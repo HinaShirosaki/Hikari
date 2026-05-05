@@ -94,6 +94,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         "  const outputIndex = args.indexOf('--output-last-message');",
         "  const outputFile = outputIndex >= 0 ? args[outputIndex + 1] : '';",
         '  fs.writeFileSync(process.env.ENANA_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
+        "  if (process.env.ENANA_FAKE_CODEX_STDOUT) { process.stdout.write(process.env.ENANA_FAKE_CODEX_STDOUT); }",
         "  if (outputFile) { fs.writeFileSync(outputFile, 'OK from fake codex'); }",
         '});'
       ].join('\n'), 'utf8');
@@ -214,7 +215,9 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         assert.equal(fs.existsSync(path.join(runtimeHome, 'config.toml')), true);
         assert.equal(fs.existsSync(path.join(runtimeHome, 'models_cache.json')), true);
         assert.equal(fs.existsSync(path.join(runtimeHome, 'skills')), true);
-        assert.match(fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8'), /\[mcp_servers\.enana\]/);
+        const runtimeConfig = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
+        assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
+        assert.match(runtimeConfig, /HIKARI_CODEX_MCP/);
       } finally {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;
@@ -231,14 +234,14 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       }
     });
 
-    test('codex cli provider writes Enana AGENTS.md guidance into the runtime workspace', async () => {
+    test('codex cli provider writes Hikari AGENTS.md guidance into the runtime workspace', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-agents-'));
       try {
         const provider = loadProvider();
         const agentsPath = await provider.ensureCodexCliAgentsFile(workspaceDir);
         const firstContent = fs.readFileSync(agentsPath, 'utf8');
         assert.equal(agentsPath, path.join(workspaceDir, 'AGENTS.md'));
-        assert.match(firstContent, /ENANA_CODEX_AGENT_INSTRUCTIONS_START/);
+        assert.match(firstContent, /HIKARI_CODEX_AGENT_INSTRUCTIONS_START/);
         assert.match(firstContent, /literature-search/);
         assert.match(firstContent, /paper-download/);
         assert.match(firstContent, /loads bounded paper context blocks/);
@@ -246,14 +249,36 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         fs.writeFileSync(agentsPath, `${firstContent}\nLocal note stays here.\n`, 'utf8');
         await provider.ensureCodexCliAgentsFile(workspaceDir);
         const secondContent = fs.readFileSync(agentsPath, 'utf8');
-        assert.equal((secondContent.match(/ENANA_CODEX_AGENT_INSTRUCTIONS_START/g) || []).length, 1);
+        assert.equal((secondContent.match(/HIKARI_CODEX_AGENT_INSTRUCTIONS_START/g) || []).length, 1);
         assert.match(secondContent, /Local note stays here/);
       } finally {
         fs.rmSync(workspaceDir, { recursive: true, force: true });
       }
     });
 
-    test('codex agent MCP gateway exposes Enana tools and instruction resources', async () => {
+    test('codex cli provider does not write Hikari files at filesystem root', async () => {
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-root-cwd-'));
+      const previousCwd = process.cwd();
+      const rootPath = path.parse(workspaceDir).root;
+      await withCodexHome({}, async () => {
+        try {
+          process.chdir(workspaceDir);
+          const provider = loadProvider();
+          const agentsPath = await provider.ensureCodexCliAgentsFile(rootPath);
+          const runtimeHome = await provider.ensureCodexCliRuntimeHome(rootPath);
+
+          assert.equal(fs.realpathSync(agentsPath), fs.realpathSync(path.join(workspaceDir, 'AGENTS.md')));
+          assert.equal(fs.realpathSync(runtimeHome), fs.realpathSync(path.join(workspaceDir, 'Config', 'codex-cli-home')));
+          assert.notEqual(agentsPath, path.join(rootPath, 'AGENTS.md'));
+          assert.notEqual(runtimeHome, path.join(rootPath, 'Config', 'codex-cli-home'));
+        } finally {
+          process.chdir(previousCwd);
+          fs.rmSync(workspaceDir, { recursive: true, force: true });
+        }
+      });
+    });
+
+    test('codex agent MCP gateway exposes Hikari tools and instruction resources', async () => {
       const { createCodexAgentMcpGateway } = require(path.join(
         __dirname,
         'src',
@@ -263,17 +288,103 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         'codex-agent',
         'mcp-gateway.js'
       ));
+      const { createMcpToolDefinitions } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'codex-agent',
+        'mcp-stdio-server.js'
+      ));
       const calls = [];
       const gateway = createCodexAgentMcpGateway({
         runTool: async (toolId, args, snapshot, context) => {
           calls.push({ toolId, args, snapshot, context });
+          if (toolId === 'protocol-matching') {
+            const selectedProtocol = {
+              id: 'prot-1',
+              name: 'Protein purification',
+              purpose: 'Purify His-tagged protein.',
+              score: 120
+            };
+            return {
+              ok: true,
+              result: {
+                ranked_matches: [selectedProtocol],
+                selected_protocol: selectedProtocol,
+                selection_method: 'deterministic',
+                rationale: 'Exact protocol candidate match.',
+                items: [selectedProtocol]
+              },
+              items: [selectedProtocol],
+              summary: 'Selected protocol Protein purification.'
+            };
+          }
+          if (toolId === 'record-lookup') {
+            const items = [
+              {
+                record_type: 'protocol',
+                id: 'prot-1',
+                title: 'Protein purification',
+                project_id: 'proj-1',
+                project_name: 'Atlas',
+                summary: 'Purify His-tagged protein.'
+              },
+              {
+                record_type: 'notebook',
+                id: 'nb-1',
+                title: 'Protein purification run 1',
+                project_id: 'proj-1',
+                project_name: 'Atlas',
+                summary: 'Yield was low.'
+              }
+            ];
+            return {
+              ok: true,
+              result: {
+                status: 'matched',
+                source: 'fallback_json',
+                query: args.query,
+                items
+              },
+              items,
+              summary: 'Record lookup completed.'
+            };
+          }
+          const items = [
+            {
+              kind: 'chemical',
+              id: 'chem-1',
+              name: 'PEI',
+              amount: '25 g',
+              location: 'Shelf A'
+            },
+            {
+              kind: 'personal_sample',
+              id: 'sample-1',
+              name: 'PEI transfection sample'
+            }
+          ];
           return {
             ok: true,
-            items: [{ id: 'item-1' }],
+            result: {
+              status: 'matched',
+              source: 'sqlite',
+              query: args.query,
+              items
+            },
+            items,
             summary: 'Inventory lookup completed.'
           };
         }
       });
+
+      const mcpToolNames = createMcpToolDefinitions().map((tool) => tool.name);
+      assert.equal(mcpToolNames.includes('inventory_lookup'), true);
+      assert.equal(mcpToolNames.includes('chemical_lookup'), true);
+      assert.equal(mcpToolNames.includes('protocol_lookup'), true);
+      assert.equal(mcpToolNames.includes('notebook_lookup'), true);
 
       const searchResult = gateway.toolSearch({ query: 'download paper pdf', limit: 6 });
       assert.equal(searchResult.ok, true);
@@ -302,6 +413,35 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(calls[0].snapshot.inventory.length, 0);
       assert.equal(calls[0].context.requestId, 'req-1');
 
+      const chemicalResult = await gateway.callGatewayTool('chemical_lookup', {
+        query: 'PEI',
+        limit: 2
+      }, {
+        requestId: 'req-chemical'
+      });
+      assert.equal(chemicalResult.ok, true);
+      assert.equal(chemicalResult.status, 'matched');
+      assert.deepEqual(chemicalResult.items.map((item) => item.kind), ['chemical']);
+      assert.equal(calls[calls.length - 1].toolId, 'inventory-lookup');
+      assert.equal(calls[calls.length - 1].args.limit, 8);
+
+      const protocolResult = await gateway.callGatewayTool('protocol_lookup', {
+        query: 'protein purification',
+        limit: 2,
+        project_id: 'proj-1'
+      }, {
+        requestId: 'req-protocol'
+      });
+      assert.equal(protocolResult.ok, true);
+      assert.equal(protocolResult.status, 'matched');
+      assert.deepEqual(protocolResult.items.map((item) => item.name), ['Protein purification']);
+      assert.equal(protocolResult.app_tool, 'protocol-matching');
+      assert.equal(protocolResult.selection_method, 'deterministic');
+      assert.equal(calls[calls.length - 1].toolId, 'protocol-matching');
+      assert.deepEqual(calls[calls.length - 1].args.protocol_candidates, ['protein purification']);
+      assert.equal(calls[calls.length - 1].context.parserPayload.primary_intent, 'protocol_to_notebook');
+      assert.equal(calls[calls.length - 1].context.project.id, 'proj-1');
+
       const invalidResult = await gateway.toolCall({
         tool_id: 'inventory-lookup',
         args: {
@@ -312,10 +452,12 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(invalidResult.ok, false);
       assert.equal(invalidResult.status, 'invalid_arguments');
 
-      const instructions = gateway.resourceRead({ uri: 'enana://instructions/codex-agent' });
+      const instructions = gateway.resourceRead({ uri: 'hikari://instructions/codex-agent' });
       assert.equal(instructions.ok, true);
       assert.match(instructions.contents, /Inference verification rules/);
       assert.match(instructions.contents, /paper-download/);
+      const legacyInstructions = gateway.resourceRead({ uri: 'enana://instructions/codex-agent' });
+      assert.equal(legacyInstructions.ok, true);
     });
 
     test('codex agent runtime builds a whole-turn prompt and parses the answer envelope', async () => {
@@ -331,6 +473,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       const calls = [];
       const traceRows = [];
       const lifecycleEvents = [];
+      const progressEvents = [];
       const runtime = createCodexAgentRuntime({
         cleanText: (value, maxLength = 2000) => {
           const text = String(value || '').trim();
@@ -338,6 +481,11 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         },
         requestCodexAgentText: async (input = {}) => {
           calls.push(input);
+          input.onStream?.({
+            text_delta: 'Streaming answer.',
+            accumulated_text: 'Streaming answer.',
+            event_type: 'agent_message_delta'
+          });
           return JSON.stringify({
             status: 'completed',
             assistant_text: 'Atlas SUMO1 likely needs a follow-up expression check.',
@@ -385,15 +533,22 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         snapshot: {
           data_file_path: '/tmp/enana-data.json'
         },
+        cwd: path.parse('/tmp/enana-workspace').root,
         model: 'gpt-5.4',
         reasoningEffort: 'high',
         traceContext: { requestId: 'req-codex-runtime', rows: [], entries: [] },
-        lifecycleRecorder: { requestId: 'req-codex-runtime', events: [] }
+        lifecycleRecorder: { requestId: 'req-codex-runtime', events: [] },
+        emitAgentProgress: (event = {}) => {
+          progressEvents.push(event);
+        }
       });
 
       assert.equal(calls.length, 1);
       assert.equal(calls[0].model, 'gpt-5.4');
       assert.equal(calls[0].reasoningEffort, 'high');
+      assert.equal(calls[0].cwd, '/tmp/enana-workspace');
+      assert.equal(calls[0].stream, true);
+      assert.equal(typeof calls[0].onStream, 'function');
       assert.equal(calls[0].enableWebSearch, true);
       assert.match(calls[0].prompt, /Codex-Owned Agent Request/);
       assert.match(calls[0].prompt, /Current user request:\nWhy was SUMO1 conjugation weak\?/);
@@ -401,11 +556,16 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.match(calls[0].prompt, /Selection insight context:/);
       assert.match(calls[0].prompt, /pilot\.pdf/);
       assert.match(calls[0].prompt, /"assistant_text"/);
-      const mcpContext = JSON.parse(calls[0].envOverrides.ENANA_CODEX_REQUEST_CONTEXT);
+      const mcpContext = JSON.parse(calls[0].envOverrides.HIKARI_CODEX_REQUEST_CONTEXT);
       assert.equal(mcpContext.provider, 'codex');
       assert.equal(mcpContext.model, 'gpt-5.4');
+      assert.equal(mcpContext.cwd, '/tmp/enana-workspace');
       assert.equal(mcpContext.project.name, 'Atlas SUMO1');
       assert.equal(mcpContext.dataFilePath, '/tmp/enana-data.json');
+      assert.deepEqual(
+        JSON.parse(calls[0].envOverrides.ENANA_CODEX_REQUEST_CONTEXT),
+        mcpContext
+      );
       assert.equal(result.ok, true);
       assert.equal(result.parser.primary_intent, 'codex_agent');
       assert.equal(result.codex_agent.status, 'completed');
@@ -413,6 +573,8 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(result.codex_agent.citations.length, 1);
       assert.equal(traceRows.some((row) => row.stage === 'codex_agent_runtime'), true);
       assert.equal(lifecycleEvents.some((event) => event.stage === 'codex_agent_completed'), true);
+      assert.equal(progressEvents.some((event) => event.stage === 'codex_agent_stream'), true);
+      assert.equal(progressEvents.some((event) => event.meta?.stream_text === 'Streaming answer.'), true);
     });
 
     test('codex agent runtime wraps non-json output with a parse warning', async () => {
@@ -470,7 +632,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
           }
         },
         env: {
-          ENANA_CODEX_REQUEST_CONTEXT: JSON.stringify({
+          HIKARI_CODEX_REQUEST_CONTEXT: JSON.stringify({
             provider: 'codex',
             model: 'gpt-5.4',
             project: {
@@ -513,34 +675,36 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
 
     test('codex agent MCP config includes the app host callback when available', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-mcp-config-'));
-      const previousHost = process.env.ENANA_CODEX_MCP_HOST;
-      const previousToken = process.env.ENANA_CODEX_MCP_TOKEN;
-      process.env.ENANA_CODEX_MCP_HOST = 'http://127.0.0.1:43123';
-      process.env.ENANA_CODEX_MCP_TOKEN = 'test-token';
+      const previousHikariHost = process.env.HIKARI_CODEX_MCP_HOST;
+      const previousHikariToken = process.env.HIKARI_CODEX_MCP_TOKEN;
+      process.env.HIKARI_CODEX_MCP_HOST = 'http://127.0.0.1:43123';
+      process.env.HIKARI_CODEX_MCP_TOKEN = 'test-token';
       try {
         const provider = loadProvider();
         const runtimeHome = await provider.ensureCodexCliRuntimeHome(workspaceDir);
         const configText = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
-        assert.match(configText, /\[mcp_servers\.enana\]/);
+        assert.match(configText, /\[mcp_servers\.hikari\]/);
+        assert.match(configText, /HIKARI_CODEX_MCP_HOST/);
         assert.match(configText, /ENANA_CODEX_MCP_HOST/);
         assert.match(configText, /http:\/\/127\.0\.0\.1:43123/);
+        assert.match(configText, /HIKARI_CODEX_MCP_TOKEN/);
         assert.match(configText, /ENANA_CODEX_MCP_TOKEN/);
       } finally {
-        if (typeof previousHost === 'string') {
-          process.env.ENANA_CODEX_MCP_HOST = previousHost;
+        if (typeof previousHikariHost === 'string') {
+          process.env.HIKARI_CODEX_MCP_HOST = previousHikariHost;
         } else {
-          delete process.env.ENANA_CODEX_MCP_HOST;
+          delete process.env.HIKARI_CODEX_MCP_HOST;
         }
-        if (typeof previousToken === 'string') {
-          process.env.ENANA_CODEX_MCP_TOKEN = previousToken;
+        if (typeof previousHikariToken === 'string') {
+          process.env.HIKARI_CODEX_MCP_TOKEN = previousHikariToken;
         } else {
-          delete process.env.ENANA_CODEX_MCP_TOKEN;
+          delete process.env.HIKARI_CODEX_MCP_TOKEN;
         }
         fs.rmSync(workspaceDir, { recursive: true, force: true });
       }
     });
 
-    test('codex cli provider runs codex exec with Enana AGENTS.md and MCP config', async () => {
+    test('codex cli provider runs codex exec with Hikari AGENTS.md and MCP config', async () => {
       const accessToken = buildJwt({
         exp: Math.floor(Date.now() / 1000) + 3600,
         email: 'scientist@example.com'
@@ -578,7 +742,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
           assert.equal(captured.args.includes('--output-last-message'), true);
           assert.match(captured.stdin, /Return OK only\./);
           assert.equal(fs.existsSync(path.join(workspaceDir, 'AGENTS.md')), true);
-          assert.match(runtimeConfig, /\[mcp_servers\.enana\]/);
+          assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
           assert.match(runtimeConfig, /mcp-stdio-server\.js/);
         } finally {
           if (typeof previousCodexCli === 'string') {
@@ -590,6 +754,74 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
             process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
           } else {
             delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+          }
+          fs.rmSync(workspaceDir, { recursive: true, force: true });
+        }
+      });
+    });
+
+    test('codex cli provider streams assistant text from codex json events', async () => {
+      const accessToken = buildJwt({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        email: 'scientist@example.com'
+      });
+      await withCodexHome({
+        authFile: {
+          auth_mode: 'chatgpt',
+          tokens: {
+            access_token: accessToken,
+            refresh_token: 'refresh-token',
+            account_id: 'acct-stream'
+          }
+        }
+      }, async () => {
+        const provider = loadProvider();
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-stream-'));
+        const fakeCodex = createFakeCodexBinary(workspaceDir);
+        const previousCodexCli = process.env.ENANA_CODEX_CLI;
+        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
+        const previousStdout = process.env.ENANA_FAKE_CODEX_STDOUT;
+        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
+        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        process.env.ENANA_FAKE_CODEX_STDOUT = [
+          JSON.stringify({ type: 'agent_message_delta', delta: 'Hello ' }),
+          JSON.stringify({ type: 'agent_message_delta', delta: 'from Codex.' }),
+          ''
+        ].join('\n');
+
+        try {
+          const streamEvents = [];
+          const result = await provider.requestCodexCliText({
+            prompt: 'Stream please.',
+            cwd: workspaceDir,
+            stream: true,
+            onStream: (event) => {
+              streamEvents.push(event);
+            }
+          });
+          const captured = JSON.parse(fs.readFileSync(fakeCodex.capturePath, 'utf8'));
+          assert.equal(result, 'OK from fake codex');
+          assert.equal(captured.args.includes('--json'), true);
+          assert.deepEqual(
+            streamEvents.map((event) => event.text_delta),
+            ['Hello ', 'from Codex.']
+          );
+          assert.equal(streamEvents[streamEvents.length - 1].accumulated_text, 'Hello from Codex.');
+        } finally {
+          if (typeof previousCodexCli === 'string') {
+            process.env.ENANA_CODEX_CLI = previousCodexCli;
+          } else {
+            delete process.env.ENANA_CODEX_CLI;
+          }
+          if (typeof previousCapture === 'string') {
+            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+          }
+          if (typeof previousStdout === 'string') {
+            process.env.ENANA_FAKE_CODEX_STDOUT = previousStdout;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_STDOUT;
           }
           fs.rmSync(workspaceDir, { recursive: true, force: true });
         }

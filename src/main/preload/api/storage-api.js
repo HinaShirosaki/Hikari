@@ -13,7 +13,8 @@ function createStorageApi(ipcRenderer) {
     writeJsonFile: (payload) => ipcRenderer.invoke(STORAGE.WRITE_JSON_FILE, payload),
     discoverStoredPapers: (payload) => ipcRenderer.invoke(STORAGE.DISCOVER_PAPERS, payload),
     openFilePath: (path) => ipcRenderer.invoke(STORAGE.OPEN_FILE, { path }),
-    readFileBase64: (path) => ipcRenderer.invoke(STORAGE.READ_FILE_BASE64, { path })
+    readFileBase64: (path) => ipcRenderer.invoke(STORAGE.READ_FILE_BASE64, { path }),
+    appendNotebookPageLog: (payload) => ipcRenderer.invoke(STORAGE.APPEND_NOTEBOOK_PAGE_LOG, payload)
   };
 }
 

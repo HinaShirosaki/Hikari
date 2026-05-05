@@ -49,13 +49,13 @@ function postJson(url, payload, headers = {}) {
         try {
           parsedBody = raw ? JSON.parse(raw) : {};
         } catch {
-          parsedBody = { ok: false, error: raw || 'Invalid Enana MCP host response.' };
+          parsedBody = { ok: false, error: raw || 'Invalid Hikari MCP host response.' };
         }
         if (response.statusCode >= 200 && response.statusCode < 300) {
           resolve(parsedBody);
           return;
         }
-        const error = new Error(cleanText(parsedBody?.error || raw, 1200) || `Enana MCP host returned ${response.statusCode}.`);
+        const error = new Error(cleanText(parsedBody?.error || raw, 1200) || `Hikari MCP host returned ${response.statusCode}.`);
         error.statusCode = response.statusCode;
         error.payload = parsedBody;
         reject(error);
@@ -68,8 +68,14 @@ function postJson(url, payload, headers = {}) {
 }
 
 function createCodexMcpHostToolRunner(options = {}) {
-  const hostUrl = cleanText(options.hostUrl || process.env.ENANA_CODEX_MCP_HOST, 2000).replace(/\/+$/u, '');
-  const token = cleanText(options.token || process.env.ENANA_CODEX_MCP_TOKEN, 4000);
+  const hostUrl = cleanText(
+    options.hostUrl || process.env.HIKARI_CODEX_MCP_HOST || process.env.ENANA_CODEX_MCP_HOST,
+    2000
+  ).replace(/\/+$/u, '');
+  const token = cleanText(
+    options.token || process.env.HIKARI_CODEX_MCP_TOKEN || process.env.ENANA_CODEX_MCP_TOKEN,
+    4000
+  );
   if (!hostUrl) {
     return null;
   }

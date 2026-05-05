@@ -9,18 +9,6 @@
               <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
             </label>
             <label>
-              Project
-              <select id="gel-project">
-                <option value="">Select project</option>
-              </select>
-            </label>
-            <label>
-              Link Notebook Page
-              <select id="gel-notebook-entry" class="gel-wide-field">
-                <option value="">Not linked</option>
-              </select>
-            </label>
-            <label>
               Analysis Type
               <select id="gel-type">
                 <option value="sds-page">SDS-PAGE</option>
@@ -61,12 +49,6 @@
               <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
               <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
             </div>
-            <div class="form-actions">
-              <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
-              <button type="button" id="gel-apply-crop-btn" class="ghost-btn" disabled>Apply Crop</button>
-              <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
-              <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
-            </div>
             <div id="gel-status" class="small-note"></div>
             <div class="form-actions">
               <button type="button" id="gel-run-btn" class="primary-btn">Analyze Gel</button>
@@ -84,6 +66,9 @@
               <div class="panel gel-viewer-panel">
                 <h3>Gel Viewer</h3>
                 <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools">
+                  <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
+                  <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
+                  <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
                   <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
                   <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
                   <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>

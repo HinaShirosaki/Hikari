@@ -37,7 +37,8 @@ const STORAGE = Object.freeze({
   WRITE_JSON_FILE: 'storage:write-json-file',
   DISCOVER_PAPERS: 'storage:discover-papers',
   OPEN_FILE: 'storage:open-file',
-  READ_FILE_BASE64: 'storage:read-file-base64'
+  READ_FILE_BASE64: 'storage:read-file-base64',
+  APPEND_NOTEBOOK_PAGE_LOG: 'storage:append-notebook-page-log'
 });
 
 const SYSTEM = Object.freeze({

@@ -326,8 +326,7 @@ body.has-shared-left-rail-view .workspace-main {
   background: var(--line);
 }
 
-.app-dock-btn,
-.topbar-icon-btn {
+.app-dock-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -353,10 +352,7 @@ body.has-shared-left-rail-view .workspace-main {
 
 .app-dock-btn:hover,
 .app-dock-btn:focus-visible,
-.app-dock-btn.is-active,
-.topbar-icon-btn:hover,
-.topbar-icon-btn:focus-visible,
-.topbar-icon-btn.is-active {
+.app-dock-btn.is-active {
   z-index: 2;
   color: var(--strong);
   background: var(--surface-subtle);
@@ -763,29 +759,9 @@ button:disabled {
   font-size: 0.9rem;
 }
 
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 650;
-}
 
-.status-idle {
-  color: #3f6a4d;
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
-}
 
-.status-running {
-  color: #8a5a16;
-  background: rgba(183, 128, 24, 0.15);
-}
 
-.status-error {
-  color: var(--danger);
-  background: rgba(167, 75, 58, 0.12);
-}
 
 .well {
   position: relative;
@@ -833,17 +809,8 @@ button:disabled {
   background: var(--surface);
 }
 
-.notebook-lookup-grid {
-  margin-top: 10px;
-}
 
-.notebook-lookup-actions {
-  align-self: end;
-}
 
-.notebook-lookup-result {
-  margin-top: 10px;
-}
 
 .synthesis-reaction-panel,
 .synthesis-mw-panel {
@@ -1002,8 +969,7 @@ button:disabled {
     padding: 7px 8px;
   }
 
-  .app-dock-btn,
-  .topbar-icon-btn {
+  .app-dock-btn {
     width: 42px;
     height: 42px;
   }

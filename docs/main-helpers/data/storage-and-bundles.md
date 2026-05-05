@@ -10,6 +10,8 @@ Its job is to strip the heavy searchable data out of the main JSON file before i
 
 - clears `protocols`
 - clears `notebookEntries`
+- clears `samples`
+- clears the derived `objectGraph`
 - clears `labInventory.chemicals`
 - clears `inventory`
 - keeps lightweight bundle metadata under `data_bundle`
@@ -42,20 +44,21 @@ Given a base data file, it derives:
 
 - the primary data file
 - `*.protocols.json`
-- `*.notebook-pages.json`
 - `*.index.sqlite`
+- `Samples/samples.json`
 
 `getBundlePaths(...)` is the shared path builder used throughout the rest of the file.
 
-For the standalone Chemicals workspace, the app now also supports a SQLite-only bundle at `enana-chemicals.index.sqlite` without requiring a sibling `enana-chemicals.ena.json`.
+For the standalone Chemicals workspace, the app now also supports a SQLite-only bundle at `hikari-chemicals.index.sqlite` without requiring a sibling `hikari-chemicals.ena.json`. Legacy `enana-chemicals.index.sqlite` bundles are still recognized on import.
 
 ## Write path
 
 `syncBundleFromSnapshot(...)` writes:
 
-1. a protocol sidecar
-2. a notebook-page sidecar
-3. a SQLite index built from the snapshot
+1. protocol folders
+2. notebook-page folders
+3. `Samples/samples.json`
+4. a SQLite index built from the snapshot
 
 That SQLite file includes searchable tables for:
 
@@ -73,8 +76,9 @@ So the bundle sync step is not just archival. It also builds fast lookup state u
 `hydrateSnapshotFromBundle(...)` rehydrates the compact snapshot by layering in:
 
 1. protocol sidecar JSON
-2. notebook-page sidecar JSON
-3. SQLite inventory/record data
+2. legacy notebook-page sidecar JSON, if present
+3. `Samples/samples.json`
+4. SQLite inventory/record data
 
 It also returns a `migration` summary that reports which fallback or hydration sources were used.
 
@@ -91,7 +95,7 @@ It:
 - hydrates each discovered bundle
 - merges protocols, notebook entries, chemicals, and inventory across bundles
 - summarizes the `SequenceViewer` SQLite library
-- writes an `enana-storage-manifest.json` manifest into the storage root
+- writes a `hikari-storage-manifest.json` manifest into the storage root
 
 This is best thought of as a discovery and migration helper, not part of the routine save/load loop.
 

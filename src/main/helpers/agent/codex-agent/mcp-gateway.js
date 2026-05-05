@@ -6,6 +6,7 @@ const {
   normalizeToolArgumentsPayload,
   resolveCanonicalToolName
 } = require('../tools/agent-tool-loading.js');
+const { createMcpLookupToolRouter } = require('./mcp-tools/index.js');
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -74,6 +75,9 @@ function createCodexAgentMcpGateway(deps = {}) {
   const runTool = typeof deps.runTool === 'function'
     ? deps.runTool
     : null;
+  const lookupToolRouter = createMcpLookupToolRouter({
+    runTool
+  });
 
   function toolSearch(input = {}) {
     const tokens = normalizeQuery(input.query);
@@ -156,7 +160,7 @@ function createCodexAgentMcpGateway(deps = {}) {
         ok: false,
         status: 'executor_unavailable',
         tool_id: toolId,
-        error: 'Enana MCP tool execution is not connected to a host app runtime yet.'
+        error: 'Hikari MCP tool execution is not connected to a host app runtime yet.'
       };
     }
     const result = await runTool(toolId, normalized.payload.tool_calls[0].arguments, ensureObject(context.snapshot), context);
@@ -172,12 +176,12 @@ function createCodexAgentMcpGateway(deps = {}) {
     const tokens = normalizeQuery(input.query);
     const resources = [
       {
-        uri: 'enana://instructions/codex-agent',
+        uri: 'hikari://instructions/codex-agent',
         name: 'Codex agent instructions',
-        description: 'Enana rules for Codex intent parsing, inference verification, paper download, and context loading.'
+        description: 'Hikari rules for Codex intent parsing, inference verification, paper download, and context loading.'
       },
       ...AGENT_TOOL_CATALOG.map((entry) => ({
-        uri: `enana://tool/${entry.name}`,
+        uri: `hikari://tool/${entry.name}`,
         name: `${entry.name} tool manifest`,
         description: entry.description
       }))
@@ -198,16 +202,16 @@ function createCodexAgentMcpGateway(deps = {}) {
 
   function resourceRead(input = {}) {
     const uri = cleanText(input.uri, 1000);
-    if (uri === 'enana://instructions/codex-agent') {
-      const { buildEnanaCodexAgentsInstructions } = require('./agent-instructions.js');
+    if (uri === 'hikari://instructions/codex-agent' || uri === 'enana://instructions/codex-agent') {
+      const { buildHikariCodexAgentsInstructions } = require('./agent-instructions.js');
       return {
         ok: true,
         uri,
         mimeType: 'text/markdown',
-        contents: buildEnanaCodexAgentsInstructions()
+        contents: buildHikariCodexAgentsInstructions()
       };
     }
-    const toolMatch = uri.match(/^enana:\/\/tool\/(.+)$/i);
+    const toolMatch = uri.match(/^(?:hikari|enana):\/\/tool\/(.+)$/i);
     if (toolMatch) {
       return {
         ok: true,
@@ -234,6 +238,9 @@ function createCodexAgentMcpGateway(deps = {}) {
     if (toolName === 'tool_call') {
       return toolCall(args, context);
     }
+    if (lookupToolRouter.hasTool(toolName)) {
+      return lookupToolRouter.callTool(toolName, args, context);
+    }
     if (toolName === 'resource_search') {
       return resourceSearch(args);
     }
@@ -242,7 +249,7 @@ function createCodexAgentMcpGateway(deps = {}) {
     }
     return {
       ok: false,
-      error: `Unknown Enana MCP gateway tool "${toolName || 'unknown'}".`
+      error: `Unknown Hikari MCP gateway tool "${toolName || 'unknown'}".`
     };
   }
 

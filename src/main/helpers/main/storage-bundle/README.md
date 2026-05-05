@@ -32,9 +32,9 @@ Splitting those pieces makes the storage pipeline easier to navigate and safer t
 - `storage-sql-read.js`
   - SQLite read helpers and row-to-snapshot fallback readers.
 - `storage-sidecars.js`
-  - Protocol folder/notebook sidecar writers and `syncBundleFromSnapshot`.
+  - Protocol folder, notebook page folder, sample JSON, and SQLite writers used by `syncBundleFromSnapshot`.
 - `storage-hydration.js`
-  - Snapshot hydration from protocol folders, notebook sidecars, SQLite fallback data, and legacy protocol sidecars.
+  - Snapshot hydration from protocol folders, notebook folders, sample JSON, SQLite fallback data, and legacy sidecars.
 - `storage-import.js`
   - Storage-root import flow, merge helpers, bundle summarization, and manifest writing.
 - `storage-manifest.js`

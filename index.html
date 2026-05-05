@@ -1091,18 +1091,6 @@
               <input id="gel-name" required placeholder="e.g. WB_RUN_2026_02_19" />
             </label>
             <label>
-              Project
-              <select id="gel-project">
-                <option value="">Select project</option>
-              </select>
-            </label>
-            <label>
-              Link Notebook Page
-              <select id="gel-notebook-entry" class="gel-wide-field">
-                <option value="">Not linked</option>
-              </select>
-            </label>
-            <label>
               Analysis Type
               <select id="gel-type">
                 <option value="sds-page">SDS-PAGE</option>
@@ -1143,12 +1131,6 @@
               <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
               <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
             </div>
-            <div class="form-actions">
-              <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
-              <button type="button" id="gel-apply-crop-btn" class="ghost-btn" disabled>Apply Crop</button>
-              <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
-              <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
-            </div>
             <div id="gel-status" class="small-note"></div>
             <div class="form-actions">
               <button type="button" id="gel-run-btn" class="primary-btn">Analyze Gel</button>
@@ -1166,6 +1148,9 @@
               <div class="panel gel-viewer-panel">
                 <h3>Gel Viewer</h3>
                 <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools">
+                  <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
+                  <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
+                  <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
                   <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
                   <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
                   <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
@@ -1452,7 +1437,7 @@
               <form id="storage-form" class="stack-form">
                 <label>
                   Root Folder Path
-                  <input id="setting-storage-path" placeholder="/path/to/enana-data" readonly />
+                  <input id="setting-storage-path" placeholder="/path/to/hikari-data" readonly />
                 </label>
                 <p class="small-note">Notebook pages will reference individual folders under this path.</p>
                 <p id="setting-storage-import-status" class="small-note">Storage import: not started.</p>
@@ -2483,8 +2468,8 @@
             Enter target sequences and run design to view candidate guides.
           </div>
 
-          <div class="plannotate-table-wrap crispr-table-wrap">
-            <table class="plannotate-table crispr-table">
+          <div class="result-table-wrap crispr-table-wrap">
+            <table class="result-table crispr-table">
               <thead>
                 <tr>
                   <th>#</th>
@@ -2552,14 +2537,14 @@
           </div>
 
           <div class="colony-preview-grid">
-            <section class="plannotate-result-card colony-preview-card">
-              <div class="plannotate-card-head">
+            <section class="result-card colony-preview-card">
+              <div class="result-card-head">
                 <h4>Annotated Colonies</h4>
               </div>
               <canvas id="colony-preview-canvas" class="colony-preview-canvas"></canvas>
             </section>
-            <section class="plannotate-result-card colony-preview-card">
-              <div class="plannotate-card-head">
+            <section class="result-card colony-preview-card">
+              <div class="result-card-head">
                 <h4>Marker Map</h4>
               </div>
               <canvas id="colony-mask-canvas" class="colony-preview-canvas"></canvas>
@@ -2594,7 +2579,7 @@
                 </section>
 
                 <section class="sequence-viewer-library-card left-rail-template__section">
-              <div class="plannotate-card-head">
+              <div class="result-card-head">
                 <h4>Sequence Library</h4>
               </div>
               <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
@@ -2610,8 +2595,8 @@
 
             <div class="sequence-viewer-home-main left-rail-template__main">
               <div class="left-rail-template__stack">
-                <section class="plannotate-result-card sequence-viewer-preview-card">
-                  <div class="plannotate-card-head">
+                <section class="result-card sequence-viewer-preview-card">
+                  <div class="result-card-head">
                     <h4>Circular Plasmid Preview</h4>
                   </div>
                   <div id="sequence-viewer-preview-host" class="sequence-viewer-preview-host">
@@ -2619,8 +2604,8 @@
                   </div>
                 </section>
 
-                <section class="plannotate-result-card sequence-viewer-feature-search-card">
-                  <div class="plannotate-card-head">
+                <section class="result-card sequence-viewer-feature-search-card">
+                  <div class="result-card-head">
                     <h4>Feature Search</h4>
                   </div>
                   <div class="sequence-viewer-feature-search-controls">
@@ -2689,7 +2674,7 @@
                 </section>
 
                 <section class="sequence-viewer-protein-builder-panel">
-                  <div class="plannotate-card-head">
+                  <div class="result-card-head">
                     <h4>Common Blocks</h4>
                   </div>
                   <div id="sequence-viewer-protein-builder-common-blocks" class="sequence-viewer-protein-builder-common-blocks">
@@ -2698,7 +2683,7 @@
                 </section>
 
                 <section class="sequence-viewer-protein-builder-panel">
-                  <div class="plannotate-card-head">
+                  <div class="result-card-head">
                     <h4>Feature Database</h4>
                   </div>
                   <div class="sequence-viewer-protein-builder-feature-controls">
@@ -2721,7 +2706,7 @@
 
               <div class="sequence-viewer-protein-builder-main left-rail-template__main">
                 <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-workflow-panel">
-                  <div class="plannotate-card-head">
+                  <div class="result-card-head">
                     <h4>Assembly Chain</h4>
                     <span id="sequence-viewer-protein-builder-meta" class="small-note">0 aa | 0 blocks</span>
                   </div>
@@ -2731,14 +2716,14 @@
                 </section>
 
                 <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-sequence-panel">
-                  <div class="plannotate-card-head">
+                  <div class="result-card-head">
                     <h4>Assembled Sequence</h4>
                   </div>
                   <div id="sequence-viewer-protein-builder-sequence" class="sequence-block">-</div>
                 </section>
 
                 <section class="sequence-viewer-protein-builder-panel sequence-viewer-protein-builder-sequence-panel">
-                  <div class="plannotate-card-head">
+                  <div class="result-card-head">
                     <h4>DNA Build</h4>
                     <button id="sequence-viewer-protein-builder-build-dna-btn" type="button" class="ghost-btn">Build DNA Sequence</button>
                   </div>
@@ -2762,8 +2747,8 @@
               </div>
 
               <div class="sequence-viewer-backbone-dialog-grid">
-                <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel">
-                  <div class="plannotate-card-head">
+                <section class="result-card sequence-viewer-backbone-dialog-panel">
+                  <div class="result-card-head">
                     <h4>Stored Backbones</h4>
                   </div>
                   <div id="sequence-viewer-protein-builder-assembly-list" class="sequence-viewer-backbone-dialog-candidates">
@@ -2771,8 +2756,8 @@
                   </div>
                 </section>
 
-                <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel sequence-viewer-protein-builder-assembly-summary-panel">
-                  <div class="plannotate-card-head">
+                <section class="result-card sequence-viewer-backbone-dialog-panel sequence-viewer-protein-builder-assembly-summary-panel">
+                  <div class="result-card-head">
                     <h4>Assembly Summary</h4>
                   </div>
                   <div id="sequence-viewer-protein-builder-assembly-summary" class="calc-output sequence-viewer-backbone-dialog-summary">
@@ -2899,15 +2884,15 @@
         </form>
 
         <div class="sequence-viewer-results">
-          <section class="plannotate-result-card sequence-viewer-sequence-card">
-            <div class="plannotate-card-head">
+          <section class="result-card sequence-viewer-sequence-card">
+            <div class="result-card-head">
               <h4>Sequence (Dual Strand)</h4>
             </div>
             <div id="sequence-viewer-sequence-host" class="sequence-viewer-sequence-host">
               <p class="small-note">Load sequence data to begin.</p>
             </div>
             <div class="sequence-viewer-feature-bottom">
-              <div class="plannotate-card-head">
+              <div class="result-card-head">
                 <h4>Features (Bottom Track)</h4>
               </div>
               <div id="sequence-viewer-feature-rail-host" class="sequence-viewer-feature-rail-host">
@@ -2919,8 +2904,8 @@
             </div>
           </section>
 
-          <section class="plannotate-result-card">
-            <div class="plannotate-card-head">
+          <section class="result-card">
+            <div class="result-card-head">
               <h4>Summary</h4>
             </div>
             <div class="sequence-viewer-stats">
@@ -2943,7 +2928,7 @@
 
         <div id="sequence-viewer-feature-editor-overlay" class="sequence-viewer-feature-editor-overlay" hidden>
           <form id="sequence-viewer-feature-editor-form" class="sequence-viewer-feature-editor" autocomplete="off">
-            <div class="plannotate-card-head sequence-viewer-feature-editor-head">
+            <div class="result-card-head sequence-viewer-feature-editor-head">
               <h4 id="sequence-viewer-feature-editor-title">Add Feature</h4>
               <button id="sequence-viewer-feature-editor-close" type="button" class="ghost-btn">Close</button>
             </div>
@@ -2988,7 +2973,7 @@
 
         <div id="sequence-viewer-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay" hidden>
           <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog" autocomplete="off">
-            <div class="plannotate-card-head sequence-viewer-sequence-edit-head">
+            <div class="result-card-head sequence-viewer-sequence-edit-head">
               <h4 id="sequence-viewer-sequence-edit-title">Edit Bases</h4>
               <button id="sequence-viewer-sequence-edit-close" type="button" class="ghost-btn">Close</button>
             </div>
@@ -3023,8 +3008,8 @@
             </div>
 
             <div class="sequence-viewer-backbone-dialog-grid">
-              <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel">
-                <div class="plannotate-card-head">
+              <section class="result-card sequence-viewer-backbone-dialog-panel">
+                <div class="result-card-head">
                   <h4>Candidate List</h4>
                 </div>
                 <div id="sequence-viewer-backbone-dialog-candidates" class="sequence-viewer-backbone-dialog-candidates">
@@ -3032,8 +3017,8 @@
                 </div>
               </section>
 
-              <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel sequence-viewer-backbone-dialog-preview-panel">
-                <div class="plannotate-card-head">
+              <section class="result-card sequence-viewer-backbone-dialog-panel sequence-viewer-backbone-dialog-preview-panel">
+                <div class="result-card-head">
                   <h4>Preview</h4>
                 </div>
                 <div id="sequence-viewer-backbone-dialog-summary" class="calc-output sequence-viewer-backbone-dialog-summary">
@@ -3070,14 +3055,14 @@
         <div class="sequence-viewer-cloning-design-grid left-rail-template">
           <aside class="sequence-viewer-cloning-design-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
             <section class="sequence-viewer-cloning-design-panel">
-              <div class="plannotate-card-head">
+              <div class="result-card-head">
                 <h4>Route</h4>
               </div>
               <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-mode-switch sequence-viewer-cloning-design-strategy-list" role="tablist" aria-label="Cloning design route"></div>
             </section>
 
             <section class="sequence-viewer-cloning-design-panel">
-              <div class="plannotate-card-head">
+              <div class="result-card-head">
                 <h4>Sequence Edit</h4>
               </div>
               <div id="sequence-viewer-cloning-design-edit-summary" class="sequence-viewer-cloning-design-edit-summary calc-output">
@@ -3086,7 +3071,7 @@
             </section>
 
             <section id="sequence-viewer-cloning-design-range-panel" class="sequence-viewer-cloning-design-panel" hidden>
-              <div class="plannotate-card-head">
+              <div class="result-card-head">
                 <h4>Amplicon</h4>
               </div>
               <div class="form-grid sequence-viewer-cloning-design-range-grid">
@@ -3117,8 +3102,8 @@
             <span id="sequence-viewer-alignment-status" class="small-note">Paste a sequence or choose a file to align against the current record.</span>
           </div>
 
-          <section class="plannotate-result-card sequence-viewer-alignment-panel">
-            <div class="plannotate-card-head">
+          <section class="result-card sequence-viewer-alignment-panel">
+            <div class="result-card-head">
               <h4>New Query</h4>
             </div>
             <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Alignment query input mode">

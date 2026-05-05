@@ -3,6 +3,7 @@
 
 const { createCodexAgentMcpGateway } = require('./mcp-gateway.js');
 const { createCodexMcpHostToolRunner } = require('./mcp-host-client.js');
+const { getMcpLookupToolDefinitions } = require('./mcp-tools/index.js');
 
 function cleanText(value, maxLength = 1000) {
   const text = String(value || '').trim();
@@ -23,14 +24,14 @@ function parseJsonObject(raw = '') {
 }
 
 function getRequestContextFromEnv(env = process.env) {
-  return parseJsonObject(env.ENANA_CODEX_REQUEST_CONTEXT);
+  return parseJsonObject(env.HIKARI_CODEX_REQUEST_CONTEXT || env.ENANA_CODEX_REQUEST_CONTEXT);
 }
 
 function createMcpToolDefinitions() {
   return [
     {
       name: 'tool_search',
-      description: 'Search Enana app tools by natural-language goal.',
+      description: 'Search Hikari app tools by natural-language goal.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -43,7 +44,7 @@ function createMcpToolDefinitions() {
     },
     {
       name: 'tool_info',
-      description: 'Load one Enana tool manifest, including schema when requested.',
+      description: 'Load one Hikari tool manifest, including schema when requested.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -56,7 +57,7 @@ function createMcpToolDefinitions() {
     },
     {
       name: 'tool_call',
-      description: 'Validate and call an Enana app tool through the MCP bridge.',
+      description: 'Validate and call a Hikari app tool through the MCP bridge.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -67,9 +68,10 @@ function createMcpToolDefinitions() {
         }
       }
     },
+    ...getMcpLookupToolDefinitions(),
     {
       name: 'resource_search',
-      description: 'Search Enana MCP resources such as instructions and tool manifests.',
+      description: 'Search Hikari MCP resources such as instructions and tool manifests.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -82,7 +84,7 @@ function createMcpToolDefinitions() {
     },
     {
       name: 'resource_read',
-      description: 'Read one Enana MCP resource by URI.',
+      description: 'Read one Hikari MCP resource by URI.',
       inputSchema: {
         type: 'object',
         additionalProperties: false,
@@ -154,7 +156,7 @@ function createCodexAgentMcpStdioServer(deps = {}) {
             resources: { listChanged: false }
           },
           serverInfo: {
-            name: 'enana-codex-agent',
+            name: 'hikari-codex-agent',
             version: '0.1.0'
           }
         });
@@ -211,7 +213,7 @@ function createCodexAgentMcpStdioServer(deps = {}) {
       }
       sendError(id, createJsonRpcError(-32601, `Method "${method || 'unknown'}" is not supported.`));
     } catch (error) {
-      sendError(id, createJsonRpcError(-32603, error?.message || 'Enana MCP bridge failed.'));
+      sendError(id, createJsonRpcError(-32603, error?.message || 'Hikari MCP bridge failed.'));
     }
   }
 

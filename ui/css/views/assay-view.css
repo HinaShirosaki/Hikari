@@ -641,24 +641,8 @@
   font-size: 0.72rem;
 }
 
-.assay-plate-editor-inline {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: end;
-  justify-content: flex-start;
-}
 
-.assay-plate-editor-inline label {
-  display: grid;
-  gap: 4px;
-  min-width: 140px;
-  text-align: left;
-}
 
-.assay-plate-editor-inline input {
-  width: 100%;
-}
 
 .assay-well.is-filled {
   font-weight: 600;
@@ -670,26 +654,8 @@
   outline-offset: -2px;
 }
 
-.assay-result-cell {
-  padding: 0;
-}
 
-.assay-result-input {
-  width: 100%;
-  min-width: 62px;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  text-align: center;
-  font-size: 0.75rem;
-  padding: 6px 4px;
-  box-sizing: border-box;
-}
 
-.assay-result-input:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 45%, #ffffff);
-  outline-offset: -2px;
-}
 
 .assay-result-disabled {
   background: rgba(232, 236, 242, 0.75);
@@ -816,7 +782,7 @@
   }
 
   .assay-create-layout .app-left-rail,
-  .assay-results-layout .app-left-rail {
+.assay-results-layout .app-left-rail {
     min-height: auto;
     max-height: none;
     padding-right: 0 !important;
@@ -841,7 +807,7 @@
   }
 
   .assay-create-sidebar .assay-form-grid,
-  .assay-form-grid {
+.assay-form-grid {
     grid-template-columns: 1fr;
   }
 }

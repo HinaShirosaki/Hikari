@@ -40,6 +40,7 @@ module.exports = {
       /^\/tmp($|\/)/,
       /^\/\.vscode($|\/)/,
       /^\/\.DS_Store$/,
+      /^\/hikari-data(?:\.ena)?\.json$/,
       /^\/enana-data(?:\.ena)?\.json$/,
       /^\/\.npm-cache($|\/)/,
       /^\/\.claude($|\/)/,

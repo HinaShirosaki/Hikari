@@ -97,28 +97,30 @@ function registerAgentChatHandler({
     const progressSender = event?.sender && typeof event.sender.send === 'function'
       ? event.sender.send.bind(event.sender)
       : null;
+    const emitAgentProgress = (lifecycleEvent) => {
+      if (!progressSender) {
+        return;
+      }
+      const progressPayload = buildAgentProgressPayload({
+        lifecycleEvent,
+        requestId,
+        clientRequestId,
+        chatSessionId: cleanText(sessionService.getSession()?.id, 120)
+      });
+      if (!progressPayload) {
+        return;
+      }
+      progressSender(AGENT_PROGRESS_EVENT, progressPayload);
+    };
     const lifecycleRecorder = observability.createLifecycleRecorder({
       requestId,
-      onEvent: (lifecycleEvent) => {
-        if (!progressSender) {
-          return;
-        }
-        const progressPayload = buildAgentProgressPayload({
-          lifecycleEvent,
-          requestId,
-          clientRequestId,
-          chatSessionId: cleanText(sessionService.getSession()?.id, 120)
-        });
-        if (!progressPayload) {
-          return;
-        }
-        progressSender(AGENT_PROGRESS_EVENT, progressPayload);
-      }
+      onEvent: emitAgentProgress
     });
     const controllerRuntime = {
       requestId,
       clientRequestId,
       lifecycleRecorder,
+      emitAgentProgress,
       chatSessionStoragePath: cleanText(chatSessionStoragePath, 2400)
     };
     const llmSource = typeof controllerUtils.resolveAgentLlmSource === 'function'

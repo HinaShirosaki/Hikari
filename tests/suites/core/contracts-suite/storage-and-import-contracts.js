@@ -44,7 +44,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
       }
     });
 
-    test('storage bundle helper sync + hydrate roundtrip restores protocols notebook inventory and samples from sidecars/sqlite', async () => {
+    test('storage bundle helper sync + hydrate roundtrip restores protocols notebook inventory and samples from folders/sqlite', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
@@ -80,11 +80,19 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
         };
         await bundleHelpers.syncBundleFromSnapshot({ dataFilePath, snapshot: sourceSnapshot });
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', 'MEMORY.md'));
+        const samplesPath = path.join(tempDir, 'Samples', 'samples.json');
+        const samplesPayload = JSON.parse(await fsPromises.readFile(samplesPath, 'utf8'));
+        assert.equal(samplesPayload.samples.length, 1);
+        assert.equal(samplesPayload.samples[0].id, 'sample-1');
+        await assert.rejects(
+          fsPromises.access(path.join(tempDir, 'example.ena.notebook-pages.json'))
+        );
 
         const compactSnapshot = {
           settings: { appearance: { uiStyle: 'classic', themeColor: '#336699' } },
           protocols: [],
           notebookEntries: [],
+          samples: [],
           labInventory: { chemicals: [], blocks: [], lastLocationNumber: 0, locationCodeMap: {}, locationCodeNextByLocation: {} },
           inventory: {}
         };
@@ -100,6 +108,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
         assert.equal(Array.isArray(hydrated.snapshot?.samples), true);
         assert.equal(hydrated.snapshot.samples.length, 1);
         assert.equal(hydrated.snapshot.samples[0].id, 'sample-1');
+        assert.equal(hydrated.migration.applied.includes('samples_folder'), true);
         assert.equal(hydrated.snapshot?.settings?.appearance?.uiStyle, 'classic');
 
         const lookupRuntime = createAgentLookupRuntime({
@@ -216,6 +225,19 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
             createdAt: '2026-04-20T09:00:00.000Z'
           }
         }, null, 2), 'utf8');
+        await fsPromises.mkdir(path.join(tempDir, 'Samples'), { recursive: true });
+        await fsPromises.writeFile(path.join(tempDir, 'Samples', 'samples.json'), JSON.stringify({
+          schema_name: 'enana_samples',
+          schema_version: '1.0.0',
+          updated_at: '2026-04-20T10:30:00.000Z',
+          samples: [{
+            id: 'sample-1',
+            code: 'S-001',
+            name: 'Atlas construct',
+            type: 'plasmid',
+            updatedAt: '2026-04-20T10:30:00.000Z'
+          }]
+        }, null, 2), 'utf8');
 
         const imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
         assert.equal(imported.statePatch.projects.length, 1);
@@ -224,7 +246,10 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
         assert.equal(imported.statePatch.notebookEntries.length, 1);
         assert.equal(imported.statePatch.notebookEntries[0].notebookType, 'biology');
         assert.equal(imported.statePatch.notebookEntries[0].storageFolder.includes(`${path.sep}Project${path.sep}Atlas${path.sep}Notebook${path.sep}`), true);
+        assert.equal(imported.statePatch.samples.length, 1);
+        assert.equal(imported.statePatch.samples[0].id, 'sample-1');
         assert.equal(imported.summary.notebookEntries, 1);
+        assert.equal(imported.summary.samples, 1);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -340,7 +365,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
         assert.equal(result.summary.personalInventoryContainers > 0, true);
         assert.equal(Array.isArray(result.statePatch?.protocols), true);
         assert.equal(result.statePatch.protocols.length > 0, true);
-        const manifestPath = path.join(tempDir, 'enana-storage-manifest.json');
+        const manifestPath = path.join(tempDir, 'hikari-storage-manifest.json');
         const manifestRaw = await fsPromises.readFile(manifestPath, 'utf8');
         const manifest = JSON.parse(manifestRaw);
         assert.equal(manifest.summary.sequenceEntries > 0, true);
@@ -358,8 +383,8 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
       assert.match(preloadSource, /syncSqliteBundle:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(STORAGE\.SYNC_SQLITE_BUNDLE, payload\)/);
       assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.SYNC_SQLITE_BUNDLE/);
       assert.match(chemicalInventorySource, /window\.enanaApi\?\.syncSqliteBundle/);
-      assert.match(chemicalInventorySource, /const targetPath = `\$\{normalizedRoot\}\/enana-chemicals\.index\.sqlite`;/);
-      assert.equal(chemicalInventorySource.includes('enana-chemicals.ena.json'), false);
+      assert.match(chemicalInventorySource, /const targetPath = `\$\{normalizedRoot\}\/hikari-chemicals\.index\.sqlite`;/);
+      assert.equal(chemicalInventorySource.includes('hikari-chemicals.ena.json'), false);
     });
 
     test('chemical bundle hydration/import no longer depends on legacy chemical json fallback', () => {

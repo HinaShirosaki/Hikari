@@ -79,11 +79,18 @@ export function createCropController({ runtime, elements, deps }) {
   }
 
   function setCropUiState() {
-    if (elements.gelApplyCropBtn) {
-      elements.gelApplyCropBtn.disabled = !runtime.cropperActive || !runtime.cropperInstance;
+    const isCropping = Boolean(runtime.cropperActive && runtime.cropperInstance);
+    if (elements.gelStartCropBtn) {
+      elements.gelStartCropBtn.disabled = !runtime.currentImage && !isCropping;
+      elements.gelStartCropBtn.textContent = isCropping ? 'Apply Crop' : 'Start Crop';
+      elements.gelStartCropBtn.classList.toggle('is-active', isCropping);
+      elements.gelStartCropBtn.setAttribute('aria-pressed', isCropping ? 'true' : 'false');
     }
     if (elements.gelCancelCropBtn) {
-      elements.gelCancelCropBtn.disabled = !runtime.cropperActive;
+      elements.gelCancelCropBtn.disabled = !isCropping;
+    }
+    if (elements.gelResetCropBtn) {
+      elements.gelResetCropBtn.disabled = !runtime.originalImage;
     }
   }
 
@@ -122,6 +129,14 @@ export function createCropController({ runtime, elements, deps }) {
       return;
     }
     deps.setStatus('Crop mode: adjust selection with Cropper.js, then click Apply Crop.');
+  }
+
+  function onCropAction() {
+    if (runtime.cropperActive && runtime.cropperInstance) {
+      onApplyCrop();
+      return;
+    }
+    onStartCrop();
   }
 
   function onCancelCrop() {
@@ -177,6 +192,7 @@ export function createCropController({ runtime, elements, deps }) {
     leaveCropMode,
     onApplyCrop,
     onCancelCrop,
+    onCropAction,
     onResetCrop,
     onStartCrop,
     setCropUiState

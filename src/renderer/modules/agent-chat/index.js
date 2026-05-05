@@ -246,6 +246,7 @@ export function initAgentChat({
       controller_codex_agent_selected: 'Preparing Codex agent request',
       controller_codex_agent: 'Routing to Codex agent',
       codex_agent_started: 'Codex agent running',
+      codex_agent_stream: 'Codex response streaming',
       codex_agent_completed: 'Codex agent completed',
       parser_completed: 'Intent parsed',
       protocol_to_notebook_followup: 'Continuing notebook follow-up',
@@ -293,6 +294,10 @@ export function initAgentChat({
   }
 
   function buildLiveProgressSummary(eventPayload = {}) {
+    const streamText = extractLiveStreamText(eventPayload);
+    if (streamText) {
+      return streamText;
+    }
     const thinkingTrace = extractLiveThinkingTrace(eventPayload);
     if (thinkingTrace) {
       return thinkingTrace;
@@ -319,6 +324,23 @@ export function initAgentChat({
       }
     }
     return trimText(eventPayload?.message, 600) || getProgressRowText(eventPayload) || 'Working on this...';
+  }
+
+  function extractLiveStreamText(eventPayload = {}) {
+    const meta = eventPayload?.meta && typeof eventPayload.meta === 'object'
+      ? eventPayload.meta
+      : {};
+    return trimText(
+      eventPayload?.stream_text
+      || eventPayload?.streamText
+      || eventPayload?.accumulated_text
+      || eventPayload?.accumulatedText
+      || meta.stream_text
+      || meta.streamText
+      || meta.accumulated_text
+      || meta.accumulatedText,
+      120000
+    );
   }
 
   function extractLiveThinkingTrace(eventPayload = {}) {
@@ -456,9 +478,11 @@ export function initAgentChat({
     const currentMeta = liveAssistantMessage.meta?.live_progress || {};
     const activityRows = upsertLiveProgressRows(currentMeta.activity_rows, eventPayload);
     const thinkingRows = upsertLiveThinkingRows(currentMeta.thinking_rows, eventPayload);
+    const streamText = extractLiveStreamText(eventPayload) || currentMeta.stream_text || '';
+    const summaryText = streamText || buildLiveProgressSummary(eventPayload);
     liveAssistantMessage = {
       ...liveAssistantMessage,
-      text: buildLiveProgressSummary(eventPayload),
+      text: summaryText,
       meta: {
         ...liveAssistantMessage.meta,
         live_progress: {
@@ -469,7 +493,8 @@ export function initAgentChat({
           routing_intent: trimText(eventPayload?.routing_intent, 120) || currentMeta.routing_intent,
           stage: trimText(eventPayload?.stage, 80) || currentMeta.stage,
           status: trimText(eventPayload?.status, 40) || currentMeta.status,
-          message: buildLiveProgressSummary(eventPayload),
+          message: summaryText,
+          stream_text: streamText,
           meta: eventPayload?.meta && typeof eventPayload.meta === 'object' ? eventPayload.meta : currentMeta.meta,
           activity_rows: activityRows,
           thinking_rows: thinkingRows,

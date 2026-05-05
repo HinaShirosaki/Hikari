@@ -447,7 +447,7 @@ function createAgentControllerCore({
         skillPromptPayload,
         selectionInsight: payload?.agent?.selectionInsight || payload?.selectionInsight || null,
         lifecycleRecorder,
-        cwd: process.cwd()
+        emitAgentProgress: runtime?.emitAgentProgress
       });
       throwIfAgentRequestAborted('Agent request stopped after Codex agent runtime.');
       if (executionFlags.developerMode === true && codexResult && typeof codexResult === 'object') {

@@ -170,12 +170,8 @@ export function initProtocolManagement({
       return;
     }
 
-    const firstProtocol = [...state.protocols].sort(listController.compareProtocols)[0];
-    if (firstProtocol) {
-      setSelectedProtocol(firstProtocol.id);
-      renderProtocolView(firstProtocol);
-      showViewPanel();
-    }
+    setSelectedProtocol('');
+    showEmptyPanel({ resetEditor: localState.protocolDetailMode === 'edit' });
   }
 
   function onCancelEditor() {
@@ -216,6 +212,7 @@ export function initProtocolManagement({
       return;
     }
     setSelectedProtocol(protocol.id);
+    listController?.renderList?.();
     openEditorWithDraft(protocol, 'Edit Protocol', { isCreateMode: false });
   }
 
@@ -225,6 +222,7 @@ export function initProtocolManagement({
       return;
     }
     setSelectedProtocol(protocol.id);
+    listController?.renderList?.();
     renderProtocolView(protocol);
     showViewPanel();
   }

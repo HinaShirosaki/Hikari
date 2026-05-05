@@ -655,7 +655,7 @@ const removedCodeGuards = [
   ['ketcher-embedded.html', /file:\/\//, false],
   ['index.html', /lab-notebook-view/, false],
   ['src/renderer/renderer.js', /VIEWS\.LAB_NOTEBOOK/, false],
-  ['forge.config.js', /enana-data/, true],
+  ['forge.config.js', /hikari-data/, true],
   ['package.json', /"build:ui": "node scripts\/build-ui\.mjs"/, true],
   ['package.json', /"check:dom-ids": "node scripts\/check-dom-ids\.mjs"/, true],
   ['package.json', /"dist": "npm run build:ui && electron-forge make"/, true],

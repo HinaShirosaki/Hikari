@@ -32,6 +32,15 @@ function pickLatestTimestamp(...values) {
   return latest;
 }
 
+function hasWorkflowContext(value) {
+  const workflowContext = ensureObject(value?.workflowContext);
+  return Boolean(
+    cleanText(workflowContext.workflowId, 220)
+    || cleanText(workflowContext.workflowEntryId, 220)
+    || cleanText(workflowContext.workflowBlockId, 220)
+  );
+}
+
 function humanizeStatus(value, fallback = 'not done') {
   const normalized = cleanText(value, 80)
     .replace(/[_-]+/g, ' ')
@@ -122,6 +131,9 @@ function collectProjectMemoryRecords(snapshot = {}) {
 
   asArray(safeSnapshot.notebookEntries).forEach((entry) => {
     const normalized = ensureObject(entry);
+    if (hasWorkflowContext(normalized)) {
+      return;
+    }
     const record = getOrCreateProjectRecord(resolveProjectMeta({
       projectId: normalized.projectId,
       projectName: normalized.projectName,
@@ -186,9 +198,22 @@ function collectProjectMemoryRecords(snapshot = {}) {
     record.updatedAt = pickLatestTimestamp(record.updatedAt, normalized.updatedAt);
   });
 
-  return [...byKey.values()].sort((left, right) => (
-    String(left.displayName || left.folderName).localeCompare(String(right.displayName || right.folderName))
-  ));
+  return [...byKey.values()]
+    .filter((record) => {
+      const counts = ensureObject(record.counts);
+      const linkedCount = Number(counts.notebookEntries) + Number(counts.workflows)
+        + Number(counts.papers) + Number(counts.assays) + Number(counts.gelAnalyses);
+      const isEmptyUntitledProject = normalizeFolderKey(record.folderName) === 'untitled_project'
+        && cleanText(record.displayName, 320) === 'Untitled Project'
+        && linkedCount === 0;
+      const isAnonymousUntitledProject = normalizeFolderKey(record.folderName) === 'untitled_project'
+        && cleanText(record.displayName, 320) === 'Untitled Project'
+        && !cleanText(record.projectId, 220);
+      return !isEmptyUntitledProject && !isAnonymousUntitledProject;
+    })
+    .sort((left, right) => (
+      String(left.displayName || left.folderName).localeCompare(String(right.displayName || right.folderName))
+    ));
 }
 
 function buildProjectMemoryMarkdown(projectRecord = {}) {
@@ -212,7 +237,7 @@ function buildProjectMemoryMarkdown(projectRecord = {}) {
     `- Gel analyses: ${Number(counts.gelAnalyses) || 0}`,
     '',
     '## Notes',
-    '- Auto-generated from Enana storage metadata.',
+    '- Auto-generated from Hikari storage metadata.',
     '- Update the project record in the app to refresh this summary.'
   ].join('\n');
 }
@@ -255,7 +280,7 @@ function buildWorkflowMemoryMarkdown({
     `- Result files: ${Number(summary.resultFileCount) || 0}`,
     '',
     '## Notes',
-    '- Auto-generated from Enana workflow storage metadata.',
+    '- Auto-generated from Hikari workflow storage metadata.',
     '- Update the workflow in the app to refresh this summary.'
   ].join('\n');
 }

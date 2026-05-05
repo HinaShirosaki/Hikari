@@ -638,25 +638,25 @@ export function createSequenceViewerCloningDesignController(config = {}) {
 
     elements.cloningDesignResult.innerHTML = `
       <section class="sequence-viewer-cloning-design-result-section">
-        <div class="plannotate-card-head">
+        <div class="result-card-head">
           <h4>Plan</h4>
         </div>
         ${renderPlanSummary(displayPlan, source, range)}
       </section>
       <section class="sequence-viewer-cloning-design-result-section">
-        <div class="plannotate-card-head">
+        <div class="result-card-head">
           <h4>Primers</h4>
         </div>
         ${renderPrimerTable(asArray(displayPlan.primers))}
       </section>
       <section class="sequence-viewer-cloning-design-result-section">
-        <div class="plannotate-card-head">
+        <div class="result-card-head">
           <h4>Procedure</h4>
         </div>
         ${renderProcedure(displayPlan)}
       </section>
       <section class="sequence-viewer-cloning-design-result-section">
-        <div class="plannotate-card-head">
+        <div class="result-card-head">
           <h4>Warnings</h4>
         </div>
         ${renderWarnings(asArray(displayPlan.warnings))}

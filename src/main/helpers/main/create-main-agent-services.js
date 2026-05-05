@@ -153,7 +153,7 @@ function createMainAgentServices(deps = {}) {
   const sharedLlmTransportDeps = {
     parsePdfDataUrl,
     toInputText,
-    requestCodexCliText: requestCodexAgentText,
+    requestCodexCliText,
     getCodexCliWorkingDirectory,
     requestClaudeMessagesWithBackoff,
     requestGeminiGenerateContentWithBackoff,
@@ -433,7 +433,7 @@ function createMainAgentServices(deps = {}) {
       data_file_path: cleanText(getDefaultDataFilePath(), 2000)
     }),
     getContextDefaults: () => ({
-      cwd: process.cwd(),
+      cwd: getCodexCliWorkingDirectory(),
       dataFilePath: cleanText(getDefaultDataFilePath(), 2000),
       fallbackDataFilePath: cleanText(getDefaultDataFilePath(), 2000)
     })

@@ -527,7 +527,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
     }
 
     const normalizedRoot = storagePath.replace(/[\\/]+$/, '');
-    const targetPath = `${normalizedRoot}/enana-chemicals.index.sqlite`;
+    const targetPath = `${normalizedRoot}/hikari-chemicals.index.sqlite`;
     const inventorySnapshot = {
       labInventory: {
         chemicals: Array.isArray(state.labInventory.chemicals) ? state.labInventory.chemicals : [],
@@ -590,7 +590,7 @@ export function initLabCommonInventory({ state, persist, createId, safeText }) {
         .filter((email) => email && email.trim())
     ));
 
-    const from = state.settings.personalInfo.enanaEmail || 'system@enana.local';
+    const from = state.settings.personalInfo.enanaEmail || 'system@hikari.local';
     recipients
       .filter((to) => to !== from)
       .forEach((to) => {

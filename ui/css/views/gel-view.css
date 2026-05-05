@@ -145,9 +145,6 @@
   font-family: var(--font-app);
 }
 
-.gel-lane-profile-empty {
-  font-size: 11px;
-}
 
 .gel-lane-profile-meta {
   display: flex;
@@ -521,8 +518,7 @@ body.theme-night .gel-report-json {
   min-width: 0;
 }
 
-#gel-form #gel-image-file,
-#gel-form #gel-notebook-entry {
+#gel-form #gel-image-file {
   width: 100%;
 }
 

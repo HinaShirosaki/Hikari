@@ -55,7 +55,7 @@ export function createProtocolSharingController({
     const firstMemberEmail = state.members
       .map((member) => String(member.enanaEmail || '').trim())
       .find(Boolean);
-    return firstMemberEmail || 'system@enana.local';
+    return firstMemberEmail || 'system@hikari.local';
   }
 
   function getShareTargetEmails() {
@@ -179,7 +179,7 @@ export function createProtocolSharingController({
 
     const from = resolveSenderEmail();
     if (to.toLowerCase() === from.toLowerCase()) {
-      setShareStatus('Cannot share a protocol to your own Enana email.');
+      setShareStatus('Cannot share a protocol to your own Hikari email.');
       return;
     }
 

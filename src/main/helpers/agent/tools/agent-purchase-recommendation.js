@@ -1220,7 +1220,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
     }
     const response = await fetchImpl(url, {
       headers: {
-        'user-agent': 'Mozilla/5.0 Enana Purchase Recommendation'
+        'user-agent': 'Mozilla/5.0 Hikari Purchase Recommendation'
       }
     });
     const failed = response?.ok === false || Number(response?.status) >= 400;

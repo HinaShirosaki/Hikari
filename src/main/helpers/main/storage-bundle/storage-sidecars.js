@@ -17,6 +17,7 @@ const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 
 const PROTOCOL_SIDECAR_SCHEMA = 'enana_protocols';
 const NOTEBOOK_SIDECAR_SCHEMA = 'enana_notebook_pages';
+const SAMPLE_SIDECAR_SCHEMA = 'enana_samples';
 const SIDECAR_SCHEMA_VERSION = '1.0.0';
 const PROTOCOL_FILE_NAME = 'protocol.json';
 
@@ -55,6 +56,15 @@ function buildNotebookPagesSidecar(snapshot, updatedAt) {
     schema_version: SIDECAR_SCHEMA_VERSION,
     updated_at: updatedAt,
     notebookPages: asArray(snapshot.notebookEntries)
+  };
+}
+
+function buildSamplesSidecar(snapshot, updatedAt) {
+  return {
+    schema_name: SAMPLE_SIDECAR_SCHEMA,
+    schema_version: SIDECAR_SCHEMA_VERSION,
+    updated_at: updatedAt,
+    samples: asArray(snapshot.samples)
   };
 }
 
@@ -182,6 +192,19 @@ async function writeProjectMemoryFiles(storageRootPath, snapshot) {
   return writtenPaths;
 }
 
+async function writeSamplesFile(samplesPath, snapshot, updatedAt) {
+  if (!samplesPath) {
+    return '';
+  }
+  await fs.mkdir(path.dirname(samplesPath), { recursive: true });
+  await fs.writeFile(
+    samplesPath,
+    JSON.stringify(buildSamplesSidecar(snapshot, updatedAt), null, 2),
+    'utf8'
+  );
+  return samplesPath;
+}
+
 async function syncBundleFromSnapshot({
   dataFilePath,
   snapshot,
@@ -204,7 +227,8 @@ async function syncBundleFromSnapshot({
   await Promise.all([
     bundlePaths.papersRootPath ? fs.mkdir(bundlePaths.papersRootPath, { recursive: true }) : Promise.resolve(),
     bundlePaths.assaysRootPath ? fs.mkdir(bundlePaths.assaysRootPath, { recursive: true }) : Promise.resolve(),
-    bundlePaths.gelsRootPath ? fs.mkdir(bundlePaths.gelsRootPath, { recursive: true }) : Promise.resolve()
+    bundlePaths.gelsRootPath ? fs.mkdir(bundlePaths.gelsRootPath, { recursive: true }) : Promise.resolve(),
+    bundlePaths.samplesRootPath ? fs.mkdir(bundlePaths.samplesRootPath, { recursive: true }) : Promise.resolve()
   ]);
   const protocolFilePaths = await writeProtocolFiles(bundlePaths.protocolsPath, safeSnapshot, updatedAt);
   const notebookPageFolderPaths = bundlePaths.storageRootPath
@@ -213,11 +237,8 @@ async function syncBundleFromSnapshot({
   const projectMemoryFilePaths = bundlePaths.storageRootPath
     ? await writeProjectMemoryFiles(bundlePaths.storageRootPath, safeSnapshot)
     : [];
-  await fs.writeFile(
-    bundlePaths.notebookPagesPath,
-    JSON.stringify(buildNotebookPagesSidecar(safeSnapshot, updatedAt), null, 2),
-    'utf8'
-  );
+  await fs.rm(bundlePaths.notebookPagesPath, { force: true }).catch(() => {});
+  const samplesPath = await writeSamplesFile(bundlePaths.samplesPath, safeSnapshot, updatedAt);
   await writeSqliteBundleIndex(bundlePaths.sqlitePath, safeSnapshot);
   await writeChemicalSqliteBundleIndex(bundlePaths.chemicalsSqlitePath, safeSnapshot);
   const workflowSync = await syncWorkflowRootFromSnapshot({
@@ -229,9 +250,10 @@ async function syncBundleFromSnapshot({
     sidecarPaths: {
       protocolsPath: bundlePaths.protocolsPath,
       protocolFilePaths,
-      notebookPagesPath: bundlePaths.notebookPagesPath,
+      notebookPagesPath: '',
       notebookPageFolderPaths,
-      projectMemoryFilePaths
+      projectMemoryFilePaths,
+      samplesPath
     },
     workflowPaths: {
       workflowRootPath: workflowSync?.workflowRootPath || '',

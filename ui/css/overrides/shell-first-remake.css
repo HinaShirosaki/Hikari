@@ -1,7 +1,6 @@
 /* Shell-first neutral overrides for dock modules and key views */
 
 .calendar-view-switch,
-#tool-box-view .plannotate-mode-switch,
 #sequence-viewer-view .sequence-viewer-library-switch,
 #sequence-viewer-detail-view .sequence-viewer-mode-switch {
   gap: 4px;
@@ -12,7 +11,6 @@
 }
 
 .calendar-view-switch > button,
-#tool-box-view .plannotate-mode-switch > button,
 #sequence-viewer-view .sequence-viewer-library-switch > button,
 #sequence-viewer-detail-view .sequence-viewer-mode-switch > button {
   border: 0;
@@ -24,8 +22,6 @@
 
 .calendar-view-switch > button:hover,
 .calendar-view-switch > button:focus-visible,
-#tool-box-view .plannotate-mode-switch > button:hover,
-#tool-box-view .plannotate-mode-switch > button:focus-visible,
 #sequence-viewer-view .sequence-viewer-library-switch > button:hover,
 #sequence-viewer-view .sequence-viewer-library-switch > button:focus-visible,
 #sequence-viewer-detail-view .sequence-viewer-mode-switch > button:hover,
@@ -35,7 +31,6 @@
 }
 
 .calendar-view-switch > .calendar-view-active,
-#tool-box-view .plannotate-mode-btn-active,
 #sequence-viewer-view .sequence-viewer-library-switch-btn-active,
 #sequence-viewer-detail-view .sequence-viewer-mode-btn-active {
   background: var(--surface-subtle);
@@ -45,19 +40,15 @@
 #tool-box-view .calc-output,
 #tool-box-view .buffer-output,
 #tool-box-view .sequence-block,
-#tool-box-view .plannotate-controls,
-#tool-box-view .plannotate-result-card,
-#tool-box-view .plannotate-map-shell,
-#tool-box-view .plannotate-table-wrap,
+#tool-box-view .result-card,
+#tool-box-view .result-table-wrap,
 #tool-box-view .crispr-controls,
 #tool-box-view .colony-counter-controls,
 #tool-box-view .colony-cropper-shell,
 #tool-box-view .colony-preview-canvas,
-#tool-box-view .protein-assembly-controls,
 #tool-box-view .protein-assembly-row,
 #sample-registry-view .sample-compound-fields,
 #sample-registry-view .sample-cell-passage-fields,
-#sequence-viewer-view .sequence-viewer-home-toolbar,
 #sequence-viewer-view .sequence-viewer-preview-host,
 #sequence-viewer-detail-view .sequence-viewer-detail-topbar,
 #sequence-viewer-detail-view .sequence-viewer-controls,
@@ -81,37 +72,16 @@
   box-shadow: none;
 }
 
-#tool-box-view .plannotate-map-host,
-#tool-box-view .plannotate-panzoom-viewport,
-#tool-box-view .plannotate-linear-map {
-  border-color: var(--line);
-  border-radius: 8px;
-  background:
-    linear-gradient(to right, color-mix(in srgb, var(--line-soft) 80%, transparent) 1px, transparent 1px),
-    var(--surface-elevated);
-  background-size: 12.5% 100%;
-}
 
-#tool-box-view .plannotate-panzoom-viewport,
-#tool-box-view .plannotate-map-shell {
-  background: var(--surface-elevated);
-}
 
-#tool-box-view .plannotate-table th,
+#tool-box-view .result-table th,
 #workflow-management-view .workflow-context-item:hover,
 #sequence-viewer-detail-view .sequence-viewer-context-item:hover:not(:disabled),
 #sequence-viewer-detail-view .sequence-viewer-context-item:focus-visible:not(:disabled) {
   background: var(--surface-subtle);
 }
 
-#tool-box-view .plannotate-map-tooltip {
-  border-color: var(--line);
-  background: var(--surface-elevated);
-  box-shadow: 0 2px 8px rgba(27, 20, 14, 0.1);
-  color: var(--text);
-}
 
-#tool-box-view .plannotate-mode-btn,
 #workflow-management-view .workflow-context-item,
 #sequence-viewer-detail-view .sequence-viewer-context-item {
   color: var(--text);
@@ -123,7 +93,6 @@
 
 #tool-box-view .crispr-risk-badge,
 #protocol-management-view .placeholder-chip,
-#protocol-management-view .step-badge,
 #sequence-viewer-view .sequence-viewer-feature-search-type {
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -224,9 +193,6 @@
   color: var(--strong);
 }
 
-#workflow-management-view .workflow-node-body p {
-  color: var(--muted);
-}
 
 #workflow-management-view .workflow-node-index,
 #workflow-management-view .workflow-port {
@@ -261,11 +227,6 @@
   gap: 16px;
 }
 
-#papers-view .papers-paper-row-main {
-  border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 8px 10px;
-}
 
 #papers-view .papers-folder-item {
   border: 1px solid transparent;
@@ -274,9 +235,7 @@
 }
 
 #papers-view .papers-folder-item:hover,
-#papers-view .papers-folder-item:focus-visible,
-#papers-view .papers-paper-row-main:hover,
-#papers-view .papers-paper-row-main:focus-visible {
+#papers-view .papers-folder-item:focus-visible {
   background: var(--surface-subtle);
 }
 
@@ -337,9 +296,6 @@
   color: var(--strong);
 }
 
-#sequence-viewer-view .sequence-viewer-home-grid {
-  gap: 16px;
-}
 
 #sequence-viewer-view .sequence-viewer-library-item,
 #sequence-viewer-view .sequence-viewer-feature-search-item,

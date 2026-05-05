@@ -145,6 +145,25 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(/controller_intent_only/.test(controllerCoreSource), true);
     });
 
+    test('codex-owned lifecycle stays scoped to agent chat while utility calls use the CLI adapter', () => {
+      const mainRuntimeSource = readLocalSource('src', 'main', 'app', 'main-runtime.js');
+      const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
+      const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
+      const systemRegistrarSource = readLocalSource('src', 'main', 'helpers', 'main', 'register-system-ipc.js');
+      const protocolPolishSource = readLocalSource('src', 'renderer', 'modules', 'protocol', 'polish.js');
+      const papersLlmSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'llm.js');
+
+      assert.match(controllerCoreSource, /codexAgentRuntime\.run\(/);
+      assert.match(mainAgentServicesSource, /const codexAgentRuntime = createCodexAgentRuntime\(\{[\s\S]*requestCodexAgentText,/);
+      assert.match(mainAgentServicesSource, /const sharedLlmTransportDeps = \{[\s\S]*requestCodexCliText,[\s\S]*getCodexCliWorkingDirectory/);
+      assert.equal(/requestCodexCliText:\s*requestCodexAgentText/.test(mainAgentServicesSource), false);
+      assert.match(mainRuntimeSource, /system:\s*\{[\s\S]*requestCodexCliText,[\s\S]*getCodexCliWorkingDirectory/);
+      assert.equal(mainRuntimeSource.includes('agentServices.requestCodexAgentText || requestCodexCliText'), false);
+      assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_GENERATE/);
+      assert.match(protocolPolishSource, /requestLlmText/);
+      assert.match(papersLlmSource, /runCodexLlmPrompt/);
+    });
+
     test('main agent logs persist redacted llm traces and replay wiring', () => {
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');

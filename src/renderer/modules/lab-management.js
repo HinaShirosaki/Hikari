@@ -73,7 +73,7 @@ export function initLabManagement({ state, persist, createId, safeText }) {
         <h3>${safeText(member.name)}</h3>
         <p><strong>Institution Email:</strong> ${safeText(member.institutionEmail)}</p>
         <p><strong>Position:</strong> ${safeText(member.position)}</p>
-        <p><strong>Enana Email:</strong> ${safeText(member.enanaEmail)}</p>
+        <p><strong>Hikari Email:</strong> ${safeText(member.enanaEmail)}</p>
         <div class="card-actions">
           <button class="ghost-btn" data-member-edit="${member.id}">Edit</button>
           <button class="danger-btn" data-member-delete="${member.id}">Delete</button>

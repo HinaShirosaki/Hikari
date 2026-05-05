@@ -75,25 +75,8 @@
   color: var(--primary);
 }
 
-.workflow-list-group {
-  display: grid;
-  gap: 10px;
-}
 
-.workflow-list-group-label {
-  margin: 0;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
 
-.workflow-create-run {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--line-soft);
-}
 
 .workflow-grid {
   align-items: end;
@@ -206,17 +189,7 @@
   background: var(--surface-subtle);
 }
 
-.workflow-node-body {
-  padding: 2px 12px 10px;
-  display: grid;
-  gap: 8px;
-}
 
-.workflow-node-body p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.84rem;
-}
 
 .workflow-node-remove {
   position: absolute;
@@ -340,36 +313,14 @@
   background: var(--surface);
 }
 
-.workflow-card-head {
-  display: flex;
-  gap: 10px;
-  justify-content: space-between;
-  align-items: flex-start;
-}
 
-.workflow-card-progress {
-  padding: 4px 8px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
 
 .workflow-card h3,
 .workflow-card p {
   margin: 0;
 }
 
-.workflow-card-active {
-  border-color: color-mix(in srgb, var(--accent) 50%, var(--line-soft));
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
-}
 
-.workflow-card-editing {
-  box-shadow:
-    inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
-}
 
 .workflow-execution-header {
   display: flex;
@@ -404,63 +355,15 @@
   min-height: 0;
 }
 
-.workflow-run-list {
-  display: grid;
-  gap: 10px;
-  margin-bottom: 14px;
-}
 
-.workflow-run-table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--line-soft);
-  background: var(--surface);
-}
 
-.workflow-run-table {
-  width: 100%;
-  border-collapse: collapse;
-}
 
-.workflow-run-table th,
-.workflow-run-table td {
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--line-soft);
-  text-align: left;
-  vertical-align: middle;
-}
 
-.workflow-run-table thead th {
-  font-size: 0.8rem;
-  color: var(--primary);
-  background: var(--surface-elevated);
-}
 
-.workflow-run-table tbody tr.is-active td {
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
-}
 
-.workflow-run-table tbody tr:last-child td {
-  border-bottom: 0;
-}
 
-.workflow-run-select {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-}
 
-.workflow-run-empty {
-  padding: 16px;
-  border: 1px dashed var(--line-soft);
-  background: var(--surface);
-}
 
-.workflow-run-empty p {
-  margin: 0;
-}
 
 .workflow-execution-shell {
   display: grid;
@@ -667,10 +570,6 @@
   color: var(--text);
 }
 
-.workflow-step-inline-actions {
-  display: flex;
-  justify-content: flex-start;
-}
 
 .workflow-placeholder-table {
   width: 100%;
@@ -751,22 +650,8 @@
   background: #fff;
 }
 
-.workflow-step-textarea,
-.workflow-step-file-field {
-  display: grid;
-  gap: 6px;
-}
 
-.workflow-step-textarea textarea {
-  width: 100%;
-  resize: vertical;
-}
 
-.workflow-step-tool-row {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
 
 .workflow-branch-section {
   display: grid;
@@ -891,19 +776,18 @@ body.workflow-dragging {
   }
 
   .workflow-execution-header,
-  .workflow-step-detail-header,
-  .workflow-branch-card-head {
+.workflow-branch-card-head {
     grid-template-columns: minmax(0, 1fr);
     display: grid;
   }
 
   .workflow-entry-column,
-  .workflow-entry-cell {
+.workflow-entry-cell {
     min-width: 180px !important;
   }
 
   .workflow-execution-table th,
-  .workflow-execution-table td {
+.workflow-execution-table td {
     min-width: 138px;
     padding: 10px;
   }
@@ -937,9 +821,6 @@ body.theme-night .workflow-node-header {
   color: var(--text);
 }
 
-body.theme-night .workflow-node-body p {
-  color: #b2c2e0;
-}
 
 body.theme-night .workflow-port {
   border-color: rgba(171, 204, 246, 0.45);

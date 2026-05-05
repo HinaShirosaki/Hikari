@@ -23,5 +23,5 @@ Updated: 2026-04-15T18:11:48.146Z
 - Result files: 0
 
 ## Notes
-- Auto-generated from Enana workflow storage metadata.
+- Auto-generated from Hikari workflow storage metadata.
 - Update the workflow in the app to refresh this summary.

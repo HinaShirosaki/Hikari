@@ -990,6 +990,21 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
     client_request_id: payloadSeen.clientRequestId,
     request_id: 'req-live-1',
     chat_session_id: 'chat-2',
+    routing_intent: 'codex_agent',
+    stage: 'codex_agent_stream',
+    status: 'streaming',
+    message: 'Partial Codex answer',
+    meta: {
+      stream_text: 'Partial Codex answer'
+    }
+  });
+  assert.match(history.innerHTML, /Partial Codex answer/);
+  assert.match(status.textContent, /Partial Codex answer/);
+
+  progressHandler({
+    client_request_id: payloadSeen.clientRequestId,
+    request_id: 'req-live-1',
+    chat_session_id: 'chat-2',
     routing_intent: 'general_science_question',
     stage: 'science_clarification_completed',
     status: 'ok',

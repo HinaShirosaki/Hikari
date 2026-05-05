@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('node:path');
 const { throwIfAgentRequestAborted } = require('../shared/agent-request-context.js');
 
 const FINAL_RESPONSE_SCHEMA = {
@@ -31,6 +32,19 @@ function cloneJson(value, fallback = null) {
     return JSON.parse(JSON.stringify(value));
   } catch {
     return fallback;
+  }
+}
+
+function isFilesystemRoot(directoryPath = '') {
+  const text = String(directoryPath || '').trim();
+  if (!text) {
+    return false;
+  }
+  try {
+    const resolved = path.resolve(text);
+    return resolved === path.parse(resolved).root;
+  } catch {
+    return false;
   }
 }
 
@@ -140,13 +154,13 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
   const selectionInsight = ensureObject(input.selectionInsight);
   const skillPromptPayload = ensureObject(input.skillPromptPayload);
   const blocks = [
-    '# Enana Codex-Owned Agent Request',
+    '# Hikari Codex-Owned Agent Request',
     '',
-    'You are handling this Enana chat turn as the Codex reasoning agent. Do the complete lifecycle yourself in this single Codex run: clarify if necessary, discover tool schemas, call Enana MCP tools, verify the inference, and synthesize the final answer.',
+    'You are handling this Hikari chat turn as the Codex reasoning agent. Do the complete lifecycle yourself in this single Codex run: clarify if necessary, discover tool schemas, call Hikari MCP tools, verify the inference, and synthesize the final answer.',
     '',
-    'AGENTS.md in this workspace contains the durable Enana Codex agent contract. Follow it together with the request details below.',
+    'AGENTS.md in this workspace contains the durable Hikari Codex agent contract. Follow it together with the request details below.',
     '',
-    'Use the MCP server named `enana` for Enana app data, papers, protocols, notebooks, inventory, memory, and structured tool access. Use native Codex search or the Enana `web-search` tool for external web evidence.',
+    'Use the MCP server named `hikari` for Hikari app data, papers, protocols, notebooks, inventory, memory, and structured tool access. Use native Codex search or the Hikari `web-search` tool for external web evidence.',
     '',
     'Final response rule: return exactly one JSON object and no surrounding prose. The JSON shape must be:',
     JSON.stringify(FINAL_RESPONSE_SCHEMA, null, 2),
@@ -161,7 +175,7 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
       ? `Selection insight context:\n${JSON.stringify(selectionInsight, null, 2)}`
       : '',
     conversationText ? `Recent conversation:\n${conversationText}` : '',
-    attachmentText ? `Attachments supplied by Enana:\n${attachmentText}` : '',
+    attachmentText ? `Attachments supplied by Hikari:\n${attachmentText}` : '',
     cleanText(skillPromptPayload.active_skills_prompt, 6000)
       ? `Active skills:\n${cleanText(skillPromptPayload.active_skills_prompt, 6000)}`
       : '',
@@ -249,12 +263,48 @@ function createCodexAgentRuntime(deps = {}) {
         error: 'Codex agent runtime is not configured.'
       };
     }
-    const cwd = cleanText(input.cwd, 2400) || getWorkingDirectory();
+    const inputCwd = cleanText(input.cwd, 2400);
+    const fallbackCwd = cleanText(getWorkingDirectory(), 2400);
+    const cwd = inputCwd && !isFilesystemRoot(inputCwd)
+      ? inputCwd
+      : (fallbackCwd || inputCwd || process.cwd());
     const prompt = buildCodexAgentPrompt(input, { cleanText });
     const traceContext = input.traceContext || null;
     const lifecycleRecorder = input.lifecycleRecorder || null;
+    const emitAgentProgress = typeof input.emitAgentProgress === 'function'
+      ? input.emitAgentProgress
+      : null;
     const model = cleanText(input.model, 120);
     const reasoningEffort = cleanText(input.reasoningEffort, 40);
+    let lastStreamText = '';
+
+    function emitStreamProgress(streamEvent = {}, { force = false } = {}) {
+      if (!emitAgentProgress) {
+        return;
+      }
+      const streamText = cleanText(
+        streamEvent.accumulated_text
+          || streamEvent.accumulatedText
+          || streamEvent.text
+          || lastStreamText,
+        120000
+      );
+      if (!streamText || (!force && streamText === lastStreamText)) {
+        return;
+      }
+      lastStreamText = streamText;
+      emitAgentProgress({
+        stage: 'codex_agent_stream',
+        status: 'streaming',
+        routing_intent: 'codex_agent',
+        message: streamText,
+        meta: {
+          stream_text: streamText,
+          text_delta: cleanText(streamEvent.text_delta || streamEvent.textDelta, 120000),
+          event_type: cleanText(streamEvent.event_type || streamEvent.eventType, 120)
+        }
+      });
+    }
 
     recordLifecycleEvent(lifecycleRecorder, {
       stage: 'codex_agent_started',
@@ -280,6 +330,11 @@ function createCodexAgentRuntime(deps = {}) {
     });
 
     throwIfAgentRequestAborted('Agent request stopped before starting Codex agent.');
+    const mcpContextJson = JSON.stringify(buildCodexMcpContext({
+      ...input,
+      cwd,
+      model
+    }, { cleanText }));
     const rawText = await requestCodexAgentText({
       prompt,
       model,
@@ -287,17 +342,19 @@ function createCodexAgentRuntime(deps = {}) {
       cwd,
       enableWebSearch: true,
       attachments: asArray(input.attachments),
+      stream: true,
+      onStream: emitStreamProgress,
       envOverrides: {
-        ENANA_CODEX_REQUEST_CONTEXT: JSON.stringify(buildCodexMcpContext({
-          ...input,
-          cwd,
-          model
-        }, { cleanText }))
+        HIKARI_CODEX_REQUEST_CONTEXT: mcpContextJson,
+        ENANA_CODEX_REQUEST_CONTEXT: mcpContextJson
       }
     });
     throwIfAgentRequestAborted('Agent request stopped after Codex agent completed.');
 
     const parsed = parseJsonObjectFromText(rawText);
+    if (lastStreamText) {
+      emitStreamProgress({ accumulated_text: lastStreamText }, { force: true });
+    }
     const parseWarning = parsed ? '' : 'Codex agent returned non-JSON output; wrapped raw text as assistant_text.';
     const codexAgent = normalizeCodexAgentPayload(parsed || {}, rawText, { cleanText });
     const parser = buildCodexAgentParserPayload(codexAgent, {
@@ -333,7 +390,7 @@ function createCodexAgentRuntime(deps = {}) {
       parser,
       codex_agent: codexAgent,
       thinking_trace: {
-        intent_parse_question: 'Codex owned this request without Enana parser dispatch.',
+        intent_parse_question: 'Codex owned this request without Hikari parser dispatch.',
         final_synthesize: cleanText(codexAgent.reasoning_summary, 1000)
           || 'Codex synthesized the final response from the evidence it gathered.'
       },

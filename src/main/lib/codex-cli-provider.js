@@ -11,11 +11,12 @@ const {
   throwIfAgentRequestAborted
 } = require('../helpers/agent/shared/agent-request-context.js');
 const {
+  buildHikariCodexAgentsInstructions,
   buildEnanaCodexAgentsInstructions
 } = require('../helpers/agent/codex-agent/agent-instructions.js');
 const {
-  ensureEnanaCodexAgentsFile,
-  ensureEnanaCodexMcpConfig
+  ensureHikariCodexAgentsFile,
+  ensureHikariCodexMcpConfig
 } = require('../helpers/agent/codex-agent/runtime-files.js');
 
 const DEFAULT_TIMEOUT_MS = 180000;
@@ -121,7 +122,13 @@ function buildPathCommandCandidates(commandName) {
 }
 
 function resolveCodexBinary() {
-  const explicit = String(process.env.ENANA_CODEX_CLI || process.env.ENANA_CODEX_BIN || '').trim();
+  const explicit = String(
+    process.env.HIKARI_CODEX_CLI
+      || process.env.HIKARI_CODEX_BIN
+      || process.env.ENANA_CODEX_CLI
+      || process.env.ENANA_CODEX_BIN
+      || ''
+  ).trim();
   const candidates = [];
   if (explicit) {
     candidates.push(explicit);
@@ -168,7 +175,7 @@ function resolveCodexBinary() {
 function pickExistingDirectory(candidates) {
   for (const candidate of candidates) {
     const value = String(candidate || '').trim();
-    if (!value) {
+    if (!value || isFilesystemRoot(value)) {
       continue;
     }
     try {
@@ -182,14 +189,31 @@ function pickExistingDirectory(candidates) {
   return '';
 }
 
+function isFilesystemRoot(candidatePath = '') {
+  const value = String(candidatePath || '').trim();
+  if (!value) {
+    return false;
+  }
+  try {
+    const resolved = path.resolve(value);
+    return resolved === path.parse(resolved).root;
+  } catch {
+    return false;
+  }
+}
+
 function resolveWorkingDirectory(cwd = '') {
   const resolved = pickExistingDirectory([
     cwd,
+    process.env.HIKARI_CODEX_WORKSPACE,
+    process.env.HIKARI_APP_DATA_ROOT,
+    process.env.ENANA_CODEX_WORKSPACE,
+    process.env.ENANA_APP_DATA_ROOT,
     process.cwd(),
-    path.dirname(process.execPath),
-    os.homedir()
+    os.homedir(),
+    path.dirname(process.execPath)
   ]);
-  return resolved || process.cwd();
+  return resolved || os.homedir() || process.cwd();
 }
 
 function sanitizeFileName(fileName, fallback = 'paper.pdf') {
@@ -246,7 +270,7 @@ function getNativeCodexCliHomeDirectory() {
 }
 
 function getCodexCliHomeDirectory() {
-  const appManagedHome = String(process.env.ENANA_CODEX_HOME || '').trim();
+  const appManagedHome = String(process.env.HIKARI_CODEX_HOME || process.env.ENANA_CODEX_HOME || '').trim();
   if (appManagedHome) {
     return appManagedHome;
   }
@@ -270,6 +294,82 @@ function safeParseJson(rawValue = '', fallback = null) {
   } catch {
     return fallback;
   }
+}
+
+function collectTextFromContent(content) {
+  if (typeof content === 'string') {
+    return cleanText(content, 120000);
+  }
+  if (!Array.isArray(content)) {
+    return '';
+  }
+  return content.map((item) => {
+    if (typeof item === 'string') {
+      return item;
+    }
+    if (!item || typeof item !== 'object') {
+      return '';
+    }
+    return item.text
+      || item.output_text
+      || item.outputText
+      || item.content
+      || '';
+  }).filter(Boolean).join('');
+}
+
+function extractCodexJsonEventText(event = {}) {
+  const source = event && typeof event === 'object' && !Array.isArray(event) ? event : {};
+  const type = cleanText(source.type || source.event || source.kind, 120).toLowerCase();
+  const role = cleanText(source.role || source.message?.role || source.item?.role, 80).toLowerCase();
+  const looksAssistant = !role || role === 'assistant' || role === 'agent';
+  if (!looksAssistant) {
+    return null;
+  }
+
+  const directDelta = source.delta
+    || source.text_delta
+    || source.textDelta
+    || source.output_text_delta
+    || source.outputTextDelta
+    || source.message_delta
+    || source.messageDelta
+    || source.token;
+  if (typeof directDelta === 'string' && directDelta) {
+    return {
+      deltaText: directDelta,
+      fullText: '',
+      eventType: type
+    };
+  }
+
+  const deltaText = collectTextFromContent(source.delta?.content || source.delta?.parts);
+  if (deltaText) {
+    return {
+      deltaText,
+      fullText: '',
+      eventType: type
+    };
+  }
+
+  const fullText = collectTextFromContent(
+    source.text
+      || source.output_text
+      || source.outputText
+      || source.message?.content
+      || source.message?.text
+      || source.item?.content
+      || source.item?.text
+      || source.content
+  );
+  if (fullText && (/message|assistant|agent|output|response/.test(type) || role)) {
+    return {
+      deltaText: '',
+      fullText,
+      eventType: type
+    };
+  }
+  return null;
 }
 
 function readCodexCliAuthFile() {
@@ -340,7 +440,7 @@ function readCodexCliOAuthProfile() {
 }
 
 function resolveCodexCliRuntimeHomeDirectory(cwd = '') {
-  const explicit = String(process.env.ENANA_CODEX_HOME || '').trim();
+  const explicit = String(process.env.HIKARI_CODEX_HOME || process.env.ENANA_CODEX_HOME || '').trim();
   if (explicit) {
     return explicit;
   }
@@ -370,7 +470,7 @@ async function removeFileIfExists(targetPath = '') {
 }
 
 async function ensureCodexCliAgentsFile(cwd = '') {
-  return ensureEnanaCodexAgentsFile(resolveWorkingDirectory(cwd));
+  return ensureHikariCodexAgentsFile(resolveWorkingDirectory(cwd));
 }
 
 async function copyFileIfChanged(sourcePath = '', targetPath = '') {
@@ -414,7 +514,7 @@ async function ensureCodexCliRuntimeHome(cwd = '') {
 
   const sourceHome = getNativeCodexCliHomeDirectory();
   if (!sourceHome) {
-    await ensureEnanaCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
+    await ensureHikariCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
       workspace: resolveWorkingDirectory(cwd)
     });
     return runtimeHome;
@@ -422,7 +522,7 @@ async function ensureCodexCliRuntimeHome(cwd = '') {
   const resolvedSource = path.resolve(sourceHome);
   const resolvedTarget = path.resolve(runtimeHome);
   if (resolvedSource === resolvedTarget || !(await pathExists(resolvedSource))) {
-    await ensureEnanaCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
+    await ensureHikariCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
       workspace: resolveWorkingDirectory(cwd)
     });
     return runtimeHome;
@@ -434,7 +534,7 @@ async function ensureCodexCliRuntimeHome(cwd = '') {
       path.join(resolvedTarget, fileName)
     )
   )));
-  await ensureEnanaCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
+  await ensureHikariCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
     workspace: resolveWorkingDirectory(cwd)
   });
   return runtimeHome;
@@ -603,7 +703,8 @@ async function clearCodexCliStoredLogin({ cwd = process.cwd() } = {}) {
     ok: true,
     clearedPaths,
     hasEnvironmentToken: Boolean(cleanText(
-      process.env.ENANA_CODEX_ACCESS_TOKEN
+      process.env.HIKARI_CODEX_ACCESS_TOKEN
+        || process.env.ENANA_CODEX_ACCESS_TOKEN
         || process.env.OPENAI_OAUTH_TOKEN
         || process.env.CHATGPT_OAUTH_TOKEN,
       20000
@@ -822,7 +923,13 @@ function resolveCodexCliReasoningEffort(reasoningEffort = '', model = '', catalo
   return explicitEffort || configuredCodexReasoningEffort || normalizeCodexCliReasoningEffort(resolvedCatalog.defaultReasoningEffort);
 }
 
-function buildCodexCliExecArgs({ outputFile = '', model = '', reasoningEffort = '', enableWebSearch = false } = {}) {
+function buildCodexCliExecArgs({
+  outputFile = '',
+  model = '',
+  reasoningEffort = '',
+  enableWebSearch = false,
+  streamJson = false
+} = {}) {
   const catalog = getCodexCliCatalog();
   const args = [
     '-a', 'never',
@@ -837,6 +944,9 @@ function buildCodexCliExecArgs({ outputFile = '', model = '', reasoningEffort = 
     '--output-last-message', outputFile,
     '--color', 'never'
   );
+  if (streamJson === true) {
+    args.push('--json');
+  }
   const resolvedModel = resolveCodexCliModel(model, catalog);
   if (resolvedModel) {
     args.push('-m', resolvedModel);
@@ -849,7 +959,14 @@ function buildCodexCliExecArgs({ outputFile = '', model = '', reasoningEffort = 
   return args;
 }
 
-async function runCodexCommand({ args, cwd, env = process.env, input = '', timeoutMs = DEFAULT_TIMEOUT_MS }) {
+async function runCodexCommand({
+  args,
+  cwd,
+  env = process.env,
+  input = '',
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+  onJsonEvent = null
+}) {
   const safeCwd = resolveWorkingDirectory(cwd);
   await ensureCodexCliAgentsFile(safeCwd);
   return new Promise((resolve, reject) => {
@@ -865,6 +982,7 @@ async function runCodexCommand({ args, cwd, env = process.env, input = '', timeo
     let finished = false;
     let timedOut = false;
     let aborted = false;
+    let jsonLineBuffer = '';
     const abortSignal = getAgentRequestAbortSignal();
 
     const timeout = setTimeout(() => {
@@ -911,8 +1029,34 @@ async function runCodexCommand({ args, cwd, env = process.env, input = '', timeo
       }
     });
 
+    function handleJsonLines(chunkText = '', force = false) {
+      if (typeof onJsonEvent !== 'function') {
+        return;
+      }
+      jsonLineBuffer += String(chunkText || '');
+      const lines = jsonLineBuffer.split(/\r?\n/u);
+      jsonLineBuffer = force ? '' : (lines.pop() || '');
+      const parseLines = force ? lines.filter(Boolean).concat(jsonLineBuffer ? [jsonLineBuffer] : []) : lines;
+      parseLines.forEach((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return;
+        }
+        const parsed = safeParseJson(trimmed, null);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          try {
+            onJsonEvent(parsed);
+          } catch {
+            // Streaming callbacks should not be able to fail the Codex request.
+          }
+        }
+      });
+    }
+
     child.stdout.on('data', (chunk) => {
-      stdout += String(chunk || '');
+      const text = String(chunk || '');
+      stdout += text;
+      handleJsonLines(text);
     });
 
     child.stderr.on('data', (chunk) => {
@@ -924,6 +1068,7 @@ async function runCodexCommand({ args, cwd, env = process.env, input = '', timeo
     });
 
     child.on('close', (code, signal) => {
+      handleJsonLines('', true);
       if (aborted || abortSignal?.aborted) {
         const abortError = isAgentRequestAbortError(abortSignal?.reason)
           ? abortSignal.reason
@@ -986,7 +1131,8 @@ async function getCodexLoginStatus({ cwd = process.cwd(), forceRefresh = false }
   }
 
   const explicitToken = cleanText(
-    process.env.ENANA_CODEX_ACCESS_TOKEN
+    process.env.HIKARI_CODEX_ACCESS_TOKEN
+      || process.env.ENANA_CODEX_ACCESS_TOKEN
       || process.env.OPENAI_OAUTH_TOKEN
       || process.env.CHATGPT_OAUTH_TOKEN,
     20000
@@ -1102,7 +1248,7 @@ function buildCodexPromptWithStagedAttachments(prompt = '', stagedAttachments = 
   ));
   return [
     cleanPrompt,
-    'Enana staged the following input files in this Codex workspace. Read them from disk if they are relevant:',
+    'Hikari staged the following input files in this Codex workspace. Read them from disk if they are relevant:',
     attachmentRows.join('\n')
   ].join('\n\n');
 }
@@ -1119,7 +1265,9 @@ async function requestCodexCliText({
   imageDataUrl = '',
   imageUrl = '',
   attachments = [],
-  envOverrides = {}
+  envOverrides = {},
+  stream = false,
+  onStream = null
 }) {
   throwIfAgentRequestAborted('Agent request stopped before starting Codex prompt.');
   const cleanPrompt = String(prompt || '').trim();
@@ -1152,11 +1300,45 @@ async function requestCodexCliText({
     ...baseEnv,
     ...(envOverrides && typeof envOverrides === 'object' ? envOverrides : {})
   };
+  const streamingEnabled = stream === true && typeof onStream === 'function';
+  let streamedText = '';
+  function handleJsonStreamEvent(event = {}) {
+    const extracted = extractCodexJsonEventText(event);
+    if (!extracted) {
+      return;
+    }
+    let deltaText = cleanText(extracted.deltaText, 120000);
+    const fullText = cleanText(extracted.fullText, 120000);
+    if (fullText) {
+      if (fullText.startsWith(streamedText)) {
+        deltaText = fullText.slice(streamedText.length);
+      } else if (fullText !== streamedText) {
+        deltaText = fullText;
+      }
+      streamedText = fullText;
+    } else if (deltaText) {
+      streamedText += deltaText;
+    }
+    if (!streamedText && !deltaText) {
+      return;
+    }
+    try {
+      onStream({
+        type: 'codex_stream',
+        event_type: cleanText(extracted.eventType, 120),
+        text_delta: deltaText,
+        accumulated_text: streamedText
+      });
+    } catch {
+      // Keep streaming best-effort; the final Codex response still resolves below.
+    }
+  }
   const args = buildCodexCliExecArgs({
     outputFile,
     model,
     reasoningEffort,
-    enableWebSearch
+    enableWebSearch,
+    streamJson: streamingEnabled
   });
 
   const commandResult = await runCodexCommand({
@@ -1164,7 +1346,8 @@ async function requestCodexCliText({
     cwd: safeCwd,
     env,
     input: promptWithAttachments,
-    timeoutMs
+    timeoutMs,
+    onJsonEvent: streamingEnabled ? handleJsonStreamEvent : null
   });
 
   throwIfAgentRequestAborted('Agent request stopped before reading Codex output.');
@@ -1175,7 +1358,7 @@ async function requestCodexCliText({
     outputText = '';
   }
   await removeFileIfExists(outputFile).catch(() => {});
-  const resultText = cleanText(outputText || commandResult.stdout, 120000);
+  const resultText = cleanText(outputText || streamedText || commandResult.stdout, 120000);
   if (!resultText) {
     throw new Error('Codex CLI returned an empty response.');
   }
@@ -1184,11 +1367,13 @@ async function requestCodexCliText({
 
 module.exports = {
   OPENAI_CODEX_LOGIN_URL,
+  buildHikariCodexAgentsInstructions,
   buildEnanaCodexAgentsInstructions,
   buildCodexCliExecArgs,
   clearCodexCliStoredLogin,
   ensureCodexCliAgentsFile,
   ensureCodexCliRuntimeHome,
+  extractCodexJsonEventText,
   extractCodexLoginUrl,
   getCodexCliCatalog,
   getCodexCliAuthFilePath,

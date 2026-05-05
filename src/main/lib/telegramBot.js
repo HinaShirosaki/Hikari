@@ -268,13 +268,13 @@ async function resolveTelegramLogPath() {
 function createStatusMessage(mainWindow) {
   if (!mainWindow) {
     return [
-      'Enana app is running.',
+      'Hikari app is running.',
       'Window: not available'
     ].join('\n');
   }
 
   return [
-    'Enana app is running.',
+    'Hikari app is running.',
     'Window: available',
     `Visible: ${mainWindow.isVisible() ? 'yes' : 'no'}`,
     `Minimized: ${mainWindow.isMinimized() ? 'yes' : 'no'}`,
@@ -1410,7 +1410,7 @@ function formatDraftReply(draft, options = {}) {
   lines.push('- "add ..." to refine this draft');
   lines.push('- "save draft"');
   lines.push('- "discard"');
-  lines.push('- "open in Enana"');
+  lines.push('- "open in Hikari"');
 
   return lines.join('\n');
 }
@@ -1579,7 +1579,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
   };
 
   const noWindowMessage = (ctx) => {
-    ctx.reply('No active Enana window. Open the app window and try again.');
+    ctx.reply('No active Hikari window. Open the app window and try again.');
   };
 
   const recordChatEvent = (ctx, event) => {
@@ -1612,7 +1612,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
       if (!sent) {
         return {
           ok: false,
-          message: 'No active Enana window. Open the app window and try again.'
+          message: 'No active Hikari window. Open the app window and try again.'
         };
       }
       return {
@@ -1628,7 +1628,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
       if (!sent) {
         return {
           ok: false,
-          message: 'No active Enana window. Open the app window and try again.'
+          message: 'No active Hikari window. Open the app window and try again.'
         };
       }
       return {
@@ -1651,7 +1651,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     if (!sent) {
       return {
         ok: false,
-        message: 'No active Enana window. Open the app window and try again.'
+        message: 'No active Hikari window. Open the app window and try again.'
       };
     }
 
@@ -1698,7 +1698,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
       if (!sent) {
         return {
           ok: false,
-          message: 'No active Enana window. Open the app window and try again.'
+          message: 'No active Hikari window. Open the app window and try again.'
         };
       }
       return {
@@ -1849,7 +1849,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     return draft;
   };
 
-  const openDraftInEnana = (ctx, draft) => {
+  const openDraftInHikari = (ctx, draft) => {
     if (!draft) {
       return false;
     }
@@ -1874,7 +1874,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     if (sent) {
       recordChatEvent(ctx, {
         type: 'draft-opened',
-        label: `Opened ${draft.draft_id} in Enana`,
+        label: `Opened ${draft.draft_id} in Hikari`,
         draft_id: draft.draft_id
       });
     }
@@ -2108,7 +2108,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
   };
 
   bot.start((ctx) => {
-    ctx.reply('Enana lab assistant bot connected. Use /help for commands.');
+    ctx.reply('Hikari lab assistant bot connected. Use /help for commands.');
   });
 
   registerCommandAlias('help', [], (ctx) => {
@@ -2213,7 +2213,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
   });
 
   registerCommandAlias('version', [], (ctx) => {
-    ctx.reply(`Enana version: ${app.getVersion()}`);
+    ctx.reply(`Hikari version: ${app.getVersion()}`);
   });
 
   registerCommandAlias('logfile', [], (ctx) => {
@@ -2227,7 +2227,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
   registerCommandAlias('focus', [], (ctx) => {
     const mainWindow = getMainWindowSafe(getMainWindow);
     if (!mainWindow) {
-      ctx.reply('No active Enana window to focus.');
+      ctx.reply('No active Hikari window to focus.');
       return;
     }
 
@@ -2236,13 +2236,13 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     }
     mainWindow.show();
     mainWindow.focus();
-    ctx.reply('Enana window focused.');
+    ctx.reply('Hikari window focused.');
   });
 
   registerCommandAlias('maximize', [], (ctx) => {
     const mainWindow = getMainWindowSafe(getMainWindow);
     if (!mainWindow) {
-      ctx.reply('No active Enana window to maximize.');
+      ctx.reply('No active Hikari window to maximize.');
       return;
     }
 
@@ -2252,13 +2252,13 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     mainWindow.maximize();
     mainWindow.show();
     mainWindow.focus();
-    ctx.reply('Enana window maximized.');
+    ctx.reply('Hikari window maximized.');
   });
 
   registerCommandAlias('restore', [], (ctx) => {
     const mainWindow = getMainWindowSafe(getMainWindow);
     if (!mainWindow) {
-      ctx.reply('No active Enana window to restore.');
+      ctx.reply('No active Hikari window to restore.');
       return;
     }
 
@@ -2267,17 +2267,17 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     }
     mainWindow.show();
     mainWindow.focus();
-    ctx.reply('Enana window restored.');
+    ctx.reply('Hikari window restored.');
   });
 
   registerCommandAlias('minimize', [], (ctx) => {
     const mainWindow = getMainWindowSafe(getMainWindow);
     if (!mainWindow) {
-      ctx.reply('No active Enana window to minimize.');
+      ctx.reply('No active Hikari window to minimize.');
       return;
     }
     mainWindow.minimize();
-    ctx.reply('Enana window minimized.');
+    ctx.reply('Hikari window minimized.');
   });
 
   registerCommandAlias('echo', [], (ctx) => {
@@ -2808,13 +2808,13 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
         ctx.reply(`Discarded draft ${discarded.draft_id}.`);
         return;
       }
-      if (/^open\s+in\s+enana$/i.test(msg)) {
-        const sent = openDraftInEnana(ctx, activeDraft);
+      if (/^open\s+in\s+(?:hikari|enana)$/i.test(msg)) {
+        const sent = openDraftInHikari(ctx, activeDraft);
         if (!sent) {
           noWindowMessage(ctx);
           return;
         }
-        ctx.reply(`Opened draft ${activeDraft.draft_id} context in Enana.`);
+        ctx.reply(`Opened draft ${activeDraft.draft_id} context in Hikari.`);
         return;
       }
 

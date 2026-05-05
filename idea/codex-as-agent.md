@@ -85,7 +85,69 @@ Codex calls:
 tool_call("sequence.design_cloning", { ... })
 ```
 
-This allows detailed instructions to be emitted only when they are needed.
+
+## Context control
+
+Codex has its own context-management behavior, but Enana should not rely entirely on Codex to decide what information enters the prompt. Enana should provide a context-control layer inside the Agent Bridge.
+
+The bridge should expose compact search and retrieval tools, while keeping full schemas, examples, long protocol text, notebook history, paper context, and detailed tool instructions outside the initial prompt.
+
+Codex can request more information when needed, but Enana should return it in controlled levels:
+
+- `summary`
+- `schema`
+- `examples`
+- `selected_fields`
+- `full`
+
+This means Codex controls the reasoning loop, while Enana controls the context supply.
+
+```text
+Codex reasoning loop
+    ↓ asks for context
+Enana Agent Bridge
+    ↓ filters and budgets context
+Context Governor
+    ↓ retrieves only necessary information
+Tool Registry / Resource Store
+```
+
+The Context Governor should decide how much information to return based on the task, domain, permission level, and token budget.
+
+Example request shape:
+
+```ts
+type ContextRequest = {
+  task: string;
+  domain?: "notebook" | "protocol" | "inventory" | "sequence" | "gel" | "assay" | "paper" | "project";
+  max_tokens?: number;
+  detail_level?: "summary" | "schema" | "examples" | "selected_fields" | "full";
+};
+```
+
+Example response shape:
+
+```ts
+type ContextResponse = {
+  context_id: string;
+  detail_level: "summary" | "schema" | "examples" | "selected_fields" | "full";
+  estimated_tokens: number;
+  content: unknown;
+  can_expand: boolean;
+  expansion_options?: Array<"schema" | "examples" | "selected_fields" | "full">;
+};
+```
+
+A good default rule is:
+
+```text
+Start with summaries.
+Load schemas only before tool execution.
+Load examples only when the model seems uncertain.
+Load full content only when summaries or selected fields are insufficient.
+```
+
+This gives Enana direct involvement in context control without fighting Codex's own agent loop.
 
 ## Tool packs
 

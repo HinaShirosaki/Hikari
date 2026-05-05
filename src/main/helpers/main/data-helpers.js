@@ -72,7 +72,7 @@ function createMainDataHelpers(deps = {}) {
         : '';
     }
 
-    const defaultName = path.basename(getDefaultDataFilePath() || 'enana-data.json') || 'enana-data.json';
+    const defaultName = path.basename(getDefaultDataFilePath() || 'hikari-data.json') || 'hikari-data.json';
     return normalizeDataFilePath(path.join(storagePath, defaultName), getDefaultDataFilePath());
   }
 
