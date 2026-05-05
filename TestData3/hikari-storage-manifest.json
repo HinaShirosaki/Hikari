@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-05-05T03:01:25.604Z",
+  "generated_at": "2026-05-05T14:32:23.264Z",
   "root_path": "/Users/shiyifan/Projects/Enana/TestData3",
   "discovered_files": [
     {
@@ -142,14 +142,21 @@
       "type": "file",
       "role": "chemical_inventory_index",
       "size_bytes": 24576,
-      "modified_at": "2026-05-05T02:50:03.228Z"
+      "modified_at": "2026-05-05T14:31:37.355Z"
+    },
+    {
+      "relative_path": "hikari-data.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 63262,
+      "modified_at": "2026-05-05T14:31:37.284Z"
     },
     {
       "relative_path": "hikari-storage-manifest.json",
       "type": "file",
       "role": "storage_manifest",
       "size_bytes": 30625,
-      "modified_at": "2026-05-05T02:50:03.204Z"
+      "modified_at": "2026-05-05T03:01:25.605Z"
     },
     {
       "relative_path": "Papers",
@@ -204,8 +211,8 @@
       "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/MEMORY.md",
       "type": "file",
       "role": "project_memory",
-      "size_bytes": 437,
-      "modified_at": "2026-05-05T02:21:23.807Z"
+      "size_bytes": 438,
+      "modified_at": "2026-05-05T14:31:37.294Z"
     },
     {
       "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/Notebook",
@@ -232,8 +239,8 @@
       "relative_path": "Project/Protein_Builder/MEMORY.md",
       "type": "file",
       "role": "project_memory",
-      "size_bytes": 454,
-      "modified_at": "2026-05-05T02:21:23.807Z"
+      "size_bytes": 455,
+      "modified_at": "2026-05-05T14:31:37.294Z"
     },
     {
       "relative_path": "Project/Protein_Builder/Notebook",
@@ -309,8 +316,8 @@
       "relative_path": "Project/SUMO1/MEMORY.md",
       "type": "file",
       "role": "project_memory",
-      "size_bytes": 388,
-      "modified_at": "2026-05-05T02:21:23.807Z"
+      "size_bytes": 389,
+      "modified_at": "2026-05-05T14:31:37.294Z"
     },
     {
       "relative_path": "Project/SUMO1/Notebook",
@@ -379,8 +386,8 @@
       "relative_path": "Project/Untitled_Project/MEMORY.md",
       "type": "file",
       "role": "project_memory",
-      "size_bytes": 460,
-      "modified_at": "2026-05-05T02:21:23.807Z"
+      "size_bytes": 461,
+      "modified_at": "2026-05-05T14:31:37.294Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook",
@@ -464,7 +471,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 8700,
-      "modified_at": "2026-05-05T02:21:23.798Z"
+      "modified_at": "2026-05-05T14:31:37.285Z"
     },
     {
       "relative_path": "Protocol/BL21(DE3)_Chemical_Transformation_with_pET28a__1774024047007-d137dae96cab78",
@@ -478,7 +485,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2529,
-      "modified_at": "2026-05-05T02:21:23.799Z"
+      "modified_at": "2026-05-05T14:31:37.285Z"
     },
     {
       "relative_path": "Protocol/IPTG-Induced_Recombinant_Protein_Expression_in_BL21(DE3)__1774024680081-6b02b28fd6d39",
@@ -492,7 +499,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 3594,
-      "modified_at": "2026-05-05T02:21:23.799Z"
+      "modified_at": "2026-05-05T14:31:37.285Z"
     },
     {
       "relative_path": "Protocol/Ni-NTA_Purification_of_His-Tagged_Protein__1774024695073-536c18071dd0d",
@@ -506,7 +513,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2351,
-      "modified_at": "2026-05-05T02:21:23.799Z"
+      "modified_at": "2026-05-05T14:31:37.286Z"
     },
     {
       "relative_path": "Protocol/Protein_Builder_Cloning_Assembly__protein-builder-cloning-assembly-protocol",
@@ -520,14 +527,14 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 1698,
-      "modified_at": "2026-05-05T02:21:23.801Z"
+      "modified_at": "2026-05-05T14:31:37.287Z"
     },
     {
       "relative_path": "Protocol/protocol.index.sqlite",
       "type": "file",
       "role": "protocol_index",
       "size_bytes": 577536,
-      "modified_at": "2026-05-05T02:21:23.822Z"
+      "modified_at": "2026-05-05T14:31:37.352Z"
     },
     {
       "relative_path": "Protocol/Small-Scale_Overnight_Starter_Culture__1774024647315-74cbb18b4cc37",
@@ -541,7 +548,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 8927,
-      "modified_at": "2026-05-05T02:21:23.800Z"
+      "modified_at": "2026-05-05T14:31:37.286Z"
     },
     {
       "relative_path": "Protocol/Soluble_TEV_Protease_Expression_in_E._coli__1777425346120-58b8924ca425c8",
@@ -555,7 +562,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2864,
-      "modified_at": "2026-05-05T02:21:23.801Z"
+      "modified_at": "2026-05-05T14:31:37.288Z"
     },
     {
       "relative_path": "Protocol/T4_DNA_Ligation__1776562378892-e9d8a0a7eee9c",
@@ -569,7 +576,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2166,
-      "modified_at": "2026-05-05T02:21:23.801Z"
+      "modified_at": "2026-05-05T14:31:37.287Z"
     },
     {
       "relative_path": "Protocol/TEV_Protease_Cleavage_of_Fusion_Protein__1774024712936-cdad2f729e908",
@@ -583,7 +590,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 21987,
-      "modified_at": "2026-05-05T02:21:23.800Z"
+      "modified_at": "2026-05-05T14:31:37.286Z"
     },
     {
       "relative_path": "Samples",
@@ -597,7 +604,7 @@
       "type": "file",
       "role": "samples_record",
       "size_bytes": 3987,
-      "modified_at": "2026-05-05T02:21:23.807Z"
+      "modified_at": "2026-05-05T14:31:37.300Z"
     },
     {
       "relative_path": "SequenceViewer",
@@ -744,7 +751,7 @@
       "type": "file",
       "role": "sequence_library_index",
       "size_bytes": 184320,
-      "modified_at": "2026-05-05T03:01:25.540Z"
+      "modified_at": "2026-05-05T14:32:23.203Z"
     },
     {
       "relative_path": "Workflow",
@@ -765,7 +772,7 @@
       "type": "file",
       "role": "workflow_template_metadata",
       "size_bytes": 923,
-      "modified_at": "2026-05-05T02:21:23.825Z"
+      "modified_at": "2026-05-05T14:31:37.360Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8",
@@ -785,8 +792,8 @@
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/MEMORY.md",
       "type": "file",
       "role": "workflow_memory",
-      "size_bytes": 611,
-      "modified_at": "2026-05-05T02:21:23.825Z"
+      "size_bytes": 612,
+      "modified_at": "2026-05-05T14:31:37.363Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook",
@@ -814,21 +821,21 @@
       "type": "file",
       "role": "workflow_run_metadata",
       "size_bytes": 7900,
-      "modified_at": "2026-05-05T02:21:23.826Z"
+      "modified_at": "2026-05-05T14:31:37.364Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/template.json",
       "type": "file",
       "role": "workflow_template_metadata",
       "size_bytes": 2495,
-      "modified_at": "2026-05-05T02:21:23.825Z"
+      "modified_at": "2026-05-05T14:31:37.358Z"
     },
     {
       "relative_path": "Workflow/workflow-status.sqlite",
       "type": "file",
       "role": "workflow_status_index",
       "size_bytes": 40960,
-      "modified_at": "2026-05-05T02:21:23.827Z"
+      "modified_at": "2026-05-05T14:31:37.366Z"
     }
   ],
   "bundles": [
@@ -869,6 +876,37 @@
       "bundle_paths": {
         "protocols_path": "Protocol",
         "notebook_pages_path": "enana-chemicals.notebook-pages.json",
+        "samples_path": "Samples/samples.json",
+        "sqlite_path": "Protocol/protocol.index.sqlite"
+      },
+      "counts": {
+        "protocols": 9,
+        "notebookEntries": 29,
+        "samples": 9,
+        "workflowTemplates": 2,
+        "workflows": 1,
+        "papers": 11,
+        "chemicals": 3,
+        "personalInventoryContainers": 8
+      },
+      "migration": {
+        "applied": [
+          "protocol_sidecar",
+          "samples_folder",
+          "project_root_storage",
+          "workflow_root_storage",
+          "inventory_sqlite",
+          "paper_sqlite"
+        ],
+        "warnings": []
+      }
+    },
+    {
+      "bundle_type": "data_bundle",
+      "data_file_path": "hikari-data.json",
+      "bundle_paths": {
+        "protocols_path": "Protocol",
+        "notebook_pages_path": "hikari-data.notebook-pages.json",
         "samples_path": "Samples/samples.json",
         "sqlite_path": "Protocol/protocol.index.sqlite"
       },
@@ -953,7 +991,7 @@
     }
   },
   "summary": {
-    "bundles": 3,
+    "bundles": 4,
     "protocols": 9,
     "notebookEntries": 29,
     "samples": 9,
