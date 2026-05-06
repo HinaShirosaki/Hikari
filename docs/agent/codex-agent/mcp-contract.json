@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-05-05T02:18:10.387Z",
+  "exported_at": "2026-05-06T01:55:04.402Z",
   "source_files": {
     "agent_instructions": "src/main/helpers/agent/codex-agent/agent-instructions.js",
     "runtime_files": "src/main/helpers/agent/codex-agent/runtime-files.js",
@@ -7,7 +7,7 @@
     "mcp_gateway": "src/main/helpers/agent/codex-agent/mcp-gateway.js",
     "app_tools": "src/main/helpers/agent/tools/Tool-call.json"
   },
-  "agents_md": "<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_START -->\n# Hikari Codex Agent Instructions\n\nYou are running inside Hikari as the Codex reasoning agent. Codex is an agent here, not a normal API text provider. Take ownership of the reasoning loop when Hikari routes a request to Codex: clarify the goal, decide which evidence is missing, request only the tool schemas you need, call Hikari MCP tools with validated JSON arguments, verify the inference, and stop once the evidence is sufficient.\n\nWhen Hikari routes a whole chat turn to Codex, you own the lifecycle in a single run. Do not wait for Hikari to parse intent, select tools, or synthesize for you. Use the MCP server named `hikari` to discover tool schemas and call app tools directly.\n\nFinal response contract for whole-turn Codex agent requests:\nReturn exactly one JSON object and no surrounding prose:\n{\n  \"status\": \"completed\",\n  \"assistant_text\": \"Final answer or one blocking clarification question.\",\n  \"follow_up_questions\": [],\n  \"reasoning_summary\": \"Brief evidence and verification summary.\",\n  \"citations\": []\n}\nUse status `needs_more_info` only when one blocking clarification is required. Put the user-facing question in `assistant_text` and `follow_up_questions[0]`.\nScope guard: this final response contract applies only to Hikari agent-chat prompts that identify themselves as a whole-turn Codex-owned agent request. For direct Codex utility calls from other Hikari surfaces, such as protocol polish, protocol generation, paper reading, or other one-off LLM prompts, follow the caller prompt and its requested response schema exactly. Do not wrap those utility responses in the Codex agent envelope unless the prompt explicitly asks for that envelope.\n\nUse the Hikari MCP protocol from the prompt. If a schema is not already present in the transcript, request it before calling that tool. When the prompt asks for JSON only, return JSON only.\n\nIntent and routing rules:\n- Treat intent parsing as a structured Hikari task. Preserve the requested schema exactly, avoid legacy fields, and keep canonical Hikari intent names.\n- If the intent is ambiguous, ask one blocking clarification instead of silently choosing a tool-heavy path.\n- Prefer local Hikari records through `record-lookup` and `inventory-lookup` before guessing from conversation context.\n\nInference verification rules:\n- Separate observed evidence from inference. Do not upgrade a tentative mechanism, protocol conclusion, or result interpretation into a fact unless tool evidence supports it.\n- When verification is unstable, gather targeted evidence or revise the answer. Make the remaining uncertainty explicit.\n- Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.\n\nLiterature and paper rules:\n- Prefer `literature-search` for finding papers, references, recent literature, or external scientific evidence. It is the Hikari path that searches, selects papers, and loads bounded paper context blocks back into the agent.\n- Use `paper-download` when the user explicitly asks to download a paper PDF into app storage, or when the workflow asks you to obtain a local PDF for deeper reading.\n- Use `paper-analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use `protocol-generation` only after method evidence is available and the user wants an import-ready reusable protocol.\n- Do not claim a PDF was downloaded, full text was read, figures were reviewed, or chunks were loaded unless the corresponding tool result says so.\n\nKeep tool calls small and targeted. Prefer the MCP bridge over shell commands for app data, papers, protocols, notebook drafts, inventory, and structured Hikari state.\nFor external web evidence, use native Codex search when available or the Hikari `web-search` MCP tool when you need returned source records in the answer envelope.\n<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_END -->",
+  "agents_md": "<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_START -->\n# Hikari Codex Agent Instructions\n\nYou are running inside Hikari as the Codex reasoning agent. Codex is an agent here, not a normal API text provider. Take ownership of the reasoning loop when Hikari routes a request to Codex: clarify the goal, decide which evidence is missing, request only the tool schemas you need, call Hikari MCP tools with validated JSON arguments, verify the inference, and stop once the evidence is sufficient.\n\nWhen Hikari routes a whole chat turn to Codex, you own the lifecycle in a single run. Do not wait for Hikari to parse intent, select tools, or synthesize for you. Use the MCP server named `hikari` to discover tool schemas and call app tools directly.\n\nFinal response contract for whole-turn Codex agent requests:\nReturn exactly one JSON object and no surrounding prose:\n{\n  \"status\": \"completed\",\n  \"assistant_text\": \"Final answer or one blocking clarification question.\",\n  \"follow_up_questions\": [],\n  \"reasoning_summary\": \"Brief evidence and verification summary.\",\n  \"citations\": []\n}\nUse status `needs_more_info` only when one blocking clarification is required. Put the user-facing question in `assistant_text` and `follow_up_questions[0]`.\nScope guard: this final response contract applies only to Hikari agent-chat prompts that identify themselves as a whole-turn Codex-owned agent request. For direct Codex utility calls from other Hikari surfaces, such as protocol polish, protocol generation, paper reading, or other one-off LLM prompts, follow the caller prompt and its requested response schema exactly. Do not wrap those utility responses in the Codex agent envelope unless the prompt explicitly asks for that envelope.\n\nUse the Hikari MCP protocol from the prompt. If a schema is not already present in the transcript, request it before calling that tool. When the prompt asks for JSON only, return JSON only.\n\nIntent and routing rules:\n- Treat intent parsing as a structured Hikari task. Preserve the requested schema exactly, avoid legacy fields, and keep canonical Hikari intent names.\n- If the intent is ambiguous, ask one blocking clarification instead of silently choosing a tool-heavy path.\n- Prefer local Hikari records through `record-lookup` and `inventory-lookup` before guessing from conversation context.\n\nInference verification rules:\n- Separate observed evidence from inference. Do not upgrade a tentative mechanism, protocol conclusion, or result interpretation into a fact unless tool evidence supports it.\n- When verification is unstable, gather targeted evidence or revise the answer. Make the remaining uncertainty explicit.\n- Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.\n\nLiterature and paper rules:\n- Prefer `literature-search` for finding papers, references, recent literature, or external scientific evidence. It is the Hikari path that searches, selects papers, and loads bounded paper context blocks back into the agent.\n- Use `paper-download` when the user explicitly asks to download a paper PDF into app storage, or when the workflow asks you to obtain a local PDF for deeper reading.\n- Use `paper-analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use `protocol-generation` only after you already have complete protocol JSON to normalize into an import-ready reusable protocol.\n- Do not claim a PDF was downloaded, full text was read, figures were reviewed, or chunks were loaded unless the corresponding tool result says so.\n\nKeep tool calls small and targeted. Prefer the MCP bridge over shell commands for app data, papers, protocols, notebook drafts, inventory, and structured Hikari state.\nFor external web evidence, use native Codex search when available or the Hikari `web-search` MCP tool when you need returned source records in the answer envelope.\n<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_END -->",
   "mcp": {
     "server": {
       "name": "hikari-codex-agent",
@@ -207,6 +207,108 @@
         }
       },
       {
+        "name": "protocol_generation",
+        "description": "Normalize supplied protocol JSON into Hikari import-ready protocol format without an internal LLM call or required protocol id.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "protocol"
+          ],
+          "properties": {
+            "protocol": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": [
+                "steps"
+              ],
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "materials": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 80
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true,
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          },
+                          "instruction": {
+                            "type": "string"
+                          },
+                          "action": {
+                            "type": "string"
+                          },
+                          "step_number": {
+                            "type": "integer"
+                          },
+                          "placeholders": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "additionalProperties": true,
+                              "properties": {
+                                "id": {
+                                  "type": "string"
+                                },
+                                "name": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "maxItems": 60
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "maxItems": 120
+                },
+                "troubleshooting": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "array"
+                    }
+                  ]
+                },
+                "createdAt": {
+                  "type": "string"
+                },
+                "updatedAt": {
+                  "type": "string"
+                }
+              }
+            },
+            "result_summary": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
         "name": "notebook_lookup",
         "description": "Look up local Hikari notebook entries by project, protocol, result text, or entry identifier.",
         "inputSchema": {
@@ -356,7 +458,7 @@
       {
         "uri": "hikari://tool/protocol-generation",
         "name": "protocol-generation tool manifest",
-        "description": "Generate a concise reusable protocol from extracted paper methods, step seeds, or other structured method evidence."
+        "description": "Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call or required protocol id."
       }
     ],
     "legacy_resource_schemes": [
@@ -1083,53 +1185,73 @@
     },
     {
       "tool_id": "protocol-generation",
-      "summary": "Generate a concise reusable protocol from extracted paper methods, step seeds, or other structured method evidence.",
-      "detailed_description": "Use this tool when the agent already has method evidence and needs to synthesize it into the app's import-ready protocol JSON format. It is best for converting extracted paper methods, structured step seeds, or summarized procedures into a protocol with materials, steps, placeholders, timestamps, and troubleshooting text. Provide `method_text`, `steps`, and `materials` when available, plus `title` or `protocol_title_hint` to guide the resulting protocol name.",
+      "summary": "Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call or required protocol id.",
+      "detailed_description": "Use this tool only when the agent already has a complete protocol JSON object and needs to normalize it into the app's import-ready protocol format. The tool does not call an LLM, does not synthesize method content, and does not require a protocol id.",
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
+        "required": [
+          "protocol"
+        ],
         "properties": {
-          "title": {
-            "type": "string"
-          },
-          "protocol_title_hint": {
-            "type": "string"
-          },
-          "purpose": {
-            "type": "string"
-          },
-          "method_text": {
-            "type": "string"
-          },
-          "source_paper_title": {
-            "type": "string"
-          },
-          "source_summary": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          },
-          "materials": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 40
-          },
-          "steps": {
-            "type": "array",
-            "items": {
-              "anyOf": [
-                {
+          "protocol": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "name",
+              "steps"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "purpose": {
+                "type": "string"
+              },
+              "materials": {
+                "type": "array",
+                "items": {
                   "type": "string"
                 },
-                {
-                  "$ref": "#/$defs/protocol_generation_step"
-                }
-              ]
-            },
-            "maxItems": 40
+                "maxItems": 80
+              },
+              "steps": {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/protocol_generation_step"
+                    }
+                  ]
+                },
+                "maxItems": 120
+              },
+              "troubleshooting": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "array"
+                  }
+                ]
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            }
+          },
+          "result_summary": {
+            "type": "string"
           }
         }
       }
@@ -1441,9 +1563,6 @@
       "type": "object",
       "additionalProperties": true,
       "properties": {
-        "id": {
-          "type": "string"
-        },
         "text": {
           "type": "string"
         },

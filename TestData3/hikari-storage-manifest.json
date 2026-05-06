@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-05-05T14:32:23.264Z",
+  "generated_at": "2026-05-06T02:11:15.611Z",
   "root_path": "/Users/shiyifan/Projects/Enana/TestData3",
   "discovered_files": [
     {
@@ -16,7 +16,28 @@
       "type": "directory",
       "role": "assays_root",
       "size_bytes": 0,
-      "modified_at": "2026-04-27T22:25:12.059Z"
+      "modified_at": "2026-05-06T01:45:57.659Z"
+    },
+    {
+      "relative_path": "Assays/aaaa__1776918071270-25a114f810413",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-05-06T01:45:57.659Z"
+    },
+    {
+      "relative_path": "Assays/aaaa__1776918071270-25a114f810413/analysis-result.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 137,
+      "modified_at": "2026-05-06T01:45:57.659Z"
+    },
+    {
+      "relative_path": "Assays/aaaa__1776918071270-25a114f810413/assay-definition.json",
+      "type": "file",
+      "role": "data_file",
+      "size_bytes": 4887,
+      "modified_at": "2026-05-06T01:45:57.659Z"
     },
     {
       "relative_path": "chat_log",
@@ -142,21 +163,21 @@
       "type": "file",
       "role": "chemical_inventory_index",
       "size_bytes": 24576,
-      "modified_at": "2026-05-05T14:31:37.355Z"
+      "modified_at": "2026-05-06T02:01:26.366Z"
     },
     {
       "relative_path": "hikari-data.json",
       "type": "file",
       "role": "data_file",
-      "size_bytes": 63262,
-      "modified_at": "2026-05-05T14:31:37.284Z"
+      "size_bytes": 61199,
+      "modified_at": "2026-05-06T01:51:30.710Z"
     },
     {
       "relative_path": "hikari-storage-manifest.json",
       "type": "file",
       "role": "storage_manifest",
-      "size_bytes": 30625,
-      "modified_at": "2026-05-05T03:01:25.605Z"
+      "size_bytes": 32301,
+      "modified_at": "2026-05-06T02:01:26.219Z"
     },
     {
       "relative_path": "Papers",
@@ -212,7 +233,7 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 438,
-      "modified_at": "2026-05-05T14:31:37.294Z"
+      "modified_at": "2026-05-06T01:51:30.726Z"
     },
     {
       "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/Notebook",
@@ -240,7 +261,7 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 455,
-      "modified_at": "2026-05-05T14:31:37.294Z"
+      "modified_at": "2026-05-06T01:51:30.726Z"
     },
     {
       "relative_path": "Project/Protein_Builder/Notebook",
@@ -317,7 +338,7 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 389,
-      "modified_at": "2026-05-05T14:31:37.294Z"
+      "modified_at": "2026-05-06T01:51:30.727Z"
     },
     {
       "relative_path": "Project/SUMO1/Notebook",
@@ -387,7 +408,7 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 461,
-      "modified_at": "2026-05-05T14:31:37.294Z"
+      "modified_at": "2026-05-06T01:51:30.727Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook",
@@ -471,7 +492,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 8700,
-      "modified_at": "2026-05-05T14:31:37.285Z"
+      "modified_at": "2026-05-06T01:51:30.712Z"
     },
     {
       "relative_path": "Protocol/BL21(DE3)_Chemical_Transformation_with_pET28a__1774024047007-d137dae96cab78",
@@ -485,7 +506,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2529,
-      "modified_at": "2026-05-05T14:31:37.285Z"
+      "modified_at": "2026-05-06T01:51:30.713Z"
     },
     {
       "relative_path": "Protocol/IPTG-Induced_Recombinant_Protein_Expression_in_BL21(DE3)__1774024680081-6b02b28fd6d39",
@@ -499,7 +520,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 3594,
-      "modified_at": "2026-05-05T14:31:37.285Z"
+      "modified_at": "2026-05-06T01:51:30.714Z"
     },
     {
       "relative_path": "Protocol/Ni-NTA_Purification_of_His-Tagged_Protein__1774024695073-536c18071dd0d",
@@ -513,7 +534,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2351,
-      "modified_at": "2026-05-05T14:31:37.286Z"
+      "modified_at": "2026-05-06T01:51:30.715Z"
     },
     {
       "relative_path": "Protocol/Protein_Builder_Cloning_Assembly__protein-builder-cloning-assembly-protocol",
@@ -527,14 +548,14 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 1698,
-      "modified_at": "2026-05-05T14:31:37.287Z"
+      "modified_at": "2026-05-06T01:51:30.717Z"
     },
     {
       "relative_path": "Protocol/protocol.index.sqlite",
       "type": "file",
       "role": "protocol_index",
-      "size_bytes": 577536,
-      "modified_at": "2026-05-05T14:31:37.352Z"
+      "size_bytes": 581632,
+      "modified_at": "2026-05-06T01:51:30.748Z"
     },
     {
       "relative_path": "Protocol/Small-Scale_Overnight_Starter_Culture__1774024647315-74cbb18b4cc37",
@@ -548,7 +569,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 8927,
-      "modified_at": "2026-05-05T14:31:37.286Z"
+      "modified_at": "2026-05-06T01:51:30.716Z"
     },
     {
       "relative_path": "Protocol/Soluble_TEV_Protease_Expression_in_E._coli__1777425346120-58b8924ca425c8",
@@ -562,7 +583,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2864,
-      "modified_at": "2026-05-05T14:31:37.288Z"
+      "modified_at": "2026-05-06T01:51:30.718Z"
     },
     {
       "relative_path": "Protocol/T4_DNA_Ligation__1776562378892-e9d8a0a7eee9c",
@@ -576,7 +597,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2166,
-      "modified_at": "2026-05-05T14:31:37.287Z"
+      "modified_at": "2026-05-06T01:51:30.717Z"
     },
     {
       "relative_path": "Protocol/TEV_Protease_Cleavage_of_Fusion_Protein__1774024712936-cdad2f729e908",
@@ -590,7 +611,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 21987,
-      "modified_at": "2026-05-05T14:31:37.286Z"
+      "modified_at": "2026-05-06T01:51:30.717Z"
     },
     {
       "relative_path": "Samples",
@@ -604,7 +625,7 @@
       "type": "file",
       "role": "samples_record",
       "size_bytes": 3987,
-      "modified_at": "2026-05-05T14:31:37.300Z"
+      "modified_at": "2026-05-06T01:51:30.727Z"
     },
     {
       "relative_path": "SequenceViewer",
@@ -751,7 +772,7 @@
       "type": "file",
       "role": "sequence_library_index",
       "size_bytes": 184320,
-      "modified_at": "2026-05-05T14:32:23.203Z"
+      "modified_at": "2026-05-06T02:11:15.455Z"
     },
     {
       "relative_path": "Workflow",
@@ -772,7 +793,7 @@
       "type": "file",
       "role": "workflow_template_metadata",
       "size_bytes": 923,
-      "modified_at": "2026-05-05T14:31:37.360Z"
+      "modified_at": "2026-05-06T01:51:30.751Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8",
@@ -793,7 +814,7 @@
       "type": "file",
       "role": "workflow_memory",
       "size_bytes": 612,
-      "modified_at": "2026-05-05T14:31:37.363Z"
+      "modified_at": "2026-05-06T01:51:30.751Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook",
@@ -821,21 +842,21 @@
       "type": "file",
       "role": "workflow_run_metadata",
       "size_bytes": 7900,
-      "modified_at": "2026-05-05T14:31:37.364Z"
+      "modified_at": "2026-05-06T01:51:30.752Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/template.json",
       "type": "file",
       "role": "workflow_template_metadata",
       "size_bytes": 2495,
-      "modified_at": "2026-05-05T14:31:37.358Z"
+      "modified_at": "2026-05-06T01:51:30.751Z"
     },
     {
       "relative_path": "Workflow/workflow-status.sqlite",
       "type": "file",
       "role": "workflow_status_index",
       "size_bytes": 40960,
-      "modified_at": "2026-05-05T14:31:37.366Z"
+      "modified_at": "2026-05-06T01:51:30.753Z"
     }
   ],
   "bundles": [

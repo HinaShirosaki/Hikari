@@ -41,26 +41,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   min-height: 0;
 }
 
-.sequence-viewer-home-sidebar {
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--line) 68%, var(--accent) 32%) transparent;
-}
-
-.sequence-viewer-home-sidebar::-webkit-scrollbar {
-  width: 12px;
-}
-
-.sequence-viewer-home-sidebar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.sequence-viewer-home-sidebar::-webkit-scrollbar-thumb {
-  border: 3px solid transparent;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--line) 68%, var(--accent) 32%);
-  background-clip: padding-box;
-}
-
 .sequence-viewer-home-nav-copy {
   display: grid;
   gap: 4px;

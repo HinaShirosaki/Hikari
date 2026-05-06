@@ -1,0 +1,298 @@
+{
+  "id": "1776918071270-25a114f810413",
+  "assayNumber": "ASY-000003",
+  "name": "aaaa",
+  "projectId": "",
+  "projectName": "",
+  "plateType": "1536",
+  "plateLabel": "1536 well",
+  "plateRows": 32,
+  "plateColumns": 48,
+  "wellCount": 1536,
+  "sampleAxis": "row",
+  "concentrationAxis": "column",
+  "sampleAxisValues": [
+    "A",
+    "V",
+    "R",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "concentrationAxisValues": [
+    "1000000",
+    "20000",
+    "10000",
+    "5000",
+    "4000",
+    "300",
+    "20",
+    "1.25",
+    "0.94",
+    "0",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    ""
+  ],
+  "manualWellOverrides": {},
+  "suppressedWells": [],
+  "notebookEntryId": "",
+  "notebookEntryProtocolName": "",
+  "notebookEntryType": "",
+  "serialDilution": {
+    "volumePerWellUl": "100",
+    "stockConcentrations": {
+      "A": "",
+      "V": "",
+      "R": ""
+    }
+  },
+  "serialDilutionSummary": {
+    "concentrationAxisName": "Column",
+    "volumePerWellUl": 100,
+    "feedbackMessages": [
+      {
+        "type": "error",
+        "text": "A: Enter a valid stock concentration for this sample."
+      },
+      {
+        "type": "note",
+        "text": "A: Skipped trailing 0 concentration well: A10."
+      },
+      {
+        "type": "error",
+        "text": "V: Enter a valid stock concentration for this sample."
+      },
+      {
+        "type": "note",
+        "text": "V: Skipped trailing 0 concentration well: B10."
+      },
+      {
+        "type": "error",
+        "text": "R: Enter a valid stock concentration for this sample."
+      },
+      {
+        "type": "note",
+        "text": "R: Skipped trailing 0 concentration well: C10."
+      }
+    ],
+    "initialDilutionRows": [],
+    "followingDilutionRows": [],
+    "followingRowsAreShared": true,
+    "hasValidPlans": false
+  },
+  "wellLayout": [
+    {
+      "well": "A1",
+      "sampleId": "A",
+      "concentration": "1000000"
+    },
+    {
+      "well": "A2",
+      "sampleId": "A",
+      "concentration": "20000"
+    },
+    {
+      "well": "A3",
+      "sampleId": "A",
+      "concentration": "10000"
+    },
+    {
+      "well": "A4",
+      "sampleId": "A",
+      "concentration": "5000"
+    },
+    {
+      "well": "A5",
+      "sampleId": "A",
+      "concentration": "4000"
+    },
+    {
+      "well": "A6",
+      "sampleId": "A",
+      "concentration": "300"
+    },
+    {
+      "well": "A7",
+      "sampleId": "A",
+      "concentration": "20"
+    },
+    {
+      "well": "A8",
+      "sampleId": "A",
+      "concentration": "1.25"
+    },
+    {
+      "well": "A9",
+      "sampleId": "A",
+      "concentration": "0.94"
+    },
+    {
+      "well": "A10",
+      "sampleId": "A",
+      "concentration": "0"
+    },
+    {
+      "well": "B1",
+      "sampleId": "V",
+      "concentration": "1000000"
+    },
+    {
+      "well": "B2",
+      "sampleId": "V",
+      "concentration": "20000"
+    },
+    {
+      "well": "B3",
+      "sampleId": "V",
+      "concentration": "10000"
+    },
+    {
+      "well": "B4",
+      "sampleId": "V",
+      "concentration": "5000"
+    },
+    {
+      "well": "B5",
+      "sampleId": "V",
+      "concentration": "4000"
+    },
+    {
+      "well": "B6",
+      "sampleId": "V",
+      "concentration": "300"
+    },
+    {
+      "well": "B7",
+      "sampleId": "V",
+      "concentration": "20"
+    },
+    {
+      "well": "B8",
+      "sampleId": "V",
+      "concentration": "1.25"
+    },
+    {
+      "well": "B9",
+      "sampleId": "V",
+      "concentration": "0.94"
+    },
+    {
+      "well": "B10",
+      "sampleId": "V",
+      "concentration": "0"
+    },
+    {
+      "well": "C1",
+      "sampleId": "R",
+      "concentration": "1000000"
+    },
+    {
+      "well": "C2",
+      "sampleId": "R",
+      "concentration": "20000"
+    },
+    {
+      "well": "C3",
+      "sampleId": "R",
+      "concentration": "10000"
+    },
+    {
+      "well": "C4",
+      "sampleId": "R",
+      "concentration": "5000"
+    },
+    {
+      "well": "C5",
+      "sampleId": "R",
+      "concentration": "4000"
+    },
+    {
+      "well": "C6",
+      "sampleId": "R",
+      "concentration": "300"
+    },
+    {
+      "well": "C7",
+      "sampleId": "R",
+      "concentration": "20"
+    },
+    {
+      "well": "C8",
+      "sampleId": "R",
+      "concentration": "1.25"
+    },
+    {
+      "well": "C9",
+      "sampleId": "R",
+      "concentration": "0.94"
+    },
+    {
+      "well": "C10",
+      "sampleId": "R",
+      "concentration": "0"
+    }
+  ],
+  "updatedAt": "2026-05-06T01:45:57.625Z"
+}

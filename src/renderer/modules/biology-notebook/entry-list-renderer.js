@@ -3,23 +3,16 @@ import {
   normalizeNotebookState,
   notebookStateLabel,
   resolveEntryCollectionName,
-  resolveEntryExperimentName,
-  resolveEntryProtocol
+  resolveEntryExperimentName
 } from './entry-helpers.js';
 
 export function createEntryListRenderer({
   listEl,
-  statusEl,
   notebookType,
   safeText,
   getNotebookEntries,
   getProjects,
-  getProtocols,
-  getEditingEntryId,
-  getViewerProtocolDraft,
-  getSelectedProjectId,
-  getSelectedProtocolId,
-  getActiveEntry
+  getEditingEntryId
 } = {}) {
   function matchesType(entry) {
     return matchesNotebookType(entry, notebookType);
@@ -88,8 +81,6 @@ export function createEntryListRenderer({
         return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
       });
 
-    updatePageListStatus(entries);
-
     if (!entries.length) {
       listEl.innerHTML = '<p class="biology-notebook-page-list-empty">No notebook pages saved yet.</p>';
       return;
@@ -112,48 +103,7 @@ export function createEntryListRenderer({
     }).join('');
   }
 
-  function updatePageListStatus(entries = null) {
-    if (!statusEl) {
-      return;
-    }
-
-    const projects = getProjects();
-    const protocols = getProtocols();
-    const savedEntries = Array.isArray(entries)
-      ? entries
-      : (getNotebookEntries() || []).filter((entry) => matchesType(entry));
-    const project = projects.find((item) => item.id === getSelectedProjectId());
-    const viewerDraft = getViewerProtocolDraft();
-    const protocol = viewerDraft || protocols.find((item) => item.id === getSelectedProtocolId());
-
-    if (project && protocol) {
-      statusEl.textContent = `Working in ${project.name} / ${protocol.name}`;
-      return;
-    }
-    if (project) {
-      statusEl.textContent = `Viewing pages for ${project.name}`;
-      return;
-    }
-    const activeEntry = getActiveEntry();
-    if (activeEntry) {
-      const activeCollectionName = resolveEntryCollectionName(activeEntry, projects);
-      const activeProtocol = resolveEntryProtocol(activeEntry, protocols);
-      if (activeCollectionName && activeProtocol?.name) {
-        statusEl.textContent = `Viewing page for ${activeCollectionName} / ${activeProtocol.name}`;
-        return;
-      }
-      if (activeProtocol?.name) {
-        statusEl.textContent = `Viewing ${activeProtocol.name}`;
-        return;
-      }
-    }
-    statusEl.textContent = savedEntries.length
-      ? 'Select a notebook page or choose a project and protocol to start a new one.'
-      : 'Select a project and protocol to start a page.';
-  }
-
   return {
-    renderEntries,
-    updatePageListStatus
+    renderEntries
   };
 }

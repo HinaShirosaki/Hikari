@@ -13,6 +13,10 @@ const {
   callProtocolLookup
 } = require('./protocol-lookup.js');
 const {
+  PROTOCOL_GENERATION_MCP_TOOL,
+  callProtocolGeneration
+} = require('./protocol-generation.js');
+const {
   NOTEBOOK_LOOKUP_MCP_TOOL,
   callNotebookLookup
 } = require('./notebook-lookup.js');
@@ -29,6 +33,10 @@ const MCP_LOOKUP_TOOLS = Object.freeze([
   {
     definition: PROTOCOL_LOOKUP_MCP_TOOL,
     handler: callProtocolLookup
+  },
+  {
+    definition: PROTOCOL_GENERATION_MCP_TOOL,
+    handler: callProtocolGeneration
   },
   {
     definition: NOTEBOOK_LOOKUP_MCP_TOOL,

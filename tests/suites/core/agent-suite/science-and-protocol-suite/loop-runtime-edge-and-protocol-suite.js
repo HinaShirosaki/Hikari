@@ -361,7 +361,7 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
       assert.equal(capturedToolNames.includes('literature-search'), true);
     });
 
-    test('protocol generation runtime emits import-ready protocol records with placeholders and troubleshooting', async () => {
+    test('protocol generation runtime normalizes import-ready protocol JSON without an llm call', async () => {
       let createIdCounter = 0;
       const requestOptions = [];
       const runtime = agentProtocolGeneration.createProtocolGenerationRuntime({
@@ -369,40 +369,35 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
         createId: () => `generated-${++createIdCounter}`,
         requestStructuredJsonPayload: async (options = {}) => {
           requestOptions.push(options);
-          return {
-          ok: true,
-          payload: {
-            protocol: {
-              name: 'PD-1 Nanobody Purification',
-              purpose: 'Purify the expressed PD-1 nanobody from lysate.',
-              materials: ['Ni-NTA resin', 'imidazole buffer'],
-              steps: [
-                'Clarify lysate.',
-                'Bind clarified lysate to Ni-NTA resin for [time].',
-                'Elute bound protein with imidazole.'
-              ],
-              troubleshooting: [
-                {
-                  problem: 'Low yield',
-                  possible_cause: 'Insufficient binding time',
-                  solution: 'Extend resin contact time.'
-                }
-              ]
-            },
-            result_summary: 'Generated a purification protocol.'
-          }
-          };
+          throw new Error('protocol generation should not call the llm');
         }
       });
 
       const result = await runtime.generateProtocol({
-        title: 'PD-1 Nanobody Purification',
-        method_text: 'Clarify lysate, bind it to Ni-NTA resin, then elute with imidazole.'
+        protocol: {
+          name: 'PD-1 Nanobody Purification',
+          purpose: 'Purify the expressed PD-1 nanobody from lysate.',
+          materials: ['Ni-NTA resin', 'imidazole buffer'],
+          steps: [
+            'Clarify lysate.',
+            'Bind clarified lysate to Ni-NTA resin for [time].',
+            'Elute bound protein with imidazole.'
+          ],
+          troubleshooting: [
+            {
+              problem: 'Low yield',
+              possible_cause: 'Insufficient binding time',
+              solution: 'Extend resin contact time.'
+            }
+          ]
+        },
+        result_summary: 'Prepared a purification protocol.'
       });
 
       assert.equal(result.ok, true);
-      assert.equal(result.status, 'generated');
+      assert.equal(result.status, 'normalized');
       assert.equal(result.protocol.name, 'PD-1 Nanobody Purification');
+      assert.equal(Object.prototype.hasOwnProperty.call(result.protocol, 'id'), false);
       assert.equal(result.protocol.createdAt, '2026-03-22T12:00:00.000Z');
       assert.equal(result.protocol.updatedAt, '2026-03-22T12:00:00.000Z');
       assert.equal(Array.isArray(result.protocol.materials), true);
@@ -412,23 +407,22 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
       assert.match(String(result.protocol.steps[1].text || ''), /\{\{ph:/);
       assert.equal(result.protocol.steps[1].placeholders[0].name, 'time');
       assert.match(String(result.protocol.troubleshooting || ''), /Low yield/);
-      assert.equal(result.summary, 'Generated a purification protocol.');
-      assert.equal(requestOptions.length, 1);
-      assert.equal(requestOptions[0].enableWebSearch, true);
+      assert.equal(result.summary, 'Prepared a purification protocol.');
+      assert.equal(requestOptions.length, 0);
     });
 
-    test('protocol generation prompt preserves concrete operational values and keeps placeholders rare', () => {
+    test('protocol generation prompt documents deterministic protocol json normalization', () => {
       const runtime = agentProtocolGeneration.createProtocolGenerationRuntime();
       const prompt = runtime.buildPrompt({
-        title: 'HEK293 Transfection',
-        method_text: 'Seed HEK293 cells and transfect at 37 C with shaking at 300 rpm for 45 minutes.',
-        message: 'Generate a transfection protocol.'
+        protocol: {
+          name: 'HEK293 Transfection',
+          steps: ['Seed HEK293 cells.', 'Transfect at 37 C.']
+        }
       });
 
-      assert.match(runtime.PROTOCOL_GENERATION_SYSTEM_PROMPT, /use web search to confirm broadly documented method details/i);
-      assert.match(prompt, /Placeholders should be rare/i);
-      assert.match(prompt, /time, temperature, rpm, speed, centrifugation force, incubation length, volumes, and concentrations/i);
-      assert.match(prompt, /do not replace stated values with placeholders/i);
+      assert.match(runtime.PROTOCOL_GENERATION_SYSTEM_PROMPT, /Do not generate protocol content/i);
+      assert.match(prompt, /Do not call an LLM or web search/i);
+      assert.match(prompt, /HEK293 Transfection/);
     });
   }
 };

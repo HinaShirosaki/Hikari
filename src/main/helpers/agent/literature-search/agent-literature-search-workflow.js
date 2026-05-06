@@ -395,6 +395,11 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
           file_name: cleanText(downloadResult.file_name, 240),
           file_path: cleanText(downloadResult.file_path, 4000),
           relative_path: cleanText(downloadResult.relative_path, 2000),
+          knowledge_markdown_path: cleanText(downloadResult.knowledge_markdown_path, 4000),
+          knowledge_markdown_relative_path: cleanText(downloadResult.knowledge_markdown_relative_path, 2000),
+          knowledge_database: downloadResult.knowledge_database && typeof downloadResult.knowledge_database === 'object'
+            ? cloneJson(downloadResult.knowledge_database, null)
+            : null,
           error: cleanText(downloadResult.error, 1200)
         });
       });

@@ -1,0 +1,1010 @@
+'use strict';
+
+const crypto = require('node:crypto');
+const fsPromises = require('node:fs/promises');
+const path = require('node:path');
+
+const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { loadSqlJs } = require('../../main/storage-bundle/storage-utils.js');
+
+const KNOWLEDGE_DATABASE_FOLDER_NAME = 'KnowledgeDatabase';
+const KNOWLEDGE_PAPERS_FOLDER_NAME = 'PaperKnowledge';
+const KNOWLEDGE_INDEX_FILE_NAME = 'knowledge.index.sqlite';
+const KNOWLEDGE_JSON_INDEX_FILE_NAME = 'index.json';
+const DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT = 120000;
+
+function defaultCleanText(value, _maxLength = 4000) {
+  const text = String(value || '');
+  if (!text) {
+    return '';
+  }
+  return text;
+}
+
+function ensureObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function asArrayDefault(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function limitText(value, maxLength = 4000) {
+  const text = String(value || '');
+  const numericMax = Number(maxLength);
+  if (!text || !Number.isFinite(numericMax) || numericMax <= 0) {
+    return text;
+  }
+  return text.length > numericMax ? text.slice(0, numericMax) : text;
+}
+
+function cloneJson(value, fallback) {
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizeDoi(value) {
+  return String(value || '')
+    .trim()
+    .replace(/^doi:\s*/i, '')
+    .replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '')
+    .replace(/\s+/g, '');
+}
+
+function extractDoiFromText(value) {
+  const text = String(value || '');
+  const match = text.match(/\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i);
+  return normalizeDoi(match?.[0] ? match[0].replace(/[),.;\]]+$/g, '') : '');
+}
+
+function sanitizeStorageName(value, fallback = 'paper') {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 180);
+  return cleaned || fallback;
+}
+
+function buildKnowledgePaperSlug({ doi = '', title = '', pdfSha256 = '' } = {}) {
+  const normalizedDoi = normalizeDoi(doi);
+  if (normalizedDoi) {
+    return sanitizeStorageName(normalizedDoi.replace(/\//g, '_'), 'paper');
+  }
+  const titleSlug = sanitizeStorageName(title, '');
+  if (titleSlug) {
+    return titleSlug;
+  }
+  return sanitizeStorageName(pdfSha256 ? `paper-${String(pdfSha256).slice(0, 16)}` : 'paper', 'paper');
+}
+
+function ensurePathWithinRoot(rootPath, targetPath) {
+  const resolvedRoot = path.resolve(rootPath);
+  const resolvedTarget = path.resolve(targetPath);
+  if (resolvedTarget === resolvedRoot) {
+    return resolvedTarget;
+  }
+  const rootWithSep = resolvedRoot.endsWith(path.sep)
+    ? resolvedRoot
+    : `${resolvedRoot}${path.sep}`;
+  if (!resolvedTarget.startsWith(rootWithSep)) {
+    throw new Error('Target path must be inside the configured storage path.');
+  }
+  return resolvedTarget;
+}
+
+function buildRelativePath(rootPath, targetPath) {
+  return path.relative(path.resolve(rootPath), path.resolve(targetPath)).split(path.sep).join('/');
+}
+
+function resolveStoragePath(source, cleanText) {
+  return cleanText(source.storage_path || source.storagePath, 4000);
+}
+
+function buildKnowledgeDatabasePaths({ storagePath = '', doi = '', title = '', pdfSha256 = '' } = {}) {
+  const resolvedStoragePath = path.resolve(storagePath);
+  const rootPath = path.join(resolvedStoragePath, KNOWLEDGE_DATABASE_FOLDER_NAME);
+  const papersPath = path.join(rootPath, KNOWLEDGE_PAPERS_FOLDER_NAME);
+  const paperFolderName = buildKnowledgePaperSlug({ doi, title, pdfSha256 });
+  const paperFolderPath = path.join(papersPath, paperFolderName);
+  return {
+    storage_path: resolvedStoragePath,
+    root_path: rootPath,
+    papers_path: papersPath,
+    paper_folder_name: paperFolderName,
+    paper_folder_path: paperFolderPath,
+    markdown_path: path.join(paperFolderPath, 'paper.md'),
+    extracted_text_path: path.join(paperFolderPath, 'extracted.txt'),
+    meta_path: path.join(paperFolderPath, 'meta.json'),
+    sqlite_path: path.join(rootPath, KNOWLEDGE_INDEX_FILE_NAME),
+    json_index_path: path.join(rootPath, KNOWLEDGE_JSON_INDEX_FILE_NAME)
+  };
+}
+
+function getPaperScope(linkedType = '') {
+  const normalized = String(linkedType || '').trim().toLowerCase().replace(/[\s_]+/g, '-');
+  if (normalized === 'project') {
+    return 'project';
+  }
+  if (normalized === 'journal-club' || normalized === 'literature-search') {
+    return 'journal-club';
+  }
+  return normalized || 'global';
+}
+
+function looksLikePdfBuffer(buffer) {
+  return Buffer.isBuffer(buffer) && buffer.length >= 5 && buffer.subarray(0, 5).toString('utf8') === '%PDF-';
+}
+
+function sha256Buffer(buffer) {
+  return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+
+function normalizeYear(value) {
+  const direct = String(value || '').trim();
+  if (/^\d{4}$/.test(direct)) {
+    return direct;
+  }
+  const match = direct.match(/\b(19|20)\d{2}\b/);
+  return match?.[0] || '';
+}
+
+function guessTitleFromText(text = '') {
+  const lines = String(text || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && line.length >= 6 && line.length <= 220);
+  return lines[0] || '';
+}
+
+function buildExtractedTextFile(extraction = {}) {
+  const pages = asArrayDefault(extraction.pages);
+  if (pages.length) {
+    return pages.map((page) => [
+      `[[page:${Number(page.page_number) || 0}]]`,
+      String(page.text || '').trim()
+    ].filter(Boolean).join('\n')).join('\n\n');
+  }
+  return String(extraction.text || '').trim();
+}
+
+function formatSectionsForMarkdown(sections = [], maxChars = 28000) {
+  const chunks = [];
+  let used = 0;
+  asArrayDefault(sections).forEach((section) => {
+    if (used >= maxChars) {
+      return;
+    }
+    const label = limitText(section?.label || section?.normalized_label || 'Section', 160);
+    const startPage = Number(section?.start_page) || Number(section?.page_number) || 0;
+    const endPage = Number(section?.end_page) || startPage;
+    const pageLabel = startPage
+      ? (endPage && endPage !== startPage ? `pp. ${startPage}-${endPage}` : `p. ${startPage}`)
+      : 'page unknown';
+    const text = String(section?.text || '').trim();
+    if (!text) {
+      return;
+    }
+    const remaining = Math.max(0, maxChars - used);
+    const slice = text.length > remaining ? `${text.slice(0, remaining)}\n[... truncated ...]` : text;
+    chunks.push(`### ${label} (${pageLabel})\n\n${slice}`);
+    used += slice.length;
+  });
+  return chunks.join('\n\n');
+}
+
+function buildFallbackMarkdown({ metadata = {}, extraction = {}, extractedText = '' } = {}) {
+  const title = limitText(metadata.title, 220) || 'Untitled paper';
+  const authors = asArrayDefault(metadata.authors).join(', ') || '-';
+  const year = metadata.year || '-';
+  const doi = metadata.doi || '-';
+  const sectionText = formatSectionsForMarkdown(extraction.sections, 30000);
+  const rawPreview = sectionText ? '' : limitText(extractedText, 30000);
+  return [
+    `# ${title}`,
+    `**Authors:** ${authors}   **Year:** ${year}   **DOI:** ${doi}`,
+    '',
+    '## TL;DR',
+    '- A provider rewrite was not available, so this LLM-facing note preserves the extracted paper text with page markers for later regeneration.',
+    '',
+    '## Background',
+    '',
+    'See the extracted sections below. Claims should be checked against `extracted.txt` before citation.',
+    '',
+    '## Methods',
+    '',
+    sectionText || '- No method-specific section was detected.',
+    '',
+    '## Key results',
+    '',
+    rawPreview || '- No separate result summary was generated.',
+    '',
+    '## Figures & tables',
+    '',
+    '- Figure extraction is not available in this entry.',
+    '',
+    '## Limitations',
+    '',
+    '- Generated from text extraction only; equations, figures, and scanned text may be incomplete.',
+    '',
+    '## How it relates',
+    '',
+    '- No cross-paper links have been indexed yet.',
+    '',
+    '## Verbatim quotes',
+    '',
+    '- Use `extracted.txt` page markers for quote selection.'
+  ].join('\n');
+}
+
+function buildMarkdownRewritePrompt({ metadata = {}, extraction = {}, extractedText = '', maxPromptChars = DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT } = {}) {
+  const promptText = limitText(extractedText, maxPromptChars);
+  const sectionSummary = asArrayDefault(extraction.sections)
+    .slice(0, 24)
+    .map((section) => ({
+      label: section?.label || section?.normalized_label || '',
+      start_page: section?.start_page || section?.page_number || null,
+      end_page: section?.end_page || section?.page_number || null
+    }));
+  return [
+    'Rewrite this scientific paper into dense wiki-form Markdown for a future LLM reader.',
+    'Use only the extracted paper text. Do not add outside knowledge.',
+    'Make every important claim traceable to a page using citations like `(p. 4)` or `(pp. 4-5)`.',
+    'Keep it self-contained, concise, and link-ready. Use `[[doi]]` only for clearly named related papers already present in the text.',
+    'Return Markdown only with this skeleton:',
+    '# <Title>',
+    '**Authors:** ...   **Year:** ...   **DOI:** ...',
+    '## TL;DR',
+    '## Background',
+    '## Methods',
+    '## Key results',
+    '## Figures & tables',
+    '## Limitations',
+    '## How it relates',
+    '## Verbatim quotes',
+    '',
+    `Metadata JSON:\n${JSON.stringify(metadata, null, 2)}`,
+    `Detected sections JSON:\n${JSON.stringify(sectionSummary, null, 2)}`,
+    `Extracted text with page markers:\n${promptText}`
+  ].join('\n\n');
+}
+
+function extractLlmText(result = {}) {
+  if (typeof result === 'string') {
+    return result;
+  }
+  const source = ensureObject(result);
+  return String(source.text || source.assistant_message || source.message || source.output_text || '').trim();
+}
+
+function normalizeMarkdown(markdown = '') {
+  const text = String(markdown || '').trim()
+    .replace(/^```(?:markdown|md)?\s*/i, '')
+    .replace(/\s*```$/i, '')
+    .trim();
+  return text;
+}
+
+function applyKnowledgeDatabaseSchema(db) {
+  db.run(`
+    CREATE TABLE IF NOT EXISTS papers (
+      id TEXT PRIMARY KEY,
+      doi TEXT UNIQUE,
+      title TEXT,
+      abstract TEXT,
+      authors_json TEXT,
+      journal TEXT,
+      year TEXT,
+      url TEXT,
+      pdf_sha256 TEXT UNIQUE,
+      added_at TEXT,
+      updated_at TEXT,
+      source TEXT,
+      wiki_status TEXT,
+      wiki_path TEXT,
+      extraction_status TEXT,
+      notes TEXT,
+      search_text TEXT
+    );
+    CREATE TABLE IF NOT EXISTS paper_locations (
+      id TEXT PRIMARY KEY,
+      paper_id TEXT NOT NULL,
+      scope TEXT,
+      container TEXT,
+      folder_path TEXT,
+      pdf_filename TEXT,
+      pdf_path TEXT,
+      discovered_at TEXT
+    );
+    CREATE TABLE IF NOT EXISTS paper_tags (
+      paper_id TEXT NOT NULL,
+      tag TEXT NOT NULL,
+      PRIMARY KEY (paper_id, tag)
+    );
+    CREATE TABLE IF NOT EXISTS paper_links (
+      from_paper_id TEXT NOT NULL,
+      to_paper_id TEXT NOT NULL,
+      relation TEXT,
+      PRIMARY KEY (from_paper_id, to_paper_id, relation)
+    );
+    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_title ON papers(title);
+    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_search ON papers(search_text);
+    CREATE INDEX IF NOT EXISTS idx_knowledge_locations_paper ON paper_locations(paper_id);
+    CREATE INDEX IF NOT EXISTS idx_knowledge_tags_tag ON paper_tags(tag);
+  `);
+}
+
+function queryRows(db, sql, params = []) {
+  const stmt = db.prepare(sql);
+  const rows = [];
+  try {
+    stmt.bind(params);
+    while (stmt.step()) {
+      rows.push(stmt.getAsObject());
+    }
+  } finally {
+    stmt.free();
+  }
+  return rows;
+}
+
+function runStatement(db, sql, params = []) {
+  const stmt = db.prepare(sql);
+  try {
+    stmt.run(params);
+  } finally {
+    stmt.free();
+  }
+}
+
+async function openKnowledgeDatabase(sqlitePath) {
+  const SQL = await loadSqlJs();
+  let db = null;
+  try {
+    const bytes = await fsPromises.readFile(sqlitePath);
+    db = bytes.length ? new SQL.Database(new Uint8Array(bytes)) : new SQL.Database();
+  } catch (error) {
+    if (error?.code !== 'ENOENT') {
+      throw error;
+    }
+    db = new SQL.Database();
+  }
+  applyKnowledgeDatabaseSchema(db);
+  return db;
+}
+
+async function persistKnowledgeDatabase(sqlitePath, db) {
+  const bytes = db.export();
+  await fsPromises.mkdir(path.dirname(sqlitePath), { recursive: true });
+  await fsPromises.writeFile(sqlitePath, Buffer.from(bytes));
+}
+
+function findExistingPaperRow(db, { doi = '', pdfSha256 = '', title = '' } = {}) {
+  const normalizedDoi = normalizeDoi(doi);
+  if (normalizedDoi) {
+    const rows = queryRows(db, 'SELECT * FROM papers WHERE lower(doi) = lower(?) LIMIT 1', [normalizedDoi]);
+    if (rows[0]) {
+      return rows[0];
+    }
+  }
+  if (pdfSha256) {
+    const rows = queryRows(db, 'SELECT * FROM papers WHERE pdf_sha256 = ? LIMIT 1', [pdfSha256]);
+    if (rows[0]) {
+      return rows[0];
+    }
+  }
+  const normalizedTitle = String(title || '').trim();
+  if (normalizedTitle) {
+    const rows = queryRows(db, 'SELECT * FROM papers WHERE lower(title) = lower(?) LIMIT 1', [normalizedTitle]);
+    if (rows[0]) {
+      return rows[0];
+    }
+  }
+  return null;
+}
+
+function buildPaperId({ existing = null, doi = '', pdfSha256 = '', title = '' } = {}) {
+  if (existing?.id) {
+    return String(existing.id);
+  }
+  const normalizedDoi = normalizeDoi(doi);
+  if (normalizedDoi) {
+    return `paper-doi-${sanitizeStorageName(normalizedDoi.replace(/\//g, '_'), 'paper')}`;
+  }
+  if (pdfSha256) {
+    return `paper-sha256-${String(pdfSha256).slice(0, 16)}`;
+  }
+  return `paper-title-${sanitizeStorageName(title, 'paper')}`;
+}
+
+function buildSearchText(metadata = {}) {
+  return [
+    metadata.title,
+    metadata.doi,
+    metadata.abstract,
+    metadata.journal,
+    metadata.year,
+    asArrayDefault(metadata.authors).join(' ')
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+async function readJsonObject(filePath) {
+  try {
+    const raw = await fsPromises.readFile(filePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+async function writeJsonFile(filePath, payload) {
+  await fsPromises.mkdir(path.dirname(filePath), { recursive: true });
+  await fsPromises.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+}
+
+function normalizeIndexEntry(entry = {}) {
+  return {
+    id: String(entry.id || ''),
+    doi: normalizeDoi(entry.doi),
+    title: String(entry.title || ''),
+    pdf_sha256: String(entry.pdf_sha256 || ''),
+    wiki_status: String(entry.wiki_status || ''),
+    wiki_path: String(entry.wiki_path || ''),
+    extraction_status: String(entry.extraction_status || ''),
+    updated_at: String(entry.updated_at || '')
+  };
+}
+
+async function updateJsonIndex(indexPath, paperRow = {}, locationRow = {}) {
+  const current = await readJsonObject(indexPath);
+  const papers = asArrayDefault(current.papers).map(normalizeIndexEntry).filter((entry) => entry.id);
+  const locations = asArrayDefault(current.locations)
+    .map((entry) => ({
+      id: String(entry.id || ''),
+      paper_id: String(entry.paper_id || ''),
+      scope: String(entry.scope || ''),
+      container: String(entry.container || ''),
+      folder_path: String(entry.folder_path || ''),
+      pdf_filename: String(entry.pdf_filename || ''),
+      pdf_path: String(entry.pdf_path || ''),
+      discovered_at: String(entry.discovered_at || '')
+    }))
+    .filter((entry) => entry.id);
+  const paperEntry = normalizeIndexEntry(paperRow);
+  const locationEntry = {
+    id: String(locationRow.id || ''),
+    paper_id: String(locationRow.paper_id || ''),
+    scope: String(locationRow.scope || ''),
+    container: String(locationRow.container || ''),
+    folder_path: String(locationRow.folder_path || ''),
+    pdf_filename: String(locationRow.pdf_filename || ''),
+    pdf_path: String(locationRow.pdf_path || ''),
+    discovered_at: String(locationRow.discovered_at || '')
+  };
+  const nextPapers = papers.filter((entry) => entry.id !== paperEntry.id);
+  if (paperEntry.id) {
+    nextPapers.push(paperEntry);
+  }
+  const nextLocations = locations.filter((entry) => entry.id !== locationEntry.id);
+  if (locationEntry.id) {
+    nextLocations.push(locationEntry);
+  }
+  await writeJsonFile(indexPath, {
+    version: 1,
+    updated_at: new Date().toISOString(),
+    papers: nextPapers,
+    locations: nextLocations
+  });
+}
+
+function resolveRelativeStoragePath(storagePath, maybeRelativePath) {
+  const source = String(maybeRelativePath || '').trim();
+  if (!source) {
+    return '';
+  }
+  if (path.isAbsolute(source)) {
+    return source;
+  }
+  return path.join(storagePath, source);
+}
+
+function chooseLocation(locations = [], scope = '', container = '') {
+  const normalizedScope = String(scope || '').trim().toLowerCase();
+  const normalizedContainer = String(container || '').trim().toLowerCase();
+  return asArrayDefault(locations).find((location) => (
+    String(location.scope || '').trim().toLowerCase() === normalizedScope
+    && String(location.container || '').trim().toLowerCase() === normalizedContainer
+  )) || asArrayDefault(locations)[0] || null;
+}
+
+function createPaperKnowledgeDatabaseRuntime(deps = {}) {
+  const {
+    asArray,
+    cleanText,
+    requestAssistantText
+  } = createAgentLlmRuntimeHelpers(deps);
+  const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
+  const pdfTextExtractionRuntime = deps.pdfTextExtractionRuntime && typeof deps.pdfTextExtractionRuntime === 'object'
+    ? deps.pdfTextExtractionRuntime
+    : null;
+
+  function normalizeMetadata(input = {}, extraction = {}, pdfSha256 = '') {
+    const source = ensureObject(input);
+    const extractedText = String(extraction.text || '');
+    const doi = normalizeDoi(
+      source.doi
+      || source.paper_doi
+      || source.paperDoi
+      || extractDoiFromText(extractedText)
+    );
+    const authors = asArray(source.authors || source.paper_authors || source.paperAuthors)
+      .map((author) => cleanText(typeof author === 'string' ? author : (author?.name || author?.family || ''), 240))
+      .filter(Boolean)
+      .slice(0, 80);
+    const title = cleanText(
+      source.title
+      || source.paper_title
+      || source.paperTitle
+      || source.file_name
+      || guessTitleFromText(extractedText),
+      320
+    );
+    return {
+      doi,
+      title,
+      abstract: cleanText(source.abstract || source.paper_abstract || source.paperAbstract, 12000),
+      authors,
+      journal: cleanText(source.journal || source.paper_journal || source.paperJournal, 320),
+      year: normalizeYear(source.year || source.published_at || source.publishedAt || source.date),
+      url: cleanText(source.url || source.page_url || source.pageUrl || source.paper_url || source.paperUrl, 2000),
+      pdf_sha256: pdfSha256,
+      source: cleanText(source.source, 80) || 'agent',
+      notes: cleanText(source.notes, 4000)
+    };
+  }
+
+  async function generateKnowledgeMarkdown(input = {}) {
+    const source = ensureObject(input);
+    const metadata = ensureObject(source.metadata);
+    const extraction = ensureObject(source.extraction);
+    const extractedText = String(source.extractedText || '');
+    const prompt = buildMarkdownRewritePrompt({
+      metadata,
+      extraction,
+      extractedText,
+      maxPromptChars: Number(source.maxPromptChars) || DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT
+    });
+
+    const llmResult = await requestAssistantText({
+      source: ensureObject(source.llmSource || source.source),
+      provider: cleanText(source.provider, 80),
+      endpoint: cleanText(source.endpoint, 2000),
+      apiKey: cleanText(source.apiKey, 400),
+      model: cleanText(source.model, 120),
+      stage: 'paper_knowledge_wiki_rewrite',
+      systemPrompt: [
+        'You create LLM-facing scientific-paper knowledge notes.',
+        'Return Markdown only. Stay faithful to the supplied extracted text.'
+      ].join(' '),
+      userPrompt: prompt,
+      traceContext: source.traceContext || null,
+      defaultError: 'Paper knowledge rewrite provider is not configured.'
+    }).catch((error) => ({
+      ok: false,
+      error: cleanText(error?.message || error, 1200)
+    }));
+
+    const markdown = normalizeMarkdown(extractLlmText(llmResult));
+    if (llmResult?.ok === true && markdown) {
+      return {
+        ok: true,
+        status: 'ready',
+        method: 'llm',
+        markdown
+      };
+    }
+
+    if (source.allowFallbackMarkdown === false) {
+      return {
+        ok: false,
+        status: 'failed',
+        method: 'llm',
+        error: cleanText(llmResult?.error, 1200) || 'Paper knowledge rewrite failed.'
+      };
+    }
+
+    return {
+      ok: true,
+      status: 'ready',
+      method: 'fallback',
+      markdown: buildFallbackMarkdown({ metadata, extraction, extractedText }),
+      warning: cleanText(llmResult?.error, 1200)
+    };
+  }
+
+  async function upsertKnowledgeIndex({ paths, metadata, filePath, paperId, extractionStatus, wikiStatus, nowIso }) {
+    const db = await openKnowledgeDatabase(paths.sqlite_path);
+    try {
+      const existing = findExistingPaperRow(db, {
+        doi: metadata.doi,
+        pdfSha256: metadata.pdf_sha256,
+        title: metadata.title
+      });
+      const resolvedPaperId = paperId || buildPaperId({
+        existing,
+        doi: metadata.doi,
+        pdfSha256: metadata.pdf_sha256,
+        title: metadata.title
+      });
+      const previousAddedAt = cleanText(existing?.added_at, 80) || nowIso;
+      const wikiPath = buildRelativePath(paths.storage_path, paths.markdown_path);
+      const folderPath = buildRelativePath(paths.storage_path, path.dirname(filePath));
+      const pdfPath = buildRelativePath(paths.storage_path, filePath);
+      const locationId = crypto.createHash('sha256')
+        .update(`${resolvedPaperId}:${pdfPath}`)
+        .digest('hex')
+        .slice(0, 24);
+      const location = {
+        id: `location-${locationId}`,
+        paper_id: resolvedPaperId,
+        scope: getPaperScope(metadata.linked_type),
+        container: metadata.linked_name || '',
+        folder_path: folderPath,
+        pdf_filename: path.basename(filePath),
+        pdf_path: pdfPath,
+        discovered_at: nowIso
+      };
+      runStatement(db, `
+        INSERT INTO papers (
+          id, doi, title, abstract, authors_json, journal, year, url, pdf_sha256,
+          added_at, updated_at, source, wiki_status, wiki_path, extraction_status, notes, search_text
+        ) VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          doi = COALESCE(excluded.doi, papers.doi),
+          title = excluded.title,
+          abstract = excluded.abstract,
+          authors_json = excluded.authors_json,
+          journal = excluded.journal,
+          year = excluded.year,
+          url = excluded.url,
+          pdf_sha256 = COALESCE(excluded.pdf_sha256, papers.pdf_sha256),
+          updated_at = excluded.updated_at,
+          source = excluded.source,
+          wiki_status = excluded.wiki_status,
+          wiki_path = excluded.wiki_path,
+          extraction_status = excluded.extraction_status,
+          notes = excluded.notes,
+          search_text = excluded.search_text
+      `, [
+        resolvedPaperId,
+        metadata.doi,
+        metadata.title,
+        metadata.abstract,
+        JSON.stringify(metadata.authors || []),
+        metadata.journal,
+        metadata.year,
+        metadata.url,
+        metadata.pdf_sha256,
+        previousAddedAt,
+        nowIso,
+        metadata.source,
+        wikiStatus,
+        wikiPath,
+        extractionStatus,
+        metadata.notes,
+        buildSearchText(metadata)
+      ]);
+      runStatement(db, `
+        INSERT INTO paper_locations (
+          id, paper_id, scope, container, folder_path, pdf_filename, pdf_path, discovered_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          paper_id = excluded.paper_id,
+          scope = excluded.scope,
+          container = excluded.container,
+          folder_path = excluded.folder_path,
+          pdf_filename = excluded.pdf_filename,
+          pdf_path = excluded.pdf_path,
+          discovered_at = excluded.discovered_at
+      `, [
+        location.id,
+        location.paper_id,
+        location.scope,
+        location.container,
+        location.folder_path,
+        location.pdf_filename,
+        location.pdf_path,
+        location.discovered_at
+      ]);
+      await persistKnowledgeDatabase(paths.sqlite_path, db);
+      await updateJsonIndex(paths.json_index_path, {
+        id: resolvedPaperId,
+        doi: metadata.doi,
+        title: metadata.title,
+        pdf_sha256: metadata.pdf_sha256,
+        wiki_status: wikiStatus,
+        wiki_path: wikiPath,
+        extraction_status: extractionStatus,
+        updated_at: nowIso
+      }, location);
+      return {
+        paper_id: resolvedPaperId,
+        wiki_path: wikiPath,
+        location
+      };
+    } finally {
+      db.close();
+    }
+  }
+
+  async function ingestPaperPdf(input = {}) {
+    const source = ensureObject(input);
+    const storagePath = resolveStoragePath(source, cleanText);
+    if (!storagePath) {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Paper knowledge ingestion requires storage_path.'
+      };
+    }
+    const rawFilePath = cleanText(source.file_path || source.filePath || source.path, 4000);
+    if (!rawFilePath) {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Paper knowledge ingestion requires file_path.'
+      };
+    }
+    const resolvedStoragePath = path.resolve(storagePath);
+    let resolvedFilePath = '';
+    try {
+      resolvedFilePath = ensurePathWithinRoot(resolvedStoragePath, rawFilePath);
+    } catch (error) {
+      return {
+        ok: false,
+        status: 'error',
+        error: cleanText(error?.message || error, 1200)
+      };
+    }
+
+    let pdfBuffer = null;
+    try {
+      pdfBuffer = await fsPromises.readFile(resolvedFilePath);
+    } catch (error) {
+      return {
+        ok: false,
+        status: 'error',
+        error: cleanText(error?.message || error, 1200) || 'Failed to read paper PDF.'
+      };
+    }
+    if (!looksLikePdfBuffer(pdfBuffer)) {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Paper knowledge ingestion requires a PDF file.'
+      };
+    }
+
+    if (!pdfTextExtractionRuntime || typeof pdfTextExtractionRuntime.extractText !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'PDF text extraction runtime is not configured.'
+      };
+    }
+
+    const pdfSha256 = sha256Buffer(pdfBuffer);
+    const extraction = await pdfTextExtractionRuntime.extractText({
+      action: 'extract',
+      file_path: resolvedFilePath,
+      include_pages: true,
+      include_sections: true,
+      max_pages: Number(source.max_pages || source.maxPages) || 300,
+      max_total_chars: Number(source.max_total_chars || source.maxTotalChars) || 500000
+    }).catch((error) => ({
+      ok: false,
+      status: 'error',
+      error: cleanText(error?.message || error, 1200)
+    }));
+    const extractionStatus = extraction?.ok === true ? 'ready' : 'failed';
+    const metadata = {
+      ...normalizeMetadata(source, extraction, pdfSha256),
+      linked_type: cleanText(source.linked_type || source.linkedType, 80),
+      linked_name: cleanText(source.linked_name || source.linkedName, 220)
+    };
+    const paths = buildKnowledgeDatabasePaths({
+      storagePath: resolvedStoragePath,
+      doi: metadata.doi,
+      title: metadata.title,
+      pdfSha256
+    });
+
+    const extractedText = extraction?.ok === true ? buildExtractedTextFile(extraction) : '';
+    await fsPromises.mkdir(paths.paper_folder_path, { recursive: true });
+    await fsPromises.writeFile(paths.extracted_text_path, extractedText, 'utf8');
+
+    const markdownResult = extraction?.ok === true
+      ? await generateKnowledgeMarkdown({
+        ...source,
+        metadata,
+        extraction,
+        extractedText,
+        allowFallbackMarkdown: source.allow_fallback_markdown !== false && source.allowFallbackMarkdown !== false
+      })
+      : {
+        ok: false,
+        status: 'failed',
+        method: '',
+        error: cleanText(extraction?.error, 1200) || 'PDF text extraction failed.'
+      };
+    const wikiStatus = markdownResult?.ok === true ? 'ready' : 'failed';
+    if (markdownResult?.markdown) {
+      await fsPromises.writeFile(paths.markdown_path, `${normalizeMarkdown(markdownResult.markdown)}\n`, 'utf8');
+    }
+
+    const nowIso = now();
+    const indexResult = await upsertKnowledgeIndex({
+      paths,
+      metadata,
+      filePath: resolvedFilePath,
+      extractionStatus,
+      wikiStatus,
+      nowIso
+    });
+    const meta = {
+      version: 1,
+      paper_id: indexResult.paper_id,
+      title: metadata.title,
+      doi: metadata.doi,
+      authors: metadata.authors,
+      journal: metadata.journal,
+      year: metadata.year,
+      url: metadata.url,
+      pdf_sha256: metadata.pdf_sha256,
+      source_pdf_path: buildRelativePath(resolvedStoragePath, resolvedFilePath),
+      extraction_status: extractionStatus,
+      wiki_status: wikiStatus,
+      wiki_generation_method: markdownResult?.method || '',
+      extracted_text_path: buildRelativePath(resolvedStoragePath, paths.extracted_text_path),
+      markdown_path: buildRelativePath(resolvedStoragePath, paths.markdown_path),
+      sqlite_path: buildRelativePath(resolvedStoragePath, paths.sqlite_path),
+      updated_at: nowIso,
+      error: cleanText(markdownResult?.error || extraction?.error, 1200),
+      warning: cleanText(markdownResult?.warning, 1200)
+    };
+    await writeJsonFile(paths.meta_path, meta);
+
+    return {
+      ok: wikiStatus === 'ready',
+      status: wikiStatus,
+      paper_id: indexResult.paper_id,
+      title: metadata.title,
+      doi: metadata.doi,
+      pdf_sha256: metadata.pdf_sha256,
+      knowledge_folder_path: paths.paper_folder_path,
+      knowledge_folder_relative_path: buildRelativePath(resolvedStoragePath, paths.paper_folder_path),
+      markdown_path: paths.markdown_path,
+      markdown_relative_path: buildRelativePath(resolvedStoragePath, paths.markdown_path),
+      extracted_text_path: paths.extracted_text_path,
+      extracted_text_relative_path: buildRelativePath(resolvedStoragePath, paths.extracted_text_path),
+      meta_path: paths.meta_path,
+      meta_relative_path: buildRelativePath(resolvedStoragePath, paths.meta_path),
+      sqlite_path: paths.sqlite_path,
+      sqlite_relative_path: buildRelativePath(resolvedStoragePath, paths.sqlite_path),
+      source_pdf_path: resolvedFilePath,
+      source_pdf_relative_path: buildRelativePath(resolvedStoragePath, resolvedFilePath),
+      extraction_status: extractionStatus,
+      wiki_generation_method: markdownResult?.method || '',
+      error: cleanText(markdownResult?.error || extraction?.error, 1200),
+      warning: cleanText(markdownResult?.warning, 1200),
+      summary: wikiStatus === 'ready'
+        ? `Wrote paper knowledge markdown to ${buildRelativePath(resolvedStoragePath, paths.markdown_path)}.`
+        : (cleanText(markdownResult?.error || extraction?.error, 600) || 'Paper knowledge ingestion failed.')
+    };
+  }
+
+  async function lookupPaper(input = {}) {
+    const source = ensureObject(input);
+    const storagePath = resolveStoragePath(source, cleanText);
+    if (!storagePath) {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Paper knowledge lookup requires storage_path.'
+      };
+    }
+    const paths = buildKnowledgeDatabasePaths({
+      storagePath,
+      doi: source.doi || source.paper_doi || source.paperDoi,
+      title: source.title || source.paper_title || source.paperTitle
+    });
+    const db = await openKnowledgeDatabase(paths.sqlite_path).catch(() => null);
+    if (!db) {
+      return {
+        ok: false,
+        status: 'missing',
+        error: 'Paper knowledge index is not available.'
+      };
+    }
+    try {
+      const paper = findExistingPaperRow(db, {
+        doi: source.doi || source.paper_doi || source.paperDoi,
+        title: source.title || source.paper_title || source.paperTitle
+      });
+      if (!paper) {
+        return {
+          ok: false,
+          status: 'missing',
+          summary: 'Paper was not found in the knowledge database.'
+        };
+      }
+      const locations = queryRows(db, 'SELECT * FROM paper_locations WHERE paper_id = ?', [paper.id]);
+      const selectedLocation = chooseLocation(
+        locations,
+        getPaperScope(source.linked_type || source.linkedType),
+        cleanText(source.linked_name || source.linkedName, 220)
+      );
+      const markdownPath = paper.wiki_path ? resolveRelativeStoragePath(storagePath, paper.wiki_path) : '';
+      const pdfPath = selectedLocation?.pdf_path
+        ? resolveRelativeStoragePath(storagePath, selectedLocation.pdf_path)
+        : '';
+      const pdfExists = pdfPath
+        ? await fsPromises.access(pdfPath).then(() => true).catch(() => false)
+        : false;
+      const markdownExists = markdownPath
+        ? await fsPromises.access(markdownPath).then(() => true).catch(() => false)
+        : false;
+      return {
+        ok: true,
+        status: 'found',
+        paper: {
+          id: cleanText(paper.id, 180),
+          doi: cleanText(paper.doi, 180),
+          title: cleanText(paper.title, 320),
+          wiki_status: cleanText(paper.wiki_status, 80),
+          wiki_path: cleanText(paper.wiki_path, 2000),
+          wiki_file_path: markdownPath,
+          wiki_exists: markdownExists,
+          pdf_sha256: cleanText(paper.pdf_sha256, 120),
+          pdf_path: cleanText(selectedLocation?.pdf_path, 2000),
+          pdf_file_path: pdfPath,
+          pdf_exists: pdfExists,
+          location: cloneJson(selectedLocation || {}, null)
+        },
+        summary: markdownExists
+          ? `Found paper knowledge markdown at ${paper.wiki_path}.`
+          : 'Found paper record, but the markdown file is missing.'
+      };
+    } finally {
+      db.close();
+    }
+  }
+
+  return {
+    KNOWLEDGE_DATABASE_FOLDER_NAME,
+    KNOWLEDGE_PAPERS_FOLDER_NAME,
+    KNOWLEDGE_INDEX_FILE_NAME,
+    KNOWLEDGE_JSON_INDEX_FILE_NAME,
+    buildKnowledgeDatabasePaths,
+    buildKnowledgePaperSlug,
+    generateKnowledgeMarkdown,
+    ingestPaperPdf,
+    lookupPaper
+  };
+}
+
+module.exports = {
+  KNOWLEDGE_DATABASE_FOLDER_NAME,
+  KNOWLEDGE_PAPERS_FOLDER_NAME,
+  KNOWLEDGE_INDEX_FILE_NAME,
+  KNOWLEDGE_JSON_INDEX_FILE_NAME,
+  buildKnowledgeDatabasePaths,
+  buildKnowledgePaperSlug,
+  normalizeDoi,
+  createPaperKnowledgeDatabaseRuntime
+};

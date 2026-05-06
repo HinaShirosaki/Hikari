@@ -101,6 +101,34 @@ function defaultSubAgentSystemPrompt(source = {}) {
   return '';
 }
 
+function buildCodexSubAgentPrompt(input = {}) {
+  const source = ensureObject(input);
+  const phase = defaultCleanText(source.phase, 40) || 'message';
+  const systemPrompt = defaultCleanText(source.system_prompt || source.systemPrompt, 40000);
+  const message = defaultCleanText(source.message, 40000);
+  const agent = ensureObject(source.agent);
+  const agentName = defaultCleanText(agent.name, 160) || defaultCleanText(agent.id, 160) || 'sub-agent';
+  const transcript = defaultAsArray(source.messages)
+    .slice(-16)
+    .map((entry) => {
+      const row = ensureObject(entry);
+      const role = defaultCleanText(row.role, 40) || 'user';
+      const text = defaultCleanText(row.text || row.content || row.message, 6000);
+      return text ? `${role}: ${text}` : '';
+    })
+    .filter(Boolean)
+    .join('\n');
+  return [
+    'You are a real delegated Codex sub-agent running for Hikari.',
+    `Sub-agent name: ${agentName}`,
+    `Current phase: ${phase}`,
+    systemPrompt ? `Sub-agent instructions:\n${systemPrompt}` : '',
+    transcript ? `Recent sub-agent transcript:\n${transcript}` : '',
+    message ? `Current delegated message:\n${message}` : '',
+    'Return the sub-agent assistant response directly. Keep it scoped to this delegated task and include concrete findings or next steps when useful.'
+  ].filter(Boolean).join('\n\n');
+}
+
 function createAgentSubAgentRuntime(deps = {}) {
   const asArray = typeof deps.asArray === 'function' ? deps.asArray : defaultAsArray;
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
@@ -271,6 +299,50 @@ function createAgentSubAgentRuntime(deps = {}) {
     return saveAgent(updated);
   }
 
+  function applyTurnMetadataToAgent(agent, metadata) {
+    const source = ensureObject(metadata);
+    const keys = Object.keys(source);
+    if (!keys.length) {
+      return agent;
+    }
+    const current = cloneJson(ensureObject(agent.metadata), {});
+    const codexSessionId = cleanText(
+      source.codex_session_id || source.codexSessionId || source.session_id || source.sessionId,
+      240
+    );
+    if (codexSessionId) {
+      current.codex_session_id = codexSessionId;
+    }
+    const codexConversationId = cleanText(
+      source.codex_conversation_id || source.codexConversationId || source.conversation_id || source.conversationId,
+      240
+    );
+    if (codexConversationId) {
+      current.codex_conversation_id = codexConversationId;
+    }
+    const codexThreadId = cleanText(
+      source.codex_thread_id || source.codexThreadId || source.thread_id || source.threadId,
+      240
+    );
+    if (codexThreadId) {
+      current.codex_thread_id = codexThreadId;
+    }
+    ['provider', 'backend', 'command'].forEach((key) => {
+      const value = cleanText(source[key], 160);
+      if (value) {
+        current[key] = value;
+      }
+    });
+    if (source.provider_ok === true || source.provider_ok === false) {
+      current.provider_ok = source.provider_ok;
+    }
+    if (source.real_codex_sub_agent === true || source.realCodexSubAgent === true) {
+      current.real_codex_sub_agent = true;
+    }
+    agent.metadata = current;
+    return agent;
+  }
+
   async function createSubAgent(input = {}) {
     const source = ensureObject(input);
     const systemPrompt = cleanText(source.system_prompt || source.systemPrompt, 40000)
@@ -319,6 +391,7 @@ function createAgentSubAgentRuntime(deps = {}) {
     if (turnResult.assistant_message) {
       agent.messages.push(normalizeMessage('assistant', turnResult.assistant_message, now()));
     }
+    applyTurnMetadataToAgent(agent, turnResult.metadata);
     agent.last_response = {
       assistant_message: turnResult.assistant_message,
       summary: turnResult.summary,
@@ -387,6 +460,7 @@ function createAgentSubAgentRuntime(deps = {}) {
     if (turnResult.assistant_message) {
       agent.messages.push(normalizeMessage('assistant', turnResult.assistant_message, now()));
     }
+    applyTurnMetadataToAgent(agent, turnResult.metadata);
     agent.last_response = {
       assistant_message: turnResult.assistant_message,
       summary: turnResult.summary,
@@ -718,5 +792,6 @@ function createAgentSubAgentRuntime(deps = {}) {
 
 module.exports = {
   SUB_AGENT_ACTIONS,
+  buildCodexSubAgentPrompt,
   createAgentSubAgentRuntime
 };

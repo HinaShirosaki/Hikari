@@ -600,15 +600,7 @@ function registerAgentToolExecutors(deps = {}) {
         summary: 'Protocol generation runtime is not configured.'
       };
     }
-    return protocolGenerationRuntime.generateProtocol({
-      ...args,
-      provider: cleanText(context?.provider, 80),
-      endpoint: cleanText(context?.endpoint, 2000),
-      apiKey: cleanText(context?.apiKey, 400),
-      model: cleanText(context?.model, 120),
-      message: cleanText(args?.message || context?.message, 2400),
-      traceContext: context?.traceContext || null
-    });
+    return protocolGenerationRuntime.generateProtocol(args);
   });
 
   genericAgentToolRuntime.registerToolExecutor('python-sandbox', async ({ args, context }) => {

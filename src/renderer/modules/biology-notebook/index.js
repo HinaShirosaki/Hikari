@@ -86,7 +86,6 @@ export function initLabNotebook({
   const notebookCancelProtocolEditBtn = document.getElementById('biology-notebook-cancel-protocol-edit-btn');
   const notebookExportBtn = document.getElementById('biology-notebook-export-btn');
   const notebookMarkExecutedBtn = document.getElementById('biology-notebook-mark-executed-btn');
-  const notebookPageListStatus = document.getElementById('biology-notebook-page-list-status');
   const notebookProtocolEditor = document.getElementById('biology-notebook-protocol-editor');
   const notebookProtocolDraftName = document.getElementById('biology-notebook-page-protocol-name');
   const notebookProtocolDraftSteps = document.getElementById('biology-notebook-page-protocol-steps');
@@ -166,17 +165,11 @@ export function initLabNotebook({
 
   const entryListRenderer = createEntryListRenderer({
     listEl: notebookEntryList,
-    statusEl: notebookPageListStatus,
     notebookType,
     safeText,
     getNotebookEntries: () => state.notebookEntries,
     getProjects: () => state.projects,
-    getProtocols: () => state.protocols,
-    getEditingEntryId: () => editingEntryId,
-    getViewerProtocolDraft: () => protocolEditor.getDraft(),
-    getSelectedProjectId: () => notebookProjectSelect.value,
-    getSelectedProtocolId: () => notebookProtocolSelect.value,
-    getActiveEntry: () => getActiveEntry()
+    getEditingEntryId: () => editingEntryId
   });
 
   const dropdownRenderer = createDropdownRenderer({
@@ -186,7 +179,6 @@ export function initLabNotebook({
     safeText,
     getProjects: () => state.projects,
     getProtocols: () => state.protocols,
-    onAfterRender: () => entryListRenderer.updatePageListStatus(),
     onProtocolChange: () => onProtocolChange()
   });
 
@@ -349,7 +341,6 @@ export function initLabNotebook({
         resultTableOverride: resultTable,
         preserveSelectedFiles: true
       });
-      entryListRenderer.updatePageListStatus();
       return;
     }
 
@@ -703,7 +694,6 @@ export function initLabNotebook({
     if (!project || !protocol) {
       clearViewer();
       entryListRenderer.renderEntries();
-      entryListRenderer.updatePageListStatus();
       return;
     }
 
@@ -719,7 +709,6 @@ export function initLabNotebook({
       isSavedEntry: true
     });
     entryListRenderer.renderEntries();
-    entryListRenderer.updatePageListStatus();
   }
 
   function renderProtocolViewer({

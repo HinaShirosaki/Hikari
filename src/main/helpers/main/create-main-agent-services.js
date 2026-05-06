@@ -44,7 +44,10 @@ const { normalizeToolInvocationArgs } = require('../agent/tools/agent-tool-loadi
 const { createAgentToolCallRuntime } = require('../agent/tools/agent-tool-execution.js');
 const { createAgentToolProviderRuntime } = require('../agent/tools/agent-tool-provide.js');
 const { createAgentCommandLineRuntime } = require('../agent/tools/agent-command-line.js');
-const { createAgentSubAgentRuntime } = require('../agent/tools/agent-sub-agent.js');
+const {
+  buildCodexSubAgentPrompt,
+  createAgentSubAgentRuntime
+} = require('../agent/tools/agent-sub-agent.js');
 const { createAgentMemoryRuntime } = require('../agent/context/agent-memory.js');
 const { createNotebookDraftRuntime } = require('../agent/tools/agent-notebook-draft.js');
 const { createWebSearchRuntime } = require('../agent/tools/agent-web-search.js');
@@ -55,6 +58,7 @@ const { createProtocolGenerationRuntime } = require('../agent/tools/agent-protoc
 const { createPaperAnalysisRuntime } = require('../agent/tools/agent-paper-analysis.js');
 const { createPaperContextLoaderRuntime } = require('../agent/tools/agent-paper-context-loader.js');
 const { createPaperDownloadRuntime } = require('../agent/tools/agent-paper-download.js');
+const { createPaperKnowledgeDatabaseRuntime } = require('../agent/tools/agent-paper-knowledge-database.js');
 const { createPdfTextExtractionRuntime } = require('../agent/tools/agent-pdf-text-extraction.js');
 const { createProtocolMatchingRuntime } = require('../agent/tools/agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('../agent/tools/agent-notebook-generation.js');
@@ -341,19 +345,71 @@ function createMainAgentServices(deps = {}) {
   const subAgentRuntime = createAgentSubAgentRuntime({
     ...sharedAgentLlmDeps,
     runSubAgentTurn: async (turnInput = {}) => {
-      const result = await agentLlmRuntimeHelpers.requestAssistantText({
-        stage: 'agent_sub_agent_turn',
-        systemPrompt: cleanText(turnInput?.system_prompt, 40000),
-        userPrompt: cleanText(turnInput?.message, 40000),
-        traceContext: turnInput?.traceContext || null,
-        defaultError: 'Sub-agent text provider is not configured.'
+      const turnMetadata = turnInput?.metadata && typeof turnInput.metadata === 'object' && !Array.isArray(turnInput.metadata)
+        ? turnInput.metadata
+        : {};
+      const agentMetadata = turnInput?.agent?.metadata && typeof turnInput.agent.metadata === 'object' && !Array.isArray(turnInput.agent.metadata)
+        ? turnInput.agent.metadata
+        : {};
+      const timeoutMs = Number(
+        turnMetadata.timeout_ms
+          ?? turnMetadata.timeoutMs
+          ?? agentMetadata.timeout_ms
+          ?? agentMetadata.timeoutMs
+      );
+      const result = await requestCodexCliText({
+        prompt: buildCodexSubAgentPrompt(turnInput),
+        cwd: cleanText(turnMetadata.cwd || agentMetadata.cwd || getCodexCliWorkingDirectory(), 2400),
+        model: cleanText(turnMetadata.model || agentMetadata.model, 120),
+        reasoningEffort: cleanText(
+          turnMetadata.reasoning_effort
+            || turnMetadata.reasoningEffort
+            || agentMetadata.reasoning_effort
+            || agentMetadata.reasoningEffort,
+          40
+        ),
+        enableWebSearch: turnMetadata.enable_web_search === true
+          || turnMetadata.enableWebSearch === true
+          || agentMetadata.enable_web_search === true
+          || agentMetadata.enableWebSearch === true,
+        timeoutMs: Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 180000,
+        resumeSessionId: cleanText(
+          agentMetadata.codex_session_id
+            || agentMetadata.codexSessionId
+            || agentMetadata.session_id
+            || agentMetadata.sessionId,
+          240
+        ),
+        returnMetadata: true
       });
-      const assistantMessage = cleanText(result?.text || result?.assistant_message || result?.message, 20000);
+      const resultMetadata = result && typeof result === 'object' && !Array.isArray(result)
+        ? (result.metadata && typeof result.metadata === 'object' && !Array.isArray(result.metadata) ? result.metadata : {})
+        : {};
+      const assistantMessage = cleanText(
+        typeof result === 'string' ? result : (result?.text || result?.assistant_message || result?.message),
+        20000
+      );
+      if (!assistantMessage) {
+        throw new Error('Codex sub-agent returned an empty response.');
+      }
+      const codexSessionId = cleanText(
+        resultMetadata.session_id
+          || resultMetadata.sessionId
+          || resultMetadata.resumed_session_id
+          || resultMetadata.resumedSessionId
+          || agentMetadata.codex_session_id
+          || agentMetadata.codexSessionId,
+        240
+      );
       return {
         assistant_message: assistantMessage,
-        summary: assistantMessage ? cleanText(assistantMessage, 500) : cleanText(result?.error, 500),
+        summary: cleanText(assistantMessage, 500),
         metadata: {
-          provider_ok: result?.ok === true
+          provider: 'codex-cli',
+          provider_ok: true,
+          real_codex_sub_agent: true,
+          codex_session_id: codexSessionId,
+          command: cleanText(resultMetadata.command, 80)
         }
       };
     }
@@ -371,6 +427,10 @@ function createMainAgentServices(deps = {}) {
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null,
     pdfTextExtractionRuntime
   });
+  const paperKnowledgeDatabaseRuntime = createPaperKnowledgeDatabaseRuntime({
+    ...sharedAgentLlmDeps,
+    pdfTextExtractionRuntime
+  });
   const webSearchRuntime = createWebSearchRuntime({
     ...sharedAgentLlmDeps
   });
@@ -383,7 +443,8 @@ function createMainAgentServices(deps = {}) {
   const paperDownloadRuntime = createPaperDownloadRuntime({
     ...sharedAgentLlmDeps,
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null,
-    BrowserWindow: deps.BrowserWindow || deps.electron?.BrowserWindow || null
+    BrowserWindow: deps.BrowserWindow || deps.electron?.BrowserWindow || null,
+    paperKnowledgeDatabaseRuntime
   });
   const literatureSearchWorkflowRuntime = createLiteratureSearchWorkflowRuntime({
     ...sharedAgentLlmDeps,

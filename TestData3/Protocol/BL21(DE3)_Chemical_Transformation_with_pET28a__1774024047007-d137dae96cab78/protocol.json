@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_protocols",
   "schema_version": "1.0.0",
-  "updated_at": "2026-05-05T14:31:37.284Z",
+  "updated_at": "2026-05-06T03:22:05.127Z",
   "protocol": {
     "id": "1774024047007-d137dae96cab78",
     "name": "BL21(DE3) Chemical Transformation with pET28a",

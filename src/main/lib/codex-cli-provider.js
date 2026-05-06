@@ -372,6 +372,69 @@ function extractCodexJsonEventText(event = {}) {
   return null;
 }
 
+function normalizeCodexSessionId(value = '') {
+  const text = String(value || '').trim();
+  if (!text) {
+    return '';
+  }
+  return text.slice(0, 240);
+}
+
+function extractCodexJsonEventSessionId(event = {}) {
+  const source = event && typeof event === 'object' && !Array.isArray(event) ? event : {};
+  const type = cleanText(source.type || source.event || source.kind, 120).toLowerCase();
+  const candidates = [
+    source.session_id,
+    source.sessionId,
+    source.conversation_id,
+    source.conversationId,
+    source.thread_id,
+    source.threadId,
+    source.session?.id,
+    source.session?.session_id,
+    source.session?.sessionId,
+    source.conversation?.id,
+    source.thread?.id,
+    source.item?.session_id,
+    source.item?.sessionId,
+    source.item?.conversation_id,
+    source.item?.conversationId,
+    source.message?.session_id,
+    source.message?.sessionId,
+    source.message?.conversation_id,
+    source.message?.conversationId,
+    source.response?.session_id,
+    source.response?.sessionId,
+    source.metadata?.session_id,
+    source.metadata?.sessionId,
+    source.metadata?.conversation_id,
+    source.metadata?.conversationId
+  ];
+  if (/session|conversation|thread/.test(type)) {
+    candidates.push(source.id);
+  }
+  for (const candidate of candidates) {
+    const sessionId = normalizeCodexSessionId(candidate);
+    if (sessionId) {
+      return sessionId;
+    }
+  }
+  return '';
+}
+
+function extractCodexSessionIdFromText(text = '') {
+  const source = String(text || '');
+  if (!source) {
+    return '';
+  }
+  const jsonStyle = source.match(/"(?:session_id|sessionId|conversation_id|conversationId|thread_id|threadId)"\s*:\s*"([^"]+)"/);
+  if (jsonStyle?.[1]) {
+    return normalizeCodexSessionId(jsonStyle[1]);
+  }
+  const labelStyle = source.match(/\b(?:session_id|sessionId|conversation_id|conversationId|thread_id|threadId)\b\s*[:=]\s*([A-Za-z0-9._:-]+)/);
+  return normalizeCodexSessionId(labelStyle?.[1] || '');
+}
+
 function readCodexCliAuthFile() {
   const candidates = getCodexCliCandidateHomeDirectories();
   for (const homeDirectory of candidates) {
@@ -923,6 +986,25 @@ function resolveCodexCliReasoningEffort(reasoningEffort = '', model = '', catalo
   return explicitEffort || configuredCodexReasoningEffort || normalizeCodexCliReasoningEffort(resolvedCatalog.defaultReasoningEffort);
 }
 
+function appendCodexCliModelArgs(args, {
+  model = '',
+  reasoningEffort = '',
+  catalog = null
+} = {}) {
+  const resolvedCatalog = catalog && typeof catalog === 'object'
+    ? catalog
+    : getCodexCliCatalog();
+  const resolvedModel = resolveCodexCliModel(model, resolvedCatalog);
+  if (resolvedModel) {
+    args.push('-m', resolvedModel);
+  }
+  const resolvedReasoningEffort = resolveCodexCliReasoningEffort(reasoningEffort, resolvedModel, resolvedCatalog);
+  if (resolvedReasoningEffort) {
+    args.push('-c', `model_reasoning_effort=${resolvedReasoningEffort}`);
+  }
+  return args;
+}
+
 function buildCodexCliExecArgs({
   outputFile = '',
   model = '',
@@ -947,13 +1029,43 @@ function buildCodexCliExecArgs({
   if (streamJson === true) {
     args.push('--json');
   }
-  const resolvedModel = resolveCodexCliModel(model, catalog);
-  if (resolvedModel) {
-    args.push('-m', resolvedModel);
+  appendCodexCliModelArgs(args, { model, reasoningEffort, catalog });
+  args.push('-');
+  return args;
+}
+
+function buildCodexCliExecResumeArgs({
+  outputFile = '',
+  sessionId = '',
+  useLastSession = false,
+  model = '',
+  reasoningEffort = '',
+  enableWebSearch = false,
+  streamJson = false
+} = {}) {
+  const catalog = getCodexCliCatalog();
+  const args = [
+    '-a', 'never',
+    '-s', 'read-only'
+  ];
+  if (enableWebSearch === true) {
+    args.push('--search');
   }
-  const resolvedReasoningEffort = resolveCodexCliReasoningEffort(reasoningEffort, resolvedModel, catalog);
-  if (resolvedReasoningEffort) {
-    args.push('-c', `model_reasoning_effort=${resolvedReasoningEffort}`);
+  args.push(
+    'exec',
+    'resume',
+    '--skip-git-repo-check',
+    '--output-last-message', outputFile
+  );
+  if (streamJson === true) {
+    args.push('--json');
+  }
+  appendCodexCliModelArgs(args, { model, reasoningEffort, catalog });
+  const cleanSessionId = normalizeCodexSessionId(sessionId);
+  if (cleanSessionId) {
+    args.push(cleanSessionId);
+  } else if (useLastSession === true) {
+    args.push('--last');
   }
   args.push('-');
   return args;
@@ -1035,8 +1147,9 @@ async function runCodexCommand({
       }
       jsonLineBuffer += String(chunkText || '');
       const lines = jsonLineBuffer.split(/\r?\n/u);
-      jsonLineBuffer = force ? '' : (lines.pop() || '');
-      const parseLines = force ? lines.filter(Boolean).concat(jsonLineBuffer ? [jsonLineBuffer] : []) : lines;
+      const pendingLine = lines.pop() || '';
+      jsonLineBuffer = force ? '' : pendingLine;
+      const parseLines = force ? lines.concat(pendingLine ? [pendingLine] : []) : lines;
       parseLines.forEach((line) => {
         const trimmed = line.trim();
         if (!trimmed) {
@@ -1267,7 +1380,9 @@ async function requestCodexCliText({
   attachments = [],
   envOverrides = {},
   stream = false,
-  onStream = null
+  onStream = null,
+  resumeSessionId = '',
+  returnMetadata = false
 }) {
   throwIfAgentRequestAborted('Agent request stopped before starting Codex prompt.');
   const cleanPrompt = String(prompt || '').trim();
@@ -1301,6 +1416,9 @@ async function requestCodexCliText({
     ...(envOverrides && typeof envOverrides === 'object' ? envOverrides : {})
   };
   const streamingEnabled = stream === true && typeof onStream === 'function';
+  const cleanResumeSessionId = normalizeCodexSessionId(resumeSessionId);
+  const collectJsonEvents = streamingEnabled || returnMetadata === true || Boolean(cleanResumeSessionId);
+  let codexSessionId = cleanResumeSessionId;
   let streamedText = '';
   function handleJsonStreamEvent(event = {}) {
     const extracted = extractCodexJsonEventText(event);
@@ -1333,13 +1451,33 @@ async function requestCodexCliText({
       // Keep streaming best-effort; the final Codex response still resolves below.
     }
   }
-  const args = buildCodexCliExecArgs({
-    outputFile,
-    model,
-    reasoningEffort,
-    enableWebSearch,
-    streamJson: streamingEnabled
-  });
+  function handleJsonEvent(event = {}) {
+    if (!codexSessionId) {
+      const sessionId = extractCodexJsonEventSessionId(event);
+      if (sessionId) {
+        codexSessionId = sessionId;
+      }
+    }
+    if (streamingEnabled) {
+      handleJsonStreamEvent(event);
+    }
+  }
+  const args = cleanResumeSessionId
+    ? buildCodexCliExecResumeArgs({
+      outputFile,
+      sessionId: cleanResumeSessionId,
+      model,
+      reasoningEffort,
+      enableWebSearch,
+      streamJson: collectJsonEvents
+    })
+    : buildCodexCliExecArgs({
+      outputFile,
+      model,
+      reasoningEffort,
+      enableWebSearch,
+      streamJson: collectJsonEvents
+    });
 
   const commandResult = await runCodexCommand({
     args,
@@ -1347,7 +1485,7 @@ async function requestCodexCliText({
     env,
     input: promptWithAttachments,
     timeoutMs,
-    onJsonEvent: streamingEnabled ? handleJsonStreamEvent : null
+    onJsonEvent: collectJsonEvents ? handleJsonEvent : null
   });
 
   throwIfAgentRequestAborted('Agent request stopped before reading Codex output.');
@@ -1358,9 +1496,22 @@ async function requestCodexCliText({
     outputText = '';
   }
   await removeFileIfExists(outputFile).catch(() => {});
+  if (!codexSessionId) {
+    codexSessionId = extractCodexSessionIdFromText(commandResult.stdout || commandResult.stderr || '');
+  }
   const resultText = cleanText(outputText || streamedText || commandResult.stdout, 120000);
   if (!resultText) {
     throw new Error('Codex CLI returned an empty response.');
+  }
+  if (returnMetadata === true) {
+    return {
+      text: resultText,
+      metadata: {
+        session_id: normalizeCodexSessionId(codexSessionId),
+        resumed_session_id: cleanResumeSessionId,
+        command: cleanResumeSessionId ? 'exec resume' : 'exec'
+      }
+    };
   }
   return resultText;
 }
@@ -1370,9 +1521,11 @@ module.exports = {
   buildHikariCodexAgentsInstructions,
   buildEnanaCodexAgentsInstructions,
   buildCodexCliExecArgs,
+  buildCodexCliExecResumeArgs,
   clearCodexCliStoredLogin,
   ensureCodexCliAgentsFile,
   ensureCodexCliRuntimeHome,
+  extractCodexJsonEventSessionId,
   extractCodexJsonEventText,
   extractCodexLoginUrl,
   getCodexCliCatalog,

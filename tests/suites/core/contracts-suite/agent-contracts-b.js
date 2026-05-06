@@ -193,7 +193,7 @@ module.exports = function registerAgentContractsB(context = {}) {
       assert.match(mainAgentServicesSource, /createPaperContextLoaderRuntime/);
       assert.match(mainAgentServicesSource, /paperContextLoaderRuntime/);
       assert.equal(readSource('src/main/helpers/agent/tools/agent-paper-analysis.js').includes("require('../shared/agent-llm-utils.js')"), true);
-      assert.equal(readSource('src/main/helpers/agent/tools/agent-protocol-generation.js').includes("require('../shared/agent-llm-utils.js')"), true);
+      assert.equal(readSource('src/main/helpers/agent/tools/agent-protocol-generation.js').includes("require('../shared/agent-llm-utils.js')"), false);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'web-search'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);

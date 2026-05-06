@@ -83,7 +83,7 @@ Supported JSON-RPC methods:
 | Method | Result |
 | --- | --- |
 | `initialize` | Protocol version, capabilities, server info |
-| `tools/list` | Nine MCP tools listed below |
+| `tools/list` | Ten MCP tools listed below |
 | `tools/call` | Gateway result encoded as one text content item |
 | `resources/list` | `resource_search({ query: "", limit: 40 })` |
 | `resources/read` | Resource contents for the requested URI |
@@ -232,6 +232,56 @@ Input schema:
     "limit": { "type": "integer", "minimum": 1, "maximum": 25 },
     "project_id": { "type": "string" },
     "project_name": { "type": "string" }
+  }
+}
+```
+
+### `protocol_generation`
+
+Direct MCP convenience wrapper for protocol JSON normalization. It calls `protocol-generation` with the supplied protocol JSON, does not call an LLM, and does not require a protocol id.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["protocol"],
+  "properties": {
+    "protocol": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["steps"],
+      "properties": {
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "purpose": { "type": "string" },
+        "materials": {
+          "type": "array",
+          "items": { "type": "string" },
+          "maxItems": 80
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              { "type": "string" },
+              { "type": "object", "additionalProperties": true }
+            ]
+          },
+          "maxItems": 120
+        },
+        "troubleshooting": {
+          "anyOf": [
+            { "type": "string" },
+            { "type": "array" }
+          ]
+        },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "result_summary": { "type": "string" }
   }
 }
 ```

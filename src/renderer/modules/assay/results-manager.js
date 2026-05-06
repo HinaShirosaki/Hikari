@@ -394,8 +394,10 @@ export function createAssayResultsManager({
   }
 
   function getResultGridHeight(def) {
-    const visibleRows = Math.min(def.rows, 14);
-    return `${Math.max(260, (visibleRows * 33) + 58)}px`;
+    if (def.rows <= 14) {
+      return '';
+    }
+    return `${(14 * 33) + 58}px`;
   }
 
   function ensureResultGrid(def) {
@@ -417,11 +419,10 @@ export function createAssayResultsManager({
       host.setAttribute('role', 'grid');
       host.setAttribute('aria-label', 'Assay result spreadsheet');
       assayResultTable.append(host);
-      resultGrid = new TabulatorLib(host, {
+      const gridOptions = {
         data: buildResultGridData(def),
         columns: buildResultGridColumns(def),
         index: '__rowIndex',
-        height: getResultGridHeight(def),
         layout: 'fitDataTable',
         reactiveData: false,
         selectableRange: true,
@@ -429,7 +430,12 @@ export function createAssayResultsManager({
         selectableRangeRows: true,
         cellEdited: onResultGridCellEdited,
         cellClick: onResultGridCellClick
-      });
+      };
+      const gridHeight = getResultGridHeight(def);
+      if (gridHeight) {
+        gridOptions.height = gridHeight;
+      }
+      resultGrid = new TabulatorLib(host, gridOptions);
       if (typeof resultGrid.on === 'function') {
         resultGrid.on('rangeAdded', updateResultRangeSelectionStatus);
         resultGrid.on('rangeChanged', updateResultRangeSelectionStatus);

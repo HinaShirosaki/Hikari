@@ -1,6 +1,6 @@
 # Agent Prompt Registry
 
-Generated at: 2026-04-29T01:48:46.756Z
+Generated at: 2026-05-05T20:52:28.245Z
 Prompt entries: 43
 
 This file is generated from the prompt registry and sample renderers in `src/main/helpers/agent/shared/agent-prompt-registry.js`.
@@ -175,13 +175,13 @@ Available tools:
 - python-sandbox: Run agent-authored Python code in an isolated sandbox with staged input files, chat-visible text/image outputs, and readback artifacts. The managed sandbox helper will try to repair failing runs itself, and you can resume the same helper later with feedback by passing its sub_agent_id. Inside the sandbox, import enana_sandbox to read files and emit renderable outputs.
 - command-line: Run a local shell command in the project workspace, capture stdout and stderr, and return the exit status. Prefer this for focused local CLI inspection or execution when Python is unnecessary.
 - web-search: Search the public web through the agent's shared web-search transport. This uses provider-native web search when available, or Codex agent search when the agent runs on Codex.
-- sub-agent: Create, message, inspect, list, and delete helper sub-agent sessions managed outside the main agent.
+- sub-agent: Create, message, inspect, list, and delete Codex CLI-backed helper sub-agent sessions managed outside the main agent.
 - memory: Recall, remember, forget, and list sparse long-term user memory records across sessions.
 - literature-search: Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The runtime now delegates to a sub-agent for candidate selection, paper reading, and optional paper downloads into the literature-search storage folder. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults.
 - purchase-recommendation: Search the web for purchasable products, extract vendor page metadata such as image and price, hard-filter explicit product requirements, and rank valid items for chat recommendation cards.
 - paper-download: Extract a downloadable paper PDF URL, stream the file into app storage with progress tracking, and fall back to a browser-assisted download session when sites block automated fetches.
 - paper-analysis: Summarize a paper briefly, extract protocol-relevant methods, and optionally draft a generated protocol from the paper.
-- protocol-generation: Generate a concise reusable protocol from extracted paper methods, step seeds, or other structured method evidence.
+- protocol-generation: Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call or required protocol id.
 
 Active project context: Atlas SUMO1
 
@@ -797,7 +797,7 @@ Kind: `system`
 Source: `src/main/helpers/agent/tools/agent-protocol-generation.js`
 
 ```text
-You generate a concise, reusable lab protocol from paper methods, extracted procedure notes, and relevant web results when available. Prefer the supplied evidence first. If the supplied evidence is incomplete, you may use web search to confirm broadly documented method details from reputable sources before resorting to a placeholder. Do not invent experiment-specific details that are not supported. Return JSON only.
+You receive protocol JSON that is already authored by the caller. Do not generate protocol content inside this tool. Normalize the supplied protocol JSON into the app import format. Return JSON only.
 ```
 
 ### Protocol Generation Rules
@@ -807,12 +807,10 @@ Kind: `rules`
 Source: `src/main/helpers/agent/tools/agent-protocol-generation.js`
 
 ```text
-Write a short protocol name and a one-sentence purpose.
-List only materials that are explicit or strongly supported by the provided evidence.
-Produce ordered steps that are operational and concise.
-Preserve concrete operational values from the evidence, including time, temperature, rpm, speed, centrifugation force, volumes, and concentrations; do not replace stated values with placeholders.
-Placeholders should be rare. Use bracket placeholders only for truly critical missing experiment-specific details that are absent from the supplied evidence and cannot be safely confirmed.
-Prefer trustworthy web-confirmed generic method context over vague placeholders, but do not invent sample-specific or construct-specific settings.
+Use the supplied protocol JSON as the source of truth.
+Do not call an LLM or web search from this tool.
+Do not require or synthesize a protocol id.
+Normalize name/title, purpose, materials, steps, timestamps, placeholders, and troubleshooting.
 Return the protocol object in the app import format with name, purpose, materials, steps, and troubleshooting.
 ```
 
@@ -823,41 +821,36 @@ Kind: `dynamic_sample`
 Source: `src/main/helpers/agent/tools/agent-protocol-generation.js`
 
 ```text
-Generate a concise protocol JSON object from the evidence below.
+Normalize the supplied protocol JSON. Do not generate protocol content here.
 
-1. Write a short protocol name and a one-sentence purpose.
-2. List only materials that are explicit or strongly supported by the provided evidence.
-3. Produce ordered steps that are operational and concise.
-4. Preserve concrete operational values from the evidence, including time, temperature, rpm, speed, centrifugation force, volumes, and concentrations; do not replace stated values with placeholders.
-5. Placeholders should be rare. Use bracket placeholders only for truly critical missing experiment-specific details that are absent from the supplied evidence and cannot be safely confirmed.
-6. Prefer trustworthy web-confirmed generic method context over vague placeholders, but do not invent sample-specific or construct-specific settings.
-7. Return the protocol object in the app import format with name, purpose, materials, steps, and troubleshooting.
+1. Use the supplied protocol JSON as the source of truth.
+2. Do not call an LLM or web search from this tool.
+3. Do not require or synthesize a protocol id.
+4. Normalize name/title, purpose, materials, steps, timestamps, placeholders, and troubleshooting.
+5. Return the protocol object in the app import format with name, purpose, materials, steps, and troubleshooting.
 
-Protocol title hint: SUMO1 Purification
+Input protocol JSON:
 
-Purpose hint: Purify SUMO1-conjugated proteins from HEK293 lysate.
-
-Source paper title: UBC9 Availability Limits SUMOylation Efficiency in HEK293 Cells
-
-Source summary: The paper reports that reduced UBC9 expression lowers SUMOylation efficiency in transient HEK293 assays.
-
-Method text:
-Lyse HEK293 cells, incubate on ice, bind lysate to Ni-NTA resin, wash, and elute SUMO-conjugated material.
-
-Material hints: HEK293 cells, lysis buffer, Ni-NTA resin
-
-Step hints:
-- Lyse the cells on ice.
-- Bind the lysate to Ni-NTA resin.
-- Wash and elute.
-
-User request: Convert the paper methods into a concise reusable protocol.
+{
+  "title": "SUMO1 Purification",
+  "purpose": "Purify SUMO1-conjugated proteins from HEK293 lysate.",
+  "source_paper_title": "UBC9 Availability Limits SUMOylation Efficiency in HEK293 Cells",
+  "source_summary": "The paper reports that reduced UBC9 expression lowers SUMOylation efficiency in transient HEK293 assays.",
+  "method_text": "Lyse HEK293 cells, incubate on ice, bind lysate to Ni-NTA resin, wash, and elute SUMO-conjugated material.",
+  "materials": [
+    "HEK293 cells",
+    "lysis buffer",
+    "Ni-NTA resin"
+  ],
+  "steps": [
+    "Lyse the cells on ice.",
+    "Bind the lysate to Ni-NTA resin.",
+    "Wash and elute."
+  ],
+  "message": "Convert the paper methods into a concise reusable protocol."
+}
 
 Return JSON with protocol { name, purpose, materials, steps, troubleshooting } and result_summary.
-
-Placeholders should be rare. Keep concrete values for time, temperature, rpm, speed, centrifugation force, incubation length, volumes, and concentrations whenever the evidence states them.
-
-If a truly critical experiment-specific value remains missing after using the supplied evidence and any available web search context, keep the step operational and use a bracket placeholder such as [DNA amount], [cell density], or [buffer composition].
 ```
 
 ### Paper Analysis System Prompt

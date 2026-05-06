@@ -7,21 +7,20 @@ Goal: a single source of truth for every paper the user (or an agent) has touche
 - One global folder: `<root>/Papers/<journal-club-or-topic>/`.
 - One per-project folder: `<root>/Project/<project-name>/Papers/`.
   - Already produced by `buildPaperStorageFolder` in [src/renderer/modules/papers/storage.js](src/renderer/modules/papers/storage.js).
-- For each paper, store as a self-contained folder rather than a loose PDF:
+- Keep the user-visible PDF in the existing paper folder. Store the LLM-facing transformed artifacts in a separate knowledge folder so the Papers library stays a PDF library:
   ```
-  <papers-folder>/<doi-or-slug>/
-    original.pdf
-    paper.md          # wiki-form rewrite (see below)
+  <root>/KnowledgeDatabase/PaperKnowledge/<doi-or-slug>/
+    paper.md          # wiki-form rewrite for LLM use
     extracted.txt     # raw output of the PDF→text tool, kept for re-runs
     figures/          # extracted images, if any
-    meta.json         # cached metadata mirror of the SQLite row
+    meta.json         # cached metadata mirror of the index row
   ```
   - Folder name is the DOI with `/` replaced by `_`; fall back to a sanitized title slug when DOI is missing.
 
 ### SQLite index
 
 - Single shared DB file (the common one referenced in [idea/storage.md](idea/storage.md), not the chemical-inventory DB).
-- Purpose: cheap lookup for "do we already have this paper?" and "where does it live?" — not full text. The full text lives in `paper.md` / `extracted.txt`.
+- Purpose: cheap lookup for "do we already have this paper?" and "where does it live?" — not full text. The full text lives in `KnowledgeDatabase/PaperKnowledge/.../paper.md` / `extracted.txt`.
 
 Tables:
 

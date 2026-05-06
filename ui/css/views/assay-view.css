@@ -170,6 +170,11 @@
 }
 
 .assay-results-output-stage {
+  display: none;
+}
+
+.assay-results-output-stage:has(#assay-analysis-table:not(:empty)) {
+  display: grid;
   padding-top: 14px;
   border-top: 1px solid var(--line-soft);
 }
@@ -674,10 +679,18 @@
   background: rgba(255, 255, 255, 0.84);
 }
 
-.assay-tabulator .tabulator {
+.assay-tabulator.tabulator {
   border: 0;
   background: transparent;
   font-size: 0.78rem;
+}
+
+.assay-tabulator.tabulator .tabulator-tableholder {
+  background: transparent;
+}
+
+.assay-tabulator.tabulator .tabulator-table {
+  background: transparent;
 }
 
 .assay-tabulator .tabulator-cell {

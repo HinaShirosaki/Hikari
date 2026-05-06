@@ -320,9 +320,6 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
       "type": "object",
       "additionalProperties": true,
       "properties": {
-        "id": {
-          "type": "string"
-        },
         "text": {
           "type": "string"
         },
@@ -445,17 +442,56 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
             "type": "string"
           },
           "maxItems": 5
+        },
+        "evidence_context": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "tool_name": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "item_count": {
+                "type": "integer"
+              },
+              "citations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "maxItems": 12
+              }
+            }
+          },
+          "maxItems": 8
         }
       }
     }
   },
   "python-sandbox": {
-    "description": "Use this tool when the agent needs to write and run Python code to compute, transform, inspect, or generate artifacts in a controlled sandbox. The agent should supply complete runnable code in `code`, optionally stage input files in `files`, and request outputs through `readback_paths`. Prefer this for deterministic analysis or file generation, not for calling local lab records that already have dedicated lookup tools.",
+    "description": "Use this tool when the agent needs to write and run Python code to compute, transform, inspect, or generate artifacts in a controlled sandbox. The agent can start a new sandbox run by supplying runnable `code`, optionally stage input files in `files`, and request outputs through `readback_paths`. The managed Python sandbox sub-agent will try to repair failing runs itself before giving up. To continue a prior sandbox helper after the main agent decides the result is insufficient, call this tool again with `sub_agent_id` and optional `feedback`; the same helper will keep working instead of starting over. Inside the sandbox, `import enana_sandbox as sandbox` to read staged files and emit chat-renderable text or image outputs. Prefer this for deterministic analysis or file generation, not for calling local lab records that already have dedicated lookup tools.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "code"
+      "anyOf": [
+        {
+          "required": [
+            "code"
+          ]
+        },
+        {
+          "required": [
+            "sub_agent_id"
+          ]
+        }
       ],
       "properties": {
         "code": {
@@ -483,12 +519,107 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
             "maxLength": 240
           },
           "maxItems": 20
+        },
+        "sub_agent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "feedback": {
+          "type": "string",
+          "maxLength": 40000
+        },
+        "max_repair_attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        }
+      }
+    }
+  },
+  "command-line": {
+    "description": "Use this tool when a focused local shell command is the fastest way to inspect or operate on the current workspace, such as `pwd`, `ls`, `git status`, `npm test`, or another project CLI. Provide the complete shell command in `command`, and optionally override `cwd` or `timeout_ms`. Mutating commands may be blocked unless the runtime explicitly enables write-capable tool execution.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command"
+      ],
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 12000
+        },
+        "cwd": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "working_directory": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 500,
+          "maximum": 120000
+        },
+        "commandName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "skillName": {
+          "type": "string",
+          "maxLength": 160
+        }
+      }
+    }
+  },
+  "web-search": {
+    "description": "Use this tool for broad external web retrieval when the agent needs current or general internet sources rather than paper-specific scholarly search. Provide `query` when possible, and optionally constrain `allowed_domains` for focused retrieval. The runtime routes through the shared web-search transport, including provider-native search and Codex agent search support.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "topic": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "allowed_domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "maxItems": 12
+        },
+        "external_web_access": {
+          "type": "boolean"
+        },
+        "user_location": {
+          "type": "object"
+        },
+        "parser_payload": {
+          "$ref": "#/$defs/parser_payload"
         }
       }
     }
   },
   "sub-agent": {
-    "description": "Use this tool to manage helper sub-agent sessions for multi-step or delegated work that should persist across turns. `create` starts a managed sub-agent with a system prompt and initial message, `message` sends a follow-up, `get` inspects one session, `list` shows active sessions, and `delete` removes a session. Use it when the agent needs a reusable delegated workspace rather than a one-shot tool execution.",
+    "description": "Use this tool to manage real Codex CLI-backed helper sub-agent sessions for multi-step or delegated work that should persist across turns. `create` starts a Codex session with a system prompt and initial message, `message` resumes that session with a follow-up, `get` inspects one session, `list` shows active sessions, and `delete` removes a session. Use it when the agent needs a reusable delegated Codex workspace rather than a one-shot tool execution.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -620,7 +751,7 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
     }
   },
   "literature-search": {
-    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. The literature workflow delegates search and reading to a sub-agent, then loads the selected paper context back into the main agent. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -659,6 +790,11 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
           "minimum": 1,
           "maximum": 25
         },
+        "max_papers": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 24
+        },
         "max_per_source": {
           "type": "integer",
           "minimum": 1,
@@ -669,6 +805,54 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
         },
         "prefer_recent": {
           "type": "boolean"
+        },
+        "parser_payload": {
+          "$ref": "#/$defs/parser_payload"
+        }
+      }
+    }
+  },
+  "purchase-recommendation": {
+    "description": "Use this tool when the user wants products they can purchase from external vendors. Provide a compact product query, explicit `required_terms` and `excluded_terms` when known, and a `budget_preference` such as `cheap` when price sensitivity matters. The tool searches generic web results, extracts product metadata from vendor pages, rejects incomplete results, and returns chat-card-ready items with image, vendor, price, and destination URL.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "required_terms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "excluded_terms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "budget_preference": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "search_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 16
         },
         "parser_payload": {
           "$ref": "#/$defs/parser_payload"
@@ -696,6 +880,9 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
           "maxLength": 160
         },
         "paper_pdf_url": {
+          "type": "string"
+        },
+        "doi": {
           "type": "string"
         },
         "pdf_url": {
@@ -795,52 +982,72 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
     }
   },
   "protocol-generation": {
-    "description": "Use this tool when the agent already has method evidence and needs to synthesize it into the app's import-ready protocol JSON format. It is best for converting extracted paper methods, structured step seeds, or summarized procedures into a protocol with materials, steps, placeholders, timestamps, and troubleshooting text. Provide `method_text`, `steps`, and `materials` when available, plus `title` or `protocol_title_hint` to guide the resulting protocol name.",
+    "description": "Use this tool only when the agent already has a complete protocol JSON object and needs to normalize it into the app's import-ready protocol format. The tool does not call an LLM, does not synthesize method content, and does not require a protocol id.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
+      "required": [
+        "protocol"
+      ],
       "properties": {
-        "title": {
-          "type": "string"
-        },
-        "protocol_title_hint": {
-          "type": "string"
-        },
-        "purpose": {
-          "type": "string"
-        },
-        "method_text": {
-          "type": "string"
-        },
-        "source_paper_title": {
-          "type": "string"
-        },
-        "source_summary": {
-          "type": "string"
-        },
-        "message": {
-          "type": "string"
-        },
-        "materials": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 40
-        },
-        "steps": {
-          "type": "array",
-          "items": {
-            "anyOf": [
-              {
+        "protocol": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "name",
+            "steps"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "purpose": {
+              "type": "string"
+            },
+            "materials": {
+              "type": "array",
+              "items": {
                 "type": "string"
               },
-              {
-                "$ref": "#/$defs/protocol_generation_step"
-              }
-            ]
-          },
-          "maxItems": 40
+              "maxItems": 80
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/$defs/protocol_generation_step"
+                  }
+                ]
+              },
+              "maxItems": 120
+            },
+            "troubleshooting": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array"
+                }
+              ]
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            }
+          }
+        },
+        "result_summary": {
+          "type": "string"
         }
       }
     }

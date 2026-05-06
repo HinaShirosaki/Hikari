@@ -196,6 +196,27 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       });
     });
 
+    test('codex cli provider builds noninteractive resume args for Codex sub-agent sessions', () => {
+      withCodexHome({}, () => {
+        const provider = loadProvider();
+        const args = provider.buildCodexCliExecResumeArgs({
+          outputFile: '/tmp/codex-last-message.txt',
+          sessionId: 'codex-session-1',
+          model: 'gpt-5.4',
+          reasoningEffort: 'high',
+          streamJson: true
+        });
+
+        assert.equal(args.includes('exec'), true);
+        assert.equal(args.includes('resume'), true);
+        assert.equal(args.includes('--json'), true);
+        assert.equal(args.includes('--color'), false);
+        assert.equal(args.includes('codex-session-1'), true);
+        assert.equal(args[args.length - 2], 'codex-session-1');
+        assert.equal(args[args.length - 1], '-');
+      });
+    });
+
     test('codex cli provider mirrors essential codex home files into an app-owned runtime directory', async () => {
       const sourceHome = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-source-'));
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-workspace-'));
@@ -321,6 +342,28 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
               summary: 'Selected protocol Protein purification.'
             };
           }
+          if (toolId === 'protocol-generation') {
+            return {
+              ok: true,
+              result: {
+                ok: true,
+                status: 'normalized',
+                protocol: {
+                  name: args.protocol.name,
+                  purpose: args.protocol.purpose || '',
+                  materials: args.protocol.materials || [],
+                  steps: args.protocol.steps.map((step, index) => ({
+                    id: `step-${index + 1}`,
+                    text: typeof step === 'string' ? step : step.text,
+                    placeholders: []
+                  })),
+                  troubleshooting: args.protocol.troubleshooting || ''
+                },
+                summary: 'Prepared protocol JSON.'
+              },
+              summary: 'Prepared protocol JSON.'
+            };
+          }
           if (toolId === 'record-lookup') {
             const items = [
               {
@@ -384,6 +427,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(mcpToolNames.includes('inventory_lookup'), true);
       assert.equal(mcpToolNames.includes('chemical_lookup'), true);
       assert.equal(mcpToolNames.includes('protocol_lookup'), true);
+      assert.equal(mcpToolNames.includes('protocol_generation'), true);
       assert.equal(mcpToolNames.includes('notebook_lookup'), true);
 
       const searchResult = gateway.toolSearch({ query: 'download paper pdf', limit: 6 });
@@ -441,6 +485,25 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.deepEqual(calls[calls.length - 1].args.protocol_candidates, ['protein purification']);
       assert.equal(calls[calls.length - 1].context.parserPayload.primary_intent, 'protocol_to_notebook');
       assert.equal(calls[calls.length - 1].context.project.id, 'proj-1');
+
+      const protocolGenerationResult = await gateway.callGatewayTool('protocol_generation', {
+        protocol: {
+          title: 'Protein purification',
+          purpose: 'Purify His-tagged protein.',
+          materials: ['Ni-NTA resin'],
+          steps: ['Bind lysate to resin for [time].']
+        },
+        result_summary: 'Normalize the protocol.'
+      }, {
+        requestId: 'req-protocol-generation'
+      });
+      assert.equal(protocolGenerationResult.ok, true);
+      assert.equal(protocolGenerationResult.status, 'normalized');
+      assert.equal(protocolGenerationResult.protocol.name, 'Protein purification');
+      assert.equal(Object.prototype.hasOwnProperty.call(protocolGenerationResult.protocol, 'id'), false);
+      assert.equal(calls[calls.length - 1].toolId, 'protocol-generation');
+      assert.equal(calls[calls.length - 1].args.protocol.name, 'Protein purification');
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[calls.length - 1].args.protocol, 'id'), false);
 
       const invalidResult = await gateway.toolCall({
         tool_id: 'inventory-lookup',
@@ -807,6 +870,86 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
             ['Hello ', 'from Codex.']
           );
           assert.equal(streamEvents[streamEvents.length - 1].accumulated_text, 'Hello from Codex.');
+        } finally {
+          if (typeof previousCodexCli === 'string') {
+            process.env.ENANA_CODEX_CLI = previousCodexCli;
+          } else {
+            delete process.env.ENANA_CODEX_CLI;
+          }
+          if (typeof previousCapture === 'string') {
+            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+          }
+          if (typeof previousStdout === 'string') {
+            process.env.ENANA_FAKE_CODEX_STDOUT = previousStdout;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_STDOUT;
+          }
+          fs.rmSync(workspaceDir, { recursive: true, force: true });
+        }
+      });
+    });
+
+    test('codex cli provider creates and resumes real Codex sessions for sub-agents', async () => {
+      const accessToken = buildJwt({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        email: 'scientist@example.com'
+      });
+      await withCodexHome({
+        authFile: {
+          auth_mode: 'chatgpt',
+          tokens: {
+            access_token: accessToken,
+            refresh_token: 'refresh-token',
+            account_id: 'acct-subagent'
+          }
+        }
+      }, async () => {
+        const provider = loadProvider();
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-subagent-'));
+        const fakeCodex = createFakeCodexBinary(workspaceDir);
+        const previousCodexCli = process.env.ENANA_CODEX_CLI;
+        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
+        const previousStdout = process.env.ENANA_FAKE_CODEX_STDOUT;
+        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
+        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+
+        try {
+          process.env.ENANA_FAKE_CODEX_STDOUT = JSON.stringify({
+            type: 'session_configured',
+            session_id: 'codex-session-1'
+          });
+          const created = await provider.requestCodexCliText({
+            prompt: 'Create helper session.',
+            cwd: workspaceDir,
+            returnMetadata: true
+          });
+          const createCapture = JSON.parse(fs.readFileSync(fakeCodex.capturePath, 'utf8'));
+          assert.equal(created.text, 'OK from fake codex');
+          assert.equal(created.metadata.session_id, 'codex-session-1');
+          assert.equal(created.metadata.command, 'exec');
+          assert.equal(createCapture.args.includes('resume'), false);
+          assert.equal(createCapture.args.includes('--json'), true);
+
+          process.env.ENANA_FAKE_CODEX_STDOUT = JSON.stringify({
+            type: 'session_resumed',
+            session_id: 'codex-session-1'
+          });
+          const resumed = await provider.requestCodexCliText({
+            prompt: 'Continue helper session.',
+            cwd: workspaceDir,
+            resumeSessionId: 'codex-session-1',
+            returnMetadata: true
+          });
+          const resumeCapture = JSON.parse(fs.readFileSync(fakeCodex.capturePath, 'utf8'));
+          assert.equal(resumed.text, 'OK from fake codex');
+          assert.equal(resumed.metadata.session_id, 'codex-session-1');
+          assert.equal(resumed.metadata.resumed_session_id, 'codex-session-1');
+          assert.equal(resumed.metadata.command, 'exec resume');
+          assert.equal(resumeCapture.args.includes('resume'), true);
+          assert.equal(resumeCapture.args.includes('codex-session-1'), true);
+          assert.match(resumeCapture.stdin, /Continue helper session\./);
         } finally {
           if (typeof previousCodexCli === 'string') {
             process.env.ENANA_CODEX_CLI = previousCodexCli;

@@ -41,7 +41,7 @@ function buildHikariCodexAgentsInstructions() {
     '- Prefer `literature-search` for finding papers, references, recent literature, or external scientific evidence. It is the Hikari path that searches, selects papers, and loads bounded paper context blocks back into the agent.',
     '- Use `paper-download` when the user explicitly asks to download a paper PDF into app storage, or when the workflow asks you to obtain a local PDF for deeper reading.',
     '- Use `paper-analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.',
-    '- Use `protocol-generation` only after method evidence is available and the user wants an import-ready reusable protocol.',
+    '- Use `protocol-generation` only after you already have complete protocol JSON to normalize into an import-ready reusable protocol.',
     '- Do not claim a PDF was downloaded, full text was read, figures were reviewed, or chunks were loaded unless the corresponding tool result says so.',
     '',
     'Keep tool calls small and targeted. Prefer the MCP bridge over shell commands for app data, papers, protocols, notebook drafts, inventory, and structured Hikari state.',

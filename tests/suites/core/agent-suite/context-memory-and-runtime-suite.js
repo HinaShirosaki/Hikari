@@ -2704,12 +2704,16 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
 
       await executors.get('protocol-generation')({
         args: {
-          method_text: 'Mix and incubate.'
+          protocol: {
+            name: 'Mixing protocol',
+            steps: ['Mix and incubate.']
+          }
         },
         context,
         state
       });
-      assert.equal(calls.find((call) => call.tool === 'protocol-generation').input.model, 'gpt-test');
+      assert.equal(calls.find((call) => call.tool === 'protocol-generation').input.model, undefined);
+      assert.equal(calls.find((call) => call.tool === 'protocol-generation').input.protocol.name, 'Mixing protocol');
     });
 
     test('registerAgentToolExecutors forwards snapshot storage and project context into literature-search', async () => {

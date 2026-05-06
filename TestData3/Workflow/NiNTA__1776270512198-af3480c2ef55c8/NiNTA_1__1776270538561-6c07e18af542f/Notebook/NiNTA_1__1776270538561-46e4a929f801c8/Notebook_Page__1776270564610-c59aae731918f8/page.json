@@ -1,5 +1,5 @@
 {
-  "exportedAt": "2026-05-05T14:31:37.364Z",
+  "exportedAt": "2026-05-06T03:22:05.157Z",
   "workflowId": "1776270538561-6c07e18af542f",
   "notebookEntry": {
     "id": "1776270564610-c59aae731918f8",
@@ -108,9 +108,7 @@
       "workflowBlockId": "1776270538561-74e8c18bdcad18",
       "workflowBlockTitle": "IPTG-Induced Recombinant Protein Expression in BL21(DE3)"
     },
-    "assayIds": [
-      "1776918071270-25a114f810413"
-    ],
+    "assayIds": [],
     "gelAnalysisIds": []
   }
 }
