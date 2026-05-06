@@ -9,7 +9,7 @@ const srcRoot = path.join(repoRoot, 'src');
 const rendererRoot = path.join(repoRoot, 'src', 'renderer');
 const rendererModulesRoot = path.join(rendererRoot, 'modules');
 const rendererServicesRoot = path.join(rendererRoot, 'services');
-const rendererFile = path.join(rendererRoot, 'renderer.js');
+const moduleRuntimeFile = path.join(rendererRoot, 'module-runtime.js');
 const defaultOutputPath = path.join(repoRoot, 'reports', 'renderer-module-relationships.md');
 
 function parseArguments(argv) {
@@ -40,7 +40,8 @@ function printHelp() {
   console.log('Usage: node scripts/report-module-relationships.mjs [--output <path>]');
   console.log('');
   console.log('Scans src/**/*.js for local import dependencies and direct imported API calls.');
-  console.log('Also infers renderer service and registry-based communication from src/renderer.');
+  console.log('Also infers renderer service and registry-based communication from');
+  console.log('src/renderer/module-runtime.js (init/registration root) and src/renderer/services/.');
 }
 
 function toPosixPath(value) {
@@ -495,7 +496,7 @@ function extractRendererImportMap(source) {
       .split(',')
       .map((item) => item.trim())
       .filter(Boolean);
-    const resolvedPath = resolveLocalSpecifier(rendererFile, match[2]);
+    const resolvedPath = resolveLocalSpecifier(moduleRuntimeFile, match[2]);
 
     for (const specifier of specifiers) {
       const specifierMatch = specifier.match(/^([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?$/);
@@ -520,15 +521,38 @@ function extractRendererInitBlocks(source, initImportMap) {
 
   for (const line of lines) {
     if (!currentBlock) {
-      const match = line.match(/^\s*(?:const|let)?\s*([A-Za-z_$][\w$]*)\s*=\s*(init[A-Za-z_$][\w$]*)\s*\(\s*\{/)
+      // Inline form (current architecture in src/renderer/module-runtime.js):
+      //   <localKey>: initAndRegisterModule(moduleRegistry, '<registryKey>', <initFn>, {
+      const inlineMatch = line.match(
+        /^\s*([A-Za-z_$][\w$]*)\s*:\s*initAndRegisterModule\s*\(\s*moduleRegistry\s*,\s*'([^']+)'\s*,\s*([A-Za-z_$][\w$]*)\s*,\s*\{/
+      );
+
+      if (inlineMatch && initImportMap.has(inlineMatch[3])) {
+        currentBlock = {
+          variableName: inlineMatch[1],
+          initFunction: inlineMatch[3],
+          sourceFile: initImportMap.get(inlineMatch[3]),
+          registryKey: inlineMatch[2],
+          callbackEdges: [],
+          moduleRefEdges: [],
+          braceDepth: countCharacters(line, '{') - countCharacters(line, '}')
+        };
+        continue;
+      }
+
+      // Legacy form (older renderer.js layout):
+      //   const <var> = init<Module>({       or       <var> = init<Module>({
+      const legacyMatch = line.match(/^\s*(?:const|let)?\s*([A-Za-z_$][\w$]*)\s*=\s*(init[A-Za-z_$][\w$]*)\s*\(\s*\{/)
         || line.match(/^\s*([A-Za-z_$][\w$]*)\s*=\s*(init[A-Za-z_$][\w$]*)\s*\(\s*\{/);
 
-      if (match && initImportMap.has(match[2])) {
+      if (legacyMatch && initImportMap.has(legacyMatch[2])) {
         currentBlock = {
-          variableName: match[1],
-          initFunction: match[2],
-          sourceFile: initImportMap.get(match[2]),
+          variableName: legacyMatch[1],
+          initFunction: legacyMatch[2],
+          sourceFile: initImportMap.get(legacyMatch[2]),
+          registryKey: null,
           callbackEdges: [],
+          moduleRefEdges: [],
           braceDepth: countCharacters(line, '{') - countCharacters(line, '}')
         };
         continue;
@@ -552,9 +576,21 @@ function extractRendererInitBlocks(source, initImportMap) {
       callbackMatch = callbackPattern.exec(line);
     }
 
+    const moduleRefPattern = /\bmodules\.([A-Za-z_$][\w$]*)\s*\??\.\s*([A-Za-z_$][\w$]*)\s*(?:\?\.)?\s*\(/g;
+    let moduleRefMatch = moduleRefPattern.exec(line);
+    while (moduleRefMatch) {
+      currentBlock.moduleRefEdges.push({
+        variableName: currentBlock.variableName,
+        sourceFile: currentBlock.sourceFile,
+        targetModuleKey: moduleRefMatch[1],
+        targetMethod: moduleRefMatch[2]
+      });
+      moduleRefMatch = moduleRefPattern.exec(line);
+    }
+
     currentBlock.braceDepth += countCharacters(line, '{') - countCharacters(line, '}');
 
-    if (currentBlock.braceDepth <= 0 && /\}\s*\);/.test(line)) {
+    if (currentBlock.braceDepth <= 0 && /\}\s*\)\s*[;,]?/.test(line)) {
       initBlocks.push(currentBlock);
       currentBlock = null;
     }
@@ -565,18 +601,33 @@ function extractRendererInitBlocks(source, initImportMap) {
 
 function extractRegistryMappings(source) {
   const mappings = [];
-  const pattern = /moduleRegistry\.register\(\s*'([^']+)'\s*,\s*([A-Za-z_$][\w$]*)\s*\)/g;
-  let match = pattern.exec(source);
 
-  while (match) {
+  // Legacy form: moduleRegistry.register('key', varName)
+  const legacyPattern = /moduleRegistry\.register\(\s*'([^']+)'\s*,\s*([A-Za-z_$][\w$]*)\s*\)/g;
+  let legacyMatch = legacyPattern.exec(source);
+  while (legacyMatch) {
     mappings.push({
-      registryKey: match[1],
-      variableName: match[2]
+      registryKey: legacyMatch[1],
+      variableName: legacyMatch[2]
     });
-    match = pattern.exec(source);
+    legacyMatch = legacyPattern.exec(source);
   }
 
-  return mappings;
+  // Inline form: <localKey>: initAndRegisterModule(moduleRegistry, '<registryKey>', ...)
+  const inlinePattern = /([A-Za-z_$][\w$]*)\s*:\s*initAndRegisterModule\s*\(\s*moduleRegistry\s*,\s*'([^']+)'/g;
+  let inlineMatch = inlinePattern.exec(source);
+  while (inlineMatch) {
+    mappings.push({
+      registryKey: inlineMatch[2],
+      variableName: inlineMatch[1]
+    });
+    inlineMatch = inlinePattern.exec(source);
+  }
+
+  return dedupeRecords(
+    mappings,
+    (mapping) => `${mapping.registryKey}:${mapping.variableName}`
+  );
 }
 
 function extractFunctionBodies(source) {
@@ -824,7 +875,8 @@ function buildReport({
   callbackEdges,
   serviceFanOutEdges,
   derivedModuleEdges,
-  derivedBridgeEdges
+  derivedBridgeEdges,
+  directModuleRefEdges
 }) {
   const generatedAt = new Date().toISOString();
   const filePaths = Array.from(fileDependencyMap.keys()).sort((left, right) => left.localeCompare(right));
@@ -847,6 +899,7 @@ function buildReport({
     `- Service fan-out edges: ${serviceFanOutEdges.length}`,
     `- Derived module-to-module API edges: ${derivedModuleEdges.length}`,
     `- Derived module-to-bridge API edges: ${derivedBridgeEdges.length}`,
+    `- Direct module-to-module callback refs: ${directModuleRefEdges.length}`,
     '',
     '## Direct Imported API Communication',
     '',
@@ -883,7 +936,7 @@ function buildReport({
   );
 
   for (const moduleRecord of registeredModules) {
-    reportLines.push(`| \`${moduleRecord.registryKey}\` | \`${toRepoRelativePath(moduleRecord.sourceFile || rendererFile)}\` |`);
+    reportLines.push(`| \`${moduleRecord.registryKey}\` | \`${toRepoRelativePath(moduleRecord.sourceFile || moduleRuntimeFile)}\` |`);
   }
 
   reportLines.push(
@@ -965,6 +1018,23 @@ function buildReport({
 
   reportLines.push(
     '',
+    '## Direct Module-to-Module Wiring (callback bodies)',
+    '',
+    '> Direct cross-module references inside renderer init/options callbacks (`modules.<key>.<method>(...)`).',
+    '> These bypass the renderer service layer and indicate tight coupling between modules.',
+    '',
+    '| From module | From file | To module | Target API |',
+    '| --- | --- | --- | --- |'
+  );
+
+  for (const edge of directModuleRefEdges) {
+    reportLines.push(
+      `| \`${edge.fromRegistryKey || edge.variableName}\` | \`${toRepoRelativePath(edge.sourceFile)}\` | \`${edge.targetModuleKey}\` | \`${edge.targetMethod}()\` |`
+    );
+  }
+
+  reportLines.push(
+    '',
     '## Local Import Dependencies',
     ''
   );
@@ -983,7 +1053,9 @@ function buildReport({
     '',
     '- The dependency section is based on local `import` and `export ... from` statements under `src`.',
     '- The direct imported API section records non-registry calls made through local imports, including wrapper files such as `assay.js`, `assay-analysis.js`, `gel-analysis.js`, and `sequence-viewer.js`.',
-    '- The renderer-specific API communication sections are inferred from `src/renderer/renderer.js` callback wiring and `src/renderer/services/*.js` registry fan-out calls.',
+    '- The renderer-specific API communication sections are inferred from `src/renderer/module-runtime.js` callback wiring and `src/renderer/services/*.js` registry fan-out calls.',
+    '- The script understands two registration forms in `module-runtime.js`: the legacy `var = init...({ ... }); moduleRegistry.register("key", var)` and the current inline `<key>: initAndRegisterModule(moduleRegistry, "<registryKey>", initFn, { ... })`.',
+    '- The "Direct Module-to-Module Wiring" section captures `modules.<key>.<method>(...)` calls inside callback bodies that bypass the renderer service layer.',
     '- Bridge targets are registry entries such as `showView`, `VIEWS`, or `setSearchInputValue` that are not registered app modules.'
   );
 
@@ -1008,7 +1080,7 @@ function main() {
   const directApiCalls = aggregateDirectApiCalls(directApiCallEdges);
   const wrapperDelegationEdges = directApiCalls.filter((edge) => edge.relation === 'renderer wrapper/internal');
 
-  const rendererSource = fs.readFileSync(rendererFile, 'utf8');
+  const rendererSource = fs.readFileSync(moduleRuntimeFile, 'utf8');
   const initImportMap = extractRendererImportMap(rendererSource);
   const initBlocks = extractRendererInitBlocks(rendererSource, initImportMap);
   const registryMappings = extractRegistryMappings(rendererSource);
@@ -1028,6 +1100,29 @@ function main() {
         right.serviceMethod
       ].join(':'));
     });
+
+  const registryKeyByVariableName = new Map(
+    registeredModules.map((entry) => [entry.variableName, entry.registryKey])
+  );
+  const directModuleRefEdges = dedupeRecords(
+    initBlocks
+      .flatMap((entry) => entry.moduleRefEdges || [])
+      .map((edge) => ({
+        ...edge,
+        fromRegistryKey: registryKeyByVariableName.get(edge.variableName) || null
+      })),
+    (edge) => `${edge.variableName}:${edge.targetModuleKey}:${edge.targetMethod}`
+  ).sort((left, right) => {
+    return [
+      left.fromRegistryKey || left.variableName,
+      left.targetModuleKey,
+      left.targetMethod
+    ].join(':').localeCompare([
+      right.fromRegistryKey || right.variableName,
+      right.targetModuleKey,
+      right.targetMethod
+    ].join(':'));
+  });
 
   const serviceFiles = walkFiles(rendererServicesRoot)
     .filter((filePath) => /Service\.js$/.test(filePath));
@@ -1050,7 +1145,8 @@ function main() {
     callbackEdges,
     serviceFanOutEdges,
     derivedModuleEdges,
-    derivedBridgeEdges
+    derivedBridgeEdges,
+    directModuleRefEdges
   });
 
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });

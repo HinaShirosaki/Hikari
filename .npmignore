@@ -1,22 +1,43 @@
 .git
 .gitignore
-.codex/
-.vscode/
-.DS_Store
 
+# Dependencies and caches
 node_modules/
-out/
-output/
-tmp/
 .npm-cache/
 
-tests/
-scripts/
-
-*.log
-*.zip
+# Build and package output
+out/
+output/
+dist/
+tmp/
 *.asar
+*.zip
 
+# Local editor and assistant state
+.codex/
+.claude/
+.vscode/
 Agent.md
 
+# OS/editor noise
+.DS_Store
+**/.DS_Store
+
+# Logs and runtime scratch data
+*.log
+logs/
+data/*.log
+data/Config/codex-cli-home/log/
+data/Config/codex-cli-home/tmp/
+
+# Local secrets
+.env
+.env.*
+data/Config/codex-cli-home/auth.json
+
+# Repo-only development material
+tests/
+scripts/
 Testdata/
+TestData2/
+TestData3/
