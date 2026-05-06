@@ -25,6 +25,7 @@ import { createSequenceViewerDetailController } from './detail-controller.js';
 import { createSequenceViewerAlignmentController } from './alignment-controller.js';
 import { createSequenceViewerProteinBuilderController } from './protein-builder.js';
 import { createProteinBuilderCloningNotebookPage } from './protein-builder-cloning-notebook.js';
+import { createSequenceViewerCloningDesignController } from './cloning-design.js';
 
 export function initSequenceViewer(options = {}) {
   const LIBRARY_STATUS_SAVED = 'saved';
@@ -79,6 +80,8 @@ export function initSequenceViewer(options = {}) {
     activeAlignmentQueryRecord: null,
     alignmentViewEnabled: false,
     proteinBuilderConfirmation: null,
+    sequenceEditDesignSource: null,
+    cloningDesign: {},
     featureSearchQuery: '',
     featureSearchResults: [],
     isSearchingFeatures: false,
@@ -1099,6 +1102,7 @@ export function initSequenceViewer(options = {}) {
   let annotationController = null;
   let alignmentController = null;
   let proteinBuilderController = null;
+  let cloningDesignController = null;
 
   function showProteinBuilderWorkspace() {
     setProteinBuilderConfirmation(null, { render: false });
@@ -1111,6 +1115,25 @@ export function initSequenceViewer(options = {}) {
     }
   }
 
+  function showCloningDesignWorkspace() {
+    detailController?.hideFeatureContextMenu();
+    detailController?.hideFeatureEditor();
+    detailController?.hideSequenceEditDialog?.();
+    homeController?.setLocalWorkspaceVisibility('cloning');
+    if (onNavigateDetail) {
+      onNavigateDetail();
+    }
+  }
+
+  function returnToSequenceDetailFromCloningDesign() {
+    homeController?.setLocalWorkspaceVisibility('detail');
+    if (onNavigateDetail) {
+      onNavigateDetail();
+    }
+    detailController?.renderActiveRecord?.();
+    setStatus('Returned to Sequence Viewer.');
+  }
+
   function setRecords(result, statusPrefix = 'Loaded') {
     state.records = Array.isArray(result.records) ? result.records : [];
     state.warnings = Array.isArray(result.warnings) ? result.warnings : [];
@@ -1118,6 +1141,8 @@ export function initSequenceViewer(options = {}) {
     state.isAnnotating = false;
     state.isRecognizingBackbone = false;
     state.proteinBuilderConfirmation = null;
+    state.sequenceEditDesignSource = null;
+    state.cloningDesign = {};
     closeBackboneRecognitionDialog();
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
@@ -1471,6 +1496,67 @@ export function initSequenceViewer(options = {}) {
     return `Inserted ${insertedLength.toLocaleString()} bp.`;
   }
 
+  function buildSequenceEditDesignSource({
+    record,
+    previousSequence,
+    nextSequence,
+    mode,
+    start,
+    end,
+    replacement
+  } = {}) {
+    const originalChangedSequence = normalizeSequenceText(previousSequence || '').slice(start, end);
+    const editedChangedSequence = mode === 'delete'
+      ? ''
+      : normalizeSequenceText(replacement || '').replace(/\*/g, '');
+    const type = mode === 'insert'
+      ? 'insertion'
+      : mode === 'delete'
+        ? 'deletion'
+        : (
+            originalChangedSequence.length === 1
+            && editedChangedSequence.length === 1
+              ? 'point-mutation'
+              : 'replacement'
+          );
+    const oneBasedStart = Math.max(1, Math.round(Number(start) || 0) + 1);
+    const oneBasedEnd = mode === 'insert'
+      ? oneBasedStart
+      : Math.max(oneBasedStart, Math.round(Number(end) || 0));
+
+    return {
+      recordName: cleanText(record?.name, 160) || 'sequence',
+      originalSequence: normalizeSequenceText(previousSequence || ''),
+      editedSequence: normalizeSequenceText(nextSequence || ''),
+      originalRange: {
+        start,
+        end
+      },
+      editedRange: {
+        start,
+        end: start + editedChangedSequence.length
+      },
+      editRequest: {
+        type,
+        position: oneBasedStart,
+        start: oneBasedStart,
+        end: oneBasedEnd,
+        originalSequence: originalChangedSequence,
+        editedSequence: editedChangedSequence,
+        size: Math.max(originalChangedSequence.length, editedChangedSequence.length)
+      },
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  function hasCurrentCloningDesignSource() {
+    const source = state.sequenceEditDesignSource;
+    const record = getSelectedRecord();
+    const sourceSequence = normalizeSequenceText(source?.editedSequence || '');
+    const recordSequence = normalizeSequenceText(record?.sequence || '');
+    return Boolean(source?.editRequest && sourceSequence.length && recordSequence && sourceSequence === recordSequence);
+  }
+
   async function applySequenceEdit(payload = {}) {
     const record = getSelectedRecord();
     if (!record?.sequence?.length) {
@@ -1516,6 +1602,16 @@ export function initSequenceViewer(options = {}) {
       sequence: nextSequence,
       features: adjustedFeatures
     };
+    state.sequenceEditDesignSource = buildSequenceEditDesignSource({
+      record: current,
+      previousSequence: sequence,
+      nextSequence,
+      mode,
+      start,
+      end,
+      replacement
+    });
+    state.cloningDesign = {};
     if (typeof nextRecord.quality === 'string' && nextRecord.quality.length) {
       nextRecord.quality = '';
       const qualityWarning = 'Sequence edits clear per-base quality scores because they no longer match the edited sequence.';
@@ -1540,6 +1636,7 @@ export function initSequenceViewer(options = {}) {
     detailController?.hideFeatureEditor();
     detailController?.updateRecordSelect?.();
     detailController?.renderActiveRecord?.();
+    cloningDesignController?.render?.();
     alignmentController?.handleReferenceRecordChanged?.();
 
     const actionLabel = buildSequenceEditStatus(mode, { start, end }, replacement.length);
@@ -1759,6 +1856,8 @@ export function initSequenceViewer(options = {}) {
     onRequestSave: saveCurrentRecordAsSaved,
     onApplySequenceEdit: applySequenceEdit,
     onRequestAlignment: () => alignmentController?.openSequencingAlignmentWorkspace?.(),
+    onRequestCloningDesign: () => cloningDesignController?.open?.(),
+    hasCloningDesignSource: hasCurrentCloningDesignSource,
     onSelectAlignmentSession: (sessionId) => alignmentController?.selectSavedAlignmentSession?.(sessionId, { enableView: true }),
     onConfirmProteinBuilderConstruct: () => {
       if (!state.proteinBuilderConfirmation) {
@@ -1831,6 +1930,16 @@ export function initSequenceViewer(options = {}) {
     readFileAsArrayBuffer
   });
 
+  cloningDesignController = createSequenceViewerCloningDesignController({
+    elements,
+    state,
+    getSelectedRecord,
+    getCloningDesignSource: () => state.sequenceEditDesignSource,
+    setStatus,
+    onNavigateCloningDesign: showCloningDesignWorkspace,
+    onReturnToDetail: returnToSequenceDetailFromCloningDesign
+  });
+
   proteinBuilderController = createSequenceViewerProteinBuilderController({
     elements,
     state: options?.state,
@@ -1900,7 +2009,7 @@ export function initSequenceViewer(options = {}) {
     }
 
     if (nextViewId === homeViewId) {
-      if (workspaceMode === 'detail' || workspaceMode === 'alignment') {
+      if (workspaceMode === 'detail' || workspaceMode === 'alignment' || workspaceMode === 'cloning') {
         homeController?.setLocalWorkspaceVisibility('home');
       }
       return;
@@ -1918,6 +2027,7 @@ export function initSequenceViewer(options = {}) {
     detailController.updateRecordSelect();
     detailController.renderActiveRecord();
     alignmentController?.render?.();
+    cloningDesignController?.render?.();
     proteinBuilderController?.render();
     homeController.syncHomeControlsState();
     void homeController.refreshLibraryEntries({ silent: true });
@@ -2005,6 +2115,7 @@ export function initSequenceViewer(options = {}) {
   homeController.bindEvents();
   detailController.bindEvents();
   alignmentController?.bindEvents?.();
+  cloningDesignController?.bindEvents?.();
   proteinBuilderController?.bindEvents?.();
 
   homeController.setLibraryFilter(LIBRARY_STATUS_SAVED);

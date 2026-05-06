@@ -303,9 +303,6 @@
       "type": "object",
       "additionalProperties": true,
       "properties": {
-        "id": {
-          "type": "string"
-        },
         "text": {
           "type": "string"
         },
@@ -421,6 +418,36 @@
             "type": "string"
           },
           "maxItems": 5
+        },
+        "evidence_context": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "tool_name": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "item_count": {
+                "type": "integer"
+              },
+              "citations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "maxItems": 12
+              }
+            }
+          },
+          "maxItems": 8
         }
       }
     }
@@ -519,7 +546,7 @@
     }
   },
   "web-search": {
-    "description": "Use this tool for broad external web retrieval when the agent needs current or general internet sources rather than paper-specific scholarly search. Provide `query` when possible, and optionally constrain `allowed_domains` for focused retrieval. The runtime routes through the shared provider-backed web-search API, including provider-native search and Codex CLI `--search` support.",
+    "description": "Use this tool for broad external web retrieval when the agent needs current or general internet sources rather than paper-specific scholarly search. Provide `query` when possible, and optionally constrain `allowed_domains` for focused retrieval. The runtime routes through the shared web-search transport, including provider-native search and Codex agent search support.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -562,7 +589,7 @@
     }
   },
   "sub-agent": {
-    "description": "Use this tool to manage helper sub-agent sessions for multi-step or delegated work that should persist across turns. `create` starts a managed sub-agent with a system prompt and initial message, `message` sends a follow-up, `get` inspects one session, `list` shows active sessions, and `delete` removes a session. Use it when the agent needs a reusable delegated workspace rather than a one-shot tool execution.",
+    "description": "Use this tool to manage real Codex CLI-backed helper sub-agent sessions for multi-step or delegated work that should persist across turns. `create` starts a Codex session with a system prompt and initial message, `message` resumes that session with a follow-up, `get` inspects one session, `list` shows active sessions, and `delete` removes a session. Use it when the agent needs a reusable delegated Codex workspace rather than a one-shot tool execution.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -906,52 +933,67 @@
     }
   },
   "protocol-generation": {
-    "description": "Use this tool when the agent already has method evidence and needs to synthesize it into the app's import-ready protocol JSON format. It is best for converting extracted paper methods, structured step seeds, or summarized procedures into a protocol with materials, steps, placeholders, timestamps, and troubleshooting text. Provide `method_text`, `steps`, and `materials` when available, plus `title` or `protocol_title_hint` to guide the resulting protocol name.",
+    "description": "Use this tool only when the agent already has a complete protocol JSON object and needs to normalize it into the app's import-ready protocol format. The tool does not call an LLM, does not synthesize method content, and does not require a protocol id.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
+      "required": ["protocol"],
       "properties": {
-        "title": {
-          "type": "string"
-        },
-        "protocol_title_hint": {
-          "type": "string"
-        },
-        "purpose": {
-          "type": "string"
-        },
-        "method_text": {
-          "type": "string"
-        },
-        "source_paper_title": {
-          "type": "string"
-        },
-        "source_summary": {
-          "type": "string"
-        },
-        "message": {
-          "type": "string"
-        },
-        "materials": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 40
-        },
-        "steps": {
-          "type": "array",
-          "items": {
-            "anyOf": [
-              {
+        "protocol": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["name", "steps"],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "purpose": {
+              "type": "string"
+            },
+            "materials": {
+              "type": "array",
+              "items": {
                 "type": "string"
               },
-              {
-                "$ref": "#/$defs/protocol_generation_step"
-              }
-            ]
-          },
-          "maxItems": 40
+              "maxItems": 80
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/$defs/protocol_generation_step"
+                  }
+                ]
+              },
+              "maxItems": 120
+            },
+            "troubleshooting": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array"
+                }
+              ]
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            }
+          }
+        },
+        "result_summary": {
+          "type": "string"
         }
       }
     }

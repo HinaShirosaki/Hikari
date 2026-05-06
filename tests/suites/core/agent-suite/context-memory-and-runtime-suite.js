@@ -1094,7 +1094,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           requestId: 'req-lifecycle-1'
         },
         provider: 'codex',
-        endpoint: 'codex://cli',
+        endpoint: '',
         apiKey: '',
         model: 'gpt-5.4-mini',
         message: 'Find endotoxin-free pipette tips to buy.',
@@ -2157,7 +2157,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(result.run_id, 'py-tool-1');
     });
 
-    test('provider bridge routes codex multimodal file requests through the simple Codex bridge surface', async () => {
+    test('provider bridge routes codex multimodal file requests through the Codex agent surface', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
@@ -2173,8 +2173,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           CODEX: 'codex',
           OPENAI: 'openai'
         },
-        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
-        resolveCodexApiKey: () => 'oauth-access-token',
         requestCodexCliText: async (input = {}) => {
           calls.push(input);
           return '{"selected":true}';
@@ -2195,8 +2193,8 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(result.ok, true);
       assert.equal(result.payload.selected, true);
       assert.equal(calls.length, 1);
-      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
-      assert.equal(calls[0].apiKey, 'oauth-access-token');
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'endpoint'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'apiKey'), false);
       assert.equal(calls[0].fileName, 'paper.pdf');
       assert.equal(calls[0].pdfDataUrl, 'data:application/pdf;base64,QUJD');
       assert.match(calls[0].prompt, /Return valid JSON only\./);
@@ -2256,7 +2254,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.deepEqual(calls[0].include, ['web_search_call.action.sources']);
     });
 
-    test('provider bridge routes codex web search through the simple Codex web-search bridge surface', async () => {
+    test('provider bridge routes codex web search through the Codex agent web-search surface', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
@@ -2271,8 +2269,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         LLM_PROVIDERS: {
           CODEX: 'codex'
         },
-        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
-        resolveCodexApiKey: () => 'oauth-access-token',
         requestCodexCliText: async (input = {}) => {
           calls.push(input);
           return JSON.stringify({
@@ -2298,13 +2294,13 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
 
       assert.equal(result.ok, true);
       assert.equal(result.results.length, 1);
-      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
-      assert.equal(calls[0].apiKey, 'oauth-access-token');
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'endpoint'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'apiKey'), false);
       assert.equal(calls[0].enableWebSearch, true);
       assert.match(calls[0].prompt, /Search query:/);
     });
 
-    test('runtime helpers wire codex structured requests through the shared simple Codex provider API surface', async () => {
+    test('runtime helpers wire codex structured requests through the shared Codex agent provider surface', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
@@ -2329,8 +2325,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         LLM_PROVIDERS: {
           CODEX: 'codex'
         },
-        resolveCodexEndpoint: () => 'https://chatgpt.com/backend-api/codex/responses',
-        resolveCodexApiKey: () => 'oauth-access-token',
         requestCodexCliText: async (input = {}) => {
           calls.push(input);
           return '{"primary_intent":"general_science_question","needs_clarification":false,"clarifying_question":"","clarification_options":[],"entities":{"projects":[],"samples":[],"proteins":[],"genes":[],"reagents":[],"vendors":[],"inventory_queries":[],"record_queries":[],"assays":[],"gels":[],"papers":[],"protocols":[],"notebooks":[],"purchase_requirements":[]},"reasoning_summary":"Parsed intent.","confidence":"high","reasoning_effort":1}';
@@ -2342,7 +2336,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
 
       const result = await helpers.requestStructuredJsonPayload({
         provider: 'codex',
-        endpoint: 'codex://cli',
+        endpoint: '',
         model: 'gpt-5.4-mini',
         stage: 'intent_parser',
         systemPrompt: 'Return valid JSON only.',
@@ -2357,8 +2351,8 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
 
       assert.equal(result.ok, true);
       assert.equal(calls.length, 1);
-      assert.equal(calls[0].endpoint, 'https://chatgpt.com/backend-api/codex/responses');
-      assert.equal(calls[0].apiKey, 'oauth-access-token');
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'endpoint'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'apiKey'), false);
       assert.equal(calls[0].enableWebSearch, true);
       assert.match(calls[0].prompt, /Return valid JSON only\./);
       assert.match(calls[0].prompt, /User asks a science question\./);
@@ -2531,6 +2525,195 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
       assert.equal(calls[0].query, 'recent protein folding benchmark');
       assert.equal(calls[0].message, 'Find recent protein folding benchmark results.');
       assert.equal(result.summary, 'Found 1 web result.');
+    });
+
+    test('registerAgentToolExecutors wires every catalog tool through the shared runtime', async () => {
+      const { AGENT_TOOL_CATALOG } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'agent-tool-loading.js'
+      ));
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+
+      const executors = new Map();
+      const calls = [];
+      const selectedProtocol = {
+        id: 'protocol-1',
+        name: 'HEK293 Transfection',
+        steps: []
+      };
+      const registeredNames = registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, handler) {
+            executors.set(name, handler);
+          }
+        },
+        agentAppApi: {
+          protocol: {
+            matchForNotebook: async (input = {}) => {
+              calls.push({ tool: 'protocol-matching', input: JSON.parse(JSON.stringify(input)) });
+              return {
+                ranked_matches: [{ ...selectedProtocol, score: 1 }],
+                selected_protocol: selectedProtocol,
+                selection_method: 'stub',
+                rationale: 'Matched protocol.'
+              };
+            }
+          },
+          notebook: {
+            generateFromProtocol: async (input = {}) => {
+              calls.push({ tool: 'notebook-generation', input: JSON.parse(JSON.stringify(input)) });
+              return {
+                status: 'completed',
+                notebook: {
+                  id: 'notebook-1',
+                  protocol_id: input.selectedProtocol?.id || ''
+                },
+                summary: 'Generated notebook.'
+              };
+            }
+          }
+        },
+        subAgentRuntime: {
+          execute: async (input = {}) => {
+            calls.push({ tool: 'sub-agent', input: JSON.parse(JSON.stringify(input)) });
+            return {
+              ok: true,
+              status: 'listed',
+              items: [{ id: 'sub-agent-1' }],
+              summary: 'Listed sub-agents.'
+            };
+          }
+        },
+        memoryRuntime: {
+          execute: async (input = {}) => {
+            calls.push({ tool: 'memory', input: JSON.parse(JSON.stringify(input)) });
+            return {
+              ok: true,
+              status: 'matched',
+              items: [{ id: 'memory-1', key: input.key || 'preference', summary: 'Memory row.' }],
+              summary: 'Recalled memory.'
+            };
+          }
+        },
+        paperAnalysisRuntime: {
+          analyzePaper: async (input = {}) => {
+            calls.push({ tool: 'paper-analysis', input: JSON.parse(JSON.stringify(input)) });
+            return {
+              ok: true,
+              status: 'completed',
+              summary: 'Analyzed paper.'
+            };
+          }
+        },
+        protocolGenerationRuntime: {
+          generateProtocol: async (input = {}) => {
+            calls.push({ tool: 'protocol-generation', input: JSON.parse(JSON.stringify(input)) });
+            return {
+              ok: true,
+              status: 'generated',
+              protocol: { name: 'Generated protocol', steps: [] },
+              summary: 'Generated protocol.'
+            };
+          }
+        }
+      });
+
+      const catalogNames = AGENT_TOOL_CATALOG.map((entry) => entry.name);
+      assert.deepEqual(registeredNames, catalogNames);
+      assert.deepEqual([...executors.keys()].sort(), catalogNames.slice().sort());
+
+      const state = {};
+      const context = {
+        provider: 'openai',
+        endpoint: 'https://example.test/v1',
+        apiKey: 'test-key',
+        model: 'gpt-test',
+        message: 'Generate a notebook from the HEK293 transfection protocol.',
+        snapshot: {},
+        project: {
+          id: 'project-1',
+          name: 'KRAS screen'
+        },
+        lifecycleRecorder: {
+          requestId: 'request-1'
+        }
+      };
+      const protocolResult = await executors.get('protocol-matching')({
+        args: {
+          protocol_candidates: ['HEK293 Transfection']
+        },
+        context,
+        state
+      });
+      assert.equal(protocolResult.status, 'selected');
+      assert.equal(state.lastSelectedProtocol.id, 'protocol-1');
+
+      const notebookResult = await executors.get('notebook-generation')({
+        args: {
+          pending_values: {
+            cell_line: 'HEK293'
+          }
+        },
+        context,
+        state
+      });
+      assert.equal(notebookResult.notebook.protocol_id, 'protocol-1');
+      assert.equal(calls.find((call) => call.tool === 'notebook-generation').input.selectedProtocol.id, 'protocol-1');
+
+      await executors.get('sub-agent')({
+        args: {
+          action: 'list'
+        },
+        context,
+        state
+      });
+      assert.equal(calls.find((call) => call.tool === 'sub-agent').input.metadata.parent_request_id, 'request-1');
+
+      await executors.get('memory')({
+        args: {
+          action: 'recall',
+          key: 'preference'
+        },
+        context,
+        state
+      });
+      assert.equal(calls.find((call) => call.tool === 'memory').input.project_name, 'KRAS screen');
+
+      await executors.get('paper-analysis')({
+        args: {
+          paper_title: 'A paper',
+          paper_summary: 'Summary text.'
+        },
+        context,
+        state
+      });
+      assert.equal(calls.find((call) => call.tool === 'paper-analysis').input.provider, 'openai');
+
+      await executors.get('protocol-generation')({
+        args: {
+          protocol: {
+            name: 'Mixing protocol',
+            steps: ['Mix and incubate.']
+          }
+        },
+        context,
+        state
+      });
+      assert.equal(calls.find((call) => call.tool === 'protocol-generation').input.model, undefined);
+      assert.equal(calls.find((call) => call.tool === 'protocol-generation').input.protocol.name, 'Mixing protocol');
     });
 
     test('registerAgentToolExecutors forwards snapshot storage and project context into literature-search', async () => {

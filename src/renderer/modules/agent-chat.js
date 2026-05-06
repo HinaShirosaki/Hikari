@@ -14,7 +14,7 @@ agentChatLogCreateSession
 function renderSessionList()
 agent-deep-research-toggle-btn
 deepResearchEnabled: state.agentChat.deepResearchEnabled === true
-apiKey: String(state.settings?.llm?.apiKey || '').trim()
+apiKey: provider === 'codex' ? '' : String(state.settings?.llm?.apiKey || '').trim()
 */
 void normalizeAgentResponse;
 

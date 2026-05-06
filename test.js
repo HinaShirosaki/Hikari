@@ -67,6 +67,7 @@ const agentLiteratureSearch = optionalRequire(path.join(__dirname, 'src', 'main'
 const agentLiteratureSearchWorkflow = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'literature-search', 'agent-literature-search-workflow.js'));
 const agentPaperContextLoader = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-context-loader.js'));
 const agentPaperDownload = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-download.js'));
+const agentPaperKnowledgeDatabase = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-knowledge-database.js'));
 const agentPaperAnalysis = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-analysis.js'));
 const agentScienceReasoningLoop = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'index.js'));
 const agentToolSmokeTest = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-smoke-test.js'));
@@ -295,6 +296,7 @@ const suiteScope = {
   agentLiteratureSearchWorkflow,
   agentPaperContextLoader,
   agentPaperDownload,
+  agentPaperKnowledgeDatabase,
   agentPaperAnalysis,
   agentScienceReasoningLoop,
   agentToolSmokeTest,

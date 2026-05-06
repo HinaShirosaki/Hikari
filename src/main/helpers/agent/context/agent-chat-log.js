@@ -196,6 +196,20 @@ function summarizePurchaseRecommendation(purchaseRecommendation) {
   return '';
 }
 
+function summarizeCodexAgent(codexAgent) {
+  const payload = codexAgent && typeof codexAgent === 'object' ? codexAgent : {};
+  const status = cleanText(payload.status, 40);
+  if (!status) {
+    return '';
+  }
+  if (status === 'needs_more_info') {
+    return asArray(payload.follow_up_questions).map((item) => cleanText(item, 500)).filter(Boolean).join(' ')
+      || cleanText(payload.answer, 12000)
+      || 'I need more detail before I can continue.';
+  }
+  return cleanText(payload.answer || payload.assistant_text, 12000);
+}
+
 function summarizeSkillCommand(skillCommand) {
   const payload = skillCommand && typeof skillCommand === 'object' ? skillCommand : {};
   if (!Object.keys(payload).length) {
@@ -296,6 +310,9 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     parser: payload.parser && typeof payload.parser === 'object' ? cloneJson(payload.parser, {}) : {},
     protocol_to_notebook: protocolWorkflow ? cloneJson(protocolWorkflow, null) : null,
     notebook_draft: notebookDraftWorkflow ? cloneJson(notebookDraftWorkflow, null) : null,
+    codex_agent: payload.codex_agent && typeof payload.codex_agent === 'object'
+      ? cloneJson(payload.codex_agent, null)
+      : null,
     purchase_recommendation: payload.purchase_recommendation && typeof payload.purchase_recommendation === 'object'
       ? cloneJson(payload.purchase_recommendation, null)
       : null,
@@ -344,6 +361,9 @@ function buildAssistantTextFromResult(result) {
   const purchaseRecommendation = payload.purchase_recommendation && typeof payload.purchase_recommendation === 'object'
     ? payload.purchase_recommendation
     : null;
+  const codexAgent = payload.codex_agent && typeof payload.codex_agent === 'object'
+    ? payload.codex_agent
+    : null;
   const skillCommand = payload.skill_command && typeof payload.skill_command === 'object'
     ? payload.skill_command
     : null;
@@ -367,6 +387,7 @@ function buildAssistantTextFromResult(result) {
   const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
   const recordSummaryText = summarizeRecordLookup(recordLookup);
   const purchaseRecommendationText = summarizePurchaseRecommendation(purchaseRecommendation);
+  const codexAgentText = summarizeCodexAgent(codexAgent);
   const skillCommandText = summarizeSkillCommand(skillCommand);
   const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
@@ -374,6 +395,9 @@ function buildAssistantTextFromResult(result) {
     || summarizeScienceResult(resultAnalysis);
   if (notebookDraftText) {
     return notebookDraftText;
+  }
+  if (codexAgentText) {
+    return codexAgentText;
   }
   // Prefer notebook completion text when a protocol-to-notebook workflow succeeded.
   if (protocolStatus === 'completed') {
@@ -434,6 +458,7 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
       },
       protocol_to_notebook: null,
       notebook_draft: null,
+      codex_agent: null,
       purchase_recommendation: null,
       inventory_lookup: null,
       record_lookup: null,

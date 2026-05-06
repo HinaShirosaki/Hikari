@@ -1,0 +1,38 @@
+{
+  "exportedAt": "2026-05-06T03:22:05.155Z",
+  "template": {
+    "id": "1777764556913-1c5e79ecfdf6d8",
+    "name": "grdr",
+    "description": "",
+    "projectId": "",
+    "blocks": [
+      {
+        "id": "1777764548664-4d16b003042ba8",
+        "type": "protocol",
+        "protocolId": "1774024047007-d137dae96cab78",
+        "text": "",
+        "assigneeId": "",
+        "x": 44,
+        "y": 36
+      },
+      {
+        "id": "1777764551721-1c1bffcd98c118",
+        "type": "protocol",
+        "protocolId": "1774024647315-74cbb18b4cc37",
+        "text": "",
+        "assigneeId": "",
+        "x": 324,
+        "y": 36
+      }
+    ],
+    "links": [
+      {
+        "id": "1777764553281-30fb7abbf368e8",
+        "fromBlockId": "1777764548664-4d16b003042ba8",
+        "toBlockId": "1777764551721-1c1bffcd98c118"
+      }
+    ],
+    "createdAt": "2026-05-02T23:29:16.913Z",
+    "updatedAt": "2026-05-02T23:29:16.913Z"
+  }
+}

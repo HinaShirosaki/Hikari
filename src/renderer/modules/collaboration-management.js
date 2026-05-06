@@ -1,7 +1,7 @@
 // Collaboration and in-app messaging controller.
 //
 // Responsibilities:
-// - render Enana email selectors for sending and viewing messages
+// - render Hikari email selectors for sending and viewing messages
 // - normalize and import shared protocols from inbox messages, links, or JSON
 // - decode portable protocol-share payloads
 // - track share/import growth events and keep collaboration UI in sync
@@ -14,8 +14,10 @@ export function initCollaborationManagement({
   trackGrowthEvent
 }) {
   // Constants and DOM references for the messaging form, inbox, and protocol-link import UI.
-  const PROTOCOL_SHARE_LINK_PREFIX = 'enana://protocol-share/';
-  const PROTOCOL_SHARE_TOKEN_PREFIX = 'ENANA_PROTOCOL_SHARE:';
+  const PROTOCOL_SHARE_LINK_PREFIX = 'hikari://protocol-share/';
+  const LEGACY_PROTOCOL_SHARE_LINK_PREFIX = 'enana://protocol-share/';
+  const PROTOCOL_SHARE_TOKEN_PREFIX = 'HIKARI_PROTOCOL_SHARE:';
+  const LEGACY_PROTOCOL_SHARE_TOKEN_PREFIX = 'ENANA_PROTOCOL_SHARE:';
   const messageForm = document.getElementById('message-form');
   const fromSelect = document.getElementById('message-from');
   const toSelect = document.getElementById('message-to');
@@ -162,7 +164,7 @@ export function initCollaborationManagement({
       .filter(Boolean);
   }
 
-  // Collect the unique Enana email addresses defined in the Members section.
+  // Collect the unique Hikari email addresses defined in the Members section.
   function getEnanaEmails() {
     const emails = state.members
       .map((member) => member.enanaEmail)
@@ -174,7 +176,7 @@ export function initCollaborationManagement({
   function renderEmailSelectors() {
     const emails = getEnanaEmails();
     const options = emails.map((email) => `<option value="${safeText(email)}">${safeText(email)}</option>`).join('');
-    const fallback = '<option value="">No Enana emails in Members</option>';
+    const fallback = '<option value="">No Hikari emails in Members</option>';
 
     fromSelect.innerHTML = options || fallback;
     toSelect.innerHTML = options || fallback;
@@ -296,10 +298,26 @@ export function initCollaborationManagement({
         return tokenFromLink;
       }
     }
+    const legacyLinkIndex = value.indexOf(LEGACY_PROTOCOL_SHARE_LINK_PREFIX);
+    if (legacyLinkIndex >= 0) {
+      const after = value.slice(legacyLinkIndex + LEGACY_PROTOCOL_SHARE_LINK_PREFIX.length);
+      const tokenFromLink = after.split(/[\s?#&]/)[0];
+      if (tokenFromLink) {
+        return tokenFromLink;
+      }
+    }
 
     const prefixedIndex = value.indexOf(PROTOCOL_SHARE_TOKEN_PREFIX);
     if (prefixedIndex >= 0) {
       const after = value.slice(prefixedIndex + PROTOCOL_SHARE_TOKEN_PREFIX.length);
+      const tokenFromPrefix = after.split(/\s/)[0];
+      if (tokenFromPrefix) {
+        return tokenFromPrefix;
+      }
+    }
+    const legacyPrefixedIndex = value.indexOf(LEGACY_PROTOCOL_SHARE_TOKEN_PREFIX);
+    if (legacyPrefixedIndex >= 0) {
+      const after = value.slice(legacyPrefixedIndex + LEGACY_PROTOCOL_SHARE_TOKEN_PREFIX.length);
       const tokenFromPrefix = after.split(/\s/)[0];
       if (tokenFromPrefix) {
         return tokenFromPrefix;
@@ -532,7 +550,7 @@ export function initCollaborationManagement({
   function renderInbox() {
     const inboxEmail = inboxEmailSelect.value;
     if (!inboxEmail) {
-      inboxList.innerHTML = '<p class="small-note">Select an Enana email to check inbox.</p>';
+      inboxList.innerHTML = '<p class="small-note">Select a Hikari email to check inbox.</p>';
       return;
     }
 

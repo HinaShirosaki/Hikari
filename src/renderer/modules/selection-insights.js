@@ -933,8 +933,12 @@ export function createSelectionInsightsController({
         provider: cleanText(state?.settings?.llm?.provider, 80),
         model: cleanText(state?.settings?.llm?.model, 160),
         reasoningEffort: cleanText(state?.settings?.llm?.reasoningEffort, 40).toLowerCase(),
-        apiEndpoint: cleanText(state?.settings?.llm?.apiEndpoint, 1200),
-        apiKey: cleanText(state?.settings?.llm?.apiKey, 4000)
+        apiEndpoint: cleanText(state?.settings?.llm?.provider, 80) === 'codex'
+          ? ''
+          : cleanText(state?.settings?.llm?.apiEndpoint, 1200),
+        apiKey: cleanText(state?.settings?.llm?.provider, 80) === 'codex'
+          ? ''
+          : cleanText(state?.settings?.llm?.apiKey, 4000)
       },
       agent: {
         developerMode: state?.settings?.agent?.developerMode === true,

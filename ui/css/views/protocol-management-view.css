@@ -29,21 +29,7 @@
 }
 
 /* Extracted from ui/css/base/core.css */
-.step-list {
-  margin: 0;
-  padding-left: 20px;
-  display: grid;
-  gap: 8px;
-}
 
-.protocol-list-top {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
 
 .protocol-sort-controls {
   margin-left: 0;
@@ -498,8 +484,8 @@
 
 @keyframes protocol-polish-dot-jump {
   0%,
-  60%,
-  100% {
+60%,
+100% {
     transform: translateY(0);
     opacity: 0.36;
   }
@@ -576,30 +562,8 @@
   cursor: default;
 }
 
-.step-line {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: center;
-}
 
-.step-content {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
 
-.step-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--surface-subtle);
-  color: var(--strong);
-  font-weight: 700;
-  font-size: 0.84rem;
-  white-space: nowrap;
-}
 
 /* Extracted from ui/css/themes/modes.css */
 
@@ -632,7 +596,7 @@
   }
 
   .protocol-polish-overlay,
-  .protocol-generate-overlay {
+.protocol-generate-overlay {
     padding: 12px;
   }
 
@@ -641,8 +605,8 @@
   }
 
   .protocol-polish-dialog-shell,
-  .protocol-generate-input-shell,
-  .protocol-generate-result-shell {
+.protocol-generate-input-shell,
+.protocol-generate-result-shell {
     max-height: calc(100vh - 24px);
   }
 
@@ -652,18 +616,18 @@
   }
 
   .protocol-polish-dialog,
-  .protocol-generate-input-dialog,
-  .protocol-generate-result-dialog {
+.protocol-generate-input-dialog,
+.protocol-generate-result-dialog {
     max-height: min(44vh, 460px);
   }
 
   .protocol-generate-input-shell,
-  .protocol-generate-result-shell {
+.protocol-generate-result-shell {
     max-height: calc(100vh - 84px);
   }
 
   .protocol-generate-input-dialog,
-  .protocol-generate-result-dialog {
+.protocol-generate-result-dialog {
     max-height: calc(100vh - 128px);
   }
 
@@ -673,7 +637,7 @@
   }
 
   .protocol-polish-actions .primary-btn,
-  .protocol-polish-actions .ghost-btn {
+.protocol-polish-actions .ghost-btn {
     flex: 1 1 200px;
   }
 }

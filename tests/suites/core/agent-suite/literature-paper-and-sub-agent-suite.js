@@ -1248,6 +1248,159 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       }
     });
 
+    test('paper knowledge database writes LLM markdown outside the Papers folder', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-knowledge-db-'));
+      const pdfPath = path.join(storageRoot, 'Papers', 'Atlas', 'mapk.pdf');
+      let rewritePrompt = '';
+      try {
+        await fsPromises.mkdir(path.dirname(pdfPath), { recursive: true });
+        await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nfake pdf bytes for knowledge db\n'));
+        const runtime = agentPaperKnowledgeDatabase.createPaperKnowledgeDatabaseRuntime({
+          now: () => '2026-03-22T12:00:00.000Z',
+          pdfTextExtractionRuntime: {
+            extractText: async (input = {}) => {
+              assert.equal(input.file_path, pdfPath);
+              return {
+                ok: true,
+                status: 'completed',
+                page_count: 2,
+                text: 'Engineered MAPK Study\nDOI: 10.1000/mapk.test\nThe method uses inhibitor treatment.',
+                pages: [
+                  {
+                    page_number: 1,
+                    text: 'Engineered MAPK Study\nDOI: 10.1000/mapk.test'
+                  },
+                  {
+                    page_number: 2,
+                    text: 'The method uses inhibitor treatment.'
+                  }
+                ],
+                sections: [
+                  {
+                    label: 'Methods',
+                    normalized_label: 'methods',
+                    start_page: 2,
+                    end_page: 2,
+                    text: 'The method uses inhibitor treatment.'
+                  }
+                ]
+              };
+            }
+          },
+          requestAssistantText: async (options = {}) => {
+            rewritePrompt = String(options.userPrompt || '');
+            return {
+              ok: true,
+              text: [
+                '# Engineered MAPK Study',
+                '**Authors:** -   **Year:** -   **DOI:** 10.1000/mapk.test',
+                '## TL;DR',
+                '- MAPK inhibitor treatment is described in the methods (p. 2).',
+                '## Background',
+                '## Methods',
+                'Inhibitor treatment is described (p. 2).',
+                '## Key results',
+                '## Figures & tables',
+                '## Limitations',
+                '## How it relates',
+                '## Verbatim quotes'
+              ].join('\n')
+            };
+          }
+        });
+
+        const result = await runtime.ingestPaperPdf({
+          storage_path: storageRoot,
+          file_path: pdfPath,
+          paper_title: 'Engineered MAPK Study',
+          doi: '10.1000/mapk.test',
+          linked_type: 'literature-search',
+          linked_name: 'Atlas'
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.status, 'ready');
+        assert.match(result.markdown_relative_path, /^KnowledgeDatabase\/PaperKnowledge\//);
+        assert.equal(result.markdown_relative_path.includes('Papers/Atlas'), false);
+        assert.notEqual(path.dirname(result.markdown_path), path.dirname(pdfPath));
+        assert.match(rewritePrompt, /\[\[page:2\]\]/);
+        const markdown = await fsPromises.readFile(result.markdown_path, 'utf8');
+        assert.match(markdown, /# Engineered MAPK Study/);
+        const meta = JSON.parse(await fsPromises.readFile(result.meta_path, 'utf8'));
+        assert.equal(meta.source_pdf_path, 'Papers/Atlas/mapk.pdf');
+        assert.equal(meta.markdown_path, result.markdown_relative_path);
+        assert.equal(result.sqlite_relative_path, 'KnowledgeDatabase/knowledge.index.sqlite');
+
+        const lookup = await runtime.lookupPaper({
+          storage_path: storageRoot,
+          doi: '10.1000/mapk.test',
+          linked_type: 'literature-search',
+          linked_name: 'Atlas'
+        });
+        assert.equal(lookup.ok, true);
+        assert.equal(lookup.paper.wiki_exists, true);
+        assert.equal(lookup.paper.pdf_exists, true);
+        assert.equal(lookup.paper.wiki_path, result.markdown_relative_path);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('paper download runtime attaches knowledge database output after a successful download', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-knowledge-'));
+      let ingestedFilePath = '';
+      try {
+        const runtime = agentPaperDownload.createPaperDownloadRuntime({
+          createId: () => 'paper-download-knowledge-1',
+          fetch: async () => ({
+            ok: true,
+            status: 200,
+            headers: {
+              get(name) {
+                const normalized = String(name || '').toLowerCase();
+                if (normalized === 'content-type') {
+                  return 'application/pdf';
+                }
+                if (normalized === 'content-length') {
+                  return '18';
+                }
+                return '';
+              }
+            },
+            body: Buffer.from('%PDF-1.7\nattached')
+          }),
+          paperKnowledgeDatabaseRuntime: {
+            ingestPaperPdf: async (input = {}) => {
+              ingestedFilePath = input.file_path;
+              return {
+                ok: true,
+                status: 'ready',
+                markdown_path: path.join(storageRoot, 'KnowledgeDatabase', 'PaperKnowledge', 'attached', 'paper.md'),
+                markdown_relative_path: 'KnowledgeDatabase/PaperKnowledge/attached/paper.md',
+                summary: 'Wrote paper knowledge markdown.'
+              };
+            }
+          }
+        });
+
+        const result = await runtime.downloadPaper({
+          paper_pdf_url: 'https://example.org/attached.pdf',
+          linked_type: 'project',
+          linked_name: 'Atlas',
+          storage_path: storageRoot,
+          paper_title: 'Attached Knowledge Paper'
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.status, 'completed');
+        assert.equal(ingestedFilePath, result.file_path);
+        assert.equal(result.knowledge_database.ok, true);
+        assert.equal(result.knowledge_markdown_relative_path, 'KnowledgeDatabase/PaperKnowledge/attached/paper.md');
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
     test('paper download runtime accepts doi-only input and opens the browser-assisted flow under the storage root', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-doi-'));
       const browserCalls = [];
@@ -1343,6 +1496,12 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
                 file_name: 'doi-paper.pdf',
                 file_path: path.join(storageRoot, 'LiteratureSearch', 'Atlas', 'Papers', 'doi-paper.pdf'),
                 relative_path: 'Papers/Atlas/doi-paper.pdf',
+                knowledge_markdown_relative_path: 'KnowledgeDatabase/PaperKnowledge/10.1000_example-doi/paper.md',
+                knowledge_database: {
+                  ok: true,
+                  status: 'ready',
+                  markdown_relative_path: 'KnowledgeDatabase/PaperKnowledge/10.1000_example-doi/paper.md'
+                },
                 summary: 'Downloaded doi-paper.pdf'
               };
             }
@@ -1368,6 +1527,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.equal(downloadCalls[0].doi, '10.1000/example-doi');
         assert.equal(downloadCalls[0].page_url, 'https://doi.org/10.1000/example-doi');
         assert.equal(result.selected_papers[0].doi, '10.1000/example-doi');
+        assert.equal(result.downloaded_papers[0].knowledge_markdown_relative_path, 'KnowledgeDatabase/PaperKnowledge/10.1000_example-doi/paper.md');
+        assert.equal(result.downloaded_papers[0].knowledge_database.status, 'ready');
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
@@ -1554,9 +1715,9 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       assert.equal(result.ok, true);
       assert.equal(result.generated_protocol.name, 'PD-1 Nanobody Purification');
       assert.equal(result.generated_protocol.troubleshooting.includes('Low binding'), true);
-      assert.equal(capturedProtocolInput.source_paper_title, 'Engineered PD-1 Nanobodies');
-      assert.equal(capturedProtocolInput.title, 'PD-1 Nanobody Purification');
-      assert.match(String(capturedProtocolInput.method_text || ''), /Ni-NTA resin/i);
+      assert.equal(capturedProtocolInput.protocol.name, 'PD-1 Nanobody Purification');
+      assert.match(String(capturedProtocolInput.protocol.steps.join(' ') || ''), /Ni-NTA resin/i);
+      assert.equal(capturedProtocolInput.result_summary, 'The paper presents a practical purification workflow for a PD-1 nanobody construct.');
     });
 
     test('sub-agent runtime creates, messages, lists, and deletes managed sub-agents', async () => {
@@ -1618,6 +1779,75 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       });
       assert.equal(missing.ok, false);
       assert.equal(missing.status, 'missing');
+    });
+
+    test('sub-agent runtime preserves Codex session metadata for real session resumes', async () => {
+      let messageTurnAgentMetadata = null;
+      const runtime = agentSubAgent.createAgentSubAgentRuntime({
+        now: () => '2026-03-22T10:00:00.000Z',
+        createId: () => 'subagent-codex-1',
+        runSubAgentTurn: async (turnInput = {}) => {
+          if (turnInput.phase === 'create') {
+            return {
+              assistant_message: 'created in Codex',
+              summary: 'created',
+              metadata: {
+                provider: 'codex-cli',
+                real_codex_sub_agent: true,
+                codex_session_id: 'codex-session-1',
+                command: 'exec'
+              }
+            };
+          }
+          messageTurnAgentMetadata = turnInput.agent?.metadata || {};
+          return {
+            assistant_message: 'resumed in Codex',
+            summary: 'resumed',
+            metadata: {
+              provider: 'codex-cli',
+              real_codex_sub_agent: true,
+              codex_session_id: 'codex-session-1',
+              command: 'exec resume'
+            }
+          };
+        }
+      });
+
+      const created = await runtime.createSubAgent({
+        system_prompt: 'You are a delegated Codex helper.',
+        message: 'Start the helper.'
+      });
+      assert.equal(created.ok, true);
+      assert.equal(created.agent.metadata.codex_session_id, 'codex-session-1');
+      assert.equal(created.agent.metadata.real_codex_sub_agent, true);
+
+      const updated = await runtime.sendSubAgentMessage({
+        agent_id: 'subagent-codex-1',
+        message: 'Continue the helper.'
+      });
+      assert.equal(updated.ok, true);
+      assert.equal(messageTurnAgentMetadata.codex_session_id, 'codex-session-1');
+      assert.equal(updated.agent.metadata.command, 'exec resume');
+    });
+
+    test('sub-agent runtime builds a Codex prompt for delegated helper sessions', () => {
+      const prompt = agentSubAgent.buildCodexSubAgentPrompt({
+        phase: 'create',
+        agent: {
+          id: 'subagent-codex-2',
+          name: 'methods-helper'
+        },
+        system_prompt: 'Find protocol risks.',
+        message: 'Review the assay setup.',
+        messages: [
+          { role: 'user', text: 'Review the assay setup.' }
+        ]
+      });
+
+      assert.match(prompt, /real delegated Codex sub-agent/);
+      assert.match(prompt, /Sub-agent name: methods-helper/);
+      assert.match(prompt, /Find protocol risks\./);
+      assert.match(prompt, /Review the assay setup\./);
     });
 
     test('sub-agent runtime supplies the python sandbox prompt internally when task metadata requests it', async () => {

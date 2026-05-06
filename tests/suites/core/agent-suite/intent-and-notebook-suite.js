@@ -455,6 +455,179 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(lifecycleStages.includes('purchase_recommendation_completed'), true);
     });
 
+    test('intent dispatcher gathers notebook-draft evidence before terminal draft tool when papers are requested', async () => {
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      const toolLoading = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-loading.js'));
+      const lifecycleStages = [];
+      const toolCalls = [];
+      const dispatcher = createAgentIntentDispatcher({
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        observability: {
+          recordLifecycleEvent: (_recorder, event) => {
+            lifecycleStages.push(event?.stage || '');
+          }
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'session',
+          hasPendingSession: () => false,
+          clearPendingSession: () => {}
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async () => {
+            throw new Error('Science runtime should not run for hybrid notebook drafts.');
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should not run for hybrid notebook drafts.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should not run for hybrid notebook drafts.');
+          }
+        },
+        deepResearchRuntime: null,
+        scienceMainUtils: {
+          buildScienceRoutingFromParser: () => ({
+            intent: 'general_science_question',
+            entities: {},
+            plan: {
+              reasoning_effort: 1
+            }
+          })
+        },
+        agentToolRuntime: {
+          buildAgentSystemPrompt: () => 'system prompt'
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run for notebook drafts.');
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run directly for notebook drafts.');
+        },
+        getDefaultDataFilePath: () => '',
+        lifecycleService: {
+          asArray: (value) => (Array.isArray(value) ? value : []),
+          createLifecycleToolRunner: () => async (toolName, args, options) => {
+            toolCalls.push({ toolName, args, options });
+            if (toolName === 'record-lookup') {
+              return {
+                ok: true,
+                summary: 'Local records show the expression run completed and purification is next.',
+                result: {
+                  status: 'matched',
+                  summary: 'Local records show the expression run completed and purification is next.',
+                  items: [{ id: 'record-1' }]
+                }
+              };
+            }
+            if (toolName === 'literature-search') {
+              return {
+                ok: true,
+                summary: 'Recent papers support a low-temperature soluble expression follow-up.',
+                result: {
+                  status: 'completed',
+                  summary: 'Recent papers support a low-temperature soluble expression follow-up.',
+                  items: [{ id: 'paper-1' }],
+                  citations: [{ source: 'paper', pointer: 'paper-1', reason: 'Matched recent expression method.' }]
+                }
+              };
+            }
+            if (toolName === 'notebook-draft') {
+              return {
+                ok: true,
+                result: {
+                  status: 'proposal_ready',
+                  selected_protocol: {
+                    id: 'prot-1',
+                    name: 'Low Temperature Expression'
+                  },
+                  source_workflow: null,
+                  missing_placeholders: [],
+                  follow_up_questions: [],
+                  proposal_summary: 'Low temperature expression follow-up.',
+                  proposal: {
+                    proposal_id: 'proposal-1'
+                  },
+                  notebook: {
+                    id: 'draft-1'
+                  },
+                  summary: 'Planned notebook draft ready.'
+                }
+              };
+            }
+            throw new Error(`Unexpected tool ${toolName}`);
+          }
+        }
+      });
+
+      const result = {
+        ok: true,
+        parser: {
+          primary_intent: 'notebook_draft'
+        }
+      };
+
+      await dispatcher.dispatchIntent({
+        payload: {},
+        context: {
+          provider: 'openai',
+          endpoint: 'https://example.test',
+          apiKey: 'key',
+          model: 'gpt-test',
+          message: 'Draft the next Atlas experiment based on recent papers.',
+          promptConversation: [],
+          snapshot: {},
+          projectId: 'proj-1',
+          projectName: 'Atlas',
+          parserPayload: {
+            primary_intent: 'notebook_draft',
+            reasoning_effort: 0,
+            direct_answer: null,
+            needs_clarification: false,
+            clarification_reason: null,
+            entities: {
+              project_name: 'Atlas',
+              workflow_step: 'next experiment'
+            },
+            protocol_candidates: ['Low Temperature Expression']
+          },
+          traceContext: null,
+          lifecycleRecorder: null,
+          deepResearchEnabled: false
+        },
+        result
+      });
+
+      assert.deepEqual(toolCalls.map((call) => call.toolName), ['record-lookup', 'literature-search', 'notebook-draft']);
+      const evidenceArgsValidation = toolLoading.normalizeToolArgumentsPayload({
+        tool_calls: toolCalls.slice(0, 2).map((call) => ({
+          tool_name: call.toolName,
+          arguments: call.args
+        }))
+      }, {
+        selectedToolNames: ['record-lookup', 'literature-search']
+      });
+      assert.equal(evidenceArgsValidation.ok, true);
+      const draftArgsValidation = toolLoading.normalizeToolArgumentsPayload({
+        tool_calls: [{
+          tool_name: toolCalls[2].toolName,
+          arguments: toolCalls[2].args
+        }]
+      }, {
+        selectedToolNames: ['notebook-draft']
+      });
+      assert.equal(draftArgsValidation.ok, true);
+      assert.equal(toolCalls[0].args.query.includes('Atlas'), true);
+      assert.equal(toolCalls[1].args.prefer_recent, true);
+      assert.equal(toolCalls[2].args.evidence_context.length, 2);
+      assert.match(toolCalls[2].args.evidence_context[1].summary, /Recent papers/i);
+      assert.equal(result.notebook_draft.status, 'proposal_ready');
+      assert.equal(result.notebookDraft.id, 'draft-1');
+      assert.equal(lifecycleStages.includes('notebook_draft_evidence_plan'), true);
+      assert.equal(lifecycleStages.includes('notebook_draft_evidence_completed'), true);
+    });
+
     test('intent dispatcher returns purchase clarification prompts without invoking the tool executor', async () => {
       const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
       let toolCallCount = 0;
@@ -1494,6 +1667,211 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.match(String(result.skill_command.summary || ''), /completed successfully/i);
     });
 
+    test('controller core routes Codex provider through the Codex-owned agent runtime', async () => {
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      let parserCallCount = 0;
+      let codexRunInput = null;
+      let setModelValue = '';
+      let setReasoningValue = '';
+      const lifecycleStages = [];
+      const controller = createAgentControllerCore({
+        deps: {
+          LLM_PROVIDERS: {
+            OPENAI: 'openai',
+            CODEX: 'codex'
+          }
+        },
+        cleanText: (value, _maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return text || '';
+        },
+        controllerUtils: {
+          resolveAgentLlmSource: () => ({
+            provider: 'codex',
+            endpoint: '',
+            apiKey: '',
+            model: 'gpt-5.4'
+          }),
+          resolveAgentProvider: () => 'codex',
+          extractConversation: (conversation) => (Array.isArray(conversation) ? conversation : []),
+          resolveAgentExecutionFlags: () => ({ developerMode: true }),
+          createAgentLlmTraceContext: () => ({
+            enabled: true,
+            requestId: 'req-codex-agent-controller',
+            logPath: '',
+            provider: 'codex',
+            model: 'gpt-5.4',
+            rows: [
+              {
+                stage: 'codex_agent_runtime',
+                provider: 'codex',
+                model: 'gpt-5.4',
+                summary: 'Codex runtime ran.'
+              }
+            ],
+            entries: []
+          }),
+          requestText: async () => {
+            throw new Error('Selection insight text path should be skipped for Codex-owned lifecycle.');
+          },
+          requestWebSearch: async () => {
+            throw new Error('Selection insight web-search path should be skipped for Codex-owned lifecycle.');
+          },
+          async requestIntentParserPayload() {
+            parserCallCount += 1;
+            throw new Error('Intent parser should be skipped for Codex-owned lifecycle.');
+          }
+        },
+        observability: {
+          recordLifecycleEvent: (_recorder, event = {}) => {
+            lifecycleStages.push(event.stage || '');
+          }
+        },
+        protocolNotebookRuntime: {
+          buildSessionKey: () => 'codex-agent-controller',
+          hasPendingSession: () => {
+            throw new Error('Open context parser bypass should be skipped for Codex-owned lifecycle.');
+          }
+        },
+        scienceReasoningLoopRuntime: {
+          runGeneralScienceQuestion: async () => {
+            throw new Error('Science runtime should be skipped for Codex-owned lifecycle.');
+          },
+          runProjectScienceQuestion: async () => {
+            throw new Error('Project science runtime should be skipped for Codex-owned lifecycle.');
+          },
+          runResultAnalysis: async () => {
+            throw new Error('Result-analysis runtime should be skipped for Codex-owned lifecycle.');
+          }
+        },
+        deepResearchRuntime: null,
+        codexAgentRuntime: {
+          async run(input = {}) {
+            codexRunInput = input;
+            return {
+              ok: true,
+              provider: 'codex',
+              model: input.model,
+              parser: {
+                primary_intent: 'codex_agent',
+                needs_clarification: false,
+                reasoning_summary: 'Codex handled the whole turn.',
+                entities: {},
+                inventory_search: {
+                  normalized_query: null,
+                  candidate_terms: [],
+                  aliases: [],
+                  search_mode: null
+                },
+                protocol_candidates: []
+              },
+              codex_agent: {
+                status: 'completed',
+                answer: 'Codex final answer.',
+                follow_up_questions: [],
+                citations: [],
+                reasoning_summary: 'Codex handled the whole turn.'
+              },
+              thinking_trace: {
+                final_synthesize: 'Codex synthesized the answer.'
+              }
+            };
+          }
+        },
+        scienceMainUtils: {},
+        agentToolRuntime: {
+          normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
+          listSkills: () => [],
+          parseSkillInvocation: () => ({
+            type: 'none',
+            active_skill_names: [],
+            cleaned_message: 'Why was SUMO1 weak?'
+          }),
+          buildSkillsPromptPayload: () => ({
+            active_skills_prompt: '',
+            skills_catalog_prompt: ''
+          })
+        },
+        executeInventoryLookup: async () => {
+          throw new Error('Inventory lookup should not run before Codex agent runtime.');
+        },
+        executeRecordLookup: async () => {
+          throw new Error('Record lookup should not run before Codex agent runtime.');
+        },
+        getAgentChatLogPath: () => '',
+        getDefaultDataFilePath: () => '',
+        setCodexCliModel: (model) => {
+          setModelValue = model;
+        },
+        setCodexCliReasoningEffort: (reasoningEffort) => {
+          setReasoningValue = reasoningEffort;
+        },
+        lifecycleService: {
+          normalizeJsonPayload: (payload, fallback = {}) => (
+            payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : fallback
+          ),
+          asArray: (value) => (Array.isArray(value) ? value : [])
+        }
+      });
+
+      const result = await controller.runAgentControllerCore({
+        message: 'Why was SUMO1 weak?',
+        projectId: 'proj-1',
+        projectName: 'Atlas',
+        conversation: [
+          { role: 'user', text: 'Open Atlas.' }
+        ],
+        attachments: [
+          {
+            name: 'atlas.pdf',
+            kind: 'file',
+            dataUrl: 'data:application/pdf;base64,abc'
+          }
+        ],
+        llm: {
+          provider: 'codex',
+          model: 'gpt-5.4',
+          reasoningEffort: 'high'
+        },
+        agent: {
+          selectionInsight: {
+            actionType: 'what_is_it',
+            selectedText: 'SUMO1'
+          }
+        },
+        stateSnapshot: {
+          data_file_path: '/tmp/enana-data.json',
+          settings: {
+            agent: {
+              developerMode: true
+            }
+          }
+        }
+      }, {
+        requestId: 'req-codex-agent-controller',
+        lifecycleRecorder: {
+          requestId: 'req-codex-agent-controller',
+          events: []
+        }
+      });
+
+      assert.equal(parserCallCount, 0);
+      assert.equal(setModelValue, 'gpt-5.4');
+      assert.equal(setReasoningValue, 'high');
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.primary_intent, 'codex_agent');
+      assert.equal(result.codex_agent.answer, 'Codex final answer.');
+      assert.equal(result.developer_trace.length, 1);
+      assert.equal(codexRunInput.model, 'gpt-5.4');
+      assert.equal(codexRunInput.reasoningEffort, 'high');
+      assert.equal(codexRunInput.projectName, 'Atlas');
+      assert.equal(codexRunInput.selectionInsight.selectedText, 'SUMO1');
+      assert.equal(codexRunInput.attachments[0].name, 'atlas.pdf');
+      assert.equal(codexRunInput.conversation[codexRunInput.conversation.length - 1].text, 'Why was SUMO1 weak?');
+      assert.equal(lifecycleStages.includes('controller_codex_agent'), true);
+      assert.equal(lifecycleStages.includes('controller_intent_only'), false);
+    });
+
     test('controller core bypasses the parser for selection insight explanations and uses direct text requests', async () => {
       const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
       let parserCallCount = 0;
@@ -1774,18 +2152,20 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       const catalog = agentIntentParser.INTENT_PARSER_CATALOG;
       assert.deepEqual(catalog.map((entry) => entry.name), agentIntentParser.PARSER_ALLOWED_INTENTS);
       assert.equal(typeof catalog[0].rules, 'string');
-      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /## Allowed intents/);
-      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /## Science reasoning_effort rubric/);
-      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /If you are unsure whether a science question should be 0 or 1, choose 1\./);
-      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Intent-specific output append:/);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Allowed intents:/);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Science reasoning_effort: 0=stable direct answer/);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /If unsure, choose 1\./);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Intent guide:/);
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /"primary_intent": "one allowed intent"/);
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Add only the extra fields listed for the chosen intent\./);
       assert.equal(/## Examples/.test(agentIntentParser.INTENT_PARSER_PROMPT), false);
       assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Omit all other keys and empty placeholders\./);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /Standalone instructional wet-lab protocol requests/i);
+      assert.match(agentIntentParser.INTENT_PARSER_PROMPT, /how to express X/i);
 
       let previousHeadingIndex = -1;
       agentIntentParser.PARSER_ALLOWED_INTENTS.forEach((intentName) => {
-        const heading = `### ${intentName}`;
+        const heading = `- ${intentName}:`;
         const headingIndex = agentIntentParser.INTENT_PARSER_PROMPT.indexOf(heading);
         assert.notEqual(headingIndex, -1);
         assert.equal(headingIndex > previousHeadingIndex, true);
@@ -1809,11 +2189,11 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
         }
       ];
       const renderedPrompt = agentIntentParser.buildIntentCatalogPrompt(customCatalog);
-      assert.equal(renderedPrompt.includes('### inventory_lookup'), true);
+      assert.equal(renderedPrompt.includes('- inventory_lookup:'), true);
       assert.equal(renderedPrompt.includes('Custom inventory description.'), true);
-      assert.equal(renderedPrompt.includes('Intent-specific rule: Custom inventory rule.'), true);
-      assert.equal(renderedPrompt.includes('Append only these extra fields: custom_inventory_field'), true);
-      assert.equal(renderedPrompt.includes('- custom_inventory_field: Custom inventory append description.'), true);
+      assert.equal(renderedPrompt.includes('Custom inventory rule.'), true);
+      assert.equal(renderedPrompt.includes('Extras: custom_inventory_field.'), true);
+      assert.equal(renderedPrompt.includes('Custom inventory append description.'), false);
       assert.equal(renderedPrompt.includes('User: "Where is the custom PEI bottle?"'), false);
     });
 
@@ -2358,6 +2738,38 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(result.notebook.entry_template.agentDraftStatus, 'needs_review');
       assert.equal(result.missing_placeholders.length, 1);
       assert.equal(result.follow_up_questions[0], 'Please provide sample name.');
+    });
+
+    test('notebook draft selection prompt includes optional evidence context', () => {
+      const runtime = agentNotebookDraft.createNotebookDraftRuntime();
+      const prompt = runtime.buildNotebookDraftSelectionPrompt({
+        message: 'Draft the next Atlas experiment based on recent papers.',
+        conversation: [],
+        parserPayload: {
+          primary_intent: 'notebook_draft'
+        },
+        project: {
+          id: 'proj-1',
+          name: 'Atlas'
+        },
+        notebookRuns: [],
+        candidates: [
+          {
+            id: 'candidate-1',
+            protocol_name: 'Low Temperature Expression'
+          }
+        ],
+        evidenceContext: [
+          {
+            tool_name: 'literature-search',
+            status: 'completed',
+            summary: 'Recent papers support low-temperature induction before purification.',
+            item_count: 2
+          }
+        ]
+      });
+      assert.match(prompt, /Evidence context JSON/);
+      assert.match(prompt, /Recent papers support low-temperature induction/);
     });
 
     test('notebook draft runtime selects downstream workflow candidate and keeps unresolved placeholders visible', async () => {

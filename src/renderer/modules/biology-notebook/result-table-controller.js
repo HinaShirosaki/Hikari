@@ -9,7 +9,10 @@ import {
 
 function getResultTableHeight(table) {
   const rowCount = Array.isArray(table?.rows) ? table.rows.length : 0;
-  return `${Math.max(180, Math.min(420, 82 + (rowCount * 42)))}px`;
+  if (rowCount <= 8) {
+    return '';
+  }
+  return `${Math.min(420, 82 + (rowCount * 42))}px`;
 }
 
 export function createResultTableController({
@@ -130,7 +133,7 @@ export function createResultTableController({
       return;
     }
 
-    grid = new TabulatorLib(host, {
+    const gridOptions = {
       data: draft.rows.map((row) => ({ ...row })),
       columns: draft.columns.map((column) => ({
         title: column.title,
@@ -140,12 +143,16 @@ export function createResultTableController({
         resizable: true
       })),
       index: 'id',
-      height: getResultTableHeight(draft),
       layout: 'fitColumns',
       reactiveData: false,
       placeholder: 'Use Add row / Add column to shape this notebook table.',
       cellEdited: handleEdited
-    });
+    };
+    const gridHeight = getResultTableHeight(draft);
+    if (gridHeight) {
+      gridOptions.height = gridHeight;
+    }
+    grid = new TabulatorLib(host, gridOptions);
   }
 
   function getCurrent() {

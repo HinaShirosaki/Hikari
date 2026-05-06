@@ -140,6 +140,7 @@ function createNotebookDraftRuntime(deps = {}) {
     'You propose the most likely next experiment and prepare planning notes for a future notebook draft.',
     'Choose exactly one candidate from the app-provided list.',
     'Prefer downstream workflow steps, recent executed progress, and project consistency.',
+    'Use evidence context when provided to choose a better next experiment and to justify the plan.',
     'Return JSON only.'
   ].join(' ');
 
@@ -148,8 +149,28 @@ function createNotebookDraftRuntime(deps = {}) {
     'Prefer candidates that are downstream from already executed workflow blocks.',
     'Do not invent protocol IDs, workflow IDs, or unsupported materials.',
     'Write concise planning text suited for a notebook draft that the user will edit later.',
-    'If the candidate already includes checklist text from workflow notes, convert it into checkpoints when helpful.'
+    'If the candidate already includes checklist text from workflow notes, convert it into checkpoints when helpful.',
+    'When evidence context is provided, incorporate supported paper or record findings into the rationale and checkpoints.'
   ];
+
+  function normalizeEvidenceContext(rawEvidence = []) {
+    return asArray(rawEvidence).map((item) => {
+      const source = ensureObject(item);
+      return {
+        tool_name: cleanText(source.tool_name || source.toolName, 120),
+        status: cleanText(source.status, 80),
+        summary: cleanText(source.summary, 900),
+        item_count: Number.isFinite(Number(source.item_count || source.itemCount))
+          ? Number(source.item_count || source.itemCount)
+          : asArray(source.items).length,
+        citations: asArray(source.citations).slice(0, 6).map((citation) => ({
+          source: cleanText(citation?.source, 120),
+          pointer: cleanText(citation?.pointer, 260),
+          reason: cleanText(citation?.reason, 260)
+        })).filter((citation) => citation.source || citation.pointer || citation.reason)
+      };
+    }).filter((item) => item.tool_name || item.summary);
+  }
 
   function buildNotebookDraftSelectionPrompt({
     message,
@@ -157,7 +178,8 @@ function createNotebookDraftRuntime(deps = {}) {
     parserPayload,
     project,
     notebookRuns,
-    candidates
+    candidates,
+    evidenceContext = []
   } = {}) {
     const promptConversation = asArray(conversation).slice(-8).map((row, index) => {
       const role = row?.role === 'assistant' ? 'assistant' : 'user';
@@ -171,7 +193,10 @@ function createNotebookDraftRuntime(deps = {}) {
       `Parser JSON:\n${JSON.stringify(parserPayload || {}, null, 2)}`,
       `Resolved project JSON:\n${JSON.stringify(project || {}, null, 2)}`,
       `Recent notebook runs JSON:\n${JSON.stringify(asArray(notebookRuns).slice(0, 12), null, 2)}`,
-      `Candidate experiments JSON:\n${JSON.stringify(asArray(candidates).slice(0, 6), null, 2)}`
+      `Candidate experiments JSON:\n${JSON.stringify(asArray(candidates).slice(0, 6), null, 2)}`,
+      asArray(evidenceContext).length
+        ? `Evidence context JSON:\n${JSON.stringify(normalizeEvidenceContext(evidenceContext).slice(0, 6), null, 2)}`
+        : ''
     ].filter(Boolean).join('\n\n');
   }
 
@@ -540,6 +565,7 @@ function createNotebookDraftRuntime(deps = {}) {
     project,
     notebookRuns,
     candidates,
+    evidenceContext = [],
     traceContext = null
   } = {}) {
     return requestStructuredJsonPayload({
@@ -551,7 +577,8 @@ function createNotebookDraftRuntime(deps = {}) {
         parserPayload,
         project,
         notebookRuns,
-        candidates
+        candidates,
+        evidenceContext
       }),
       schema: NOTEBOOK_DRAFT_SELECTION_SCHEMA,
       traceContext,
@@ -559,10 +586,14 @@ function createNotebookDraftRuntime(deps = {}) {
     });
   }
 
-  function buildFallbackProposal(candidate = {}, selectedProtocol = {}) {
+  function buildFallbackProposal(candidate = {}, selectedProtocol = {}, evidenceContext = []) {
     const workflowName = cleanText(candidate?.workflow?.name, 220);
     const protocolName = cleanText(selectedProtocol?.name || candidate?.protocol_name, 220) || 'Next Experiment';
     const trail = asArray(candidate?.trail).map((item) => cleanText(item, 220)).filter(Boolean);
+    const evidenceSummaries = normalizeEvidenceContext(evidenceContext)
+      .map((item) => cleanText(item.summary, 240))
+      .filter(Boolean)
+      .slice(0, 3);
     return {
       title: workflowName
         ? `${protocolName} (${workflowName})`
@@ -570,14 +601,18 @@ function createNotebookDraftRuntime(deps = {}) {
       purpose: workflowName
         ? `Advance the next planned step in ${workflowName}.`
         : `Prepare the next likely experiment using ${protocolName}.`,
-      rationale: cleanText(candidate?.reason, 320) || 'This protocol is the strongest next-step candidate from local workflow and notebook context.',
+      rationale: cleanText([
+        cleanText(candidate?.reason, 320) || 'This protocol is the strongest next-step candidate from local workflow and notebook context.',
+        evidenceSummaries.length ? `Evidence considered: ${evidenceSummaries.join(' ')}` : ''
+      ].filter(Boolean).join(' '), 700),
       planned_materials: uniqueStrings([
         ...asArray(selectedProtocol?.materials).slice(0, 5),
         protocolName
       ], 6),
       checkpoints: uniqueStrings([
         ...trail,
-        cleanText(candidate?.reason, 220)
+        cleanText(candidate?.reason, 220),
+        ...evidenceSummaries
       ], 6)
     };
   }
@@ -627,6 +662,7 @@ function createNotebookDraftRuntime(deps = {}) {
     notebook,
     candidate,
     proposal,
+    evidenceContext = [],
     missingPlaceholders = []
   }) {
     const generatedAt = now();
@@ -639,6 +675,7 @@ function createNotebookDraftRuntime(deps = {}) {
       rationale: cleanText(proposal?.rationale, 700) || cleanText(candidate?.reason, 320),
       planned_materials: uniqueStrings(asArray(proposal?.planned_materials), 8),
       checkpoints: uniqueStrings(asArray(proposal?.checkpoints), 8),
+      evidence_context: normalizeEvidenceContext(evidenceContext).slice(0, 6),
       workflow: candidate?.workflow && typeof candidate.workflow === 'object'
         ? {
           id: cleanText(candidate.workflow.id, 120),
@@ -677,6 +714,10 @@ function createNotebookDraftRuntime(deps = {}) {
       source: 'agent_notebook_draft_v1',
       proposalId,
       workflowId: cleanText(candidate?.workflow?.id, 120),
+      evidenceToolNames: uniqueStrings(
+        normalizeEvidenceContext(evidenceContext).map((item) => item.tool_name),
+        8
+      ),
       suggestedAt: generatedAt
     };
 
@@ -695,6 +736,7 @@ function createNotebookDraftRuntime(deps = {}) {
     project: selectedProject = {},
     workflowId = '',
     protocolCandidates = [],
+    evidenceContext = [],
     traceContext = null,
     lifecycleRecorder = null
   } = {}) {
@@ -800,8 +842,13 @@ function createNotebookDraftRuntime(deps = {}) {
     const notebookRuns = extractNotebookRuns(snapshot)
       .filter((entry) => cleanText(entry.project_id, 120) === cleanText(resolvedProject.id, 120))
       .slice(0, 12);
+    const normalizedEvidenceContext = normalizeEvidenceContext(evidenceContext);
     let selectedCandidate = candidates[0];
-    let proposalFields = buildFallbackProposal(selectedCandidate, protocols.find((protocol) => protocol.id === selectedCandidate.protocol_id));
+    let proposalFields = buildFallbackProposal(
+      selectedCandidate,
+      protocols.find((protocol) => protocol.id === selectedCandidate.protocol_id),
+      normalizedEvidenceContext
+    );
     const llmSelection = await requestNotebookDraftSelection({
       provider,
       endpoint,
@@ -813,6 +860,7 @@ function createNotebookDraftRuntime(deps = {}) {
       project: resolvedProject,
       notebookRuns,
       candidates,
+      evidenceContext: normalizedEvidenceContext,
       traceContext
     });
     if (llmSelection?.ok && llmSelection?.payload) {
@@ -889,6 +937,7 @@ function createNotebookDraftRuntime(deps = {}) {
         notebook: generationResult.notebook,
         candidate: selectedCandidate,
         proposal: proposalFields,
+        evidenceContext: normalizedEvidenceContext,
         missingPlaceholders: generationResult.missing_placeholders
       })
       : null;
@@ -921,6 +970,7 @@ function createNotebookDraftRuntime(deps = {}) {
   return {
     NOTEBOOK_DRAFT_SELECTION_SYSTEM_PROMPT,
     NOTEBOOK_DRAFT_SELECTION_RULES,
+    normalizeEvidenceContext,
     normalizeWorkflowRecord,
     extractNotebookRuns,
     resolvePlanningProject,

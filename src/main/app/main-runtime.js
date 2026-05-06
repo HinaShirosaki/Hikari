@@ -12,9 +12,7 @@ const {
   getCodexCliModel,
   getCodexCliReasoningEffort,
   getCodexLoginStatus,
-  resolveCodexCliAccessToken,
   resolveCodexCliRuntimeHomeDirectory,
-  resolveCodexCliResponsesEndpoint,
   setCodexCliModel,
   setCodexCliReasoningEffort,
   requestCodexCliText
@@ -63,7 +61,7 @@ const { createAgentLogRuntime } = require('./agent-log-runtime');
 const { createLlmPromptsRuntime } = require('./llm-prompts-runtime');
 const { createTelegramRuntime } = require('./telegram-runtime');
 
-const DEFAULT_DATA_FILE_NAME = 'enana-data.json';
+const DEFAULT_DATA_FILE_NAME = 'hikari-data.json';
 const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
 const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
 
@@ -93,9 +91,14 @@ function createMainRuntime({
     agentChatLogFileName: AGENT_CHAT_LOG_FILE_NAME
   });
 
-  if (!String(processObject.env.ENANA_CODEX_HOME || '').trim()) {
-    processObject.env.ENANA_CODEX_HOME = appPaths.getCodexCliHomePath()
+  if (!String(processObject.env.HIKARI_CODEX_HOME || processObject.env.ENANA_CODEX_HOME || '').trim()) {
+    processObject.env.HIKARI_CODEX_HOME = appPaths.getCodexCliHomePath()
       || resolveCodexCliRuntimeHomeDirectory(appPaths.getCodexCliWorkingDirectory());
+    processObject.env.ENANA_CODEX_HOME = processObject.env.HIKARI_CODEX_HOME;
+  } else if (!String(processObject.env.HIKARI_CODEX_HOME || '').trim()) {
+    processObject.env.HIKARI_CODEX_HOME = processObject.env.ENANA_CODEX_HOME;
+  } else if (!String(processObject.env.ENANA_CODEX_HOME || '').trim()) {
+    processObject.env.ENANA_CODEX_HOME = processObject.env.HIKARI_CODEX_HOME;
   }
 
   const chatLogTransformMonitor = createChatLogTransformMonitor({
@@ -171,12 +174,11 @@ function createMainRuntime({
     cleanText,
     appendAgentChatLogEntry: agentLogRuntime.appendAgentChatLogEntry,
     requestCodexCliText,
-    resolveCodexApiKey: ({ apiKey } = {}) => resolveCodexCliAccessToken(apiKey),
-    resolveCodexEndpoint: (endpoint) => resolveCodexCliResponsesEndpoint(endpoint),
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     BrowserWindow,
     getAgentPythonSandboxRoot: appPaths.getAgentPythonSandboxRoot,
+    getAgentMemoryFilePath: appPaths.getAgentMemoryFilePath,
     getBundlePaths,
     hydrateSnapshotFromBundle,
     syncBundleFromSnapshot
@@ -218,6 +220,7 @@ function createMainRuntime({
         protocolNotebookRuntime: agentServices.protocolNotebookRuntime,
         scienceReasoningLoopRuntime: agentServices.scienceReasoningLoopRuntime,
         deepResearchRuntime: agentServices.deepResearchRuntime,
+        codexAgentRuntime: agentServices.codexAgentRuntime,
         scienceMainUtils: agentServices.scienceMainUtils,
         agentToolRuntime: agentServices.agentToolRuntime,
         agentChatLogRuntime: agentServices.agentChatLogRuntime,
@@ -264,6 +267,7 @@ function createMainRuntime({
     appIconPath,
     appPaths,
     chatLogTransformMonitor,
+    codexAgentMcpHost: agentServices.codexAgentMcpHost,
     llmPromptsRuntime,
     registerIpcHandlers,
     startChatLogTransformMonitor,

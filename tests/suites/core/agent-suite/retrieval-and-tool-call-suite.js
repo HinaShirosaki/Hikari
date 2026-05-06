@@ -354,8 +354,11 @@ module.exports = function registerAgentRetrievalAndToolCallSuite(context = {}) {
       });
       assert.equal(scienceTools.tool_names.includes('literature-search'), true);
       assert.equal(scienceTools.tool_names.includes('web-search'), true);
-      assert.equal(scienceTools.tool_names.includes('record-lookup'), true);
       assert.equal(scienceTools.tool_names.includes('python-sandbox'), true);
+      assert.equal(scienceTools.tool_names.includes('record-lookup'), false);
+      assert.equal(scienceTools.tool_names.includes('memory'), false);
+      assert.equal(scienceTools.tool_names.includes('command-line'), false);
+      assert.equal(scienceTools.tool_names.includes('notebook-generation'), false);
       assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'literature-search'), true);
       assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'web-search'), true);
       assert.equal(
@@ -591,7 +594,7 @@ Workspace body
       assert.equal(result.items[0].title, 'Vendor A Syringe Filter');
     });
 
-    test('purchase recommendation runtime uses the simple bridge web-search api for codex fast search mode', async () => {
+    test('purchase recommendation runtime uses the Codex agent web-search surface for fast search mode', async () => {
       const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const webSearchCalls = [];
       let structuredCalls = 0;

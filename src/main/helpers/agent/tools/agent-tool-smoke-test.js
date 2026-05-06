@@ -296,31 +296,6 @@ function createStructuredJsonResponder() {
         }
       };
     }
-    if (stage === 'protocol_generation') {
-      return {
-        ok: true,
-        payload: {
-          protocol: {
-            name: cleanText(ensureObject(options.input).title, 220) || 'Generated Smoke-Test Protocol',
-            purpose: 'Produce a concise purification workflow from the provided method evidence.',
-            materials: ['Ni-NTA resin', 'imidazole buffer'],
-            steps: [
-              'Clarify lysate.',
-              'Bind clarified lysate to Ni-NTA resin for [time].',
-              'Elute bound protein with imidazole.'
-            ],
-            troubleshooting: [
-              {
-                problem: 'Low yield',
-                possible_cause: 'Insufficient resin contact time',
-                solution: 'Increase binding time before elution.'
-              }
-            ]
-          },
-          result_summary: 'Protocol generation smoke test completed.'
-        }
-      };
-    }
     if (stage === 'protocol_tiebreak_llm') {
       return {
         ok: true,
@@ -921,22 +896,22 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   }
 
   async function smokeProtocolGeneration(options = {}) {
-    const runtime = createProtocolGenerationRuntime({
-      requestStructuredJsonPayload: structuredResponder
-    });
-    const requestMessage = resolveToolMessage(options.message, 'Generate a concise purification protocol from this summary.');
+    const runtime = createProtocolGenerationRuntime();
+    const requestMessage = resolveToolMessage(options.message, 'Normalize the supplied protocol JSON.');
     const result = await runtime.generateProtocol({
-      title: 'Atlas Binder Purification',
-      purpose: 'Purify the Atlas binder from clarified lysate.',
-      method_text: 'Clarify lysate, bind it to Ni-NTA resin for [time], then elute with imidazole.',
-      materials: ['Ni-NTA resin', 'imidazole buffer'],
-      steps: ['Clarify lysate.', 'Bind to Ni-NTA resin.', 'Elute with imidazole.'],
-      source_summary: requestMessage
+      protocol: {
+        name: 'Atlas Binder Purification',
+        purpose: 'Purify the Atlas binder from clarified lysate.',
+        materials: ['Ni-NTA resin', 'imidazole buffer'],
+        steps: ['Clarify lysate.', 'Bind to Ni-NTA resin for [time].', 'Elute with imidazole.'],
+        troubleshooting: 'Keep buffers cold during purification.'
+      },
+      result_summary: requestMessage
     });
     return {
       ...result,
       ok: result?.ok !== false,
-      summary: cleanText(result?.result_summary, 320) || 'Protocol generation smoke test completed.'
+      summary: cleanText(result?.summary, 320) || 'Protocol generation smoke test completed.'
     };
   }
 

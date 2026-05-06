@@ -307,7 +307,7 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
   trigger(confirmShareBtn, 'click');
   assert.equal(state.messages.length, 1);
   assert.equal(state.messages[0].type, 'protocol_share');
-  assert.match(state.messages[0].payload.shareLink, /^enana:\/\/protocol-share\//);
+  assert.match(state.messages[0].payload.shareLink, /^hikari:\/\/protocol-share\//);
   assert.equal(tracked[0].name, 'protocol_share_sent');
 
   protocol.renderList();
@@ -462,6 +462,79 @@ test('protocol-management shows JSON import on create and hides it on edit', asy
 
   assert.equal(document.getElementById('protocol-json-import-panel').hidden, true);
   assert.equal(document.getElementById('protocol-generate-btn').hidden, true);
+});
+
+test('protocol-management keeps saved protocols unselected until the user opens one', () => {
+  const document = createMockDocument([
+    'protocol-detail-panel',
+    'protocol-empty-panel',
+    'protocol-editor-panel',
+    'protocol-view-panel',
+    'protocol-view-title',
+    'protocol-view-content',
+    'protocol-list',
+    'protocol-sort-field-btn',
+    'protocol-sort-order-btn'
+  ]);
+
+  const state = {
+    protocols: [
+      {
+        id: 'protocol-a',
+        name: 'Alpha Protocol',
+        purpose: '',
+        materials: [],
+        steps: [{ id: 'step-a', text: 'Add buffer', placeholders: [] }],
+        troubleshooting: '',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z'
+      },
+      {
+        id: 'protocol-b',
+        name: 'Beta Protocol',
+        purpose: '',
+        materials: [],
+        steps: [{ id: 'step-b', text: 'Incubate', placeholders: [] }],
+        troubleshooting: '',
+        createdAt: '2026-01-02T00:00:00.000Z',
+        updatedAt: '2026-01-02T00:00:00.000Z'
+      }
+    ],
+    notebookEntries: [],
+    workflows: [],
+    workflowTemplates: [],
+    assays: [],
+    gelAnalyses: [],
+    messages: [],
+    members: [],
+    settings: { personalInfo: { enanaEmail: '' } }
+  };
+
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+    document,
+    TextEncoder,
+    btoa: btoaPolyfill
+  });
+  const protocol = protocolModule.initProtocolManagement({
+    state,
+    persist: () => {},
+    createId: () => 'generated-id',
+    safeText: shared.safeText,
+    onProtocolsChanged: () => {},
+    trackGrowthEvent: () => {}
+  });
+
+  protocol.renderList();
+  const protocolList = document.getElementById('protocol-list');
+  assert.equal(protocolList.innerHTML.includes('protocol-list-row-selected'), false);
+  assert.equal(document.getElementById('protocol-detail-panel').dataset.mode, 'empty');
+
+  const firstRow = protocolList.querySelectorAll('[data-protocol-select]')[0];
+  trigger(firstRow, 'click');
+
+  assert.equal((protocolList.innerHTML.match(/protocol-list-row-selected/g) || []).length, 1);
+  assert.match(protocolList.innerHTML, /protocol-list-row-selected list-row-selected"[\s\S]*data-protocol-select="protocol-a"/);
+  assert.equal(document.getElementById('protocol-detail-panel').dataset.mode, 'view');
 });
 
 test('protocol-management generates a protocol from the create editor overlay', async () => {

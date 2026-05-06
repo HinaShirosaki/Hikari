@@ -4,11 +4,14 @@ const path = require('path');
 const { cleanText } = require('./storage-utils');
 
 const ASSAYS_ROOT_FOLDER_NAME = 'Assays';
-const CHEMICALS_SQLITE_FILE_NAME = 'enana-chemicals.index.sqlite';
+const CHEMICALS_SQLITE_FILE_NAME = 'hikari-chemicals.index.sqlite';
+const LEGACY_CHEMICALS_SQLITE_FILE_NAME = 'enana-chemicals.index.sqlite';
 const GELS_ROOT_FOLDER_NAME = 'Gels';
 const PAPERS_ROOT_FOLDER_NAME = 'Papers';
 const PROTOCOL_ROOT_FOLDER_NAME = 'Protocol';
 const PROTOCOL_INDEX_FILE_NAME = 'protocol.index.sqlite';
+const SAMPLES_ROOT_FOLDER_NAME = 'Samples';
+const SAMPLES_FILE_NAME = 'samples.json';
 
 function hasSupportedDataExtension(filePath) {
   return /\.(?:json|ena)$/i.test(String(filePath || '').trim());
@@ -91,7 +94,10 @@ function resolveStorageRootLayout({ storagePath = '', basePath = '' } = {}) {
       papersRootPath: '',
       assaysRootPath: '',
       gelsRootPath: '',
-      chemicalsSqlitePath: ''
+      samplesRootPath: '',
+      samplesPath: '',
+      chemicalsSqlitePath: '',
+      legacyChemicalsSqlitePath: ''
     };
   }
   return {
@@ -99,7 +105,10 @@ function resolveStorageRootLayout({ storagePath = '', basePath = '' } = {}) {
     papersRootPath: path.join(rootPath, PAPERS_ROOT_FOLDER_NAME),
     assaysRootPath: path.join(rootPath, ASSAYS_ROOT_FOLDER_NAME),
     gelsRootPath: path.join(rootPath, GELS_ROOT_FOLDER_NAME),
-    chemicalsSqlitePath: path.join(rootPath, CHEMICALS_SQLITE_FILE_NAME)
+    samplesRootPath: path.join(rootPath, SAMPLES_ROOT_FOLDER_NAME),
+    samplesPath: path.join(rootPath, SAMPLES_ROOT_FOLDER_NAME, SAMPLES_FILE_NAME),
+    chemicalsSqlitePath: path.join(rootPath, CHEMICALS_SQLITE_FILE_NAME),
+    legacyChemicalsSqlitePath: path.join(rootPath, LEGACY_CHEMICALS_SQLITE_FILE_NAME)
   };
 }
 
@@ -113,12 +122,15 @@ function getBundlePathsFromBasePath(basePath, options = {}) {
       papersRootPath: '',
       assaysRootPath: '',
       gelsRootPath: '',
+      samplesRootPath: '',
+      samplesPath: '',
       protocolRootPath: '',
       protocolsPath: '',
       notebookPagesPath: '',
       sqlitePath: '',
       legacySqlitePath: '',
-      chemicalsSqlitePath: ''
+      chemicalsSqlitePath: '',
+      legacyChemicalsSqlitePath: ''
     };
   }
   const resolvedBasePath = path.resolve(cleanedBasePath);
@@ -137,12 +149,15 @@ function getBundlePathsFromBasePath(basePath, options = {}) {
     papersRootPath: storageLayout.papersRootPath,
     assaysRootPath: storageLayout.assaysRootPath,
     gelsRootPath: storageLayout.gelsRootPath,
+    samplesRootPath: storageLayout.samplesRootPath,
+    samplesPath: storageLayout.samplesPath,
     protocolRootPath: protocolPaths.protocolRootPath,
     protocolsPath: protocolPaths.protocolRootPath,
     notebookPagesPath: `${resolvedBasePath}.notebook-pages.json`,
     sqlitePath: protocolPaths.sqlitePath,
     legacySqlitePath: `${resolvedBasePath}.index.sqlite`,
-    chemicalsSqlitePath: storageLayout.chemicalsSqlitePath
+    chemicalsSqlitePath: storageLayout.chemicalsSqlitePath,
+    legacyChemicalsSqlitePath: storageLayout.legacyChemicalsSqlitePath
   };
 }
 
@@ -154,7 +169,7 @@ function getBundlePathsFromSqlitePath(sqlitePath, options = {}) {
   const lowerSqlitePath = cleanedSqlitePath.toLowerCase();
   if (lowerSqlitePath.endsWith(`/${PROTOCOL_ROOT_FOLDER_NAME.toLowerCase()}/${PROTOCOL_INDEX_FILE_NAME}`)) {
     const storagePath = path.dirname(path.dirname(path.resolve(cleanedSqlitePath)));
-    const basePath = options?.basePath || path.join(storagePath, 'enana-data');
+    const basePath = options?.basePath || path.join(storagePath, 'hikari-data');
     return getBundlePathsFromBasePath(basePath, { storagePath });
   }
   if (!/\.index\.sqlite$/i.test(cleanedSqlitePath)) {
@@ -178,22 +193,28 @@ function getBundlePaths({ dataFilePath, fallbackDataFilePath = '', storagePath =
     papersRootPath: storageLayout.papersRootPath,
     assaysRootPath: storageLayout.assaysRootPath,
     gelsRootPath: storageLayout.gelsRootPath,
+    samplesRootPath: storageLayout.samplesRootPath,
+    samplesPath: storageLayout.samplesPath,
     protocolRootPath: protocolPaths.protocolRootPath,
     protocolsPath: protocolPaths.protocolRootPath,
     notebookPagesPath: `${basePath}.notebook-pages.json`,
     sqlitePath: protocolPaths.sqlitePath,
     legacySqlitePath: `${basePath}.index.sqlite`,
-    chemicalsSqlitePath: storageLayout.chemicalsSqlitePath
+    chemicalsSqlitePath: storageLayout.chemicalsSqlitePath,
+    legacyChemicalsSqlitePath: storageLayout.legacyChemicalsSqlitePath
   };
 }
 
 module.exports = {
   ASSAYS_ROOT_FOLDER_NAME,
   CHEMICALS_SQLITE_FILE_NAME,
+  LEGACY_CHEMICALS_SQLITE_FILE_NAME,
   GELS_ROOT_FOLDER_NAME,
   PAPERS_ROOT_FOLDER_NAME,
   PROTOCOL_INDEX_FILE_NAME,
   PROTOCOL_ROOT_FOLDER_NAME,
+  SAMPLES_FILE_NAME,
+  SAMPLES_ROOT_FOLDER_NAME,
   getBundlePaths,
   getBundlePathsFromBasePath,
   getBundlePathsFromSqlitePath,

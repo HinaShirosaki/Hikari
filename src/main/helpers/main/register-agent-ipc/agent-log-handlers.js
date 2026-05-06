@@ -168,22 +168,7 @@ function registerAgentLogHandlers({
     }
 
     const normalizedPayload = normalizeJsonPayload(payload, {});
-    const llmSource = typeof controllerUtils.resolveAgentLlmSource === 'function'
-      ? controllerUtils.resolveAgentLlmSource(normalizedPayload?.llm)
-      : {};
     const editorDraft = normalizeProtocolGenerationEditorDraft(normalizedPayload?.editorDraft);
-    const attachments = asArray(normalizedPayload?.attachments)
-      .filter((attachment) => attachment && typeof attachment === 'object')
-      .map((attachment) => ({
-        id: cleanText(attachment?.id, 120),
-        name: cleanText(attachment?.name, 240),
-        mimeType: cleanText(attachment?.mimeType || attachment?.mime_type, 160),
-        dataUrl: cleanText(attachment?.dataUrl || attachment?.data_url, 400000),
-        kind: cleanText(attachment?.kind, 40),
-        size: Number.isFinite(Number(attachment?.size)) ? Number(attachment.size) : 0
-      }))
-      .filter((attachment) => attachment.dataUrl);
-
     const requestMessage = cleanText(normalizedPayload?.message, 3000);
     const hasEditorContext = Boolean(
       editorDraft.title
@@ -193,23 +178,27 @@ function registerAgentLogHandlers({
       || editorDraft.steps.length
       || editorDraft.troubleshooting
     );
-    if (!requestMessage && !attachments.length && !hasEditorContext) {
+    if (!requestMessage && !hasEditorContext) {
       return {
         ok: false,
-        error: 'Add a prompt, editor context, or attachment before generating a protocol.'
+        error: 'Provide protocol JSON or editor protocol content before preparing a protocol.'
       };
     }
 
     try {
       const result = await protocolGenerationRuntime.generateProtocol({
-        provider: cleanText(llmSource?.provider, 80),
-        endpoint: cleanText(llmSource?.endpoint, 2000),
-        apiKey: cleanText(llmSource?.apiKey, 400),
-        model: cleanText(llmSource?.model, 120),
-        reasoningEffort: cleanText(normalizedPayload?.llm?.reasoningEffort, 40).toLowerCase(),
-        message: requestMessage,
-        attachments,
-        ...editorDraft
+        ...(hasEditorContext ? {
+          protocol: {
+            name: editorDraft.title,
+            purpose: editorDraft.purpose,
+            materials: editorDraft.materials,
+            steps: editorDraft.steps,
+            troubleshooting: editorDraft.troubleshooting
+          }
+        } : {
+          protocol_json: requestMessage
+        }),
+        result_summary: requestMessage
       });
 
       if (!result?.ok || !result.protocol) {

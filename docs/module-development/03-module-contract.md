@@ -1,0 +1,258 @@
+# 3. The module contract
+
+Every module is a JavaScript factory that takes an options bag, performs DOM lookups, attaches event listeners, and returns a small render API. This page documents the contract precisely so you can write a new module without copy-paste guesswork.
+
+## File location and shape
+
+Two acceptable layouts:
+
+**Single file (small modules):**
+
+```
+src/renderer/modules/my-feature.js
+```
+
+**Folder (when the controller grows past ~400 lines):**
+
+```
+src/renderer/modules/my-feature/
+  index.js          # exports initMyFeature, orchestrates submodules
+  state.js          # pure state-derived helpers (no DOM)
+  rendering.js      # markup builders / fragment renderers
+  events.js         # event wiring (optional)
+  constants.js      # labels, defaults
+  Readme.md         # short maintenance note
+```
+
+[src/renderer/modules/personal-inventory/](../../src/renderer/modules/personal-inventory/) and [src/renderer/modules/home-dashboard/](../../src/renderer/modules/home-dashboard/) are good references for the folder layout. [src/renderer/modules/tool-box.js](../../src/renderer/modules/tool-box.js) plus [src/renderer/modules/tool-box/](../../src/renderer/modules/tool-box/) shows a barrel + sub-tools pattern.
+
+In all cases, the **public** export is a single function named `init<Name>` (camel-cased, capitalized after `init`). Use a re-export from a barrel file when you split the implementation:
+
+```js
+// src/renderer/modules/my-feature/index.js
+export function initMyFeature(options) { ... }
+```
+
+```js
+// src/renderer/modules/my-feature.js (barrel — only if you keep the flat path)
+export { initMyFeature } from './my-feature/index.js';
+```
+
+The flat barrel exists in some cases for historical reasons — `module-runtime.js` imports from the flat path. New modules should import their `init*` directly from `./modules/my-feature/index.js`.
+
+## The `init*` function: inputs
+
+`module-runtime.js` builds a single options bag for each module from a few ambient inputs and module-specific callbacks. The full set of available inputs (you destructure what you need):
+
+| Option | Type | Source | Meaning |
+| --- | --- | --- | --- |
+| `state` | object | `loadState()` | the single mutable state object — mutate in place, then call `persist()` |
+| `persist` | `() => void` | `start-renderer-app.js` | flushes state to localStorage and disk; rebuilds `state.objectGraph` |
+| `createId` | `() => string` | `shared.js` | timestamp+random ID generator for new entities |
+| `safeText` | `(value) => string` | `shared.js` | HTML-escape helper, use whenever you build innerHTML |
+| `cssEscape` | `(value) => string` | `shared.js` | escapes a value for use inside a CSS attribute selector |
+| `notebookType` | string | constant per call site | e.g. `'biology'` for the notebook module |
+| `apiBridge` | object \| null | `window.enanaApi` | IPC bridge exposed by the preload script |
+| `getApiBridge` | `() => object \| null` | factory | use this if you may need the bridge after lazy initialization |
+| `rootDocument` | Document | `globalThis.document` | useful when supporting iframes or off-screen render in tests |
+| `selectionInsightsController` | object | `selection-insights.js` | optional: text selection insights service |
+| `trackGrowthEvent` | function | `shared.js` | append a growth event to `state.growthMetrics` |
+| `onXxxChanged` | function | `rendererServices.<area>` | the **important** one: cross-module fan-out callbacks (see below) |
+| `onOpen<Other>` | function | `start-renderer-app.js` | navigation/launch callbacks (e.g. `onOpenNotebookEntry`) |
+
+Look at [src/renderer/module-runtime.js](../../src/renderer/module-runtime.js) lines 67–219 for the exact wiring per module. When you add a new one, add a similar block.
+
+A typical module signature:
+
+```js
+export function initMyFeature({
+  state,
+  persist,
+  createId,
+  safeText,
+  onMyFeatureChanged = () => {}
+}) {
+  // 1. DOM lookups
+  const root = document.getElementById('my-feature-view');
+  const list = document.getElementById('my-feature-list');
+  if (!root || !list) {
+    return { render: () => {} };  // gracefully no-op if wiring is missing
+  }
+
+  // 2. Local UI state (NOT in the persisted state object)
+  const uiState = {
+    selectedId: '',
+    isAddFormOpen: false
+  };
+
+  // 3. Render API
+  function render() {
+    const items = state.myFeatureItems || [];
+    list.innerHTML = items.map((item) => `
+      <li class="list-row" data-id="${safeText(item.id)}">
+        <span>${safeText(item.name)}</span>
+      </li>
+    `).join('');
+  }
+
+  // 4. Event wiring
+  list.addEventListener('click', (event) => {
+    const row = event.target instanceof Element ? event.target.closest('[data-id]') : null;
+    if (!row) return;
+    uiState.selectedId = row.dataset.id || '';
+    render();
+  });
+
+  // 5. Public API
+  return {
+    render
+  };
+}
+```
+
+The shape of the returned API is not constrained; it is whatever `module-runtime.js` and other modules need to call. Common conventions:
+
+- `render()` — full render of the view.
+- `renderList()`, `renderEntries()`, `renderForm()`, `renderOptions()` — fine-grained refresh hooks called by services after data changes elsewhere.
+- `applyAppearance()` — re-applies any per-view style based on `state.settings.appearance`.
+- `openEntry(id)` — public navigation hook so other modules can launch into a specific record.
+
+## Defensive lookups
+
+The renderer is one big DOM. Always check elements exist before calling `addEventListener` etc:
+
+```js
+const button = document.getElementById('my-feature-add-btn');
+button?.addEventListener('click', onAdd);
+```
+
+The reason is twofold: ID typos surface as silent breakage in unit-test environments, and `module-runtime.js` instantiates every module on every boot regardless of which view you start in.
+
+If a critical element is missing, return a no-op API as in `home-dashboard.js`:
+
+```js
+if (requiredElements.some((element) => !element)) {
+  return { render: () => {} };
+}
+```
+
+This keeps `renderAll()` safe.
+
+## State contract
+
+There is one state object. It is loaded from localStorage by `loadState()`, normalized by `normalizeState()` in [src/renderer/modules/shared.js](../../src/renderer/modules/shared.js), and reused for the entire app lifetime. Every module receives **the same reference**.
+
+Rules:
+
+1. **Mutate in place.** `state.myFeatureItems.push(item)`, not `state = { ...state, myFeatureItems: [...] }`.
+2. **Call `persist()` after every user-visible change.** It writes localStorage and triggers `autoSaveDataFile` if a storage path is configured. Do not throttle it inside a module — `start-renderer-app.js` already swallows the auto-save promise.
+3. **Add new top-level keys to `defaultState`.** Otherwise users who upgrade have `undefined` until they touch your view. Defaults live in [src/renderer/modules/shared.js](../../src/renderer/modules/shared.js) (search for `export const defaultState`).
+4. **Keep transient UI state in module locals**, not on `state`. The `selectedRowId`, "is dialog open", "draft text", etc. should never leave the module. The persisted `state` is for data the user expects back next session.
+5. **Never write to `state.objectGraph`.** It is rebuilt on every `persist()` from the rest of the state by [src/renderer/modules/object-graph.js](../../src/renderer/modules/object-graph.js).
+
+If your module reads data that lives under another module's domain (e.g. `state.protocols` from inside the notebook), read it directly. Don't try to channel it through service calls — the state object **is** the source of truth.
+
+## Cross-module communication
+
+Three mechanisms, used in this order of preference.
+
+### 3.1 Service fan-out (recommended)
+
+When data your module changes is also displayed elsewhere (e.g. a sample edit must refresh the notebook entry list), call into the appropriate **service** at `start-renderer-app.js` injection time:
+
+```js
+// in module-runtime.js when initializing your module:
+initMyFeature({
+  state,
+  persist,
+  ...
+  onMyFeatureChanged: rendererServices.protocol.handleProtocolsChanged
+})
+```
+
+Inside the module you only call `onMyFeatureChanged()`. You don't know (or care) which other modules are subscribed.
+
+The services are defined in [src/renderer/services/](../../src/renderer/services/):
+
+- `protocolService.js` — `handleProtocolsChanged`, `importProtocolsFromJson`, `createDraftFromPaper`
+- `notebookService.js` — `handleNotebookEntriesChanged`, `handleAgentNotebookEntriesChanged`
+- `projectService.js` — `handleProjectsChanged`
+- `inventoryService.js` — `handleSamplesChanged`, `openSampleSearch`
+- `analysisService.js` — `handleAssaysChanged`, `handleGelAnalysesChanged`, `openAssayForNotebook`, `openGelForNotebook`
+- `sequenceService.js` — `openFromToolBox`
+
+Add a new service file for a new feature area. The shape is mechanical — see [src/renderer/services/protocolService.js](../../src/renderer/services/protocolService.js):
+
+```js
+export function createProtocolService(registry) {
+  function handleProtocolsChanged() {
+    registry.get('biologyNotebook').renderProtocolOptions?.();
+    registry.get('biologyNotebook').renderEntries?.();
+    registry.get('workflowManagement').render?.();
+    // ...
+  }
+  return { handleProtocolsChanged, /* ... */ };
+}
+```
+
+Then export it in `services/index.js` so `createRendererServices` exposes it.
+
+### 3.2 Module registry
+
+If you only need to call **one** other module:
+
+```js
+const protocol = registry.get('protocol');
+protocol.renderList?.();
+```
+
+`registry.get` always returns an object (the empty frozen sentinel `{}` if missing), so optional chaining is enough. The keys are the second argument to `initAndRegisterModule(...)` in `module-runtime.js`. Current keys:
+
+```
+biologyNotebook, protocol, projectManagement, agentChat, workflowManagement,
+papers, labCommonInventory, personalInventory, sampleRegistry, assay, gel,
+sequenceViewer, toolBox, settings, homeDashboard
+```
+
+You usually only reach for the registry inside service files. From inside your module, prefer the injected callback (see 3.1).
+
+### 3.3 IPC bridge (`window.enanaApi`)
+
+For anything that crosses the renderer/main boundary — file system, agent calls, scripts, autosave, native dialogs — use the `apiBridge`/`getApiBridge` option:
+
+```js
+const bridge = getApiBridge();
+const result = await bridge?.runScript?.('extract-feature', payload);
+```
+
+The full surface is documented in [docs/main-helpers/](../main-helpers/). Don't import directly from `window` in modules — accept it through the options bag so the module stays testable.
+
+## Lifecycle and rendering
+
+`module-runtime.js` calls into your module twice on boot:
+
+1. `initMyFeature(options)` — synchronous, registers DOM listeners.
+2. `modules.myFeature.render()` (or your specific render dispatcher) inside `renderAll()` after the state is fully hydrated.
+
+After boot, your module re-renders in response to:
+
+- the user navigating to your view: `renderView(viewId)` looks you up in `renderByViewId` and calls the appropriate render function.
+- a service callback firing, e.g. another module calls `onSamplesChanged()` and `inventoryService.handleSamplesChanged` ends up calling your `renderList?.()`.
+- direct user interaction: your own listeners call `render()` after mutating state and `persist()`.
+
+There is no virtual DOM and no reactive system. You decide when to re-render. Keep `render()` idempotent and cheap enough to call after any state change.
+
+## Returning the API
+
+The runtime stores whatever you return under `modules.<key>` and registers it under the same key with the registry. Other modules and services then reach back through `registry.get('<key>')`. Keep the returned object small and stable — adding a method is fine; renaming one is a breaking change for anyone using the registry.
+
+## When you really need a new top-level concept
+
+If your feature introduces a brand new top-level state slice (say `state.experiments`), make sure to:
+
+1. Add the default to `defaultState` in `shared.js`.
+2. Extend `normalizeState()` to coerce missing/legacy values.
+3. Add the slice to the object graph if it has cross-references — see [src/renderer/modules/object-graph.js](../../src/renderer/modules/object-graph.js).
+4. If the slice should round-trip to the on-disk `.ena` storage bundle, hook the writer in [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and the matching main-process bundler in [src/main/helpers/main/storage-bundle/](../../src/main/helpers/main/storage-bundle/).
+
+Most modules do not need this. Reuse existing slices when you can.

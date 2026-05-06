@@ -1,8 +1,8 @@
 {
   "protocol_to_notebook": {
     "name": "protocol_to_notebook",
-    "description": "Use when the user describes lab work and wants a protocol-based notebook draft or protocol-guided documentation.",
-    "rules": "Infer up to three likely protocol names when possible and omit every other field unless it is listed below.",
+    "description": "Performed lab work -> notebook page or lab-record documentation.",
+    "rules": "Requires notebook, record, or documentation intent for work already done. Standalone how-to protocol requests are science questions.",
     "example_input": "I did the HEK293 transfection for Atlas today. Can you turn it into a notebook page?",
     "specific_output_append": {
       "protocol_candidates": "Populate with 1 to 3 likely protocol names inferred from the request."
@@ -10,8 +10,8 @@
   },
   "notebook_draft": {
     "name": "notebook_draft",
-    "description": "Use when the user wants the likely next experiment proposed in advance and wants a future planned notebook page drafted before the work is executed.",
-    "rules": "Infer likely protocol names and only include compact project or workflow hints when they materially help plan the draft.",
+    "description": "Future planned experiment -> planned notebook page.",
+    "rules": "Requires a requested notebook draft tied to a project, workflow, or next step. Not for standalone how-to protocols.",
     "example_input": "What should I do next for Atlas, and can you draft tomorrow's notebook page for it?",
     "specific_output_append": {
       "protocol_candidates": "Populate with 1 to 3 likely protocol names inferred from the next-step planning request.",
@@ -22,8 +22,8 @@
   },
   "inventory_lookup": {
     "name": "inventory_lookup",
-    "description": "Use when the user asks about stock availability, reagent identity, location, supplier metadata, or lab-stored chemical records.",
-    "rules": "Use inventory_search to carry the normalized lookup query and candidate search terms.",
+    "description": "Stock availability, reagent identity, location, supplier metadata, or stored chemical records.",
+    "rules": "Use inventory_search for normalized query terms and aliases.",
     "example_input": "Do we have PEI in stock, and where is it?",
     "specific_output_append": {
       "inventory_search": "Populate normalized_query, candidate_terms, aliases, and search_mode for inventory search."
@@ -31,8 +31,8 @@
   },
   "record_lookup": {
     "name": "record_lookup",
-    "description": "Use when the user asks for stored project, workflow, notebook, assay, gel, or other lab records that are not inventory items.",
-    "rules": "Only include compact record-hint entities when they materially narrow the local record search.",
+    "description": "Stored project, workflow, notebook, assay, gel, paper, or lab records, excluding inventory.",
+    "rules": "Include record-hint entities only when they narrow local search.",
     "example_input": "What did we use last time for the antibody conjugation workflow?",
     "specific_output_append": {
       "entities.project_name": "Populate when the request is scoped to a project.",
@@ -43,8 +43,8 @@
   },
   "project_science_question": {
     "name": "project_science_question",
-    "description": "Use when the user asks a scientific question tied to a specific project, experiment, workflow, or project record.",
-    "rules": "Return reasoning_effort for routing. Include direct_answer only when reasoning_effort is 0. Include project or protocol hints only when they materially improve project resolution.",
+    "description": "Science question tied to an active or named project, experiment, workflow, or stored record.",
+    "rules": "Return reasoning_effort. Include direct_answer only at effort 0. Include project/protocol hints only when useful.",
     "example_input": "Why did the Atlas binder lose expression after transfection?",
     "specific_output_append": {
       "reasoning_effort": "Default to 1. Use 0 only for direct stable background answers that do not need project evidence or retrieval. Use 2 for broad synthesis, comparison, or recent-source-heavy reasoning.",
@@ -55,9 +55,9 @@
   },
   "general_science_question": {
     "name": "general_science_question",
-    "description": "Use when the user asks a general science question that is not tied to a specific project or stored lab record.",
-    "rules": "Return reasoning_effort for routing. Include direct_answer only when reasoning_effort is 0.",
-    "example_input": "Why does imidazole help elute His-tagged proteins?",
+    "description": "Science question or experimental how-to not tied to project records.",
+    "rules": "Standalone detailed wet-lab protocol requests go here unless notebook/record output is requested. Return reasoning_effort; direct_answer only at effort 0.",
+    "example_input": "How do I express TEV protease? Give me a detailed protocol.",
     "specific_output_append": {
       "reasoning_effort": "Default to 1. Use 0 only for direct stable background answers with no retrieval need. Use 2 for broad synthesis, comparison, or freshness-sensitive reasoning.",
       "direct_answer": "When reasoning_effort is 0, provide the actual user-facing answer here. Otherwise set to null."
@@ -65,8 +65,8 @@
   },
   "paper_analysis": {
     "name": "paper_analysis",
-    "description": "Use when the user asks to analyze, summarize, extract methods from, or interpret a specific paper or PDF already identified in the conversation.",
-    "rules": "Only include the paper title and requested analysis when they are explicit or strongly implied.",
+    "description": "Analyze, summarize, extract methods from, or interpret a specific identified paper/PDF.",
+    "rules": "Include paper title and requested output only when explicit or strongly implied.",
     "example_input": "Summarize the paper 'Engineered Nanobody Constructs' and pull out the methods.",
     "specific_output_append": {
       "entities.paper_title": "Populate when the paper title is provided or strongly implied.",
@@ -75,8 +75,8 @@
   },
   "literature_search": {
     "name": "literature_search",
-    "description": "Use when the user asks to find papers, references, recent literature, or external sources rather than analyze a specific paper already identified.",
-    "rules": "Only include the requested literature output when the user specifies it explicitly.",
+    "description": "Find papers, references, recent literature, or external sources.",
+    "rules": "Use when the user wants sources, not analysis of one already-identified paper.",
     "example_input": "Find recent papers on binder stability in mammalian expression systems.",
     "specific_output_append": {
       "entities.requested_output": "Use to capture the desired literature output such as papers, references, or recent findings."
@@ -84,8 +84,8 @@
   },
   "purchase_recommendation": {
     "name": "purchase_recommendation",
-    "description": "Use when the user wants a product recommendation or asks to find an item they can buy from an external vendor.",
-    "rules": "Capture only the compact shopping filters that materially affect the product search. Do not repeat the product category or base item name inside required_attributes.",
+    "description": "Recommend or find a purchasable item from external vendors.",
+    "rules": "Capture compact shopping filters. Do not repeat the base product inside required_attributes.",
     "example_input": "Find a cheap metal-free endotoxin-free syringe filter I can buy.",
     "specific_output_append": {
       "entities.product_query": "Populate with the product name or purchase target.",
@@ -96,8 +96,8 @@
   },
   "result_analysis": {
     "name": "result_analysis",
-    "description": "Use for data analysis, result interpretation, coding-style transforms, quantitative fitting, or requests to compute or analyze experimental outputs.",
-    "rules": "Only include compact analysis-task hints when they materially help route the computation or interpretation request.",
+    "description": "Analyze results/data, compute, fit, transform, interpret outputs, or write code-like analysis.",
+    "rules": "Include compact task hints only when they help route the analysis.",
     "example_input": "Fit a standard curve for this ELISA data and tell me which samples are outliers.",
     "specific_output_append": {
       "entities.requested_output": "Capture the analysis deliverable such as fitting, interpretation, or transformation.",
@@ -107,8 +107,8 @@
   },
   "mixed_request": {
     "name": "mixed_request",
-    "description": "Use when the user combines materially different tasks in a single message and the app should clarify or separate them before execution.",
-    "rules": "Flag that clarification is required before execution and explain the minimum follow-up needed.",
+    "description": "Multiple materially different tasks in one message.",
+    "rules": "Ask the minimum clarification needed to split or prioritize execution.",
     "example_input": "Check if we have PEI, summarize the latest binder paper, and build a notebook page for yesterday's transfection.",
     "specific_output_append": {
       "needs_clarification": "Usually true when the user combines multiple materially different tasks.",
@@ -117,8 +117,8 @@
   },
   "unclear": {
     "name": "unclear",
-    "description": "Use when the user message is too vague, incomplete, or ambiguous to safely route to a specific intent.",
-    "rules": "Flag that clarification is required and ask for the minimum missing routing detail.",
+    "description": "Too vague, incomplete, or ambiguous to route safely.",
+    "rules": "Ask for the minimum missing routing detail.",
     "example_input": "Can you help with that thing from earlier?",
     "specific_output_append": {
       "needs_clarification": "Must be true for unclear requests.",

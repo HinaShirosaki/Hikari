@@ -13,7 +13,7 @@ const BLOCKED_STATUS_CODES = new Set([401, 403, 407, 409, 423, 425, 429, 451, 50
 const BLOCKED_HTML_PATTERN = /captcha|cloudflare|checking your browser|access denied|verify you are human|automated requests|enable javascript|robot/i;
 const PDF_URL_HINT_PATTERN = /(?:\.pdf(?:$|[?#])|\/pdf(?:\/|$)|[?&](?:format|type|download|pdf)=(?:1|true|pdf)?\b|[?&][^=#]*pdf\b)/i;
 const DEFAULT_FETCH_ACCEPT = 'application/pdf,application/octet-stream;q=0.9,*/*;q=0.1';
-const DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; EnanaPaperDownload/1.0; +https://enana.local)';
+const DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; HikariPaperDownload/1.0; +https://hikari.local)';
 
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
@@ -445,6 +445,10 @@ function createPaperDownloadRuntime(deps = {}) {
   const BrowserWindow = typeof deps.BrowserWindow === 'function'
     ? deps.BrowserWindow
     : (typeof deps.electron?.BrowserWindow === 'function' ? deps.electron.BrowserWindow : null);
+  const paperKnowledgeDatabaseRuntime = deps.paperKnowledgeDatabaseRuntime
+    && typeof deps.paperKnowledgeDatabaseRuntime === 'object'
+    ? deps.paperKnowledgeDatabaseRuntime
+    : null;
 
   function buildJobSnapshot(job) {
     return cloneJson(ensureObject(job), {});
@@ -905,6 +909,43 @@ function createPaperDownloadRuntime(deps = {}) {
     });
   }
 
+  async function attachKnowledgeDatabaseResult(downloadId, downloadResult = {}, input = {}) {
+    const source = ensureObject(input);
+    const result = ensureObject(downloadResult);
+    if (!paperKnowledgeDatabaseRuntime || typeof paperKnowledgeDatabaseRuntime.ingestPaperPdf !== 'function') {
+      return result;
+    }
+    if (result.ok !== true || !cleanText(result.file_path, 4000)) {
+      return result;
+    }
+    if (isExplicitFalse(source.knowledge_database) || isExplicitFalse(source.update_knowledge_database)) {
+      return result;
+    }
+
+    const knowledgeResult = await paperKnowledgeDatabaseRuntime.ingestPaperPdf({
+      ...source,
+      file_path: result.file_path,
+      file_name: result.file_name,
+      stored_relative_path: result.relative_path,
+      source: cleanText(source.source, 80) || 'agent',
+      linked_type: cleanText(source.linked_type || source.linkedType, 80),
+      linked_name: cleanText(source.linked_name || source.linkedName, 220),
+      paper_title: cleanText(source.paper_title || source.paperTitle || result.file_name, 320),
+      traceContext: source.traceContext || null
+    }).catch((error) => ({
+      ok: false,
+      status: 'failed',
+      error: cleanText(error?.message || error, 1200) || 'Paper knowledge database update failed.'
+    }));
+
+    return updateJob(downloadId, {
+      knowledge_database: knowledgeResult,
+      knowledge_markdown_path: cleanText(knowledgeResult?.markdown_path, 4000),
+      knowledge_markdown_relative_path: cleanText(knowledgeResult?.markdown_relative_path, 2000),
+      summary: cleanText(result.summary, 600)
+    });
+  }
+
   async function runDownload(downloadId, input = {}) {
     const extraction = extractPaperDownloadTargets(input);
     const target = await resolveTargetFile(input, extraction);
@@ -922,20 +963,22 @@ function createPaperDownloadRuntime(deps = {}) {
 
     try {
       if (extraction.selected_pdf_url) {
-        return await performDirectDownload({
+        const completed = await performDirectDownload({
           input,
           extraction,
           target,
           downloadId
         });
+        return attachKnowledgeDatabaseResult(downloadId, completed, input);
       }
       if (extraction.browser_entry_url) {
-        return await performBrowserFallback({
+        const completed = await performBrowserFallback({
           input,
           extraction,
           target,
           downloadId
         });
+        return attachKnowledgeDatabaseResult(downloadId, completed, input);
       }
       throw createDownloadError('No paper download URL was found.');
     } catch (error) {
@@ -944,12 +987,13 @@ function createPaperDownloadRuntime(deps = {}) {
         || (!extraction.selected_pdf_url && Boolean(extraction.browser_entry_url));
       if (shouldUseBrowser && !isExplicitFalse(ensureObject(input).use_browser_fallback) && extraction.browser_entry_url) {
         try {
-          return await performBrowserFallback({
+          const completed = await performBrowserFallback({
             input,
             extraction,
             target,
             downloadId
           });
+          return attachKnowledgeDatabaseResult(downloadId, completed, input);
         } catch (browserError) {
           const browserStatus = browserError?.browser_required === true ? 'browser_required' : 'failed';
           const failed = updateJob(downloadId, {

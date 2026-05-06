@@ -26,6 +26,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     manualOverrides: createEmptyManualOverrides(),
     onGelAnalysesChanged,
     originalImage: null,
+    pendingNotebookLink: null,
     persist,
     preprocessedCache: null,
     safeText,
@@ -112,14 +113,12 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     }
   });
 
-  elements.gelProjectInput?.addEventListener('change', recordsManager.renderNotebookOptions);
   elements.gelImageFileInput?.addEventListener('change', imageController.onImageFileChange);
   elements.gelDenoiseStrengthInput?.addEventListener('input', imageController.onEnhancementChanged);
   elements.gelContrastStrengthInput?.addEventListener('input', imageController.onEnhancementChanged);
   elements.gelRunBtn?.addEventListener('click', onRunAnalysis);
   elements.gelResetOverridesBtn?.addEventListener('click', manualWorkflow.onResetManualOverrides);
-  elements.gelStartCropBtn?.addEventListener('click', cropController.onStartCrop);
-  elements.gelApplyCropBtn?.addEventListener('click', cropController.onApplyCrop);
+  elements.gelStartCropBtn?.addEventListener('click', cropController.onCropAction);
   elements.gelCancelCropBtn?.addEventListener('click', cropController.onCancelCrop);
   elements.gelResetCropBtn?.addEventListener('click', cropController.onResetCrop);
   elements.gelCanvas?.addEventListener('click', manualWorkflow.onCanvasClick);
@@ -150,8 +149,6 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   function render() {
     recordsManager.ensureState();
     imageController.renderEnhancementValues();
-    recordsManager.renderProjectOptions();
-    recordsManager.renderNotebookOptions();
     cropController.setCropUiState();
     manualWorkflow.renderOverrideStatus();
     manualWorkflow.renderManualProgress();
@@ -194,8 +191,6 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
 
   return {
     render,
-    renderProjectOptions: recordsManager.renderProjectOptions,
-    renderNotebookOptions: recordsManager.renderNotebookOptions,
     renderList: recordsManager.renderList,
     startLinkedGel: recordsManager.startLinkedGel
   };

@@ -166,17 +166,13 @@ const RAW_LLM_PROVIDER_CONFIGS = [
   {
     "id": "codex",
     "key": "CODEX",
-    "label": "OpenAI CLI (Codex)",
-    "defaultEndpoint": "codex://cli",
+    "label": "Codex Agent (CLI)",
+    "defaultEndpoint": "",
     "defaultModel": "",
     "modelPlaceholder": "optional, e.g. gpt-5.4",
-    "apiKeyPlaceholder": "Not required (use `codex login`)",
+    "apiKeyPlaceholder": "Handled by `codex login`",
     "requiresApiKey": false,
-    "endpointHints": [
-      "codex://",
-      "codex cli",
-      "openai-cli"
-    ],
+    "endpointHints": [],
     "models": [
       {
         "id": "gpt-5.4",
@@ -367,6 +363,9 @@ function inferLlmProviderFromEndpoint(endpoint) {
   const value = String(endpoint || '').trim().toLowerCase();
   if (!value) {
     return '';
+  }
+  if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('codex agent')) {
+    return LLM_PROVIDERS.CODEX;
   }
   for (const provider of LLM_PROVIDER_CONFIGS) {
     const hints = Array.isArray(provider.endpointHints) ? provider.endpointHints : [];

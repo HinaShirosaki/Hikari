@@ -1,0 +1,54 @@
+{
+  "schema_name": "enana_protocols",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-05-06T03:22:05.127Z",
+  "protocol": {
+    "id": "1777425346120-58b8924ca425c8",
+    "name": "Soluble TEV Protease Expression in E. coli",
+    "purpose": "Express soluble S219V TEV protease from pRK793 in E. coli for downstream purification and use in fusion-tag cleavage.",
+    "materials": [
+      "E. coli BL21(DE3) CodonPlus-RIL glycerol stock carrying pRK793",
+      "LB broth",
+      "Ampicillin (100 ug/mL final)",
+      "Chloramphenicol (30 ug/mL final)",
+      "Glucose (0.2% final in production culture)",
+      "IPTG, fresh 200 mM stock",
+      "500 mL baffled flask",
+      "4 L baffled flasks",
+      "Shaking incubator capable of 37°C and 30°C",
+      "Spectrophotometer for OD600 measurements",
+      "Refrigerated centrifuge"
+    ],
+    "steps": [
+      {
+        "id": "step-mojd4m26-1",
+        "text": "Inoculate 50-150 mL LB broth containing 100 ug/mL ampicillin and 30 ug/mL chloramphenicol in a 500 mL baffled flask from a glycerol stock of BL21(DE3) CodonPlus-RIL/pRK793 cells. Incubate overnight at 37°C with shaking at 250 rpm.",
+        "placeholders": []
+      },
+      {
+        "id": "step-mojd4m26-2",
+        "text": "For each 1 L expression culture, inoculate 1 L fresh LB broth containing 100 ug/mL ampicillin, 30 ug/mL chloramphenicol, and 0.2% glucose in a 4 L baffled flask with 25 mL saturated overnight culture. A typical preparation uses 4-6 L total culture.",
+        "placeholders": []
+      },
+      {
+        "id": "step-mojd4m26-3",
+        "text": "Grow the cultures at 37°C with shaking at 250 rpm until mid-log phase, OD600 about 0.5, which is approximately 2 h.",
+        "placeholders": []
+      },
+      {
+        "id": "step-mojd4m26-4",
+        "text": "Shift the cultures to 30°C and induce with IPTG to 1 mM final concentration using 5 mL of 200 mM IPTG stock per liter of culture. Continue shaking at 250 rpm for 4-6 h, then place the cultures at 4°C.",
+        "placeholders": []
+      },
+      {
+        "id": "step-mojd4m26-5",
+        "text": "Harvest cells by centrifugation at 5,000 x g for 10 min at 4°C. Store the cell pellet at -80°C until purification. A 6 L preparation typically yields 30-40 g cell paste.",
+        "placeholders": []
+      }
+    ],
+    "troubleshooting": "Low soluble TEV protease: reduce the culture temperature from 37°C to 30°C immediately before IPTG induction; this temperature shift is reported to keep virtually all processed TEV protease soluble.\nLow overall yield: use BL21(DE3) CodonPlus-RIL cells and maintain 30 ug/mL chloramphenicol selection during growth; the pRIL rare-tRNA plasmid is reported to dramatically increase TEV protease yield.",
+    "createdAt": "2026-04-29T01:14:53.741Z",
+    "updatedAt": "2026-04-29T01:15:46.120Z",
+    "selectionInsights": []
+  }
+}

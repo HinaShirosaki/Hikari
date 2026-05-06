@@ -478,14 +478,6 @@ function validateIntentCatalog(rawCatalog) {
   return Object.freeze(PARSER_CANONICAL_INTENTS.map((name) => byName.get(name)));
 }
 
-// Render one intent's output-append rows as bullet points for the prompt.
-function formatIntentSpecificOutputAppend(rows = []) {
-  return asArray(rows)
-    .map((row) => `- ${cleanText(row?.key, 120)}: ${cleanText(row?.description, 500)}`)
-    .filter(Boolean)
-    .join('\n');
-}
-
 function formatIntentSpecificOutputKeys(rows = []) {
   return asArray(rows)
     .map((row) => cleanText(row?.key, 120))
@@ -493,57 +485,46 @@ function formatIntentSpecificOutputKeys(rows = []) {
     .join(', ');
 }
 
-function buildScienceReasoningEffortRubric() {
+function formatIntentGuideLine(entry = {}) {
+  const extras = formatIntentSpecificOutputKeys(entry.specific_output_append);
   return [
-    '- For science intents, default to reasoning_effort 1 unless the request clearly belongs at 0 or 2.',
-    '- Use reasoning_effort 0 only for stable background questions you can answer directly without retrieval, recent-source checking, project-record inspection, or multi-step analysis.',
-    '- Use reasoning_effort 1 for the typical science question that needs a targeted reasoning loop, light retrieval, project lookup, or a careful explanation.',
-    '- Use reasoning_effort 2 when the user wants broad synthesis, comparison of multiple explanations, recent literature, or multi-step evidence gathering.',
-    '- If you are unsure whether a science question should be 0 or 1, choose 1.'
-  ].join('\n');
+    `- ${cleanText(entry.name, 80)}:`,
+    cleanText(entry.description, 800),
+    cleanText(entry.rules, 1000),
+    `Extras: ${extras || 'none'}.`
+  ].filter(Boolean).join(' ');
+}
+
+function buildScienceReasoningEffortRubric() {
+  return 'Science reasoning_effort: 0=stable direct answer; 1=default careful answer or light retrieval; 2=broad synthesis, recent literature, or multi-step evidence gathering. If unsure, choose 1.';
 }
 
 // Build the base instruction prompt that teaches the model the allowed intents and schema.
 function buildIntentCatalogPrompt(catalog = []) {
   // Fall back to the validated static catalog unless a test/custom catalog is supplied.
   const normalizedCatalog = asArray(catalog).length ? asArray(catalog) : INTENT_PARSER_CATALOG;
-  const allowedIntents = normalizedCatalog.map((entry) => `- ${entry.name}`).join('\n');
-  const descriptions = normalizedCatalog.map((entry) => [
-    `### ${entry.name}`,
-    entry.description,
-    `Intent-specific rule: ${entry.rules}`,
-    `Append only these extra fields: ${formatIntentSpecificOutputKeys(entry.specific_output_append) || '(none)'}`,
-    'Intent-specific output append:',
-    formatIntentSpecificOutputAppend(entry.specific_output_append)
-  ].join('\n')).join('\n\n');
+  const allowedIntents = normalizedCatalog.map((entry) => entry.name).join(', ');
+  const intentGuide = normalizedCatalog.map(formatIntentGuideLine).join('\n');
 
-  // Assemble one reusable instruction block that defines intents, schema, rules, and examples.
+  // Assemble one compact instruction block that defines intents, schema, and routing boundaries.
   return [
-    'You are an intent and entity parser for a lab assistant app.',
-    "Read the user's message and return compact JSON only.",
-    '## Allowed intents',
-    allowedIntents,
-    '## Output shape',
-    JSON.stringify(INTENT_PARSER_OUTPUT_TEMPLATE, null, 2),
-    'Always include primary_intent.',
-    'Add only the extra fields listed for the chosen intent.',
-    'Omit all other keys and empty placeholders.',
-    'If you include entities, include only the listed entity keys under an entities object.',
-    '## Rules',
-    '- Return JSON only.',
-    '- Choose exactly one primary intent.',
-    '- For science intents, include reasoning_effort as 0, 1, or 2.',
-    '- Include direct_answer only when reasoning_effort is 0.',
-    '- Include inventory_search only for inventory_lookup.',
-    '- Include protocol_candidates only for protocol_to_notebook or notebook_draft.',
-    '- Include needs_clarification and clarification_reason when clarification is required.',
-    '- Do not invent obscure aliases or unsupported protocol names.',
-    '## Science reasoning_effort rubric',
-    buildScienceReasoningEffortRubric(),
-    '## Intent descriptions',
-    descriptions,
+    'Classify the lab-assistant user message. Return compact JSON only.',
+    `Allowed intents: ${allowedIntents}`,
+    'Base JSON: { "primary_intent": "one allowed intent" }',
+    'Add only the extra fields listed for the chosen intent. Omit all other keys and empty placeholders.',
+    'If you include entities, include only listed entities.* keys.',
+    'Rules:',
+    '- Choose exactly one primary_intent.',
+    `- ${buildScienceReasoningEffortRubric()}`,
+    '- Include direct_answer only for science intents at reasoning_effort=0.',
+    '- inventory_search shape: {normalized_query, candidate_terms, aliases, search_mode}.',
+    '- protocol_candidates: 1 to 3 likely protocol names; do not invent obscure aliases.',
+    '- needs_clarification and clarification_reason only when routing is blocked.',
+    '- Standalone instructional wet-lab protocol requests, such as "how to express X" or "give me a detailed protocol", are science questions unless the user asks for a notebook page, notebook draft, lab record, or documentation of work they performed.',
+    'Intent guide:',
+    intentGuide,
     'Return JSON only.'
-  ].join('\n\n');
+  ].join('\n');
 }
 
 function cloneSchemaFragment(schema) {

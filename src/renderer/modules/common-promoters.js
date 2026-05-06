@@ -4,11 +4,5 @@ export const COMMON_PROMOTER_LIBRARY_METADATA = Object.freeze({
 });
 
 export const COMMON_PROMOTERS = Object.freeze([
-  Object.freeze({
-    id: 't7',
-    label: 'T7 promoter',
-    type: 'promoter',
-    note: 'promoter for bacteriophage T7 RNA polymerase',
-    sequence: 'TAATACGACTCACTATAGG'
-  })
+ 
 ]);

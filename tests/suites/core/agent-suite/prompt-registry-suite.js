@@ -28,7 +28,7 @@ module.exports = function registerAgentPromptRegistrySuite(context = {}) {
       assert.match(markdown, /# Agent Prompt Registry/);
       assert.match(markdown, /## Core Agent/);
       assert.match(markdown, /## Science Reasoning/);
-      assert.match(markdown, /You are an intent and entity parser for a lab assistant app\./);
+      assert.match(markdown, /Classify the lab-assistant user message\. Return compact JSON only\./);
       assert.match(markdown, /You are executing Step 4 of a deep research workflow\./);
     });
 

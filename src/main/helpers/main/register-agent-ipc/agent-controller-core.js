@@ -13,6 +13,7 @@ function createAgentControllerCore({
   protocolNotebookRuntime,
   scienceReasoningLoopRuntime,
   deepResearchRuntime,
+  codexAgentRuntime,
   scienceMainUtils,
   agentToolRuntime,
   executeInventoryLookup,
@@ -382,7 +383,7 @@ function createAgentControllerCore({
     const model = cleanText(llmSource?.model, 120);
     const reasoningEffort = cleanText(payload?.llm?.reasoningEffort, 40).toLowerCase();
     if (provider !== deps.LLM_PROVIDERS.CODEX && !apiKey) {
-      throw new Error('Missing LLM API key. Set it in Settings > LLM Model & API, or use LLM_API_KEY / ENANA_LLM_API_KEY.');
+      throw new Error('Missing LLM API key. Set it in Settings > LLM Model & Access, or use LLM_API_KEY / ENANA_LLM_API_KEY.');
     }
     if (provider === deps.LLM_PROVIDERS.CODEX) {
       setCodexCliModel(model);
@@ -412,6 +413,48 @@ function createAgentControllerCore({
     const promptConversation = hasLatestUserInConversation
       ? conversation
       : [...conversation, { role: 'user', text: effectiveMessage }];
+
+    if (provider === deps.LLM_PROVIDERS.CODEX) {
+      if (!codexAgentRuntime || typeof codexAgentRuntime.run !== 'function') {
+        return {
+          ok: false,
+          provider,
+          model: model || 'codex-default',
+          error: 'Codex agent runtime is not configured.'
+        };
+      }
+      observability.recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'controller_codex_agent',
+        status: 'ok',
+        routing_intent: 'codex_agent',
+        message: 'Routing request to the Codex-owned agent lifecycle.'
+      });
+      const codexResult = await codexAgentRuntime.run({
+        provider,
+        endpoint,
+        apiKey,
+        model,
+        reasoningEffort,
+        message: effectiveMessage,
+        conversation: promptConversation,
+        attachments,
+        snapshot,
+        executionFlags,
+        deepResearchEnabled,
+        traceContext,
+        projectId,
+        projectName,
+        skillPromptPayload,
+        selectionInsight: payload?.agent?.selectionInsight || payload?.selectionInsight || null,
+        lifecycleRecorder,
+        emitAgentProgress: runtime?.emitAgentProgress
+      });
+      throwIfAgentRequestAborted('Agent request stopped after Codex agent runtime.');
+      if (executionFlags.developerMode === true && codexResult && typeof codexResult === 'object') {
+        codexResult.developer_trace = asArray(traceContext?.rows);
+      }
+      return codexResult;
+    }
 
     const selectionInsightResult = await selectionInsightRuntime.runSelectionInsight(payload, {
       provider,
@@ -529,6 +572,18 @@ function createAgentControllerCore({
     const lifecycleRecorder = runtime && typeof runtime === 'object'
       ? runtime.lifecycleRecorder
       : null;
+    const provider = typeof controllerUtils.resolveAgentProvider === 'function'
+      ? cleanText(controllerUtils.resolveAgentProvider(payload?.llm), 80)
+      : '';
+    const isCodexProvider = provider === deps.LLM_PROVIDERS.CODEX;
+    if (isCodexProvider) {
+      observability.recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'controller_codex_agent_selected',
+        status: 'ok',
+        message: 'Using Codex-owned agent controller path.'
+      });
+      return runAgentControllerCore(payload, runtime && typeof runtime === 'object' ? runtime : {});
+    }
     observability.recordLifecycleEvent(lifecycleRecorder, {
       stage: 'controller_intent_only_selected',
       status: 'ok',

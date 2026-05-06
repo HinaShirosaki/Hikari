@@ -15,5 +15,5 @@ Updated: 2026-04-28T01:49:05.527Z
 - Gel analyses: 0
 
 ## Notes
-- Auto-generated from Enana storage metadata.
+- Auto-generated from Hikari storage metadata.
 - Update the project record in the app to refresh this summary.

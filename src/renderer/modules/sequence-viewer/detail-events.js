@@ -32,6 +32,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const onRequestClear = config?.onRequestClear || (() => {});
   const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
+  const onRequestCloningDesign = config?.onRequestCloningDesign || (() => {});
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
   const onConfirmProteinBuilderConstruct = config?.onConfirmProteinBuilderConstruct || (() => {});
   const onReturnToProteinBuilder = config?.onReturnToProteinBuilder || (() => {});
@@ -89,6 +90,11 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   elements.alignmentOpenBtn?.addEventListener('click', (event) => {
     event.preventDefault();
     void onRequestAlignment();
+  });
+
+  elements.cloningDesignBtn?.addEventListener('click', (event) => {
+    event.preventDefault();
+    void onRequestCloningDesign();
   });
 
   elements.alignmentSessionSelect?.addEventListener('change', () => {

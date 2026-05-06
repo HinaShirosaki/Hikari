@@ -1,7 +1,7 @@
 import { DEFAULT_LADDER_STANDARDS } from './constants.js';
 import { createBandsCsv, downloadTextFile } from './export.js';
 import { normalizeEnhancementSettings } from './image-processing.js';
-import { formatAnalysisTypeLabel, notebookLabel } from './presentation.js';
+import { formatAnalysisTypeLabel } from './presentation.js';
 import { clamp, createEmptyManualOverrides, normalizeManualOverrides, safeFilePart } from './shared.js';
 
 export function createRecordsManager({ runtime, elements, deps }) {
@@ -103,24 +103,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
         gelIds: nextIds
       };
     });
-  }
-
-  function selectNotebookOption(value) {
-    if (!elements.gelNotebookEntryInput) {
-      return;
-    }
-    const targetValue = String(value || '').trim();
-    if (!targetValue) {
-      elements.gelNotebookEntryInput.value = '';
-      return;
-    }
-    if (!Array.from(elements.gelNotebookEntryInput.options).some((option) => option.value === targetValue)) {
-      const option = document.createElement('option');
-      option.value = targetValue;
-      option.textContent = `${targetValue} (missing notebook page)`;
-      elements.gelNotebookEntryInput.append(option);
-    }
-    elements.gelNotebookEntryInput.value = targetValue;
   }
 
   function captureNotebookPreviewImage(fallback = '') {
@@ -259,48 +241,12 @@ export function createRecordsManager({ runtime, elements, deps }) {
     };
   }
 
-  function renderProjectOptions() {
-    if (!elements.gelProjectInput) {
-      return;
-    }
-    const selected = elements.gelProjectInput.value;
-    const options = ['<option value="">Select project</option>'];
-    (runtime.state.projects || []).forEach((project) => {
-      const isSelected = project.id === selected ? ' selected' : '';
-      options.push(`<option value="${project.id}"${isSelected}>${runtime.safeText(project.name)}</option>`);
-    });
-    elements.gelProjectInput.innerHTML = options.join('');
-    if (selected && (runtime.state.projects || []).some((project) => project.id === selected)) {
-      elements.gelProjectInput.value = selected;
-    }
-  }
-
-  function renderNotebookOptions() {
-    if (!elements.gelNotebookEntryInput) {
-      return;
-    }
-
-    const selected = elements.gelNotebookEntryInput.value;
-    const projectId = elements.gelProjectInput?.value || '';
-    const entries = (runtime.state.notebookEntries || [])
-      .filter((entry) => !projectId || entry.projectId === projectId)
-      .sort((a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || ''));
-
-    const options = ['<option value="">Not linked</option>'];
-    entries.forEach((entry) => {
-      options.push(`<option value="${entry.id}">${runtime.safeText(notebookLabel(entry))}</option>`);
-    });
-
-    elements.gelNotebookEntryInput.innerHTML = options.join('');
-
-    if (selected && entries.some((entry) => entry.id === selected)) {
-      elements.gelNotebookEntryInput.value = selected;
-    }
-  }
-
   function buildRecordFromCurrentReport(existingId = '') {
-    const project = (runtime.state.projects || []).find((item) => item.id === elements.gelProjectInput?.value);
-    const notebookEntry = (runtime.state.notebookEntries || []).find((entry) => entry.id === elements.gelNotebookEntryInput?.value);
+    const pendingLink = runtime.pendingNotebookLink || {};
+    const notebookEntryId = String(pendingLink.notebookEntryId || '').trim();
+    const projectId = String(pendingLink.projectId || '').trim();
+    const project = (runtime.state.projects || []).find((item) => item.id === projectId);
+    const notebookEntry = (runtime.state.notebookEntries || []).find((entry) => entry.id === notebookEntryId);
     const report = runtime.currentReport;
     const params = readParams();
     const sourceImageName = String(runtime.currentImage?.name || '').trim();
@@ -308,9 +254,9 @@ export function createRecordsManager({ runtime, elements, deps }) {
     return {
       id: existingId || runtime.createId(),
       name: elements.gelNameInput?.value.trim() || `Gel-${Date.now()}`,
-      projectId: project?.id || '',
-      projectName: project?.name || '',
-      notebookEntryId: elements.gelNotebookEntryInput?.value || '',
+      projectId: projectId || project?.id || '',
+      projectName: project?.name || notebookEntry?.projectName || '',
+      notebookEntryId,
       notebookEntryProtocolName: notebookEntry?.experimentName || notebookEntry?.protocolName || '',
       notebookEntryType: notebookEntry?.notebookType || '',
       imageName: report?.image?.name || sourceImageName,
@@ -406,12 +352,11 @@ export function createRecordsManager({ runtime, elements, deps }) {
     runtime.currentReport = null;
     runtime.manualOverrides = createEmptyManualOverrides();
     runtime.cropApplied = false;
+    runtime.pendingNotebookLink = null;
     deps.leaveCropMode();
     runtime.manualDividerConfirmed = false;
     runtime.selectedViewerTool = '';
 
-    renderProjectOptions();
-    renderNotebookOptions();
     deps.renderOverrideStatus();
     deps.renderManualProgress();
     deps.renderCanvas();
@@ -422,11 +367,10 @@ export function createRecordsManager({ runtime, elements, deps }) {
   function fillFromRecord(record) {
     elements.gelIdInput.value = record.id;
     elements.gelNameInput.value = record.name || '';
-    elements.gelProjectInput.value = record.projectId || '';
-    renderProjectOptions();
-    elements.gelProjectInput.value = record.projectId || '';
-    renderNotebookOptions();
-    elements.gelNotebookEntryInput.value = record.notebookEntryId || '';
+    runtime.pendingNotebookLink = {
+      notebookEntryId: String(record.notebookEntryId || '').trim(),
+      projectId: String(record.projectId || '').trim()
+    };
 
     const parameters = record.parameters || {};
     elements.gelTypeInput.value = record.analysisType === 'western' || record.analysisType === 'agarose'
@@ -544,8 +488,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
         <article class="card">
           <h3>${runtime.safeText(record.name || record.id)}</h3>
           <p><strong>Type:</strong> ${runtime.safeText(formatAnalysisTypeLabel(record.analysisType))}</p>
-          <p><strong>Project:</strong> ${runtime.safeText(record.projectName || '-')}</p>
-          <p><strong>Notebook:</strong> ${runtime.safeText(record.notebookEntryProtocolName || '-')}</p>
           <p><strong>Image:</strong> ${runtime.safeText(record.imageName || '-')}</p>
           <p><strong>Lanes/Bands:</strong> ${runtime.safeText(`${laneCount} / ${bandCount}`)}</p>
           <p><strong>Overrides:</strong> ${runtime.safeText(String(overrideCount))}</p>
@@ -565,14 +507,10 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
     const linkedEntry = (runtime.state.notebookEntries || []).find((entry) => entry.id === notebookEntryId);
     const resolvedProjectId = String(projectId || linkedEntry?.projectId || '').trim();
-    if (resolvedProjectId && elements.gelProjectInput) {
-      elements.gelProjectInput.value = resolvedProjectId;
-      renderProjectOptions();
-      elements.gelProjectInput.value = resolvedProjectId;
-    }
-
-    renderNotebookOptions();
-    selectNotebookOption(notebookEntryId);
+    runtime.pendingNotebookLink = {
+      notebookEntryId: String(notebookEntryId || '').trim(),
+      projectId: resolvedProjectId
+    };
     const resolvedGelName = String(gelName || linkedEntry?.experimentName || linkedEntry?.protocolName || '').trim();
     if (resolvedGelName && elements.gelNameInput) {
       elements.gelNameInput.value = resolvedGelName;
@@ -594,8 +532,6 @@ export function createRecordsManager({ runtime, elements, deps }) {
     onSaveAnalysis,
     readParams,
     renderList,
-    renderNotebookOptions,
-    renderProjectOptions,
     resetForm,
     startLinkedGel
   };

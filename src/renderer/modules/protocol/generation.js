@@ -335,8 +335,12 @@ export function createProtocolGenerationController({
           provider: String(state.settings?.llm?.provider || '').trim(),
           model: String(state.settings?.llm?.model || '').trim(),
           reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim().toLowerCase(),
-          apiEndpoint: String(state.settings?.llm?.apiEndpoint || '').trim(),
-          apiKey: String(state.settings?.llm?.apiKey || '').trim()
+          apiEndpoint: String(state.settings?.llm?.provider || '').trim() === 'codex'
+            ? ''
+            : String(state.settings?.llm?.apiEndpoint || '').trim(),
+          apiKey: String(state.settings?.llm?.provider || '').trim() === 'codex'
+            ? ''
+            : String(state.settings?.llm?.apiKey || '').trim()
         }
       });
 

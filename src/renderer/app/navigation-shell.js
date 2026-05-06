@@ -275,8 +275,9 @@ export function createNavigationShell({
 
   function syncSharedLeftRailShellChrome() {
     const activeView = views.find((view) => view.classList.contains('is-active')) || null;
-    const activeRailShell = activeView?.querySelector?.('.left-rail-template') || null;
-    const hasSharedLeftRailView = Boolean(activeRailShell?.querySelector?.('[data-sync-left-rail]'));
+    const railShells = Array.from(activeView?.querySelectorAll?.('.left-rail-template') || []);
+    const visibleRailShell = railShells.find((shell) => !shell.closest('[hidden]')) || null;
+    const hasSharedLeftRailView = Boolean(visibleRailShell?.querySelector?.('[data-sync-left-rail]'));
     documentObject.body.classList.toggle('has-shared-left-rail-view', hasSharedLeftRailView);
   }
 
@@ -379,6 +380,19 @@ export function createNavigationShell({
         syncResponsiveDock();
       });
       responsiveDockObserver.observe(documentObject.documentElement);
+    }
+    if (typeof windowObject.MutationObserver === 'function') {
+      const workspaceMain = documentObject.querySelector('.workspace-main');
+      if (workspaceMain) {
+        const hiddenObserver = new windowObject.MutationObserver(() => {
+          syncSharedLeftRailShellChrome();
+        });
+        hiddenObserver.observe(workspaceMain, {
+          subtree: true,
+          attributes: true,
+          attributeFilter: ['hidden']
+        });
+      }
     }
   }
 

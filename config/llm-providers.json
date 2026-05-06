@@ -123,17 +123,13 @@
     },
     {
       "id": "codex",
-      "label": "OpenAI CLI (Codex)",
-      "defaultEndpoint": "codex://cli",
+      "label": "Codex Agent (CLI)",
+      "defaultEndpoint": "",
       "defaultModel": "",
       "modelPlaceholder": "optional, e.g. gpt-5.4",
-      "apiKeyPlaceholder": "Not required (use `codex login`)",
+      "apiKeyPlaceholder": "Handled by `codex login`",
       "requiresApiKey": false,
-      "endpointHints": [
-        "codex://",
-        "codex cli",
-        "openai-cli"
-      ],
+      "endpointHints": [],
       "models": [
         {
           "id": "gpt-5.4",

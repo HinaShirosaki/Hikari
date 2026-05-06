@@ -176,7 +176,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(ignoreAsText, /\\\/output\(\$\|\\\/\)/);
       assert.match(ignoreAsText, /\\\/tmp\(\$\|\\\/\)/);
       assert.match(ignoreAsText, /\.DS_Store/);
-      assert.match(ignoreAsText, /enana-data\(\?:\\\.ena\)\?\\\.json/);
+      assert.match(ignoreAsText, /hikari-data\(\?:\\\.ena\)\?\\\.json/);
     });
 
     test('main sql.js helpers resolve the bundled vendor asset from package-safe paths', () => {

@@ -408,7 +408,6 @@ test('biology-notebook keeps planned pages distinct, marks them executed, and pr
     'biology-notebook-protocol-meta',
     'biology-notebook-export-btn',
     'biology-notebook-mark-executed-btn',
-    'biology-notebook-page-list-status',
     'biology-notebook-steps',
     'biology-notebook-result',
     'biology-notebook-result-file',
@@ -548,7 +547,6 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
     'biology-notebook-protocol-meta',
     'biology-notebook-export-btn',
     'biology-notebook-mark-executed-btn',
-    'biology-notebook-page-list-status',
     'biology-notebook-steps',
     'biology-notebook-result',
     'biology-notebook-result-file',
@@ -656,7 +654,6 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
   assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'IPTG Expression');
   assert.match(document.getElementById('biology-notebook-steps').innerHTML, /0\.5 mM/);
   assert.equal(document.getElementById('biology-notebook-mark-executed-btn').hidden, false);
-  assert.match(document.getElementById('biology-notebook-page-list-status').textContent, /Viewing page for Clone 12 \/ IPTG Expression/);
   assert.doesNotMatch(document.getElementById('biology-notebook-entry-list').innerHTML, /Untitled Project/);
   assert.equal((document.getElementById('biology-notebook-entry-list').innerHTML.match(/biology-notebook-folder-name">Clone 12</g) || []).length, 1);
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Ni-NTA Purification/);
@@ -676,7 +673,6 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
     'biology-notebook-cancel-protocol-edit-btn',
     'biology-notebook-export-btn',
     'biology-notebook-mark-executed-btn',
-    'biology-notebook-page-list-status',
     'biology-notebook-protocol-editor',
     'biology-notebook-page-protocol-name',
     'biology-notebook-page-protocol-steps',
@@ -783,7 +779,6 @@ test('biology-notebook edits only the saved page protocol copy and keeps the ori
     'biology-notebook-cancel-protocol-edit-btn',
     'biology-notebook-export-btn',
     'biology-notebook-mark-executed-btn',
-    'biology-notebook-page-list-status',
     'biology-notebook-protocol-editor',
     'biology-notebook-page-protocol-name',
     'biology-notebook-page-protocol-steps',
@@ -919,7 +914,6 @@ test('biology-notebook saves and reopens result tables with Tabulator', async ()
     'biology-notebook-protocol-meta',
     'biology-notebook-export-btn',
     'biology-notebook-mark-executed-btn',
-    'biology-notebook-page-list-status',
     'biology-notebook-steps',
     'biology-notebook-result',
     'biology-notebook-result-file',

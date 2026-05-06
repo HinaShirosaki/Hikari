@@ -1,6 +1,29 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function cleanText(value, maxLength = 1200) {
+  const text = String(value || '').trim();
+  if (!text) {
+    return '';
+  }
+  return maxLength > 0 ? text.slice(0, maxLength) : text;
+}
+
+function ensureObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function parseJsonObject(raw = '') {
+  try {
+    const parsed = JSON.parse(String(raw || ''));
+    return ensureObject(parsed);
+  } catch {
+    return {};
+  }
+}
 
 function createProtocolGenerationRuntime(deps = {}) {
   const createId = typeof deps.createId === 'function'
@@ -9,11 +32,6 @@ function createProtocolGenerationRuntime(deps = {}) {
   const now = typeof deps.now === 'function'
     ? deps.now
     : (() => new Date().toISOString());
-  const {
-    asArray,
-    cleanText,
-    requestStructuredJsonPayload
-  } = createAgentLlmRuntimeHelpers(deps);
   let generatedIdCounter = 0;
 
   const PROTOCOL_GENERATION_RESPONSE_SCHEMA = {
@@ -42,7 +60,6 @@ function createProtocolGenerationRuntime(deps = {}) {
                   additionalProperties: false,
                   required: ['text'],
                   properties: {
-                    id: { type: 'string' },
                     text: { type: 'string' },
                     instruction: { type: 'string' },
                     action: { type: 'string' },
@@ -95,20 +112,17 @@ function createProtocolGenerationRuntime(deps = {}) {
   };
 
   const PROTOCOL_GENERATION_SYSTEM_PROMPT = [
-    'You generate a concise, reusable lab protocol from paper methods, extracted procedure notes, and relevant web results when available.',
-    'Prefer the supplied evidence first.',
-    'If the supplied evidence is incomplete, you may use web search to confirm broadly documented method details from reputable sources before resorting to a placeholder.',
-    'Do not invent experiment-specific details that are not supported.',
+    'You receive protocol JSON that is already authored by the caller.',
+    'Do not generate protocol content inside this tool.',
+    'Normalize the supplied protocol JSON into the app import format.',
     'Return JSON only.'
   ].join(' ');
 
   const PROTOCOL_GENERATION_RULES = [
-    'Write a short protocol name and a one-sentence purpose.',
-    'List only materials that are explicit or strongly supported by the provided evidence.',
-    'Produce ordered steps that are operational and concise.',
-    'Preserve concrete operational values from the evidence, including time, temperature, rpm, speed, centrifugation force, volumes, and concentrations; do not replace stated values with placeholders.',
-    'Placeholders should be rare. Use bracket placeholders only for truly critical missing experiment-specific details that are absent from the supplied evidence and cannot be safely confirmed.',
-    'Prefer trustworthy web-confirmed generic method context over vague placeholders, but do not invent sample-specific or construct-specific settings.',
+    'Use the supplied protocol JSON as the source of truth.',
+    'Do not call an LLM or web search from this tool.',
+    'Do not require or synthesize a protocol id.',
+    'Normalize name/title, purpose, materials, steps, timestamps, placeholders, and troubleshooting.',
     'Return the protocol object in the app import format with name, purpose, materials, steps, and troubleshooting.'
   ];
 
@@ -298,7 +312,6 @@ function createProtocolGenerationRuntime(deps = {}) {
         : (Array.isArray(source.procedure) ? source.procedure : inputSource.steps)
     );
     return {
-      id: cleanText(inputSource.protocol_id || source.id, 120) || createGeneratedId('protocol'),
       name: cleanText(
         source.name
           || source.title
@@ -318,82 +331,65 @@ function createProtocolGenerationRuntime(deps = {}) {
     };
   }
 
+  function resolveProtocolPayload(input = {}) {
+    const source = ensureObject(input);
+    if (source.protocol && typeof source.protocol === 'object' && !Array.isArray(source.protocol)) {
+      return source.protocol;
+    }
+    const rawProtocolJson = cleanText(source.protocol_json || source.protocolJson, 200000);
+    if (rawProtocolJson) {
+      const parsed = parseJsonObject(rawProtocolJson);
+      if (parsed.protocol && typeof parsed.protocol === 'object' && !Array.isArray(parsed.protocol)) {
+        return parsed.protocol;
+      }
+      if (Object.keys(parsed).length) {
+        return parsed;
+      }
+    }
+    if ((source.name || source.title || source.protocol_title_hint) && Array.isArray(source.steps)) {
+      return source;
+    }
+    return {};
+  }
+
   function buildPrompt(input = {}) {
     const source = input && typeof input === 'object' ? input : {};
-    const stepSeed = asArray(source.steps)
-      .map((step) => (typeof step === 'string' ? cleanText(step, 1200) : cleanText(step?.text || step?.instruction || step?.action, 1200)))
-      .filter(Boolean)
-      .join('\n- ');
-    const materialSeed = asArray(source.materials).map((item) => cleanText(item, 220)).filter(Boolean).join(', ');
+    const protocol = resolveProtocolPayload(source);
     return [
-      'Generate a concise protocol JSON object from the evidence below.',
+      'Normalize the supplied protocol JSON. Do not generate protocol content here.',
       PROTOCOL_GENERATION_RULES.map((rule, index) => `${index + 1}. ${rule}`).join('\n'),
-      `Protocol title hint: ${cleanText(source.title || source.protocol_title_hint, 220) || '-'}`,
-      `Purpose hint: ${cleanText(source.purpose, 600) || '-'}`,
-      `Source paper title: ${cleanText(source.source_paper_title, 220) || '-'}`,
-      `Source summary: ${cleanText(source.source_summary, 2400) || '-'}`,
-      `Method text:\n${cleanText(source.method_text || source.methodText, 12000) || '-'}`,
-      `Material hints: ${materialSeed || '-'}`,
-      `Step hints:\n- ${stepSeed || '-'}`,
-      `User request: ${cleanText(source.message, 2400) || '-'}`,
-      'Return JSON with protocol { name, purpose, materials, steps, troubleshooting } and result_summary.',
-      'Placeholders should be rare. Keep concrete values for time, temperature, rpm, speed, centrifugation force, incubation length, volumes, and concentrations whenever the evidence states them.',
-      'If a truly critical experiment-specific value remains missing after using the supplied evidence and any available web search context, keep the step operational and use a bracket placeholder such as [DNA amount], [cell density], or [buffer composition].'
+      'Input protocol JSON:',
+      JSON.stringify(protocol && Object.keys(protocol).length ? protocol : source, null, 2),
+      'Return JSON with protocol { name, purpose, materials, steps, troubleshooting } and result_summary.'
     ].join('\n\n');
   }
 
   async function generateProtocol(input = {}) {
     const source = input && typeof input === 'object' ? input : {};
-    const prompt = buildPrompt(source);
-    const evidenceText = [
-      cleanText(source.method_text || source.methodText, 4000),
-      cleanText(source.source_summary, 1200),
-      cleanText(source.message, 1200),
-      asArray(source.steps).length ? 'steps' : '',
-      asArray(source.materials).length ? 'materials' : ''
-    ].filter(Boolean).join(' ');
-
-    if (!evidenceText) {
+    const protocolPayload = resolveProtocolPayload(source);
+    if (!Object.keys(protocolPayload).length) {
       return {
         ok: false,
         status: 'error',
-        error: 'Protocol generation requires method_text, steps, materials, source_summary, or message evidence.'
+        error: 'Protocol generation requires a protocol JSON object.'
       };
     }
 
-    const llmResult = await requestStructuredJsonPayload({
-      source,
-      stage: 'protocol_generation',
-      systemPrompt: PROTOCOL_GENERATION_SYSTEM_PROMPT,
-      userPrompt: prompt,
-      schema: PROTOCOL_GENERATION_RESPONSE_SCHEMA,
-      enableWebSearch: true,
-      traceContext: source.traceContext || null,
-      defaultError: 'Protocol generation provider is not configured.'
-    });
-
-    if (!llmResult?.ok || !llmResult.payload) {
-      return {
-        ok: false,
-        status: 'error',
-        error: cleanText(llmResult?.error, 600) || 'Protocol generation failed.'
-      };
-    }
-
-    const protocol = normalizeGeneratedProtocol(llmResult.payload, source);
+    const protocol = normalizeGeneratedProtocol(protocolPayload, source);
     if (!protocol.name || !protocol.steps.length) {
       return {
         ok: false,
         status: 'error',
-        error: 'Protocol generation returned incomplete protocol content.'
+        error: 'Protocol JSON must include a protocol name and at least one step.'
       };
     }
 
     return {
       ok: true,
-      status: 'generated',
+      status: 'normalized',
       protocol,
-      summary: cleanText(llmResult.payload.result_summary, 320) || `Generated protocol "${protocol.name}".`
+      summary: cleanText(source.result_summary || source.resultSummary || source.summary, 320)
+        || `Prepared protocol "${protocol.name}".`
     };
   }
 

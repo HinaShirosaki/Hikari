@@ -5,7 +5,10 @@ const path = require('path');
 const { hasSupportedDataExtension } = require('./storage-paths');
 const { asArray, cleanText, ensureObject, normalizeFileTimestamp } = require('./storage-utils');
 
-const STORAGE_MANIFEST_FILE_NAME = 'enana-storage-manifest.json';
+const STORAGE_MANIFEST_FILE_NAME = 'hikari-storage-manifest.json';
+const LEGACY_STORAGE_MANIFEST_FILE_NAMES = Object.freeze([
+  'enana-storage-manifest.json'
+]);
 
 function toPosixRelative(rootPath, targetPath) {
   return path.relative(rootPath, targetPath).split(path.sep).join('/');
@@ -32,7 +35,10 @@ function detectManifestRole(relativePath) {
   if (!normalized || normalized === '.') {
     return 'root';
   }
-  if (normalized === STORAGE_MANIFEST_FILE_NAME.toLowerCase()) {
+  if (
+    normalized === STORAGE_MANIFEST_FILE_NAME.toLowerCase()
+    || LEGACY_STORAGE_MANIFEST_FILE_NAMES.includes(normalized)
+  ) {
     return 'storage_manifest';
   }
   if (normalized === 'protocol') {
@@ -40,6 +46,12 @@ function detectManifestRole(relativePath) {
   }
   if (normalized === 'project') {
     return 'project_root';
+  }
+  if (normalized === 'samples') {
+    return 'samples_root';
+  }
+  if (normalized === 'samples/samples.json') {
+    return 'samples_record';
   }
   if (normalized.startsWith('project/') && normalized.endsWith('/memory.md')) {
     return 'project_memory';
@@ -56,7 +68,7 @@ function detectManifestRole(relativePath) {
   if (normalized === 'protocol/protocol.index.sqlite') {
     return 'protocol_index';
   }
-  if (normalized === 'enana-chemicals.index.sqlite') {
+  if (normalized === 'hikari-chemicals.index.sqlite' || normalized === 'enana-chemicals.index.sqlite') {
     return 'chemical_inventory_index';
   }
   if (normalized.endsWith('.index.sqlite')) {
@@ -138,6 +150,7 @@ function normalizeBundleSummary(snapshot) {
   return {
     protocols: asArray(source.protocols).length,
     notebookEntries: asArray(source.notebookEntries).length,
+    samples: asArray(source.samples).length,
     workflowTemplates: asArray(source.workflowTemplates).length,
     workflows: asArray(source.workflows).length,
     papers: asArray(source.papers).length,
@@ -148,7 +161,7 @@ function normalizeBundleSummary(snapshot) {
 
 function isBundleCandidateName(fileName) {
   const lower = String(fileName || '').toLowerCase();
-  if (!lower || lower === STORAGE_MANIFEST_FILE_NAME.toLowerCase()) {
+  if (!lower || lower === STORAGE_MANIFEST_FILE_NAME.toLowerCase() || LEGACY_STORAGE_MANIFEST_FILE_NAMES.includes(lower)) {
     return false;
   }
   if (lower.endsWith('.index.sqlite')) {
@@ -159,7 +172,7 @@ function isBundleCandidateName(fileName) {
 
 function isSqliteBundleCandidateName(fileName) {
   const lower = String(fileName || '').toLowerCase();
-  if (!lower || lower === STORAGE_MANIFEST_FILE_NAME.toLowerCase()) {
+  if (!lower || lower === STORAGE_MANIFEST_FILE_NAME.toLowerCase() || LEGACY_STORAGE_MANIFEST_FILE_NAMES.includes(lower)) {
     return false;
   }
   return lower.endsWith('.index.sqlite');

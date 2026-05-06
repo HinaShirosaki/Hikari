@@ -65,14 +65,14 @@ npm run start
 
 ## AI and Agent Setup
 
-Configure AI features in `Settings > LLM Model & API`.
+Configure AI features in `Settings > LLM Model & Access`.
 
 Supported providers:
 
 - `OpenAI`
 - `Gemini`
 - `Claude`
-- `OpenAI CLI (Codex)`
+- `Codex Agent (CLI)`
 
 Environment variable fallbacks:
 
@@ -83,13 +83,13 @@ Notes:
 
 - `Papers` and `Agent` require valid LLM settings.
 - Provider defaults come from [`config/llm-providers.json`](./config/llm-providers.json).
-- Codex CLI mode does not require an API key if you are already logged in with `codex login`.
+- Codex Agent mode does not use an API endpoint or API key; it uses the signed-in `codex` CLI plus Enana MCP tools.
 
-### Codex CLI setup
+### Codex Agent Setup
 
 1. Install the `codex` CLI and make sure it is available on `PATH`.
 2. Run `codex login`.
-3. In `Settings > LLM Model & API`, select `OpenAI CLI (Codex)`.
+3. In `Settings > LLM Model & Access`, select `Codex Agent (CLI)`.
 4. Optionally choose a model and reasoning effort.
 
 ## Telegram Bot
@@ -169,7 +169,7 @@ Packaging notes:
 - `src/main/main.js`: Electron main process, window lifecycle, IPC wiring, LLM integration, and Telegram lifecycle.
 - `src/main/helpers/main/`: persistence, storage-bundle import/export, sequence-library logic, and main-process IPC registrars.
 - `src/main/helpers/agent/`: agent backend, tool execution, runtime orchestration, and deep-research pipeline.
-- `src/main/lib/`: process-level integrations such as the Telegram bot and Codex CLI provider.
+- `src/main/lib/`: process-level integrations such as the Telegram bot and Codex agent launcher.
 - `src/renderer/`: renderer shell, feature modules, shared state, and service layer.
 - `ui/html/` and `ui/css/`: source fragments used to generate the shipped `index.html` and `styles.css`.
 - `ui/config/`: source-of-truth ordering and app-registry config for generated UI assets.
@@ -194,7 +194,8 @@ If you are onboarding to the codebase, these are the best starting points:
 
 ### Papers or Agent says an API key is missing
 
-- Set the provider, model, endpoint, and key in `Settings > LLM Model & API`.
+- For OpenAI, Gemini, or Claude, set the provider, model, endpoint, and key in `Settings > LLM Model & Access`.
+- For Codex Agent, sign in with `codex login`; no endpoint or API key is used.
 - Or export `ENANA_LLM_API_KEY` / `LLM_API_KEY` before launching the app.
 
 ### Codex mode is selected but nothing responds

@@ -17,7 +17,7 @@
   },
   {
     "name": "notebook-draft",
-    "description": "Propose a likely next experiment, prepare a planned biology notebook draft, and wait for explicit confirmation before creating the page."
+    "description": "Propose a likely next experiment, optionally using prior record/literature evidence, prepare a planned biology notebook draft, and wait for explicit confirmation before creating the page."
   },
   {
     "name": "python-sandbox",
@@ -29,11 +29,11 @@
   },
   {
     "name": "web-search",
-    "description": "Search the public web through the agent's shared provider-backed web-search API. This uses provider-native web search when available, or Codex CLI with `--search` when the agent runs on Codex."
+    "description": "Search the public web through the agent's shared web-search transport. This uses provider-native web search when available, or Codex agent search when the agent runs on Codex."
   },
   {
     "name": "sub-agent",
-    "description": "Create, message, inspect, list, and delete helper sub-agent sessions managed outside the main agent."
+    "description": "Create, message, inspect, list, and delete Codex CLI-backed helper sub-agent sessions managed outside the main agent."
   },
   {
     "name": "memory",
@@ -57,6 +57,6 @@
   },
   {
     "name": "protocol-generation",
-    "description": "Generate a concise reusable protocol from extracted paper methods, step seeds, or other structured method evidence."
+    "description": "Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call or required protocol id."
   }
 ]

@@ -199,19 +199,14 @@ function createPaperAnalysisRuntime(deps = {}) {
     let generatedProtocol = null;
     if (context.generate_protocol === true && normalized.protocol_candidate) {
       const protocolResult = await protocolGenerationRuntime.generateProtocol({
-        provider: cleanText(source.provider, 80),
-        endpoint: cleanText(source.endpoint, 2000),
-        apiKey: cleanText(source.apiKey, 400),
-        model: cleanText(source.model, 120),
-        title: normalized.protocol_candidate.title || context.protocol_title_hint,
-        purpose: normalized.protocol_candidate.purpose,
-        method_text: normalized.protocol_candidate.method_text,
-        materials: normalized.protocol_candidate.materials,
-        steps: normalized.protocol_candidate.steps,
-        source_paper_title: context.title,
-        source_summary: normalized.brief_summary,
-        message: context.message,
-        traceContext: source.traceContext || null
+        protocol: {
+          name: normalized.protocol_candidate.title || context.protocol_title_hint,
+          purpose: normalized.protocol_candidate.purpose,
+          materials: normalized.protocol_candidate.materials,
+          steps: normalized.protocol_candidate.steps,
+          troubleshooting: normalized.protocol_candidate.troubleshooting || normalized.protocol_candidate.notes || ''
+        },
+        result_summary: normalized.brief_summary
       });
       if (protocolResult?.ok === true) {
         generatedProtocol = protocolResult.protocol;

@@ -105,7 +105,9 @@ function normalizeLlmProviderCatalog(catalog) {
     if (seenIds.has(id)) {
       throw new Error(`Duplicate LLM provider id in llm-providers.json: ${id}`);
     }
-    if (!label || !defaultEndpoint || !modelPlaceholder || !apiKeyPlaceholder) {
+    const requiresApiKey = entry.requiresApiKey !== false;
+    const allowsEmptyEndpoint = id === 'codex' && !requiresApiKey;
+    if (!label || (!defaultEndpoint && !allowsEmptyEndpoint) || !modelPlaceholder || !apiKeyPlaceholder) {
       throw new Error(`LLM provider "${id}" is missing a required field`);
     }
 
@@ -119,7 +121,7 @@ function normalizeLlmProviderCatalog(catalog) {
       defaultModel,
       modelPlaceholder,
       apiKeyPlaceholder,
-      requiresApiKey: entry.requiresApiKey !== false,
+      requiresApiKey,
       endpointHints,
       models
     };
@@ -257,6 +259,9 @@ function buildLlmProviderModuleSource({ catalog, moduleType }) {
     "  const value = String(endpoint || '').trim().toLowerCase();",
     '  if (!value) {',
     "    return '';",
+    '  }',
+    "  if (value.startsWith('codex://') || value.includes('codex cli') || value.includes('codex agent')) {",
+    '    return LLM_PROVIDERS.CODEX;',
     '  }',
     '  for (const provider of LLM_PROVIDER_CONFIGS) {',
     '    const hints = Array.isArray(provider.endpointHints) ? provider.endpointHints : [];',

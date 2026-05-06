@@ -17,6 +17,7 @@
         <div class="sequence-viewer-detail-topbar">
           <button id="sequence-viewer-back-btn" type="button" class="ghost-btn">Back to Library</button>
           <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+          <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
           <label class="sequence-viewer-save-name-wrap">
             Save Name
             <input id="sequence-viewer-save-name" placeholder="e.g. pLenti_GFP" />
@@ -104,15 +105,15 @@
         </form>
 
         <div class="sequence-viewer-results">
-          <section class="plannotate-result-card sequence-viewer-sequence-card">
-            <div class="plannotate-card-head">
+          <section class="result-card sequence-viewer-sequence-card">
+            <div class="result-card-head">
               <h4>Sequence (Dual Strand)</h4>
             </div>
             <div id="sequence-viewer-sequence-host" class="sequence-viewer-sequence-host">
               <p class="small-note">Load sequence data to begin.</p>
             </div>
             <div class="sequence-viewer-feature-bottom">
-              <div class="plannotate-card-head">
+              <div class="result-card-head">
                 <h4>Features (Bottom Track)</h4>
               </div>
               <div id="sequence-viewer-feature-rail-host" class="sequence-viewer-feature-rail-host">
@@ -124,8 +125,8 @@
             </div>
           </section>
 
-          <section class="plannotate-result-card">
-            <div class="plannotate-card-head">
+          <section class="result-card">
+            <div class="result-card-head">
               <h4>Summary</h4>
             </div>
             <div class="sequence-viewer-stats">
@@ -148,7 +149,7 @@
 
         <div id="sequence-viewer-feature-editor-overlay" class="sequence-viewer-feature-editor-overlay" hidden>
           <form id="sequence-viewer-feature-editor-form" class="sequence-viewer-feature-editor" autocomplete="off">
-            <div class="plannotate-card-head sequence-viewer-feature-editor-head">
+            <div class="result-card-head sequence-viewer-feature-editor-head">
               <h4 id="sequence-viewer-feature-editor-title">Add Feature</h4>
               <button id="sequence-viewer-feature-editor-close" type="button" class="ghost-btn">Close</button>
             </div>
@@ -193,7 +194,7 @@
 
         <div id="sequence-viewer-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay" hidden>
           <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog" autocomplete="off">
-            <div class="plannotate-card-head sequence-viewer-sequence-edit-head">
+            <div class="result-card-head sequence-viewer-sequence-edit-head">
               <h4 id="sequence-viewer-sequence-edit-title">Edit Bases</h4>
               <button id="sequence-viewer-sequence-edit-close" type="button" class="ghost-btn">Close</button>
             </div>
@@ -228,8 +229,8 @@
             </div>
 
             <div class="sequence-viewer-backbone-dialog-grid">
-              <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel">
-                <div class="plannotate-card-head">
+              <section class="result-card sequence-viewer-backbone-dialog-panel">
+                <div class="result-card-head">
                   <h4>Candidate List</h4>
                 </div>
                 <div id="sequence-viewer-backbone-dialog-candidates" class="sequence-viewer-backbone-dialog-candidates">
@@ -237,8 +238,8 @@
                 </div>
               </section>
 
-              <section class="plannotate-result-card sequence-viewer-backbone-dialog-panel sequence-viewer-backbone-dialog-preview-panel">
-                <div class="plannotate-card-head">
+              <section class="result-card sequence-viewer-backbone-dialog-panel sequence-viewer-backbone-dialog-preview-panel">
+                <div class="result-card-head">
                   <h4>Preview</h4>
                 </div>
                 <div id="sequence-viewer-backbone-dialog-summary" class="calc-output sequence-viewer-backbone-dialog-summary">
@@ -258,6 +259,63 @@
         </div>
       </div>
 
+      <div id="sequence-viewer-cloning-design-workspace" class="sequence-viewer-cloning-design-workspace" hidden>
+        <div class="sequence-viewer-cloning-design-toolbar">
+          <div class="sequence-viewer-cloning-design-toolbar-nav">
+            <button id="sequence-viewer-cloning-design-back-btn" type="button" class="ghost-btn">Back to Sequence</button>
+          </div>
+          <div class="sequence-viewer-cloning-design-toolbar-copy">
+            <h2>Cloning Design</h2>
+            <span id="sequence-viewer-cloning-design-status" class="small-note">Edit the active sequence to enable cloning design.</span>
+          </div>
+          <div class="form-actions sequence-viewer-cloning-design-toolbar-actions">
+            <button id="sequence-viewer-cloning-design-run-btn" type="button" class="primary-btn">Design Primers</button>
+          </div>
+        </div>
+
+        <div class="sequence-viewer-cloning-design-grid left-rail-template">
+          <aside class="sequence-viewer-cloning-design-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+            <section class="sequence-viewer-cloning-design-panel">
+              <div class="result-card-head">
+                <h4>Route</h4>
+              </div>
+              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-mode-switch sequence-viewer-cloning-design-strategy-list" role="tablist" aria-label="Cloning design route"></div>
+            </section>
+
+            <section class="sequence-viewer-cloning-design-panel">
+              <div class="result-card-head">
+                <h4>Sequence Edit</h4>
+              </div>
+              <div id="sequence-viewer-cloning-design-edit-summary" class="sequence-viewer-cloning-design-edit-summary calc-output">
+                <p class="small-note">Edit summary will appear here.</p>
+              </div>
+            </section>
+
+            <section id="sequence-viewer-cloning-design-range-panel" class="sequence-viewer-cloning-design-panel" hidden>
+              <div class="result-card-head">
+                <h4>Amplicon</h4>
+              </div>
+              <div class="form-grid sequence-viewer-cloning-design-range-grid">
+                <label>
+                  Start
+                  <input id="sequence-viewer-cloning-design-insert-start" type="number" min="1" step="1" />
+                </label>
+                <label>
+                  End
+                  <input id="sequence-viewer-cloning-design-insert-end" type="number" min="1" step="1" />
+                </label>
+              </div>
+            </section>
+          </aside>
+
+          <div class="sequence-viewer-cloning-design-main left-rail-template__main">
+            <div id="sequence-viewer-cloning-design-result" class="sequence-viewer-cloning-design-result">
+              <p class="small-note">Choose a route, then design primers.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace" hidden>
         <div class="sequence-viewer-alignment-dialog" role="dialog" aria-modal="true" aria-label="Alignment">
           <div class="sequence-viewer-alignment-toolbar">
@@ -265,8 +323,8 @@
             <span id="sequence-viewer-alignment-status" class="small-note">Paste a sequence or choose a file to align against the current record.</span>
           </div>
 
-          <section class="plannotate-result-card sequence-viewer-alignment-panel">
-            <div class="plannotate-card-head">
+          <section class="result-card sequence-viewer-alignment-panel">
+            <div class="result-card-head">
               <h4>New Query</h4>
             </div>
             <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Alignment query input mode">

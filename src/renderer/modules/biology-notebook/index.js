@@ -51,6 +51,11 @@ import {
 } from './entry-record-builder.js';
 import { registerNotebookSelectionInsightsHost } from './selection-insights-host.js';
 import { isPathInsideRoot } from '../storage-path-normalizer.js';
+import {
+  changedFieldList,
+  describeNotebookEntryChanges,
+  logNotebookPageEvent
+} from './page-log.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({
@@ -81,7 +86,6 @@ export function initLabNotebook({
   const notebookCancelProtocolEditBtn = document.getElementById('biology-notebook-cancel-protocol-edit-btn');
   const notebookExportBtn = document.getElementById('biology-notebook-export-btn');
   const notebookMarkExecutedBtn = document.getElementById('biology-notebook-mark-executed-btn');
-  const notebookPageListStatus = document.getElementById('biology-notebook-page-list-status');
   const notebookProtocolEditor = document.getElementById('biology-notebook-protocol-editor');
   const notebookProtocolDraftName = document.getElementById('biology-notebook-page-protocol-name');
   const notebookProtocolDraftSteps = document.getElementById('biology-notebook-page-protocol-steps');
@@ -161,17 +165,11 @@ export function initLabNotebook({
 
   const entryListRenderer = createEntryListRenderer({
     listEl: notebookEntryList,
-    statusEl: notebookPageListStatus,
     notebookType,
     safeText,
     getNotebookEntries: () => state.notebookEntries,
     getProjects: () => state.projects,
-    getProtocols: () => state.protocols,
-    getEditingEntryId: () => editingEntryId,
-    getViewerProtocolDraft: () => protocolEditor.getDraft(),
-    getSelectedProjectId: () => notebookProjectSelect.value,
-    getSelectedProtocolId: () => notebookProtocolSelect.value,
-    getActiveEntry: () => getActiveEntry()
+    getEditingEntryId: () => editingEntryId
   });
 
   const dropdownRenderer = createDropdownRenderer({
@@ -181,7 +179,6 @@ export function initLabNotebook({
     safeText,
     getProjects: () => state.projects,
     getProtocols: () => state.protocols,
-    onAfterRender: () => entryListRenderer.updatePageListStatus(),
     onProtocolChange: () => onProtocolChange()
   });
 
@@ -344,7 +341,6 @@ export function initLabNotebook({
         resultTableOverride: resultTable,
         preserveSelectedFiles: true
       });
-      entryListRenderer.updatePageListStatus();
       return;
     }
 
@@ -368,9 +364,21 @@ export function initLabNotebook({
       return;
     }
 
+    const previousProtocolName = entry.protocolName || '';
     state.notebookEntries[index] = nextEntry;
     protocolEditor.setDraft(null);
     persist();
+    logNotebookPageEvent({
+      entry: nextEntry,
+      storagePath: state.settings?.storagePath,
+      action: 'protocol-edit',
+      summary: `Edited protocol snapshot${nextEntry.protocolName ? ` (${nextEntry.protocolName})` : ''}`,
+      details: {
+        previousProtocolName,
+        protocolName: nextEntry.protocolName || '',
+        protocolId: nextEntry.protocolId || ''
+      }
+    });
     entryListRenderer.renderEntries();
     renderProtocolViewer({
       project,
@@ -510,11 +518,13 @@ export function initLabNotebook({
     const index = editingEntry
       ? state.notebookEntries.findIndex((item) => item.id === editingEntry.id)
       : -1;
+    const previousEntrySnapshot = index >= 0 ? { ...state.notebookEntries[index] } : null;
     if (index >= 0) {
       state.notebookEntries[index] = { ...state.notebookEntries[index], ...entry };
     } else {
       state.notebookEntries.push(entry);
     }
+    const persistedEntry = index >= 0 ? state.notebookEntries[index] : entry;
 
     editingEntryId = entry.id;
     protocolEditor.setDraft(null);
@@ -522,6 +532,38 @@ export function initLabNotebook({
     updateSaveButtonLabel();
 
     persist();
+    if (previousEntrySnapshot) {
+      const changes = describeNotebookEntryChanges(previousEntrySnapshot, persistedEntry);
+      const changedFields = changedFieldList(changes);
+      if (changedFields.length) {
+        logNotebookPageEvent({
+          entry: persistedEntry,
+          storagePath: state.settings?.storagePath,
+          action: 'update',
+          summary: `Updated notebook page (${changedFields.join(', ')})`,
+          details: {
+            changedFields,
+            changes,
+            experimentName: persistedEntry.experimentName || '',
+            importedFileCount: importedResultFileRecords.length
+          }
+        });
+      }
+    } else {
+      logNotebookPageEvent({
+        entry: persistedEntry,
+        storagePath: state.settings?.storagePath,
+        action: 'create',
+        summary: `Created notebook page${persistedEntry.experimentName ? ` "${persistedEntry.experimentName}"` : ''}`,
+        details: {
+          notebookType,
+          projectName: persistedEntry.projectName || '',
+          protocolName: persistedEntry.protocolName || '',
+          experimentName: persistedEntry.experimentName || '',
+          importedFileCount: importedResultFileRecords.length
+        }
+      });
+    }
     notebookResultFile.value = '';
     entryListRenderer.renderEntries();
     renderProtocolViewer({
@@ -556,6 +598,16 @@ export function initLabNotebook({
       if (!savedEntry) {
         throw new Error('Unable to save the clarified notebook entry.');
       }
+      logNotebookPageEvent({
+        entry: savedEntry,
+        storagePath: state.settings?.storagePath,
+        action: 'clarify',
+        summary: 'Clarified notebook note via LLM',
+        details: {
+          sourceCharacters: source.length,
+          combinedCharacters: combinedNote.length
+        }
+      });
       showTransientNotice('Clarified note saved.');
     } catch (error) {
       showTransientNotice(String(error?.message || error || 'Failed to clarify the notebook entry.'), {
@@ -642,7 +694,6 @@ export function initLabNotebook({
     if (!project || !protocol) {
       clearViewer();
       entryListRenderer.renderEntries();
-      entryListRenderer.updatePageListStatus();
       return;
     }
 
@@ -658,7 +709,6 @@ export function initLabNotebook({
       isSavedEntry: true
     });
     entryListRenderer.renderEntries();
-    entryListRenderer.updatePageListStatus();
   }
 
   function renderProtocolViewer({
@@ -794,6 +844,13 @@ export function initLabNotebook({
     };
     state.notebookEntries[index] = nextEntry;
     persist();
+    logNotebookPageEvent({
+      entry: nextEntry,
+      storagePath: state.settings?.storagePath,
+      action: 'execute',
+      summary: 'Marked notebook page as executed',
+      details: { executedAt: timestamp }
+    });
     entryListRenderer.renderEntries();
 
     const project = getEntryProject(nextEntry);
@@ -836,8 +893,26 @@ export function initLabNotebook({
       sampleLinks: collectNotebookSampleLinks(state.notebookEntries[index], protocol),
       updatedAt: timestamp
     };
+    const previousEntrySnapshot = { ...state.notebookEntries[index] };
     state.notebookEntries[index] = nextEntry;
     persist();
+    const changes = describeNotebookEntryChanges(previousEntrySnapshot, nextEntry, [
+      'values',
+      'result',
+      'resultTable',
+      'sampleLinks'
+    ]);
+    const changedFields = changedFieldList(changes);
+    if (changedFields.length) {
+      const sampleLinkCount = Array.isArray(nextEntry.sampleLinks) ? nextEntry.sampleLinks.length : 0;
+      logNotebookPageEvent({
+        entry: nextEntry,
+        storagePath: state.settings?.storagePath,
+        action: 'sample-link-update',
+        summary: `Updated linked samples (${changedFields.join(', ')})`,
+        details: { changedFields, changes, sampleLinkCount }
+      });
+    }
     entryListRenderer.renderEntries();
     const project = getEntryProject(nextEntry);
     if (project && notebookProtocolMeta) {

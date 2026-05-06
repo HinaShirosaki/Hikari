@@ -127,6 +127,18 @@ export function collectAgentActivityRows(meta) {
     upsertRow('done', `Purchase matches: ${purchaseItemCount}`);
   }
 
+  const codexAgent = meta.codex_agent && typeof meta.codex_agent === 'object'
+    ? meta.codex_agent
+    : {};
+  const codexAgentStatus = trimText(codexAgent.status, 40);
+  if (codexAgentStatus) {
+    upsertRow(codexAgentStatus === 'completed' ? 'done' : 'pending', `Codex agent status: ${codexAgentStatus}`);
+  }
+  const codexCitationCount = asArray(codexAgent.citations).length;
+  if (codexCitationCount > 0) {
+    upsertRow('done', `Codex agent citations: ${codexCitationCount}`);
+  }
+
   [
     ['General science', meta.general_science_question],
     ['Project science', meta.project_science_question],
@@ -274,6 +286,20 @@ export function summarizePurchaseRecommendation(purchaseRecommendation) {
   return '';
 }
 
+export function summarizeCodexAgent(codexAgent) {
+  const payload = codexAgent && typeof codexAgent === 'object' ? codexAgent : {};
+  const status = trimText(payload.status, 40);
+  if (!status) {
+    return '';
+  }
+  if (status === 'needs_more_info') {
+    return asArray(payload.follow_up_questions).map((item) => trimText(item, 500)).filter(Boolean).join(' ')
+      || trimText(payload.answer, 12000)
+      || 'I need more detail before I can continue.';
+  }
+  return trimText(payload.answer || payload.assistant_text, 12000);
+}
+
 export function summarizeScienceResult(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
   const status = trimText(source.status, 40);
@@ -357,6 +383,9 @@ export function normalizeAgentResponse(result) {
   const purchaseRecommendation = result?.purchase_recommendation && typeof result.purchase_recommendation === 'object'
     ? result.purchase_recommendation
     : null;
+  const codexAgent = result?.codex_agent && typeof result.codex_agent === 'object'
+    ? result.codex_agent
+    : null;
   const generalScienceQuestion = result?.general_science_question && typeof result.general_science_question === 'object'
     ? result.general_science_question
     : null;
@@ -369,11 +398,13 @@ export function normalizeAgentResponse(result) {
   const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
   const recordSummaryText = summarizeRecordLookup(recordLookup);
   const purchaseRecommendationText = summarizePurchaseRecommendation(purchaseRecommendation);
+  const codexAgentText = summarizeCodexAgent(codexAgent);
   const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
     || summarizeScienceResult(projectScienceQuestion)
     || summarizeScienceResult(resultAnalysis);
   const assistantText = notebookDraftText
+    || codexAgentText
     || (protocolStatus === 'completed'
       ? (completedNotebookText
         || `Notebook draft completed using protocol ${trimText(protocolWorkflow?.selected_protocol?.name, 220) || 'selection'}.`)
@@ -392,6 +423,7 @@ export function normalizeAgentResponse(result) {
     notebookDraftWorkflow,
     notebookPayload,
     purchaseRecommendation,
+    codexAgent,
     inventoryLookup,
     recordLookup,
     generalScienceQuestion,

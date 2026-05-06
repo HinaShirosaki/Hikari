@@ -242,8 +242,8 @@ export const DEVELOPER_TOOL_TEST_OPTIONS = [
   {
     name: 'protocol-generation',
     label: 'Protocol Generation',
-    description: 'Pass a concise free-text method summary and inspect the generated protocol payload.',
-    example: 'Generate a concise purification protocol from this summary.'
+    description: 'Pass complete protocol JSON and inspect the normalized protocol payload.',
+    example: '{"protocol":{"name":"Atlas Binder Purification","steps":["Clarify lysate.","Bind to Ni-NTA resin for [time]."]}}'
   }
 ];
 

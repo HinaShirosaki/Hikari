@@ -14,7 +14,7 @@ function createMainAppPaths(deps = {}) {
   const processObject = deps.processObject || process;
   const projectRoot = String(deps.projectRoot || processObject.cwd() || '').trim();
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
-  const defaultDataFileName = String(deps.defaultDataFileName || 'enana-data.json').trim() || 'enana-data.json';
+  const defaultDataFileName = String(deps.defaultDataFileName || 'hikari-data.json').trim() || 'hikari-data.json';
   const telegramConfigFileName = String(deps.telegramConfigFileName || 'telegram-bot.json').trim() || 'telegram-bot.json';
   const agentChatLogFileName = String(deps.agentChatLogFileName || 'agent-chat.log').trim() || 'agent-chat.log';
 
@@ -35,21 +35,21 @@ function createMainAppPaths(deps = {}) {
   }
 
   function getDefaultAppDataRoot() {
-    const override = String(processObject.env.ENANA_APP_DATA_ROOT || '').trim();
+    const override = String(processObject.env.HIKARI_APP_DATA_ROOT || processObject.env.ENANA_APP_DATA_ROOT || '').trim();
     if (override) {
       return path.resolve(override);
     }
 
     const documentsPath = getDocumentsPath();
     if (documentsPath) {
-      return path.join(documentsPath, 'Enana');
+      return path.join(documentsPath, 'Hikari');
     }
 
     return path.join(projectRoot || processObject.cwd(), 'data');
   }
 
   function getCodexCliHomePath() {
-    const override = String(processObject.env.ENANA_CODEX_HOME || '').trim();
+    const override = String(processObject.env.HIKARI_CODEX_HOME || processObject.env.ENANA_CODEX_HOME || '').trim();
     if (override) {
       return path.resolve(override);
     }
@@ -96,6 +96,15 @@ function createMainAppPaths(deps = {}) {
     return path.join(getDefaultAppDataRoot(), 'Tmp', 'agent-python-sandbox');
   }
 
+  function getAgentMemoryFilePath() {
+    const override = String(processObject.env.ENANA_AGENT_MEMORY_PATH || '').trim();
+    if (override) {
+      return path.resolve(override);
+    }
+
+    return path.join(getDefaultAppDataRoot(), 'Agent', 'memory.json');
+  }
+
   function getAgentChatSessionStoragePath(payload) {
     return cleanText(
       payload?.stateSnapshot?.settings?.storagePath
@@ -112,6 +121,7 @@ function createMainAppPaths(deps = {}) {
     getTelegramConfigPath,
     getAgentChatLogPath,
     getAgentPythonSandboxRoot,
+    getAgentMemoryFilePath,
     getAgentChatSessionStoragePath
   };
 }

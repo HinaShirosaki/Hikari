@@ -59,9 +59,9 @@ So the folder contains more capability than the current controller wiring expose
 | `literature-search` | `tools/agent-literature-search.js` | search PubMed, Europe PMC, Crossref, UniProt, or web RSS results |
 | `paper-download` | `tools/agent-paper-download.js` | locate PDF URLs, download papers, track progress, and fall back to browser-assisted download |
 | `paper-analysis` | `tools/agent-paper-analysis.js` | summarize a paper and optionally extract/generate a protocol |
-| `protocol-generation` | `tools/agent-protocol-generation.js` | turn methods evidence into a reusable protocol payload |
+| `protocol-generation` | `tools/agent-protocol-generation.js` | normalize supplied protocol JSON into an import-ready protocol payload |
 | `python-sandbox` | `tools/agent-python-sandbox.js` | run agent-authored Python in a sandbox and optionally supervise it through a sub-agent |
-| `sub-agent` | `tools/agent-sub-agent.js` | create, message, inspect, list, and delete helper sub-agent sessions |
+| `sub-agent` | `tools/agent-sub-agent.js` | create, message, inspect, list, and delete Codex CLI-backed helper sub-agent sessions |
 | `memory` | `context/agent-memory.js` | sparse long-term memory with `remember`, `recall`, `forget`, and `list` actions |
 
 ## Tool group walkthrough
@@ -86,7 +86,7 @@ These four files form one sub-system:
 - `agent-notebook-draft.js`
 - `agent-protocol-generation.js`
 
-`protocol-matching` chooses a protocol. `notebook-generation` fills placeholders and creates a notebook payload. `notebook-draft` guesses the next likely experiment before handing off to notebook generation. `protocol-generation` is the paper-to-reusable-protocol converter.
+`protocol-matching` chooses a protocol. `notebook-generation` fills placeholders and creates a notebook payload. `notebook-draft` guesses the next likely experiment before handing off to notebook generation. `protocol-generation` is the deterministic protocol-JSON normalizer; callers must author or extract the protocol JSON before invoking it.
 
 ## Literature and paper tools
 

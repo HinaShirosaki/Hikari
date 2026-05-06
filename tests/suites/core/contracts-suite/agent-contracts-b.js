@@ -136,7 +136,7 @@ module.exports = function registerAgentContractsB(context = {}) {
       const protocolSource = fs.readFileSync(agentPath('tools', 'agent-protocol-generation.js'), 'utf8');
       const llmUtilsSource = fs.readFileSync(agentPath('shared', 'agent-llm-utils.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
-      const openAiCliProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'openai-cli-provider.js'), 'utf8');
+      const codexAgentProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'codex-agent-provider.js'), 'utf8');
       const openAiProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'openai-provider.js'), 'utf8');
       const claudeProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'claude-provider.js'), 'utf8');
       const geminiProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'gemini-provider.js'), 'utf8');
@@ -179,21 +179,21 @@ module.exports = function registerAgentContractsB(context = {}) {
       assert.doesNotMatch(llmUtilsSource, /requestOpenAiResponsesWithBackoff/);
       assert.doesNotMatch(llmUtilsSource, /requestClaudeMessagesWithBackoff/);
       assert.doesNotMatch(llmUtilsSource, /requestGeminiGenerateContentWithBackoff/);
-      assert.match(llmBridgeSource, /llm-providers\/openai-cli-provider/);
+      assert.match(llmBridgeSource, /llm-providers\/codex-agent-provider/);
       assert.match(llmBridgeSource, /llm-providers\/openai-provider/);
       assert.match(llmBridgeSource, /llm-providers\/claude-provider/);
       assert.match(llmBridgeSource, /llm-providers\/gemini-provider/);
       assert.match(openAiProviderSource, /input_file/);
       assert.match(geminiProviderSource, /inlineData/);
       assert.match(claudeProviderSource, /document/);
-      assert.match(openAiCliProviderSource, /enableWebSearch/);
+      assert.match(codexAgentProviderSource, /enableWebSearch/);
       assert.match(mainAgentServicesSource, /createWebSearchRuntime/);
       assert.match(mainAgentServicesSource, /const webSearchRuntime = createWebSearchRuntime/);
       assert.match(mainAgentServicesSource, /webSearchRuntime,/);
       assert.match(mainAgentServicesSource, /createPaperContextLoaderRuntime/);
       assert.match(mainAgentServicesSource, /paperContextLoaderRuntime/);
       assert.equal(readSource('src/main/helpers/agent/tools/agent-paper-analysis.js').includes("require('../shared/agent-llm-utils.js')"), true);
-      assert.equal(readSource('src/main/helpers/agent/tools/agent-protocol-generation.js').includes("require('../shared/agent-llm-utils.js')"), true);
+      assert.equal(readSource('src/main/helpers/agent/tools/agent-protocol-generation.js').includes("require('../shared/agent-llm-utils.js')"), false);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'web-search'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
@@ -337,14 +337,19 @@ module.exports = function registerAgentContractsB(context = {}) {
       const { DEEP_RESEARCH_POLICIES } = require(agentPath('deep-research', 'index.js'));
       const { getToolInputSchemas } = require(agentPath('tools', 'agent-tool-loading.js'));
       const { REASONING_ENTRY_TOOL_SCOPES } = require(agentPath('tools', 'agent-tool-provide.js'));
+      const catalogToolCount = getToolInputSchemas().length;
 
       SCIENCE_REASONING_INTENTS.map((intent) => getScienceReasoningPolicy(intent)).forEach((policy) => {
-        assert.equal(policy.tool_scope, null);
+        assert.equal(Array.isArray(policy.tool_scope), true);
+        assert.equal(policy.tool_scope.length > 0, true);
+        assert.equal(policy.tool_scope.length < catalogToolCount, true);
         const resolved = getToolInputSchemas(policy.tool_scope);
         assert.equal(resolved.length > 0, true);
       });
       Object.values(DEEP_RESEARCH_POLICIES).forEach((policy) => {
-        assert.equal(policy.tool_scope, null);
+        assert.equal(Array.isArray(policy.tool_scope), true);
+        assert.equal(policy.tool_scope.length > 0, true);
+        assert.equal(policy.tool_scope.length < catalogToolCount, true);
         const resolved = getToolInputSchemas(policy.tool_scope);
         assert.equal(resolved.length > 0, true);
       });

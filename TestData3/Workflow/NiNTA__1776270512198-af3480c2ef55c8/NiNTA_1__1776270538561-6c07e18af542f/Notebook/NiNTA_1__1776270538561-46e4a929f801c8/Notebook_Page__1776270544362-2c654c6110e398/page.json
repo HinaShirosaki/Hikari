@@ -1,11 +1,11 @@
 {
-  "exportedAt": "2026-04-28T16:53:02.688Z",
+  "exportedAt": "2026-05-06T03:22:05.156Z",
   "workflowId": "1776270538561-6c07e18af542f",
   "notebookEntry": {
     "id": "1776270544362-2c654c6110e398",
     "notebookType": "biology",
     "projectId": "",
-    "projectName": "",
+    "projectName": "Untitled Project",
     "protocolId": "1774024047007-d137dae96cab78",
     "protocolName": "BL21(DE3) Chemical Transformation with pET28a",
     "protocolSnapshot": {
@@ -57,14 +57,14 @@
       ]
     },
     "values": {
-      "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": ""
+      "1774125436234-5e6cd5beb943b:1774125436234-cac9aa958fe75": "vjhv"
     },
     "result": "",
     "resultFiles": [],
     "resultFileRecords": [],
     "storageFolder": "",
     "createdAt": "2026-04-15T16:29:04.362Z",
-    "updatedAt": "2026-04-22T02:06:42.306Z",
+    "updatedAt": "2026-05-02T23:52:36.164Z",
     "notebookState": "executed",
     "executedAt": "2026-04-15T16:29:20.078Z",
     "workflowContext": {
@@ -77,6 +77,11 @@
     },
     "assayIds": [],
     "gelAnalysisIds": [],
-    "experimentName": "BL21(DE3) Chemical Transformation with pET28a"
+    "experimentName": "BL21(DE3) Chemical Transformation with pET28a",
+    "resultTable": null,
+    "sampleLinks": [],
+    "agentDraftStatus": "",
+    "agentDraftMeta": {},
+    "selectionInsights": []
   }
 }

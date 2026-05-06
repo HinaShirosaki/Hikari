@@ -716,10 +716,9 @@ function buildSearchQueries(input = {}) {
   ], 4);
 }
 
-function usesCodexCliPurchasePath(input = {}) {
+function usesCodexAgentPurchasePath(input = {}) {
   const provider = cleanText(input.provider, 80).toLowerCase();
-  const endpoint = cleanText(input.endpoint, 2000).toLowerCase();
-  return provider === 'codex' || endpoint.startsWith('codex://');
+  return provider === 'codex';
 }
 
 function buildFastCodexSearchQueries(input = {}, filters = {}, priorRounds = []) {
@@ -1221,7 +1220,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
     }
     const response = await fetchImpl(url, {
       headers: {
-        'user-agent': 'Mozilla/5.0 Enana Purchase Recommendation'
+        'user-agent': 'Mozilla/5.0 Hikari Purchase Recommendation'
       }
     });
     const failed = response?.ok === false || Number(response?.status) >= 400;
@@ -1261,7 +1260,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
         priorRounds
       })
       : buildSearchQueries(input);
-    if (usesCodexCliPurchasePath(input)) {
+    if (usesCodexAgentPurchasePath(input)) {
       return {
         planner: 'fast_codex_heuristic',
         reasoning: 'Using fast Codex purchase planning to avoid extra CLI round-trips.',
@@ -1321,7 +1320,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
     heuristicReasoning = {},
     candidateLinks = []
   } = {}) {
-    if (!requestStructuredJsonPayload || usesCodexCliPurchasePath(input)) {
+    if (!requestStructuredJsonPayload || usesCodexAgentPurchasePath(input)) {
       return null;
     }
     try {
@@ -1376,7 +1375,7 @@ function createPurchaseRecommendationRuntime(deps = {}) {
   async function execute(input = {}) {
     const query = deriveProductQuery(input);
     const filters = resolveFilters(input);
-    const fastCodexPath = usesCodexCliPurchasePath(input);
+    const fastCodexPath = usesCodexAgentPurchasePath(input);
     if (!query) {
       return {
         ok: true,

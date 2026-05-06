@@ -1,0 +1,218 @@
+/* Universal selection treatment for list rows inside the shared left rail. */
+
+:root {
+  --enana-left-rail-list-radius: 8px;
+  --enana-left-rail-list-hover: color-mix(in srgb, var(--surface-subtle) 64%, transparent);
+  --enana-left-rail-list-selected: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
+  --enana-left-rail-list-focus: color-mix(in srgb, var(--focus) 22%, transparent);
+}
+
+body.theme-night {
+  --enana-left-rail-list-hover: color-mix(in srgb, var(--surface-subtle) 72%, #ffffff 4%);
+  --enana-left-rail-list-selected: color-mix(in srgb, var(--surface-subtle) 86%, #ffffff 7%);
+  --enana-left-rail-list-focus: color-mix(in srgb, var(--focus) 28%, transparent);
+}
+
+.left-rail-template__rail :is(
+  .papers-folder-item,
+  .papers-paper-row,
+  .biology-notebook-folder-item,
+  .biology-notebook-page-row,
+  .project-rail-item,
+  .settings-nav-item,
+  .tool-tile .label,
+  .agent-session-card,
+  .protocol-list-row,
+  .workflow-card,
+  .workflow-template-name-item,
+  .sequence-viewer-library-item,
+  .inventory-container-btn,
+  .assay-browser-item,
+  .list-row:not(.list-row-header)
+) {
+  border-radius: var(--enana-left-rail-list-radius);
+  color: var(--text);
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.left-rail-template__rail :is(
+  .papers-folder-item,
+  .papers-paper-row,
+  .biology-notebook-folder-item,
+  .biology-notebook-page-row,
+  .project-rail-item,
+  .settings-nav-item,
+  .tool-tile .label,
+  .agent-session-card,
+  .protocol-list-row,
+  .workflow-card,
+  .workflow-template-name-item,
+  .sequence-viewer-library-item,
+  .inventory-container-btn,
+  .assay-browser-item,
+  .list-row:not(.list-row-header)
+):hover,
+.left-rail-template__rail :is(
+  .papers-folder-item,
+  .papers-paper-row,
+  .biology-notebook-folder-item,
+  .biology-notebook-page-row,
+  .project-rail-main-btn,
+  .settings-nav-item,
+  .tool-tile,
+  .agent-session-card,
+  .protocol-list-row,
+  .workflow-card,
+  .workflow-template-name-item,
+  .sequence-viewer-library-item,
+  .inventory-container-btn,
+  .assay-browser-item,
+  .list-row:not(.list-row-header)
+):focus-visible {
+  background: var(--enana-left-rail-list-hover) !important;
+  color: var(--strong) !important;
+  outline: none;
+}
+
+.left-rail-template__rail :is(
+  .papers-folder-item.is-active,
+  .papers-paper-row.is-active,
+  .biology-notebook-page-row.is-active,
+  .project-rail-item.is-active,
+  .settings-nav-item.is-active,
+  .tool-tile-active .label,
+  .agent-session-card.is-active,
+  .protocol-list-row-selected,
+  .protocol-list-row.list-row-selected,
+  .workflow-template-name-item.is-active,
+  .sequence-viewer-library-item-active,
+  .inventory-container-btn.active,
+  .assay-browser-item.is-active,
+  .list-row-selected
+) {
+  background: var(--enana-left-rail-list-selected) !important;
+  border-color: transparent !important;
+  color: var(--strong) !important;
+  box-shadow: none !important;
+}
+
+.left-rail-template__rail :is(
+  .papers-folder-item,
+  .papers-paper-row,
+  .biology-notebook-folder-item,
+  .biology-notebook-page-row,
+  .project-rail-main-btn,
+  .settings-nav-item,
+  .tool-tile,
+  .agent-session-card,
+  .protocol-list-row,
+  .workflow-card,
+  .workflow-template-name-item,
+  .sequence-viewer-library-item,
+  .inventory-container-btn,
+  .assay-browser-item,
+  .list-row:not(.list-row-header)
+):focus-visible {
+  box-shadow: 0 0 0 2px var(--enana-left-rail-list-focus) !important;
+}
+
+.left-rail-template__rail :is(
+  .papers-folder-name,
+  .papers-paper-title,
+  .biology-notebook-folder-name,
+  .biology-notebook-page-name,
+  .project-rail-title,
+  .settings-nav-item span,
+  .tool-tile .label,
+  .agent-session-card strong,
+  .protocol-name-text,
+  .workflow-card h3,
+  .workflow-template-name-item,
+  .sequence-viewer-library-item-name,
+  .inventory-container-name,
+  .assay-browser-item-title,
+  .text-list-btn,
+  .list-main-text
+) {
+  font-weight: 500 !important;
+}
+
+.left-rail-template__rail :is(
+  .papers-folder-item.is-active .papers-folder-name,
+  .papers-paper-row.is-active .papers-paper-title,
+  .biology-notebook-page-row.is-active .biology-notebook-page-name,
+  .project-rail-item.is-active .project-rail-title,
+  .settings-nav-item.is-active span,
+  .tool-tile-active .label,
+  .agent-session-card.is-active strong,
+  .protocol-list-row-selected .protocol-name-text,
+  .protocol-list-row.list-row-selected .protocol-name-text,
+  .workflow-template-name-item.is-active,
+  .sequence-viewer-library-item-active .sequence-viewer-library-item-name,
+  .inventory-container-btn.active .inventory-container-name,
+  .assay-browser-item.is-active .assay-browser-item-title,
+  .list-row-selected .text-list-btn,
+  .list-row-selected .list-main-text
+) {
+  color: var(--strong) !important;
+  font-weight: 700 !important;
+}
+
+
+.left-rail-template__rail :is(
+  .project-rail-main-btn,
+  .tool-tile,
+  .tool-tile .label,
+  .agent-session-card,
+  .settings-nav-item,
+  .inventory-container-btn
+) {
+  transform: none !important;
+}
+
+/* Compact density for left-rail list rows (tree-style, not card-style). */
+.left-rail-template__rail :is(
+  .papers-folder-item,
+  .papers-paper-row,
+  .biology-notebook-folder-item,
+  .biology-notebook-page-row,
+  .project-rail-item,
+  .project-rail-main-btn,
+  .settings-nav-item,
+  .agent-session-card,
+  .protocol-list-row,
+  .workflow-template-name-item,
+  .sequence-viewer-library-item,
+  .inventory-container-btn,
+  .assay-browser-item,
+  .list-row:not(.list-row-header)
+) {
+  padding-top: 3px !important;
+  padding-bottom: 3px !important;
+  min-height: 0 !important;
+  line-height: 1.35 !important;
+  font-size: 0.88rem !important;
+}
+
+.left-rail-template__rail :is(
+  .biology-notebook-folder-item,
+  .biology-notebook-page-row,
+  .papers-folder-item,
+  .papers-paper-row,
+  .project-rail-item,
+  .agent-session-card,
+  .protocol-list-row
+) {
+  gap: 6px !important;
+}
+
+.left-rail-template__rail .biology-notebook-folder-children,
+.left-rail-template__rail .biology-notebook-folder-children--pages {
+  padding-top: 0 !important;
+  padding-bottom: 2px !important;
+  padding-left: 18px !important;
+}
+
+.left-rail-template__rail .biology-notebook-page-badge {
+  font-size: 0.7rem !important;
+}

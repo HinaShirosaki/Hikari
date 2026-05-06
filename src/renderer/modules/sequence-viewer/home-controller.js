@@ -51,9 +51,11 @@ export function createSequenceViewerHomeController(config = {}) {
       ? 'detail'
       : mode === 'alignment'
         ? 'alignment'
-      : mode === 'builder'
-        ? 'builder'
-        : 'home';
+        : mode === 'builder'
+          ? 'builder'
+          : mode === 'cloning'
+            ? 'cloning'
+            : 'home';
     state.localWorkspaceMode = next;
     rootDocument?.body?.classList?.toggle?.('sequence-viewer-fixed-scroll', next === 'builder' || next === 'alignment');
     if (elements.homeWorkspace) {
@@ -64,6 +66,9 @@ export function createSequenceViewerHomeController(config = {}) {
     }
     if (elements.detailWorkspace) {
       elements.detailWorkspace.hidden = next !== 'detail' && next !== 'alignment';
+    }
+    if (elements.cloningDesignWorkspace) {
+      elements.cloningDesignWorkspace.hidden = next !== 'cloning';
     }
     if (elements.alignmentWorkspace) {
       elements.alignmentWorkspace.hidden = next !== 'alignment';
