@@ -620,25 +620,24 @@ expectedGraphRelations.forEach(([from, relation, to], idx) => {
 
 const moduleExportContracts = [
   ['src/renderer/modules/agent-chat.js', /export function initAgentChat/],
-  ['src/renderer/modules/assay.js', /export function initAssay/],
-  ['src/renderer/modules/assay-analysis.js', /export function analyzeAssayData/],
-  ['src/renderer/modules/biology-notebook.js', /export function initLabNotebook/],
+  ['src/renderer/modules/assay/index.js', /export function initAssay/],
+  ['src/renderer/modules/assay/analysis/index.js', /export function analyzeAssayData/],
+  ['src/renderer/modules/biology-notebook/index.js', /export function initLabNotebook/],
   ['src/renderer/modules/buffer-compounds.js', /export const BUFFER_COMPOUNDS/],
-  ['src/renderer/modules/collaboration-management.js', /export function initCollaborationManagement/],
+  ['src/renderer/modules/collaboration-management/index.js', /export function initCollaborationManagement/],
   ['src/renderer/modules/gel-analysis.js', /export function initGelAnalysis/],
-  ['src/renderer/modules/lab-common-inventory.js', /export function initLabCommonInventory/],
+  ['src/renderer/modules/lab-common-inventory/index.js', /export function initLabCommonInventory/],
   ['src/renderer/modules/lab-management.js', /export function initLabManagement/],
-  ['src/renderer/modules/lab-notebook.js', /export function initLabNotebook/],
   ['src/renderer/modules/object-graph.js', /export function createUid/],
   ['src/renderer/modules/object-graph.js', /export function rebuildObjectGraph/],
   ['src/renderer/modules/papers-management.js', /export function initPapersManagement/],
-  ['src/renderer/modules/personal-inventory.js', /export function initPersonalInventory/],
-  ['src/renderer/modules/project-management.js', /export function initProjectManagement/],
+  ['src/renderer/modules/personal-inventory/index.js', /export function initPersonalInventory/],
+  ['src/renderer/modules/project-management/index.js', /export function initProjectManagement/],
   ['src/renderer/modules/protocol-management.js', /export function initProtocolManagement/],
-  ['src/renderer/modules/sample-registry.js', /export function initSampleRegistry/],
-  ['src/renderer/modules/settings.js', /export function initSettings/],
+  ['src/renderer/modules/sample-registry/index.js', /export function initSampleRegistry/],
+  ['src/renderer/modules/settings/index.js', /export function initSettings/],
   ['src/renderer/modules/tool-box.js', /export function initToolBox/],
-  ['src/renderer/modules/workflow-management.js', /export function initWorkflowManagement/]
+  ['src/renderer/modules/workflow/index.js', /export function initWorkflowManagement/]
 ];
 
 moduleExportContracts.forEach(([relativePath, pattern], idx) => {
@@ -648,7 +647,7 @@ moduleExportContracts.forEach(([relativePath, pattern], idx) => {
 });
 
 const removedCodeGuards = [
-  ['src/renderer/modules/shared.js', /LAB_NOTEBOOK/, false],
+  ['src/renderer/modules/views.js', /LAB_NOTEBOOK/, false],
   ['src/main/lib/telegramBot.js', /telegram-message/, false],
   ['src/main/preload.js', /onTelegramMessage/, false],
   ['ketcher-embedded.html', /\/Users\//, false],

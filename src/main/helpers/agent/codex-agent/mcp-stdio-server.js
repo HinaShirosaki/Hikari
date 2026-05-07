@@ -3,7 +3,7 @@
 
 const { createCodexAgentMcpGateway } = require('./mcp-gateway.js');
 const { createCodexMcpHostToolRunner } = require('./mcp-host-client.js');
-const { getMcpLookupToolDefinitions } = require('./mcp-tools/index.js');
+const { getDirectMcpToolDefinitions } = require('./mcp-tools/index.js');
 
 function cleanText(value, maxLength = 1000) {
   const text = String(value || '').trim();
@@ -29,6 +29,7 @@ function getRequestContextFromEnv(env = process.env) {
 
 function createMcpToolDefinitions() {
   return [
+    ...getDirectMcpToolDefinitions(),
     {
       name: 'tool_search',
       description: 'Search Hikari app tools by natural-language goal.',
@@ -68,7 +69,6 @@ function createMcpToolDefinitions() {
         }
       }
     },
-    ...getMcpLookupToolDefinitions(),
     {
       name: 'resource_search',
       description: 'Search Hikari MCP resources such as instructions and tool manifests.',

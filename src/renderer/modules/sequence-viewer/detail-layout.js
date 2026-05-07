@@ -23,7 +23,15 @@ function measureSequenceTypography(rootDocument, sequenceHost) {
       probe.style.display = 'inline-block';
       probe.style.width = 'auto';
       const sampleLength = 40;
-      probe.textContent = 'A'.repeat(sampleLength);
+      const content = rootDocument.createElement('span');
+      content.className = 'sequence-viewer-seq-text-content';
+      for (let index = 0; index < sampleLength; index += 1) {
+        const base = rootDocument.createElement('span');
+        base.className = 'sequence-viewer-seq-base';
+        base.textContent = 'A';
+        content.appendChild(base);
+      }
+      probe.appendChild(content);
       sequenceHost.appendChild(probe);
 
       const measuredAdvance = probe.getBoundingClientRect().width / sampleLength;

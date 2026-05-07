@@ -1,4 +1,4 @@
-import { asArray, trimText } from './shared.js';
+import { asArray, normalizeAgentUserQuestion, trimText } from './shared.js';
 
 function activityStatusRank(status) {
   if (status === 'done') {
@@ -292,7 +292,11 @@ export function summarizeCodexAgent(codexAgent) {
   if (!status) {
     return '';
   }
+  const userQuestion = normalizeAgentUserQuestion(payload.user_question || payload.userQuestion, payload.answer);
   if (status === 'needs_more_info') {
+    if (userQuestion?.question) {
+      return userQuestion.question;
+    }
     return asArray(payload.follow_up_questions).map((item) => trimText(item, 500)).filter(Boolean).join(' ')
       || trimText(payload.answer, 12000)
       || 'I need more detail before I can continue.';
@@ -386,6 +390,13 @@ export function normalizeAgentResponse(result) {
   const codexAgent = result?.codex_agent && typeof result.codex_agent === 'object'
     ? result.codex_agent
     : null;
+  const userQuestion = normalizeAgentUserQuestion(
+    result?.user_question
+      || result?.userQuestion
+      || codexAgent?.user_question
+      || codexAgent?.userQuestion,
+    codexAgent?.answer
+  );
   const generalScienceQuestion = result?.general_science_question && typeof result.general_science_question === 'object'
     ? result.general_science_question
     : null;
@@ -424,6 +435,7 @@ export function normalizeAgentResponse(result) {
     notebookPayload,
     purchaseRecommendation,
     codexAgent,
+    userQuestion,
     inventoryLookup,
     recordLookup,
     generalScienceQuestion,

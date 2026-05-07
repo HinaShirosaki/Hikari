@@ -77,7 +77,9 @@ const LLM = Object.freeze({
   CODEX_CLEAR_LOGIN: 'llm:codex-clear-login',
   CODEX_SET_MODEL: 'llm:codex-set-model',
   CODEX_SET_REASONING_EFFORT: 'llm:codex-set-reasoning-effort',
-  CODEX_GENERATE: 'llm:codex-generate'
+  CODEX_GENERATE: 'llm:codex-generate',
+  DIRECT_MODULES: 'llm:direct-modules',
+  DIRECT_GENERATE: 'llm:direct-generate'
 });
 
 module.exports = {

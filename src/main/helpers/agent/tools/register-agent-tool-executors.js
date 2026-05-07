@@ -1,6 +1,6 @@
 'use strict';
 
-const { toIntegerInRange } = require('../../main/value-utils.js');
+const { toIntegerInRange } = require('../../main/data/value-utils.js');
 
 function defaultCleanText(value, _maxLength = 500) {
   const text = String(value || '');
@@ -495,6 +495,16 @@ function registerAgentToolExecutors(deps = {}) {
     );
     return literatureSearchRuntime.execute({
       ...args,
+      provider: cleanText(args?.provider || context?.provider, 80),
+      model: cleanText(args?.model || context?.model, 120),
+      reasoning_effort: cleanText(
+        args?.reasoning_effort
+          || args?.reasoningEffort
+          || context?.reasoning_effort
+          || context?.reasoningEffort,
+        40
+      ),
+      cwd: cleanText(args?.cwd || context?.cwd, 2400),
       traceContext: context?.traceContext || null,
       query: cleanText(args?.query, 600),
       message: cleanText(args?.message || context?.message, 1200),

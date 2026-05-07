@@ -716,6 +716,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
           'main',
           'helpers',
           'main',
+          'llm',
           'chat-log-transformer.js'
         ));
         const runtime = createChatLogTransformRuntime({
@@ -764,7 +765,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
     test('agent chat handler persists internal request, tool, trace, and response rows into the session log', async () => {
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-handler-'));
       try {
-        const { registerAgentIpc } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'));
+        const { registerAgentIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'index.js'));
         const handlers = new Map();
         const ipcMain = {
           handle(channel, handler) {
@@ -1047,7 +1048,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
     });
 
     test('lifecycle tool runner forwards request context into tool execution', async () => {
-      const { createAgentLifecycleService } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-lifecycle-service.js'));
+      const { createAgentLifecycleService } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-lifecycle-service.js'));
       let receivedCall = null;
       const lifecycleService = createAgentLifecycleService({
         cleanText: (value, maxLength = 2000) => {
@@ -1135,7 +1136,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
     test('agent chat handler uses the parser-direct science answer for reasoning_effort 0', async () => {
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-direct-science-'));
       try {
-        const { registerAgentIpc } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'));
+        const { registerAgentIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'index.js'));
         const handlers = new Map();
         const ipcMain = {
           handle(channel, handler) {
@@ -1354,7 +1355,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
     test('selected project upgrades general science parsing into project science execution', async () => {
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-project-scope-'));
       try {
-        const { registerAgentIpc } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc.js'));
+        const { registerAgentIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'index.js'));
         const handlers = new Map();
         const ipcMain = {
           handle(channel, handler) {
@@ -2759,6 +2760,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         context: {
           provider: 'codex',
           model: 'gpt-5.4-mini',
+          cwd: '/Users/shiyifan/Projects/Enana',
           message: 'Find ncAA papers.',
           project: {
             id: 'project-1',
@@ -2783,6 +2785,9 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
 
       assert.equal(result.ok, true);
       assert.equal(calls.length, 1);
+      assert.equal(calls[0].provider, 'codex');
+      assert.equal(calls[0].model, 'gpt-5.4-mini');
+      assert.equal(calls[0].cwd, '/Users/shiyifan/Projects/Enana');
       assert.equal(calls[0].project.name, 'Atlas');
       assert.equal(calls[0].storage_path, '/tmp/enana-storage');
       assert.equal(calls[0].storagePath, '/tmp/enana-storage');

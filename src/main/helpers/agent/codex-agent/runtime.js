@@ -7,6 +7,7 @@ const FINAL_RESPONSE_SCHEMA = {
   status: 'completed',
   assistant_text: 'Final answer or one blocking clarification question.',
   follow_up_questions: [],
+  user_question: null,
   reasoning_summary: 'Brief evidence and verification summary.',
   citations: []
 };
@@ -85,14 +86,65 @@ function normalizeCitation(cleanText, citation = {}) {
   };
 }
 
+function slugText(cleanText, value = '', fallback = 'option') {
+  const normalized = cleanText(value, 120)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || fallback;
+}
+
+function normalizeUserQuestion(cleanText, value = {}, fallbackQuestion = '') {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const question = cleanText(
+    source.question
+      || source.prompt
+      || source.title
+      || fallbackQuestion,
+    600
+  );
+  if (!question) {
+    return null;
+  }
+  const options = asArray(source.options || source.choices)
+    .map((item, index) => {
+      const option = item && typeof item === 'object' && !Array.isArray(item)
+        ? item
+        : { label: item };
+      const label = cleanText(option.label || option.title || option.text || option.value, 160);
+      const valueText = cleanText(option.value || option.answer || label, 1000);
+      if (!label || !valueText) {
+        return null;
+      }
+      return {
+        id: cleanText(option.id || option.key, 120) || `${slugText(cleanText, label)}-${index + 1}`,
+        label,
+        value: valueText,
+        description: cleanText(option.description || option.detail || option.reason, 260)
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 6);
+  return {
+    id: cleanText(source.id || source.question_id || source.questionId, 120) || slugText(cleanText, question, 'question'),
+    question,
+    context: cleanText(source.context || source.help_text || source.helpText, 700),
+    options,
+    allow_custom: source.allow_custom !== false && source.allowCustom !== false,
+    placeholder: cleanText(source.placeholder || source.custom_placeholder || source.customPlaceholder, 160)
+      || 'Type another answer',
+    submit_label: cleanText(source.submit_label || source.submitLabel, 80) || 'Send answer'
+  };
+}
+
 function normalizeCodexAgentPayload(rawPayload = {}, rawText = '', { cleanText = defaultCleanText } = {}) {
-  const source = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
+  const rawSource = rawPayload && typeof rawPayload === 'object' ? rawPayload : {};
+  const finalResponse = ensureObject(rawSource.final_response || rawSource.finalResponse);
+  const source = Object.keys(finalResponse).length ? finalResponse : rawSource;
   const followUps = asArray(source.follow_up_questions || source.followUpQuestions)
     .map((item) => cleanText(item, 500))
     .filter(Boolean)
     .slice(0, 6);
-  const status = cleanText(source.status, 40)
-    || (followUps.length ? 'needs_more_info' : 'completed');
   const answer = cleanText(
     source.assistant_text
       || source.assistantText
@@ -101,6 +153,19 @@ function normalizeCodexAgentPayload(rawPayload = {}, rawText = '', { cleanText =
       || rawText,
     120000
   );
+  const userQuestion = normalizeUserQuestion(
+    cleanText,
+    source.user_question
+      || source.userQuestion
+      || source.ask_user
+      || source.askUser,
+    followUps[0] || answer
+  );
+  const rawStatus = cleanText(source.status, 40);
+  const status = rawStatus === 'needs_user_answer'
+    ? 'needs_more_info'
+    : rawStatus
+    || (followUps.length || userQuestion ? 'needs_more_info' : 'completed');
   const reasoningSummary = cleanText(
     source.reasoning_summary
       || source.reasoningSummary
@@ -110,7 +175,10 @@ function normalizeCodexAgentPayload(rawPayload = {}, rawText = '', { cleanText =
   return {
     status,
     answer,
-    follow_up_questions: followUps,
+    follow_up_questions: followUps.length
+      ? followUps
+      : (userQuestion?.question ? [userQuestion.question] : []),
+    user_question: userQuestion,
     reasoning_summary: reasoningSummary,
     citations: asArray(source.citations)
       .map((citation) => normalizeCitation(cleanText, citation))
@@ -166,6 +234,7 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     JSON.stringify(FINAL_RESPONSE_SCHEMA, null, 2),
     '',
     'Set `status` to `needs_more_info` when you need one blocking clarification. Put the user-facing question in both `assistant_text` and `follow_up_questions[0]`. Set `status` to `completed` when answering.',
+    'When the clarification has likely choices, set `user_question` to an object with `question`, up to six `options` using `{ "label": "...", "value": "...", "description": "..." }`, and `allow_custom: true`. Hikari will render the options plus a custom text answer box and send the user answer as the next chat turn.',
     '',
     projectId || projectName
       ? `Selected project:\n${JSON.stringify({ id: projectId, name: projectName }, null, 2)}`
@@ -195,14 +264,15 @@ function buildCodexAgentParserPayload(codexAgent = {}, {
   cleanText = defaultCleanText
 } = {}) {
   const needsClarification = cleanText(codexAgent.status, 40) === 'needs_more_info'
-    || asArray(codexAgent.follow_up_questions).length > 0;
+    || asArray(codexAgent.follow_up_questions).length > 0
+    || Boolean(codexAgent.user_question?.question);
   return {
     primary_intent: 'codex_agent',
     reasoning_effort: Number.isFinite(Number(reasoningEffort)) ? Number(reasoningEffort) : 0,
     direct_answer: needsClarification ? null : cleanText(codexAgent.answer, 12000) || null,
     needs_clarification: needsClarification,
     clarification_reason: needsClarification
-      ? cleanText(codexAgent.follow_up_questions?.[0] || codexAgent.answer, 500) || 'codex_agent_needs_more_info'
+      ? cleanText(codexAgent.user_question?.question || codexAgent.follow_up_questions?.[0] || codexAgent.answer, 500) || 'codex_agent_needs_more_info'
       : null,
     entities: {
       project_id: cleanText(projectId, 120),

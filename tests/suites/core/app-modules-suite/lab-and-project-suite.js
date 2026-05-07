@@ -82,7 +82,7 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
     'inventory-add-container-cancel'
   ]);
   const inventorySections = document.getElementById('inventory-sections');
-  const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory.js'), {
+  const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'index.js'), {
     document
   });
 
@@ -198,7 +198,7 @@ test('personal-inventory creates a linked sample from the side editor for an emp
     'inventory-add-container-cancel'
   ]);
   const inventorySections = document.getElementById('inventory-sections');
-  const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory.js'), {
+  const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'index.js'), {
     document
   });
 
@@ -314,7 +314,7 @@ test('project-management deletes projects with linked notebook and workflow clea
     ]
   };
 
-  const projectManagementModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'project-management.js'), {
+  const projectManagementModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'project-management', 'index.js'), {
     document
   });
   const projectManagement = projectManagementModule.initProjectManagement({
@@ -382,7 +382,7 @@ test('project-management renders notebook state labels for project pages', () =>
     workflows: []
   };
 
-  const projectManagementModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'project-management.js'), {
+  const projectManagementModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'project-management', 'index.js'), {
     document
   });
   const projectManagement = projectManagementModule.initProjectManagement({
@@ -476,7 +476,7 @@ test('biology-notebook keeps planned pages distinct, marks them executed, and pr
     }
   };
 
-  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook.js'), {
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
     document,
     window: {
       enanaApi: {}
@@ -633,7 +633,7 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
     }
   };
 
-  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook.js'), {
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
     document,
     window: {
       enanaApi: {}
@@ -740,7 +740,7 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
     }
   };
 
-  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook.js'), {
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
     document,
     window: {
       enanaApi: {}
@@ -851,7 +851,7 @@ test('biology-notebook edits only the saved page protocol copy and keeps the ori
     }
   };
 
-  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook.js'), {
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
     document,
     window: {
       enanaApi: {}
@@ -982,7 +982,7 @@ test('biology-notebook saves and reopens result tables with Tabulator', async ()
     }
   };
 
-  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook.js'), {
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
     document,
     window: {
       enanaApi: {},
@@ -1132,7 +1132,7 @@ test('notebook pdf export includes linked page content and omits notebook type p
     }
   };
 
-  const pdfExportModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'pdf-export.js'), {
+  const pdfExportModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'pdf-export', 'index.js'), {
     window: {
       jspdf: {
         jsPDF: MockJsPdf
@@ -1306,7 +1306,7 @@ test('notebook pdf export paginates wrapped notes and draws result tables as cel
     }
   }
 
-  const pdfExportModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'pdf-export.js'), {
+  const pdfExportModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'pdf-export', 'index.js'), {
     window: {
       jspdf: {
         jsPDF: MockJsPdf
@@ -1402,7 +1402,7 @@ test('assay pdf export omits mapped well text section', () => {
     }
   }
 
-  const pdfExportModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'pdf-export.js'), {
+  const pdfExportModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'pdf-export', 'index.js'), {
     window: {
       jspdf: {
         jsPDF: MockJsPdf

@@ -1,6 +1,7 @@
 import { normalizeAgentResponse } from './response.js';
 import {
   asArray,
+  normalizeAgentUserQuestion,
   TOOL_ACTIVITY_LABELS,
   toConversation,
   trimText
@@ -42,6 +43,7 @@ export function initAgentChat({
   const developerRunToolBtn = rootDocument?.getElementById?.('agent-dev-run-tool-btn') || null;
   const developerToolHint = rootDocument?.getElementById?.('agent-dev-tool-hint') || null;
   const historyNode = rootDocument?.getElementById?.('agent-chat-history') || null;
+  const conversationShell = historyNode?.closest?.('.agent-conversation-shell') || null;
   const scrollToBottomBtn = rootDocument?.getElementById?.('agent-scroll-to-bottom-btn') || null;
   const input = rootDocument?.getElementById?.('agent-message-input') || null;
   const attachmentInput = rootDocument?.getElementById?.('agent-attachment-input') || null;
@@ -599,15 +601,21 @@ export function initAgentChat({
 
   function renderHistoryView(options = {}) {
     ensureAgentState();
+    const visibleMessages = liveAssistantMessage
+      ? [...state.agentChat.messages, liveAssistantMessage]
+      : state.agentChat.messages;
+    const hasMessages = asArray(visibleMessages).length > 0;
+    conversationShell?.classList?.toggle('is-empty-chat', !hasMessages);
+    if (!hasMessages && scrollToBottomBtn) {
+      scrollToBottomBtn.hidden = true;
+    }
     const previousScrollTop = historyNode.scrollTop;
     const shouldStickToBottom = options.forceScroll === true
       || historyNode.childElementCount === 0
       || isHistoryNearBottom();
     renderingModule.renderHistory({
       historyNode,
-      messages: liveAssistantMessage
-        ? [...state.agentChat.messages, liveAssistantMessage]
-        : state.agentChat.messages,
+      messages: visibleMessages,
       state,
       safeText
     });
@@ -665,6 +673,77 @@ export function initAgentChat({
 
   function renderContextSummary() {
     // Context summary UI has been removed from the agent rail.
+  }
+
+  function findChatMessageById(messageId = '') {
+    const targetId = trimText(messageId, 120);
+    if (!targetId) {
+      return null;
+    }
+    return asArray(state.agentChat.messages).find((item) => trimText(item?.id, 120) === targetId) || null;
+  }
+
+  function getAssistantUserQuestion(message) {
+    const meta = message?.meta && typeof message.meta === 'object' ? message.meta : {};
+    return normalizeAgentUserQuestion(
+      meta.user_question
+        || meta.userQuestion
+        || meta.codex_agent?.user_question
+        || meta.codex_agent?.userQuestion,
+      message?.text
+    );
+  }
+
+  function markAssistantQuestionAnswered(messageId, answerText) {
+    const message = findChatMessageById(messageId);
+    const question = getAssistantUserQuestion(message);
+    if (!message || !question) {
+      return null;
+    }
+    const answeredQuestion = {
+      ...question,
+      status: 'answered',
+      answered: {
+        answer: trimText(answerText, 1000),
+        answered_at: new Date().toISOString()
+      }
+    };
+    message.meta = {
+      ...(message.meta && typeof message.meta === 'object' ? message.meta : {}),
+      user_question: answeredQuestion
+    };
+    if (message.meta.codex_agent && typeof message.meta.codex_agent === 'object') {
+      message.meta.codex_agent = {
+        ...message.meta.codex_agent,
+        user_question: answeredQuestion
+      };
+    }
+    return answeredQuestion;
+  }
+
+  async function answerAssistantQuestion(messageId, answerText) {
+    if (inFlight) {
+      return;
+    }
+    if (!api?.agentChat) {
+      setStatus('Agent IPC is unavailable.');
+      return;
+    }
+    const answer = trimText(answerText, 3000);
+    if (!answer) {
+      setStatus('Add an answer first.');
+      return;
+    }
+    const question = markAssistantQuestionAnswered(messageId, answer);
+    if (!question) {
+      setStatus('Question is unavailable.');
+      return;
+    }
+    persist();
+    renderHistoryView({ forceScroll: true });
+    input.value = answer;
+    syncComposerHeight();
+    await sendMessage();
   }
 
   const sessionManager = createAgentChatSessionManager({
@@ -747,6 +826,27 @@ export function initAgentChat({
       syncComposerHeight();
       input.focus();
       setStatus('Prompt ready.');
+      return;
+    }
+
+    const questionOptionButton = event?.target?.closest?.('[data-agent-question-option]')
+      || (event?.target?.dataset?.agentQuestionOption ? event.target : null);
+    if (questionOptionButton) {
+      const messageId = trimText(questionOptionButton.dataset.agentQuestionOption, 120);
+      const answer = trimText(questionOptionButton.dataset.agentQuestionAnswer, 3000)
+        || trimText(questionOptionButton.textContent, 3000);
+      await answerAssistantQuestion(messageId, answer);
+      return;
+    }
+
+    const questionSubmitButton = event?.target?.closest?.('[data-agent-question-submit]')
+      || (event?.target?.dataset?.agentQuestionSubmit ? event.target : null);
+    if (questionSubmitButton) {
+      const messageId = trimText(questionSubmitButton.dataset.agentQuestionSubmit, 120);
+      const card = questionSubmitButton.closest?.('[data-agent-user-question-card]');
+      const answerInput = card?.querySelector?.('[data-agent-question-custom-input]');
+      const answer = trimText(answerInput?.value, 3000);
+      await answerAssistantQuestion(messageId, answer);
       return;
     }
 
@@ -983,6 +1083,7 @@ export function initAgentChat({
           protocol_to_notebook: response.protocolWorkflow,
           notebook_draft: response.notebookDraftWorkflow,
           codex_agent: response.codexAgent,
+          user_question: response.userQuestion,
           purchase_recommendation: response.purchaseRecommendation,
           inventory_lookup: response.inventoryLookup,
           record_lookup: response.recordLookup,

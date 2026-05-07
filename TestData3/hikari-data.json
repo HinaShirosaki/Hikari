@@ -22,7 +22,7 @@
       "name": "PD-1 Nanobody Binder Discovery",
       "description": "",
       "createdAt": "2026-03-23T16:43:22.543Z",
-      "updatedAt": "2026-03-23T16:43:22.543Z"
+      "updatedAt": "2026-05-06T02:12:11.850Z"
     },
     {
       "id": "project_folder_pd_l1_blocking_clone_validation",
@@ -878,11 +878,16 @@
         "title": "What is antigen",
         "project_id": "",
         "project_name": "",
-        "updated_at": "2026-05-02T23:40:36.723Z",
+        "log_file": "chat-moninpt4-eecjbfsk.log",
         "created_at": "2026-05-01T23:00:47.848Z",
+        "updated_at": "2026-05-02T23:40:36.723Z",
+        "status": "active",
         "message_count": 6,
-        "last_message_preview": "Sanger sequencing is a DNA sequencing method that determines the order of bases in a DNA strand by copying the DNA and occasionally inserting special chain-terminating nucleotides. Those terminated fragments are separated by size, and the final base on each fragment reveals the DNA sequence. It is highly accurate and i...",
+        "request_count": 3,
+        "last_message_preview": "Sanger sequencing is a DNA sequencing method that determines the order of bases in a DNA strand by copying the DNA and occasionally inserting special chain-terminating nucleotides. Those terminated fragments are separated by size, and the final base on each fragment reveals the DNA sequence. It is highly accurate and is commonly used for sequencing short DNA regions, validating plasmids, and confirming variants, though it is lower-throughput than next-generation sequencing.",
+        "last_user_message_preview": "What is Sanger sequencing",
         "response_type": "",
+        "last_request_id": "1777765222178-afca364c",
         "last_error": ""
       },
       {
@@ -907,11 +912,16 @@
         "title": "How antigen is presented to B cells? Think harder",
         "project_id": "",
         "project_name": "",
-        "updated_at": "2026-04-29T02:12:18.911Z",
+        "log_file": "chat-mojepvrf-uwtifvng.log",
         "created_at": "2026-04-29T01:59:25.708Z",
+        "updated_at": "2026-04-29T02:12:18.911Z",
+        "status": "active",
         "message_count": 2,
+        "request_count": 1,
         "last_message_preview": "Agent stopped.",
+        "last_user_message_preview": "How antigen is presented to B cells? Think harder",
         "response_type": "",
+        "last_request_id": "1777427992634-ec909d20",
         "last_error": ""
       },
       {
@@ -919,11 +929,16 @@
         "title": "How to express TEV protease. Give me detailed protocol",
         "project_id": "",
         "project_name": "",
-        "updated_at": "2026-04-29T01:10:51.894Z",
+        "log_file": "chat-mojcxblr-wllcqrp5.log",
         "created_at": "2026-04-29T01:09:13.599Z",
+        "updated_at": "2026-04-29T01:10:51.894Z",
+        "status": "active",
         "message_count": 2,
-        "last_message_preview": "What expression medium volume, antibiotic, and overnight starter culture volume should be used for the TEV protease expression culture? At what OD600 should induction begin, and what final IPTG concentration should be used? What post-induction temperature and shaking duration should be used? What centrifugation speed, ...",
+        "request_count": 1,
+        "last_message_preview": "What expression medium volume, antibiotic, and overnight starter culture volume should be used for the TEV protease expression culture? At what OD600 should induction begin, and what final IPTG concentration should be used? What post-induction temperature and shaking duration should be used? What centrifugation speed, time, and temperature should be used to harvest the cells? Please provide volume. Please provide antibiotic. Please provide value. Please provide concentration. Please provide temperature. Please provide time.",
+        "last_user_message_preview": "How to express TEV protease. Give me detailed protocol",
         "response_type": "",
+        "last_request_id": "1777424955501-8980b0b6",
         "last_error": ""
       },
       {
@@ -1557,12 +1572,12 @@
     "storagePath": "/Users/shiyifan/Projects/Enana/TestData3",
     "pendingNotebookSampleCapture": null,
     "storageImport": {
-      "lastImportedAt": "2026-05-06T02:11:15.664Z",
+      "lastImportedAt": "2026-05-06T14:58:03.993Z",
       "manifestPath": "/Users/shiyifan/Projects/Enana/TestData3/hikari-storage-manifest.json",
       "summary": {
         "bundles": 4,
         "protocols": 9,
-        "notebookEntries": 29,
+        "notebookEntries": 32,
         "workflowTemplates": 2,
         "workflows": 1,
         "papers": 11,
@@ -1596,12 +1611,7 @@
       },
       "quickLogDraft": "",
       "quickLogEntries": [],
-      "incubationLocations": [
-        {
-          "name": "Last",
-          "reminderDate": "2026-04-21"
-        }
-      ],
+      "incubationLocations": [],
       "timerTemplates": [
         {
           "name": "ELISA antibody",
@@ -1619,6 +1629,6 @@
   "assaySequence": 4,
   "data_bundle": {
     "mode": "sqlite_indexed",
-    "updated_at": "2026-05-06T03:22:05.125Z"
+    "updated_at": "2026-05-06T15:21:01.589Z"
   }
 }

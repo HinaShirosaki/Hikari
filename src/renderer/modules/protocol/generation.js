@@ -1,3 +1,5 @@
+import { requestDirectLlmText } from '../direct-llm.js';
+
 function trimText(value, maxLength = 5000) {
   const text = String(value || '').trim();
   if (!text) {
@@ -51,6 +53,50 @@ function buildProtocolGenerationSourceText(draft, { normalizeMaterials, stepToEd
     '',
     'Troubleshooting:',
     troubleshooting || '[none provided]'
+  ].join('\n');
+}
+
+function buildProtocolGenerationPrompt({
+  prompt,
+  editorDraft,
+  hasEditorContext,
+  attachments,
+  normalizeMaterials,
+  stepToEditableLine
+}) {
+  const attachmentList = Array.isArray(attachments) && attachments.length
+    ? attachments
+      .map((attachment, index) => {
+        const name = sanitizeAttachmentName(attachment?.name, `attachment-${index + 1}`);
+        const kind = trimText(attachment?.kind || attachment?.mimeType, 80) || 'file';
+        return `${index + 1}. ${name} (${kind})`;
+      })
+      .join('\n')
+    : '[none provided]';
+
+  return [
+    'Generate a lab protocol from the user request, current draft context, and attached evidence.',
+    'Return JSON only with this exact shape:',
+    '{"protocol":{"name":"","purpose":"","materials":[""],"steps":[""],"troubleshooting":""},"result_summary":""}',
+    '',
+    'Rules:',
+    '- Create a complete, import-ready lab protocol.',
+    '- Use concise scientific language and operational step wording.',
+    '- Preserve useful details from the current draft when provided.',
+    '- Use attached evidence when available, but do not invent unsupported exact measurements, times, temperatures, or reagent identities.',
+    '- Use bracket placeholders such as [temperature], [time], or [volume] when a value is necessary but missing.',
+    '- Materials must be short item strings. Steps must be ordered instruction strings.',
+    '',
+    'User request:',
+    trimText(prompt, 3000) || '[none provided]',
+    '',
+    'Current draft context:',
+    hasEditorContext
+      ? buildProtocolGenerationSourceText(editorDraft, { normalizeMaterials, stepToEditableLine })
+      : '[none provided]',
+    '',
+    'Attachments:',
+    attachmentList
   ].join('\n');
 }
 
@@ -316,32 +362,25 @@ export function createProtocolGenerationController({
     setProtocolGeneratePendingState(true);
 
     try {
-      const result = await api.agentGenerateProtocol({
-        message: prompt,
+      const generatedProtocolJson = await requestDirectLlmText({
+        llm: state.settings?.llm,
+        moduleId: 'protocol',
+        task: 'protocol-generation',
+        prompt: buildProtocolGenerationPrompt({
+          prompt,
+          editorDraft,
+          hasEditorContext,
+          attachments,
+          normalizeMaterials,
+          stepToEditableLine
+        }),
         attachments,
-        editorDraft: {
-          title: editorDraft.name,
-          purpose: editorDraft.purpose,
-          materials: normalizeMaterials(editorDraft.materials),
-          steps: Array.isArray(editorDraft.steps)
-            ? editorDraft.steps.map((step) => String(stepToEditableLine(step) || '').trim()).filter(Boolean)
-            : [],
-          troubleshooting: editorDraft.troubleshooting,
-          methodText: hasEditorContext
-            ? buildProtocolGenerationSourceText(editorDraft, { normalizeMaterials, stepToEditableLine })
-            : ''
-        },
-        llm: {
-          provider: String(state.settings?.llm?.provider || '').trim(),
-          model: String(state.settings?.llm?.model || '').trim(),
-          reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim().toLowerCase(),
-          apiEndpoint: String(state.settings?.llm?.provider || '').trim() === 'codex'
-            ? ''
-            : String(state.settings?.llm?.apiEndpoint || '').trim(),
-          apiKey: String(state.settings?.llm?.provider || '').trim() === 'codex'
-            ? ''
-            : String(state.settings?.llm?.apiKey || '').trim()
-        }
+        expectJson: true
+      });
+
+      const result = await api.agentGenerateProtocol({
+        protocolJson: generatedProtocolJson,
+        resultSummary: prompt
       });
 
       if (requestToken !== localState.protocolGenerationRequestToken || ui.protocolGenerateResultOverlay?.hidden) {

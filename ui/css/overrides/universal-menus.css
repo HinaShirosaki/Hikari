@@ -270,6 +270,66 @@ body.theme-night .assay-sample-picker-search-input {
   color: var(--muted);
 }
 
+.biology-notebook-sample-link-menu {
+  width: min(320px, calc(100vw - 24px));
+  max-height: min(360px, calc(100vh - 24px));
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 6px !important;
+  padding: 8px !important;
+  font-size: 0.9rem;
+}
+
+.biology-notebook-sample-link-menu-head {
+  order: 1;
+  gap: 1px;
+  padding: 2px 6px 0;
+  border-top: 0;
+}
+
+.biology-notebook-sample-link-search {
+  order: 2;
+  width: 100%;
+  height: 34px;
+  margin: 0;
+  padding: 0 10px 0 32px;
+  border-radius: 7px;
+  background-position: 10px 50%;
+  background-size: 15px 15px;
+  font-size: 0.86rem;
+  box-shadow: inset 0 1px 2px rgba(27, 20, 14, 0.04);
+}
+
+.biology-notebook-sample-link-search:focus {
+  border-color: color-mix(in srgb, var(--focus) 42%, var(--line));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 14%, transparent), inset 0 1px 2px rgba(27, 20, 14, 0.04);
+}
+
+.biology-notebook-sample-link-results {
+  order: 3;
+  max-height: min(230px, calc(100vh - 138px));
+  gap: 2px;
+  padding: 0;
+}
+
+.biology-notebook-sample-link-option {
+  min-height: 44px;
+  padding: 7px 8px;
+  border-radius: 7px;
+}
+
+.biology-notebook-sample-link-option-main {
+  font-size: 0.9rem;
+}
+
+.biology-notebook-sample-link-option-meta,
+.biology-notebook-sample-link-empty {
+  font-size: 0.78rem;
+}
+
+.biology-notebook-sample-link-empty {
+  padding: 8px;
+}
+
 
 
 body.theme-night .app-more-item,

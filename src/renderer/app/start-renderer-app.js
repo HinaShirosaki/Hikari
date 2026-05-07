@@ -1,13 +1,10 @@
+import { VIEWS, TITLES } from '../modules/views.js';
+import { createId, safeText, cssEscape } from '../modules/utils.js';
 import {
-  VIEWS,
-  TITLES,
   loadState,
   persistState,
-  createId,
-  trackGrowthEvent,
-  safeText,
-  cssEscape
-} from '../modules/shared.js';
+  trackGrowthEvent
+} from '../modules/app-state.js';
 import {
   rebuildObjectGraph,
   queryNotebookEntriesByRelation

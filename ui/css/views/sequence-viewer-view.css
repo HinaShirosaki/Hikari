@@ -1282,6 +1282,9 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-sequence-host {
+  --sequence-viewer-sequence-font: "SF Mono", "SFMono-Regular", "Cascadia Mono", "Roboto Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+  --sequence-viewer-nt-gap: 1.5px;
+  --sequence-viewer-selection-highlight: rgba(78, 127, 255, 0.22);
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -1315,9 +1318,9 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   grid-template-columns: 28px 1fr 28px;
   gap: 6px;
   align-items: baseline;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.79rem;
-  line-height: 1.35;
+  font-family: var(--sequence-viewer-sequence-font);
+  font-size: 0.9rem;
+  line-height: 1.42;
 }
 
 .sequence-viewer-strand-row-bottom {
@@ -1342,9 +1345,13 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   display: block;
   width: 100%;
   position: relative;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.79rem;
-  line-height: 1.35;
+  font-family: var(--sequence-viewer-sequence-font);
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-stretch: 106%;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+  line-height: 1.42;
   letter-spacing: 0;
   white-space: nowrap;
   overflow: visible;
@@ -1352,8 +1359,24 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-seq-text-content {
-  display: block;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sequence-viewer-nt-gap);
   user-select: none;
+}
+
+.sequence-viewer-seq-run {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sequence-viewer-nt-gap);
+  border-radius: 3px;
+}
+
+.sequence-viewer-seq-base {
+  display: inline-block;
+  min-width: 1ch;
+  text-align: center;
+  line-height: 1.28;
 }
 
 .sequence-viewer-line-cursor {
@@ -1370,8 +1393,15 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-seq-highlight {
-  background: rgba(78, 127, 255, 0.22);
-  border-radius: 3px;
+  background: var(--sequence-viewer-selection-highlight);
+}
+
+.sequence-viewer-strand-row-top .sequence-viewer-seq-highlight:not(.sequence-viewer-seq-highlight-alignment) {
+  box-shadow: 0 5px 0 var(--sequence-viewer-selection-highlight);
+}
+
+.sequence-viewer-strand-row-bottom .sequence-viewer-seq-highlight:not(.sequence-viewer-seq-highlight-alignment) {
+  box-shadow: 0 -5px 0 var(--sequence-viewer-selection-highlight);
 }
 
 .sequence-viewer-seq-highlight-alignment {
@@ -1444,7 +1474,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-restriction-annot {
   position: absolute;
-  top: 0;
   --sequence-viewer-restriction-stroke-width: 1px;
   border: 0;
   background: transparent;
@@ -1796,11 +1825,11 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
   .sequence-viewer-strand-row {
     grid-template-columns: 24px 1fr 24px;
-    font-size: 0.74rem;
+    font-size: 0.84rem;
   }
 
   .sequence-viewer-seq-text {
-    font-size: 0.74rem;
+    font-size: 0.84rem;
   }
 
   .sequence-viewer-protein-builder-toolbar {
@@ -1953,7 +1982,8 @@ body.theme-night .sequence-viewer-strand-end {
 }
 
 body.theme-night .sequence-viewer-seq-highlight {
-  background: rgba(78, 127, 255, 0.35);
+  --sequence-viewer-selection-highlight: rgba(78, 127, 255, 0.35);
+  background: var(--sequence-viewer-selection-highlight);
 }
 
 body.theme-night .sequence-viewer-restriction-label {

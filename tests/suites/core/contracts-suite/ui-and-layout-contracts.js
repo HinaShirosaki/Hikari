@@ -204,12 +204,12 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('main composes dedicated IPC registrars with generic tool runtime support', () => {
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
-      const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', ...parts);
+      const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
+      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8');
       const agentRegistrarSource = fs.readFileSync(agentRegistrarPath('index.js'), 'utf8');
-      const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
+      const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
       const toolLoadingSource = fs.readFileSync(agentPath('tools', 'agent-tool-loading.js'), 'utf8');
       const toolExecutionSource = fs.readFileSync(agentPath('tools', 'agent-tool-execution.js'), 'utf8');
       const toolProviderSource = fs.readFileSync(agentPath('tools', 'agent-tool-provide.js'), 'utf8');
@@ -246,7 +246,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const llmUtilsSource = fs.readFileSync(agentPath('shared', 'agent-llm-utils.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
       const chatLogSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
-      const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
+      const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
       assert.doesNotMatch(llmUtilsSource, /text\.length > maxLength \? text\.slice\(0,\s*maxLength\) : text;/);
       assert.doesNotMatch(llmBridgeSource, /text\.length > maxLength \? text\.slice\(0,\s*maxLength\) : text;/);
       assert.doesNotMatch(chatLogSource, /text\.length > maxLength \? text\.slice\(0,\s*maxLength\) : text;/);
@@ -256,8 +256,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('settings expose Codex login recovery controls through preload and system IPC', () => {
       const mainSource = readMainProcessSource();
       const preloadSource = readPreloadSource();
-      const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
-      const settingsSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'settings.js'), 'utf8');
+      const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
+      const settingsSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'settings', 'index.js'), 'utf8');
       const settingsHtml = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'setting-view.html'), 'utf8');
 
       assert.match(mainSource, /launchCodexCliLogin/);
@@ -274,7 +274,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('main and preload expose sequence library IPC bridge through the data registrar', () => {
-      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
+      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8');
       const preloadSource = readPreloadSource();
       assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.LIST/);
       assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.GET/);
@@ -293,7 +293,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('main and preload expose storage root import IPC bridge through the data registrar', () => {
-      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
+      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8');
       const preloadSource = readPreloadSource();
       assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.IMPORT_ROOT/);
       assert.match(dataRegistrarSource, /importStorageRoot\(\{ storagePath \}\)/);

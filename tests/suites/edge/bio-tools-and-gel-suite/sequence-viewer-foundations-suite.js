@@ -2,6 +2,10 @@ module.exports = function registerEdgeSequenceViewerFoundationsSuite(context = {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
+function stripHtmlTags(html) {
+  return String(html || '').replace(/<[^>]*>/g, '');
+}
+
 test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () => {
   [
     'normalizeSequenceText',
@@ -671,7 +675,7 @@ test('[EDGE] sequence-viewer restriction renderer emits px-based geometry with l
   assert.match(html, /sequence-viewer-restriction-label/);
   assert.match(html, /sequence-viewer-restriction-box/);
   assert.match(html, /sequence-viewer-restriction-cut-svg/);
-  assert.match(html, /sequence-viewer-line-restriction-track" style="width:[0-9.]+px;height:[0-9.]+px;"/);
+  assert.match(html, /sequence-viewer-line-restriction-track" style="width:[0-9.]+px;height:[0-9.]+px;[^"]*"/);
 
   const styleMatch = html.match(
     /class="sequence-viewer-restriction-annot[^"]*"\s+data-feature-index="0"\s+style="([^"]+)"/
@@ -696,6 +700,43 @@ test('[EDGE] sequence-viewer restriction renderer emits px-based geometry with l
   assert.equal(topCutX, bridgeStartX);
   assert.equal(bridgeEndX, bottomCutX);
   assert.notEqual(topCutX, bottomCutX);
+});
+
+test('[EDGE] sequence-viewer restriction renderer stacks overlapping site labels into lanes', () => {
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('TTTGAATTCTTT', [], {
+    lineLength: 12,
+    charAdvancePx: 10,
+    sequenceLineHeightPx: 16,
+    selectedFeatureIndex: -1,
+    features: [
+      {
+        name: 'EcoRI',
+        type: 'restriction_site',
+        strand: 1,
+        site: 'GAATTC',
+        cut: 'G^AATTC',
+        segments: [{ start: 3, end: 9 }]
+      },
+      {
+        name: 'EcoRI-alt',
+        type: 'restriction_site',
+        strand: 1,
+        site: 'GAATTC',
+        cut: 'G^AATTC',
+        segments: [{ start: 3, end: 9 }]
+      }
+    ]
+  });
+
+  assert.match(html, /--sequence-viewer-restriction-lanes:2;/);
+  assert.match(html, /class="sequence-viewer-strand-pair" style="padding-top:[0-9.]+px;"/);
+
+  const styles = [...html.matchAll(
+    /class="sequence-viewer-restriction-annot[^"]*"\s+data-feature-index="\d+"\s+style="([^"]+)"/g
+  )].map((match) => match[1]);
+  assert.equal(styles.length, 2);
+  assert.equal(styles.some((style) => /top:0\.000px;/.test(style)), true);
+  assert.equal(styles.some((style) => /top:-[0-9.]+px;/.test(style)), true);
 });
 
 test('[EDGE] sequence-viewer line feature renderer emits px-based span bars', () => {
@@ -853,8 +894,9 @@ test('[EDGE] sequence-viewer dual-strand renderer shows 5/3 orientation and pair
   assert.match(html, /sequence-viewer-strand-row-bottom/);
   assert.match(html, /5'/);
   assert.match(html, /3'/);
-  assert.match(html, /CGT/);
-  assert.match(html, /GCA/);
+  const plainText = stripHtmlTags(html);
+  assert.match(plainText, /CGT/);
+  assert.match(plainText, /GCA/);
   const highlightCount = (html.match(/sequence-viewer-seq-highlight/g) || []).length;
   assert.equal(highlightCount, 2);
 });

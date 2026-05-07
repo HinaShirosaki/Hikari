@@ -21,7 +21,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
     ].join('\n');
 
     test('data-helpers default bundle hydrator preserves parsed snapshot settings', async () => {
-      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data-helpers.js'));
+      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data', 'data-helpers.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'data-helpers-default-hydrate-'));
       const dataFilePath = path.join(tempDir, 'state.json');
       try {
@@ -45,7 +45,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
     });
 
     test('storage bundle helper sync + hydrate roundtrip restores protocols notebook inventory and samples from folders/sqlite', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
       const { createAgentLookupRuntime } = require(agentPath('runtime', 'agent-lookup-runtime.js'));
@@ -130,7 +130,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
     });
 
     test('storage hydration restores project notebook pages from page folders when the notebook sidecar is missing', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'project-notebook-folder-hydration-'));
       const dataFilePath = path.join(tempDir, 'example.ena.json');
       try {
@@ -191,7 +191,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
     });
 
     test('storage root importer restores projects and notebook pages from project folders without bundle files', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'project-folder-only-import-'));
       try {
         const projectRoot = path.join(tempDir, 'Project', 'Atlas');
@@ -256,7 +256,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
     });
 
     test('workflow root storage sync writes template/run folders and hydrates workflows notebook pages plus related papers', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
       const workflowStorage = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'workflow-storage.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'workflow-root-storage-'));
       const dataFilePath = path.join(tempDir, 'workflow-example.ena.json');
@@ -352,7 +352,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
     });
 
     test('storage root importer reads Testdata-like bundles and writes manifest with non-zero summary counts', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
       const fixtureRoot = path.join(__dirname, 'Testdata');
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-import-fixture-'));
       try {
@@ -378,8 +378,8 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
 
     test('chemical inventory sync uses sqlite-only bundle writes instead of a chemical json file', () => {
       const preloadSource = readPreloadStorageSource();
-      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-data-ipc.js'), 'utf8');
-      const chemicalInventorySource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'lab-common-inventory.js'), 'utf8');
+      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8');
+      const chemicalInventorySource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'lab-common-inventory', 'index.js'), 'utf8');
       assert.match(preloadSource, /syncSqliteBundle:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(STORAGE\.SYNC_SQLITE_BUNDLE, payload\)/);
       assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.SYNC_SQLITE_BUNDLE/);
       assert.match(chemicalInventorySource, /window\.enanaApi\?\.syncSqliteBundle/);
@@ -419,7 +419,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
     test('main agent chat logging records request/result/error with redacted API key metadata', () => {
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
-      const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', ...parts);
+      const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
       const mainSource = readMainProcessSource();
       const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'app-paths.js'), 'utf8');
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');

@@ -49,6 +49,7 @@ export const DEFAULT_CLONING_PREFERENCES = Object.freeze({
   preferGibsonForMultiFragment: true,
   maxPrimerEncodedInsertionAA: 30,
   maxPrimerLength: 60,
+  minMutagenesisFlankLength: 8,
   requireUniqueRestrictionSites: true,
   topology: 'circular',
   vendorFilter: DEFAULT_VENDOR_FILTER,
@@ -664,9 +665,13 @@ function normalizeEditRequest(editRequest, templateSequence = '') {
   }
 
   const startIndex = Number.isFinite(start) ? clampIndex(start - 1, 0, template.length) : 0;
-  const endIndex = Number.isFinite(end)
-    ? clampIndex(end, startIndex, template.length)
-    : clampIndex(startIndex + originalSequence.length, startIndex, template.length);
+  const endIndex = type === 'insertion'
+    ? startIndex
+    : (
+        Number.isFinite(end)
+          ? clampIndex(end, startIndex, template.length)
+          : clampIndex(startIndex + originalSequence.length, startIndex, template.length)
+      );
 
   return {
     type,
@@ -723,11 +728,12 @@ function buildOrderedFragmentMap({ host, fragments, resultSequence, editRequest 
   };
 }
 
-function buildPrimerRecord({ name, role, sequence, tailSequence = '', bindingSequence = '', warnings = [] }) {
+function buildPrimerRecord({ name, role, sequence, tailSequence = '', bindingSequence = '', tmSequence = '', warnings = [] }) {
   const safeSequence = normalizeSequence(sequence);
   const safeTail = normalizeSequence(tailSequence);
   const safeBinding = normalizeSequence(bindingSequence);
-  const tmTarget = safeBinding.length ? safeBinding : safeSequence;
+  const safeTmSequence = normalizeSequence(tmSequence);
+  const tmTarget = safeTmSequence || (safeBinding.length ? safeBinding : safeSequence);
 
   return {
     name: String(name || '').trim() || 'primer',
@@ -1017,50 +1023,90 @@ function findMutagenesisWindow(flankSequence, side, thresholds, targetBudget) {
   return best;
 }
 
-function designSimpleMutagenesisPrimers(templateSequence, normalizedEdit, thresholds, config) {
-  const template = normalizeSequence(templateSequence);
+function selectSimpleMutagenesisPrimer(template, normalizedEdit, thresholds, config) {
   const leftFlank = template.slice(0, normalizedEdit.startIndex);
   const rightFlank = template.slice(normalizedEdit.endIndex);
   const replacement = normalizedEdit.type === 'deletion'
     ? ''
     : normalizeSequence(normalizedEdit.editedSequence || '');
   const maxPrimerLength = Math.max(0, Number(config?.maxPrimerLength) || DEFAULT_CLONING_PREFERENCES.maxPrimerLength);
+  const minPrimerLength = Math.max(1, Number(thresholds?.primerLength?.min) || 1);
+  const maxPrimerWindow = Math.max(minPrimerLength, Number(thresholds?.primerLength?.max) || maxPrimerLength);
+  const maxTotalLength = Math.min(maxPrimerLength, maxPrimerWindow);
+  const minFlankLength = Math.max(1, Number(config?.minMutagenesisFlankLength) || DEFAULT_CLONING_PREFERENCES.minMutagenesisFlankLength);
+  const preferredTm = createMidpoint(thresholds?.primerTm);
+  const preferredLength = createMidpoint(thresholds?.primerLength);
+  let best = null;
 
-  for (let availableFlank = Math.max(0, maxPrimerLength - replacement.length); availableFlank >= Number(thresholds.primerLength.min || 0); availableFlank -= 1) {
-    const leftBudget = Math.max(1, Math.floor(availableFlank / 2));
-    const rightBudget = Math.max(1, availableFlank - leftBudget);
-    const leftWindow = findMutagenesisWindow(leftFlank, 'left', thresholds, leftBudget);
-    const rightWindow = findMutagenesisWindow(rightFlank, 'right', thresholds, rightBudget);
-    if (!leftWindow || !rightWindow) {
-      continue;
-    }
-    const forwardSequence = `${leftWindow.sequence}${replacement}${rightWindow.sequence}`;
-    if (forwardSequence.length > maxPrimerLength) {
-      continue;
-    }
-    const forwardTm = oligoTm(forwardSequence, 'DNA');
-    if (forwardTm < thresholds.primerTm.min || forwardTm > thresholds.primerTm.max) {
-      continue;
-    }
+  if (replacement.length >= maxTotalLength) {
+    return null;
+  }
 
-    const reverseSequence = reverseComplementDna(forwardSequence);
+  const maxLeftLength = Math.min(leftFlank.length, maxTotalLength - replacement.length - minFlankLength);
+  const maxRightLength = Math.min(rightFlank.length, maxTotalLength - replacement.length - minFlankLength);
+  if (maxLeftLength < minFlankLength || maxRightLength < minFlankLength) {
+    return null;
+  }
+
+  for (let leftLength = minFlankLength; leftLength <= maxLeftLength; leftLength += 1) {
+    const leftSequence = leftFlank.slice(leftFlank.length - leftLength);
+    for (let rightLength = minFlankLength; rightLength <= maxRightLength; rightLength += 1) {
+      const rightSequence = rightFlank.slice(0, rightLength);
+      const primerSequence = `${leftSequence}${replacement}${rightSequence}`;
+      const primerLength = primerSequence.length;
+      if (primerLength < minPrimerLength || primerLength > maxTotalLength) {
+        continue;
+      }
+      const tm = oligoTm(primerSequence, 'DNA');
+      if (tm < thresholds.primerTm.min || tm > thresholds.primerTm.max) {
+        continue;
+      }
+      const editCenter = leftLength + (replacement.length / 2);
+      const primerCenter = primerLength / 2;
+      const balancePenalty = Math.abs(editCenter - primerCenter) * 0.35;
+      const score = candidateScore(tm, preferredTm, primerLength, preferredLength) + balancePenalty;
+      if (!best || score < best.score) {
+        best = {
+          sequence: primerSequence,
+          leftSequence,
+          rightSequence,
+          replacement,
+          tm,
+          length: primerLength,
+          score
+        };
+      }
+    }
+  }
+
+  return best;
+}
+
+function designSimpleMutagenesisPrimers(templateSequence, normalizedEdit, thresholds, config) {
+  const template = normalizeSequence(templateSequence);
+  const primer = selectSimpleMutagenesisPrimer(template, normalizedEdit, thresholds, config);
+  if (primer) {
+    const reverseSequence = reverseComplementDna(primer.sequence);
+    const bindingSequence = `${primer.leftSequence}${primer.rightSequence}`;
     return {
       feasible: true,
       primers: [
         buildPrimerRecord({
           name: 'mutagenesis_F',
           role: 'mutagenesis-forward',
-          sequence: forwardSequence,
-          tailSequence: replacement,
-          bindingSequence: `${leftWindow.sequence}${rightWindow.sequence}`,
+          sequence: primer.sequence,
+          tailSequence: primer.replacement,
+          bindingSequence,
+          tmSequence: primer.sequence,
           warnings: []
         }),
         buildPrimerRecord({
           name: 'mutagenesis_R',
           role: 'mutagenesis-reverse',
           sequence: reverseSequence,
-          tailSequence: reverseComplementDna(replacement),
-          bindingSequence: reverseComplementDna(`${leftWindow.sequence}${rightWindow.sequence}`),
+          tailSequence: reverseComplementDna(primer.replacement),
+          bindingSequence: reverseComplementDna(bindingSequence),
+          tmSequence: reverseSequence,
           warnings: []
         })
       ],

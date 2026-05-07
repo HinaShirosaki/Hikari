@@ -6,7 +6,7 @@ const {
   normalizeToolArgumentsPayload,
   resolveCanonicalToolName
 } = require('../tools/agent-tool-loading.js');
-const { createMcpLookupToolRouter } = require('./mcp-tools/index.js');
+const { createDirectMcpToolRouter } = require('./mcp-tools/index.js');
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -75,7 +75,7 @@ function createCodexAgentMcpGateway(deps = {}) {
   const runTool = typeof deps.runTool === 'function'
     ? deps.runTool
     : null;
-  const lookupToolRouter = createMcpLookupToolRouter({
+  const directToolRouter = createDirectMcpToolRouter({
     runTool
   });
 
@@ -238,8 +238,8 @@ function createCodexAgentMcpGateway(deps = {}) {
     if (toolName === 'tool_call') {
       return toolCall(args, context);
     }
-    if (lookupToolRouter.hasTool(toolName)) {
-      return lookupToolRouter.callTool(toolName, args, context);
+    if (directToolRouter.hasTool(toolName)) {
+      return directToolRouter.callTool(toolName, args, context);
     }
     if (toolName === 'resource_search') {
       return resourceSearch(args);

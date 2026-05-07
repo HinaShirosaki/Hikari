@@ -34,29 +34,50 @@ import {
   normalizeSequenceText
 } from './shared.js';
 
+const RESTRICTION_STACK_LANE_STEP_PX = 16;
+const RESTRICTION_LABEL_COLLISION_GAP_PX = 6;
+const RESTRICTION_LABEL_HORIZONTAL_PADDING_PX = 8;
+
+function getSequenceRunClass(kind) {
+  const normalizedKind = String(kind || '').toLowerCase();
+  if (normalizedKind === 'alignment') {
+    return 'sequence-viewer-seq-run sequence-viewer-seq-highlight sequence-viewer-seq-highlight-alignment';
+  }
+  if (normalizedKind) {
+    return 'sequence-viewer-seq-run sequence-viewer-seq-highlight';
+  }
+  return 'sequence-viewer-seq-run';
+}
+
+function buildSequenceBaseCells(sourceText, start, end) {
+  const cells = [];
+  for (let baseIndex = start; baseIndex < end; baseIndex += 1) {
+    cells.push(`<span class="sequence-viewer-seq-base">${escapeHtml(sourceText[baseIndex] || '')}</span>`);
+  }
+  return cells.join('');
+}
+
 function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighlights) {
-  let body = '';
   if (!lineHighlights.length) {
-    return escapeHtml(sourceText.slice(lineStart, lineEnd));
+    return `<span class="sequence-viewer-seq-run">${buildSequenceBaseCells(sourceText, lineStart, lineEnd)}</span>`;
   }
 
   let cursor = lineStart;
+  const runs = [];
   lineHighlights.forEach((segment) => {
     if (segment.start > cursor) {
-      body += escapeHtml(sourceText.slice(cursor, segment.start));
+      runs.push(`<span class="sequence-viewer-seq-run">${buildSequenceBaseCells(sourceText, cursor, segment.start)}</span>`);
     }
-    const kind = String(segment?.kind || '').toLowerCase();
-    const highlightClass = kind === 'alignment'
-      ? 'sequence-viewer-seq-highlight sequence-viewer-seq-highlight-alignment'
-      : 'sequence-viewer-seq-highlight';
-    body += `<span class="${highlightClass}">${escapeHtml(sourceText.slice(segment.start, segment.end))}</span>`;
+    const kind = String(segment?.kind || '').toLowerCase() === 'alignment' ? 'alignment' : 'highlight';
+    runs.push(`<span class="${getSequenceRunClass(kind)}">${buildSequenceBaseCells(sourceText, segment.start, segment.end)}</span>`);
     cursor = segment.end;
   });
 
   if (cursor < lineEnd) {
-    body += escapeHtml(sourceText.slice(cursor, lineEnd));
+    runs.push(`<span class="sequence-viewer-seq-run">${buildSequenceBaseCells(sourceText, cursor, lineEnd)}</span>`);
   }
-  return body;
+
+  return runs.join('');
 }
 
 export function normalizeHighlightSegments(segments, sequenceLength = null) {
@@ -97,6 +118,43 @@ export function normalizeHighlightSegments(segments, sequenceLength = null) {
   return merged;
 }
 
+function estimateRestrictionLabelWidthPx(label, charAdvancePx) {
+  const safeLabel = String(label || '');
+  const labelAdvancePx = Math.max(5, charAdvancePx * 0.68);
+  return Math.max(28, (safeLabel.length * labelAdvancePx) + RESTRICTION_LABEL_HORIZONTAL_PADDING_PX);
+}
+
+function assignRestrictionAnnotationLanes(fragments) {
+  const sorted = [...fragments].sort((left, right) => {
+    if (left.collisionLeftPx !== right.collisionLeftPx) {
+      return left.collisionLeftPx - right.collisionLeftPx;
+    }
+    if (left.leftPx !== right.leftPx) {
+      return left.leftPx - right.leftPx;
+    }
+    return right.widthPx - left.widthPx;
+  });
+  const laneRightEdges = [];
+
+  sorted.forEach((fragment) => {
+    let laneIndex = laneRightEdges.findIndex(
+      (rightEdge) => fragment.collisionLeftPx >= (rightEdge + RESTRICTION_LABEL_COLLISION_GAP_PX)
+    );
+    if (laneIndex < 0) {
+      laneIndex = laneRightEdges.length;
+      laneRightEdges.push(fragment.collisionRightPx);
+    } else {
+      laneRightEdges[laneIndex] = fragment.collisionRightPx;
+    }
+    fragment.lane = laneIndex;
+  });
+
+  return {
+    fragments: sorted,
+    laneCount: Math.max(1, laneRightEdges.length)
+  };
+}
+
 function renderLineRestrictionAnnotationsHtml(
   indexedFeatures,
   lineStart,
@@ -110,7 +168,7 @@ function renderLineRestrictionAnnotationsHtml(
   const safeLineHeight = Math.max(8, Number(sequenceLineHeightPx) || FALLBACK_SEQUENCE_LINE_HEIGHT_PX);
   const pairBoxHeightPx = Math.max(safeLineHeight + 8, (safeLineHeight * 2) + STRAND_PAIR_ROW_GAP_PX);
   const lineWidthPx = Math.max(1, (Math.max(lineStart, lineEnd) - lineStart) * safeAdvance);
-  const annotations = indexedFeatures
+  const fragments = indexedFeatures
     .filter(({ feature }) => String(feature?.type || '').toLowerCase() === 'restriction_site')
     .flatMap(({ feature, index }) => {
       const segments = Array.isArray(feature?.segments) ? feature.segments : [];
@@ -162,35 +220,63 @@ function renderLineRestrictionAnnotationsHtml(
           const svgHeight = RESTRICTION_LABEL_GAP_PX + pairBoxHeightPx;
           const location = buildFeatureLocationText(feature, sequenceLength);
           const isActive = index === selectedFeatureIndex;
-          const title = `${feature.name || '-'} (${location})`;
+          const label = String(feature.name || `site_${index + 1}`);
+          const title = `${label || '-'} (${location})`;
+          const labelWidthPx = estimateRestrictionLabelWidthPx(label, safeAdvance);
+          const labelCenterPx = geometry.leftPx + (geometry.widthPx / 2);
+          const collisionLeftPx = Math.min(geometry.leftPx, labelCenterPx - (labelWidthPx / 2));
+          const collisionRightPx = Math.max(geometry.leftPx + geometry.widthPx, labelCenterPx + (labelWidthPx / 2));
 
-          return `
+          return {
+            index,
+            isActive,
+            label,
+            title,
+            leftPx: geometry.leftPx,
+            widthPx: geometry.widthPx,
+            collisionLeftPx,
+            collisionRightPx,
+            cutPoints,
+            svgWidth,
+            svgHeight
+          };
+        })
+        .filter(Boolean);
+    });
+
+  if (!fragments.length) {
+    return { html: '', topPaddingPx: 0 };
+  }
+
+  const { fragments: stackedFragments, laneCount } = assignRestrictionAnnotationLanes(fragments);
+  const topPaddingPx = RESTRICTION_LABEL_GAP_PX + 5 + ((laneCount - 1) * RESTRICTION_STACK_LANE_STEP_PX);
+  const annotations = stackedFragments
+    .map((fragment) => {
+      const laneTopPx = -fragment.lane * RESTRICTION_STACK_LANE_STEP_PX;
+      return `
             <button
               type="button"
-              class="sequence-viewer-restriction-annot${isActive ? ' sequence-viewer-restriction-annot-active' : ''}"
-              data-feature-index="${index}"
-              style="left:${geometry.leftPx.toFixed(3)}px;width:${geometry.widthPx.toFixed(3)}px;--sequence-viewer-restriction-label-gap:${RESTRICTION_LABEL_GAP_PX}px;"
-              title="${escapeHtml(title)}"
+              class="sequence-viewer-restriction-annot${fragment.isActive ? ' sequence-viewer-restriction-annot-active' : ''}"
+              data-feature-index="${fragment.index}"
+              style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;top:${laneTopPx.toFixed(3)}px;z-index:${fragment.lane + 1};--sequence-viewer-restriction-label-gap:${RESTRICTION_LABEL_GAP_PX}px;"
+              title="${escapeHtml(fragment.title)}"
             >
-              <span class="sequence-viewer-restriction-label">${escapeHtml(feature.name || `site_${index + 1}`)}</span>
+              <span class="sequence-viewer-restriction-label">${escapeHtml(fragment.label)}</span>
               <span class="sequence-viewer-restriction-box"></span>
-              ${cutPoints
-    ? `<svg class="sequence-viewer-restriction-cut-svg" viewBox="0 0 ${svgWidth.toFixed(2)} ${svgHeight.toFixed(2)}" preserveAspectRatio="none" aria-hidden="true">
-                <polyline points="${cutPoints}"></polyline>
+              ${fragment.cutPoints
+    ? `<svg class="sequence-viewer-restriction-cut-svg" viewBox="0 0 ${fragment.svgWidth.toFixed(2)} ${fragment.svgHeight.toFixed(2)}" preserveAspectRatio="none" aria-hidden="true">
+                <polyline points="${fragment.cutPoints}"></polyline>
               </svg>`
     : ''}
             </button>
           `;
-        })
-        .filter(Boolean);
     })
     .join('');
 
-  if (!annotations) {
-    return '';
-  }
-
-  return `<div class="sequence-viewer-line-restriction-track" style="width:${lineWidthPx.toFixed(3)}px;height:${pairBoxHeightPx.toFixed(3)}px;">${annotations}</div>`;
+  return {
+    html: `<div class="sequence-viewer-line-restriction-track" style="width:${lineWidthPx.toFixed(3)}px;height:${pairBoxHeightPx.toFixed(3)}px;--sequence-viewer-restriction-lanes:${laneCount};">${annotations}</div>`,
+    topPaddingPx
+  };
 }
 
 function renderLineFeatureButtonsHtml(
@@ -408,6 +494,7 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
       charAdvancePx,
       sequenceLineHeightPx
     );
+    const restrictionTopPaddingPx = Math.max(0, Number(lineRestrictionAnnotations?.topPaddingPx) || 0);
     const lineFeatureButtons = renderLineFeatureButtonsHtml(
       indexedFeatures,
       lineStart,
@@ -421,20 +508,26 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
     const cursorLeftPx = hasCursorOnLine
       ? lineFeatureOffsetPx + ((cursorBaseIndex - lineStart) * charAdvancePx)
       : null;
+    const strandPairStyle = restrictionTopPaddingPx > 0
+      ? ` style="padding-top:${restrictionTopPaddingPx.toFixed(3)}px;"`
+      : '';
+    const coordStyle = restrictionTopPaddingPx > 0
+      ? ` style="padding-top:${(restrictionTopPaddingPx + 2).toFixed(3)}px;"`
+      : '';
 
     lines.push(`
       <div class="sequence-viewer-dual-line" data-line-start="${lineStart}" data-line-end="${lineEnd}">
-        <span class="sequence-viewer-seq-coord">${(lineStart + 1).toLocaleString()}</span>
+        <span class="sequence-viewer-seq-coord"${coordStyle}>${(lineStart + 1).toLocaleString()}</span>
         <div class="sequence-viewer-strand-block">
-          <div class="sequence-viewer-strand-pair">
+          <div class="sequence-viewer-strand-pair"${strandPairStyle}>
             ${hasCursorOnLine
-    ? `<span class="sequence-viewer-line-cursor" style="left:${cursorLeftPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;" aria-hidden="true"></span>`
+    ? `<span class="sequence-viewer-line-cursor" style="left:${cursorLeftPx.toFixed(3)}px;top:${restrictionTopPaddingPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;" aria-hidden="true"></span>`
     : ''}
             <div class="sequence-viewer-strand-row sequence-viewer-strand-row-top">
               <span class="sequence-viewer-strand-end">5'</span>
               <span class="sequence-viewer-seq-text sequence-viewer-seq-text-top">
                 <span class="sequence-viewer-seq-text-content">${forwardBody}</span>
-                ${lineRestrictionAnnotations}
+                ${lineRestrictionAnnotations.html}
               </span>
               <span class="sequence-viewer-strand-end">3'</span>
             </div>

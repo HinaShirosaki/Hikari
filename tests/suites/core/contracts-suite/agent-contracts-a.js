@@ -5,7 +5,7 @@ module.exports = function registerAgentContractsA(context = {}) {
   with (scope) {
     const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
     const agentPath = (...parts) => path.join(agentDir, ...parts);
-    const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', ...parts);
+    const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
     const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
@@ -149,8 +149,9 @@ module.exports = function registerAgentContractsA(context = {}) {
       const mainRuntimeSource = readLocalSource('src', 'main', 'app', 'main-runtime.js');
       const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
-      const systemRegistrarSource = readLocalSource('src', 'main', 'helpers', 'main', 'register-system-ipc.js');
+      const systemRegistrarSource = readLocalSource('src', 'main', 'ipc', 'register-system-ipc.js');
       const protocolPolishSource = readLocalSource('src', 'renderer', 'modules', 'protocol', 'polish.js');
+      const directLlmSource = readLocalSource('src', 'renderer', 'modules', 'direct-llm.js');
       const papersLlmSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'llm.js');
 
       assert.match(controllerCoreSource, /codexAgentRuntime\.run\(/);
@@ -161,7 +162,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(mainRuntimeSource.includes('agentServices.requestCodexAgentText || requestCodexCliText'), false);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_GENERATE/);
       assert.match(protocolPolishSource, /requestLlmText/);
-      assert.match(papersLlmSource, /runCodexLlmPrompt/);
+      assert.match(directLlmSource, /runDirectLlmPrompt/);
+      assert.doesNotMatch(papersLlmSource, /runCodexLlmPrompt/);
     });
 
     test('main agent logs persist redacted llm traces and replay wiring', () => {
@@ -231,7 +233,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const preloadSource = readPreloadSource();
-      const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-system-ipc.js'), 'utf8');
+      const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
 
       assert.match(purchaseSource, /function createPurchaseRecommendationRuntime\(deps = \{\}\)/);
       assert.match(purchaseSource, /createAgentLlmRuntimeHelpers/);

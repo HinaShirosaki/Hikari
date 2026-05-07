@@ -55,8 +55,10 @@ This file is much smaller and is split between two concerns.
 - `llm:codex-status`
 - `llm:codex-set-model`
 - `llm:codex-generate`
+- `llm:direct-modules`
+- `llm:direct-generate`
 
-These endpoints are thin wrappers around the Codex CLI provider helpers from `main.js`.
+The Codex endpoints are thin wrappers around the Codex CLI provider helpers from `main.js`. The direct endpoints expose the registered module-level LLM surface for app modules that need provider-backed text/file generation without entering the agent chat controller.
 
 ## Telegram endpoints
 

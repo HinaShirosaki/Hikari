@@ -83,7 +83,7 @@ Supported JSON-RPC methods:
 | Method | Result |
 | --- | --- |
 | `initialize` | Protocol version, capabilities, server info |
-| `tools/list` | Ten MCP tools listed below |
+| `tools/list` | Direct Hikari contract tools plus generic search/bridge/resource tools listed below |
 | `tools/call` | Gateway result encoded as one text content item |
 | `resources/list` | `resource_search({ query: "", limit: 40 })` |
 | `resources/read` | Resource contents for the requested URI |
@@ -92,6 +92,17 @@ Supported JSON-RPC methods:
 Unsupported methods return JSON-RPC error `-32601`. Internal failures return `-32603`. Missing resources return `-32004`.
 
 ## MCP tools
+
+The direct Hikari MCP contract tools are first-class MCP tools in `tools/list`. Codex can call them by name without using `tool_search`, `tool_info`, or `tool_call`:
+
+- `inventory_lookup`
+- `chemical_lookup`
+- `protocol_lookup`
+- `protocol_generation`
+- `notebook_lookup`
+- `ask_user`
+
+Use `tool_search`, `tool_info`, and `tool_call` only for broader app tools that are not already exposed as direct MCP tools.
 
 ### `tool_search`
 
@@ -307,6 +318,74 @@ Input schema:
 }
 ```
 
+### `ask_user`
+
+Direct MCP helper for one blocking clarification. It does not wait inside MCP for a human answer; instead it returns a renderable `final_response` payload that Codex should emit as the whole-turn JSON result. Hikari renders the options and custom text box, then sends the user answer back as the next chat turn.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["question", "options"],
+  "properties": {
+    "question": { "type": "string", "minLength": 1 },
+    "context": { "type": "string" },
+    "options": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "anyOf": [
+          { "type": "string" },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label"],
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string", "minLength": 1 },
+              "value": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        ]
+      }
+    },
+    "allow_custom": { "type": "boolean" },
+    "placeholder": { "type": "string" },
+    "submit_label": { "type": "string" }
+  }
+}
+```
+
+Result shape:
+
+```json
+{
+  "ok": true,
+  "status": "needs_user_answer",
+  "mcp_tool": "ask_user",
+  "user_question": {
+    "question": "Which project should I use?",
+    "options": [
+      {
+        "label": "Current project",
+        "value": "Use the current project."
+      }
+    ],
+    "allow_custom": true
+  },
+  "final_response": {
+    "status": "needs_more_info",
+    "assistant_text": "Which project should I use?",
+    "follow_up_questions": ["Which project should I use?"],
+    "user_question": {}
+  }
+}
+```
+
 Direct lookup result shape:
 
 ```json
@@ -432,6 +511,8 @@ Response:
 Unauthorized calls return HTTP 401 with `status: "unauthorized"`. Missing executor returns HTTP 503 with `status: "executor_unavailable"`.
 
 ## Hikari app tools exposed through `tool_search` / `tool_info`
+
+These generic app tools remain available through the bridge for cases that do not match a direct MCP contract tool. Do not route `inventory_lookup`, `chemical_lookup`, `protocol_lookup`, `protocol_generation`, or `notebook_lookup` through `tool_search`; call those direct MCP tools instead.
 
 The current exported tool ids are:
 

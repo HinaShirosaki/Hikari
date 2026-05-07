@@ -14,7 +14,7 @@ async function loadPdfJsModule() {
     installPdfJsCompat(globalThis);
     pdfJsModulePromise = import(buildViewerAssetUrl('./vendor/pdfjs/build/pdf.mjs'))
       .then((pdfjsLib) => {
-        pdfjsLib.GlobalWorkerOptions.workerSrc = buildViewerAssetUrl('./src/renderer/modules/papers-pdfjs-worker.js');
+        pdfjsLib.GlobalWorkerOptions.workerSrc = buildViewerAssetUrl('./src/renderer/modules/papers/pdfjs-worker.js');
         return pdfjsLib;
       })
       .catch((error) => {

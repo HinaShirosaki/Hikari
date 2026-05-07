@@ -70,8 +70,8 @@ export function createSampleLinkMenuController({
     if (!menu) {
       return;
     }
-    const menuWidth = 340;
-    const menuHeight = 420;
+    const menuWidth = 320;
+    const menuHeight = 360;
     const viewportWidth = win?.innerWidth || doc?.documentElement?.clientWidth || menuWidth;
     const viewportHeight = win?.innerHeight || doc?.documentElement?.clientHeight || menuHeight;
     const left = Math.max(12, Math.min(Number(x) || 12, viewportWidth - menuWidth - 12));

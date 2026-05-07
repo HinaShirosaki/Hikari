@@ -2,6 +2,10 @@ module.exports = function registerEdgeSequenceViewerInteractionsSuite(context = 
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
+function stripHtmlTags(html) {
+  return String(html || '').replace(/<[^>]*>/g, '');
+}
+
 test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus selected translation row', () => {
   const ids = [
     'sequence-viewer-home-workspace',
@@ -596,7 +600,7 @@ test('[EDGE] sequence-viewer keyboard edits selected bases through the sequence 
 
   assert.equal(Boolean(editOverlay.hidden), true);
   assert.equal(statLength.textContent, '10');
-  assert.equal(sequenceHost.innerHTML.includes('AGGCGTACGT'), true);
+  assert.equal(stripHtmlTags(sequenceHost.innerHTML).includes('AGGCGTACGT'), true);
 });
 
 test('[EDGE] sequence-viewer keyboard inserts at cursor and confirms selected-base deletion', async () => {
@@ -710,7 +714,7 @@ test('[EDGE] sequence-viewer keyboard inserts at cursor and confirms selected-ba
   await flushAsync();
 
   assert.equal(statLength.textContent, '14');
-  assert.equal(sequenceHost.innerHTML.includes('ACGTTTACGTACGT'), true);
+  assert.equal(stripHtmlTags(sequenceHost.innerHTML).includes('ACGTTTACGTACGT'), true);
 
   trigger(sequenceHost, 'mousedown', { button: 0, clientX: 28, target: lineTarget });
   trigger(sequenceHost, 'mousemove', { clientX: 60, target: lineTarget });
@@ -726,7 +730,7 @@ test('[EDGE] sequence-viewer keyboard inserts at cursor and confirms selected-ba
 
   assert.equal(Boolean(editOverlay.hidden), true);
   assert.equal(statLength.textContent, '10');
-  assert.equal(sequenceHost.innerHTML.includes('ATACGTACGT'), true);
+  assert.equal(stripHtmlTags(sequenceHost.innerHTML).includes('ATACGTACGT'), true);
 });
 
 test('[EDGE] sequence-viewer opens cloning design after base edits and renders primers', async () => {

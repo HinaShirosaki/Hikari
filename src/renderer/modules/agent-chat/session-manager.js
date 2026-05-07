@@ -132,7 +132,7 @@ export function createAgentChatSessionManager(deps = {}) {
       if (preserveLocalMessages) {
         upsertSessionSummary(result.session);
         renderSessionList();
-        setSessionStatus('Loaded chats from disk.');
+        setSessionStatus('');
         if (options.silent !== true) {
           setStatus('Ready.');
         }
@@ -147,7 +147,7 @@ export function createAgentChatSessionManager(deps = {}) {
       renderContextSummary();
       renderSessionList();
       renderHistory({ forceScroll: true });
-      setSessionStatus('Loaded chats from disk.');
+      setSessionStatus('');
       if (options.silent !== true) {
         setStatus('Ready.');
       }

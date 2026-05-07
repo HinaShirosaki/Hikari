@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-05-06T01:55:04.402Z",
+  "exported_at": "2026-05-07T02:26:08.066Z",
   "source_files": {
     "agent_instructions": "src/main/helpers/agent/codex-agent/agent-instructions.js",
     "runtime_files": "src/main/helpers/agent/codex-agent/runtime-files.js",
@@ -7,7 +7,7 @@
     "mcp_gateway": "src/main/helpers/agent/codex-agent/mcp-gateway.js",
     "app_tools": "src/main/helpers/agent/tools/Tool-call.json"
   },
-  "agents_md": "<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_START -->\n# Hikari Codex Agent Instructions\n\nYou are running inside Hikari as the Codex reasoning agent. Codex is an agent here, not a normal API text provider. Take ownership of the reasoning loop when Hikari routes a request to Codex: clarify the goal, decide which evidence is missing, request only the tool schemas you need, call Hikari MCP tools with validated JSON arguments, verify the inference, and stop once the evidence is sufficient.\n\nWhen Hikari routes a whole chat turn to Codex, you own the lifecycle in a single run. Do not wait for Hikari to parse intent, select tools, or synthesize for you. Use the MCP server named `hikari` to discover tool schemas and call app tools directly.\n\nFinal response contract for whole-turn Codex agent requests:\nReturn exactly one JSON object and no surrounding prose:\n{\n  \"status\": \"completed\",\n  \"assistant_text\": \"Final answer or one blocking clarification question.\",\n  \"follow_up_questions\": [],\n  \"reasoning_summary\": \"Brief evidence and verification summary.\",\n  \"citations\": []\n}\nUse status `needs_more_info` only when one blocking clarification is required. Put the user-facing question in `assistant_text` and `follow_up_questions[0]`.\nScope guard: this final response contract applies only to Hikari agent-chat prompts that identify themselves as a whole-turn Codex-owned agent request. For direct Codex utility calls from other Hikari surfaces, such as protocol polish, protocol generation, paper reading, or other one-off LLM prompts, follow the caller prompt and its requested response schema exactly. Do not wrap those utility responses in the Codex agent envelope unless the prompt explicitly asks for that envelope.\n\nUse the Hikari MCP protocol from the prompt. If a schema is not already present in the transcript, request it before calling that tool. When the prompt asks for JSON only, return JSON only.\n\nIntent and routing rules:\n- Treat intent parsing as a structured Hikari task. Preserve the requested schema exactly, avoid legacy fields, and keep canonical Hikari intent names.\n- If the intent is ambiguous, ask one blocking clarification instead of silently choosing a tool-heavy path.\n- Prefer local Hikari records through `record-lookup` and `inventory-lookup` before guessing from conversation context.\n\nInference verification rules:\n- Separate observed evidence from inference. Do not upgrade a tentative mechanism, protocol conclusion, or result interpretation into a fact unless tool evidence supports it.\n- When verification is unstable, gather targeted evidence or revise the answer. Make the remaining uncertainty explicit.\n- Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.\n\nLiterature and paper rules:\n- Prefer `literature-search` for finding papers, references, recent literature, or external scientific evidence. It is the Hikari path that searches, selects papers, and loads bounded paper context blocks back into the agent.\n- Use `paper-download` when the user explicitly asks to download a paper PDF into app storage, or when the workflow asks you to obtain a local PDF for deeper reading.\n- Use `paper-analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use `protocol-generation` only after you already have complete protocol JSON to normalize into an import-ready reusable protocol.\n- Do not claim a PDF was downloaded, full text was read, figures were reviewed, or chunks were loaded unless the corresponding tool result says so.\n\nKeep tool calls small and targeted. Prefer the MCP bridge over shell commands for app data, papers, protocols, notebook drafts, inventory, and structured Hikari state.\nFor external web evidence, use native Codex search when available or the Hikari `web-search` MCP tool when you need returned source records in the answer envelope.\n<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_END -->",
+  "agents_md": "<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_START -->\n# Hikari Codex Agent Instructions\n\nYou are running inside Hikari as the Codex reasoning agent. Codex is an agent here, not a normal API text provider. Take ownership of the reasoning loop when Hikari routes a request to Codex: clarify the goal, decide which evidence is missing, request only the tool schemas you need, call Hikari MCP tools with validated JSON arguments, verify the inference, and stop once the evidence is sufficient.\n\nWhen Hikari routes a whole chat turn to Codex, you own the lifecycle in a single run. Do not wait for Hikari to parse intent, select tools, or synthesize for you. Use the MCP server named `hikari` to call direct tools first, and use `tool_search` / `tool_info` / `tool_call` only for broader app tools that are not already exposed as direct MCP tools.\n\nFinal response contract for whole-turn Codex agent requests:\nReturn exactly one JSON object and no surrounding prose:\n{\n  \"status\": \"completed\",\n  \"assistant_text\": \"Final answer or one blocking clarification question.\",\n  \"follow_up_questions\": [],\n  \"user_question\": null,\n  \"reasoning_summary\": \"Brief evidence and verification summary.\",\n  \"citations\": []\n}\nUse status `needs_more_info` only when one blocking clarification is required. Put the user-facing question in `assistant_text` and `follow_up_questions[0]`.\nWhen the clarification has likely answer choices, also set `user_question` to `{ \"question\": \"...\", \"options\": [{ \"label\": \"...\", \"value\": \"...\", \"description\": \"...\" }], \"allow_custom\": true }`. Hikari renders those options and a custom text answer box, then sends the user answer back as the next chat turn.\nScope guard: this final response contract applies only to Hikari agent-chat prompts that identify themselves as a whole-turn Codex-owned agent request. For direct Codex utility calls from other Hikari surfaces, such as protocol polish, protocol generation, paper reading, or other one-off LLM prompts, follow the caller prompt and its requested response schema exactly. Do not wrap those utility responses in the Codex agent envelope unless the prompt explicitly asks for that envelope.\n\nUse the Hikari MCP protocol from the prompt. Direct MCP tools already appear in the server tool list and can be called without `tool_search`. If a broader app tool schema is not already present in the transcript, request it before calling that tool through `tool_call`. When the prompt asks for JSON only, return JSON only.\n\nDirect Hikari MCP tools available without `tool_search`:\n- `inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.\n- `chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.\n- `protocol_lookup`: search local protocols through Hikari protocol matching.\n- `protocol_generation`: normalize a complete protocol JSON object into the app import format; it does not generate content with an LLM and does not require an id.\n- `notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.\n- `ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.\n\nIntent and routing rules:\n- Treat intent parsing as a structured Hikari task. Preserve the requested schema exactly, avoid legacy fields, and keep canonical Hikari intent names.\n- If the intent is ambiguous, ask one blocking clarification instead of silently choosing a tool-heavy path.\n- Prefer local Hikari records through direct MCP tools such as `inventory_lookup`, `chemical_lookup`, `protocol_lookup`, and `notebook_lookup` before guessing from conversation context. Use `record-lookup` through `tool_call` only when the direct lookup tools are not specific enough.\n\nInference verification rules:\n- Separate observed evidence from inference. Do not upgrade a tentative mechanism, protocol conclusion, or result interpretation into a fact unless tool evidence supports it.\n- When verification is unstable, gather targeted evidence or revise the answer. Make the remaining uncertainty explicit.\n- Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.\n\nLiterature and paper rules:\n- Prefer `literature-search` for finding papers, references, recent literature, or external scientific evidence. It is the Hikari path that searches, selects papers, and loads bounded paper context blocks back into the agent.\n- When Hikari launches a Codex paper-context sub-agent, that sub-agent should read the provided `KnowledgeDatabase/PaperKnowledge/.../paper.md` files and return the requested context JSON. Do not call `literature-search` again from inside that paper-context sub-agent.\n- Use `paper-download` when the user explicitly asks to download a paper PDF into app storage, or when the workflow asks you to obtain a local PDF for deeper reading.\n- Use `paper-analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use direct `protocol_generation` only after you already have complete protocol JSON to normalize into an import-ready reusable protocol.\n- Do not claim a PDF was downloaded, full text was read, figures were reviewed, or chunks were loaded unless the corresponding tool result says so.\n\nKeep tool calls small and targeted. Prefer the MCP bridge over shell commands for app data, papers, protocols, notebook drafts, inventory, and structured Hikari state.\nFor external web evidence, use native Codex search when available or the Hikari `web-search` MCP tool when you need returned source records in the answer envelope.\n<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_END -->",
   "mcp": {
     "server": {
       "name": "hikari-codex-agent",
@@ -33,75 +33,6 @@
       "ping"
     ],
     "tools": [
-      {
-        "name": "tool_search",
-        "description": "Search Hikari app tools by natural-language goal.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "query"
-          ],
-          "properties": {
-            "query": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 30
-            }
-          }
-        }
-      },
-      {
-        "name": "tool_info",
-        "description": "Load one Hikari tool manifest, including schema when requested.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "tool_id"
-          ],
-          "properties": {
-            "tool_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "detail_level": {
-              "type": "string",
-              "enum": [
-                "summary",
-                "schema",
-                "full"
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "tool_call",
-        "description": "Validate and call a Hikari app tool through the MCP bridge.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "tool_id",
-            "args"
-          ],
-          "properties": {
-            "tool_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "args": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          }
-        }
-      },
       {
         "name": "inventory_lookup",
         "description": "Look up local Hikari inventory items, including chemicals, personal containers, and samples.",
@@ -340,6 +271,139 @@
         }
       },
       {
+        "name": "ask_user",
+        "description": "Prepare one blocking user clarification question with suggested options and optional custom text input for Hikari to render.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "question",
+            "options"
+          ],
+          "properties": {
+            "question": {
+              "type": "string",
+              "minLength": 1
+            },
+            "context": {
+              "type": "string"
+            },
+            "options": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 6,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "label"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "value": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "allow_custom": {
+              "type": "boolean"
+            },
+            "placeholder": {
+              "type": "string"
+            },
+            "submit_label": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "tool_search",
+        "description": "Search Hikari app tools by natural-language goal.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            }
+          }
+        }
+      },
+      {
+        "name": "tool_info",
+        "description": "Load one Hikari tool manifest, including schema when requested.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tool_id"
+          ],
+          "properties": {
+            "tool_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "detail_level": {
+              "type": "string",
+              "enum": [
+                "summary",
+                "schema",
+                "full"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "tool_call",
+        "description": "Validate and call a Hikari app tool through the MCP bridge.",
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tool_id",
+            "args"
+          ],
+          "properties": {
+            "tool_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "args": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      {
         "name": "resource_search",
         "description": "Search Hikari MCP resources such as instructions and tool manifests.",
         "inputSchema": {
@@ -438,7 +502,7 @@
       {
         "uri": "hikari://tool/literature-search",
         "name": "literature-search tool manifest",
-        "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The runtime now delegates to a sub-agent for candidate selection, paper reading, and optional paper downloads into the literature-search storage folder. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults."
+        "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults."
       },
       {
         "uri": "hikari://tool/purchase-recommendation",
@@ -946,8 +1010,8 @@
     },
     {
       "tool_id": "literature-search",
-      "summary": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The runtime now delegates to a sub-agent for candidate selection, paper reading, and optional paper downloads into the literature-search storage folder. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults.",
-      "detailed_description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. The literature workflow delegates search and reading to a sub-agent, then loads the selected paper context back into the main agent. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+      "summary": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults.",
+      "detailed_description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. The literature workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads selected paper context back into the main agent; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
       "input_schema": {
         "type": "object",
         "additionalProperties": false,

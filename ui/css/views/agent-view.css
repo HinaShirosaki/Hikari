@@ -67,6 +67,33 @@ body.agent-view-fixed-scroll .workspace-main {
   margin: 0 0 4px;
 }
 
+#agent-session-status:empty {
+  display: none;
+}
+
+.agent-new-chat-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.agent-new-chat-btn:hover,
+.agent-new-chat-btn:focus-visible {
+  background: transparent;
+  color: var(--accent);
+}
+
+.agent-new-chat-btn svg {
+  width: 21px;
+  height: 21px;
+}
+
 .agent-session-list {
   display: grid;
   gap: 8px;
@@ -497,6 +524,111 @@ body.agent-view-fixed-scroll .workspace-main {
   gap: 16px;
 }
 
+.agent-user-question-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px 0 0 16px;
+  border-left: 2px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+}
+
+.agent-user-question-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.agent-user-question-card h4 {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.35;
+  color: var(--strong);
+}
+
+.agent-user-question-context,
+.agent-user-question-answer {
+  margin: 0;
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+.agent-user-question-options {
+  display: grid;
+  gap: 8px;
+}
+
+.agent-user-question-option {
+  width: 100%;
+  min-height: 44px;
+  display: grid;
+  gap: 3px;
+  justify-items: start;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 88%, white 12%);
+  color: var(--strong);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.agent-user-question-option span {
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.agent-user-question-option small {
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.agent-user-question-option:hover,
+.agent-user-question-option:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 46%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+}
+
+.agent-user-question-option:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  outline-offset: 2px;
+}
+
+.agent-user-question-option:disabled,
+.agent-user-question-custom textarea:disabled,
+.agent-user-question-custom button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.agent-user-question-custom {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.agent-user-question-custom textarea {
+  width: 100%;
+  min-height: 44px;
+  max-height: 110px;
+  resize: vertical;
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--surface) 88%, white 12%);
+  color: var(--strong);
+  font: inherit;
+  line-height: 1.45;
+}
+
+.agent-user-question-custom textarea:focus {
+  outline: 2px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  outline-offset: 2px;
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
+}
+
 .agent-thinking-trace {
   display: grid;
   gap: 10px;
@@ -777,11 +909,26 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 .agent-conversation-shell {
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
+  height: 100%;
   min-height: 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   overflow: hidden;
+}
+
+.agent-conversation-shell.is-empty-chat {
+  grid-template-rows: minmax(0, 1fr);
+  align-items: center;
+}
+
+.agent-conversation-shell.is-empty-chat .agent-history-viewport {
+  display: none;
+}
+
+.agent-conversation-shell.is-empty-chat .agent-composer-shell {
+  align-self: center;
+  padding: 0 20px;
 }
 
 .agent-history-viewport {
@@ -821,6 +968,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   border-top: 0;
   background: transparent;
   box-shadow: none;
+  align-self: end;
 }
 
 .agent-composer-card {
@@ -1218,6 +1366,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
     padding: 22px 0 30px;
   }
 
+  .agent-user-question-custom {
+    grid-template-columns: 1fr;
+  }
+
   .agent-chat-row,
 .agent-chat-row-user {
     width: 100%;
@@ -1241,6 +1393,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
   .agent-composer-shell {
     padding: 0 12px 12px;
+  }
+
+  .agent-conversation-shell.is-empty-chat .agent-composer-shell {
+    padding: 0 12px;
   }
 
   .agent-composer-card {

@@ -1,4 +1,4 @@
-import { exportAssayDefinitionPdf } from '../pdf-export.js';
+import { exportAssayDefinitionPdf } from '../pdf-export/index.js';
 import { getAssayElements } from './dom.js';
 import { createAssayLayoutManager } from './layout-manager.js';
 import { createAssayResultsManager } from './results-manager.js';

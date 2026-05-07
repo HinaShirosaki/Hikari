@@ -1,5 +1,5 @@
-import { exportProtocolPdf } from '../pdf-export.js';
-import { requestLlmText } from '../papers/llm.js';
+import { exportProtocolPdf } from '../pdf-export/index.js';
+import { requestLlmText } from '../direct-llm.js';
 import { parseJsonFromText } from '../papers/normalizers.js';
 import { DEFAULT_PROTOCOL_JSON_IMPORT_STATUS, DEFAULT_SHARE_STATUS, PLACEHOLDER_TOKEN_REGEX } from './constants.js';
 import { getProtocolDom } from './dom.js';

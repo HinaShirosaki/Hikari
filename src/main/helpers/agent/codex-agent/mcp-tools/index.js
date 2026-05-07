@@ -20,8 +20,12 @@ const {
   NOTEBOOK_LOOKUP_MCP_TOOL,
   callNotebookLookup
 } = require('./notebook-lookup.js');
+const {
+  ASK_USER_MCP_TOOL,
+  callAskUser
+} = require('./ask-user.js');
 
-const MCP_LOOKUP_TOOLS = Object.freeze([
+const DIRECT_MCP_TOOLS = Object.freeze([
   {
     definition: INVENTORY_LOOKUP_MCP_TOOL,
     handler: callInventoryLookup
@@ -41,16 +45,24 @@ const MCP_LOOKUP_TOOLS = Object.freeze([
   {
     definition: NOTEBOOK_LOOKUP_MCP_TOOL,
     handler: callNotebookLookup
+  },
+  {
+    definition: ASK_USER_MCP_TOOL,
+    handler: callAskUser
   }
 ]);
 
-function getMcpLookupToolDefinitions() {
-  return MCP_LOOKUP_TOOLS.map((tool) => tool.definition);
+const DIRECT_MCP_TOOL_NAMES = Object.freeze(
+  DIRECT_MCP_TOOLS.map((tool) => tool.definition.name)
+);
+
+function getDirectMcpToolDefinitions() {
+  return DIRECT_MCP_TOOLS.map((tool) => tool.definition);
 }
 
-function createMcpLookupToolRouter(deps = {}) {
+function createDirectMcpToolRouter(deps = {}) {
   const handlers = new Map(
-    MCP_LOOKUP_TOOLS.map((tool) => [tool.definition.name, tool.handler])
+    DIRECT_MCP_TOOLS.map((tool) => [tool.definition.name, tool.handler])
   );
 
   function hasTool(name = '') {
@@ -63,7 +75,7 @@ function createMcpLookupToolRouter(deps = {}) {
       return {
         ok: false,
         status: 'unknown_tool',
-        error: `Unknown Hikari MCP lookup tool "${String(name || 'unknown')}".`
+        error: `Unknown Hikari direct MCP tool "${String(name || 'unknown')}".`
       };
     }
     return handler(args, context, deps);
@@ -72,11 +84,19 @@ function createMcpLookupToolRouter(deps = {}) {
   return {
     hasTool,
     callTool,
-    getToolDefinitions: getMcpLookupToolDefinitions
+    getToolDefinitions: getDirectMcpToolDefinitions
   };
 }
 
+const MCP_LOOKUP_TOOLS = DIRECT_MCP_TOOLS;
+const getMcpLookupToolDefinitions = getDirectMcpToolDefinitions;
+const createMcpLookupToolRouter = createDirectMcpToolRouter;
+
 module.exports = {
+  DIRECT_MCP_TOOLS,
+  DIRECT_MCP_TOOL_NAMES,
+  getDirectMcpToolDefinitions,
+  createDirectMcpToolRouter,
   MCP_LOOKUP_TOOLS,
   getMcpLookupToolDefinitions,
   createMcpLookupToolRouter

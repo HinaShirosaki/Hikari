@@ -5,7 +5,7 @@ module.exports = function registerAgentContractsB(context = {}) {
   with (scope) {
     const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
     const agentPath = (...parts) => path.join(agentDir, ...parts);
-    const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', ...parts);
+    const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
     const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
@@ -49,7 +49,7 @@ module.exports = function registerAgentContractsB(context = {}) {
       const agentRegistrarSource = fs.readFileSync(agentRegistrarPath('index.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
       const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), 'utf8');
-      const sharedSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'shared.js'), 'utf8');
+      const sharedSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'app-state.js'), 'utf8');
       const agentViewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'agent-view.html'), 'utf8');
 
       assert.match(helperSource, /const DEEP_RESEARCH_INTENTS = Object\.freeze/);
@@ -206,6 +206,125 @@ module.exports = function registerAgentContractsB(context = {}) {
       assert.equal(Boolean(toolCallCatalog['paper-analysis']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['notebook-draft']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
+    });
+
+    test('direct LLM module registry exposes owned module calls outside the agent chat runtime', async () => {
+      const {
+        createDirectLlmModuleRegistry,
+        registerDefaultDirectLlmModules
+      } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'llm', 'direct-llm-module-registry.js'));
+      const calls = [];
+      const registry = registerDefaultDirectLlmModules(createDirectLlmModuleRegistry({
+        cleanText: (value) => String(value || '').trim(),
+        LLM_PROVIDERS: {
+          CODEX: 'codex',
+          OPENAI: 'openai'
+        },
+        DEFAULT_LLM_PROVIDER: 'openai',
+        normalizeLlmProvider: (provider) => String(provider || 'openai').trim(),
+        defaultLlmEndpointForProvider: () => 'https://api.openai.com/v1/responses',
+        defaultAgentModelForProvider: () => 'gpt-5',
+        requestFileInput: async (input = {}) => {
+          calls.push({ kind: 'file', input });
+          return { ok: true, text: 'Paper summary.' };
+        },
+        requestStructuredJsonPayload: async (input = {}) => {
+          calls.push({ kind: 'json', input });
+          return { ok: true, payload: { mapped: true }, text: '{"mapped":true}' };
+        },
+        requestText: async (input = {}) => {
+          calls.push({ kind: 'text', input });
+          return { ok: true, text: 'Clarified.' };
+        }
+      }));
+
+      assert.equal(registry.listModules().some((entry) => entry.id === 'papers'), true);
+      assert.equal(registry.listModules().some((entry) => entry.id === 'inventory'), true);
+      assert.equal(
+        registry.listModules().some((entry) => (
+          entry.id === 'protocol'
+          && entry.tasks.some((task) => task.id === 'protocol-generation')
+        )),
+        true
+      );
+
+      const summary = await registry.requestModuleLlm({
+        moduleId: 'papers',
+        task: 'paper-summary',
+        prompt: 'Summarize this paper.',
+        pdfDataUrl: 'data:application/pdf;base64,QUJD',
+        fileName: 'paper.pdf',
+        llm: {
+          provider: 'openai',
+          apiKey: 'sk-test',
+          model: 'gpt-5'
+        }
+      });
+
+      assert.equal(summary.ok, true);
+      assert.equal(summary.text, 'Paper summary.');
+      assert.equal(calls[0].kind, 'file');
+      assert.equal(calls[0].input.stage, 'direct_llm_papers_paper_summary');
+      assert.equal(calls[0].input.userPrompt, 'Summarize this paper.');
+      assert.equal(calls[0].input.pdfDataUrl, 'data:application/pdf;base64,QUJD');
+
+      const mapped = await registry.requestModuleLlm({
+        moduleId: 'inventory',
+        task: 'chemical-header-mapping',
+        prompt: 'Map these headers.',
+        llm: {
+          provider: 'codex',
+          model: 'gpt-5.4-mini',
+          reasoningEffort: 'high'
+        }
+      });
+
+      assert.equal(mapped.ok, true);
+      assert.deepEqual(mapped.payload, { mapped: true });
+      assert.equal(calls[1].kind, 'json');
+      assert.equal(calls[1].input.provider, 'codex');
+      assert.equal(calls[1].input.reasoningEffort, 'high');
+
+      const missing = await registry.requestModuleLlm({
+        moduleId: 'papers',
+        task: 'not-a-real-task',
+        prompt: 'Nope',
+        llm: {
+          provider: 'openai',
+          apiKey: 'sk-test',
+          model: 'gpt-5'
+        }
+      });
+      assert.equal(missing.ok, false);
+      assert.match(missing.error, /not registered/);
+    });
+
+    test('direct LLM module registry is wired through main IPC and preload', () => {
+      const channelsSource = readLocalSource('src', 'shared', 'ipc', 'channels.js');
+      const preloadSource = readLocalSource('src', 'main', 'preload', 'api', 'llm-api.js');
+      const mainRuntimeSource = readLocalSource('src', 'main', 'app', 'main-runtime.js');
+      const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
+      const systemRegistrarSource = readLocalSource('src', 'main', 'ipc', 'register-system-ipc.js');
+      const directLlmSource = readLocalSource('src', 'renderer', 'modules', 'direct-llm.js');
+      const papersLlmSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'llm.js');
+      const protocolGenerationSource = readLocalSource('src', 'renderer', 'modules', 'protocol', 'generation.js');
+      const inventorySource = readLocalSource('src', 'renderer', 'modules', 'lab-common-inventory', 'index.js');
+
+      assert.match(channelsSource, /DIRECT_MODULES:\s*'llm:direct-modules'/);
+      assert.match(channelsSource, /DIRECT_GENERATE:\s*'llm:direct-generate'/);
+      assert.match(preloadSource, /getDirectLlmModules:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(LLM\.DIRECT_MODULES\)/);
+      assert.match(preloadSource, /runDirectLlmPrompt:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(LLM\.DIRECT_GENERATE, payload\)/);
+      assert.match(mainAgentServicesSource, /createDirectLlmModuleRegistry/);
+      assert.match(mainAgentServicesSource, /registerDefaultDirectLlmModules/);
+      assert.match(mainAgentServicesSource, /directLlmRegistry/);
+      assert.match(mainRuntimeSource, /directLlmRegistry:\s*agentServices\.directLlmRegistry/);
+      assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.DIRECT_MODULES/);
+      assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.DIRECT_GENERATE/);
+      assert.match(directLlmSource, /runDirectLlmPrompt/);
+      assert.match(papersLlmSource, /requestDirectLlmText/);
+      assert.doesNotMatch(papersLlmSource, /runDirectLlmPrompt/);
+      assert.match(protocolGenerationSource, /task:\s*'protocol-generation'/);
+      assert.match(inventorySource, /chemical-header-mapping/);
     });
 
     test('purchase recommendation helper exposes reusable runtime and tool contracts', () => {

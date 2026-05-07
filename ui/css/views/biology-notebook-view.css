@@ -526,12 +526,12 @@
 .biology-notebook-sample-link-menu {
   position: fixed;
   z-index: 3000;
-  width: min(340px, calc(100vw - 24px));
-  max-height: min(420px, calc(100vh - 24px));
+  width: min(320px, calc(100vw - 24px));
+  max-height: min(360px, calc(100vh - 24px));
   overflow: hidden;
   display: grid;
-  gap: 8px;
-  padding: 10px;
+  gap: 6px;
+  padding: 8px;
   border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
   border-radius: 8px;
   background: var(--surface-elevated, #fff);
@@ -553,7 +553,7 @@
 
 .biology-notebook-sample-link-results {
   min-height: 80px;
-  max-height: 300px;
+  max-height: 240px;
   overflow: auto;
   display: grid;
   gap: 4px;

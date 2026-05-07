@@ -1,6 +1,7 @@
 import { renderMarkdown } from './markdown.js';
 import {
   asArray,
+  normalizeAgentUserQuestion,
   trimText
 } from './shared.js';
 import {
@@ -361,7 +362,72 @@ function renderAssistantThinkingTrace(meta, safeText) {
   return renderCollapsibleThinkingTrace('Thinking Trace', thinkingRows, safeText, { open: isLive });
 }
 
-function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
+function renderUserQuestionCard(meta, messageId = '', safeText, { disabled = false } = {}) {
+  const question = normalizeAgentUserQuestion(
+    meta?.user_question
+      || meta?.userQuestion
+      || meta?.codex_agent?.user_question
+      || meta?.codex_agent?.userQuestion,
+    meta?.codex_agent?.answer
+  );
+  if (!question) {
+    return '';
+  }
+  const answeredText = trimText(question.answered?.answer, 1000);
+  const messageKey = trimText(messageId, 120);
+  const controlsDisabled = disabled || Boolean(answeredText) || !messageKey;
+  const disabledAttr = controlsDisabled ? ' disabled' : '';
+  const options = asArray(question.options);
+  return `
+    <section
+      class="agent-user-question-card${controlsDisabled ? ' is-disabled' : ''}"
+      data-agent-user-question-card="${safeText(messageKey)}"
+      aria-label="Clarification question"
+    >
+      <p class="agent-user-question-kicker">Clarification Needed</p>
+      <h4>${safeText(question.question)}</h4>
+      ${question.context ? `<p class="agent-user-question-context">${safeText(question.context)}</p>` : ''}
+      ${options.length ? `
+        <div class="agent-user-question-options">
+          ${options.map((option) => `
+            <button
+              type="button"
+              class="agent-user-question-option"
+              data-agent-question-option="${safeText(messageKey)}"
+              data-agent-question-answer="${safeText(option.value)}"
+              ${disabledAttr}
+            >
+              <span>${safeText(option.label)}</span>
+              ${option.description ? `<small>${safeText(option.description)}</small>` : ''}
+            </button>
+          `).join('')}
+        </div>
+      ` : ''}
+      ${question.allow_custom ? `
+        <div class="agent-user-question-custom">
+          <textarea
+            rows="2"
+            data-agent-question-custom-input="${safeText(messageKey)}"
+            placeholder="${safeText(question.placeholder)}"
+            ${disabledAttr}
+          ></textarea>
+          <button
+            type="button"
+            class="primary-btn"
+            data-agent-question-submit="${safeText(messageKey)}"
+            ${disabledAttr}
+          >
+            ${safeText(question.submit_label)}
+          </button>
+        </div>
+      ` : ''}
+      ${answeredText ? `<p class="agent-user-question-answer">Answered: ${safeText(answeredText)}</p>` : ''}
+      ${!answeredText && disabled ? '<p class="agent-user-question-answer">This thread has already continued.</p>' : ''}
+    </section>
+  `;
+}
+
+function renderAssistantMeta(meta, messageId = '', { state, safeText, canAnswerQuestion = true }) {
   if (!meta || typeof meta !== 'object') {
     return '';
   }
@@ -414,7 +480,11 @@ function renderAssistantMeta(meta, messageId = '', { state, safeText }) {
     ? meta.purchase_recommendation
     : {};
   const pythonSandboxRuns = collectPythonSandboxRuns(meta);
+  const userQuestionCard = renderUserQuestionCard(meta, messageId, safeText, {
+    disabled: canAnswerQuestion !== true
+  });
   const sections = [
+    userQuestionCard,
     hasPurchaseRecommendation ? renderPurchaseRecommendationCards(purchaseRecommendation, safeText) : '',
     renderPythonSandboxRuns(pythonSandboxRuns, safeText),
     showCreatePlannedPageButton ? `
@@ -491,7 +561,7 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
     return;
   }
 
-  historyNode.innerHTML = safeMessages.map((message) => {
+  historyNode.innerHTML = safeMessages.map((message, index) => {
     const role = message.role === 'assistant' ? 'assistant' : 'user';
     const headerLabel = role === 'assistant' ? 'Assistant' : 'You';
     const cardClass = role === 'assistant' ? 'agent-chat-item-assistant' : 'agent-chat-item-user';
@@ -502,7 +572,11 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
       ? renderAssistantThinkingTrace(message.meta, safeText)
       : '';
     const assistantMeta = role === 'assistant'
-      ? renderAssistantMeta(message.meta, message.id, { state, safeText })
+      ? renderAssistantMeta(message.meta, message.id, {
+        state,
+        safeText,
+        canAnswerQuestion: !safeMessages.slice(index + 1).some((item) => item?.role === 'user')
+      })
       : '';
     const messageBody = role === 'assistant'
       ? `<div class="agent-chat-body agent-chat-markdown">${renderMarkdown(message.text || '', safeText)}</div>`

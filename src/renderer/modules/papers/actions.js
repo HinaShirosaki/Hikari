@@ -253,7 +253,8 @@ export function createPapersActions(context) {
         fileName: paper.fileName,
         title: paper.title,
         instruction: requirePrompt(prompts, 'extractMethods'),
-        prompts
+        prompts,
+        task: 'paper-methods-extraction'
       });
 
       paper.methodsExtract = normalizeMethodsExtract(result);
@@ -288,7 +289,8 @@ export function createPapersActions(context) {
         fileName: paper.fileName,
         title: paper.title,
         instruction: requirePrompt(prompts, 'extractReagents'),
-        prompts
+        prompts,
+        task: 'paper-reagents-extraction'
       });
 
       const reagents = Array.isArray(result?.reagents) ? result.reagents : [];
