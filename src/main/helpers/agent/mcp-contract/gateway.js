@@ -6,7 +6,8 @@ const {
   normalizeToolArgumentsPayload,
   resolveCanonicalToolName
 } = require('../tools/agent-tool-loading.js');
-const { createDirectMcpToolRouter } = require('./mcp-tools/index.js');
+const { createDirectMcpToolRouter } = require('./direct-tools/index.js');
+const { buildHikariAgentMcpInstructions } = require('./instructions.js');
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -71,7 +72,7 @@ function summarizeTool(entry) {
   };
 }
 
-function createCodexAgentMcpGateway(deps = {}) {
+function createAgentMcpGateway(deps = {}) {
   const runTool = typeof deps.runTool === 'function'
     ? deps.runTool
     : null;
@@ -176,9 +177,9 @@ function createCodexAgentMcpGateway(deps = {}) {
     const tokens = normalizeQuery(input.query);
     const resources = [
       {
-        uri: 'hikari://instructions/codex-agent',
-        name: 'Codex agent instructions',
-        description: 'Hikari rules for Codex intent parsing, inference verification, paper download, and context loading.'
+        uri: 'hikari://instructions/agent-mcp',
+        name: 'Agent MCP instructions',
+        description: 'Provider-neutral Hikari MCP usage rules for direct tools, broader tool calls, and resources.'
       },
       ...AGENT_TOOL_CATALOG.map((entry) => ({
         uri: `hikari://tool/${entry.name}`,
@@ -202,13 +203,17 @@ function createCodexAgentMcpGateway(deps = {}) {
 
   function resourceRead(input = {}) {
     const uri = cleanText(input.uri, 1000);
-    if (uri === 'hikari://instructions/codex-agent' || uri === 'enana://instructions/codex-agent') {
-      const { buildHikariCodexAgentsInstructions } = require('./agent-instructions.js');
+    if (
+      uri === 'hikari://instructions/agent-mcp'
+      || uri === 'enana://instructions/agent-mcp'
+      || uri === 'hikari://instructions/codex-agent'
+      || uri === 'enana://instructions/codex-agent'
+    ) {
       return {
         ok: true,
         uri,
         mimeType: 'text/markdown',
-        contents: buildHikariCodexAgentsInstructions()
+        contents: buildHikariAgentMcpInstructions()
       };
     }
     const toolMatch = uri.match(/^(?:hikari|enana):\/\/tool\/(.+)$/i);
@@ -263,6 +268,9 @@ function createCodexAgentMcpGateway(deps = {}) {
   };
 }
 
+const createCodexAgentMcpGateway = createAgentMcpGateway;
+
 module.exports = {
+  createAgentMcpGateway,
   createCodexAgentMcpGateway
 };

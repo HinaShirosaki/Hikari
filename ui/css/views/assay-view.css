@@ -251,15 +251,27 @@
   gap: 6px;
 }
 
+.assay-axis-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
 .assay-axis-switch {
   display: grid;
   gap: 6px;
   align-content: stretch;
-  justify-items: start;
 }
 
 .assay-axis-switch .assay-mode-switch {
-  justify-self: start;
+  justify-self: stretch;
+  width: 100%;
+}
+
+.assay-axis-switch .assay-mode-switch > button {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .assay-sample-picker {
@@ -817,6 +829,10 @@
 @media (max-width: 640px) {
   .assay-header-row {
     align-items: stretch;
+  }
+
+  .assay-axis-config-grid {
+    grid-template-columns: 1fr;
   }
 
   .assay-create-sidebar .assay-form-grid,

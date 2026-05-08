@@ -661,7 +661,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
 
     const plateDef = getPlateDefinition(elements.assayPlateTypeInput?.value);
     const sampleAxis = elements.assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
-    const concentrationAxis = oppositeAxis(sampleAxis);
+    const selectedConcentrationAxis = elements.assayConcentrationAxisInput?.value === 'row' ? 'row' : 'column';
+    const concentrationAxis = selectedConcentrationAxis === oppositeAxis(sampleAxis)
+      ? selectedConcentrationAxis
+      : oppositeAxis(sampleAxis);
     const project = (state.projects || []).find((item) => item.id === elements.assayProjectInput?.value);
     const notebookEntry = (state.notebookEntries || []).find((entry) => entry.id === elements.assayNotebookEntryInput?.value);
     const editingId = elements.assayIdInput?.value || '';
@@ -927,6 +930,11 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   });
   elements.assaySampleAxisRowBtn?.addEventListener('click', () => layoutManager.setSampleAxis('row'));
   elements.assaySampleAxisColumnBtn?.addEventListener('click', () => layoutManager.setSampleAxis('column'));
+  elements.assayConcentrationAxisInput?.addEventListener('change', () => {
+    layoutManager.setConcentrationAxis(elements.assayConcentrationAxisInput?.value);
+  });
+  elements.assayConcentrationAxisRowBtn?.addEventListener('click', () => layoutManager.setConcentrationAxis('row'));
+  elements.assayConcentrationAxisColumnBtn?.addEventListener('click', () => layoutManager.setConcentrationAxis('column'));
   elements.assayPlateFieldSampleBtn?.addEventListener('click', () => layoutManager.setPlateEditField('sampleId'));
   elements.assayPlateFieldConcentrationBtn?.addEventListener('click', () => layoutManager.setPlateEditField('concentration'));
   elements.assayClearMappingsBtn?.addEventListener('click', layoutManager.onClearWellMappings);

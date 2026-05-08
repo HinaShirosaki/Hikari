@@ -66,7 +66,7 @@ const { createAgentInventoryLookupRuntime } = require('../agent/tools/agent-inve
 const { createAgentRecordLookupRuntime } = require('../agent/tools/agent-record-lookup.js');
 const { createAgentRuntimeSupport } = require('../agent/runtime/agent-runtime-support.js');
 const { createAgentSubAppApi } = require('../agent/runtime/agent-sub-app-api.js');
-const { createCodexAgentMcpHost } = require('../agent/codex-agent/mcp-host.js');
+const { createAgentMcpHost } = require('../agent/mcp-contract/host.js');
 const {
   buildCodexMcpContext,
   createCodexAgentRuntime
@@ -451,6 +451,8 @@ function createMainAgentServices(deps = {}) {
         ),
         returnMetadata: true,
         envOverrides: {
+          HIKARI_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
+          ENANA_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
           HIKARI_CODEX_REQUEST_CONTEXT: mcpContextJson,
           ENANA_CODEX_REQUEST_CONTEXT: mcpContextJson
         }
@@ -561,7 +563,7 @@ function createMainAgentServices(deps = {}) {
     getAgentPythonSandboxRoot
   });
 
-  codexAgentMcpHost = createCodexAgentMcpHost({
+  codexAgentMcpHost = createAgentMcpHost({
     runTool: agentToolRuntime.runAgentTool,
     env: process.env,
     getSnapshot: () => ({

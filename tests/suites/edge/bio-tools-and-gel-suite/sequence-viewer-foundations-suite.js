@@ -548,6 +548,25 @@ test('[EDGE] sequence-viewer buildOrfFeatures collapses nested ORFs in the same 
   assert.equal(plusFrameOne[0].orfLengthAa, 3);
 });
 
+test('[EDGE] sequence-viewer buildOrfFeatures updates when active ORF stop codons change', () => {
+  const sequence = 'ATGAAATGACCCTAA';
+  const allStops = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 });
+  const taaOnly = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', {
+    minAaLength: 2,
+    stopCodons: { TAG: false, TAA: true, TGA: false }
+  });
+  const noStops = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', {
+    minAaLength: 2,
+    stopCodons: { TAG: false, TAA: false, TGA: false }
+  });
+
+  assert.equal(allStops[0].stopCodon, 'TGA');
+  assert.equal(allStops[0].orfLengthNt, 9);
+  assert.equal(taaOnly[0].stopCodon, 'TAA');
+  assert.equal(taaOnly[0].orfLengthNt, 15);
+  assert.equal(noStops.length, 0);
+});
+
 test('[EDGE] sequence-viewer commercial restriction builder keeps only unique cutter sites and groups same-site enzymes once', () => {
   const features = sequenceViewerInternals.buildCommercialRestrictionFeatures('GAATTCAAAAGAATTCGGATCCGACGTC', 'linear');
   const bamhiSite = features.find((feature) => feature.site === 'GGATCC');
@@ -735,8 +754,9 @@ test('[EDGE] sequence-viewer restriction renderer stacks overlapping site labels
     /class="sequence-viewer-restriction-annot[^"]*"\s+data-feature-index="\d+"\s+style="([^"]+)"/g
   )].map((match) => match[1]);
   assert.equal(styles.length, 2);
-  assert.equal(styles.some((style) => /top:0\.000px;/.test(style)), true);
-  assert.equal(styles.some((style) => /top:-[0-9.]+px;/.test(style)), true);
+  assert.equal(styles.every((style) => !/top:-[0-9.]+px;/.test(style)), true);
+  assert.equal(styles.some((style) => /--sequence-viewer-restriction-label-stack-offset:0\.000px;/.test(style)), true);
+  assert.equal(styles.some((style) => /--sequence-viewer-restriction-label-stack-offset:(?!0\.000)[0-9.]+px;/.test(style)), true);
 });
 
 test('[EDGE] sequence-viewer line feature renderer emits px-based span bars', () => {
@@ -837,7 +857,7 @@ test('[EDGE] sequence-viewer dual-strand renderer places selected ORF amino-acid
   assert.equal(minusBottom < minusAa, true);
 });
 
-test('[EDGE] sequence-viewer ORF translation context can show stop codons as TAG/TAA/TGA labels', () => {
+test('[EDGE] sequence-viewer ORF translation context terminates before stop codons', () => {
   const sequence = 'ATGAAATAGCCC';
   const feature = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 })[0];
   const context = sequenceViewerInternals.buildSelectedOrfTranslationContext(sequence, feature, {
@@ -845,12 +865,12 @@ test('[EDGE] sequence-viewer ORF translation context can show stop codons as TAG
   });
 
   assert.equal(Boolean(context), true);
-  assert.equal(context.anchors.map((anchor) => anchor.displayText).join('|'), 'M|K|TAG');
-  assert.equal(context.anchors[2].isStop, true);
-  assert.equal(context.anchors[2].colorKey, 'TAG');
+  assert.equal(context.anchors.map((anchor) => anchor.displayText).join('|'), 'M|K');
+  assert.equal(context.anchors.some((anchor) => anchor.isStop), false);
+  assert.equal(context.anchors.some((anchor) => anchor.codon === 'TAG'), false);
 });
 
-test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells and can render stop codon labels', () => {
+test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells without rendering stop labels', () => {
   const sequence = 'ATGAAATAGCCC';
   const feature = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 })[0];
   const context = sequenceViewerInternals.buildSelectedOrfTranslationContext(sequence, feature, {
@@ -866,7 +886,7 @@ test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells a
   });
 
   assert.match(html, /sequence-viewer-aa-chip/);
-  assert.match(html, /data-aa-display="TAG"/);
+  assert.doesNotMatch(html, /data-aa-display="TAG"/);
   assert.match(html, /--sequence-viewer-aa-chip-color:#[0-9a-f]{6};/i);
 });
 

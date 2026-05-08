@@ -5,7 +5,8 @@ import {
   ORF_STOP_CODONS
 } from './constants.js';
 import {
-  normalizeOrfStopCodonVisibility,
+  getEnabledOrfStopCodons,
+  normalizeOrfStopCodonSelection,
   resolveOrfTranslationDisplay
 } from './translation-style.js';
 import {
@@ -75,10 +76,19 @@ function buildSegmentsFromStartAndLength(start, length, sequenceLength, topology
   ];
 }
 
-function detectLinearOrfHits(sequence, minNtLength) {
+function buildStopCodonSet(value) {
+  return new Set(getEnabledOrfStopCodons(value));
+}
+
+function buildStopCodonCacheKey(value) {
+  return getEnabledOrfStopCodons(value).join(',');
+}
+
+function detectLinearOrfHits(sequence, minNtLength, stopCodons = ORF_STOP_CODONS) {
   const text = String(sequence || '');
   const sequenceLength = text.length;
-  if (sequenceLength < 6) {
+  const activeStopCodons = stopCodons instanceof Set ? stopCodons : new Set(stopCodons || []);
+  if (sequenceLength < 6 || !activeStopCodons.size) {
     return [];
   }
 
@@ -92,7 +102,7 @@ function detectLinearOrfHits(sequence, minNtLength) {
 
       for (let position = start + 3; position <= sequenceLength - 3; position += 3) {
         const stopCodon = text.slice(position, position + 3);
-        if (!ORF_STOP_CODONS.has(stopCodon)) {
+        if (!activeStopCodons.has(stopCodon)) {
           continue;
         }
         const length = (position + 3) - start;
@@ -112,10 +122,11 @@ function detectLinearOrfHits(sequence, minNtLength) {
   return hits;
 }
 
-function detectCircularOrfHits(sequence, minNtLength) {
+function detectCircularOrfHits(sequence, minNtLength, stopCodons = ORF_STOP_CODONS) {
   const text = String(sequence || '');
   const sequenceLength = text.length;
-  if (sequenceLength < 6) {
+  const activeStopCodons = stopCodons instanceof Set ? stopCodons : new Set(stopCodons || []);
+  if (sequenceLength < 6 || !activeStopCodons.size) {
     return [];
   }
 
@@ -139,7 +150,7 @@ function detectCircularOrfHits(sequence, minNtLength) {
         }
         const position = (start + (step * 3)) % sequenceLength;
         const stopCodon = readCircularCodon(text, position);
-        if (!ORF_STOP_CODONS.has(stopCodon)) {
+        if (!activeStopCodons.has(stopCodon)) {
           continue;
         }
         if (length >= minNtLength) {
@@ -158,11 +169,11 @@ function detectCircularOrfHits(sequence, minNtLength) {
   return hits;
 }
 
-function detectOrfHitsForSequence(sequence, topology, minNtLength) {
+function detectOrfHitsForSequence(sequence, topology, minNtLength, stopCodons = ORF_STOP_CODONS) {
   const normalizedTopology = normalizeTopology(topology);
   return normalizedTopology === 'circular'
-    ? detectCircularOrfHits(sequence, minNtLength)
-    : detectLinearOrfHits(sequence, minNtLength);
+    ? detectCircularOrfHits(sequence, minNtLength, stopCodons)
+    : detectLinearOrfHits(sequence, minNtLength, stopCodons);
 }
 
 export function buildOrfFeatures(sequence, topology = 'linear', options = {}) {
@@ -175,9 +186,11 @@ export function buildOrfFeatures(sequence, topology = 'linear', options = {}) {
   const minAaLength = Math.max(1, Math.floor(Number(options?.minAaLength) || DEFAULT_MIN_ORF_AA_LENGTH));
   const minNtLength = Math.max(6, (minAaLength + 1) * 3);
   const normalizedTopology = normalizeTopology(topology);
-  const forwardHits = detectOrfHitsForSequence(text, normalizedTopology, minNtLength);
+  const stopCodonSelection = normalizeOrfStopCodonSelection(options?.stopCodons);
+  const activeStopCodons = buildStopCodonSet(stopCodonSelection);
+  const forwardHits = detectOrfHitsForSequence(text, normalizedTopology, minNtLength, activeStopCodons);
   const reverseSequence = reverseComplementIupac(text).replace(/[^ACGT]/g, 'N');
-  const reverseHits = detectOrfHitsForSequence(reverseSequence, normalizedTopology, minNtLength);
+  const reverseHits = detectOrfHitsForSequence(reverseSequence, normalizedTopology, minNtLength, activeStopCodons);
   const dedupe = new Set();
   const features = [];
 
@@ -359,7 +372,6 @@ export function buildSelectedOrfTranslationContext(sequence, feature, options = 
 
   const strand = feature?.strand === -1 ? -1 : 1;
   const stopDisplay = options?.stopVisibility ?? options?.stopMode;
-  const stopVisibility = normalizeOrfStopCodonVisibility(stopDisplay);
   const codingIndices = getOrfCodingIndices(feature, sequenceLength);
   const codonCount = Math.floor(codingIndices.length / 3);
   if (!codonCount) {
@@ -380,6 +392,9 @@ export function buildSelectedOrfTranslationContext(sequence, feature, options = 
       })
       .join('');
     const aa = translateDnaCodon(codon) || 'X';
+    if (aa === '*') {
+      break;
+    }
     const display = resolveOrfTranslationDisplay(aa, codon, stopDisplay);
     if (!display) {
       continue;
@@ -405,7 +420,6 @@ export function buildSelectedOrfTranslationContext(sequence, feature, options = 
   anchors.sort((left, right) => left.baseIndex - right.baseIndex);
   return {
     strand,
-    stopVisibility,
     anchors
   };
 }
@@ -415,13 +429,17 @@ export function getOrfFeaturesForRecord(record, options = {}) {
     return [];
   }
   const minAaLength = Math.max(1, Math.floor(Number(options?.minAaLength) || DEFAULT_MIN_ORF_AA_LENGTH));
-  const cacheKey = `${record.sequence}|${normalizeTopology(record.topology)}|${minAaLength}`;
+  const stopCodonSelection = normalizeOrfStopCodonSelection(options?.stopCodons);
+  const cacheKey = `${record.sequence}|${normalizeTopology(record.topology)}|${minAaLength}|${buildStopCodonCacheKey(stopCodonSelection)}`;
   const cached = ORF_FEATURE_CACHE.get(record);
   if (cached?.key === cacheKey && Array.isArray(cached.features)) {
     return cached.features;
   }
 
-  const features = buildOrfFeatures(record.sequence, record.topology, { minAaLength });
+  const features = buildOrfFeatures(record.sequence, record.topology, {
+    minAaLength,
+    stopCodons: stopCodonSelection
+  });
   ORF_FEATURE_CACHE.set(record, { key: cacheKey, features });
   return features;
 }

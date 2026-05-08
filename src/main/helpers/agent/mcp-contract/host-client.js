@@ -67,13 +67,22 @@ function postJson(url, payload, headers = {}) {
   });
 }
 
-function createCodexMcpHostToolRunner(options = {}) {
+function createAgentMcpHostToolRunner(options = {}) {
+  const env = options.env && typeof options.env === 'object' ? options.env : process.env;
   const hostUrl = cleanText(
-    options.hostUrl || process.env.HIKARI_CODEX_MCP_HOST || process.env.ENANA_CODEX_MCP_HOST,
+    options.hostUrl
+      || env.HIKARI_AGENT_MCP_HOST
+      || env.ENANA_AGENT_MCP_HOST
+      || env.HIKARI_CODEX_MCP_HOST
+      || env.ENANA_CODEX_MCP_HOST,
     2000
   ).replace(/\/+$/u, '');
   const token = cleanText(
-    options.token || process.env.HIKARI_CODEX_MCP_TOKEN || process.env.ENANA_CODEX_MCP_TOKEN,
+    options.token
+      || env.HIKARI_AGENT_MCP_TOKEN
+      || env.ENANA_AGENT_MCP_TOKEN
+      || env.HIKARI_CODEX_MCP_TOKEN
+      || env.ENANA_CODEX_MCP_TOKEN,
     4000
   );
   if (!hostUrl) {
@@ -97,7 +106,10 @@ function createCodexMcpHostToolRunner(options = {}) {
   };
 }
 
+const createCodexMcpHostToolRunner = createAgentMcpHostToolRunner;
+
 module.exports = {
+  createAgentMcpHostToolRunner,
   createCodexMcpHostToolRunner,
   postJson
 };

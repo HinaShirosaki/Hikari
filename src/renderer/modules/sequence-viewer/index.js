@@ -16,7 +16,7 @@ import {
   readStoragePathFromLocalState
 } from './storage.js';
 import {
-  normalizeOrfStopCodonVisibility
+  normalizeOrfStopCodonSelection
 } from './translation-style.js';
 import { getSequenceViewerElements } from './dom.js';
 import { createSequenceViewerAnnotationController } from './annotation.js';
@@ -59,10 +59,10 @@ export function initSequenceViewer(options = {}) {
       variantMode: 'gibson'
     },
     orfViewEnabled: false,
-    orfStopVisibility: normalizeOrfStopCodonVisibility({
-      TAG: Boolean(elements.orfStopTagToggle?.checked),
-      TAA: Boolean(elements.orfStopTaaToggle?.checked),
-      TGA: Boolean(elements.orfStopTgaToggle?.checked)
+    orfStopCodons: normalizeOrfStopCodonSelection({
+      TAG: true,
+      TAA: true,
+      TGA: true
     }),
     restrictionVendorFilter: {
       ...DEFAULT_RESTRICTION_VENDOR_FILTER

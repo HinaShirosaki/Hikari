@@ -6,7 +6,7 @@ const {
   STORAGE,
   INVENTORY,
   SEQUENCE_LIBRARY
-} = require('../../../shared/ipc/channels');
+} = require('../../shared/ipc/channels');
 
 function registerDataIpc(deps = {}) {
   const ipcMain = deps.ipcMain;

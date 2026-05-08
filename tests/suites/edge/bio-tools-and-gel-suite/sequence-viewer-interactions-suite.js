@@ -63,9 +63,9 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
   const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
   const statFeatures = document.getElementById('sequence-viewer-stat-features');
   assert.equal(Boolean(orfToggle.checked), false);
-  assert.equal(Boolean(orfStopTagToggle.checked), false);
-  assert.equal(Boolean(orfStopTaaToggle.checked), false);
-  assert.equal(Boolean(orfStopTgaToggle.checked), false);
+  assert.equal(Boolean(orfStopTagToggle.checked), true);
+  assert.equal(Boolean(orfStopTaaToggle.checked), true);
+  assert.equal(Boolean(orfStopTgaToggle.checked), true);
   assert.equal(statFeatures.textContent, '0');
   assert.equal(sequenceHost.innerHTML.includes('ORF +1'), false);
 
@@ -84,10 +84,18 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
   trigger(sequenceHost, 'click', { target: clickTarget });
   assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row-plus'), true);
   assert.equal(sequenceHost.innerHTML.indexOf('sequence-viewer-strand-row-bottom') < sequenceHost.innerHTML.indexOf('sequence-viewer-aa-row-plus'), true);
+  assert.equal(sequenceHost.innerHTML.includes('data-aa-display="TAA"'), false);
+
+  orfStopTaaToggle.checked = false;
+  trigger(orfStopTaaToggle, 'change');
+  assert.equal(statFeatures.textContent, '0');
+  assert.equal(sequenceHost.innerHTML.includes('ORF +1'), false);
+  assert.equal(sequenceHost.innerHTML.includes('sequence-viewer-aa-row'), false);
 
   orfStopTaaToggle.checked = true;
   trigger(orfStopTaaToggle, 'change');
-  assert.equal(sequenceHost.innerHTML.includes('data-aa-display="TAA"'), true);
+  assert.equal(statFeatures.textContent, '1');
+  assert.equal(sequenceHost.innerHTML.includes('ORF +1'), true);
 
   orfToggle.checked = false;
   trigger(orfToggle, 'change');

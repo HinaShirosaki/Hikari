@@ -238,6 +238,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         assert.equal(fs.existsSync(path.join(runtimeHome, 'skills')), true);
         const runtimeConfig = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
         assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
+        assert.match(runtimeConfig, /HIKARI_AGENT_MCP/);
         assert.match(runtimeConfig, /HIKARI_CODEX_MCP/);
       } finally {
         if (typeof previousCodexHome === 'string') {
@@ -299,15 +300,15 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       });
     });
 
-    test('codex agent MCP gateway exposes Hikari tools and instruction resources', async () => {
-      const { createCodexAgentMcpGateway } = require(path.join(
+    test('agent MCP gateway exposes Hikari tools and instruction resources', async () => {
+      const { createAgentMcpGateway } = require(path.join(
         __dirname,
         'src',
         'main',
         'helpers',
         'agent',
-        'codex-agent',
-        'mcp-gateway.js'
+        'mcp-contract',
+        'gateway.js'
       ));
       const { createMcpToolDefinitions } = require(path.join(
         __dirname,
@@ -315,11 +316,11 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         'main',
         'helpers',
         'agent',
-        'codex-agent',
-        'mcp-stdio-server.js'
+        'mcp-contract',
+        'stdio-server.js'
       ));
       const calls = [];
-      const gateway = createCodexAgentMcpGateway({
+      const gateway = createAgentMcpGateway({
         runTool: async (toolId, args, snapshot, context) => {
           calls.push({ toolId, args, snapshot, context });
           if (toolId === 'protocol-matching') {
@@ -542,15 +543,16 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(invalidResult.ok, false);
       assert.equal(invalidResult.status, 'invalid_arguments');
 
-      const instructions = gateway.resourceRead({ uri: 'hikari://instructions/codex-agent' });
+      const instructions = gateway.resourceRead({ uri: 'hikari://instructions/agent-mcp' });
       assert.equal(instructions.ok, true);
-      assert.match(instructions.contents, /Inference verification rules/);
+      assert.match(instructions.contents, /provider-neutral Hikari app contract/);
       assert.match(instructions.contents, /Direct Hikari MCP tools available without `tool_search`/);
       assert.match(instructions.contents, /`protocol_generation`/);
       assert.match(instructions.contents, /`ask_user`/);
       assert.match(instructions.contents, /paper-download/);
       const legacyInstructions = gateway.resourceRead({ uri: 'enana://instructions/codex-agent' });
       assert.equal(legacyInstructions.ok, true);
+      assert.match(legacyInstructions.contents, /provider-neutral Hikari app contract/);
     });
 
     test('codex agent runtime builds a whole-turn prompt and parses the answer envelope', async () => {
@@ -649,12 +651,20 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.match(calls[0].prompt, /Selection insight context:/);
       assert.match(calls[0].prompt, /pilot\.pdf/);
       assert.match(calls[0].prompt, /"assistant_text"/);
-      const mcpContext = JSON.parse(calls[0].envOverrides.HIKARI_CODEX_REQUEST_CONTEXT);
+      const mcpContext = JSON.parse(calls[0].envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT);
       assert.equal(mcpContext.provider, 'codex');
       assert.equal(mcpContext.model, 'gpt-5.4');
       assert.equal(mcpContext.cwd, '/tmp/enana-workspace');
       assert.equal(mcpContext.project.name, 'Atlas SUMO1');
       assert.equal(mcpContext.dataFilePath, '/tmp/enana-data.json');
+      assert.deepEqual(
+        JSON.parse(calls[0].envOverrides.ENANA_AGENT_MCP_REQUEST_CONTEXT),
+        mcpContext
+      );
+      assert.deepEqual(
+        JSON.parse(calls[0].envOverrides.HIKARI_CODEX_REQUEST_CONTEXT),
+        mcpContext
+      );
       assert.deepEqual(
         JSON.parse(calls[0].envOverrides.ENANA_CODEX_REQUEST_CONTEXT),
         mcpContext
@@ -754,19 +764,19 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(traceRows.some((row) => row.stage === 'codex_agent_parse_warning'), true);
     });
 
-    test('codex MCP stdio server forwards request context from the Codex command environment', async () => {
-      const { createCodexAgentMcpStdioServer } = require(path.join(
+    test('agent MCP stdio server forwards request context from the provider environment', async () => {
+      const { createAgentMcpStdioServer } = require(path.join(
         __dirname,
         'src',
         'main',
         'helpers',
         'agent',
-        'codex-agent',
-        'mcp-stdio-server.js'
+        'mcp-contract',
+        'stdio-server.js'
       ));
       let capturedContext = null;
       const outputChunks = [];
-      const server = createCodexAgentMcpStdioServer({
+      const server = createAgentMcpStdioServer({
         input: { on() {} },
         output: {
           write(chunk) {
@@ -774,7 +784,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
           }
         },
         env: {
-          HIKARI_CODEX_REQUEST_CONTEXT: JSON.stringify({
+          HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify({
             provider: 'codex',
             model: 'gpt-5.4',
             project: {
@@ -817,21 +827,37 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
 
     test('codex agent MCP config includes the app host callback when available', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-mcp-config-'));
+      const previousAgentHost = process.env.HIKARI_AGENT_MCP_HOST;
+      const previousAgentToken = process.env.HIKARI_AGENT_MCP_TOKEN;
       const previousHikariHost = process.env.HIKARI_CODEX_MCP_HOST;
       const previousHikariToken = process.env.HIKARI_CODEX_MCP_TOKEN;
-      process.env.HIKARI_CODEX_MCP_HOST = 'http://127.0.0.1:43123';
-      process.env.HIKARI_CODEX_MCP_TOKEN = 'test-token';
+      process.env.HIKARI_AGENT_MCP_HOST = 'http://127.0.0.1:43123';
+      process.env.HIKARI_AGENT_MCP_TOKEN = 'test-token';
       try {
         const provider = loadProvider();
         const runtimeHome = await provider.ensureCodexCliRuntimeHome(workspaceDir);
         const configText = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
         assert.match(configText, /\[mcp_servers\.hikari\]/);
+        assert.match(configText, /HIKARI_AGENT_MCP_HOST/);
+        assert.match(configText, /ENANA_AGENT_MCP_HOST/);
         assert.match(configText, /HIKARI_CODEX_MCP_HOST/);
         assert.match(configText, /ENANA_CODEX_MCP_HOST/);
         assert.match(configText, /http:\/\/127\.0\.0\.1:43123/);
+        assert.match(configText, /HIKARI_AGENT_MCP_TOKEN/);
+        assert.match(configText, /ENANA_AGENT_MCP_TOKEN/);
         assert.match(configText, /HIKARI_CODEX_MCP_TOKEN/);
         assert.match(configText, /ENANA_CODEX_MCP_TOKEN/);
       } finally {
+        if (typeof previousAgentHost === 'string') {
+          process.env.HIKARI_AGENT_MCP_HOST = previousAgentHost;
+        } else {
+          delete process.env.HIKARI_AGENT_MCP_HOST;
+        }
+        if (typeof previousAgentToken === 'string') {
+          process.env.HIKARI_AGENT_MCP_TOKEN = previousAgentToken;
+        } else {
+          delete process.env.HIKARI_AGENT_MCP_TOKEN;
+        }
         if (typeof previousHikariHost === 'string') {
           process.env.HIKARI_CODEX_MCP_HOST = previousHikariHost;
         } else {
@@ -885,7 +911,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
           assert.match(captured.stdin, /Return OK only\./);
           assert.equal(fs.existsSync(path.join(workspaceDir, 'AGENTS.md')), true);
           assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
-          assert.match(runtimeConfig, /mcp-stdio-server\.js/);
+          assert.match(runtimeConfig, /mcp-contract\/stdio-server\.js/);
         } finally {
           if (typeof previousCodexCli === 'string') {
             process.env.ENANA_CODEX_CLI = previousCodexCli;

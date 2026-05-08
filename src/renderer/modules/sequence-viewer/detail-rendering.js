@@ -114,7 +114,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
       : null;
     const orfTranslationContext = state.orfViewEnabled
       ? buildSelectedOrfTranslationContext(record.sequence, selectedFeature, {
-        stopVisibility: state.orfStopVisibility
+        stopCodons: state.orfStopCodons
       })
       : null;
 

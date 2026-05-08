@@ -252,13 +252,13 @@ function renderLineRestrictionAnnotationsHtml(
   const topPaddingPx = RESTRICTION_LABEL_GAP_PX + 5 + ((laneCount - 1) * RESTRICTION_STACK_LANE_STEP_PX);
   const annotations = stackedFragments
     .map((fragment) => {
-      const laneTopPx = -fragment.lane * RESTRICTION_STACK_LANE_STEP_PX;
+      const labelStackOffsetPx = fragment.lane * RESTRICTION_STACK_LANE_STEP_PX;
       return `
             <button
               type="button"
               class="sequence-viewer-restriction-annot${fragment.isActive ? ' sequence-viewer-restriction-annot-active' : ''}"
               data-feature-index="${fragment.index}"
-              style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;top:${laneTopPx.toFixed(3)}px;z-index:${fragment.lane + 1};--sequence-viewer-restriction-label-gap:${RESTRICTION_LABEL_GAP_PX}px;"
+              style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;z-index:${fragment.lane + 1};--sequence-viewer-restriction-label-gap:${RESTRICTION_LABEL_GAP_PX}px;--sequence-viewer-restriction-label-stack-offset:${labelStackOffsetPx.toFixed(3)}px;"
               title="${escapeHtml(fragment.title)}"
             >
               <span class="sequence-viewer-restriction-label">${escapeHtml(fragment.label)}</span>

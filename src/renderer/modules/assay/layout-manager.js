@@ -40,7 +40,9 @@ export function createAssayLayoutManager({
   clearAnalysisOutput
 }) {
   const {
-    assayConcentrationAxisDisplay,
+    assayConcentrationAxisColumnBtn,
+    assayConcentrationAxisInput,
+    assayConcentrationAxisRowBtn,
     assayImportFile,
     assayNumberDisplay,
     assayPlateDefinition,
@@ -351,8 +353,11 @@ export function createAssayLayoutManager({
 
   function renderAxisSwitchButtons() {
     const sampleAxis = getSampleAxis();
+    const concentrationAxis = oppositeAxis(sampleAxis);
     assaySampleAxisRowBtn?.classList.toggle('calendar-view-active', sampleAxis === 'row');
     assaySampleAxisColumnBtn?.classList.toggle('calendar-view-active', sampleAxis === 'column');
+    assayConcentrationAxisRowBtn?.classList.toggle('calendar-view-active', concentrationAxis === 'row');
+    assayConcentrationAxisColumnBtn?.classList.toggle('calendar-view-active', concentrationAxis === 'column');
   }
 
   function renderPlateEditFieldButtons() {
@@ -361,11 +366,10 @@ export function createAssayLayoutManager({
   }
 
   function syncAxisDisplay() {
-    if (!assayConcentrationAxisDisplay) {
-      return;
-    }
     const sampleAxis = getSampleAxis();
-    assayConcentrationAxisDisplay.value = axisLabel(oppositeAxis(sampleAxis));
+    if (assayConcentrationAxisInput) {
+      assayConcentrationAxisInput.value = oppositeAxis(sampleAxis);
+    }
     renderAxisSwitchButtons();
   }
 
@@ -375,6 +379,7 @@ export function createAssayLayoutManager({
     }
     const next = axis === 'column' ? 'column' : 'row';
     if (assaySampleAxisInput.value === next) {
+      syncAxisDisplay();
       return;
     }
     assaySampleAxisInput.value = next;
@@ -382,6 +387,10 @@ export function createAssayLayoutManager({
     setLayoutFromAxisAndOverrides();
     renderPlatePreview();
     renderResultTable();
+  }
+
+  function setConcentrationAxis(axis) {
+    setSampleAxis(axis === 'row' ? 'column' : 'row');
   }
 
   function setPlateEditField(field) {
@@ -851,6 +860,7 @@ export function createAssayLayoutManager({
     renderAxisSwitchButtons,
     renderPlateEditFieldButtons,
     setSampleAxis,
+    setConcentrationAxis,
     setPlateEditField,
     syncAxisDisplay,
     onSwapAxes,

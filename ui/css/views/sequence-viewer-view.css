@@ -1474,6 +1474,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-restriction-annot {
   position: absolute;
+  top: 0;
   --sequence-viewer-restriction-stroke-width: 1px;
   border: 0;
   background: transparent;
@@ -1488,7 +1489,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-restriction-label {
   position: absolute;
   top: auto;
-  bottom: calc(100% + 3px);
+  bottom: calc(100% + 3px + var(--sequence-viewer-restriction-label-stack-offset, 0px));
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.67rem;

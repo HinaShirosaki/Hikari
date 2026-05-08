@@ -24,7 +24,21 @@ function parseJson(raw = '', fallback = {}) {
   }
 }
 
-function createCodexAgentMcpHost(deps = {}) {
+function captureEnvValue(env, key) {
+  return Object.prototype.hasOwnProperty.call(env, key)
+    ? { present: true, value: env[key] }
+    : { present: false, value: undefined };
+}
+
+function restoreEnvValue(env, key, previous) {
+  if (previous?.present) {
+    env[key] = previous.value;
+  } else {
+    delete env[key];
+  }
+}
+
+function createAgentMcpHost(deps = {}) {
   const runTool = typeof deps.runTool === 'function' ? deps.runTool : null;
   const getSnapshot = typeof deps.getSnapshot === 'function' ? deps.getSnapshot : (() => ({}));
   const getContextDefaults = typeof deps.getContextDefaults === 'function'
@@ -34,18 +48,19 @@ function createCodexAgentMcpHost(deps = {}) {
   const hostname = cleanText(deps.hostname, 120) || '127.0.0.1';
   const token = cleanText(deps.token, 4000) || crypto.randomBytes(24).toString('hex');
   const maxBodyBytes = Math.max(1024, Math.min(10 * 1024 * 1024, Number(deps.maxBodyBytes) || 5 * 1024 * 1024));
-  const previousHikariHostEnv = Object.prototype.hasOwnProperty.call(env, 'HIKARI_CODEX_MCP_HOST')
-    ? env.HIKARI_CODEX_MCP_HOST
-    : null;
-  const previousHikariTokenEnv = Object.prototype.hasOwnProperty.call(env, 'HIKARI_CODEX_MCP_TOKEN')
-    ? env.HIKARI_CODEX_MCP_TOKEN
-    : null;
-  const previousEnanaHostEnv = Object.prototype.hasOwnProperty.call(env, 'ENANA_CODEX_MCP_HOST')
-    ? env.ENANA_CODEX_MCP_HOST
-    : null;
-  const previousEnanaTokenEnv = Object.prototype.hasOwnProperty.call(env, 'ENANA_CODEX_MCP_TOKEN')
-    ? env.ENANA_CODEX_MCP_TOKEN
-    : null;
+  const managedEnvKeys = Object.freeze([
+    'HIKARI_AGENT_MCP_HOST',
+    'HIKARI_AGENT_MCP_TOKEN',
+    'ENANA_AGENT_MCP_HOST',
+    'ENANA_AGENT_MCP_TOKEN',
+    'HIKARI_CODEX_MCP_HOST',
+    'HIKARI_CODEX_MCP_TOKEN',
+    'ENANA_CODEX_MCP_HOST',
+    'ENANA_CODEX_MCP_TOKEN'
+  ]);
+  const previousEnvValues = new Map(
+    managedEnvKeys.map((key) => [key, captureEnvValue(env, key)])
+  );
   let server = null;
   let started = null;
   let hostUrl = '';
@@ -84,9 +99,13 @@ function createCodexAgentMcpHost(deps = {}) {
       return true;
     }
     const auth = cleanText(request.headers.authorization, 5000);
-    const hikariHeaderToken = cleanText(request.headers['x-hikari-codex-mcp-token'], 5000);
-    const enanaHeaderToken = cleanText(request.headers['x-enana-codex-mcp-token'], 5000);
-    return auth === `Bearer ${token}` || hikariHeaderToken === token || enanaHeaderToken === token;
+    const headerTokens = [
+      request.headers['x-hikari-agent-mcp-token'],
+      request.headers['x-enana-agent-mcp-token'],
+      request.headers['x-hikari-codex-mcp-token'],
+      request.headers['x-enana-codex-mcp-token']
+    ].map((value) => cleanText(value, 5000));
+    return auth === `Bearer ${token}` || headerTokens.includes(token);
   }
 
   async function handleToolCall(request, response) {
@@ -113,7 +132,7 @@ function createCodexAgentMcpHost(deps = {}) {
     const context = {
       ...ensureObject(getContextDefaults()),
       ...ensureObject(body.context),
-      codexMcp: true
+      agentMcp: true
     };
     const snapshot = Object.keys(ensureObject(body.snapshot)).length
       ? ensureObject(body.snapshot)
@@ -133,7 +152,7 @@ function createCodexAgentMcpHost(deps = {}) {
       if (request.method === 'GET' && requestUrl.pathname === '/health') {
         writeJson(response, 200, {
           ok: true,
-          name: 'hikari-codex-agent-mcp-host'
+          name: 'hikari-agent-mcp-host'
         });
         return;
       }
@@ -172,6 +191,10 @@ function createCodexAgentMcpHost(deps = {}) {
         const address = server.address();
         const port = typeof address === 'object' && address ? address.port : 0;
         hostUrl = `http://${hostname}:${port}`;
+        env.HIKARI_AGENT_MCP_HOST = hostUrl;
+        env.HIKARI_AGENT_MCP_TOKEN = token;
+        env.ENANA_AGENT_MCP_HOST = hostUrl;
+        env.ENANA_AGENT_MCP_TOKEN = token;
         env.HIKARI_CODEX_MCP_HOST = hostUrl;
         env.HIKARI_CODEX_MCP_TOKEN = token;
         env.ENANA_CODEX_MCP_HOST = hostUrl;
@@ -195,26 +218,9 @@ function createCodexAgentMcpHost(deps = {}) {
     server = null;
     started = null;
     hostUrl = '';
-    if (previousHikariHostEnv === null) {
-      delete env.HIKARI_CODEX_MCP_HOST;
-    } else {
-      env.HIKARI_CODEX_MCP_HOST = previousHikariHostEnv;
-    }
-    if (previousHikariTokenEnv === null) {
-      delete env.HIKARI_CODEX_MCP_TOKEN;
-    } else {
-      env.HIKARI_CODEX_MCP_TOKEN = previousHikariTokenEnv;
-    }
-    if (previousEnanaHostEnv === null) {
-      delete env.ENANA_CODEX_MCP_HOST;
-    } else {
-      env.ENANA_CODEX_MCP_HOST = previousEnanaHostEnv;
-    }
-    if (previousEnanaTokenEnv === null) {
-      delete env.ENANA_CODEX_MCP_TOKEN;
-    } else {
-      env.ENANA_CODEX_MCP_TOKEN = previousEnanaTokenEnv;
-    }
+    managedEnvKeys.forEach((key) => {
+      restoreEnvValue(env, key, previousEnvValues.get(key));
+    });
   }
 
   return {
@@ -225,6 +231,9 @@ function createCodexAgentMcpHost(deps = {}) {
   };
 }
 
+const createCodexAgentMcpHost = createAgentMcpHost;
+
 module.exports = {
+  createAgentMcpHost,
   createCodexAgentMcpHost
 };

@@ -1,38 +1,46 @@
-# Hikari Codex MCP Contract
+# Hikari Agent MCP Contract
 
-This document exports the MCP-facing contract used by the Codex-owned Hikari agent runtime. The live implementation is in `src/main/helpers/agent/codex-agent/`.
+This document exports the provider-neutral MCP-facing contract for Hikari agents. The live reusable implementation is in `src/main/helpers/agent/mcp-contract/`. Codex-specific behavior, such as AGENTS.md injection and Codex CLI config writing, stays in `src/main/helpers/agent/codex-agent/`.
 
-## Runtime config injected into Codex
+## Runtime config
 
-Hikari writes the following block into Codex's runtime `config.toml`:
+Any agent provider that supports MCP can launch the shared stdio server. The Codex CLI integration writes the following provider-specific block into Codex's runtime `config.toml`:
 
 ```toml
 # HIKARI_MCP_CONFIG_START
 [mcp_servers.hikari]
 command = "node"
-args = ["/absolute/path/to/src/main/helpers/agent/codex-agent/mcp-stdio-server.js"]
+args = ["/absolute/path/to/src/main/helpers/agent/mcp-contract/stdio-server.js"]
 env = {
+  HIKARI_AGENT_MCP = "1",
+  HIKARI_AGENT_MCP_WORKSPACE = "/runtime/workspace",
+  HIKARI_AGENT_MCP_HOST = "http://127.0.0.1:<port>",
+  HIKARI_AGENT_MCP_TOKEN = "<opaque bearer token>",
   HIKARI_CODEX_MCP = "1",
   HIKARI_CODEX_WORKSPACE = "/runtime/workspace",
-  HIKARI_AGENT_DATA_FILE = "/path/to/hikari-data.json",
-  HIKARI_AGENT_STORAGE_PATH = "/path/to/storage",
   HIKARI_CODEX_MCP_HOST = "http://127.0.0.1:<port>",
   HIKARI_CODEX_MCP_TOKEN = "<opaque bearer token>",
+  HIKARI_AGENT_DATA_FILE = "/path/to/hikari-data.json",
+  HIKARI_AGENT_STORAGE_PATH = "/path/to/storage",
+  ENANA_AGENT_MCP = "1",
+  ENANA_AGENT_MCP_WORKSPACE = "/runtime/workspace",
+  ENANA_AGENT_MCP_HOST = "http://127.0.0.1:<port>",
+  ENANA_AGENT_MCP_TOKEN = "<opaque bearer token>",
   ENANA_CODEX_MCP = "1",
   ENANA_CODEX_WORKSPACE = "/runtime/workspace",
-  ENANA_AGENT_DATA_FILE = "/path/to/hikari-data.json",
-  ENANA_AGENT_STORAGE_PATH = "/path/to/storage",
   ENANA_CODEX_MCP_HOST = "http://127.0.0.1:<port>",
-  ENANA_CODEX_MCP_TOKEN = "<opaque bearer token>"
+  ENANA_CODEX_MCP_TOKEN = "<opaque bearer token>",
+  ENANA_AGENT_DATA_FILE = "/path/to/hikari-data.json",
+  ENANA_AGENT_STORAGE_PATH = "/path/to/storage"
 }
 # HIKARI_MCP_CONFIG_END
 ```
 
-`HIKARI_CODEX_MCP_HOST` and `HIKARI_CODEX_MCP_TOKEN` are present when the app-side callback host is running. The legacy `ENANA_*` aliases are still emitted for compatibility. The stdio MCP server uses these values to relay `tool_call` requests into the live Hikari process.
+`HIKARI_AGENT_MCP_HOST` and `HIKARI_AGENT_MCP_TOKEN` are present when the app-side callback host is running. The `HIKARI_CODEX_*` values are compatibility aliases for the Codex CLI integration, and the legacy `ENANA_*` aliases are still emitted for compatibility. The stdio MCP server uses these values to relay `tool_call` requests into the live Hikari process.
 
 ## Per-request context
 
-Each Codex run receives `HIKARI_CODEX_REQUEST_CONTEXT` as JSON. The legacy `ENANA_CODEX_REQUEST_CONTEXT` alias is also set. The stdio server merges this object into every gateway call context.
+Each provider run can receive `HIKARI_AGENT_MCP_REQUEST_CONTEXT` as JSON. Codex runs also receive `HIKARI_CODEX_REQUEST_CONTEXT`; `ENANA_AGENT_MCP_REQUEST_CONTEXT` and `ENANA_CODEX_REQUEST_CONTEXT` are compatibility aliases. The stdio server merges this object into every gateway call context.
 
 ```json
 {
@@ -60,7 +68,7 @@ Server info:
 
 ```json
 {
-  "name": "hikari-codex-agent",
+  "name": "hikari-agent-mcp",
   "version": "0.1.0"
 }
 ```
@@ -93,7 +101,7 @@ Unsupported methods return JSON-RPC error `-32601`. Internal failures return `-3
 
 ## MCP tools
 
-The direct Hikari MCP contract tools are first-class MCP tools in `tools/list`. Codex can call them by name without using `tool_search`, `tool_info`, or `tool_call`:
+The direct Hikari MCP contract tools are first-class MCP tools in `tools/list`. Agent providers can call them by name without using `tool_search`, `tool_info`, or `tool_call`:
 
 - `inventory_lookup`
 - `chemical_lookup`
@@ -443,10 +451,10 @@ Input schema:
 
 | URI | MIME type | Contents |
 | --- | --- | --- |
-| `hikari://instructions/codex-agent` | `text/markdown` | Generated AGENTS instructions |
+| `hikari://instructions/agent-mcp` | `text/markdown` | Provider-neutral MCP usage instructions |
 | `hikari://tool/<tool-id>` | `application/json` | Full `tool_info({ detail_level: "full" })` envelope |
 
-Resource discovery also returns one resource per Hikari app tool manifest. Legacy `enana://` resource URIs are still accepted for direct reads.
+Resource discovery also returns one resource per Hikari app tool manifest. Legacy `enana://` resource URIs are still accepted for direct reads. The old `hikari://instructions/codex-agent` URI is accepted as a compatibility alias, but it returns the provider-neutral MCP instructions.
 
 ## App-side callback host
 
@@ -463,7 +471,7 @@ Response:
 ```json
 {
   "ok": true,
-  "name": "hikari-codex-agent-mcp-host"
+  "name": "hikari-agent-mcp-host"
 }
 ```
 
@@ -471,7 +479,7 @@ Tool call:
 
 ```http
 POST /tool-call
-Authorization: Bearer <HIKARI_CODEX_MCP_TOKEN>
+Authorization: Bearer <HIKARI_AGENT_MCP_TOKEN>
 Content-Type: application/json
 ```
 
@@ -493,7 +501,7 @@ The host merges default context before execution:
   "cwd": "/runtime/workspace",
   "dataFilePath": "/path/to/hikari-data.json",
   "fallbackDataFilePath": "/path/to/hikari-data.json",
-  "codexMcp": true
+  "agentMcp": true
 }
 ```
 
@@ -512,7 +520,7 @@ Unauthorized calls return HTTP 401 with `status: "unauthorized"`. Missing execut
 
 ## Hikari app tools exposed through `tool_search` / `tool_info`
 
-These generic app tools remain available through the bridge for cases that do not match a direct MCP contract tool. Do not route `inventory_lookup`, `chemical_lookup`, `protocol_lookup`, `protocol_generation`, or `notebook_lookup` through `tool_search`; call those direct MCP tools instead.
+These generic app tools remain available through the bridge for cases that do not match a direct MCP contract tool. Do not route `inventory_lookup`, `chemical_lookup`, `protocol_lookup`, `protocol_generation`, `notebook_lookup`, or `ask_user` through `tool_search`; call those direct MCP tools instead.
 
 The current exported tool ids are:
 

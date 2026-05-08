@@ -331,9 +331,9 @@ body.has-shared-left-rail-view .workspace-main {
   min-width: 0;
   max-width: min(100%, calc(100vw - 32px));
   padding: 7px 9px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--bg) 90%, var(--surface-elevated) 10%);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   isolation: isolate;
   pointer-events: none;
   justify-self: center;

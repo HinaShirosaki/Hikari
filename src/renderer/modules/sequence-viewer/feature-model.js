@@ -111,7 +111,12 @@ export function assignFeatureLanes(features) {
 export function getRenderableFeaturesForRecord(record, options = {}) {
   const parsedFeatures = Array.isArray(record?.features) ? record.features : [];
   const includeOrf = Boolean(options?.includeOrf);
-  const orfFeatures = includeOrf ? getOrfFeaturesForRecord(record, options) : [];
+  const orfFeatures = includeOrf
+    ? getOrfFeaturesForRecord(record, {
+      ...options,
+      stopCodons: options?.orfStopCodons ?? options?.stopCodons
+    })
+    : [];
   const restrictionFeatures = getCommercialRestrictionFeaturesForRecord(record, {
     vendorFilter: options?.restrictionVendorFilter
   });

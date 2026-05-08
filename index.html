@@ -923,27 +923,33 @@
                 <option value="1536">1536 well</option>
               </select>
             </label>
-            <div class="assay-axis-switch">
-              <span class="assay-display-label">Sample ID Axis</span>
-              <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
-                <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
-                <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>
+            <div class="assay-axis-config-grid">
+              <div class="assay-axis-switch">
+                <span class="assay-display-label">Sample ID Axis</span>
+                <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
+                  <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
+                  <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>
+                </div>
+                <select id="assay-sample-axis" hidden>
+                  <option value="row" selected>Row</option>
+                  <option value="column">Column</option>
+                </select>
               </div>
-              <select id="assay-sample-axis" hidden>
-                <option value="row" selected>Row</option>
-                <option value="column">Column</option>
-              </select>
+              <div class="assay-axis-switch">
+                <span class="assay-display-label">Conc. Axis</span>
+                <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Concentration axis switch">
+                  <button type="button" id="assay-concentration-axis-row-btn" class="ghost-btn">Row</button>
+                  <button type="button" id="assay-concentration-axis-column-btn" class="ghost-btn calendar-view-active">Column</button>
+                </div>
+                <select id="assay-concentration-axis" hidden>
+                  <option value="row">Row</option>
+                  <option value="column" selected>Column</option>
+                </select>
+              </div>
             </div>
-            <label>
-              Concentration Axis
-              <input id="assay-concentration-axis-display" readonly />
-            </label>
-            <label>
-              Link Notebook Page
-              <select id="assay-notebook-entry">
-                <option value="">Not linked</option>
-              </select>
-            </label>
+            <select id="assay-notebook-entry" hidden>
+              <option value="">Not linked</option>
+            </select>
             <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
             <div id="assay-csv-status" class="small-note assay-form-note"></div>
             <div class="form-actions assay-form-actions">
@@ -2851,16 +2857,16 @@
             </label>
             <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="ORF stop codons">
               <span class="sequence-viewer-inline-toggle-group-label">ORF Stops</span>
-              <label class="sequence-viewer-inline-toggle" title="Show TAG stop codons in the selected ORF translation row.">
-                <input id="sequence-viewer-orf-stop-tag-toggle" type="checkbox" />
+              <label class="sequence-viewer-inline-toggle" title="Use TAG as an ORF terminator.">
+                <input id="sequence-viewer-orf-stop-tag-toggle" type="checkbox" checked />
                 <span>TAG</span>
               </label>
-              <label class="sequence-viewer-inline-toggle" title="Show TAA stop codons in the selected ORF translation row.">
-                <input id="sequence-viewer-orf-stop-taa-toggle" type="checkbox" />
+              <label class="sequence-viewer-inline-toggle" title="Use TAA as an ORF terminator.">
+                <input id="sequence-viewer-orf-stop-taa-toggle" type="checkbox" checked />
                 <span>TAA</span>
               </label>
-              <label class="sequence-viewer-inline-toggle" title="Show TGA stop codons in the selected ORF translation row.">
-                <input id="sequence-viewer-orf-stop-tga-toggle" type="checkbox" />
+              <label class="sequence-viewer-inline-toggle" title="Use TGA as an ORF terminator.">
+                <input id="sequence-viewer-orf-stop-tga-toggle" type="checkbox" checked />
                 <span>TGA</span>
               </label>
             </div>

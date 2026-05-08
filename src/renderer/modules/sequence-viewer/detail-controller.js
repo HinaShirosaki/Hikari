@@ -17,7 +17,7 @@ import {
   cleanText,
   clamp,
 } from './shared.js';
-import { normalizeOrfStopCodonVisibility } from './translation-style.js';
+import { normalizeOrfStopCodonSelection } from './translation-style.js';
 
 export function createSequenceViewerDetailController(config = {}) {
   const rootDocument = config?.rootDocument || globalThis?.document || null;
@@ -56,6 +56,7 @@ export function createSequenceViewerDetailController(config = {}) {
   function getVisibleFeaturesForRecord(record) {
     return getRenderableFeaturesForRecord(record, {
       includeOrf: state.orfViewEnabled,
+      orfStopCodons: state.orfStopCodons,
       restrictionVendorFilter: state.restrictionVendorFilter
     });
   }
@@ -101,6 +102,26 @@ export function createSequenceViewerDetailController(config = {}) {
         && cleanText(item.type, 120) === type
         && (item?.strand === -1 ? -1 : 1) === strand
         && itemSegmentKey === segmentKey;
+    });
+  }
+
+  function findUpdatedOrfIndex(features, feature) {
+    if (!Array.isArray(features) || !features.length || !isOrfFeature(feature)) {
+      return -1;
+    }
+    const strand = feature?.strand === -1 ? -1 : 1;
+    const frame = cleanText(feature?.orfFrame, 12);
+    const firstStart = Array.isArray(feature?.segments)
+      ? Math.round(Number(feature.segments[0]?.start) || 0)
+      : 0;
+    return features.findIndex((item) => {
+      const itemStart = Array.isArray(item?.segments)
+        ? Math.round(Number(item.segments[0]?.start) || 0)
+        : 0;
+      return isOrfFeature(item)
+        && (item?.strand === -1 ? -1 : 1) === strand
+        && cleanText(item?.orfFrame, 12) === frame
+        && itemStart === firstStart;
     });
   }
 
@@ -272,27 +293,27 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function syncOrfToggleState() {
     const hasRecord = Boolean(getSelectedRecord()?.sequence?.length);
-    const stopVisibility = normalizeOrfStopCodonVisibility(state.orfStopVisibility);
+    const stopCodons = normalizeOrfStopCodonSelection(state.orfStopCodons);
     if (elements.orfToggle) {
       elements.orfToggle.checked = Boolean(state.orfViewEnabled);
       elements.orfToggle.disabled = !hasRecord;
     }
     if (elements.orfStopTagToggle) {
-      elements.orfStopTagToggle.checked = Boolean(stopVisibility.TAG);
+      elements.orfStopTagToggle.checked = Boolean(stopCodons.TAG);
       elements.orfStopTagToggle.disabled = !hasRecord;
     }
     if (elements.orfStopTaaToggle) {
-      elements.orfStopTaaToggle.checked = Boolean(stopVisibility.TAA);
+      elements.orfStopTaaToggle.checked = Boolean(stopCodons.TAA);
       elements.orfStopTaaToggle.disabled = !hasRecord;
     }
     if (elements.orfStopTgaToggle) {
-      elements.orfStopTgaToggle.checked = Boolean(stopVisibility.TGA);
+      elements.orfStopTgaToggle.checked = Boolean(stopCodons.TGA);
       elements.orfStopTgaToggle.disabled = !hasRecord;
     }
   }
 
-  function readOrfStopVisibilityFromControls() {
-    return normalizeOrfStopCodonVisibility({
+  function readOrfStopCodonsFromControls() {
+    return normalizeOrfStopCodonSelection({
       TAG: Boolean(elements.orfStopTagToggle?.checked),
       TAA: Boolean(elements.orfStopTaaToggle?.checked),
       TGA: Boolean(elements.orfStopTgaToggle?.checked)
@@ -456,6 +477,30 @@ export function createSequenceViewerDetailController(config = {}) {
     renderActiveRecord();
   }
 
+  function setOrfStopCodons(nextStopCodons) {
+    const record = getSelectedRecord();
+    const previousFeatures = getVisibleFeaturesForRecord(record);
+    const selectedFeature = (
+      Number.isFinite(state.selectedFeatureIndex)
+      && state.selectedFeatureIndex >= 0
+      && state.selectedFeatureIndex < previousFeatures.length
+    ) ? previousFeatures[state.selectedFeatureIndex] : null;
+
+    state.orfStopCodons = normalizeOrfStopCodonSelection(nextStopCodons);
+
+    if (selectedFeature) {
+      const nextFeatures = getVisibleFeaturesForRecord(record);
+      const exactIndex = findFeatureIndexByIdentity(nextFeatures, selectedFeature);
+      state.selectedFeatureIndex = exactIndex >= 0
+        ? exactIndex
+        : findUpdatedOrfIndex(nextFeatures, selectedFeature);
+    } else {
+      state.selectedFeatureIndex = -1;
+    }
+
+    renderActiveRecord();
+  }
+
   featureEditingController = createSequenceViewerFeatureEditingController({
     elements,
     state,
@@ -501,7 +546,8 @@ export function createSequenceViewerDetailController(config = {}) {
       renderSequence,
       renderSelectedFeatureDetail,
       setOrfViewEnabled,
-      readOrfStopVisibilityFromControls,
+      readOrfStopCodonsFromControls,
+      setOrfStopCodons,
       setRestrictionVendorFilter,
       resolveSequenceBoundaryFromEvent,
       resolveFeatureActionContext,

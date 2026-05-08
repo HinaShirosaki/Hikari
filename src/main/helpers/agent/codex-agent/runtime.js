@@ -415,6 +415,8 @@ function createCodexAgentRuntime(deps = {}) {
       stream: true,
       onStream: emitStreamProgress,
       envOverrides: {
+        HIKARI_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
+        ENANA_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
         HIKARI_CODEX_REQUEST_CONTEXT: mcpContextJson,
         ENANA_CODEX_REQUEST_CONTEXT: mcpContextJson
       }

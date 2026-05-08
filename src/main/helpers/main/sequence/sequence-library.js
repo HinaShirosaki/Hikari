@@ -1022,9 +1022,10 @@ function normalizeProteinSequence(raw) {
     .replace(/[^A-Z*]/g, '');
 }
 
-function stripTerminalProteinStop(proteinSequence) {
+function trimProteinAtFirstStop(proteinSequence) {
   const normalized = normalizeProteinSequence(proteinSequence);
-  return normalized.endsWith('*') ? normalized.slice(0, -1) : normalized;
+  const stopIndex = normalized.indexOf('*');
+  return stopIndex >= 0 ? normalized.slice(0, stopIndex) : normalized;
 }
 
 function translateFeatureSequenceToProtein(featureSequence) {
@@ -1037,9 +1038,13 @@ function translateFeatureSequenceToProtein(featureSequence) {
   let protein = '';
   for (let index = 0; index < codonCount; index += 1) {
     const codon = sequence.slice(index * 3, (index * 3) + 3);
-    protein += CODON_TO_AMINO_ACID[codon] || 'X';
+    const aminoAcid = CODON_TO_AMINO_ACID[codon] || 'X';
+    if (aminoAcid === '*') {
+      break;
+    }
+    protein += aminoAcid;
   }
-  return stripTerminalProteinStop(protein);
+  return protein;
 }
 
 function resolveFeatureProteinPayload(feature, featureSequence) {
@@ -1047,7 +1052,7 @@ function resolveFeatureProteinPayload(feature, featureSequence) {
     return { proteinSequence: '', translationSource: '' };
   }
 
-  const qualifierProteinSequence = stripTerminalProteinStop(feature?.translation || feature?.proteinSequence || '');
+  const qualifierProteinSequence = trimProteinAtFirstStop(feature?.translation || feature?.proteinSequence || '');
   if (qualifierProteinSequence) {
     return {
       proteinSequence: qualifierProteinSequence,

@@ -174,9 +174,9 @@ module.exports = function registerAgentSequenceLibraryContracts(context = {}) {
           status: 'saved',
           sourceFormat: 'genbank',
           topology: 'linear',
-          sequence: 'ATGAAATAAATGGGCCCT',
-          sequenceLength: 18,
-          featureCount: 2,
+          sequence: 'ATGAAATAAATGGGCCCTATGTAAATG',
+          sequenceLength: 27,
+          featureCount: 3,
           features: [
             {
               name: 'ImportedCds',
@@ -192,9 +192,16 @@ module.exports = function registerAgentSequenceLibraryContracts(context = {}) {
               strand: 1,
               source: 'manual',
               segments: [{ start: 9, end: 18 }]
+            },
+            {
+              name: 'InternalStopCds',
+              type: 'cds',
+              strand: 1,
+              source: 'manual',
+              segments: [{ start: 18, end: 27 }]
             }
           ],
-          gbkText: 'LOCUS       ProteinVector    18 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 atgaaataaatgggccct\n//\n',
+          gbkText: 'LOCUS       ProteinVector    27 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 atgaaataaatgggccctatgtaaatg\n//\n',
           htmlText: '<html><body>protein vector</body></html>'
         });
 
@@ -217,7 +224,8 @@ module.exports = function registerAgentSequenceLibraryContracts(context = {}) {
             JSON.stringify(cdsRows),
             JSON.stringify([
               { name: 'DerivedCds', dna_sequence: 'ATGGGCCCT', amino_acid_sequence: 'MGP' },
-              { name: 'ImportedCds', dna_sequence: 'ATGAAATAA', amino_acid_sequence: 'MK' }
+              { name: 'ImportedCds', dna_sequence: 'ATGAAATAA', amino_acid_sequence: 'MK' },
+              { name: 'InternalStopCds', dna_sequence: 'ATGTAAATG', amino_acid_sequence: 'M' }
             ])
           );
         } finally {

@@ -42,27 +42,33 @@
                 <option value="1536">1536 well</option>
               </select>
             </label>
-            <div class="assay-axis-switch">
-              <span class="assay-display-label">Sample ID Axis</span>
-              <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
-                <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
-                <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>
+            <div class="assay-axis-config-grid">
+              <div class="assay-axis-switch">
+                <span class="assay-display-label">Sample ID Axis</span>
+                <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
+                  <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
+                  <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>
+                </div>
+                <select id="assay-sample-axis" hidden>
+                  <option value="row" selected>Row</option>
+                  <option value="column">Column</option>
+                </select>
               </div>
-              <select id="assay-sample-axis" hidden>
-                <option value="row" selected>Row</option>
-                <option value="column">Column</option>
-              </select>
+              <div class="assay-axis-switch">
+                <span class="assay-display-label">Conc. Axis</span>
+                <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Concentration axis switch">
+                  <button type="button" id="assay-concentration-axis-row-btn" class="ghost-btn">Row</button>
+                  <button type="button" id="assay-concentration-axis-column-btn" class="ghost-btn calendar-view-active">Column</button>
+                </div>
+                <select id="assay-concentration-axis" hidden>
+                  <option value="row">Row</option>
+                  <option value="column" selected>Column</option>
+                </select>
+              </div>
             </div>
-            <label>
-              Concentration Axis
-              <input id="assay-concentration-axis-display" readonly />
-            </label>
-            <label>
-              Link Notebook Page
-              <select id="assay-notebook-entry">
-                <option value="">Not linked</option>
-              </select>
-            </label>
+            <select id="assay-notebook-entry" hidden>
+              <option value="">Not linked</option>
+            </select>
             <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
             <div id="assay-csv-status" class="small-note assay-form-note"></div>
             <div class="form-actions assay-form-actions">

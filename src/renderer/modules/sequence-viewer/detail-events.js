@@ -15,7 +15,8 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const renderSequence = config?.renderSequence || (() => {});
   const renderSelectedFeatureDetail = config?.renderSelectedFeatureDetail || (() => {});
   const setOrfViewEnabled = config?.setOrfViewEnabled || (() => {});
-  const readOrfStopVisibilityFromControls = config?.readOrfStopVisibilityFromControls || (() => ({}));
+  const readOrfStopCodonsFromControls = config?.readOrfStopCodonsFromControls || (() => ({}));
+  const setOrfStopCodons = config?.setOrfStopCodons || (() => {});
   const setRestrictionVendorFilter = config?.setRestrictionVendorFilter || (() => {});
   const resolveSequenceBoundaryFromEvent = config?.resolveSequenceBoundaryFromEvent || (() => null);
   const resolveFeatureActionContext = config?.resolveFeatureActionContext || (() => null);
@@ -55,8 +56,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   });
 
   const handleOrfStopToggleChange = () => {
-    state.orfStopVisibility = readOrfStopVisibilityFromControls();
-    renderActiveRecord();
+    setOrfStopCodons(readOrfStopCodonsFromControls());
   };
 
   elements.orfStopTagToggle?.addEventListener('change', handleOrfStopToggleChange);

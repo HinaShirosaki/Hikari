@@ -53,12 +53,16 @@ function replaceManagedBlock(existing = '', start = '', end = '', block = '') {
   return existing.replace(pattern, block);
 }
 
+function resolveHikariAgentMcpServerPath() {
+  return path.join(__dirname, '..', 'mcp-contract', 'stdio-server.js');
+}
+
 function resolveEnanaCodexMcpServerPath() {
-  return path.join(__dirname, 'mcp-stdio-server.js');
+  return resolveHikariAgentMcpServerPath();
 }
 
 function resolveHikariCodexMcpServerPath() {
-  return resolveEnanaCodexMcpServerPath();
+  return resolveHikariAgentMcpServerPath();
 }
 
 function addEnvAlias(envEntries, hikariKey, enanaKey, value, maxLength = 2400) {
@@ -72,22 +76,48 @@ function addEnvAlias(envEntries, hikariKey, enanaKey, value, maxLength = 2400) {
 
 function buildHikariCodexMcpConfigBlock(options = {}) {
   const envEntries = {};
+  addEnvAlias(envEntries, 'HIKARI_AGENT_MCP', 'ENANA_AGENT_MCP', '1', 40);
   addEnvAlias(envEntries, 'HIKARI_CODEX_MCP', 'ENANA_CODEX_MCP', '1', 40);
+  addEnvAlias(envEntries, 'HIKARI_AGENT_MCP_WORKSPACE', 'ENANA_AGENT_MCP_WORKSPACE', options.workspace, 2400);
   addEnvAlias(envEntries, 'HIKARI_CODEX_WORKSPACE', 'ENANA_CODEX_WORKSPACE', options.workspace, 2400);
   addEnvAlias(envEntries, 'HIKARI_AGENT_DATA_FILE', 'ENANA_AGENT_DATA_FILE', options.dataFilePath, 2400);
   addEnvAlias(envEntries, 'HIKARI_AGENT_STORAGE_PATH', 'ENANA_AGENT_STORAGE_PATH', options.storagePath, 2400);
+  const mcpHostUrl = options.mcpHostUrl
+    || process.env.HIKARI_AGENT_MCP_HOST
+    || process.env.ENANA_AGENT_MCP_HOST
+    || process.env.HIKARI_CODEX_MCP_HOST
+    || process.env.ENANA_CODEX_MCP_HOST;
+  const mcpToken = options.mcpToken
+    || process.env.HIKARI_AGENT_MCP_TOKEN
+    || process.env.ENANA_AGENT_MCP_TOKEN
+    || process.env.HIKARI_CODEX_MCP_TOKEN
+    || process.env.ENANA_CODEX_MCP_TOKEN;
+  addEnvAlias(
+    envEntries,
+    'HIKARI_AGENT_MCP_HOST',
+    'ENANA_AGENT_MCP_HOST',
+    mcpHostUrl,
+    2400
+  );
+  addEnvAlias(
+    envEntries,
+    'HIKARI_AGENT_MCP_TOKEN',
+    'ENANA_AGENT_MCP_TOKEN',
+    mcpToken,
+    4000
+  );
   addEnvAlias(
     envEntries,
     'HIKARI_CODEX_MCP_HOST',
     'ENANA_CODEX_MCP_HOST',
-    options.mcpHostUrl || process.env.HIKARI_CODEX_MCP_HOST || process.env.ENANA_CODEX_MCP_HOST,
+    mcpHostUrl,
     2400
   );
   addEnvAlias(
     envEntries,
     'HIKARI_CODEX_MCP_TOKEN',
     'ENANA_CODEX_MCP_TOKEN',
-    options.mcpToken || process.env.HIKARI_CODEX_MCP_TOKEN || process.env.ENANA_CODEX_MCP_TOKEN,
+    mcpToken,
     4000
   );
   const envText = Object.entries(envEntries)
@@ -184,6 +214,7 @@ module.exports = {
   HIKARI_MCP_CONFIG_END,
   ENANA_MCP_CONFIG_START,
   ENANA_MCP_CONFIG_END,
+  resolveHikariAgentMcpServerPath,
   resolveHikariCodexMcpServerPath,
   resolveEnanaCodexMcpServerPath,
   buildHikariCodexMcpConfigBlock,

@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 'use strict';
 
-const { createCodexAgentMcpGateway } = require('./mcp-gateway.js');
-const { createCodexMcpHostToolRunner } = require('./mcp-host-client.js');
-const { getDirectMcpToolDefinitions } = require('./mcp-tools/index.js');
+const { createAgentMcpGateway } = require('./gateway.js');
+const { createAgentMcpHostToolRunner } = require('./host-client.js');
+const { getDirectMcpToolDefinitions } = require('./direct-tools/index.js');
 
 function cleanText(value, maxLength = 1000) {
   const text = String(value || '').trim();
@@ -24,7 +24,12 @@ function parseJsonObject(raw = '') {
 }
 
 function getRequestContextFromEnv(env = process.env) {
-  return parseJsonObject(env.HIKARI_CODEX_REQUEST_CONTEXT || env.ENANA_CODEX_REQUEST_CONTEXT);
+  return parseJsonObject(
+    env.HIKARI_AGENT_MCP_REQUEST_CONTEXT
+      || env.ENANA_AGENT_MCP_REQUEST_CONTEXT
+      || env.HIKARI_CODEX_REQUEST_CONTEXT
+      || env.ENANA_CODEX_REQUEST_CONTEXT
+  );
 }
 
 function createMcpToolDefinitions() {
@@ -104,13 +109,13 @@ function createJsonRpcError(code, message) {
   };
 }
 
-function createCodexAgentMcpStdioServer(deps = {}) {
+function createAgentMcpStdioServer(deps = {}) {
   const input = deps.input || process.stdin;
   const output = deps.output || process.stdout;
   const runTool = typeof deps.runTool === 'function'
     ? deps.runTool
-    : createCodexMcpHostToolRunner(deps);
-  const gateway = deps.gateway || createCodexAgentMcpGateway({
+    : createAgentMcpHostToolRunner(deps);
+  const gateway = deps.gateway || createAgentMcpGateway({
     ...deps,
     ...(runTool ? { runTool } : {})
   });
@@ -156,7 +161,7 @@ function createCodexAgentMcpStdioServer(deps = {}) {
             resources: { listChanged: false }
           },
           serverInfo: {
-            name: 'hikari-codex-agent',
+            name: 'hikari-agent-mcp',
             version: '0.1.0'
           }
         });
@@ -261,11 +266,14 @@ function createCodexAgentMcpStdioServer(deps = {}) {
 }
 
 if (require.main === module) {
-  createCodexAgentMcpStdioServer().start();
+  createAgentMcpStdioServer().start();
 }
+
+const createCodexAgentMcpStdioServer = createAgentMcpStdioServer;
 
 module.exports = {
   createMcpToolDefinitions,
+  createAgentMcpStdioServer,
   createCodexAgentMcpStdioServer,
   getRequestContextFromEnv
 };

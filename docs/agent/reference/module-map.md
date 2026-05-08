@@ -35,7 +35,9 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 | `runtime/agent-protocol-notebook.js` | Main path | protocol-to-notebook coordinator with pending-session state |
 | `runtime/agent-science-main-utils.js` | Support | science response shaping, project/paper evidence helpers |
 | `runtime/agent-science-reasoning-loop.js` | Main path | non-deep-research science loop |
-| `runtime/agent-codex-runtime.js` | Secondary | instantiated in `main.js` but not currently dispatched |
+| `codex-agent/runtime.js` | Main path for Codex provider | Codex-only whole-turn runtime |
+| `codex-agent/runtime-files.js` | Support for Codex provider | AGENTS.md and Codex CLI MCP config writer |
+| `mcp-contract/` | Support | provider-neutral MCP stdio server, gateway, direct tools, and callback host |
 
 ## Tools
 
