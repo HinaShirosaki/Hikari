@@ -53,6 +53,39 @@ function detectManifestRole(relativePath) {
   if (normalized === 'samples/samples.json') {
     return 'samples_record';
   }
+  if (normalized === 'knowledgebase') {
+    return 'knowledge_base_root';
+  }
+  if (normalized === 'knowledgebase/papers.md') {
+    return 'paper_markdown_root';
+  }
+  if (normalized === 'knowledgebase/knowledge.index.sqlite') {
+    return 'paper_knowledge_index';
+  }
+  if (normalized === 'knowledgebase/index.json') {
+    return 'paper_knowledge_json_index';
+  }
+  if (normalized.startsWith('knowledgebase/papers.md/')) {
+    if (normalized.endsWith('/paper.md')) {
+      return 'paper_knowledge_markdown';
+    }
+    if (normalized.endsWith('/extracted.txt')) {
+      return 'paper_knowledge_extracted_text';
+    }
+    if (normalized.endsWith('/meta.json')) {
+      return 'paper_knowledge_metadata';
+    }
+    return 'paper_knowledge_artifact';
+  }
+  if (normalized === 'knowledgedatabase') {
+    return 'legacy_knowledge_database_root';
+  }
+  if (normalized === 'knowledgedatabase/paperknowledge') {
+    return 'legacy_paper_knowledge_root';
+  }
+  if (normalized.startsWith('knowledgedatabase/paperknowledge/')) {
+    return 'legacy_paper_knowledge_artifact';
+  }
   if (normalized.startsWith('project/') && normalized.endsWith('/memory.md')) {
     return 'project_memory';
   }
@@ -154,6 +187,8 @@ function normalizeBundleSummary(snapshot) {
     workflowTemplates: asArray(source.workflowTemplates).length,
     workflows: asArray(source.workflows).length,
     papers: asArray(source.papers).length,
+    assays: asArray(source.assays).length,
+    gelAnalyses: asArray(source.gelAnalyses).length,
     chemicals: asArray(labInventory.chemicals).length,
     personalInventoryContainers: personalContainerCount
   };

@@ -118,7 +118,11 @@ export function createPapersActions(context) {
           linkedName: linked.name
         }),
         fileName: file.name,
-        dataBase64
+        dataBase64,
+        transformPdfToMarkdown: true,
+        paperTitle: elements.paperTitleInput?.value?.trim() || file.name.replace(/\.pdf$/i, ''),
+        linkedType: elements.paperLinkTypeSelect?.value,
+        linkedName: linked.name
       });
       if (!result?.ok) {
         throw new Error(result?.error || 'Failed to store uploaded PDF.');
@@ -150,6 +154,11 @@ export function createPapersActions(context) {
       keyFigures: [],
       highlights: [],
       comments: [],
+      knowledgeMarkdownRelativePath: storedFile.knowledgeMarkdownRelativePath || '',
+      knowledgeExtractedTextRelativePath: storedFile.knowledgeExtractedTextRelativePath || '',
+      knowledgeMetaRelativePath: storedFile.knowledgeMetaRelativePath || '',
+      knowledgeStatus: storedFile.knowledgeStatus || '',
+      knowledgeGenerationMethod: storedFile.knowledgeDatabase?.wiki_generation_method || '',
       deepReadReady: false,
       availabilityStatus: 'uploaded_pdf',
       ingestionStatus: 'uploaded',

@@ -68,6 +68,8 @@ export function getSelectionInfo({ selection, pageLayer } = {}) {
   const layerTop = Number(layerRect?.y ?? layerRect?.top);
   const parentWidth = Number(layerRect?.width);
   const parentHeight = Number(layerRect?.height);
+  const pageWidth = Number(textLayer.dataset.pageWidth) || parentWidth;
+  const pageHeight = Number(textLayer.dataset.pageHeight) || parentHeight;
   if (!Number.isFinite(parentWidth) || !Number.isFinite(parentHeight) || parentWidth <= 0 || parentHeight <= 0) {
     return null;
   }
@@ -116,6 +118,8 @@ export function getSelectionInfo({ selection, pageLayer } = {}) {
   return {
     pageNumber,
     text,
-    boxes
+    boxes,
+    pageWidth,
+    pageHeight
   };
 }

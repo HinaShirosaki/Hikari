@@ -664,6 +664,154 @@ test('agent-chat lets developers run one tool with a manual message and inspect 
   assert.equal(status.textContent, 'Manual tool test complete for python-sandbox.');
 });
 
+test('agent-chat developer response simulator previews context and injects typed LLM output', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-developer-tools',
+    'agent-dev-response-simulator',
+    'agent-dev-response-summary',
+    'agent-dev-response-fold-btn',
+    'agent-dev-response-body',
+    'agent-dev-visible-context',
+    'agent-dev-mock-response',
+    'agent-dev-refresh-context-btn',
+    'agent-dev-use-mock-response-btn',
+    'agent-dev-response-hint',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const simulator = document.getElementById('agent-dev-response-simulator');
+  const visibleContext = document.getElementById('agent-dev-visible-context');
+  const mockResponse = document.getElementById('agent-dev-mock-response');
+  const refreshContextBtn = document.getElementById('agent-dev-refresh-context-btn');
+  const useMockResponseBtn = document.getElementById('agent-dev-use-mock-response-btn');
+  const messageInput = document.getElementById('agent-message-input');
+  const history = document.getElementById('agent-chat-history');
+  const status = document.getElementById('agent-status');
+
+  let previewPayloadSeen = null;
+  let agentChatCalled = false;
+  const state = {
+    projects: [{ id: 'p1', name: 'Cancer Study' }],
+    protocols: [{ id: 'pr1', name: 'Cell Prep', steps: [] }],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      llm: {
+        provider: 'codex',
+        model: 'gpt-5.4',
+        reasoningEffort: 'medium',
+        apiEndpoint: '',
+        apiKey: ''
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: { projectId: 'p1', messages: [] }
+  };
+
+  const window = {
+    enanaApi: {
+      autoSaveDataFile: async () => ({
+        ok: true,
+        filePath: '/tmp/enana-data.ena.json'
+      }),
+      agentDeveloperContextPreview: async (payload) => {
+        previewPayloadSeen = payload;
+        return {
+          ok: true,
+          updated_at: '2026-05-08T12:00:00.000Z',
+          provider: 'codex',
+          model: 'gpt-5.4',
+          project: { id: payload.projectId, name: payload.projectName },
+          request: {
+            message: payload.message,
+            conversation: payload.conversation,
+            attachments: []
+          },
+          prompt: {
+            kind: 'codex_agent_prompt',
+            system_prompt: 'Backend rendered Codex system prompt with MCP instructions.'
+          },
+          llm: { provider: 'codex', model: 'gpt-5.4' },
+          agent: payload.agent,
+          state_snapshot: payload.stateSnapshot
+        };
+      },
+      agentChat: async () => {
+        agentChatCalled = true;
+        return { ok: false, error: 'should not call real agent chat' };
+      }
+    }
+  };
+
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `agent-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  assert.equal(Boolean(simulator.hidden), true);
+
+  state.settings.agent.developerMode = true;
+  agent.render();
+  assert.equal(Boolean(simulator.hidden), false);
+  assert.match(visibleContext.value, /Agent-visible context/);
+  assert.match(visibleContext.value, /Refresh Context to render the backend prompt/);
+
+  messageInput.value = 'Pretend the agent found the answer.';
+  trigger(messageInput, 'input');
+  trigger(refreshContextBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(previewPayloadSeen.message, 'Pretend the agent found the answer.');
+  assert.equal(previewPayloadSeen.projectId, 'p1');
+  assert.equal(previewPayloadSeen.agent.developerMode, true);
+  assert.match(visibleContext.value, /Backend rendered Codex system prompt/);
+  assert.match(visibleContext.value, /Pretend the agent found the answer\./);
+
+  mockResponse.value = JSON.stringify({
+    status: 'completed',
+    assistant_text: 'Injected answer from the typed mock response.',
+    reasoning_summary: 'Developer supplied a mock response.'
+  });
+  trigger(useMockResponseBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(agentChatCalled, false);
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.equal(state.agentChat.messages[0].role, 'user');
+  assert.equal(state.agentChat.messages[0].text, 'Pretend the agent found the answer.');
+  assert.equal(state.agentChat.messages[1].role, 'assistant');
+  assert.equal(state.agentChat.messages[1].text, 'Injected answer from the typed mock response.');
+  assert.equal(state.agentChat.messages[1].meta.developer_mock_response.injected, true);
+  assert.equal(state.agentChat.messages[1].meta.developer_mock_response.parsed_json, true);
+  assert.equal(state.agentChat.messages[1].meta.developer_mock_response.context_summary.provider, 'codex');
+  assert.match(history.innerHTML, /Injected answer from the typed mock response\./);
+  assert.equal(status.textContent, 'Developer mock response injected.');
+});
+
 test('agent-chat prioritizes inventory lookup summary text and renders lookup metadata panels', async () => {
   const document = createMockDocument([
     'agent-project-select',

@@ -11,6 +11,7 @@ function registerAgentLogHandlers({
   getAgentChatSessionStoragePath,
   agentToolRuntime,
   agentToolSmokeTestRuntime,
+  codexAgentRuntime,
   protocolGenerationRuntime,
   controllerUtils,
   lifecycleService
@@ -28,6 +29,172 @@ function registerAgentLogHandlers({
       materials: asArray(source?.materials).map((item) => cleanText(item, 220)).filter(Boolean).slice(0, 80),
       steps: asArray(source?.steps).map((item) => cleanText(item, 2000)).filter(Boolean).slice(0, 120),
       troubleshooting: cleanText(source?.troubleshooting, 2400)
+    };
+  }
+
+  function summarizeAttachments(payloadAttachments = []) {
+    return asArray(payloadAttachments).map((attachment) => {
+      const source = attachment && typeof attachment === 'object' ? attachment : {};
+      return {
+        id: cleanText(source.id, 120),
+        name: cleanText(source.name, 240),
+        mime_type: cleanText(source.mimeType || source.mime_type, 160),
+        kind: cleanText(source.kind, 40),
+        size: Number.isFinite(Number(source.size)) ? Number(source.size) : 0
+      };
+    }).filter((attachment) => attachment.name);
+  }
+
+  function buildPromptConversation({ payload, message }) {
+    const conversation = typeof controllerUtils.extractConversation === 'function'
+      ? controllerUtils.extractConversation(payload?.conversation)
+      : asArray(payload?.conversation).map((entry) => ({
+        role: entry?.role === 'assistant' ? 'assistant' : 'user',
+        text: cleanText(entry?.text || entry?.content || entry?.message, 2500)
+      })).filter((entry) => entry.text);
+    const hasLatestUserInConversation = Boolean(
+      conversation.length > 0
+      && conversation[conversation.length - 1].role === 'user'
+      && conversation[conversation.length - 1].text === message
+    );
+    return hasLatestUserInConversation
+      ? conversation
+      : [...conversation, { role: 'user', text: message }];
+  }
+
+  function buildDeveloperContextPreview(normalizedPayload = {}) {
+    const rawSnapshot = normalizeJsonPayload(normalizedPayload?.stateSnapshot, {});
+    const snapshot = typeof agentToolRuntime.normalizeAgentSnapshot === 'function'
+      ? agentToolRuntime.normalizeAgentSnapshot(rawSnapshot)
+      : rawSnapshot;
+    const message = cleanText(normalizedPayload?.message, 3000);
+    const workspaceDir = process.cwd();
+    const skillInvocation = typeof agentToolRuntime.parseSkillInvocation === 'function'
+      ? agentToolRuntime.parseSkillInvocation(message, { workspaceDir })
+      : {
+        type: 'none',
+        active_skill_names: [],
+        cleaned_message: message
+      };
+    const effectiveMessage = cleanText(
+      skillInvocation?.type === 'skill_prompt'
+        ? skillInvocation.cleaned_message
+        : message,
+      3000
+    ) || message;
+    const skillPromptPayload = typeof agentToolRuntime.buildSkillsPromptPayload === 'function'
+      ? agentToolRuntime.buildSkillsPromptPayload({
+        workspaceDir,
+        activeSkillNames: asArray(skillInvocation?.active_skill_names)
+      })
+      : {
+        skills_catalog_prompt: '',
+        active_skills_prompt: ''
+      };
+    const llmSource = typeof controllerUtils.resolveAgentLlmSource === 'function'
+      ? controllerUtils.resolveAgentLlmSource(normalizedPayload?.llm)
+      : {
+        provider: cleanText(normalizedPayload?.llm?.provider, 80),
+        endpoint: cleanText(normalizedPayload?.llm?.apiEndpoint || normalizedPayload?.llm?.endpoint, 2000),
+        apiKey: cleanText(normalizedPayload?.llm?.apiKey, 400),
+        model: cleanText(normalizedPayload?.llm?.model, 120)
+      };
+    const provider = cleanText(llmSource?.provider, 80);
+    const model = cleanText(llmSource?.model, 120);
+    const projectId = cleanText(normalizedPayload?.projectId || normalizedPayload?.project_id, 120);
+    const projectName = cleanText(normalizedPayload?.projectName || normalizedPayload?.project_name, 220);
+    const promptConversation = buildPromptConversation({
+      payload: normalizedPayload,
+      message: effectiveMessage
+    });
+    const attachments = summarizeAttachments(normalizedPayload?.attachments);
+    const agentFlags = {
+      developerMode: normalizedPayload?.agent?.developerMode === true,
+      deepResearchEnabled: normalizedPayload?.agent?.deepResearchEnabled === true
+    };
+    const llmSummary = typeof controllerUtils.summarizeLlmForAgentLog === 'function'
+      ? controllerUtils.summarizeLlmForAgentLog(normalizedPayload?.llm)
+      : {
+        provider,
+        model,
+        endpoint: cleanText(llmSource?.endpoint, 2000),
+        hasApiKey: Boolean(cleanText(llmSource?.apiKey, 400))
+      };
+    const baseSystemPrompt = typeof agentToolRuntime.buildAgentSystemPrompt === 'function'
+      ? agentToolRuntime.buildAgentSystemPrompt(projectName, {
+        agent: {
+          skillsCatalogPrompt: cleanText(skillPromptPayload.skills_catalog_prompt, 16000),
+          activeSkillsPrompt: cleanText(skillPromptPayload.active_skills_prompt, 24000)
+        }
+      })
+      : '';
+    const codexPrompt = provider === 'codex'
+      && codexAgentRuntime
+      && typeof codexAgentRuntime.buildPrompt === 'function'
+      ? codexAgentRuntime.buildPrompt({
+        provider,
+        model,
+        reasoningEffort: cleanText(normalizedPayload?.llm?.reasoningEffort, 40).toLowerCase(),
+        message: effectiveMessage,
+        conversation: promptConversation,
+        attachments: asArray(normalizedPayload?.attachments),
+        snapshot,
+        executionFlags: {
+          developerMode: agentFlags.developerMode
+        },
+        deepResearchEnabled: agentFlags.deepResearchEnabled,
+        projectId,
+        projectName,
+        skillPromptPayload,
+        selectionInsight: normalizedPayload?.agent?.selectionInsight || normalizedPayload?.selectionInsight || null
+      })
+      : '';
+
+    return {
+      ok: true,
+      updated_at: new Date().toISOString(),
+      provider,
+      model,
+      project: {
+        id: projectId,
+        name: projectName
+      },
+      request: {
+        message: effectiveMessage,
+        original_message: message,
+        conversation: promptConversation,
+        attachments
+      },
+      prompt: {
+        kind: provider === 'codex' ? 'codex_agent_prompt' : 'agent_runtime_prompt',
+        system_prompt: codexPrompt || baseSystemPrompt,
+        parser_system_prompt: provider === 'codex' ? '' : 'Return valid JSON only.',
+        skills_catalog_prompt: cleanText(skillPromptPayload.skills_catalog_prompt, 16000),
+        active_skills_prompt: cleanText(skillPromptPayload.active_skills_prompt, 24000)
+      },
+      skill_invocation: {
+        type: cleanText(skillInvocation?.type, 80),
+        active_skill_names: asArray(skillInvocation?.active_skill_names).map((item) => cleanText(item, 160)).filter(Boolean),
+        command_name: cleanText(skillInvocation?.command_name, 80),
+        skill_name: cleanText(skillInvocation?.skill?.name, 160)
+      },
+      mcp_context: provider === 'codex'
+        ? {
+          provider: 'codex',
+          model,
+          cwd: workspaceDir,
+          message: cleanText(effectiveMessage, 3200),
+          conversation: promptConversation.slice(-12),
+          project: {
+            id: projectId,
+            name: projectName
+          },
+          dataFilePath: cleanText(snapshot?.data_file_path || snapshot?.dataFilePath, 2000)
+        }
+        : null,
+      llm: llmSummary,
+      agent: agentFlags,
+      state_snapshot: snapshot
     };
   }
 
@@ -104,6 +271,34 @@ function registerAgentLogHandlers({
       return {
         ok: false,
         error: cleanText(error?.message || error, 2400)
+      };
+    }
+  });
+
+  ipcMain.handle(AGENT.DEVELOPER_CONTEXT_PREVIEW, async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const executionFlags = controllerUtils.resolveAgentExecutionFlags(
+      normalizedPayload,
+      normalizeJsonPayload(normalizedPayload?.stateSnapshot, {})
+    );
+    if (executionFlags.developerMode !== true) {
+      return {
+        ok: false,
+        status: 'error',
+        summary: 'Agent developer mode must be enabled to inspect agent-visible context.',
+        error: 'Agent developer mode must be enabled to inspect agent-visible context.'
+      };
+    }
+
+    try {
+      return buildDeveloperContextPreview(normalizedPayload);
+    } catch (error) {
+      const message = cleanText(error?.message || error, 600) || 'Failed to build agent-visible context preview.';
+      return {
+        ok: false,
+        status: 'error',
+        summary: message,
+        error: message
       };
     }
   });

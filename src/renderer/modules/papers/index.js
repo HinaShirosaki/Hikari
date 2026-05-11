@@ -5,6 +5,11 @@ import { createPapersLibraryController } from './library.js';
 import { ensurePaperHighlights } from './model.js';
 import { normalizePaperSummary } from './normalizers.js';
 import {
+  boxesToPdfQuadPoints,
+  normalizeHighlightBoxes,
+  normalizePageDimension
+} from './pdf-viewer-geometry.js';
+import {
   hasPaperPdfMetadata,
   normalizePaperPdfMetadata
 } from './pdf-metadata.js';
@@ -354,39 +359,37 @@ export function initPapersManagement({
     const activePaper = context.getActivePaper?.() || null;
     paperViewer.setHighlights(activePaper ? ensurePaperHighlights(activePaper) : []);
   };
-  context.createPaperHighlight = ({ pageNumber, text, boxes } = {}) => {
+  context.createPaperHighlight = ({ pageNumber, text, boxes, pageWidth, pageHeight } = {}) => {
     const activePaper = context.getActivePaper?.() || null;
     const normalizedText = String(text || '').trim();
     const normalizedPageNumber = Math.max(1, Math.round(Number(pageNumber) || 1));
-    const normalizedBoxes = (Array.isArray(boxes) ? boxes : [])
-      .map((box) => {
-        if (!box || typeof box !== 'object') {
-          return null;
-        }
-        const x = Number(box.x);
-        const y = Number(box.y);
-        const width = Number(box.width);
-        const height = Number(box.height);
-        if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-          return null;
-        }
-        return { x, y, width, height };
-      })
-      .filter(Boolean);
+    const normalizedBoxes = normalizeHighlightBoxes(boxes);
+    const normalizedPageWidth = normalizePageDimension(pageWidth);
+    const normalizedPageHeight = normalizePageDimension(pageHeight);
+    const quadPoints = boxesToPdfQuadPoints(normalizedBoxes, {
+      pageWidth: normalizedPageWidth,
+      pageHeight: normalizedPageHeight
+    });
 
     if (!activePaper || !normalizedText || !normalizedBoxes.length) {
       return false;
     }
 
     const now = new Date().toISOString();
-    ensurePaperHighlights(activePaper).push({
+    const highlightRecord = {
       id: createId(),
       pageNumber: normalizedPageNumber,
       text: normalizedText,
       boxes: normalizedBoxes,
       createdAt: now,
       updatedAt: now
-    });
+    };
+    if (normalizedPageWidth && normalizedPageHeight && quadPoints.length) {
+      highlightRecord.pageWidth = normalizedPageWidth;
+      highlightRecord.pageHeight = normalizedPageHeight;
+      highlightRecord.quadPoints = quadPoints;
+    }
+    ensurePaperHighlights(activePaper).push(highlightRecord);
     activePaper.updatedAt = now;
     persist();
     context.syncViewerHighlights();

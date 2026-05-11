@@ -1,0 +1,202 @@
+{
+  "schema_name": "enana_storage_manifest",
+  "schema_version": "1.0.0",
+  "generated_at": "2026-05-11T18:57:14.448Z",
+  "root_path": "/Users/shiyifan/Projects/Enana/TestData3/TestData4",
+  "discovered_files": [
+    {
+      "relative_path": ".DS_Store",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 6148,
+      "modified_at": "2026-05-11T16:54:54.904Z"
+    },
+    {
+      "relative_path": "Assays",
+      "type": "directory",
+      "role": "assays_root",
+      "size_bytes": 0,
+      "modified_at": "2026-05-09T15:55:37.397Z"
+    },
+    {
+      "relative_path": "chat_log",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-05-09T15:55:37.410Z"
+    },
+    {
+      "relative_path": "Gels",
+      "type": "directory",
+      "role": "gels_root",
+      "size_bytes": 0,
+      "modified_at": "2026-05-09T15:55:37.397Z"
+    },
+    {
+      "relative_path": "hikari-chemicals.index.sqlite",
+      "type": "file",
+      "role": "chemical_inventory_index",
+      "size_bytes": 24576,
+      "modified_at": "2026-05-09T15:55:39.204Z"
+    },
+    {
+      "relative_path": "hikari-storage-manifest.json",
+      "type": "file",
+      "role": "storage_manifest",
+      "size_bytes": 4805,
+      "modified_at": "2026-05-11T16:52:25.361Z"
+    },
+    {
+      "relative_path": "KnowledgeBase",
+      "type": "directory",
+      "role": "knowledge_base_root",
+      "size_bytes": 0,
+      "modified_at": "2026-05-11T16:52:25.333Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md",
+      "type": "directory",
+      "role": "paper_markdown_root",
+      "size_bytes": 0,
+      "modified_at": "2026-05-11T16:52:25.333Z"
+    },
+    {
+      "relative_path": "Papers",
+      "type": "directory",
+      "role": "papers_root",
+      "size_bytes": 0,
+      "modified_at": "2026-05-09T15:55:37.397Z"
+    },
+    {
+      "relative_path": "Project",
+      "type": "directory",
+      "role": "project_root",
+      "size_bytes": 0,
+      "modified_at": "2026-05-09T15:55:37.397Z"
+    },
+    {
+      "relative_path": "Protocol",
+      "type": "directory",
+      "role": "protocol_root",
+      "size_bytes": 0,
+      "modified_at": "2026-05-09T15:55:37.400Z"
+    },
+    {
+      "relative_path": "Protocol/protocol.index.sqlite",
+      "type": "file",
+      "role": "protocol_index",
+      "size_bytes": 90112,
+      "modified_at": "2026-05-09T15:55:39.202Z"
+    },
+    {
+      "relative_path": "Samples",
+      "type": "directory",
+      "role": "samples_root",
+      "size_bytes": 0,
+      "modified_at": "2026-05-09T15:55:37.398Z"
+    },
+    {
+      "relative_path": "Samples/samples.json",
+      "type": "file",
+      "role": "samples_record",
+      "size_bytes": 126,
+      "modified_at": "2026-05-09T15:55:39.199Z"
+    },
+    {
+      "relative_path": "Workflow",
+      "type": "directory",
+      "role": "other",
+      "size_bytes": 0,
+      "modified_at": "2026-05-09T15:55:37.403Z"
+    },
+    {
+      "relative_path": "Workflow/workflow-status.sqlite",
+      "type": "file",
+      "role": "workflow_status_index",
+      "size_bytes": 40960,
+      "modified_at": "2026-05-09T15:55:39.205Z"
+    }
+  ],
+  "bundles": [
+    {
+      "bundle_type": "sqlite_only_bundle",
+      "data_file_path": "",
+      "bundle_paths": {
+        "protocols_path": "Protocol",
+        "notebook_pages_path": "hikari-chemicals.notebook-pages.json",
+        "samples_path": "Samples/samples.json",
+        "sqlite_path": "Protocol/protocol.index.sqlite"
+      },
+      "counts": {
+        "protocols": 0,
+        "notebookEntries": 0,
+        "samples": 0,
+        "workflowTemplates": 0,
+        "workflows": 0,
+        "papers": 0,
+        "assays": 0,
+        "gelAnalyses": 0,
+        "chemicals": 0,
+        "personalInventoryContainers": 0
+      },
+      "migration": {
+        "applied": [
+          "samples_folder",
+          "workflow_root_storage",
+          "inventory_sqlite"
+        ],
+        "warnings": []
+      }
+    }
+  ],
+  "protocol_storage": {
+    "relative_root_path": "Protocol",
+    "relative_index_sqlite_path": "Protocol/protocol.index.sqlite",
+    "protocols": 0
+  },
+  "workflow_storage": {
+    "relative_root_path": "Workflow",
+    "relative_status_sqlite_path": "Workflow/workflow-status.sqlite",
+    "workflow_templates": 0,
+    "workflows": 0,
+    "papers": 0
+  },
+  "sample_storage": {
+    "relative_root_path": "Samples",
+    "relative_samples_json_path": "Samples/samples.json",
+    "samples": 0
+  },
+  "paper_markdown_storage": {
+    "relative_root_path": "KnowledgeBase/papers.md",
+    "transformed": 0,
+    "skipped": 0,
+    "failed": 0
+  },
+  "sequence_library": {
+    "relative_path": "SequenceViewer/sequence-library.sqlite",
+    "exists": false,
+    "entry_count": 0,
+    "status_counts": {
+      "saved": 0,
+      "temporary": 0
+    }
+  },
+  "summary": {
+    "bundles": 1,
+    "protocols": 0,
+    "notebookEntries": 0,
+    "samples": 0,
+    "workflowTemplates": 0,
+    "workflows": 0,
+    "papers": 0,
+    "assays": 0,
+    "gelAnalyses": 0,
+    "chemicals": 0,
+    "personalInventoryContainers": 0,
+    "sequenceEntries": 0,
+    "paperMarkdownTransformed": 0,
+    "paperMarkdownSkipped": 0,
+    "paperMarkdownFailed": 0
+  },
+  "warnings": []
+}

@@ -1,0 +1,261 @@
+[[page:1]]
+Vol.:(0123456789) 1 3 Hepatology International (2023) 17:1–3
+https://doi.org/10.1007/s12072-022-10437-1
+EDITORIAL
+Role of pharmacogenetics and tacrolimus dosing in liver
+transplantation
+James Fung 1,2,3
+Received: 31 August 2022 / Accepted: 8 October 2022 / Published online: 25 October 2022
+© Asian Pacific Association for the Study of the Liver 2022
+After liver transplantation (LT), long-term immunosuppres-
+sion is required to prevent allograft rejection. Tacrolimus
+(TAC), a macrolide antibiotic and calcineurin inhibitor,
+is the primary immunosuppressive agent after LT. After
+absorption, TAC forms a complex with the FK-binding pro-
+tein, with subsequent competitive binding and inhibition of
+calcineurin, ultimately leading to a decrease in interleukin-2
+(IL-2) transcriptional activity and reduced T-cell prolifera-
+tion. Due to its narrow therapeutic window, monitoring
+of TAC whole-blood trough concentrations is essential to
+ensure adequate drug levels and to avoid toxicity. Two for-
+mulations of TAC are currently available. The immediate-
+release TAC (IR-TAC) is given twice daily, whereas the
+prolong-released TAC (PR-TAC) is given once daily, thereby
+potentially improving patient adherence. In clinical practice,
+the switch from IR-TAC to PR-TAC is performed primarily
+to increase patient compliance. In a phase III trial of de novo
+LT recipients, the efficacy and safety profiles were found to
+be similar between PR-TAC and IR-TAC [1]. The conver-
+sion from IR-TAC to PR-TAC is relatively straight forward
+using the same daily-dose requirement, although significant
+variation in calcineurin activity may occur during the early
+post-transplant period [2].
+In fact, it is well established that there is high inter- and
+intra-patient variability in the pharmacokinetics of TAC,
+which is metabolized by enzymes in the cytochrome P450
+(CYP) 3A family. Both CYP3A4 and CYP3A5 are clini-
+cally important isoforms, with high sequence homology and
+substrate overlap. The poor oral bioavailability of TAC is
+due to the pre-systemic elimination and first-pass metabo-
+lism by intestinal CYP3A and hepatic CYP3A respectively,
+with subsequent systemic clearance via biliary excretion of
+its metabolites. Single nucleotide polymorphisms (SNP)
+in the CYP3A5 gene can alter enzyme expression, with
+higher expression leading to more extensive metabolism,
+and vice versa. One of the best studied SNP in CYP3A5 is
+the A6986G transition within intron 3 (CYP3A5*3) which
+is associated with reduced function as a result of alterna-
+tive splicing, with production of a truncated protein [3].
+Homozygous carriers of CYP3A5*3 gene (*3/*3) have no
+CYP3A5 activity, and therefore have a higher dose-normal-
+ized trough TAC concentration compared to CYP3A*1 car-
+riers. Another essential component of CYP-mediated drug
+oxidation is CYP P450 oxidoreductase (POR), which acts
+as an electron donor through transfer from NADPH to CYP.
+Polymorphisms in the POR gene therefore can also affect
+CYP function, with POR*28 being one of the best stud-
+ied polymorphisms. The presence of POR*28 with A503V
+mutation alters the reactivity of POR binding site with CYP,
+potentially enhancing TAC metabolism with increased CYP
+activation.
+In LT, the situation becomes even more complex as it is
+necessary to consider both the donor hepatic and recipient
+intestinal CYP3A status when assessing TAC pharmacoki-
+netics. For instance, the CYP3A5 genotype of the donor
+liver may be different to the CYP3A5 genotype residing
+in the recipient intestine. Furthermore, the relative influ-
+ence of donor and recipient genotypes remains unclear, and
+it is possible that this interplay may not be static and may
+change over the post-transplant period, with donor genotype
+expression being delayed. In addition, there is influence of
+other enzymes in the CYP3A family, including CYP3A4
+and CYP3A7. In a recent study of LT recipients, CYP3A7,
+CYP3A4, and CYP3A5*3 polymorphisms in the recipients
+and not the donors were associated with tacrolimus C0/D in
+the early post-transplant period [4].
+* James Fung
+jfung@gastro.hk
+1 Department of Medicine, Queen Mary Hospital, The
+University of Hong Kong, 102 Pokfulam Road, Hong Kong,
+China
+2 The Liver Transplant Centre, Queen Mary Hospital,
+Hong Kong, China
+3 State Key Laboratory of Liver Research, The University
+of Hong Kong, Hong Kong, China
+
+[[page:2]]
+2 Hepatology International (2023) 17:1–3 1 3
+Apart from the CYP3A enzyme system, membrane
+transporters are also important in determining the phar-
+macokinetics of TAC. These transporters allow TAC to
+be absorbed into the systemic circulation and into the
+hepatocytes to be metabolized, and can also influence
+the intracellular concentration of TAC in target cells,
+thereby affect the therapeutic efficacy. The two main
+types of transporters include the ATP-binding cassette
+transporters (ABC) and the solute carrier transporters
+(SLC). Once TAC is metabolized by CYP3A, it is trans-
+ported out of cells via the P-glycoprotein (ABCB1) trans-
+porter, which is encoded by the multidrug resistance-1
+(MDR1) gene. Although numerous polymorphisms exist
+for the ABCB1 gene, data to date are inconsistent, with
+lack of clear association between ABCB1 genotypes and
+TAC whole blood concentrations [5]. It is possible that
+these transporters have greater influence on intracellular
+concentrations of TAC rather than whole blood concen-
+trations. Another transporter is the multidrug resistance-
+associated protein 2 (MRP2) coded by the ABCC2 gene.
+Again, the results have not been conclusive in showing
+definite relationships between SNP in the ABCC2 gene
+and TAC pharmacokinetics, with almost all studies per-
+formed on renal transplant patients [6]. The most studied
+SNPs for ABCC2 include the – 24C > T, 1249G > A, and
+3972C > T, giving rise to the following haplotypes: H1
+(wildtype), H2 (1249G > A) with increased expression,
+and H9 (3972C > T) and H12 (– 24C > T and 3972C/T)
+with decreased expression [7].
+In the current study by Park et al. [8], the authors investi-
+gated the effects of SNPs for CYP3A5, MDR1 (1236C > T,
+2677G > T/A, and 3435C > T), ABCC2 (– 24C > T,
+1249G > A, and 3972C > T), and POR*28 in donors and
+recipients on TAC dose-adjusted trough levels in LT recipi-
+ents after switching from IR-TAC to once daily PR-TAC.
+This is a small single-center retrospective study of 87
+patients who underwent living-donor LT at least 1 month
+before switching to PR-TAC. Donors for each recipient were
+also included. The study divided the patients into 2 groups:
+those with < 30% decrease in C0/dose (group 1) and those
+with ≥ 30% decrease in C0/dose (group 2) following switch-
+ing to PR-TAC. The study showed that recipient CYP3A5
+*1/*3 and *3/*3 were more frequent in group 1 compared
+to group 2, whereas CYP3A5 *1/*1 was more frequent in
+group 2 ( p = 0.016). These findings are consistent with what
+we know already with regard to CYP3A5 genotypes. How-
+ever, they did not find any significant differences in donor
+CYP3A5 variants between the two groups. The discrepancy
+between recipient and donor findings may highlight the dif-
+ferences between hepatic and intestinal CYP3A influences,
+and the effect of time after LT on the function and the rela-
+tive influence of these two enzymes, with those in group 2
+having an earlier switching time ( p = 0.025).
+The ABCC2 SNP findings in the current study were
+consistent with previous studies of renal transplant recipi-
+ents, with higher AA and AG genotypes in group 2 than
+in group 1 ( p = 0.042). The donor high-activity ABCC2
+genotype (H1/H2 and H2/H2) was significantly more fre-
+quent in group 2 than in group 1, while the low-activity
+genotype (H1/H9, H1/H10, H1/H12, H9/H12, and H12/
+H12) was more frequent in group 1 than in group 2 (0 vs.
+14.3%; 36.8 vs. 20.4%; p = 0.013). With regard to the other
+SNPs in MDR1 and POR*28, no significant differences were
+observed between the two groups and with TAC C0/dose in
+the current study.
+Although the current study by Park et al. [8] does shed
+some light onto the potential effects of SNPs in TAC phar-
+macokinetics when switching to PR-TAC, this is a small
+retrospective study, and the TAC measurements following
+switching had a wide range from 5 to 102 days. Further-
+more, the switching time was significantly different between
+the two groups and not controlled, and after adjusting for
+switching time, no factors were found to be associated with
+a reduction in TAC C0/dose. The significantly higher TAC
+trough levels before switching in group 2 may be due to
+the shorter switching time and may also impact the results.
+Therefore, it is difficult to draw any firm conclusions from
+the current study, and further prospective studies controlling
+the exact timing of drug intake, time of switching from LT,
+and fixed time points of TAC measurement are required to
+confirm these results. However, the study has highlighted the
+role of pharmacogenetics when switching between different
+formulations of tacrolimus.
+For the conversion from IM-TAC to PR-TAC, determina-
+tion of specific SNPs in donors and recipients is unlikely to
+have any practical clinical application on its own given the
+complex interplay between enzymes and transporters in dif-
+ferent organs and cellular compartments. In addition, other
+factors, such as age, ethnicity, body surface area, hematocrit,
+drug–drug interactions, and liver function, may also alter
+TAC metabolism and excretion. Therefore, the clinical util-
+ity of studying these pharmacogenetic alterations may be
+limited. This is highlighted by the discordant results from
+previous studies, despite much research over many years.
+However, it is important for clinicians to be aware of the
+role of these SNPs, and that they can account for wide vari-
+ations in the pharmacokinetics of TAC even with a simple
+one-to-one conversion. Close monitoring of drug levels must
+be performed after switching to PR-TAC for timely dose
+adjustments to avoid rejection and drug toxicity with insuf-
+ficient and inadvertent high levels respectively. It is impor-
+tant to note that the toxicity effect of TAC is bimodal, with
+early onset adverse events including acute nephrotoxicity
+and neurotoxicity occurring as a result of local drug accu-
+mulation that may not be reflected in therapeutic drug levels.
+Therefore, whole blood trough levels are only a surrogate
+
+[[page:3]]
+3 Hepatology International (2023) 17:1–3 1 3
+measurement for intracellular drug concentrations, of which
+the latter may be more indicative of the amount of drug
+available for target interaction. Indeed, studies of tacrolimus
+concentration inside peripheral blood mononuclear cells
+(PBMCs) have shown poor correlation with whole blood
+concentration [9, 10]. Finally, although determination of
+SNPs may help guide TAC dosing, there is to date no direct
+evidence that this will ultimately lead to an improved clini-
+cal outcome. A large prospective study, inclusive of models
+that consider and integrate the complex interplay between
+multiple factors including the various SNPs and their rela-
+tive influences are required to determine the exact utility of
+TAC pharmacogenetics in clinical practice. Until then, per-
+sonalized prescriptions of TAC based on pharmacogenetic
+analysis remain in theory only, and not ready for prime time.
+Author contributions JF: Writer.
+Funding None.
+Declarations
+Conflict of interest James Fung declares that there is no conflict of
+interest.
+Ethical approval Not required.
+Informed consent Not applicable.
+References
+1. Trunecka P, Boillot O, Seehofer D, Pinna AD, Fischer L, Eric-
+zon BG, et al. Once-daily prolonged-release tacrolimus (ADVA-
+GRAF) versus twice-daily tacrolimus (PROGRAF) in liver trans-
+plantation. Am J Transpl 2010;10:2313–2323
+2. Allard M, Puszkiel A, Conti F, Chevillard L, Kamar N, Noe G,
+et al. Pharmacokinetics and pharmacodynamics of once-daily
+prolonged-release tacrolimus in liver transplant recipients. Clin
+Ther 2019;41:882–896.e883
+3. Kuehl P, Zhang J, Lin Y, Lamba J, Assem M, Schuetz J, et al.
+Sequence diversity in CYP3A promoters and characterization of
+the genetic basis of polymorphic CYP3A5 expression. Nat Genet
+2001;27:383–391
+4. Dong Y, Xu Q, Li R, Tao Y, Zhang Q, Li J, et al. CYP3A7,
+CYP3A4, and CYP3A5 genetic polymorphisms in recipients
+rather than donors influence tacrolimus concentrations in the early
+stages after liver transplantation. Gene 2022;809: 146007
+5. Staatz CE, Goodman LK, Tett SE. Effect of CYP3A and ABCB1
+single nucleotide polymorphisms on the pharmacokinetics and
+pharmacodynamics of calcineurin inhibitors: part II. Clin Phar-
+macokinet 2010;49:207–221
+6. Pulk RA, Schladt DS, Oetting WS, Guan W, Israni AK, Matas
+AJ, et al. Multigene predictors of tacrolimus exposure in kidney
+transplant recipients. Pharmacogenomics 2015;16:841–854
+7. Laechelt S, Turrini E, Ruehmkorf A, Siegmund W, Cascorbi I,
+Haenisch S. Impact of ABCC2 haplotypes on transcriptional and
+posttranscriptional gene regulation and function. Pharmacog-
+enomics J 2011;11:25–34
+8. Park J, Lee KW, Oh SC, Park MY, Lee JM, Hong SY, Hong SK,
+et al. Impact of single-nucleotide polymorphisms on tacrolimus
+pharmacokinetics in liver transplant patients after switching to
+once-daily dosing. Hepatol Int. 2022
+9. Capron A, Lerut J, Latinne D, Rahier J, Haufroid V, Wallemacq
+P. Correlation of tacrolimus levels in peripheral blood mononu-
+clear cells with histological staging of rejection after liver trans-
+plantation: preliminary results of a prospective study. Transpl Int
+2012;25:41–47
+10. Lemaitre F, Blanchet B, Latournerie M, Antignac M, Houssel-
+Debry P, Verdier MC, et al. Pharmacokinetics and pharmacody-
+namics of tacrolimus in liver transplant recipients: inside the white
+blood cells. Clin Biochem 2015;48:406–411
+Publisher's Note Springer Nature remains neutral with regard to
+jurisdictional claims in published maps and institutional affiliations.

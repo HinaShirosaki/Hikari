@@ -216,18 +216,24 @@ async function syncBundleFromSnapshot({
     fallbackDataFilePath,
     storagePath: safeSnapshot?.settings?.storagePath
   });
-  if (!bundlePaths.dataFilePath) {
+  const storageRootPath = cleanText(bundlePaths.storageRootPath, 2400)
+    || (bundlePaths.dataFilePath ? path.dirname(bundlePaths.dataFilePath) : '');
+  if (!storageRootPath) {
     return {
       bundlePaths,
       sidecarPaths: {}
     };
   }
   const updatedAt = new Date().toISOString();
-  await fs.mkdir(path.dirname(bundlePaths.dataFilePath), { recursive: true });
+  await fs.mkdir(storageRootPath, { recursive: true });
+  if (bundlePaths.dataFilePath) {
+    await fs.mkdir(path.dirname(bundlePaths.dataFilePath), { recursive: true });
+  }
   await Promise.all([
     bundlePaths.papersRootPath ? fs.mkdir(bundlePaths.papersRootPath, { recursive: true }) : Promise.resolve(),
     bundlePaths.assaysRootPath ? fs.mkdir(bundlePaths.assaysRootPath, { recursive: true }) : Promise.resolve(),
     bundlePaths.gelsRootPath ? fs.mkdir(bundlePaths.gelsRootPath, { recursive: true }) : Promise.resolve(),
+    bundlePaths.paperMarkdownRootPath ? fs.mkdir(bundlePaths.paperMarkdownRootPath, { recursive: true }) : Promise.resolve(),
     bundlePaths.samplesRootPath ? fs.mkdir(bundlePaths.samplesRootPath, { recursive: true }) : Promise.resolve()
   ]);
   const protocolFilePaths = await writeProtocolFiles(bundlePaths.protocolsPath, safeSnapshot, updatedAt);
@@ -253,6 +259,8 @@ async function syncBundleFromSnapshot({
       notebookPagesPath: '',
       notebookPageFolderPaths,
       projectMemoryFilePaths,
+      knowledgeBaseRootPath: bundlePaths.knowledgeBaseRootPath,
+      paperMarkdownRootPath: bundlePaths.paperMarkdownRootPath,
       samplesPath
     },
     workflowPaths: {

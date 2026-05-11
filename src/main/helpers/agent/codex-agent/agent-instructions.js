@@ -49,7 +49,7 @@ function buildHikariCodexAgentsInstructions() {
     '',
     'Literature and paper rules:',
     '- Prefer `literature-search` for finding papers, references, recent literature, or external scientific evidence. It is the Hikari path that searches, selects papers, and loads bounded paper context blocks back into the agent.',
-    '- When Hikari launches a Codex paper-context sub-agent, that sub-agent should read the provided `KnowledgeDatabase/PaperKnowledge/.../paper.md` files and return the requested context JSON. Do not call `literature-search` again from inside that paper-context sub-agent.',
+    '- When Hikari launches a Codex paper-context sub-agent, that sub-agent should read the provided `KnowledgeBase/papers.md/.../paper.md` files and return the requested context JSON. Do not call `literature-search` again from inside that paper-context sub-agent.',
     '- Use `paper-download` when the user explicitly asks to download a paper PDF into app storage, or when the workflow asks you to obtain a local PDF for deeper reading.',
     '- Use `paper-analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.',
     '- Use direct `protocol_generation` only after you already have complete protocol JSON to normalize into an import-ready reusable protocol.',

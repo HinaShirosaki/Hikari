@@ -41,6 +41,8 @@ export function getAssayElements(root = document) {
     assayAnalysisClearGroupsBtn: root.getElementById('assay-analysis-clear-groups-btn'),
     assayAnalysisSelectionStatus: root.getElementById('assay-analysis-selection-status'),
     assayResultsLoadBtn: root.getElementById('assay-results-load-btn'),
+    assayAttachResultFileBtn: root.getElementById('assay-attach-result-file-btn'),
+    assayResultFileInput: root.getElementById('assay-result-file-input'),
     assaySaveResultsBtn: root.getElementById('assay-save-results-btn'),
     assayActiveAssayInfo: root.getElementById('assay-active-assay-info'),
     assayClearResultsBtn: root.getElementById('assay-clear-results-btn'),
@@ -56,6 +58,13 @@ export function getAssayElements(root = document) {
     assaySerialDilutionVolumeInput: root.getElementById('assay-serial-dilution-volume'),
     assaySerialDilutionSummary: root.getElementById('assay-serial-dilution-summary'),
     assaySerialDilutionContent: root.getElementById('assay-serial-dilution-content'),
+    assayResultImportOverlay: root.getElementById('assay-result-import-overlay'),
+    assayResultImportCloseBtn: root.getElementById('assay-result-import-close-btn'),
+    assayResultImportCancelBtn: root.getElementById('assay-result-import-cancel-btn'),
+    assayResultImportApplyBtn: root.getElementById('assay-result-import-apply-btn'),
+    assayResultImportStatus: root.getElementById('assay-result-import-status'),
+    assayResultImportCandidates: root.getElementById('assay-result-import-candidates'),
+    assayResultImportPreview: root.getElementById('assay-result-import-preview'),
     assayLayoutStatus: root.getElementById('assay-layout-status'),
     assayList: root.getElementById('assay-list')
   };

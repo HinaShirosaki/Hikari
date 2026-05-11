@@ -289,6 +289,89 @@ div {
   min-width: 0;
 }
 
+.topbar-search-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  max-height: min(420px, 60vh);
+  overflow-y: auto;
+  z-index: 50;
+}
+
+.topbar-search-suggestions[hidden] {
+  display: none;
+}
+
+.topbar-search-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  color: var(--text, #1f2533);
+  user-select: none;
+}
+
+.topbar-search-suggestion + .topbar-search-suggestion {
+  margin-top: 2px;
+}
+
+.topbar-search-suggestion.is-active,
+.topbar-search-suggestion:hover {
+  background: var(--accent-soft, rgba(100, 114, 85, 0.12));
+}
+
+.topbar-search-suggestion-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+  gap: 1px;
+}
+
+.topbar-search-suggestion-label {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-search-suggestion-sublabel {
+  color: var(--muted, #6b7280);
+  font-size: 0.78rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-search-suggestion-kind {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted, #6b7280);
+  background: var(--surface-muted, rgba(0, 0, 0, 0.05));
+  padding: 2px 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+body.theme-night .topbar-search-suggestions {
+  background: var(--surface, #1d2230);
+  border-color: var(--border, rgba(255, 255, 255, 0.12));
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.55);
+}
+
 .workspace-shell {
   position: relative;
   min-height: 0;

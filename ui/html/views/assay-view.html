@@ -107,6 +107,8 @@
             </label>
             <div class="form-actions assay-results-actions">
               <button type="button" id="assay-results-load-btn" class="ghost-btn">Load Plate</button>
+              <button type="button" id="assay-attach-result-file-btn" class="ghost-btn">Attach Result File</button>
+              <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
               <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
               <button type="button" id="assay-clear-results-btn" class="ghost-btn">Clear Results</button>
             </div>
@@ -199,6 +201,26 @@
           </div>
           <div id="assay-serial-dilution-summary" class="small-note"></div>
           <div id="assay-serial-dilution-content" class="assay-serial-dilution-content"></div>
+        </div>
+      </div>
+
+      <div id="assay-result-import-overlay" class="assay-result-import-overlay" hidden>
+        <div class="assay-result-import-dialog" role="dialog" aria-modal="true" aria-labelledby="assay-result-import-title">
+          <div class="assay-header-row assay-result-import-head">
+            <div>
+              <h3 id="assay-result-import-title">Select Result Matrix</h3>
+              <p id="assay-result-import-status" class="small-note"></p>
+            </div>
+            <button type="button" id="assay-result-import-close-btn" class="ghost-btn" aria-label="Close result import dialog">Close</button>
+          </div>
+          <div class="assay-result-import-body">
+            <div id="assay-result-import-candidates" class="assay-result-import-candidates" role="listbox" aria-label="Detected result matrices"></div>
+            <div id="assay-result-import-preview" class="assay-result-import-preview"></div>
+          </div>
+          <div class="form-actions assay-result-import-actions">
+            <button type="button" id="assay-result-import-cancel-btn" class="ghost-btn">Cancel</button>
+            <button type="button" id="assay-result-import-apply-btn" class="primary-btn">Use This Matrix</button>
+          </div>
         </div>
       </div>
     </section>

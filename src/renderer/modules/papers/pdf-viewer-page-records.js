@@ -1,5 +1,11 @@
 export function cancelAllRenderTasks(pageRecords = []) {
   pageRecords.forEach((record) => {
+    if (typeof record?.textSelectionCleanup === 'function') {
+      try {
+        record.textSelectionCleanup();
+      } catch {}
+      record.textSelectionCleanup = null;
+    }
     if (!record?.renderTask || typeof record.renderTask.cancel !== 'function') {
       record.renderTask = null;
     } else {
@@ -26,23 +32,20 @@ export function releasePageRecords({ pageLayer, pageRecords = [] } = {}) {
   }
 }
 
-export function ensurePageRecords({ pageLayer, pageMetrics = [] } = {}) {
-  if (!pageLayer) {
-    return [];
-  }
-
-  const doc = pageLayer.ownerDocument || (typeof document !== 'undefined' ? document : null);
+export function buildPageRecords({ doc, pageMetrics = [] } = {}) {
   if (!doc?.createElement) {
     return [];
   }
 
-  pageLayer.innerHTML = '';
-  const fragment = doc.createDocumentFragment();
-  const records = pageMetrics.map((metric, index) => {
+  return pageMetrics.map((metric, index) => {
     const pageNumber = index + 1;
+    const pageWidth = Math.max(Number(metric?.width) || 0, 1);
+    const pageHeight = Math.max(Number(metric?.height) || 0, 1);
     const pageElement = doc.createElement('div');
     pageElement.className = 'papers-viewer-page';
     pageElement.dataset.pageNumber = String(pageNumber);
+    pageElement.dataset.pageWidth = String(pageWidth);
+    pageElement.dataset.pageHeight = String(pageHeight);
 
     const canvas = doc.createElement('canvas');
     canvas.className = 'papers-viewer-canvas';
@@ -51,19 +54,24 @@ export function ensurePageRecords({ pageLayer, pageMetrics = [] } = {}) {
     const highlightLayer = doc.createElement('div');
     highlightLayer.className = 'papers-viewer-highlight-layer';
     highlightLayer.dataset.pageNumber = String(pageNumber);
+    highlightLayer.dataset.pageWidth = String(pageWidth);
+    highlightLayer.dataset.pageHeight = String(pageHeight);
     highlightLayer.setAttribute('aria-hidden', 'true');
 
     const textLayer = doc.createElement('div');
-    textLayer.className = 'papers-viewer-text-layer';
+    textLayer.className = 'papers-viewer-text-layer textLayer';
     textLayer.dataset.pageNumber = String(pageNumber);
+    textLayer.dataset.pageWidth = String(pageWidth);
+    textLayer.dataset.pageHeight = String(pageHeight);
 
     const overlay = doc.createElement('div');
     overlay.className = 'papers-viewer-overlay';
     overlay.dataset.pageNumber = String(pageNumber);
+    overlay.dataset.pageWidth = String(pageWidth);
+    overlay.dataset.pageHeight = String(pageHeight);
     overlay.setAttribute('aria-label', `Paper page ${pageNumber} comment pins`);
 
     pageElement.append(canvas, highlightLayer, textLayer, overlay);
-    fragment.appendChild(pageElement);
 
     return {
       pageNumber,
@@ -75,10 +83,50 @@ export function ensurePageRecords({ pageLayer, pageMetrics = [] } = {}) {
       overlay,
       renderTask: null,
       textLayerBuilder: null,
+      textSelectionCleanup: null,
       renderedScale: 0
     };
   });
-  pageLayer.appendChild(fragment);
+}
+
+export function attachPageRecords({ pageLayer, pageRecords = [] } = {}) {
+  if (!pageLayer || !pageRecords.length) {
+    if (pageLayer) {
+      pageLayer.innerHTML = '';
+    }
+    return;
+  }
+  const doc = pageLayer.ownerDocument || (typeof document !== 'undefined' ? document : null);
+  if (!doc?.createDocumentFragment) {
+    pageLayer.innerHTML = '';
+    pageRecords.forEach((record) => {
+      if (record?.element) {
+        pageLayer.appendChild(record.element);
+      }
+    });
+    return;
+  }
+  const fragment = doc.createDocumentFragment();
+  pageRecords.forEach((record) => {
+    if (record?.element) {
+      fragment.appendChild(record.element);
+    }
+  });
+  pageLayer.replaceChildren(fragment);
+}
+
+export function ensurePageRecords({ pageLayer, pageMetrics = [] } = {}) {
+  if (!pageLayer) {
+    return [];
+  }
+
+  const doc = pageLayer.ownerDocument || (typeof document !== 'undefined' ? document : null);
+  if (!doc?.createElement) {
+    return [];
+  }
+
+  const records = buildPageRecords({ doc, pageMetrics });
+  attachPageRecords({ pageLayer, pageRecords: records });
   return records;
 }
 

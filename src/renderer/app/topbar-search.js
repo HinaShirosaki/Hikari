@@ -95,6 +95,47 @@ function protocolSearchText(protocol) {
   ].join(' ');
 }
 
+function joinSublabel(parts) {
+  return parts
+    .map((part) => (part == null ? '' : String(part).trim()))
+    .filter((part) => part.length > 0)
+    .join(' · ');
+}
+
+function scoreSuggestion(candidate, queryLower, queryTokens) {
+  const labelLower = String(candidate.label || '').toLowerCase();
+  const textLower = String(candidate.text || '').toLowerCase();
+  let score = 0;
+
+  if (labelLower) {
+    if (labelLower === queryLower) {
+      score += 16;
+    } else if (labelLower.startsWith(queryLower)) {
+      score += 10;
+    } else if (labelLower.includes(queryLower)) {
+      score += 5;
+    }
+    queryTokens.forEach((token) => {
+      if (labelLower.includes(token)) {
+        score += 2;
+      }
+    });
+  }
+
+  if (textLower && textLower !== labelLower) {
+    if (textLower.includes(queryLower)) {
+      score += 1.5;
+    }
+    queryTokens.forEach((token) => {
+      if (textLower.includes(token)) {
+        score += 0.6;
+      }
+    });
+  }
+
+  return score;
+}
+
 export function createTopbarSearchController({
   state,
   VIEWS,
@@ -105,8 +146,24 @@ export function createTopbarSearchController({
   getActiveViewId,
   setSearchInputValue,
   topbarSearchInput,
+  apps = [],
+  normalizeViewId: normalizeAppViewId = (viewId) => viewId,
+  openItemHandlers = {},
   windowObject = window
 }) {
+  const itemHandlers = openItemHandlers && typeof openItemHandlers === 'object'
+    ? openItemHandlers
+    : {};
+  const appSuggestionEntries = asArray(apps).map((app) => {
+    const viewId = normalizeAppViewId(app?.viewId);
+    const aliases = asArray(app?.aliases);
+    return {
+      app,
+      viewId,
+      target: { viewId, inputId: '', label: app?.label || '' },
+      aliasText: [app?.id, app?.label, ...aliases].filter(Boolean).join(' ')
+    };
+  }).filter((entry) => entry.viewId);
   function getScopeTarget(scopeToken) {
     return searchScopeTargets.get(normalizeSearchToken(scopeToken)) || null;
   }
@@ -193,7 +250,8 @@ export function createTopbarSearchController({
 
   function buildGlobalSearchCandidates() {
     const candidates = [];
-    const addCandidate = (target, text) => {
+    let nextCandidateId = 0;
+    const addCandidate = (target, text, displayInfo = {}) => {
       if (!target || !target.viewId) {
         return;
       }
@@ -201,11 +259,27 @@ export function createTopbarSearchController({
       if (!searchText) {
         return;
       }
-      candidates.push({ target, text: searchText });
+      const label = String(displayInfo.label || '').trim() || searchText;
+      const sublabel = String(displayInfo.sublabel || '').trim();
+      const kind = String(displayInfo.kind || target.label || '').trim();
+      const applyQueryRaw = displayInfo.applyQuery == null ? label : displayInfo.applyQuery;
+      const applyQuery = String(applyQueryRaw || '').trim();
+      const itemId = String(displayInfo.itemId || '').trim();
+      candidates.push({
+        id: `c${nextCandidateId++}`,
+        target,
+        text: searchText,
+        label,
+        sublabel,
+        kind,
+        applyQuery,
+        itemId
+      });
     };
 
     const chemicalTarget = getScopeTarget('chemicals');
     asArray(state.labInventory?.chemicals).forEach((chemical) => {
+      const label = chemical?.name || chemical?.casNumber || chemical?.catalogNumber;
       addCandidate(chemicalTarget, [
         chemical?.name,
         chemical?.casNumber,
@@ -214,11 +288,18 @@ export function createTopbarSearchController({
         chemical?.location,
         chemical?.unitSize,
         chemical?.amountInStock
-      ].join(' '));
+      ].join(' '), {
+        label,
+        sublabel: joinSublabel([chemical?.casNumber, chemical?.vendor, chemical?.location]),
+        kind: 'Chemical',
+        applyQuery: label,
+        itemId: chemical?.id
+      });
     });
 
     const sampleTarget = getScopeTarget('samples');
     asArray(state.samples).forEach((sample) => {
+      const label = sample?.name || sample?.code;
       addCandidate(sampleTarget, [
         sample?.code,
         sample?.name,
@@ -226,11 +307,18 @@ export function createTopbarSearchController({
         sample?.lot,
         sample?.concentration,
         sample?.notes
-      ].join(' '));
+      ].join(' '), {
+        label,
+        sublabel: joinSublabel([sample?.code, sample?.type, sample?.concentration]),
+        kind: 'Sample',
+        applyQuery: sample?.code || label,
+        itemId: sample?.id
+      });
     });
 
     const assayTarget = getScopeTarget('assay');
     asArray(state.assays).forEach((assayItem) => {
+      const label = assayItem?.name || assayItem?.assayNumber;
       addCandidate(assayTarget, [
         assayItem?.assayNumber,
         assayItem?.name,
@@ -240,11 +328,18 @@ export function createTopbarSearchController({
         assayItem?.notes,
         asArray(assayItem?.sampleAxisValues).join(' '),
         asArray(assayItem?.concentrationAxisValues).join(' ')
-      ].join(' '));
+      ].join(' '), {
+        label,
+        sublabel: joinSublabel([assayItem?.assayNumber, assayItem?.projectName, assayItem?.plateLabel]),
+        kind: 'Assay',
+        applyQuery: assayItem?.assayNumber || label,
+        itemId: assayItem?.id
+      });
     });
 
     const gelTarget = getScopeTarget('gel');
     asArray(state.gelAnalyses).forEach((record) => {
+      const label = record?.name || record?.imageName;
       addCandidate(gelTarget, [
         record?.name,
         record?.projectName,
@@ -253,37 +348,70 @@ export function createTopbarSearchController({
         record?.imageName,
         record?.report?.confidence?.label,
         asArray(record?.report?.warnings).join(' ')
-      ].join(' '));
+      ].join(' '), {
+        label,
+        sublabel: joinSublabel([record?.analysisType, record?.projectName, record?.notebookEntryProtocolName]),
+        kind: 'Gel',
+        applyQuery: label,
+        itemId: record?.id
+      });
     });
 
     const projectTarget = getScopeTarget('projects');
     asArray(state.projects).forEach((project) => {
-      addCandidate(projectTarget, [project?.name, project?.description].join(' '));
+      const label = project?.name;
+      addCandidate(projectTarget, [project?.name, project?.description].join(' '), {
+        label,
+        sublabel: project?.description,
+        kind: 'Project',
+        applyQuery: label,
+        itemId: project?.id
+      });
     });
 
     const protocolTarget = getScopeTarget('protocols');
     asArray(state.protocols).forEach((protocolItem) => {
-      addCandidate(protocolTarget, protocolSearchText(protocolItem));
+      const label = protocolItem?.name;
+      addCandidate(protocolTarget, protocolSearchText(protocolItem), {
+        label,
+        sublabel: protocolItem?.purpose,
+        kind: 'Protocol',
+        applyQuery: label,
+        itemId: protocolItem?.id
+      });
     });
 
     const paperTarget = getScopeTarget('papers');
     asArray(state.papers).forEach((paper) => {
+      const label = paper?.title || paper?.fileName;
       addCandidate(paperTarget, [
         paper?.title,
         paper?.linkedName,
         paper?.summary,
         paper?.fileName
-      ].join(' '));
+      ].join(' '), {
+        label,
+        sublabel: joinSublabel([paper?.linkedName, paper?.fileName]),
+        kind: 'Paper',
+        applyQuery: label,
+        itemId: paper?.id
+      });
     });
 
     const memberTarget = getScopeTarget('members');
     asArray(state.members).forEach((member) => {
+      const label = member?.name;
       addCandidate(memberTarget, [
         member?.name,
         member?.position,
         member?.institutionEmail,
         member?.enanaEmail
-      ].join(' '));
+      ].join(' '), {
+        label,
+        sublabel: joinSublabel([member?.position, member?.institutionEmail || member?.enanaEmail]),
+        kind: 'Member',
+        applyQuery: label
+      });
     });
 
     const workflowTarget = {
@@ -292,7 +420,14 @@ export function createTopbarSearchController({
       label: 'Workflows'
     };
     asArray(state.workflows).forEach((workflow) => {
-      addCandidate(workflowTarget, [workflow?.name, workflow?.description].join(' '));
+      const label = workflow?.name;
+      addCandidate(workflowTarget, [workflow?.name, workflow?.description].join(' '), {
+        label,
+        sublabel: workflow?.description,
+        kind: 'Workflow',
+        applyQuery: '',
+        itemId: workflow?.id
+      });
     });
 
     const biologyNotebookTarget = {
@@ -304,13 +439,20 @@ export function createTopbarSearchController({
       if (entry?.notebookType !== 'biology') {
         return;
       }
+      const label = entry?.protocolName || entry?.projectName;
       addCandidate(biologyNotebookTarget, [
         entry?.projectName,
         entry?.protocolName,
         entry?.result,
         asArray(entry?.resultFiles).join(' '),
         entry?.updatedAt
-      ].join(' '));
+      ].join(' '), {
+        label,
+        sublabel: joinSublabel([entry?.projectName, entry?.updatedAt]),
+        kind: 'Notebook',
+        applyQuery: '',
+        itemId: entry?.id
+      });
     });
 
     const personalInventoryTarget = {
@@ -320,6 +462,7 @@ export function createTopbarSearchController({
     };
     Object.entries(state.inventory || {}).forEach(([zone, containers]) => {
       asArray(containers).forEach((container) => {
+        const label = container?.name;
         addCandidate(personalInventoryTarget, [
           zone,
           container?.name,
@@ -328,11 +471,106 @@ export function createTopbarSearchController({
           asArray(container?.wells)
             .map((well) => (typeof well === 'string' ? well : `${well?.name || ''} ${well?.content || ''}`))
             .join(' ')
-        ].join(' '));
+        ].join(' '), {
+          label,
+          sublabel: joinSublabel([container?.type, zone]),
+          kind: 'Container',
+          applyQuery: ''
+        });
       });
     });
 
     return candidates;
+  }
+
+  function buildAppSuggestionCandidates() {
+    return appSuggestionEntries.map((entry, index) => ({
+      id: `app-${index}`,
+      target: entry.target,
+      text: entry.aliasText,
+      label: entry.app?.label || '',
+      sublabel: TITLES[entry.viewId] || '',
+      kind: 'Module',
+      applyQuery: ''
+    }));
+  }
+
+  function getSearchSuggestions(rawQuery, options = {}) {
+    const limit = Number.isFinite(options.limit) && options.limit > 0
+      ? Math.floor(options.limit)
+      : 8;
+    const raw = String(rawQuery || '').trim();
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = parseTopbarSearch(rawQuery);
+    const effectiveQuery = parsed.query || raw;
+    const queryLower = effectiveQuery.toLowerCase();
+    const queryTokens = parsed.tokens.length
+      ? parsed.tokens
+      : tokenizeSearchQuery(effectiveQuery);
+
+    const candidates = [
+      ...buildAppSuggestionCandidates(),
+      ...buildGlobalSearchCandidates()
+    ];
+
+    const filterToViewId = parsed.target?.viewId || parsed.openViewId || '';
+    const scoped = filterToViewId
+      ? candidates.filter((candidate) => candidate.target?.viewId === filterToViewId)
+      : candidates;
+
+    const ranked = [];
+    scoped.forEach((candidate) => {
+      const score = scoreSuggestion(candidate, queryLower, queryTokens);
+      if (score <= 0) {
+        return;
+      }
+      ranked.push({ candidate, score });
+    });
+
+    ranked.sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return String(a.candidate.label || '').localeCompare(String(b.candidate.label || ''));
+    });
+
+    const seenLabels = new Set();
+    const results = [];
+    for (const entry of ranked) {
+      const dedupeKey = `${entry.candidate.kind}::${entry.candidate.label.toLowerCase()}::${entry.candidate.target.viewId}`;
+      if (seenLabels.has(dedupeKey)) {
+        continue;
+      }
+      seenLabels.add(dedupeKey);
+      results.push(entry.candidate);
+      if (results.length >= limit) {
+        break;
+      }
+    }
+    return results;
+  }
+
+  function applySuggestion(suggestion) {
+    if (!suggestion?.target?.viewId) {
+      return false;
+    }
+    const handler = suggestion.itemId
+      ? itemHandlers[suggestion.kind]
+      : null;
+    if (typeof handler === 'function') {
+      try {
+        const handled = handler(suggestion.itemId, suggestion);
+        if (handled !== false) {
+          return true;
+        }
+      } catch (error) {
+        console.error('Failed to open suggestion item:', error);
+      }
+    }
+    return applySearchTarget(suggestion.target, suggestion.applyQuery || '');
   }
 
   function executeTopbarSearch(rawQuery) {
@@ -494,6 +732,8 @@ export function createTopbarSearchController({
 
   return {
     executeTopbarSearch,
+    getSearchSuggestions,
+    applySuggestion,
     handleTelegramCommand,
     initTelegramCommandBridge
   };

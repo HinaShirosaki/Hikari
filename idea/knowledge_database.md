@@ -9,7 +9,7 @@ Goal: a single source of truth for every paper the user (or an agent) has touche
   - Already produced by `buildPaperStorageFolder` in [src/renderer/modules/papers/storage.js](src/renderer/modules/papers/storage.js).
 - Keep the user-visible PDF in the existing paper folder. Store the LLM-facing transformed artifacts in a separate knowledge folder so the Papers library stays a PDF library:
   ```
-  <root>/KnowledgeDatabase/PaperKnowledge/<doi-or-slug>/
+  <root>/KnowledgeBase/papers.md/<doi-or-slug>/
     paper.md          # wiki-form rewrite for LLM use
     extracted.txt     # raw output of the PDF→text tool, kept for re-runs
     figures/          # extracted images, if any
@@ -20,7 +20,7 @@ Goal: a single source of truth for every paper the user (or an agent) has touche
 ### SQLite index
 
 - Single shared DB file (the common one referenced in [idea/storage.md](idea/storage.md), not the chemical-inventory DB).
-- Purpose: cheap lookup for "do we already have this paper?" and "where does it live?" — not full text. The full text lives in `KnowledgeDatabase/PaperKnowledge/.../paper.md` / `extracted.txt`.
+- Purpose: cheap lookup for "do we already have this paper?" and "where does it live?" — not full text. The full text lives in `KnowledgeBase/papers.md/.../paper.md` / `extracted.txt`.
 
 Tables:
 

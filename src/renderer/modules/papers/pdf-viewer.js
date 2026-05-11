@@ -19,6 +19,8 @@ import {
 } from './pdf-viewer-normalizers.js';
 import {
   applyPageSizing,
+  attachPageRecords,
+  buildPageRecords,
   cancelAllRenderTasks,
   ensurePageRecords,
   releasePageRecords
@@ -28,8 +30,10 @@ import {
   renderPins
 } from './pdf-viewer-overlays.js';
 import {
+  commitOffscreenToVisibleCanvas,
   loadEmbeddedPdfMetadata,
   loadPageMetrics,
+  renderPageCanvasToOffscreen,
   renderPageRecord
 } from './pdf-viewer-rendering.js';
 import { getSelectionInfo } from './pdf-viewer-selection.js';
@@ -82,12 +86,14 @@ export function createPapersPdfViewer(elements = {}) {
     loadToken: 0,
     renderToken: 0,
     scrollFrame: 0,
+    selectionFrame: 0,
     pdfDocument: null,
     loadingTask: null,
     comments: [],
     highlights: [],
     selectedCommentId: '',
     pendingSelection: null,
+    selectionPointerDown: false,
     placementMode: false,
     openExternal: null,
     resolveBytes: null,
@@ -119,6 +125,7 @@ export function createPapersPdfViewer(elements = {}) {
     try {
       getSelectionRef()?.removeAllRanges?.();
     } catch {}
+    state.selectionPointerDown = false;
   }
 
   function setStatus(message, isError = false) {
@@ -374,6 +381,7 @@ export function createPapersPdfViewer(elements = {}) {
   }
 
   function updatePendingSelection() {
+    state.selectionFrame = 0;
     if (!hasActiveDocument() || !pageLayer || state.placementMode) {
       state.pendingSelection = null;
     } else {
@@ -383,6 +391,39 @@ export function createPapersPdfViewer(elements = {}) {
       });
     }
     refreshToolbar();
+  }
+
+  function schedulePendingSelectionUpdate() {
+    if (state.selectionPointerDown) {
+      return;
+    }
+    const win = getWindowRef();
+    if (state.selectionFrame) {
+      return;
+    }
+    const callback = () => updatePendingSelection();
+    if (typeof win?.requestAnimationFrame === 'function') {
+      state.selectionFrame = win.requestAnimationFrame(callback);
+    } else {
+      state.selectionFrame = 1;
+      setTimeout(callback, 0);
+    }
+  }
+
+  function handleTextSelectionPointerDown(event) {
+    const textLayer = event?.target?.closest?.('.papers-viewer-text-layer') || null;
+    if (!textLayer || !pageLayer?.contains?.(textLayer) || state.placementMode) {
+      return;
+    }
+    state.selectionPointerDown = true;
+  }
+
+  function handleTextSelectionPointerUp() {
+    if (!state.selectionPointerDown) {
+      return;
+    }
+    state.selectionPointerDown = false;
+    schedulePendingSelectionUpdate();
   }
 
   async function cleanupLoadingTask() {
@@ -667,9 +708,74 @@ export function createPapersPdfViewer(elements = {}) {
         })).catch(() => {});
       }
 
-      releasePageRecords({ pageLayer, pageRecords: state.pageRecords });
-      state.pageRecords = ensurePageRecords({ pageLayer, pageMetrics: state.pageMetrics });
-      await renderDocumentPages({ resetScroll: true });
+      // Build new page records off-DOM and pre-render the first page's
+      // canvas so the swap below is atomic — the previous paper stays visible
+      // until the new first page is ready, then the layer is replaced in one
+      // DOM op. The text layer is rendered post-swap by renderDocumentPages.
+      const previousPageRecords = state.pageRecords;
+      const ownerDoc = pageLayer?.ownerDocument
+        || (typeof document !== 'undefined' ? document : null);
+      const newPageRecords = buildPageRecords({
+        doc: ownerDoc,
+        pageMetrics: state.pageMetrics
+      });
+      const swapScale = (() => {
+        const previousRecords = state.pageRecords;
+        state.pageRecords = newPageRecords;
+        try {
+          return getDocumentScale();
+        } finally {
+          state.pageRecords = previousRecords;
+        }
+      })();
+      state.zoom = clamp(swapScale, MIN_ZOOM, MAX_ZOOM);
+      applyPageSizing({ pageRecords: newPageRecords, scale: swapScale });
+
+      const isLoadStale = () => activeLoadToken !== state.loadToken;
+      const outputScale = Math.max(getWindowRef()?.devicePixelRatio || 1, 1);
+      const firstRecord = newPageRecords[0] || null;
+      let prerenderedFirst = null;
+      if (firstRecord) {
+        try {
+          prerenderedFirst = await renderPageCanvasToOffscreen({
+            pdfDocument,
+            record: firstRecord,
+            scale: swapScale,
+            outputScale,
+            isStale: isLoadStale
+          });
+        } catch (prerenderError) {
+          if (!isRenderingCancelled(prerenderError)) {
+            // Fall back to the post-swap render path; we still want to swap.
+          }
+        }
+        if (isLoadStale()) {
+          try {
+            await pdfDocument.destroy();
+          } catch {}
+          return false;
+        }
+        if (prerenderedFirst) {
+          commitOffscreenToVisibleCanvas({
+            record: firstRecord,
+            offscreen: prerenderedFirst.offscreen,
+            cssWidth: prerenderedFirst.cssWidth,
+            cssHeight: prerenderedFirst.cssHeight,
+            bitmapWidth: prerenderedFirst.bitmapWidth,
+            bitmapHeight: prerenderedFirst.bitmapHeight
+          });
+          try {
+            prerenderedFirst.page?.cleanup?.();
+          } catch {}
+        }
+      }
+
+      // Atomic swap: drop the old DOM and attach the pre-rendered records.
+      releasePageRecords({ pageLayer, pageRecords: previousPageRecords });
+      state.pageRecords = newPageRecords;
+      attachPageRecords({ pageLayer, pageRecords: newPageRecords });
+      setStageScrollTop(0);
+      await renderDocumentPages({ resetScroll: false, preserveScroll: false });
       return true;
     } catch (error) {
       if (activeLoadToken !== state.loadToken) {
@@ -802,7 +908,9 @@ export function createPapersPdfViewer(elements = {}) {
       const selection = {
         pageNumber: state.pendingSelection.pageNumber,
         text: state.pendingSelection.text,
-        boxes: state.pendingSelection.boxes
+        boxes: state.pendingSelection.boxes,
+        pageWidth: state.pendingSelection.pageWidth,
+        pageHeight: state.pendingSelection.pageHeight
       };
       const didCreateHighlight = state.onHighlightSelection(selection);
       if (didCreateHighlight === false) {
@@ -824,14 +932,17 @@ export function createPapersPdfViewer(elements = {}) {
     });
     stage?.addEventListener('scroll', scheduleScrollSync, { passive: true });
     pageLayer?.addEventListener('click', handleOverlayClick);
+    pageLayer?.addEventListener('pointerdown', handleTextSelectionPointerDown);
 
     const win = getWindowRef();
     const doc = getDocumentRef();
     if (typeof win?.addEventListener === 'function') {
       win.addEventListener('resize', handleResize);
+      win.addEventListener('pointerup', handleTextSelectionPointerUp);
+      win.addEventListener('blur', handleTextSelectionPointerUp);
     }
     if (typeof doc?.addEventListener === 'function') {
-      doc.addEventListener('selectionchange', updatePendingSelection);
+      doc.addEventListener('selectionchange', schedulePendingSelectionUpdate);
     }
 
     if (stage && typeof ResizeObserver === 'function') {

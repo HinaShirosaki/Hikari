@@ -42,6 +42,15 @@ export function initAgentChat({
   const developerToolMessageInput = rootDocument?.getElementById?.('agent-dev-tool-message') || null;
   const developerRunToolBtn = rootDocument?.getElementById?.('agent-dev-run-tool-btn') || null;
   const developerToolHint = rootDocument?.getElementById?.('agent-dev-tool-hint') || null;
+  const developerResponseSimulator = rootDocument?.getElementById?.('agent-dev-response-simulator') || null;
+  const developerResponseSummary = rootDocument?.getElementById?.('agent-dev-response-summary') || null;
+  const developerResponseFoldBtn = rootDocument?.getElementById?.('agent-dev-response-fold-btn') || null;
+  const developerResponseBody = rootDocument?.getElementById?.('agent-dev-response-body') || null;
+  const developerVisibleContext = rootDocument?.getElementById?.('agent-dev-visible-context') || null;
+  const developerMockResponseInput = rootDocument?.getElementById?.('agent-dev-mock-response') || null;
+  const developerRefreshContextBtn = rootDocument?.getElementById?.('agent-dev-refresh-context-btn') || null;
+  const developerUseMockResponseBtn = rootDocument?.getElementById?.('agent-dev-use-mock-response-btn') || null;
+  const developerResponseHint = rootDocument?.getElementById?.('agent-dev-response-hint') || null;
   const historyNode = rootDocument?.getElementById?.('agent-chat-history') || null;
   const conversationShell = historyNode?.closest?.('.agent-conversation-shell') || null;
   const scrollToBottomBtn = rootDocument?.getElementById?.('agent-scroll-to-bottom-btn') || null;
@@ -60,6 +69,9 @@ export function initAgentChat({
   let stopRequested = false;
   let stopInProgress = false;
   let composerAttachments = [];
+  let developerResponseSimulatorFolded = false;
+  let developerContextPreview = null;
+  let developerContextPreviewText = '';
 
   if (!projectSelect || !historyNode || !input || !sendBtn || !clearBtn || !status) {
     return { render: () => {} };
@@ -144,6 +156,195 @@ export function initAgentChat({
       || trimText(attachmentSummary, 3000);
   }
 
+  function getCurrentProjectDetails() {
+    ensureAgentState();
+    const projectId = state.agentChat.projectId || '';
+    const projectName = asArray(state.projects).find((item) => item.id === projectId)?.name || '';
+    return { projectId, projectName };
+  }
+
+  function buildAgentLlmPayload() {
+    const provider = String(state.settings?.llm?.provider || '').trim();
+    return {
+      provider,
+      model: String(state.settings?.llm?.model || '').trim(),
+      reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim().toLowerCase(),
+      apiEndpoint: provider === 'codex'
+        ? ''
+        : String(state.settings?.llm?.apiEndpoint || '').trim(),
+      apiKey: provider === 'codex'
+        ? ''
+        : String(state.settings?.llm?.apiKey || '').trim()
+    };
+  }
+
+  function summarizeAgentLlmPayload(llmPayload = {}) {
+    return {
+      provider: trimText(llmPayload.provider, 80),
+      model: trimText(llmPayload.model, 120),
+      reasoningEffort: trimText(llmPayload.reasoningEffort, 40),
+      apiEndpoint: trimText(llmPayload.apiEndpoint, 2000),
+      apiKey: trimText(llmPayload.apiKey, 400) ? '[set]' : ''
+    };
+  }
+
+  function buildAgentFlagsPayload() {
+    return {
+      developerMode: state.settings?.agent?.developerMode === true,
+      deepResearchEnabled: state.agentChat.deepResearchEnabled === true
+    };
+  }
+
+  function buildDeveloperContextPreviewPayload(stateSnapshot) {
+    ensureAgentState();
+    const rawMessageText = trimText(input.value, 3000);
+    const attachments = asArray(composerAttachments).map((attachment) => ({ ...attachment }));
+    const messageText = buildMessagePayloadText(rawMessageText, attachments);
+    const { projectId, projectName } = getCurrentProjectDetails();
+    const llm = buildAgentLlmPayload();
+    return {
+      message: messageText,
+      attachments,
+      projectId,
+      projectName,
+      conversation: toConversation(state.agentChat.messages),
+      stateSnapshot,
+      llm,
+      agent: buildAgentFlagsPayload()
+    };
+  }
+
+  function buildLocalDeveloperContextPreview() {
+    const { projectId } = getCurrentProjectDetails();
+    const stateSnapshot = buildStateSnapshot(state, projectId);
+    const payload = buildDeveloperContextPreviewPayload(stateSnapshot);
+    return {
+      ok: true,
+      local: true,
+      updated_at: new Date().toISOString(),
+      preview: {
+        provider: trimText(payload.llm.provider, 80),
+        model: trimText(payload.llm.model, 120),
+        project: {
+          id: trimText(payload.projectId, 120),
+          name: trimText(payload.projectName, 220)
+        },
+        request: {
+          message: payload.message,
+          conversation: payload.conversation,
+          attachments: asArray(payload.attachments).map((attachment) => ({
+            id: trimText(attachment?.id, 120),
+            name: trimText(attachment?.name, 240),
+            mime_type: trimText(attachment?.mimeType || attachment?.mime_type, 160),
+            kind: trimText(attachment?.kind, 40),
+            size: Number.isFinite(Number(attachment?.size)) ? Number(attachment.size) : 0
+          }))
+        },
+        prompt: {
+          kind: 'renderer_request_envelope',
+          system_prompt: 'Refresh Context to render the backend prompt for the selected provider.'
+        },
+        llm: summarizeAgentLlmPayload(payload.llm),
+        agent: payload.agent,
+        state_snapshot: payload.stateSnapshot
+      }
+    };
+  }
+
+  function invalidateDeveloperContextPreview() {
+    developerContextPreview = null;
+    developerContextPreviewText = '';
+    if (developerResponseHint) {
+      developerResponseHint.textContent = '';
+    }
+  }
+
+  function renderDeveloperResponseSimulator() {
+    const enabled = state.settings?.agent?.developerMode === true;
+    if (!developerResponseSimulator) {
+      return;
+    }
+    developerResponseSimulator.hidden = !enabled;
+    if (!enabled) {
+      return;
+    }
+    developerResponseSimulator.classList?.toggle('is-folded', developerResponseSimulatorFolded);
+    if (developerResponseFoldBtn) {
+      developerResponseFoldBtn.textContent = developerResponseSimulatorFolded ? 'Show' : 'Fold';
+      developerResponseFoldBtn.setAttribute?.('aria-expanded', developerResponseSimulatorFolded ? 'false' : 'true');
+    }
+    if (developerResponseBody) {
+      developerResponseBody.hidden = developerResponseSimulatorFolded;
+    }
+    const context = developerContextPreview || buildLocalDeveloperContextPreview();
+    const contextText = developerContextPreviewText || developerToolsModule.formatDeveloperVisibleContext(context);
+    if (developerVisibleContext && developerVisibleContext.value !== contextText) {
+      developerVisibleContext.value = contextText;
+    }
+    const summary = developerToolsModule.summarizeDeveloperVisibleContext(context);
+    if (developerResponseSummary) {
+      const provider = summary.provider || 'provider';
+      const model = summary.model ? ` / ${summary.model}` : '';
+      const turns = Number(summary.conversation_turns) || 0;
+      developerResponseSummary.textContent = `${provider}${model} · ${turns} turn${turns === 1 ? '' : 's'}`;
+    }
+    if (developerResponseHint && !trimText(developerResponseHint.textContent, 120)) {
+      developerResponseHint.textContent = developerContextPreview?.local === false ? 'Backend context ready.' : 'Local context preview.';
+    }
+  }
+
+  async function refreshDeveloperContextPreview() {
+    if (state.settings?.agent?.developerMode !== true) {
+      setStatus('Enable Agent Developer Mode to inspect agent context.');
+      return null;
+    }
+    ensureAgentState();
+    if (developerRefreshContextBtn) {
+      developerRefreshContextBtn.disabled = true;
+    }
+    if (developerResponseHint) {
+      developerResponseHint.textContent = 'Refreshing context...';
+    }
+    try {
+      const { projectId } = getCurrentProjectDetails();
+      const stateSnapshot = await buildSyncedStateSnapshot(projectId);
+      const payload = buildDeveloperContextPreviewPayload(stateSnapshot);
+      const result = api?.agentDeveloperContextPreview
+        ? await api.agentDeveloperContextPreview(payload)
+        : null;
+      const context = result?.ok
+        ? { ...result, local: false, updated_at: result.updated_at || new Date().toISOString() }
+        : buildLocalDeveloperContextPreview();
+      developerContextPreview = context;
+      developerContextPreviewText = developerToolsModule.formatDeveloperVisibleContext(context);
+      if (developerResponseHint) {
+        developerResponseHint.textContent = result?.ok
+          ? 'Backend context ready.'
+          : 'Local context preview.';
+      }
+      renderDeveloperResponseSimulator();
+      setStatus('Developer context refreshed.');
+      return context;
+    } catch (error) {
+      const context = buildLocalDeveloperContextPreview();
+      developerContextPreview = {
+        ...context,
+        error: String(error?.message || error)
+      };
+      developerContextPreviewText = developerToolsModule.formatDeveloperVisibleContext(developerContextPreview);
+      if (developerResponseHint) {
+        developerResponseHint.textContent = `Context refresh failed: ${String(error?.message || error)}`;
+      }
+      renderDeveloperResponseSimulator();
+      setStatus('Error.');
+      return developerContextPreview;
+    } finally {
+      if (developerRefreshContextBtn) {
+        developerRefreshContextBtn.disabled = inFlight;
+      }
+    }
+  }
+
   function renderComposerAttachments() {
     if (!attachmentList) {
       return;
@@ -174,6 +375,7 @@ export function initAgentChat({
     if (attachmentInput) {
       attachmentInput.value = '';
     }
+    invalidateDeveloperContextPreview();
     renderComposerAttachments();
   }
 
@@ -207,7 +409,9 @@ export function initAgentChat({
     try {
       const nextAttachments = await Promise.all(incomingFiles.map((file) => normalizeAttachmentFile(file)));
       composerAttachments = [...composerAttachments, ...nextAttachments].slice(-8);
+      invalidateDeveloperContextPreview();
       renderComposerAttachments();
+      renderDeveloperResponseSimulator();
       setStatus(`${composerAttachments.length} attachment${composerAttachments.length === 1 ? '' : 's'} ready.`);
     } catch (error) {
       setStatus(String(error?.message || error || 'Failed to load attachments.'));
@@ -789,6 +993,15 @@ export function initAgentChat({
     if (developerToolMessageInput) {
       developerToolMessageInput.disabled = inFlight;
     }
+    if (developerRefreshContextBtn) {
+      developerRefreshContextBtn.disabled = inFlight;
+    }
+    if (developerUseMockResponseBtn) {
+      developerUseMockResponseBtn.disabled = inFlight;
+    }
+    if (developerMockResponseInput) {
+      developerMockResponseInput.disabled = inFlight;
+    }
     if (deepResearchToggleBtn) {
       deepResearchToggleBtn.disabled = inFlight;
     }
@@ -1029,21 +1242,8 @@ export function initAgentChat({
         projectName,
         conversation: toConversation(state.agentChat.messages),
         stateSnapshot,
-        llm: {
-          provider: String(state.settings?.llm?.provider || '').trim(),
-          model: String(state.settings?.llm?.model || '').trim(),
-          reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim().toLowerCase(),
-          apiEndpoint: String(state.settings?.llm?.provider || '').trim() === 'codex'
-            ? ''
-            : String(state.settings?.llm?.apiEndpoint || '').trim(),
-          apiKey: String(state.settings?.llm?.provider || '').trim() === 'codex'
-            ? ''
-            : String(state.settings?.llm?.apiKey || '').trim()
-        },
-        agent: {
-          developerMode: state.settings?.agent?.developerMode === true,
-          deepResearchEnabled: state.agentChat.deepResearchEnabled === true
-        }
+        llm: buildAgentLlmPayload(),
+        agent: buildAgentFlagsPayload()
       });
 
       if (!result?.ok) {
@@ -1181,6 +1381,141 @@ export function initAgentChat({
       });
     } catch {
       // The active request will still unwind locally once the current step completes.
+    }
+  }
+
+  async function useDeveloperMockResponse() {
+    if (inFlight) {
+      return;
+    }
+    if (state.settings?.agent?.developerMode !== true) {
+      setStatus('Enable Agent Developer Mode to inject a mock LLM response.');
+      return;
+    }
+    const rawResponse = trimText(developerMockResponseInput?.value, 120000);
+    if (!rawResponse) {
+      setStatus('Type a mock LLM response first.');
+      return;
+    }
+
+    ensureAgentState();
+    updateInFlightState(true);
+    setStatus('Injecting developer mock response...');
+
+    const rawMessageText = trimText(input.value, 3000);
+    const attachments = asArray(composerAttachments).map((attachment) => ({ ...attachment }));
+    const messageText = buildMessagePayloadText(rawMessageText, attachments);
+    const context = developerContextPreview || buildLocalDeveloperContextPreview();
+    const contextSummary = developerToolsModule.summarizeDeveloperVisibleContext(context);
+
+    try {
+      if (messageText || attachments.length) {
+        await sessionManager.ensureCurrentChatSession(messageText);
+        state.agentChat.messages.push({
+          id: createId(),
+          role: 'user',
+          text: rawMessageText || buildAttachmentSummary(attachments),
+          attachments,
+          createdAt: new Date().toISOString()
+        });
+        state.agentChat.messages = state.agentChat.messages.slice(-40);
+        input.value = '';
+        resetComposerAttachments();
+        invalidateDeveloperContextPreview();
+        syncComposerHeight();
+      }
+
+      const llm = buildAgentLlmPayload();
+      const mockResult = developerToolsModule.buildDeveloperMockAgentResult({
+        rawResponse,
+        provider: llm.provider,
+        model: llm.model
+      });
+      const response = normalizeAgentResponse(mockResult);
+      const notebookDraft = applyNotebookDraftAutoSave(response.notebookPayload, messageText, {
+        state,
+        createId,
+        onNotebookEntriesChanged
+      });
+      if (notebookDraft?.save?.applied === true) {
+        renderContextSummary();
+      }
+
+      state.agentChat.messages.push({
+        id: createId(),
+        role: 'assistant',
+        text: response.assistantText,
+        createdAt: new Date().toISOString(),
+        meta: {
+          parser: response.parser,
+          protocol_to_notebook: response.protocolWorkflow,
+          notebook_draft: response.notebookDraftWorkflow,
+          codex_agent: response.codexAgent,
+          user_question: response.userQuestion,
+          purchase_recommendation: response.purchaseRecommendation,
+          inventory_lookup: response.inventoryLookup,
+          record_lookup: response.recordLookup,
+          general_science_question: response.generalScienceQuestion,
+          project_science_question: response.projectScienceQuestion,
+          result_analysis: response.resultAnalysis,
+          thinking_trace: response.thinkingTrace,
+          notebookDraft: notebookDraft || null,
+          developer_trace: response.developerTrace,
+          developer_mock_response: {
+            injected: true,
+            parsed_json: mockResult?.developer_mock_meta?.parsed_json === true,
+            response_shape: trimText(mockResult?.developer_mock_meta?.response_shape, 80),
+            context_summary: contextSummary,
+            injected_at: new Date().toISOString()
+          },
+          thinking_trace_rows: [],
+          requestText: messageText
+        }
+      });
+      state.agentChat.messages = state.agentChat.messages.slice(-40);
+      persist();
+      sessionManager.renderSessionList();
+      renderHistoryView({ forceScroll: true });
+      renderDeveloperResponseSimulator();
+      setStatus('Developer mock response injected.');
+    } catch (error) {
+      state.agentChat.messages.push({
+        id: createId(),
+        role: 'assistant',
+        text: `Developer mock response failed: ${String(error?.message || error)}`,
+        createdAt: new Date().toISOString(),
+        meta: {
+          parser: {
+            primary_intent: 'developer_mock_response',
+            reasoning_effort: 0,
+            direct_answer: null,
+            needs_clarification: true,
+            clarification_reason: 'developer_mock_error',
+            entities: {},
+            inventory_search: {
+              normalized_query: null,
+              candidate_terms: [],
+              aliases: [],
+              search_mode: null
+            },
+            protocol_candidates: [],
+            reasoning_summary: `Developer mock response failed: ${String(error?.message || error)}`
+          },
+          developer_mock_response: {
+            injected: false,
+            error: String(error?.message || error),
+            context_summary: contextSummary,
+            injected_at: new Date().toISOString()
+          },
+          requestText: messageText
+        }
+      });
+      state.agentChat.messages = state.agentChat.messages.slice(-40);
+      persist();
+      renderHistoryView({ forceScroll: true });
+      setStatus('Error.');
+    } finally {
+      updateInFlightState(false);
     }
   }
 
@@ -1353,6 +1688,7 @@ export function initAgentChat({
   projectSelect.addEventListener('change', () => {
     ensureAgentState();
     state.agentChat.projectId = projectSelect.value || '';
+    invalidateDeveloperContextPreview();
     persist();
     render();
   });
@@ -1377,6 +1713,19 @@ export function initAgentChat({
     renderDeveloperToolHint();
   });
 
+  developerResponseFoldBtn?.addEventListener('click', () => {
+    developerResponseSimulatorFolded = !developerResponseSimulatorFolded;
+    renderDeveloperResponseSimulator();
+  });
+
+  developerRefreshContextBtn?.addEventListener('click', () => {
+    void refreshDeveloperContextPreview();
+  });
+
+  developerUseMockResponseBtn?.addEventListener('click', () => {
+    void useDeveloperMockResponse();
+  });
+
   newChatBtn?.addEventListener('click', () => {
     input.value = '';
     resetComposerAttachments();
@@ -1387,6 +1736,7 @@ export function initAgentChat({
   deepResearchToggleBtn?.addEventListener('click', () => {
     ensureAgentState();
     state.agentChat.deepResearchEnabled = !(state.agentChat.deepResearchEnabled === true);
+    invalidateDeveloperContextPreview();
     persist();
     renderDeepResearchToggle();
     setStatus(state.agentChat.deepResearchEnabled === true
@@ -1432,6 +1782,8 @@ export function initAgentChat({
 
   input.addEventListener('input', () => {
     syncComposerHeight();
+    invalidateDeveloperContextPreview();
+    renderDeveloperResponseSimulator();
   });
 
   attachBtn?.addEventListener('click', () => {
@@ -1451,7 +1803,9 @@ export function initAgentChat({
       return;
     }
     composerAttachments = composerAttachments.filter((attachment) => trimText(attachment?.id, 120) !== attachmentId);
+    invalidateDeveloperContextPreview();
     renderComposerAttachments();
+    renderDeveloperResponseSimulator();
   });
 
   function render() {
@@ -1465,6 +1819,7 @@ export function initAgentChat({
     if (developerTools) {
       developerTools.hidden = !(state.settings?.agent?.developerMode === true && api?.agentDeveloperTestTools);
     }
+    renderDeveloperResponseSimulator();
     syncComposerHeight();
     renderComposerAttachments();
     renderHistoryView();

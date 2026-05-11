@@ -422,20 +422,30 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
 
   async function saveStoragePath(path) {
     const nextPath = String(path || '').trim();
-    state.settings.storagePath = nextPath;
-    persist();
+    const previousPath = String(state.settings?.storagePath || '').trim();
+    const rootChanged = nextPath !== previousPath;
     if (!nextPath) {
+      state.settings.storagePath = '';
+      persist();
       renderStorageImportStatus();
       return;
     }
     if (typeof onStoragePathSaved !== 'function') {
+      state.settings.storagePath = nextPath;
+      persist();
       renderStorageImportStatus();
       return;
     }
     storageImportInFlight = true;
     renderStorageImportStatus();
     try {
-      await onStoragePathSaved(nextPath);
+      const result = await onStoragePathSaved(nextPath, {
+        resetWorkspace: rootChanged,
+        previousStoragePath: previousPath
+      });
+      if (!result?.ok && rootChanged && result?.refreshed !== true && settingStoragePath) {
+        settingStoragePath.value = previousPath;
+      }
     } finally {
       storageImportInFlight = false;
       renderStorageImportStatus();
@@ -790,7 +800,7 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
       return;
     }
     if (storageImportInFlight) {
-      settingStorageImportStatus.textContent = 'Storage import: scanning and importing records...';
+      settingStorageImportStatus.textContent = 'Storage import: refreshing workspace and scanning records...';
       return;
     }
     const info = state.settings?.storageImport && typeof state.settings.storageImport === 'object'

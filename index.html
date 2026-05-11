@@ -55,6 +55,7 @@
       </nav>
       <div class="topbar-tools">
         <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
+        <ul id="topbar-search-suggestions" class="topbar-search-suggestions" role="listbox" aria-label="Search suggestions" hidden></ul>
       </div>
     </header>
     <div class="workspace-shell">
@@ -125,6 +126,7 @@
                 </div>
               </div>
             </label>
+            <div id="dashboard-quick-log-recent-list" class="home-quick-log-recent-list" aria-label="Recent quick logs"></div>
           </div>
         </section>
 
@@ -988,6 +990,8 @@
             </label>
             <div class="form-actions assay-results-actions">
               <button type="button" id="assay-results-load-btn" class="ghost-btn">Load Plate</button>
+              <button type="button" id="assay-attach-result-file-btn" class="ghost-btn">Attach Result File</button>
+              <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
               <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
               <button type="button" id="assay-clear-results-btn" class="ghost-btn">Clear Results</button>
             </div>
@@ -1080,6 +1084,26 @@
           </div>
           <div id="assay-serial-dilution-summary" class="small-note"></div>
           <div id="assay-serial-dilution-content" class="assay-serial-dilution-content"></div>
+        </div>
+      </div>
+
+      <div id="assay-result-import-overlay" class="assay-result-import-overlay" hidden>
+        <div class="assay-result-import-dialog" role="dialog" aria-modal="true" aria-labelledby="assay-result-import-title">
+          <div class="assay-header-row assay-result-import-head">
+            <div>
+              <h3 id="assay-result-import-title">Select Result Matrix</h3>
+              <p id="assay-result-import-status" class="small-note"></p>
+            </div>
+            <button type="button" id="assay-result-import-close-btn" class="ghost-btn" aria-label="Close result import dialog">Close</button>
+          </div>
+          <div class="assay-result-import-body">
+            <div id="assay-result-import-candidates" class="assay-result-import-candidates" role="listbox" aria-label="Detected result matrices"></div>
+            <div id="assay-result-import-preview" class="assay-result-import-preview"></div>
+          </div>
+          <div class="form-actions assay-result-import-actions">
+            <button type="button" id="assay-result-import-cancel-btn" class="ghost-btn">Cancel</button>
+            <button type="button" id="assay-result-import-apply-btn" class="primary-btn">Use This Matrix</button>
+          </div>
         </div>
       </div>
     </section>
@@ -1442,7 +1466,7 @@
               <form id="storage-form" class="stack-form">
                 <label>
                   Root Folder Path
-                  <input id="setting-storage-path" placeholder="/path/to/hikari-data" readonly />
+                  <input id="setting-storage-path" placeholder="/path/to/storage-root" readonly />
                 </label>
                 <p class="small-note">Notebook pages will reference individual folders under this path.</p>
                 <p id="setting-storage-import-status" class="small-note">Storage import: not started.</p>
@@ -1932,6 +1956,30 @@
                 <div class="form-actions">
                   <button type="button" id="agent-dev-run-tool-btn" class="ghost-btn">Run Selected Tool</button>
                   <span id="agent-dev-tool-hint" class="small-note"></span>
+                </div>
+              </div>
+            </div>
+            <div id="agent-dev-response-simulator" class="agent-dev-response-simulator" hidden>
+              <div class="agent-dev-response-header">
+                <div>
+                  <strong>LLM Response Simulator</strong>
+                  <span id="agent-dev-response-summary" class="small-note">Developer mode</span>
+                </div>
+                <button type="button" id="agent-dev-response-fold-btn" class="ghost-btn" aria-expanded="true">Fold</button>
+              </div>
+              <div id="agent-dev-response-body" class="agent-dev-response-body">
+                <label class="agent-dev-context-field">
+                  Agent Visible Context
+                  <textarea id="agent-dev-visible-context" rows="10" readonly></textarea>
+                </label>
+                <label class="agent-dev-context-field">
+                  Typed LLM Response
+                  <textarea id="agent-dev-mock-response" rows="6" placeholder="Type the exact assistant response to inject."></textarea>
+                </label>
+                <div class="agent-dev-response-actions">
+                  <button type="button" id="agent-dev-refresh-context-btn" class="ghost-btn">Refresh Context</button>
+                  <button type="button" id="agent-dev-use-mock-response-btn" class="primary-btn">Use As Response</button>
+                  <span id="agent-dev-response-hint" class="small-note"></span>
                 </div>
               </div>
             </div>

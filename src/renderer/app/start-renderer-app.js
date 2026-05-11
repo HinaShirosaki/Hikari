@@ -107,8 +107,11 @@ export function startRendererApp() {
     apiBridge: window.enanaApi || null,
     getApiBridge: () => window.enanaApi || null,
     rootDocument: document,
-    onStoragePathSaved: async (storagePath) => {
-      const result = await storageImportController.runStorageRootImport(storagePath, { persistMergedState: true });
+    onStoragePathSaved: async (storagePath, options = {}) => {
+      const result = await storageImportController.runStorageRootImport(storagePath, {
+        persistMergedState: true,
+        resetWorkspace: options.resetWorkspace === true
+      });
       renderAll();
       return result;
     }
@@ -123,9 +126,68 @@ export function startRendererApp() {
     moduleRuntime,
     sharedLeftRailRuntime,
     executeTopbarSearch: (query) => topbarSearchController?.executeTopbarSearch(query),
+    getSearchSuggestions: (query, options) => topbarSearchController?.getSearchSuggestions(query, options) || [],
+    applySearchSuggestion: (suggestion) => topbarSearchController?.applySuggestion(suggestion) || false,
     documentObject: document,
     windowObject: window
   });
+
+  function clickItemBySelector(viewId, selector) {
+    showView(viewId);
+    const tryClick = () => {
+      const element = document.querySelector(selector);
+      if (element instanceof HTMLElement) {
+        element.click();
+        if (typeof element.scrollIntoView === 'function') {
+          element.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+        return true;
+      }
+      return false;
+    };
+    if (tryClick()) {
+      return true;
+    }
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        tryClick();
+      });
+    });
+    return true;
+  }
+
+  function openItemViaDataAttr(viewId, attrName, itemId) {
+    if (!itemId) {
+      return false;
+    }
+    const safeId = cssEscape(String(itemId));
+    return clickItemBySelector(viewId, `[${attrName}="${safeId}"]`);
+  }
+
+  const openItemHandlers = {
+    Notebook: (itemId) => {
+      if (!itemId) {
+        return false;
+      }
+      showView(VIEWS.BIOLOGY_NOTEBOOK);
+      return moduleRegistry.get('biologyNotebook')?.openEntry?.(itemId) !== undefined;
+    },
+    Protocol: (itemId) => {
+      if (!itemId) {
+        return false;
+      }
+      showView(VIEWS.PROTOCOL_MANAGEMENT);
+      moduleRegistry.get('protocol')?.editProtocol?.(itemId);
+      return true;
+    },
+    Sample: (itemId) => openItemViaDataAttr(VIEWS.SAMPLE_REGISTRY, 'data-sample-open', itemId),
+    Chemical: (itemId) => openItemViaDataAttr(VIEWS.LAB_COMMON_INVENTORY, 'data-chemical-open', itemId),
+    Assay: (itemId) => openItemViaDataAttr(VIEWS.ASSAY, 'data-assay-open-results', itemId),
+    Gel: (itemId) => openItemViaDataAttr(VIEWS.GEL, 'data-gel-edit', itemId),
+    Project: (itemId) => openItemViaDataAttr(VIEWS.PROJECT_MANAGEMENT, 'data-project-select', itemId),
+    Paper: (itemId) => openItemViaDataAttr(VIEWS.PAPERS, 'data-paper-view', itemId),
+    Workflow: (itemId) => openItemViaDataAttr(VIEWS.WORKFLOW_MANAGEMENT, 'data-workflow-run-open', itemId)
+  };
 
   topbarSearchController = createTopbarSearchController({
     state,
@@ -137,6 +199,9 @@ export function startRendererApp() {
     getActiveViewId: navigationShell.getActiveViewId,
     setSearchInputValue,
     topbarSearchInput: navigationShell.topbarSearchInput,
+    apps: APP_REGISTRY,
+    normalizeViewId: normalizeAppViewId,
+    openItemHandlers,
     windowObject: window
   });
 

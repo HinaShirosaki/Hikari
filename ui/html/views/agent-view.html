@@ -41,6 +41,30 @@
                 </div>
               </div>
             </div>
+            <div id="agent-dev-response-simulator" class="agent-dev-response-simulator" hidden>
+              <div class="agent-dev-response-header">
+                <div>
+                  <strong>LLM Response Simulator</strong>
+                  <span id="agent-dev-response-summary" class="small-note">Developer mode</span>
+                </div>
+                <button type="button" id="agent-dev-response-fold-btn" class="ghost-btn" aria-expanded="true">Fold</button>
+              </div>
+              <div id="agent-dev-response-body" class="agent-dev-response-body">
+                <label class="agent-dev-context-field">
+                  Agent Visible Context
+                  <textarea id="agent-dev-visible-context" rows="10" readonly></textarea>
+                </label>
+                <label class="agent-dev-context-field">
+                  Typed LLM Response
+                  <textarea id="agent-dev-mock-response" rows="6" placeholder="Type the exact assistant response to inject."></textarea>
+                </label>
+                <div class="agent-dev-response-actions">
+                  <button type="button" id="agent-dev-refresh-context-btn" class="ghost-btn">Refresh Context</button>
+                  <button type="button" id="agent-dev-use-mock-response-btn" class="primary-btn">Use As Response</button>
+                  <span id="agent-dev-response-hint" class="small-note"></span>
+                </div>
+              </div>
+            </div>
             <div class="agent-conversation-shell">
               <div class="agent-history-viewport">
                 <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>

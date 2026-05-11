@@ -160,6 +160,28 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, /\.sequence-viewer-library-list\s*\{[\s\S]*overflow:\s*visible;/);
     });
 
+    test('papers PDF text layer keeps native browser selection stable during drag', () => {
+      const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
+      const pageRecordsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-records.js');
+      const renderingSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-rendering.js');
+      const viewerSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer.js');
+      const selectionSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-text-selection.js');
+      assert.match(pageRecordsSource, /className\s*=\s*'papers-viewer-text-layer textLayer'/);
+      assert.match(pageRecordsSource, /textSelectionCleanup/);
+      assert.match(renderingSource, /bindPdfTextLayerSelection/);
+      assert.match(selectionSource, /endOfContent/);
+      assert.match(selectionSource, /range\.compareBoundaryPoints/);
+      assert.match(selectionSource, /endDiv\.style\.userSelect\s*=\s*'text'/);
+      assert.match(viewerSource, /selectionPointerDown/);
+      assert.match(viewerSource, /doc\.addEventListener\('selectionchange', schedulePendingSelectionUpdate\)/);
+      assert.match(css, /\.papers-viewer-text-layer\s*\{[\s\S]*overflow:\s*clip;/);
+      assert.match(css, /\.papers-viewer-text-layer\s*\{[\s\S]*--text-scale-factor:/);
+      assert.match(css, /\.papers-viewer-text-layer br::selection\s*\{[\s\S]*background:\s*transparent;/);
+      assert.match(css, /\.papers-viewer-text-layer \.endOfContent\s*\{[\s\S]*inset:\s*100% 0 0;/);
+      assert.match(css, /\.papers-viewer-text-layer\.selecting \.endOfContent\s*\{[\s\S]*top:\s*0;/);
+      assert.doesNotMatch(css, /\.papers-viewer-text-layer span\s*\{[\s\S]*font-family:\s*var\(--font-app\)/);
+    });
+
     test('ketcher embedded page uses portable static path resolution', () => {
       const html = fs.readFileSync(path.join(__dirname, 'ketcher-embedded.html'), 'utf8');
       assert.equal(html.includes('/Users/'), false);

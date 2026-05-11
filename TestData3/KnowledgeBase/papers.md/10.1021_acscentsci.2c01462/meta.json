@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "paper_id": "paper-sha256-d98805d7dbc7b733",
+  "title": "adams-et-al-2023-stretching-peptides-to-generate-small-molecule-%CE%B2-strand-mimics",
+  "doi": "10.1021/acscentsci.2c01462",
+  "authors": [],
+  "journal": "",
+  "year": "",
+  "url": "",
+  "pdf_sha256": "d98805d7dbc7b7330356aebd097c275f5ef5c30a0ecf9280adb26c52a3bbd830",
+  "source_pdf_path": "Project/CD19_CAR_Binder_Optimization/Papers/adams-et-al-2023-stretching-peptides-to-generate-small-molecule-%CE%B2-strand-mimics.pdf",
+  "extraction_status": "ready",
+  "wiki_status": "ready",
+  "wiki_generation_method": "pdf-to-md",
+  "extracted_text_path": "KnowledgeBase/papers.md/10.1021_acscentsci.2c01462/extracted.txt",
+  "markdown_path": "KnowledgeBase/papers.md/10.1021_acscentsci.2c01462/paper.md",
+  "sqlite_path": "KnowledgeBase/knowledge.index.sqlite",
+  "updated_at": "2026-05-11T19:55:10.182Z",
+  "error": "",
+  "warning": ""
+}

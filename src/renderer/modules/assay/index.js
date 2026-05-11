@@ -143,6 +143,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       serialDilution: assay.serialDilution,
       serialDilutionSummary: assay.serialDilutionSummary,
       wellLayout: assay.wellLayout,
+      resultAttachments: Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [],
       updatedAt: assay.updatedAt
     };
     const latestAnalysis = assay.latestAnalysis && typeof assay.latestAnalysis === 'object'
@@ -171,6 +172,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
           data: {
             assayId: assay.id,
             resultValues: assay.resultValues || {},
+            resultAttachments: Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [],
             latestAnalysis,
             updatedAt: assay.updatedAt
           }
@@ -412,6 +414,93 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     }
   }
 
+  function getActiveResultsAssay() {
+    const assayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
+    return assayId ? getAssayById(assayId) : null;
+  }
+
+  async function parseAssayResultImport(payload) {
+    if (!window.enanaApi?.parseAssayResultImportFile) {
+      throw new Error('Assay result file parser is unavailable.');
+    }
+    const result = await window.enanaApi.parseAssayResultImportFile(payload);
+    if (!result?.ok) {
+      throw new Error(result?.error || 'Unable to parse assay result file.');
+    }
+    return result;
+  }
+
+  async function persistAssayResultAttachment({ fileName, dataBase64, candidate } = {}) {
+    const assay = getActiveResultsAssay();
+    const storageRoot = getStorageRoot();
+    const targetFolder = buildAssayArtifactFolder(assay);
+    if (!assay) {
+      throw new Error('Select an assay plate before attaching a result file.');
+    }
+    if (!storageRoot || !targetFolder) {
+      throw new Error('Set a storage folder before attaching assay result files.');
+    }
+    if (!dataBase64) {
+      throw new Error('Result attachment file data is missing.');
+    }
+    if (!window.enanaApi?.storeImportedFile) {
+      throw new Error('Result attachment storage is unavailable.');
+    }
+
+    const stored = await window.enanaApi.storeImportedFile({
+      storagePath: storageRoot,
+      targetFolder,
+      fileName,
+      dataBase64
+    });
+    if (!stored?.ok) {
+      throw new Error(stored?.error || 'Unable to save result attachment.');
+    }
+
+    return {
+      id: createId(),
+      originalFileName: String(fileName || '').trim(),
+      fileName: stored.fileName || String(fileName || '').trim(),
+      filePath: stored.filePath || '',
+      relativePath: stored.relativePath || '',
+      storageFolder: targetFolder,
+      importedAt: new Date().toISOString(),
+      tableName: candidate?.tableName || '',
+      format: candidate?.format || '',
+      rangeLabel: candidate?.rangeLabel || '',
+      startRowIndex: Number(candidate?.startRowIndex || 0),
+      startColumnIndex: Number(candidate?.startColumnIndex || 0),
+      rows: Number(candidate?.rows || 0),
+      columns: Number(candidate?.columns || 0),
+      numericCount: Number(candidate?.numericCount || 0),
+      nonBlankCount: Number(candidate?.nonBlankCount || 0)
+    };
+  }
+
+  async function onAssayResultImportApplied({ attachment } = {}) {
+    const assay = getActiveResultsAssay();
+    if (!assay) {
+      throw new Error('Selected assay plate was not found.');
+    }
+    const def = getPlateDefinition(assay.plateType || elements.assayPlateTypeInput?.value || '96');
+    assay.resultValues = layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, def));
+    if (attachment && typeof attachment === 'object') {
+      const existing = Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [];
+      assay.resultAttachments = [...existing, attachment];
+    }
+    assay.latestAnalysis = null;
+    assay.updatedAt = new Date().toISOString();
+    syncNotebookAssayLinks();
+    persist();
+    renderResultsAssayOptions(assay.id);
+    renderActiveAssayInfo(assay);
+    renderList();
+    if (typeof onAssaysChanged === 'function') {
+      onAssaysChanged();
+    }
+    await persistAssayArtifacts(assay.id);
+  }
+
   const layoutManager = createAssayLayoutManager({
     runtime,
     elements,
@@ -435,7 +524,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     ),
     setResultStatus,
     clearAnalysisOutput: () => analysisView?.clearOutput(),
-    onAnalysisConfigChange: () => analysisView?.onAnalysisConfigChange()
+    onAnalysisConfigChange: () => analysisView?.onAnalysisConfigChange(),
+    parseResultImportFile: parseAssayResultImport,
+    persistResultAttachment: persistAssayResultAttachment,
+    onResultImportApplied: onAssayResultImportApplied
   });
 
   analysisView = createAssayAnalysisView({
@@ -697,6 +789,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       serialDilutionSummary: layoutManager.getSerialDilutionSummaryData(),
       wellLayout: normalizeLayout(runtime.currentLayout, plateDef),
       resultValues: layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, plateDef)),
+      resultAttachments: Array.isArray(existing?.resultAttachments) ? existing.resultAttachments : [],
       updatedAt: new Date().toISOString()
     };
     record.latestAnalysis = assayDefinitionChanged(existing, record)
@@ -955,6 +1048,13 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   elements.assayAnalysisAddColumnGroupBtn?.addEventListener('click', resultsManager.onAddSelectedColumnGroup);
   elements.assayAnalysisClearGroupsBtn?.addEventListener('click', resultsManager.onClearAnalysisGroups);
   elements.assayResultsLoadBtn?.addEventListener('click', onResultsAssayLoad);
+  elements.assayAttachResultFileBtn?.addEventListener('click', resultsManager.onAttachResultFileClick);
+  elements.assayResultFileInput?.addEventListener('change', resultsManager.onResultFileChange);
+  elements.assayResultImportOverlay?.addEventListener('click', resultsManager.onResultImportOverlayClick);
+  elements.assayResultImportCandidates?.addEventListener('click', resultsManager.onResultImportCandidateClick);
+  elements.assayResultImportCloseBtn?.addEventListener('click', resultsManager.closeResultImportDialog);
+  elements.assayResultImportCancelBtn?.addEventListener('click', resultsManager.closeResultImportDialog);
+  elements.assayResultImportApplyBtn?.addEventListener('click', resultsManager.applySelectedResultImportCandidate);
   elements.assaySaveResultsBtn?.addEventListener('click', onSaveResults);
   elements.assayClearResultsBtn?.addEventListener('click', resultsManager.onClearResults);
   elements.assayAnalyzeResultsBtn?.addEventListener('click', analysisView.onAnalyzeResults);

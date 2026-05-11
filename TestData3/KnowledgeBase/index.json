@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-11T20:00:39.224Z",
+  "papers": [
+    {
+      "id": "paper-sha256-4e997d9f48125458",
+      "doi": "10.1038/s41467-026-70656-0",
+      "title": "Diverse organic molecules on Mars revealed by the first SAM TMAH experiment",
+      "pdf_sha256": "4e997d9f48125458462139d1bd98a241febe10dabb757794d94e001160418cbd",
+      "wiki_status": "ready",
+      "wiki_path": "KnowledgeBase/papers.md/Diverse_organic_molecules_on_Mars_revealed_by_the_first_SAM_TMAH_experiment/paper.md",
+      "extraction_status": "ready",
+      "updated_at": "2026-05-11T19:56:09.686Z"
+    },
+    {
+      "id": "paper-sha256-16799da5bb6b9b14",
+      "doi": "10.1007/s12072-022-10437-1",
+      "title": "Role of pharmacogenetics and tacrolimus dosing in liver transplantation",
+      "pdf_sha256": "16799da5bb6b9b1432544fa7bbc7e137660df1c5cf427a48fa477fad1df775d3",
+      "wiki_status": "ready",
+      "wiki_path": "KnowledgeBase/papers.md/Role_of_pharmacogenetics_and_tacrolimus_dosing_in_liver_transplantation/paper.md",
+      "extraction_status": "ready",
+      "updated_at": "2026-05-11T19:56:09.751Z"
+    },
+    {
+      "id": "paper-sha256-d98805d7dbc7b733",
+      "doi": "10.1021/acscentsci.2c01462",
+      "title": "adams-et-al-2023-stretching-peptides-to-generate-small-molecule-%CE%B2-strand-mimics",
+      "pdf_sha256": "d98805d7dbc7b7330356aebd097c275f5ef5c30a0ecf9280adb26c52a3bbd830",
+      "wiki_status": "ready",
+      "wiki_path": "KnowledgeBase/papers.md/adams-et-al-2023-stretching-peptides-to-generate-small-molecule-%CE%B2-strand-mimics/paper.md",
+      "extraction_status": "ready",
+      "updated_at": "2026-05-11T19:56:10.018Z"
+    },
+    {
+      "id": "paper-sha256-be69fe3e144f6142",
+      "doi": "",
+      "title": "anie202300691-sup-0001-misc_information",
+      "pdf_sha256": "be69fe3e144f61426fcd700f6c2627c0c7f419a9dd2d20079d6527caea00a778",
+      "wiki_status": "ready",
+      "wiki_path": "KnowledgeBase/papers.md/anie202300691-sup-0001-misc_information/paper.md",
+      "extraction_status": "ready",
+      "updated_at": "2026-05-11T19:59:48.625Z"
+    },
+    {
+      "id": "paper-doi-10.1038_s41589-025-02063-3",
+      "doi": "10.1038/s41589-025-02063-3",
+      "title": "s41589-025-02063-3",
+      "pdf_sha256": "6ee61842c1e4dd634062a017cca3e292b409bac62b6d0179db1f1df122c275cf",
+      "wiki_status": "ready",
+      "wiki_path": "KnowledgeBase/papers.md/s41589-025-02063-3/paper.md",
+      "extraction_status": "ready",
+      "updated_at": "2026-05-11T20:00:39.222Z"
+    }
+  ],
+  "locations": [
+    {
+      "id": "location-4d5b77bca5872a0f6ae0663e",
+      "paper_id": "paper-sha256-4e997d9f48125458",
+      "scope": "global",
+      "container": "",
+      "folder_path": "Papers/spleen_B_cell_intact_antigen_marginal_zone_macrophage_follicular_dendritic_cell_review",
+      "pdf_filename": "s41467-026-70656-0.pdf",
+      "pdf_path": "Papers/spleen_B_cell_intact_antigen_marginal_zone_macrophage_follicular_dendritic_cell_review/s41467-026-70656-0.pdf",
+      "discovered_at": "2026-05-11T19:56:09.686Z"
+    },
+    {
+      "id": "location-3df1a35b7eb77e3c6eb85e55",
+      "paper_id": "paper-sha256-16799da5bb6b9b14",
+      "scope": "global",
+      "container": "",
+      "folder_path": "Papers/spleen_B_cell_intact_antigen_marginal_zone_macrophage_follicular_dendritic_cell_review",
+      "pdf_filename": "Role_of_pharmacogenetics_and_tacrolimus_dosing_in_liver_transplantation..pdf",
+      "pdf_path": "Papers/spleen_B_cell_intact_antigen_marginal_zone_macrophage_follicular_dendritic_cell_review/Role_of_pharmacogenetics_and_tacrolimus_dosing_in_liver_transplantation..pdf",
+      "discovered_at": "2026-05-11T19:56:09.751Z"
+    },
+    {
+      "id": "location-92742f06b2744999642a582b",
+      "paper_id": "paper-sha256-d98805d7dbc7b733",
+      "scope": "global",
+      "container": "",
+      "folder_path": "Project/CD19_CAR_Binder_Optimization/Papers",
+      "pdf_filename": "adams-et-al-2023-stretching-peptides-to-generate-small-molecule-%CE%B2-strand-mimics.pdf",
+      "pdf_path": "Project/CD19_CAR_Binder_Optimization/Papers/adams-et-al-2023-stretching-peptides-to-generate-small-molecule-%CE%B2-strand-mimics.pdf",
+      "discovered_at": "2026-05-11T19:56:10.018Z"
+    },
+    {
+      "id": "location-88b9ac4771c0b7e058a96997",
+      "paper_id": "paper-sha256-be69fe3e144f6142",
+      "scope": "project",
+      "container": "CD19 CAR Binder Optimization",
+      "folder_path": "Project/CD19_CAR_Binder_Optimization/Papers",
+      "pdf_filename": "anie202300691-sup-0001-misc_information.pdf",
+      "pdf_path": "Project/CD19_CAR_Binder_Optimization/Papers/anie202300691-sup-0001-misc_information.pdf",
+      "discovered_at": "2026-05-11T19:59:48.625Z"
+    },
+    {
+      "id": "location-d4c77debf967cd83a3e2a2d4",
+      "paper_id": "paper-doi-10.1038_s41589-025-02063-3",
+      "scope": "project",
+      "container": "CD19 CAR Binder Optimization",
+      "folder_path": "Project/CD19_CAR_Binder_Optimization/Papers",
+      "pdf_filename": "s41589-025-02063-3.pdf",
+      "pdf_path": "Project/CD19_CAR_Binder_Optimization/Papers/s41589-025-02063-3.pdf",
+      "discovered_at": "2026-05-11T20:00:39.222Z"
+    }
+  ]
+}

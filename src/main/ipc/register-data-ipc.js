@@ -1,9 +1,14 @@
 'use strict';
 
 const path = require('node:path');
-const { parseChemicalImportFile } = require('../helpers/main/chemical-import-parser');
+const {
+  parseAssayResultImportFile,
+  parseChemicalImportFile
+} = require('../helpers/main/chemical-import-parser');
+const { transformPaperPdfToMarkdown } = require('../helpers/main/paper-markdown-import');
 const {
   STORAGE,
+  ASSAY,
   INVENTORY,
   SEQUENCE_LIBRARY
 } = require('../../shared/ipc/channels');
@@ -148,11 +153,38 @@ function registerDataIpc(deps = {}) {
     const targetFilePath = await getUniqueFilePath(resolvedTargetFolder, fileName);
     const binary = Buffer.from(dataBase64, 'base64');
     await fs.writeFile(targetFilePath, binary);
+    let paperMarkdown = null;
+    if (payload?.transformPdfToMarkdown === true && /\.pdf$/i.test(targetFilePath)) {
+      paperMarkdown = await transformPaperPdfToMarkdown({
+        storagePath: resolvedStoragePath,
+        filePath: targetFilePath,
+        paper: {
+          title: payload?.paperTitle || payload?.title || fileName.replace(/\.pdf$/i, ''),
+          fileName: path.basename(targetFilePath),
+          storedRelativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/'),
+          linkedType: payload?.linkedType,
+          linkedName: payload?.linkedName,
+          doi: payload?.doi
+        },
+        skipExistingMarkdown: false,
+        source: 'manual-import'
+      }).catch((error) => ({
+        ok: false,
+        status: 'error',
+        error: String(error?.message || error)
+      }));
+    }
 
     return {
       filePath: targetFilePath,
       fileName: path.basename(targetFilePath),
-      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/')
+      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/'),
+      knowledgeDatabase: paperMarkdown || null,
+      knowledgeMarkdownRelativePath: cleanText(paperMarkdown?.markdown_relative_path, 2400),
+      knowledgeExtractedTextRelativePath: cleanText(paperMarkdown?.extracted_text_relative_path, 2400),
+      knowledgeMetaRelativePath: cleanText(paperMarkdown?.meta_relative_path, 2400),
+      knowledgeStatus: cleanText(paperMarkdown?.status, 80),
+      knowledgeError: cleanText(paperMarkdown?.error, 1200)
     };
   }
 
@@ -382,6 +414,28 @@ function registerDataIpc(deps = {}) {
 
     try {
       const parsed = parseChemicalImportFile({ fileName, dataBase64 });
+      return {
+        ok: true,
+        ...parsed
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: String(error?.message || error)
+      };
+    }
+  });
+
+  ipcMain.handle(ASSAY.PARSE_RESULT_IMPORT, async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const fileName = cleanText(normalizedPayload?.fileName, 300);
+    const dataBase64 = String(normalizedPayload?.dataBase64 || '').trim();
+    if (!dataBase64) {
+      return { ok: false, error: 'Missing assay result import file data.' };
+    }
+
+    try {
+      const parsed = parseAssayResultImportFile({ fileName, dataBase64 });
       return {
         ok: true,
         ...parsed

@@ -1,4 +1,4 @@
-LOCUS       Protein_Builder_       3825 bp    DNA     circular SYN 07-MAY-2026
+LOCUS       Protein_Builder_       3825 bp    DNA     circular SYN 10-MAY-2026
 DEFINITION  Protein_Builder_
 ACCESSION   .
 VERSION     .
@@ -34,7 +34,7 @@ ORIGIN
       361 cgtccgccgt ctaggtaagt ttaaagctca ggtcgagacc gggcctttgt ccggcgctcc
       421 cttggagcct acctagactc agccggctct ccacgctttg cctgaccctg cttgctcaac
       481 tctacgtctt tgtttcgttt tctgttctgc gccgttacag atccaagctg tgaccggcgc
-      541 ctacctgaga tcaccggcga aggagggcca ccatgtagca ccatcaccac cacgaaaacc
+      541 ctacctgaga tcaccggcga aggagggcca ccatgcacca ccatcaccac cacgaaaacc
       601 tgtacttcca gggcgcgttt accgtgaccg tgccgaaaga tctgtacgtg gtggaatacg
       661 gcagcaacat gaccattgaa tgcaaatttc cggtggaaaa acagctggat ctggcggcct
       721 taattgttta ttgggaaatg gaagataaaa acattattca gtttgtgcat ggtgaagaag

@@ -44,6 +44,49 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
       }
     });
 
+    test('storage-root autosave syncs folders without writing the default data file', async () => {
+      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data', 'data-helpers.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-root-autosave-'));
+      const staleDataPath = path.join(tempDir, 'hikari-data.json');
+      try {
+        await fsPromises.writeFile(staleDataPath, '{"legacy":true}\n', 'utf8');
+        let syncedDataFilePath = null;
+        const helpers = createMainDataHelpers({
+          fs: fsPromises,
+          path,
+          hasSupportedDataExtension: mainUtils.hasSupportedDataExtension,
+          normalizeDataFilePath: mainUtils.normalizeDataFilePath,
+          writeSnapshot: async () => {
+            throw new Error('root storage autosave should not write a data file');
+          },
+          syncBundleFromSnapshot: async ({ dataFilePath, snapshot }) => {
+            syncedDataFilePath = dataFilePath;
+            assert.equal(snapshot.settings.storagePath, tempDir);
+            return {
+              bundlePaths: {
+                storageRootPath: tempDir,
+                sqlitePath: path.join(tempDir, 'Protocol', 'protocol.index.sqlite')
+              },
+              sidecarPaths: {}
+            };
+          },
+          getDefaultDataFilePath: () => path.join(tempDir, 'hikari-data.json')
+        });
+
+        const result = await helpers.autoSaveDataFile({
+          data: { settings: { storagePath: tempDir }, samples: [{ id: 'sample-1' }] },
+          filePath: ''
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.filePath, '');
+        assert.equal(syncedDataFilePath, '');
+        await assert.rejects(fsPromises.access(staleDataPath));
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
     test('storage bundle helper sync + hydrate roundtrip restores protocols notebook inventory and samples from folders/sqlite', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
@@ -80,6 +123,7 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
         };
         await bundleHelpers.syncBundleFromSnapshot({ dataFilePath, snapshot: sourceSnapshot });
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', 'MEMORY.md'));
+        await fsPromises.access(path.join(tempDir, 'KnowledgeBase', 'papers.md'));
         const samplesPath = path.join(tempDir, 'Samples', 'samples.json');
         const samplesPayload = JSON.parse(await fsPromises.readFile(samplesPath, 'utf8'));
         assert.equal(samplesPayload.samples.length, 1);
@@ -124,6 +168,41 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
         assert.equal(recordSearch.usedSqlite, true);
         assert.equal(recordSearch.items.length > 0, true);
         assert.equal(recordSearch.items.some((item) => item.record_type === 'protocol'), true);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('storage-root-only sync and import does not require hikari-data.json', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-root-only-sync-'));
+      try {
+        const sourceSnapshot = {
+          projects: [{ id: 'project-1', name: 'Atlas' }],
+          protocols: [{ id: 'protocol-1', name: 'Protein Purification', steps: ['Bind sample'] }],
+          notebookEntries: [{ id: 'note-1', projectId: 'project-1', projectName: 'Atlas', protocolId: 'protocol-1', protocolName: 'Protein Purification', result: 'Good yield.' }],
+          inventory: { Freezer: [{ id: 'box-1', name: 'Protein box', type: 'box81' }] },
+          samples: [{ id: 'sample-1', name: 'Atlas construct', inventoryLink: { section: 'Freezer', containerId: 'box-1' } }],
+          assays: [{ id: 'assay-1', name: 'Binding assay', projectId: 'project-1', updatedAt: '2026-05-09T10:00:00.000Z' }],
+          gelAnalyses: [{ id: 'gel-1', name: 'SDS-PAGE', projectId: 'project-1', updatedAt: '2026-05-09T10:00:00.000Z' }],
+          settings: { storagePath: tempDir }
+        };
+
+        await bundleHelpers.syncBundleFromSnapshot({ snapshot: sourceSnapshot });
+        await fsPromises.access(path.join(tempDir, 'Protocol', 'protocol.index.sqlite'));
+        await fsPromises.access(path.join(tempDir, 'Samples', 'samples.json'));
+        await fsPromises.access(path.join(tempDir, 'KnowledgeBase', 'papers.md'));
+        await assert.rejects(fsPromises.access(path.join(tempDir, 'hikari-data.json')));
+
+        const imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        assert.equal(imported.statePatch.protocols.some((protocol) => protocol.id === 'protocol-1'), true);
+        assert.equal(imported.statePatch.notebookEntries.some((entry) => entry.id === 'note-1'), true);
+        assert.equal(imported.statePatch.samples.some((sample) => sample.id === 'sample-1'), true);
+        assert.equal(imported.statePatch.inventory.Freezer.some((item) => item.id === 'box-1'), true);
+        assert.equal(imported.statePatch.assays.some((assay) => assay.id === 'assay-1'), true);
+        assert.equal(imported.statePatch.gelAnalyses.some((gel) => gel.id === 'gel-1'), true);
+        assert.equal(imported.summary.assays, 1);
+        assert.equal(imported.summary.gelAnalyses, 1);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -371,9 +450,26 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
         assert.equal(manifest.summary.sequenceEntries > 0, true);
         assert.equal(Array.isArray(manifest.discovered_files), true);
         assert.equal(manifest.discovered_files.length > 0, true);
+        assert.equal(
+          manifest.discovered_files.some((entry) => (
+            entry.relative_path === 'KnowledgeBase/papers.md'
+            && entry.role === 'paper_markdown_root'
+          )),
+          true
+        );
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
+    });
+
+    test('storage manifest classifies KnowledgeBase paper markdown folders', () => {
+      const { detectManifestRole } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-manifest.js'));
+      assert.equal(detectManifestRole('KnowledgeBase'), 'knowledge_base_root');
+      assert.equal(detectManifestRole('KnowledgeBase/papers.md'), 'paper_markdown_root');
+      assert.equal(detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/paper.md'), 'paper_knowledge_markdown');
+      assert.equal(detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/extracted.txt'), 'paper_knowledge_extracted_text');
+      assert.equal(detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/meta.json'), 'paper_knowledge_metadata');
+      assert.equal(detectManifestRole('KnowledgeBase/knowledge.index.sqlite'), 'paper_knowledge_index');
     });
 
     test('chemical inventory sync uses sqlite-only bundle writes instead of a chemical json file', () => {
@@ -399,15 +495,101 @@ module.exports = function registerStorageAndImportContracts(context = {}) {
       assert.match(importSource, /kind:\s*'sqlite_only_bundle'/);
     });
 
+    test('storage root refresh clears cached module data before importing a changed root', async () => {
+      const { createStorageImportController } = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'app', 'storage-import.js'),
+        { window: {} }
+      );
+      const state = structuredClone(shared.defaultState);
+      state.projects = [{ id: 'old-project', name: 'Old Project' }];
+      state.protocols = [{ id: 'old-protocol', name: 'Old Protocol' }];
+      state.notebookEntries = [{ id: 'old-note', title: 'Old Note' }];
+      state.papers = [{ id: 'old-paper', title: 'Old Paper' }];
+      state.assays = [{ id: 'old-assay', name: 'Old Assay' }];
+      state.gelAnalyses = [{ id: 'old-gel', name: 'Old Gel' }];
+      state.samples = [{ id: 'old-sample', name: 'Old Sample' }];
+      state.inventory = { Freezer: [{ id: 'old-box', name: 'Old Box' }] };
+      state.agentChat = { currentSessionId: 'old-chat', sessions: [{ id: 'old-chat' }], messages: [{ id: 'old-message' }] };
+      state.settings.storagePath = '/old/root';
+      state.settings.llm.apiKey = 'keep-this-key';
+      state.settings.dashboard.quickLogDraft = 'old quick log';
+
+      let ensuredPath = '';
+      let stateAtImport = null;
+      let persistedSnapshot = null;
+      const controller = createStorageImportController({
+        state,
+        persist: () => {
+          persistedSnapshot = structuredClone(state);
+        },
+        persistState: () => {},
+        normalizeStateStoragePaths: () => {},
+        rebuildObjectGraph: () => ({ nodes: {}, edges: [], backlinks: {}, updatedAt: 'rebuilt' }),
+        windowObject: {
+          enanaApi: {
+            ensureStorageDirectory: async (storagePath) => {
+              ensuredPath = storagePath;
+              return { ok: true, path: storagePath };
+            },
+            importStorageRoot: async () => {
+              stateAtImport = structuredClone(state);
+              return {
+                ok: true,
+                statePatch: {
+                  projects: [{ id: 'new-project', name: 'New Project' }],
+                  protocols: [{ id: 'new-protocol', name: 'New Protocol' }]
+                },
+                summary: { protocols: 1 },
+                warnings: [],
+                manifestPath: '/new/root/hikari-storage-manifest.json'
+              };
+            }
+          }
+        }
+      });
+
+      const result = await controller.runStorageRootImport('/new/root', {
+        persistMergedState: true,
+        resetWorkspace: true
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.refreshed, true);
+      assert.equal(ensuredPath, '/new/root');
+      assert.deepEqual(stateAtImport.projects, []);
+      assert.deepEqual(stateAtImport.protocols, []);
+      assert.deepEqual(stateAtImport.notebookEntries, []);
+      assert.deepEqual(stateAtImport.papers, []);
+      assert.deepEqual(stateAtImport.assays, []);
+      assert.deepEqual(stateAtImport.gelAnalyses, []);
+      assert.deepEqual(stateAtImport.samples, []);
+      assert.deepEqual(stateAtImport.agentChat.sessions, []);
+      assert.equal(stateAtImport.settings.storagePath, '/new/root');
+      assert.equal(stateAtImport.settings.llm.apiKey, 'keep-this-key');
+      assert.equal(stateAtImport.settings.dashboard.quickLogDraft, '');
+      assert.equal(state.projects.some((project) => project.id === 'old-project'), false);
+      assert.equal(state.projects.some((project) => project.id === 'new-project'), true);
+      assert.equal(state.protocols.some((protocol) => protocol.id === 'new-protocol'), true);
+      assert.equal(state.settings.llm.apiKey, 'keep-this-key');
+      assert.equal(persistedSnapshot.projects.some((project) => project.id === 'new-project'), true);
+    });
+
     test('renderer storage import wiring runs on save callback and startup hydration path', () => {
       const rendererSource = readRendererStorageSource();
-      assert.match(rendererSource, /onStoragePathSaved:\s*async\s*\(storagePath\)\s*=>\s*\{\s*const result = await storageImportController\.runStorageRootImport\(storagePath, \{ persistMergedState: true \}\);/);
+      const settingsSource = readLocalSource('src', 'renderer', 'modules', 'settings', 'index.js');
+      assert.match(rendererSource, /onStoragePathSaved:\s*async\s*\(storagePath,\s*options = \{\}\)\s*=>/);
+      assert.match(rendererSource, /resetWorkspace:\s*options\.resetWorkspace === true/);
+      assert.match(rendererSource, /function refreshWorkspaceForStorageRoot\(storagePath\)/);
+      assert.match(rendererSource, /refreshWorkspaceForStorageRoot,\s*runStorageRootImport/);
       assert.match(rendererSource, /async function hydrateStateFromStorageRoot\(\)/);
       assert.equal(rendererSource.includes('hydrateStateFromDataFile'), false);
       assert.match(rendererSource, /async function initApp\(\)\s*\{\s*await storageImportController\.hydrateStateFromStorageRoot\(\);/);
       assert.match(rendererSource, /state\.projects = mergeRecordsById\(state\.projects, patch\.projects, 'project'\);/);
       assert.match(rendererSource, /mergeStorageImportPatch\(result\.statePatch\);/);
       assert.equal(/state\.settings\s*=\s*result\.statePatch\.settings/.test(rendererSource), false);
+      assert.match(settingsSource, /const rootChanged = nextPath !== previousPath;/);
+      assert.match(settingsSource, /onStoragePathSaved\(nextPath,\s*\{\s*resetWorkspace:\s*rootChanged,/);
+      assert.equal(settingsSource.includes('state.settings.storagePath = nextPath;\n    persist();\n    if (!nextPath)'), false);
     });
 
     test('telegram bot writes events to data/telegram-events.log by default', () => {

@@ -58,35 +58,54 @@ function createMainDataHelpers(deps = {}) {
     return resolvedTarget.startsWith(rootWithSep);
   }
 
-  function resolveAutoSaveTargetPath(filePath, snapshot) {
+  function getDefaultAutoSaveDataFilePath(storagePath) {
+    const defaultName = path.basename(getDefaultDataFilePath() || 'hikari-data.json') || 'hikari-data.json';
+    return normalizeDataFilePath(path.join(storagePath, defaultName), getDefaultDataFilePath());
+  }
+
+  function resolveAutoSaveTarget(filePath, snapshot) {
     const storagePath = cleanText(snapshot?.settings?.storagePath, 2400);
     if (!storagePath) {
-      return '';
+      return null;
     }
 
     const explicitPath = cleanText(filePath, 2400);
     if (explicitPath) {
       const normalizedExplicitPath = normalizeDataFilePath(explicitPath, getDefaultDataFilePath());
-      return isPathWithinRoot(storagePath, normalizedExplicitPath)
-        ? normalizedExplicitPath
-        : '';
+      if (!isPathWithinRoot(storagePath, normalizedExplicitPath)) {
+        return null;
+      }
+      return {
+        targetPath: normalizedExplicitPath,
+        writeDataFile: true,
+        staleDataFilePath: ''
+      };
     }
 
-    const defaultName = path.basename(getDefaultDataFilePath() || 'hikari-data.json') || 'hikari-data.json';
-    return normalizeDataFilePath(path.join(storagePath, defaultName), getDefaultDataFilePath());
+    return {
+      targetPath: '',
+      writeDataFile: false,
+      staleDataFilePath: getDefaultAutoSaveDataFilePath(storagePath)
+    };
   }
 
   async function persistSnapshot({
     targetPath,
     snapshot,
     ensureDirectory = false,
-    includeFilePathOnError = false
+    includeFilePathOnError = false,
+    writeDataFile = true
   }) {
     try {
-      if (ensureDirectory) {
+      if (writeDataFile && !targetPath) {
+        throw new Error('Missing data file path.');
+      }
+      if (writeDataFile && ensureDirectory) {
         await fs.mkdir(path.dirname(targetPath), { recursive: true });
       }
-      await writeSnapshot(targetPath, snapshot);
+      if (writeDataFile) {
+        await writeSnapshot(targetPath, snapshot);
+      }
       const bundleSync = await syncBundleFromSnapshot({
         dataFilePath: targetPath,
         snapshot,
@@ -166,16 +185,21 @@ function createMainDataHelpers(deps = {}) {
       return { ok: false, error: 'Missing data payload.' };
     }
     const snapshot = data && typeof data === 'object' ? data : {};
-    const targetPath = resolveAutoSaveTargetPath(filePath, snapshot);
-    if (!targetPath) {
+    const target = resolveAutoSaveTarget(filePath, snapshot);
+    if (!target) {
       return { ok: false, error: 'Auto-save requires a configured storage path.' };
     }
-    return persistSnapshot({
-      targetPath,
+    const result = await persistSnapshot({
+      targetPath: target.targetPath,
       snapshot,
       ensureDirectory: true,
-      includeFilePathOnError: true
+      includeFilePathOnError: true,
+      writeDataFile: target.writeDataFile
     });
+    if (result.ok && !target.writeDataFile && target.staleDataFilePath) {
+      await fs.rm(target.staleDataFilePath, { force: true }).catch(() => {});
+    }
+    return result;
   }
 
   async function loadSelectedDataFile(filePath) {

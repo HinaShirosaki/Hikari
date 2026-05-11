@@ -1127,12 +1127,12 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
               file_name: 'mapk.pdf',
               file_path: path.join(storageRoot, 'Papers', 'Atlas', 'mapk.pdf'),
               relative_path: 'Papers/Atlas/mapk.pdf',
-              knowledge_markdown_path: path.join(storageRoot, 'KnowledgeDatabase', 'PaperKnowledge', '10.1000_mapk', 'paper.md'),
-              knowledge_markdown_relative_path: 'KnowledgeDatabase/PaperKnowledge/10.1000_mapk/paper.md',
+              knowledge_markdown_path: path.join(storageRoot, 'KnowledgeBase', 'papers.md', '10.1000_mapk', 'paper.md'),
+              knowledge_markdown_relative_path: 'KnowledgeBase/papers.md/10.1000_mapk/paper.md',
               knowledge_database: {
                 ok: true,
                 status: 'ready',
-                markdown_relative_path: 'KnowledgeDatabase/PaperKnowledge/10.1000_mapk/paper.md'
+                markdown_relative_path: 'KnowledgeBase/papers.md/10.1000_mapk/paper.md'
               },
               summary: 'Downloaded mapk.pdf and wrote paper.md.'
             })
@@ -1166,11 +1166,11 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.equal(result.loaded_context_blocks.length, 1);
         assert.equal(result.loaded_context_blocks[0].source, 'knowledge_markdown');
         assert.equal(result.papers_read_count, 1);
-        assert.equal(result.downloaded_papers[0].knowledge_markdown_relative_path, 'KnowledgeDatabase/PaperKnowledge/10.1000_mapk/paper.md');
+        assert.equal(result.downloaded_papers[0].knowledge_markdown_relative_path, 'KnowledgeBase/papers.md/10.1000_mapk/paper.md');
         assert.equal(turns.length, 1);
         assert.match(String(turns[0].system_prompt || ''), /Codex paper-context sub-agent/);
         assert.match(String(turns[0].message || ''), /knowledge_markdown_path/);
-        assert.match(String(turns[0].message || ''), /KnowledgeDatabase\/PaperKnowledge\/10\.1000_mapk\/paper\.md/);
+        assert.match(String(turns[0].message || ''), /KnowledgeBase\/papers\.md\/10\.1000_mapk\/paper\.md/);
         assert.doesNotMatch(String(turns[0].message || ''), /call Hikari literature-search/i);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
@@ -1458,7 +1458,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
 
         assert.equal(result.ok, true);
         assert.equal(result.status, 'ready');
-        assert.match(result.markdown_relative_path, /^KnowledgeDatabase\/PaperKnowledge\//);
+        assert.match(result.markdown_relative_path, /^KnowledgeBase\/papers\.md\//);
         assert.equal(result.markdown_relative_path.includes('Papers/Atlas'), false);
         assert.notEqual(path.dirname(result.markdown_path), path.dirname(pdfPath));
         assert.match(rewritePrompt, /\[\[page:2\]\]/);
@@ -1467,7 +1467,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         const meta = JSON.parse(await fsPromises.readFile(result.meta_path, 'utf8'));
         assert.equal(meta.source_pdf_path, 'Papers/Atlas/mapk.pdf');
         assert.equal(meta.markdown_path, result.markdown_relative_path);
-        assert.equal(result.sqlite_relative_path, 'KnowledgeDatabase/knowledge.index.sqlite');
+        assert.equal(result.sqlite_relative_path, 'KnowledgeBase/knowledge.index.sqlite');
 
         const lookup = await runtime.lookupPaper({
           storage_path: storageRoot,
@@ -1479,6 +1479,135 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.equal(lookup.paper.wiki_exists, true);
         assert.equal(lookup.paper.pdf_exists, true);
         assert.equal(lookup.paper.wiki_path, result.markdown_relative_path);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('pdf-to-md helper renders extracted PDF pages as markdown and the pdf text tool can include it', async () => {
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-pdf-text-extraction.js'));
+      const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
+        metadata: {
+          title: 'Engineered MAPK Study',
+          doi: '10.1000/mapk'
+        },
+        extraction: {
+          ok: true,
+          page_count: 1,
+          extracted_page_count: 1,
+          pages: [{ page_number: 1, text: 'Abstract\nMAPK inhibitor treatment was tested.' }],
+          sections: [{ label: 'Abstract', start_page: 1, end_page: 1, text: 'MAPK inhibitor treatment was tested.' }]
+        }
+      });
+      assert.match(markdown, /^# Engineered MAPK Study/m);
+      assert.match(markdown, /DOI: 10\.1000\/mapk/);
+      assert.match(markdown, /### Page 1/);
+
+      const runtime = pdfTextExtraction.createPdfTextExtractionRuntime({
+        pdfJsLib: {
+          getDocument: () => ({
+            promise: Promise.resolve({
+              numPages: 1,
+              getPage: async () => ({
+                getTextContent: async () => ({
+                  items: [
+                    { str: 'Engineered MAPK Study', hasEOL: true },
+                    { str: 'Abstract', hasEOL: true },
+                    { str: 'MAPK inhibitor treatment was tested.', hasEOL: true }
+                  ]
+                }),
+                cleanup: () => {}
+              }),
+              getOutline: async () => [],
+              destroy: async () => {}
+            })
+          })
+        }
+      });
+      const result = await runtime.extractText({
+        buffer: Buffer.from('%PDF-1.7\nfake bytes'),
+        title: 'Engineered MAPK Study',
+        include_markdown: true
+      });
+      assert.equal(result.ok, true);
+      assert.match(result.markdown, /^# Engineered MAPK Study/m);
+      assert.match(result.markdown, /MAPK inhibitor treatment was tested/);
+
+      const originalDomMatrix = globalThis.DOMMatrix;
+      try {
+        delete globalThis.DOMMatrix;
+        const nodeRuntime = pdfTextExtraction.createPdfTextExtractionRuntime({
+          importEsm: async () => {
+            assert.equal(typeof globalThis.DOMMatrix, 'function');
+            return {
+              getDocument: () => ({
+                promise: Promise.resolve({
+                  numPages: 1,
+                  getPage: async () => ({
+                    getTextContent: async () => ({
+                      items: [{ str: 'Node extracted paper text.', hasEOL: true }]
+                    }),
+                    cleanup: () => {}
+                  }),
+                  getOutline: async () => [],
+                  destroy: async () => {}
+                })
+              })
+            };
+          },
+          vendorPdfJsPath: path.join(__dirname, 'vendor', 'pdfjs', 'build', 'pdf.mjs')
+        });
+        const nodeResult = await nodeRuntime.extractText({
+          buffer: Buffer.from('%PDF-1.7\nfake bytes'),
+          include_markdown: true
+        });
+        assert.equal(nodeResult.ok, true);
+        assert.match(nodeResult.markdown, /Node extracted paper text/);
+      } finally {
+        if (originalDomMatrix) {
+          globalThis.DOMMatrix = originalDomMatrix;
+        } else {
+          delete globalThis.DOMMatrix;
+        }
+      }
+    });
+
+    test('paper markdown import helper updates imported paper records with knowledge markdown paths', async () => {
+      const { transformPaperPdfToMarkdown } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'paper-markdown-import.js'));
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-markdown-import-'));
+      const pdfPath = path.join(storageRoot, 'Papers', 'Atlas', 'mapk.pdf');
+      try {
+        await fsPromises.mkdir(path.dirname(pdfPath), { recursive: true });
+        await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nfake pdf bytes\n'));
+        const paper = {
+          id: 'paper-1',
+          title: 'Engineered MAPK Study',
+          storedRelativePath: 'Papers/Atlas/mapk.pdf',
+          linkedType: 'journal-club',
+          linkedName: 'Atlas'
+        };
+        const result = await transformPaperPdfToMarkdown({
+          storagePath: storageRoot,
+          paper,
+          paperKnowledgeDatabaseRuntime: {
+            ingestPaperPdf: async (input = {}) => {
+              assert.equal(input.file_path, pdfPath);
+              assert.equal(input.use_llm_rewrite, false);
+              return {
+                ok: true,
+                status: 'ready',
+                markdown_relative_path: 'KnowledgeBase/papers.md/Engineered_MAPK_Study/paper.md',
+                extracted_text_relative_path: 'KnowledgeBase/papers.md/Engineered_MAPK_Study/extracted.txt',
+                meta_relative_path: 'KnowledgeBase/papers.md/Engineered_MAPK_Study/meta.json',
+                wiki_generation_method: 'pdf-to-md'
+              };
+            }
+          }
+        });
+        assert.equal(result.ok, true);
+        assert.equal(paper.knowledgeMarkdownRelativePath, 'KnowledgeBase/papers.md/Engineered_MAPK_Study/paper.md');
+        assert.equal(paper.knowledgeStatus, 'ready');
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
@@ -1513,8 +1642,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
               return {
                 ok: true,
                 status: 'ready',
-                markdown_path: path.join(storageRoot, 'KnowledgeDatabase', 'PaperKnowledge', 'attached', 'paper.md'),
-                markdown_relative_path: 'KnowledgeDatabase/PaperKnowledge/attached/paper.md',
+                markdown_path: path.join(storageRoot, 'KnowledgeBase', 'papers.md', 'attached', 'paper.md'),
+                markdown_relative_path: 'KnowledgeBase/papers.md/attached/paper.md',
                 summary: 'Wrote paper knowledge markdown.'
               };
             }
@@ -1533,7 +1662,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.equal(result.status, 'completed');
         assert.equal(ingestedFilePath, result.file_path);
         assert.equal(result.knowledge_database.ok, true);
-        assert.equal(result.knowledge_markdown_relative_path, 'KnowledgeDatabase/PaperKnowledge/attached/paper.md');
+        assert.equal(result.knowledge_markdown_relative_path, 'KnowledgeBase/papers.md/attached/paper.md');
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
@@ -1634,11 +1763,11 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
                 file_name: 'doi-paper.pdf',
                 file_path: path.join(storageRoot, 'LiteratureSearch', 'Atlas', 'Papers', 'doi-paper.pdf'),
                 relative_path: 'Papers/Atlas/doi-paper.pdf',
-                knowledge_markdown_relative_path: 'KnowledgeDatabase/PaperKnowledge/10.1000_example-doi/paper.md',
+                knowledge_markdown_relative_path: 'KnowledgeBase/papers.md/10.1000_example-doi/paper.md',
                 knowledge_database: {
                   ok: true,
                   status: 'ready',
-                  markdown_relative_path: 'KnowledgeDatabase/PaperKnowledge/10.1000_example-doi/paper.md'
+                  markdown_relative_path: 'KnowledgeBase/papers.md/10.1000_example-doi/paper.md'
                 },
                 summary: 'Downloaded doi-paper.pdf'
               };
@@ -1665,7 +1794,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.equal(downloadCalls[0].doi, '10.1000/example-doi');
         assert.equal(downloadCalls[0].page_url, 'https://doi.org/10.1000/example-doi');
         assert.equal(result.selected_papers[0].doi, '10.1000/example-doi');
-        assert.equal(result.downloaded_papers[0].knowledge_markdown_relative_path, 'KnowledgeDatabase/PaperKnowledge/10.1000_example-doi/paper.md');
+        assert.equal(result.downloaded_papers[0].knowledge_markdown_relative_path, 'KnowledgeBase/papers.md/10.1000_example-doi/paper.md');
         assert.equal(result.downloaded_papers[0].knowledge_database.status, 'ready');
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });

@@ -3,6 +3,7 @@
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 const { Buffer } = require('node:buffer');
+const { buildPdfMarkdownFromExtraction } = require('../../main/pdf-to-md.js');
 
 const PDF_TEXT_EXTRACTION_ACTIONS = Object.freeze({
   EXTRACT: 'extract'
@@ -14,6 +15,110 @@ const DEFAULT_MAX_TOTAL_CHARS = 400000;
 const DEFAULT_FETCH_ACCEPT = 'application/pdf,application/octet-stream;q=0.9,*/*;q=0.1';
 const DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; HikariPdfTextExtraction/1.0; +https://hikari.local)';
 const DEFAULT_VENDOR_PDFJS_PATH = path.resolve(__dirname, '../../../../../vendor/pdfjs/build/pdf.mjs');
+const DEFAULT_VENDOR_PDFJS_ROOT = path.resolve(__dirname, '../../../../../vendor/pdfjs');
+
+class PdfTextDomMatrix {
+  constructor(init) {
+    const values = Array.isArray(init) || ArrayBuffer.isView(init)
+      ? Array.from(init)
+      : null;
+    const source = values || ensureObject(init);
+    this.a = numberOrDefault(values ? values[0] : source.a ?? source.m11, 1);
+    this.b = numberOrDefault(values ? values[1] : source.b ?? source.m12, 0);
+    this.c = numberOrDefault(values ? values[2] : source.c ?? source.m21, 0);
+    this.d = numberOrDefault(values ? values[3] : source.d ?? source.m22, 1);
+    this.e = numberOrDefault(values ? values[4] : source.e ?? source.m41, 0);
+    this.f = numberOrDefault(values ? values[5] : source.f ?? source.m42, 0);
+    this.is2D = true;
+  }
+
+  get m11() { return this.a; }
+  set m11(value) { this.a = Number(value) || 0; }
+  get m12() { return this.b; }
+  set m12(value) { this.b = Number(value) || 0; }
+  get m21() { return this.c; }
+  set m21(value) { this.c = Number(value) || 0; }
+  get m22() { return this.d; }
+  set m22(value) { this.d = Number(value) || 0; }
+  get m41() { return this.e; }
+  set m41(value) { this.e = Number(value) || 0; }
+  get m42() { return this.f; }
+  set m42(value) { this.f = Number(value) || 0; }
+
+  multiply(other) {
+    return new PdfTextDomMatrix(this).multiplySelf(other);
+  }
+
+  multiplySelf(other) {
+    const matrix = new PdfTextDomMatrix(other);
+    const a = this.a * matrix.a + this.c * matrix.b;
+    const b = this.b * matrix.a + this.d * matrix.b;
+    const c = this.a * matrix.c + this.c * matrix.d;
+    const d = this.b * matrix.c + this.d * matrix.d;
+    const e = this.a * matrix.e + this.c * matrix.f + this.e;
+    const f = this.b * matrix.e + this.d * matrix.f + this.f;
+    return this.#set(a, b, c, d, e, f);
+  }
+
+  preMultiplySelf(other) {
+    const matrix = new PdfTextDomMatrix(other);
+    const a = matrix.a * this.a + matrix.c * this.b;
+    const b = matrix.b * this.a + matrix.d * this.b;
+    const c = matrix.a * this.c + matrix.c * this.d;
+    const d = matrix.b * this.c + matrix.d * this.d;
+    const e = matrix.a * this.e + matrix.c * this.f + matrix.e;
+    const f = matrix.b * this.e + matrix.d * this.f + matrix.f;
+    return this.#set(a, b, c, d, e, f);
+  }
+
+  translate(tx = 0, ty = 0) {
+    return new PdfTextDomMatrix(this).translateSelf(tx, ty);
+  }
+
+  translateSelf(tx = 0, ty = 0) {
+    return this.multiplySelf([1, 0, 0, 1, numberOrDefault(tx, 0), numberOrDefault(ty, 0)]);
+  }
+
+  scale(scaleX = 1, scaleY = scaleX) {
+    return new PdfTextDomMatrix(this).scaleSelf(scaleX, scaleY);
+  }
+
+  scaleSelf(scaleX = 1, scaleY = scaleX) {
+    return this.multiplySelf([numberOrDefault(scaleX, 1), 0, 0, numberOrDefault(scaleY, 1), 0, 0]);
+  }
+
+  invertSelf() {
+    const determinant = this.a * this.d - this.b * this.c;
+    if (!determinant) {
+      return this.#set(NaN, NaN, NaN, NaN, NaN, NaN);
+    }
+    const a = this.d / determinant;
+    const b = -this.b / determinant;
+    const c = -this.c / determinant;
+    const d = this.a / determinant;
+    const e = (this.c * this.f - this.d * this.e) / determinant;
+    const f = (this.b * this.e - this.a * this.f) / determinant;
+    return this.#set(a, b, c, d, e, f);
+  }
+
+  toFloat32Array() {
+    return new Float32Array([this.a, this.b, this.c, this.d, this.e, this.f]);
+  }
+
+  toFloat64Array() {
+    return new Float64Array([this.a, this.b, this.c, this.d, this.e, this.f]);
+  }
+
+  #set(a, b, c, d, e, f) {
+    this.a = a;
+    this.b = b;
+    this.c = c;
+    this.d = d;
+    this.e = e;
+    this.f = f;
+    return this;
+  }
+}
 
 function defaultCleanText(value, maxLength = 4000) {
   const text = String(value || '');
@@ -29,6 +134,22 @@ function defaultCleanText(value, maxLength = 4000) {
 
 function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function numberOrDefault(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function installPdfJsNodePolyfills() {
+  if (typeof globalThis.DOMMatrix === 'undefined') {
+    globalThis.DOMMatrix = PdfTextDomMatrix;
+  }
+}
+
+function withTrailingSeparator(value) {
+  const text = String(value || '');
+  return text.endsWith(path.sep) ? text : `${text}${path.sep}`;
 }
 
 function normalizeInteger(value, fallback, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
@@ -267,6 +388,7 @@ function createPdfTextExtractionRuntime(deps = {}) {
     ? deps.importEsm
     : ((specifier) => import(specifier));
   const vendorPdfJsPath = cleanText(deps.vendorPdfJsPath, 4000) || DEFAULT_VENDOR_PDFJS_PATH;
+  const vendorPdfJsRoot = cleanText(deps.vendorPdfJsRoot, 4000) || DEFAULT_VENDOR_PDFJS_ROOT;
   const providedPdfJs = deps.pdfJsLib && typeof deps.pdfJsLib === 'object' ? deps.pdfJsLib : null;
 
   let pdfJsModulePromise = null;
@@ -275,6 +397,7 @@ function createPdfTextExtractionRuntime(deps = {}) {
     if (providedPdfJs) {
       return providedPdfJs;
     }
+    installPdfJsNodePolyfills();
     if (!pdfJsModulePromise) {
       const moduleUrl = vendorPdfJsPath.startsWith('file:')
         ? vendorPdfJsPath
@@ -475,6 +598,9 @@ function createPdfTextExtractionRuntime(deps = {}) {
     );
     const includePages = source.include_pages !== false && source.includePages !== false;
     const includeSections = source.include_sections !== false && source.includeSections !== false;
+    const includeMarkdown = source.include_markdown === true
+      || source.includeMarkdown === true
+      || cleanText(source.output_format || source.outputFormat, 80).toLowerCase() === 'markdown';
 
     let pdfBuffer;
     try {
@@ -526,15 +652,20 @@ function createPdfTextExtractionRuntime(deps = {}) {
     try {
       loadingTask = pdfjsLib.getDocument({
         data: new Uint8Array(pdfBuffer),
+        cMapUrl: withTrailingSeparator(path.join(vendorPdfJsRoot, 'web', 'cmaps')),
+        standardFontDataUrl: withTrailingSeparator(path.join(vendorPdfJsRoot, 'web', 'standard_fonts')),
+        wasmUrl: withTrailingSeparator(path.join(vendorPdfJsRoot, 'web', 'wasm')),
         useWorkerFetch: false,
         disableFontFace: true,
+        isOffscreenCanvasSupported: false,
+        isImageDecoderSupported: false,
         isEvalSupported: false
       });
       pdfDocument = await loadingTask.promise;
 
       const totalPages = Number(pdfDocument?.numPages) || 0;
       if (!totalPages) {
-        return {
+        const emptyResult = {
           ok: true,
           status: 'completed',
           page_count: 0,
@@ -547,6 +678,15 @@ function createPdfTextExtractionRuntime(deps = {}) {
           sections_source: includeSections ? '' : undefined,
           summary: 'PDF contained no pages.'
         };
+        if (includeMarkdown) {
+          emptyResult.markdown = buildPdfMarkdownFromExtraction({
+            metadata: source.metadata || source,
+            extraction: emptyResult,
+            extractedText: '',
+            sourcePdfPath: source.file_path || source.filePath || source.path || ''
+          });
+        }
+        return emptyResult;
       }
 
       const { start, end } = normalizePageRange(
@@ -618,7 +758,7 @@ function createPdfTextExtractionRuntime(deps = {}) {
         }
       }
 
-      return {
+      const result = {
         ok: true,
         status: 'completed',
         page_count: totalPages,
@@ -638,6 +778,15 @@ function createPdfTextExtractionRuntime(deps = {}) {
           ? `Extracted text from ${internalPages.length} page(s) (${totalCharacters} characters)${sections.length ? `, ${sections.length} section(s) via ${sectionsSource}` : ''}.`
           : 'No extractable text was found in the PDF.'
       };
+      if (includeMarkdown) {
+        result.markdown = buildPdfMarkdownFromExtraction({
+          metadata: source.metadata || source,
+          extraction: result,
+          extractedText: fullText,
+          sourcePdfPath: source.file_path || source.filePath || source.path || ''
+        });
+      }
+      return result;
     } catch (error) {
       return {
         ok: false,

@@ -79,6 +79,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(mainAgentServicesSource, /createAgentToolSmokeTestRuntime/);
       assert.match(mainSource, /registerAgentIpc/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.DEVELOPER_TEST_TOOLS/);
+      assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.DEVELOPER_CONTEXT_PREVIEW/);
       assert.match(logHandlersSource, /agentToolSmokeTestRuntime\.runTool/);
       assert.match(logHandlersSource, /normalizedPayload\?\.toolName/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_LIST_REQUESTS/);
@@ -87,6 +88,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(agentChatHandlerSource, /clientRequestId/);
       assert.match(agentChatHandlerSource, /request_id:/);
       assert.match(preloadSource, /agentDeveloperTestTools:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.DEVELOPER_TEST_TOOLS, payload\)/);
+      assert.match(preloadSource, /agentDeveloperContextPreview:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.DEVELOPER_CONTEXT_PREVIEW, payload\)/);
       assert.match(preloadSource, /agentLogsListRequests:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.LOGS_LIST_REQUESTS\)/);
       assert.match(preloadSource, /agentLogsReplay:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.LOGS_REPLAY, payload\)/);
       assert.match(preloadSource, /onAgentProgress:\s*\(handler\)\s*=>\s*\{/);

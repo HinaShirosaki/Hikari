@@ -7,8 +7,9 @@ const {
   hydrateSamplesRootFromStoragePath,
   hydrateSnapshotFromBundle
 } = require('./storage-hydration');
+const { transformPaperRecordsToMarkdown } = require('../paper-markdown-import');
 const { collectManifestEntries, isBundleCandidateName, isSqliteBundleCandidateName, looksLikeEnanaSnapshot, normalizeBundleSummary, STORAGE_MANIFEST_FILE_NAME, toPosixRelative } = require('./storage-manifest');
-const { getBundlePaths, getBundlePathsFromSqlitePath, resolveProtocolBundlePaths, SAMPLES_FILE_NAME, SAMPLES_ROOT_FOLDER_NAME } = require('./storage-paths');
+const { getBundlePaths, getBundlePathsFromSqlitePath, resolveProtocolBundlePaths, resolveStorageRootLayout, SAMPLES_FILE_NAME, SAMPLES_ROOT_FOLDER_NAME } = require('./storage-paths');
 const { summarizeSequenceLibrary } = require('./sequence-library-summary');
 const { importWorkflowRoot, resolveWorkflowStoragePaths } = require('./workflow-storage');
 const { asArray, cleanText, ensureObject, parseJsonObject, readJsonFile } = require('./storage-utils');
@@ -115,6 +116,10 @@ async function importStorageRoot({ storagePath = '' } = {}) {
   if (!storageStat.isDirectory()) {
     throw new Error('Storage path must be a directory.');
   }
+  const storageLayout = resolveStorageRootLayout({ storagePath: resolvedStoragePath });
+  if (storageLayout.paperMarkdownRootPath) {
+    await fs.mkdir(storageLayout.paperMarkdownRootPath, { recursive: true });
+  }
 
   const warnings = [];
   const dirEntries = await fs.readdir(resolvedStoragePath, { withFileTypes: true });
@@ -174,6 +179,8 @@ async function importStorageRoot({ storagePath = '' } = {}) {
   const workflowMap = new Map();
   const paperMap = new Map();
   const paperExperimentLinkMap = new Map();
+  const assayMap = new Map();
+  const gelAnalysisMap = new Map();
   const chemicalMap = new Map();
   const inventoryZoneMap = new Map();
   const blockMap = new Map();
@@ -181,6 +188,64 @@ async function importStorageRoot({ storagePath = '' } = {}) {
   let locationCodeMap = {};
   let locationCodeNextByLocation = {};
   const bundleSummaries = [];
+
+  function mergeHydratedSnapshot(hydratedSnapshot) {
+    const source = ensureObject(hydratedSnapshot);
+    mergeByIdMap(projectMap, source.projects, 'project');
+    mergeByIdMap(protocolMap, source.protocols, 'protocol');
+    mergeByIdMap(notebookMap, source.notebookEntries, 'notebook');
+    mergeByIdMap(sampleMap, source.samples, 'sample');
+    mergeByIdMap(workflowTemplateMap, source.workflowTemplates, 'workflow_template');
+    mergeByIdMap(workflowMap, source.workflows, 'workflow');
+    mergeByIdMap(paperMap, source.papers, 'paper');
+    mergePaperExperimentLinks(paperExperimentLinkMap, source.paperExperimentLinks);
+    mergeByIdMap(assayMap, source.assays, 'assay');
+    mergeByIdMap(gelAnalysisMap, source.gelAnalyses, 'gel');
+    mergeByIdMap(chemicalMap, ensureObject(source.labInventory).chemicals, 'chemical');
+    mergeInventoryMap(inventoryZoneMap, source.inventory);
+
+    asArray(ensureObject(source.labInventory).blocks).forEach((block, index) => {
+      const normalizedBlock = ensureObject(block);
+      const blockKey = cleanText(normalizedBlock.hash, 240)
+        || `${cleanText(normalizedBlock.index, 40)}_${cleanText(normalizedBlock.timestamp, 120)}_${index}`;
+      blockMap.set(blockKey, normalizedBlock);
+    });
+    lastLocationNumber = Math.max(
+      lastLocationNumber,
+      Number(ensureObject(source.labInventory).lastLocationNumber) || 0
+    );
+    locationCodeMap = {
+      ...locationCodeMap,
+      ...ensureObject(ensureObject(source.labInventory).locationCodeMap)
+    };
+    locationCodeNextByLocation = {
+      ...locationCodeNextByLocation,
+      ...ensureObject(ensureObject(source.labInventory).locationCodeNextByLocation)
+    };
+  }
+
+  const rootBundlePaths = getBundlePaths({ storagePath: resolvedStoragePath });
+  const rootHydrated = await hydrateSnapshotFromBundle({
+    snapshot: { settings: { storagePath: resolvedStoragePath } },
+    bundlePaths: rootBundlePaths
+  });
+  const rootHydratedSnapshot = ensureObject(rootHydrated.snapshot);
+  const rootSummary = normalizeBundleSummary(rootHydratedSnapshot);
+  if (Object.values(rootSummary).some((value) => Number(value) > 0)) {
+    mergeHydratedSnapshot(rootHydratedSnapshot);
+    bundleSummaries.push({
+      bundle_type: 'storage_root',
+      data_file_path: '',
+      bundle_paths: {
+        protocols_path: toPosixRelative(resolvedStoragePath, rootHydrated.bundlePaths.protocolsPath),
+        notebook_pages_path: '',
+        samples_path: toPosixRelative(resolvedStoragePath, rootHydrated.bundlePaths.samplesPath),
+        sqlite_path: toPosixRelative(resolvedStoragePath, rootHydrated.bundlePaths.sqlitePath)
+      },
+      counts: rootSummary,
+      migration: rootHydrated.migration || null
+    });
+  }
 
   for (const candidate of candidateFiles) {
     const candidatePath = candidate.path;
@@ -222,35 +287,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     });
     const hydratedSnapshot = ensureObject(hydrated.snapshot);
     const summary = normalizeBundleSummary(hydratedSnapshot);
-    mergeByIdMap(projectMap, hydratedSnapshot.projects, 'project');
-    mergeByIdMap(protocolMap, hydratedSnapshot.protocols, 'protocol');
-    mergeByIdMap(notebookMap, hydratedSnapshot.notebookEntries, 'notebook');
-    mergeByIdMap(sampleMap, hydratedSnapshot.samples, 'sample');
-    mergeByIdMap(workflowTemplateMap, hydratedSnapshot.workflowTemplates, 'workflow_template');
-    mergeByIdMap(workflowMap, hydratedSnapshot.workflows, 'workflow');
-    mergeByIdMap(paperMap, hydratedSnapshot.papers, 'paper');
-    mergePaperExperimentLinks(paperExperimentLinkMap, hydratedSnapshot.paperExperimentLinks);
-    mergeByIdMap(chemicalMap, ensureObject(hydratedSnapshot.labInventory).chemicals, 'chemical');
-    mergeInventoryMap(inventoryZoneMap, hydratedSnapshot.inventory);
-
-    asArray(ensureObject(hydratedSnapshot.labInventory).blocks).forEach((block, index) => {
-      const normalizedBlock = ensureObject(block);
-      const blockKey = cleanText(normalizedBlock.hash, 240)
-        || `${cleanText(normalizedBlock.index, 40)}_${cleanText(normalizedBlock.timestamp, 120)}_${index}`;
-      blockMap.set(blockKey, normalizedBlock);
-    });
-    lastLocationNumber = Math.max(
-      lastLocationNumber,
-      Number(ensureObject(hydratedSnapshot.labInventory).lastLocationNumber) || 0
-    );
-    locationCodeMap = {
-      ...locationCodeMap,
-      ...ensureObject(ensureObject(hydratedSnapshot.labInventory).locationCodeMap)
-    };
-    locationCodeNextByLocation = {
-      ...locationCodeNextByLocation,
-      ...ensureObject(ensureObject(hydratedSnapshot.labInventory).locationCodeNextByLocation)
-    };
+    mergeHydratedSnapshot(hydratedSnapshot);
 
     bundleSummaries.push({
       bundle_type: candidate.kind,
@@ -299,6 +336,8 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     workflows: [...workflowMap.values()],
     papers: [...paperMap.values()],
     paperExperimentLinks: [...paperExperimentLinkMap.values()],
+    assays: [...assayMap.values()],
+    gelAnalyses: [...gelAnalysisMap.values()],
     labInventory: {
       chemicals: [...chemicalMap.values()],
       blocks: mergedBlocks,
@@ -323,6 +362,14 @@ async function importStorageRoot({ storagePath = '' } = {}) {
   statePatch.samples = [...sampleMap.values()];
   statePatch.papers = [...paperMap.values()];
   statePatch.paperExperimentLinks = [...paperExperimentLinkMap.values()];
+  statePatch.assays = [...assayMap.values()];
+  statePatch.gelAnalyses = [...gelAnalysisMap.values()];
+
+  const paperMarkdown = await transformPaperRecordsToMarkdown({
+    storagePath: resolvedStoragePath,
+    papers: statePatch.papers,
+    source: 'storage_import'
+  });
 
   const sequenceLibrary = await summarizeSequenceLibrary(resolvedStoragePath);
   const workflowPaths = resolveWorkflowStoragePaths(resolvedStoragePath);
@@ -331,7 +378,8 @@ async function importStorageRoot({ storagePath = '' } = {}) {
   const allWarnings = warnings
     .concat(asArray(projectRoot?.warnings))
     .concat(asArray(samplesRoot?.warnings))
-    .concat(asArray(workflowRoot?.warnings));
+    .concat(asArray(workflowRoot?.warnings))
+    .concat(asArray(paperMarkdown?.warnings));
   const summary = {
     bundles: bundleSummaries.length,
     protocols: statePatch.protocols.length,
@@ -340,10 +388,15 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     workflowTemplates: statePatch.workflowTemplates.length,
     workflows: statePatch.workflows.length,
     papers: statePatch.papers.length,
+    assays: statePatch.assays.length,
+    gelAnalyses: statePatch.gelAnalyses.length,
     chemicals: statePatch.labInventory.chemicals.length,
     personalInventoryContainers: Object.values(statePatch.inventory)
       .reduce((sum, list) => sum + asArray(list).length, 0),
-    sequenceEntries: Number(sequenceLibrary.entryCount) || 0
+    sequenceEntries: Number(sequenceLibrary.entryCount) || 0,
+    paperMarkdownTransformed: Number(paperMarkdown?.transformed) || 0,
+    paperMarkdownSkipped: Number(paperMarkdown?.skipped) || 0,
+    paperMarkdownFailed: Number(paperMarkdown?.failed) || 0
   };
 
   const discoveredFiles = await collectManifestEntries(resolvedStoragePath, 3);
@@ -370,6 +423,12 @@ async function importStorageRoot({ storagePath = '' } = {}) {
       relative_root_path: toPosixRelative(resolvedStoragePath, samplesRootPath),
       relative_samples_json_path: toPosixRelative(resolvedStoragePath, samplesJsonPath),
       samples: statePatch.samples.length
+    },
+    paper_markdown_storage: {
+      relative_root_path: 'KnowledgeBase/papers.md',
+      transformed: Number(paperMarkdown?.transformed) || 0,
+      skipped: Number(paperMarkdown?.skipped) || 0,
+      failed: Number(paperMarkdown?.failed) || 0
     },
     sequence_library: {
       relative_path: toPosixRelative(resolvedStoragePath, sequenceLibrary.path),
