@@ -4,6 +4,7 @@ const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 const { Buffer } = require('node:buffer');
 const { buildPdfMarkdownFromExtraction } = require('../../main/pdf-to-md.js');
+const { joinTextItems, stripRunningHeadersAndFooters } = require('../../main/pdf-text-layout.js');
 
 const PDF_TEXT_EXTRACTION_ACTIONS = Object.freeze({
   EXTRACT: 'extract'
@@ -214,36 +215,6 @@ function normalizePageRange(rawStart, rawEnd, totalPages) {
   const start = normalizeInteger(rawStart, 1, { min: 1, max: total });
   const end = normalizeInteger(rawEnd, total, { min: start, max: total });
   return { start, end };
-}
-
-function joinTextItems(items) {
-  if (!Array.isArray(items) || !items.length) {
-    return '';
-  }
-  const lines = [];
-  let currentLine = '';
-  items.forEach((item) => {
-    if (!item) {
-      return;
-    }
-    const str = typeof item.str === 'string' ? item.str : '';
-    if (str) {
-      currentLine = currentLine ? `${currentLine}${str}` : str;
-    }
-    if (item.hasEOL) {
-      lines.push(currentLine);
-      currentLine = '';
-    } else if (str && !str.endsWith(' ')) {
-      currentLine = `${currentLine} `;
-    }
-  });
-  if (currentLine.trim()) {
-    lines.push(currentLine);
-  }
-  return lines
-    .map((line) => line.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-    .join('\n');
 }
 
 function normalizeSectionLabel(rawLabel) {
@@ -792,7 +763,15 @@ function createPdfTextExtractionRuntime(deps = {}) {
       }
 
       const truncatedByPageLimit = lastTargetPage < end;
-      const fullText = textChunks.join('\n\n');
+      const cleanedPages = stripRunningHeadersAndFooters(internalPages);
+      if (cleanedPages !== internalPages) {
+        internalPages.length = 0;
+        internalPages.push(...cleanedPages);
+      }
+      const fullText = internalPages
+        .map((page) => String(page.text || ''))
+        .filter(Boolean)
+        .join('\n\n');
 
       let sections = [];
       let sectionsSource = '';

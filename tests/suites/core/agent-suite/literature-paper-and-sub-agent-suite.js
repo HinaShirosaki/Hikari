@@ -1502,7 +1502,9 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       });
       assert.match(markdown, /^# Engineered MAPK Study/m);
       assert.match(markdown, /DOI: 10\.1000\/mapk/);
-      assert.match(markdown, /### Page 1/);
+      // Sections cover the body, so the redundant Pages dump is dropped by default.
+      assert.match(markdown, /### Abstract \(p\. 1\)/);
+      assert.doesNotMatch(markdown, /^## Pages/m);
 
       const runtime = pdfTextExtraction.createPdfTextExtractionRuntime({
         pdfJsLib: {
@@ -1616,6 +1618,218 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       assert.match(sectionMarkdown, /### Results \(p\. 1\)/);
       assert.match(sectionMarkdown, /First result sentence continues as one paragraph\./);
       assert.doesNotMatch(sectionMarkdown, /^## Pages/m);
+    });
+
+    test('pdf joinTextItems merges position-adjacent items without inserting stray ligature spaces', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      // Three text items on the same baseline whose x-ranges touch — the old
+      // joiner would insert a space between each ("con fi rmed"); the new joiner
+      // should merge them into a single word.
+      const items = [
+        { str: 'con', transform: [1, 0, 0, 1, 10, 100], width: 15, height: 10 },
+        { str: 'fi', transform: [1, 0, 0, 1, 25, 100], width: 5, height: 10 },
+        { str: 'rmed', transform: [1, 0, 0, 1, 30, 100], width: 20, height: 10, hasEOL: true }
+      ];
+      const text = pdfTextLayout.joinTextItems(items);
+      assert.equal(text, 'confirmed');
+    });
+
+    test('pdf joinTextItems inserts spaces between items separated by a font-sized gap', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const items = [
+        { str: 'alpha', transform: [1, 0, 0, 1, 10, 100], width: 30, height: 10 },
+        { str: 'beta', transform: [1, 0, 0, 1, 50, 100], width: 25, height: 10, hasEOL: true }
+      ];
+      const text = pdfTextLayout.joinTextItems(items);
+      assert.equal(text, 'alpha beta');
+    });
+
+    test('pdf joinTextItems emits a markdown table when a Table caption is followed by aligned rows', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      // Lines are differentiated by y. Within each line, items at consistent
+      // x-positions form columns separated by gaps larger than 2x the font size.
+      const fontSize = 10;
+      const makeLine = (y, items) => items.map((item, idx) => ({
+        str: item.str,
+        transform: [1, 0, 0, 1, item.x, y],
+        width: item.width,
+        height: fontSize,
+        hasEOL: idx === items.length - 1
+      }));
+      const items = [
+        ...makeLine(200, [{ str: 'Table 1. Yields by ligand', x: 50, width: 120 }]),
+        ...makeLine(180, [
+          { str: 'Entry', x: 50, width: 25 },
+          { str: 'Ligand', x: 150, width: 35 },
+          { str: 'Yield', x: 250, width: 25 }
+        ]),
+        ...makeLine(165, [
+          { str: '1', x: 50, width: 8 },
+          { str: 'bipy', x: 150, width: 25 },
+          { str: '95%', x: 250, width: 25 }
+        ]),
+        ...makeLine(150, [
+          { str: '2', x: 50, width: 8 },
+          { str: 'phen', x: 150, width: 25 },
+          { str: '72%', x: 250, width: 25 }
+        ]),
+        ...makeLine(120, [{ str: 'Narrative text follows.', x: 50, width: 100 }])
+      ];
+      const text = pdfTextLayout.joinTextItems(items);
+      assert.match(text, /^Table 1\. Yields by ligand$/m);
+      assert.match(text, /^\| Entry \| Ligand \| Yield \|$/m);
+      assert.match(text, /^\| --- \| --- \| --- \|$/m);
+      assert.match(text, /^\| 1 \| bipy \| 95% \|$/m);
+      assert.match(text, /^\| 2 \| phen \| 72% \|$/m);
+      assert.match(text, /^Narrative text follows\.$/m);
+    });
+
+    test('pdf joinTextItems reconstructs a markdown table when the header wraps across multiple lines', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const fontSize = 10;
+      const mk = (y, list) => list.map((item, idx) => ({
+        str: item.str,
+        transform: [1, 0, 0, 1, item.x, y],
+        width: item.width,
+        height: fontSize,
+        hasEOL: idx === list.length - 1
+      }));
+      const items = [
+        ...mk(300, [{ str: 'Table 1 | Design of CRBN constructs', x: 50, width: 200 }]),
+        // Header line 1 — five columns including hyphen-wrapped column names.
+        ...mk(280, [
+          { str: 'Construct ID', x: 50, width: 40 },
+          { str: 'N-terminal resi-', x: 150, width: 50 },
+          { str: 'Linker', x: 250, width: 25 },
+          { str: 'C-terminal resi-', x: 350, width: 50 },
+          { str: 'Mutations', x: 450, width: 40 }
+        ]),
+        // Header line 2 — wrapped continuations of columns 2 and 4.
+        ...mk(270, [
+          { str: 'due range', x: 150, width: 35 },
+          { str: 'due range', x: 350, width: 35 }
+        ]),
+        ...mk(255, [
+          { str: '1', x: 50, width: 5 },
+          { str: '41–187', x: 150, width: 30 },
+          { str: 'GSG', x: 250, width: 15 },
+          { str: '249–426', x: 350, width: 30 },
+          { str: '–', x: 450, width: 5 }
+        ]),
+        ...mk(240, [
+          { str: '6', x: 50, width: 5 },
+          { str: '41–187', x: 150, width: 30 },
+          { str: 'GSG', x: 250, width: 15 },
+          { str: '249–426', x: 350, width: 30 },
+          { str: 'T58S, I92V, K116N,', x: 450, width: 75 }
+        ]),
+        // Mutations column wraps onto a continuation line aligned with the last column.
+        ...mk(230, [{ str: 'C366K, S410R, L423I', x: 450, width: 80 }]),
+        ...mk(215, [
+          { str: '15', x: 50, width: 10 },
+          { str: '44–185', x: 150, width: 30 },
+          { str: 'GGSSGGSSG', x: 250, width: 50 },
+          { str: '321–427', x: 350, width: 30 },
+          { str: 'C366S', x: 450, width: 25 }
+        ]),
+        ...mk(190, [{ str: 'Narrative text follows.', x: 50, width: 100 }])
+      ];
+      const text = pdfTextLayout.joinTextItems(items);
+      assert.match(text, /^Table 1 \| Design of CRBN constructs$/m);
+      // Wrapped headers de-hyphenated into single column titles.
+      assert.match(text, /^\| Construct ID \| N-terminal residue range \| Linker \| C-terminal residue range \| Mutations \|$/m);
+      assert.match(text, /^\| --- \| --- \| --- \| --- \| --- \|$/m);
+      assert.match(text, /^\| 1 \| 41–187 \| GSG \| 249–426 \| – \|$/m);
+      // Continuation row merged into the previous row's last cell.
+      assert.match(text, /^\| 6 \| 41–187 \| GSG \| 249–426 \| T58S, I92V, K116N, C366K, S410R, L423I \|$/m);
+      assert.match(text, /^\| 15 \| 44–185 \| GGSSGGSSG \| 321–427 \| C366S \|$/m);
+      assert.match(text, /^Narrative text follows\.$/m);
+    });
+
+    test('pdf-text-layout strips running headers/footers that repeat at the same head/tail position across pages', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const footer = (n) => [
+        'ACS Central Science Research Article',
+        'https://doi.org/10.1021/foo',
+        `ACS Cent. Sci. 2023, 9, ${n}`,
+        String(n)
+      ].join('\n');
+      const pages = [
+        { page_number: 1, text: `Body line one\nBody line two\n${footer(648)}` },
+        { page_number: 2, text: `Continued body line\nMore content\n${footer(649)}` },
+        { page_number: 3, text: `Another body line\n${footer(650)}` }
+      ];
+      const stripped = pdfTextLayout.stripRunningHeadersAndFooters(pages);
+      assert.equal(stripped.length, 3);
+      for (const page of stripped) {
+        assert.doesNotMatch(page.text, /ACS Central Science Research Article/);
+        assert.doesNotMatch(page.text, /https:\/\/doi\.org/);
+        assert.doesNotMatch(page.text, /ACS Cent\. Sci\./);
+        assert.doesNotMatch(page.text, /^\d+$/m);
+      }
+      assert.match(stripped[0].text, /Body line one/);
+      assert.match(stripped[1].text, /Continued body line/);
+      assert.match(stripped[2].text, /Another body line/);
+    });
+
+    test('pdf-text-layout leaves pages untouched when fewer than three repetitions are found', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const pages = [
+        { page_number: 1, text: 'Body one\nRepeated footer\n1' },
+        { page_number: 2, text: 'Body two\nRepeated footer\n2' }
+      ];
+      const stripped = pdfTextLayout.stripRunningHeadersAndFooters(pages);
+      assert.deepStrictEqual(stripped, pages);
+    });
+
+    test('pdf-to-md drops the redundant Pages dump by default when sections cover the body', () => {
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
+        metadata: { title: 'Paper with sections' },
+        extraction: {
+          ok: true,
+          page_count: 1,
+          pages: [{ page_number: 1, text: 'Methods\nWe used X.' }],
+          sections: [{ label: 'Methods', start_page: 1, end_page: 1, text: 'We used X.' }]
+        }
+      });
+      assert.match(markdown, /## Sections/);
+      assert.doesNotMatch(markdown, /^## Pages/m);
+    });
+
+    test('pdf-to-md still emits Pages when explicitly requested even with sections present', () => {
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
+        metadata: { title: 'Paper with sections' },
+        extraction: {
+          ok: true,
+          page_count: 1,
+          pages: [{ page_number: 1, text: 'Methods\nWe used X.' }],
+          sections: [{ label: 'Methods', start_page: 1, end_page: 1, text: 'We used X.' }]
+        },
+        includePages: true
+      });
+      assert.match(markdown, /## Sections/);
+      assert.match(markdown, /## Pages/);
+    });
+
+    test('pdf-to-md formatMarkdownBodyText preserves markdown tables across paragraph joining', () => {
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const input = [
+        'Intro paragraph that',
+        'wraps across two lines.',
+        '',
+        '| Entry | Yield |',
+        '| --- | --- |',
+        '| 1 | 95% |',
+        '| 2 | 72% |',
+        '',
+        'Closing sentence.'
+      ].join('\n');
+      const formatted = pdfToMd.formatMarkdownBodyText(input);
+      assert.match(formatted, /Intro paragraph that wraps across two lines\./);
+      assert.match(formatted, /\| Entry \| Yield \|\n\| --- \| --- \|\n\| 1 \| 95% \|\n\| 2 \| 72% \|/);
+      assert.match(formatted, /Closing sentence\./);
     });
 
     test('paper markdown import helper updates imported paper records with knowledge markdown paths', async () => {

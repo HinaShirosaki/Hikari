@@ -2,6 +2,7 @@
 
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
+const { isMarkdownTableLine } = require('./pdf-text-layout.js');
 
 const PDF_TO_MD_FORMAT = 'hikari-pdf-to-md-v1';
 const DEFAULT_MAX_SECTION_CHARS = 60000;
@@ -153,7 +154,9 @@ function formatMarkdownBodyText(value = '') {
   const lines = String(value || '').split(/\r?\n/);
   const paragraphs = [];
   let current = '';
-  const flush = () => {
+  let tableBuffer = [];
+
+  const flushParagraph = () => {
     const text = current.trim();
     if (text) {
       paragraphs.push(text);
@@ -161,21 +164,37 @@ function formatMarkdownBodyText(value = '') {
     current = '';
   };
 
+  const flushTable = () => {
+    if (tableBuffer.length) {
+      paragraphs.push(tableBuffer.join('\n'));
+      tableBuffer = [];
+    }
+  };
+
   lines.forEach((rawLine) => {
+    if (isMarkdownTableLine(rawLine)) {
+      flushParagraph();
+      tableBuffer.push(rawLine.trim());
+      return;
+    }
+    if (tableBuffer.length) {
+      flushTable();
+    }
     const line = normalizeBodyLine(rawLine);
     if (!line) {
-      flush();
+      flushParagraph();
       return;
     }
     if (shouldBreakBeforeLine(line, current)) {
-      flush();
+      flushParagraph();
     }
     current = appendBodyLine(current, line);
     if (shouldBreakAfterLine(line, current)) {
-      flush();
+      flushParagraph();
     }
   });
-  flush();
+  flushParagraph();
+  flushTable();
   return paragraphs.join('\n\n');
 }
 
@@ -270,7 +289,7 @@ function buildPdfMarkdownFromExtraction({
   transformedAt = '',
   maxSectionChars = DEFAULT_MAX_SECTION_CHARS,
   maxPageChars = DEFAULT_MAX_PAGE_CHARS,
-  includePages = true
+  includePages
 } = {}) {
   const normalizedExtraction = ensureObject(extraction);
   const normalizedMetadata = normalizePdfMarkdownMetadata({
@@ -281,7 +300,10 @@ function buildPdfMarkdownFromExtraction({
   const title = normalizeMarkdownHeading(normalizedMetadata.title);
   const authors = normalizedMetadata.authors.length ? normalizedMetadata.authors.join(', ') : '-';
   const sectionMarkdown = buildSectionMarkdown(normalizedExtraction.sections, maxSectionChars);
-  const pageMarkdown = includePages ? buildPageMarkdown(normalizedExtraction.pages, maxPageChars) : '';
+  const resolvedIncludePages = typeof includePages === 'boolean'
+    ? includePages
+    : !sectionMarkdown;
+  const pageMarkdown = resolvedIncludePages ? buildPageMarkdown(normalizedExtraction.pages, maxPageChars) : '';
   const rawText = !sectionMarkdown && !pageMarkdown
     ? formatMarkdownBodyText(limitBlock(extractedText || normalizedExtraction.text, maxSectionChars))
     : '';
@@ -302,7 +324,7 @@ function buildPdfMarkdownFromExtraction({
     '',
     sectionMarkdown || '- No section headings were detected.',
   ];
-  if (includePages) {
+  if (resolvedIncludePages) {
     parts.push('', '## Pages', '', pageMarkdown || rawText || '- No extractable page text was found.');
   } else if (!sectionMarkdown) {
     parts.push('', '## Text', '', rawText || '- No extractable text was found.');

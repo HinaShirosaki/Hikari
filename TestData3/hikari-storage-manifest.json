@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_storage_manifest",
   "schema_version": "1.0.0",
-  "generated_at": "2026-05-11T19:59:31.690Z",
+  "generated_at": "2026-05-12T14:52:34.643Z",
   "root_path": "/Users/shiyifan/Projects/Enana/TestData3",
   "discovered_files": [
     {
@@ -219,14 +219,14 @@
       "type": "file",
       "role": "chemical_inventory_index",
       "size_bytes": 24576,
-      "modified_at": "2026-05-11T19:51:50.183Z"
+      "modified_at": "2026-05-12T01:32:56.907Z"
     },
     {
       "relative_path": "hikari-storage-manifest.json",
       "type": "file",
       "role": "storage_manifest",
-      "size_bytes": 49432,
-      "modified_at": "2026-05-11T19:51:49.768Z"
+      "size_bytes": 55767,
+      "modified_at": "2026-05-12T01:32:26.049Z"
     },
     {
       "relative_path": "KnowledgeBase",
@@ -239,22 +239,22 @@
       "relative_path": "KnowledgeBase/index.json",
       "type": "file",
       "role": "paper_knowledge_json_index",
-      "size_bytes": 3378,
-      "modified_at": "2026-05-11T19:56:10.020Z"
+      "size_bytes": 6327,
+      "modified_at": "2026-05-12T14:52:34.633Z"
     },
     {
       "relative_path": "KnowledgeBase/knowledge.index.sqlite",
       "type": "file",
       "role": "paper_knowledge_index",
       "size_bytes": 61440,
-      "modified_at": "2026-05-11T19:56:10.020Z"
+      "modified_at": "2026-05-12T14:52:34.632Z"
     },
     {
       "relative_path": "KnowledgeBase/papers.md",
       "type": "directory",
       "role": "paper_markdown_root",
       "size_bytes": 0,
-      "modified_at": "2026-05-11T19:55:10.050Z"
+      "modified_at": "2026-05-12T14:52:34.627Z"
     },
     {
       "relative_path": "KnowledgeBase/papers.md/10.1007_s12072-022-10437-1",
@@ -341,6 +341,34 @@
       "modified_at": "2026-05-11T19:55:09.828Z"
     },
     {
+      "relative_path": "KnowledgeBase/papers.md/A_gasdermin-based_life–death_evolution_system_for_reprogramming_protease_specificity",
+      "type": "directory",
+      "role": "paper_knowledge_artifact",
+      "size_bytes": 0,
+      "modified_at": "2026-05-12T01:32:54.860Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/A_gasdermin-based_life–death_evolution_system_for_reprogramming_protease_specificity/extracted.txt",
+      "type": "file",
+      "role": "paper_knowledge_extracted_text",
+      "size_bytes": 91446,
+      "modified_at": "2026-05-12T01:32:54.856Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/A_gasdermin-based_life–death_evolution_system_for_reprogramming_protease_specificity/meta.json",
+      "type": "file",
+      "role": "paper_knowledge_metadata",
+      "size_bytes": 976,
+      "modified_at": "2026-05-12T01:32:54.860Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/A_gasdermin-based_life–death_evolution_system_for_reprogramming_protease_specificity/paper.md",
+      "type": "file",
+      "role": "paper_knowledge_markdown",
+      "size_bytes": 91577,
+      "modified_at": "2026-05-12T01:32:54.858Z"
+    },
+    {
       "relative_path": "KnowledgeBase/papers.md/adams-et-al-2023-stretching-peptides-to-generate-small-molecule-%CE%B2-strand-mimics",
       "type": "directory",
       "role": "paper_knowledge_artifact",
@@ -367,6 +395,62 @@
       "role": "paper_knowledge_markdown",
       "size_bytes": 53943,
       "modified_at": "2026-05-11T19:56:10.019Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/anie202300691-sup-0001-misc_information",
+      "type": "directory",
+      "role": "paper_knowledge_artifact",
+      "size_bytes": 0,
+      "modified_at": "2026-05-11T19:59:48.628Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/anie202300691-sup-0001-misc_information/extracted.txt",
+      "type": "file",
+      "role": "paper_knowledge_extracted_text",
+      "size_bytes": 139850,
+      "modified_at": "2026-05-11T19:59:48.623Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/anie202300691-sup-0001-misc_information/meta.json",
+      "type": "file",
+      "role": "paper_knowledge_metadata",
+      "size_bytes": 823,
+      "modified_at": "2026-05-11T19:59:48.629Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/anie202300691-sup-0001-misc_information/paper.md",
+      "type": "file",
+      "role": "paper_knowledge_markdown",
+      "size_bytes": 205426,
+      "modified_at": "2026-05-11T19:59:48.626Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/Design_of_a_Cereblon_construct_for_crystallographic_and_biophysical_studies_of_protein_degraders",
+      "type": "directory",
+      "role": "paper_knowledge_artifact",
+      "size_bytes": 0,
+      "modified_at": "2026-05-12T14:52:34.633Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/Design_of_a_Cereblon_construct_for_crystallographic_and_biophysical_studies_of_protein_degraders/extracted.txt",
+      "type": "file",
+      "role": "paper_knowledge_extracted_text",
+      "size_bytes": 85237,
+      "modified_at": "2026-05-12T14:52:34.628Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/Design_of_a_Cereblon_construct_for_crystallographic_and_biophysical_studies_of_protein_degraders/meta.json",
+      "type": "file",
+      "role": "paper_knowledge_metadata",
+      "size_bytes": 1006,
+      "modified_at": "2026-05-12T14:52:34.633Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/Design_of_a_Cereblon_construct_for_crystallographic_and_biophysical_studies_of_protein_degraders/paper.md",
+      "type": "file",
+      "role": "paper_knowledge_markdown",
+      "size_bytes": 85367,
+      "modified_at": "2026-05-12T14:52:34.631Z"
     },
     {
       "relative_path": "KnowledgeBase/papers.md/Diverse_organic_molecules_on_Mars_revealed_by_the_first_SAM_TMAH_experiment",
@@ -423,6 +507,90 @@
       "role": "paper_knowledge_markdown",
       "size_bytes": 28371,
       "modified_at": "2026-05-11T19:56:09.751Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41467-024-52871-9",
+      "type": "directory",
+      "role": "paper_knowledge_artifact",
+      "size_bytes": 0,
+      "modified_at": "2026-05-12T01:32:54.302Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41467-024-52871-9/extracted.txt",
+      "type": "file",
+      "role": "paper_knowledge_extracted_text",
+      "size_bytes": 85237,
+      "modified_at": "2026-05-12T01:32:54.298Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41467-024-52871-9/meta.json",
+      "type": "file",
+      "role": "paper_knowledge_metadata",
+      "size_bytes": 772,
+      "modified_at": "2026-05-12T01:32:54.302Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41467-024-52871-9/paper.md",
+      "type": "file",
+      "role": "paper_knowledge_markdown",
+      "size_bytes": 85289,
+      "modified_at": "2026-05-12T01:32:54.300Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41589_025_02063_3",
+      "type": "directory",
+      "role": "paper_knowledge_artifact",
+      "size_bytes": 0,
+      "modified_at": "2026-05-12T01:32:28.527Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41589_025_02063_3/extracted.txt",
+      "type": "file",
+      "role": "paper_knowledge_extracted_text",
+      "size_bytes": 91446,
+      "modified_at": "2026-05-12T01:32:28.522Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41589_025_02063_3/meta.json",
+      "type": "file",
+      "role": "paper_knowledge_metadata",
+      "size_bytes": 772,
+      "modified_at": "2026-05-12T01:32:28.527Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41589_025_02063_3/paper.md",
+      "type": "file",
+      "role": "paper_knowledge_markdown",
+      "size_bytes": 91509,
+      "modified_at": "2026-05-12T01:32:28.524Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41589-025-02063-3",
+      "type": "directory",
+      "role": "paper_knowledge_artifact",
+      "size_bytes": 0,
+      "modified_at": "2026-05-11T20:00:39.225Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41589-025-02063-3/extracted.txt",
+      "type": "file",
+      "role": "paper_knowledge_extracted_text",
+      "size_bytes": 93665,
+      "modified_at": "2026-05-11T20:15:59.099Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41589-025-02063-3/meta.json",
+      "type": "file",
+      "role": "paper_knowledge_metadata",
+      "size_bytes": 772,
+      "modified_at": "2026-05-11T20:15:59.125Z"
+    },
+    {
+      "relative_path": "KnowledgeBase/papers.md/s41589-025-02063-3/paper.md",
+      "type": "file",
+      "role": "paper_knowledge_markdown",
+      "size_bytes": 93730,
+      "modified_at": "2026-05-11T20:15:59.103Z"
     },
     {
       "relative_path": "KnowledgeBase/papers.md/Stretching_Peptides_to_Generate_Small_Molecule_β-Strand_Mimics",
@@ -513,14 +681,14 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 450,
-      "modified_at": "2026-05-11T19:51:50.136Z"
+      "modified_at": "2026-05-12T01:32:56.896Z"
     },
     {
       "relative_path": "Project/CD19_CAR_Binder_Optimization/Papers",
       "type": "directory",
       "role": "other",
       "size_bytes": 0,
-      "modified_at": "2026-05-11T19:49:48.294Z"
+      "modified_at": "2026-05-12T01:32:54.127Z"
     },
     {
       "relative_path": "Project/CD19_CAR_Binder_Optimization/Papers/adams-et-al-2023-stretching-peptides-to-generate-small-molecule-%CE%B2-strand-mimics.pdf",
@@ -528,6 +696,27 @@
       "role": "other",
       "size_bytes": 3317632,
       "modified_at": "2026-05-11T19:49:48.296Z"
+    },
+    {
+      "relative_path": "Project/CD19_CAR_Binder_Optimization/Papers/anie202300691-sup-0001-misc_information.pdf",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 11085098,
+      "modified_at": "2026-05-11T19:59:47.762Z"
+    },
+    {
+      "relative_path": "Project/CD19_CAR_Binder_Optimization/Papers/s41467-024-52871-9.pdf",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 2399829,
+      "modified_at": "2026-05-12T01:32:54.133Z"
+    },
+    {
+      "relative_path": "Project/CD19_CAR_Binder_Optimization/Papers/s41589-025-02063-3.pdf",
+      "type": "file",
+      "role": "other",
+      "size_bytes": 14933782,
+      "modified_at": "2026-05-11T20:00:38.715Z"
     },
     {
       "relative_path": "Project/PD-1_Nanobody_Binder_Discovery",
@@ -541,7 +730,7 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 438,
-      "modified_at": "2026-05-11T19:51:50.136Z"
+      "modified_at": "2026-05-12T01:32:56.896Z"
     },
     {
       "relative_path": "Project/PD-1_Nanobody_Binder_Discovery/Notebook",
@@ -590,7 +779,7 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 455,
-      "modified_at": "2026-05-11T19:51:50.136Z"
+      "modified_at": "2026-05-12T01:32:56.896Z"
     },
     {
       "relative_path": "Project/Protein_Builder/Notebook",
@@ -667,7 +856,7 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 389,
-      "modified_at": "2026-05-11T19:51:50.137Z"
+      "modified_at": "2026-05-12T01:32:56.896Z"
     },
     {
       "relative_path": "Project/SUMO1/Notebook",
@@ -737,7 +926,7 @@
       "type": "file",
       "role": "project_memory",
       "size_bytes": 461,
-      "modified_at": "2026-05-11T19:51:50.137Z"
+      "modified_at": "2026-05-12T01:32:56.896Z"
     },
     {
       "relative_path": "Project/Untitled_Project/Notebook",
@@ -821,7 +1010,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 8700,
-      "modified_at": "2026-05-11T19:51:50.129Z"
+      "modified_at": "2026-05-12T01:32:56.889Z"
     },
     {
       "relative_path": "Protocol/BL21(DE3)_Chemical_Transformation_with_pET28a__1774024047007-d137dae96cab78",
@@ -835,7 +1024,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2529,
-      "modified_at": "2026-05-11T19:51:50.129Z"
+      "modified_at": "2026-05-12T01:32:56.889Z"
     },
     {
       "relative_path": "Protocol/IPTG-Induced_Recombinant_Protein_Expression_in_BL21(DE3)__1774024680081-6b02b28fd6d39",
@@ -849,7 +1038,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 3594,
-      "modified_at": "2026-05-11T19:51:50.130Z"
+      "modified_at": "2026-05-12T01:32:56.889Z"
     },
     {
       "relative_path": "Protocol/Ni-NTA_Purification_of_His-Tagged_Protein__1774024695073-536c18071dd0d",
@@ -863,7 +1052,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2351,
-      "modified_at": "2026-05-11T19:51:50.130Z"
+      "modified_at": "2026-05-12T01:32:56.890Z"
     },
     {
       "relative_path": "Protocol/Protein_Builder_Cloning_Assembly__protein-builder-cloning-assembly-protocol",
@@ -877,14 +1066,14 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 1698,
-      "modified_at": "2026-05-11T19:51:50.130Z"
+      "modified_at": "2026-05-12T01:32:56.890Z"
     },
     {
       "relative_path": "Protocol/protocol.index.sqlite",
       "type": "file",
       "role": "protocol_index",
-      "size_bytes": 5074944,
-      "modified_at": "2026-05-11T19:51:50.181Z"
+      "size_bytes": 671744,
+      "modified_at": "2026-05-12T01:32:56.906Z"
     },
     {
       "relative_path": "Protocol/Small-Scale_Overnight_Starter_Culture__1774024647315-74cbb18b4cc37",
@@ -898,7 +1087,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 8927,
-      "modified_at": "2026-05-11T19:51:50.131Z"
+      "modified_at": "2026-05-12T01:32:56.890Z"
     },
     {
       "relative_path": "Protocol/Soluble_TEV_Protease_Expression_in_E._coli__1777425346120-58b8924ca425c8",
@@ -912,7 +1101,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 2864,
-      "modified_at": "2026-05-11T19:51:50.131Z"
+      "modified_at": "2026-05-12T01:32:56.890Z"
     },
     {
       "relative_path": "Protocol/T4_DNA_Ligation__1776562378892-e9d8a0a7eee9c",
@@ -926,7 +1115,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 3904,
-      "modified_at": "2026-05-11T19:51:50.131Z"
+      "modified_at": "2026-05-12T01:32:56.890Z"
     },
     {
       "relative_path": "Protocol/T4_DNA_Ligation__1776562378892-e9d8a0a7eee9c/selection-insights.json",
@@ -947,7 +1136,7 @@
       "type": "file",
       "role": "protocol_record",
       "size_bytes": 21987,
-      "modified_at": "2026-05-11T19:51:50.132Z"
+      "modified_at": "2026-05-12T01:32:56.891Z"
     },
     {
       "relative_path": "Samples",
@@ -961,7 +1150,7 @@
       "type": "file",
       "role": "samples_record",
       "size_bytes": 126,
-      "modified_at": "2026-05-11T19:51:50.137Z"
+      "modified_at": "2026-05-12T01:32:56.896Z"
     },
     {
       "relative_path": "SequenceViewer",
@@ -1108,7 +1297,7 @@
       "type": "file",
       "role": "sequence_library_index",
       "size_bytes": 184320,
-      "modified_at": "2026-05-11T19:59:31.678Z"
+      "modified_at": "2026-05-12T14:52:34.403Z"
     },
     {
       "relative_path": "TestData4",
@@ -1255,7 +1444,7 @@
       "type": "file",
       "role": "workflow_template_metadata",
       "size_bytes": 923,
-      "modified_at": "2026-05-11T19:51:50.184Z"
+      "modified_at": "2026-05-12T01:32:56.908Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8",
@@ -1276,7 +1465,7 @@
       "type": "file",
       "role": "workflow_memory",
       "size_bytes": 612,
-      "modified_at": "2026-05-11T19:51:50.185Z"
+      "modified_at": "2026-05-12T01:32:56.908Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_1__1776270538561-6c07e18af542f/Notebook",
@@ -1304,7 +1493,7 @@
       "type": "file",
       "role": "workflow_run_metadata",
       "size_bytes": 7900,
-      "modified_at": "2026-05-11T19:51:50.185Z"
+      "modified_at": "2026-05-12T01:32:56.908Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_2__1778262694218-ff48770da4f03",
@@ -1318,7 +1507,7 @@
       "type": "file",
       "role": "workflow_memory",
       "size_bytes": 611,
-      "modified_at": "2026-05-11T19:51:50.187Z"
+      "modified_at": "2026-05-12T01:32:56.910Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_2__1778262694218-ff48770da4f03/Notebook",
@@ -1346,7 +1535,7 @@
       "type": "file",
       "role": "workflow_run_metadata",
       "size_bytes": 6051,
-      "modified_at": "2026-05-11T19:51:50.187Z"
+      "modified_at": "2026-05-12T01:32:56.910Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_3__1778262702714-2f5d53b25722c",
@@ -1360,7 +1549,7 @@
       "type": "file",
       "role": "workflow_memory",
       "size_bytes": 612,
-      "modified_at": "2026-05-11T19:51:50.189Z"
+      "modified_at": "2026-05-12T01:32:56.911Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/NiNTA_3__1778262702714-2f5d53b25722c/Notebook",
@@ -1388,21 +1577,21 @@
       "type": "file",
       "role": "workflow_run_metadata",
       "size_bytes": 5583,
-      "modified_at": "2026-05-11T19:51:50.189Z"
+      "modified_at": "2026-05-12T01:32:56.912Z"
     },
     {
       "relative_path": "Workflow/NiNTA__1776270512198-af3480c2ef55c8/template.json",
       "type": "file",
       "role": "workflow_template_metadata",
       "size_bytes": 2495,
-      "modified_at": "2026-05-11T19:51:50.184Z"
+      "modified_at": "2026-05-12T01:32:56.907Z"
     },
     {
       "relative_path": "Workflow/workflow-status.sqlite",
       "type": "file",
       "role": "workflow_status_index",
       "size_bytes": 53248,
-      "modified_at": "2026-05-11T19:51:50.190Z"
+      "modified_at": "2026-05-12T01:32:56.913Z"
     }
   ],
   "bundles": [
@@ -1421,7 +1610,7 @@
         "samples": 0,
         "workflowTemplates": 2,
         "workflows": 3,
-        "papers": 13,
+        "papers": 16,
         "assays": 2,
         "gelAnalyses": 1,
         "chemicals": 3,
@@ -1456,7 +1645,7 @@
         "samples": 0,
         "workflowTemplates": 2,
         "workflows": 3,
-        "papers": 13,
+        "papers": 16,
         "assays": 2,
         "gelAnalyses": 1,
         "chemicals": 3,
@@ -1491,7 +1680,7 @@
         "samples": 0,
         "workflowTemplates": 2,
         "workflows": 3,
-        "papers": 13,
+        "papers": 16,
         "assays": 2,
         "gelAnalyses": 1,
         "chemicals": 3,
@@ -1526,7 +1715,7 @@
         "samples": 0,
         "workflowTemplates": 2,
         "workflows": 3,
-        "papers": 13,
+        "papers": 16,
         "assays": 2,
         "gelAnalyses": 1,
         "chemicals": 3,
@@ -1557,7 +1746,7 @@
     "relative_status_sqlite_path": "Workflow/workflow-status.sqlite",
     "workflow_templates": 2,
     "workflows": 3,
-    "papers": 13
+    "papers": 16
   },
   "sample_storage": {
     "relative_root_path": "Samples",
@@ -1566,8 +1755,8 @@
   },
   "paper_markdown_storage": {
     "relative_root_path": "KnowledgeBase/papers.md",
-    "transformed": 0,
-    "skipped": 3,
+    "transformed": 1,
+    "skipped": 5,
     "failed": 10
   },
   "sequence_library": {
@@ -1586,14 +1775,14 @@
     "samples": 0,
     "workflowTemplates": 2,
     "workflows": 3,
-    "papers": 13,
+    "papers": 16,
     "assays": 2,
     "gelAnalyses": 1,
     "chemicals": 3,
     "personalInventoryContainers": 8,
     "sequenceEntries": 5,
-    "paperMarkdownTransformed": 0,
-    "paperMarkdownSkipped": 3,
+    "paperMarkdownTransformed": 1,
+    "paperMarkdownSkipped": 5,
     "paperMarkdownFailed": 10
   },
   "warnings": [
