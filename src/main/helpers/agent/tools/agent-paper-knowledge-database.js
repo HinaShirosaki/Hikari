@@ -542,7 +542,8 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
           extractedText,
           sourcePdfPath: source.file_path || source.filePath || source.path || '',
           sourcePdfRelativePath: source.source_pdf_relative_path || source.sourcePdfRelativePath || '',
-          transformedAt: now()
+          transformedAt: now(),
+          includePages: false
         })
       };
     }
@@ -601,7 +602,8 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
         extractedText,
         sourcePdfPath: source.file_path || source.filePath || source.path || '',
         sourcePdfRelativePath: source.source_pdf_relative_path || source.sourcePdfRelativePath || '',
-        transformedAt: now()
+        transformedAt: now(),
+        includePages: false
       }),
       warning: cleanText(llmResult?.error, 1200)
     };

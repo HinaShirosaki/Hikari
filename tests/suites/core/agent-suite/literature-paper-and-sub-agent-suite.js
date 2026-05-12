@@ -1571,6 +1571,51 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
           delete globalThis.DOMMatrix;
         }
       }
+
+      const sectionRuntime = pdfTextExtraction.createPdfTextExtractionRuntime({
+        pdfJsLib: {
+          getDocument: () => ({
+            promise: Promise.resolve({
+              numPages: 1,
+              getPage: async () => ({
+                getTextContent: async () => ({
+                  items: [
+                    { str: 'Example tagged paper', hasEOL: true },
+                    { str: 'This introductory paragraph', hasEOL: true },
+                    { str: 'wraps across PDF lines.', hasEOL: true },
+                    { str: 'Results', hasEOL: true },
+                    { str: 'First result sentence', hasEOL: true },
+                    { str: 'continues as one paragraph.', hasEOL: true },
+                    { str: 'Methods', hasEOL: true },
+                    { str: 'Cells were grown', hasEOL: true },
+                    { str: 'in culture.', hasEOL: true }
+                  ]
+                }),
+                cleanup: () => {}
+              }),
+              getOutline: async () => ([{ title: 'Example tagged paper', dest: [{}], items: [] }]),
+              getPageIndex: async () => 0,
+              destroy: async () => {}
+            })
+          })
+        }
+      });
+      const sectionResult = await sectionRuntime.extractText({
+        buffer: Buffer.from('%PDF-1.7\nfake bytes'),
+        include_sections: true
+      });
+      assert.equal(sectionResult.ok, true);
+      assert.equal(sectionResult.sections_source, 'heuristic');
+      assert.deepEqual(sectionResult.sections.map((section) => section.label), ['Front matter', 'Results', 'Methods']);
+
+      const sectionMarkdown = pdfToMd.buildPdfMarkdownFromExtraction({
+        metadata: { title: 'Example tagged paper' },
+        extraction: sectionResult,
+        includePages: false
+      });
+      assert.match(sectionMarkdown, /### Results \(p\. 1\)/);
+      assert.match(sectionMarkdown, /First result sentence continues as one paragraph\./);
+      assert.doesNotMatch(sectionMarkdown, /^## Pages/m);
     });
 
     test('paper markdown import helper updates imported paper records with knowledge markdown paths', async () => {

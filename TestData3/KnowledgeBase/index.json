@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-11T20:00:39.224Z",
+  "updated_at": "2026-05-11T20:15:59.124Z",
   "papers": [
     {
       "id": "paper-sha256-4e997d9f48125458",
@@ -50,7 +50,7 @@
       "wiki_status": "ready",
       "wiki_path": "KnowledgeBase/papers.md/s41589-025-02063-3/paper.md",
       "extraction_status": "ready",
-      "updated_at": "2026-05-11T20:00:39.222Z"
+      "updated_at": "2026-05-11T20:15:59.102Z"
     }
   ],
   "locations": [
@@ -97,12 +97,12 @@
     {
       "id": "location-d4c77debf967cd83a3e2a2d4",
       "paper_id": "paper-doi-10.1038_s41589-025-02063-3",
-      "scope": "project",
-      "container": "CD19 CAR Binder Optimization",
+      "scope": "global",
+      "container": "",
       "folder_path": "Project/CD19_CAR_Binder_Optimization/Papers",
       "pdf_filename": "s41589-025-02063-3.pdf",
       "pdf_path": "Project/CD19_CAR_Binder_Optimization/Papers/s41589-025-02063-3.pdf",
-      "discovered_at": "2026-05-11T20:00:39.222Z"
+      "discovered_at": "2026-05-11T20:15:59.102Z"
     }
   ]
 }

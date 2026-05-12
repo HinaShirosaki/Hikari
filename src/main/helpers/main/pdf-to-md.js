@@ -110,6 +110,75 @@ function limitBlock(value, maxChars) {
   return `${text.slice(0, numericMax).trim()}\n\n[... truncated ...]`;
 }
 
+function normalizeBodyLine(value) {
+  return String(value || '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isReferenceStart(line) {
+  return /^\(?\d{1,4}\)?[.)]\s+/.test(line);
+}
+
+function isCaptionStart(line) {
+  return /^(?:extended\s+data\s+)?(?:fig(?:ure)?|table)\.?\s+\d+/i.test(line);
+}
+
+function shouldBreakBeforeLine(line, currentParagraph) {
+  if (!currentParagraph) {
+    return false;
+  }
+  return isReferenceStart(line) || isCaptionStart(line) || /^\[\[page:\d+\]\]$/i.test(line);
+}
+
+function shouldBreakAfterLine(line, currentParagraph) {
+  if (currentParagraph.length < 900) {
+    return false;
+  }
+  return /[.!?)](?:\s*\d+)?$/.test(line);
+}
+
+function appendBodyLine(paragraph, line) {
+  if (!paragraph) {
+    return line;
+  }
+  if (/[A-Za-z]-$/.test(paragraph) && /^[a-z]/.test(line)) {
+    return `${paragraph.slice(0, -1)}${line}`;
+  }
+  return `${paragraph} ${line}`;
+}
+
+function formatMarkdownBodyText(value = '') {
+  const lines = String(value || '').split(/\r?\n/);
+  const paragraphs = [];
+  let current = '';
+  const flush = () => {
+    const text = current.trim();
+    if (text) {
+      paragraphs.push(text);
+    }
+    current = '';
+  };
+
+  lines.forEach((rawLine) => {
+    const line = normalizeBodyLine(rawLine);
+    if (!line) {
+      flush();
+      return;
+    }
+    if (shouldBreakBeforeLine(line, current)) {
+      flush();
+    }
+    current = appendBodyLine(current, line);
+    if (shouldBreakAfterLine(line, current)) {
+      flush();
+    }
+  });
+  flush();
+  return paragraphs.join('\n\n');
+}
+
 function formatPageRange(section = {}) {
   const startPage = Number(section.start_page) || Number(section.page_number) || 0;
   const endPage = Number(section.end_page) || startPage;
@@ -141,10 +210,11 @@ function buildSectionMarkdown(sections = [], maxSectionChars = DEFAULT_MAX_SECTI
         return '';
       }
       const label = normalizeMarkdownHeading(section?.label || section?.normalized_label || 'Section', 'Section');
+      const body = formatMarkdownBodyText(text);
       return [
         `### ${label} (${formatPageRange(section)})`,
         '',
-        text
+        body
       ].join('\n');
     })
     .filter(Boolean);
@@ -159,10 +229,11 @@ function buildPageMarkdown(pages = [], maxPageChars = DEFAULT_MAX_PAGE_CHARS) {
       if (!pageNumber || !text) {
         return '';
       }
+      const body = formatMarkdownBodyText(text);
       return [
         `### Page ${pageNumber}`,
         '',
-        text
+        body
       ].join('\n');
     })
     .filter(Boolean)
@@ -212,13 +283,12 @@ function buildPdfMarkdownFromExtraction({
   const sectionMarkdown = buildSectionMarkdown(normalizedExtraction.sections, maxSectionChars);
   const pageMarkdown = includePages ? buildPageMarkdown(normalizedExtraction.pages, maxPageChars) : '';
   const rawText = !sectionMarkdown && !pageMarkdown
-    ? limitBlock(extractedText || normalizedExtraction.text, maxSectionChars)
+    ? formatMarkdownBodyText(limitBlock(extractedText || normalizedExtraction.text, maxSectionChars))
     : '';
   const transformedLine = cleanText(transformedAt, 120)
     ? [`- Transformed at: ${cleanText(transformedAt, 120)}`]
     : [];
-
-  return [
+  const parts = [
     `# ${title}`,
     '',
     `**Authors:** ${authors}`,
@@ -231,11 +301,13 @@ function buildPdfMarkdownFromExtraction({
     '## Sections',
     '',
     sectionMarkdown || '- No section headings were detected.',
-    '',
-    '## Pages',
-    '',
-    pageMarkdown || rawText || '- No extractable page text was found.'
-  ].join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  ];
+  if (includePages) {
+    parts.push('', '## Pages', '', pageMarkdown || rawText || '- No extractable page text was found.');
+  } else if (!sectionMarkdown) {
+    parts.push('', '## Text', '', rawText || '- No extractable text was found.');
+  }
+  return parts.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 async function transformPdfToMarkdown({
@@ -300,6 +372,7 @@ module.exports = {
   PDF_TO_MD_FORMAT,
   buildExtractedTextFile,
   buildPdfMarkdownFromExtraction,
+  formatMarkdownBodyText,
   normalizePdfMarkdownMetadata,
   transformPdfToMarkdown
 };

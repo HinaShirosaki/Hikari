@@ -266,17 +266,41 @@ function normalizeSectionLabel(rawLabel) {
   if (/^(references|bibliography|works\s+cited|literature\s+cited)\b/.test(text)) return 'references';
   if (/^acknowled?g(?:e)?ments?\b/.test(text)) return 'acknowledgments';
   if (/^funding\b/.test(text)) return 'funding';
+  if (/^online\s+content\b/.test(text)) return 'online_content';
+  if (/^reporting\s+summary\b/.test(text)) return 'reporting_summary';
   if (/^(competing\s+interests|conflicts?\s+of\s+interest|declarations?)\b/.test(text)) return 'declarations';
-  if (/^(supplement(?:ary)?(?:\s+(?:material|information|data|figures?|tables?))?|supporting\s+information)\b/.test(text)) return 'supplementary';
+  if (/^(supplement(?:ary)?\s+(?:material|information)|supporting\s+information)\b/.test(text)) return 'supplementary';
   if (/^(appendix|appendices)\b/.test(text)) return 'appendix';
   if (/^author\s+(?:contributions?|information)\b/.test(text)) return 'author_contributions';
   if (/^(data|code)\s+availability\b/.test(text)) return 'data_availability';
   return '';
 }
 
+function formatDetectedHeadingLabel(label, normalizedLabel) {
+  const canonicalLabels = {
+    abstract: 'Abstract',
+    introduction: 'Introduction',
+    methods: 'Methods',
+    results: 'Results',
+    discussion: 'Discussion',
+    conclusion: 'Conclusion',
+    references: 'References',
+    acknowledgments: 'Acknowledgements',
+    funding: 'Funding',
+    online_content: 'Online content',
+    reporting_summary: 'Reporting summary',
+    declarations: 'Declarations',
+    supplementary: 'Supplementary information',
+    appendix: 'Appendix',
+    author_contributions: 'Author contributions',
+    data_availability: 'Data availability'
+  };
+  return canonicalLabels[normalizedLabel] || label;
+}
+
 function detectHeadingFromLine(line) {
   const trimmed = String(line || '').trim();
-  if (!trimmed || trimmed.length > 80) {
+  if (!trimmed || trimmed.length > 180) {
     return null;
   }
   const stripped = trimmed
@@ -284,7 +308,10 @@ function detectHeadingFromLine(line) {
     .replace(/^[ivxlcdm]+\.\s+/i, '')
     .replace(/[:.\-—]\s*$/, '')
     .trim();
-  if (!stripped || stripped.length > 60) {
+  if (!stripped || stripped.length > 160) {
+    return null;
+  }
+  if (/^[a-z]/.test(stripped)) {
     return null;
   }
   const normalizedLabel = normalizeSectionLabel(stripped);
@@ -292,7 +319,7 @@ function detectHeadingFromLine(line) {
     return null;
   }
   return {
-    label: trimmed,
+    label: formatDetectedHeadingLabel(trimmed, normalizedLabel),
     normalized_label: normalizedLabel
   };
 }
@@ -319,15 +346,43 @@ function detectHeadingsFromPages(pages) {
         });
       });
   });
-  // Drop duplicate canonical headings — keep the first occurrence.
+  // Drop duplicate canonical headings on the same page, while preserving
+  // repeated real sections such as main-text References and Methods References.
   const seen = new Set();
   return headings.filter((heading) => {
-    if (seen.has(heading.normalized_label)) {
+    const key = `${heading.normalized_label}:${heading.page_number}`;
+    if (seen.has(key)) {
       return false;
     }
-    seen.add(heading.normalized_label);
+    seen.add(key);
     return true;
   });
+}
+
+function collectPageLinesBetween(pages, startPoint, endPoint) {
+  const sectionLines = [];
+  pages.forEach((page) => {
+    const pageNumber = Number(page.page_number);
+    if (pageNumber < startPoint.page_number || pageNumber > endPoint.page_number) {
+      return;
+    }
+    const lines = String(page.text || '').split('\n');
+    let startIndex = 0;
+    let endIndex = lines.length;
+    if (pageNumber === startPoint.page_number) {
+      startIndex = Math.min(lines.length, Math.max(0, Number(startPoint.line_index) || 0));
+    }
+    if (pageNumber === endPoint.page_number) {
+      endIndex = Math.min(lines.length, Math.max(startIndex, Number(endPoint.line_index) || 0));
+    }
+    for (let lineIndex = startIndex; lineIndex < endIndex; lineIndex += 1) {
+      const line = lines[lineIndex];
+      if (line) {
+        sectionLines.push(line);
+      }
+    }
+  });
+  return sectionLines;
 }
 
 function buildSectionsFromHeadings(pages, headings, maxCharsPerSection) {
@@ -336,32 +391,39 @@ function buildSectionsFromHeadings(pages, headings, maxCharsPerSection) {
   }
   const lastPageNumber = Number(pages[pages.length - 1]?.page_number) || 0;
   const sections = [];
+  const firstPageNumber = Number(pages[0]?.page_number) || 1;
+  const firstHeading = headings[0];
+  const frontMatterLines = collectPageLinesBetween(
+    pages,
+    { page_number: firstPageNumber, line_index: 0 },
+    { page_number: firstHeading.page_number, line_index: firstHeading.line_index }
+  );
+  if (frontMatterLines.length) {
+    const text = frontMatterLines.join('\n');
+    const limited = maxCharsPerSection > 0 && text.length > maxCharsPerSection
+      ? text.slice(0, maxCharsPerSection)
+      : text;
+    sections.push({
+      label: 'Front matter',
+      normalized_label: 'front_matter',
+      source: 'heuristic',
+      start_page: firstPageNumber,
+      end_page: firstHeading.page_number,
+      character_count: limited.length,
+      text: limited
+    });
+  }
   headings.forEach((current, index) => {
     const next = headings[index + 1] || null;
     const startPage = current.page_number;
     const endPage = next ? next.page_number : lastPageNumber;
-    const sectionLines = [];
-    pages.forEach((page) => {
-      const pageNumber = Number(page.page_number);
-      if (pageNumber < startPage || pageNumber > endPage) {
-        return;
-      }
-      const lines = String(page.text || '').split('\n');
-      let startIndex = 0;
-      let endIndex = lines.length;
-      if (pageNumber === current.page_number) {
-        startIndex = current.line_index + 1;
-      }
-      if (next && pageNumber === next.page_number) {
-        endIndex = next.line_index;
-      }
-      for (let lineIndex = startIndex; lineIndex < endIndex; lineIndex += 1) {
-        const line = lines[lineIndex];
-        if (line) {
-          sectionLines.push(line);
-        }
-      }
-    });
+    const sectionLines = collectPageLinesBetween(
+      pages,
+      { page_number: startPage, line_index: current.line_index + 1 },
+      next
+        ? { page_number: next.page_number, line_index: next.line_index }
+        : { page_number: lastPageNumber, line_index: Number.MAX_SAFE_INTEGER }
+    );
     const text = sectionLines.join('\n');
     const limited = maxCharsPerSection > 0 && text.length > maxCharsPerSection
       ? text.slice(0, maxCharsPerSection)
@@ -520,7 +582,7 @@ function createPdfTextExtractionRuntime(deps = {}) {
     flat.sort((left, right) => left.page_number - right.page_number);
     const minDepth = flat.reduce((acc, entry) => Math.min(acc, entry.depth), flat[0].depth);
     const topLevel = flat.filter((entry) => entry.depth === minDepth && entry.title);
-    if (!topLevel.length) {
+    if (topLevel.length < 2) {
       return [];
     }
     const sections = [];
