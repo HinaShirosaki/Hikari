@@ -1620,6 +1620,43 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       assert.doesNotMatch(sectionMarkdown, /^## Pages/m);
     });
 
+    test('pdf text extraction keeps long detected sections within the overall extraction budget by default', async () => {
+      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-pdf-text-extraction.js'));
+      const longBody = (label) => `${label} ${'x'.repeat(19000)}`;
+      const pageLabels = ['page-alpha', 'page-beta', 'page-gamma', 'page-delta', 'page-omega-tail-marker'];
+      const runtime = pdfTextExtraction.createPdfTextExtractionRuntime({
+        pdfJsLib: {
+          getDocument: () => ({
+            promise: Promise.resolve({
+              numPages: 5,
+              getPage: async (pageNumber) => ({
+                getTextContent: async () => ({
+                  items: pageNumber === 1
+                    ? [
+                      { str: 'Results', hasEOL: true },
+                      { str: longBody(pageLabels[0]), hasEOL: true }
+                    ]
+                    : [{ str: longBody(pageLabels[pageNumber - 1]), hasEOL: true }]
+                }),
+                cleanup: () => {}
+              }),
+              getOutline: async () => [],
+              destroy: async () => {}
+            })
+          })
+        }
+      });
+      const result = await runtime.extractText({
+        buffer: Buffer.from('%PDF-1.7\nfake bytes'),
+        include_sections: true
+      });
+      assert.equal(result.ok, true);
+      assert.equal(result.sections_source, 'heuristic');
+      assert.equal(result.sections[0].label, 'Results');
+      assert.match(result.sections[0].text, /page-omega-tail-marker/);
+      assert.ok(result.sections[0].text.length > 80000);
+    });
+
     test('pdf joinTextItems merges position-adjacent items without inserting stray ligature spaces', () => {
       const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
       // Three text items on the same baseline whose x-ranges touch — the old
@@ -1811,6 +1848,22 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       });
       assert.match(markdown, /## Sections/);
       assert.match(markdown, /## Pages/);
+    });
+
+    test('pdf-to-md keeps complete section text by default for stored paper markdown', () => {
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const longSection = `${'A'.repeat(65000)} complete tail marker`;
+      const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
+        metadata: { title: 'Long paper section' },
+        extraction: {
+          ok: true,
+          page_count: 1,
+          extracted_page_count: 1,
+          sections: [{ label: 'Results', start_page: 1, end_page: 1, text: longSection }]
+        }
+      });
+      assert.match(markdown, /complete tail marker/);
+      assert.doesNotMatch(markdown, /\[\.\.\. truncated \.\.\.\]/);
     });
 
     test('pdf-to-md formatMarkdownBodyText preserves markdown tables across paragraph joining', () => {

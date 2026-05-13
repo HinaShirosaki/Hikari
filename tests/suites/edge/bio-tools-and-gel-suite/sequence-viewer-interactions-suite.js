@@ -496,6 +496,155 @@ test('[EDGE] sequence-viewer drag selection context menu can edit and delete an 
   assert.equal(featureDetail.innerHTML.includes('Feature_B'), false);
 });
 
+test('[EDGE] sequence-viewer context menu designs primers for selected sequence or selected feature', async () => {
+  const ids = [
+    'sequence-viewer-mode-paste',
+    'sequence-viewer-mode-file',
+    'sequence-viewer-paste-panel',
+    'sequence-viewer-file-panel',
+    'sequence-viewer-textarea',
+    'sequence-viewer-file-input',
+    'sequence-viewer-file-choose',
+    'sequence-viewer-file-name',
+    'sequence-viewer-load-btn',
+    'sequence-viewer-annotate-btn',
+    'sequence-viewer-clear-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-messages',
+    'sequence-viewer-record-select',
+    'sequence-viewer-stat-format',
+    'sequence-viewer-stat-length',
+    'sequence-viewer-stat-topology',
+    'sequence-viewer-stat-gc',
+    'sequence-viewer-stat-ambiguous',
+    'sequence-viewer-stat-quality',
+    'sequence-viewer-stat-features',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host',
+    'sequence-viewer-feature-context-menu',
+    'sequence-viewer-feature-editor-overlay',
+    'sequence-viewer-primer-design-overlay',
+    'sequence-viewer-primer-design-title',
+    'sequence-viewer-primer-design-note',
+    'sequence-viewer-primer-design-result',
+    'sequence-viewer-primer-design-close',
+    'sequence-viewer-primer-design-dismiss'
+  ];
+  let copiedText = '';
+  const document = createMockDocument(ids);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    {
+      document,
+      navigator: {
+        clipboard: {
+          writeText: async (value) => {
+            copiedText = String(value || '');
+          }
+        }
+      }
+    }
+  );
+  const viewer = moduleWithDom.initSequenceViewer();
+  const sequence = 'GCGCGCGCGCGCGATATATATATATATATATATAGCGCGCGCGCGCGAT';
+  viewer.loadFromExternal({
+    name: 'primer_context',
+    sequence,
+    source: 'external',
+    features: [
+      {
+        id: 'feature_primer_1',
+        name: 'Feature_A',
+        type: 'promoter',
+        strand: 1,
+        source: 'manual',
+        segments: [{ start: 0, end: sequence.length }]
+      }
+    ]
+  });
+
+  const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
+  const contextMenu = document.getElementById('sequence-viewer-feature-context-menu');
+  const overlay = document.getElementById('sequence-viewer-primer-design-overlay');
+  const note = document.getElementById('sequence-viewer-primer-design-note');
+  const result = document.getElementById('sequence-viewer-primer-design-result');
+  const closeBtn = document.getElementById('sequence-viewer-primer-design-close');
+
+  const lineElement = {
+    dataset: { lineStart: '0', lineEnd: String(sequence.length) },
+    querySelector() {
+      return {
+        getBoundingClientRect() {
+          return { left: 20, width: 440 };
+        }
+      };
+    }
+  };
+  const lineTarget = {
+    closest(selector) {
+      if (selector === '.sequence-viewer-dual-line') {
+        return lineElement;
+      }
+      return null;
+    }
+  };
+  const actionTarget = {
+    closest(selector) {
+      if (selector === '[data-sequence-feature-action]') {
+        return { dataset: { sequenceFeatureAction: 'design-primer' } };
+      }
+      return null;
+    }
+  };
+
+  trigger(sequenceHost, 'mousedown', { button: 0, clientX: 20, target: lineTarget });
+  trigger(sequenceHost, 'mousemove', { clientX: 452, target: lineTarget });
+  trigger(sequenceHost, 'mouseup', { target: lineTarget });
+  trigger(sequenceHost, 'contextmenu', { clientX: 452, clientY: 84, target: lineTarget });
+
+  assert.match(contextMenu.innerHTML, /Design Primer/);
+  trigger(contextMenu, 'click', { target: actionTarget });
+  assert.equal(Boolean(overlay.hidden), false);
+  assert.match(note.textContent, /PCR primer pair/);
+  assert.match(result.innerHTML, /Pcr Forward/);
+  assert.match(result.innerHTML, /Pcr Reverse/);
+  const overlayCopyButtons = result.querySelectorAll('[data-sequence-primer-copy]');
+  assert.equal(overlayCopyButtons.length >= 4, true);
+  trigger(result, 'click', {
+    target: {
+      closest(selector) {
+        if (selector === '[data-sequence-primer-copy]') {
+          return overlayCopyButtons[0];
+        }
+        return null;
+      }
+    }
+  });
+  await flushAsync();
+  assert.equal(copiedText, overlayCopyButtons[0].dataset.sequencePrimerCopy);
+
+  trigger(closeBtn, 'click');
+  assert.equal(Boolean(overlay.hidden), true);
+
+  const featureTarget = {
+    closest(selector) {
+      if (selector === '[data-feature-index]') {
+        return { dataset: { featureIndex: '0' } };
+      }
+      return null;
+    }
+  };
+  trigger(sequenceHost, 'click', { target: featureTarget });
+  trigger(sequenceHost, 'contextmenu', { clientX: 48, clientY: 84, target: featureTarget });
+  trigger(contextMenu, 'click', { target: actionTarget });
+
+  assert.equal(Boolean(overlay.hidden), false);
+  assert.match(note.textContent, /Feature_A/);
+  assert.match(result.innerHTML, /Feature_A_F/);
+  assert.match(result.innerHTML, /Feature_A_R/);
+});
+
 test('[EDGE] sequence-viewer keyboard edits selected bases through the sequence edit dialog', async () => {
   const ids = [
     'sequence-viewer-mode-paste',
@@ -793,6 +942,7 @@ test('[EDGE] sequence-viewer opens cloning design after base edits and renders p
     'sequence-viewer-cloning-design-insert-end',
     'sequence-viewer-cloning-design-result'
   ];
+  let copiedText = '';
   const listeners = {};
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
@@ -804,6 +954,13 @@ test('[EDGE] sequence-viewer opens cloning design after base edits and renders p
       },
       setTimeout(callback) {
         callback();
+      },
+      navigator: {
+        clipboard: {
+          writeText: async (value) => {
+            copiedText = String(value || '');
+          }
+        }
       }
     }
   );
@@ -869,6 +1026,20 @@ test('[EDGE] sequence-viewer opens cloning design after base edits and renders p
   assert.equal(Boolean(detailWorkspace.hidden), true);
   assert.equal(resultHost.innerHTML.includes('sequence-viewer-cloning-design-primer-table'), true);
   assert.equal(resultHost.innerHTML.includes('tile_outer_left'), true);
+  const cloningCopyButtons = resultHost.querySelectorAll('[data-sequence-primer-copy]');
+  assert.equal(cloningCopyButtons.length >= 4, true);
+  trigger(resultHost, 'click', {
+    target: {
+      closest(selector) {
+        if (selector === '[data-sequence-primer-copy]') {
+          return cloningCopyButtons[1];
+        }
+        return null;
+      }
+    }
+  });
+  await flushAsync();
+  assert.equal(copiedText, cloningCopyButtons[1].dataset.sequencePrimerCopy);
 });
   }
 };

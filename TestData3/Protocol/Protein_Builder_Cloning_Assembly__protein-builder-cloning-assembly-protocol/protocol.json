@@ -1,7 +1,7 @@
 {
   "schema_name": "enana_protocols",
   "schema_version": "1.0.0",
-  "updated_at": "2026-05-12T14:52:34.743Z",
+  "updated_at": "2026-05-13T04:20:47.262Z",
   "protocol": {
     "id": "protein-builder-cloning-assembly-protocol",
     "name": "Protein Builder Cloning Assembly",

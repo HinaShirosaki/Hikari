@@ -1,0 +1,3394 @@
+[[page:1]]
+RESEARCH ARTICLE S UMMARY
+◥
+DEGRON ENGINEERING
+Continuous evolution of compact protein degradation
+tags regulated by selective molecular glues
+Jaron A. M. Mercer†, Stephan J. DeCarlo†, Shourya S. Roy Burman†, Vedagopuram Sreekanth,
+Andrew T. Nelson, Moritz Hunkeler, Peter J. Chen, Katherine A. Donovan, Praveen Kokkonda,
+Praveen K. Tiwari, Veronika M. Shoba, Arghya Deb, Amit Choudhary*, Eric S. Fischer*, David R. Liu*
+INTRODUCTION: Small molecule–triggered pro-
+tein degradation tags (degrons) are powerful tools
+to study the effects of the loss of a protein of
+interest and for target validation. In the presence
+of a small molecule in mammalian cells, degron
+tags form a complex with an E3 ubiquitin ligase
+effector such as cereblon (CRBN). Proteins re-
+cruited to this degron•small molecule•E3 ligase
+ternary complex by fusion to a degron tag are
+degraded by the ubiquitin-proteasome system.
+RATIONALE: Most known degron tags are large
+protein domains that cannot be easily or cleanly
+installed in endogenous protein-coding genes.
+Although zinc finger (ZF) degrons are theo-
+retically small enough for facile endogenous
+tagging, their degradation is triggered by tha-
+lidomide, pomalidomide, and lenalidomide
+(immunomodulatory drugs, or IMiDs) with sub-
+stantial off-target degradation effects, preclud-
+ing their use as specific modulators of target
+protein levels. Recently, we reported the devel-
+opment of new IMiD derivatives such as PT-179
+that bind CRBN but do not induce degradation
+of off-target proteins. In this study, we developed
+a phage-assisted continuous evolution (PACE)
+platform for generating engineered molecular
+glue interactions and applied it to evolve ZF
+degrons that bind CRBN complexed with the
+otherwise-inactive IMiD derivative PT-179.
+RESULTS: To apply continuous evolution to
+molecular glue complexes, we developed PACE
+selections that link phage propagation to mo-
+lecular glue ternary complex formation (MG-
+PACE). Over 250 hours of continuous evolution
+requiring survival through an overall dilution
+of 10271-fold yielded SD40, a 36–amino acid ZF
+protein that tightly binds CRBN in complex
+with PT-179. In mammalian cells, PT-179 po-
+tently degrades proteins fused to SD40 at either
+the N or C terminus. SD40 is small enough for
+efficient and precise in-frame insertion in tar-
+get protein-coding genes in human cells using
+prime editing, enabling minimally perturba-
+tive studies of endogenous proteins generated
+from genes that maintain their native regula-
+tory contexts. To reveal mechanistic insights
+into the evolution and molecular basis of SD40’s
+activity and specificity, we determined high-
+resolution cryo–electron microscopy (cryo-EM)
+structures of SD40 in complex with CRBN
+bound to PT-179 or pomalidomide. SD40 in-
+teracts with CRBN’s IMiD-binding C-terminal
+domain while also forming an extensive in-
+terface with its N-terminal domain. We also
+used MG-PACE to evolve a second ZF degron,
+SD56, that is functional in mouse cells. Com-
+pared with human CRBN, mouse CRBN con-
+tains an amino acid substitution that prevents
+binding of endogenous mouse ZF proteins
+upon IMiD treatment. MG-PACE evolved SD56
+in the presence of mouse CRBN and PT-179.
+We showed that PT-179 potently degrades SD56-
+tagged proteins in cultured mouse cells and
+that SD56 can respond to canonical and next-
+generation IMiDs, including pomalidomide
+and mezigdomide.
+CONCLUSION: We developed a continuous evo-
+lution system for generating new molecular
+glue complexes and applied it to remodel the
+CRBN•IMiD•ZF degron ternary complex. MG-
+PACE yielded SD40, a compact ZF that me-
+diates potent degradation of tagged proteins
+in human cells in response to an IMiD-derived
+small molecule with no detected off-target neo-
+substrates. SD40 evolved to engage both the N-
+and C-terminal domains of CRBN, driving CRBN
+to its putatively active closed conformation.
+SD40’s small size facilitates efficient installa-
+tion in endogenous protein-coding genes with
+prime editing, enabling tunable and selective
+modulation of endogenous proteins. We also
+used MG-PACE to develop SD56, a ZF degron
+that is compatible with PT-179 and other IMiDs
+in mouse cells. Collectively, our efforts provide a
+platform for the rapid evolution of tailor-made
+molecular glue complexes, including compact
+ZF tags that overcome shortcomings associated
+with existing degrons.
+▪
+RES EARCH
+The list of author affiliations is available in the full article online.
+*Corresponding author. Email: drliu@fas.harvard.edu (D.R.L.);
+eric_fischer@dfci.harvard.edu (E.S.F.); achoudhary@bwh.
+harvard.edu (A.C.)
+†These authors contributed equally to this work.
+Cite this article as J. A. M. Mercer et al., Science 383,
+eadk4422 (2024). DOI: 10.1126/science.adk4422
+READ THE FULL ARTICLE AT
+https://doi.org/10.1126/science.adk4422
+Prime
+editing
+Tagged endogenous
+protein
+Selective
+degradation
+Gene
+expression
+CRBN
+A
+C
+Evolving
+PT-179
+N
+HN
+O
+O
+O
+O
+N
+O
+Pomalidomide
+PT-179
+Ternary complex
+PT-179
+Genomic integration N
+HN
+O
+O
+O
+O NH2
+B
+Transcriptional
+activator
+Hybrid promoter
+CRBNCTD
+CRBNNTD
+CRBNHBD
+SD40
+PT-179
+An evolved zinc finger mediates specific degradation of tagged endogenous proteins. (A) We developed a
+selection system for phage-assisted continuous evolution of molecular glue complexes (MG-PACE). We applied
+MG-PACE to evolve ZF degrons that engage the E3 ubiquitin ligase substrate receptor CRBN only when it is bound
+to PT-179, a thalidomide derivative that does not exhibit off-target degradation of endogenous human proteins.
+Assembly of the CRBN•PT-179•ZF ternary complex in host Escherichia coli promotes transcription of the essential
+phage gene gIII. (B) An ~2.4-Å resolution cryo-EM structure revealed that the evolved ZF protein, SD40
+(magenta), engages both CRBN’s IMiD-binding C-terminal domain (CRBNCTD, cyan) and N-terminal domain
+(CRBNNTD, green) through contacts not previously observed between CRBN and a ZF. (C) SD40 is only
+36 amino acids long, enabling clean installation of SD40 in-frame into endogenous genomic protein-coding
+genes in mammalian cell culture with prime editing. SD40-tagged endogenous proteins in human cells are
+potently, rapidly, and selectively degraded in response to treatment with PT-179.
+
+[[page:2]]
+RESEARCH ARTICLE
+◥
+DEGRON ENGINEERING
+Continuous evolution of compact protein degradation
+tags regulated by selective molecular glues
+Jaron A. M. Mercer1,2,3†, Stephan J. DeCarlo1,2,3†, Shourya S. Roy Burman4,5†,
+Vedagopuram Sreekanth6,7,8, Andrew T. Nelson1,2,3, Moritz Hunkeler4,5, Peter J. Chen1,2,3,
+Katherine A. Donovan4,5, Praveen Kokkonda6,7, Praveen K. Tiwari6,7,8, Veronika M. Shoba6,7,
+Arghya Deb6,7, Amit Choudhary6,7,8*, Eric S. Fischer4,5*, David R. Liu1,2,3*
+Conditional protein degradation tags (degrons) are usually >100 amino acids long or are triggered by
+small molecules with substantial off-target effects, thwarting their use as specific modulators of
+endogenous protein levels. We developed a phage-assisted continuous evolution platform for molecular
+glue complexes (MG-PACE) and evolved a 36–amino acid zinc finger (ZF) degron (SD40) that binds the
+ubiquitin ligase substrate receptor cereblon in complex with PT-179, an orthogonal thalidomide
+derivative. Endogenous proteins tagged in-frame with SD40 using prime editing are degraded by
+otherwise inert PT-179. Cryo–electron microscopy structures of SD40 in complex with ligand-bound
+cereblon revealed mechanistic insights into the molecular basis of SD40’s activity and specificity. Our
+efforts establish a system for continuous evolution of molecular glue complexes and provide ZF tags
+that overcome shortcomings associated with existing degrons.
+M
+olecular glues are small molecules that
+induce binding of two proteins, en-
+abling precise temporal control over
+proximity-driven biological processes
+(1–4). Thalidomide and its analogs
+pomalidomide and lenalidomide (immunomod-
+ulatory drugs, or IMiDs) are molecular glues
+that bind cereblon (CRBN), the substrate re-
+ceptor of the CRL4CRBN E3 ubiquitin ligase,
+altering its substrate specificity to recognize
+protein neosubstrates that are ubiquitinated
+and subsequently degraded (5–7). CRBN•IMiD•
+neosubstrate ternary complexes contain an
+extended interface of protein–protein contacts,
+and IMiDs do not bind protein neosubstrates
+in the absence of CRBN (8–11). As a result,
+IMiDs elicit sigmoidal dose-response curves
+without the “hook effect” characteristic of bi-
+valent inducers of proximity (12, 13). IMiD-
+bound CRBN recognizes a small b-turn motif
+often found in zinc finger (ZF) transcrip-
+tion factors. Appending this small b-turn
+motif, commonly called a degron, to other
+proteins makes the resulting fusion pro-
+tein susceptible to IMiD-induced degrada-
+tion (9, 14–16).
+Small molecule–responsive protein tags are
+indispensable tools in chemical biology. Tech-
+nologies for small molecule–induced degrada-
+tion of target proteins include the degradation
+tag (dTAG) system (17, 18), small molecule–
+assisted shutoff (SMASh) (19), ligand-induced
+degradation (20), HaloProtacs (21, 22), and
+the auxin-inducible degron (23–25). These tags,
+however, are primarily limited to exogenous
+expression of fusion proteins owing to their
+large size (108 to 304 amino acids) or require
+coexpression of non-native effector domains
+(23, 26). This requirement precludes the study
+of proteins expressed from their endogenous
+genomic loci at native expression levels under
+endogenous regulatory control. In contrast,
+some ZF motifs recognized by IMiD-bound
+CRBN are small enough to be, in theory, pre-
+cisely inserted into a target gene in-frame using
+prime editing (27–30). However, IMiDs induce
+degradation of numerous off-target neosub-
+strates in human cells, limiting their utility as
+research tools (7, 9, 31, 32). An ideal degron tag
+would be small enough for precision in-frame
+installation by genome editing, respond to a
+cell-permeable small molecule with no off-target
+effects, and be invulnerable to the hook effect.
+In this study, we developed a phage-assisted
+continuous evolution system (PACE) to repro-
+gram molecular glue complexes and applied
+the system to evolve a small, 36-residue ZF do-
+main that engages IMiD-bound human CRBN.
+We evolved this small degron in the pres-
+ence of orthogonal IMiD derivatives bearing
+phthalimide-ring substitutions that disrupt
+binding to native protein neosubstrates and
+verified that these “bumped” IMiD deriva-
+tives exhibit greatly reduced off-target activity
+in human cells compared with pomalidomide,
+a canonical IMiD. The evolved degron is small
+enough to be efficiently inserted in-frame into
+a target endogenous genomic site in human
+cells using prime editing for in-frame gene tag-
+ging. Human proteins tagged with the evolved
+degron are rapidly and potently degraded by PT-
+179, an orthogonal IMiD derivative. To overcome
+the fundamental limitation that IMiD-based
+degrons are inactive in rodents, we separately
+evolved ZF variants that engage mouse CRBN,
+enabling induced protein degradation in mouse
+cells. Finally, we obtained cryo–electron mi-
+croscopy (cryo-EM) structures of the evolved ZF
+in complex with CRBN and bumped, as well
+as canonical, IMiD derivatives revealing an
+expanded interface of evolved interactions
+bridging the CRBN N- and C-terminal do-
+mains. These findings collectively establish a
+continuous evolution platform for the rapid
+remodeling of molecular glue complexes; pro-
+vide degrons that recognize newly identified,
+highly specific molecular glues; and discover a
+neosubstrate-mediated mechanism of induc-
+ing CRBN to adopt its closed, putatively active
+conformation.
+Results
+A PACE circuit for molecular glue complexes
+PACE harnesses the very short life cycle of the
+M13 Escherichia coli bacteriophage (~10 min)
+to perform many generations of evolution in
+a short time period with minimal researcher
+intervention, typically accelerating labora-
+tory evolution by >100-fold (Fig. 1A) (33, 34).
+Selection phage (SP) harbor all the genes nec-
+essary to produce progeny phage except for
+gIII, which encodes the phage coat protein pIII;
+gIII is replaced by a gene encoding the evolv-
+ing protein of interest. Host cells contain an ac-
+cessory plasmid (AP) that provides pIII if the
+evolving protein encoded in the SP has the
+desired activity. Selection pressure is applied by
+dilution with fresh host cells either continuously
+(PACE) or periodically [phage-assisted non-
+continuous evolution (PANCE)] in fixed-volume
+vessels called lagoons. SP that fail to replicate
+faster than the rate of dilution wash out of the
+lagoon. Host cells also express a suite of pro-
+teins from a mutagenesis plasmid (MP) that
+increase the frequency of substitution muta-
+tions during SP replication (35). PACE and
+PANCE have been used to evolve a wide variety
+of proteins, including polymerases (33, 36–38),
+proteases (39–41), protein-binding proteins
+(42–44), metabolic enzymes (45), DNA bind-
+ing proteins (46), and gene editing agents such
+as Cas nucleases (47, 48), base editors (49–53),
+prime editors (54), and transcription activator-
+like effector nucleases (TALENs) (55) with new
+or improved activities and specificities.
+RES EARCH
+1
+Merkin Institute of Transformative Technologies in Healthcare,
+Broad Institute of Harvard and MIT, Cambridge, MA 02142,
+USA. 2Department of Chemistry and Chemical Biology, Harvard
+University, Cambridge, MA 02138, USA. 3Howard Hughes
+Medical Institute, Harvard University, Cambridge, MA 02138,
+USA. 4Department of Cancer Biology, Dana-Farber Cancer
+Institute, Boston, MA 02215, USA. 5Department of Biological
+Chemistry and Molecular Pharmacology, Harvard Medical
+School, Boston, MA 02115, USA. 6Chemical Biology and
+Therapeutics Science, Broad Institute of Harvard and MIT,
+Cambridge, MA 02142, USA. 7Department of Medicine, Harvard
+Medical School, Boston, MA 02115, USA. 8Divisions of Renal
+Medicine and Engineering, Brigham and Women’s Hospital,
+Boston, MA 02115, USA.
+*Corresponding author. Email: drliu@fas.harvard.edu (D.R.L.);
+eric_fischer@dfci.harvard.edu (E.S.F.); achoudhary@bwh.harvard.
+edu (A.C.)
+†These authors contributed equally to this work.
+
+[[page:3]]
+To apply continuous evolution to molecular
+glue complexes, we built on previous PACE se-
+lections for protein–DNA and protein–protein
+binding interactions using hybrid transcription
+activation circuits in E. coli (42, 47, 48, 55) to
+develop a PACE selection that links pIII expres-
+sion to molecular glue ternary complex for-
+mation (MG-PACE). In the bacterial two-hybrid
+system, a specified protein–protein binding
+event recruits RNA polymerase (RNAP) to ini-
+tiate transcription of a reporter gene (56, 57).
+We designed an initial selection system respon-
+sive to rapamycin, which induces dimerization
+of FKBP12 and FRB (FKBP12-rapamycin-binding
+fragment of mTOR) (58, 59). FKBP12 is an-
+chored upstream of a pLac-derived promoter
+(pLac*) by fusion to the DNA binding protein
+RR69, a derivative of the 434 phage repressor
+(60). FRB is fused to the small w-subunit of the
+E. coli RNAP. Rapamycin-induced binding of
+FKBP12 and FRB recruits the full RNAP to
+pLac*, driving expression of gIII or a luciferase
+reporter luxAB (Fig. 1B).
+The impermeability of E. coli to many small
+molecules (61) could prevent activation of the
+MG-PACE circuit. Indeed, we detected luciferase
+expression only at high (>1 mM) concentra-
+tions of rapamycin (Fig. 1C). Coadministration
+of polymyxin B nonapeptide (PMBN), a poly-
+cationic small molecule that permeabilizes the
+E. coli outer membrane (62), produced a ro-
+bust rapamycin dose-response curve with a
+subnanomolar median effective concentration
+(EC50) (Fig. 1C). A hook effect emerges at high
+concentrations, reflecting rapamycin’s modest
+affinity for FRB without FKBP12 [dissociation
+constant (Kd) = 26 mM] (63, 64). These data
+suggest that under permeabilizing conditions,
+the MG-PACE circuit activates quickly enough
+to reflect equilibrium binding dynamics of the
+molecular glue ternary complex. Collective-
+ly, these findings establish that the MG-PACE
+gene circuit links the affinity of a known mo-
+lecular glue interaction to gene expression and
+thus can serve as the basis of a PACE selection.
+Orthogonal IMiD derivatives with no detected
+off-target neosubstrates
+IMiDs bind a hydrophobic pocket in the C-
+terminal domain of CRBN, placing their glu-
+tarimide ring within the pocket and leaving
+Fig. 1. Phage-assisted
+continuous evolution
+circuit for molecular glue
+complexes (MG-PACE).
+(A) In PACE, the gene for a
+protein of interest is
+placed on a selection phage
+(SP) in place of the phage
+gene gIII, which encodes
+the phage coat protein pIII.
+Host cells harbor an accessory
+plasmid (AP) encoding a
+selection circuit that provides
+pIII and a mutagenesis
+plasmid (MP) that increases
+the incidence of mutation
+during SP replication.
+(B) Rapamycin-sensitive MG-
+PACE circuit. (C) Rapamycin-
+induced activation of the
+MG-PACE circuit (1 hour).
+(D) Pomalidomide and IMiD
+derivatives PT-179 and PK-
+1016. (E) Whole-transcriptome
+RNA-seq of MM.1S cells
+treated with pomalidomide
+(1 mM, 48 hours, left) or
+PT-179 (1 mM, 48 hours, right).
+Values and error bars in (C)
+represent the mean and
+standard deviation of three
+replicates, each normalized
+to a control treatment
+with DMSO only. Values in
+(E) represent the mean
+of five replicates; P values
+for each gene were calculated
+using the Wald test and
+adjusted using the Benjamini-
+Hochberg method (84).
+A B
+C
+ω
+luxAB
+FKBP12 FRB
+434 OR1 pLac*
+434 RR69
+Rapamycin
+Phage
+AP MP
+Infection
+[Constant outflow]
+SP AP MP
+Host E. coli
+[Constant inflow]
+Mutagenesis plasmid
+(MP)
+araC Mutagenic genes
+pBAD
+Selection phage (SP)
+Evolving
+protein
+Phage
+genes
+Accessory plasmid (AP)
+pIII no pIII
+Bait protein
+Evolving protein
+(from SP)
+Molecular glue
+ω
+RNAP
+pLac*
+gIII
+Uninfectious phage
+DNA binding
+domain
+pIII
+D E MM.1S cells, pomalidomide MM.1S cells, PT-179
+N
+HN
+O
+O
+O
+O
+Pomalidomide
+N
+HN
+O
+O
+O
+O
+N
+O
+R
+R = H: PT-179
+R = F: PK-1016
+NH2
+4
+5
+6
+-2 -1 0 1 2 3 4 5
+0
+10
+20
+30
+Log10[rapamycin], nM
+Fold transcriptional activation
++ PMBN
+no PMBN
+-8 -4 0 4 8
+0
+5
+10
+15
+20
+25
+Log2 fold change
+(PT-179 vs. DMSO)
+-Log
+10
+adjusted
+p
+-value
+-9 -6 -3 0 3 6 9
+0
+5
+10
+15
+20
+25
+Log2 fold change
+(pomalidomide vs. DMSO)
+-Log
+10
+adjusted
+p
+-value
+>
+
+[[page:4]]
+the phthalimide ring partially exposed (65).
+CRBN•IMiD neosubstrates engage both the
+exposed IMiD phthalimide ring and the sur-
+rounding CRBN protein surface (8–11). Recently,
+we synthesized a panel of IMiD derivatives
+featuring substituents at the phthalimide 4-
+and 5-positions to identify motifs that impede
+native neosubstrate engagement, thereby min-
+imizing off-target protein degradation (66). In
+that study, we identified PT-179 (Fig. 1D) as a po-
+tential orthogonal IMiD derivative that does not
+induce degradation of known pomalidomide
+neosubstrates.
+To thoroughly assess the potential of PT-179
+for neosubstrate degradation in an unbiased
+proteome- and transcriptome-wide manner,
+we treated human cells lines that are known
+to express neosubstrates of canonical IMiDs
+with either pomalidomide or PT-179 and an-
+alyzed the treated cells by global proteomic
+and transcriptomic analyses. In MOLT4 cells,
+an acute lymphoblastic leukemia line, poma-
+lidomide induced significant down-regulation
+of the previously identified neosubstrates IKZF1
+(9) and ZFP91 (9, 31), whereas PT-179 did not
+significantly down-regulate any detected pro-
+teins (no down-regulation ≥ 2-fold at P ≤ 0.0001;
+fig. S1A). In KELLY cells, a neuroblastoma line,
+pomalidomide induced robust down-regulation
+of the developmental transcription factor SALL4
+(32) and ZFP91 (31), whereas PT-179 exhibited
+no significant degradation of detected proteins
+(fig. S1, B, D, and E). In human embryonic kid-
+ney 293T (HEK293T) cells, pomalidomide in-
+duced degradation of ZFP91, whereas PT-179
+did not down-regulate any detected proteins
+(fig. S1C). In addition, we treated multiple
+myeloma MM.1S cells with both compounds
+and performed whole-transcriptome sequenc-
+ing. Pomalidomide induced differential ex-
+pression of 1426 genes, reflecting degradation
+of key transcription and epigenetic regula-
+tors such as IKZF1/3 and ARID2 (Fig. 1E) (67).
+Treatment with PT-179 resulted in only three
+differentially expressed genes, a 99.8% de-
+crease in the frequency of gene expression
+perturbation, consistent with very low neosub-
+strate activity (Fig. 1E). Taken together, these
+results demonstrate that PT-179 is an IMiD
+derivative with minimal endogenous neosub-
+strates in the tested cell types.
+To verify that PT-179 still binds CRBN, we pu-
+rified the DDB1•CRBN complex and measured
+its affinity for PT-179 by competitive fluores-
+cence anisotropy (65). PT-179 binds CRBN with
+a Kd of 587 nM, similar to pomalidomide (Kd =
+500 nM; fig. S2, A to C). Finally, we performed
+competitive CRBN engagement assays by bio-
+luminescence resonance energy transfer (BRET)
+from a CRBN–NanoLuc fusion to a fluorescent
+IMiD conjugate in human cells (68). These as-
+says suggested that PT-179 engages CRBN in
+HEK293T and U2OS cells with one-seventh the
+potency of pomalidomide (fig. S2D), although
+we note that pomalidomide’s apparent affin-
+ity for CRBN in cells is likely enhanced by neo-
+substrate recruitment as dissociation constants
+are lower for CRBN•IMiD•neosubstrate ternary
+complexes than for CRBN•IMiD binary com-
+plexes (figs. S2C and S15, C and D).
+Evolution of ZF degrons that engage CRBN
+bound to orthogonal IMiD derivatives
+To evolve ZFs that engage PT-179–bound CRBN,
+we constructed an MG-PACE circuit using the
+CRBN•IMiD•ZF molecular glue complex. As a
+starting ZF, we chose a 60–amino acid chimera
+composed of IMiD neosubstrates IKZF1 and
+ZFP91 that was previously developed as a po-
+tent IMiD-responsive “super-degron,” hereafter
+referred to as SD0 (14). We translationally fused
+CRBN to the DNA binding protein RR69 and
+fused SD0 to the RNAP w-subunit, then we
+measured transcriptional activation by lumi-
+nescence (Fig. 2A). Pomalidomide elicited a
+sigmoidal dose-response curve (EC50 = 252 nM),
+but with only sevenfold maximal transcrip-
+tional activation (Fig. 2C). Increasing or de-
+creasing expression levels of RR69–CRBN or
+w–SD0 did not improve transcriptional acti-
+vation (fig. S3).
+We also explored anchoring the circuit with
+the CRBN C-terminal domain (CTD) alone,
+which contains the IMiD binding pocket (Fig.
+2B) (65, 69). The CRBNCTD MG-PACE circuit
+exhibited 13-fold transcriptional activation at
+the highest dose, albeit with a rightward shift
+of the dose-response curve. This shift likely re-
+flects a decrease in affinity of pomalidomide
+toward CRBNCTD (69), a decrease in affinity of
+SD0 toward CRBNCTD•pomalidomide, or both
+(Fig. 2C). We attributed the difference in maxi-
+mum circuit activation to poor expression of
+full-length CRBN in E. coli. In our initial ef-
+forts, we used the CRBNCTD MG-PACE circuit,
+hypothesizing that higher activation (lower
+selection stringency) would better support
+weakly-binding SD0 variants in the early stages
+of evolution.
+Attempts to evolve SD0 to bind CRBNCTD•
+PT-179 repeatedly failed, suggesting that too
+many mutations were required to access SD0
+variants capable of supporting phage propaga-
+tion. To bridge this mutational gap, we revisited
+the CRBN•pomalidomide•IKZF1 co-crystal struc-
+ture (9) and identified three residues that we
+predicted might be important for accommo-
+dating bumped IMiD derivatives. We cloned a
+library of phage encoding all possible muta-
+tions at the three corresponding positions in
+SD0 (Q18, E20, and I21) using NNK codons
+(N = A,T,C, or G; and K = G or T) but were still
+unable to obtain variants that conferred PT-
+179–dependent phage propagation.
+We hypothesized that IMiD derivatives with
+smaller substituents might serve as evolutionary
+stepping stones that would guide the evolution
+of SD0 to accommodate larger substitutions.
+We previously identified dozens of substituted
+IMiD derivatives that exhibit only partial dis-
+ruption of neosubstrate degradation (66). We
+selected a panel of 16 IMiD derivatives encom-
+passing a range of neosubstrate degradation
+propensities and conducted 96 simultaneous
+PANCE experiments separately using each of
+the 16 IMiD derivatives (fig. S4). Although slower
+than PACE, PANCE is easily parallelized in
+multiwell plates or automated systems (53, 70)
+and prevents washout of weakly propagating
+phage, providing a greater opportunity for weak-
+ly active early-stage solutions to evolve in re-
+sponse to challenging problems. Each lagoon
+was seeded with phage encoding either SD0
+or the SD0 library, and PANCE passages were
+conducted in media supplemented with a tar-
+get IMiD derivative.
+After eight or nine passages reaching an av-
+erage overall dilution of 1015- to 1017-fold, we
+obtained 15 pools of phage (10 originating from
+SD0 library phage, five originating from SD0
+phage) that propagated strongly in the pres-
+ence of one of five target IMiD derivatives (fig.
+S5). Successful evolutions occurred in lagoons
+supplemented with IMiD derivatives that have
+the highest propensity to degrade pomalido-
+mide neosubstrates. Despite differences in the
+structures of IMiD derivative stepping stones,
+evolved SD0 mutants in surviving phage con-
+verged on similar mutations (fig. S6). We char-
+acterized variants SD8 and SD12 and found
+that they elicit dose-dependent luciferase ex-
+pression from the CRBNCTD MG-PACE circuit
+in response to their respective IMiD derivatives,
+and to a lesser extent in response to PT-179 (fig.
+S7). These results indicate that evolving with
+alternate IMiD derivatives as stepping stones
+succeeded in producing SD0 variants that bind
+PT-179–bound CRBNCTD.
+From these initial evolved variants, we pur-
+sued two evolutionary trajectories (fig. S8).
+First, we subjected phage encoding SD12 to
+270 hours of PACE (representing hundreds of
+generations of phage mutation, selection, and
+replication for each surviving phage) on the
+CRBNCTD MG-PACE circuit in media supple-
+mented with 10 mM PT-179 (Fig. 2D). We in-
+creased selection stringency by decreasing the
+strength of the ribosome binding site (RBS)
+governing gIII translation (71), requiring more
+transcription events from the MG-PACE hybrid
+promoter to sustain adequate pIII production.
+Surviving phage showed evolutionary conver-
+gence on the SD20 variant, which evolved non-
+silent mutations in 12 of the original 60 residues
+in SD0 and the addition of two C-terminal res-
+idues (Fig. 2I and fig. S8D). SD20 induces ro-
+bust luciferase expression from the CRBNCTD
+MG-PACE circuit in response to PT-179 (24-fold
+activation at 50 mM PT-179) (Fig. 2E). These
+results suggest that SD20 evolved to bind
+CRBNCTD•PT-179 with affinity comparable to
+that of SD0 binding CRBNCTD•pomalidomide.
+
+[[page:5]]
+A B C
+I
+CRBNCTD
+434
+RR69
+luxAB
+or gIII
+434 OR1 pLac*
+ω
+Full-length CRBN
+SD0
+luxAB
+or gIII
+434 OR1 pLac*
+434
+RR69
+D E
+PT-179 (10 μM), gIII RBS = sd5 PT-179 (10 μM), gIII RBS = sd2
+F
+H
+PK-1016 (10 μM), gIII RBS = sd8
+PK-1016 (10 μM)
+gIII RBS = sd5
+PK-1016 (500 nM)
+gIII RBS = sd5; gIII-neg RBS = sd8
+0 24 48 72 96 120 144 168 192 216 240 264
+103
+104
+105
+106
+107
+108
+109
+1
+2
+3
+4
+Time (hrs)
+Phage titer (pfu/mL)
+Lagoon flow
+rate (vol/hr)
+0 24 48 72 96 120 144 168 192 216 240 264
+103
+104
+105
+106
+107
+108
+109
+1
+2
+3
+4
+Time (hrs)
+Phage titer (pfu/mL)
+Lagoon flow
+rate (vol/hr)
+0 1 2 3 4 5 6 7 8 9 10
+103
+104
+105
+106
+107
+108
+109
+1010
+101
+102
+103
+104
+Passage
+Phage titer (pfu/mL)
+Dilution factor
+ω
+SD0
+G
+0 1 2 3 4 5
+0
+5
+10
+15
+20
+25
+30
+Log10[PT-179], nM
+Fold transcriptional
+activation
+SD17 (136 hrs)
+SD20 (270 hrs)
+SD0
+SD12 (9 passages)
+-1 0 1 2 3 4 5
+0
+2
+4
+6
+8
+10
+Log10[PT-179], nM
+Fold transcriptional
+activation
+SD31 (18 passages)
+[EC50 = 3.25 M]
+SD35 (135 hrs)
+[EC50 = 557 nM]
+SD36 (277 hrs)
+[EC50 = 217 nM]
+SD0
+SD8 (8 passages)
+-1 0 1 2 3 4 5
+0
+5
+10
+15
+20
+Log10[pomalidomide], nM
+Fold transcriptional
+activation
+full-length CRBN
+[EC50 = 252 nM]
+CRBNCTD
+Fig. 2. Phage-assisted continuous evolution of new ZF degrons.
+(A) Full-length CRBN MG-PACE circuit. (B) CRBNCTD MG-PACE circuit.
+(C) Pomalidomide-induced activation of both CRBN MG-PACE circuits
+(1 hour). (D) PACE in CRBNCTD circuit. (E) PT-179–induced CRBNCTD circuit
+activation with evolved variants (1 hour). (F) PANCE in the full-length CRBN
+circuit. (G) PACE in the full-length CRBN circuit. (H) PT-179–induced
+full-length CRBN circuit activation with evolved variants (1 hour).
+(I) Mutations in PANCE- and PACE-evolved degron variants. SD17 and
+SD20 contain a frame-shift mutation recoding residues 57 to 60 and
+extending the reading frame by two residues. Single-letter abbreviations
+for the amino acid residues are as follows: A, Ala; C, Cys; D, Asp; E, Glu;
+F, Phe; G, Gly; H, His; I, Ile; K, Lys; L, Leu; M, Met; N, Asn; P, Pro;
+Q, Gln; R, Arg; S, Ser; T, Thr; V, Val; W, Trp; and Y, Tyr. Values and error bars
+in (C), (E), and (H) represent the mean and standard deviation of three
+replicates, each normalized to a control treatment with DMSO only. Dashed
+vertical lines in (D), (F), and (G) represent neutral drift passages.
+
+[[page:6]]
+Next, we evolved SD8 using the full-length
+CRBN circuit (fig. S8C). We conducted 10 PANCE
+passages (1024-fold overall dilution) followed
+by 135 hours of PACE (Fig. 2, F and G) using
+PK-1016 (Fig. 1D), a close analog of PT-179 with
+a fluorine at the phthalimide 6-position. PK-
+1016 binds CRBN (Kd = 1000 nM; fig. S2C) with
+poorer affinity than PT-179 (Kd = 587 nM), and
+we reasoned that this change could further in-
+crease selection stringency. These efforts yielded
+SD35, which potently activated the full-length
+CRBN MG-PACE circuit in response to PT-179
+(EC50 = 557 nM; Fig. 2, H and I, and fig. S8, C
+and D). We also attempted to augment selection
+stringency further by lowering RBS strength,
+but this change resulted in phage washout.
+We hypothesized that reducing the concen-
+tration of PK-1016 might increase stringency
+by reducing the fraction of bound CRBN during
+selection. To discourage the evolution of var-
+iants capable of PK-1016–independent CRBN
+binding, we performed simultaneous negative
+selection using a mutant CRBN [Tyr384→Ala
+(Y384A) and Trp386→Ala (W386A), CRBNYW/AA]
+that is deficient in IMiD binding (72). To im-
+plement this negative selection, we constructed
+a single-chain version of the DNA-binding P22
+phage repressor c2 (scP22) (73), translation-
+ally fused scP22 to CRBNYW/AA, and placed
+the p22 OL1 operator upstream of gIII-neg, a
+dominant-negative form of gIII (fig. S9) (38).
+SD35 variants that bind CRBN without an
+IMiD derivative should also bind CRBNYW/AA,
+triggering expression of pIII-neg and poison-
+ing the production of infectious progeny phage.
+We evolved the SD35-containing pool of phage
+surviving the previous 135 hours of PACE for
+an additional 142 hours using this strategy and
+lowered the concentration of PK-1016 from
+10 mM to 500 nM (Fig. 2G and fig. S8C). The
+resulting evolved variant surviving both pos-
+itive and negative selection, SD36, contains
+eight mutated residues (Fig. 2I and fig. S8D)
+and elicits a potent sigmoidal PT-179 dose-
+response curve in the full-length CRBN MG-
+PACE circuit (EC50 = 217 nM; Fig. 2H).
+Identification of SD40, a compact
+PT-179–dependent degradation tag
+Next, we characterized the ability of evolved
+degrons to recruit tagged proteins to the endog-
+enous CUL4A/B•RBX1•DDB1•CRBN (CRL4CRBN)
+E3 ligase complex in human cells, triggering
+ubiquitination and proteasomal degradation
+in response to PT-179 (Fig. 3A). We generated
+stable HEK293T cell lines expressing degron
+variants fused to enhanced green fluorescent
+protein (eGFP) with untagged mCherry as an
+internal control for expression (74). SD20, which
+evolved in the CRBNCTD selection circuit, did
+not trigger eGFP degradation in response to
+PT-179 despite its marked improvement in
+activating the CRBNCTD MG-PACE circuit (fig.
+S10, A and B). SD20 contains several mutations
+in the C-terminal portion of the degron (Fig. 2I
+and fig. S10A). This region of IKZF1 has been
+predicted through molecular dynamics to en-
+gage CRBNNTD, and mutating certain residues
+within this region, such as R57 (which is mu-
+tated in SD20), impairs ternary complex forma-
+tion in vitro (9). We speculate that evolution in
+the absence of CRBNNTD led to C-terminal mu-
+tations in SD20 that impede ternary complex
+formation with full-length CRBN, as evidenced
+by SD20 only weakly activating the full-length
+CRBN MG-PACE circuit in response to PT-179
+(fig. S10C). Consistent with this model, revert-
+ing the mutated C-terminal residues in SD20
+lead to an increase in transcriptional activation
+with full-length CRBN and PT-179 (fig. S10C).
+In contrast, variants evolved in the full-
+length CRBN selection circuit induced PT-
+179–dependent eGFP degradation in reporter
+HEK293T cells, with more evolved variants
+exhibiting greater potency (Fig. 3B). SD36 po-
+tently degraded eGFP in response to PT-179
+with a half-maximal degradation concentra-
+tion (DC50) of 14.3 nM. These results demon-
+strate that the full-length CRBN MG-PACE
+circuit successfully evolved ZF degrons that
+degrade tagged proteins in human cells in
+response to bumped IMiD derivative PT-179.
+The eight mutations in SD36 occur in the
+center of the degron, between residues 15 and
+50 (Fig. 2I and fig. S11A). We hypothesized
+that portions of the N and C termini of the
+degron that were not mutated during evolu-
+tion might be dispensable for its engagement
+with CRBN•PT-179. We successively truncated
+the N- and C-terminal ends of SD36 and iden-
+tified a 36–amino acid “minimal” degron, SD40,
+that exhibited 3.2-fold enhanced potency for
+PT-179–induced eGFP degradation (DC50 =
+4.5 nM; Fig. 3B and fig. S11A). Trimming the
+degron beyond this point led to a marked
+reduction in degradation potency (fig. S11B).
+Although degron variants were evolved to bind
+CRBN•PK-1016, PK-1016 is a poor degrader
+of SD40-eGFP in HEK293T cells, suggesting
+that the added fluorine is disruptive for cell
+penetration (fig. S11C). SD40 remains potently
+responsive to canonical IMiD derivatives such
+as pomalidomide and mezigdomide (fig. S11,
+D and E).
+To test the versatility of SD40, we generated
+five stable HEK293T cell lines that exogenously
+express N- or C-terminal SD40 fusions with
+Nluc, Fluc, and the kinase activator PRKRA.
+We observed robust dose-dependent degra-
+dation of each fusion construct in response
+to PT-179 (Fig. 3C). A time-course experiment
+revealed that PRKRA degradation occurred
+within 10 min of 1 mM PT-179 administration
+and degradation was nearly complete within
+1 hour (Fig. 3D). To investigate whether SD40
+targets unintended neosubstrates for degra-
+dation, we performed global proteomics using
+HEK293T cells stably expressing SD40-eGFP.
+After 5 hours of treatment with pomalidomide,
+SD40-eGFP was significantly degraded along-
+side multiple known endogenous neosubstrates
+of pomalidomide (fig. S12A). In contrast, after
+5 and 24 hours of treatment with PT-179, SD40-
+eGFP was the only significantly degraded pro-
+tein (no other protein out of ~7800 detected was
+degraded ≥2-fold at P ≤ 0.0001; fig. S12, B and
+C). These results corroborate that SD40 me-
+diates rapid and selective PT-179–triggered
+degradation of various tagged proteins as N-
+or C-terminal fusions.
+SD40 can be installed in target genes
+by prime editing
+Next, we evaluated the installation of SD40 at
+endogenous genomic target genes in mamma-
+lian cells using twin prime editing (twinPE)
+(54, 75). We optimized prime editing parame-
+ters, including spacer position and prime editor
+construct (30), to insert SD40 at the C terminus
+of serine/threonine-protein kinase PLK1 with
+26% editing efficiency and 8.8% indel by-
+products in HEK293T cells (Fig. 3E and fig.
+S13), enabling rapid isolation of a homozy-
+gous PLK1-SD40 cell line. PLK1 is an essential
+cell-state regulator (76), and complete knock-
+down for 24 hours is cytotoxic. After 2 hours
+of treatment with PT-179, we observed ro-
+bust PLK1 knockdown (Fig. 3F). We also used
+twinPE to install SD40 at the N terminus of
+bromodomain-containing protein 4 (BRD4)
+yielding 7.7% knock-in of SD40 in K562 cells
+(Fig. 3E and fig. S13) with 4.3% indel by-
+products. From a pool of prime-edited cells, we
+isolated a homozygous line expressing SD40-
+BRD4 and observed that PT-179 effected ro-
+bust degradation (Fig. 3F). For comparison, we
+also attempted scarless insertion of SD40 and
+FKBP12F36V from the dTag system (324 base
+pairs) (17) at the N terminus of BRD4 using Cas9
+nuclease-directed homology-directed repair
+(HDR) using two different single-guide RNAs
+(sgRNAs) and a double-stranded donor DNA
+template. Cas9-mediated insertion of SD40
+was more efficient (5.2 to 8.7% editing) than the
+larger FKBP12F36V (0.61 to 0.82% editing), al-
+though indel products predominated in both
+cases (77 to 86% indels for SD40, 93 to 96%
+indels for FKBP12F36V; fig. S14). These findings
+indicate that SD40 is amenable to installation
+into native target genes in human cells by prime
+editing with favorable ratios of the desired edit
+to indel by-products, facilitating the evaluation
+of conditional degradation of an endogenous
+target protein expressed from its native gene
+in its natural genomic regulatory context.
+SD40 tightly binds CRBN•PT-179 in vitro
+To compare the affinity of the evolved ternary
+complex CRBN•PT-179•SD40 to that of the
+original complex CRBN•pomalidomide•SD0,
+we expressed and purified representative SD40
+and SD0 constructs from E. coli as fusions to
+
+[[page:7]]
+maltose binding protein (MBP). We coex-
+pressed and co-purified CRBN with a trun-
+cated version of its adaptor protein, DNA
+damage–binding protein 1 (DDB1DBPB•CRBN)
+from Trichoplusia ni Hi Five cells. We con-
+ducted bio-layer interferometry (BLI) with im-
+mobilized MBP-degron to measure association
+and dissociation rates of DDB1DBPB•CRBN pre-
+complexed with either PT-179 or pomalidomide.
+As expected, SD0 binds CRBN•pomalidomide
+(Kd = 217 nM) but not CRBN•PT-179 (Fig. 3G
+and fig. S15A). In contrast, SD40 binds CRBN
+precomplexed with both molecules (CRBN•
+pomalidomide•SD40 Kd = 135 nM, CRBN•PT-
+179•SD40 Kd = 123 nM; fig. S15B). Equilibrium
+binding measurements using time-resolved
+fluorescence resonance energy transfer (TR-
+FRET) yielded data consistent with these find-
+ings (fig. S15, C and D). BLI revealed that SD40
+binds precomplexed CRBN with slower on-
+and off-rates relative to SD0 (Fig. 3G), sug-
+gesting that the MG-PACE circuit may select
+for longer residence times at the evolving
+CRBN•PT-179•degron interface. Finally, we
+investigated whether the presence of SD40 in-
+creases PT-179’s apparent affinity for CRBN in
+human cells. We observed a 1.8-fold increase
+Fig. 3. SD40 degrades exoge-
+nously and endogenously
+expressed tagged proteins in
+human HEK293T and K562
+cells. (A) Cartoon representation
+of PT-179 recruiting a degron-
+tagged protein to the
+CUL4•RBX1•DDB1•CRBN E3
+ligase complex. (B) PT-179–
+induced eGFP degradation
+(≥20 hours) with evolved degrons
+in HEK293T cells. (C) Degradation
+of proteins fused to SD40
+(24 hours). The corresponding
+genes were genomically integrated
+in HEK293T cells using a
+lentiviral vector. (D) Time course
+of PT-179–induced degradation of
+exogenously expressed SD40-
+PRKRA in HEK293T cells.
+(E) Insertion of a 108–base pair
+sequence encoding SD40 in-frame
+in endogenous genomic target
+genes using twinPE. SD40 was
+precisely inserted before the
+endogenous PLK1 stop codon in
+HEK293T cells and after the
+endogenous BRD4 start codon in
+K562 cells. (F) Degradation of
+endogenous SD40-tagged PLK1
+(2 hours) and BRD4 (24 hours) in
+cell lines generated by prime
+editing. (G) Thermodynamic and
+kinetic binding parameters for SD0
+and SD40 binding to CRBN•
+pomalidomide or CRBN•PT-179.
+Values and error bars in (B)
+represent the mean and standard
+deviation of three replicates,
+normalized to control treatment
+with DMSO only. Values and error
+bars in (E) represent the mean
+and standard deviation of three
+replicates. Thermodynamic and
+kinetic binding parameters in (G)
+reflect the mean and standard
+error of three replicates.
+DMSO
+1 μM PT-179
+10 min
+30 min
+1 hr
+2 hr
+4 hr
+SD40-PRKRA-HA
+β-tubulin
+PLK1C-term
+(HEK 293T cells)
+BRD4 N-term
+(K562 cells)
+SD40-BRD4
+GAPDH
+DMSO
+PT-179 (nM)
+1
+10
+100
+1,000
+10,000
+PLK1-SD40
+GAPDH
+DMSO
+[PT-179] (nM)
+1
+10
+100
+1,000
+10,000
+SD40-PRKRA-HA
+β-tubulin
+HA-PRKRA-SD40
+β-tubulin
+SD40-NanoLuc-HA
+GAPDH
+HA-NanoLuc-SD40
+GAPDH
+SD40-FLuc-HA
+GAPDH
+SD40-eGFP
+β-tubulin
+Exogenous expression Endogenous tagging
+A
+D
+C
+F
+E
+Variant Molecular glue Kd kon (M-1s-1) koff (s-1)
+SD0
+SD40
+SD40
+pomalidomide
+pomalidomide
+PT-179
+PT-179
+N/A N/A N/A
+G
+B
+Evolved
+CRBN degron tag
+Tagged
+protein
+DDB1
+CUL4
+RBX
+E2
+Ubiquitin
+transfer
+PT-179
+N8
+SD0
+Correct edit
+Indels
+0
+10
+20
+30
+Total sequencing reads
+with the specified edit or indels (%)
+Correct edit
+Indels
+0
+2
+4
+6
+8
+10
+Total sequencing reads
+with the specified edit or indels (%)
+245 ± 4.41 nM (2.89 ± 0.317) x 105 (7.10 ± 0.873) x 10-2
+135 ± 22.4 nM (7.78 ± 0.288) x 104 (1.06 ± 0.200) x 10-2
+123 ± 4.45 nM (4.29 ± 0.100) x 104 (5.28 ± 0.132) x 10-3
+-1 0 1 2 3
+0.0
+0.5
+1.0
+Log10[PT-179], nM
+Normalized fluorescence
+(eGFP / mCherry)
+SD36
+[DC50 = 14.3 nM]
+SD31
+SD8
+SD40
+[DC50 = 4.5 nM]
+SD0
+
+[[page:8]]
+in affinity in HEK293T cells stably expressing
+SD40-PRKRA and a further 3.8-fold increase
+in HEK293T cells overexpressing SD40-PRKRA
+(fig. S16). Overall, these data indicate that MG-
+PACE successfully evolved a high-affinity molec-
+ular glue interaction with PT-179–bound CRBN.
+Structural characterization of the
+DDB1•CRBN•PT-179•SD40 complex
+Evolved mutations in SD40 cluster near the
+C-terminal region and IMiD contact site. To un-
+derstand how they influence the affinity of SD40
+to CRBN, we determined cryo-EM structures of
+SD40 in complex with DDB1DBPB•CRBN bound
+to PT-179 or to pomalidomide. With PT-179,
+three-dimensional classification revealed het-
+erogeneity at the DDB1DBPB•CRBN interface
+implying relative motion between the two pro-
+teins (movie S1). Hence, after multiple rounds
+of refinement, we obtained two distinct high-
+quality maps for DDB1DBPB•CRBN•PT-179•SD40
+at global resolutions of ~2.4 and ~2.5 Å, re-
+spectively (fig. S18B), which were then used to
+build models (Fig. 4, A and B, and figs. S18
+and S19). For comparison with a conventional
+IMiD, we also built a model of DDB1DBPB•CRBN•
+pomalidomide•SD40 using a map refined
+to a global resolution of ~3.3 Å (Fig. 4C and
+figs. S17 and S19H). Additional compound
+density in the PT-179 maps compared with
+the pomalidomide map allowed unambiguous
+placement of the morpholine ring of PT-179
+(fig. S19, I and J).
+The cryo-EM structures with PT-179 reveal an
+extensive interface between SD40 and CRBN
+(Fig. 4D) bridging the IMiD-binding C-terminal
+and N-terminal domains of CRBN. In IKZF1,
+Q146 (equivalent to Q18 in SD0) forms a water-
+mediated hydrogen bond with the phthalimide
+amino group of pomalidomide (9). As SD40
+evolved to bind PT-179 and PK-1016, both of
+which lack this amino group, this hydrogen
+bonding opportunity was lost. Instead, the
+side chain of F18 packs against the electron-
+rich morpholine substituent at the C5 posi-
+tion of the phthalimide ring of PT-179 (Fig.
+4E and fig. S20). The C-terminal tail (residues
+42 to 50) of SD40 folds back on the ZF motif
+and is stabilized by a constellation of hydro-
+phobic residues: P20, I36, F45, and L49 (Fig.
+4F). E20P (arising in SD8) acts as a gatekeeper
+mutation that enables this fold by tightly
+packing against the three other residues as
+well as H353 of CRBN.
+The additional contacts of the SD40 C-terminal
+tail with CRBN at residues E42, L44, Y47, H48,
+and Y50 result in an increased buried solvent-
+accessible surface area of 2293 Å2 at the CRBN•
+SD40 interface compared with 1098 Å2 with-
+out the tail (Fig. 4G). Moreover, this inter-
+face has a high shape complementarity score
+(77) of 0.68 (on a scale of 0 to 1, with 1 being
+perfectly complementary). The mutation P44L
+arose in SD8 without the presence of CRBNNTD.
+Upon introduction of full-length CRBN, L44
+likely bound a hydrophobic patch of CRBN
+around M88 and anchored the C-terminal tail
+on CRBN supporting subsequent mutations
+(map quality insufficient to unambiguously
+assign rotamers near CRBNM88). Y47 and H48
+are well positioned to make favorable inter-
+actions with several CRBN residues, notably
+p–p stacking interactions with H103 and Y355,
+respectively, bridging the N- and C-terminal
+domains of CRBN (Fig. 4H). C47Y arose in
+SD31, which coincided with a sharply increased
+circuit activation compared with SD8 (Fig. 2H).
+Conversely, trimming of residues H48 to Y50 in
+SD41 led to a marked reduction in degradation
+signal compared with SD40 (fig. S11, A and B).
+Side-chain densities for Y50 of SD40 and
+F150 of CRBN were not resolved in the map,
+but the backbones are well positioned to form
+p–p stacking interactions, suggesting that
+the final mutation C50Y may increase affin-
+ity through this potentially transient inter-
+action. Mezigdomide was recently shown to
+promote the closed (putatively active) confor-
+mation of CRBN by recruiting the N-terminal
+domain through interactions near F102 and
+F150 (11), both of which are at the CRBN•SD40
+interface. These results suggest that SD40
+and mezigdomide take advantage of a shared
+strategy for CRBN activation by making non-
+overlapping contacts across both CRBNCTD
+and CRBNNTD, thus explaining the highly po-
+tent degradation activity of mezigdomide
+(fig. S11E).
+The R15L, P16L, and K37N mutations are not
+present at the CRBN•PT-179•SD40 interface
+and likely evolved to influence MG-PACE cir-
+cuit activation by allosteric or other mechanisms.
+The lower helical propensity of asparagine com-
+pared with lysine (78) may have resulted in
+premature termination of the helix at position
+38—which, in prior structures (9) extends to
+residue 40. This early helix termination turns
+the SD40 C-terminal tail toward CRBNNTD and
+provides the opportunity to make the aforemen-
+tioned contacts (fig. S20A).
+The structure of the CRBN•pomalidomide•
+SD40 interface is similar to that of CRBN•PT-
+179•SD40, with the SD40 C-terminal tail adopt-
+ing the same looped conformation (Fig. 4C),
+indicating that the binding mode of SD40 is
+not specific to PT-179. Given this molecule-
+agnostic mode of binding, we hypothesized that
+the reversion mutation F18Q in SD40 would
+restore the water-mediated hydrogen bonding
+interaction seen with pomalidomide (9). In-
+deed, reverting the F18 mutation in SD40 led
+to a 5.6-fold improvement in potency with
+pomalidomide (DC50 = 177 pM; fig. S20C). This
+SD40 revertant displayed a modest 2.2-fold re-
+duction in potency with PT-179 (DC50 = 10.1 nM;
+fig. S20D). Modeling SD40 and the revertant
+using Rosetta (79) predicted that glutamine
+avoids a steric clash with the morpholine sub-
+stitution on PT-179, but its interaction with
+PT-179 is less energetically favorable than that
+of phenylalanine (fig. S20B and table S7).
+These observations highlight that the inter-
+action between the SD40 C-terminal tail and
+CRBNNTD is the primary driver of affinity.
+Collectively, the high-resolution structures
+of the DDB1DBPB•CRBN•PT-179•SD40 ter-
+nary complex reveal that the mutations in
+SD40 evolved to take advantage of numer-
+ous types of interactions between the evolved
+degron, CRBN, and PT-179. These include newly
+formed polar and hydrophobic interactions
+with mutated residues, conformational rear-
+rangement in nonmutated residues so they can
+participate in new interactions with CRBN,
+new interactions within SD40 including a
+well-packed hydrophobic cluster, and po-
+sitioning complementary SD40 groups next
+to nearly every reachable surface of partner
+molecules (Fig. 4, D to H). Hence, these mod-
+els illustrate that a genetically encodable evolved
+degron can exploit interactions with regions
+of CRBN previously known to engage current-
+generation small-molecule drug candidates
+such as mezigdomide as well as entirely novel
+regions.
+Evolution of a mouse CRBN–compatible
+degron tag
+Compared with human CRBN, mouse cereblon
+(mmCRBN) contains a V388I mutation that
+prevents IMiD-induced recruitment of ZF
+neosubstrates (8). The development of a po-
+tent and compact degron that is compatible
+with mmCRBN would facilitate studies that
+modulate target protein function in mouse
+systems. We hypothesized that MG-PACE could
+evolve degrons that overcome this difference
+in mmCRBN and respond to PT-179 in mouse
+cells. We constructed a mmCRBN MG-PACE
+circuit (Fig. 5A) and performed a total of
+205 hours of PACE seeded with SD36-encoding
+phage (Fig. 5B). SD0 did not activate the
+mmCRBN circuit, but SD36 showed activity
+for mmCRBN•PT-179 (Fig. 5D). The additional
+contacts made by the C-terminal tail of SD36
+to the CRBN N-terminal domain may allow
+it to tolerate a marginal change in binding
+mode of the ZF due the steric occlusion caused
+by V388I.
+After 89 hours of PACE, we identified the
+SD55 variant with improved activation of the
+mmCRBN MG-PACE circuit (EC50 = 1.11 mM;
+Fig. 5, C and D). We hypothesized that expres-
+sion of a competing degron variant in PACE
+would impose selection pressure on the evolv-
+ing degron to increase binding affinity to
+mmCRBN•PT-179 (Fig. 5A and fig. S8, A and
+B). We conducted an additional 116 hours in
+host cells expressing a fusion of MBP to SD55
+and identified variant SD56 with an additional
+4.9-fold improvement in the EC50 of circuit
+activation (EC50 = 225 nM; Fig. 5D).
+
+[[page:9]]
+To test whether MG-PACE produced a PT-
+179–responsive degron tag that is functional
+in mouse cells, we transduced mouse 3T3 cells
+with degron-eGFP-IRES-mCherry constructs for
+SD0, SD36, and SD56. After overnight treat-
+ment with PT-179, we observed no signs of eGFP
+degradation when fused to SD0, but SD36 and
+SD56 elicited dose-dependent eGFP degrada-
+tion (Fig. 5E). SD56 exhibited greater potency
+than SD36 in mouse cells (SD56 DC50 = 70 nM
+versus SD36 DC50 = 372 nM; Fig. 5E). SD56 also
+responds to canonical IMiD derivatives in 3T3
+cells, such as pomalidomide and mezigdomide
+(fig. S21, A to C), and to pomalidomide and
+PT-179 in human HEK293T cells with potencies
+similar to SD40 (fig. S21, D and E). Canonical
+IMiDs do not have neosubstrates in mouse
+cells (80). To verify that PT-179 does not recruit
+neosubstrates, we performed global proteo-
+mics analysis in mouse Ba/F3 cells treated
+with PT-179 for 5 and 24 hours and detected
+no significant changes to protein expression
+(no down-regulation ≥ 2-fold at P ≤ 0.0001;
+fig. S22). Collectively, these data demonstrate
+that MG-PACE can be applied using mouse E3
+ligase domains to evolve potent degrons that
+function in mouse cells.
+Fig. 4. Cryo-EM structure of the
+ternary complex of SD40 with
+DDB1•CRBN bound to IMiD
+derivatives. (A) EM map of
+DDB1DBPB•CRBN•PT-179•SD40,
+colored by domains. Map obtained
+from local refinement on CRBN
+and sharpened using DeepEMhancer
+(99). (B) Cartoon model of
+DDB1DBPB•CRBN•PT-179•SD40 with
+PT-179 highlighted in space-filling
+representation. (C) Comparison
+of the structures of SD40 bound
+to CRBN•PT-179 and to CRBN•
+pomalidomide. Backbone trace of
+DDB1DBPB•CRBN•pomalidomide•SD40
+is shown in translucent gray super-
+imposed on DDB1DBPB•CRBN•PT-
+179•SD40 in color aligned on the
+CRBN residues around the ligand.
+(D) Close-up of the cartoon model in
+(B) near the CRBN•PT-179•SD40
+interface with key residues of
+SD40 shown in stick representation.
+(E) Interaction of F18 and PT-179
+through stacking of the side chain
+against the morpholine ring of
+the compound. (F) A constellation of
+hydrophobic residues (P20, I36, F45,
+and L49) shown in space-filling
+representation. These residues pack
+tightly against each other and H353 of
+CRBN. (G) Additional interactions
+made by the C-terminal tail of SD40
+with CRBNNTD. CRBN is shown in
+surface representation, and SD40 is
+shown as a transparent surface and
+cartoon. SD40 residues contributing
+most to the interaction are shown
+in stick representation. (H) Interaction
+of Y47 and H48 of SD40 with CRBN
+residues. p–p stacking interactions
+with H103 in CRBNNTD and Y355 in
+CRBNCTD are highlighted. In (E) to (H),
+insets show the map orientation,
+depth cue, and cropping applied to
+arrive at that panel.
+F18 PT-179
+Y50
+Y47
+L44
+E42
+F45
+L49
+P20
+I36
+C19
+C22
+H39
+H35
+Zn2+
+H48
+N37
+D
+SD40
+CRBNCTD
+CRBNNTD
+CRBNHBD
+DDB1BPC
+DDB1BPA
+PT-179
+B
+Y47
+Y50
+H48
+L44
+E42
+Y47
+H48
+Y355
+H103
+F102
+Q86
+P85
+G H
+F45
+L49
+P20
+I36
+H353
+F
+E
+PT-179 F18
+90°
+A SD40
+CRBNCTD
+CRBNNTD
+CRBNHBD
+DDB1BPC
+DDB1BPA
+PT-179
+C
+PT-179
+Pomalidomide
+
+[[page:10]]
+Discussion
+Small molecule–induced degrons have become
+a major focus of both basic research and clin-
+ical applications. Among the handful of well-
+characterized degrons, none are both small
+enough for efficient genomic knock-in and
+compatible with a bio-orthogonal ligand that
+avoids degradation of endogenous neosub-
+strates, including important transcription fac-
+tors such as IKZF1/3, ZFP91, and SALL4. We
+developed a molecular glue PACE system that
+enables rapid and continuous evolution of high-
+affinity interactions between a protein of inter-
+est and a small molecule–bound target. Applying
+the MG-PACE system evolved potent and selec-
+tive molecular glue interactions between new
+ZF degrons and CRBN bound to orthogonal
+IMiD derivatives. The resulting chemically in-
+ducible degron is only 36 amino acids long,
+can be efficiently inserted at genomic loci using
+prime editing, and responds to a small-molecule
+IMiD derivative that perturbs far fewer endog-
+enous neosubstrates than canonical IMiD deriv-
+atives. We also applied MG-PACE to mmCRBN
+evolution, overcoming unfavorable residue-
+neosubstrate contacts, allowing the evolution
+of a degron that responds to PT-179 in mouse
+cells. Together, these findings provide power-
+ful tools that enable manipulation of protein
+levels in human and mouse cells with exquis-
+ite specificity. These tools should be especially
+useful to study protein function or validate
+potential therapeutic targets while preserving
+endogenous regulatory mechanisms that gov-
+ern protein levels, thereby maximizing the bi-
+ological relevance of the findings.
+Collectively, our results establish MG-PACE
+as a powerful tool for remodeling molecular
+glue interactions. We developed gene circuits
+for simultaneous positive and negative selec-
+tion and tools to modulate selection stringency
+by controlling gIII RBS strength and expressing
+competing binders. Phage encoding SD36 ex-
+perienced an overall 10271-fold dilution over 18
+serial PANCE passages and 277 hours of PACE,
+corresponding to the shortest linear path ex-
+periencing hundreds of generations of degron
+mutation, selection, and replication. MG-PACE
+may also be useful to provide compact degron
+tags that are compatible with the large diver-
+sity of other IMiD derivatives that have been
+developed (81), allowing IMiDs with especially
+desirable pharmacologic properties to be ap-
+plied to targeted protein degradation or other
+molecular glue applications.
+Our finding that active degrons evolved ex-
+clusively in the presence of full-length CRBN
+supports the emerging picture that the closed
+form of CRBN, in which the N-terminal do-
+main in close proximity to the IMiD-binding
+C-terminal domain, is the active conforma-
+tion for ubiquitin transfer (9, 11). The ~2.4-Å
+global resolution cryo-EM structure of the ter-
+nary complex establishes that degrons can evolve
+substantial interactions with both CRBNNTD
+and CRBNCTD to drive CRBN toward the closed
+state. This study also identified previously
+unrecognized regions in CRBNNTD that can
+be targeted to improve the affinity of CRBN-
+modulating drugs and additional degrons.
+This enhanced understanding of CRBN com-
+plexed with a potent, laboratory-evolved degron
+thus may inform the development of next-
+generation CRBN-based therapeutics.
+Materials and methods
+General methods
+Antibiotics were purchased from Gold Bio and
+used at the following concentrations: strepto-
+mycin (50 mg/ml), chloramphenicol (25 mg/ml),
+carbenicillin (50 mg/ml), spectinomycin (50 mg/ml),
+tetracycline (10 mg/ml), and kanamycin (50 mg/ml).
+Nucleic acid samples were resuspended in either
+buffer EB (Qiagen, 19086) or nuclease-free water
+(Qiagen, 129117). Polymerase chain reaction
+(PCR) for cloning was performed with Phusion
+U Multiplex PCR Master Mix (Thermo Fischer,
+F562L). Gene blocks and primers were ordered
+from Integrated DNA Technologies. PCR for se-
+quencing phage variants was performed with
+GoTaq Green Master Mix (Promega, M712B) or
+Phusion U Multiplex PCR Master Mix (Thermo
+Fischer, F562L). Bacterial plasmids were cloned
+A B C
+D
+Competing
+ZF
+mmCRBN Evolving
+ZF
+434 OR1 pLac* gIII
+434
+RR69
+E
+PT-179 (10 μM)
+PT-179 (2 μM)
+comp = MBP–SD55
+0 24 48 72 96 120 144 168 192
+103
+104
+105
+106
+107
+108
+109
+1010
+1
+2
+3
+4
+Time (hrs)
+Phage titer (pfu/mL)
+Lagoon flow
+rate (vol/hr)
+ω
+MBP
+-1 0 1 2 3 4 5
+5
+10
+Log10[PT-179], nM
+Fold transcriptional
+activation
+SD0
+SD36
+SD55
+[89 hrs, EC50 = 1.11 M]
+SD56
+[205 hrs, EC50 = 225 nM]
+-1 0 1 2 3 4
+0.4
+0.6
+0.8
+1.0
+Log10[PT-179], nM
+Normalized fluorescence
+(eGFP / mCherry)
+SD56
+[DC50 = 70 nM]
+SD0
+SD36
+[DC50 = 372 nM]
+Fig. 5. MG-PACE evolves degrons that engage PT-179–bound mouse CRBN. (A) The mmCRBN MG-PACE circuit. Stringency is increased by expression of a
+competing ZF degron fused to maltose binding protein (MBP). (B) PACE in the mmCRBN MG-PACE circuit. (C) Mutations in evolved PT-179•mmCRBN–binding
+degrons. (D) PT-179–induced mmCRBN circuit activation (1 hour) by SD0 and evolved variants. (E) PT-179–induced degradation (≥20 hours) of degron-tagged eGFP
+in mouse 3T3 cells. Values and error bars in (D) and (E) represent the mean and standard deviation of three replicates, each normalized to control treatment with
+DMSO only, except for the highest PT-179 concentration in (E), which used two replicates.
+
+[[page:11]]
+into either Mach1 (Thermo Fisher Scientific,
+C862003) or Turbo (NEB, C2984) chemically
+competent cells. Lentiviral vectors were cloned
+into Stbl3 chemically competent cells (Thermo
+Fisher Scientific, C737303). PMBN was pur-
+chased from Chemieliva. Pomalidomide was
+purchased from Combi-Blocks. All PACE ex-
+periments were performed in the S2060 strain
+(34). IMiD derivatives AD-45, AD-46, AD-55,
+AD-64, PK-802, PK-803, PK-804, PK-806, PK-
+1016, PT-176, PT-178, PT-179, PT-187, PT-198,
+VS-775, VS-777, and VS-786 were synthesized
+as previously described (66).
+Luminescence assays
+Chemically competent S2060 cells were co-
+transformed with accessory and complemen-
+tary plasmids (table S1). Cells were plated on LB
+agar supplemented with carbenicillin, spectino-
+mycin, and tetracycline and grown overnight
+at 37°C. Single colonies were seeded in 1 ml
+Davis rich media (DRM) with carbenicillin and
+spectinomycin and grown overnight in a 37°C
+shaker at 220 rpm. Overnight cultures were
+back-diluted 1:100 in DRM with carbenicillin
+and spectinomycin and grown at 37°C with
+shaking until OD600 values reached 0.3 to 0.4.
+PMBN was added to a final concentration of
+3 mg/ml culture from a 1000× stock [3 mg/ml
+in dimethyl sulfoxide (DMSO)]. One micro-
+liter DMSO or indicated small molecule dis-
+solved in 1 ml DMSO was added to the bottom
+of a well in a 96-well black wall, clear-bottom
+plate (Costar) and resuspended in 200 ml
+PMBN-treated cell culture per well. Ninety-
+six–well plates were then incubated in an In-
+finite M1000 Pro microplate reader (Tecan) at
+37°C with continuous shaking for ~1 hour be-
+fore reading A600 nm and luminescence values.
+Raw luminescence values were then divided
+by the corresponding A600 nm values to nor-
+malize to cell density. EC50 values were cal-
+culated in GraphPad Prism (v9.5.1), using an
+agonist versus response variable slope (four
+parameter) model.
+Cell culture conditions
+HEK 293T (ATCC CRL-3216), U2OS (ATCC,
+HTB-96), and NIH 3T3 (ATCC CRL-1658) cells
+were cultured in Dulbecco’s modified Eagle’s
+medium (DMEM) plus GlutaMAX (Thermo
+Fisher Scientific) supplemented with 10% (v/v)
+fetal bovine serum (FBS, Thermo Fisher Scien-
+tific). K562, MM.1S (CRL-2974), KELLY (92110411),
+and MOLT-4 (CRL-1582) cells were cultured in
+Roswell Park Memorial Institute (RPMI) 1640
+media (Thermo Fisher Scientific) supplemented
+with 10% (v/v) FBS. All cells were maintained
+below 90% confluency and cultured at 37°C
+with 5% CO2. Cell lines were authenticated by
+their suppliers and tested negative for myco-
+plasma. Ba/F3 (gift from N. Gray, Stanford Uni-
+versity) were cultured similar to MOLT-4 cells
+with the media additionally supplemented with
+1 ng/ml recombinant mouse IL-3 (PropecBio
+CYT-371).
+Transcriptome-wide RNA sequencing
+The effect of small-molecule treatment on
+transcriptome-wide RNA expression was eval-
+uated using bulk RNA sequencing (RNA-seq)
+of five biological replicates per sample. Briefly,
+200,000 MM.1S cells were plated per well in a
+24-well plate with 1 mM of either pomalidomide,
+PT-179, or a DMSO control with a final concen-
+tration of 0.5% v/v DMSO. Forty-eight hours after
+treatment, cells were washed with PBS and lysed
+in RLT buffer (Qiagen) with b-mercaptoethanol.
+Total RNA from each sample was purified from
+2 × 105 to 4 × 105 cells using the RNeasy Mini Kit
+(Qiagen) with on-column DNaseI digestion and
+eluted in nuclease-free water. Polyadenylated
+RNA was sequenced using Smart-seq2 as pre-
+viously described (82) with two changes: 20 ng
+of total RNA and Maxima RNase H-minus re-
+verse transcriptase (Thermo Fisher) were used
+for the initial reverse transcription step. The
+resulting cDNA libraries were sequenced on
+an Illumina NextSeq 550 High Output kit with
+the following run parameters: 37 cycles for
+read1, 37 cycles for read2, 8 cycles for index1,
+and 8 cycles for index2.
+Sequencing data were demultiplexed with
+bcl2fastq, and roughly 40 million paired-end
+reads were obtained per sample. Transcript-level
+quantification was performed using kallisto
+(83) with the Homo sapiens GRCh38 reference
+transcriptome and with bootstrapping. Differ-
+ential expression analysis at the gene level
+was conducted using DESeq2 with batch cor-
+rection of biological replicates (84). To prefil-
+ter low count genes, only genes with at least
+10 counts in at least five samples were analyzed.
+Compared between conditions, genes with a
+transcript abundance fold-change > 2 and with
+a false discovery rate (FDR)–corrected P < 0.01
+were called as differentially expressed.
+Global quantitative proteomics sample preparation
+MOLT4, Kelly, HEK293T, or Ba/F3 cells were
+treated with DMSO, PT-179, or pomalidomide
+at 1 mM for 5 or 24 hours, and cells were har-
+vested by centrifugation at 4°C before snap
+freezing in liquid nitrogen. Cells were lysed by
+addition of lysis buffer [8 M urea, 50 mM NaCl,
+50 mM 4-(2-hydroxyethyl)-1-piperazineethane-
+sulfonic acid (EPPS) pH 8.5, protease and phos-
+phatase inhibitors] and homogenization by
+bead beating (BioSpec) for three repeats of 30 s
+at 2400 strokes/min. Bradford assay was used to
+determine the final protein concentration in the
+clarified cell lysate. Fifty micrograms of pro-
+tein for each sample was reduced, alkylated,
+and precipitated using methanol/chloroform
+as previously described (32), and the resulting
+washed precipitated protein was allowed to air
+dry. Precipitated protein was resuspended in
+4 M urea, 50 mM HEPES pH 7.4, followed by
+dilution to <1 M urea with the addition of
+200 mM EPPS, pH 8. Proteins were digested with
+LysC (1:50; enzyme:protein) and trypsin (1:50;
+enzyme:protein) overnight at 37°C. Sample di-
+gests were acidified with formic acid to a pH of
+2 to 3 before desalting using C18 solid-phase
+extraction plates (SOLA, Thermo Fisher Scien-
+tific). Desalted peptides were dried in a vacuum
+centrifuge and reconstituted in 0.1% formic
+acid for liquid chromatography–mass spec-
+trometry (LC-MS) analysis.
+diaPASEF quantitative LC-MS proteomics
+and data analysis
+Data were collected using a TimsTOF Pro2
+(Bruker Daltonics, Bremen, Germany) coupled
+to a nanoElute LC pump (Bruker Daltonics,
+Bremen, Germany) via a CaptiveSpray nano-
+electrospray source. Peptides were separated
+on a reversed-phase C18 column (25 cm × 75 mm
+ID, 1.6 mM, IonOpticks, Australia) containing
+an integrated captive spray emitter. Peptides
+were separated using a 50-min gradient of 2 to
+30% buffer B (acetonitrile in 0.1% formic acid)
+with a flow rate of 250 nl/min and column tem-
+perature maintained at 50°C.
+Data-dependent acquisition (DDA) was per-
+formed in parallel accumulation–serial fragmen-
+tation (PASEF) mode to determine effective ion
+mobility windows for downstream diaPASEF
+data collection (85). The ddaPASEF parameters
+included: 100% duty cycle using accumulation
+and ramp times of 50 ms each, one TIMS-MS
+scan and 10 PASEF ramps per acquisition cycle.
+The TIMS-MS survey scan was acquired be-
+tween 100 and 1700 mass-to-charge ratio (m/z)
+and the reduced ion mobility coefficients (1/K0)
+of 0.7 to 1.3 V·s/cm2. Precursors with 1 to 5
+charges were selected, and those that reached
+an intensity threshold of 20,000 arbitrary units
+were actively excluded for 0.4 min. The quad-
+rupole isolation width was set to 2 m/z for
+m/z < 700 and 3 m/z for m/z > 800, with the
+m/z between 700 and 800 being interpolated
+linearly. The TIMS elution voltages were cal-
+ibrated linearly with three points (Agilent
+ESI-L Tuning Mix Ions; 622, 922, 1222m/z) to
+determine 1/K0. To perform diaPASEF, the pre-
+cursor distribution in the DDA m/z-ion mo-
+bility plane was used to design an acquisition
+scheme for Data-independent acquisition (DIA)
+data collection which included two windows in
+each 50-ms diaPASEF scan. Data were acquired
+using 16 of these 25-Da precursor double win-
+dow scans (creating 32 windows), which cov-
+ered the diagonal scan line for doubly and triply
+charged precursors, with singly charged precur-
+sors able to be excluded by their position in
+the m/z-ion mobility plane. These precursor
+isolation windows were defined between 400
+and 1200 m/z and 1/K0 of 0.7 to 1.3 V·s/cm2.
+The diaPASEF raw file processing and
+controlling peptide and protein level false
+FDRs, assembling proteins from peptides,
+
+[[page:12]]
+and protein quantification from peptides were
+performed using either targeted, cell line–specific
+spectral libraries generated by searching offline
+fractionated ddaPASEF data against a Swissprot
+human or mouse database (January 2021) or
+by using library free analysis in DIA-NN 1.8
+(86). Library free mode performs an in silico
+digestion of a given protein sequence data-
+base alongside deep learning–based predic-
+tions to extract the DIA precursor data into a
+collection of MS2 spectra. The search results
+are then used to generate a spectral library
+which is then used for the targeted analysis of
+the DIA data searched against a Swissprot hu-
+man or mouse database (January 2021). Data-
+base search criteria largely followed the default
+settings for directDIA, including tryptic with
+two missed cleavages, carbamidomethylation of
+cysteine, oxidation of methionine, N-terminal
+acetylation, and precursor Q-value (FDR) cutoff
+of 0.01. Precursor quantification strategy was
+set to Robust LC (high accuracy) with retention
+time–dependent cross run normalization. Pro-
+teins with low sum of abundance (<2000 ×
+no. of treatments) were excluded from further
+analysis, and proteins with missing values were
+imputed by random selection from a Gaussian
+distribution either with a mean of the non-
+missing values for that treatment group or with
+a mean equal to the median of the background
+(in cases when all values for a treatment group
+are missing). Protein abundances were scaled
+using in-house scripts in the R framework (R
+Development Core Team, 2014), and resulting
+data were filtered to only include proteins that
+had a minimum of three counts in at least four
+replicates of each independent comparison of
+treatment sample to the DMSO control. Sig-
+nificant changes comparing the relative pro-
+tein abundance of these treatments to DMSO
+control comparisons were assessed by mod-
+erated t test as implemented in the limma
+package within the R framework (87).
+Fluorescence polarization
+Fluorescence polarization experiments were
+performed according to previously reported
+methods (65). All experiments were performed
+in 25 mM HEPES, 200 nM NaCl, 1 mM tris(2-
+carboxyethyl)phosphine (TCEP), pH 7.4. Dilu-
+tions of DDB1-CRBN sample were mixed with
+20 nM thalidomide-Cy5 compound at a final
+DMSO concentration of 0.1% v/v. Solutions were
+incubated for 30 min at room temperature (RT)
+with gentle shaking (220 rpm). Polarization
+values (mP) were measured on a Tecan Infinite
+M1000 Pro microplate reader. GraphPad Prism
+(v9.5.1) was used to calculate the Kd value of
+cereblon and thalidomide-Cy5 (fig. S2A) using
+a saturated, one-site binding model.
+Competitive fluorescence polarization
+Competitive fluorescence polarization experi-
+ments were performed according to previously
+reported methods (65). All experiments were
+performed in 25 mM HEPES, 200 nM NaCl,
+1 mM TCEP, pH 7.4. A precomplexed sam-
+ple was prepared by incubating DDB1-CRBN
+(400 nM) with thalidomide-Cy5 conjugate
+(fig. S2A) (80 nM) at RT for 30 min with gentle
+shaking (220 rpm). To initiate competition, dilu-
+tions of pomalidomide, PT-179, or PK-1016 were
+added to the precomplexed CRBN sample at a
+final DMSO concentration of 1% v/v. Polariza-
+tion values were measured on an Infinite M1000
+Pro microplate reader (Tecan) after 1 hour of in-
+cubation at RT with gentle shaking. A total of
+three independent measurements were acquired
+and averaged per biological sample to generate
+the values shown in fig. S2C. All mP values were
+normalized between 0 and 100 using the for-
+mula Normalized mP ¼ ð xminimumÞ
+maximumminimum
+h i
+∗100,
+where x is the mP value of the sample and
+“minimum” and “maximum” are the minimum
+and maximum mP values, respectively, across
+all samples. Kd values were estimated from
+computed inhibitory constant values as previ-
+ously described (65).
+In-cell CRBN engagement NanoBRET
+In-cell CRBN engagement assays were con-
+ducted with a commercial kit (Promega N2910)
+according to a published procedure (68). U2OS
+or HEK293T cells were transfected with a com-
+bination of NanoLuc-CRBN fusion vector (1 mg
+per 100,000 cells) and DDB1 expression vec-
+tor (4 mg per 100,000 cells) encoded plasmid
+(Promega N2910) using Lipofectamine 3000
+reagent (Thermo Fischer Scientific, L3000015).
+After 24 hours of transfection, DMSO solutions
+of pomalidomide and PT-179 were prepared to
+10× target concentrations in a 384-well white
+microplate (Corning, 3765) from 10 mM of
+stock solutions using a Tecan D300e Digital
+Dispenser. The transfected cells were washed
+with PBS, trypsinized, and plated in a 384-well
+white microplate (Corning, 3765) at 3000 cells
+in 34 ml Opti-MEM I reduced serum medium
+per well. Complete 20X NanoBRET Tracer Re-
+agent (2 ml) and 10× pomalidomide or PT-179
+solutions (4 ml) were dispensed in each well.
+The plates were incubated for 1 hour at 37°C,
+5% CO2. After incubation plates were brought
+to RT and incubated with 3× complete sub-
+strate plus inhibitor solution (20 ml) for 3 min
+at RT before measuring BRET signal on an
+EnVision multilabel plate reader with EnVision
+Manager 1.13 (PerkinElmer). At each liquid han-
+dling step, the plates were shaken on a Thermo
+Fisher Combi instrument followed by centrif-
+ugation at 100g for 1 min.
+Data presented in fig. S16 were obtained
+using the above protocol with slight modifica-
+tions. Lipofectamine 2000 was used in place of
+lipofectamine 3000 for all transfections, 1 mg
+of pSD192A was included for generating the
+SD40-PRKRA overexpression sample, and the
+assay was performed using 2500 cells per well.
+NanoBRET values for the in-cell CRBN en-
+gagement assay were calculated as follows:
+1) Raw NanoBRET Ratio (mBU) = (618 nmEm/
+460 nmEm) × 1000
+2) Mean corrected NanoBRET ratio mBU =
+Mean mBU experimental − Mean mBU no-
+ligand control
+EC50 values were calculated in GraphPad
+Prism (v9.5.1), using an inhibitor vs. response
+variable slope (four parameter) model.
+Phage-assisted noncontinuous evolution (PANCE)
+PANCE was conducted as previously described
+(34). Briefly, chemically competent S2060 E. coli
+were transformed with the desired APs and
+MP6, plated on 2xYT agar plates supplemented
+with 100 mM glucose and the necessary anti-
+biotics. Single colonies were picked in DRM
+containing maintenance antibiotics, serially
+diluted 1:10 in fresh DRM, and grown over-
+night at 37°C with shaking. The next day, cul-
+ture wells that were in log-phase (OD600 ~0.3
+to 0.6) were pooled and treated with 10 mM
+arabinose to induce mutagenesis. Induced host
+cells were then split into several 1-ml cultures
+in a 96-well plate, and target IMiD derivatives
+were added to 10 mM from a 10 mM stock
+solution (final 0.1% DMSO v/v). Cultures were
+infected with phage at the reported dilutions.
+Infected cultures were grown for 8 to 16 hours
+at 37°C with shaking at 220 rpm. Host cells
+were pelleted by centrifugation at 3700g for
+10 min, and supernatant containing phage was
+harvested for storage and/or infection. Phage
+titers were determined by quantitative PCR
+or plaque assay (34). For genotype determina-
+tion, single plaques were picked and amplified
+using GoTaq Master Mix (Promega, M7122)
+with primers AB1396 and AB1792 (table S4),
+and resultant PCR products were submitted
+for Sanger sequencing.
+Phage-assisted continuous evolution (PACE)
+PACE was conducted as previously described
+(34). Briefly, chemically competent S2060 E. coli
+were transformed with the desired APs and
+MP6, plated on 2xYT agar plates supplemented
+with 100 mM glucose and the necessary anti-
+biotics. Single colonies were picked in DRM
+containing maintenance antibiotics, serially
+diluted 1:10 in fresh DRM, and grown over-
+night at 37°C with shaking. The next day, cul-
+ture wells that were in log-phase (OD600 ~0.3 to
+0.6) were used to seed a chemostat contain-
+ing 60 ml of DRM. Chemostat cultures were
+grown to OD600 0.3 to 0.6 and then contin-
+uously diluted with fresh DRM at a rate that
+maintained cell density at OD600 0.8 to 1.0.
+Chemostat volumes were maintained at 40 to
+60 ml. Lagoons were 3 to 15 ml and supplied
+with arabinose (10 mM), polymyxin B nona-
+peptide (3 mg/ml), and target IMiD derivative
+(10 mM to 500 nM) from a 20× stock solution
+in 1:1 DMSO/water using a syringe pump.
+
+[[page:13]]
+Before infection in every PACE experiment,
+phage were propagated in strain S2208 con-
+taining MP6 for 4 to 6 hours with shaking
+in DRM supplemented with 10 mM arabinose
+and necessary antibiotics. Phage samples were
+then isolated through centrifugation, and 150 ml
+was used to infect lagoons. Aliquots (500 ml)
+were taken from lagoons and centrifuged at
+6000g for 5 min to isolate phage samples at
+indicated time points. Titers were determined
+by plaque assays using S2208 cells (34). For
+genotype determination, single plaques were
+picked and amplified using GoTaq Master Mix
+(Promega, M7122) with primers AB1396 and
+AB1792 (table S4), and resultant PCR products
+were submitted for Sanger sequencing. At
+each time point, typically four plaques were
+picked for each lagoon.
+Lentiviral plasmid construction, virus generation,
+and transduction
+ZF constructs were codon optimized using
+IDT’s codon optimization tool and ordered as
+gBlock gene fragments with flanking BsmBI
+restriction sites (Integrated DNA Technolo-
+gies). Both Cilantro 2 vector (Addgene #74450)
+and PCR amplified and purified ZF gBlocks
+were digested with BsmBI-v2 (NEB R0739) fol-
+lowing NEB’s protocol. After digestion, Cilantro
+2 vector was Quick-CIP treated (NEB M0525).
+Digested vector and inserts were purified using
+QIAquick PCR purification kit (Qiagen 128104)
+before ligation using T4 DNA ligase (NEB
+M0202). Ligase reaction mix was directly carried
+forward for transformation in One Shot Stbl3
+Chemically Competent bacteria (Thermo Fischer
+Scientific C737303). Plasmid DNA was isolated
+from bacterial cells using the ZymoPURE II
+Plasmid Midiprep Kit (Zymo Research D4200)
+or the QIAGEN Plasmid Midi Kit (Qiagen 12143)
+according to the manufacturer’s protocols.
+For lentiviral production, HEK293T cells
+were seeded in a six-well, 9.6-cm2 dish (Corning)
+at a density of 7.0 × 105 cells per well. The next
+day, cells were transfected with 1333 ng of trans-
+fer vector encoding the degradation reporter
+construct, 1000 ng of psPAX2 (Addgene #12260),
+and 667 ng of pMD2.G (Addgene #12259) using
+lipofectamine 2000 (Thermo Fisher Scientific
+11668019). Five to six hours after initiation of
+transfection, fresh culture media was exchanged.
+After 48 hours, the supernatant was passed
+through a 0.45-mM filter (Corning), and the
+filtrate was stored at −80°C for future use in
+lentiviral infections.
+HEK293T and NIH 3T3 cells were plated in
+a six-well, 9.6-cm2 dish (Corning) in DMEM +
+10% FBS. Lentivirus was applied dropwise in
+the presence of 10 mg/ml polybrene (Sigma-
+Aldrich). Low multiplicity of infection (MOI ≤
+0.3) infections were performed for all cell
+lines to ensure a low number of integration
+events. The next day, the media was exchanged
+for fresh DMEM + 10% FBS containing 2 mg/ml
+puromycin to initiate selection. Selections
+were carried out for ≥3 days before running
+experiments.
+Flow cytometry analysis
+Flow cytometry to quantify degron-tagged eGFP
+degradation was performed according to pre-
+viously described methods (9, 74). Briefly, after
+≥3 days of antibiotic selection of lentivirally
+transduced HEK293T or NIH 3T3 cells, cells
+were plated in a poly-D-lysine 48-well, 0.75-cm2
+plate at a density of 4.0 × 104 or 8.0 × 103 cells per
+well, respectively. The next day, cells were treated
+with compounds diluted to a final concentra-
+tion of 0.5% DMSO per well. After overnight
+treatment (≥20 hours), cells were harvested
+and analyzed on Beckman CytoFLEX S or
+Beckman CytoFLEX LX flow cytometers to
+quantify eGFP and mCherry fluorescence.
+FLOWJO was used to analyze all flow data.
+Parameters were derived in the software to
+enable calculation of the geometric mean for
+eGFP:mCherry ratios on a single-cell level.
+The values were then normalized by dividing
+the average geometric mean of the experi-
+mental condition by the average geometric
+mean of the DMSO controls. Each experi-
+ment was performed in biological triplicate.
+In GraphPad Prism (v9.5.1), DC50 values were
+calculated using an inhibitor vs. response var-
+iable slope (four parameter) model.
+Immunoblots
+HEK293T or K562 cells were plated at a den-
+sity of 1.6 × 105 cells per well in a 24-well plate
+coated with poly-D-lysine (Corning) in 1 ml
+media (DMEM + 10% FBS for HEK293T cells
+and RPMI + 10% FBS for K562 cells). After 16
+to 18 hours, cells were treated with either DMSO
+or the indicated concentration of small mole-
+cules to a 0.5% final concentration of DMSO.
+Plates were incubated at 37°C, 5% CO2 for
+24 hours for all cell lines except endogenously
+tagged PLK1-SD40 HEK293T cells, which were
+incubated for 2 hours. Cells were washed with
+PBS and then lysed for 30 min at 4°C in radio-
+immunoprecipitation assay (RIPA; 25 mM
+Tris-HCl, 150 mM NaCl, 1% NP-40, 1% so-
+dium deoxycholate, 0.1% SDS, pH ~ 7.6) buffer
+containing 1 mM phenylmethylsulfonyl fluoride
+(PMSF; Sigma Aldrich) and 1× EDTA-free pro-
+tease inhibitor cocktail (Roche). Lysates were
+centrifuged for 20 min at 18,000g to isolate
+the soluble fractions. Protein concentration in
+clarified lysates was quantified using Pierce
+BCA Protein Assay Kit (Thermo Scientific) ac-
+cording to the manufacturer’s protocol. Clari-
+fied lysates were mixed with NuPAGE LDS
+Sample Buffer (Thermo NP0007) containing
+10 mM dithiothreitol and boiled for 10 min.
+Gel electrophoresis was performed on boiled
+samples using polyacrylamide gels (Invitrogen
+NP0329BOX) with equal amounts of total pro-
+tein in each lane. Proteins were transferred to
+nitrocellulose membranes (Invitrogen IB23001)
+using the iBlot 2 (Invitrogen IB21001) P0 pro-
+tocol. After transfer, membranes were blocked
+in blocking buffer [50 mM Tris-HCl, 150 mM
+NaCl, 0.5% Tween-20, 1% bovine serum albu-
+min (BSA), pH 7.4] for 1 hour at RT and then
+incubated with primary antibody overnight
+at 4°C in blocking buffer. The following pri-
+mary antibodies were used for the indicated
+proteins at the reported dilutions: HA-tag (Cell
+Signaling, #3724; 1:1000), BRD4 long isoform
+(Cell Signaling, #13440; 1:1000), GAPDH (Cell
+Signaling, #5174; 1:5000), Beta tubulin (Bioss,
+bsm-33034M; 1:5000), PLK1 (Cell Signaling,
+#4513; 1:1000), GFP (Cell Signaling, #2956;
+1:1000), Anti-TUB (Invitrogen, #PA531164,
+1:1000). After overnight incubation, membranes
+were washed three times with TBST buffer
+(50 mM Tris-HCl, 150 mM NaCl, 0.5% Tween-
+20, pH 7.4). Membranes were incubated with
+1:10,000 goat anti-rabbit 680RD (LI-COR, 926-
+68071) and/or goat anti-mouse 680RD (LI-COR,
+926-68070) for 1hr at RT in blocking buffer.
+Membranes were washed 3x with TBST buffer
+and visualized on an Odyssey Imaging Sys-
+tem (LI-COR).
+Degron purification for BLI and TR-FRET
+SD40 and a two-ZF construct containing SD0
+[residues 141 to 243 (D197 to 238) of IKZF1
+where residues 450 to 460 of ZFP91 are in
+place of amino acids 146 to156 of IKZF1] (table
+S2) were cloned into vectors enabling expres-
+sion as a Avi- and His-tagged MBP fusion in
+E. coli BL21(DE3) cells (NEB, C2527H). Colo-
+nies were seeded into LB media supplemented
+with kanamycin and grown overnight with shak-
+ing at 37°C. The next day, cultures were back-
+diluted 1:200 in 2xYT medium supplemented
+with 50 mM zinc chloride and kanamycin. Cul-
+tures were grown with shaking at 37°C until
+OD600 reached ~0.4 to 0.6. Cultures were cooled
+on ice for 20 min, and expression of degron–
+MBP–Avi–His fusion proteins was induced with
+0.5 mM isopropyl b-D-1-thiogalactopyranoside
+(IPTG). Cultures were grown overnight with
+shaking at 16°C. Cells were harvested by cen-
+trifugation at 4000g for 20 min. Pellets were
+resuspended in ice-cold lysis buffer (50 mM
+Tris-HCl, 450 mM NaCl, 10 mM imidazole,
+50 mM ZnCl2, 20% glycerol, 3 mM TCEP, Roche
+cOmplete EDTA-free protease inhibitor tablet,
+pH 7.6) and lysed by 3 min of sonication (pulses
+were 3 s on followed by 3 s off). Lysates were
+clarified through centrifugation at 20,000g for
+30 min. Clarified lysates were incubated with
+HisPur Ni-NTA resin (Thermo Fisher Scien-
+tific, 88221) for 1 hour with gentle rocking at
+4°C. Resin was washed with 20 column vol-
+umes of ice-cold wash buffer (50 mM Tris-HCl,
+300 mM NaCl, 25 mM imidazole, 50 mM ZnCl2,
+10% glycerol, 3 mM TCEP, pH 7.6) followed by
+10 column volumes of elution buffer (50 mM
+Tris-HCl, 50 mM NaCl, 500 mM imidazole,
+
+[[page:14]]
+50 mM ZnCl2, 10% glycerol, 3 mM TCEP, pH 7.6).
+Pooled elution fractions were buffer exchanged
+into storage buffer (25 mM HEPES, 150 mM
+NaCl, 50 mM ZnCl2, 3 mM TCEP, 10% glycerol,
+pH 8.2) and concentrated using 30 kDa MWCO
+Amicon Ultra-15 Centrifugal Filter Unit (Milli-
+pore Sigma, UFC903096). Samples concentra-
+tions were determined using Bradford assay.
+Degron biotinylation for BLI and TR-FRET
+Degron protein samples were buffer exchanged
+using 30 kDa MWCO Amicon Ultra-15 Centrif-
+ugal Filter Unit (Millipore Sigma, UFC903096)
+into biotinylation buffer (50 mM bicine, 50 mM
+NaCl, 1 mM TCEP, 50 mM ZnCl2, pH 8.3). Forty
+nanomoles of protein sample was used as input.
+Biotinylation reactions were set up according to
+manufacturer’s protocols (Avidity, BirA500-RT).
+After 1 to 2 hours of incubation at RT, sam-
+ples were buffer-exchanged into storage buffer
+(25 mM HEPES, 200 mM NaCl, 50 mM ZnCl2,
+1 mM TCEP, 10% glycerol, pH 7.4) through fast
+protein liquid chromatography (FPLC) using a
+Superdex 200 Increase 10/300 GL column (Cytiva).
+Fractions were analyzed by SDS–polyacrylamide
+gel electrophoresis, and samples containing
+the biotinylated degron sample were concen-
+trated using a 30 kDa MWCO Amicon Ultra-15
+Centrifugal Filter Unit. Pooled, concentrated
+protein samples were flash-frozen in liquid ni-
+trogen and stored at −80°C for later use.
+CRBN (for BLI, TR-FRET, and EM) and degron
+(for EM) expression and purification
+His6-tagged hsDDB1DBPB (Uniport entry Q16531,
+residues 396–705 replaced with a GNGNSG
+linker) and FLAG and Spy-tagged hsCRBN
+(Uniport entry Q96SW2, full length) were cloned
+into pAC8-derived vectors (88) and recombinant-
+ly expressed using the baculovirus expression
+system (Invitrogen). To generate baculovirus,
+1 mg of pAC8-derived plasmids was cotrans-
+fected with linearized baculoviral DNA in
+Spodoptera frugiperda Sf9 cells grown in ESF
+921 medium (Expression Systems) at a density
+of 0.9 × 106 cells/ml. After 5 days of incubation
+without shaking at 27°C, the supernatant was
+collected, and a fresh batch of Sf9 cells at a
+density of 1 × 106 cells/ml was infected with
+1.5% (v/v) baculovirus for viral amplification.
+Viral titer and volume were increased by an-
+other two rounds of amplification in Sf9 cells
+for 3 days each incubated at 27°C with shaking
+at 120 rpm. For protein expression, Trichoplusia
+ni High Five cells grown in SF-4 Baculo Express
+IC medium (BioConcept) at a density of 2 ×
+106 cells/ml were coinfected with 1.5% (v/v)
+each of DDB1- and CRBN-expressing baculo-
+viruses. After 40 hours of incubation at 27°C
+with shaking at 160 rpm, High Five cells were
+collected by centrifuging for 15 min at 3500g.
+Avi–His6–MBP–FLAG-tagged SD40 was cloned
+into a pET expression vector. For expression,
+E. coli LOBSTR cells (Kerafast) were trans-
+formed and grown in Terrific Broth medium
+(Thermo Fisher) at 37°C. Upon achieving an
+OD600 of 1.4, cells were induced with 0.5 mM
+isopropyl b-D-1-thiogalactopyranoside (IPTG).
+After 4 hours, the culture was centrifuged for
+15 min at 4000g, and the pellet collected and
+frozen at −80°C.
+All protein purification steps were done at
+4°C or on ice. Cells were resuspended in lysis
+buffer [50 mM Tris/HCl pH 8.0, 200 mM NaCl,
+0.1% (v/v) Triton X-100, 1 mM TCEP, 1 mM
+PMSF, and a cocktail of protease inhibitors;
+for SD40, 50 mM ZnCl2 and 10% (v/v) glycerol
+were also added] and lysed on ice by sonica-
+tion. The lysate was separated using ultra-
+centrifugation at 185,511g for 1 hour, and the
+soluble fraction was treated with Benzonase
+at RT for 15 min and filtered through a 0.45-mm
+membrane. For DDB1DBPB•CRBN, the lysate
+was applied to anti-DYKDDDDK G1 Affinity
+Resin (Genscript) and eluted with 150 mg/ml
+FLAG peptide. For SD40, the lysate was ap-
+plied to Ni-charged resin (Genscript). For BLI
+experiments, DDB1DBPB•CRBN tags were cleaved
+by incubating overnight at 4°C with 3% (w/w)
+tobacco etch virus (TEV) protease. The sample
+was then diluted to 66.7 mM NaCl with 50 mM
+Tris/HCl pH 8.5, 1 mM TCEP buffer and ap-
+plied to a Poros 50 HQ anion exchange column
+(Thermo Fisher) and then eluted in 50 mM Tris/
+HCl pH 8.5, 1 mM TCEP buffer containing in-
+creasing concentrations of NaCl from 25 mM
+to 1 M. Eluted fractions were pooled and con-
+centrated using a 30 kDa MWCO centrifugal
+concentrator. For SD40, the lysate was applied
+to high-affinity Ni-charged resin (Genscript)
+and eluted with increasing concentrations of
+imidazole (100 to 500 mM). Eluted fractions
+were pooled and concentrated using a 10 kDa
+MWCO centrifugal concentrator (Sartorius).
+Next, size exclusion chromatography was
+performed using a Superdex200 column (GE
+Healthcare) for DDB1DBPB•CRBN or a Superdex75
+column (GE Healthcare) for SD40 in a buffer
+containing 25 mM HEPES/NaOH 7.4, 200 mM
+NaCl, and 1 mM TCEP; for SD40, 50 mM ZnCl2
+and 10% (v/v) glycerol were also added. For
+DDB1DBPB•CRBN, only the fractions on the left
+of the main peak were collected, pooled, and
+concentrated to 5.34 mg/ml (35.37 mM) for
+cryo-EM and 3.98 mg/ml (27.2 mM) for BLI
+experiments. For SD40, the fractions were col-
+lected, pooled, and concentrated to 9.42 mg/ml
+(186.9 mM) for cryo-EM experiments. The con-
+centrated purified samples were aliquoted,
+flash-frozen in liquid N2, and stored at −80°C.
+For TR-FRET, FLAG-eGFP-hsCRBN was puri-
+fied by the same procedure as described above
+for FLAG and Spy-tagged hsCRBN.
+Biolayer interferometry (BLI)
+BLI experiments were performed similarly to
+previously described methods (12). The Octet
+System (Sartorius) was used for all BLI ex-
+periments. All binding experiments were per-
+formed in black 96-well plates (VWR, 76221-
+764) in 250 ml per well BLI buffer: 25 mM
+HEPES, 200 mM NaCl, 1 mM TCEP, 0.1% v/v
+Tween20, 0.05 mg/ml BSA, 100 mM of indi-
+cated molecular glue compound at a final
+DMSO concentration of 1%, pH 7.4. All bind-
+ing measurements were conducted with shak-
+ing (1000 rpm) at 30°C. Biotinylated degron
+sample was immobilized on streptavidin-coated
+optical probes (Sartorius, 18-5019) at a con-
+centration that produced a steady, linear signal
+during loading (50 to 400 nM). To generate
+analyte samples, DDB1-CRBN was precom-
+plexed in BLI buffer for 30 min at RT. Pre-
+complexed sample was diluted threefold for
+a total of three to five concentrations. Base-
+line steps were performed in the exact buffer
+used for analyte and ligand preparation to en-
+sure there were no effects from the addition
+of DMSO and the small molecule. Data were
+analyzed using the Octet data analysis soft-
+ware. All data were analyzed using a global fit
+analysis for a 1:1 binding model. Reported Kd
+values were calculated using the determined
+kon and koff values and validated for accuracy
+by comparing to the steady-state analysis.
+Time-resolved fluorescence resonance energy
+transfer (TR-FRET) assays
+To measure compound EC50 values, 200 nM
+biotinylated SD0 or SD40, 200 nM CRBN–
+eGFP•DDB1DBPB, and 2nM terbium (Tb)–coupled
+streptavidin (89) were mixed in a buffer con-
+taining 50 mM HEPES/NaOH pH 8.0, 200 mM
+NaCl, 1 mM TCEP, 0.1% (v/v) pluronic acid,
+and 0.5% BSA (w/v) [mixture 1]. For each
+data point, 15 ml of the mixture 1 was added to
+a well in 384-well low-volume round-bottom
+microplate (Corning), and increasing concen-
+trations of the compounds were dispensed
+using a D300e Digital Dispenser (HP) and
+normalized to 2% (v/v) DMSO. All steps were
+carried out on ice, and, to avoid photobleach-
+ing, samples were protected from light for steps
+involving CRBN-eGFP. Using a PHERAstar
+FS microplate reader (BMG Labtech), Tb was
+excited at 337 nm, and emissions from Tb at
+490 nm and from eGFP at 520 nm were mea-
+sured. In each cycle, to minimize background,
+the emission signal was integrated in the win-
+dow of 70 to 600 ms after the excitation pulse.
+The evolution of the emissions was monitored
+over 60 cycles, each separated by 109 s. Back-
+ground fluorescence due to the compounds
+was calculated by repeating the assay without
+CRBN–eGFP•DDB1DBPB and subtracting the
+signal for the corresponding compound con-
+centration. The ratio of emissions at 520/490
+from the last five cycles was averaged as the
+final TR-FRET reading. In GraphPad Prism
+(v10.1.1), EC50 values were calculated using an
+agonist versus response variable slope (four
+parameter) model.
+
+[[page:15]]
+To measure ternary complex Kd values,
+400 nM biotinylated SD0 or SD40, 100 mM
+compound, and 4 nM of Tb-coupled strepta-
+vidin were mixed in the buffer as described
+above [mixture 2]. Serial dilutions of CRBN–
+eGFP•DDB1DBPB from 9.8 nM to 1.25 mM were
+prepared in the same buffer [mixture 3]. A
+total of 7.5 ml each of mixtures 2 and 3 were
+added to each well in a 384-well microplate
+and incubated. To subtract background signal
+from excess compound concentration, the read-
+ing from zero CRBN concentration was sub-
+tracted. To subtract background emissions from
+increasing concentrations of eGFP, emission
+values from a blank sample containing the
+same concentration of CRBN–eGFP•DDB1DBPB
+but no compound was subtracted from each
+reading. TR-FRET readings were taken in the
+manner described above. In GraphPad Prism
+(v10.1.1), Kd values were calculated using spe-
+cific binding with Hill slope model.
+Prime editing in HEK293T cells
+TwinPE experiments were conducted as pre-
+viously described (30, 54, 75). Briefly, HEK293T
+cells were seeded in 96-well plates (Corning) at
+a density of 15,000 cells in 100 ml DMEM + 10%
+FBS in each well. After 16 to 20 hours, cells
+were transfected at ∼60% confluency with
+0.5 ml of Lipofectamine 2000 (Thermo Fisher
+Scientific), according to the manufacturer’s
+protocols, and 250 ng of prime editor plasmid
+DNA, 33 ng of pegRNA 1 plasmid DNA, and
+33 ng of pegRNA 2 plasmid DNA. Cells were
+cultured for 4 days after transfection. Media
+was removed, and genomic DNA was extracted
+by the addition of 100 ml freshly prepared lysis
+buffer [10 mM Tris-HCl, pH 7.5; 0.05% SDS
+25 mg/ml of proteinase K (Thermo Fisher)]
+directly into each well. The mixture was incu-
+bated in the tissue culture plate at 37°C for 1 to
+2 hours, then transferred to a PCR plate and
+incubated at 80°C for 30 min to inactivate
+enzymes.
+High-throughput DNA sequencing of genomic
+DNA samples
+Targeted genomic sites were amplified from
+genomic DNA and sequenced on an Illumina
+MiSeq as previously described (30). Briefly,
+primers containing Illumina forward and re-
+verse adapters (table S4) were used for a first
+round of PCR (PCR1) to amplify a genomic re-
+gion of interest under the following conditions:
+0.5 mM each of forward and reverse primer,
+1 ml of genomic DNA, and 10 ml PhusionU
+Green Multiplex PCR Master Mix in a 20-ml
+reaction. PCR reactions were carried out as
+follows: 98°C for 2 min and then 30 cycles
+of 98°C for 10 s, 61°C for 20 s, 72°C for 30 s,
+followed by a final 72°C extension for 2 min.
+A second round of PCR (PCR2) was conducted
+to add a unique Illumina barcode pair to each
+sample under the following conditions: 0.5 mM
+each of forward and reverse primer, 1 ml un-
+purified PCR1, and 10 ml PhusionU Green
+Multiplex PCR Master Mix in a 20-ml reaction.
+PCR reactions were carried out as follows:
+98°C for 2 min and then 10 cycles of 98°C for
+10 s, 61°C for 20 s, 72°C for 30 s, followed by a
+final 72°C extension for 2 min. PCR2 products
+were pooled by common amplicon and puri-
+fied by electrophoresis on a 1% agarose gel
+using a QIAquick Gel Extraction Kit (Qiagen),
+eluting with 40 ml water. DNA concentration
+was measured by fluorometric quantification
+(Qubit, Thermo Fisher) and sequenced on an
+Illumina MiSeq instrument using Illumina
+MiSeq control software (version 3.1), accord-
+ing to the manufacturer’s protocols.
+Sequencing reads were demultiplexed using
+MiSeq reporter (Illumina). Alignment of am-
+plicon sequences to a reference sequence was
+performed using CRISPResso2 (90). CRISP-
+Resso2 was run in HDR mode using the de-
+sired SD40-containing allele as the expected
+allele (e flag). Editing yield was calculated as:
+[no. of reads with the desired edit that do not
+contain indels] ÷ [no. of total reads]. Indels
+were quantified as: [no. of reads aligning to
+either the desired edit or the wild-type allele
+containing an insertion or deletion] ÷ [no. of
+total reads].
+To minimize PCR bias, genomic DNA from
+optimal editing conditions at PLK1 in HEK293T
+cells [editor PE6c (54), pegRNAs 313A and
+314C (table S3)] and BRD4 in K562 cells [editor
+PE6c, pegRNAs 327K and 328B (table S3)] (Fig.
+3G) were resequenced in a three-step PCR pro-
+tocol with unique molecular identifiers (UMIs)
+as previously described (75). In brief, the ge-
+nomic DNA was first linearly amplified (PCR0)
+with only a forward primer containing a 15-
+nucleotide UMI (table S4) under the follow-
+ing conditions: 0.1 mM forward primer, 1 ml
+genomic DNA, and 10 ml PhusionU Green
+Multiplex PCR Master Mix in a 20-ml reac-
+tion. PCR reactions were conducted as follows:
+10 cycles of 98°C for 1 min, 61°C for 25 s, 72°C
+for 1 min. PCR products were purified by 1.8×
+AMPure beads (Beckman Coulter) according
+to the manufacturer's protocol and eluted in
+20 ml nuclease-free water. PCR1 was carried
+out as before but using 1.5 ml of purified PCR0
+as template and a forward primer that anneals
+outside the UMI (UMI-fwd, table S4). PCR2
+and high-throughput sequencing were carried
+out as before. Raw sequencing reads were
+UMI deduplicated using AmpUMI (91) before
+analyzing with CRISPResso2 as before.
+PLK1-SD40 HEK293T cell line generation
+HEK293T cells were seeded in a 48-well plate
+(Corning) at a density of 30,000 cells in 250 ml
+DMEM + 10% FBS in each well. After 16 to
+20 hours, cells were transfected at ∼60% con-
+fluency with 1 ml of Lipofectamine 2000 (Thermo
+Fisher Scientific), according to the manufac-
+turer’s protocols, and 750 ng of PEmax (92)
+plasmid DNA, 125 ng of pegRNA 277F plas-
+mid DNA (table S3), and 125 ng of pegRNA
+278C plasmid DNA (table S3). Cells were cul-
+tured for 3 days after transfection, then re-
+plated in 96-well plates at a density of 0.5 cells
+per well. Single-cell colonies were evaluated for
+homozygous knock-in of SD40 using the high-
+throughput DNA sequencing protocol above.
+Prime editing in K562 cells
+K562 cells were nucleofected using a Lonza
+4D-Nucleofector system. Two hundred thou-
+sand cells per nucleofection were pelleted and
+washed with PBS, and washed cells were re-
+suspended in nucleofection solution following
+the protocol for the Lonza SE Cell Line 4D-
+Nucleofector Kit. To each nucleofection cuvette
+was added 20 ml of resuspended cells, 750 ng
+of prime editor plasmid, 125 ng of pegRNA
+plasmid 1, and 125 ng of pegRNA plasmid 2.
+The samples were electroporated using pro-
+gram FF-120 then allowed to incubate in the
+cuvette at RT for 10 min before adding the
+full nucleofection solution to 0.25 ml of me-
+dia in a 48-well tissue culture plate (Corning).
+After 3 days, cells were pelleted in 1.5-ml tubes,
+and media was removed. Genomic DNA was
+extracted by the addition of 100 ml freshly
+prepared lysis buffer [10 mM Tris-HCl, pH 7.5;
+0.05% SDS 25 mg/ml of proteinase K (Thermo
+Fisher)] directly into each well. The mixture was
+incubated at 37°C for 1 to 2 hours, then trans-
+ferred to a PCR plate and incubated at 80°C for
+30 min to inactivate enzymes. Genotyping of
+samples was performed as described above.
+SD40-BRD4 K562 cell line generation
+The SD40-BRD4 K562 cell lines were gener-
+ated by single-flap prime editing (27, 30). K562
+cells were nucleofected as above with 750 ng
+of PEmax plasmid DNA, 250 ng of pegRNA
+DTN464 plasmid DNA (table S3), and 83 ng
+of nicking sgRNA DTN487 plasmid DNA (table
+S3). After 72 hours, cells were pooled, recounted,
+and nucleofected a second time according to
+the same protocol. After another 72-hour in-
+cubation, cells were replated in 96-well plates
+at a density of 0.5 cells per well. Single-cell
+colonies were evaluated for homozygous knock-
+in of SD40 using the high-throughput DNA
+sequencing protocol above.
+Cas9-mediated HDR insertion of SD40
+and FKBP12F36V
+Double-stranded DNA donor templates (table
+S2) were synthesized as gene blocks (IDT) and
+cloned into plasmids. Donor DNA was ampli-
+fied from plasmids with Phusion U and appro-
+priate primers (table S4). Amplicons were
+purified with SPRI beads and resuspended
+in water to 1 mg/ml. Guide RNAs (table S5)
+were synthesized (IDT) and resuspended in
+IDTE buffer to 50 mM. For each electroporation
+
+[[page:16]]
+condition, ribonucleoprotein complex was pre-
+pared by mixing ALT-R v3 S.p. Cas9 nuclease
+(IDT, 120 pmol, 2.4 ml from 50 mM stock) and
+sgRNA (150 pmol, 3 ml) and allowed to incubate
+at RT for 20 min. Donor DNA (2.4 mg, 2.4 ml)
+and PBS (2.6 ml) were added to a total volume
+of 10 ml. Nucleofections were conducted in 20-ml
+cuvette strips with 200,000 HEK293T cells in
+10 ml SF 4D-Nucleofector X Solution (Lonza).
+Immediately after electroporation, 80 ml pre-
+warmed media (DEMEM + 10% FBS) was added
+to each cuvette. After 10 min, cells were trans-
+ferred to 12-well plates in a total volume of
+1 ml media and allowed to incubate for 72 hours.
+Media was removed, and genomic DNA was ex-
+tracted by the addition of 250 ml freshly pre-
+pared lysis buffer [10 mM Tris-HCl, pH 7.5;
+0.05% SDS 25 mg/ml of proteinase K (Thermo
+Fisher)] directly into each well. The mixture
+was incubated in the tissue culture plate at
+37°C for 1 to 2 hours then transferred to a PCR
+plate and incubated at 80°C for 30 min to in-
+activate enzymes. Editing outcomes were de-
+termined by the high-throughput sequencing
+protocol with UMI deduplication as above.
+Reads were 200 base pairs; edits were consid-
+ered correct if the 5′ HDR junction was incor-
+porated without indels.
+EM sample preparation and data collection
+DDB1DBPB•CRBN, PT-179/pomalidomide, and
+SD40 were mixed and incubated on ice for
+1 hour at final concentration of 10.5, 105, and
+21 mM, respectively (mixture 1). The dilution
+buffer used contained 20 mM HEPES/NaOH
+pH 7.0, 150 mM NaCl, and 3 mM TCEP. DMSO
+concentrations were kept below 2% (v/v).
+Grids (Quantifoil UltrAuFoil R 1.2/1.3) were
+glow-discharged in PELCO easiGlow (20 mA,
+120 s, 39 Pa) and loaded onto a Leica EM-GP
+plunge freezer with chamber conditions of
+10°C and 90% relative humidity. Grids were
+first preincubated with 4 ml of 10 mM CRBN-
+agnostic IKZF1Q146A;G151N
+140196 for 1 min and then
+blotted from behind for 4 s with NCI Micro
+Whatman No.1 filter paper. Immediately, 4 ml
+of mixture 1 diluted 10-fold—with the dilution
+buffer during the 1-min incubation time—was
+applied to the grids before blotting for 4 s and
+plunging into liquid ethane at −181°C.
+Datasets were collected using SerialEM (93)
+(v4.1b) in either a Thermo Scientific Talos
+Arctica (DDB1DBPB•CRBN•pomalidomide•SD40)
+operated at 200 kV or a Thermo Scientific Titan
+Krios operated at 300 kV. The Titan Krios was
+equipped with a Gatan BioQuantum imag-
+ing filter (20 eV slit width). Movies were re-
+corded on Gatan K3 direct electron detectors.
+For DDB1DBPB•CRBN•pomalidomide•SD40,
+nine movies (50 frames, 5-s exposure time)
+were recorded per stage position using beam
+shift at nominal magnifications of 36,000×.
+Defocus was varied between −0.8 and −2.0 mm,
+and total electron exposure was 53.80 e/Å2. For
+DDB1DBPB•CRBN•PT-179•SD40, 18 movies (two
+per hole, 50 frames, 2.5-s exposure time) were
+recorded in nine holes per stage position at a
+magnification of 105,000× and a total electron
+exposure of 52.0 e/Å2. The defocus was varied
+between −0.8 and −2.0 mm.
+Data processing and model building
+Relion-4 (94) and cryoSPARC (v4.2.0) (95) were
+used for all processing steps. All resolutions
+given are based on the Fourier shell correla-
+tion (FSC) 0.143 threshold criterion (96, 97).
+For the DDB1DBPB•CRBN•pomalidomide•SD40
+dataset, 2524 movies were corrected for beam-
+induced motion, and contrast transfer function
+(CTF) was estimated on-the-fly in cryoSPARC
+live. Low-quality movies were rejected, and
+1,254,659 particles were extracted (1.59 Å/pixel)
+from the 1212 remaining micrographs after
+TOPAZ (v0.2.5) (98) particle picking. The movie
+acceptance criterion in cryoSPARC live was
+as follows: defocus average between −0.4 and
+−3.1 mm, CTF fit better than 8.1 Å, max in-
+frame motion below 6.153, astigmatism angle
+between −89.9° and 174.5°, sample tilt between
+0.1° and 27.1°, and total number of particles
+extracted above 609. The particles were cleaned
+up in three rounds of heterogeneous refine-
+ment (using one good initial volume and four
+decoys). The resulting 561,074 particles were
+reextracted at 1.28 Å/pixel and classified using
+three-dimensional (3D) variability (with a soft
+mask around CRBN) into 10 clusters. A single
+cluster (55,205 particles) with most pronounced
+density for the ZF was used in a final homoge-
+neous refinement, yielding a reconstruction
+at global resolution of ~3.3 Å with a B factor
+of 120 Å2. Local refinement with a soft mask
+encompassing CRBN (soft padding: 12 pix-
+els), followed by postprocessing using deep-
+EMhancer (99), further improved the density
+for the ZF. Maps postprocessed by cryoSPARC,
+maps filtered according to local resolution,
+and maps postprocessed with DeepEMhancer
+[all deposited in the Electron Microscopy Data
+Bank (EMDB) under EMD-41423 and EMD-
+41777] were used for model building. DDB1
+[from Protein Data Bank (PDB) ID 8G46 (100)],
+CRBN [PDB ID 5FQD (8)], and a ZF [PDB ID
+6H0F (9)] were fit into the density in UCSF
+ChimeraX (v1.5) (101) and relaxed using ISOLDE
+(102). COOT (v0.9.8) (103) was then used to
+manually build the remaining parts of the ZF
+and to improve the model. The final model
+was protonated, and a ligand restraint file was
+generated with phenix.ready_set (104),
+followed by refinement using phenix.real_
+space_refine (v1.19.2-4158) (105) using ref-
+erence restraints for the ZF. Initially, the model
+was refined against the unsharpened map with
+ADP refinement switched on, followed by refine-
+ments against the sharpened map without ADP
+refinement. The final model was deposited
+under PDB ID 8TNP.
+For the DDB1DBPB•CRBN•PT-179•SD40 data-
+set, 16,340 movies were collected and corrected
+for beam-induced motion on-the-fly in cry-
+oSPARC live. CTF was estimated, and low-
+quality movies (CTF fit worse than 5 Å and
+relative ice thickness outside 0.986 to 1.128)
+were rejected, leaving 12,642 micrographs
+from which 6,798,113 particles were picked
+using TOPAZ. The particles were split into
+three batches, and each batch was sent through
+three rounds of heterogeneous refinement. Par-
+ticles from good classes were combined and
+further cleaned up in another round of heter-
+ogeneous refinement. A consensus refinement
+from the remaining 1,844,380 particles yielded
+a reconstruction at 2.9 Å. The particles were
+Fourier-cropped to a pixel size of 2.2 Å/pixel
+and imported (106) into Relion for 3D classi-
+fication. In a first round, particles were classi-
+fied with alignment into 20 classes (t = 20),
+and all good particles (1,690,591) were sent
+into a masked classification (10 classes, t = 50)
+without alignment using a soft mask around
+CRBN (soft padding: 12 pixels). This yielded
+several classes with diverging CRBN confor-
+mations, four of which were reimported into
+cryoSPARC and used for movie S1. The two
+classes showing the most pronounced ZF
+density were reimported into cryoSPARC,
+reextracted at 0.87 Å/pixel, and refined to an
+overall global resolution of ~2.4 Å (B factor =
+70 Å2) and ~2.5 Å (B factor = 71 Å2), respec-
+tively. Local refinements both with and without
+a CRBN focused mask (soft padded to 12 pixels
+and 15 pixels, respectively), and postprocessing
+using DeepEMhancer further improved the ZF
+density. Local motion correction and CTF re-
+finement did not improve the resolution or
+quality of the reconstructions and were thus
+not performed. All final maps were deposited
+in the EMDB under EMD-41424/EMD-41778
+and EMD-41425/EMD-41779 for conforma-
+tions 1 and 2, respectively. The starting mod-
+el was obtained from the DDB1DBPB•CRBN•
+pomalidomide•SD40 model built previous-
+ly, and chains fit into the density in UCSF
+ChimeraX (v1.5) and PT-179 were built from
+pomalidomide in PyMOL (v2.5). Next, the two
+conformations were individually relaxed into
+density using Rosetta (v3.13) (79) in dual space—
+torsion and Cartesian with penalties for de-
+viation from ideal bond lengths and angles.
+The fit-to-density score term was upweighted
+to 35 to approximate density correlations
+with interpolations on a per-atom basis on a
+grid precomputed from the input map den-
+sity. The command line used was: rosetta_
+refinement_script.sh.
+COOT was then used to manually build and
+refine the model. The final model was proto-
+nated, and a ligand restraint file was generated
+with phenix.ready_set, followed by un-
+restrained refinement using phenix.real_
+space_refine (v1.20.1-4487) against the
+
+[[page:17]]
+unsharpened map with ADP refinement turned
+on. The final models were deposited in PDB
+under IDs 8TNQ and 8TNR for conformations
+1 and 2, respectively.
+A small patch of unaccounted density re-
+mains, which most probably stems from the
+uncleaved His6–TEV sequence of the used
+DDB1 construct (fig. S12L). Data collection pa-
+rameters and refinement statistics validated
+with MolProbity (107) and EMRinger (108) in-
+tegrated in Phenix and are available in table
+S6, local resolution ranges are given on the
+basis of the 0 to 75% percentile in local reso-
+lution histograms (109), and conical directional
+FSCs were used to determine the resolution
+ranges due to anisotropy (110). Structural bi-
+ology applications used in this project were
+compiled and configured by SBGrid (111).
+Interface analysis
+Interface comparison was made with Rosetta
+(v3.13) by first truncating the C-terminal tail
+of SD40, reordering the fold tree such that
+the interface being compared (i.e., jump num-
+ber) corresponds to that of CRBN•PT-179 and
+SD40, and then using the following command
+to obtain interface scores, buried interface
+solvent-accessible surface area, and shape
+complementarity scores (77): sasa_and_sc_
+calc_scripts.sh.
+Scoring interactions between residue pairs
+Reversion mutations were scored using Rosetta
+(v3.13) by first relaxing the SD40 and SD40F18Q
+with minimal movement using the command:
+relax_script.sh.
+Residue-wise scoring of the relaxed struc-
+tures was then performed, and the scores cor-
+responding to the interaction between SD40
+residue 18 and PT-179 were then extracted using
+residue_energy_breakdown_script.sh.
+Custom scripts used for structural modeling
+and analysis can be found in Zenodo (112).
+RE FE RENCES AND N OT ES
+1. S. L. Schreiber, The rise of molecular glues. Cell 184, 3–9
+(2021). doi: 10.1016/j.cell.2020.12.020; pmid: 33417864
+2. K. Raina, C. M. Crews, Chemical inducers of targeted protein
+degradation. J. Biol. Chem. 285, 11057–11060 (2010).
+doi: 10.1074/jbc.R109.078105; pmid: 20147751
+3. E. S. Fischer, E. Park, M. J. Eck, N. H. Thomä, SPLINTS:
+Small-molecule protein ligand interface stabilizers. Curr. Opin.
+Struct. Biol. 37, 115–122 (2016). doi: 10.1016/
+j.sbi.2016.01.004; pmid: 26829757
+4. D. Bier, P. Thiel, J. Briels, C. Ottmann, Stabilization of
+Protein–Protein Interactions in chemical biology and drug
+discovery. Prog. Biophys. Mol. Biol. 119, 10–19 (2015).
+doi: 10.1016/j.pbiomolbio.2015.05.002; pmid: 26093250
+5. J. Krönke et al., Lenalidomide causes selective degradation
+of IKZF1 and IKZF3 in multiple myeloma cells. Science 343,
+301–305 (2014). doi: 10.1126/science.1244851;
+pmid: 24292625
+6. G. Lu et al., The myeloma drug lenalidomide promotes the
+cereblon-dependent destruction of Ikaros proteins. Science 343,
+305–309 (2014). doi: 10.1126/science.1244917; pmid: 24292623
+7. J. Krönke et al., Lenalidomide induces ubiquitination and
+degradation of CK1a in del(5q) MDS. Nature 523, 183–188
+(2015). doi: 10.1038/nature14610; pmid: 26131937
+8. G. Petzold, E. S. Fischer, N. H. Thomä, Structural basis of
+lenalidomide-induced CK1a degradation by the CRL4CRBN
+ubiquitin ligase. Nature 532, 127–130 (2016). doi: 10.1038/
+nature16979; pmid: 26909574
+9. Q. L. Sievers et al., Defining the human C2H2 zinc finger
+degrome targeted by thalidomide analogs through CRBN.
+Science 362, eaat0572 (2018). doi: 10.1126/science.aat0572;
+pmid: 30385546
+10. M. E. Matyskiela et al., Crystal structure of the SALL4–
+pomalidomide–cereblon–DDB1 complex. Nat. Struct. Mol.
+Biol. 27, 319–322 (2020). doi: 10.1038/s41594-020-0405-9;
+pmid: 32251415
+11. E. R. Watson et al., Molecular glue CELMoD compounds are
+regulators of cereblon conformation. Science 378, 549–553
+(2022). doi: 10.1126/science.add7574; pmid: 36378961
+12. S. Cao et al., Defining molecular glues with a dual-nanobody
+cannabidiol sensor. Nat. Commun. 13, 815 (2022).
+doi: 10.1038/s41467-022-28507-1; pmid: 35145136
+13. M. Pettersson, C. M. Crews, PROteolysis TArgeting Chimeras
+(PROTACs) — Past, present and future. Drug Discov.
+Today. Technol. 31, 15–27 (2019). doi: 10.1016/j.
+ddtec.2019.01.002; pmid: 31200855
+14. M. Jan et al., Reversible ON- and OFF-switch chimeric antigen
+receptors controlled by lenalidomide. Sci. Transl. Med. 13,
+eabb6295 (2021). doi: 10.1126/scitranslmed.abb6295;
+pmid: 33408186
+15. S. Carbonneau et al., An IMiD-inducible degron provides
+reversible regulation for chimeric antigen receptor expression
+and activity. Cell Chem. Biol. 28, 802–812.e6 (2021).
+doi: 10.1016/j.chembiol.2020.11.012; pmid: 33333026
+16. H. Bouguenina et al., iTAG an optimized IMiD-induced
+degron for targeted protein degradation in human and
+murine cells. iScience 26, 107059 (2023). doi: 10.1016/
+j.isci.2023.107059; pmid: 37360684
+17. B. Nabet et al., The dTAG system for immediate and
+target-specific protein degradation. Nat. Chem. Biol. 14,
+431–441 (2018). doi: 10.1038/s41589-018-0021-8;
+pmid: 29581585
+18. B. Nabet et al., Rapid and direct control of target protein
+levels with VHL-recruiting dTAG molecules. Nat. Commun. 11,
+4687 (2020). doi: 10.1038/s41467-020-18377-w;
+pmid: 32948771
+19. H. K. Chung et al., Tunable and reversible drug control of
+protein production via a self-excising degron. Nat. Chem. Biol.
+11, 713–720 (2015). doi: 10.1038/nchembio.1869;
+pmid: 26214256
+20. K. M. Bonger, L. C. Chen, C. W. Liu, T. J. Wandless, Small-
+molecule displacement of a cryptic degron causes conditional
+protein degradation. Nat. Chem. Biol. 7, 531–537 (2011).
+doi: 10.1038/nchembio.598; pmid: 21725303
+21. D. L. Buckley et al., HaloPROTACS: Use of small molecule
+PROTACs to induce degradation of HaloTag fusion proteins.
+ACS Chem. Biol. 10, 1831–1837 (2015). doi: 10.1021/
+acschembio.5b00442; pmid: 26070106
+22. H. Tovell et al., Rapid and reversible knockdown of
+endogenously tagged endosomal proteins via an optimized
+HaloPROTAC degrader. ACS Chem. Biol. 14, 882–892 (2019).
+doi: 10.1021/acschembio.8b01016; pmid: 30978004
+23. K. Nishimura, T. Fukagawa, H. Takisawa, T. Kakimoto,
+M. Kanemaki, An auxin-based degron system for the rapid
+depletion of proteins in nonplant cells. Nat. Methods 6,
+917–922 (2009). doi: 10.1038/nmeth.1401; pmid: 19915560
+24. T. Natsume, T. Kiyomitsu, Y. Saga, M. T. Kanemaki, Rapid
+protein depletion in human cells by auxin-inducible degron
+tagging with short homology donors. Cell Rep. 15, 210–218
+(2016). doi: 10.1016/j.celrep.2016.03.001; pmid: 27052166
+25. A. Yesbolatova et al., The auxin-inducible degron 2
+technology provides sharp degradation control in yeast,
+mammalian cells, and mice. Nat. Commun. 11, 5701 (2020).
+doi: 10.1038/s41467-020-19532-z; pmid: 33177522
+26. D. P. Bondeson et al., Systematic profiling of conditional
+degron tag technologies for target validation studies.
+Nat. Commun. 13, 5495 (2022). doi: 10.1038/
+s41467-022-33246-4; pmid: 36127368
+27. A. V. Anzalone et al., Search-and-replace genome editing
+without double-strand breaks or donor DNA. Nature 576,
+149–157 (2019). doi: 10.1038/s41586-019-1711-4;
+pmid: 31634902
+28. A. V. Anzalone, L. W. Koblan, D. R. Liu, Genome editing
+with CRISPR-Cas nucleases, base editors, transposases and
+prime editors. Nat. Biotechnol. 38, 824–844 (2020).
+doi: 10.1038/s41587-020-0561-9; pmid: 32572269
+29. P. J. Chen, D. R. Liu, Prime editing for precise and highly
+versatile genome manipulation. Nat. Rev. Genet. 24, 161–177
+(2023). doi: 10.1038/s41576-022-00541-1; pmid: 36344749
+30. J. L. Doman, A. A. Sousa, P. B. Randolph, P. J. Chen, D. R. Liu,
+Designing and executing prime editing experiments in
+mammalian cells. Nat. Protoc. 17, 2431–2468 (2022).
+doi: 10.1038/s41596-022-00724-4; pmid: 35941224
+31. J. An et al., pSILAC mass spectrometry reveals ZFP91 as
+IMiD-dependent substrate of the CRL4CRBN ubiquitin
+ligase. Nat. Commun. 8, 15398 (2017). doi: 10.1038/
+ncomms15398; pmid: 28530236
+32. K. A. Donovan et al., Thalidomide promotes degradation of
+SALL4, a transcription factor implicated in Duane Radial Ray
+syndrome. eLife 7, e38430 (2018). doi: 10.7554/eLife.38430;
+pmid: 30067223
+33. K. M. Esvelt, J. C. Carlson, D. R. Liu, A system for the
+continuous directed evolution of biomolecules. Nature 472,
+499–503 (2011). doi: 10.1038/nature09929; pmid: 21478873
+34. S. M. Miller, T. Wang, D. R. Liu, Phage-assisted continuous
+and non-continuous evolution. Nat. Protoc. 15, 4101–4127
+(2020). doi: 10.1038/s41596-020-00410-3; pmid: 33199872
+35. A. H. Badran, D. R. Liu, Development of potent in vivo
+mutagenesis plasmids with broad mutational spectra.
+Nat. Commun. 6, 8425 (2015). doi: 10.1038/ncomms9425;
+pmid: 26443021
+36. B. C. Dickinson, A. M. Leconte, B. Allen, K. M. Esvelt,
+D. R. Liu, Experimental interrogation of the path dependence
+and stochasticity of protein evolution using phage-assisted
+continuous evolution. Proc. Natl. Acad. Sci. U.S.A. 110,
+9007–9012 (2013). doi: 10.1073/pnas.1220670110;
+pmid: 23674678
+37. A. M. Leconte et al., A population-based experimental model
+for protein evolution: Effects of mutation rate and selection
+stringency on evolutionary outcomes. Biochemistry 52,
+1490–1499 (2013). doi: 10.1021/bi3016185; pmid: 23360105
+38. J. C. Carlson, A. H. Badran, D. A. Guggiana-Nilo, D. R. Liu,
+Negative selection and stringency modulation in phage-
+assisted continuous evolution. Nat. Chem. Biol. 10, 216–222
+(2014). doi: 10.1038/nchembio.1453; pmid: 24487694
+39. B. C. Dickinson, M. S. Packer, A. H. Badran, D. R. Liu, A
+system for the continuous directed evolution of proteases
+rapidly reveals drug-resistance mutations. Nat. Commun. 5,
+5352 (2014). doi: 10.1038/ncomms6352; pmid: 25355134
+40. M. S. Packer, H. A. Rees, D. R. Liu, Phage-assisted continuous
+evolution of proteases with altered substrate specificity.
+Nat. Commun. 8, 956 (2017). doi: 10.1038/
+s41467-017-01055-9; pmid: 29038472
+41. T. R. Blum et al., Phage-assisted evolution of botulinum
+neurotoxin proteases with reprogrammed specificity. Science
+371, 803–810 (2021). doi: 10.1126/science.abf5972;
+pmid: 33602850
+42. A. H. Badran et al., Continuous evolution of Bacillus
+thuringiensis toxins overcomes insect resistance. Nature 533,
+58–63 (2016). doi: 10.1038/nature17938; pmid: 27120167
+43. T. Wang, A. H. Badran, T. P. Huang, D. R. Liu, Continuous
+directed evolution of proteins with improved soluble
+expression. Nat. Chem. Biol. 14, 972–980 (2018).
+doi: 10.1038/s41589-018-0121-5; pmid: 30127387
+44. M. S. Morrison, T. Wang, A. Raguram, C. Hemez, D. R. Liu,
+Disulfide-compatible phage-assisted continuous evolution in
+the periplasmic space. Nat. Commun. 12, 5959 (2021).
+doi: 10.1038/s41467-021-26279-8; pmid: 34645844
+45. T. B. Roth, B. M. Woolston, G. Stephanopoulos, D. R. Liu,
+Phage-assisted evolution of Bacillus methanolicus methanol
+dehydrogenase 2. ACS Synth. Biol. 8, 796–806 (2019).
+doi: 10.1021/acssynbio.8b00481; pmid: 30856338
+46. A. K. Brödel, R. Rodrigues, A. Jaramillo, M. Isalan,
+Accelerated evolution of a minimal 63–amino acid dual
+transcription factor. Sci. Adv. 6, eaba2728 (2020).
+doi: 10.1126/sciadv.aba2728; pmid: 32577520
+47. J. H. Hu et al., Evolved Cas9 variants with broad PAM
+compatibility and high DNA specificity. Nature 556, 57–63
+(2018). doi: 10.1038/nature26155; pmid: 29512652
+48. S. M. Miller et al., Continuous evolution of SpCas9 variants
+compatible with non-G PAMs. Nat. Biotechnol. 38, 471–481
+(2020). doi: 10.1038/s41587-020-0412-8; pmid: 32042170
+49. B. W. Thuronyi et al., Continuous evolution of base editors
+with expanded target compatibility and improved activity.
+Nat. Biotechnol. 37, 1070–1079 (2019). doi: 10.1038/
+s41587-019-0193-0; pmid: 31332326
+50. M. F. Richter et al., Phage-assisted evolution of an adenine
+base editor with improved Cas domain compatibility and
+activity. Nat. Biotechnol. 38, 883–891 (2020). doi: 10.1038/
+s41587-020-0453-z; pmid: 32433547
+51. B. Y. Mok et al., CRISPR-free base editors with enhanced
+activity and expanded targeting scope in mitochondrial and
+
+[[page:18]]
+nuclear DNA. Nat. Biotechnol. 40, 1378–1387 (2022).
+doi: 10.1038/s41587-022-01256-8; pmid: 35379961
+52. M. E. Neugebauer et al., Evolution of an adenine base
+editor into a small, efficient cytosine base editor with low off-
+target activity. Nat. Biotechnol. 41, 673–685 (2023).
+doi: 10.1038/s41587-022-01533-6; pmid: 36357719
+53. T. P. Huang et al., High-throughput continuous evolution of
+compact Cas9 variants targeting single-nucleotide-pyrimidine
+PAMs. Nat. Biotechnol. 41, 96–107 (2023). doi: 10.1038/
+s41587-022-01410-2; pmid: 36076084
+54. J. L. Doman et al., Phage-assisted evolution and protein
+engineering yield compact, efficient prime editors. Cell 186,
+3983–4002.e26 (2023). doi: 10.1016/j.cell.2023.07.039;
+pmid: 37657419
+55. B. P. Hubbard et al., Continuous directed evolution of
+DNA-binding proteins to improve TALEN specificity.
+Nat. Methods 12, 939–942 (2015). doi: 10.1038/nmeth.3515;
+pmid: 26258293
+56. S. L. Dove, J. K. Joung, A. Hochschild, Activation of
+prokaryotic transcription through arbitrary protein-protein
+contacts. Nature 386, 627–630 (1997). doi: 10.1038/
+386627a0; pmid: 9121589
+57. S. L. Dove, A. Hochschild, Conversion of the w subunit of
+Escherichia coli RNA polymerase into a transcriptional
+activator or an activation target. Genes Dev. 12, 745–754
+(1998). doi: 10.1101/gad.12.5.745; pmid: 9499408
+58. E. J. Brown et al., A mammalian protein targeted by
+G1-arresting rapamycin–receptor complex. Nature 369,
+756–758 (1994). doi: 10.1038/369756a0; pmid: 8008069
+59. J. Chen, X. F. Zheng, E. J. Brown, S. L. Schreiber,
+Identification of an 11-kDa FKBP12-rapamycin-binding domain
+within the 289-kDa FKBP12-rapamycin-associated protein
+and characterization of a critical serine residue. Proc. Natl.
+Acad. Sci. U.S.A. 92, 4947–4951 (1995). doi: 10.1073/
+pnas.92.11.4947; pmid: 7539137
+60. P. Percipalle et al., Rationally designed helix-turn-helix
+proteins and their conformational changes upon DNA
+binding. EMBO J. 14, 3200–3205 (1995). doi: 10.1002/
+j.1460-2075.1995.tb07322.x; pmid: 7621832
+61. M. F. Richter et al., Predictive compound accumulation rules
+yield a broad-spectrum antibiotic. Nature 545, 299–304
+(2017). doi: 10.1038/nature22308; pmid: 28489819
+62. M. Vaara, T. Vaara, Polycations sensitize enteric bacteria to
+antibiotics. Antimicrob. Agents Chemother. 24, 107–113
+(1983). doi: 10.1128/AAC.24.1.107; pmid: 6414364
+63. L. A. Banaszynski, C. W. Liu, T. J. Wandless, Characterization
+of the FKBP·rapamycin·FRB ternary complex. J. Am. Chem.
+Soc. 127, 4715–4721 (2005). doi: 10.1021/ja043277y;
+pmid: 15796538
+64. E. F. Douglass Jr., C. J. Miller, G. Sparer, H. Shapiro,
+D. A. Spiegel, A comprehensive mathematical model for
+three-body binding equilibria. J. Am. Chem. Soc. 135,
+6092–6099 (2013). doi: 10.1021/ja311795d; pmid: 23544844
+65. E. S. Fischer et al., Structure of the DDB1-CRBN E3 ubiquitin
+ligase in complex with thalidomide. Nature 512, 49–53
+(2014). doi: 10.1038/nature13527; pmid: 25043012
+66. T. M. Nguyen et al., Proteolysis-targeting chimeras with
+reduced off-targets. Nat. Chem. 16, 218–228 (2024).
+doi: 10.1038/s41557-023-01379-8; pmid: 38110475
+67. J. Yamamoto et al., ARID2 is a pomalidomide-dependent
+CRL4CRBN substrate in multiple myeloma cells. Nat. Chem.
+Biol. 16, 1208–1217 (2020). doi: 10.1038/s41589-020-0645-
+3; pmid: 32958952
+68. K. M. Riching et al., Quantitative live-cell kinetic degradation
+and mechanistic profiling of PROTAC mode of action.
+ACS Chem. Biol. 13, 2758–2770 (2018). doi: 10.1021/
+acschembio.8b00692; pmid: 30137962
+69. A. A. Akuffo et al., Ligand-mediated protein degradation
+reveals functional conservation among sequence variants
+of the CUL4-type E3 ligase substrate receptor cereblon.
+J. Biol. Chem. 293, 6187–6200 (2018). doi: 10.1074/
+jbc.M117.816868; pmid: 29449372
+70. E. A. DeBenedictis et al., Systematic molecular evolution
+enables robust biomolecule discovery. Nat. Methods 19,
+55–64 (2022). doi: 10.1038/s41592-021-01348-4;
+pmid: 34969982
+71. S. Ringquist et al., Translation initiation in Escherichia coli:
+Sequences within the ribosome-binding site. Mol. Microbiol.
+6, 1219–1229 (1992). doi: 10.1111/j.1365-2958.1992.tb01561.x;
+pmid: 1375310
+72. T. Ito et al., Identification of a primary target of thalidomide
+teratogenicity. Science 327, 1345–1350 (2010). doi: 10.1126/
+science.1177319; pmid: 20223979
+73. A. L. Donner, P. A. Carlson, G. B. Koudelka, Dimerization
+specificity of P22 and 434 repressors is determined by
+multiple polypeptide segments. J. Bacteriol. 179, 1253–1261
+(1997). doi: 10.1128/jb.179.4.1253-1261.1997; pmid: 9023209
+74. H.-C. S. Yen, Q. Xu, D. M. Chou, Z. Zhao, S. J. Elledge,
+Global protein stability profiling in mammalian cells.
+Science 322, 918–923 (2008). doi: 10.1126/science.1160489;
+pmid: 18988847
+75. A. V. Anzalone et al., Programmable deletion, replacement,
+integration and inversion of large DNA sequences with twin
+prime editing. Nat. Biotechnol. 40, 731–740 (2022).
+doi: 10.1038/s41587-021-01133-w; pmid: 34887556
+76. L.-Y. Lu et al., Polo-like kinase 1 is essential for early
+embryonic development and tumor suppression. Mol. Cell.
+Biol. 28, 6870–6876 (2008). doi: 10.1128/MCB.00392-08;
+pmid: 18794363
+77. M. C. Lawrence, P. M. Colman, Shape complementarity at
+protein/protein interfaces. J. Mol. Biol. 234, 946–950 (1993).
+doi: 10.1006/jmbi.1993.1648; pmid: 8263940
+78. C. N. Pace, J. M. Scholtz, A helix propensity scale based on
+experimental studies of peptides and proteins. Biophys. J. 75,
+422–427 (1998). doi: 10.1016/S0006-3495(98)77529-0;
+pmid: 9649402
+79. J. K. Leman et al., Macromolecular modeling and design in
+Rosetta: Recent methods and frameworks. Nat. Methods 17,
+665–680 (2020). doi: 10.1038/s41592-020-0848-2;
+pmid: 32483333
+80. E. C. Fink et al., CrbnI391V is sufficient to confer in vivo
+sensitivity to thalidomide and its derivatives in mice. Blood
+132, 1535–1544 (2018). doi: 10.1182/blood-2018-05-852798;
+pmid: 30064974
+81. V. Oleinikovas, P. Gainza, T. Ryckmans, B. Fasching,
+N. H. Thomä, From thalidomide to rational molecular glue
+design for targeted protein degradation. Annu. Rev.
+Pharmacol. Toxicol. 64, 291–312 (2024). doi: 10.1146/
+annurev-pharmtox-022123-104147; pmid: 37585660
+82. S. Picelli et al., Full-length RNA-seq from single cells using
+Smart-seq2. Nat. Protoc. 9, 171–181 (2014). doi: 10.1038/
+nprot.2014.006; pmid: 24385147
+83. N. L. Bray, H. Pimentel, P. Melsted, L. Pachter, Near-optimal
+probabilistic RNA-seq quantification. Nat. Biotechnol. 34,
+525–527 (2016). doi: 10.1038/nbt.3519; pmid: 27043002
+84. M. I. Love, W. Huber, S. Anders, Moderated estimation of fold
+change and dispersion for RNA-seq data with DESeq2.
+Genome Biol. 15, 550 (2014). doi: 10.1186/s13059-014-0550-
+8; pmid: 25516281
+85. F. Meier et al., diaPASEF: Parallel accumulation-serial
+fragmentation combined with data-independent acquisition.
+Nat. Methods 17, 1229–1236 (2020). doi: 10.1038/
+s41592-020-00998-0; pmid: 33257825
+86. V. Demichev, C. B. Messner, S. I. Vernardis, K. S. Lilley,
+M. Ralser, DIA-NN: Neural networks and interference
+correction enable deep proteome coverage in high
+throughput. Nat. Methods 17, 41–44 (2020). doi: 10.1038/
+s41592-019-0638-x; pmid: 31768060
+87. M. E. Ritchie et al., limma powers differential expression
+analyses for RNA-sequencing and microarray studies.
+Nucleic Acids Res. 43, e47 (2015). doi: 10.1093/nar/gkv007;
+pmid: 25605792
+88. W. Abdulrahman et al., A set of baculovirus transfer vectors
+for screening of affinity tags and parallel expression
+strategies. Anal. Biochem. 385, 383–385 (2009).
+doi: 10.1016/j.ab.2008.10.044; pmid: 19061853
+89. N. C. Payne, A. S. Kalyakina, K. Singh, M. A. Tye, R. Mazitschek,
+Bright and stable luminescent probes for target engagement
+profiling in live cells. Nat. Chem. Biol. 17, 1168–1177 (2021).
+doi: 10.1038/s41589-021-00877-5; pmid: 34675420
+90. K. Clement et al., CRISPResso2 provides accurate and rapid
+genome editing sequence analysis. Nat. Biotechnol. 37,
+224–226 (2019). doi: 10.1038/s41587-019-0032-3;
+pmid: 30809026
+91. K. Clement, R. Farouni, D. E. Bauer, L. Pinello, AmpUMI:
+Design and analysis of unique molecular identifiers for deep
+amplicon sequencing. Bioinformatics 34, i202–i210 (2018).
+doi: 10.1093/bioinformatics/bty264; pmid: 29949956
+92. P. J. Chen et al., Enhanced prime editing systems by
+manipulating cellular determinants of editing outcomes. Cell
+184, 5635–5652.e29 (2021). doi: 10.1016/j.cell.2021.09.018;
+pmid: 34653350
+93. M. Schorb, I. Haberbosch, W. J. H. Hagen, Y. Schwab,
+D. N. Mastronarde, Software tools for automated
+transmission electron microscopy. Nat. Methods 16, 471–477
+(2019). doi: 10.1038/s41592-019-0396-9; pmid: 31086343
+94. D. Kimanius, L. Dong, G. Sharov, T. Nakane, S. H. W. Scheres,
+New tools for automated cryo-EM single-particle analysis
+in RELION-4.0. Biochem. J. 478, 4169–4185 (2021).
+doi: 10.1042/BCJ20210708; pmid: 34783343
+95. A. Punjani, J. L. Rubinstein, D. J. Fleet, M. A. Brubaker,
+cryoSPARC: Algorithms for rapid unsupervised cryo-EM
+structure determination. Nat. Methods 14, 290–296 (2017).
+doi: 10.1038/nmeth.4169; pmid: 28165473
+96. P. B. Rosenthal, R. Henderson, Optimal determination of
+particle orientation, absolute hand, and contrast loss in
+single-particle electron cryomicroscopy. J. Mol. Biol. 333,
+721–745 (2003). doi: 10.1016/j.jmb.2003.07.013;
+pmid: 14568533
+97. S. H. W. Scheres, S. Chen, Prevention of overfitting in
+cryo-EM structure determination. Nat. Methods 9, 853–854
+(2012). doi: 10.1038/nmeth.2115; pmid: 22842542
+98. T. Bepler et al., Positive-unlabeled convolutional neural
+networks for particle picking in cryo-electron micrographs.
+Nat. Methods 16, 1153–1160 (2019). doi: 10.1038/
+s41592-019-0575-8; pmid: 31591578
+99. R. Sanchez-Garcia et al., DeepEMhancer: A deep learning
+solution for cryo-EM volume post-processing. Commun. Biol. 4,
+874 (2021). doi: 10.1038/s42003-021-02399-1; pmid: 34267316
+100. Y.-D. Li et al., Template-assisted covalent modification of
+DCAF16 underlies activity of BRD4 molecular glue
+degraders. bioRxiv2023.02.14.528208 [Preprint] (2023);
+https://doi.org/10.1101/2023.02.14.528208.
+101. E. F. Pettersen et al., UCSF ChimeraX: Structure visualization
+for researchers, educators, and developers. Protein Sci. 30,
+70–82 (2021). doi: 10.1002/pro.3943; pmid: 32881101
+102. T. I. Croll, ISOLDE: A physically realistic environment for
+model building into low-resolution electron-density maps.
+Acta Crystallogr. D Struct. Biol. 74, 519–530 (2018).
+doi: 10.1107/S2059798318002425; pmid: 29872003
+103. P. Emsley, B. Lohkamp, W. G. Scott, K. Cowtan, Features
+and development of Coot. Acta Crystallogr. D Biol. Crystallogr.
+66, 486–501 (2010). doi: 10.1107/S0907444910007493;
+pmid: 20383002
+104. P. D. Adams et al., PHENIX: A comprehensive Python-based
+system for macromolecular structure solution. Acta
+Crystallogr. D Biol. Crystallogr. 66, 213–221 (2010).
+doi: 10.1107/S0907444909052925; pmid: 20124702
+105. P. V. Afonine et al., Real-space refinement in PHENIX for
+cryo-EM and crystallography. Acta Crystallogr. D Struct. Biol.
+74, 531–544 (2018). doi: 10.1107/S2059798318006551;
+pmid: 29872004
+106. D. Asarnow, E. Palovcak, Y. Cheng, asarnow/pyem: UCSF
+pyem v0.5, Zenodo (2019); https://doi.org/10.5281/
+zenodo.3576630.
+107. C. J. Williams et al., MolProbity: More and better reference
+data for improved all-atom structure validation. Protein Sci.
+27, 293–315 (2018). doi: 10.1002/pro.3330; pmid: 29067766
+108. B. A. Barad et al., EMRinger: Side chain–directed model
+and map validation for 3D cryo-electron microscopy.
+Nat. Methods 12, 943–946 (2015). doi: 10.1038/
+nmeth.3541; pmid: 26280328
+109. G. Cardone, J. B. Heymann, A. C. Steven, One number does
+not fit all: Mapping local variations in resolution in cryo-EM
+reconstructions. J. Struct. Biol. 184, 226–236 (2013).
+doi: 10.1016/j.jsb.2013.08.002; pmid: 23954653
+110. Y. Z. Tan et al., Addressing preferred specimen orientation in
+single-particle cryo-EM through tilting. Nat. Methods 14,
+793–796 (2017). doi: 10.1038/nmeth.4347; pmid: 28671674
+111. A. Morin et al., Collaboration gets the most out of
+software. eLife 2, e01456 (2013). doi: 10.7554/eLife.01456;
+pmid: 24040512
+112. S. S. Roy Burman, E. S. Fischer, fischerlab/scripts-
+publications: 2024_Evolved_degrons, Zenodo (2024);
+https://doi.org/10.5281/zenodo.10637358.
+AC KNOWLED GME NTS
+We thank the staff at Harvard Center for Cryo-Electron Microscopy
+for their support during grid screening and data collection. We
+thank S. Dixon-Clarke for providing IKZF1 mutant and N. C. Payne
+and R. Mazitschek for providing Tb-coupled streptavidin. We also
+thank the SBGrid Consortium for software support and compute
+resources. Funding: Funding was provided by US NIH grants
+R01EB031172, R01EB027793, R35GM118062, R01CA214608,
+R01GM137606, and R01GM132825 and by the Howard Hughes
+Medical Institute. J.A.M.M. was supported by a Ruth L. Kirchstein
+National Science Research Award Postdoctoral Fellowship (F32
+GM133088). S.S.R.B. was supported by a Cancer Research
+Institute Irvington Postdoctoral Fellowship (CRI 3442). P.J.C. was
+
+[[page:19]]
+supported by a National Science Foundation Graduate Research
+Fellowship. Author contributions: J.A.M.M., S.J.D., and S.S.R.B.
+designed the research, performed experiments, analyzed data, and
+wrote the manuscript. V.S. assisted in research design and
+performed CRBN cellular engagement experiments. A.T.N.
+performed and analyzed genome editing experiments. M.H.
+contributed to structure determination and model building. P.J.C.
+performed and analyzed RNA-seq experiments. K.A.D. designed,
+performed, and analyzed global proteomics experiments. P.K.,
+P.K.T., V.M.S., and A.D. synthesized IMiD derivatives. A.C., E.S.F.,
+and D.R.L. designed and supervised the research and wrote the
+manuscript. Competing interests: The authors have filed patent
+applications on PACE, evolved degrons, and related improvements.
+D.R.L. is a cofounder, consultant, and equity holder of Beam
+Therapeutics, Prime Medicine, Pairwise Plants, Chroma Medicine,
+Resonance Medicine, Exo Therapeutics, and Nvelop Therapeutics.
+E.S.F. is a founder, scientific advisory board member, and equity
+holder of Civetta Therapeutics, Proximity Therapeutics, and
+Neomorph, Inc. (also on the board of directors). E.S.F. is an equity
+holder and scientific advisory board member of Avilar Therapeutics
+and Photys Therapeutics; an equity holder of Light Horse
+Therapeutics; and a consultant to Novartis, Sanofi, EcoR1 Capital,
+Ajax Therapeutics, and Deerfield. The Fischer lab receives or
+has received research funding from Novartis, Ajax, Voronoi, Interline,
+Deerfield, and Astellas. A.C. is a scientific founder and is on the
+scientific advisory board of Photys Therapeutics. K.A.D. is a
+consultant to Kronos Bio and Neomorph, Inc. P.J.C. is currently an
+employee of Prime Medicine. Data and materials availability:
+Plasmids used in this study are available through AddGene
+(depositor: D.R.L.). Sequencing files can be accessed using the
+National Center for Biotechnology Information Sequence Read
+Archive (accession no. SUB14211320). Cryo-EM maps are available
+from Electron Microscopy Data Bank with accession codes
+EMD-41423 and EMD-41777 (DDB1DBPB•CRBN•pomalidomide•SD40),
+EMD-41424 and EMD-41778 (DDB1DBPB•CRBN•PT-179•SD40,
+conformation 1), and EMD-41425 and EMD-41779 (DDB1DBPB•CRBN•PT-
+179•SD40, conformation 2). The corresponding coordinates are
+available from the Protein Data Bank under IDs 8TNP, 8TNQ,
+and 8TNR, respectively. Custom scripts used for structural
+modeling and analysis can be found in Zenodo (112). License
+information: Copyright © 2024 the authors, some rights
+reserved; exclusive licensee American Association for the
+Advancement of Science. No claim to original US government
+works. https://www.science.org/about/science-licenses-journal-
+article-reuse. This article is subject to HHMI’s Open Access
+to Publications policy. HHMI lab heads have previously granted a
+nonexclusive CC BY 4.0 license to the public and a sublicensable
+license to HHMI in their research articles. Pursuant to those
+licenses, the author-accepted manuscript (AAM) of this article can
+be made freely available under a CC BY 4.0 license immediately
+upon publication.
+SUPPLEMENTARY MATERIALS
+science.org/doi/10.1126/science.adk4422
+Figs. S1 to S26
+Tables S1 to S7
+References (113–115)
+MDAR Reproducibility Checklist
+Movie S1
+Data S1
+Submitted 22 August 2023; accepted 9 February 2024
+10.1126/science.adk4422

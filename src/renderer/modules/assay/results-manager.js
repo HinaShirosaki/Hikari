@@ -1,9 +1,11 @@
 import {
+  parseWellId,
   rowLabelToIndex,
   toRowLabel,
   wellIdFor
 } from './plate-model.js';
 import { oppositeAxis } from './shared.js';
+import { bindFileDropTarget } from '../file-drop.js';
 
 function toResultField(columnIndex) {
   return `c${columnIndex + 1}`;
@@ -253,6 +255,35 @@ export function detectAssayResultMatrixCandidates(tables, def) {
     selected.push(candidate);
   });
   return selected.slice(0, 12);
+}
+
+export function getAssayResultImportTarget(layout, fallbackDef) {
+  const mappedCells = (Array.isArray(layout) ? layout : [])
+    .map((item) => parseWellId(item?.well))
+    .filter(Boolean);
+  if (!mappedCells.length) {
+    return {
+      rows: Number(fallbackDef?.rows) || 0,
+      columns: Number(fallbackDef?.columns) || 0,
+      startRowIndex: 0,
+      startColumnIndex: 0,
+      source: 'plate'
+    };
+  }
+
+  const rowIndexes = mappedCells.map((item) => item.rowIndex);
+  const columnIndexes = mappedCells.map((item) => item.columnIndex);
+  const startRowIndex = Math.min(...rowIndexes);
+  const endRowIndex = Math.max(...rowIndexes);
+  const startColumnIndex = Math.min(...columnIndexes);
+  const endColumnIndex = Math.max(...columnIndexes);
+  return {
+    rows: (endRowIndex - startRowIndex) + 1,
+    columns: (endColumnIndex - startColumnIndex) + 1,
+    startRowIndex,
+    startColumnIndex,
+    source: 'mapped'
+  };
 }
 
 export function createAssayResultsManager({
@@ -969,7 +1000,7 @@ export function createAssayResultsManager({
     renderResultImportPreview(candidate);
   }
 
-  function openResultImportDialog({ fileName, dataBase64, candidates }) {
+  function openResultImportDialog({ fileName, dataBase64, candidates, importTarget }) {
     if (!assayResultImportOverlay) {
       return;
     }
@@ -977,6 +1008,7 @@ export function createAssayResultsManager({
       fileName,
       dataBase64,
       candidates,
+      importTarget,
       selectedId: candidates[0]?.id || ''
     };
     assayResultImportOverlay.hidden = false;
@@ -1035,6 +1067,7 @@ export function createAssayResultsManager({
 
     try {
       const importedFileName = resultImportState.fileName;
+      const importTarget = resultImportState.importTarget || getAssayResultImportTarget(runtime.currentLayout, getCurrentDefinition());
       const attachment = await persistResultAttachment({
         fileName: importedFileName,
         dataBase64: resultImportState.dataBase64,
@@ -1042,8 +1075,8 @@ export function createAssayResultsManager({
       });
       const counts = applyResultMatrix({
         matrix: candidate.matrix,
-        startRowIndex: 0,
-        startColumnIndex: 0,
+        startRowIndex: importTarget.startRowIndex,
+        startColumnIndex: importTarget.startColumnIndex,
         replaceAll: true
       });
       renderResultTable();
@@ -1070,11 +1103,7 @@ export function createAssayResultsManager({
     }
   }
 
-  async function onResultFileChange(event) {
-    const file = event.target?.files?.[0] || null;
-    if (event.target) {
-      event.target.value = '';
-    }
+  async function importResultFile(file) {
     if (!file) {
       return;
     }
@@ -1095,10 +1124,11 @@ export function createAssayResultsManager({
         fileName: file.name,
         dataBase64
       });
-      const def = getCurrentDefinition();
-      const candidates = detectAssayResultMatrixCandidates(parsed?.tables || [], def);
+      const importTarget = getAssayResultImportTarget(runtime.currentLayout, getCurrentDefinition());
+      const candidates = detectAssayResultMatrixCandidates(parsed?.tables || [], importTarget);
       if (!candidates.length) {
-        setResultStatus(`No ${def.rows} x ${def.columns} result matrix was detected in ${file.name}.`);
+        const areaLabel = importTarget.source === 'mapped' ? 'mapped-area ' : '';
+        setResultStatus(`No ${importTarget.rows} x ${importTarget.columns} ${areaLabel}result matrix was detected in ${file.name}.`);
         return;
       }
       if (candidates.length === 1) {
@@ -1106,6 +1136,7 @@ export function createAssayResultsManager({
           fileName: file.name,
           dataBase64,
           candidates,
+          importTarget,
           selectedId: candidates[0].id
         };
         await applyResultImportCandidate(candidates[0]);
@@ -1114,13 +1145,22 @@ export function createAssayResultsManager({
       openResultImportDialog({
         fileName: file.name,
         dataBase64,
-        candidates
+        candidates,
+        importTarget
       });
     } catch (error) {
       const message = String(error?.message || error || 'Unable to read result file.');
       setResultStatus(message);
       setResultImportStatus(message);
     }
+  }
+
+  async function onResultFileChange(event) {
+    const file = event.target?.files?.[0] || null;
+    if (event.target) {
+      event.target.value = '';
+    }
+    await importResultFile(file);
   }
 
   function onAttachResultFileClick() {
@@ -1190,6 +1230,19 @@ export function createAssayResultsManager({
     }
     setResultStatus('Cleared all result values. Only mapped wells are editable.');
   }
+
+  bindFileDropTarget({
+    target: elements.assayResultsLayout || assayResultTable,
+    accept: assayResultFileInput?.getAttribute?.('accept') || '',
+    disabled: () => Boolean(elements.assayResultsLayout?.hidden),
+    onFiles: ([file]) => importResultFile(file),
+    onRejected: () => {
+      setResultStatus('Drop a CSV or Excel result file to attach it.');
+    },
+    onError: (error) => {
+      setResultStatus(String(error?.message || error || 'Unable to import the dropped result file.'));
+    }
+  });
 
   return {
     getResultValueCount,

@@ -79,33 +79,51 @@ export function createPapersActions(context) {
     context.renderLibrarySidebar?.();
   }
 
-  async function onPaperSubmit(event) {
-    event?.preventDefault?.();
+  function resolvePaperUploadTarget() {
     const options = context.library?.getCurrentLinkOptions?.() || [];
-    const file = elements.paperPdfInput?.files?.[0];
     const linkId = elements.paperLinkTargetSelect?.value;
     const linked = options.find((item) => item.id === linkId);
 
-    if (!file || !linkId || !linked) {
-      return;
+    if (!linkId || !linked) {
+      return null;
     }
 
     const rootPath = String(state.settings?.storagePath || '').trim();
     if (!rootPath) {
       windowRef?.alert?.('Set Storage Folder Path in Settings before uploading papers.');
-      return;
+      return null;
     }
+
+    return {
+      rootPath,
+      linkId,
+      linked,
+      linkedType: elements.paperLinkTypeSelect?.value
+    };
+  }
+
+  async function uploadPaperFile(file, uploadTarget) {
+    if (!file || !uploadTarget) {
+      return null;
+    }
+
+    const {
+      rootPath,
+      linkId,
+      linked,
+      linkedType
+    } = uploadTarget;
 
     const pdfDataUrl = await fileToDataUrl(file);
     const dataBase64 = extractBase64Payload(pdfDataUrl);
     if (!dataBase64) {
       windowRef?.alert?.('Cannot read the selected PDF.');
-      return;
+      return null;
     }
 
     if (!windowRef?.enanaApi?.storeImportedFile) {
       windowRef?.alert?.('Imported file storage API is unavailable.');
-      return;
+      return null;
     }
 
     let storedFile = null;
@@ -114,14 +132,14 @@ export function createPapersActions(context) {
         storagePath: rootPath,
         targetFolder: buildPaperStorageFolder({
           rootPath,
-          linkedType: elements.paperLinkTypeSelect?.value,
+          linkedType,
           linkedName: linked.name
         }),
         fileName: file.name,
         dataBase64,
         transformPdfToMarkdown: true,
         paperTitle: elements.paperTitleInput?.value?.trim() || file.name.replace(/\.pdf$/i, ''),
-        linkedType: elements.paperLinkTypeSelect?.value,
+        linkedType,
         linkedName: linked.name
       });
       if (!result?.ok) {
@@ -130,7 +148,7 @@ export function createPapersActions(context) {
       storedFile = result;
     } catch (error) {
       windowRef?.alert?.(String(error?.message || error || 'Failed to store uploaded PDF.'));
-      return;
+      return null;
     }
 
     const now = new Date().toISOString();
@@ -141,7 +159,7 @@ export function createPapersActions(context) {
       pdfDataUrl,
       storedFilePath: storedFile.filePath || '',
       storedRelativePath: storedFile.relativePath || '',
-      linkedType: elements.paperLinkTypeSelect?.value,
+      linkedType,
       linkedId: linkId,
       linkedName: linked.name,
       summary: '',
@@ -172,10 +190,39 @@ export function createPapersActions(context) {
 
     state.papers.push(paper);
     persist();
-    elements.paperForm?.reset?.();
     libraryState.selectedFolderKey = buildFolderKey(paper.linkedType, paper.linkedId);
     context.library?.ensureFolderExpanded?.(libraryState.selectedFolderKey);
     context.render?.();
+    return paper;
+  }
+
+  async function uploadPaperFiles(files = []) {
+    const selectedFiles = (Array.isArray(files) ? files : [files]).filter(Boolean);
+    if (!selectedFiles.length) {
+      return [];
+    }
+
+    const uploadTarget = resolvePaperUploadTarget();
+    if (!uploadTarget) {
+      return [];
+    }
+
+    const uploaded = [];
+    for (const file of selectedFiles) {
+      const paper = await uploadPaperFile(file, uploadTarget);
+      if (paper) {
+        uploaded.push(paper);
+      }
+    }
+    elements.paperForm?.reset?.();
+    context.render?.();
+    return uploaded;
+  }
+
+  async function onPaperSubmit(event) {
+    event?.preventDefault?.();
+    const file = elements.paperPdfInput?.files?.[0];
+    await uploadPaperFiles(file ? [file] : []);
   }
 
   function deleteJournalClub(journalClubId) {
@@ -416,6 +463,7 @@ export function createPapersActions(context) {
     bindEvents,
     startPaperAutoIngest,
     onPaperSubmit,
+    uploadPaperFiles,
     deleteJournalClub,
     deletePaper,
     summarizePaper,

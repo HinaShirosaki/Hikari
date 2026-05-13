@@ -203,9 +203,9 @@
         </section>
       </div>
 
-      <div id="dashboard-passage-dialog-overlay" class="home-dialog-overlay" hidden>
+      <div id="dashboard-passage-dialog-overlay" class="home-dialog-overlay app-dialog-overlay app-dialog-overlay--contained app-dialog-overlay--top" hidden>
         <div
-          class="home-dialog home-passage-dialog"
+          class="home-dialog home-passage-dialog app-dialog-surface"
           role="dialog"
           aria-modal="true"
           aria-labelledby="dashboard-passage-dialog-title"
@@ -249,9 +249,9 @@
         </div>
       </div>
 
-      <div id="dashboard-timer-dialog-overlay" class="home-dialog-overlay" hidden>
+      <div id="dashboard-timer-dialog-overlay" class="home-dialog-overlay app-dialog-overlay app-dialog-overlay--contained app-dialog-overlay--top" hidden>
         <div
-          class="home-dialog home-timer-dialog"
+          class="home-dialog home-timer-dialog app-dialog-surface"
           role="dialog"
           aria-modal="true"
           aria-labelledby="dashboard-timer-dialog-title"
@@ -283,9 +283,9 @@
         </div>
       </div>
 
-      <div id="dashboard-notebook-note-dialog-overlay" class="home-dialog-overlay" hidden>
+      <div id="dashboard-notebook-note-dialog-overlay" class="home-dialog-overlay app-dialog-overlay app-dialog-overlay--contained app-dialog-overlay--top" hidden>
         <div
-          class="home-dialog home-notebook-note-dialog"
+          class="home-dialog home-notebook-note-dialog app-dialog-surface"
           role="dialog"
           aria-modal="true"
           aria-labelledby="dashboard-notebook-note-dialog-title"
@@ -311,9 +311,9 @@
         </div>
       </div>
 
-      <div id="dashboard-incubation-dialog-overlay" class="home-dialog-overlay" hidden>
+      <div id="dashboard-incubation-dialog-overlay" class="home-dialog-overlay app-dialog-overlay app-dialog-overlay--contained app-dialog-overlay--top" hidden>
         <div
-          class="home-dialog home-incubation-dialog"
+          class="home-dialog home-incubation-dialog app-dialog-surface"
           role="dialog"
           aria-modal="true"
           aria-labelledby="dashboard-incubation-dialog-title"
@@ -450,10 +450,10 @@
             <div id="protocol-view-content" class="stack-form"></div>
           </div>
 
-          <div id="protocol-generate-input-overlay" class="protocol-generate-overlay" hidden>
+          <div id="protocol-generate-input-overlay" class="protocol-generate-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
             <div class="protocol-generate-input-shell" role="dialog" aria-modal="true" aria-labelledby="protocol-generate-input-title">
-              <section class="protocol-polish-dialog protocol-generate-input-dialog" aria-labelledby="protocol-generate-input-title">
-                <div class="protocol-polish-dialog-head">
+              <section class="protocol-polish-dialog protocol-generate-input-dialog app-dialog-surface" aria-labelledby="protocol-generate-input-title">
+                <div class="protocol-polish-dialog-head app-dialog-head">
                   <div>
                     <span class="protocol-detail-mode">Generate</span>
                     <h3 id="protocol-generate-input-title">Generate Protocol</h3>
@@ -483,10 +483,10 @@
             </div>
           </div>
 
-          <div id="protocol-generate-result-overlay" class="protocol-generate-overlay" hidden>
+          <div id="protocol-generate-result-overlay" class="protocol-generate-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
             <div class="protocol-generate-result-shell" role="dialog" aria-modal="true" aria-labelledby="protocol-generate-title">
-              <section class="protocol-polish-dialog protocol-generate-result-dialog" aria-labelledby="protocol-generate-title">
-                <div class="protocol-polish-dialog-head">
+              <section class="protocol-polish-dialog protocol-generate-result-dialog app-dialog-surface" aria-labelledby="protocol-generate-title">
+                <div class="protocol-polish-dialog-head app-dialog-head">
                   <div>
                     <span class="protocol-detail-mode">Generate</span>
                     <h3 id="protocol-generate-title">Generated Protocol</h3>
@@ -504,11 +504,11 @@
             </div>
           </div>
 
-          <div id="protocol-polish-overlay" class="protocol-polish-overlay" hidden>
+          <div id="protocol-polish-overlay" class="protocol-polish-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
             <div class="protocol-polish-dialog-shell" role="dialog" aria-modal="true" aria-labelledby="protocol-polish-title">
               <div class="protocol-polish-dialog-stack">
-                <section class="protocol-polish-dialog protocol-polish-dialog-source" aria-labelledby="protocol-polish-source-title">
-                  <div class="protocol-polish-dialog-head">
+                <section class="protocol-polish-dialog protocol-polish-dialog-source app-dialog-surface" aria-labelledby="protocol-polish-source-title">
+                  <div class="protocol-polish-dialog-head app-dialog-head">
                     <div>
                       <span class="protocol-detail-mode">Before</span>
                       <h3 id="protocol-polish-source-title">Your Input</h3>
@@ -517,8 +517,8 @@
                   <div id="protocol-polish-original-preview" class="protocol-polish-preview stack-form"></div>
                 </section>
 
-                <section class="protocol-polish-dialog protocol-polish-dialog-result" aria-labelledby="protocol-polish-title">
-                  <div class="protocol-polish-dialog-head">
+                <section class="protocol-polish-dialog protocol-polish-dialog-result app-dialog-surface" aria-labelledby="protocol-polish-title">
+                  <div class="protocol-polish-dialog-head app-dialog-head">
                     <div>
                       <span class="protocol-detail-mode">After</span>
                       <h3 id="protocol-polish-title">Polished Protocol</h3>
@@ -855,9 +855,9 @@
         </div>
       </div>
 
-      <div id="sample-compound-dialog-overlay" class="sample-compound-dialog-overlay" hidden>
-        <div class="sample-compound-dialog" role="dialog" aria-modal="true" aria-labelledby="sample-compound-dialog-title">
-          <div class="sample-compound-dialog-head">
+      <div id="sample-compound-dialog-overlay" class="sample-compound-dialog-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+        <div class="sample-compound-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sample-compound-dialog-title">
+          <div class="sample-compound-dialog-head app-dialog-head">
             <div>
               <h3 id="sample-compound-dialog-title">Draw Chemical Structure</h3>
               <p class="small-note">Use Ketcher to draw or edit the chemical, then apply the snapshot to the current sample.</p>
@@ -1069,9 +1069,9 @@
         </div>
       </div>
 
-      <div id="assay-serial-dilution-overlay" class="assay-serial-dilution-overlay" hidden>
-        <div class="assay-serial-dilution-dialog" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
-          <div class="assay-header-row assay-serial-dilution-head">
+      <div id="assay-serial-dilution-overlay" class="assay-serial-dilution-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
+        <div class="assay-serial-dilution-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
+          <div class="assay-header-row assay-serial-dilution-head app-dialog-head">
             <h3 id="assay-serial-dilution-title">Serial Dilution</h3>
             <button type="button" id="assay-serial-dilution-close-btn" class="ghost-btn" aria-label="Close serial dilution dialog">Close</button>
           </div>
@@ -1087,9 +1087,9 @@
         </div>
       </div>
 
-      <div id="assay-result-import-overlay" class="assay-result-import-overlay" hidden>
-        <div class="assay-result-import-dialog" role="dialog" aria-modal="true" aria-labelledby="assay-result-import-title">
-          <div class="assay-header-row assay-result-import-head">
+      <div id="assay-result-import-overlay" class="assay-result-import-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
+        <div class="assay-result-import-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="assay-result-import-title">
+          <div class="assay-header-row assay-result-import-head app-dialog-head">
             <div>
               <h3 id="assay-result-import-title">Select Result Matrix</h3>
               <p id="assay-result-import-status" class="small-note"></p>
@@ -1233,6 +1233,11 @@
                   <div class="form-actions">
                     <button type="button" id="gel-manual-prev-btn" class="ghost-btn">Previous Step</button>
                     <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
+                    <label class="small-note" style="display: inline-flex; align-items: center; gap: 4px;">
+                      Lanes:
+                      <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" style="width: 60px;" />
+                    </label>
+                    <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-Detect Lanes</button>
                     <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Steps</button>
                   </div>
                 </aside>
@@ -1323,9 +1328,9 @@
         </div>
       </div>
 
-      <div id="chemical-dialog-overlay" class="chemical-dialog-overlay" hidden>
-        <div class="chemical-dialog" role="dialog" aria-modal="true" aria-labelledby="chemical-dialog-title">
-          <div class="chemical-dialog-head">
+      <div id="chemical-dialog-overlay" class="chemical-dialog-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+        <div class="chemical-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="chemical-dialog-title">
+          <div class="chemical-dialog-head app-dialog-head">
             <div>
               <h3 id="chemical-dialog-title">Add Chemical</h3>
               <p class="small-note">Create or update a chemical record.</p>
@@ -2794,9 +2799,9 @@
             </div>
           </div>
 
-          <div id="sequence-viewer-protein-builder-assembly-overlay" class="sequence-viewer-backbone-dialog-overlay" hidden>
-            <div class="sequence-viewer-backbone-dialog" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-protein-builder-assembly-title">
-              <div class="sequence-viewer-backbone-dialog-head">
+          <div id="sequence-viewer-protein-builder-assembly-overlay" class="sequence-viewer-backbone-dialog-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
+            <div class="sequence-viewer-backbone-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-protein-builder-assembly-title">
+              <div class="sequence-viewer-backbone-dialog-head app-dialog-head">
                 <div>
                   <h4 id="sequence-viewer-protein-builder-assembly-title">Assemble Plasmid</h4>
                   <p id="sequence-viewer-protein-builder-assembly-subtitle" class="small-note">Select a stored backbone to combine with the current DNA build.</p>
@@ -2984,9 +2989,9 @@
 
         <div id="sequence-viewer-feature-context-menu" class="sequence-viewer-context-menu" hidden></div>
 
-        <div id="sequence-viewer-feature-editor-overlay" class="sequence-viewer-feature-editor-overlay" hidden>
-          <form id="sequence-viewer-feature-editor-form" class="sequence-viewer-feature-editor" autocomplete="off">
-            <div class="result-card-head sequence-viewer-feature-editor-head">
+        <div id="sequence-viewer-feature-editor-overlay" class="sequence-viewer-feature-editor-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+          <form id="sequence-viewer-feature-editor-form" class="sequence-viewer-feature-editor app-dialog-surface" autocomplete="off">
+            <div class="result-card-head sequence-viewer-feature-editor-head app-dialog-head">
               <h4 id="sequence-viewer-feature-editor-title">Add Feature</h4>
               <button id="sequence-viewer-feature-editor-close" type="button" class="ghost-btn">Close</button>
             </div>
@@ -3029,9 +3034,23 @@
           </form>
         </div>
 
-        <div id="sequence-viewer-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay" hidden>
-          <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog" autocomplete="off">
-            <div class="result-card-head sequence-viewer-sequence-edit-head">
+        <div id="sequence-viewer-primer-design-overlay" class="sequence-viewer-primer-design-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+          <section class="sequence-viewer-primer-design-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-design-title">
+            <div class="result-card-head sequence-viewer-primer-design-head app-dialog-head">
+              <h4 id="sequence-viewer-primer-design-title">Designed Primers</h4>
+              <button id="sequence-viewer-primer-design-close" type="button" class="ghost-btn">Close</button>
+            </div>
+            <p id="sequence-viewer-primer-design-note" class="small-note">Primer details will appear here.</p>
+            <div id="sequence-viewer-primer-design-result" class="sequence-viewer-primer-design-result calc-output"></div>
+            <div class="form-actions">
+              <button id="sequence-viewer-primer-design-dismiss" type="button" class="primary-btn">Done</button>
+            </div>
+          </section>
+        </div>
+
+        <div id="sequence-viewer-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+          <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
+            <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
               <h4 id="sequence-viewer-sequence-edit-title">Edit Bases</h4>
               <button id="sequence-viewer-sequence-edit-close" type="button" class="ghost-btn">Close</button>
             </div>
@@ -3050,9 +3069,9 @@
           </form>
         </div>
 
-        <div id="sequence-viewer-backbone-dialog-overlay" class="sequence-viewer-backbone-dialog-overlay" hidden>
-          <div class="sequence-viewer-backbone-dialog" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-backbone-dialog-title">
-            <div class="sequence-viewer-backbone-dialog-head">
+        <div id="sequence-viewer-backbone-dialog-overlay" class="sequence-viewer-backbone-dialog-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
+          <div class="sequence-viewer-backbone-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-backbone-dialog-title">
+            <div class="sequence-viewer-backbone-dialog-head app-dialog-head">
               <div>
                 <h4 id="sequence-viewer-backbone-dialog-title">Backbone / Insert Candidates</h4>
                 <p id="sequence-viewer-backbone-dialog-subtitle" class="small-note">Review promoter and ORF candidates before applying a backbone/insert interpretation.</p>
@@ -3153,8 +3172,8 @@
         </div>
       </div>
 
-      <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace" hidden>
-        <div class="sequence-viewer-alignment-dialog" role="dialog" aria-modal="true" aria-label="Alignment">
+      <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace app-dialog-overlay app-dialog-overlay--top" hidden>
+        <div class="sequence-viewer-alignment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-label="Alignment">
           <div class="sequence-viewer-alignment-toolbar">
             <button id="sequence-viewer-alignment-close-btn" type="button" class="ghost-btn sequence-viewer-alignment-close-icon" aria-label="Close alignment dialog">x</button>
             <span id="sequence-viewer-alignment-status" class="small-note">Paste a sequence or choose a file to align against the current record.</span>

@@ -121,8 +121,7 @@
   gap: 4px;
 }
 
-.assay-browser-item-title,
-.assay-browser-item-meta {
+.assay-browser-item-title {
   margin: 0;
 }
 
@@ -130,12 +129,6 @@
   color: var(--strong);
   font-size: 0.94rem;
   font-weight: 650;
-}
-
-.assay-browser-item-meta {
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.35;
 }
 
 .assay-browser-item-actions {
@@ -849,8 +842,13 @@
 .assay-analysis-chart {
   border: 1px solid rgba(53, 99, 153, 0.22);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.84);
+  background: #ffffff;
   padding: 10px;
+}
+
+.assay-analysis-chart-canvas {
+  background: #ffffff;
+  border-radius: 6px;
 }
 
 @media (max-width: 1100px) {
@@ -1027,26 +1025,33 @@ body.theme-night .assay-tabulator {
 
 body.theme-night .assay-analysis-chart {
   border-color: rgba(145, 174, 214, 0.32);
-  background: rgba(20, 33, 57, 0.78);
+  background: #ffffff;
 }
 
-body.theme-night .assay-analysis-chart .rv-xy-plot__grid-lines__line {
-  stroke: rgba(145, 174, 214, 0.24);
+body.theme-night .assay-analysis-chart-canvas {
+  background: #ffffff;
 }
 
-body.theme-night .assay-analysis-chart .rv-xy-plot__axis__line,
-body.theme-night .assay-analysis-chart .rv-xy-plot__axis__tick__line {
-  stroke: rgba(145, 174, 214, 0.52);
+body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__grid-lines__line {
+  stroke: rgba(53, 99, 153, 0.2);
 }
 
-body.theme-night .assay-analysis-chart .rv-xy-plot__axis__tick__text {
-  fill: #d7e5ff;
+body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__line,
+body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__line {
+  stroke: rgba(53, 99, 153, 0.46);
+}
+
+body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__text {
+  fill: #1f3b66;
+}
+
+body.theme-night .assay-analysis-chart-title {
+  color: #1f3b66;
 }
 
 #assay-view .panel,
 #assay-view .card,
-.assay-tabulator,
-.assay-analysis-chart {
+.assay-tabulator {
   border: 0;
   border-radius: 0;
   background: transparent;

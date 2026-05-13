@@ -5,8 +5,8 @@ const path = require('node:path');
 const { isMarkdownTableLine } = require('./pdf-text-layout.js');
 
 const PDF_TO_MD_FORMAT = 'hikari-pdf-to-md-v1';
-const DEFAULT_MAX_SECTION_CHARS = 60000;
-const DEFAULT_MAX_PAGE_CHARS = 30000;
+const DEFAULT_MAX_SECTION_CHARS = 0;
+const DEFAULT_MAX_PAGE_CHARS = 0;
 
 function cleanText(value, maxLength = 4000) {
   const text = String(value || '').trim();

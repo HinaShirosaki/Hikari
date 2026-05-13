@@ -979,14 +979,14 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       z-index: 20;
       min-width: 180px;
       max-width: min(320px, calc(100vw - 16px));
-      border-radius: 10px;
-      border: 1px solid rgba(90, 119, 165, 0.42);
-      background: rgba(249, 252, 255, 0.98);
-      box-shadow: 0 10px 24px rgba(27, 20, 14, 0.12);
+      border-radius: 8px;
+      border: 1px solid rgba(216, 206, 193, 0.96);
+      background: rgba(255, 252, 247, 0.98);
+      box-shadow: 0 2px 8px rgba(27, 20, 14, 0.1);
       padding: 9px 11px;
       font-size: 12px;
       line-height: 1.35;
-      color: var(--preview-ink);
+      color: #17120e;
       pointer-events: none;
     }
     .circular-preview__hover-tooltip[hidden] {
@@ -1002,7 +1002,7 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       font-weight: 700;
     }
     .circular-preview__hover-description {
-      color: var(--preview-muted);
+      color: #72675d;
     }
     .circular-preview__title {
       fill: var(--preview-ink);

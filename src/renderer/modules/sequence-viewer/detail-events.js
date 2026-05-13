@@ -1,4 +1,5 @@
 import { cleanText, clamp, normalizeRecordName } from './shared.js';
+import { copyPrimerValueFromEvent } from './primer-copy.js';
 
 export function bindSequenceViewerDetailEvents(config = {}) {
   const elements = config?.elements || {};
@@ -8,6 +9,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const clearSequenceSelection = config?.clearSequenceSelection || (() => {});
   const hideFeatureContextMenu = config?.hideFeatureContextMenu || (() => {});
   const hideFeatureEditor = config?.hideFeatureEditor || (() => {});
+  const hidePrimerDesignOverlay = config?.hidePrimerDesignOverlay || (() => {});
   const hideSequenceEditDialog = config?.hideSequenceEditDialog || (() => {});
   const hideSequenceHoverTooltip = config?.hideSequenceHoverTooltip || (() => {});
   const showSequenceHoverTooltip = config?.showSequenceHoverTooltip || (() => {});
@@ -18,10 +20,12 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const readOrfStopCodonsFromControls = config?.readOrfStopCodonsFromControls || (() => ({}));
   const setOrfStopCodons = config?.setOrfStopCodons || (() => {});
   const setRestrictionVendorFilter = config?.setRestrictionVendorFilter || (() => {});
+  const setStatus = config?.setStatus || (() => {});
   const resolveSequenceBoundaryFromEvent = config?.resolveSequenceBoundaryFromEvent || (() => null);
   const resolveFeatureActionContext = config?.resolveFeatureActionContext || (() => null);
   const renderFeatureContextMenu = config?.renderFeatureContextMenu || (() => {});
   const openFeatureEditor = config?.openFeatureEditor || (() => {});
+  const openPrimerDesignOverlay = config?.openPrimerDesignOverlay || (() => {});
   const deleteFeatureFromContext = config?.deleteFeatureFromContext || (async () => {});
   const applyFeatureEditorChanges = config?.applyFeatureEditorChanges || (async () => {});
   const getActiveFeatureActionContext = config?.getActiveFeatureActionContext || (() => null);
@@ -141,6 +145,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     clearSequenceSelection();
     hideFeatureContextMenu();
     hideFeatureEditor();
+    hidePrimerDesignOverlay();
     hideSequenceEditDialog();
     onReferenceRecordChanged();
     renderActiveRecord();
@@ -330,6 +335,10 @@ export function bindSequenceViewerDetailEvents(config = {}) {
       openFeatureEditor('edit', context);
       return;
     }
+    if (action === 'design-primer') {
+      openPrimerDesignOverlay(context);
+      return;
+    }
     if (action === 'delete') {
       void deleteFeatureFromContext(context);
     }
@@ -352,6 +361,36 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     if (event?.target === elements.featureEditorOverlay) {
       hideFeatureEditor();
     }
+  });
+
+  elements.primerDesignCloseBtn?.addEventListener('click', () => {
+    hidePrimerDesignOverlay();
+  });
+
+  elements.primerDesignDismissBtn?.addEventListener('click', () => {
+    hidePrimerDesignOverlay();
+  });
+
+  elements.primerDesignOverlay?.addEventListener('click', (event) => {
+    if (event?.target === elements.primerDesignOverlay) {
+      hidePrimerDesignOverlay();
+    }
+  });
+
+  elements.primerDesignResult?.addEventListener('click', (event) => {
+    void (async () => {
+      const result = await copyPrimerValueFromEvent(event);
+      if (!result.handled) {
+        return;
+      }
+      const label = result.kind === 'sequence' ? 'primer sequence' : 'primer name';
+      setStatus(
+        result.copied
+          ? `Copied ${label}.`
+          : `Clipboard access is unavailable. Copy the ${label} directly from the table.`,
+        !result.copied
+      );
+    })();
   });
 
   elements.sequenceEditForm?.addEventListener('submit', (event) => {
@@ -392,6 +431,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     if (String(event?.key || '') === 'Escape') {
       hideFeatureContextMenu();
       hideFeatureEditor();
+      hidePrimerDesignOverlay();
       hideSequenceEditDialog();
       return;
     }

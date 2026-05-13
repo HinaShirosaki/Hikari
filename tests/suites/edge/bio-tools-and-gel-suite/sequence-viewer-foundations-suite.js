@@ -1016,6 +1016,8 @@ test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument emits standalone D
   assert.match(html, /circular-preview__leader/);
   assert.match(html, /circular-preview__scene/);
   assert.match(html, /circular-preview__hover-tooltip/);
+  assert.match(html, /background:\s*rgba\(255,\s*252,\s*247,\s*0\.98\)/i);
+  assert.match(html, /border:\s*1px solid rgba\(216,\s*206,\s*193,\s*0\.96\)/i);
   assert.match(html, /data-preview-tooltip="feature"/);
   assert.match(html, /data-tooltip-description="/);
   assert.match(html, /data-feature-x="/);

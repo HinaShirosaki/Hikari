@@ -507,6 +507,20 @@ test('[EDGE] tool-box designCloningPrimers supports multi-primer tiling for long
   assert.equal(primerPlan.primerOrder.includes('tile_outer_left'), true);
 });
 
+test('[EDGE] tool-box designPcrPrimerPair designs a forward and reverse primer for a selected sequence', () => {
+  const primerPlan = toolBox.designPcrPrimerPair(
+    'GCGCGCGCGCGCGATATATATATATATATATATAGCGCGCGCGCGCGAT',
+    { name: 'selected_region' }
+  );
+
+  assert.equal(primerPlan.feasible, true);
+  assert.equal(primerPlan.primerCount, 2);
+  assert.equal(primerPlan.primers[0].name, 'selected_region_F');
+  assert.equal(primerPlan.primers[1].name, 'selected_region_R');
+  assert.equal(primerPlan.primers[0].role, 'pcr-forward');
+  assert.equal(primerPlan.primers[1].role, 'pcr-reverse');
+});
+
 test('[EDGE] tool-box assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {
   const plan = toolBox.assembleCloningPlan({
     hostVectors: [

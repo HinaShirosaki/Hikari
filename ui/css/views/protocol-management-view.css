@@ -51,6 +51,16 @@
   gap: 12px;
   padding: 14px 0;
   cursor: pointer;
+  position: relative;
+  border-bottom: 0;
+}
+
+.protocol-list-row::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  border-bottom: 1px solid var(--line-soft);
+  pointer-events: none;
 }
 
 .protocol-list-row-selected {

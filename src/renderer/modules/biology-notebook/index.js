@@ -56,6 +56,7 @@ import {
   describeNotebookEntryChanges,
   logNotebookPageEvent
 } from './page-log.js';
+import { bindFileDropTarget, mergeFilesIntoInput } from '../file-drop.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({
@@ -111,6 +112,7 @@ export function initLabNotebook({
   let editingEntryId = null;
   let linkedPreviewRenderToken = 0;
   let sampleLinkDrafts = new Map();
+  let pendingDroppedResultFiles = [];
 
   const previewImageLoader = createLinkedPreviewImageLoader({
     readFileBase64: window.enanaApi?.readFileBase64?.bind(window.enanaApi)
@@ -250,6 +252,54 @@ export function initLabNotebook({
     state.notebookEntries[index] = nextEntry;
     persist();
     return nextEntry;
+  }
+
+  function mergeUniqueFiles(files = []) {
+    const seen = new Set();
+    return (Array.isArray(files) ? files : [])
+      .filter(Boolean)
+      .filter((file) => {
+        const key = [
+          String(file?.name || ''),
+          Number(file?.size) || 0,
+          Number(file?.lastModified) || 0
+        ].join('|');
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      });
+  }
+
+  function getSelectedNotebookResultFiles() {
+    return mergeUniqueFiles([
+      ...Array.from(notebookResultFile?.files || []),
+      ...pendingDroppedResultFiles
+    ]);
+  }
+
+  function clearPendingNotebookResultFiles() {
+    pendingDroppedResultFiles = [];
+    if (notebookResultFile) {
+      notebookResultFile.value = '';
+    }
+  }
+
+  function queueNotebookResultFiles(files = []) {
+    const incomingFiles = mergeUniqueFiles(Array.isArray(files) ? files : [files]);
+    if (!incomingFiles.length) {
+      return;
+    }
+    const mergedFiles = mergeUniqueFiles([
+      ...getSelectedNotebookResultFiles(),
+      ...incomingFiles
+    ]);
+    const mergedIntoInput = mergeFilesIntoInput(notebookResultFile, mergedFiles, { append: false });
+    pendingDroppedResultFiles = mergedIntoInput ? [] : mergedFiles;
+    showTransientNotice(
+      `${incomingFiles.length} file${incomingFiles.length === 1 ? '' : 's'} ready to attach on save.`
+    );
   }
 
   function seedSampleLinkDrafts(entry) {
@@ -457,7 +507,7 @@ export function initLabNotebook({
       protocol
     );
     const entryId = editingEntry?.id || createId();
-    const selectedResultFiles = Array.from(notebookResultFile.files || []);
+    const selectedResultFiles = getSelectedNotebookResultFiles();
     const existingResultFiles = Array.isArray(editingEntry?.resultFiles)
       ? editingEntry.resultFiles.map((name) => String(name || '').trim()).filter(Boolean)
       : [];
@@ -564,7 +614,7 @@ export function initLabNotebook({
         }
       });
     }
-    notebookResultFile.value = '';
+    clearPendingNotebookResultFiles();
     entryListRenderer.renderEntries();
     renderProtocolViewer({
       project,
@@ -750,7 +800,7 @@ export function initLabNotebook({
     notebookResult.value = entry?.result || '';
     resultTableController.renderEditor(resultTableOverride ?? entry?.resultTable ?? null);
     if (!preserveSelectedFiles) {
-      notebookResultFile.value = '';
+      clearPendingNotebookResultFiles();
     }
     renderLinkedPreviews(entry);
     updateSaveButtonLabel();
@@ -767,7 +817,7 @@ export function initLabNotebook({
     notebookSteps.innerHTML = '';
     notebookSteps.hidden = false;
     notebookResult.value = '';
-    notebookResultFile.value = '';
+    clearPendingNotebookResultFiles();
     resultTableController.renderEditor(null);
     if (notebookExperimentName) {
       notebookExperimentName.value = '';
@@ -963,6 +1013,19 @@ export function initLabNotebook({
   notebookEntryList?.addEventListener('click', onEntryListClick);
   notebookExportBtn?.addEventListener('click', onExportButtonClick);
   notebookMarkExecutedBtn?.addEventListener('click', markEntryExecuted);
+  bindFileDropTarget({
+    target: notebookProtocolArea || notebookResultFile,
+    multiple: true,
+    disabled: () => Boolean(notebookProtocolArea?.hidden),
+    onFiles: (files) => {
+      queueNotebookResultFiles(files);
+    },
+    onError: (error) => {
+      showTransientNotice(String(error?.message || error || 'Failed to queue dropped notebook files.'), {
+        type: 'error'
+      });
+    }
+  });
   inlinePlaceholders.bindEvents();
   if (typeof document.addEventListener === 'function') {
     document.addEventListener('click', onDocumentClickForSampleLinkMenu);

@@ -1,0 +1,91 @@
+{
+  "id": "1778632562771-f5c9de9b71b638",
+  "name": "aaa",
+  "projectId": "",
+  "projectName": "",
+  "notebookEntryId": "",
+  "notebookEntryProtocolName": "",
+  "notebookEntryType": "",
+  "imageName": "Shi, Yifan 2026-04-27_13h26m50s1.tiff",
+  "analysisType": "sds-page",
+  "parameters": {
+    "analysisType": "sds-page",
+    "analysisMode": "manual",
+    "ladderStandards": [
+      250,
+      150,
+      100,
+      75,
+      50,
+      37,
+      25,
+      20,
+      15,
+      10
+    ],
+    "ladderLane": 1,
+    "normalization": "none",
+    "cropApplied": false,
+    "tiffPage": 1,
+    "tiffPageCount": 1,
+    "enhancement": {
+      "denoiseStrength": 35,
+      "contrastBoost": 100
+    },
+    "manualOverrides": {
+      "laneSegmentation": {
+        "gelLeft": 0,
+        "gelRight": 774,
+        "dividers": [
+          85,
+          155,
+          228,
+          270,
+          476,
+          551,
+          642,
+          691,
+          742
+        ],
+        "dividerDone": false,
+        "bandTop": null,
+        "bandBottom": null
+      },
+      "addedBands": [],
+      "ladderLane": null,
+      "ladderBands": [],
+      "ladderBandsDone": false,
+      "laneTable": {
+        "rows": []
+      }
+    }
+  },
+  "manualOverrides": {
+    "laneSegmentation": {
+      "gelLeft": 0,
+      "gelRight": 774,
+      "dividers": [
+        85,
+        155,
+        228,
+        270,
+        476,
+        551,
+        642,
+        691,
+        742
+      ],
+      "dividerDone": false,
+      "bandTop": null,
+      "bandBottom": null
+    },
+    "addedBands": [],
+    "ladderLane": null,
+    "ladderBands": [],
+    "ladderBandsDone": false,
+    "laneTable": {
+      "rows": []
+    }
+  },
+  "updatedAt": "2026-05-13T00:36:02.771Z"
+}

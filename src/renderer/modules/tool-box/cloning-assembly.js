@@ -1740,6 +1740,59 @@ export function designCloningPrimers(args = {}) {
   });
 }
 
+export function designPcrPrimerPair(sequence, options = {}) {
+  const templateSequence = normalizeSequence(sequence);
+  const config = {
+    ...DEFAULT_CLONING_PREFERENCES,
+    ...(options?.preferences || {})
+  };
+  const baseName = String(options?.name || '').trim() || 'selection';
+
+  if (!templateSequence.length) {
+    return {
+      feasible: false,
+      primers: [],
+      selectedThresholdLevel: null,
+      attempts: [],
+      warnings: ['Select one or more DNA bases before designing primers.']
+    };
+  }
+
+  return designWithThresholdFallback((thresholds) => {
+    const forwardBinding = selectBindingWindow(templateSequence, 'forward', thresholds, 0, config);
+    const reverseBinding = selectBindingWindow(templateSequence, 'reverse', thresholds, 0, config);
+    if (!forwardBinding || !reverseBinding) {
+      return {
+        feasible: false,
+        primers: [],
+        warnings: ['No forward/reverse PCR primer pair matched the current threshold set for this sequence.']
+      };
+    }
+
+    const primers = [
+      buildPrimerRecord({
+        name: `${baseName}_F`,
+        role: 'pcr-forward',
+        sequence: forwardBinding.bindingSequence,
+        bindingSequence: forwardBinding.bindingSequence
+      }),
+      buildPrimerRecord({
+        name: `${baseName}_R`,
+        role: 'pcr-reverse',
+        sequence: reverseBinding.bindingSequence,
+        bindingSequence: reverseBinding.bindingSequence
+      })
+    ];
+
+    return {
+      feasible: true,
+      primers,
+      warnings: [],
+      ...summarizePrimerPlan(primers)
+    };
+  });
+}
+
 export function assembleCloningPlan(payload = {}) {
   const config = {
     ...DEFAULT_CLONING_PREFERENCES,

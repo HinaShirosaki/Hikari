@@ -1,4 +1,4 @@
-LOCUS       Protein_Builder_       3825 bp    DNA     circular SYN 10-MAY-2026
+LOCUS       Protein_Builder_       3825 bp    DNA     circular SYN 12-MAY-2026
 DEFINITION  Protein_Builder_
 ACCESSION   .
 VERSION     .
@@ -24,6 +24,53 @@ FEATURES             Location/Qualifiers
      misc_feature    615..965
                      /label="CD274(PD-L1)"
                      /note="Protein Builder DNA block (351 bp)."
+     promoter        31..242
+                     /label="EF-1a core promoter"
+                     /note="Exact DNA annotation match for stored promoter. 212
+                     bp matched. Seen in CZ013_pFUSE-PD-1."
+     ltr             255..523
+                     /label="5' LTR(truncated)"
+                     /note="Exact DNA annotation match for stored ltr. 269 bp
+                     matched. Seen in CZ013_pFUSE-PD-1."
+     primer_bind     511..528
+                     /label="PFUSE_Seq F"
+                     /note="Exact DNA annotation match for stored primer_bind.
+                     18 bp matched. Seen in CZ013_pFUSE-PD-1."
+     polya_signal    990..1111
+                     /label="SV40 poly(A) signal"
+                     /note="Exact DNA annotation match for stored polya_signal.
+                     122 bp matched. Seen in CZ013_pFUSE-PD-1."
+     polya_site      1215..1609
+                     /label="beta-globin poly(A)"
+                     /note="Exact DNA annotation match for stored polya_site.
+                     395 bp matched. Seen in CZ013_pFUSE-PD-1."
+     polya_signal    1215..1609
+                     /label="beta-globin poly(A)"
+                     /note="Exact DNA annotation match for stored polya_signal.
+                     395 bp matched. Seen in CZ013_pFUSE-PD-1."
+     enhancer        2590..2893
+                     /label="CMV enhancer"
+                     /note="Exact DNA annotation match for stored enhancer. 304
+                     bp matched. Seen in CZ013_pFUSE-PD-1."
+     rep_origin      complement(2973..3561)
+                     /label="ori"
+                     /note="Exact DNA annotation match for stored rep_origin.
+                     589 bp matched. Seen in CZ013_pFUSE-PD-1."
+     polya_signal    3669..3717
+                     /label="polyA_signal"
+                     /note="Exact DNA annotation match for stored polya_signal.
+                     49 bp matched. Seen in CZ013_pFUSE-PD-1."
+     misc_feature    3728..3819
+                     /label="pause site"
+                     /note="Exact DNA annotation match for stored misc_feature.
+                     92 bp matched. Seen in CZ013_pFUSE-PD-1."
+     cds             complement(1623..1997)
+                     /label="BleoR"
+                     /note="Exact ORF protein annotation match for a stored CDS.
+                     frame -2, 124 aa, 375 nt. Seen in CZ013_pFUSE-PD-1."
+                     /translation="MAKLTSAVPVLTARDVAGAVEFWTDRLGFSRDFVEDDFAGVVRDD
+                     VTLFISAVQDQVVPDNTLAWVWVRGLDELYAEWSEVVSTNFRDASGPAMTEIGEQPWGR
+                     EFALRDPAGNCVHFVAEEQD"
 ORIGIN
         1 ggatctgcga tcgctccggt gcccgtcagt gggcagagcg cacatcgccc acagtccccg
        61 agaagttggg gggaggggtc ggcaattgaa cgggtgccta gagaaggtgg cgcggggtaa

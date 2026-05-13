@@ -36,7 +36,8 @@ import {
   evaluateGibsonAssembly,
   evaluateRestrictionLigation,
   evaluateSiteDirectedMutagenesis,
-  designCloningPrimers
+  designCloningPrimers,
+  designPcrPrimerPair
 } from './tool-box/cloning-assembly.js';
 import {
   cleanSequence,
@@ -88,6 +89,7 @@ export {
   evaluateRestrictionLigation,
   evaluateSiteDirectedMutagenesis,
   designCloningPrimers,
+  designPcrPrimerPair,
   linearRegression,
   cleanSequence,
   countResidues,

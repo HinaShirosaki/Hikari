@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated_at": "2026-05-12T14:52:34.632Z",
+  "updated_at": "2026-05-12T23:42:58.434Z",
   "papers": [
     {
       "id": "paper-sha256-4e997d9f48125458",
@@ -61,6 +61,26 @@
       "wiki_path": "KnowledgeBase/papers.md/Design_of_a_Cereblon_construct_for_crystallographic_and_biophysical_studies_of_protein_degraders/paper.md",
       "extraction_status": "ready",
       "updated_at": "2026-05-12T14:52:34.630Z"
+    },
+    {
+      "id": "paper-doi-10.1038_s41577-025-01207-9",
+      "doi": "10.1038/s41577-025-01207-9",
+      "title": "Fifty years of monoclonals: the past, present and future of antibody therapeutics",
+      "pdf_sha256": "7b9f656f8df11e662de086a26b7c32ae48adfdd7a8a51de55a0c370cfade531d",
+      "wiki_status": "ready",
+      "wiki_path": "KnowledgeBase/papers.md/Fifty_years_of_monoclonals__the_past,_present_and_future_of_antibody_therapeutics/paper.md",
+      "extraction_status": "ready",
+      "updated_at": "2026-05-12T17:03:47.588Z"
+    },
+    {
+      "id": "paper-doi-10.1126_science.adk4422",
+      "doi": "10.1126/science.adk4422",
+      "title": "Continuous evolution of compact protein degradation tags regulated by selective molecular glues",
+      "pdf_sha256": "5e7205af899a31d76d1508ebb396d5a4412c8312b5cd19682dd58271375e9fdc",
+      "wiki_status": "ready",
+      "wiki_path": "KnowledgeBase/papers.md/Continuous_evolution_of_compact_protein_degradation_tags_regulated_by_selective_molecular_glues/paper.md",
+      "extraction_status": "ready",
+      "updated_at": "2026-05-12T23:42:58.430Z"
     }
   ],
   "locations": [
@@ -123,6 +143,26 @@
       "pdf_filename": "s41467-024-52871-9.pdf",
       "pdf_path": "Project/CD19_CAR_Binder_Optimization/Papers/s41467-024-52871-9.pdf",
       "discovered_at": "2026-05-12T14:52:34.630Z"
+    },
+    {
+      "id": "location-571d415e6bf7e426a4204029",
+      "paper_id": "paper-doi-10.1038_s41577-025-01207-9",
+      "scope": "project",
+      "container": "CD19 CAR Binder Optimization",
+      "folder_path": "Project/CD19_CAR_Binder_Optimization/Papers",
+      "pdf_filename": "s41577-025-01207-9.pdf",
+      "pdf_path": "Project/CD19_CAR_Binder_Optimization/Papers/s41577-025-01207-9.pdf",
+      "discovered_at": "2026-05-12T17:03:47.588Z"
+    },
+    {
+      "id": "location-5d4a68f226c019d73755f18a",
+      "paper_id": "paper-doi-10.1126_science.adk4422",
+      "scope": "project",
+      "container": "CD19 CAR Binder Optimization",
+      "folder_path": "Project/CD19_CAR_Binder_Optimization/Papers",
+      "pdf_filename": "science.adk4422.pdf",
+      "pdf_path": "Project/CD19_CAR_Binder_Optimization/Papers/science.adk4422.pdf",
+      "discovered_at": "2026-05-12T23:42:58.430Z"
     }
   ]
 }

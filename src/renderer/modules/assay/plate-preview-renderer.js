@@ -16,7 +16,6 @@ function sampleColor(sampleId) {
   const hue = Math.round((hash * 137.508) % 360);
   return {
     hue,
-    accentHue: (hue + 28 + (hash % 42)) % 360,
     saturation: 74 + (hash % 18)
   };
 }
@@ -29,13 +28,21 @@ function buildRankedConcentrations(filledLayouts) {
     .map((value) => ({ value, magnitude: parseConcentrationMagnitude(value) }))
     .filter((item) => item.magnitude !== null);
   if (numericValues.length >= 2) {
-    const magnitudes = numericValues.map((item) => item.magnitude);
+    const positiveMagnitudes = numericValues
+      .map((item) => item.magnitude)
+      .filter((value) => value > 0);
+    const zeroFloor = positiveMagnitudes.length
+      ? Math.log10(Math.min(...positiveMagnitudes)) - 1
+      : 0;
+    const magnitudes = numericValues.map((item) => item.magnitude > 0
+      ? Math.log10(item.magnitude)
+      : zeroFloor);
     const min = Math.min(...magnitudes);
     const max = Math.max(...magnitudes);
     const span = max - min || 1;
-    return new Map(numericValues.map((item) => [
+    return new Map(numericValues.map((item, index) => [
       item.value,
-      0.28 + (((item.magnitude - min) / span) * 0.54)
+      0.24 + (((magnitudes[index] - min) / span) * 0.62)
     ]));
   }
   const unique = [...new Set(rawValues)];
@@ -132,20 +139,14 @@ export function buildPlatePreviewHtml({
         : 'Sample ID: - | Concentration: -';
       const color = sampleValue
         ? sampleColor(sampleValue)
-        : { hue: 210, accentHue: 232, saturation: 72 };
+        : { hue: 210, saturation: 72 };
       const intensity = concentrationValue
         ? (rankedConcentrations.get(concentrationValue) || 0.58)
         : (sampleValue ? 0.36 : 0);
-      const topAlpha = Math.min(0.92, 0.22 + (intensity * 0.68));
-      const bottomAlpha = Math.min(0.98, 0.28 + (intensity * 0.78));
-      const topLightness = Math.max(76, 97 - (intensity * 18));
-      const middleLightness = Math.max(64, 91 - (intensity * 24));
-      const bottomLightness = Math.max(54, 88 - (intensity * 30));
-      const borderAlpha = Math.min(0.78, 0.28 + (intensity * 0.5));
-      const highlightAlpha = Math.min(0.48, 0.16 + (intensity * 0.2));
-      const shadowAlpha = Math.min(0.34, 0.1 + (intensity * 0.24));
+      const saturation = Math.round(Math.min(94, color.saturation - 10 + (intensity * 18)));
+      const lightness = Math.round(Math.max(58, 96 - (intensity * 34)));
       const cellStyle = sampleValue || concentrationValue
-        ? ` style="background: linear-gradient(145deg, hsla(${color.accentHue}, ${Math.min(98, color.saturation + 8)}%, ${Math.min(98, topLightness + 2)}%, ${topAlpha}) 0%, hsla(${color.hue}, ${color.saturation}%, ${middleLightness}%, ${Math.min(0.96, topAlpha + 0.08)}) 48%, hsla(${color.hue}, ${Math.min(98, color.saturation + 12)}%, ${bottomLightness}%, ${bottomAlpha}) 100%); border-color: hsla(${color.hue}, 70%, 38%, ${borderAlpha}); box-shadow: inset 0 1px 0 hsla(${color.accentHue}, 90%, 98%, ${highlightAlpha}), inset 0 -12px 20px hsla(${color.hue}, 76%, 44%, ${shadowAlpha});"`
+        ? ` style="background-color: hsl(${color.hue} ${saturation}% ${lightness}%);"`
         : '';
       cells.push(`
         <td class="assay-well${filled}${active}" data-well="${well}" title="${safeText(`${well} • ${meta} • Click to edit ${editable}`)}"${cellStyle}>

@@ -23,6 +23,7 @@ test('[EDGE] tool-box internal functions are exposed for unit tests', () => {
     'evaluateRestrictionLigation',
     'evaluateSiteDirectedMutagenesis',
     'designCloningPrimers',
+    'designPcrPrimerPair',
     'linearRegression',
     'peptideStats',
     'renderChemicalOptions',

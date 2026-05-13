@@ -626,7 +626,7 @@ function createPdfTextExtractionRuntime(deps = {}) {
     );
     const maxCharsPerSection = normalizeInteger(
       source.max_chars_per_section || source.maxCharsPerSection,
-      maxCharsPerPage * 4,
+      maxTotalChars,
       { min: 500, max: 1000000 }
     );
     const includePages = source.include_pages !== false && source.includePages !== false;

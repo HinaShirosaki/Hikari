@@ -53,6 +53,8 @@ export function getGelElements(root = document) {
     gelStepBands: root.getElementById('gel-step-bands'),
     gelManualPrevBtn: root.getElementById('gel-manual-prev-btn'),
     gelManualNextBtn: root.getElementById('gel-manual-next-btn'),
-    gelManualResetBtn: root.getElementById('gel-manual-reset-btn')
+    gelManualResetBtn: root.getElementById('gel-manual-reset-btn'),
+    gelAutoDetectLanesBtn: root.getElementById('gel-auto-detect-lanes-btn'),
+    gelExpectedLaneCountInput: root.getElementById('gel-expected-lane-count')
   };
 }

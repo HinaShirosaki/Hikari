@@ -168,6 +168,10 @@ export function createSequenceViewerDetailController(config = {}) {
     featureEditingController?.hideFeatureEditor();
   }
 
+  function hidePrimerDesignOverlay() {
+    featureEditingController?.hidePrimerDesignOverlay();
+  }
+
   function hideSequenceEditDialog() {
     sequenceEditingController?.hideSequenceEditDialog();
   }
@@ -188,6 +192,10 @@ export function createSequenceViewerDetailController(config = {}) {
 
   function openFeatureEditor(mode, context = {}) {
     featureEditingController?.openFeatureEditor(mode, context);
+  }
+
+  function openPrimerDesignOverlay(context = {}) {
+    featureEditingController?.openPrimerDesignOverlay(context);
   }
 
   async function applyFeatureEditorChanges() {
@@ -539,6 +547,7 @@ export function createSequenceViewerDetailController(config = {}) {
       clearSequenceSelection,
       hideFeatureContextMenu,
       hideFeatureEditor,
+      hidePrimerDesignOverlay,
       hideSequenceEditDialog,
       hideSequenceHoverTooltip,
       showSequenceHoverTooltip,
@@ -553,6 +562,7 @@ export function createSequenceViewerDetailController(config = {}) {
       resolveFeatureActionContext,
       renderFeatureContextMenu,
       openFeatureEditor,
+      openPrimerDesignOverlay,
       deleteFeatureFromContext,
       applyFeatureEditorChanges,
       getActiveFeatureActionContext: () => activeFeatureActionContext,
@@ -581,6 +591,7 @@ export function createSequenceViewerDetailController(config = {}) {
     getVisibleFeaturesForRecord,
     hideFeatureContextMenu,
     hideFeatureEditor,
+    hidePrimerDesignOverlay,
     hideSequenceEditDialog,
     renderActiveRecord,
     renderSelectedFeatureDetail,

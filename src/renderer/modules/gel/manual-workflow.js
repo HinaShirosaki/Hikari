@@ -1,4 +1,5 @@
 import { buildLanesFromManualSegmentation } from './analysis-core.js';
+import { detectLanes } from './auto-lanes.js';
 import { getViewerToolLabel, renderViewerToolbar, updateStepClass } from './manual-ui.js';
 import { clamp, createEmptyManualOverrides, normalizeManualOverrides } from './shared.js';
 
@@ -458,6 +459,45 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     }
   }
 
+  function onAutoDetectLanes() {
+    if (!runtime.currentImage?.gray) {
+      deps.setStatus('Load a gel image before auto-detecting lanes.');
+      return;
+    }
+    const normalized = normalizeManualOverrides(runtime.manualOverrides);
+    const segmentation = normalized.laneSegmentation || {};
+    const rawCount = Number(elements.gelExpectedLaneCountInput?.value);
+    const expectedLaneCount = Number.isFinite(rawCount) && rawCount >= 2 ? Math.floor(rawCount) : null;
+    const result = detectLanes({
+      gray: runtime.currentImage.gray,
+      width: runtime.currentImage.width,
+      height: runtime.currentImage.height,
+      yStart: Number.isFinite(segmentation.bandTop) ? segmentation.bandTop : null,
+      yEnd: Number.isFinite(segmentation.bandBottom) ? segmentation.bandBottom : null,
+      gelLeft: segmentation.gelLeft,
+      gelRight: segmentation.gelRight,
+      expectedLaneCount
+    });
+    const peakCount = result?.peaks?.length ?? 0;
+    if (!result || peakCount < 2) {
+      deps.setStatus('Auto-detection found no clear lanes. Adjust borders or contrast and try again.');
+      return;
+    }
+    updateLaneSegmentation({
+      gelLeft: result.gelLeft,
+      gelRight: result.gelRight,
+      dividers: result.dividers,
+      dividerDone: false,
+      bandTop: segmentation.bandTop,
+      bandBottom: segmentation.bandBottom
+    });
+    resetDownstreamManualSelections();
+    runtime.manualDividerConfirmed = false;
+    renderOverrideStatus();
+    deps.renderCanvas();
+    deps.setStatus(`Auto-detected ${peakCount} lane(s). Review dividers and add any missing ones, then click Done Dividers.`);
+  }
+
   function onResetManualOverrides() {
     runtime.manualOverrides = createEmptyManualOverrides();
     runtime.manualDividerConfirmed = false;
@@ -475,6 +515,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
 
   return {
     getManualStep,
+    onAutoDetectLanes,
     onCanvasClick,
     onManualNextStep,
     onManualPrevStep,

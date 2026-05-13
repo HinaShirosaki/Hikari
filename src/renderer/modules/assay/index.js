@@ -16,7 +16,6 @@ import {
 } from './plate-model.js';
 import {
   axisLabel,
-  formatTimestamp,
   notebookLabel,
   oppositeAxis
 } from './shared.js';
@@ -618,23 +617,22 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       return;
     }
 
-    elements.assayList.innerHTML = rows.map((assay) => `
-      <article class="assay-browser-item">
-        <div class="assay-browser-item-copy">
-          <p class="assay-browser-item-title">${safeText(assay.name)}</p>
-          <p class="assay-browser-item-meta">${safeText(assay.assayNumber || '-')} · ${safeText(assay.projectName || 'No project')}</p>
-          <p class="assay-browser-item-meta">${safeText(assay.plateLabel || `${assay.wellCount || '-'} well`)} · Sample ID by ${safeText(axisLabel(assay.sampleAxis))}</p>
-          <p class="assay-browser-item-meta">${safeText(String((assay.wellLayout || []).length || 0))} mapped · ${safeText(String(Object.keys(assay.resultValues || {}).length || 0))} results</p>
-          <p class="assay-browser-item-meta">${safeText(linkedNotebookLabel(assay))} · Updated ${safeText(formatTimestamp(assay.updatedAt))}</p>
-        </div>
-        <div class="card-actions assay-browser-item-actions">
-          <button type="button" class="primary-btn" data-assay-open-results="${assay.id}">Open Results</button>
-          <button type="button" class="ghost-btn" data-assay-export-pdf="${assay.id}">Export PDF</button>
-          <button type="button" class="ghost-btn" data-assay-edit="${assay.id}">Edit</button>
-          <button type="button" class="danger-btn" data-assay-delete="${assay.id}">Delete</button>
-        </div>
-      </article>
-    `).join('');
+    elements.assayList.innerHTML = rows.map((assay) => {
+      const title = assay.name || assay.assayNumber || assay.id || 'Untitled assay';
+      return `
+        <article class="assay-browser-item">
+          <div class="assay-browser-item-copy">
+            <p class="assay-browser-item-title">${safeText(title)}</p>
+          </div>
+          <div class="card-actions assay-browser-item-actions">
+            <button type="button" class="primary-btn" data-assay-open-results="${assay.id}">Open Results</button>
+            <button type="button" class="ghost-btn" data-assay-export-pdf="${assay.id}">Export PDF</button>
+            <button type="button" class="ghost-btn" data-assay-edit="${assay.id}">Edit</button>
+            <button type="button" class="danger-btn" data-assay-delete="${assay.id}">Delete</button>
+          </div>
+        </article>
+      `;
+    }).join('');
   }
 
   function loadAssayForResults(assayId) {
