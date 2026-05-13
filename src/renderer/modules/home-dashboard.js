@@ -56,6 +56,7 @@ export function initHomeDashboard({
     quickLogStatus: document.getElementById('dashboard-quick-log-status'),
     quickLogSaveBtn: document.getElementById('dashboard-quick-log-save-btn'),
     quickLogAgentBtn: document.getElementById('dashboard-quick-log-agent-btn'),
+    quickLogRecentList: document.getElementById('dashboard-quick-log-recent-list'),
     quickActionButtons: [...document.querySelectorAll('[data-dashboard-action]')]
   };
 
@@ -90,6 +91,7 @@ export function initHomeDashboard({
     quickLogElements.quickLogStatus,
     quickLogElements.quickLogSaveBtn,
     quickLogElements.quickLogAgentBtn,
+    quickLogElements.quickLogRecentList,
     ...Object.values(notebookElements),
     ...Object.values(timerElements)
   ];
@@ -151,6 +153,7 @@ export function initHomeDashboard({
       state,
       persist,
       createId,
+      safeText,
       render: masterRender,
       onOpenSamples,
       onOpenNotebook,

@@ -1,4 +1,11 @@
-import { clamp, clampCommentAnchor } from './pdf-viewer-anchors.js';
+import { clampCommentAnchor } from './pdf-viewer-anchors.js';
+import {
+  boxesToPdfQuadPoints,
+  normalizeHighlightBoxes,
+  normalizePageDimension,
+  normalizeQuadPointList,
+  pdfQuadPointsToBoxes
+} from './pdf-viewer-geometry.js';
 
 export function normalizeCommentList(comments) {
   return (Array.isArray(comments) ? comments : [])
@@ -34,32 +41,17 @@ export function normalizeHighlightList(highlights) {
       const id = String(highlight.id || '').trim();
       const pageNumber = Math.round(Number(highlight.pageNumber));
       const text = String(highlight.text || '').trim();
-      const boxes = (Array.isArray(highlight.boxes) ? highlight.boxes : [])
-        .map((box) => {
-          if (!box || typeof box !== 'object') {
-            return null;
-          }
-          const left = clamp(Number(box.x) || 0, 0, 1);
-          const top = clamp(Number(box.y) || 0, 0, 1);
-          const width = clamp(Number(box.width) || 0, 0, 1);
-          const height = clamp(Number(box.height) || 0, 0, 1);
-          if (width <= 0 || height <= 0) {
-            return null;
-          }
-          const right = clamp(left + width, 0, 1);
-          const bottom = clamp(top + height, 0, 1);
-          if (right <= left || bottom <= top) {
-            return null;
-          }
-          return {
-            x: left,
-            y: top,
-            width: right - left,
-            height: bottom - top
-          };
-        })
-        .filter(Boolean);
-      if (!id || !Number.isFinite(pageNumber) || pageNumber < 1 || !text || !boxes.length) {
+      const pageWidth = normalizePageDimension(highlight.pageWidth);
+      const pageHeight = normalizePageDimension(highlight.pageHeight);
+      const sourceQuadPoints = normalizeQuadPointList(highlight.quadPoints);
+      const boxes = normalizeHighlightBoxes(highlight.boxes);
+      const derivedBoxes = boxes.length
+        ? boxes
+        : pdfQuadPointsToBoxes(sourceQuadPoints, { pageWidth, pageHeight });
+      const quadPoints = sourceQuadPoints.length
+        ? sourceQuadPoints
+        : boxesToPdfQuadPoints(derivedBoxes, { pageWidth, pageHeight });
+      if (!id || !Number.isFinite(pageNumber) || pageNumber < 1 || !text || !derivedBoxes.length) {
         return null;
       }
       return {
@@ -67,7 +59,10 @@ export function normalizeHighlightList(highlights) {
         id,
         pageNumber,
         text,
-        boxes
+        boxes: derivedBoxes,
+        ...(pageWidth ? { pageWidth } : {}),
+        ...(pageHeight ? { pageHeight } : {}),
+        ...(quadPoints.length ? { quadPoints } : {})
       };
     })
     .filter(Boolean);

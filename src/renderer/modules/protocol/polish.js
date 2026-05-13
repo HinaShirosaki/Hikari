@@ -234,7 +234,10 @@ export function createProtocolPolishController({
     try {
       const rawResponse = await requestLlmText({
         llm: state.settings?.llm,
-        prompt: buildProtocolPolishPrompt(localState.protocolPolishSourceDraft)
+        prompt: buildProtocolPolishPrompt(localState.protocolPolishSourceDraft),
+        moduleId: 'protocol',
+        task: 'protocol-polish',
+        expectJson: true
       });
 
       if (requestToken !== localState.protocolPolishRequestToken || ui.protocolPolishOverlay?.hidden) {

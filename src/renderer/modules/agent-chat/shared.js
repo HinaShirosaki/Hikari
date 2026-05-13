@@ -13,6 +13,66 @@ export function trimText(value, maxLength = 5000) {
   return `${text.slice(0, maxLength)}...`;
 }
 
+function slugText(value, fallback = 'option') {
+  const normalized = trimText(value, 120)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || fallback;
+}
+
+export function normalizeAgentUserQuestion(value, fallbackQuestion = '') {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const question = trimText(
+    source.question
+      || source.prompt
+      || source.title
+      || fallbackQuestion,
+    600
+  );
+  if (!question) {
+    return null;
+  }
+  const options = asArray(source.options || source.choices)
+    .map((item, index) => {
+      const option = item && typeof item === 'object' && !Array.isArray(item)
+        ? item
+        : { label: item };
+      const label = trimText(option.label || option.title || option.text || option.value, 160);
+      const valueText = trimText(option.value || option.answer || label, 1000);
+      if (!label || !valueText) {
+        return null;
+      }
+      return {
+        id: trimText(option.id || option.key, 120) || `${slugText(label)}-${index + 1}`,
+        label,
+        value: valueText,
+        description: trimText(option.description || option.detail || option.reason, 260)
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 6);
+  const allowCustom = source.allow_custom !== false && source.allowCustom !== false;
+  const answered = source.answered && typeof source.answered === 'object' && !Array.isArray(source.answered)
+    ? {
+      answer: trimText(source.answered.answer || source.answered.value, 1000),
+      answered_at: trimText(source.answered.answered_at || source.answered.answeredAt, 80)
+    }
+    : null;
+  return {
+    id: trimText(source.id || source.question_id || source.questionId, 120) || slugText(question, 'question'),
+    question,
+    context: trimText(source.context || source.help_text || source.helpText, 700),
+    options,
+    allow_custom: allowCustom,
+    placeholder: trimText(source.placeholder || source.custom_placeholder || source.customPlaceholder, 160)
+      || 'Type another answer',
+    submit_label: trimText(source.submit_label || source.submitLabel, 80) || 'Send answer',
+    status: trimText(source.status, 40),
+    answered
+  };
+}
+
 function getMethodStepText(step) {
   if (typeof step === 'string') {
     return trimText(step, 180);

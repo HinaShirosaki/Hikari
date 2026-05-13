@@ -29,6 +29,8 @@ export function createNavigationShell({
   moduleRuntime,
   sharedLeftRailRuntime,
   executeTopbarSearch,
+  getSearchSuggestions = () => [],
+  applySearchSuggestion = () => false,
   documentObject = document,
   windowObject = window
 }) {
@@ -47,6 +49,7 @@ export function createNavigationShell({
   const topbarViewActions = documentObject.getElementById('topbar-view-actions');
   const exitBtn = documentObject.getElementById('exit-btn');
   const topbarSearchInput = documentObject.getElementById('topbar-search');
+  const topbarSearchSuggestions = documentObject.getElementById('topbar-search-suggestions');
   const dockNav = documentObject.getElementById('app-dock-nav');
   const appDockDivider = documentObject.querySelector('.app-dock-divider');
   const moreBtn = documentObject.getElementById('app-more-btn');
@@ -281,6 +284,133 @@ export function createNavigationShell({
     documentObject.body.classList.toggle('has-shared-left-rail-view', hasSharedLeftRailView);
   }
 
+  let suggestionsState = {
+    items: [],
+    activeIndex: -1,
+    open: false
+  };
+
+  function escapeHtmlText(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function renderSearchSuggestionList() {
+    if (!topbarSearchSuggestions) {
+      return;
+    }
+    const { items, activeIndex, open } = suggestionsState;
+    if (!open || items.length === 0) {
+      topbarSearchSuggestions.hidden = true;
+      topbarSearchSuggestions.replaceChildren();
+      topbarSearchInput?.setAttribute('aria-expanded', 'false');
+      topbarSearchInput?.removeAttribute('aria-activedescendant');
+      return;
+    }
+    topbarSearchSuggestions.hidden = false;
+    topbarSearchInput?.setAttribute('aria-expanded', 'true');
+
+    const fragment = documentObject.createDocumentFragment();
+    items.forEach((item, index) => {
+      const li = documentObject.createElement('li');
+      li.className = 'topbar-search-suggestion';
+      li.setAttribute('role', 'option');
+      li.id = `topbar-search-suggestion-${index}`;
+      li.dataset.index = String(index);
+      li.classList.toggle('is-active', index === activeIndex);
+      li.setAttribute('aria-selected', index === activeIndex ? 'true' : 'false');
+
+      const kindHtml = item.kind
+        ? `<span class="topbar-search-suggestion-kind">${escapeHtmlText(item.kind)}</span>`
+        : '';
+      const sublabelHtml = item.sublabel
+        ? `<span class="topbar-search-suggestion-sublabel">${escapeHtmlText(item.sublabel)}</span>`
+        : '';
+
+      li.innerHTML = `
+        <span class="topbar-search-suggestion-body">
+          <span class="topbar-search-suggestion-label">${escapeHtmlText(item.label)}</span>
+          ${sublabelHtml}
+        </span>
+        ${kindHtml}
+      `;
+      fragment.appendChild(li);
+    });
+    topbarSearchSuggestions.replaceChildren(fragment);
+
+    if (activeIndex >= 0 && activeIndex < items.length) {
+      topbarSearchInput?.setAttribute('aria-activedescendant', `topbar-search-suggestion-${activeIndex}`);
+    } else {
+      topbarSearchInput?.removeAttribute('aria-activedescendant');
+    }
+  }
+
+  function closeSearchSuggestions() {
+    if (!suggestionsState.open && suggestionsState.items.length === 0) {
+      return;
+    }
+    suggestionsState = { items: [], activeIndex: -1, open: false };
+    renderSearchSuggestionList();
+  }
+
+  function refreshSearchSuggestions() {
+    if (!topbarSearchSuggestions || !topbarSearchInput) {
+      return;
+    }
+    const rawQuery = topbarSearchInput.value || '';
+    if (!rawQuery.trim()) {
+      closeSearchSuggestions();
+      return;
+    }
+    const items = getSearchSuggestions(rawQuery, { limit: 8 }) || [];
+    if (!items.length) {
+      suggestionsState = { items: [], activeIndex: -1, open: false };
+      renderSearchSuggestionList();
+      return;
+    }
+    suggestionsState = {
+      items,
+      activeIndex: items.length ? 0 : -1,
+      open: true
+    };
+    renderSearchSuggestionList();
+  }
+
+  function moveSearchSuggestionFocus(delta) {
+    const { items } = suggestionsState;
+    if (!suggestionsState.open || items.length === 0) {
+      return;
+    }
+    const total = items.length;
+    const current = suggestionsState.activeIndex;
+    const next = current < 0
+      ? (delta > 0 ? 0 : total - 1)
+      : (current + delta + total) % total;
+    suggestionsState = { ...suggestionsState, activeIndex: next };
+    renderSearchSuggestionList();
+    const target = topbarSearchSuggestions?.querySelector(`[data-index="${next}"]`);
+    if (target && typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function selectSearchSuggestion(index) {
+    const item = suggestionsState.items[index];
+    if (!item) {
+      return false;
+    }
+    closeSearchSuggestions();
+    if (topbarSearchInput) {
+      topbarSearchInput.value = '';
+      topbarSearchInput.title = `Opened ${item.kind || item.target?.label || 'view'}: ${item.label}`;
+    }
+    return applySearchSuggestion(item);
+  }
+
   function showView(viewId) {
     const nextView = normalize(viewId);
     if (lastViewPersistenceEnabled) {
@@ -340,22 +470,96 @@ export function createNavigationShell({
       toggleMoreMenu();
     });
     exitBtn?.addEventListener('click', () => windowObject.close());
+    if (topbarSearchInput) {
+      topbarSearchInput.setAttribute('role', 'combobox');
+      topbarSearchInput.setAttribute('aria-autocomplete', 'list');
+      topbarSearchInput.setAttribute('aria-expanded', 'false');
+      topbarSearchInput.setAttribute('aria-controls', 'topbar-search-suggestions');
+      topbarSearchInput.setAttribute('autocomplete', 'off');
+    }
+    topbarSearchInput?.addEventListener('input', () => {
+      refreshSearchSuggestions();
+    });
+    topbarSearchInput?.addEventListener('focus', () => {
+      if ((topbarSearchInput.value || '').trim()) {
+        refreshSearchSuggestions();
+      }
+    });
     topbarSearchInput?.addEventListener('keydown', (event) => {
+      if (event.key === 'ArrowDown') {
+        if (!suggestionsState.open) {
+          refreshSearchSuggestions();
+        } else {
+          moveSearchSuggestionFocus(1);
+        }
+        event.preventDefault();
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        if (suggestionsState.open) {
+          moveSearchSuggestionFocus(-1);
+          event.preventDefault();
+        }
+        return;
+      }
       if (event.key === 'Enter') {
         event.preventDefault();
+        if (suggestionsState.open && suggestionsState.activeIndex >= 0) {
+          selectSearchSuggestion(suggestionsState.activeIndex);
+          return;
+        }
+        closeSearchSuggestions();
         executeTopbarSearch(topbarSearchInput.value);
         return;
       }
       if (event.key === 'Escape') {
+        if (suggestionsState.open) {
+          closeSearchSuggestions();
+          event.preventDefault();
+          return;
+        }
         topbarSearchInput.value = '';
         topbarSearchInput.title = 'Search cleared.';
       }
     });
+    topbarSearchSuggestions?.addEventListener('mousedown', (event) => {
+      const item = event.target instanceof Element
+        ? event.target.closest('[data-index]')
+        : null;
+      if (!item) {
+        return;
+      }
+      event.preventDefault();
+      const index = Number(item.dataset.index);
+      if (Number.isFinite(index)) {
+        selectSearchSuggestion(index);
+      }
+    });
+    topbarSearchSuggestions?.addEventListener('mouseover', (event) => {
+      const item = event.target instanceof Element
+        ? event.target.closest('[data-index]')
+        : null;
+      if (!item) {
+        return;
+      }
+      const index = Number(item.dataset.index);
+      if (Number.isFinite(index) && index !== suggestionsState.activeIndex) {
+        suggestionsState = { ...suggestionsState, activeIndex: index };
+        renderSearchSuggestionList();
+      }
+    });
     documentObject.addEventListener('click', (event) => {
+      const target = event.target;
+      if (suggestionsState.open) {
+        const insideSuggestions = target instanceof Node
+          && (topbarSearchSuggestions?.contains(target) || topbarSearchInput?.contains(target));
+        if (!insideSuggestions) {
+          closeSearchSuggestions();
+        }
+      }
       if (moreMenu?.hidden !== false) {
         return;
       }
-      const target = event.target;
       if (target instanceof Node && (moreMenu.contains(target) || moreBtn?.contains(target))) {
         return;
       }

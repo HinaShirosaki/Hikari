@@ -1,8 +1,0 @@
-LOCUS       sequence_1               42 bp    DNA     circular SYN 01-JAN-2026
-DEFINITION  Restored sequence viewer sample entry.
-FEATURES             Location/Qualifiers
-     source          1..42
-                     /organism="synthetic construct"
-ORIGIN
-        1 atggccattg taatgggccg ctgaaagggt gcccgatag
-//

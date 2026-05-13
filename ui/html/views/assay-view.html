@@ -42,27 +42,33 @@
                 <option value="1536">1536 well</option>
               </select>
             </label>
-            <div class="assay-axis-switch">
-              <span class="assay-display-label">Sample ID Axis</span>
-              <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
-                <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
-                <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>
+            <div class="assay-axis-config-grid">
+              <div class="assay-axis-switch">
+                <span class="assay-display-label">Sample ID Axis</span>
+                <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Sample ID axis switch">
+                  <button type="button" id="assay-sample-axis-row-btn" class="ghost-btn calendar-view-active">Row</button>
+                  <button type="button" id="assay-sample-axis-column-btn" class="ghost-btn">Column</button>
+                </div>
+                <select id="assay-sample-axis" hidden>
+                  <option value="row" selected>Row</option>
+                  <option value="column">Column</option>
+                </select>
               </div>
-              <select id="assay-sample-axis" hidden>
-                <option value="row" selected>Row</option>
-                <option value="column">Column</option>
-              </select>
+              <div class="assay-axis-switch">
+                <span class="assay-display-label">Conc. Axis</span>
+                <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Concentration axis switch">
+                  <button type="button" id="assay-concentration-axis-row-btn" class="ghost-btn">Row</button>
+                  <button type="button" id="assay-concentration-axis-column-btn" class="ghost-btn calendar-view-active">Column</button>
+                </div>
+                <select id="assay-concentration-axis" hidden>
+                  <option value="row">Row</option>
+                  <option value="column" selected>Column</option>
+                </select>
+              </div>
             </div>
-            <label>
-              Concentration Axis
-              <input id="assay-concentration-axis-display" readonly />
-            </label>
-            <label>
-              Link Notebook Page
-              <select id="assay-notebook-entry">
-                <option value="">Not linked</option>
-              </select>
-            </label>
+            <select id="assay-notebook-entry" hidden>
+              <option value="">Not linked</option>
+            </select>
             <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
             <div id="assay-csv-status" class="small-note assay-form-note"></div>
             <div class="form-actions assay-form-actions">
@@ -101,6 +107,8 @@
             </label>
             <div class="form-actions assay-results-actions">
               <button type="button" id="assay-results-load-btn" class="ghost-btn">Load Plate</button>
+              <button type="button" id="assay-attach-result-file-btn" class="ghost-btn">Attach Result File</button>
+              <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
               <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
               <button type="button" id="assay-clear-results-btn" class="ghost-btn">Clear Results</button>
             </div>
@@ -178,9 +186,9 @@
         </div>
       </div>
 
-      <div id="assay-serial-dilution-overlay" class="assay-serial-dilution-overlay" hidden>
-        <div class="assay-serial-dilution-dialog" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
-          <div class="assay-header-row assay-serial-dilution-head">
+      <div id="assay-serial-dilution-overlay" class="assay-serial-dilution-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
+        <div class="assay-serial-dilution-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
+          <div class="assay-header-row assay-serial-dilution-head app-dialog-head">
             <h3 id="assay-serial-dilution-title">Serial Dilution</h3>
             <button type="button" id="assay-serial-dilution-close-btn" class="ghost-btn" aria-label="Close serial dilution dialog">Close</button>
           </div>
@@ -193,6 +201,26 @@
           </div>
           <div id="assay-serial-dilution-summary" class="small-note"></div>
           <div id="assay-serial-dilution-content" class="assay-serial-dilution-content"></div>
+        </div>
+      </div>
+
+      <div id="assay-result-import-overlay" class="assay-result-import-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
+        <div class="assay-result-import-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="assay-result-import-title">
+          <div class="assay-header-row assay-result-import-head app-dialog-head">
+            <div>
+              <h3 id="assay-result-import-title">Select Result Matrix</h3>
+              <p id="assay-result-import-status" class="small-note"></p>
+            </div>
+            <button type="button" id="assay-result-import-close-btn" class="ghost-btn" aria-label="Close result import dialog">Close</button>
+          </div>
+          <div class="assay-result-import-body">
+            <div id="assay-result-import-candidates" class="assay-result-import-candidates" role="listbox" aria-label="Detected result matrices"></div>
+            <div id="assay-result-import-preview" class="assay-result-import-preview"></div>
+          </div>
+          <div class="form-actions assay-result-import-actions">
+            <button type="button" id="assay-result-import-cancel-btn" class="ghost-btn">Cancel</button>
+            <button type="button" id="assay-result-import-apply-btn" class="primary-btn">Use This Matrix</button>
+          </div>
         </div>
       </div>
     </section>

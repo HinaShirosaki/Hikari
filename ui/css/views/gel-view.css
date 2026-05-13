@@ -87,11 +87,10 @@
 }
 
 .gel-lane-profile-chart-shell {
-  padding: 12px 12px 10px;
-  border: 1px solid rgba(53, 99, 153, 0.16);
-  border-radius: 14px;
-  background:
-    linear-gradient(180deg, rgba(247, 251, 255, 0.96) 0%, rgba(235, 244, 255, 0.72) 100%);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .gel-lane-profile-chart {
@@ -420,9 +419,8 @@ body.theme-night .gel-lane-profile-picker {
 }
 
 body.theme-night .gel-lane-profile-chart-shell {
-  border-color: rgba(145, 174, 214, 0.22);
-  background:
-    linear-gradient(180deg, rgba(16, 27, 48, 0.96) 0%, rgba(19, 34, 59, 0.76) 100%);
+  border: 0;
+  background: transparent;
 }
 
 body.theme-night .gel-lane-profile-chart .lane-profile-frame {

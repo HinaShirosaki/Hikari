@@ -232,6 +232,134 @@ test('agent-chat normalizes Codex agent answer envelopes', () => {
   assert.equal(needsMoreInfo.codexAgent.status, 'needs_more_info');
 });
 
+test('agent-chat renders Codex user questions and returns option answers', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const history = document.getElementById('agent-chat-history');
+  const messageInput = document.getElementById('agent-message-input');
+  const sendBtn = document.getElementById('agent-send-btn');
+  const payloads = [];
+  const state = {
+    projects: [],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      storagePath: '',
+      llm: {
+        provider: 'codex',
+        model: 'gpt-5.4',
+        reasoningEffort: 'medium'
+      },
+      agent: {
+        developerMode: false
+      }
+    },
+    agentChat: { projectId: '', messages: [] }
+  };
+  const window = {
+    enanaApi: {
+      agentChat: async (payload) => {
+        payloads.push(payload);
+        if (payloads.length === 1) {
+          return {
+            ok: true,
+            parser: {
+              primary_intent: 'codex_agent',
+              needs_clarification: true,
+              clarification_reason: 'Which project should I use?',
+              reasoning_summary: 'Codex needs project scope.'
+            },
+            codex_agent: {
+              status: 'needs_more_info',
+              answer: 'Which project should I use?',
+              follow_up_questions: ['Which project should I use?'],
+              user_question: {
+                question: 'Which project should I use?',
+                options: [
+                  { label: 'Atlas', value: 'Use Atlas.', description: 'Continue in Atlas.' },
+                  { label: 'All projects', value: 'Search all projects.' }
+                ],
+                allow_custom: true
+              },
+              citations: []
+            }
+          };
+        }
+        return {
+          ok: true,
+          parser: {
+            primary_intent: 'codex_agent',
+            needs_clarification: false,
+            reasoning_summary: 'Codex continued with the selected scope.'
+          },
+          codex_agent: {
+            status: 'completed',
+            answer: 'Using Atlas.',
+            follow_up_questions: [],
+            citations: []
+          }
+        };
+      }
+    }
+  };
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: (() => {
+      let idx = 0;
+      return () => `question-msg-${idx += 1}`;
+    })(),
+    safeText: shared.safeText
+  });
+
+  agent.render();
+  messageInput.value = 'Summarize this.';
+  trigger(sendBtn, 'click');
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(payloads.length, 1);
+  assert.match(history.innerHTML, /agent-user-question-card/);
+  assert.match(history.innerHTML, /data-agent-question-answer="Use Atlas\."/);
+  const optionButton = history.querySelector('[data-agent-question-option]');
+  assert.equal(optionButton.dataset.agentQuestionOption, state.agentChat.messages[1].id);
+  trigger(history, 'click', {
+    target: {
+      dataset: {
+        agentQuestionOption: optionButton.dataset.agentQuestionOption,
+        agentQuestionAnswer: 'Use Atlas.'
+      }
+    }
+  });
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(payloads.length, 2);
+  assert.equal(payloads[1].message, 'Use Atlas.');
+  assert.equal(state.agentChat.messages.length, 4);
+  assert.equal(state.agentChat.messages[1].meta.user_question.status, 'answered');
+  assert.equal(state.agentChat.messages[1].meta.user_question.answered.answer, 'Use Atlas.');
+  assert.equal(state.agentChat.messages[2].role, 'user');
+  assert.equal(state.agentChat.messages[2].text, 'Use Atlas.');
+  assert.equal(state.agentChat.messages[3].text, 'Using Atlas.');
+});
+
 test('agent-chat renders completed science thinking trace details in assistant metadata', () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));
   const document = createMockDocument(['agent-chat-history']);

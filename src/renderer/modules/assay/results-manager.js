@@ -1,9 +1,11 @@
 import {
+  parseWellId,
   rowLabelToIndex,
   toRowLabel,
   wellIdFor
 } from './plate-model.js';
 import { oppositeAxis } from './shared.js';
+import { bindFileDropTarget } from '../file-drop.js';
 
 function toResultField(columnIndex) {
   return `c${columnIndex + 1}`;
@@ -17,6 +19,273 @@ function resultFieldToColumnIndex(field) {
   return parsed - 1;
 }
 
+function normalizeImportCell(value) {
+  return String(value ?? '').trim();
+}
+
+function trimTrailingEmptyImportCells(row) {
+  const next = Array.isArray(row) ? row.map(normalizeImportCell) : [];
+  while (next.length && !next[next.length - 1]) {
+    next.pop();
+  }
+  return next;
+}
+
+function normalizeImportRows(rows) {
+  return (Array.isArray(rows) ? rows : [])
+    .map(trimTrailingEmptyImportCells)
+    .filter((row) => row.some(Boolean));
+}
+
+function maxImportColumnCount(rows) {
+  return rows.reduce((max, row) => Math.max(max, Array.isArray(row) ? row.length : 0), 0);
+}
+
+function numericImportValue(value) {
+  const text = normalizeImportCell(value).replace(/,/g, '');
+  if (!text || !/^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?$/i.test(text)) {
+    return null;
+  }
+  const parsed = Number(text);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function oneBasedIntegerLabel(value) {
+  const parsed = numericImportValue(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+}
+
+function isContinuousOneBased(values, length) {
+  if (!Array.isArray(values) || values.length < length || length <= 0) {
+    return false;
+  }
+  for (let index = 0; index < length; index += 1) {
+    if (oneBasedIntegerLabel(values[index]) !== index + 1) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function isPlateRowLabelSequence(values, length) {
+  if (!Array.isArray(values) || values.length < length || length <= 0) {
+    return false;
+  }
+  for (let index = 0; index < length; index += 1) {
+    if (normalizeImportCell(values[index]).toUpperCase() !== toRowLabel(index)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function importColumnLetter(columnIndex) {
+  let value = columnIndex + 1;
+  let label = '';
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    label = String.fromCharCode(65 + remainder) + label;
+    value = Math.floor((value - 1) / 26);
+  }
+  return label || 'A';
+}
+
+function importCellAddress(rowIndex, columnIndex) {
+  return `${importColumnLetter(columnIndex)}${rowIndex + 1}`;
+}
+
+function sliceImportMatrix(rows, startRowIndex, startColumnIndex, rowCount, columnCount) {
+  const matrix = [];
+  for (let rowOffset = 0; rowOffset < rowCount; rowOffset += 1) {
+    const sourceRow = rows[startRowIndex + rowOffset] || [];
+    const nextRow = [];
+    for (let columnOffset = 0; columnOffset < columnCount; columnOffset += 1) {
+      nextRow.push(normalizeImportCell(sourceRow[startColumnIndex + columnOffset]));
+    }
+    matrix.push(nextRow);
+  }
+  return matrix;
+}
+
+function summarizeImportMatrix(matrix) {
+  let nonBlankCount = 0;
+  let numericCount = 0;
+  matrix.forEach((row) => {
+    row.forEach((cell) => {
+      if (!normalizeImportCell(cell)) {
+        return;
+      }
+      nonBlankCount += 1;
+      if (numericImportValue(cell) !== null) {
+        numericCount += 1;
+      }
+    });
+  });
+  const totalCount = matrix.reduce((total, row) => total + row.length, 0);
+  return {
+    totalCount,
+    nonBlankCount,
+    numericCount,
+    nonBlankRatio: totalCount ? nonBlankCount / totalCount : 0,
+    numericRatio: nonBlankCount ? numericCount / nonBlankCount : 0
+  };
+}
+
+function scoreImportCandidate({ matrix, rows, startRowIndex, startColumnIndex, rowCount, columnCount }) {
+  const stats = summarizeImportMatrix(matrix);
+  if (!stats.nonBlankCount || !stats.numericCount) {
+    return null;
+  }
+  if (stats.numericRatio < 0.45 && stats.numericCount < Math.max(3, Math.ceil(stats.totalCount * 0.2))) {
+    return null;
+  }
+
+  const rowAbove = startRowIndex > 0
+    ? (rows[startRowIndex - 1] || []).slice(startColumnIndex, startColumnIndex + columnCount)
+    : [];
+  const leftColumn = startColumnIndex > 0
+    ? rows.slice(startRowIndex, startRowIndex + rowCount).map((row) => row?.[startColumnIndex - 1])
+    : [];
+  const firstRow = matrix[0] || [];
+  const firstColumn = matrix.map((row) => row[0]);
+  const hasNumberedColumnHeader = isContinuousOneBased(rowAbove, columnCount);
+  const hasLetteredRowHeader = isPlateRowLabelSequence(leftColumn, rowCount);
+  const hasNumberedRowHeader = isContinuousOneBased(leftColumn, rowCount);
+  const dataStartsWithNumberedHeader = isContinuousOneBased(firstRow, columnCount);
+  const dataStartsWithRowHeader = isPlateRowLabelSequence(firstColumn, rowCount) || isContinuousOneBased(firstColumn, rowCount);
+
+  let score = (stats.numericRatio * 90) + (stats.nonBlankRatio * 35) + Math.min(stats.numericCount, stats.totalCount);
+  if (stats.nonBlankRatio >= 0.95) {
+    score += 12;
+  }
+  if (hasNumberedColumnHeader) {
+    score += 40;
+  }
+  if (hasLetteredRowHeader) {
+    score += 36;
+  } else if (hasNumberedRowHeader) {
+    score += 18;
+  }
+  if (!hasNumberedColumnHeader && !hasLetteredRowHeader && !hasNumberedRowHeader && startRowIndex === 0 && startColumnIndex === 0) {
+    score += 8;
+  }
+  if (dataStartsWithNumberedHeader) {
+    score -= 55;
+  }
+  if (dataStartsWithRowHeader) {
+    score -= 55;
+  }
+
+  return {
+    ...stats,
+    score,
+    hasNumberedColumnHeader,
+    hasLetteredRowHeader,
+    hasNumberedRowHeader,
+    dataStartsWithNumberedHeader,
+    dataStartsWithRowHeader
+  };
+}
+
+export function detectAssayResultMatrixCandidates(tables, def) {
+  const rowCount = Number(def?.rows);
+  const columnCount = Number(def?.columns);
+  if (!Number.isInteger(rowCount) || !Number.isInteger(columnCount) || rowCount <= 0 || columnCount <= 0) {
+    return [];
+  }
+
+  const candidates = [];
+  (Array.isArray(tables) ? tables : []).forEach((table, tableIndex) => {
+    const rows = normalizeImportRows(table?.rows);
+    const width = maxImportColumnCount(rows);
+    if (rows.length < rowCount || width < columnCount) {
+      return;
+    }
+    const maxStartRow = rows.length - rowCount;
+    const maxStartColumn = width - columnCount;
+    for (let startRowIndex = 0; startRowIndex <= maxStartRow; startRowIndex += 1) {
+      for (let startColumnIndex = 0; startColumnIndex <= maxStartColumn; startColumnIndex += 1) {
+        const matrix = sliceImportMatrix(rows, startRowIndex, startColumnIndex, rowCount, columnCount);
+        const scored = scoreImportCandidate({
+          matrix,
+          rows,
+          startRowIndex,
+          startColumnIndex,
+          rowCount,
+          columnCount
+        });
+        if (!scored || scored.score < 35) {
+          continue;
+        }
+        const startAddress = importCellAddress(startRowIndex, startColumnIndex);
+        const endAddress = importCellAddress(startRowIndex + rowCount - 1, startColumnIndex + columnCount - 1);
+        candidates.push({
+          id: `table-${tableIndex + 1}-${startRowIndex}-${startColumnIndex}`,
+          tableId: String(table?.id || `table-${tableIndex + 1}`),
+          tableName: String(table?.name || table?.sheetName || `Sheet ${tableIndex + 1}`).trim() || `Sheet ${tableIndex + 1}`,
+          format: String(table?.format || '').trim(),
+          startRowIndex,
+          startColumnIndex,
+          rangeLabel: `${startAddress}:${endAddress}`,
+          rows: rowCount,
+          columns: columnCount,
+          matrix,
+          ...scored
+        });
+      }
+    }
+  });
+
+  candidates.sort((left, right) => right.score - left.score);
+  const bestScore = candidates[0]?.score ?? 0;
+  const seenTableIds = new Set();
+  const selected = [];
+  candidates.forEach((candidate) => {
+    const tableId = candidate.tableId || candidate.tableName;
+    const isBestForTable = !seenTableIds.has(tableId);
+    if (isBestForTable) {
+      seenTableIds.add(tableId);
+    }
+    if (!isBestForTable && candidate.score < Math.max(35, bestScore - 18)) {
+      return;
+    }
+    selected.push(candidate);
+  });
+  return selected.slice(0, 12);
+}
+
+export function getAssayResultImportTarget(layout, fallbackDef) {
+  const mappedCells = (Array.isArray(layout) ? layout : [])
+    .map((item) => parseWellId(item?.well))
+    .filter(Boolean);
+  if (!mappedCells.length) {
+    return {
+      rows: Number(fallbackDef?.rows) || 0,
+      columns: Number(fallbackDef?.columns) || 0,
+      startRowIndex: 0,
+      startColumnIndex: 0,
+      source: 'plate'
+    };
+  }
+
+  const rowIndexes = mappedCells.map((item) => item.rowIndex);
+  const columnIndexes = mappedCells.map((item) => item.columnIndex);
+  const startRowIndex = Math.min(...rowIndexes);
+  const endRowIndex = Math.max(...rowIndexes);
+  const startColumnIndex = Math.min(...columnIndexes);
+  const endColumnIndex = Math.max(...columnIndexes);
+  return {
+    rows: (endRowIndex - startRowIndex) + 1,
+    columns: (endColumnIndex - startColumnIndex) + 1,
+    startRowIndex,
+    startColumnIndex,
+    source: 'mapped'
+  };
+}
+
 export function createAssayResultsManager({
   runtime,
   elements,
@@ -27,7 +296,10 @@ export function createAssayResultsManager({
   filterAndNormalizeResults,
   setResultStatus,
   clearAnalysisOutput,
-  onAnalysisConfigChange
+  onAnalysisConfigChange,
+  parseResultImportFile,
+  persistResultAttachment,
+  onResultImportApplied
 }) {
   const {
     assayAnalysisAddColumnGroupBtn,
@@ -37,11 +309,22 @@ export function createAssayResultsManager({
     assayAnalysisGroupNameInput,
     assayAnalysisRowGroupsInput,
     assayAnalysisSelectionStatus,
-    assayResultTable
+    assayResultTable,
+    assayAttachResultFileBtn,
+    assayResultFileInput,
+    assayResultImportOverlay,
+    assayResultImportCloseBtn,
+    assayResultImportCancelBtn,
+    assayResultImportApplyBtn,
+    assayResultImportStatus,
+    assayResultImportCandidates,
+    assayResultImportPreview
   } = elements;
 
   let resultGrid = null;
   let resultGridSignature = '';
+  let resultImportState = null;
+  let resultImportPreviewGrid = null;
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -567,6 +850,354 @@ export function createAssayResultsManager({
     return { pastedCount, skippedCount };
   }
 
+  function setResultImportStatus(message) {
+    if (assayResultImportStatus) {
+      assayResultImportStatus.textContent = message || '';
+    }
+  }
+
+  function destroyResultImportPreviewGrid() {
+    if (!resultImportPreviewGrid) {
+      return;
+    }
+    resultImportPreviewGrid.destroy();
+    resultImportPreviewGrid = null;
+  }
+
+  function closeResultImportDialog() {
+    if (assayResultImportOverlay) {
+      assayResultImportOverlay.hidden = true;
+    }
+    destroyResultImportPreviewGrid();
+    resultImportState = null;
+    if (assayResultImportCandidates) {
+      assayResultImportCandidates.innerHTML = '';
+    }
+    if (assayResultImportPreview) {
+      assayResultImportPreview.innerHTML = '';
+    }
+    setResultImportStatus('');
+  }
+
+  function buildResultImportPreviewRows(candidate) {
+    return (Array.isArray(candidate?.matrix) ? candidate.matrix : []).map((row, rowIndex) => {
+      const data = {
+        __rowIndex: rowIndex,
+        rowLabel: toRowLabel(rowIndex)
+      };
+      for (let columnIndex = 0; columnIndex < candidate.columns; columnIndex += 1) {
+        data[toResultField(columnIndex)] = String(row?.[columnIndex] ?? '');
+      }
+      return data;
+    });
+  }
+
+  function buildResultImportPreviewColumns(candidate) {
+    const columns = [
+      {
+        title: '',
+        field: 'rowLabel',
+        width: 54,
+        minWidth: 54,
+        headerSort: false,
+        hozAlign: 'center',
+        frozen: true,
+        editable: false
+      }
+    ];
+    for (let columnIndex = 0; columnIndex < candidate.columns; columnIndex += 1) {
+      columns.push({
+        title: String(columnIndex + 1),
+        field: toResultField(columnIndex),
+        headerSort: false,
+        hozAlign: 'center',
+        headerHozAlign: 'center',
+        minWidth: 72,
+        editable: false
+      });
+    }
+    return columns;
+  }
+
+  function renderResultImportPreview(candidate) {
+    destroyResultImportPreviewGrid();
+    if (!assayResultImportPreview) {
+      return;
+    }
+    assayResultImportPreview.innerHTML = '';
+    if (!candidate) {
+      assayResultImportPreview.innerHTML = '<p class="small-note">Select a detected matrix to preview it.</p>';
+      return;
+    }
+    if (!TabulatorLib) {
+      const table = document.createElement('table');
+      table.className = 'assay-serial-dilution-table assay-result-import-fallback-table';
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th></th>
+            ${Array.from({ length: candidate.columns }, (_item, index) => `<th>${index + 1}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>
+          ${candidate.matrix.map((row, rowIndex) => `
+            <tr>
+              <th>${toRowLabel(rowIndex)}</th>
+              ${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}
+            </tr>
+          `).join('')}
+        </tbody>
+      `;
+      assayResultImportPreview.append(table);
+      return;
+    }
+    const host = document.createElement('div');
+    host.className = 'assay-tabulator assay-result-import-preview-grid';
+    host.setAttribute('role', 'grid');
+    host.setAttribute('aria-label', 'Read-only assay result import preview');
+    assayResultImportPreview.append(host);
+    resultImportPreviewGrid = new TabulatorLib(host, {
+      data: buildResultImportPreviewRows(candidate),
+      columns: buildResultImportPreviewColumns(candidate),
+      index: '__rowIndex',
+      layout: 'fitDataTable',
+      reactiveData: false,
+      selectable: false
+    });
+  }
+
+  function renderResultImportCandidates() {
+    if (!assayResultImportCandidates || !resultImportState) {
+      return;
+    }
+    const { candidates, selectedId } = resultImportState;
+    assayResultImportCandidates.innerHTML = candidates.map((candidate) => {
+      const active = candidate.id === selectedId ? ' is-active' : '';
+      const numericPercent = Math.round((candidate.numericRatio || 0) * 100);
+      const fillPercent = Math.round((candidate.nonBlankRatio || 0) * 100);
+      return `
+        <button type="button" class="assay-result-import-choice${active}" data-result-import-candidate="${escapeHtml(candidate.id)}">
+          <strong>${escapeHtml(candidate.tableName || 'Sheet')} · ${escapeHtml(candidate.rangeLabel)}</strong>
+          <span>${escapeHtml(`${candidate.rows} x ${candidate.columns}`)} result cells · ${numericPercent}% numeric · ${fillPercent}% filled</span>
+        </button>
+      `;
+    }).join('');
+  }
+
+  function selectResultImportCandidate(candidateId) {
+    if (!resultImportState) {
+      return;
+    }
+    const candidate = resultImportState.candidates.find((item) => item.id === candidateId);
+    if (!candidate) {
+      return;
+    }
+    resultImportState.selectedId = candidate.id;
+    if (assayResultImportApplyBtn) {
+      assayResultImportApplyBtn.disabled = false;
+    }
+    renderResultImportCandidates();
+    renderResultImportPreview(candidate);
+  }
+
+  function openResultImportDialog({ fileName, dataBase64, candidates, importTarget }) {
+    if (!assayResultImportOverlay) {
+      return;
+    }
+    resultImportState = {
+      fileName,
+      dataBase64,
+      candidates,
+      importTarget,
+      selectedId: candidates[0]?.id || ''
+    };
+    assayResultImportOverlay.hidden = false;
+    if (assayResultImportApplyBtn) {
+      assayResultImportApplyBtn.disabled = !resultImportState.selectedId;
+    }
+    setResultImportStatus(`Detected ${candidates.length} plate-sized matrix choices in ${fileName}.`);
+    renderResultImportCandidates();
+    selectResultImportCandidate(resultImportState.selectedId);
+  }
+
+  function arrayBufferToBase64(buffer) {
+    const bytes = new Uint8Array(buffer);
+    const chunkSize = 0x8000;
+    const chunks = [];
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      const chunk = bytes.subarray(index, index + chunkSize);
+      let binary = '';
+      for (let offset = 0; offset < chunk.length; offset += 1) {
+        binary += String.fromCharCode(chunk[offset]);
+      }
+      chunks.push(binary);
+    }
+    return btoa(chunks.join(''));
+  }
+
+  function readResultImportFileBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => {
+        try {
+          resolve(arrayBufferToBase64(reader.result));
+        } catch (error) {
+          reject(error);
+        }
+      });
+      reader.addEventListener('error', () => reject(reader.error || new Error('Unable to read result file.')));
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  async function applyResultImportCandidate(candidate) {
+    if (!candidate || !resultImportState) {
+      setResultStatus('Select a result matrix before importing.');
+      return;
+    }
+    if (typeof persistResultAttachment !== 'function') {
+      setResultStatus('Result file attachment storage is unavailable.');
+      return;
+    }
+
+    if (assayResultImportApplyBtn) {
+      assayResultImportApplyBtn.disabled = true;
+    }
+    setResultImportStatus(`Saving ${resultImportState.fileName} beside the assay plate...`);
+
+    try {
+      const importedFileName = resultImportState.fileName;
+      const importTarget = resultImportState.importTarget || getAssayResultImportTarget(runtime.currentLayout, getCurrentDefinition());
+      const attachment = await persistResultAttachment({
+        fileName: importedFileName,
+        dataBase64: resultImportState.dataBase64,
+        candidate
+      });
+      const counts = applyResultMatrix({
+        matrix: candidate.matrix,
+        startRowIndex: importTarget.startRowIndex,
+        startColumnIndex: importTarget.startColumnIndex,
+        replaceAll: true
+      });
+      renderResultTable();
+      if (typeof clearAnalysisOutput === 'function') {
+        clearAnalysisOutput();
+      }
+      if (typeof onResultImportApplied === 'function') {
+        await onResultImportApplied({
+          candidate,
+          attachment,
+          fileName: importedFileName,
+          counts
+        });
+      }
+      closeResultImportDialog();
+      setResultStatus(`Imported ${counts.pastedCount} result value(s) from ${importedFileName}. Skipped ${counts.skippedCount} unmapped cell(s). Attached file saved beside the plate.`);
+    } catch (error) {
+      const message = String(error?.message || error || 'Unable to import result file.');
+      setResultImportStatus(message);
+      setResultStatus(message);
+      if (assayResultImportApplyBtn) {
+        assayResultImportApplyBtn.disabled = false;
+      }
+    }
+  }
+
+  async function importResultFile(file) {
+    if (!file) {
+      return;
+    }
+    const selectedAssayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
+    if (!selectedAssayId) {
+      setResultStatus('Select an assay plate before attaching a result file.');
+      return;
+    }
+    if (typeof parseResultImportFile !== 'function') {
+      setResultStatus('Result file parser is unavailable.');
+      return;
+    }
+
+    setResultStatus(`Reading ${file.name}...`);
+    try {
+      const dataBase64 = await readResultImportFileBase64(file);
+      const parsed = await parseResultImportFile({
+        fileName: file.name,
+        dataBase64
+      });
+      const importTarget = getAssayResultImportTarget(runtime.currentLayout, getCurrentDefinition());
+      const candidates = detectAssayResultMatrixCandidates(parsed?.tables || [], importTarget);
+      if (!candidates.length) {
+        const areaLabel = importTarget.source === 'mapped' ? 'mapped-area ' : '';
+        setResultStatus(`No ${importTarget.rows} x ${importTarget.columns} ${areaLabel}result matrix was detected in ${file.name}.`);
+        return;
+      }
+      if (candidates.length === 1) {
+        resultImportState = {
+          fileName: file.name,
+          dataBase64,
+          candidates,
+          importTarget,
+          selectedId: candidates[0].id
+        };
+        await applyResultImportCandidate(candidates[0]);
+        return;
+      }
+      openResultImportDialog({
+        fileName: file.name,
+        dataBase64,
+        candidates,
+        importTarget
+      });
+    } catch (error) {
+      const message = String(error?.message || error || 'Unable to read result file.');
+      setResultStatus(message);
+      setResultImportStatus(message);
+    }
+  }
+
+  async function onResultFileChange(event) {
+    const file = event.target?.files?.[0] || null;
+    if (event.target) {
+      event.target.value = '';
+    }
+    await importResultFile(file);
+  }
+
+  function onAttachResultFileClick() {
+    if (!assayAttachResultFileBtn || !assayResultFileInput) {
+      setResultStatus('Result file attachment control is unavailable.');
+      return;
+    }
+    const selectedAssayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
+    if (!selectedAssayId) {
+      setResultStatus('Select an assay plate before attaching a result file.');
+      return;
+    }
+    assayResultFileInput.click();
+  }
+
+  function onResultImportOverlayClick(event) {
+    if (event.target === assayResultImportOverlay) {
+      closeResultImportDialog();
+    }
+  }
+
+  function onResultImportCandidateClick(event) {
+    const button = event.target.closest('[data-result-import-candidate]');
+    if (!button) {
+      return;
+    }
+    selectResultImportCandidate(button.dataset.resultImportCandidate);
+  }
+
+  function applySelectedResultImportCandidate() {
+    if (!resultImportState) {
+      return;
+    }
+    const candidate = resultImportState.candidates.find((item) => item.id === resultImportState.selectedId);
+    void applyResultImportCandidate(candidate);
+  }
+
   function onResultTablePaste(event) {
     const start = getPasteStartCell(event);
     if (!start) {
@@ -600,6 +1231,19 @@ export function createAssayResultsManager({
     setResultStatus('Cleared all result values. Only mapped wells are editable.');
   }
 
+  bindFileDropTarget({
+    target: elements.assayResultsLayout || assayResultTable,
+    accept: assayResultFileInput?.getAttribute?.('accept') || '',
+    disabled: () => Boolean(elements.assayResultsLayout?.hidden),
+    onFiles: ([file]) => importResultFile(file),
+    onRejected: () => {
+      setResultStatus('Drop a CSV or Excel result file to attach it.');
+    },
+    onError: (error) => {
+      setResultStatus(String(error?.message || error || 'Unable to import the dropped result file.'));
+    }
+  });
+
   return {
     getResultValueCount,
     clearResultGrid,
@@ -610,6 +1254,12 @@ export function createAssayResultsManager({
     onAddSelectedColumnGroup,
     onClearAnalysisGroups,
     onResultTablePaste,
-    onClearResults
+    onClearResults,
+    onAttachResultFileClick,
+    onResultFileChange,
+    closeResultImportDialog,
+    onResultImportOverlayClick,
+    onResultImportCandidateClick,
+    applySelectedResultImportCandidate
   };
 }

@@ -10,6 +10,127 @@ import {
   parseNumericResult
 } from './shared.js';
 
+const DEFAULT_CHART_PALETTE = Object.freeze([
+  '#1f77b4',
+  '#ef6c3e',
+  '#2ca25f',
+  '#9467bd',
+  '#d4a72c',
+  '#8c564b'
+]);
+
+const POINT_SHAPES = Object.freeze(['circle', 'square', 'triangle', 'diamond', 'cross']);
+const LINE_STYLES = Object.freeze(['solid', 'dashed', 'dotted']);
+const FRAME_STYLES = Object.freeze(['box', 'l-shape', 'none']);
+const CURVE_TYPES = Object.freeze(['curveMonotoneX', 'curveLinear', 'curveStep']);
+const SCALE_TYPES = Object.freeze(['linear', 'log', 'ordinal']);
+
+export function createDefaultChartStyle() {
+  return {
+    xColumn: 'auto',
+    yColumn: 'auto',
+    seriesColumn: 'auto',
+    xScale: 'auto',
+    yScale: 'linear',
+    xRange: { auto: true, min: null, max: null },
+    yRange: { auto: true, min: null, max: null },
+    palette: DEFAULT_CHART_PALETTE.slice(),
+    seriesColors: {},
+    pointShape: 'circle',
+    pointSize: 3,
+    lineStyle: 'solid',
+    lineWidth: 1.5,
+    curve: 'curveMonotoneX',
+    frameStyle: 'box',
+    frameCornerRadius: 0,
+    frameStroke: '#9bb0c9',
+    frameStrokeWidth: 1,
+    backgroundColor: '#ffffff'
+  };
+}
+
+function clampFinite(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function sanitizeRange(range) {
+  const fallback = { auto: true, min: null, max: null };
+  if (!range || typeof range !== 'object') {
+    return fallback;
+  }
+  return {
+    auto: range.auto !== false,
+    min: clampFinite(range.min),
+    max: clampFinite(range.max)
+  };
+}
+
+function sanitizeEnum(value, allowed, fallback) {
+  return allowed.includes(value) ? value : fallback;
+}
+
+function sanitizeColor(value, fallback) {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+  const trimmed = value.trim();
+  return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(trimmed) ? trimmed : fallback;
+}
+
+export function normalizeChartStyle(input) {
+  const base = createDefaultChartStyle();
+  if (!input || typeof input !== 'object') {
+    return base;
+  }
+  const palette = Array.isArray(input.palette) && input.palette.length
+    ? input.palette.map((color, index) => sanitizeColor(color, base.palette[index % base.palette.length]))
+    : base.palette;
+  const seriesColors = {};
+  if (input.seriesColors && typeof input.seriesColors === 'object') {
+    Object.entries(input.seriesColors).forEach(([label, color]) => {
+      const safe = sanitizeColor(color, null);
+      if (safe) {
+        seriesColors[String(label)] = safe;
+      }
+    });
+  }
+  return {
+    xColumn: typeof input.xColumn === 'string' ? input.xColumn : base.xColumn,
+    yColumn: typeof input.yColumn === 'string' ? input.yColumn : base.yColumn,
+    seriesColumn: typeof input.seriesColumn === 'string' ? input.seriesColumn : base.seriesColumn,
+    xScale: input.xScale === 'auto' ? 'auto' : sanitizeEnum(input.xScale, SCALE_TYPES, base.xScale),
+    yScale: sanitizeEnum(input.yScale, ['linear', 'log'], base.yScale),
+    xRange: sanitizeRange(input.xRange),
+    yRange: sanitizeRange(input.yRange),
+    palette,
+    seriesColors,
+    pointShape: sanitizeEnum(input.pointShape, POINT_SHAPES, base.pointShape),
+    pointSize: Number.isFinite(input.pointSize) ? Math.max(1, Math.min(20, input.pointSize)) : base.pointSize,
+    lineStyle: sanitizeEnum(input.lineStyle, LINE_STYLES, base.lineStyle),
+    lineWidth: Number.isFinite(input.lineWidth) ? Math.max(0.5, Math.min(8, input.lineWidth)) : base.lineWidth,
+    curve: sanitizeEnum(input.curve, CURVE_TYPES, base.curve),
+    frameStyle: sanitizeEnum(input.frameStyle, FRAME_STYLES, base.frameStyle),
+    frameCornerRadius: Number.isFinite(input.frameCornerRadius)
+      ? Math.max(0, Math.min(40, input.frameCornerRadius))
+      : base.frameCornerRadius,
+    frameStroke: sanitizeColor(input.frameStroke, base.frameStroke),
+    frameStrokeWidth: Number.isFinite(input.frameStrokeWidth)
+      ? Math.max(0, Math.min(6, input.frameStrokeWidth))
+      : base.frameStrokeWidth,
+    backgroundColor: sanitizeColor(input.backgroundColor, base.backgroundColor)
+  };
+}
+
+export const CHART_STYLE_OPTIONS = Object.freeze({
+  pointShapes: POINT_SHAPES,
+  lineStyles: LINE_STYLES,
+  frameStyles: FRAME_STYLES,
+  curves: CURVE_TYPES,
+  scales: SCALE_TYPES,
+  defaultPalette: DEFAULT_CHART_PALETTE
+});
+
 export function createAssayAnalysisView({
   runtime,
   elements,
@@ -20,7 +141,8 @@ export function createAssayAnalysisView({
   getCurrentDefinition,
   syncCurrentResultsFromGrid,
   getResultValueCount,
-  onAnalysisRendered
+  onAnalysisRendered,
+  onChartStyleChanged
 }) {
   const {
     assayAnalysisColumnGroupsInput,
@@ -32,6 +154,45 @@ export function createAssayAnalysisView({
   } = elements;
   const hasReactVis = Boolean(ReactLib && ReactDOMLib && ReactVisLib);
   let analysisChartHost = null;
+  let lastAnalysisContext = {
+    headers: [],
+    seriesLabels: [],
+    method: ''
+  };
+
+  if (!runtime.chartStyle || typeof runtime.chartStyle !== 'object') {
+    runtime.chartStyle = createDefaultChartStyle();
+  } else {
+    runtime.chartStyle = normalizeChartStyle(runtime.chartStyle);
+  }
+
+  function getChartStyle() {
+    return runtime.chartStyle;
+  }
+
+  function setChartStyle(patch) {
+    runtime.chartStyle = normalizeChartStyle({ ...runtime.chartStyle, ...(patch || {}) });
+    if (typeof onChartStyleChanged === 'function') {
+      onChartStyleChanged(runtime.chartStyle);
+    }
+    return runtime.chartStyle;
+  }
+
+  function resetChartStyle() {
+    runtime.chartStyle = createDefaultChartStyle();
+    if (typeof onChartStyleChanged === 'function') {
+      onChartStyleChanged(runtime.chartStyle);
+    }
+    return runtime.chartStyle;
+  }
+
+  function getChartContext() {
+    return {
+      headers: lastAnalysisContext.headers.slice(),
+      seriesLabels: lastAnalysisContext.seriesLabels.slice(),
+      method: lastAnalysisContext.method
+    };
+  }
 
   function collectNumericObservations() {
     const layoutMap = layoutToMap(runtime.currentLayout);
@@ -106,6 +267,14 @@ export function createAssayAnalysisView({
     if (!clone.getAttribute('xmlns:xlink')) {
       clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
     }
+    const ownerDoc = clone.ownerDocument || document;
+    const bg = ownerDoc.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bg.setAttribute('x', '0');
+    bg.setAttribute('y', '0');
+    bg.setAttribute('width', '100%');
+    bg.setAttribute('height', '100%');
+    bg.setAttribute('fill', '#ffffff');
+    clone.insertBefore(bg, clone.firstChild);
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(clone.outerHTML)}`;
   }
 
@@ -308,6 +477,11 @@ export function createAssayAnalysisView({
       return;
     }
 
+    lastAnalysisContext = {
+      ...lastAnalysisContext,
+      seriesLabels: chartModel.series.map((series) => String(series.label || ''))
+    };
+
     const {
       XYPlot,
       XAxis,
@@ -414,7 +588,11 @@ export function createAssayAnalysisView({
         legendElement
       ]),
       ReactLib.createElement('div', { className: 'assay-analysis-chart-plot', key: 'plot' }, [
-        ReactLib.createElement(XYPlot, { ...plotProps, key: 'xy-plot' }, plotChildren)
+        ReactLib.createElement(
+          'div',
+          { className: 'assay-analysis-chart-canvas', key: 'canvas' },
+          ReactLib.createElement(XYPlot, { ...plotProps, key: 'xy-plot' }, plotChildren)
+        )
       ])
     ]);
 
@@ -443,6 +621,7 @@ export function createAssayAnalysisView({
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
+    lastAnalysisContext = { headers: [], seriesLabels: [], method: '' };
   }
 
   function renderAnalysis() {
@@ -470,6 +649,12 @@ export function createAssayAnalysisView({
         columnSummary: getDimensionAnalysisOptions('column')
       }
     });
+
+    lastAnalysisContext = {
+      headers: Array.isArray(result?.headers) ? result.headers.map(String) : [],
+      seriesLabels: [],
+      method
+    };
 
     const ignoredNote = nonNumericCount ? ` Non-numeric cells ignored: ${nonNumericCount}.` : '';
     const rowCountNote = ` Rows: ${result.rows.length}.`;
@@ -534,6 +719,10 @@ export function createAssayAnalysisView({
     renderAnalysis,
     onAnalysisMethodChange,
     onAnalysisConfigChange,
-    onAnalyzeResults
+    onAnalyzeResults,
+    getChartStyle,
+    setChartStyle,
+    resetChartStyle,
+    getChartContext
   };
 }

@@ -5,10 +5,18 @@ const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const {
+  buildExtractedTextFile,
+  buildPdfMarkdownFromExtraction
+} = require('../../main/pdf-to-md.js');
 const { loadSqlJs } = require('../../main/storage-bundle/storage-utils.js');
 
-const KNOWLEDGE_DATABASE_FOLDER_NAME = 'KnowledgeDatabase';
-const KNOWLEDGE_PAPERS_FOLDER_NAME = 'PaperKnowledge';
+const KNOWLEDGE_BASE_FOLDER_NAME = 'KnowledgeBase';
+const KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME = 'papers.md';
+const LEGACY_KNOWLEDGE_DATABASE_FOLDER_NAME = 'KnowledgeDatabase';
+const LEGACY_KNOWLEDGE_PAPERS_FOLDER_NAME = 'PaperKnowledge';
+const KNOWLEDGE_DATABASE_FOLDER_NAME = KNOWLEDGE_BASE_FOLDER_NAME;
+const KNOWLEDGE_PAPERS_FOLDER_NAME = KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME;
 const KNOWLEDGE_INDEX_FILE_NAME = 'knowledge.index.sqlite';
 const KNOWLEDGE_JSON_INDEX_FILE_NAME = 'index.json';
 const DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT = 120000;
@@ -105,10 +113,17 @@ function resolveStoragePath(source, cleanText) {
   return cleanText(source.storage_path || source.storagePath, 4000);
 }
 
-function buildKnowledgeDatabasePaths({ storagePath = '', doi = '', title = '', pdfSha256 = '' } = {}) {
+function buildKnowledgeDatabasePaths({
+  storagePath = '',
+  doi = '',
+  title = '',
+  pdfSha256 = '',
+  rootFolderName = KNOWLEDGE_BASE_FOLDER_NAME,
+  papersFolderName = KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME
+} = {}) {
   const resolvedStoragePath = path.resolve(storagePath);
-  const rootPath = path.join(resolvedStoragePath, KNOWLEDGE_DATABASE_FOLDER_NAME);
-  const papersPath = path.join(rootPath, KNOWLEDGE_PAPERS_FOLDER_NAME);
+  const rootPath = path.join(resolvedStoragePath, rootFolderName);
+  const papersPath = path.join(rootPath, papersFolderName);
   const paperFolderName = buildKnowledgePaperSlug({ doi, title, pdfSha256 });
   const paperFolderPath = path.join(papersPath, paperFolderName);
   return {
@@ -123,6 +138,17 @@ function buildKnowledgeDatabasePaths({ storagePath = '', doi = '', title = '', p
     sqlite_path: path.join(rootPath, KNOWLEDGE_INDEX_FILE_NAME),
     json_index_path: path.join(rootPath, KNOWLEDGE_JSON_INDEX_FILE_NAME)
   };
+}
+
+function buildLegacyKnowledgeDatabasePaths({ storagePath = '', doi = '', title = '', pdfSha256 = '' } = {}) {
+  return buildKnowledgeDatabasePaths({
+    storagePath,
+    doi,
+    title,
+    pdfSha256,
+    rootFolderName: LEGACY_KNOWLEDGE_DATABASE_FOLDER_NAME,
+    papersFolderName: LEGACY_KNOWLEDGE_PAPERS_FOLDER_NAME
+  });
 }
 
 function getPaperScope(linkedType = '') {
@@ -159,86 +185,6 @@ function guessTitleFromText(text = '') {
     .map((line) => line.trim())
     .filter((line) => line && line.length >= 6 && line.length <= 220);
   return lines[0] || '';
-}
-
-function buildExtractedTextFile(extraction = {}) {
-  const pages = asArrayDefault(extraction.pages);
-  if (pages.length) {
-    return pages.map((page) => [
-      `[[page:${Number(page.page_number) || 0}]]`,
-      String(page.text || '').trim()
-    ].filter(Boolean).join('\n')).join('\n\n');
-  }
-  return String(extraction.text || '').trim();
-}
-
-function formatSectionsForMarkdown(sections = [], maxChars = 28000) {
-  const chunks = [];
-  let used = 0;
-  asArrayDefault(sections).forEach((section) => {
-    if (used >= maxChars) {
-      return;
-    }
-    const label = limitText(section?.label || section?.normalized_label || 'Section', 160);
-    const startPage = Number(section?.start_page) || Number(section?.page_number) || 0;
-    const endPage = Number(section?.end_page) || startPage;
-    const pageLabel = startPage
-      ? (endPage && endPage !== startPage ? `pp. ${startPage}-${endPage}` : `p. ${startPage}`)
-      : 'page unknown';
-    const text = String(section?.text || '').trim();
-    if (!text) {
-      return;
-    }
-    const remaining = Math.max(0, maxChars - used);
-    const slice = text.length > remaining ? `${text.slice(0, remaining)}\n[... truncated ...]` : text;
-    chunks.push(`### ${label} (${pageLabel})\n\n${slice}`);
-    used += slice.length;
-  });
-  return chunks.join('\n\n');
-}
-
-function buildFallbackMarkdown({ metadata = {}, extraction = {}, extractedText = '' } = {}) {
-  const title = limitText(metadata.title, 220) || 'Untitled paper';
-  const authors = asArrayDefault(metadata.authors).join(', ') || '-';
-  const year = metadata.year || '-';
-  const doi = metadata.doi || '-';
-  const sectionText = formatSectionsForMarkdown(extraction.sections, 30000);
-  const rawPreview = sectionText ? '' : limitText(extractedText, 30000);
-  return [
-    `# ${title}`,
-    `**Authors:** ${authors}   **Year:** ${year}   **DOI:** ${doi}`,
-    '',
-    '## TL;DR',
-    '- A provider rewrite was not available, so this LLM-facing note preserves the extracted paper text with page markers for later regeneration.',
-    '',
-    '## Background',
-    '',
-    'See the extracted sections below. Claims should be checked against `extracted.txt` before citation.',
-    '',
-    '## Methods',
-    '',
-    sectionText || '- No method-specific section was detected.',
-    '',
-    '## Key results',
-    '',
-    rawPreview || '- No separate result summary was generated.',
-    '',
-    '## Figures & tables',
-    '',
-    '- Figure extraction is not available in this entry.',
-    '',
-    '## Limitations',
-    '',
-    '- Generated from text extraction only; equations, figures, and scanned text may be incomplete.',
-    '',
-    '## How it relates',
-    '',
-    '- No cross-paper links have been indexed yet.',
-    '',
-    '## Verbatim quotes',
-    '',
-    '- Use `extracted.txt` page markers for quote selection.'
-  ].join('\n');
 }
 
 function buildMarkdownRewritePrompt({ metadata = {}, extraction = {}, extractedText = '', maxPromptChars = DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT } = {}) {
@@ -447,6 +393,18 @@ async function writeJsonFile(filePath, payload) {
   await fsPromises.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
+async function pathExists(targetPath) {
+  try {
+    await fsPromises.access(targetPath);
+    return true;
+  } catch (error) {
+    if (error?.code === 'ENOENT') {
+      return false;
+    }
+    throw error;
+  }
+}
+
 function normalizeIndexEntry(entry = {}) {
   return {
     id: String(entry.id || ''),
@@ -573,6 +531,22 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     const metadata = ensureObject(source.metadata);
     const extraction = ensureObject(source.extraction);
     const extractedText = String(source.extractedText || '');
+    if (source.use_llm_rewrite === false || source.useLlmRewrite === false) {
+      return {
+        ok: true,
+        status: 'ready',
+        method: 'pdf-to-md',
+        markdown: buildPdfMarkdownFromExtraction({
+          metadata,
+          extraction,
+          extractedText,
+          sourcePdfPath: source.file_path || source.filePath || source.path || '',
+          sourcePdfRelativePath: source.source_pdf_relative_path || source.sourcePdfRelativePath || '',
+          transformedAt: now(),
+          includePages: false
+        })
+      };
+    }
     const prompt = buildMarkdownRewritePrompt({
       metadata,
       extraction,
@@ -621,8 +595,16 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     return {
       ok: true,
       status: 'ready',
-      method: 'fallback',
-      markdown: buildFallbackMarkdown({ metadata, extraction, extractedText }),
+      method: 'pdf-to-md-fallback',
+      markdown: buildPdfMarkdownFromExtraction({
+        metadata,
+        extraction,
+        extractedText,
+        sourcePdfPath: source.file_path || source.filePath || source.path || '',
+        sourcePdfRelativePath: source.source_pdf_relative_path || source.sourcePdfRelativePath || '',
+        transformedAt: now(),
+        includePages: false
+      }),
       warning: cleanText(llmResult?.error, 1200)
     };
   }
@@ -817,9 +799,10 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       linked_type: cleanText(source.linked_type || source.linkedType, 80),
       linked_name: cleanText(source.linked_name || source.linkedName, 220)
     };
+    const explicitDoi = normalizeDoi(source.doi || source.paper_doi || source.paperDoi);
     const paths = buildKnowledgeDatabasePaths({
       storagePath: resolvedStoragePath,
-      doi: metadata.doi,
+      doi: explicitDoi,
       title: metadata.title,
       pdfSha256
     });
@@ -834,6 +817,7 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
         metadata,
         extraction,
         extractedText,
+        source_pdf_relative_path: buildRelativePath(resolvedStoragePath, resolvedFilePath),
         allowFallbackMarkdown: source.allow_fallback_markdown !== false && source.allowFallbackMarkdown !== false
       })
       : {
@@ -918,32 +902,41 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
         error: 'Paper knowledge lookup requires storage_path.'
       };
     }
-    const paths = buildKnowledgeDatabasePaths({
+    const lookupIdentity = {
       storagePath,
       doi: source.doi || source.paper_doi || source.paperDoi,
       title: source.title || source.paper_title || source.paperTitle
-    });
-    const db = await openKnowledgeDatabase(paths.sqlite_path).catch(() => null);
-    if (!db) {
-      return {
-        ok: false,
-        status: 'missing',
-        error: 'Paper knowledge index is not available.'
-      };
-    }
-    try {
+    };
+    const pathCandidates = [
+      buildKnowledgeDatabasePaths(lookupIdentity),
+      buildLegacyKnowledgeDatabasePaths(lookupIdentity)
+    ];
+    let indexAvailable = false;
+
+    for (let index = 0; index < pathCandidates.length; index += 1) {
+      const paths = pathCandidates[index];
+      if (index > 0 && !(await pathExists(paths.sqlite_path))) {
+        continue;
+      }
+      const db = await openKnowledgeDatabase(paths.sqlite_path).catch(() => null);
+      if (!db) {
+        continue;
+      }
+      indexAvailable = true;
       const paper = findExistingPaperRow(db, {
         doi: source.doi || source.paper_doi || source.paperDoi,
         title: source.title || source.paper_title || source.paperTitle
       });
       if (!paper) {
-        return {
-          ok: false,
-          status: 'missing',
-          summary: 'Paper was not found in the knowledge database.'
-        };
+        db.close();
+        continue;
       }
-      const locations = queryRows(db, 'SELECT * FROM paper_locations WHERE paper_id = ?', [paper.id]);
+      let locations = [];
+      try {
+        locations = queryRows(db, 'SELECT * FROM paper_locations WHERE paper_id = ?', [paper.id]);
+      } finally {
+        db.close();
+      }
       const selectedLocation = chooseLocation(
         locations,
         getPaperScope(source.linked_type || source.linkedType),
@@ -954,10 +947,10 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
         ? resolveRelativeStoragePath(storagePath, selectedLocation.pdf_path)
         : '';
       const pdfExists = pdfPath
-        ? await fsPromises.access(pdfPath).then(() => true).catch(() => false)
+        ? await pathExists(pdfPath)
         : false;
       const markdownExists = markdownPath
-        ? await fsPromises.access(markdownPath).then(() => true).catch(() => false)
+        ? await pathExists(markdownPath)
         : false;
       return {
         ok: true,
@@ -980,17 +973,32 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
           ? `Found paper knowledge markdown at ${paper.wiki_path}.`
           : 'Found paper record, but the markdown file is missing.'
       };
-    } finally {
-      db.close();
     }
+    if (!indexAvailable) {
+      return {
+        ok: false,
+        status: 'missing',
+        error: 'Paper knowledge index is not available.'
+      };
+    }
+    return {
+      ok: false,
+      status: 'missing',
+      summary: 'Paper was not found in the knowledge database.'
+    };
   }
 
   return {
+    KNOWLEDGE_BASE_FOLDER_NAME,
+    KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME,
     KNOWLEDGE_DATABASE_FOLDER_NAME,
     KNOWLEDGE_PAPERS_FOLDER_NAME,
+    LEGACY_KNOWLEDGE_DATABASE_FOLDER_NAME,
+    LEGACY_KNOWLEDGE_PAPERS_FOLDER_NAME,
     KNOWLEDGE_INDEX_FILE_NAME,
     KNOWLEDGE_JSON_INDEX_FILE_NAME,
     buildKnowledgeDatabasePaths,
+    buildLegacyKnowledgeDatabasePaths,
     buildKnowledgePaperSlug,
     generateKnowledgeMarkdown,
     ingestPaperPdf,
@@ -999,11 +1007,16 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
 }
 
 module.exports = {
+  KNOWLEDGE_BASE_FOLDER_NAME,
+  KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME,
   KNOWLEDGE_DATABASE_FOLDER_NAME,
   KNOWLEDGE_PAPERS_FOLDER_NAME,
+  LEGACY_KNOWLEDGE_DATABASE_FOLDER_NAME,
+  LEGACY_KNOWLEDGE_PAPERS_FOLDER_NAME,
   KNOWLEDGE_INDEX_FILE_NAME,
   KNOWLEDGE_JSON_INDEX_FILE_NAME,
   buildKnowledgeDatabasePaths,
+  buildLegacyKnowledgeDatabasePaths,
   buildKnowledgePaperSlug,
   normalizeDoi,
   createPaperKnowledgeDatabaseRuntime

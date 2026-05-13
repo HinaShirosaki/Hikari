@@ -1,6 +1,7 @@
 import { escapeHtml } from '../tool-box/common.js';
 import { assembleCloningPlan } from '../tool-box/cloning-assembly.js';
 import { cleanText, clamp, normalizeSequenceText } from './shared.js';
+import { copyPrimerValueFromEvent, renderPrimerCopyButton } from './primer-copy.js';
 
 const STRATEGY_WHOLE_PLASMID = 'whole-plasmid';
 const STRATEGY_TWO_STEP_LIGATION = 'two-step-ligation';
@@ -440,12 +441,23 @@ function renderPrimerTable(primers = []) {
         <tbody>
           ${primers.map((primer, index) => {
             const sequence = normalizeSequenceText(primer?.sequence || '');
+            const primerName = cleanText(primer?.name, 160) || `Primer ${index + 1}`;
             return `
               <tr>
                 <td>${escapeHtml(cleanText(primer?.groupLabel, 120) || '-')}</td>
-                <td>${escapeHtml(cleanText(primer?.name, 160) || `Primer ${index + 1}`)}</td>
+                <td>
+                  <div class="sequence-viewer-primer-copy-cell">
+                    <span class="sequence-viewer-primer-copy-value">${escapeHtml(primerName)}</span>
+                    ${renderPrimerCopyButton(primerName, 'name', 'primer name')}
+                  </div>
+                </td>
                 <td>${escapeHtml(formatPrimerRole(primer?.role))}</td>
-                <td class="sequence-viewer-cloning-design-primer-seq">${escapeHtml(sequence || '-')}</td>
+                <td class="sequence-viewer-cloning-design-primer-seq">
+                  <div class="sequence-viewer-primer-copy-cell sequence-viewer-primer-copy-cell-sequence">
+                    <span class="sequence-viewer-primer-copy-value">${escapeHtml(sequence || '-')}</span>
+                    ${renderPrimerCopyButton(sequence, 'sequence', 'primer sequence')}
+                  </div>
+                </td>
                 <td>${Math.max(0, Number(primer?.length) || sequence.length).toLocaleString()} nt</td>
                 <td>${escapeHtml(formatNumber(primer?.tm, 1))} C</td>
                 <td>${escapeHtml(formatNumber(primer?.gcContent, 1))}%</td>
@@ -771,6 +783,22 @@ export function createSequenceViewerCloningDesignController(config = {}) {
     elements.cloningDesignRunBtn?.addEventListener('click', (event) => {
       event.preventDefault();
       designPrimers();
+    });
+
+    elements.cloningDesignResult?.addEventListener('click', (event) => {
+      void (async () => {
+        const result = await copyPrimerValueFromEvent(event);
+        if (!result.handled) {
+          return;
+        }
+        const label = result.kind === 'sequence' ? 'primer sequence' : 'primer name';
+        setStatus(
+          result.copied
+            ? `Copied ${label}.`
+            : `Clipboard access is unavailable. Copy the ${label} directly from the table.`,
+          !result.copied
+        );
+      })();
     });
   }
 

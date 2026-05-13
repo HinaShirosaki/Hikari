@@ -396,6 +396,66 @@ test('[EDGE] tool-box evaluateSiteDirectedMutagenesis supports short insertion r
   assert.equal(result.editType, 'insertion');
 });
 
+test('[EDGE] tool-box designCloningPrimers designs simple site-directed mutagenesis primers', () => {
+  const leftFlank = 'GCGCGCGCGCGCGATATATATATATATATATATA';
+  const rightFlank = 'ATATATATATATATATATATGCGCGCGCGCGCGAT';
+  const template = `${leftFlank}AAA${rightFlank}`;
+  const primerPlan = toolBox.designCloningPrimers({
+    strategy: 'site-directed-mutagenesis',
+    selectedHost: {
+      id: 'host-1',
+      name: 'Template',
+      sequence: template
+    },
+    editRequest: {
+      type: 'point-mutation',
+      start: leftFlank.length + 1,
+      end: leftFlank.length + 3,
+      originalSequence: 'AAA',
+      editedSequence: 'GAA'
+    }
+  });
+
+  assert.equal(primerPlan.feasible, true);
+  assert.equal(primerPlan.primerCount, 2);
+  assert.equal(primerPlan.primers[0].role, 'mutagenesis-forward');
+  assert.equal(primerPlan.primers[1].role, 'mutagenesis-reverse');
+  assert.equal(primerPlan.primers[0].tailSequence, 'GAA');
+  assert.equal(primerPlan.primers[1].tailSequence, 'TTC');
+  assert.equal(primerPlan.primerTmDifferences[0], 0);
+});
+
+test('[EDGE] tool-box designCloningPrimers preserves insertion boundaries for mutagenesis primers', () => {
+  const template = 'GCGCGCGCGCGCGATATATATATATATATATATAAAAACCCCCGGGGGTTTTTATATATATATGCGCGCGCGCGCGAT';
+  const insertAt = 36;
+  const insertedSequence = 'CCATGG';
+  const primerPlan = toolBox.designCloningPrimers({
+    strategy: 'site-directed-mutagenesis',
+    selectedHost: {
+      id: 'host-1',
+      name: 'Template',
+      sequence: template
+    },
+    editRequest: {
+      type: 'insertion',
+      position: insertAt + 1,
+      start: insertAt + 1,
+      end: insertAt + 1,
+      originalSequence: '',
+      editedSequence: insertedSequence
+    }
+  });
+
+  assert.equal(primerPlan.feasible, true);
+  const forwardPrimer = primerPlan.primers[0];
+  const insertionIndex = forwardPrimer.sequence.indexOf(insertedSequence);
+  assert.equal(insertionIndex >= 0, true);
+  const leftArm = forwardPrimer.sequence.slice(0, insertionIndex);
+  const rightArm = forwardPrimer.sequence.slice(insertionIndex + insertedSequence.length);
+  assert.equal(leftArm, template.slice(insertAt - leftArm.length, insertAt));
+  assert.equal(rightArm, template.slice(insertAt, insertAt + rightArm.length));
+});
+
 test('[EDGE] tool-box designCloningPrimers falls back to relaxed thresholds when needed', () => {
   const primerPlan = toolBox.designCloningPrimers({
     strategy: 'restriction-ligation',
@@ -445,6 +505,20 @@ test('[EDGE] tool-box designCloningPrimers supports multi-primer tiling for long
   assert.equal(primerPlan.feasible, true);
   assert.equal(primerPlan.primerCount > 2, true);
   assert.equal(primerPlan.primerOrder.includes('tile_outer_left'), true);
+});
+
+test('[EDGE] tool-box designPcrPrimerPair designs a forward and reverse primer for a selected sequence', () => {
+  const primerPlan = toolBox.designPcrPrimerPair(
+    'GCGCGCGCGCGCGATATATATATATATATATATAGCGCGCGCGCGCGAT',
+    { name: 'selected_region' }
+  );
+
+  assert.equal(primerPlan.feasible, true);
+  assert.equal(primerPlan.primerCount, 2);
+  assert.equal(primerPlan.primers[0].name, 'selected_region_F');
+  assert.equal(primerPlan.primers[1].name, 'selected_region_R');
+  assert.equal(primerPlan.primers[0].role, 'pcr-forward');
+  assert.equal(primerPlan.primers[1].role, 'pcr-reverse');
 });
 
 test('[EDGE] tool-box assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {

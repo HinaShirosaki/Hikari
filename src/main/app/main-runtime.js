@@ -31,7 +31,7 @@ const { defaultCleanText } = require('../helpers/agent/shared/agent-llm-utils.js
 const { appendLogWithRotation } = require('../helpers/agent/shared/agent-observability');
 const { createMainAgentServices } = require('../helpers/main/create-main-agent-services.js');
 const { createMainAppPaths } = require('../helpers/main/app-paths.js');
-const { createMainDataHelpers } = require('../helpers/main/data-helpers');
+const { createMainDataHelpers } = require('../helpers/main/data/data-helpers');
 const {
   discoverPapersFromStorageRoot,
   getBundlePaths,
@@ -39,7 +39,7 @@ const {
   syncSqliteBundleFromSnapshot,
   hydrateSnapshotFromBundle,
   importStorageRoot
-} = require('../helpers/main/storage-bundle');
+} = require('../helpers/main/storage-bundle/index.js');
 const {
   listSequenceEntries,
   getSequenceEntry,
@@ -51,11 +51,11 @@ const {
   listRecognizedBackbones,
   upsertRecognizedBackbone,
   recognizeSequenceBackbone
-} = require('../helpers/main/sequence-library');
+} = require('../helpers/main/sequence/sequence-library');
 const {
   buildCompactIndexedSnapshot
-} = require('../helpers/main/data-snapshot-utils');
-const { createChatLogTransformMonitor } = require('../helpers/main/chat-log-transformer.js');
+} = require('../helpers/main/data/data-snapshot-utils');
+const { createChatLogTransformMonitor } = require('../helpers/main/llm/chat-log-transformer.js');
 const { registerMainIpc } = require('../ipc');
 const { createAgentLogRuntime } = require('./agent-log-runtime');
 const { createLlmPromptsRuntime } = require('./llm-prompts-runtime');
@@ -246,6 +246,7 @@ function createMainRuntime({
         setCodexCliModel,
         setCodexCliReasoningEffort,
         requestCodexCliText,
+        directLlmRegistry: agentServices.directLlmRegistry,
         getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
         writeSavedTelegramToken: telegramRuntime.writeSavedTelegramToken,
         restartTelegramBot: telegramRuntime.restartTelegramBot,

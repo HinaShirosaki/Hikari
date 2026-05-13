@@ -1,3 +1,41 @@
+import { defaultState } from '../modules/app-state.js';
+
+const WORKSPACE_STATE_KEYS = [
+  'members',
+  'instruments',
+  'protocols',
+  'projects',
+  'workflows',
+  'workflowTemplates',
+  'journalClubs',
+  'papers',
+  'paperExperimentLinks',
+  'knowledgeChats',
+  'agentChat',
+  'messages',
+  'notebookEntries',
+  'synthesisChemistryDrafts',
+  'assays',
+  'gelAnalyses',
+  'samples',
+  'objectGraph',
+  'labInventory',
+  'inventory'
+];
+
+const WORKSPACE_SETTINGS_KEYS = [
+  'pendingNotebookSampleCapture',
+  'storageImport',
+  'dashboard'
+];
+
+function cloneDefaultValue(value) {
+  if (typeof structuredClone === 'function') {
+    return structuredClone(value);
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -173,6 +211,8 @@ function buildStorageImportSummary(payload) {
       workflowTemplates: Number(summary.workflowTemplates) || 0,
       workflows: Number(summary.workflows) || 0,
       papers: Number(summary.papers) || 0,
+      assays: Number(summary.assays) || 0,
+      gelAnalyses: Number(summary.gelAnalyses) || 0,
       chemicals: Number(summary.chemicals) || 0,
       personalInventoryContainers: Number(summary.personalInventoryContainers) || 0,
       sequenceEntries: Number(summary.sequenceEntries) || 0
@@ -196,6 +236,8 @@ function buildStorageImportError(previous, message) {
         workflowTemplates: 0,
         workflows: 0,
         papers: 0,
+        assays: 0,
+        gelAnalyses: 0,
         chemicals: 0,
         personalInventoryContainers: 0,
         sequenceEntries: 0
@@ -213,6 +255,20 @@ export function createStorageImportController({
   rebuildObjectGraph,
   windowObject = window
 }) {
+  function refreshWorkspaceForStorageRoot(storagePath) {
+    WORKSPACE_STATE_KEYS.forEach((key) => {
+      state[key] = cloneDefaultValue(defaultState[key]);
+    });
+
+    if (!state.settings || typeof state.settings !== 'object') {
+      state.settings = cloneDefaultValue(defaultState.settings);
+    }
+    WORKSPACE_SETTINGS_KEYS.forEach((key) => {
+      state.settings[key] = cloneDefaultValue(defaultState.settings[key]);
+    });
+    state.settings.storagePath = String(storagePath || '').trim();
+  }
+
   function mergeStorageImportPatch(statePatch) {
     const patch = statePatch && typeof statePatch === 'object' ? statePatch : {};
     state.projects = mergeRecordsById(state.projects, patch.projects, 'project');
@@ -222,6 +278,8 @@ export function createStorageImportController({
     state.workflows = mergeRecordsById(state.workflows, patch.workflows, 'workflow');
     state.papers = mergePaperRecords(state.papers, patch.papers);
     state.paperExperimentLinks = mergePaperExperimentLinks(state.paperExperimentLinks, patch.paperExperimentLinks);
+    state.assays = mergeRecordsById(state.assays, patch.assays, 'assay');
+    state.gelAnalyses = mergeRecordsById(state.gelAnalyses, patch.gelAnalyses, 'gel');
 
     const existingLabInventory = state.labInventory && typeof state.labInventory === 'object'
       ? state.labInventory
@@ -244,6 +302,27 @@ export function createStorageImportController({
     state.settings.storageImport = buildStorageImportError(previous, message);
   }
 
+  async function ensureStorageRootDirectory(storagePath) {
+    if (!windowObject.enanaApi?.ensureStorageDirectory) {
+      return { ok: true, skipped: true };
+    }
+    try {
+      const result = await windowObject.enanaApi.ensureStorageDirectory(storagePath);
+      if (result?.ok === false) {
+        return {
+          ok: false,
+          error: result.error || 'Unable to initialize the storage folder.'
+        };
+      }
+      return { ok: true, path: result?.path || storagePath };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error?.message || 'Unable to initialize the storage folder.'
+      };
+    }
+  }
+
   async function runStorageRootImport(storagePath, options = {}) {
     const resolvedStoragePath = String(storagePath || '').trim();
     if (!resolvedStoragePath || !windowObject.enanaApi?.importStorageRoot) {
@@ -251,12 +330,32 @@ export function createStorageImportController({
     }
 
     const persistMergedState = options.persistMergedState === true;
+    const resetWorkspace = options.resetWorkspace === true;
     try {
+      const ensured = await ensureStorageRootDirectory(resolvedStoragePath);
+      if (!ensured.ok) {
+        updateStorageImportError(ensured.error || 'Unable to initialize the storage folder.');
+        persistState(state);
+        return {
+          ok: false,
+          refreshed: false,
+          error: ensured.error || 'Unable to initialize the storage folder.'
+        };
+      }
+
+      if (resetWorkspace) {
+        refreshWorkspaceForStorageRoot(resolvedStoragePath);
+      }
+
       const result = await windowObject.enanaApi.importStorageRoot(resolvedStoragePath);
       if (!result?.ok) {
         updateStorageImportError(result?.error || 'Storage import failed.');
         persistState(state);
-        return { ok: false, error: result?.error || 'Storage import failed.' };
+        return {
+          ok: false,
+          refreshed: resetWorkspace,
+          error: result?.error || 'Storage import failed.'
+        };
       }
 
       mergeStorageImportPatch(result.statePatch);
@@ -270,6 +369,7 @@ export function createStorageImportController({
       }
       return {
         ok: true,
+        refreshed: resetWorkspace,
         summary: result.summary || {},
         warnings: result.warnings || [],
         manifestPath: result.manifestPath || ''
@@ -277,7 +377,11 @@ export function createStorageImportController({
     } catch (error) {
       updateStorageImportError(error?.message || 'Storage import failed.');
       persistState(state);
-      return { ok: false, error: error?.message || 'Storage import failed.' };
+      return {
+        ok: false,
+        refreshed: resetWorkspace,
+        error: error?.message || 'Storage import failed.'
+      };
     }
   }
 
@@ -292,6 +396,7 @@ export function createStorageImportController({
   return {
     hydrateStateFromStorageRoot,
     mergeStorageImportPatch,
+    refreshWorkspaceForStorageRoot,
     runStorageRootImport
   };
 }

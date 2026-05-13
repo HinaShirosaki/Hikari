@@ -1,0 +1,158 @@
+/* Shared overlapping-window chrome. View files keep only content-specific layout. */
+.app-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2550;
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  overflow: auto;
+  padding: 18px;
+  background: rgba(18, 34, 55, 0.24);
+}
+
+.app-dialog-overlay--top {
+  align-items: start;
+  padding: max(76px, env(safe-area-inset-top, 0px)) 18px 18px;
+}
+
+.app-dialog-overlay--center {
+  align-items: center;
+}
+
+.app-dialog-overlay[hidden] {
+  display: none !important;
+}
+
+.app-dialog-surface {
+  --app-dialog-width: 920px;
+  --app-dialog-max-height: calc(100svh - 36px);
+  --app-dialog-padding: 18px;
+  --app-dialog-gap: 16px;
+  width: min(var(--app-dialog-width), calc(100vw - 32px));
+  max-height: var(--app-dialog-max-height);
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: var(--app-dialog-gap);
+  padding: var(--app-dialog-padding);
+  border: 1px solid color-mix(in srgb, var(--line) 88%, var(--accent) 12%);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-elevated) 96%, var(--surface-subtle) 4%);
+  box-shadow: 0 24px 58px rgba(18, 34, 55, 0.2);
+}
+
+.app-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.app-dialog-head h3,
+.app-dialog-head h4,
+.app-dialog-head p {
+  margin: 0;
+}
+
+#home-view .app-dialog-overlay.app-dialog-overlay--contained {
+  position: absolute;
+  z-index: 20;
+  padding: 84px 24px 24px;
+  background: rgba(18, 34, 55, 0.22);
+}
+
+#home-view .home-dialog.app-dialog-surface {
+  --app-dialog-width: 320px;
+  --app-dialog-padding: 18px;
+  --app-dialog-gap: 12px;
+  border-color: color-mix(in srgb, var(--home-tile-line) 88%, var(--accent) 12%);
+}
+
+#home-view .home-notebook-note-dialog.app-dialog-surface {
+  --app-dialog-width: 380px;
+}
+
+.chemical-dialog.app-dialog-surface {
+  --app-dialog-width: 920px;
+}
+
+.sample-compound-dialog.app-dialog-surface {
+  --app-dialog-width: 1180px;
+}
+
+.assay-serial-dilution-dialog.app-dialog-surface,
+.assay-result-import-dialog.app-dialog-surface {
+  --app-dialog-width: 1040px;
+  --app-dialog-max-height: calc(100svh - 96px);
+  --app-dialog-padding: 16px;
+  --app-dialog-gap: 12px;
+}
+
+.sequence-viewer-feature-editor.app-dialog-surface {
+  --app-dialog-width: 560px;
+  --app-dialog-padding: 14px;
+  --app-dialog-gap: 12px;
+}
+
+.sequence-viewer-sequence-edit-dialog.app-dialog-surface {
+  --app-dialog-width: 480px;
+  --app-dialog-padding: 14px;
+  --app-dialog-gap: 12px;
+}
+
+.sequence-viewer-backbone-dialog.app-dialog-surface {
+  --app-dialog-width: 1180px;
+  --app-dialog-max-height: calc(100svh - 96px);
+  --app-dialog-gap: 14px;
+}
+
+.sequence-viewer-alignment-dialog.app-dialog-surface {
+  --app-dialog-width: 760px;
+  --app-dialog-max-height: calc(100svh - 96px);
+  --app-dialog-padding: 16px;
+  --app-dialog-gap: 12px;
+}
+
+.protocol-polish-dialog.app-dialog-surface,
+.protocol-generate-input-dialog.app-dialog-surface,
+.protocol-generate-result-dialog.app-dialog-surface {
+  --app-dialog-width: 100%;
+  --app-dialog-padding: clamp(18px, 2.5vw, 24px);
+  --app-dialog-gap: 14px;
+  width: min(var(--app-dialog-width), 100%);
+}
+
+body.theme-night .app-dialog-overlay {
+  background: rgba(9, 18, 33, 0.54);
+}
+
+body.theme-night .app-dialog-surface {
+  border-color: rgba(145, 174, 214, 0.32);
+  background: rgba(20, 33, 57, 0.98);
+  box-shadow: 0 24px 58px rgba(4, 10, 20, 0.42);
+}
+
+body.theme-night #home-view .home-dialog.app-dialog-surface {
+  background: rgba(20, 33, 57, 0.98);
+}
+
+@media (max-width: 720px) {
+  .app-dialog-overlay {
+    padding: 12px;
+  }
+
+  .app-dialog-overlay--top {
+    padding-top: 68px;
+  }
+
+  #home-view .app-dialog-overlay.app-dialog-overlay--contained {
+    padding: 72px 14px 14px;
+  }
+
+  .app-dialog-surface {
+    width: min(var(--app-dialog-width), calc(100vw - 20px));
+    padding: clamp(14px, 4vw, var(--app-dialog-padding));
+  }
+}

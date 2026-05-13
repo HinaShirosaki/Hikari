@@ -83,6 +83,7 @@ function createCodexAgentLlmProvider(deps = {}) {
       const raw = await requestCodexCliText({
         prompt,
         model: cleanText(input.model, 120),
+        reasoningEffort: cleanText(input.reasoningEffort || input.reasoning_effort, 40),
         enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
         attachments
@@ -96,6 +97,7 @@ function createCodexAgentLlmProvider(deps = {}) {
           : `${normalizedStage} completed via Codex agent transport.`,
         requestPayload: {
           model: cleanText(input.model, 120),
+          reasoningEffort: cleanText(input.reasoningEffort || input.reasoning_effort, 40),
           prompt,
           enableWebSearch: input.enableWebSearch === true,
           attachments: attachments.map((attachment) => ({
@@ -156,6 +158,7 @@ function createCodexAgentLlmProvider(deps = {}) {
       const raw = await requestCodexCliText({
         prompt,
         model: cleanText(input.model, 120),
+        reasoningEffort: cleanText(input.reasoningEffort || input.reasoning_effort, 40),
         enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
         fileName: normalizedFileName,
@@ -168,6 +171,7 @@ function createCodexAgentLlmProvider(deps = {}) {
         summary: `${normalizedStage} completed via Codex agent transport.`,
         requestPayload: {
           model: cleanText(input.model, 120),
+          reasoningEffort: cleanText(input.reasoningEffort || input.reasoning_effort, 40),
           prompt,
           enableWebSearch: input.enableWebSearch === true,
           attachment: {
@@ -227,6 +231,7 @@ function createCodexAgentLlmProvider(deps = {}) {
       const raw = await requestCodexCliText({
         prompt,
         model: cleanText(input.model, 120),
+        reasoningEffort: cleanText(input.reasoningEffort || input.reasoning_effort, 40),
         enableWebSearch: true,
         cwd: getWorkingDirectory()
       });
@@ -237,6 +242,7 @@ function createCodexAgentLlmProvider(deps = {}) {
         summary: `${normalizedStage} completed via Codex agent transport.`,
         requestPayload: {
           model: cleanText(input.model, 120),
+          reasoningEffort: cleanText(input.reasoningEffort || input.reasoning_effort, 40),
           prompt,
           enableWebSearch: true
         },
@@ -289,6 +295,7 @@ function createCodexAgentLlmProvider(deps = {}) {
       const raw = await requestCodexCliText({
         prompt,
         model: cleanText(input.model, 120),
+        reasoningEffort: cleanText(input.reasoningEffort || input.reasoning_effort, 40),
         enableWebSearch: input.enableWebSearch === true,
         cwd: getWorkingDirectory(),
         imageDataUrl: normalizedImageData
@@ -300,6 +307,7 @@ function createCodexAgentLlmProvider(deps = {}) {
         summary: `${normalizedStage} completed via Codex multimodal prompt transport.`,
         requestPayload: {
           model: cleanText(input.model, 120),
+          reasoningEffort: cleanText(input.reasoningEffort || input.reasoning_effort, 40),
           prompt,
           enableWebSearch: input.enableWebSearch === true,
           attachment: {

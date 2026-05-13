@@ -68,16 +68,16 @@
             </label>
             <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="ORF stop codons">
               <span class="sequence-viewer-inline-toggle-group-label">ORF Stops</span>
-              <label class="sequence-viewer-inline-toggle" title="Show TAG stop codons in the selected ORF translation row.">
-                <input id="sequence-viewer-orf-stop-tag-toggle" type="checkbox" />
+              <label class="sequence-viewer-inline-toggle" title="Use TAG as an ORF terminator.">
+                <input id="sequence-viewer-orf-stop-tag-toggle" type="checkbox" checked />
                 <span>TAG</span>
               </label>
-              <label class="sequence-viewer-inline-toggle" title="Show TAA stop codons in the selected ORF translation row.">
-                <input id="sequence-viewer-orf-stop-taa-toggle" type="checkbox" />
+              <label class="sequence-viewer-inline-toggle" title="Use TAA as an ORF terminator.">
+                <input id="sequence-viewer-orf-stop-taa-toggle" type="checkbox" checked />
                 <span>TAA</span>
               </label>
-              <label class="sequence-viewer-inline-toggle" title="Show TGA stop codons in the selected ORF translation row.">
-                <input id="sequence-viewer-orf-stop-tga-toggle" type="checkbox" />
+              <label class="sequence-viewer-inline-toggle" title="Use TGA as an ORF terminator.">
+                <input id="sequence-viewer-orf-stop-tga-toggle" type="checkbox" checked />
                 <span>TGA</span>
               </label>
             </div>
@@ -147,9 +147,9 @@
 
         <div id="sequence-viewer-feature-context-menu" class="sequence-viewer-context-menu" hidden></div>
 
-        <div id="sequence-viewer-feature-editor-overlay" class="sequence-viewer-feature-editor-overlay" hidden>
-          <form id="sequence-viewer-feature-editor-form" class="sequence-viewer-feature-editor" autocomplete="off">
-            <div class="result-card-head sequence-viewer-feature-editor-head">
+        <div id="sequence-viewer-feature-editor-overlay" class="sequence-viewer-feature-editor-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+          <form id="sequence-viewer-feature-editor-form" class="sequence-viewer-feature-editor app-dialog-surface" autocomplete="off">
+            <div class="result-card-head sequence-viewer-feature-editor-head app-dialog-head">
               <h4 id="sequence-viewer-feature-editor-title">Add Feature</h4>
               <button id="sequence-viewer-feature-editor-close" type="button" class="ghost-btn">Close</button>
             </div>
@@ -192,9 +192,23 @@
           </form>
         </div>
 
-        <div id="sequence-viewer-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay" hidden>
-          <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog" autocomplete="off">
-            <div class="result-card-head sequence-viewer-sequence-edit-head">
+        <div id="sequence-viewer-primer-design-overlay" class="sequence-viewer-primer-design-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+          <section class="sequence-viewer-primer-design-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-design-title">
+            <div class="result-card-head sequence-viewer-primer-design-head app-dialog-head">
+              <h4 id="sequence-viewer-primer-design-title">Designed Primers</h4>
+              <button id="sequence-viewer-primer-design-close" type="button" class="ghost-btn">Close</button>
+            </div>
+            <p id="sequence-viewer-primer-design-note" class="small-note">Primer details will appear here.</p>
+            <div id="sequence-viewer-primer-design-result" class="sequence-viewer-primer-design-result calc-output"></div>
+            <div class="form-actions">
+              <button id="sequence-viewer-primer-design-dismiss" type="button" class="primary-btn">Done</button>
+            </div>
+          </section>
+        </div>
+
+        <div id="sequence-viewer-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+          <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
+            <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
               <h4 id="sequence-viewer-sequence-edit-title">Edit Bases</h4>
               <button id="sequence-viewer-sequence-edit-close" type="button" class="ghost-btn">Close</button>
             </div>
@@ -213,9 +227,9 @@
           </form>
         </div>
 
-        <div id="sequence-viewer-backbone-dialog-overlay" class="sequence-viewer-backbone-dialog-overlay" hidden>
-          <div class="sequence-viewer-backbone-dialog" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-backbone-dialog-title">
-            <div class="sequence-viewer-backbone-dialog-head">
+        <div id="sequence-viewer-backbone-dialog-overlay" class="sequence-viewer-backbone-dialog-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
+          <div class="sequence-viewer-backbone-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-backbone-dialog-title">
+            <div class="sequence-viewer-backbone-dialog-head app-dialog-head">
               <div>
                 <h4 id="sequence-viewer-backbone-dialog-title">Backbone / Insert Candidates</h4>
                 <p id="sequence-viewer-backbone-dialog-subtitle" class="small-note">Review promoter and ORF candidates before applying a backbone/insert interpretation.</p>
@@ -316,8 +330,8 @@
         </div>
       </div>
 
-      <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace" hidden>
-        <div class="sequence-viewer-alignment-dialog" role="dialog" aria-modal="true" aria-label="Alignment">
+      <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace app-dialog-overlay app-dialog-overlay--top" hidden>
+        <div class="sequence-viewer-alignment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-label="Alignment">
           <div class="sequence-viewer-alignment-toolbar">
             <button id="sequence-viewer-alignment-close-btn" type="button" class="ghost-btn sequence-viewer-alignment-close-icon" aria-label="Close alignment dialog">x</button>
             <span id="sequence-viewer-alignment-status" class="small-note">Paste a sequence or choose a file to align against the current record.</span>

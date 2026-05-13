@@ -2,6 +2,10 @@ module.exports = function registerEdgeSequenceViewerFoundationsSuite(context = {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
+function stripHtmlTags(html) {
+  return String(html || '').replace(/<[^>]*>/g, '');
+}
+
 test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () => {
   [
     'normalizeSequenceText',
@@ -544,6 +548,25 @@ test('[EDGE] sequence-viewer buildOrfFeatures collapses nested ORFs in the same 
   assert.equal(plusFrameOne[0].orfLengthAa, 3);
 });
 
+test('[EDGE] sequence-viewer buildOrfFeatures updates when active ORF stop codons change', () => {
+  const sequence = 'ATGAAATGACCCTAA';
+  const allStops = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 });
+  const taaOnly = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', {
+    minAaLength: 2,
+    stopCodons: { TAG: false, TAA: true, TGA: false }
+  });
+  const noStops = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', {
+    minAaLength: 2,
+    stopCodons: { TAG: false, TAA: false, TGA: false }
+  });
+
+  assert.equal(allStops[0].stopCodon, 'TGA');
+  assert.equal(allStops[0].orfLengthNt, 9);
+  assert.equal(taaOnly[0].stopCodon, 'TAA');
+  assert.equal(taaOnly[0].orfLengthNt, 15);
+  assert.equal(noStops.length, 0);
+});
+
 test('[EDGE] sequence-viewer commercial restriction builder keeps only unique cutter sites and groups same-site enzymes once', () => {
   const features = sequenceViewerInternals.buildCommercialRestrictionFeatures('GAATTCAAAAGAATTCGGATCCGACGTC', 'linear');
   const bamhiSite = features.find((feature) => feature.site === 'GGATCC');
@@ -671,7 +694,7 @@ test('[EDGE] sequence-viewer restriction renderer emits px-based geometry with l
   assert.match(html, /sequence-viewer-restriction-label/);
   assert.match(html, /sequence-viewer-restriction-box/);
   assert.match(html, /sequence-viewer-restriction-cut-svg/);
-  assert.match(html, /sequence-viewer-line-restriction-track" style="width:[0-9.]+px;height:[0-9.]+px;"/);
+  assert.match(html, /sequence-viewer-line-restriction-track" style="width:[0-9.]+px;height:[0-9.]+px;[^"]*"/);
 
   const styleMatch = html.match(
     /class="sequence-viewer-restriction-annot[^"]*"\s+data-feature-index="0"\s+style="([^"]+)"/
@@ -696,6 +719,44 @@ test('[EDGE] sequence-viewer restriction renderer emits px-based geometry with l
   assert.equal(topCutX, bridgeStartX);
   assert.equal(bridgeEndX, bottomCutX);
   assert.notEqual(topCutX, bottomCutX);
+});
+
+test('[EDGE] sequence-viewer restriction renderer stacks overlapping site labels into lanes', () => {
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('TTTGAATTCTTT', [], {
+    lineLength: 12,
+    charAdvancePx: 10,
+    sequenceLineHeightPx: 16,
+    selectedFeatureIndex: -1,
+    features: [
+      {
+        name: 'EcoRI',
+        type: 'restriction_site',
+        strand: 1,
+        site: 'GAATTC',
+        cut: 'G^AATTC',
+        segments: [{ start: 3, end: 9 }]
+      },
+      {
+        name: 'EcoRI-alt',
+        type: 'restriction_site',
+        strand: 1,
+        site: 'GAATTC',
+        cut: 'G^AATTC',
+        segments: [{ start: 3, end: 9 }]
+      }
+    ]
+  });
+
+  assert.match(html, /--sequence-viewer-restriction-lanes:2;/);
+  assert.match(html, /class="sequence-viewer-strand-pair" style="padding-top:[0-9.]+px;"/);
+
+  const styles = [...html.matchAll(
+    /class="sequence-viewer-restriction-annot[^"]*"\s+data-feature-index="\d+"\s+style="([^"]+)"/g
+  )].map((match) => match[1]);
+  assert.equal(styles.length, 2);
+  assert.equal(styles.every((style) => !/top:-[0-9.]+px;/.test(style)), true);
+  assert.equal(styles.some((style) => /--sequence-viewer-restriction-label-stack-offset:0\.000px;/.test(style)), true);
+  assert.equal(styles.some((style) => /--sequence-viewer-restriction-label-stack-offset:(?!0\.000)[0-9.]+px;/.test(style)), true);
 });
 
 test('[EDGE] sequence-viewer line feature renderer emits px-based span bars', () => {
@@ -796,7 +857,7 @@ test('[EDGE] sequence-viewer dual-strand renderer places selected ORF amino-acid
   assert.equal(minusBottom < minusAa, true);
 });
 
-test('[EDGE] sequence-viewer ORF translation context can show stop codons as TAG/TAA/TGA labels', () => {
+test('[EDGE] sequence-viewer ORF translation context terminates before stop codons', () => {
   const sequence = 'ATGAAATAGCCC';
   const feature = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 })[0];
   const context = sequenceViewerInternals.buildSelectedOrfTranslationContext(sequence, feature, {
@@ -804,12 +865,12 @@ test('[EDGE] sequence-viewer ORF translation context can show stop codons as TAG
   });
 
   assert.equal(Boolean(context), true);
-  assert.equal(context.anchors.map((anchor) => anchor.displayText).join('|'), 'M|K|TAG');
-  assert.equal(context.anchors[2].isStop, true);
-  assert.equal(context.anchors[2].colorKey, 'TAG');
+  assert.equal(context.anchors.map((anchor) => anchor.displayText).join('|'), 'M|K');
+  assert.equal(context.anchors.some((anchor) => anchor.isStop), false);
+  assert.equal(context.anchors.some((anchor) => anchor.codon === 'TAG'), false);
 });
 
-test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells and can render stop codon labels', () => {
+test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells without rendering stop labels', () => {
   const sequence = 'ATGAAATAGCCC';
   const feature = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 })[0];
   const context = sequenceViewerInternals.buildSelectedOrfTranslationContext(sequence, feature, {
@@ -825,7 +886,7 @@ test('[EDGE] sequence-viewer dual-strand renderer color-codes amino-acid cells a
   });
 
   assert.match(html, /sequence-viewer-aa-chip/);
-  assert.match(html, /data-aa-display="TAG"/);
+  assert.doesNotMatch(html, /data-aa-display="TAG"/);
   assert.match(html, /--sequence-viewer-aa-chip-color:#[0-9a-f]{6};/i);
 });
 
@@ -853,8 +914,9 @@ test('[EDGE] sequence-viewer dual-strand renderer shows 5/3 orientation and pair
   assert.match(html, /sequence-viewer-strand-row-bottom/);
   assert.match(html, /5'/);
   assert.match(html, /3'/);
-  assert.match(html, /CGT/);
-  assert.match(html, /GCA/);
+  const plainText = stripHtmlTags(html);
+  assert.match(plainText, /CGT/);
+  assert.match(plainText, /GCA/);
   const highlightCount = (html.match(/sequence-viewer-seq-highlight/g) || []).length;
   assert.equal(highlightCount, 2);
 });
@@ -954,6 +1016,8 @@ test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument emits standalone D
   assert.match(html, /circular-preview__leader/);
   assert.match(html, /circular-preview__scene/);
   assert.match(html, /circular-preview__hover-tooltip/);
+  assert.match(html, /background:\s*rgba\(255,\s*252,\s*247,\s*0\.98\)/i);
+  assert.match(html, /border:\s*1px solid rgba\(216,\s*206,\s*193,\s*0\.96\)/i);
   assert.match(html, /data-preview-tooltip="feature"/);
   assert.match(html, /data-tooltip-description="/);
   assert.match(html, /data-feature-x="/);

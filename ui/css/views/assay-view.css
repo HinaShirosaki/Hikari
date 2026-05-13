@@ -121,8 +121,7 @@
   gap: 4px;
 }
 
-.assay-browser-item-title,
-.assay-browser-item-meta {
+.assay-browser-item-title {
   margin: 0;
 }
 
@@ -130,12 +129,6 @@
   color: var(--strong);
   font-size: 0.94rem;
   font-weight: 650;
-}
-
-.assay-browser-item-meta {
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.35;
 }
 
 .assay-browser-item-actions {
@@ -251,15 +244,27 @@
   gap: 6px;
 }
 
+.assay-axis-config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
 .assay-axis-switch {
   display: grid;
   gap: 6px;
   align-content: stretch;
-  justify-items: start;
 }
 
 .assay-axis-switch .assay-mode-switch {
-  justify-self: start;
+  justify-self: stretch;
+  width: 100%;
+}
+
+.assay-axis-switch .assay-mode-switch > button {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .assay-sample-picker {
@@ -345,7 +350,8 @@
   margin: 0;
 }
 
-.assay-serial-dilution-overlay {
+.assay-serial-dilution-overlay,
+.assay-result-import-overlay {
   position: fixed;
   inset: 0;
   z-index: 2550;
@@ -357,11 +363,13 @@
   padding: max(72px, env(safe-area-inset-top, 0px)) 18px 18px;
 }
 
-.assay-serial-dilution-overlay[hidden] {
+.assay-serial-dilution-overlay[hidden],
+.assay-result-import-overlay[hidden] {
   display: none !important;
 }
 
-.assay-serial-dilution-dialog {
+.assay-serial-dilution-dialog,
+.assay-result-import-dialog {
   width: min(1040px, calc(100vw - 32px));
   max-height: calc(100svh - 90px);
   overflow: auto;
@@ -373,12 +381,14 @@
   box-shadow: 0 18px 40px rgba(27, 20, 14, 0.14);
 }
 
-.assay-serial-dilution-head {
+.assay-serial-dilution-head,
+.assay-result-import-head {
   justify-content: space-between;
   align-items: center;
 }
 
-.assay-serial-dilution-head h3 {
+.assay-serial-dilution-head h3,
+.assay-result-import-head h3 {
   margin: 0;
 }
 
@@ -397,6 +407,57 @@
 .assay-serial-dilution-content {
   display: grid;
   gap: 12px;
+}
+
+.assay-result-import-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.assay-result-import-candidates {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.assay-result-import-choice {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid rgba(53, 99, 153, 0.18);
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--text);
+  text-align: left;
+}
+
+.assay-result-import-choice:hover,
+.assay-result-import-choice:focus-visible,
+.assay-result-import-choice.is-active {
+  border-color: color-mix(in srgb, var(--accent) 42%, #ffffff);
+  background: color-mix(in srgb, var(--accent) 12%, #ffffff);
+}
+
+.assay-result-import-choice strong,
+.assay-result-import-choice span {
+  display: block;
+}
+
+.assay-result-import-preview {
+  min-width: 0;
+  overflow: auto;
+}
+
+.assay-result-import-preview .assay-tabulator .tabulator-cell {
+  cursor: default;
+}
+
+.assay-result-import-actions {
+  justify-content: flex-end;
 }
 
 .assay-serial-dilution-stock-table-wrap,
@@ -781,8 +842,13 @@
 .assay-analysis-chart {
   border: 1px solid rgba(53, 99, 153, 0.22);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.84);
+  background: #ffffff;
   padding: 10px;
+}
+
+.assay-analysis-chart-canvas {
+  background: #ffffff;
+  border-radius: 6px;
 }
 
 @media (max-width: 1100px) {
@@ -809,6 +875,10 @@
     grid-template-columns: 1fr;
   }
 
+  .assay-result-import-body {
+    grid-template-columns: 1fr;
+  }
+
   .assay-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -817,6 +887,10 @@
 @media (max-width: 640px) {
   .assay-header-row {
     align-items: stretch;
+  }
+
+  .assay-axis-config-grid {
+    grid-template-columns: 1fr;
   }
 
   .assay-create-sidebar .assay-form-grid,
@@ -896,13 +970,27 @@ body.theme-night .assay-sample-picker-item-meta {
   color: #b6c7e6;
 }
 
-body.theme-night .assay-serial-dilution-overlay {
+body.theme-night .assay-serial-dilution-overlay,
+body.theme-night .assay-result-import-overlay {
   background: rgba(9, 18, 33, 0.46);
 }
 
-body.theme-night .assay-serial-dilution-dialog {
+body.theme-night .assay-serial-dilution-dialog,
+body.theme-night .assay-result-import-dialog {
   border-color: rgba(145, 174, 214, 0.32);
   background: rgba(20, 33, 57, 0.98);
+}
+
+body.theme-night .assay-result-import-choice {
+  border-color: rgba(145, 174, 214, 0.2);
+  background: rgba(31, 49, 81, 0.72);
+}
+
+body.theme-night .assay-result-import-choice:hover,
+body.theme-night .assay-result-import-choice:focus-visible,
+body.theme-night .assay-result-import-choice.is-active {
+  border-color: rgba(151, 184, 235, 0.5);
+  background: rgba(56, 82, 127, 0.92);
 }
 
 body.theme-night .assay-serial-dilution-sample {
@@ -937,26 +1025,33 @@ body.theme-night .assay-tabulator {
 
 body.theme-night .assay-analysis-chart {
   border-color: rgba(145, 174, 214, 0.32);
-  background: rgba(20, 33, 57, 0.78);
+  background: #ffffff;
 }
 
-body.theme-night .assay-analysis-chart .rv-xy-plot__grid-lines__line {
-  stroke: rgba(145, 174, 214, 0.24);
+body.theme-night .assay-analysis-chart-canvas {
+  background: #ffffff;
 }
 
-body.theme-night .assay-analysis-chart .rv-xy-plot__axis__line,
-body.theme-night .assay-analysis-chart .rv-xy-plot__axis__tick__line {
-  stroke: rgba(145, 174, 214, 0.52);
+body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__grid-lines__line {
+  stroke: rgba(53, 99, 153, 0.2);
 }
 
-body.theme-night .assay-analysis-chart .rv-xy-plot__axis__tick__text {
-  fill: #d7e5ff;
+body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__line,
+body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__line {
+  stroke: rgba(53, 99, 153, 0.46);
+}
+
+body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__text {
+  fill: #1f3b66;
+}
+
+body.theme-night .assay-analysis-chart-title {
+  color: #1f3b66;
 }
 
 #assay-view .panel,
 #assay-view .card,
-.assay-tabulator,
-.assay-analysis-chart {
+.assay-tabulator {
   border: 0;
   border-radius: 0;
   background: transparent;

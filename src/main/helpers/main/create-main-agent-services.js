@@ -15,7 +15,7 @@ const {
   requestOpenAiResponsesWithBackoff,
   requestClaudeMessagesWithBackoff,
   requestGeminiGenerateContentWithBackoff
-} = require('./llm-provider-runtime.js');
+} = require('./llm/llm-provider-runtime.js');
 const {
   runPythonSandbox,
   createManagedPythonSandboxRuntime
@@ -66,10 +66,17 @@ const { createAgentInventoryLookupRuntime } = require('../agent/tools/agent-inve
 const { createAgentRecordLookupRuntime } = require('../agent/tools/agent-record-lookup.js');
 const { createAgentRuntimeSupport } = require('../agent/runtime/agent-runtime-support.js');
 const { createAgentSubAppApi } = require('../agent/runtime/agent-sub-app-api.js');
-const { createCodexAgentMcpHost } = require('../agent/codex-agent/mcp-host.js');
-const { createCodexAgentRuntime } = require('../agent/codex-agent/runtime.js');
+const { createAgentMcpHost } = require('../agent/mcp-contract/host.js');
+const {
+  buildCodexMcpContext,
+  createCodexAgentRuntime
+} = require('../agent/codex-agent/runtime.js');
 const { registerAgentToolExecutors } = require('../agent/tools/register-agent-tool-executors.js');
-const { asArray, clamp, createUniqueStrings } = require('./value-utils.js');
+const {
+  createDirectLlmModuleRegistry,
+  registerDefaultDirectLlmModules
+} = require('./llm/direct-llm-module-registry.js');
+const { asArray, clamp, createUniqueStrings } = require('./data/value-utils.js');
 
 function renderPromptTemplate(template, vars = {}) {
   const source = String(template || '');
@@ -208,6 +215,19 @@ function createMainAgentServices(deps = {}) {
   const agentLlmRuntimeHelpers = createAgentLlmRuntimeHelpers({
     ...sharedAgentLlmDeps
   });
+  const directLlmRegistry = registerDefaultDirectLlmModules(createDirectLlmModuleRegistry({
+    cleanText,
+    LLM_PROVIDERS,
+    DEFAULT_LLM_PROVIDER,
+    normalizeLlmProvider,
+    defaultLlmEndpointForProvider,
+    defaultAgentModelForProvider,
+    requestText: agentLlmRuntimeHelpers.requestText,
+    requestStructuredJsonPayload: agentLlmRuntimeHelpers.requestStructuredJsonPayload,
+    requestImageInput: agentLlmRuntimeHelpers.requestImageInput,
+    requestFileInput: agentLlmRuntimeHelpers.requestFileInput,
+    requestWebSearch: agentLlmRuntimeHelpers.requestWebSearch
+  }));
 
   const agentRuntimeRegistry = createAgentRuntimeRegistry({
     cleanText
@@ -357,17 +377,66 @@ function createMainAgentServices(deps = {}) {
           ?? agentMetadata.timeout_ms
           ?? agentMetadata.timeoutMs
       );
+      const cwd = cleanText(turnMetadata.cwd || agentMetadata.cwd || getCodexCliWorkingDirectory(), 2400);
+      const model = cleanText(turnMetadata.model || agentMetadata.model, 120);
+      const reasoningEffort = cleanText(
+        turnMetadata.reasoning_effort
+          || turnMetadata.reasoningEffort
+          || agentMetadata.reasoning_effort
+          || agentMetadata.reasoningEffort,
+        40
+      );
+      if (codexAgentMcpHost && typeof codexAgentMcpHost.ensureStarted === 'function') {
+        await codexAgentMcpHost.ensureStarted();
+      }
+      const project = turnMetadata.project && typeof turnMetadata.project === 'object'
+        ? turnMetadata.project
+        : (agentMetadata.project && typeof agentMetadata.project === 'object' ? agentMetadata.project : {});
+      const traceContext = {
+        requestId: cleanText(
+          turnMetadata.parent_request_id
+            || turnMetadata.parentRequestId
+            || agentMetadata.parent_request_id
+            || agentMetadata.parentRequestId,
+          160
+        )
+      };
+      const mcpContextJson = JSON.stringify(buildCodexMcpContext({
+        cwd,
+        model,
+        message: cleanText(turnInput.message, 3200),
+        conversation: asArray(turnInput.messages).map((entry) => ({
+          role: cleanText(entry?.role, 40),
+          text: cleanText(entry?.text || entry?.content || entry?.message, 3200)
+        })),
+        projectId: cleanText(
+          turnMetadata.project_id
+            || turnMetadata.projectId
+            || project.id
+            || project.projectId
+            || agentMetadata.project_id
+            || agentMetadata.projectId,
+          120
+        ),
+        projectName: cleanText(
+          turnMetadata.project_name
+            || turnMetadata.projectName
+            || project.name
+            || project.projectName
+            || agentMetadata.project_name
+            || agentMetadata.projectName,
+          220
+        ),
+        snapshot: {
+          data_file_path: cleanText(getDefaultDataFilePath(), 2000)
+        },
+        traceContext
+      }, { cleanText }));
       const result = await requestCodexCliText({
         prompt: buildCodexSubAgentPrompt(turnInput),
-        cwd: cleanText(turnMetadata.cwd || agentMetadata.cwd || getCodexCliWorkingDirectory(), 2400),
-        model: cleanText(turnMetadata.model || agentMetadata.model, 120),
-        reasoningEffort: cleanText(
-          turnMetadata.reasoning_effort
-            || turnMetadata.reasoningEffort
-            || agentMetadata.reasoning_effort
-            || agentMetadata.reasoningEffort,
-          40
-        ),
+        cwd,
+        model,
+        reasoningEffort,
         enableWebSearch: turnMetadata.enable_web_search === true
           || turnMetadata.enableWebSearch === true
           || agentMetadata.enable_web_search === true
@@ -380,7 +449,13 @@ function createMainAgentServices(deps = {}) {
             || agentMetadata.sessionId,
           240
         ),
-        returnMetadata: true
+        returnMetadata: true,
+        envOverrides: {
+          HIKARI_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
+          ENANA_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
+          HIKARI_CODEX_REQUEST_CONTEXT: mcpContextJson,
+          ENANA_CODEX_REQUEST_CONTEXT: mcpContextJson
+        }
       });
       const resultMetadata = result && typeof result === 'object' && !Array.isArray(result)
         ? (result.metadata && typeof result.metadata === 'object' && !Array.isArray(result.metadata) ? result.metadata : {})
@@ -450,7 +525,8 @@ function createMainAgentServices(deps = {}) {
     ...sharedAgentLlmDeps,
     literatureSearchRuntime,
     paperContextLoaderRuntime,
-    paperDownloadRuntime
+    paperDownloadRuntime,
+    subAgentRuntime
   });
   const purchaseRecommendationRuntime = createPurchaseRecommendationRuntime({
     ...sharedAgentLlmDeps,
@@ -487,7 +563,7 @@ function createMainAgentServices(deps = {}) {
     getAgentPythonSandboxRoot
   });
 
-  codexAgentMcpHost = createCodexAgentMcpHost({
+  codexAgentMcpHost = createAgentMcpHost({
     runTool: agentToolRuntime.runAgentTool,
     env: process.env,
     getSnapshot: () => ({
@@ -560,7 +636,8 @@ function createMainAgentServices(deps = {}) {
     agentAppApi,
     webSearchRuntime,
     paperDownloadRuntime,
-    literatureSearchWorkflowRuntime
+    literatureSearchWorkflowRuntime,
+    directLlmRegistry
   };
 }
 

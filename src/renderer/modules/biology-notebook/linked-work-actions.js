@@ -1,4 +1,4 @@
-import { exportNotebookEntryPdf } from '../pdf-export.js';
+import { exportNotebookEntryPdf } from '../pdf-export/index.js';
 import { findLatestLinkedRecord } from '../notebook-linked-previews.js';
 import {
   matchesNotebookType,

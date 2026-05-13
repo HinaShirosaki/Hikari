@@ -32,6 +32,7 @@ function buildParsedTable(rows, metadata = {}) {
   return {
     headers,
     rows: dataRows,
+    tableRows: normalizedRows,
     rowCount: dataRows.length,
     ...metadata
   };
@@ -220,6 +221,10 @@ function parseSharedStrings(xml) {
 }
 
 function parseWorkbookSheetTarget(entries) {
+  return parseWorkbookSheetTargets(entries)[0] || { path: 'xl/worksheets/sheet1.xml', name: 'Sheet1' };
+}
+
+function parseWorkbookSheetTargets(entries) {
   const workbookXml = readXmlEntry(entries, 'xl/workbook.xml');
   const relsXml = readXmlEntry(entries, 'xl/_rels/workbook.xml.rels');
   const rels = new Map();
@@ -231,17 +236,19 @@ function parseWorkbookSheetTarget(entries) {
     return '';
   });
 
-  const sheetMatch = workbookXml.match(/<sheet\b([^>]*)\/?>/);
-  if (!sheetMatch) {
-    return { path: 'xl/worksheets/sheet1.xml', name: 'Sheet1' };
+  const sheetMatches = [...workbookXml.matchAll(/<sheet\b([^>]*)\/?>/g)];
+  if (!sheetMatches.length) {
+    return [{ path: 'xl/worksheets/sheet1.xml', name: 'Sheet1' }];
   }
-  const attrs = parseXmlAttributes(sheetMatch[1]);
-  const relId = attrs['r:id'] || attrs.id || '';
-  const relTarget = relId ? rels.get(relId) : '';
-  return {
-    path: relTarget || 'xl/worksheets/sheet1.xml',
-    name: attrs.name || 'Sheet1'
-  };
+  return sheetMatches.map((match, index) => {
+    const attrs = parseXmlAttributes(match[1]);
+    const relId = attrs['r:id'] || attrs.id || '';
+    const relTarget = relId ? rels.get(relId) : '';
+    return {
+      path: relTarget || `xl/worksheets/sheet${index + 1}.xml`,
+      name: attrs.name || `Sheet${index + 1}`
+    };
+  });
 }
 
 function columnIndexFromCellRef(ref) {
@@ -310,15 +317,26 @@ function parseXlsx(buffer) {
   });
 }
 
-function maybeParseHtmlTable(buffer) {
-  const text = buffer.toString('utf8').replace(/^\uFEFF/, '').trim();
-  if (!/^<(!doctype\s+html|html|table)\b/i.test(text)) {
-    return null;
-  }
-  const tableMatch = text.match(/<table\b[\s\S]*?<\/table>/i);
-  const table = tableMatch ? tableMatch[0] : text;
+function parseXlsxSheets(buffer) {
+  const entries = readZipEntries(buffer);
+  const sharedStrings = parseSharedStrings(readXmlEntry(entries, 'xl/sharedStrings.xml'));
+  return parseWorkbookSheetTargets(entries)
+    .map((sheet) => {
+      const sheetXml = readXmlEntry(entries, sheet.path);
+      if (!sheetXml) {
+        return null;
+      }
+      return buildParsedTable(parseSheetXml(sheetXml, sharedStrings), {
+        format: 'xlsx',
+        sheetName: sheet.name
+      });
+    })
+    .filter(Boolean);
+}
+
+function parseHtmlTableRows(tableHtml) {
   const rows = [];
-  (table.match(/<tr\b[\s\S]*?<\/tr>/gi) || []).forEach((rowHtml) => {
+  (tableHtml.match(/<tr\b[\s\S]*?<\/tr>/gi) || []).forEach((rowHtml) => {
     const row = [];
     rowHtml.replace(/<t[hd]\b[^>]*>([\s\S]*?)<\/t[hd]>/gi, (_match, cellHtml) => {
       row.push(decodeXmlEntities(cellHtml.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')).trim());
@@ -326,16 +344,28 @@ function maybeParseHtmlTable(buffer) {
     });
     rows.push(row);
   });
-  return buildParsedTable(rows, { format: 'html-xls' });
+  return rows;
 }
 
-function maybeParseSpreadsheetMl(buffer) {
+function maybeParseHtmlTables(buffer) {
   const text = buffer.toString('utf8').replace(/^\uFEFF/, '').trim();
-  if (!/^<\?xml/i.test(text) || !/<Workbook\b/i.test(text)) {
-    return null;
+  if (!/^<(!doctype\s+html|html|table)\b/i.test(text)) {
+    return [];
   }
+  const tableMatches = text.match(/<table\b[\s\S]*?<\/table>/gi) || [text];
+  return tableMatches.map((table, index) => buildParsedTable(parseHtmlTableRows(table), {
+    format: 'html-xls',
+    sheetName: `Table ${index + 1}`
+  }));
+}
+
+function maybeParseHtmlTable(buffer) {
+  return maybeParseHtmlTables(buffer)[0] || null;
+}
+
+function parseSpreadsheetMlRows(source) {
   const rows = [];
-  (text.match(/<Row\b[\s\S]*?<\/Row>/gi) || []).forEach((rowXml) => {
+  (source.match(/<Row\b[\s\S]*?<\/Row>/gi) || []).forEach((rowXml) => {
     const row = [];
     let currentIndex = 0;
     rowXml.replace(/<Cell\b([^>]*)>([\s\S]*?)<\/Cell>/gi, (_match, attrText, cellXml) => {
@@ -351,7 +381,32 @@ function maybeParseSpreadsheetMl(buffer) {
     });
     rows.push(row);
   });
-  return buildParsedTable(rows, { format: 'xml-xls' });
+  return rows;
+}
+
+function maybeParseSpreadsheetMlTables(buffer) {
+  const text = buffer.toString('utf8').replace(/^\uFEFF/, '').trim();
+  if (!/^<\?xml/i.test(text) || !/<Workbook\b/i.test(text)) {
+    return [];
+  }
+  const worksheetMatches = text.match(/<Worksheet\b[\s\S]*?<\/Worksheet>/gi) || [];
+  if (!worksheetMatches.length) {
+    return [buildParsedTable(parseSpreadsheetMlRows(text), {
+      format: 'xml-xls',
+      sheetName: 'Sheet 1'
+    })];
+  }
+  return worksheetMatches.map((worksheetXml, index) => {
+    const attrs = parseXmlAttributes(worksheetXml.match(/<Worksheet\b([^>]*)>/i)?.[1] || '');
+    return buildParsedTable(parseSpreadsheetMlRows(worksheetXml), {
+      format: 'xml-xls',
+      sheetName: attrs['ss:Name'] || attrs.Name || `Sheet ${index + 1}`
+    });
+  });
+}
+
+function maybeParseSpreadsheetMl(buffer) {
+  return maybeParseSpreadsheetMlTables(buffer)[0] || null;
 }
 
 function sectorOffset(sector, sectorSize) {
@@ -597,7 +652,7 @@ function setBiffCell(rows, rowIndex, columnIndex, value) {
   rows[rowIndex][columnIndex] = cellValueText(value);
 }
 
-function parseBiffWorkbook(workbookStream) {
+function readBiffRecords(workbookStream) {
   const records = [];
   for (let offset = 0; offset + 4 <= workbookStream.length;) {
     const id = workbookStream.readUInt16LE(offset);
@@ -613,7 +668,34 @@ function parseBiffWorkbook(workbookStream) {
     });
     offset = dataOffset + length;
   }
+  return records;
+}
 
+function parseBiffSheetName(recordData) {
+  if (!recordData || recordData.length < 8) {
+    return '';
+  }
+  const nameLength = recordData[6] || 0;
+  const options = recordData[7] || 0;
+  const isWide = (options & 0x01) === 0x01;
+  const start = 8;
+  const byteLength = nameLength * (isWide ? 2 : 1);
+  if (start + byteLength > recordData.length) {
+    return '';
+  }
+  return isWide
+    ? recordData.subarray(start, start + byteLength).toString('utf16le')
+    : recordData.subarray(start, start + byteLength).toString('latin1');
+}
+
+function parseBiffWorkbookSheetNames(records) {
+  return records
+    .filter((record) => record.id === 0x0085)
+    .map((record) => parseBiffSheetName(record.data))
+    .filter(Boolean);
+}
+
+function parseBiffSharedStrings(records) {
   const sstRecords = [];
   for (let index = 0; index < records.length; index += 1) {
     if (records[index].id === 0x00FC) {
@@ -626,63 +708,85 @@ function parseBiffWorkbook(workbookStream) {
       break;
     }
   }
-  const sharedStrings = sstRecords.length ? parseSst(sstRecords) : [];
-  const rows = [];
-  let inWorksheet = false;
-  let worksheetSeen = false;
+  return sstRecords.length ? parseSst(sstRecords) : [];
+}
+
+function applyBiffCellRecord(rows, record, sharedStrings) {
+  const data = record.data;
+  if (record.id === 0x00FD && data.length >= 10) {
+    const row = data.readUInt16LE(0);
+    const col = data.readUInt16LE(2);
+    const sstIndex = data.readUInt32LE(6);
+    setBiffCell(rows, row, col, sharedStrings[sstIndex] || '');
+  } else if (record.id === 0x0203 && data.length >= 14) {
+    setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), data.readDoubleLE(6));
+  } else if (record.id === 0x027E && data.length >= 10) {
+    setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), decodeRk(data.readUInt32LE(6)));
+  } else if (record.id === 0x00BD && data.length >= 6) {
+    const row = data.readUInt16LE(0);
+    const firstCol = data.readUInt16LE(2);
+    let cursor = 4;
+    let column = firstCol;
+    while (cursor + 6 <= data.length - 2) {
+      setBiffCell(rows, row, column, decodeRk(data.readUInt32LE(cursor + 2)));
+      cursor += 6;
+      column += 1;
+    }
+  } else if (record.id === 0x0204 && data.length >= 9) {
+    const parsed = readBiff8String(data, 6);
+    setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), parsed.text);
+  } else if (record.id === 0x0205 && data.length >= 8) {
+    setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), data[6] ? 'TRUE' : 'FALSE');
+  } else if (record.id === 0x0006 && data.length >= 14) {
+    const marker = data[12];
+    if (marker !== 0xFF) {
+      setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), data.readDoubleLE(6));
+    }
+  }
+}
+
+function parseBiffWorkbookSheets(workbookStream) {
+  const records = readBiffRecords(workbookStream);
+  const sharedStrings = parseBiffSharedStrings(records);
+  const sheetNames = parseBiffWorkbookSheetNames(records);
+  const sheets = [];
+  let activeRows = null;
+  let activeSheetIndex = -1;
 
   for (const record of records) {
     if (record.id === 0x0809) {
       const type = record.data.length >= 4 ? record.data.readUInt16LE(2) : 0;
-      if (type === 0x0010 && !worksheetSeen) {
-        inWorksheet = true;
-        worksheetSeen = true;
+      if (type === 0x0010) {
+        activeSheetIndex += 1;
+        activeRows = [];
       }
       continue;
     }
-    if (record.id === 0x000A && inWorksheet) {
-      break;
-    }
-    if (!inWorksheet) {
+    if (record.id === 0x000A && activeRows) {
+      sheets.push(buildParsedTable(activeRows, {
+        format: 'xls',
+        sheetName: sheetNames[activeSheetIndex] || `Sheet ${activeSheetIndex + 1}`
+      }));
+      activeRows = null;
       continue;
     }
-
-    const data = record.data;
-    if (record.id === 0x00FD && data.length >= 10) {
-      const row = data.readUInt16LE(0);
-      const col = data.readUInt16LE(2);
-      const sstIndex = data.readUInt32LE(6);
-      setBiffCell(rows, row, col, sharedStrings[sstIndex] || '');
-    } else if (record.id === 0x0203 && data.length >= 14) {
-      setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), data.readDoubleLE(6));
-    } else if (record.id === 0x027E && data.length >= 10) {
-      setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), decodeRk(data.readUInt32LE(6)));
-    } else if (record.id === 0x00BD && data.length >= 6) {
-      const row = data.readUInt16LE(0);
-      const firstCol = data.readUInt16LE(2);
-      let cursor = 4;
-      let column = firstCol;
-      while (cursor + 6 <= data.length - 2) {
-        setBiffCell(rows, row, column, decodeRk(data.readUInt32LE(cursor + 2)));
-        cursor += 6;
-        column += 1;
-      }
-    } else if (record.id === 0x0204 && data.length >= 9) {
-      const parsed = readBiff8String(data, 6);
-      setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), parsed.text);
-    } else if (record.id === 0x0205 && data.length >= 8) {
-      setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), data[6] ? 'TRUE' : 'FALSE');
-    } else if (record.id === 0x0006 && data.length >= 14) {
-      const marker = data[12];
-      if (marker !== 0xFF) {
-        setBiffCell(rows, data.readUInt16LE(0), data.readUInt16LE(2), data.readDoubleLE(6));
-      }
+    if (!activeRows) {
+      continue;
     }
+    applyBiffCellRecord(activeRows, record, sharedStrings);
   }
 
-  return buildParsedTable(rows, {
-    format: 'xls'
-  });
+  if (activeRows) {
+    sheets.push(buildParsedTable(activeRows, {
+      format: 'xls',
+      sheetName: sheetNames[activeSheetIndex] || `Sheet ${activeSheetIndex + 1}`
+    }));
+  }
+  return sheets.filter((sheet) => Array.isArray(sheet?.tableRows) && sheet.tableRows.length);
+}
+
+function parseBiffWorkbook(workbookStream) {
+  return parseBiffWorkbookSheets(workbookStream)[0] || buildParsedTable([], { format: 'xls' });
 }
 
 function parseXls(buffer) {
@@ -701,6 +805,24 @@ function parseXls(buffer) {
     throw new Error('XLS file did not contain a Workbook stream.');
   }
   return parseBiffWorkbook(ole.readStream(workbookEntry));
+}
+
+function parseXlsSheets(buffer) {
+  const htmlTables = maybeParseHtmlTables(buffer);
+  if (htmlTables.length) {
+    return htmlTables;
+  }
+  const spreadsheetMlTables = maybeParseSpreadsheetMlTables(buffer);
+  if (spreadsheetMlTables.length) {
+    return spreadsheetMlTables;
+  }
+
+  const ole = readOleCompoundFile(buffer);
+  const workbookEntry = ole.entries.find((entry) => /^(Workbook|Book)$/i.test(entry.name));
+  if (!workbookEntry) {
+    throw new Error('XLS file did not contain a Workbook stream.');
+  }
+  return parseBiffWorkbookSheets(ole.readStream(workbookEntry));
 }
 
 function parseChemicalImportFile({ fileName = '', dataBase64 = '', buffer = null } = {}) {
@@ -732,12 +854,68 @@ function parseChemicalImportFile({ fileName = '', dataBase64 = '', buffer = null
   throw new Error('Unsupported chemical import file type. Use .csv, .xls, or .xlsx.');
 }
 
+function tableForAssayResultImport(table, index = 0) {
+  const tableRows = normalizeTableRows(
+    Array.isArray(table?.tableRows)
+      ? table.tableRows
+      : [table?.headers || [], ...(Array.isArray(table?.rows) ? table.rows : [])]
+  );
+  return {
+    id: `table-${index + 1}`,
+    name: String(table?.sheetName || table?.name || `Sheet ${index + 1}`).trim() || `Sheet ${index + 1}`,
+    format: String(table?.format || '').trim(),
+    rows: tableRows,
+    rowCount: tableRows.length,
+    columnCount: tableRows.reduce((max, row) => Math.max(max, Array.isArray(row) ? row.length : 0), 0)
+  };
+}
+
+function parseAssayResultImportFile({ fileName = '', dataBase64 = '', buffer = null } = {}) {
+  const sourceBuffer = buffer
+    ? Buffer.from(buffer)
+    : Buffer.from(String(dataBase64 || ''), 'base64');
+  if (!sourceBuffer.length) {
+    throw new Error('Result import file is empty.');
+  }
+
+  const extension = String(fileName || '').toLowerCase().split('.').pop();
+  let tables = [];
+  if (extension === 'csv') {
+    tables = [parseDelimitedText(sourceBuffer.toString('utf8'), ',')];
+  } else if (extension === 'tsv') {
+    tables = [parseDelimitedText(sourceBuffer.toString('utf8'), '\t')];
+  } else if (extension === 'xlsx') {
+    tables = parseXlsxSheets(sourceBuffer);
+  } else if (extension === 'xls') {
+    tables = parseXlsSheets(sourceBuffer);
+  } else {
+    const textPreview = sourceBuffer.toString('utf8', 0, Math.min(sourceBuffer.length, 256)).trim();
+    if (textPreview.includes(',') || textPreview.includes('\t')) {
+      tables = [parseDelimitedText(sourceBuffer.toString('utf8'))];
+    }
+  }
+
+  const resultTables = tables
+    .map((table, index) => tableForAssayResultImport(table, index))
+    .filter((table) => table.rows.length && table.columnCount);
+  if (!resultTables.length) {
+    throw new Error('No readable result table was found. Use .csv, .xls, or .xlsx.');
+  }
+  return {
+    fileName: String(fileName || '').trim(),
+    tables: resultTables
+  };
+}
+
 module.exports = {
   parseChemicalImportFile,
+  parseAssayResultImportFile,
   __private: {
     parseDelimitedText,
     parseXlsx,
+    parseXlsxSheets,
     parseXls,
+    parseXlsSheets,
     normalizeTableRows
   }
 };

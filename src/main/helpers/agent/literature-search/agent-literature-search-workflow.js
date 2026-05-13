@@ -2,6 +2,10 @@
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
 const { createAgentSubAgentRuntime } = require('../tools/agent-sub-agent.js');
+const {
+  runCodexPaperContextSubAgent,
+  shouldUseCodexPaperContextWorkflow
+} = require('./codex-paper-context-workflow.js');
 
 const SEARCH_BATCH_SIZE = 8;
 const DEFAULT_MAX_CANDIDATE_PAPERS = 12;
@@ -198,6 +202,9 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
   const createSubAgentRuntime = typeof deps.createSubAgentRuntime === 'function'
     ? deps.createSubAgentRuntime
     : createAgentSubAgentRuntime;
+  const codexSubAgentRuntime = deps.subAgentRuntime && typeof deps.subAgentRuntime === 'object'
+    ? deps.subAgentRuntime
+    : null;
   const subAgentStore = deps.subAgentStore instanceof Map ? deps.subAgentStore : new Map();
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
 
@@ -552,18 +559,6 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       enrichedCandidates.push(await enrichPaperForDownload(candidate));
     }
     const workflowCandidates = assignCanonicalPaperIds(enrichedCandidates);
-
-    const downloadPromise = downloadSelectedPapers(workflowCandidates, {
-      ...source,
-      storage_path: copiedContext.storage_path
-    }, linkedName);
-    const readPromise = readSelectedPapers(workflowCandidates, {
-      ...source,
-      query,
-      downloadPromise
-    });
-    const [downloadedPapers, readResult] = await Promise.all([downloadPromise, readPromise]);
-
     const selectedPapers = workflowCandidates.map((candidate) => ({
       paper_id: cleanText(candidate.paper_id, 120),
       paper_title: cleanText(candidate.title, 320),
@@ -577,6 +572,75 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       published_at: cleanText(candidate.published_at, 80),
       score: scorePaperCandidate(candidate, query)
     }));
+    const downloadInput = {
+      ...source,
+      storage_path: copiedContext.storage_path
+    };
+    const downloadPromise = downloadSelectedPapers(workflowCandidates, downloadInput, linkedName);
+    const useCodexPaperContext = Boolean(codexSubAgentRuntime)
+      && shouldUseCodexPaperContextWorkflow(source);
+    let downloadedPapers = [];
+    let readResult = null;
+    let paperContextSubAgent = null;
+
+    if (useCodexPaperContext) {
+      downloadedPapers = await downloadPromise;
+      paperContextSubAgent = await runCodexPaperContextSubAgent({
+        subAgentRuntime: codexSubAgentRuntime,
+        query,
+        message: cleanText(source.message, 1600) || query,
+        copiedContext: copiedContext,
+        selectedPapers,
+        downloadedPapers,
+        source,
+        parentRequestId: cleanText(source.traceContext?.requestId || source.request_id, 160),
+        cwd: cleanText(source.cwd, 2400),
+        model: cleanText(source.model, 120),
+        reasoningEffort: cleanText(source.reasoning_effort || source.reasoningEffort, 40),
+        name: sanitizeFolderName(
+          cleanText(source.sub_agent_name || source.subAgentName, 160)
+          || `codex-paper-context-${Date.now()}`
+        )
+      }, { asArray, cleanText });
+      if (!paperContextSubAgent?.ok) {
+        return {
+          ok: false,
+          status: cleanText(paperContextSubAgent?.status, 40) || 'error',
+          error: cleanText(paperContextSubAgent?.error, 1200) || 'Codex paper context sub-agent failed.',
+          query,
+          sources: asArray(rawSearchResult.sources),
+          items: asArray(rawSearchResult.items),
+          citations: asArray(rawSearchResult.citations),
+          source_counts: cloneJson(defaultEnsureObject(rawSearchResult.source_counts), {}),
+          source_errors: cloneJson(defaultEnsureObject(rawSearchResult.source_errors), {}),
+          selected_papers: selectedPapers,
+          downloaded_papers: downloadedPapers,
+          loaded_context_blocks: [],
+          papers_read_count: 0,
+          sub_agent_id: cleanText(paperContextSubAgent?.sub_agent_id, 160),
+          sub_agent: paperContextSubAgent?.sub_agent || null,
+          sub_agent_context: copiedContext,
+          codex_paper_context: true,
+          summary: cleanText(paperContextSubAgent?.error, 600) || 'Codex paper context sub-agent failed.'
+        };
+      }
+      readResult = {
+        ok: true,
+        status: cleanText(paperContextSubAgent.status, 40) || 'completed',
+        papers_read_count: Number(paperContextSubAgent.papers_read_count) || 0,
+        loaded_context_blocks: asArray(paperContextSubAgent.loaded_context_blocks),
+        papers: asArray(paperContextSubAgent.selected_papers),
+        summary: cleanText(paperContextSubAgent.summary, 800)
+          || `Codex paper context sub-agent loaded ${asArray(paperContextSubAgent.loaded_context_blocks).length} context block(s).`
+      };
+    } else {
+      const readPromise = readSelectedPapers(workflowCandidates, {
+        ...source,
+        query,
+        downloadPromise
+      });
+      [downloadedPapers, readResult] = await Promise.all([downloadPromise, readPromise]);
+    }
 
     const contextBlockCount = asArray(readResult.loaded_context_blocks).length;
     const downloadCount = downloadedPapers.filter((paper) => paper.ok === true).length;
@@ -601,7 +665,10 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       downloaded_papers: downloadedPapers,
       loaded_context_blocks: asArray(readResult.loaded_context_blocks),
       papers_read_count: Number(readResult.papers_read_count) || 0,
+      sub_agent_id: cleanText(paperContextSubAgent?.sub_agent_id, 160),
+      sub_agent: paperContextSubAgent?.sub_agent || null,
       sub_agent_context: copiedContext,
+      codex_paper_context: useCodexPaperContext,
       summary
     };
   }
@@ -626,6 +693,58 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     }
 
     const copiedContext = buildCopiedContext(source, query);
+    const useCodexPaperContext = Boolean(codexSubAgentRuntime)
+      && shouldUseCodexPaperContextWorkflow(source);
+    if (useCodexPaperContext) {
+      const workflowResult = await runLiteratureWorkflow({
+        ...source,
+        query,
+        message: cleanText(source.message, 1600) || query
+      }, copiedContext);
+      if (workflowResult?.ok === false) {
+        return {
+          ok: false,
+          status: cleanText(workflowResult.status, 40) || 'error',
+          error: cleanText(workflowResult.error, 1200) || `Literature search failed for ${query}.`,
+          query,
+          sources: asArray(workflowResult.sources),
+          items: asArray(workflowResult.items),
+          citations: asArray(workflowResult.citations),
+          source_counts: cloneJson(defaultEnsureObject(workflowResult.source_counts), {}),
+          source_errors: cloneJson(defaultEnsureObject(workflowResult.source_errors), {}),
+          selected_papers: asArray(workflowResult.selected_papers),
+          downloaded_papers: asArray(workflowResult.downloaded_papers),
+          loaded_context_blocks: asArray(workflowResult.loaded_context_blocks),
+          papers_read_count: Number(workflowResult.papers_read_count) || 0,
+          sub_agent_id: cleanText(workflowResult.sub_agent_id, 160),
+          sub_agent: workflowResult.sub_agent || null,
+          sub_agent_context: workflowResult.sub_agent_context || copiedContext,
+          codex_paper_context: true,
+          summary: cleanText(workflowResult.summary || workflowResult.error, 600)
+            || `Literature search failed for ${query}.`
+        };
+      }
+      return {
+        ok: true,
+        status: 'completed',
+        query,
+        sources: asArray(workflowResult.sources),
+        items: asArray(workflowResult.items),
+        citations: asArray(workflowResult.citations),
+        source_counts: cloneJson(defaultEnsureObject(workflowResult.source_counts), {}),
+        source_errors: cloneJson(defaultEnsureObject(workflowResult.source_errors), {}),
+        selected_papers: asArray(workflowResult.selected_papers),
+        downloaded_papers: asArray(workflowResult.downloaded_papers),
+        loaded_context_blocks: asArray(workflowResult.loaded_context_blocks),
+        papers_read_count: Number(workflowResult.papers_read_count) || 0,
+        sub_agent_id: cleanText(workflowResult.sub_agent_id, 160),
+        sub_agent: workflowResult.sub_agent || null,
+        sub_agent_context: workflowResult.sub_agent_context || copiedContext,
+        codex_paper_context: true,
+        summary: cleanText(workflowResult.summary, 600)
+          || `Completed delegated literature search for ${query}.`
+      };
+    }
     const subAgentRuntime = createSubAgentRuntime({
       now,
       store: subAgentStore,

@@ -1,4 +1,4 @@
-import { requestLlmText } from './papers/llm.js';
+import { requestLlmText } from './direct-llm.js';
 
 let activeToastTimer = 0;
 let activeToastFadeTimer = 0;
@@ -93,7 +93,9 @@ export const clarifyNotebookNote = async ({ llm, text }) => {
 
   const clarified = await requestLlmText({
     llm,
-    prompt
+    prompt,
+    moduleId: 'notebook',
+    task: 'note-clarify'
   });
 
   return String(clarified || '').trim() || source;

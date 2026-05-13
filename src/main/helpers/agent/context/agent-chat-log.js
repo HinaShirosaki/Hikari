@@ -77,6 +77,65 @@ function normalizeSessionBrief(text, fallback = 'New Chat') {
   return normalized || fallback;
 }
 
+function slugText(value, fallback = 'option') {
+  const normalized = cleanText(value, 120)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || fallback;
+}
+
+function normalizeAgentUserQuestion(value, fallbackQuestion = '') {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const question = cleanText(
+    source.question
+      || source.prompt
+      || source.title
+      || fallbackQuestion,
+    600
+  );
+  if (!question) {
+    return null;
+  }
+  const options = asArray(source.options || source.choices)
+    .map((item, index) => {
+      const option = item && typeof item === 'object' && !Array.isArray(item)
+        ? item
+        : { label: item };
+      const label = cleanText(option.label || option.title || option.text || option.value, 160);
+      const valueText = cleanText(option.value || option.answer || label, 1000);
+      if (!label || !valueText) {
+        return null;
+      }
+      return {
+        id: cleanText(option.id || option.key, 120) || `${slugText(label)}-${index + 1}`,
+        label,
+        value: valueText,
+        description: cleanText(option.description || option.detail || option.reason, 260)
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 6);
+  const answered = source.answered && typeof source.answered === 'object' && !Array.isArray(source.answered)
+    ? {
+      answer: cleanText(source.answered.answer || source.answered.value, 1000),
+      answered_at: cleanText(source.answered.answered_at || source.answered.answeredAt, 80)
+    }
+    : null;
+  return {
+    id: cleanText(source.id || source.question_id || source.questionId, 120) || slugText(question, 'question'),
+    question,
+    context: cleanText(source.context || source.help_text || source.helpText, 700),
+    options,
+    allow_custom: source.allow_custom !== false && source.allowCustom !== false,
+    placeholder: cleanText(source.placeholder || source.custom_placeholder || source.customPlaceholder, 160)
+      || 'Type another answer',
+    submit_label: cleanText(source.submit_label || source.submitLabel, 80) || 'Send answer',
+    status: cleanText(source.status, 40),
+    answered
+  };
+}
+
 // Build a concise assistant-facing summary from inventory lookup results.
 function summarizeInventoryLookup(lookup) {
   const payload = lookup && typeof lookup === 'object' ? lookup : {};
@@ -202,7 +261,11 @@ function summarizeCodexAgent(codexAgent) {
   if (!status) {
     return '';
   }
+  const userQuestion = normalizeAgentUserQuestion(payload.user_question || payload.userQuestion, payload.answer);
   if (status === 'needs_more_info') {
+    if (userQuestion?.question) {
+      return userQuestion.question;
+    }
     return asArray(payload.follow_up_questions).map((item) => cleanText(item, 500)).filter(Boolean).join(' ')
       || cleanText(payload.answer, 12000)
       || 'I need more detail before I can continue.';
@@ -313,6 +376,13 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     codex_agent: payload.codex_agent && typeof payload.codex_agent === 'object'
       ? cloneJson(payload.codex_agent, null)
       : null,
+    user_question: normalizeAgentUserQuestion(
+      payload.user_question
+        || payload.userQuestion
+        || payload.codex_agent?.user_question
+        || payload.codex_agent?.userQuestion,
+      payload.codex_agent?.answer
+    ),
     purchase_recommendation: payload.purchase_recommendation && typeof payload.purchase_recommendation === 'object'
       ? cloneJson(payload.purchase_recommendation, null)
       : null,

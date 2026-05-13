@@ -1,4 +1,36 @@
-import { getHighlightMarkerBox, getPdfCommentPinPosition } from './pdf-viewer-anchors.js';
+import { getPdfCommentPinPosition } from './pdf-viewer-anchors.js';
+import {
+  buildHighlightSvgPath,
+  normalizeHighlightBoxes,
+  normalizePageDimension,
+  pdfQuadPointsToBoxes
+} from './pdf-viewer-geometry.js';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function getHighlightBoxesForRecord(highlight, record) {
+  const boxes = normalizeHighlightBoxes(highlight?.boxes);
+  if (boxes.length) {
+    return boxes;
+  }
+  const pageWidth = normalizePageDimension(highlight?.pageWidth || record?.metric?.width);
+  const pageHeight = normalizePageDimension(highlight?.pageHeight || record?.metric?.height);
+  return pdfQuadPointsToBoxes(highlight?.quadPoints, { pageWidth, pageHeight });
+}
+
+function renderHighlightDivFallback({ doc, layer, highlight, boxes }) {
+  boxes.forEach((box) => {
+    const mark = doc.createElement('div');
+    mark.className = 'papers-viewer-highlight';
+    mark.dataset.highlightId = highlight.id;
+    mark.style.left = `${(box.x * 100).toFixed(3)}%`;
+    mark.style.top = `${(box.y * 100).toFixed(3)}%`;
+    mark.style.width = `${(box.width * 100).toFixed(3)}%`;
+    mark.style.height = `${(box.height * 100).toFixed(3)}%`;
+    mark.title = highlight.text;
+    layer.appendChild(mark);
+  });
+}
 
 export function clearPins({ pageRecords = [], placementMode = false } = {}) {
   pageRecords.forEach((record) => {
@@ -34,22 +66,36 @@ export function renderHighlights({ pageRecords = [], highlights = [] } = {}) {
     if (!doc?.createElement) {
       return;
     }
+    const svg = typeof doc.createElementNS === 'function'
+      ? doc.createElementNS(SVG_NS, 'svg')
+      : null;
+    if (svg) {
+      svg.classList.add('papers-viewer-highlight-svg');
+      svg.setAttribute('viewBox', '0 0 1 1');
+      svg.setAttribute('preserveAspectRatio', 'none');
+      highlightLayer.appendChild(svg);
+    }
     pageHighlights.forEach((highlight) => {
-      highlight.boxes.forEach((box) => {
-        const markerBox = getHighlightMarkerBox(box);
-        if (!markerBox) {
-          return;
-        }
-        const mark = doc.createElement('div');
-        mark.className = 'papers-viewer-highlight';
-        mark.dataset.highlightId = highlight.id;
-        mark.style.left = `${(markerBox.left * 100).toFixed(3)}%`;
-        mark.style.top = `${(markerBox.top * 100).toFixed(3)}%`;
-        mark.style.width = `${(markerBox.width * 100).toFixed(3)}%`;
-        mark.style.height = `${(markerBox.height * 100).toFixed(3)}%`;
-        mark.title = highlight.text;
-        highlightLayer.appendChild(mark);
-      });
+      const boxes = getHighlightBoxesForRecord(highlight, record);
+      if (!boxes.length) {
+        return;
+      }
+      if (!svg) {
+        renderHighlightDivFallback({ doc, layer: highlightLayer, highlight, boxes });
+        return;
+      }
+      const pathData = buildHighlightSvgPath(boxes);
+      if (!pathData) {
+        return;
+      }
+      const path = doc.createElementNS(SVG_NS, 'path');
+      path.classList.add('papers-viewer-highlight-path');
+      path.dataset.highlightId = highlight.id;
+      path.setAttribute('d', pathData);
+      const title = doc.createElementNS(SVG_NS, 'title');
+      title.textContent = highlight.text;
+      path.appendChild(title);
+      svg.appendChild(path);
     });
   });
 }

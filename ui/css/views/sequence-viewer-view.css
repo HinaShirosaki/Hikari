@@ -547,6 +547,53 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   font-weight: 700;
 }
 
+.sequence-viewer-primer-copy-cell {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sequence-viewer-primer-copy-cell-sequence {
+  width: 100%;
+}
+
+.sequence-viewer-primer-copy-value {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.sequence-viewer-primer-copy-btn {
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-elevated);
+  color: var(--strong);
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.sequence-viewer-primer-copy-btn:hover,
+.sequence-viewer-primer-copy-btn:focus-visible {
+  border-color: rgba(43, 87, 154, 0.72);
+  background: var(--surface-subtle);
+}
+
+.sequence-viewer-primer-copy-btn svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .sequence-viewer-cloning-design-procedure {
   display: grid;
   gap: 8px;
@@ -1282,6 +1329,9 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-sequence-host {
+  --sequence-viewer-sequence-font: "SF Mono", "SFMono-Regular", "Cascadia Mono", "Roboto Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+  --sequence-viewer-nt-gap: 1.5px;
+  --sequence-viewer-selection-highlight: rgba(78, 127, 255, 0.22);
   border-radius: 8px;
   border: 1px solid var(--line);
   background: var(--surface);
@@ -1315,9 +1365,9 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   grid-template-columns: 28px 1fr 28px;
   gap: 6px;
   align-items: baseline;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.79rem;
-  line-height: 1.35;
+  font-family: var(--sequence-viewer-sequence-font);
+  font-size: 0.9rem;
+  line-height: 1.42;
 }
 
 .sequence-viewer-strand-row-bottom {
@@ -1342,9 +1392,13 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   display: block;
   width: 100%;
   position: relative;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.79rem;
-  line-height: 1.35;
+  font-family: var(--sequence-viewer-sequence-font);
+  font-size: 0.9rem;
+  font-weight: 500;
+  font-stretch: 106%;
+  font-variant-ligatures: none;
+  font-feature-settings: "liga" 0, "calt" 0;
+  line-height: 1.42;
   letter-spacing: 0;
   white-space: nowrap;
   overflow: visible;
@@ -1352,8 +1406,24 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-seq-text-content {
-  display: block;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sequence-viewer-nt-gap);
   user-select: none;
+}
+
+.sequence-viewer-seq-run {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sequence-viewer-nt-gap);
+  border-radius: 3px;
+}
+
+.sequence-viewer-seq-base {
+  display: inline-block;
+  min-width: 1ch;
+  text-align: center;
+  line-height: 1.28;
 }
 
 .sequence-viewer-line-cursor {
@@ -1370,8 +1440,15 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-seq-highlight {
-  background: rgba(78, 127, 255, 0.22);
-  border-radius: 3px;
+  background: var(--sequence-viewer-selection-highlight);
+}
+
+.sequence-viewer-strand-row-top .sequence-viewer-seq-highlight:not(.sequence-viewer-seq-highlight-alignment) {
+  box-shadow: 0 5px 0 var(--sequence-viewer-selection-highlight);
+}
+
+.sequence-viewer-strand-row-bottom .sequence-viewer-seq-highlight:not(.sequence-viewer-seq-highlight-alignment) {
+  box-shadow: 0 -5px 0 var(--sequence-viewer-selection-highlight);
 }
 
 .sequence-viewer-seq-highlight-alignment {
@@ -1459,7 +1536,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-restriction-label {
   position: absolute;
   top: auto;
-  bottom: calc(100% + 3px);
+  bottom: calc(100% + 3px + var(--sequence-viewer-restriction-label-stack-offset, 0px));
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.67rem;
@@ -1567,13 +1644,13 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   min-width: 170px;
   max-width: 260px;
   border-radius: 8px;
-  border: 1px solid rgba(77, 109, 155, 0.44);
-  background: rgba(245, 251, 255, 0.97);
-  box-shadow: 0 2px 8px rgba(27, 20, 14, 0.1);
+  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
+  background: color-mix(in srgb, var(--surface-elevated) 96%, var(--surface-subtle) 4%);
+  box-shadow: 0 2px 8px rgba(27, 20, 14, 0.08);
   padding: 7px 9px;
   font-size: 0.69rem;
   line-height: 1.3;
-  color: #1e3553;
+  color: var(--strong);
   pointer-events: none;
 }
 
@@ -1628,6 +1705,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-feature-editor-overlay,
+.sequence-viewer-primer-design-overlay,
 .sequence-viewer-sequence-edit-overlay {
   position: fixed;
   inset: 0;
@@ -1639,11 +1717,13 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-feature-editor-overlay[hidden],
+.sequence-viewer-primer-design-overlay[hidden],
 .sequence-viewer-sequence-edit-overlay[hidden] {
   display: none !important;
 }
 
 .sequence-viewer-feature-editor,
+.sequence-viewer-primer-design-dialog,
 .sequence-viewer-sequence-edit-dialog {
   width: min(100%, 560px);
   border-radius: 8px;
@@ -1659,14 +1739,46 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   width: min(100%, 480px);
 }
 
+.sequence-viewer-primer-design-dialog {
+  width: min(100%, 760px);
+}
+
 .sequence-viewer-feature-editor-head,
+.sequence-viewer-primer-design-head,
 .sequence-viewer-sequence-edit-head {
   align-items: center;
 }
 
 .sequence-viewer-feature-editor-head h4,
+.sequence-viewer-primer-design-head h4,
 .sequence-viewer-sequence-edit-head h4 {
   margin: 0;
+}
+
+.sequence-viewer-primer-design-result {
+  display: grid;
+  gap: 10px;
+  max-height: min(60vh, 520px);
+  overflow: auto;
+}
+
+.sequence-viewer-primer-design-summary {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-primer-design-summary p,
+.sequence-viewer-primer-design-warnings p {
+  margin: 0;
+}
+
+.sequence-viewer-primer-design-warnings {
+  display: grid;
+  gap: 6px;
+}
+
+.sequence-viewer-primer-design-warning {
+  color: var(--danger);
 }
 
 .sequence-viewer-feature-editor-grid {
@@ -1796,11 +1908,11 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
   .sequence-viewer-strand-row {
     grid-template-columns: 24px 1fr 24px;
-    font-size: 0.74rem;
+    font-size: 0.84rem;
   }
 
   .sequence-viewer-seq-text {
-    font-size: 0.74rem;
+    font-size: 0.84rem;
   }
 
   .sequence-viewer-protein-builder-toolbar {
@@ -1953,7 +2065,8 @@ body.theme-night .sequence-viewer-strand-end {
 }
 
 body.theme-night .sequence-viewer-seq-highlight {
-  background: rgba(78, 127, 255, 0.35);
+  --sequence-viewer-selection-highlight: rgba(78, 127, 255, 0.35);
+  background: var(--sequence-viewer-selection-highlight);
 }
 
 body.theme-night .sequence-viewer-restriction-label {
@@ -1986,10 +2099,10 @@ body.theme-night .sequence-viewer-line-feature-active {
 }
 
 body.theme-night .sequence-viewer-feature-hover-tooltip {
-  border-color: rgba(171, 205, 245, 0.44);
-  background: rgba(23, 38, 57, 0.96);
-  box-shadow: 0 2px 8px rgba(27, 20, 14, 0.12);
-  color: rgba(236, 246, 255, 0.97);
+  border-color: color-mix(in srgb, var(--line) 84%, #ffffff 8%);
+  background: color-mix(in srgb, var(--surface-elevated) 92%, #14110e 8%);
+  box-shadow: 0 2px 8px rgba(12, 9, 7, 0.18);
+  color: var(--strong);
 }
 
 body.theme-night .sequence-viewer-context-menu {
@@ -2010,6 +2123,7 @@ body.theme-night .sequence-viewer-context-item:focus-visible:not(:disabled) {
 }
 
 body.theme-night .sequence-viewer-feature-editor-overlay,
+body.theme-night .sequence-viewer-primer-design-overlay,
 body.theme-night .sequence-viewer-sequence-edit-overlay {
   background: rgba(3, 8, 18, 0.44);
 }
@@ -2019,6 +2133,7 @@ body.theme-night .sequence-viewer-alignment-workspace {
 }
 
 body.theme-night .sequence-viewer-feature-editor,
+body.theme-night .sequence-viewer-primer-design-dialog,
 body.theme-night .sequence-viewer-sequence-edit-dialog {
   border-color: rgba(171, 205, 245, 0.34);
   background: var(--surface-elevated);

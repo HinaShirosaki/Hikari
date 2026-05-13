@@ -6,6 +6,7 @@ import {
   formatRelativePaperTime
 } from './model.js';
 import { getPaperDisplayTitle } from './pdf-metadata.js';
+import { bindFileDropTarget } from '../file-drop.js';
 
 export function createPapersLibraryController(context) {
   const {
@@ -748,6 +749,25 @@ export function createPapersLibraryController(context) {
     elements.papersContextNewFolderBtn?.addEventListener('click', onCreateJournalClubFromMenuClick);
     elements.papersContextRenameFolderBtn?.addEventListener('click', onRenameJournalClubFromMenuClick);
     elements.papersContextDeleteFolderBtn?.addEventListener('click', onDeleteJournalClubFromMenuClick);
+    bindFileDropTarget({
+      target: elements.papersLibraryRail || elements.journalClubList,
+      accept: elements.paperPdfInput?.getAttribute?.('accept') || 'application/pdf,.pdf',
+      multiple: true,
+      onFiles: async (files) => {
+        const selectedFolder = getSelectedFolder();
+        if (!selectedFolder) {
+          windowRef?.alert?.('Create or select a folder before uploading a paper.');
+          return;
+        }
+        await context.actions?.uploadPaperFiles?.(files);
+      },
+      onRejected: () => {
+        windowRef?.alert?.('Drop PDF files to add them to the selected paper folder.');
+      },
+      onError: (error) => {
+        windowRef?.alert?.(String(error?.message || error || 'Failed to upload dropped PDF files.'));
+      }
+    });
     if (typeof windowRef?.addEventListener === 'function') {
       windowRef.addEventListener('resize', schedulePapersEdgeBleedSync);
       windowRef.addEventListener('resize', hideLibraryContextMenu);

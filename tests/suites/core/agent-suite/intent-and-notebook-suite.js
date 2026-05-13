@@ -214,7 +214,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('intent dispatcher routes unclear parser intents into general science execution', async () => {
-      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
       let receivedScienceInput = null;
       const dispatcher = createAgentIntentDispatcher({
         cleanText: (value, _maxLength = 2000) => {
@@ -316,7 +316,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('intent dispatcher routes purchase recommendations through the tracked tool executor', async () => {
-      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
       const lifecycleStages = [];
       const toolCalls = [];
       const dispatcher = createAgentIntentDispatcher({
@@ -456,7 +456,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('intent dispatcher gathers notebook-draft evidence before terminal draft tool when papers are requested', async () => {
-      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
       const toolLoading = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-loading.js'));
       const lifecycleStages = [];
       const toolCalls = [];
@@ -629,7 +629,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('intent dispatcher returns purchase clarification prompts without invoking the tool executor', async () => {
-      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
       let toolCallCount = 0;
       const dispatcher = createAgentIntentDispatcher({
         cleanText: (value, _maxLength = 2000) => {
@@ -727,7 +727,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('controller core skips intent parser while protocol notebook context remains open', async () => {
-      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
       let parserCallCount = 0;
       const lifecycleStages = [];
       const controller = createAgentControllerCore({
@@ -879,7 +879,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('controller core skips parser for unresolved inventory follow-up turns in the same chat session', async () => {
-      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
       let parserCallCount = 0;
       let inventoryLookupCalls = 0;
       const lifecycleStages = [];
@@ -1042,7 +1042,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('controller core skips parser for unresolved record follow-up turns in the same chat session', async () => {
-      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
       let parserCallCount = 0;
       let recordLookupCalls = 0;
       const lifecycleStages = [];
@@ -1204,7 +1204,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('controller core skips parser for the next general science follow-up turn and re-enters the reasoning loop', async () => {
-      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
       let parserCallCount = 0;
       let scienceRuntimeCalls = 0;
       let receivedScienceInput = null;
@@ -1370,7 +1370,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('controller core runs the parser again after a skipped follow-up turn was already used', async () => {
-      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
       let parserCallCount = 0;
       let scienceRuntimeCalls = 0;
       const lifecycleStages = [];
@@ -1545,7 +1545,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('controller core dispatches direct skill commands to tools before intent parsing or LLM setup', async () => {
-      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
       let parserCallCount = 0;
       let toolCallCount = 0;
       const controller = createAgentControllerCore({
@@ -1668,7 +1668,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('controller core routes Codex provider through the Codex-owned agent runtime', async () => {
-      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
       let parserCallCount = 0;
       let codexRunInput = null;
       let setModelValue = '';
@@ -1873,7 +1873,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('controller core bypasses the parser for selection insight explanations and uses direct text requests', async () => {
-      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
       let parserCallCount = 0;
       let requestTextCallCount = 0;
       const controller = createAgentControllerCore({
@@ -1989,7 +1989,7 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
     });
 
     test('controller core bypasses the parser for selection insight purchase recommendations and uses direct web search', async () => {
-      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'register-agent-ipc', 'agent-controller-core.js'));
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
       let parserCallCount = 0;
       let requestTextCallCount = 0;
       let requestWebSearchCallCount = 0;

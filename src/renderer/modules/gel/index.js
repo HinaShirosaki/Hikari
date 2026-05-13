@@ -7,6 +7,7 @@ import { createManualWorkflowController } from './manual-workflow.js';
 import { createRecordsManager } from './records-manager.js';
 import { createRenderingController, selectViewerBaseImageData } from './rendering.js';
 import { createEmptyManualOverrides } from './shared.js';
+import { bindFileDropTarget } from '../file-drop.js';
 
 export { selectViewerBaseImageData };
 
@@ -114,6 +115,17 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   });
 
   elements.gelImageFileInput?.addEventListener('change', imageController.onImageFileChange);
+  bindFileDropTarget({
+    target: elements.gelViewerStage || elements.gelImageRow || elements.gelForm,
+    accept: elements.gelImageFileInput?.getAttribute?.('accept') || 'image/*',
+    onFiles: ([file]) => imageController.loadImageFile(file),
+    onRejected: () => {
+      setStatus('Drop an image file to load it into Gel.');
+    },
+    onError: (error) => {
+      setStatus(String(error?.message || error || 'Failed to load the dropped gel image.'));
+    }
+  });
   elements.gelDenoiseStrengthInput?.addEventListener('input', imageController.onEnhancementChanged);
   elements.gelContrastStrengthInput?.addEventListener('input', imageController.onEnhancementChanged);
   elements.gelRunBtn?.addEventListener('click', onRunAnalysis);
@@ -138,6 +150,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   elements.gelManualPrevBtn?.addEventListener('click', manualWorkflow.onManualPrevStep);
   elements.gelManualNextBtn?.addEventListener('click', manualWorkflow.onManualNextStep);
   elements.gelManualResetBtn?.addEventListener('click', manualWorkflow.onManualResetSteps);
+  elements.gelAutoDetectLanesBtn?.addEventListener('click', manualWorkflow.onAutoDetectLanes);
   elements.gelLaneProfileSelect?.addEventListener('change', (event) => {
     const nextLane = Number(event?.target?.value);
     runtime.selectedLaneProfileLane = Number.isFinite(nextLane) && nextLane > 0

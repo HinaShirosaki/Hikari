@@ -16,7 +16,7 @@ import {
   readStoragePathFromLocalState
 } from './storage.js';
 import {
-  normalizeOrfStopCodonVisibility
+  normalizeOrfStopCodonSelection
 } from './translation-style.js';
 import { getSequenceViewerElements } from './dom.js';
 import { createSequenceViewerAnnotationController } from './annotation.js';
@@ -26,6 +26,7 @@ import { createSequenceViewerAlignmentController } from './alignment-controller.
 import { createSequenceViewerProteinBuilderController } from './protein-builder.js';
 import { createProteinBuilderCloningNotebookPage } from './protein-builder-cloning-notebook.js';
 import { createSequenceViewerCloningDesignController } from './cloning-design.js';
+import { bindFileDropTarget } from '../file-drop.js';
 
 export function initSequenceViewer(options = {}) {
   const LIBRARY_STATUS_SAVED = 'saved';
@@ -59,10 +60,10 @@ export function initSequenceViewer(options = {}) {
       variantMode: 'gibson'
     },
     orfViewEnabled: false,
-    orfStopVisibility: normalizeOrfStopCodonVisibility({
-      TAG: Boolean(elements.orfStopTagToggle?.checked),
-      TAA: Boolean(elements.orfStopTaaToggle?.checked),
-      TGA: Boolean(elements.orfStopTgaToggle?.checked)
+    orfStopCodons: normalizeOrfStopCodonSelection({
+      TAG: true,
+      TAA: true,
+      TGA: true
     }),
     restrictionVendorFilter: {
       ...DEFAULT_RESTRICTION_VENDOR_FILTER
@@ -1033,6 +1034,7 @@ export function initSequenceViewer(options = {}) {
 
     detailController?.hideFeatureContextMenu();
     detailController?.hideFeatureEditor();
+    detailController?.hidePrimerDesignOverlay?.();
 
     closeBackboneRecognitionDialog();
     if (removedRecognitionFeatures) {
@@ -1108,6 +1110,7 @@ export function initSequenceViewer(options = {}) {
     setProteinBuilderConfirmation(null, { render: false });
     detailController?.hideFeatureContextMenu();
     detailController?.hideFeatureEditor();
+    detailController?.hidePrimerDesignOverlay?.();
     detailController?.hideSequenceEditDialog?.();
     homeController?.setLocalWorkspaceVisibility('builder');
     if (onNavigateHome) {
@@ -1118,6 +1121,7 @@ export function initSequenceViewer(options = {}) {
   function showCloningDesignWorkspace() {
     detailController?.hideFeatureContextMenu();
     detailController?.hideFeatureEditor();
+    detailController?.hidePrimerDesignOverlay?.();
     detailController?.hideSequenceEditDialog?.();
     homeController?.setLocalWorkspaceVisibility('cloning');
     if (onNavigateDetail) {
@@ -1150,6 +1154,7 @@ export function initSequenceViewer(options = {}) {
     detailController?.clearSequenceSelection();
     detailController?.hideFeatureContextMenu();
     detailController?.hideFeatureEditor();
+    detailController?.hidePrimerDesignOverlay?.();
     detailController?.hideSequenceEditDialog?.();
 
     detailController?.updateRecordSelect();
@@ -1634,6 +1639,7 @@ export function initSequenceViewer(options = {}) {
     detailController?.clearSequenceSelection({ preserveCursor: true });
     detailController?.hideFeatureContextMenu();
     detailController?.hideFeatureEditor();
+    detailController?.hidePrimerDesignOverlay?.();
     detailController?.updateRecordSelect?.();
     detailController?.renderActiveRecord?.();
     cloningDesignController?.render?.();
@@ -1764,6 +1770,7 @@ export function initSequenceViewer(options = {}) {
         detailController?.clearSequenceSelection();
         detailController?.hideFeatureContextMenu();
         detailController?.hideFeatureEditor();
+        detailController?.hidePrimerDesignOverlay?.();
         state.selectedFeatureIndex = -1;
         detailController?.renderActiveRecord();
         if (hadRecognitionFeatures && state.activeEntryId) {
@@ -1805,6 +1812,7 @@ export function initSequenceViewer(options = {}) {
     setInputComposerVisible(true);
     detailController?.hideFeatureContextMenu();
     detailController?.hideFeatureEditor();
+    detailController?.hidePrimerDesignOverlay?.();
     detailController?.hideSequenceEditDialog?.();
     setRecords({ records: [], warnings: [], errors: [] }, 'Cleared');
     setStatus('Idle');
@@ -1897,6 +1905,7 @@ export function initSequenceViewer(options = {}) {
     },
     onNavigateHome: () => {
       setProteinBuilderConfirmation(null, { render: false });
+      detailController?.hidePrimerDesignOverlay?.();
       detailController?.hideSequenceEditDialog?.();
       homeController.navigateToHome();
     },
@@ -2033,6 +2042,19 @@ export function initSequenceViewer(options = {}) {
     void homeController.refreshLibraryEntries({ silent: true });
   }
 
+  async function openDroppedSequenceFile(file) {
+    if (!file) {
+      return;
+    }
+
+    try {
+      setStatus(`Reading ${file.name}...`);
+      await homeController?.openSequenceFileInDetail?.(file);
+    } catch (error) {
+      setStatus(String(error?.message || error || 'Failed to open dropped sequence file.'), true);
+    }
+  }
+
   elements.modePasteBtn?.addEventListener('click', () => {
     setMode('paste');
   });
@@ -2066,6 +2088,18 @@ export function initSequenceViewer(options = {}) {
         elements.fileNameLabel.textContent = 'No file selected';
       }
       setStatus(error.message || 'Failed to load file.', true);
+    }
+  });
+
+  bindFileDropTarget({
+    target: elements.detailWorkspace || elements.filePanel,
+    accept: FILE_ACCEPT,
+    onFiles: ([file]) => openDroppedSequenceFile(file),
+    onRejected: () => {
+      setStatus('Drop a supported GBK, FASTA, FASTQ, or sequence text file.', true);
+    },
+    onError: (error) => {
+      setStatus(String(error?.message || error || 'Failed to open dropped sequence file.'), true);
     }
   });
 

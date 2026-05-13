@@ -2,16 +2,22 @@ import { layoutToMap, toRowLabel, wellIdFor } from './plate-model.js';
 import { parseConcentrationMagnitude } from './concentration-utils.js';
 
 function hashSampleId(sampleId) {
-  let hash = 0;
+  let hash = 2166136261;
   const text = String(sampleId || '').trim();
   for (let index = 0; index < text.length; index += 1) {
-    hash = ((hash * 31) + text.charCodeAt(index)) % 360;
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
   }
-  return hash;
+  return hash >>> 0;
 }
 
-function sampleHue(sampleId) {
-  return (hashSampleId(sampleId) + 18) % 360;
+function sampleColor(sampleId) {
+  const hash = hashSampleId(sampleId);
+  const hue = Math.round((hash * 137.508) % 360);
+  return {
+    hue,
+    saturation: 74 + (hash % 18)
+  };
 }
 
 function buildRankedConcentrations(filledLayouts) {
@@ -22,13 +28,21 @@ function buildRankedConcentrations(filledLayouts) {
     .map((value) => ({ value, magnitude: parseConcentrationMagnitude(value) }))
     .filter((item) => item.magnitude !== null);
   if (numericValues.length >= 2) {
-    const magnitudes = numericValues.map((item) => item.magnitude);
+    const positiveMagnitudes = numericValues
+      .map((item) => item.magnitude)
+      .filter((value) => value > 0);
+    const zeroFloor = positiveMagnitudes.length
+      ? Math.log10(Math.min(...positiveMagnitudes)) - 1
+      : 0;
+    const magnitudes = numericValues.map((item) => item.magnitude > 0
+      ? Math.log10(item.magnitude)
+      : zeroFloor);
     const min = Math.min(...magnitudes);
     const max = Math.max(...magnitudes);
     const span = max - min || 1;
-    return new Map(numericValues.map((item) => [
+    return new Map(numericValues.map((item, index) => [
       item.value,
-      0.28 + (((item.magnitude - min) / span) * 0.54)
+      0.24 + (((magnitudes[index] - min) / span) * 0.62)
     ]));
   }
   const unique = [...new Set(rawValues)];
@@ -123,19 +137,16 @@ export function buildPlatePreviewHtml({
       const meta = cellLayout
         ? `Sample ID: ${cellLayout.sampleId || '-'} | Concentration: ${cellLayout.concentration || '-'}`
         : 'Sample ID: - | Concentration: -';
-      const hue = sampleValue ? sampleHue(sampleValue) : 210;
+      const color = sampleValue
+        ? sampleColor(sampleValue)
+        : { hue: 210, saturation: 72 };
       const intensity = concentrationValue
         ? (rankedConcentrations.get(concentrationValue) || 0.58)
         : (sampleValue ? 0.36 : 0);
-      const topAlpha = Math.min(0.92, 0.18 + (intensity * 0.68));
-      const bottomAlpha = Math.min(0.98, 0.28 + (intensity * 0.78));
-      const topLightness = Math.max(76, 96 - (intensity * 18));
-      const bottomLightness = Math.max(54, 88 - (intensity * 30));
-      const borderAlpha = Math.min(0.72, 0.24 + (intensity * 0.5));
-      const highlightAlpha = Math.min(0.42, 0.12 + (intensity * 0.18));
-      const shadowAlpha = Math.min(0.3, 0.08 + (intensity * 0.22));
+      const saturation = Math.round(Math.min(94, color.saturation - 10 + (intensity * 18)));
+      const lightness = Math.round(Math.max(58, 96 - (intensity * 34)));
       const cellStyle = sampleValue || concentrationValue
-        ? ` style="background: linear-gradient(180deg, hsla(${hue}, 86%, ${topLightness}%, ${topAlpha}) 0%, hsla(${hue}, 92%, ${bottomLightness}%, ${bottomAlpha}) 100%); border-color: hsla(${hue}, 58%, 42%, ${borderAlpha}); box-shadow: inset 0 1px 0 hsla(${hue}, 90%, 98%, ${highlightAlpha}), inset 0 -10px 18px hsla(${hue}, 74%, 48%, ${shadowAlpha});"`
+        ? ` style="background-color: hsl(${color.hue} ${saturation}% ${lightness}%);"`
         : '';
       cells.push(`
         <td class="assay-well${filled}${active}" data-well="${well}" title="${safeText(`${well} • ${meta} • Click to edit ${editable}`)}"${cellStyle}>

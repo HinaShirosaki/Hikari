@@ -6,6 +6,11 @@ export const DEFAULT_ORF_STOP_CODON_VISIBILITY = Object.freeze({
   TAA: false,
   TGA: false
 });
+export const DEFAULT_ORF_STOP_CODON_SELECTION = Object.freeze({
+  TAG: true,
+  TAA: true,
+  TGA: true
+});
 
 const ORF_STOP_DISPLAY_MODE_SET = new Set(['trim', 'star', 'codon']);
 const ORF_STOP_CODON_KEYS = ['TAG', 'TAA', 'TGA'];
@@ -165,6 +170,39 @@ export function normalizeOrfStopCodonVisibility(value) {
     next[codon] = source[codon] === true || source[codon.toLowerCase()] === true;
     return next;
   }, {});
+}
+
+export function normalizeOrfStopCodonSelection(value) {
+  if (typeof value === 'string') {
+    const selected = new Set(
+      String(value || '')
+        .toUpperCase()
+        .split(/[\s,;|]+/)
+        .filter((codon) => ORF_STOP_CODON_KEYS.includes(codon))
+    );
+    if (selected.size) {
+      return ORF_STOP_CODON_KEYS.reduce((next, codon) => {
+        next[codon] = selected.has(codon);
+        return next;
+      }, {});
+    }
+    return { ...DEFAULT_ORF_STOP_CODON_SELECTION };
+  }
+
+  const source = value && typeof value === 'object' ? value : {};
+  return ORF_STOP_CODON_KEYS.reduce((next, codon) => {
+    const hasUpper = Object.prototype.hasOwnProperty.call(source, codon);
+    const hasLower = Object.prototype.hasOwnProperty.call(source, codon.toLowerCase());
+    next[codon] = hasUpper || hasLower
+      ? source[codon] === true || source[codon.toLowerCase()] === true
+      : DEFAULT_ORF_STOP_CODON_SELECTION[codon];
+    return next;
+  }, {});
+}
+
+export function getEnabledOrfStopCodons(value) {
+  const selection = normalizeOrfStopCodonSelection(value);
+  return ORF_STOP_CODON_KEYS.filter((codon) => selection[codon] === true);
 }
 
 export function resolveOrfTranslationDisplay(aminoAcid, codon, stopDisplay = DEFAULT_ORF_STOP_CODON_VISIBILITY) {

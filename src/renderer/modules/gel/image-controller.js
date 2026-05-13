@@ -102,8 +102,7 @@ export function createImageController({ runtime, elements, deps }) {
     }
   }
 
-  async function onImageFileChange(event) {
-    const file = event?.target?.files?.[0];
+  async function loadImageFile(file) {
     if (!file) {
       return;
     }
@@ -144,6 +143,14 @@ export function createImageController({ runtime, elements, deps }) {
     }
   }
 
+  async function onImageFileChange(event) {
+    const file = event?.target?.files?.[0];
+    if (event?.target) {
+      event.target.value = '';
+    }
+    await loadImageFile(file);
+  }
+
   function normalizeCurrentCanvasCrop(croppedCanvas) {
     const context = croppedCanvas.getContext('2d', { willReadFrequently: true });
     const croppedData = context.getImageData(0, 0, croppedCanvas.width, croppedCanvas.height);
@@ -161,6 +168,7 @@ export function createImageController({ runtime, elements, deps }) {
     copyNormalizedImage,
     getPreprocessedImageForCurrentSettings,
     imageDataToDataUrl,
+    loadImageFile,
     normalizeCurrentCanvasCrop,
     onEnhancementChanged,
     onImageFileChange,

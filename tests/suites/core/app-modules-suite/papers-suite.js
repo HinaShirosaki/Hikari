@@ -560,6 +560,53 @@ test('papers module syncs stored highlights into the PDF viewer when a paper ope
   assert.equal(harness.viewerFactory.controller.highlights[0].id, 'highlight-1');
 });
 
+test('papers module stores highlight selections with PDF-style quad points', async () => {
+  const harness = buildPapersManagementHarness();
+
+  await openPaperInHarness(harness);
+  const didCreateHighlight = harness.viewerFactory.controller.callbacks.onHighlightSelection({
+    pageNumber: 1,
+    text: 'Important selected sentence',
+    boxes: [
+      { x: 0.1, y: 0.2, width: 0.3, height: 0.04 }
+    ],
+    pageWidth: 600,
+    pageHeight: 800
+  });
+
+  assert.equal(didCreateHighlight, true);
+  assert.equal(harness.state.papers[0].highlights.length, 1);
+  const highlight = harness.state.papers[0].highlights[0];
+  assert.equal(highlight.pageWidth, 600);
+  assert.equal(highlight.pageHeight, 800);
+  assert.deepEqual(Array.from(highlight.quadPoints), [60, 640, 240, 640, 60, 608, 240, 608]);
+  assert.deepEqual(
+    Array.from(harness.viewerFactory.controller.highlights[0].quadPoints),
+    Array.from(highlight.quadPoints)
+  );
+});
+
+test('papers highlight normalizer derives boxes from stored quad points', () => {
+  const normalizersModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-normalizers.js')
+  );
+  const highlights = normalizersModule.normalizeHighlightList([
+    {
+      id: 'highlight-quad',
+      pageNumber: 1,
+      text: 'Stored as PDF geometry',
+      pageWidth: 600,
+      pageHeight: 800,
+      quadPoints: [60, 640, 240, 640, 60, 608, 240, 608]
+    }
+  ]);
+
+  assert.equal(highlights.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(highlights[0].boxes)), [
+    { x: 0.1, y: 0.2, width: 0.3, height: 0.04 }
+  ]);
+});
+
 test('papers module renders embedded PDF metadata in the right-rail summary section', async () => {
   const harness = buildPapersManagementHarness();
   harness.state.papers[0].pdfMetadata = {

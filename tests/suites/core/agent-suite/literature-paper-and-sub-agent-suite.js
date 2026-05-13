@@ -1039,6 +1039,144 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
       }
     });
 
+    test('literature search workflow uses a real Codex sub-agent to read extracted paper markdown for Codex callers', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-codex-'));
+      const turns = [];
+      const loadCalls = [];
+      const subAgentRuntime = agentSubAgent.createAgentSubAgentRuntime({
+        now: () => '2026-03-22T10:00:00.000Z',
+        createId: () => 'subagent-codex-paper-1',
+        runSubAgentTurn: async (turnInput = {}) => {
+          turns.push(JSON.parse(JSON.stringify(turnInput)));
+          return {
+            assistant_message: JSON.stringify({
+              ok: true,
+              status: 'completed',
+              selected_papers: [
+                {
+                  paper_id: 'paper-1',
+                  paper_title: 'MAPK resistance markdown paper',
+                  reason: 'The extracted markdown contains the requested mechanism.'
+                }
+              ],
+              loaded_context_blocks: [
+                {
+                  paper_id: 'paper-1',
+                  paper_title: 'MAPK resistance markdown paper',
+                  section_label: 'Results',
+                  excerpt: 'Extracted markdown links pathway reactivation to MAPK inhibitor resistance.',
+                  relevance_reason: 'Directly answers what mechanism should enter the main context.',
+                  source: 'knowledge_markdown',
+                  evidence_kind: 'text'
+                }
+              ],
+              papers_read_count: 1,
+              summary: 'Read 1 extracted paper markdown file and loaded 1 context block.'
+            }),
+            summary: 'Codex paper context loaded.',
+            metadata: {
+              provider: 'codex-cli',
+              real_codex_sub_agent: true,
+              codex_session_id: 'codex-session-paper-1',
+              command: 'exec'
+            }
+          };
+        }
+      });
+
+      try {
+        const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          literatureSearchRuntime: {
+            searchLiteratureCandidates: async () => ({
+              ok: true,
+              status: 'completed',
+              query: 'MAPK resistance',
+              sources: ['pubmed'],
+              items: [
+                {
+                  id: 'candidate-1',
+                  source: 'pubmed',
+                  title: 'MAPK resistance markdown paper',
+                  summary: 'A paper about pathway reactivation and MAPK resistance.',
+                  url: 'https://example.org/mapk',
+                  doi: '10.1000/mapk'
+                }
+              ],
+              citations: [],
+              loaded_context_blocks: [],
+              papers_read_count: 0,
+              source_counts: { pubmed: 1 },
+              source_errors: {},
+              summary: 'Found 1 literature result.'
+            })
+          },
+          paperContextLoaderRuntime: {
+            fetchEuropePmcMetadataForItem: async () => ({
+              pdf_urls: ['https://example.org/mapk.pdf'],
+              abstract_sections: []
+            }),
+            loadPaperContexts: async () => {
+              loadCalls.push('called');
+              throw new Error('Codex paper context path should not call the generic paper context loader.');
+            }
+          },
+          paperDownloadRuntime: {
+            downloadPaper: async () => ({
+              ok: true,
+              status: 'completed',
+              file_name: 'mapk.pdf',
+              file_path: path.join(storageRoot, 'Papers', 'Atlas', 'mapk.pdf'),
+              relative_path: 'Papers/Atlas/mapk.pdf',
+              knowledge_markdown_path: path.join(storageRoot, 'KnowledgeBase', 'papers.md', '10.1000_mapk', 'paper.md'),
+              knowledge_markdown_relative_path: 'KnowledgeBase/papers.md/10.1000_mapk/paper.md',
+              knowledge_database: {
+                ok: true,
+                status: 'ready',
+                markdown_relative_path: 'KnowledgeBase/papers.md/10.1000_mapk/paper.md'
+              },
+              summary: 'Downloaded mapk.pdf and wrote paper.md.'
+            })
+          },
+          subAgentRuntime
+        });
+
+        const result = await runtime.execute({
+          provider: 'codex',
+          model: 'gpt-5.4-mini',
+          cwd: '/Users/shiyifan/Projects/Enana',
+          query: 'MAPK resistance',
+          storage_path: storageRoot,
+          snapshot: {
+            settings: {
+              storagePath: storageRoot
+            }
+          },
+          project: {
+            id: 'project-atlas',
+            name: 'Atlas'
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.codex_paper_context, true);
+        assert.equal(result.sub_agent_id, 'subagent-codex-paper-1');
+        assert.equal(result.sub_agent.metadata.real_codex_sub_agent, true);
+        assert.equal(result.sub_agent.metadata.codex_session_id, 'codex-session-paper-1');
+        assert.equal(loadCalls.length, 0);
+        assert.equal(result.loaded_context_blocks.length, 1);
+        assert.equal(result.loaded_context_blocks[0].source, 'knowledge_markdown');
+        assert.equal(result.papers_read_count, 1);
+        assert.equal(result.downloaded_papers[0].knowledge_markdown_relative_path, 'KnowledgeBase/papers.md/10.1000_mapk/paper.md');
+        assert.equal(turns.length, 1);
+        assert.match(String(turns[0].system_prompt || ''), /Codex paper-context sub-agent/);
+        assert.match(String(turns[0].message || ''), /knowledge_markdown_path/);
+        assert.match(String(turns[0].message || ''), /KnowledgeBase\/papers\.md\/10\.1000_mapk\/paper\.md/);
+        assert.doesNotMatch(String(turns[0].message || ''), /call Hikari literature-search/i);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
     test('literature search workflow owns paper IDs used for downloads and reads', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-paper-id-'));
       const downloadCalls = [];
@@ -1320,7 +1458,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
 
         assert.equal(result.ok, true);
         assert.equal(result.status, 'ready');
-        assert.match(result.markdown_relative_path, /^KnowledgeDatabase\/PaperKnowledge\//);
+        assert.match(result.markdown_relative_path, /^KnowledgeBase\/papers\.md\//);
         assert.equal(result.markdown_relative_path.includes('Papers/Atlas'), false);
         assert.notEqual(path.dirname(result.markdown_path), path.dirname(pdfPath));
         assert.match(rewritePrompt, /\[\[page:2\]\]/);
@@ -1329,7 +1467,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         const meta = JSON.parse(await fsPromises.readFile(result.meta_path, 'utf8'));
         assert.equal(meta.source_pdf_path, 'Papers/Atlas/mapk.pdf');
         assert.equal(meta.markdown_path, result.markdown_relative_path);
-        assert.equal(result.sqlite_relative_path, 'KnowledgeDatabase/knowledge.index.sqlite');
+        assert.equal(result.sqlite_relative_path, 'KnowledgeBase/knowledge.index.sqlite');
 
         const lookup = await runtime.lookupPaper({
           storage_path: storageRoot,
@@ -1341,6 +1479,447 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.equal(lookup.paper.wiki_exists, true);
         assert.equal(lookup.paper.pdf_exists, true);
         assert.equal(lookup.paper.wiki_path, result.markdown_relative_path);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+
+    test('pdf-to-md helper renders extracted PDF pages as markdown and the pdf text tool can include it', async () => {
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-pdf-text-extraction.js'));
+      const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
+        metadata: {
+          title: 'Engineered MAPK Study',
+          doi: '10.1000/mapk'
+        },
+        extraction: {
+          ok: true,
+          page_count: 1,
+          extracted_page_count: 1,
+          pages: [{ page_number: 1, text: 'Abstract\nMAPK inhibitor treatment was tested.' }],
+          sections: [{ label: 'Abstract', start_page: 1, end_page: 1, text: 'MAPK inhibitor treatment was tested.' }]
+        }
+      });
+      assert.match(markdown, /^# Engineered MAPK Study/m);
+      assert.match(markdown, /DOI: 10\.1000\/mapk/);
+      // Sections cover the body, so the redundant Pages dump is dropped by default.
+      assert.match(markdown, /### Abstract \(p\. 1\)/);
+      assert.doesNotMatch(markdown, /^## Pages/m);
+
+      const runtime = pdfTextExtraction.createPdfTextExtractionRuntime({
+        pdfJsLib: {
+          getDocument: () => ({
+            promise: Promise.resolve({
+              numPages: 1,
+              getPage: async () => ({
+                getTextContent: async () => ({
+                  items: [
+                    { str: 'Engineered MAPK Study', hasEOL: true },
+                    { str: 'Abstract', hasEOL: true },
+                    { str: 'MAPK inhibitor treatment was tested.', hasEOL: true }
+                  ]
+                }),
+                cleanup: () => {}
+              }),
+              getOutline: async () => [],
+              destroy: async () => {}
+            })
+          })
+        }
+      });
+      const result = await runtime.extractText({
+        buffer: Buffer.from('%PDF-1.7\nfake bytes'),
+        title: 'Engineered MAPK Study',
+        include_markdown: true
+      });
+      assert.equal(result.ok, true);
+      assert.match(result.markdown, /^# Engineered MAPK Study/m);
+      assert.match(result.markdown, /MAPK inhibitor treatment was tested/);
+
+      const originalDomMatrix = globalThis.DOMMatrix;
+      try {
+        delete globalThis.DOMMatrix;
+        const nodeRuntime = pdfTextExtraction.createPdfTextExtractionRuntime({
+          importEsm: async () => {
+            assert.equal(typeof globalThis.DOMMatrix, 'function');
+            return {
+              getDocument: () => ({
+                promise: Promise.resolve({
+                  numPages: 1,
+                  getPage: async () => ({
+                    getTextContent: async () => ({
+                      items: [{ str: 'Node extracted paper text.', hasEOL: true }]
+                    }),
+                    cleanup: () => {}
+                  }),
+                  getOutline: async () => [],
+                  destroy: async () => {}
+                })
+              })
+            };
+          },
+          vendorPdfJsPath: path.join(__dirname, 'vendor', 'pdfjs', 'build', 'pdf.mjs')
+        });
+        const nodeResult = await nodeRuntime.extractText({
+          buffer: Buffer.from('%PDF-1.7\nfake bytes'),
+          include_markdown: true
+        });
+        assert.equal(nodeResult.ok, true);
+        assert.match(nodeResult.markdown, /Node extracted paper text/);
+      } finally {
+        if (originalDomMatrix) {
+          globalThis.DOMMatrix = originalDomMatrix;
+        } else {
+          delete globalThis.DOMMatrix;
+        }
+      }
+
+      const sectionRuntime = pdfTextExtraction.createPdfTextExtractionRuntime({
+        pdfJsLib: {
+          getDocument: () => ({
+            promise: Promise.resolve({
+              numPages: 1,
+              getPage: async () => ({
+                getTextContent: async () => ({
+                  items: [
+                    { str: 'Example tagged paper', hasEOL: true },
+                    { str: 'This introductory paragraph', hasEOL: true },
+                    { str: 'wraps across PDF lines.', hasEOL: true },
+                    { str: 'Results', hasEOL: true },
+                    { str: 'First result sentence', hasEOL: true },
+                    { str: 'continues as one paragraph.', hasEOL: true },
+                    { str: 'Methods', hasEOL: true },
+                    { str: 'Cells were grown', hasEOL: true },
+                    { str: 'in culture.', hasEOL: true }
+                  ]
+                }),
+                cleanup: () => {}
+              }),
+              getOutline: async () => ([{ title: 'Example tagged paper', dest: [{}], items: [] }]),
+              getPageIndex: async () => 0,
+              destroy: async () => {}
+            })
+          })
+        }
+      });
+      const sectionResult = await sectionRuntime.extractText({
+        buffer: Buffer.from('%PDF-1.7\nfake bytes'),
+        include_sections: true
+      });
+      assert.equal(sectionResult.ok, true);
+      assert.equal(sectionResult.sections_source, 'heuristic');
+      assert.deepEqual(sectionResult.sections.map((section) => section.label), ['Front matter', 'Results', 'Methods']);
+
+      const sectionMarkdown = pdfToMd.buildPdfMarkdownFromExtraction({
+        metadata: { title: 'Example tagged paper' },
+        extraction: sectionResult,
+        includePages: false
+      });
+      assert.match(sectionMarkdown, /### Results \(p\. 1\)/);
+      assert.match(sectionMarkdown, /First result sentence continues as one paragraph\./);
+      assert.doesNotMatch(sectionMarkdown, /^## Pages/m);
+    });
+
+    test('pdf text extraction keeps long detected sections within the overall extraction budget by default', async () => {
+      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-pdf-text-extraction.js'));
+      const longBody = (label) => `${label} ${'x'.repeat(19000)}`;
+      const pageLabels = ['page-alpha', 'page-beta', 'page-gamma', 'page-delta', 'page-omega-tail-marker'];
+      const runtime = pdfTextExtraction.createPdfTextExtractionRuntime({
+        pdfJsLib: {
+          getDocument: () => ({
+            promise: Promise.resolve({
+              numPages: 5,
+              getPage: async (pageNumber) => ({
+                getTextContent: async () => ({
+                  items: pageNumber === 1
+                    ? [
+                      { str: 'Results', hasEOL: true },
+                      { str: longBody(pageLabels[0]), hasEOL: true }
+                    ]
+                    : [{ str: longBody(pageLabels[pageNumber - 1]), hasEOL: true }]
+                }),
+                cleanup: () => {}
+              }),
+              getOutline: async () => [],
+              destroy: async () => {}
+            })
+          })
+        }
+      });
+      const result = await runtime.extractText({
+        buffer: Buffer.from('%PDF-1.7\nfake bytes'),
+        include_sections: true
+      });
+      assert.equal(result.ok, true);
+      assert.equal(result.sections_source, 'heuristic');
+      assert.equal(result.sections[0].label, 'Results');
+      assert.match(result.sections[0].text, /page-omega-tail-marker/);
+      assert.ok(result.sections[0].text.length > 80000);
+    });
+
+    test('pdf joinTextItems merges position-adjacent items without inserting stray ligature spaces', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      // Three text items on the same baseline whose x-ranges touch — the old
+      // joiner would insert a space between each ("con fi rmed"); the new joiner
+      // should merge them into a single word.
+      const items = [
+        { str: 'con', transform: [1, 0, 0, 1, 10, 100], width: 15, height: 10 },
+        { str: 'fi', transform: [1, 0, 0, 1, 25, 100], width: 5, height: 10 },
+        { str: 'rmed', transform: [1, 0, 0, 1, 30, 100], width: 20, height: 10, hasEOL: true }
+      ];
+      const text = pdfTextLayout.joinTextItems(items);
+      assert.equal(text, 'confirmed');
+    });
+
+    test('pdf joinTextItems inserts spaces between items separated by a font-sized gap', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const items = [
+        { str: 'alpha', transform: [1, 0, 0, 1, 10, 100], width: 30, height: 10 },
+        { str: 'beta', transform: [1, 0, 0, 1, 50, 100], width: 25, height: 10, hasEOL: true }
+      ];
+      const text = pdfTextLayout.joinTextItems(items);
+      assert.equal(text, 'alpha beta');
+    });
+
+    test('pdf joinTextItems emits a markdown table when a Table caption is followed by aligned rows', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      // Lines are differentiated by y. Within each line, items at consistent
+      // x-positions form columns separated by gaps larger than 2x the font size.
+      const fontSize = 10;
+      const makeLine = (y, items) => items.map((item, idx) => ({
+        str: item.str,
+        transform: [1, 0, 0, 1, item.x, y],
+        width: item.width,
+        height: fontSize,
+        hasEOL: idx === items.length - 1
+      }));
+      const items = [
+        ...makeLine(200, [{ str: 'Table 1. Yields by ligand', x: 50, width: 120 }]),
+        ...makeLine(180, [
+          { str: 'Entry', x: 50, width: 25 },
+          { str: 'Ligand', x: 150, width: 35 },
+          { str: 'Yield', x: 250, width: 25 }
+        ]),
+        ...makeLine(165, [
+          { str: '1', x: 50, width: 8 },
+          { str: 'bipy', x: 150, width: 25 },
+          { str: '95%', x: 250, width: 25 }
+        ]),
+        ...makeLine(150, [
+          { str: '2', x: 50, width: 8 },
+          { str: 'phen', x: 150, width: 25 },
+          { str: '72%', x: 250, width: 25 }
+        ]),
+        ...makeLine(120, [{ str: 'Narrative text follows.', x: 50, width: 100 }])
+      ];
+      const text = pdfTextLayout.joinTextItems(items);
+      assert.match(text, /^Table 1\. Yields by ligand$/m);
+      assert.match(text, /^\| Entry \| Ligand \| Yield \|$/m);
+      assert.match(text, /^\| --- \| --- \| --- \|$/m);
+      assert.match(text, /^\| 1 \| bipy \| 95% \|$/m);
+      assert.match(text, /^\| 2 \| phen \| 72% \|$/m);
+      assert.match(text, /^Narrative text follows\.$/m);
+    });
+
+    test('pdf joinTextItems reconstructs a markdown table when the header wraps across multiple lines', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const fontSize = 10;
+      const mk = (y, list) => list.map((item, idx) => ({
+        str: item.str,
+        transform: [1, 0, 0, 1, item.x, y],
+        width: item.width,
+        height: fontSize,
+        hasEOL: idx === list.length - 1
+      }));
+      const items = [
+        ...mk(300, [{ str: 'Table 1 | Design of CRBN constructs', x: 50, width: 200 }]),
+        // Header line 1 — five columns including hyphen-wrapped column names.
+        ...mk(280, [
+          { str: 'Construct ID', x: 50, width: 40 },
+          { str: 'N-terminal resi-', x: 150, width: 50 },
+          { str: 'Linker', x: 250, width: 25 },
+          { str: 'C-terminal resi-', x: 350, width: 50 },
+          { str: 'Mutations', x: 450, width: 40 }
+        ]),
+        // Header line 2 — wrapped continuations of columns 2 and 4.
+        ...mk(270, [
+          { str: 'due range', x: 150, width: 35 },
+          { str: 'due range', x: 350, width: 35 }
+        ]),
+        ...mk(255, [
+          { str: '1', x: 50, width: 5 },
+          { str: '41–187', x: 150, width: 30 },
+          { str: 'GSG', x: 250, width: 15 },
+          { str: '249–426', x: 350, width: 30 },
+          { str: '–', x: 450, width: 5 }
+        ]),
+        ...mk(240, [
+          { str: '6', x: 50, width: 5 },
+          { str: '41–187', x: 150, width: 30 },
+          { str: 'GSG', x: 250, width: 15 },
+          { str: '249–426', x: 350, width: 30 },
+          { str: 'T58S, I92V, K116N,', x: 450, width: 75 }
+        ]),
+        // Mutations column wraps onto a continuation line aligned with the last column.
+        ...mk(230, [{ str: 'C366K, S410R, L423I', x: 450, width: 80 }]),
+        ...mk(215, [
+          { str: '15', x: 50, width: 10 },
+          { str: '44–185', x: 150, width: 30 },
+          { str: 'GGSSGGSSG', x: 250, width: 50 },
+          { str: '321–427', x: 350, width: 30 },
+          { str: 'C366S', x: 450, width: 25 }
+        ]),
+        ...mk(190, [{ str: 'Narrative text follows.', x: 50, width: 100 }])
+      ];
+      const text = pdfTextLayout.joinTextItems(items);
+      assert.match(text, /^Table 1 \| Design of CRBN constructs$/m);
+      // Wrapped headers de-hyphenated into single column titles.
+      assert.match(text, /^\| Construct ID \| N-terminal residue range \| Linker \| C-terminal residue range \| Mutations \|$/m);
+      assert.match(text, /^\| --- \| --- \| --- \| --- \| --- \|$/m);
+      assert.match(text, /^\| 1 \| 41–187 \| GSG \| 249–426 \| – \|$/m);
+      // Continuation row merged into the previous row's last cell.
+      assert.match(text, /^\| 6 \| 41–187 \| GSG \| 249–426 \| T58S, I92V, K116N, C366K, S410R, L423I \|$/m);
+      assert.match(text, /^\| 15 \| 44–185 \| GGSSGGSSG \| 321–427 \| C366S \|$/m);
+      assert.match(text, /^Narrative text follows\.$/m);
+    });
+
+    test('pdf-text-layout strips running headers/footers that repeat at the same head/tail position across pages', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const footer = (n) => [
+        'ACS Central Science Research Article',
+        'https://doi.org/10.1021/foo',
+        `ACS Cent. Sci. 2023, 9, ${n}`,
+        String(n)
+      ].join('\n');
+      const pages = [
+        { page_number: 1, text: `Body line one\nBody line two\n${footer(648)}` },
+        { page_number: 2, text: `Continued body line\nMore content\n${footer(649)}` },
+        { page_number: 3, text: `Another body line\n${footer(650)}` }
+      ];
+      const stripped = pdfTextLayout.stripRunningHeadersAndFooters(pages);
+      assert.equal(stripped.length, 3);
+      for (const page of stripped) {
+        assert.doesNotMatch(page.text, /ACS Central Science Research Article/);
+        assert.doesNotMatch(page.text, /https:\/\/doi\.org/);
+        assert.doesNotMatch(page.text, /ACS Cent\. Sci\./);
+        assert.doesNotMatch(page.text, /^\d+$/m);
+      }
+      assert.match(stripped[0].text, /Body line one/);
+      assert.match(stripped[1].text, /Continued body line/);
+      assert.match(stripped[2].text, /Another body line/);
+    });
+
+    test('pdf-text-layout leaves pages untouched when fewer than three repetitions are found', () => {
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const pages = [
+        { page_number: 1, text: 'Body one\nRepeated footer\n1' },
+        { page_number: 2, text: 'Body two\nRepeated footer\n2' }
+      ];
+      const stripped = pdfTextLayout.stripRunningHeadersAndFooters(pages);
+      assert.deepStrictEqual(stripped, pages);
+    });
+
+    test('pdf-to-md drops the redundant Pages dump by default when sections cover the body', () => {
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
+        metadata: { title: 'Paper with sections' },
+        extraction: {
+          ok: true,
+          page_count: 1,
+          pages: [{ page_number: 1, text: 'Methods\nWe used X.' }],
+          sections: [{ label: 'Methods', start_page: 1, end_page: 1, text: 'We used X.' }]
+        }
+      });
+      assert.match(markdown, /## Sections/);
+      assert.doesNotMatch(markdown, /^## Pages/m);
+    });
+
+    test('pdf-to-md still emits Pages when explicitly requested even with sections present', () => {
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
+        metadata: { title: 'Paper with sections' },
+        extraction: {
+          ok: true,
+          page_count: 1,
+          pages: [{ page_number: 1, text: 'Methods\nWe used X.' }],
+          sections: [{ label: 'Methods', start_page: 1, end_page: 1, text: 'We used X.' }]
+        },
+        includePages: true
+      });
+      assert.match(markdown, /## Sections/);
+      assert.match(markdown, /## Pages/);
+    });
+
+    test('pdf-to-md keeps complete section text by default for stored paper markdown', () => {
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const longSection = `${'A'.repeat(65000)} complete tail marker`;
+      const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
+        metadata: { title: 'Long paper section' },
+        extraction: {
+          ok: true,
+          page_count: 1,
+          extracted_page_count: 1,
+          sections: [{ label: 'Results', start_page: 1, end_page: 1, text: longSection }]
+        }
+      });
+      assert.match(markdown, /complete tail marker/);
+      assert.doesNotMatch(markdown, /\[\.\.\. truncated \.\.\.\]/);
+    });
+
+    test('pdf-to-md formatMarkdownBodyText preserves markdown tables across paragraph joining', () => {
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const input = [
+        'Intro paragraph that',
+        'wraps across two lines.',
+        '',
+        '| Entry | Yield |',
+        '| --- | --- |',
+        '| 1 | 95% |',
+        '| 2 | 72% |',
+        '',
+        'Closing sentence.'
+      ].join('\n');
+      const formatted = pdfToMd.formatMarkdownBodyText(input);
+      assert.match(formatted, /Intro paragraph that wraps across two lines\./);
+      assert.match(formatted, /\| Entry \| Yield \|\n\| --- \| --- \|\n\| 1 \| 95% \|\n\| 2 \| 72% \|/);
+      assert.match(formatted, /Closing sentence\./);
+    });
+
+    test('paper markdown import helper updates imported paper records with knowledge markdown paths', async () => {
+      const { transformPaperPdfToMarkdown } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'paper-markdown-import.js'));
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-markdown-import-'));
+      const pdfPath = path.join(storageRoot, 'Papers', 'Atlas', 'mapk.pdf');
+      try {
+        await fsPromises.mkdir(path.dirname(pdfPath), { recursive: true });
+        await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nfake pdf bytes\n'));
+        const paper = {
+          id: 'paper-1',
+          title: 'Engineered MAPK Study',
+          storedRelativePath: 'Papers/Atlas/mapk.pdf',
+          linkedType: 'journal-club',
+          linkedName: 'Atlas'
+        };
+        const result = await transformPaperPdfToMarkdown({
+          storagePath: storageRoot,
+          paper,
+          paperKnowledgeDatabaseRuntime: {
+            ingestPaperPdf: async (input = {}) => {
+              assert.equal(input.file_path, pdfPath);
+              assert.equal(input.use_llm_rewrite, false);
+              return {
+                ok: true,
+                status: 'ready',
+                markdown_relative_path: 'KnowledgeBase/papers.md/Engineered_MAPK_Study/paper.md',
+                extracted_text_relative_path: 'KnowledgeBase/papers.md/Engineered_MAPK_Study/extracted.txt',
+                meta_relative_path: 'KnowledgeBase/papers.md/Engineered_MAPK_Study/meta.json',
+                wiki_generation_method: 'pdf-to-md'
+              };
+            }
+          }
+        });
+        assert.equal(result.ok, true);
+        assert.equal(paper.knowledgeMarkdownRelativePath, 'KnowledgeBase/papers.md/Engineered_MAPK_Study/paper.md');
+        assert.equal(paper.knowledgeStatus, 'ready');
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
@@ -1375,8 +1954,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
               return {
                 ok: true,
                 status: 'ready',
-                markdown_path: path.join(storageRoot, 'KnowledgeDatabase', 'PaperKnowledge', 'attached', 'paper.md'),
-                markdown_relative_path: 'KnowledgeDatabase/PaperKnowledge/attached/paper.md',
+                markdown_path: path.join(storageRoot, 'KnowledgeBase', 'papers.md', 'attached', 'paper.md'),
+                markdown_relative_path: 'KnowledgeBase/papers.md/attached/paper.md',
                 summary: 'Wrote paper knowledge markdown.'
               };
             }
@@ -1395,7 +1974,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.equal(result.status, 'completed');
         assert.equal(ingestedFilePath, result.file_path);
         assert.equal(result.knowledge_database.ok, true);
-        assert.equal(result.knowledge_markdown_relative_path, 'KnowledgeDatabase/PaperKnowledge/attached/paper.md');
+        assert.equal(result.knowledge_markdown_relative_path, 'KnowledgeBase/papers.md/attached/paper.md');
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
@@ -1496,11 +2075,11 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
                 file_name: 'doi-paper.pdf',
                 file_path: path.join(storageRoot, 'LiteratureSearch', 'Atlas', 'Papers', 'doi-paper.pdf'),
                 relative_path: 'Papers/Atlas/doi-paper.pdf',
-                knowledge_markdown_relative_path: 'KnowledgeDatabase/PaperKnowledge/10.1000_example-doi/paper.md',
+                knowledge_markdown_relative_path: 'KnowledgeBase/papers.md/10.1000_example-doi/paper.md',
                 knowledge_database: {
                   ok: true,
                   status: 'ready',
-                  markdown_relative_path: 'KnowledgeDatabase/PaperKnowledge/10.1000_example-doi/paper.md'
+                  markdown_relative_path: 'KnowledgeBase/papers.md/10.1000_example-doi/paper.md'
                 },
                 summary: 'Downloaded doi-paper.pdf'
               };
@@ -1527,7 +2106,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuite(context =
         assert.equal(downloadCalls[0].doi, '10.1000/example-doi');
         assert.equal(downloadCalls[0].page_url, 'https://doi.org/10.1000/example-doi');
         assert.equal(result.selected_papers[0].doi, '10.1000/example-doi');
-        assert.equal(result.downloaded_papers[0].knowledge_markdown_relative_path, 'KnowledgeDatabase/PaperKnowledge/10.1000_example-doi/paper.md');
+        assert.equal(result.downloaded_papers[0].knowledge_markdown_relative_path, 'KnowledgeBase/papers.md/10.1000_example-doi/paper.md');
         assert.equal(result.downloaded_papers[0].knowledge_database.status, 'ready');
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });

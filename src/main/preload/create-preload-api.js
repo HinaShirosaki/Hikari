@@ -1,6 +1,7 @@
 'use strict';
 
 const { createAgentApi } = require('./api/agent-api');
+const { createAssayApi } = require('./api/assay-api');
 const { createInventoryApi } = require('./api/inventory-api');
 const { createLlmApi } = require('./api/llm-api');
 const { createSequenceLibraryApi } = require('./api/sequence-library-api');
@@ -12,6 +13,7 @@ function createPreloadApi(ipcRenderer) {
   return {
     ...createStorageApi(ipcRenderer),
     ...createSystemApi(ipcRenderer),
+    ...createAssayApi(ipcRenderer),
     ...createInventoryApi(ipcRenderer),
     ...createSequenceLibraryApi(ipcRenderer),
     ...createTelegramApi(ipcRenderer),

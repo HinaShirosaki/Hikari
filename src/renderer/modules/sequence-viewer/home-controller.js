@@ -2,6 +2,7 @@ import { escapeHtml } from '../tool-box/common.js';
 import { DEFAULT_MAX_RECORDS } from './constants.js';
 import { parseInputRecords } from './parsing.js';
 import { cleanText } from './shared.js';
+import { bindFileDropTarget } from '../file-drop.js';
 
 export function createSequenceViewerHomeController(config = {}) {
   const rootDocument = config?.rootDocument || globalThis?.document || null;
@@ -44,6 +45,34 @@ export function createSequenceViewerHomeController(config = {}) {
     }
     elements.featureSearchStatus.textContent = message;
     elements.featureSearchStatus.style.color = isError ? 'var(--danger)' : '';
+  }
+
+  function applyPreviewFrameSurfaceBridge(frame) {
+    const previewDocument = frame?.contentDocument || frame?.contentWindow?.document || null;
+    const previewHead = previewDocument?.head || previewDocument?.querySelector?.('head') || null;
+    if (!previewDocument || !previewHead || typeof previewDocument.createElement !== 'function') {
+      return;
+    }
+
+    let styleNode = previewDocument.getElementById?.('sequence-viewer-preview-surface-bridge') || null;
+    if (!styleNode) {
+      styleNode = previewDocument.createElement('style');
+      styleNode.id = 'sequence-viewer-preview-surface-bridge';
+      previewHead.appendChild(styleNode);
+    }
+
+    styleNode.textContent = `
+      .circular-preview__hover-tooltip {
+        border-radius: 8px !important;
+        border: 1px solid rgba(216, 206, 193, 0.96) !important;
+        background: rgba(255, 252, 247, 0.98) !important;
+        box-shadow: 0 2px 8px rgba(27, 20, 14, 0.1) !important;
+        color: #17120e !important;
+      }
+      .circular-preview__hover-description {
+        color: #72675d !important;
+      }
+    `;
   }
 
   function setLocalWorkspaceVisibility(mode) {
@@ -146,6 +175,7 @@ export function createSequenceViewerHomeController(config = {}) {
       frame.setAttribute('scrolling', 'no');
       frame.srcdoc = String(htmlText);
       frame.addEventListener('load', () => {
+        applyPreviewFrameSurfaceBridge(frame);
         schedulePreviewFrameHeightSync(frame);
       }, { once: true });
       elements.previewHost.replaceChildren(frame);
@@ -567,6 +597,22 @@ export function createSequenceViewerHomeController(config = {}) {
     }
   }
 
+  async function openSequenceFileInDetail(file) {
+    if (!file) {
+      return;
+    }
+
+    try {
+      setHomeStatus(`Reading ${file.name}...`);
+      const text = await readFileAsText(file);
+      const parsed = parseInputRecords(text, { maxRecords: DEFAULT_MAX_RECORDS });
+      await openParsedRecordsInDetail(parsed, text, 'Loaded');
+      setStatus(`Opened ${file.name} in detail workspace.`);
+    } catch (error) {
+      setHomeStatus(error?.message || 'Failed to open selected file.', true);
+    }
+  }
+
   function bindEvents() {
     const ResizeObserverCtor = rootDocument?.defaultView?.ResizeObserver || globalThis?.ResizeObserver;
     if (elements.previewHost && typeof ResizeObserverCtor === 'function') {
@@ -599,20 +645,19 @@ export function createSequenceViewerHomeController(config = {}) {
 
     elements.homeOpenInput?.addEventListener('change', async () => {
       const file = elements.homeOpenInput.files?.[0];
-      if (!file) {
-        return;
-      }
+      await openSequenceFileInDetail(file);
+      elements.homeOpenInput.value = '';
+    });
 
-      try {
-        setHomeStatus(`Reading ${file.name}...`);
-        const text = await readFileAsText(file);
-        const parsed = parseInputRecords(text, { maxRecords: DEFAULT_MAX_RECORDS });
-        await openParsedRecordsInDetail(parsed, text, 'Loaded');
-        setStatus(`Opened ${file.name} in detail workspace.`);
-      } catch (error) {
-        setHomeStatus(error?.message || 'Failed to open selected file.', true);
-      } finally {
-        elements.homeOpenInput.value = '';
+    bindFileDropTarget({
+      target: elements.homeWorkspace || elements.homeOpenBtn,
+      accept: fileAccept,
+      onFiles: ([file]) => openSequenceFileInDetail(file),
+      onRejected: () => {
+        setHomeStatus('Drop a supported GBK, FASTA, FASTQ, or sequence text file.', true);
+      },
+      onError: (error) => {
+        setHomeStatus(String(error?.message || error || 'Failed to open dropped sequence file.'), true);
       }
     });
 
@@ -684,6 +729,7 @@ export function createSequenceViewerHomeController(config = {}) {
     bindEvents,
     navigateToHome,
     navigateToDetail,
+    openSequenceFileInDetail,
     openLibraryEntryInDetail,
     openParsedRecordsInDetail,
     refreshLibraryEntries,

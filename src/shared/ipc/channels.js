@@ -19,6 +19,7 @@ const AGENT = Object.freeze({
   CHAT_LOG_LIST_SESSIONS: 'agent:chat-log:list-sessions',
   CHAT_LOG_GET_SESSION: 'agent:chat-log:get-session',
   DEVELOPER_TEST_TOOLS: 'agent:developer:test-tools',
+  DEVELOPER_CONTEXT_PREVIEW: 'agent:developer:context-preview',
   LOGS_LIST_REQUESTS: 'agent:logs:list-requests',
   LOGS_REPLAY: 'agent:logs:replay'
 });
@@ -49,6 +50,10 @@ const INVENTORY = Object.freeze({
   PARSE_CHEMICAL_IMPORT: 'inventory:parse-chemical-import'
 });
 
+const ASSAY = Object.freeze({
+  PARSE_RESULT_IMPORT: 'assay:parse-result-import'
+});
+
 const SEQUENCE_LIBRARY = Object.freeze({
   LIST: 'sequence-library:list',
   GET: 'sequence-library:get',
@@ -77,7 +82,9 @@ const LLM = Object.freeze({
   CODEX_CLEAR_LOGIN: 'llm:codex-clear-login',
   CODEX_SET_MODEL: 'llm:codex-set-model',
   CODEX_SET_REASONING_EFFORT: 'llm:codex-set-reasoning-effort',
-  CODEX_GENERATE: 'llm:codex-generate'
+  CODEX_GENERATE: 'llm:codex-generate',
+  DIRECT_MODULES: 'llm:direct-modules',
+  DIRECT_GENERATE: 'llm:direct-generate'
 });
 
 module.exports = {
@@ -86,6 +93,7 @@ module.exports = {
   STORAGE,
   SYSTEM,
   INVENTORY,
+  ASSAY,
   SEQUENCE_LIBRARY,
   TELEGRAM,
   TELEGRAM_COMMAND_EVENT,

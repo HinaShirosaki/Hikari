@@ -39,7 +39,7 @@ test('collaboration-management sends messages and imports protocol share links',
     protocols: []
   };
 
-  const collaborationModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'collaboration-management.js'), {
+  const collaborationModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'collaboration-management', 'index.js'), {
     document,
     atob: atobPolyfill,
     TextDecoder,
@@ -623,6 +623,7 @@ test('protocol-management generates a protocol from the create editor overlay', 
     }
   };
 
+  let directLlmPayload = null;
   let generatedPayload = null;
   let resolveGeneration = null;
 
@@ -647,6 +648,26 @@ test('protocol-management generates a protocol from the create editor overlay', 
     },
     window: {
       enanaApi: {
+        runDirectLlmPrompt: async (payload) => {
+          directLlmPayload = payload;
+          return {
+            ok: true,
+            payload: {
+              protocol: {
+                name: 'Generated Expression Protocol',
+                purpose: 'Express a recombinant protein in bacteria.',
+                materials: ['LB media', 'Antibiotic', 'Expression plasmid'],
+                steps: [
+                  'Transform the expression plasmid into competent cells.',
+                  'Grow an overnight starter culture with the correct antibiotic.',
+                  'Inoculate fresh media and induce expression at [temperature].'
+                ],
+                troubleshooting: 'Problem: low expression; Solution: reduce the induction temperature.'
+              },
+              result_summary: 'Generated protocol from the attached methods.'
+            }
+          };
+        },
         agentGenerateProtocol: async (payload) => {
           generatedPayload = payload;
           return new Promise((resolve) => {
@@ -694,9 +715,13 @@ test('protocol-management generates a protocol from the create editor overlay', 
   assert.equal(document.getElementById('protocol-generate-input-overlay').hidden, true);
   assert.equal(document.getElementById('protocol-generate-result-overlay').hidden, false);
   assert.match(document.getElementById('protocol-generate-result-preview').innerHTML, /protocol-polish-loading-dots/);
-  assert.equal(generatedPayload.message, 'Generate a bacterial expression protocol from the attached methods.');
-  assert.equal(generatedPayload.attachments.length, 1);
-  assert.equal(generatedPayload.attachments[0].name, 'methods.pdf');
+  assert.equal(directLlmPayload.moduleId, 'protocol');
+  assert.equal(directLlmPayload.task, 'protocol-generation');
+  assert.match(directLlmPayload.prompt, /Generate a bacterial expression protocol from the attached methods\./);
+  assert.equal(directLlmPayload.attachments.length, 1);
+  assert.equal(directLlmPayload.attachments[0].name, 'methods.pdf');
+  assert.match(generatedPayload.protocolJson, /Generated Expression Protocol/);
+  assert.equal(generatedPayload.resultSummary, 'Generate a bacterial expression protocol from the attached methods.');
 
   resolveGeneration({
     ok: true,

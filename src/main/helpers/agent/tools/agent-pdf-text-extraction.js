@@ -3,6 +3,8 @@
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 const { Buffer } = require('node:buffer');
+const { buildPdfMarkdownFromExtraction } = require('../../main/pdf-to-md.js');
+const { joinTextItems, stripRunningHeadersAndFooters } = require('../../main/pdf-text-layout.js');
 
 const PDF_TEXT_EXTRACTION_ACTIONS = Object.freeze({
   EXTRACT: 'extract'
@@ -14,6 +16,110 @@ const DEFAULT_MAX_TOTAL_CHARS = 400000;
 const DEFAULT_FETCH_ACCEPT = 'application/pdf,application/octet-stream;q=0.9,*/*;q=0.1';
 const DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; HikariPdfTextExtraction/1.0; +https://hikari.local)';
 const DEFAULT_VENDOR_PDFJS_PATH = path.resolve(__dirname, '../../../../../vendor/pdfjs/build/pdf.mjs');
+const DEFAULT_VENDOR_PDFJS_ROOT = path.resolve(__dirname, '../../../../../vendor/pdfjs');
+
+class PdfTextDomMatrix {
+  constructor(init) {
+    const values = Array.isArray(init) || ArrayBuffer.isView(init)
+      ? Array.from(init)
+      : null;
+    const source = values || ensureObject(init);
+    this.a = numberOrDefault(values ? values[0] : source.a ?? source.m11, 1);
+    this.b = numberOrDefault(values ? values[1] : source.b ?? source.m12, 0);
+    this.c = numberOrDefault(values ? values[2] : source.c ?? source.m21, 0);
+    this.d = numberOrDefault(values ? values[3] : source.d ?? source.m22, 1);
+    this.e = numberOrDefault(values ? values[4] : source.e ?? source.m41, 0);
+    this.f = numberOrDefault(values ? values[5] : source.f ?? source.m42, 0);
+    this.is2D = true;
+  }
+
+  get m11() { return this.a; }
+  set m11(value) { this.a = Number(value) || 0; }
+  get m12() { return this.b; }
+  set m12(value) { this.b = Number(value) || 0; }
+  get m21() { return this.c; }
+  set m21(value) { this.c = Number(value) || 0; }
+  get m22() { return this.d; }
+  set m22(value) { this.d = Number(value) || 0; }
+  get m41() { return this.e; }
+  set m41(value) { this.e = Number(value) || 0; }
+  get m42() { return this.f; }
+  set m42(value) { this.f = Number(value) || 0; }
+
+  multiply(other) {
+    return new PdfTextDomMatrix(this).multiplySelf(other);
+  }
+
+  multiplySelf(other) {
+    const matrix = new PdfTextDomMatrix(other);
+    const a = this.a * matrix.a + this.c * matrix.b;
+    const b = this.b * matrix.a + this.d * matrix.b;
+    const c = this.a * matrix.c + this.c * matrix.d;
+    const d = this.b * matrix.c + this.d * matrix.d;
+    const e = this.a * matrix.e + this.c * matrix.f + this.e;
+    const f = this.b * matrix.e + this.d * matrix.f + this.f;
+    return this.#set(a, b, c, d, e, f);
+  }
+
+  preMultiplySelf(other) {
+    const matrix = new PdfTextDomMatrix(other);
+    const a = matrix.a * this.a + matrix.c * this.b;
+    const b = matrix.b * this.a + matrix.d * this.b;
+    const c = matrix.a * this.c + matrix.c * this.d;
+    const d = matrix.b * this.c + matrix.d * this.d;
+    const e = matrix.a * this.e + matrix.c * this.f + matrix.e;
+    const f = matrix.b * this.e + matrix.d * this.f + matrix.f;
+    return this.#set(a, b, c, d, e, f);
+  }
+
+  translate(tx = 0, ty = 0) {
+    return new PdfTextDomMatrix(this).translateSelf(tx, ty);
+  }
+
+  translateSelf(tx = 0, ty = 0) {
+    return this.multiplySelf([1, 0, 0, 1, numberOrDefault(tx, 0), numberOrDefault(ty, 0)]);
+  }
+
+  scale(scaleX = 1, scaleY = scaleX) {
+    return new PdfTextDomMatrix(this).scaleSelf(scaleX, scaleY);
+  }
+
+  scaleSelf(scaleX = 1, scaleY = scaleX) {
+    return this.multiplySelf([numberOrDefault(scaleX, 1), 0, 0, numberOrDefault(scaleY, 1), 0, 0]);
+  }
+
+  invertSelf() {
+    const determinant = this.a * this.d - this.b * this.c;
+    if (!determinant) {
+      return this.#set(NaN, NaN, NaN, NaN, NaN, NaN);
+    }
+    const a = this.d / determinant;
+    const b = -this.b / determinant;
+    const c = -this.c / determinant;
+    const d = this.a / determinant;
+    const e = (this.c * this.f - this.d * this.e) / determinant;
+    const f = (this.b * this.e - this.a * this.f) / determinant;
+    return this.#set(a, b, c, d, e, f);
+  }
+
+  toFloat32Array() {
+    return new Float32Array([this.a, this.b, this.c, this.d, this.e, this.f]);
+  }
+
+  toFloat64Array() {
+    return new Float64Array([this.a, this.b, this.c, this.d, this.e, this.f]);
+  }
+
+  #set(a, b, c, d, e, f) {
+    this.a = a;
+    this.b = b;
+    this.c = c;
+    this.d = d;
+    this.e = e;
+    this.f = f;
+    return this;
+  }
+}
 
 function defaultCleanText(value, maxLength = 4000) {
   const text = String(value || '');
@@ -29,6 +135,22 @@ function defaultCleanText(value, maxLength = 4000) {
 
 function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function numberOrDefault(value, fallback) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function installPdfJsNodePolyfills() {
+  if (typeof globalThis.DOMMatrix === 'undefined') {
+    globalThis.DOMMatrix = PdfTextDomMatrix;
+  }
+}
+
+function withTrailingSeparator(value) {
+  const text = String(value || '');
+  return text.endsWith(path.sep) ? text : `${text}${path.sep}`;
 }
 
 function normalizeInteger(value, fallback, { min = 1, max = Number.MAX_SAFE_INTEGER } = {}) {
@@ -95,36 +217,6 @@ function normalizePageRange(rawStart, rawEnd, totalPages) {
   return { start, end };
 }
 
-function joinTextItems(items) {
-  if (!Array.isArray(items) || !items.length) {
-    return '';
-  }
-  const lines = [];
-  let currentLine = '';
-  items.forEach((item) => {
-    if (!item) {
-      return;
-    }
-    const str = typeof item.str === 'string' ? item.str : '';
-    if (str) {
-      currentLine = currentLine ? `${currentLine}${str}` : str;
-    }
-    if (item.hasEOL) {
-      lines.push(currentLine);
-      currentLine = '';
-    } else if (str && !str.endsWith(' ')) {
-      currentLine = `${currentLine} `;
-    }
-  });
-  if (currentLine.trim()) {
-    lines.push(currentLine);
-  }
-  return lines
-    .map((line) => line.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-    .join('\n');
-}
-
 function normalizeSectionLabel(rawLabel) {
   const text = String(rawLabel || '')
     .trim()
@@ -145,17 +237,41 @@ function normalizeSectionLabel(rawLabel) {
   if (/^(references|bibliography|works\s+cited|literature\s+cited)\b/.test(text)) return 'references';
   if (/^acknowled?g(?:e)?ments?\b/.test(text)) return 'acknowledgments';
   if (/^funding\b/.test(text)) return 'funding';
+  if (/^online\s+content\b/.test(text)) return 'online_content';
+  if (/^reporting\s+summary\b/.test(text)) return 'reporting_summary';
   if (/^(competing\s+interests|conflicts?\s+of\s+interest|declarations?)\b/.test(text)) return 'declarations';
-  if (/^(supplement(?:ary)?(?:\s+(?:material|information|data|figures?|tables?))?|supporting\s+information)\b/.test(text)) return 'supplementary';
+  if (/^(supplement(?:ary)?\s+(?:material|information)|supporting\s+information)\b/.test(text)) return 'supplementary';
   if (/^(appendix|appendices)\b/.test(text)) return 'appendix';
   if (/^author\s+(?:contributions?|information)\b/.test(text)) return 'author_contributions';
   if (/^(data|code)\s+availability\b/.test(text)) return 'data_availability';
   return '';
 }
 
+function formatDetectedHeadingLabel(label, normalizedLabel) {
+  const canonicalLabels = {
+    abstract: 'Abstract',
+    introduction: 'Introduction',
+    methods: 'Methods',
+    results: 'Results',
+    discussion: 'Discussion',
+    conclusion: 'Conclusion',
+    references: 'References',
+    acknowledgments: 'Acknowledgements',
+    funding: 'Funding',
+    online_content: 'Online content',
+    reporting_summary: 'Reporting summary',
+    declarations: 'Declarations',
+    supplementary: 'Supplementary information',
+    appendix: 'Appendix',
+    author_contributions: 'Author contributions',
+    data_availability: 'Data availability'
+  };
+  return canonicalLabels[normalizedLabel] || label;
+}
+
 function detectHeadingFromLine(line) {
   const trimmed = String(line || '').trim();
-  if (!trimmed || trimmed.length > 80) {
+  if (!trimmed || trimmed.length > 180) {
     return null;
   }
   const stripped = trimmed
@@ -163,7 +279,10 @@ function detectHeadingFromLine(line) {
     .replace(/^[ivxlcdm]+\.\s+/i, '')
     .replace(/[:.\-—]\s*$/, '')
     .trim();
-  if (!stripped || stripped.length > 60) {
+  if (!stripped || stripped.length > 160) {
+    return null;
+  }
+  if (/^[a-z]/.test(stripped)) {
     return null;
   }
   const normalizedLabel = normalizeSectionLabel(stripped);
@@ -171,7 +290,7 @@ function detectHeadingFromLine(line) {
     return null;
   }
   return {
-    label: trimmed,
+    label: formatDetectedHeadingLabel(trimmed, normalizedLabel),
     normalized_label: normalizedLabel
   };
 }
@@ -198,15 +317,43 @@ function detectHeadingsFromPages(pages) {
         });
       });
   });
-  // Drop duplicate canonical headings — keep the first occurrence.
+  // Drop duplicate canonical headings on the same page, while preserving
+  // repeated real sections such as main-text References and Methods References.
   const seen = new Set();
   return headings.filter((heading) => {
-    if (seen.has(heading.normalized_label)) {
+    const key = `${heading.normalized_label}:${heading.page_number}`;
+    if (seen.has(key)) {
       return false;
     }
-    seen.add(heading.normalized_label);
+    seen.add(key);
     return true;
   });
+}
+
+function collectPageLinesBetween(pages, startPoint, endPoint) {
+  const sectionLines = [];
+  pages.forEach((page) => {
+    const pageNumber = Number(page.page_number);
+    if (pageNumber < startPoint.page_number || pageNumber > endPoint.page_number) {
+      return;
+    }
+    const lines = String(page.text || '').split('\n');
+    let startIndex = 0;
+    let endIndex = lines.length;
+    if (pageNumber === startPoint.page_number) {
+      startIndex = Math.min(lines.length, Math.max(0, Number(startPoint.line_index) || 0));
+    }
+    if (pageNumber === endPoint.page_number) {
+      endIndex = Math.min(lines.length, Math.max(startIndex, Number(endPoint.line_index) || 0));
+    }
+    for (let lineIndex = startIndex; lineIndex < endIndex; lineIndex += 1) {
+      const line = lines[lineIndex];
+      if (line) {
+        sectionLines.push(line);
+      }
+    }
+  });
+  return sectionLines;
 }
 
 function buildSectionsFromHeadings(pages, headings, maxCharsPerSection) {
@@ -215,32 +362,39 @@ function buildSectionsFromHeadings(pages, headings, maxCharsPerSection) {
   }
   const lastPageNumber = Number(pages[pages.length - 1]?.page_number) || 0;
   const sections = [];
+  const firstPageNumber = Number(pages[0]?.page_number) || 1;
+  const firstHeading = headings[0];
+  const frontMatterLines = collectPageLinesBetween(
+    pages,
+    { page_number: firstPageNumber, line_index: 0 },
+    { page_number: firstHeading.page_number, line_index: firstHeading.line_index }
+  );
+  if (frontMatterLines.length) {
+    const text = frontMatterLines.join('\n');
+    const limited = maxCharsPerSection > 0 && text.length > maxCharsPerSection
+      ? text.slice(0, maxCharsPerSection)
+      : text;
+    sections.push({
+      label: 'Front matter',
+      normalized_label: 'front_matter',
+      source: 'heuristic',
+      start_page: firstPageNumber,
+      end_page: firstHeading.page_number,
+      character_count: limited.length,
+      text: limited
+    });
+  }
   headings.forEach((current, index) => {
     const next = headings[index + 1] || null;
     const startPage = current.page_number;
     const endPage = next ? next.page_number : lastPageNumber;
-    const sectionLines = [];
-    pages.forEach((page) => {
-      const pageNumber = Number(page.page_number);
-      if (pageNumber < startPage || pageNumber > endPage) {
-        return;
-      }
-      const lines = String(page.text || '').split('\n');
-      let startIndex = 0;
-      let endIndex = lines.length;
-      if (pageNumber === current.page_number) {
-        startIndex = current.line_index + 1;
-      }
-      if (next && pageNumber === next.page_number) {
-        endIndex = next.line_index;
-      }
-      for (let lineIndex = startIndex; lineIndex < endIndex; lineIndex += 1) {
-        const line = lines[lineIndex];
-        if (line) {
-          sectionLines.push(line);
-        }
-      }
-    });
+    const sectionLines = collectPageLinesBetween(
+      pages,
+      { page_number: startPage, line_index: current.line_index + 1 },
+      next
+        ? { page_number: next.page_number, line_index: next.line_index }
+        : { page_number: lastPageNumber, line_index: Number.MAX_SAFE_INTEGER }
+    );
     const text = sectionLines.join('\n');
     const limited = maxCharsPerSection > 0 && text.length > maxCharsPerSection
       ? text.slice(0, maxCharsPerSection)
@@ -267,6 +421,7 @@ function createPdfTextExtractionRuntime(deps = {}) {
     ? deps.importEsm
     : ((specifier) => import(specifier));
   const vendorPdfJsPath = cleanText(deps.vendorPdfJsPath, 4000) || DEFAULT_VENDOR_PDFJS_PATH;
+  const vendorPdfJsRoot = cleanText(deps.vendorPdfJsRoot, 4000) || DEFAULT_VENDOR_PDFJS_ROOT;
   const providedPdfJs = deps.pdfJsLib && typeof deps.pdfJsLib === 'object' ? deps.pdfJsLib : null;
 
   let pdfJsModulePromise = null;
@@ -275,6 +430,7 @@ function createPdfTextExtractionRuntime(deps = {}) {
     if (providedPdfJs) {
       return providedPdfJs;
     }
+    installPdfJsNodePolyfills();
     if (!pdfJsModulePromise) {
       const moduleUrl = vendorPdfJsPath.startsWith('file:')
         ? vendorPdfJsPath
@@ -397,7 +553,7 @@ function createPdfTextExtractionRuntime(deps = {}) {
     flat.sort((left, right) => left.page_number - right.page_number);
     const minDepth = flat.reduce((acc, entry) => Math.min(acc, entry.depth), flat[0].depth);
     const topLevel = flat.filter((entry) => entry.depth === minDepth && entry.title);
-    if (!topLevel.length) {
+    if (topLevel.length < 2) {
       return [];
     }
     const sections = [];
@@ -470,11 +626,14 @@ function createPdfTextExtractionRuntime(deps = {}) {
     );
     const maxCharsPerSection = normalizeInteger(
       source.max_chars_per_section || source.maxCharsPerSection,
-      maxCharsPerPage * 4,
+      maxTotalChars,
       { min: 500, max: 1000000 }
     );
     const includePages = source.include_pages !== false && source.includePages !== false;
     const includeSections = source.include_sections !== false && source.includeSections !== false;
+    const includeMarkdown = source.include_markdown === true
+      || source.includeMarkdown === true
+      || cleanText(source.output_format || source.outputFormat, 80).toLowerCase() === 'markdown';
 
     let pdfBuffer;
     try {
@@ -526,15 +685,20 @@ function createPdfTextExtractionRuntime(deps = {}) {
     try {
       loadingTask = pdfjsLib.getDocument({
         data: new Uint8Array(pdfBuffer),
+        cMapUrl: withTrailingSeparator(path.join(vendorPdfJsRoot, 'web', 'cmaps')),
+        standardFontDataUrl: withTrailingSeparator(path.join(vendorPdfJsRoot, 'web', 'standard_fonts')),
+        wasmUrl: withTrailingSeparator(path.join(vendorPdfJsRoot, 'web', 'wasm')),
         useWorkerFetch: false,
         disableFontFace: true,
+        isOffscreenCanvasSupported: false,
+        isImageDecoderSupported: false,
         isEvalSupported: false
       });
       pdfDocument = await loadingTask.promise;
 
       const totalPages = Number(pdfDocument?.numPages) || 0;
       if (!totalPages) {
-        return {
+        const emptyResult = {
           ok: true,
           status: 'completed',
           page_count: 0,
@@ -547,6 +711,15 @@ function createPdfTextExtractionRuntime(deps = {}) {
           sections_source: includeSections ? '' : undefined,
           summary: 'PDF contained no pages.'
         };
+        if (includeMarkdown) {
+          emptyResult.markdown = buildPdfMarkdownFromExtraction({
+            metadata: source.metadata || source,
+            extraction: emptyResult,
+            extractedText: '',
+            sourcePdfPath: source.file_path || source.filePath || source.path || ''
+          });
+        }
+        return emptyResult;
       }
 
       const { start, end } = normalizePageRange(
@@ -590,7 +763,15 @@ function createPdfTextExtractionRuntime(deps = {}) {
       }
 
       const truncatedByPageLimit = lastTargetPage < end;
-      const fullText = textChunks.join('\n\n');
+      const cleanedPages = stripRunningHeadersAndFooters(internalPages);
+      if (cleanedPages !== internalPages) {
+        internalPages.length = 0;
+        internalPages.push(...cleanedPages);
+      }
+      const fullText = internalPages
+        .map((page) => String(page.text || ''))
+        .filter(Boolean)
+        .join('\n\n');
 
       let sections = [];
       let sectionsSource = '';
@@ -618,7 +799,7 @@ function createPdfTextExtractionRuntime(deps = {}) {
         }
       }
 
-      return {
+      const result = {
         ok: true,
         status: 'completed',
         page_count: totalPages,
@@ -638,6 +819,15 @@ function createPdfTextExtractionRuntime(deps = {}) {
           ? `Extracted text from ${internalPages.length} page(s) (${totalCharacters} characters)${sections.length ? `, ${sections.length} section(s) via ${sectionsSource}` : ''}.`
           : 'No extractable text was found in the PDF.'
       };
+      if (includeMarkdown) {
+        result.markdown = buildPdfMarkdownFromExtraction({
+          metadata: source.metadata || source,
+          extraction: result,
+          extractedText: fullText,
+          sourcePdfPath: source.file_path || source.filePath || source.path || ''
+        });
+      }
+      return result;
     } catch (error) {
       return {
         ok: false,

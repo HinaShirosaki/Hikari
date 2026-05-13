@@ -1,4 +1,4 @@
-import { exportAssayDefinitionPdf } from '../pdf-export.js';
+import { exportAssayDefinitionPdf } from '../pdf-export/index.js';
 import { getAssayElements } from './dom.js';
 import { createAssayLayoutManager } from './layout-manager.js';
 import { createAssayResultsManager } from './results-manager.js';
@@ -16,7 +16,6 @@ import {
 } from './plate-model.js';
 import {
   axisLabel,
-  formatTimestamp,
   notebookLabel,
   oppositeAxis
 } from './shared.js';
@@ -143,6 +142,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       serialDilution: assay.serialDilution,
       serialDilutionSummary: assay.serialDilutionSummary,
       wellLayout: assay.wellLayout,
+      resultAttachments: Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [],
       updatedAt: assay.updatedAt
     };
     const latestAnalysis = assay.latestAnalysis && typeof assay.latestAnalysis === 'object'
@@ -171,6 +171,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
           data: {
             assayId: assay.id,
             resultValues: assay.resultValues || {},
+            resultAttachments: Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [],
             latestAnalysis,
             updatedAt: assay.updatedAt
           }
@@ -412,6 +413,93 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     }
   }
 
+  function getActiveResultsAssay() {
+    const assayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
+    return assayId ? getAssayById(assayId) : null;
+  }
+
+  async function parseAssayResultImport(payload) {
+    if (!window.enanaApi?.parseAssayResultImportFile) {
+      throw new Error('Assay result file parser is unavailable.');
+    }
+    const result = await window.enanaApi.parseAssayResultImportFile(payload);
+    if (!result?.ok) {
+      throw new Error(result?.error || 'Unable to parse assay result file.');
+    }
+    return result;
+  }
+
+  async function persistAssayResultAttachment({ fileName, dataBase64, candidate } = {}) {
+    const assay = getActiveResultsAssay();
+    const storageRoot = getStorageRoot();
+    const targetFolder = buildAssayArtifactFolder(assay);
+    if (!assay) {
+      throw new Error('Select an assay plate before attaching a result file.');
+    }
+    if (!storageRoot || !targetFolder) {
+      throw new Error('Set a storage folder before attaching assay result files.');
+    }
+    if (!dataBase64) {
+      throw new Error('Result attachment file data is missing.');
+    }
+    if (!window.enanaApi?.storeImportedFile) {
+      throw new Error('Result attachment storage is unavailable.');
+    }
+
+    const stored = await window.enanaApi.storeImportedFile({
+      storagePath: storageRoot,
+      targetFolder,
+      fileName,
+      dataBase64
+    });
+    if (!stored?.ok) {
+      throw new Error(stored?.error || 'Unable to save result attachment.');
+    }
+
+    return {
+      id: createId(),
+      originalFileName: String(fileName || '').trim(),
+      fileName: stored.fileName || String(fileName || '').trim(),
+      filePath: stored.filePath || '',
+      relativePath: stored.relativePath || '',
+      storageFolder: targetFolder,
+      importedAt: new Date().toISOString(),
+      tableName: candidate?.tableName || '',
+      format: candidate?.format || '',
+      rangeLabel: candidate?.rangeLabel || '',
+      startRowIndex: Number(candidate?.startRowIndex || 0),
+      startColumnIndex: Number(candidate?.startColumnIndex || 0),
+      rows: Number(candidate?.rows || 0),
+      columns: Number(candidate?.columns || 0),
+      numericCount: Number(candidate?.numericCount || 0),
+      nonBlankCount: Number(candidate?.nonBlankCount || 0)
+    };
+  }
+
+  async function onAssayResultImportApplied({ attachment } = {}) {
+    const assay = getActiveResultsAssay();
+    if (!assay) {
+      throw new Error('Selected assay plate was not found.');
+    }
+    const def = getPlateDefinition(assay.plateType || elements.assayPlateTypeInput?.value || '96');
+    assay.resultValues = layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, def));
+    if (attachment && typeof attachment === 'object') {
+      const existing = Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [];
+      assay.resultAttachments = [...existing, attachment];
+    }
+    assay.latestAnalysis = null;
+    assay.updatedAt = new Date().toISOString();
+    syncNotebookAssayLinks();
+    persist();
+    renderResultsAssayOptions(assay.id);
+    renderActiveAssayInfo(assay);
+    renderList();
+    if (typeof onAssaysChanged === 'function') {
+      onAssaysChanged();
+    }
+    await persistAssayArtifacts(assay.id);
+  }
+
   const layoutManager = createAssayLayoutManager({
     runtime,
     elements,
@@ -435,7 +523,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     ),
     setResultStatus,
     clearAnalysisOutput: () => analysisView?.clearOutput(),
-    onAnalysisConfigChange: () => analysisView?.onAnalysisConfigChange()
+    onAnalysisConfigChange: () => analysisView?.onAnalysisConfigChange(),
+    parseResultImportFile: parseAssayResultImport,
+    persistResultAttachment: persistAssayResultAttachment,
+    onResultImportApplied: onAssayResultImportApplied
   });
 
   analysisView = createAssayAnalysisView({
@@ -526,23 +617,22 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       return;
     }
 
-    elements.assayList.innerHTML = rows.map((assay) => `
-      <article class="assay-browser-item">
-        <div class="assay-browser-item-copy">
-          <p class="assay-browser-item-title">${safeText(assay.name)}</p>
-          <p class="assay-browser-item-meta">${safeText(assay.assayNumber || '-')} · ${safeText(assay.projectName || 'No project')}</p>
-          <p class="assay-browser-item-meta">${safeText(assay.plateLabel || `${assay.wellCount || '-'} well`)} · Sample ID by ${safeText(axisLabel(assay.sampleAxis))}</p>
-          <p class="assay-browser-item-meta">${safeText(String((assay.wellLayout || []).length || 0))} mapped · ${safeText(String(Object.keys(assay.resultValues || {}).length || 0))} results</p>
-          <p class="assay-browser-item-meta">${safeText(linkedNotebookLabel(assay))} · Updated ${safeText(formatTimestamp(assay.updatedAt))}</p>
-        </div>
-        <div class="card-actions assay-browser-item-actions">
-          <button type="button" class="primary-btn" data-assay-open-results="${assay.id}">Open Results</button>
-          <button type="button" class="ghost-btn" data-assay-export-pdf="${assay.id}">Export PDF</button>
-          <button type="button" class="ghost-btn" data-assay-edit="${assay.id}">Edit</button>
-          <button type="button" class="danger-btn" data-assay-delete="${assay.id}">Delete</button>
-        </div>
-      </article>
-    `).join('');
+    elements.assayList.innerHTML = rows.map((assay) => {
+      const title = assay.name || assay.assayNumber || assay.id || 'Untitled assay';
+      return `
+        <article class="assay-browser-item">
+          <div class="assay-browser-item-copy">
+            <p class="assay-browser-item-title">${safeText(title)}</p>
+          </div>
+          <div class="card-actions assay-browser-item-actions">
+            <button type="button" class="primary-btn" data-assay-open-results="${assay.id}">Open Results</button>
+            <button type="button" class="ghost-btn" data-assay-export-pdf="${assay.id}">Export PDF</button>
+            <button type="button" class="ghost-btn" data-assay-edit="${assay.id}">Edit</button>
+            <button type="button" class="danger-btn" data-assay-delete="${assay.id}">Delete</button>
+          </div>
+        </article>
+      `;
+    }).join('');
   }
 
   function loadAssayForResults(assayId) {
@@ -661,7 +751,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
 
     const plateDef = getPlateDefinition(elements.assayPlateTypeInput?.value);
     const sampleAxis = elements.assaySampleAxisInput?.value === 'column' ? 'column' : 'row';
-    const concentrationAxis = oppositeAxis(sampleAxis);
+    const selectedConcentrationAxis = elements.assayConcentrationAxisInput?.value === 'row' ? 'row' : 'column';
+    const concentrationAxis = selectedConcentrationAxis === oppositeAxis(sampleAxis)
+      ? selectedConcentrationAxis
+      : oppositeAxis(sampleAxis);
     const project = (state.projects || []).find((item) => item.id === elements.assayProjectInput?.value);
     const notebookEntry = (state.notebookEntries || []).find((entry) => entry.id === elements.assayNotebookEntryInput?.value);
     const editingId = elements.assayIdInput?.value || '';
@@ -694,6 +787,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       serialDilutionSummary: layoutManager.getSerialDilutionSummaryData(),
       wellLayout: normalizeLayout(runtime.currentLayout, plateDef),
       resultValues: layoutManager.filterMappedResults(normalizeResults(runtime.currentResults, plateDef)),
+      resultAttachments: Array.isArray(existing?.resultAttachments) ? existing.resultAttachments : [],
       updatedAt: new Date().toISOString()
     };
     record.latestAnalysis = assayDefinitionChanged(existing, record)
@@ -927,6 +1021,11 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   });
   elements.assaySampleAxisRowBtn?.addEventListener('click', () => layoutManager.setSampleAxis('row'));
   elements.assaySampleAxisColumnBtn?.addEventListener('click', () => layoutManager.setSampleAxis('column'));
+  elements.assayConcentrationAxisInput?.addEventListener('change', () => {
+    layoutManager.setConcentrationAxis(elements.assayConcentrationAxisInput?.value);
+  });
+  elements.assayConcentrationAxisRowBtn?.addEventListener('click', () => layoutManager.setConcentrationAxis('row'));
+  elements.assayConcentrationAxisColumnBtn?.addEventListener('click', () => layoutManager.setConcentrationAxis('column'));
   elements.assayPlateFieldSampleBtn?.addEventListener('click', () => layoutManager.setPlateEditField('sampleId'));
   elements.assayPlateFieldConcentrationBtn?.addEventListener('click', () => layoutManager.setPlateEditField('concentration'));
   elements.assayClearMappingsBtn?.addEventListener('click', layoutManager.onClearWellMappings);
@@ -947,6 +1046,13 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   elements.assayAnalysisAddColumnGroupBtn?.addEventListener('click', resultsManager.onAddSelectedColumnGroup);
   elements.assayAnalysisClearGroupsBtn?.addEventListener('click', resultsManager.onClearAnalysisGroups);
   elements.assayResultsLoadBtn?.addEventListener('click', onResultsAssayLoad);
+  elements.assayAttachResultFileBtn?.addEventListener('click', resultsManager.onAttachResultFileClick);
+  elements.assayResultFileInput?.addEventListener('change', resultsManager.onResultFileChange);
+  elements.assayResultImportOverlay?.addEventListener('click', resultsManager.onResultImportOverlayClick);
+  elements.assayResultImportCandidates?.addEventListener('click', resultsManager.onResultImportCandidateClick);
+  elements.assayResultImportCloseBtn?.addEventListener('click', resultsManager.closeResultImportDialog);
+  elements.assayResultImportCancelBtn?.addEventListener('click', resultsManager.closeResultImportDialog);
+  elements.assayResultImportApplyBtn?.addEventListener('click', resultsManager.applySelectedResultImportCandidate);
   elements.assaySaveResultsBtn?.addEventListener('click', onSaveResults);
   elements.assayClearResultsBtn?.addEventListener('click', resultsManager.onClearResults);
   elements.assayAnalyzeResultsBtn?.addEventListener('click', analysisView.onAnalyzeResults);

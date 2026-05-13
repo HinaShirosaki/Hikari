@@ -1,1 +1,0 @@
-Build a pdf viewer inside the papers module. Users can add comments on pdf papers.

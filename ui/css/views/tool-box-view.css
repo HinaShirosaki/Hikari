@@ -139,7 +139,7 @@
 .reaction-mix-row {
   display: grid;
   gap: 10px;
-  grid-template-columns: minmax(160px, 1.2fr) repeat(3, minmax(170px, 1fr)) minmax(92px, auto);
+  grid-template-columns: minmax(180px, 1.2fr) repeat(2, minmax(180px, 1fr)) minmax(250px, 1.25fr) minmax(108px, 0.7fr);
   align-items: start;
   padding: 12px 0;
   border-top: 1px solid var(--line-soft);
@@ -206,10 +206,11 @@
 }
 
 .reaction-mix-action-cell {
-  align-self: end;
+  align-self: start;
 }
 
 .reaction-mix-action-cell .ghost-btn {
+  min-height: 38px;
   width: 100%;
 }
 

@@ -42,9 +42,13 @@ function optionalRequire(modulePath, fallback = {}) {
 }
 
 const memoryStorage = createMemoryStorage();
-const shared = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'shared.js'), {
-  localStorage: memoryStorage
-});
+const shared = {
+  ...loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'views.js')),
+  ...loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'utils.js')),
+  ...loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'app-state.js'), {
+    localStorage: memoryStorage
+  })
+};
 
 const agentRouting = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-routing.js'));
 const agentIntentParser = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'intent', 'agent-intent-parser.js'));
@@ -81,7 +85,7 @@ const agentPythonCodegen = agentPython;
 const agentWebFallback = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-web-fallback.js'));
 const phase89Runtime = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-phase89-runtime.js'));
 const agentSqliteIndex = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-sqlite-index.js'));
-const sequenceLibrary = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sequence-library.js'));
+const sequenceLibrary = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sequence', 'sequence-library.js'));
 const objectGraph = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'object-graph.js'));
 const toolBox = loadEsmStyleModule(
   path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box.js'),
@@ -183,9 +187,9 @@ const papersManagementInternals = loadEsmStyleModule(
   ['normalizePaperSummary']
 );
 const papersPdfViewerInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'papers-pdf-viewer.js')
+  path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
 );
-const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'assay-analysis.js'));
+const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'assay', 'analysis', 'index.js'));
 const mainUtils = require(path.join(__dirname, 'src', 'main', 'lib', 'main-utils.js'));
 const telegramBot = require(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));

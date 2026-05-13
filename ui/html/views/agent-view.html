@@ -7,7 +7,12 @@
                 <h3>Saved Chats</h3>
                 <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
               </div>
-              <button type="button" id="agent-new-chat-btn" class="ghost-btn">New Chat</button>
+              <button type="button" id="agent-new-chat-btn" class="ghost-btn agent-new-chat-btn" aria-label="New Chat" title="New Chat">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                  <path d="M5 5.75A2.75 2.75 0 0 1 7.75 3h8.5A2.75 2.75 0 0 1 19 5.75v5.5A2.75 2.75 0 0 1 16.25 14H12l-4.15 3.2A.8.8 0 0 1 6.55 16.58V14A2.75 2.75 0 0 1 5 11.25v-5.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                  <path d="M12 6.75v3.5M10.25 8.5h3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </button>
             </div>
             <div id="agent-session-list" class="agent-session-list" aria-live="polite"></div>
           </div>
@@ -33,6 +38,30 @@
                 <div class="form-actions">
                   <button type="button" id="agent-dev-run-tool-btn" class="ghost-btn">Run Selected Tool</button>
                   <span id="agent-dev-tool-hint" class="small-note"></span>
+                </div>
+              </div>
+            </div>
+            <div id="agent-dev-response-simulator" class="agent-dev-response-simulator" hidden>
+              <div class="agent-dev-response-header">
+                <div>
+                  <strong>LLM Response Simulator</strong>
+                  <span id="agent-dev-response-summary" class="small-note">Developer mode</span>
+                </div>
+                <button type="button" id="agent-dev-response-fold-btn" class="ghost-btn" aria-expanded="true">Fold</button>
+              </div>
+              <div id="agent-dev-response-body" class="agent-dev-response-body">
+                <label class="agent-dev-context-field">
+                  Agent Visible Context
+                  <textarea id="agent-dev-visible-context" rows="10" readonly></textarea>
+                </label>
+                <label class="agent-dev-context-field">
+                  Typed LLM Response
+                  <textarea id="agent-dev-mock-response" rows="6" placeholder="Type the exact assistant response to inject."></textarea>
+                </label>
+                <div class="agent-dev-response-actions">
+                  <button type="button" id="agent-dev-refresh-context-btn" class="ghost-btn">Refresh Context</button>
+                  <button type="button" id="agent-dev-use-mock-response-btn" class="primary-btn">Use As Response</button>
+                  <span id="agent-dev-response-hint" class="small-note"></span>
                 </div>
               </div>
             </div>

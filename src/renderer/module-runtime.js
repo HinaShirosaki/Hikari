@@ -1,19 +1,19 @@
 import { initProtocolManagement } from './modules/protocol-management.js';
-import { initLabNotebook as initBiologyNotebook } from './modules/biology-notebook.js';
-import { initPersonalInventory } from './modules/personal-inventory.js';
-import { initSettings } from './modules/settings.js';
-import { initProjectManagement } from './modules/project-management.js';
-import { initWorkflowManagement } from './modules/workflow-management.js';
-import { initLabCommonInventory } from './modules/lab-common-inventory.js';
-import { initSampleRegistry } from './modules/sample-registry.js';
-import { initAssay } from './modules/assay.js';
+import { initLabNotebook as initBiologyNotebook } from './modules/biology-notebook/index.js';
+import { initPersonalInventory } from './modules/personal-inventory/index.js';
+import { initSettings } from './modules/settings/index.js';
+import { initProjectManagement } from './modules/project-management/index.js';
+import { initWorkflowManagement } from './modules/workflow/index.js';
+import { initLabCommonInventory } from './modules/lab-common-inventory/index.js';
+import { initSampleRegistry } from './modules/sample-registry/index.js';
+import { initAssay } from './modules/assay/index.js';
 import { initGelAnalysis } from './modules/gel-analysis.js';
 import { initPapersManagement } from './modules/papers-management.js';
 import { initToolBox } from './modules/tool-box.js';
 import { initAgentChat } from './modules/agent-chat.js';
 import { initHomeDashboard } from './modules/home-dashboard.js';
 import { initSequenceViewer } from './modules/sequence-viewer.js';
-import { createSelectionInsightsController } from './modules/selection-insights.js';
+import { createSelectionInsightsController } from './modules/selection-insights/index.js';
 
 function renderBiologyNotebook(modules) {
   modules.biologyNotebook.renderProjectOptions();

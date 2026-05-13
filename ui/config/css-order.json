@@ -22,6 +22,7 @@
     "ui/css/overrides/shell-first-remake.css",
     "ui/css/overrides/left-rail-template.css",
     "ui/css/overrides/universal-menus.css",
+    "ui/css/overrides/universal-dialogs.css",
     "ui/css/overrides/universal-left-rail-lists.css"
   ]
 }

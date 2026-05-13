@@ -1,13 +1,49 @@
-out/
+# Dependencies
 node_modules/
-tmp/
-*.zip
-*.asar
 .npm-cache/
-.DS_Store
-*.log
+
+# Build and package output
+out/
 output/
-Agent.md
+dist/
+tmp/
+*.asar
+*.zip
+
+# Local editor and assistant state
 .codex/
+.claude/
 .vscode/
-Expor
+Agent.md
+
+# OS/editor noise
+.DS_Store
+**/.DS_Store
+~$*
+
+# Logs and runtime scratch data
+*.log
+logs/
+data/*.log
+data/Config/codex-cli-home/log/
+data/Config/codex-cli-home/tmp/
+
+# Local secrets
+.env
+.env.*
+data/Config/codex-cli-home/auth.json
+
+# Local scratch / personal / test material (not part of the app)
+/Book3.xlsx
+/agent-context-debug.md
+/enana-data.ena.json
+/Exported Standard Features/
+/Testdata/
+/TestData2/
+/TestData3/
+/idea/
+/reports/
+
+# Stray local biology samples dropped into data/
+/data/*.gb
+/data/*.gbk

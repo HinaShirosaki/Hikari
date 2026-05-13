@@ -9,7 +9,7 @@ const {
   readProtocolRowsFromSqlite,
   readSqliteBundleIndex
 } = require('./storage-sql-read');
-const { asArray, cleanText, cloneJson, ensureObject, readJsonFile } = require('./storage-utils');
+const { asArray, cleanText, cloneJson, ensureObject, parseJsonObject, readJsonFile } = require('./storage-utils');
 const { hydrateWorkflowRootFromStoragePath } = require('./workflow-storage');
 
 function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
@@ -165,6 +165,18 @@ function mergePaperRecords(existingRecords, importedRecords) {
     byId.set(id, merged);
   });
   return [...byId.values()];
+}
+
+function readRecordIndexPayloadsByType(rows, recordType) {
+  const targetType = cleanText(recordType, 80).toLowerCase();
+  if (!targetType) {
+    return [];
+  }
+  return asArray(rows)
+    .map((row) => ensureObject(row))
+    .filter((row) => cleanText(row.record_type, 80).toLowerCase() === targetType)
+    .map((row) => parseJsonObject(row.raw_json))
+    .filter((record) => record && typeof record === 'object' && !Array.isArray(record));
 }
 
 function mergePaperExperimentLinks(existingLinks, importedLinks) {
@@ -650,6 +662,16 @@ async function hydrateSnapshotFromBundle({
     if (asArray(commonSqliteData.paperRows).length) {
       nextSnapshot.papers = mergePaperRecords(nextSnapshot.papers, readPaperRowsFromSqlite(commonSqliteData.paperRows));
       migration.applied.push('paper_sqlite');
+    }
+    const assayRows = readRecordIndexPayloadsByType(commonSqliteData.recordRows, 'assay');
+    if (assayRows.length) {
+      nextSnapshot.assays = mergeRecordsById(nextSnapshot.assays, assayRows, 'assay');
+      migration.applied.push('assay_record_index');
+    }
+    const gelRows = readRecordIndexPayloadsByType(commonSqliteData.recordRows, 'gel');
+    if (gelRows.length) {
+      nextSnapshot.gelAnalyses = mergeRecordsById(nextSnapshot.gelAnalyses, gelRows, 'gel');
+      migration.applied.push('gel_record_index');
     }
   }
 
