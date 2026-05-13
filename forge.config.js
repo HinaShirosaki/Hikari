@@ -35,31 +35,52 @@ module.exports = {
     asar: true,
     prune: true,
     ignore: [
+      // Build / package output
       /^\/out($|\/)/,
       /^\/output($|\/)/,
+      /^\/dist($|\/)/,
       /^\/tmp($|\/)/,
+      /\.asar$/,
+      /\.zip$/,
+
+      // Editor / assistant / OS noise
       /^\/\.vscode($|\/)/,
-      /^\/\.DS_Store$/,
-      /^\/hikari-data(?:\.ena)?\.json$/,
-      /^\/enana-data(?:\.ena)?\.json$/,
-      /^\/\.npm-cache($|\/)/,
       /^\/\.claude($|\/)/,
       /^\/\.codex($|\/)/,
-      /^\/Testdata($|\/)/,
-      /^\/Exported Standard Features($|\/)/,
+      /^\/\.npm-cache($|\/)/,
+      /(^|\/)\.DS_Store$/,
+      /(^|\/)~\$[^/]+$/,
+      /\.map$/,
+
+      // Repo-only development material
       /^\/tests($|\/)/,
       /^\/scripts($|\/)/,
       /^\/docs($|\/)/,
       /^\/reports($|\/)/,
       /^\/idea($|\/)/,
       /^\/skills($|\/)/,
-      /^\/agent-context-debug\.md$/,
       /^\/test\.js$/,
+      /^\/agent-context-debug\.md$/,
       /^\/\.gitignore$/,
       /^\/\.npmignore$/,
       /^\/Readme\.md$/,
-      /\.DS_Store$/,
-      /\.map$/
+
+      // Local scratch / personal / test material
+      /^\/Book3\.xlsx$/,
+      /^\/hikari-data(?:\.ena)?\.json$/,
+      /^\/enana-data(?:\.ena)?\.json$/,
+      /^\/Exported Standard Features($|\/)/,
+      /^\/Testdata($|\/)/,
+      /^\/TestData2($|\/)/,
+      /^\/TestData3($|\/)/,
+
+      // Runtime / secret material that shouldn't ship
+      /^\/data\/.*\.log$/,
+      /^\/data\/Config\/codex-cli-home\/auth\.json$/,
+      /^\/data\/Config\/codex-cli-home\/log($|\/)/,
+      /^\/data\/Config\/codex-cli-home\/tmp($|\/)/,
+      /^\/data\/[^/]+\.gb$/,
+      /^\/data\/[^/]+\.gbk$/
     ]
   },
   rebuildConfig: {},

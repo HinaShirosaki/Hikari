@@ -19,6 +19,7 @@ Agent.md
 # OS/editor noise
 .DS_Store
 **/.DS_Store
+~$*
 
 # Logs and runtime scratch data
 *.log
@@ -31,3 +32,18 @@ data/Config/codex-cli-home/tmp/
 .env
 .env.*
 data/Config/codex-cli-home/auth.json
+
+# Local scratch / personal / test material (not part of the app)
+/Book3.xlsx
+/agent-context-debug.md
+/enana-data.ena.json
+/Exported Standard Features/
+/Testdata/
+/TestData2/
+/TestData3/
+/idea/
+/reports/
+
+# Stray local biology samples dropped into data/
+/data/*.gb
+/data/*.gbk
