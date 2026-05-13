@@ -40,6 +40,7 @@ export function getGelElements(root = document) {
     gelLaneProfileMeta: root.getElementById('gel-lane-profile-meta'),
     gelReportSummary: root.getElementById('gel-report-summary'),
     gelReportJson: root.getElementById('gel-report-json'),
+    gelBrowserCount: root.getElementById('gel-browser-count'),
     gelSearchInput: root.getElementById('gel-search'),
     gelList: root.getElementById('gel-list'),
     gelManualProgress: root.getElementById('gel-manual-progress'),

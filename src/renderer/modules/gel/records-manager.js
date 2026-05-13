@@ -1,7 +1,6 @@
 import { DEFAULT_LADDER_STANDARDS } from './constants.js';
 import { createBandsCsv, downloadTextFile } from './export.js';
 import { normalizeEnhancementSettings } from './image-processing.js';
-import { formatAnalysisTypeLabel } from './presentation.js';
 import { clamp, createEmptyManualOverrides, normalizeManualOverrides, safeFilePart } from './shared.js';
 
 export function createRecordsManager({ runtime, elements, deps }) {
@@ -449,51 +448,28 @@ export function createRecordsManager({ runtime, elements, deps }) {
   function renderList() {
     ensureState();
     const term = String(elements.gelSearchInput?.value || '').trim().toLowerCase();
-    const rows = (runtime.state.gelAnalyses || [])
+    const records = (runtime.state.gelAnalyses || [])
       .slice()
-      .sort((a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || ''))
-      .filter((record) => matchesSearch(record, term));
+      .sort((a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || ''));
+    const rows = records.filter((record) => matchesSearch(record, term));
+
+    if (elements.gelBrowserCount) {
+      elements.gelBrowserCount.textContent = term ? `${rows.length}/${records.length}` : String(records.length);
+    }
 
     if (!rows.length) {
-      elements.gelList.innerHTML = '<p class="small-note">No gel analyses saved.</p>';
+      elements.gelList.innerHTML = '<p class="small-note gel-browser-empty">No saved gels found.</p>';
       return;
     }
 
     elements.gelList.innerHTML = rows.map((record) => {
-      const confidence = record.report?.confidence || { label: '-', score: '-' };
-      const laneCount = record.report?.lanes?.length || 0;
-      const bandCount = (record.report?.lanes || []).reduce((sum, lane) => sum + (lane.bands?.length || 0), 0);
-      const overrideCount = (() => {
-        const summary = record.report?.preprocessing?.manualOverridesSummary;
-        if (summary) {
-          return (summary.laneSegmentationDividers || 0)
-            + (Number.isFinite(summary.laneSegmentationLeft) ? 1 : 0)
-            + (Number.isFinite(summary.laneSegmentationRight) ? 1 : 0)
-            + (Number.isFinite(summary.laneSegmentationBandTop) ? 1 : 0)
-            + (Number.isFinite(summary.laneSegmentationBandBottom) ? 1 : 0)
-            + (summary.addedBands || 0)
-            + (summary.ladderBands || 0)
-            + (Number.isFinite(summary.ladderLaneOverride) ? 1 : 0);
-        }
-        const manual = normalizeManualOverrides(record.manualOverrides || {});
-        const segmentationCount = (Number.isFinite(manual.laneSegmentation?.gelLeft) ? 1 : 0)
-          + (Number.isFinite(manual.laneSegmentation?.gelRight) ? 1 : 0)
-          + (manual.laneSegmentation?.dividers?.length || 0)
-          + (Number.isFinite(manual.laneSegmentation?.bandTop) ? 1 : 0)
-          + (Number.isFinite(manual.laneSegmentation?.bandBottom) ? 1 : 0)
-          + (Number.isFinite(manual.ladderLane) ? 1 : 0);
-        return manual.addedBands.length + (manual.ladderBands?.length || 0) + segmentationCount;
-      })();
+      const title = record.name || record.id || 'Untitled gel';
       return `
-        <article class="card">
-          <h3>${runtime.safeText(record.name || record.id)}</h3>
-          <p><strong>Type:</strong> ${runtime.safeText(formatAnalysisTypeLabel(record.analysisType))}</p>
-          <p><strong>Image:</strong> ${runtime.safeText(record.imageName || '-')}</p>
-          <p><strong>Lanes/Bands:</strong> ${runtime.safeText(`${laneCount} / ${bandCount}`)}</p>
-          <p><strong>Overrides:</strong> ${runtime.safeText(String(overrideCount))}</p>
-          <p><strong>Confidence:</strong> ${runtime.safeText(String(confidence.label || '-'))} (${runtime.safeText(String(confidence.score ?? '-'))})</p>
-          <p><strong>Updated:</strong> ${runtime.safeText(new Date(record.updatedAt || '').toLocaleString() || '-')}</p>
-          <div class="card-actions">
+        <article class="gel-browser-item">
+          <div class="gel-browser-item-copy">
+            <p class="gel-browser-item-title">${runtime.safeText(title)}</p>
+          </div>
+          <div class="card-actions gel-browser-item-actions">
             <button type="button" class="ghost-btn" data-gel-edit="${record.id}">Edit</button>
             <button type="button" class="danger-btn" data-gel-delete="${record.id}">Delete</button>
           </div>

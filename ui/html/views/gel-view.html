@@ -1,6 +1,19 @@
 <section id="gel-view" class="view">
       <div class="gel-workspace left-rail-template">
         <div class="gel-setup-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <details id="gel-browser-panel" class="gel-browser-panel">
+            <summary class="gel-browser-summary">
+              <span>Existing Gels</span>
+              <span id="gel-browser-count" class="small-note">0</span>
+            </summary>
+            <div class="gel-browser-body">
+              <label>
+                Search Gels
+                <input id="gel-search" placeholder="Search saved gels" />
+              </label>
+              <div id="gel-list" class="gel-browser-list"></div>
+            </div>
+          </details>
           <h3>Setup</h3>
           <form id="gel-form" class="form-grid">
             <input type="hidden" id="gel-id" />
@@ -138,15 +151,6 @@
                 <h3>Analysis Report</h3>
                 <div id="gel-report-summary" class="cards"></div>
                 <pre id="gel-report-json" class="gel-report-json"></pre>
-              </div>
-
-              <div class="panel gel-library-panel">
-                <h3>Saved Gel Analyses</h3>
-                <label>
-                  Search
-                  <input id="gel-search" placeholder="Name, type, project, notebook..." />
-                </label>
-                <div id="gel-list" class="cards"></div>
               </div>
             </div>
           </div>

@@ -166,6 +166,80 @@
   gap: 14px;
 }
 
+.gel-browser-panel {
+  margin: 0;
+  padding: 0 0 6px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.gel-browser-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 0 10px;
+  cursor: pointer;
+  color: var(--strong);
+  font-weight: 650;
+}
+
+.gel-browser-summary::-webkit-details-marker {
+  display: none;
+}
+
+.gel-browser-summary::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.gel-browser-panel[open] .gel-browser-summary::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.gel-browser-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 0 8px;
+}
+
+.gel-browser-list {
+  display: grid;
+  gap: 0;
+}
+
+.gel-browser-empty {
+  padding: 6px 0 2px;
+}
+
+.gel-browser-item {
+  display: grid;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+.gel-browser-item-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.gel-browser-item-title {
+  margin: 0;
+  color: var(--strong);
+  font-size: 0.94rem;
+  font-weight: 650;
+}
+
+.gel-browser-item-actions {
+  gap: 6px;
+}
+
 .gel-viewer-panel {
   min-width: 0;
 }

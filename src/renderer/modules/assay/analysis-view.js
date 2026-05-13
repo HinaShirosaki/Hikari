@@ -319,7 +319,17 @@ export function createAssayAnalysisView({
     return numericIndexes[0];
   }
 
-  function buildAnalysisChartModel(result, method) {
+  function resolveColumnIndex(headers, override, fallbackIndex) {
+    if (typeof override === 'string' && override && override !== 'auto') {
+      const matched = headers.findIndex((header) => String(header) === override);
+      if (matched >= 0) {
+        return matched;
+      }
+    }
+    return fallbackIndex;
+  }
+
+  function buildAnalysisChartModel(result, method, style) {
     const headers = Array.isArray(result?.headers) ? result.headers : [];
     const rows = Array.isArray(result?.rows) ? result.rows : [];
     if (!headers.length || !rows.length) {
@@ -333,13 +343,16 @@ export function createAssayAnalysisView({
       return null;
     }
 
-    const yIndex = pickChartMetricIndex(method, headers, numericIndexes);
+    const autoY = pickChartMetricIndex(method, headers, numericIndexes);
+    const yIndex = resolveColumnIndex(headers, style?.yColumn, autoY);
     const otherNumeric = numericIndexes.filter((index) => index !== yIndex);
     const nonNumericIndexes = headers
       .map((_, index) => index)
       .filter((index) => !numericIndexes.includes(index));
-    const xIndex = nonNumericIndexes[0] ?? otherNumeric[0] ?? null;
-    const seriesIndex = nonNumericIndexes.find((index) => index !== xIndex) ?? null;
+    const autoX = nonNumericIndexes[0] ?? otherNumeric[0] ?? null;
+    const xIndex = resolveColumnIndex(headers, style?.xColumn, autoX);
+    const autoSeries = nonNumericIndexes.find((index) => index !== xIndex) ?? null;
+    const seriesIndex = resolveColumnIndex(headers, style?.seriesColumn, autoSeries);
     const seriesMap = new Map();
     let numericXCount = 0;
     let totalCount = 0;
@@ -465,13 +478,78 @@ export function createAssayAnalysisView({
     };
   }
 
+  const LINE_DASH_MAP = {
+    solid: '',
+    dashed: '6,4',
+    dotted: '2,3'
+  };
+
+  function makePointRenderer(shape, color) {
+    if (shape === 'triangle') {
+      return () => ReactLib.createElement('polygon', {
+        points: '0,-1 1,1 -1,1',
+        fill: color,
+        stroke: color
+      });
+    }
+    if (shape === 'cross') {
+      return () => ReactLib.createElement('path', {
+        d: 'M-1 0 H1 M0 -1 V1',
+        stroke: color,
+        strokeWidth: 0.4,
+        fill: 'none'
+      });
+    }
+    return null;
+  }
+
+  function pointShapeStringFor(shape) {
+    if (shape === 'square' || shape === 'diamond' || shape === 'circle') {
+      return shape;
+    }
+    return null;
+  }
+
+  function pickSeriesColor(style, label, index) {
+    const labelKey = String(label || '');
+    if (labelKey && style.seriesColors[labelKey]) {
+      return style.seriesColors[labelKey];
+    }
+    const palette = style.palette && style.palette.length ? style.palette : DEFAULT_CHART_PALETTE;
+    return palette[index % palette.length];
+  }
+
+  function computeDomain(range, fallbackData, accessor) {
+    if (range && range.auto === false
+      && Number.isFinite(range.min) && Number.isFinite(range.max)
+      && range.min < range.max) {
+      return [range.min, range.max];
+    }
+    if (!Array.isArray(fallbackData) || !fallbackData.length) {
+      return null;
+    }
+    let min = Number.POSITIVE_INFINITY;
+    let max = Number.NEGATIVE_INFINITY;
+    fallbackData.forEach((point) => {
+      const value = accessor(point);
+      if (!Number.isFinite(value)) return;
+      if (value < min) min = value;
+      if (value > max) max = value;
+    });
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) {
+      return null;
+    }
+    return [min, max];
+  }
+
   function renderAnalysisChart(result, method) {
     unmountAnalysisChart();
     if (!hasReactVis || !assayAnalysisTable) {
       return;
     }
 
-    const chartModel = result?.chartModel || buildAnalysisChartModel(result, method);
+    const style = runtime.chartStyle;
+    const chartModel = result?.chartModel || buildAnalysisChartModel(result, method, style);
     const chartTarget = assayAnalysisTable.querySelector('[data-assay-analysis-chart]');
     if (!chartModel || !chartTarget) {
       return;
@@ -491,6 +569,7 @@ export function createAssayAnalysisView({
       VerticalBarSeries,
       LineSeries,
       MarkSeries,
+      CustomSVGSeries,
       WhiskerSeries,
       DiscreteColorLegend
     } = ReactVisLib;
@@ -498,7 +577,6 @@ export function createAssayAnalysisView({
       return;
     }
 
-    const palette = ['#1f77b4', '#ef6c3e', '#2ca25f', '#9467bd', '#d4a72c', '#8c564b'];
     const longestSeries = chartModel.series.reduce((max, item) => Math.max(max, item.data.length), 0);
     const plotWidth = Math.max(420, Math.min(1280, (longestSeries || 1) * (chartModel.chartType === 'line' ? 60 : 70)));
     const plotHeight = 280;
@@ -510,7 +588,29 @@ export function createAssayAnalysisView({
     };
     if (chartModel.chartType === 'bar') {
       plotProps.xType = 'ordinal';
+    } else {
+      const userXScale = style.xScale && style.xScale !== 'auto' ? style.xScale : null;
+      if (userXScale && userXScale !== 'ordinal') {
+        plotProps.xType = userXScale;
+      }
     }
+    if (style.yScale && style.yScale !== 'linear') {
+      plotProps.yType = style.yScale;
+    }
+
+    if (chartModel.chartType === 'line') {
+      const xDomain = computeDomain(style.xRange, chartModel.series.flatMap((s) => s.data), (p) => p.x);
+      if (xDomain) plotProps.xDomain = xDomain;
+    }
+    const yDomain = computeDomain(style.yRange, chartModel.series.flatMap((s) => s.data), (p) => p.y);
+    if (yDomain) plotProps.yDomain = yDomain;
+
+    const axisLineStyle = {
+      line: {
+        stroke: style.frameStroke || '#9bb0c9',
+        strokeWidth: style.frameStrokeWidth ?? 1
+      }
+    };
 
     const plotChildren = [
       ReactLib.createElement(VerticalGridLines, { key: 'v-grid' }),
@@ -518,31 +618,76 @@ export function createAssayAnalysisView({
       ReactLib.createElement(XAxis, {
         key: 'x-axis',
         title: chartModel.xLabel,
-        tickLabelAngle: chartModel.chartType === 'bar' ? -35 : 0
+        tickLabelAngle: chartModel.chartType === 'bar' ? -35 : 0,
+        style: axisLineStyle
       }),
       ReactLib.createElement(YAxis, {
         key: 'y-axis',
-        title: chartModel.yLabel
+        title: chartModel.yLabel,
+        style: axisLineStyle
       })
     ];
 
+    if (style.frameStyle === 'box') {
+      plotChildren.push(ReactLib.createElement(XAxis, {
+        key: 'x-axis-top',
+        orientation: 'top',
+        tickFormat: () => '',
+        style: axisLineStyle
+      }));
+      plotChildren.push(ReactLib.createElement(YAxis, {
+        key: 'y-axis-right',
+        orientation: 'right',
+        tickFormat: () => '',
+        style: axisLineStyle
+      }));
+    }
+
+    const dashArray = LINE_DASH_MAP[style.lineStyle] || '';
+
     chartModel.series.forEach((series, index) => {
-      const color = palette[index % palette.length];
+      const color = pickSeriesColor(style, series.label, index);
       if (chartModel.chartType === 'line') {
         if (LineSeries) {
           plotChildren.push(ReactLib.createElement(LineSeries, {
             key: `line-${series.label}-${index}`,
             data: series.data,
             color,
-            curve: 'curveMonotoneX'
+            strokeWidth: style.lineWidth,
+            curve: style.curve || 'curveMonotoneX',
+            style: dashArray ? { strokeDasharray: dashArray } : undefined
           }));
         }
-        if (MarkSeries) {
+        const stringShape = pointShapeStringFor(style.pointShape);
+        const functionShape = makePointRenderer(style.pointShape, color);
+        if (functionShape && CustomSVGSeries) {
+          const data = series.data.map((point) => ({
+            ...point,
+            customComponent: functionShape,
+            size: style.pointSize
+          }));
+          plotChildren.push(ReactLib.createElement(CustomSVGSeries, {
+            key: `point-${series.label}-${index}`,
+            data,
+            color
+          }));
+        } else if (stringShape && stringShape !== 'circle' && CustomSVGSeries) {
+          const data = series.data.map((point) => ({
+            ...point,
+            customComponent: stringShape,
+            size: style.pointSize
+          }));
+          plotChildren.push(ReactLib.createElement(CustomSVGSeries, {
+            key: `point-${series.label}-${index}`,
+            data,
+            color
+          }));
+        } else if (MarkSeries) {
           plotChildren.push(ReactLib.createElement(MarkSeries, {
-            key: `mark-${series.label}-${index}`,
+            key: `point-${series.label}-${index}`,
             data: series.data,
             color,
-            size: 3
+            size: style.pointSize
           }));
         }
       } else if (VerticalBarSeries) {
@@ -571,7 +716,7 @@ export function createAssayAnalysisView({
 
     const legendItems = chartModel.series.map((series, index) => ({
       title: series.label,
-      color: palette[index % palette.length]
+      color: pickSeriesColor(style, series.label, index)
     }));
     const legendElement = DiscreteColorLegend && legendItems.length > 1
       ? ReactLib.createElement(DiscreteColorLegend, {
@@ -582,6 +727,12 @@ export function createAssayAnalysisView({
       : null;
     const titleText = `${chartModel.yLabel} by ${chartModel.xLabel}`;
 
+    const canvasClassName = ['assay-analysis-chart-canvas', `frame-${style.frameStyle || 'box'}`].join(' ');
+    const canvasStyle = {
+      backgroundColor: style.backgroundColor || '#ffffff',
+      borderRadius: `${style.frameCornerRadius ?? 0}px`
+    };
+
     const chartElement = ReactLib.createElement('div', null, [
       ReactLib.createElement('div', { className: 'assay-analysis-chart-head', key: 'head' }, [
         ReactLib.createElement('div', { className: 'assay-analysis-chart-title', key: 'title' }, titleText),
@@ -590,7 +741,7 @@ export function createAssayAnalysisView({
       ReactLib.createElement('div', { className: 'assay-analysis-chart-plot', key: 'plot' }, [
         ReactLib.createElement(
           'div',
-          { className: 'assay-analysis-chart-canvas', key: 'canvas' },
+          { className: canvasClassName, style: canvasStyle, key: 'canvas' },
           ReactLib.createElement(XYPlot, { ...plotProps, key: 'xy-plot' }, plotChildren)
         )
       ])
