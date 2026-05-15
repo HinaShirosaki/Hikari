@@ -57,6 +57,7 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 | `tools/agent-paper-download.js` | Secondary | action-based paper acquisition runtime |
 | `tools/agent-paper-analysis.js` | Secondary | paper summarization and protocol extraction |
 | `tools/agent-protocol-generation.js` | Secondary | deterministic protocol JSON normalization |
+| `tools/agent-protocol-save.js` | Secondary | persisted protocol save and renderer refresh bridge |
 | `tools/agent-sub-agent.js` | Secondary | action-based helper-agent runtime |
 | `tools/agent-python-sandbox.js` | Secondary | low-level sandbox plus managed supervisor wrapper |
 | `tools/agent-tool-smoke-test.js` | Main path | exposed through developer IPC for manual tool testing |

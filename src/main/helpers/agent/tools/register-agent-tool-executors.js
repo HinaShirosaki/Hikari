@@ -184,6 +184,7 @@ function registerAgentToolExecutors(deps = {}) {
   const paperDownloadRuntime = deps.paperDownloadRuntime || {};
   const paperAnalysisRuntime = deps.paperAnalysisRuntime || {};
   const protocolGenerationRuntime = deps.protocolGenerationRuntime || {};
+  const protocolSaveRuntime = deps.protocolSaveRuntime || {};
   const agentAppApi = deps.agentAppApi && typeof deps.agentAppApi === 'object'
     ? deps.agentAppApi
     : {};
@@ -609,6 +610,21 @@ function registerAgentToolExecutors(deps = {}) {
         error: 'Protocol generation runtime is not configured.',
         summary: 'Protocol generation runtime is not configured.'
       };
+    }
+    const shouldSave = args?.save === true
+      || args?.persist === true
+      || args?.save_to_protocol_module === true
+      || args?.saveToProtocolModule === true;
+    if (shouldSave) {
+      if (!protocolSaveRuntime || typeof protocolSaveRuntime.saveProtocol !== 'function') {
+        return {
+          ok: false,
+          status: 'error',
+          error: 'Protocol save runtime is not configured.',
+          summary: 'Protocol save runtime is not configured.'
+        };
+      }
+      return protocolSaveRuntime.saveProtocol(args, context);
     }
     return protocolGenerationRuntime.generateProtocol(args);
   });

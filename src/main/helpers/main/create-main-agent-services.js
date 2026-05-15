@@ -55,6 +55,7 @@ const { createLiteratureSearchRuntime } = require('../agent/tools/agent-literatu
 const { createLiteratureSearchWorkflowRuntime } = require('../agent/literature-search/agent-literature-search-workflow.js');
 const { createPurchaseRecommendationRuntime } = require('../agent/tools/agent-purchase-recommendation.js');
 const { createProtocolGenerationRuntime } = require('../agent/tools/agent-protocol-generation.js');
+const { createProtocolSaveRuntime } = require('../agent/tools/agent-protocol-save.js');
 const { createPaperAnalysisRuntime } = require('../agent/tools/agent-paper-analysis.js');
 const { createPaperContextLoaderRuntime } = require('../agent/tools/agent-paper-context-loader.js');
 const { createPaperDownloadRuntime } = require('../agent/tools/agent-paper-download.js');
@@ -77,6 +78,7 @@ const {
   registerDefaultDirectLlmModules
 } = require('./llm/direct-llm-module-registry.js');
 const { asArray, clamp, createUniqueStrings } = require('./data/value-utils.js');
+const { STORAGE } = require('../../../shared/ipc/channels');
 
 function renderPromptTemplate(template, vars = {}) {
   const source = String(template || '');
@@ -358,6 +360,25 @@ function createMainAgentServices(deps = {}) {
   const protocolGenerationRuntime = createProtocolGenerationRuntime({
     ...sharedAgentLlmDeps
   });
+  function emitProtocolSaved(payload = {}) {
+    const BrowserWindow = deps.BrowserWindow || deps.electron?.BrowserWindow || null;
+    if (!BrowserWindow || typeof BrowserWindow.getAllWindows !== 'function') {
+      return;
+    }
+    BrowserWindow.getAllWindows().forEach((windowRef) => {
+      const webContents = windowRef?.webContents;
+      if (webContents && typeof webContents.send === 'function' && !webContents.isDestroyed?.()) {
+        webContents.send(STORAGE.PROTOCOL_RECORD_SAVED, payload);
+      }
+    });
+  }
+  const protocolSaveRuntime = createProtocolSaveRuntime({
+    protocolGenerationRuntime,
+    hydrateSnapshotFromBundle,
+    syncBundleFromSnapshot,
+    getDefaultDataFilePath,
+    emitProtocolSaved
+  });
   const paperAnalysisRuntime = createPaperAnalysisRuntime({
     ...sharedAgentLlmDeps,
     protocolGenerationRuntime
@@ -560,6 +581,7 @@ function createMainAgentServices(deps = {}) {
     paperDownloadRuntime,
     paperAnalysisRuntime,
     protocolGenerationRuntime,
+    protocolSaveRuntime,
     getAgentPythonSandboxRoot
   });
 

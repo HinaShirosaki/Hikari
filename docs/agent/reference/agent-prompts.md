@@ -1,6 +1,6 @@
 # Agent Prompt Registry
 
-Generated at: 2026-05-05T20:52:28.245Z
+Generated at: 2026-05-15T20:47:18.462Z
 Prompt entries: 43
 
 This file is generated from the prompt registry and sample renderers in `src/main/helpers/agent/shared/agent-prompt-registry.js`.
@@ -181,7 +181,7 @@ Available tools:
 - purchase-recommendation: Search the web for purchasable products, extract vendor page metadata such as image and price, hard-filter explicit product requirements, and rank valid items for chat recommendation cards.
 - paper-download: Extract a downloadable paper PDF URL, stream the file into app storage with progress tracking, and fall back to a browser-assisted download session when sites block automated fetches.
 - paper-analysis: Summarize a paper briefly, extract protocol-relevant methods, and optionally draft a generated protocol from the paper.
-- protocol-generation: Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call or required protocol id.
+- protocol-generation: Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call, and save it into the Hikari Protocols module when save is true.
 
 Active project context: Atlas SUMO1
 

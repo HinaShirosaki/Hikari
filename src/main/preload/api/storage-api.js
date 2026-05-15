@@ -14,7 +14,19 @@ function createStorageApi(ipcRenderer) {
     discoverStoredPapers: (payload) => ipcRenderer.invoke(STORAGE.DISCOVER_PAPERS, payload),
     openFilePath: (path) => ipcRenderer.invoke(STORAGE.OPEN_FILE, { path }),
     readFileBase64: (path) => ipcRenderer.invoke(STORAGE.READ_FILE_BASE64, { path }),
-    appendNotebookPageLog: (payload) => ipcRenderer.invoke(STORAGE.APPEND_NOTEBOOK_PAGE_LOG, payload)
+    appendNotebookPageLog: (payload) => ipcRenderer.invoke(STORAGE.APPEND_NOTEBOOK_PAGE_LOG, payload),
+    onProtocolRecordSaved: (handler) => {
+      if (typeof handler !== 'function') {
+        return () => {};
+      }
+      const listener = (_event, payload) => {
+        handler(payload);
+      };
+      ipcRenderer.on(STORAGE.PROTOCOL_RECORD_SAVED, listener);
+      return () => {
+        ipcRenderer.removeListener(STORAGE.PROTOCOL_RECORD_SAVED, listener);
+      };
+    }
   };
 }
 

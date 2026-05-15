@@ -58,6 +58,16 @@ function buildReadOnlyToolAnnotations(title = '') {
   });
 }
 
+function buildWriteToolAnnotations(title = '') {
+  return compactObject({
+    title: cleanText(title, 120),
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false
+  });
+}
+
 function uniqueStrings(values = [], max = 20) {
   const seen = new Set();
   const out = [];
@@ -300,6 +310,7 @@ module.exports = {
   cloneJson,
   compactObject,
   buildReadOnlyToolAnnotations,
+  buildWriteToolAnnotations,
   uniqueStrings,
   toIntegerInRange,
   buildCommonLookupInputSchema,

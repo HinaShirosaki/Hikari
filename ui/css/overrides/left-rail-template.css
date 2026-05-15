@@ -117,6 +117,37 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
   --left-rail-main-gap: 28px;
 }
 
+@media (max-width: 720px) {
+  .left-rail-template.agent-chat-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 100%;
+  }
+
+  .left-rail-template.agent-chat-layout > .agent-session-rail.left-rail-template__rail {
+    height: auto;
+    min-height: 0;
+    max-height: min(42vh, 360px);
+    overflow: hidden !important;
+    padding: 14px 16px 12px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--app-left-rail-divider) !important;
+  }
+
+  .left-rail-template.agent-chat-layout > .left-rail-template__main {
+    padding-left: 0;
+    overflow: hidden;
+  }
+
+  .left-rail-template.agent-chat-layout .agent-session-panel {
+    min-height: 0;
+  }
+
+  .left-rail-template.agent-chat-layout .agent-session-list {
+    overflow-y: auto;
+  }
+}
+
 .sample-main-grid {
   display: grid;
   grid-template-columns: minmax(300px, 0.9fr) minmax(320px, 1fr);

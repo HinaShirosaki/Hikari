@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-05-08T02:12:49.992Z",
+  "exported_at": "2026-05-15T20:47:33.542Z",
   "source_files": {
     "mcp_instructions": "src/main/helpers/agent/mcp-contract/instructions.js",
     "mcp_stdio_server": "src/main/helpers/agent/mcp-contract/stdio-server.js",
@@ -10,7 +10,7 @@
     "codex_runtime_files": "src/main/helpers/agent/codex-agent/runtime-files.js",
     "app_tools": "src/main/helpers/agent/tools/Tool-call.json"
   },
-  "agent_mcp_instructions": "# Hikari Agent MCP Instructions\n\nThis MCP server is the provider-neutral Hikari app contract. Any agent provider that can use MCP should call these tools for local Hikari data, protocols, notebooks, inventory, papers, memory, and structured app actions.\n\nUse direct MCP tools first when the task matches them. Use `tool_search`, `tool_info`, and `tool_call` for broader Hikari app tools that are not already exposed as direct MCP tools. Request a schema with `tool_info` before calling a broader app tool when the argument shape is not already known.\n\nDirect Hikari MCP tools available without `tool_search`:\n- `inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.\n- `chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.\n- `protocol_lookup`: search local protocols through Hikari protocol matching.\n- `protocol_generation`: normalize a complete protocol JSON object into the app import format; it does not generate content with an LLM and does not require an id.\n- `notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.\n- `ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.\n\nTool-use rules:\n- Prefer local Hikari records through direct MCP tools before guessing from conversation context.\n- Use `record-lookup` through `tool_call` only when the direct lookup tools are not specific enough.\n- Use `literature-search` for finding papers, references, recent literature, or external scientific evidence.\n- Use `paper-download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.\n- Use `paper-analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use direct `protocol_generation` only after complete protocol JSON already exists.\n\nClarification rule:\nWhen one blocking user answer is required, call `ask_user`. It returns a renderable `final_response` payload. Do not wait inside MCP for the human answer; the host app renders the options and sends the user answer as the next turn.\n\nVerification rule:\nSeparate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.",
+  "agent_mcp_instructions": "# Hikari Agent MCP Instructions\n\nThis MCP server is the provider-neutral Hikari app contract. Any agent provider that can use MCP should call these tools for local Hikari data, protocols, notebooks, inventory, papers, memory, and structured app actions.\n\nUse direct MCP tools first when the task matches them. Use `tool_search`, `tool_info`, and `tool_call` for broader Hikari app tools that are not already exposed as direct MCP tools. Request a schema with `tool_info` before calling a broader app tool when the argument shape is not already known.\n\nDirect Hikari MCP tools available without `tool_search`:\n- `inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.\n- `chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.\n- `protocol_lookup`: search local protocols through Hikari protocol matching.\n- `protocol_generation`: normalize a complete protocol JSON object into the app import format without generating content; set `save: true` in the same call to add it to the Hikari Protocols module.\n- `notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.\n- `ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.\n\nTool-use rules:\n- Prefer local Hikari records through direct MCP tools before guessing from conversation context.\n- Use `record-lookup` through `tool_call` only when the direct lookup tools are not specific enough.\n- Use `literature-search` for finding papers, references, recent literature, or external scientific evidence.\n- Use `paper-download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.\n- Use `paper-analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use direct `protocol_generation` only after complete protocol JSON already exists.\n- When the user asks to save or add a generated protocol, call `protocol_generation` once with `save: true`.\n\nClarification rule:\nWhen one blocking user answer is required, call `ask_user`. It returns a renderable `final_response` payload. Do not wait inside MCP for the human answer; the host app renders the options and sends the user answer as the next turn.\n\nVerification rule:\nSeparate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.",
   "provider_examples": {
     "codex_cli": {
       "config_template": "# HIKARI_MCP_CONFIG_START\n[mcp_servers.hikari]\ncommand = \"node\"\nargs = [\"/Users/shiyifan/Projects/Enana/src/main/helpers/agent/mcp-contract/stdio-server.js\"]\nenv = { HIKARI_AGENT_MCP = \"1\", ENANA_AGENT_MCP = \"1\", HIKARI_CODEX_MCP = \"1\", ENANA_CODEX_MCP = \"1\", HIKARI_AGENT_MCP_WORKSPACE = \"/runtime/workspace\", ENANA_AGENT_MCP_WORKSPACE = \"/runtime/workspace\", HIKARI_CODEX_WORKSPACE = \"/runtime/workspace\", ENANA_CODEX_WORKSPACE = \"/runtime/workspace\", HIKARI_AGENT_DATA_FILE = \"/path/to/hikari-data.json\", ENANA_AGENT_DATA_FILE = \"/path/to/hikari-data.json\", HIKARI_AGENT_STORAGE_PATH = \"/path/to/storage\", ENANA_AGENT_STORAGE_PATH = \"/path/to/storage\", HIKARI_AGENT_MCP_HOST = \"http://127.0.0.1:<port>\", ENANA_AGENT_MCP_HOST = \"http://127.0.0.1:<port>\", HIKARI_AGENT_MCP_TOKEN = \"<opaque bearer token>\", ENANA_AGENT_MCP_TOKEN = \"<opaque bearer token>\", HIKARI_CODEX_MCP_HOST = \"http://127.0.0.1:<port>\", ENANA_CODEX_MCP_HOST = \"http://127.0.0.1:<port>\", HIKARI_CODEX_MCP_TOKEN = \"<opaque bearer token>\", ENANA_CODEX_MCP_TOKEN = \"<opaque bearer token>\" }\n# HIKARI_MCP_CONFIG_END",
@@ -43,6 +43,13 @@
       {
         "name": "inventory_lookup",
         "description": "Look up local Hikari inventory items, including chemicals, personal containers, and samples.",
+        "annotations": {
+          "title": "Inventory lookup",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -91,6 +98,13 @@
       {
         "name": "chemical_lookup",
         "description": "Look up local Hikari chemical records, including amount, CAS, supplier, and storage location.",
+        "annotations": {
+          "title": "Chemical lookup",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -119,6 +133,13 @@
       {
         "name": "protocol_lookup",
         "description": "Look up local Hikari protocol records by protocol name, purpose, category, or step text.",
+        "annotations": {
+          "title": "Protocol lookup",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -146,7 +167,14 @@
       },
       {
         "name": "protocol_generation",
-        "description": "Normalize supplied protocol JSON into Hikari import-ready protocol format without an internal LLM call or required protocol id.",
+        "description": "Normalize supplied protocol JSON into Hikari import-ready protocol format without an internal LLM call, and save it into Protocols when save is true.",
+        "annotations": {
+          "title": "Protocol generation",
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -161,6 +189,9 @@
                 "steps"
               ],
               "properties": {
+                "id": {
+                  "type": "string"
+                },
                 "name": {
                   "type": "string"
                 },
@@ -242,6 +273,21 @@
             },
             "result_summary": {
               "type": "string"
+            },
+            "save": {
+              "type": "boolean"
+            },
+            "persist": {
+              "type": "boolean"
+            },
+            "save_to_protocol_module": {
+              "type": "boolean"
+            },
+            "overwrite": {
+              "type": "boolean"
+            },
+            "upsert": {
+              "type": "boolean"
             }
           }
         }
@@ -249,6 +295,13 @@
       {
         "name": "notebook_lookup",
         "description": "Look up local Hikari notebook entries by project, protocol, result text, or entry identifier.",
+        "annotations": {
+          "title": "Notebook lookup",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -280,6 +333,13 @@
       {
         "name": "ask_user",
         "description": "Prepare one blocking user clarification question with suggested options and optional custom text input for Hikari to render.",
+        "annotations": {
+          "title": "Ask user clarification",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -344,6 +404,13 @@
       {
         "name": "tool_search",
         "description": "Search Hikari app tools by natural-language goal.",
+        "annotations": {
+          "title": "Tool search",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -366,6 +433,13 @@
       {
         "name": "tool_info",
         "description": "Load one Hikari tool manifest, including schema when requested.",
+        "annotations": {
+          "title": "Tool info",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -413,6 +487,13 @@
       {
         "name": "resource_search",
         "description": "Search Hikari MCP resources such as instructions and tool manifests.",
+        "annotations": {
+          "title": "Resource search",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -435,6 +516,13 @@
       {
         "name": "resource_read",
         "description": "Read one Hikari MCP resource by URI.",
+        "annotations": {
+          "title": "Resource read",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
@@ -529,7 +617,7 @@
       {
         "uri": "hikari://tool/protocol-generation",
         "name": "protocol-generation tool manifest",
-        "description": "Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call or required protocol id."
+        "description": "Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call, and save it into the Hikari Protocols module when save is true."
       }
     ],
     "legacy_resource_schemes": [
@@ -5882,9 +5970,9 @@
     },
     {
       "tool_id": "protocol-generation",
-      "summary": "Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call or required protocol id.",
-      "input_hint": "protocol, result_summary?",
-      "detailed_description": "Use this tool only when the agent already has a complete protocol JSON object and needs to normalize it into the app's import-ready protocol format. The tool does not call an LLM, does not synthesize method content, and does not require a protocol id.",
+      "summary": "Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call, and save it into the Hikari Protocols module when save is true.",
+      "input_hint": "protocol, result_summary?, save?, persist?, overwrite?, upsert?",
+      "detailed_description": "Use this tool only when the agent already has a complete protocol JSON object and needs to normalize it into the app's import-ready protocol format. The tool does not call an LLM or synthesize method content. Set save to true in the same call when the user wants the protocol added to the Hikari Protocols module.",
       "input_schema": {
         "type": "object",
         "additionalProperties": false,
@@ -5900,6 +5988,9 @@
               "steps"
             ],
             "properties": {
+              "id": {
+                "type": "string"
+              },
               "name": {
                 "type": "string"
               },
@@ -5950,6 +6041,18 @@
           },
           "result_summary": {
             "type": "string"
+          },
+          "save": {
+            "type": "boolean"
+          },
+          "persist": {
+            "type": "boolean"
+          },
+          "overwrite": {
+            "type": "boolean"
+          },
+          "upsert": {
+            "type": "boolean"
           }
         }
       },

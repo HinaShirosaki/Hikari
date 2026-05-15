@@ -71,6 +71,103 @@ export function startRendererApp() {
     }
   }
 
+  function normalizeExternalProtocol(protocol) {
+    if (!protocol || typeof protocol !== 'object' || Array.isArray(protocol)) {
+      return null;
+    }
+    const name = String(protocol.name || protocol.title || '').trim();
+    const steps = Array.isArray(protocol.steps)
+      ? protocol.steps
+        .map((step, index) => {
+          if (typeof step === 'string') {
+            const text = step.trim();
+            return text ? { id: `step-${index + 1}`, text, placeholders: [] } : null;
+          }
+          if (!step || typeof step !== 'object') {
+            return null;
+          }
+          const text = String(step.text || step.instruction || step.action || '').trim();
+          if (!text) {
+            return null;
+          }
+          return {
+            id: String(step.id || `step-${index + 1}`),
+            text,
+            placeholders: Array.isArray(step.placeholders)
+              ? step.placeholders
+                .map((placeholder, placeholderIndex) => {
+                  const placeholderName = String(placeholder?.name || '').trim();
+                  if (!placeholderName) {
+                    return null;
+                  }
+                  return {
+                    id: String(placeholder?.id || `ph-${index + 1}-${placeholderIndex + 1}`),
+                    name: placeholderName
+                  };
+                })
+                .filter(Boolean)
+              : []
+          };
+        })
+        .filter(Boolean)
+      : [];
+    if (!name || !steps.length) {
+      return null;
+    }
+    const materials = Array.isArray(protocol.materials)
+      ? protocol.materials.map((item) => String(item || '').trim()).filter(Boolean)
+      : String(protocol.materials || '')
+        .replace(/\r\n?/g, '\n')
+        .split('\n')
+        .map((line) => line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, '').trim())
+        .filter(Boolean);
+    const nowIso = new Date().toISOString();
+    const createdAt = Number.isFinite(Date.parse(String(protocol.createdAt || '')))
+      ? new Date(Date.parse(String(protocol.createdAt))).toISOString()
+      : nowIso;
+    const updatedAt = Number.isFinite(Date.parse(String(protocol.updatedAt || '')))
+      ? new Date(Date.parse(String(protocol.updatedAt))).toISOString()
+      : createdAt;
+    return {
+      id: String(protocol.id || createId()),
+      name,
+      createdAt,
+      updatedAt,
+      purpose: String(protocol.purpose || protocol.description || '').trim(),
+      materials,
+      steps,
+      troubleshooting: String(protocol.troubleshooting || '').trim(),
+      ...(Array.isArray(protocol.aliases)
+        ? { aliases: protocol.aliases.map((alias) => String(alias || '').trim()).filter(Boolean) }
+        : {}),
+      ...(String(protocol.projectId || protocol.project_id || '').trim()
+        ? { projectId: String(protocol.projectId || protocol.project_id).trim() }
+        : {}),
+      ...(String(protocol.projectName || protocol.project_name || '').trim()
+        ? { projectName: String(protocol.projectName || protocol.project_name).trim() }
+        : {})
+    };
+  }
+
+  function mergeExternalProtocolRecord(payload = {}) {
+    const protocol = normalizeExternalProtocol(payload?.protocol);
+    if (!protocol) {
+      return;
+    }
+    if (!Array.isArray(state.protocols)) {
+      state.protocols = [];
+    }
+    const existingIndex = state.protocols.findIndex((item) => String(item?.id || '') === protocol.id);
+    if (existingIndex >= 0) {
+      state.protocols[existingIndex] = protocol;
+    } else {
+      state.protocols.push(protocol);
+    }
+    persist();
+    rendererServices.protocol.handleProtocolsChanged();
+    moduleRegistry.get('protocol')?.renderList?.();
+  }
+
   function renderAll() {
     state.objectGraph = rebuildObjectGraph(state);
     moduleRuntime.renderAll();
@@ -203,6 +300,10 @@ export function startRendererApp() {
     normalizeViewId: normalizeAppViewId,
     openItemHandlers,
     windowObject: window
+  });
+
+  window.enanaApi?.onProtocolRecordSaved?.((payload) => {
+    mergeExternalProtocolRecord(payload);
   });
 
   window.enanaGraph = {

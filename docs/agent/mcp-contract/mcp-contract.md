@@ -257,7 +257,7 @@ Input schema:
 
 ### `protocol_generation`
 
-Direct MCP convenience wrapper for protocol JSON normalization. It calls `protocol-generation` with the supplied protocol JSON, does not call an LLM, and does not require a protocol id.
+Direct MCP convenience wrapper for protocol JSON normalization. It calls `protocol-generation` with the supplied protocol JSON, does not call an LLM, and saves the normalized record into Protocols when `save` is true.
 
 Input schema:
 
@@ -272,6 +272,7 @@ Input schema:
       "additionalProperties": true,
       "required": ["steps"],
       "properties": {
+        "id": { "type": "string" },
         "name": { "type": "string" },
         "title": { "type": "string" },
         "purpose": { "type": "string" },
@@ -300,7 +301,11 @@ Input schema:
         "updatedAt": { "type": "string" }
       }
     },
-    "result_summary": { "type": "string" }
+    "result_summary": { "type": "string" },
+    "save": { "type": "boolean" },
+    "persist": { "type": "boolean" },
+    "overwrite": { "type": "boolean" },
+    "upsert": { "type": "boolean" }
   }
 }
 ```

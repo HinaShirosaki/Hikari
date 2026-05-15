@@ -982,7 +982,7 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
     }
   },
   "protocol-generation": {
-    "description": "Use this tool only when the agent already has a complete protocol JSON object and needs to normalize it into the app's import-ready protocol format. The tool does not call an LLM, does not synthesize method content, and does not require a protocol id.",
+    "description": "Use this tool only when the agent already has a complete protocol JSON object and needs to normalize it into the app's import-ready protocol format. The tool does not call an LLM or synthesize method content. Set save to true in the same call when the user wants the protocol added to the Hikari Protocols module.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -998,6 +998,9 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
             "steps"
           ],
           "properties": {
+            "id": {
+              "type": "string"
+            },
             "name": {
               "type": "string"
             },
@@ -1048,6 +1051,18 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
         },
         "result_summary": {
           "type": "string"
+        },
+        "save": {
+          "type": "boolean"
+        },
+        "persist": {
+          "type": "boolean"
+        },
+        "overwrite": {
+          "type": "boolean"
+        },
+        "upsert": {
+          "type": "boolean"
         }
       }
     }

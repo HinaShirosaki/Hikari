@@ -399,12 +399,14 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
             };
           }
           if (toolId === 'protocol-generation') {
+            const savedProtocolId = args.save === true ? (args.protocol.id || 'protocol-saved-1') : '';
             return {
               ok: true,
               result: {
                 ok: true,
-                status: 'normalized',
+                status: args.save === true ? 'saved' : 'normalized',
                 protocol: {
+                  ...(savedProtocolId ? { id: savedProtocolId } : {}),
                   name: args.protocol.name,
                   purpose: args.protocol.purpose || '',
                   materials: args.protocol.materials || [],
@@ -415,9 +417,9 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
                   })),
                   troubleshooting: args.protocol.troubleshooting || ''
                 },
-                summary: 'Prepared protocol JSON.'
+                summary: args.save === true ? 'Saved protocol JSON.' : 'Prepared protocol JSON.'
               },
-              summary: 'Prepared protocol JSON.'
+              summary: args.save === true ? 'Saved protocol JSON.' : 'Prepared protocol JSON.'
             };
           }
           if (toolId === 'record-lookup') {
@@ -492,15 +494,19 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(mcpToolNames.includes('chemical_lookup'), true);
       assert.equal(mcpToolNames.includes('protocol_lookup'), true);
       assert.equal(mcpToolNames.includes('protocol_generation'), true);
+      assert.equal(mcpToolNames.includes('protocol_save'), false);
       assert.equal(mcpToolNames.includes('notebook_lookup'), true);
       assert.equal(mcpToolNames.includes('ask_user'), true);
       assert.equal(mcpToolNames.indexOf('tool_search') > mcpToolNames.indexOf('ask_user'), true);
       const askUserDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'ask_user');
+      const protocolGenerationDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'protocol_generation');
       const toolSearchDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'tool_search');
       const toolCallDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'tool_call');
       assert.equal(askUserDefinition.annotations.readOnlyHint, true);
       assert.equal(askUserDefinition.annotations.destructiveHint, false);
       assert.equal(askUserDefinition.annotations.openWorldHint, false);
+      assert.equal(protocolGenerationDefinition.annotations.readOnlyHint, false);
+      assert.equal(protocolGenerationDefinition.annotations.destructiveHint, false);
       assert.equal(toolSearchDefinition.annotations.readOnlyHint, true);
       assert.equal(toolCallDefinition.annotations, undefined);
 
@@ -579,6 +585,24 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(calls[calls.length - 1].args.protocol.name, 'Protein purification');
       assert.equal(Object.prototype.hasOwnProperty.call(calls[calls.length - 1].args.protocol, 'id'), false);
 
+      const protocolSaveResult = await gateway.callGatewayTool('protocol_generation', {
+        protocol: {
+          name: 'Protein purification',
+          purpose: 'Purify His-tagged protein.',
+          materials: ['Ni-NTA resin'],
+          steps: ['Bind lysate to resin for [time].']
+        },
+        result_summary: 'Save the generated protocol.',
+        save: true
+      }, {
+        requestId: 'req-protocol-save'
+      });
+      assert.equal(protocolSaveResult.ok, true);
+      assert.equal(protocolSaveResult.status, 'saved');
+      assert.equal(protocolSaveResult.protocol.id, 'protocol-saved-1');
+      assert.equal(calls[calls.length - 1].toolId, 'protocol-generation');
+      assert.equal(calls[calls.length - 1].args.save, true);
+
       const askUserResult = await gateway.callGatewayTool('ask_user', {
         question: 'Which project should I use?',
         options: [
@@ -611,6 +635,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.match(instructions.contents, /provider-neutral Hikari app contract/);
       assert.match(instructions.contents, /Direct Hikari MCP tools available without `tool_search`/);
       assert.match(instructions.contents, /`protocol_generation`/);
+      assert.match(instructions.contents, /save: true/);
       assert.match(instructions.contents, /`ask_user`/);
       assert.match(instructions.contents, /paper-download/);
       const legacyInstructions = gateway.resourceRead({ uri: 'enana://instructions/codex-agent' });

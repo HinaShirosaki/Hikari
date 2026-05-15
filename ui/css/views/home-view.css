@@ -18,6 +18,9 @@
   --home-bottom-row: minmax(136px, 0.04fr);
   --contribution-cell-size: 15px;
   --contribution-cell-gap: 4px;
+  --contribution-card-width: calc(
+    (22 * var(--contribution-cell-size)) + (21 * var(--contribution-cell-gap)) + 37px + (2 * var(--home-tile-padding))
+  );
   height: 100%;
   max-height: 100%;
   min-height: 0;
@@ -41,7 +44,7 @@ body.theme-night #home-view {
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-columns: minmax(470px, 1.28fr) minmax(330px, 0.86fr) minmax(300px, 0.72fr);
+  grid-template-columns: var(--contribution-card-width) minmax(330px, 1.28fr) minmax(300px, 0.86fr);
   grid-template-areas:
     "contribution notebook timer"
     "contribution notebook passage"
