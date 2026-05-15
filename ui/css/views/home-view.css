@@ -500,49 +500,6 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
   resize: none;
 }
 
-#home-view .home-quick-log-recent-list {
-  display: grid;
-  align-content: start;
-  min-height: 0;
-  overflow: auto;
-  border-top: 1px solid var(--home-tile-line-soft);
-}
-
-#home-view .home-quick-log-empty {
-  margin: 0;
-  padding-top: 11px;
-  color: var(--home-tile-muted);
-  font-size: 0.84rem;
-}
-
-#home-view .home-quick-log-recent-row {
-  display: grid;
-  gap: 3px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--home-tile-line-soft);
-}
-
-#home-view .home-quick-log-recent-row:last-child {
-  border-bottom: 0;
-}
-
-#home-view .home-quick-log-recent-time {
-  color: var(--home-tile-muted);
-  font-size: 0.76rem;
-  line-height: 1.2;
-}
-
-#home-view .home-quick-log-recent-text {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: var(--home-tile-text);
-  font-size: 0.86rem;
-  line-height: 1.28;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
 #home-view .home-quick-log-actions {
   position: absolute;
   right: 12px;

@@ -95,6 +95,9 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         "  const outputFile = outputIndex >= 0 ? args[outputIndex + 1] : '';",
         '  fs.writeFileSync(process.env.ENANA_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
         "  if (process.env.ENANA_FAKE_CODEX_STDOUT) { process.stdout.write(process.env.ENANA_FAKE_CODEX_STDOUT); }",
+        "  if (process.env.ENANA_FAKE_CODEX_STDERR) { process.stderr.write(process.env.ENANA_FAKE_CODEX_STDERR); }",
+        "  const exitCode = Number(process.env.ENANA_FAKE_CODEX_EXIT_CODE || 0);",
+        "  if (exitCode) { process.exit(exitCode); }",
         "  if (outputFile) { fs.writeFileSync(outputFile, 'OK from fake codex'); }",
         '});'
       ].join('\n'), 'utf8');
@@ -196,6 +199,23 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       });
     });
 
+    test('codex cli provider can disable native tool search before exec', () => {
+      withCodexHome({}, () => {
+        const provider = loadProvider();
+        const args = provider.buildCodexCliExecArgs({
+          outputFile: '/tmp/codex-last-message.txt',
+          disableToolSearch: true
+        });
+
+        const disableIndex = args.indexOf('--disable');
+        const toolSearchIndex = args.indexOf('tool_search');
+        const execIndex = args.indexOf('exec');
+        assert.equal(disableIndex >= 0, true);
+        assert.equal(toolSearchIndex, disableIndex + 1);
+        assert.equal(execIndex > toolSearchIndex, true);
+      });
+    });
+
     test('codex cli provider builds noninteractive resume args for Codex sub-agent sessions', () => {
       withCodexHome({}, () => {
         const provider = loadProvider();
@@ -254,6 +274,41 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         fs.rmSync(sourceHome, { recursive: true, force: true });
         fs.rmSync(workspaceDir, { recursive: true, force: true });
       }
+    });
+
+    test('codex MCP config points packaged app paths at app.asar.unpacked', () => {
+      const {
+        resolveUnpackedAsarPath,
+        buildHikariCodexMcpConfigBlock
+      } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'codex-agent',
+        'runtime-files.js'
+      ));
+      const packedServerPath = [
+        '',
+        'Applications',
+        'Hikari.app',
+        'Contents',
+        'Resources',
+        'app.asar',
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'mcp-contract',
+        'stdio-server.js'
+      ].join(path.sep);
+      const unpackedServerPath = resolveUnpackedAsarPath(packedServerPath);
+
+      assert.equal(unpackedServerPath.includes(`${path.sep}app.asar.unpacked${path.sep}`), true);
+      assert.equal(unpackedServerPath.includes(`${path.sep}app.asar${path.sep}`), false);
+      assert.equal(resolveUnpackedAsarPath('/tmp/Hikari/src/main.js'), '/tmp/Hikari/src/main.js');
+      assert.match(buildHikariCodexMcpConfigBlock({ workspace: '/tmp/Hikari' }), /\[mcp_servers\.hikari\]/);
     });
 
     test('codex cli provider writes Hikari AGENTS.md guidance into the runtime workspace', async () => {
@@ -440,6 +495,14 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(mcpToolNames.includes('notebook_lookup'), true);
       assert.equal(mcpToolNames.includes('ask_user'), true);
       assert.equal(mcpToolNames.indexOf('tool_search') > mcpToolNames.indexOf('ask_user'), true);
+      const askUserDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'ask_user');
+      const toolSearchDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'tool_search');
+      const toolCallDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'tool_call');
+      assert.equal(askUserDefinition.annotations.readOnlyHint, true);
+      assert.equal(askUserDefinition.annotations.destructiveHint, false);
+      assert.equal(askUserDefinition.annotations.openWorldHint, false);
+      assert.equal(toolSearchDefinition.annotations.readOnlyHint, true);
+      assert.equal(toolCallDefinition.annotations, undefined);
 
       const searchResult = gateway.toolSearch({ query: 'download paper pdf', limit: 6 });
       assert.equal(searchResult.ok, true);
@@ -555,7 +618,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.match(legacyInstructions.contents, /provider-neutral Hikari app contract/);
     });
 
-    test('codex agent runtime builds a whole-turn prompt and parses the answer envelope', async () => {
+    test('codex agent runtime builds a Codex-session prompt and renders plain final text', async () => {
       const { createCodexAgentRuntime } = require(path.join(
         __dirname,
         'src',
@@ -577,23 +640,29 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         requestCodexAgentText: async (input = {}) => {
           calls.push(input);
           input.onStream?.({
+            type: 'codex_thinking',
+            thinking_text: 'Checking the relevant project records.',
+            event_type: 'agent_reasoning_delta'
+          });
+          input.onStream?.({
+            type: 'codex_tool_call',
+            status: 'started',
+            tool_name: 'inventory_lookup',
+            tool_call_text: 'inventory_lookup: {"query":"SUMO1"}',
+            event_type: 'tool_call_started'
+          });
+          input.onStream?.({
             text_delta: 'Streaming answer.',
             accumulated_text: 'Streaming answer.',
             event_type: 'agent_message_delta'
           });
-          return JSON.stringify({
-            status: 'completed',
-            assistant_text: 'Atlas SUMO1 likely needs a follow-up expression check.',
-            follow_up_questions: [],
-            reasoning_summary: 'Used local project context and verified the conclusion.',
-            citations: [
-              {
-                source: 'record-lookup',
-                pointer: 'notebook:atlas-sumo1',
-                reason: 'Matched the selected project record.'
-              }
-            ]
-          });
+          return {
+            text: 'Atlas SUMO1 likely needs a follow-up expression check.',
+            metadata: {
+              session_id: 'codex-chat-session-1',
+              command: 'exec'
+            }
+          };
         },
         recordAgentLlmTrace: async (_traceContext, event = {}) => {
           traceRows.push(event);
@@ -645,16 +714,22 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(calls[0].stream, true);
       assert.equal(typeof calls[0].onStream, 'function');
       assert.equal(calls[0].enableWebSearch, true);
-      assert.match(calls[0].prompt, /Codex-Owned Agent Request/);
+      assert.equal(calls[0].disableToolSearch, true);
+      assert.equal(calls[0].returnMetadata, true);
+      assert.equal(calls[0].resumeSessionId, '');
+      assert.match(calls[0].prompt, /Codex Chat Turn/);
       assert.match(calls[0].prompt, /Current user request:\nWhy was SUMO1 conjugation weak\?/);
-      assert.match(calls[0].prompt, /Recent conversation:/);
+      assert.doesNotMatch(calls[0].prompt, /Recent conversation:/);
       assert.match(calls[0].prompt, /Selection insight context:/);
       assert.match(calls[0].prompt, /pilot\.pdf/);
-      assert.match(calls[0].prompt, /"assistant_text"/);
+      assert.doesNotMatch(calls[0].prompt, /"assistant_text"/);
       const mcpContext = JSON.parse(calls[0].envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT);
       assert.equal(mcpContext.provider, 'codex');
       assert.equal(mcpContext.model, 'gpt-5.4');
       assert.equal(mcpContext.cwd, '/tmp/enana-workspace');
+      assert.equal(mcpContext.chatSessionId, '');
+      assert.equal(mcpContext.codexSessionId, '');
+      assert.deepEqual(mcpContext.conversation, []);
       assert.equal(mcpContext.project.name, 'Atlas SUMO1');
       assert.equal(mcpContext.dataFilePath, '/tmp/enana-data.json');
       assert.deepEqual(
@@ -671,11 +746,17 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       );
       assert.equal(result.ok, true);
       assert.equal(result.parser.primary_intent, 'codex_agent');
+      assert.equal(result.parser.needs_clarification, false);
       assert.equal(result.codex_agent.status, 'completed');
       assert.match(result.codex_agent.answer, /SUMO1 likely/);
-      assert.equal(result.codex_agent.citations.length, 1);
+      assert.equal(result.codex_agent.user_question, null);
+      assert.equal(result.codex_agent.codex_session_id, 'codex-chat-session-1');
+      assert.equal(result.codex_session_id, 'codex-chat-session-1');
+      assert.equal(result.codex_agent.citations.length, 0);
       assert.equal(traceRows.some((row) => row.stage === 'codex_agent_runtime'), true);
       assert.equal(lifecycleEvents.some((event) => event.stage === 'codex_agent_completed'), true);
+      assert.equal(progressEvents.some((event) => event.stage === 'codex_agent_thinking' && event.meta?.thinking_trace === 'Checking the relevant project records.'), true);
+      assert.equal(progressEvents.some((event) => event.stage === 'tool_call_started' && event.tool_name === 'inventory_lookup' && event.meta?.tool_call_text.includes('SUMO1')), true);
       assert.equal(progressEvents.some((event) => event.stage === 'codex_agent_stream'), true);
       assert.equal(progressEvents.some((event) => event.meta?.stream_text === 'Streaming answer.'), true);
     });
@@ -695,20 +776,25 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
           const text = String(value || '').trim();
           return maxLength > 0 ? text.slice(0, maxLength) : text;
         },
-        requestCodexAgentText: async () => JSON.stringify({
-          status: 'needs_more_info',
-          assistant_text: 'Which project should I use?',
-          follow_up_questions: ['Which project should I use?'],
-          user_question: {
-            question: 'Which project should I use?',
-            options: [
-              { label: 'Atlas', value: 'Use Atlas.' },
-              { label: 'All projects', value: 'Search all projects.' }
-            ],
-            allow_custom: true
-          },
-          reasoning_summary: 'Waiting for one project-scope clarification.',
-          citations: []
+        requestCodexAgentText: async () => ({
+          text: JSON.stringify({
+            status: 'needs_more_info',
+            assistant_text: 'Which project should I use?',
+            follow_up_questions: ['Which project should I use?'],
+            user_question: {
+              question: 'Which project should I use?',
+              options: [
+                { label: 'Atlas', value: 'Use Atlas.' },
+                { label: 'All projects', value: 'Search all projects.' }
+              ],
+              allow_custom: true
+            },
+            reasoning_summary: 'Waiting for one project-scope clarification.',
+            citations: []
+          }),
+          metadata: {
+            session_id: 'codex-clarify-session'
+          }
         })
       });
 
@@ -722,6 +808,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(result.parser.needs_clarification, true);
       assert.equal(result.parser.clarification_reason, 'Which project should I use?');
       assert.equal(result.codex_agent.status, 'needs_more_info');
+      assert.equal(result.codex_agent.codex_session_id, 'codex-clarify-session');
       assert.equal(result.codex_agent.user_question.question, 'Which project should I use?');
       assert.deepEqual(
         result.codex_agent.user_question.options.map((option) => option.value),
@@ -729,7 +816,134 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       );
     });
 
-    test('codex agent runtime wraps non-json output with a parse warning', async () => {
+    test('codex agent runtime recovers ask_user clarification from tool stream when final text is prose', async () => {
+      const { createCodexAgentRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'codex-agent',
+        'runtime.js'
+      ));
+      const askUserResult = {
+        ok: true,
+        status: 'needs_user_answer',
+        mcp_tool: 'ask_user',
+        user_question: {
+          question: 'Which project should I use?',
+          options: [
+            { label: 'Atlas', value: 'Use Atlas.' },
+            { label: 'All projects', value: 'Search all projects.' }
+          ],
+          allow_custom: true
+        },
+        final_response: {
+          status: 'needs_more_info',
+          assistant_text: 'Which project should I use?',
+          follow_up_questions: ['Which project should I use?'],
+          user_question: {
+            question: 'Which project should I use?',
+            options: [
+              { label: 'Atlas', value: 'Use Atlas.' },
+              { label: 'All projects', value: 'Search all projects.' }
+            ],
+            allow_custom: true
+          },
+          reasoning_summary: 'Waiting for one project-scope clarification.',
+          citations: []
+        }
+      };
+      const runtime = createCodexAgentRuntime({
+        cleanText: (value, maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        requestCodexAgentText: async (input = {}) => {
+          input.onStream?.({
+            type: 'codex_tool_call',
+            status: 'completed',
+            tool_name: 'ask_user',
+            tool_call_text: `ask_user: ${JSON.stringify(askUserResult)}`,
+            tool_output_text: JSON.stringify(askUserResult),
+            event_type: 'tool_call_completed'
+          });
+          return {
+            text: 'I need one detail before I can answer well.',
+            metadata: {
+              session_id: 'codex-clarify-stream-session'
+            }
+          };
+        }
+      });
+
+      const result = await runtime.run({
+        message: 'Summarize the latest notes.',
+        model: 'gpt-5.4',
+        cwd: '/tmp/enana-workspace'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.needs_clarification, true);
+      assert.equal(result.parser.clarification_reason, 'Which project should I use?');
+      assert.equal(result.codex_agent.status, 'needs_more_info');
+      assert.equal(result.codex_agent.answer, 'Which project should I use?');
+      assert.equal(result.codex_agent.codex_session_id, 'codex-clarify-stream-session');
+      assert.deepEqual(
+        result.codex_agent.user_question.options.map((option) => option.value),
+        ['Use Atlas.', 'Search all projects.']
+      );
+    });
+
+    test('codex agent runtime recovers ask_user clarification from tool arguments', async () => {
+      const { createCodexAgentRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'codex-agent',
+        'runtime.js'
+      ));
+      const runtime = createCodexAgentRuntime({
+        cleanText: (value, maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        requestCodexAgentText: async (input = {}) => {
+          input.onStream?.({
+            type: 'codex_tool_call',
+            status: 'started',
+            tool_name: 'ask_user',
+            tool_call_text: 'ask_user: {"question":"Which project scope should I use?","options":[{"label":"All projects","value":"Search all projects"},{"label":"PD-1 Nanobody Binder Discovery","value":"Use the PD-1 project"}],"allow_custom":false}',
+            event_type: 'function_call'
+          });
+          return {
+            text: 'Which project scope should I use?',
+            metadata: {
+              session_id: 'codex-clarify-args-session'
+            }
+          };
+        }
+      });
+
+      const result = await runtime.run({
+        message: 'Ask for project scope first.',
+        model: 'gpt-5.4',
+        cwd: '/tmp/enana-workspace'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.parser.needs_clarification, true);
+      assert.equal(result.codex_agent.status, 'needs_more_info');
+      assert.equal(result.codex_agent.user_question.allow_custom, false);
+      assert.deepEqual(
+        result.codex_agent.user_question.options.map((option) => option.value),
+        ['Search all projects', 'Use the PD-1 project']
+      );
+    });
+
+    test('codex agent runtime treats non-json output as normal assistant text', async () => {
       const { createCodexAgentRuntime } = require(path.join(
         __dirname,
         'src',
@@ -745,7 +959,12 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
           const text = String(value || '').trim();
           return maxLength > 0 ? text.slice(0, maxLength) : text;
         },
-        requestCodexAgentText: async () => 'Plain answer from Codex.',
+        requestCodexAgentText: async () => ({
+          text: 'Plain answer from Codex.',
+          metadata: {
+            session_id: 'codex-plain-session'
+          }
+        }),
         recordAgentLlmTrace: async (_traceContext, event = {}) => {
           traceRows.push(event);
         }
@@ -759,9 +978,57 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
 
       assert.equal(result.ok, true);
       assert.equal(result.codex_agent.answer, 'Plain answer from Codex.');
-      assert.equal(result.warnings.length, 1);
-      assert.match(result.warnings[0], /non-JSON output/);
-      assert.equal(traceRows.some((row) => row.stage === 'codex_agent_parse_warning'), true);
+      assert.equal(result.codex_session_id, 'codex-plain-session');
+      assert.equal(result.warnings, undefined);
+      assert.equal(traceRows.some((row) => row.stage === 'codex_agent_completed'), true);
+    });
+
+    test('codex agent runtime resumes the Codex session stored on a Hikari chat', async () => {
+      const { createCodexAgentRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'codex-agent',
+        'runtime.js'
+      ));
+      const calls = [];
+      const runtime = createCodexAgentRuntime({
+        cleanText: (value, maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        requestCodexAgentText: async (input = {}) => {
+          calls.push(input);
+          return {
+            text: 'Continuing the same Codex chat.',
+            metadata: {
+              session_id: 'codex-chat-session-1',
+              resumed_session_id: 'codex-chat-session-1',
+              command: 'exec resume'
+            }
+          };
+        }
+      });
+
+      const result = await runtime.run({
+        message: 'Continue from there.',
+        model: 'gpt-5.4',
+        cwd: '/tmp/enana-workspace',
+        chatSessionId: 'hikari-chat-1',
+        codexSessionId: 'codex-chat-session-1'
+      });
+
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].resumeSessionId, 'codex-chat-session-1');
+      assert.equal(calls[0].returnMetadata, true);
+      const mcpContext = JSON.parse(calls[0].envOverrides.HIKARI_CODEX_REQUEST_CONTEXT);
+      assert.equal(mcpContext.chatSessionId, 'hikari-chat-1');
+      assert.equal(mcpContext.codexSessionId, 'codex-chat-session-1');
+      assert.equal(result.codex_session_id, 'codex-chat-session-1');
+      assert.equal(result.resumed_codex_session_id, 'codex-chat-session-1');
+      assert.equal(result.codex_agent.answer, 'Continuing the same Codex chat.');
     });
 
     test('agent MCP stdio server forwards request context from the provider environment', async () => {
@@ -774,15 +1041,11 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         'mcp-contract',
         'stdio-server.js'
       ));
+      const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+      const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+
       let capturedContext = null;
-      const outputChunks = [];
-      const server = createAgentMcpStdioServer({
-        input: { on() {} },
-        output: {
-          write(chunk) {
-            outputChunks.push(String(chunk || ''));
-          }
-        },
+      const { server, connect } = createAgentMcpStdioServer({
         env: {
           HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify({
             provider: 'codex',
@@ -801,28 +1064,40 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
               ok: true,
               results: []
             };
-          }
+          },
+          resourceSearch: () => ({ results: [] }),
+          resourceRead: () => ({ ok: false, error: 'unused' })
         }
       });
 
-      await server.handleRequest({
-        jsonrpc: '2.0',
-        id: 7,
-        method: 'tools/call',
-        params: {
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await connect(serverTransport);
+      const client = new Client(
+        { name: 'hikari-test-client', version: '0.0.1' },
+        { capabilities: {} }
+      );
+      await client.connect(clientTransport);
+
+      try {
+        const response = await client.callTool({
           name: 'tool_search',
-          arguments: {
-            query: 'paper'
-          }
-        }
-      });
+          arguments: { query: 'paper' }
+        });
 
-      assert.equal(capturedContext.provider, 'codex');
-      assert.equal(capturedContext.model, 'gpt-5.4');
-      assert.equal(capturedContext.project.name, 'Atlas');
-      assert.equal(capturedContext.traceRequestId, 'req-ctx');
-      assert.equal(capturedContext.mcpRequest.id, 7);
-      assert.equal(outputChunks.join('').includes('"jsonrpc":"2.0"'), true);
+        assert.equal(capturedContext.provider, 'codex');
+        assert.equal(capturedContext.model, 'gpt-5.4');
+        assert.equal(capturedContext.project.name, 'Atlas');
+        assert.equal(capturedContext.traceRequestId, 'req-ctx');
+        assert.equal(capturedContext.mcpRequest.method, 'tools/call');
+        assert.equal(capturedContext.mcpRequest.params.name, 'tool_search');
+        assert.equal(response.isError, false);
+        assert.equal(Array.isArray(response.content), true);
+        assert.equal(response.content[0].type, 'text');
+        assert.equal(response.content[0].text.includes('"ok": true'), true);
+      } finally {
+        await client.close();
+        await server.close();
+      }
     });
 
     test('codex agent MCP config includes the app host callback when available', async () => {
@@ -952,8 +1227,29 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
         process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
         process.env.ENANA_FAKE_CODEX_STDOUT = [
-          JSON.stringify({ type: 'agent_message_delta', delta: 'Hello ' }),
-          JSON.stringify({ type: 'agent_message_delta', delta: 'from Codex.' }),
+          JSON.stringify({ type: 'event_msg', payload: { type: 'agent_reasoning', text: 'Checking project context.' } }),
+          JSON.stringify({ type: 'event_msg', payload: { type: 'agent_message', phase: 'commentary', message: 'I am checking inventory.' } }),
+          JSON.stringify({ type: 'response_item', payload: { type: 'function_call', name: 'inventory_lookup', arguments: { query: 'SUMO1' } } }),
+          JSON.stringify({
+            type: 'event_msg',
+            payload: {
+              type: 'mcp_tool_call_end',
+              invocation: {
+                server: 'hikari',
+                tool: 'inventory_lookup',
+                arguments: { query: 'SUMO1' }
+              },
+              result: {
+                Ok: {
+                  content: [
+                    { type: 'text', text: 'Found 2 matching records.' }
+                  ],
+                  isError: false
+                }
+              }
+            }
+          }),
+          JSON.stringify({ type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Final response from Codex.' }], phase: 'final_answer' } }),
           ''
         ].join('\n');
 
@@ -968,13 +1264,250 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
             }
           });
           const captured = JSON.parse(fs.readFileSync(fakeCodex.capturePath, 'utf8'));
+          const assistantStreamEvents = streamEvents.filter((event) => event.type === 'codex_stream');
           assert.equal(result, 'OK from fake codex');
           assert.equal(captured.args.includes('--json'), true);
           assert.deepEqual(
-            streamEvents.map((event) => event.text_delta),
-            ['Hello ', 'from Codex.']
+            assistantStreamEvents.map((event) => event.text_delta),
+            ['Final response from Codex.']
           );
-          assert.equal(streamEvents[streamEvents.length - 1].accumulated_text, 'Hello from Codex.');
+          assert.equal(assistantStreamEvents[assistantStreamEvents.length - 1].accumulated_text, 'Final response from Codex.');
+          assert.equal(streamEvents.some((event) => event.type === 'codex_thinking' && event.thinking_text === 'Checking project context.'), true);
+          assert.equal(streamEvents.some((event) => event.type === 'codex_thinking' && event.thinking_text === 'I am checking inventory.'), true);
+          assert.equal(streamEvents.some((event) => event.type === 'codex_tool_call' && event.tool_name === 'inventory_lookup' && event.status === 'started'), true);
+          assert.equal(streamEvents.some((event) => event.type === 'codex_tool_call' && event.status === 'completed' && /Found 2/.test(event.tool_call_text)), true);
+        } finally {
+          if (typeof previousCodexCli === 'string') {
+            process.env.ENANA_CODEX_CLI = previousCodexCli;
+          } else {
+            delete process.env.ENANA_CODEX_CLI;
+          }
+          if (typeof previousCapture === 'string') {
+            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+          }
+          if (typeof previousStdout === 'string') {
+            process.env.ENANA_FAKE_CODEX_STDOUT = previousStdout;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_STDOUT;
+          }
+          fs.rmSync(workspaceDir, { recursive: true, force: true });
+        }
+      });
+    });
+
+    test('codex cli provider reports no-credit json failures before plugin warnings', async () => {
+      const accessToken = buildJwt({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        email: 'scientist@example.com'
+      });
+      await withCodexHome({
+        authFile: {
+          auth_mode: 'chatgpt',
+          tokens: {
+            access_token: accessToken,
+            refresh_token: 'refresh-token',
+            account_id: 'acct-no-credits'
+          }
+        }
+      }, async () => {
+        const provider = loadProvider();
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-no-credits-'));
+        const fakeCodex = createFakeCodexBinary(workspaceDir);
+        const previousCodexCli = process.env.ENANA_CODEX_CLI;
+        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
+        const previousStdout = process.env.ENANA_FAKE_CODEX_STDOUT;
+        const previousStderr = process.env.ENANA_FAKE_CODEX_STDERR;
+        const previousExitCode = process.env.ENANA_FAKE_CODEX_EXIT_CODE;
+        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
+        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        process.env.ENANA_FAKE_CODEX_STDOUT = [
+          JSON.stringify({
+            type: 'event_msg',
+            payload: {
+              type: 'token_count',
+              rate_limits: {
+                credits: {
+                  has_credits: false,
+                  unlimited: false,
+                  balance: '0'
+                }
+              }
+            }
+          }),
+          JSON.stringify({
+            type: 'event_msg',
+            payload: {
+              type: 'task_complete',
+              last_agent_message: null
+            }
+          }),
+          ''
+        ].join('\n');
+        process.env.ENANA_FAKE_CODEX_STDERR = [
+          '2026-05-15T00:26:05Z  WARN codex_core_plugins::loader: failed to load plugin: plugin is not installed',
+          ''
+        ].join('\n');
+        process.env.ENANA_FAKE_CODEX_EXIT_CODE = '1';
+
+        try {
+          let caughtError = null;
+          try {
+            await provider.requestCodexCliText({
+              prompt: 'Return OK only.',
+              cwd: workspaceDir,
+              stream: true,
+              onStream: () => {}
+            });
+          } catch (error) {
+            caughtError = error;
+          }
+
+          assert.equal(Boolean(caughtError), true);
+          assert.match(caughtError.message, /no available credits/);
+          assert.doesNotMatch(caughtError.message, /codex_core_plugins/);
+          assert.match(caughtError.stderr, /codex_core_plugins/);
+        } finally {
+          if (typeof previousCodexCli === 'string') {
+            process.env.ENANA_CODEX_CLI = previousCodexCli;
+          } else {
+            delete process.env.ENANA_CODEX_CLI;
+          }
+          if (typeof previousCapture === 'string') {
+            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+          }
+          if (typeof previousStdout === 'string') {
+            process.env.ENANA_FAKE_CODEX_STDOUT = previousStdout;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_STDOUT;
+          }
+          if (typeof previousStderr === 'string') {
+            process.env.ENANA_FAKE_CODEX_STDERR = previousStderr;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_STDERR;
+          }
+          if (typeof previousExitCode === 'string') {
+            process.env.ENANA_FAKE_CODEX_EXIT_CODE = previousExitCode;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_EXIT_CODE;
+          }
+          fs.rmSync(workspaceDir, { recursive: true, force: true });
+        }
+      });
+    });
+
+    test('codex cli provider replays MCP tool progress from the native session transcript', async () => {
+      const accessToken = buildJwt({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        email: 'scientist@example.com'
+      });
+      await withCodexHome({
+        authFile: {
+          auth_mode: 'chatgpt',
+          tokens: {
+            access_token: accessToken,
+            refresh_token: 'refresh-token',
+            account_id: 'acct-stream'
+          }
+        }
+      }, async () => {
+        const provider = loadProvider();
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-transcript-'));
+        const fakeCodex = createFakeCodexBinary(workspaceDir);
+        const sessionId = '019e289d-7ba2-72c3-93a0-9bfe186543e1';
+        const sessionDir = path.join(workspaceDir, 'Config', 'codex-cli-home', 'sessions', '2026', '05', '14');
+        fs.mkdirSync(sessionDir, { recursive: true });
+        fs.writeFileSync(
+          path.join(sessionDir, `rollout-2026-05-14T17-31-09-${sessionId}.jsonl`),
+          [
+            JSON.stringify({
+              type: 'response_item',
+              payload: {
+                type: 'function_call',
+                name: 'ask_user',
+                namespace: 'mcp__hikari__',
+                arguments: '{"question":"Which project scope should I use?","options":[{"label":"All projects","value":"Search all projects"}]}'
+              }
+            }),
+            JSON.stringify({
+              type: 'event_msg',
+              payload: {
+                type: 'mcp_tool_call_end',
+                invocation: {
+                  server: 'hikari',
+                  tool: 'ask_user',
+                  arguments: {
+                    question: 'Which project scope should I use?',
+                    options: [
+                      { label: 'All projects', value: 'Search all projects' }
+                    ]
+                  }
+                },
+                result: {
+                  Ok: {
+                    content: [
+                      {
+                        type: 'text',
+                        text: JSON.stringify({
+                          ok: true,
+                          status: 'needs_user_answer',
+                          user_question: {
+                            question: 'Which project scope should I use?',
+                            options: [
+                              { label: 'All projects', value: 'Search all projects' }
+                            ]
+                          },
+                          final_response: {
+                            status: 'needs_more_info',
+                            assistant_text: 'Which project scope should I use?',
+                            user_question: {
+                              question: 'Which project scope should I use?',
+                              options: [
+                                { label: 'All projects', value: 'Search all projects' }
+                              ]
+                            }
+                          }
+                        })
+                      }
+                    ],
+                    isError: false
+                  }
+                }
+              }
+            }),
+            ''
+          ].join('\n'),
+          'utf8'
+        );
+        const previousCodexCli = process.env.ENANA_CODEX_CLI;
+        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
+        const previousStdout = process.env.ENANA_FAKE_CODEX_STDOUT;
+        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
+        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        process.env.ENANA_FAKE_CODEX_STDOUT = [
+          JSON.stringify({ type: 'session_meta', payload: { id: sessionId } }),
+          JSON.stringify({ type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Which project scope should I use?' }], phase: 'final_answer' } }),
+          ''
+        ].join('\n');
+
+        try {
+          const streamEvents = [];
+          const result = await provider.requestCodexCliText({
+            prompt: 'Replay transcript please.',
+            cwd: workspaceDir,
+            stream: true,
+            onStream: (event) => {
+              streamEvents.push(event);
+            },
+            returnMetadata: true
+          });
+
+          assert.equal(result.metadata.session_id, sessionId);
+          assert.equal(result.text, 'OK from fake codex');
+          assert.equal(streamEvents.some((event) => event.type === 'codex_tool_call' && event.tool_name === 'ask_user' && event.status === 'completed' && /needs_user_answer/.test(event.tool_output_text)), true);
         } finally {
           if (typeof previousCodexCli === 'string') {
             process.env.ENANA_CODEX_CLI = previousCodexCli;

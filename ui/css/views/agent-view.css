@@ -111,6 +111,9 @@ body.agent-view-fixed-scroll .workspace-main {
   padding: 10px 12px;
   display: grid;
   gap: 6px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .agent-session-card.is-active {
@@ -126,7 +129,12 @@ body.agent-view-fixed-scroll .workspace-main {
 .agent-session-card strong {
   display: block;
   font-size: 0.92rem;
+  line-height: 1.25;
   color: var(--primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agent-session-card span {
@@ -831,6 +839,8 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   padding: 8px 0 8px 12px;
   border: 0;
   border-radius: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .agent-session-card.is-active {
@@ -841,7 +851,12 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-session-card strong {
   font-size: 0.96rem;
+  line-height: 1.25;
   color: var(--strong);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agent-chat-panel {

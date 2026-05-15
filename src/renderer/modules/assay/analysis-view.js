@@ -45,7 +45,14 @@ export function createDefaultChartStyle() {
     frameCornerRadius: 0,
     frameStroke: '#9bb0c9',
     frameStrokeWidth: 1,
-    backgroundColor: '#ffffff'
+    backgroundColor: '#ffffff',
+    sizeAuto: true,
+    frameWidth: null,
+    frameHeight: null,
+    showVerticalGrid: true,
+    showHorizontalGrid: true,
+    gridColor: '#9bb0c9',
+    gridStrokeWidth: 1
   };
 }
 
@@ -118,7 +125,20 @@ export function normalizeChartStyle(input) {
     frameStrokeWidth: Number.isFinite(input.frameStrokeWidth)
       ? Math.max(0, Math.min(6, input.frameStrokeWidth))
       : base.frameStrokeWidth,
-    backgroundColor: sanitizeColor(input.backgroundColor, base.backgroundColor)
+    backgroundColor: sanitizeColor(input.backgroundColor, base.backgroundColor),
+    sizeAuto: input.sizeAuto !== false,
+    frameWidth: Number.isFinite(input.frameWidth)
+      ? Math.max(320, Math.min(2000, input.frameWidth))
+      : base.frameWidth,
+    frameHeight: Number.isFinite(input.frameHeight)
+      ? Math.max(180, Math.min(1200, input.frameHeight))
+      : base.frameHeight,
+    showVerticalGrid: input.showVerticalGrid !== false,
+    showHorizontalGrid: input.showHorizontalGrid !== false,
+    gridColor: sanitizeColor(input.gridColor, base.gridColor),
+    gridStrokeWidth: Number.isFinite(input.gridStrokeWidth)
+      ? Math.max(0, Math.min(6, input.gridStrokeWidth))
+      : base.gridStrokeWidth
   };
 }
 
@@ -578,8 +598,11 @@ export function createAssayAnalysisView({
     }
 
     const longestSeries = chartModel.series.reduce((max, item) => Math.max(max, item.data.length), 0);
-    const plotWidth = Math.max(420, Math.min(1280, (longestSeries || 1) * (chartModel.chartType === 'line' ? 60 : 70)));
-    const plotHeight = 280;
+    const autoWidth = Math.max(420, Math.min(1280, (longestSeries || 1) * (chartModel.chartType === 'line' ? 60 : 70)));
+    const autoHeight = 280;
+    const useCustomSize = style.sizeAuto === false;
+    const plotWidth = useCustomSize && Number.isFinite(style.frameWidth) ? style.frameWidth : autoWidth;
+    const plotHeight = useCustomSize && Number.isFinite(style.frameHeight) ? style.frameHeight : autoHeight;
     const marginBottom = chartModel.chartType === 'bar' ? 108 : 72;
     const plotProps = {
       width: plotWidth,
@@ -598,11 +621,15 @@ export function createAssayAnalysisView({
       plotProps.yType = style.yScale;
     }
 
+    const allPoints = chartModel.series.flatMap((s) => [
+      ...(Array.isArray(s.data) ? s.data : []),
+      ...(Array.isArray(s.markers) ? s.markers : [])
+    ]);
     if (chartModel.chartType === 'line') {
-      const xDomain = computeDomain(style.xRange, chartModel.series.flatMap((s) => s.data), (p) => p.x);
+      const xDomain = computeDomain(style.xRange, allPoints, (p) => p.x);
       if (xDomain) plotProps.xDomain = xDomain;
     }
-    const yDomain = computeDomain(style.yRange, chartModel.series.flatMap((s) => s.data), (p) => p.y);
+    const yDomain = computeDomain(style.yRange, allPoints, (p) => p.y);
     if (yDomain) plotProps.yDomain = yDomain;
 
     const axisLineStyle = {
@@ -612,9 +639,19 @@ export function createAssayAnalysisView({
       }
     };
 
-    const plotChildren = [
-      ReactLib.createElement(VerticalGridLines, { key: 'v-grid' }),
-      ReactLib.createElement(HorizontalGridLines, { key: 'h-grid' }),
+    const gridStyle = {
+      stroke: style.gridColor || '#9bb0c9',
+      strokeWidth: style.gridStrokeWidth ?? 1
+    };
+
+    const plotChildren = [];
+    if (style.showVerticalGrid !== false) {
+      plotChildren.push(ReactLib.createElement(VerticalGridLines, { key: 'v-grid', style: gridStyle }));
+    }
+    if (style.showHorizontalGrid !== false) {
+      plotChildren.push(ReactLib.createElement(HorizontalGridLines, { key: 'h-grid', style: gridStyle }));
+    }
+    plotChildren.push(
       ReactLib.createElement(XAxis, {
         key: 'x-axis',
         title: chartModel.xLabel,
@@ -626,7 +663,7 @@ export function createAssayAnalysisView({
         title: chartModel.yLabel,
         style: axisLineStyle
       })
-    ];
+    );
 
     if (style.frameStyle === 'box') {
       plotChildren.push(ReactLib.createElement(XAxis, {
@@ -648,7 +685,9 @@ export function createAssayAnalysisView({
     chartModel.series.forEach((series, index) => {
       const color = pickSeriesColor(style, series.label, index);
       if (chartModel.chartType === 'line') {
-        if (LineSeries) {
+        const hasExplicitMarkers = Array.isArray(series.markers);
+        const markerData = hasExplicitMarkers ? series.markers : series.data;
+        if (LineSeries && series.data && series.data.length) {
           plotChildren.push(ReactLib.createElement(LineSeries, {
             key: `line-${series.label}-${index}`,
             data: series.data,
@@ -660,35 +699,37 @@ export function createAssayAnalysisView({
         }
         const stringShape = pointShapeStringFor(style.pointShape);
         const functionShape = makePointRenderer(style.pointShape, color);
-        if (functionShape && CustomSVGSeries) {
-          const data = series.data.map((point) => ({
-            ...point,
-            customComponent: functionShape,
-            size: style.pointSize
-          }));
-          plotChildren.push(ReactLib.createElement(CustomSVGSeries, {
-            key: `point-${series.label}-${index}`,
-            data,
-            color
-          }));
-        } else if (stringShape && stringShape !== 'circle' && CustomSVGSeries) {
-          const data = series.data.map((point) => ({
-            ...point,
-            customComponent: stringShape,
-            size: style.pointSize
-          }));
-          plotChildren.push(ReactLib.createElement(CustomSVGSeries, {
-            key: `point-${series.label}-${index}`,
-            data,
-            color
-          }));
-        } else if (MarkSeries) {
-          plotChildren.push(ReactLib.createElement(MarkSeries, {
-            key: `point-${series.label}-${index}`,
-            data: series.data,
-            color,
-            size: style.pointSize
-          }));
+        if (markerData && markerData.length) {
+          if (functionShape && CustomSVGSeries) {
+            const data = markerData.map((point) => ({
+              ...point,
+              customComponent: functionShape,
+              size: style.pointSize
+            }));
+            plotChildren.push(ReactLib.createElement(CustomSVGSeries, {
+              key: `point-${series.label}-${index}`,
+              data,
+              color
+            }));
+          } else if (stringShape && stringShape !== 'circle' && CustomSVGSeries) {
+            const data = markerData.map((point) => ({
+              ...point,
+              customComponent: stringShape,
+              size: style.pointSize
+            }));
+            plotChildren.push(ReactLib.createElement(CustomSVGSeries, {
+              key: `point-${series.label}-${index}`,
+              data,
+              color
+            }));
+          } else if (MarkSeries) {
+            plotChildren.push(ReactLib.createElement(MarkSeries, {
+              key: `point-${series.label}-${index}`,
+              data: markerData,
+              color,
+              size: style.pointSize
+            }));
+          }
         }
       } else if (VerticalBarSeries) {
         plotChildren.push(ReactLib.createElement(VerticalBarSeries, {

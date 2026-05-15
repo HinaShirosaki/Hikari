@@ -292,7 +292,10 @@ export function summarizeCodexAgent(codexAgent) {
   if (!status) {
     return '';
   }
-  const userQuestion = normalizeAgentUserQuestion(payload.user_question || payload.userQuestion, payload.answer);
+  const explicitUserQuestion = payload.user_question || payload.userQuestion;
+  const userQuestion = explicitUserQuestion
+    ? normalizeAgentUserQuestion(explicitUserQuestion, '')
+    : null;
   if (status === 'needs_more_info') {
     if (userQuestion?.question) {
       return userQuestion.question;
@@ -390,13 +393,22 @@ export function normalizeAgentResponse(result) {
   const codexAgent = result?.codex_agent && typeof result.codex_agent === 'object'
     ? result.codex_agent
     : null;
-  const userQuestion = normalizeAgentUserQuestion(
-    result?.user_question
-      || result?.userQuestion
-      || codexAgent?.user_question
-      || codexAgent?.userQuestion,
-    codexAgent?.answer
+  const explicitUserQuestion = result?.user_question
+    || result?.userQuestion
+    || codexAgent?.user_question
+    || codexAgent?.userQuestion;
+  const codexStatus = trimText(codexAgent?.status, 40);
+  const keepUserQuestion = Boolean(
+    explicitUserQuestion
+    && (
+      codexStatus === 'needs_more_info'
+      || codexStatus === 'needs_user_answer'
+      || (!codexAgent && parser?.needs_clarification === true)
+    )
   );
+  const userQuestion = keepUserQuestion
+    ? normalizeAgentUserQuestion(explicitUserQuestion, '')
+    : null;
   const generalScienceQuestion = result?.general_science_question && typeof result.general_science_question === 'object'
     ? result.general_science_question
     : null;

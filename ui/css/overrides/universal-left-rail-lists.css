@@ -194,6 +194,20 @@ body.theme-night {
   font-size: 0.88rem !important;
 }
 
+.left-rail-template__rail .agent-session-card {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.left-rail-template__rail .agent-session-card strong {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  line-height: 1.25 !important;
+}
+
 .left-rail-template__rail :is(
   .biology-notebook-folder-item,
   .biology-notebook-page-row,

@@ -365,11 +365,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (!elements.assayActiveAssayInfo) {
       return;
     }
-    if (!assay) {
-      elements.assayActiveAssayInfo.textContent = 'No assay plate loaded.';
-      return;
-    }
-    elements.assayActiveAssayInfo.textContent = `Loaded ${assay.assayNumber || assay.id} | ${assay.name || '-'} | ${assay.plateLabel || `${assay.wellCount || '-'} well`}`;
+    elements.assayActiveAssayInfo.textContent = '';
   }
 
   function renderProjectOptions() {
@@ -678,7 +674,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     runtime.chartStyle = normalizeChartStyle(assay.chartStyle);
     chartStyleControls?.refresh();
     analysisView.clearOutput();
-    setResultStatus(`Loaded ${resultsManager.getResultValueCount()} result value(s) for ${assay.assayNumber || assay.id}.`);
   }
 
   function setAssayMode(mode) {
@@ -718,15 +713,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       runtime.activeResultsAssayId = '';
       renderActiveAssayInfo(null);
       setResultStatus('No assay plate selected.');
-      return;
-    }
-    loadAssayForResults(assayId);
-  }
-
-  function onResultsAssayLoad() {
-    const assayId = elements.assayResultsAssaySelect?.value || '';
-    if (!assayId) {
-      setResultStatus('Select an assay plate first.');
       return;
     }
     loadAssayForResults(assayId);
@@ -1045,7 +1031,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   elements.assayAnalysisAddRowGroupBtn?.addEventListener('click', resultsManager.onAddSelectedRowGroup);
   elements.assayAnalysisAddColumnGroupBtn?.addEventListener('click', resultsManager.onAddSelectedColumnGroup);
   elements.assayAnalysisClearGroupsBtn?.addEventListener('click', resultsManager.onClearAnalysisGroups);
-  elements.assayResultsLoadBtn?.addEventListener('click', onResultsAssayLoad);
   elements.assayAttachResultFileBtn?.addEventListener('click', resultsManager.onAttachResultFileClick);
   elements.assayResultFileInput?.addEventListener('change', resultsManager.onResultFileChange);
   elements.assayResultImportOverlay?.addEventListener('click', resultsManager.onResultImportOverlayClick);

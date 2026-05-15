@@ -1849,6 +1849,8 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
         }
       }, {
         requestId: 'req-codex-agent-controller',
+        chatSessionId: 'hikari-chat-1',
+        codexSessionId: 'codex-chat-session-1',
         lifecycleRecorder: {
           requestId: 'req-codex-agent-controller',
           events: []
@@ -1867,7 +1869,9 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(codexRunInput.projectName, 'Atlas');
       assert.equal(codexRunInput.selectionInsight.selectedText, 'SUMO1');
       assert.equal(codexRunInput.attachments[0].name, 'atlas.pdf');
-      assert.equal(codexRunInput.conversation[codexRunInput.conversation.length - 1].text, 'Why was SUMO1 weak?');
+      assert.deepEqual(codexRunInput.conversation, []);
+      assert.equal(codexRunInput.chatSessionId, 'hikari-chat-1');
+      assert.equal(codexRunInput.codexSessionId, 'codex-chat-session-1');
       assert.equal(lifecycleStages.includes('controller_codex_agent'), true);
       assert.equal(lifecycleStages.includes('controller_intent_only'), false);
     });

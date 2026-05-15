@@ -3,15 +3,6 @@
 const path = require('node:path');
 const { throwIfAgentRequestAborted } = require('../shared/agent-request-context.js');
 
-const FINAL_RESPONSE_SCHEMA = {
-  status: 'completed',
-  assistant_text: 'Final answer or one blocking clarification question.',
-  follow_up_questions: [],
-  user_question: null,
-  reasoning_summary: 'Brief evidence and verification summary.',
-  citations: []
-};
-
 function defaultCleanText(value, _maxLength = 2000) {
   const text = String(value || '');
   if (!text) {
@@ -153,19 +144,19 @@ function normalizeCodexAgentPayload(rawPayload = {}, rawText = '', { cleanText =
       || rawText,
     120000
   );
-  const userQuestion = normalizeUserQuestion(
-    cleanText,
-    source.user_question
-      || source.userQuestion
-      || source.ask_user
-      || source.askUser,
-    followUps[0] || answer
-  );
+  const userQuestionSource = source.user_question
+    || source.userQuestion
+    || source.ask_user
+    || source.askUser;
+  const userQuestion = userQuestionSource
+    ? normalizeUserQuestion(cleanText, userQuestionSource, followUps[0] || '')
+    : null;
   const rawStatus = cleanText(source.status, 40);
   const status = rawStatus === 'needs_user_answer'
     ? 'needs_more_info'
     : rawStatus
-    || (followUps.length || userQuestion ? 'needs_more_info' : 'completed');
+    || (userQuestion ? 'needs_more_info' : 'completed');
+  const keepClarification = status === 'needs_more_info';
   const reasoningSummary = cleanText(
     source.reasoning_summary
       || source.reasoningSummary
@@ -175,10 +166,10 @@ function normalizeCodexAgentPayload(rawPayload = {}, rawText = '', { cleanText =
   return {
     status,
     answer,
-    follow_up_questions: followUps.length
-      ? followUps
-      : (userQuestion?.question ? [userQuestion.question] : []),
-    user_question: userQuestion,
+    follow_up_questions: keepClarification
+      ? (followUps.length ? followUps : (userQuestion?.question ? [userQuestion.question] : []))
+      : followUps,
+    user_question: keepClarification ? userQuestion : null,
     reasoning_summary: reasoningSummary,
     citations: asArray(source.citations)
       .map((citation) => normalizeCitation(cleanText, citation))
@@ -187,17 +178,75 @@ function normalizeCodexAgentPayload(rawPayload = {}, rawText = '', { cleanText =
   };
 }
 
-function summarizeConversation(cleanText, conversation = []) {
-  return asArray(conversation)
-    .map((turn, index) => {
-      const source = turn && typeof turn === 'object' ? turn : {};
-      const role = cleanText(source.role, 40) || 'message';
-      const text = cleanText(source.text || source.content || source.message, 4000);
-      return text ? `${index + 1}. ${role}: ${text}` : '';
-    })
-    .filter(Boolean)
-    .slice(-12)
-    .join('\n');
+function buildAskUserPayloadFromArguments(args = {}, { cleanText = defaultCleanText } = {}) {
+  const source = args && typeof args === 'object' && !Array.isArray(args) ? args : {};
+  const userQuestion = normalizeUserQuestion(cleanText, source, '');
+  if (!userQuestion?.question) {
+    return null;
+  }
+  return {
+    status: 'needs_more_info',
+    answer: userQuestion.question,
+    follow_up_questions: [userQuestion.question],
+    user_question: userQuestion,
+    reasoning_summary: 'Waiting for the user to answer this blocking clarification.',
+    citations: []
+  };
+}
+
+function extractAskUserPayloadFromToolEvent(streamEvent = {}) {
+  const source = streamEvent && typeof streamEvent === 'object' && !Array.isArray(streamEvent)
+    ? streamEvent
+    : {};
+  const toolName = defaultCleanText(source.tool_name || source.toolName, 160);
+  if (toolName !== 'ask_user') {
+    return null;
+  }
+  const objectCandidates = [
+    source.arguments,
+    source.args,
+    source.tool_result,
+    source.toolResult,
+    source.tool_output,
+    source.toolOutput,
+    source.result,
+    source.output
+  ].filter((candidate) => candidate && typeof candidate === 'object' && !Array.isArray(candidate));
+  for (const candidate of objectCandidates) {
+    const payload = normalizeCodexAgentPayload(candidate, '', { cleanText: defaultCleanText });
+    if (payload.status === 'needs_more_info' && payload.user_question?.question) {
+      return payload;
+    }
+    const argumentPayload = buildAskUserPayloadFromArguments(candidate, { cleanText: defaultCleanText });
+    if (argumentPayload?.user_question?.question) {
+      return argumentPayload;
+    }
+  }
+  const textCandidates = [
+    source.tool_output_text,
+    source.toolOutputText,
+    source.output_text,
+    source.outputText,
+    source.tool_call_text,
+    source.toolCallText,
+    source.text,
+    source.message
+  ];
+  for (const candidate of textCandidates) {
+    const parsed = parseJsonObjectFromText(candidate);
+    if (!parsed) {
+      continue;
+    }
+    const payload = normalizeCodexAgentPayload(parsed, '', { cleanText: defaultCleanText });
+    if (payload.status === 'needs_more_info' && payload.user_question?.question) {
+      return payload;
+    }
+    const argumentPayload = buildAskUserPayloadFromArguments(parsed, { cleanText: defaultCleanText });
+    if (argumentPayload?.user_question?.question) {
+      return argumentPayload;
+    }
+  }
+  return null;
 }
 
 function summarizeAttachments(cleanText, attachments = []) {
@@ -215,26 +264,20 @@ function summarizeAttachments(cleanText, attachments = []) {
 
 function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}) {
   const message = cleanText(input.message, 24000);
-  const conversationText = summarizeConversation(cleanText, input.conversation);
   const attachmentText = summarizeAttachments(cleanText, input.attachments);
   const projectId = cleanText(input.projectId, 120);
   const projectName = cleanText(input.projectName, 220);
   const selectionInsight = ensureObject(input.selectionInsight);
-  const skillPromptPayload = ensureObject(input.skillPromptPayload);
   const blocks = [
-    '# Hikari Codex-Owned Agent Request',
+    '# Hikari Codex Chat Turn',
     '',
-    'You are handling this Hikari chat turn as the Codex reasoning agent. Do the complete lifecycle yourself in this single Codex run: clarify if necessary, discover tool schemas, call Hikari MCP tools, verify the inference, and synthesize the final answer.',
+    'You are handling this Hikari chat turn as the Codex reasoning agent. Own the lifecycle yourself: manage context in this Codex session, clarify if necessary, discover and call Hikari MCP tools, verify the inference, and synthesize the final user-facing answer.',
     '',
     'AGENTS.md in this workspace contains the durable Hikari Codex agent contract. Follow it together with the request details below.',
     '',
-    'Use the MCP server named `hikari` for Hikari app data, papers, protocols, notebooks, inventory, memory, and structured tool access. Use native Codex search or the Hikari `web-search` tool for external web evidence.',
+    'Hikari provides rendering and the MCP server. Do not depend on Hikari to replay chat history, choose tools, parse intent, or synthesize for you. Use your Codex session context for continuity and return normal assistant prose for Hikari to render.',
     '',
-    'Final response rule: return exactly one JSON object and no surrounding prose. The JSON shape must be:',
-    JSON.stringify(FINAL_RESPONSE_SCHEMA, null, 2),
-    '',
-    'Set `status` to `needs_more_info` when you need one blocking clarification. Put the user-facing question in both `assistant_text` and `follow_up_questions[0]`. Set `status` to `completed` when answering.',
-    'When the clarification has likely choices, set `user_question` to an object with `question`, up to six `options` using `{ "label": "...", "value": "...", "description": "..." }`, and `allow_custom: true`. Hikari will render the options plus a custom text answer box and send the user answer as the next chat turn.',
+    'Use the MCP server named `hikari` for Hikari app data, papers, protocols, notebooks, inventory, memory, and structured tool access. Use native Codex search or the Hikari `web-search` tool for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
     '',
     projectId || projectName
       ? `Selected project:\n${JSON.stringify({ id: projectId, name: projectName }, null, 2)}`
@@ -243,14 +286,7 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     selectionInsight.actionType || selectionInsight.selectedText
       ? `Selection insight context:\n${JSON.stringify(selectionInsight, null, 2)}`
       : '',
-    conversationText ? `Recent conversation:\n${conversationText}` : '',
     attachmentText ? `Attachments supplied by Hikari:\n${attachmentText}` : '',
-    cleanText(skillPromptPayload.active_skills_prompt, 6000)
-      ? `Active skills:\n${cleanText(skillPromptPayload.active_skills_prompt, 6000)}`
-      : '',
-    cleanText(skillPromptPayload.skills_catalog_prompt, 6000)
-      ? `Skills catalog:\n${cleanText(skillPromptPayload.skills_catalog_prompt, 6000)}`
-      : '',
     '',
     `Current user request:\n${message}`
   ];
@@ -264,7 +300,6 @@ function buildCodexAgentParserPayload(codexAgent = {}, {
   cleanText = defaultCleanText
 } = {}) {
   const needsClarification = cleanText(codexAgent.status, 40) === 'needs_more_info'
-    || asArray(codexAgent.follow_up_questions).length > 0
     || Boolean(codexAgent.user_question?.question);
   return {
     primary_intent: 'codex_agent',
@@ -296,8 +331,10 @@ function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {})
     provider: 'codex',
     model: cleanText(input.model, 120),
     cwd: cleanText(input.cwd, 1200),
+    chatSessionId: cleanText(input.chatSessionId || input.chat_session_id, 120),
+    codexSessionId: cleanText(input.codexSessionId || input.codex_session_id, 240),
     message: cleanText(input.message, 3200),
-    conversation: cloneJson(asArray(input.conversation).slice(-12), []),
+    conversation: [],
     project: {
       id: cleanText(input.projectId, 120),
       name: cleanText(input.projectName, 220)
@@ -346,10 +383,72 @@ function createCodexAgentRuntime(deps = {}) {
       : null;
     const model = cleanText(input.model, 120);
     const reasoningEffort = cleanText(input.reasoningEffort, 40);
+    const resumeSessionId = cleanText(input.codexSessionId || input.codex_session_id, 240);
     let lastStreamText = '';
+    let streamedAskUserPayload = null;
 
     function emitStreamProgress(streamEvent = {}, { force = false } = {}) {
+      const eventType = cleanText(streamEvent.type || streamEvent.event_type || streamEvent.eventType, 120);
+      if (eventType === 'codex_tool_call') {
+        const askUserPayload = extractAskUserPayloadFromToolEvent(streamEvent);
+        if (askUserPayload?.user_question?.question) {
+          streamedAskUserPayload = askUserPayload;
+        }
+      }
       if (!emitAgentProgress) {
+        return;
+      }
+      if (eventType === 'codex_thinking') {
+        const thinkingText = cleanText(
+          streamEvent.thinking_text
+            || streamEvent.thinkingText
+            || streamEvent.text
+            || streamEvent.message,
+          4000
+        );
+        if (!thinkingText) {
+          return;
+        }
+        emitAgentProgress({
+          stage: 'codex_agent_thinking',
+          status: 'streaming',
+          routing_intent: 'codex_agent',
+          message: thinkingText,
+          meta: {
+            thinking_trace: thinkingText,
+            codex_event_type: cleanText(streamEvent.event_type || streamEvent.eventType, 120)
+          }
+        });
+        return;
+      }
+      if (eventType === 'codex_tool_call') {
+        const toolName = cleanText(streamEvent.tool_name || streamEvent.toolName, 160) || 'codex-tool';
+        const toolCallText = cleanText(
+          streamEvent.tool_call_text
+            || streamEvent.toolCallText
+            || streamEvent.text
+            || streamEvent.message
+            || toolName,
+          2400
+        );
+        const rawStatus = cleanText(streamEvent.status, 40);
+        const status = rawStatus === 'failed' || rawStatus === 'error'
+          ? 'failed'
+          : (rawStatus === 'completed' || rawStatus === 'done' || rawStatus === 'ok' ? 'completed' : 'started');
+        emitAgentProgress({
+          stage: status === 'failed'
+            ? 'tool_call_failed'
+            : (status === 'completed' ? 'tool_call_completed' : 'tool_call_started'),
+          status,
+          routing_intent: 'codex_agent',
+          tool_name: toolName,
+          message: toolCallText,
+          meta: {
+            tool_call_text: toolCallText,
+            thinking_trace: toolCallText,
+            codex_event_type: cleanText(streamEvent.event_type || streamEvent.eventType, 120)
+          }
+        });
         return;
       }
       const streamText = cleanText(
@@ -405,15 +504,18 @@ function createCodexAgentRuntime(deps = {}) {
       cwd,
       model
     }, { cleanText }));
-    const rawText = await requestCodexAgentText({
+    const codexTextResult = await requestCodexAgentText({
       prompt,
       model,
       reasoningEffort,
       cwd,
       enableWebSearch: true,
+      disableToolSearch: true,
       attachments: asArray(input.attachments),
       stream: true,
       onStream: emitStreamProgress,
+      resumeSessionId,
+      returnMetadata: true,
       envOverrides: {
         HIKARI_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
         ENANA_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
@@ -423,12 +525,46 @@ function createCodexAgentRuntime(deps = {}) {
     });
     throwIfAgentRequestAborted('Agent request stopped after Codex agent completed.');
 
+    const rawText = typeof codexTextResult === 'string'
+      ? codexTextResult
+      : cleanText(codexTextResult?.text, 120000);
+    const codexMetadata = codexTextResult && typeof codexTextResult === 'object' && !Array.isArray(codexTextResult)
+      ? ensureObject(codexTextResult.metadata)
+      : {};
+    const codexSessionId = cleanText(
+      codexMetadata.session_id
+        || codexMetadata.sessionId
+        || codexMetadata.resumed_session_id
+        || codexMetadata.resumedSessionId
+        || resumeSessionId,
+      240
+    );
     const parsed = parseJsonObjectFromText(rawText);
     if (lastStreamText) {
       emitStreamProgress({ accumulated_text: lastStreamText }, { force: true });
     }
-    const parseWarning = parsed ? '' : 'Codex agent returned non-JSON output; wrapped raw text as assistant_text.';
     const codexAgent = normalizeCodexAgentPayload(parsed || {}, rawText, { cleanText });
+    if (
+      streamedAskUserPayload?.user_question?.question
+      && codexAgent.status !== 'needs_more_info'
+    ) {
+      codexAgent.status = 'needs_more_info';
+      codexAgent.answer = cleanText(streamedAskUserPayload.answer || streamedAskUserPayload.user_question.question, 120000);
+      codexAgent.follow_up_questions = asArray(streamedAskUserPayload.follow_up_questions).length
+        ? streamedAskUserPayload.follow_up_questions
+        : [streamedAskUserPayload.user_question.question];
+      codexAgent.user_question = streamedAskUserPayload.user_question;
+      codexAgent.reasoning_summary = cleanText(
+        streamedAskUserPayload.reasoning_summary,
+        4000
+      ) || 'Waiting for the user to answer this blocking clarification.';
+      codexAgent.citations = asArray(streamedAskUserPayload.citations);
+    }
+    codexAgent.codex_session_id = codexSessionId;
+    codexAgent.resumed_codex_session_id = cleanText(
+      codexMetadata.resumed_session_id || codexMetadata.resumedSessionId || resumeSessionId,
+      240
+    );
     const parser = buildCodexAgentParserPayload(codexAgent, {
       projectId: input.projectId,
       projectName: input.projectName,
@@ -436,11 +572,16 @@ function createCodexAgentRuntime(deps = {}) {
       cleanText
     });
     await recordAgentLlmTrace(traceContext, {
-      stage: parseWarning ? 'codex_agent_parse_warning' : 'codex_agent_completed',
+      stage: 'codex_agent_completed',
       provider: 'codex',
       model,
-      summary: parseWarning || 'Codex-owned agent lifecycle completed.',
-      response_payload: parsed || rawText
+      summary: 'Codex-owned agent lifecycle completed.',
+      response_payload: parsed || rawText,
+      metadata: {
+        codex_session_id: codexSessionId,
+        resumed_codex_session_id: cleanText(codexAgent.resumed_codex_session_id, 240),
+        command: cleanText(codexMetadata.command, 80)
+      }
     });
     recordLifecycleEvent(lifecycleRecorder, {
       stage: 'codex_agent_completed',
@@ -451,7 +592,8 @@ function createCodexAgentRuntime(deps = {}) {
       meta: {
         status: codexAgent.status,
         citation_count: asArray(codexAgent.citations).length,
-        parse_warning: Boolean(parseWarning)
+        codex_session_id: codexSessionId,
+        resumed_codex_session_id: cleanText(codexAgent.resumed_codex_session_id, 240)
       }
     });
 
@@ -459,14 +601,15 @@ function createCodexAgentRuntime(deps = {}) {
       ok: true,
       provider: 'codex',
       model,
+      codex_session_id: codexSessionId,
+      resumed_codex_session_id: cleanText(codexAgent.resumed_codex_session_id, 240),
       parser,
       codex_agent: codexAgent,
       thinking_trace: {
         intent_parse_question: 'Codex owned this request without Hikari parser dispatch.',
         final_synthesize: cleanText(codexAgent.reasoning_summary, 1000)
           || 'Codex synthesized the final response from the evidence it gathered.'
-      },
-      ...(parseWarning ? { warnings: [parseWarning] } : {})
+      }
     };
   }
 
@@ -479,7 +622,6 @@ function createCodexAgentRuntime(deps = {}) {
 }
 
 module.exports = {
-  FINAL_RESPONSE_SCHEMA,
   buildCodexAgentPrompt,
   buildCodexAgentParserPayload,
   buildCodexMcpContext,

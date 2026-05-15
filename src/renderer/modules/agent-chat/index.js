@@ -556,10 +556,14 @@ export function initAgentChat({
     return trimText(
       eventPayload?.thinking_trace
       || eventPayload?.thinkingTrace
+      || eventPayload?.tool_call_text
+      || eventPayload?.toolCallText
       || eventPayload?.trace_sentence
       || eventPayload?.traceSentence
       || meta.thinking_trace
       || meta.thinkingTrace
+      || meta.tool_call_text
+      || meta.toolCallText
       || meta.trace_sentence
       || meta.traceSentence,
       420
@@ -889,13 +893,22 @@ export function initAgentChat({
 
   function getAssistantUserQuestion(message) {
     const meta = message?.meta && typeof message.meta === 'object' ? message.meta : {};
-    return normalizeAgentUserQuestion(
-      meta.user_question
-        || meta.userQuestion
-        || meta.codex_agent?.user_question
-        || meta.codex_agent?.userQuestion,
-      message?.text
+    const explicitUserQuestion = meta.user_question
+      || meta.userQuestion
+      || meta.codex_agent?.user_question
+      || meta.codex_agent?.userQuestion;
+    const codexStatus = trimText(meta.codex_agent?.status, 40);
+    const keepUserQuestion = Boolean(
+      explicitUserQuestion
+      && (
+        codexStatus === 'needs_more_info'
+        || codexStatus === 'needs_user_answer'
+        || (!meta.codex_agent && meta.parser?.needs_clarification === true)
+      )
     );
+    return keepUserQuestion
+      ? normalizeAgentUserQuestion(explicitUserQuestion, '')
+      : null;
   }
 
   function markAssistantQuestionAnswered(messageId, answerText) {

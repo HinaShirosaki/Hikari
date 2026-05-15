@@ -20,7 +20,14 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
     'assayChartFrameStroke',
     'assayChartFrameStrokeWidth',
     'assayChartFrameCornerRadius',
-    'assayChartBackgroundColor'
+    'assayChartBackgroundColor',
+    'assayChartSizeAuto',
+    'assayChartFrameWidth',
+    'assayChartFrameHeight',
+    'assayChartGridVertical',
+    'assayChartGridHorizontal',
+    'assayChartGridColor',
+    'assayChartGridStrokeWidth'
   ];
 
   if (!fieldKeys.some((key) => elements[key])) {
@@ -85,8 +92,22 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
     setValueIfPresent(elements.assayChartFrameStrokeWidth, style.frameStrokeWidth);
     setValueIfPresent(elements.assayChartFrameCornerRadius, style.frameCornerRadius);
     setValueIfPresent(elements.assayChartBackgroundColor, style.backgroundColor);
+    setValueIfPresent(elements.assayChartSizeAuto, style.sizeAuto !== false);
+    setValueIfPresent(
+      elements.assayChartFrameWidth,
+      Number.isFinite(style.frameWidth) ? style.frameWidth : 720
+    );
+    setValueIfPresent(
+      elements.assayChartFrameHeight,
+      Number.isFinite(style.frameHeight) ? style.frameHeight : 280
+    );
+    setValueIfPresent(elements.assayChartGridVertical, style.showVerticalGrid !== false);
+    setValueIfPresent(elements.assayChartGridHorizontal, style.showHorizontalGrid !== false);
+    setValueIfPresent(elements.assayChartGridColor, style.gridColor);
+    setValueIfPresent(elements.assayChartGridStrokeWidth, style.gridStrokeWidth);
 
     applyRangeDisabledState();
+    applySizeDisabledState();
     renderSeriesColors(style, ctx.seriesLabels);
   }
 
@@ -102,6 +123,16 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
     }
     if (elements.assayChartYMax) {
       elements.assayChartYMax.disabled = Boolean(elements.assayChartYRangeAuto?.checked);
+    }
+  }
+
+  function applySizeDisabledState() {
+    const auto = Boolean(elements.assayChartSizeAuto?.checked);
+    if (elements.assayChartFrameWidth) {
+      elements.assayChartFrameWidth.disabled = auto;
+    }
+    if (elements.assayChartFrameHeight) {
+      elements.assayChartFrameHeight.disabled = auto;
     }
   }
 
@@ -192,13 +223,33 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
       frameCornerRadius: elements.assayChartFrameCornerRadius
         ? Number(elements.assayChartFrameCornerRadius.value)
         : style.frameCornerRadius,
-      backgroundColor: elements.assayChartBackgroundColor?.value || style.backgroundColor
+      backgroundColor: elements.assayChartBackgroundColor?.value || style.backgroundColor,
+      sizeAuto: elements.assayChartSizeAuto
+        ? Boolean(elements.assayChartSizeAuto.checked)
+        : style.sizeAuto,
+      frameWidth: elements.assayChartFrameWidth
+        ? Number(elements.assayChartFrameWidth.value) || style.frameWidth
+        : style.frameWidth,
+      frameHeight: elements.assayChartFrameHeight
+        ? Number(elements.assayChartFrameHeight.value) || style.frameHeight
+        : style.frameHeight,
+      showVerticalGrid: elements.assayChartGridVertical
+        ? Boolean(elements.assayChartGridVertical.checked)
+        : style.showVerticalGrid,
+      showHorizontalGrid: elements.assayChartGridHorizontal
+        ? Boolean(elements.assayChartGridHorizontal.checked)
+        : style.showHorizontalGrid,
+      gridColor: elements.assayChartGridColor?.value || style.gridColor,
+      gridStrokeWidth: elements.assayChartGridStrokeWidth
+        ? Number(elements.assayChartGridStrokeWidth.value)
+        : style.gridStrokeWidth
     };
   }
 
   function applyPatch(patch) {
     analysisView.setChartStyle(patch);
     applyRangeDisabledState();
+    applySizeDisabledState();
     if (typeof onStyleChanged === 'function') {
       onStyleChanged(analysisView.getChartStyle());
     }
@@ -240,7 +291,14 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
     elements.assayChartFrameStroke,
     elements.assayChartFrameStrokeWidth,
     elements.assayChartFrameCornerRadius,
-    elements.assayChartBackgroundColor
+    elements.assayChartBackgroundColor,
+    elements.assayChartSizeAuto,
+    elements.assayChartFrameWidth,
+    elements.assayChartFrameHeight,
+    elements.assayChartGridVertical,
+    elements.assayChartGridHorizontal,
+    elements.assayChartGridColor,
+    elements.assayChartGridStrokeWidth
   ];
 
   inputBindings.forEach((input) => {

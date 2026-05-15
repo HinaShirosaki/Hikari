@@ -2,6 +2,7 @@
 
 const {
   asArray,
+  buildReadOnlyToolAnnotations,
   cleanText,
   cloneJson,
   compactObject,
@@ -12,6 +13,7 @@ const {
 const PROTOCOL_GENERATION_MCP_TOOL = Object.freeze({
   name: 'protocol_generation',
   description: 'Normalize supplied protocol JSON into Hikari import-ready protocol format without an internal LLM call or required protocol id.',
+  annotations: buildReadOnlyToolAnnotations('Protocol generation normalization'),
   inputSchema: {
     type: 'object',
     additionalProperties: false,

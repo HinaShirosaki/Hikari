@@ -2,6 +2,7 @@
 
 const {
   buildCommonLookupInputSchema,
+  buildReadOnlyToolAnnotations,
   compactObject,
   filterInventoryItemsByKind,
   normalizeLookupQuery,
@@ -18,6 +19,7 @@ const {
 const CHEMICAL_LOOKUP_MCP_TOOL = Object.freeze({
   name: 'chemical_lookup',
   description: 'Look up local Hikari chemical records, including amount, CAS, supplier, and storage location.',
+  annotations: buildReadOnlyToolAnnotations('Chemical lookup'),
   inputSchema: buildCommonLookupInputSchema({
     cas: { type: 'string' },
     supplier: { type: 'string' }

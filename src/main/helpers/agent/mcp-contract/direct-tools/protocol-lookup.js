@@ -3,6 +3,7 @@
 const {
   asArray,
   buildCommonLookupInputSchema,
+  buildReadOnlyToolAnnotations,
   cleanText,
   normalizeLookupQuery,
   normalizeParserPayload,
@@ -20,6 +21,7 @@ const PROJECT_FILTER_SCHEMA = Object.freeze({
 const PROTOCOL_LOOKUP_MCP_TOOL = Object.freeze({
   name: 'protocol_lookup',
   description: 'Look up local Hikari protocol records by protocol name, purpose, category, or step text.',
+  annotations: buildReadOnlyToolAnnotations('Protocol lookup'),
   inputSchema: buildCommonLookupInputSchema(PROJECT_FILTER_SCHEMA)
 });
 

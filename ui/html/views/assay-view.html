@@ -98,7 +98,6 @@
       <div class="assay-results-layout assay-mode-results-panel left-rail-template" hidden>
         <div class="assay-results-sheet-panel assay-results-controls-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="assay-results-control-section">
-            <p class="small-note">Select an assay plate, paste values into the table on the right, then save and analyze.</p>
             <label>
               Assay Plate
               <select id="assay-results-assay-select">
@@ -106,7 +105,6 @@
               </select>
             </label>
             <div class="form-actions assay-results-actions">
-              <button type="button" id="assay-results-load-btn" class="ghost-btn">Load Plate</button>
               <button type="button" id="assay-attach-result-file-btn" class="ghost-btn">Attach Result File</button>
               <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
               <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
@@ -165,9 +163,6 @@
                 <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
               </div>
               <div id="assay-analysis-selection-status" class="small-note"></div>
-              <p class="small-note assay-analysis-help">
-                Drag-select replicate wells in the result table, then add as row or column group. Manual format also works: <code>Group: item1,item2</code>; ranges: <code>A-C</code> or <code>1-3</code>.
-              </p>
             </div>
             <div class="form-actions assay-results-actions">
               <button type="button" id="assay-analyze-results-btn" class="ghost-btn">Analyze Results</button>
@@ -309,6 +304,42 @@
                 <label>
                   Background
                   <input type="color" id="assay-chart-background-color" />
+                </label>
+              </fieldset>
+
+              <fieldset class="assay-chart-style-group">
+                <legend>Size</legend>
+                <label class="assay-chart-style-checkbox">
+                  <input type="checkbox" id="assay-chart-size-auto" checked />
+                  Auto size
+                </label>
+                <label>
+                  Width (px)
+                  <input type="range" id="assay-chart-frame-width" min="320" max="2000" step="10" />
+                </label>
+                <label>
+                  Height (px)
+                  <input type="range" id="assay-chart-frame-height" min="180" max="1200" step="10" />
+                </label>
+              </fieldset>
+
+              <fieldset class="assay-chart-style-group">
+                <legend>Grid lines</legend>
+                <label class="assay-chart-style-checkbox">
+                  <input type="checkbox" id="assay-chart-grid-vertical" checked />
+                  Vertical lines
+                </label>
+                <label class="assay-chart-style-checkbox">
+                  <input type="checkbox" id="assay-chart-grid-horizontal" checked />
+                  Horizontal lines
+                </label>
+                <label>
+                  Color
+                  <input type="color" id="assay-chart-grid-color" />
+                </label>
+                <label>
+                  Width
+                  <input type="range" id="assay-chart-grid-stroke-width" min="0" max="6" step="0.1" />
                 </label>
               </fieldset>
 

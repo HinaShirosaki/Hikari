@@ -8,7 +8,6 @@ export function initQuickLogWidget({
   state,
   persist,
   createId,
-  safeText,
   render,
   onOpenSamples,
   onOpenNotebook,
@@ -22,7 +21,6 @@ export function initQuickLogWidget({
     quickLogStatus,
     quickLogSaveBtn,
     quickLogAgentBtn,
-    quickLogRecentList,
     quickActionButtons
   } = elements;
 
@@ -45,40 +43,8 @@ export function initQuickLogWidget({
     quickLogStatus.textContent = String(message || '').trim();
   }
 
-  function formatQuickLogTimestamp(timestamp) {
-    const parsed = new Date(String(timestamp || '').trim());
-    if (Number.isNaN(parsed.getTime())) {
-      return 'Recent';
-    }
-    return parsed.toLocaleString([], {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-  }
-
-  function renderRecentQuickLogs() {
-    const entries = Array.isArray(state.settings?.dashboard?.quickLogEntries)
-      ? state.settings.dashboard.quickLogEntries
-      : [];
-    const recentEntries = entries.slice(-3).reverse();
-    if (!recentEntries.length) {
-      quickLogRecentList.innerHTML = '<p class="home-quick-log-empty">Recent quick logs will appear here.</p>';
-      return;
-    }
-    quickLogRecentList.innerHTML = recentEntries.map((entry) => `
-      <article class="home-quick-log-recent-row">
-        <time class="home-quick-log-recent-time">${safeText(formatQuickLogTimestamp(entry?.createdAt || entry?.updatedAt))}</time>
-        <p class="home-quick-log-recent-text">${safeText(entry?.text || '')}</p>
-      </article>
-    `).join('');
-  }
-
   function renderQuickLogWidget() {
     syncQuickLogInput();
-    renderRecentQuickLogs();
     const hasDraft = Boolean(String(state.settings.dashboard.quickLogDraft || '').trim());
     quickLogSaveBtn.disabled = !hasDraft;
     quickLogAgentBtn.disabled = !hasDraft;

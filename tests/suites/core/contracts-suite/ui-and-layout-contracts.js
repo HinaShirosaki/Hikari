@@ -190,7 +190,15 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('forge config prunes dev deps and ignores build artifacts', () => {
-      assert.equal(forgeConfig.packagerConfig.asar, true);
+      assert.equal(Boolean(forgeConfig.packagerConfig.asar), true);
+      assert.match(
+        forgeConfig.packagerConfig.asar?.unpackDir || '',
+        /src\/main\/helpers\/agent/
+      );
+      assert.match(
+        forgeConfig.packagerConfig.asar?.unpackDir || '',
+        /node_modules\/@modelcontextprotocol\/sdk/
+      );
       assert.equal(forgeConfig.packagerConfig.prune, true);
       assert.ok(Array.isArray(forgeConfig.packagerConfig.ignore));
       const ignoreAsText = forgeConfig.packagerConfig.ignore.map((item) => item.toString()).join('\n');

@@ -40,7 +40,6 @@ export function getAssayElements(root = document) {
     assayAnalysisAddColumnGroupBtn: root.getElementById('assay-analysis-add-column-group-btn'),
     assayAnalysisClearGroupsBtn: root.getElementById('assay-analysis-clear-groups-btn'),
     assayAnalysisSelectionStatus: root.getElementById('assay-analysis-selection-status'),
-    assayResultsLoadBtn: root.getElementById('assay-results-load-btn'),
     assayAttachResultFileBtn: root.getElementById('assay-attach-result-file-btn'),
     assayResultFileInput: root.getElementById('assay-result-file-input'),
     assaySaveResultsBtn: root.getElementById('assay-save-results-btn'),
@@ -90,6 +89,13 @@ export function getAssayElements(root = document) {
     assayChartFrameStrokeWidth: root.getElementById('assay-chart-frame-stroke-width'),
     assayChartFrameCornerRadius: root.getElementById('assay-chart-frame-corner-radius'),
     assayChartBackgroundColor: root.getElementById('assay-chart-background-color'),
+    assayChartSizeAuto: root.getElementById('assay-chart-size-auto'),
+    assayChartFrameWidth: root.getElementById('assay-chart-frame-width'),
+    assayChartFrameHeight: root.getElementById('assay-chart-frame-height'),
+    assayChartGridVertical: root.getElementById('assay-chart-grid-vertical'),
+    assayChartGridHorizontal: root.getElementById('assay-chart-grid-horizontal'),
+    assayChartGridColor: root.getElementById('assay-chart-grid-color'),
+    assayChartGridStrokeWidth: root.getElementById('assay-chart-grid-stroke-width'),
     assayChartSeriesColors: root.getElementById('assay-chart-series-colors')
   };
 }
