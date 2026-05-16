@@ -107,6 +107,7 @@ The direct Hikari MCP contract tools are first-class MCP tools in `tools/list`. 
 - `chemical_lookup`
 - `protocol_lookup`
 - `protocol_generation`
+- `notebook_draft`
 - `notebook_lookup`
 - `ask_user`
 
@@ -331,6 +332,38 @@ Input schema:
 }
 ```
 
+### `notebook_draft`
+
+Direct MCP convenience wrapper for planned next-experiment notebook drafts. It calls `notebook-draft`, returns a confirmation-ready draft payload, and does not create the notebook page itself.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "message": { "type": "string" },
+    "project": { "type": "object", "additionalProperties": true },
+    "project_id": { "type": "string" },
+    "project_name": { "type": "string" },
+    "workflow_id": { "type": "string", "maxLength": 160 },
+    "protocol_name": { "type": "string" },
+    "protocol_candidates": {
+      "type": "array",
+      "items": { "type": "string" },
+      "maxItems": 5
+    },
+    "evidence_context": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": true },
+      "maxItems": 8
+    },
+    "parser_payload": { "type": "object", "additionalProperties": true }
+  }
+}
+```
+
 ### `ask_user`
 
 Direct MCP helper for one blocking clarification. It does not wait inside MCP for a human answer; instead it returns a renderable `final_response` payload that Codex should emit as the whole-turn JSON result. Hikari renders the options and custom text box, then sends the user answer back as the next chat turn.
@@ -525,7 +558,7 @@ Unauthorized calls return HTTP 401 with `status: "unauthorized"`. Missing execut
 
 ## Hikari app tools exposed through `tool_search` / `tool_info`
 
-These generic app tools remain available through the bridge for cases that do not match a direct MCP contract tool. Do not route `inventory_lookup`, `chemical_lookup`, `protocol_lookup`, `protocol_generation`, `notebook_lookup`, or `ask_user` through `tool_search`; call those direct MCP tools instead.
+These generic app tools remain available through the bridge for cases that do not match a direct MCP contract tool. Do not route `inventory_lookup`, `chemical_lookup`, `protocol_lookup`, `protocol_generation`, `notebook_draft`, `notebook_lookup`, or `ask_user` through `tool_search`; call those direct MCP tools instead. For Codex-backed agent runs, `tool_search` suppresses exact direct-tool duplicates such as `inventory-lookup`, `notebook-draft`, and `protocol-generation`.
 
 The current exported tool ids are:
 

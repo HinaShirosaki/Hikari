@@ -422,6 +422,35 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
               summary: args.save === true ? 'Saved protocol JSON.' : 'Prepared protocol JSON.'
             };
           }
+          if (toolId === 'notebook-draft') {
+            return {
+              ok: true,
+              result: {
+                status: 'proposal_ready',
+                project_name: args.project?.name || 'Atlas',
+                selected_protocol: {
+                  id: 'prot-1',
+                  name: args.protocol_candidates?.[0] || 'Protein purification',
+                  selection_method: 'direct',
+                  rationale: 'Requested as a direct MCP notebook draft.'
+                },
+                source_workflow: args.workflow_id ? { id: args.workflow_id } : null,
+                missing_placeholders: [],
+                follow_up_questions: [],
+                proposal_summary: 'Protein purification: prepare the next planned notebook page.',
+                proposal: {
+                  proposal_id: 'proposal-1',
+                  title: 'Protein purification'
+                },
+                notebook: {
+                  id: 'draft-1',
+                  title: 'Protein purification'
+                },
+                summary: 'Planned notebook draft ready.'
+              },
+              summary: 'Planned notebook draft ready.'
+            };
+          }
           if (toolId === 'record-lookup') {
             const items = [
               {
@@ -482,11 +511,12 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       });
 
       const mcpToolNames = createMcpToolDefinitions().map((tool) => tool.name);
-      assert.deepEqual(mcpToolNames.slice(0, 6), [
+      assert.deepEqual(mcpToolNames.slice(0, 7), [
         'inventory_lookup',
         'chemical_lookup',
         'protocol_lookup',
         'protocol_generation',
+        'notebook_draft',
         'notebook_lookup',
         'ask_user'
       ]);
@@ -495,11 +525,13 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(mcpToolNames.includes('protocol_lookup'), true);
       assert.equal(mcpToolNames.includes('protocol_generation'), true);
       assert.equal(mcpToolNames.includes('protocol_save'), false);
+      assert.equal(mcpToolNames.includes('notebook_draft'), true);
       assert.equal(mcpToolNames.includes('notebook_lookup'), true);
       assert.equal(mcpToolNames.includes('ask_user'), true);
       assert.equal(mcpToolNames.indexOf('tool_search') > mcpToolNames.indexOf('ask_user'), true);
       const askUserDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'ask_user');
       const protocolGenerationDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'protocol_generation');
+      const notebookDraftDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'notebook_draft');
       const toolSearchDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'tool_search');
       const toolCallDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'tool_call');
       assert.equal(askUserDefinition.annotations.readOnlyHint, true);
@@ -507,12 +539,25 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(askUserDefinition.annotations.openWorldHint, false);
       assert.equal(protocolGenerationDefinition.annotations.readOnlyHint, false);
       assert.equal(protocolGenerationDefinition.annotations.destructiveHint, false);
+      assert.equal(notebookDraftDefinition.annotations.readOnlyHint, true);
+      assert.equal(notebookDraftDefinition.annotations.idempotentHint, false);
       assert.equal(toolSearchDefinition.annotations.readOnlyHint, true);
       assert.equal(toolCallDefinition.annotations, undefined);
 
       const searchResult = gateway.toolSearch({ query: 'download paper pdf', limit: 6 });
       assert.equal(searchResult.ok, true);
       assert.equal(searchResult.results.some((entry) => entry.tool_id === 'paper-download'), true);
+
+      const codexSearchResult = await gateway.callGatewayTool('tool_search', {
+        query: 'notebook draft protocol generation inventory',
+        limit: 30
+      }, {
+        provider: 'codex'
+      });
+      assert.equal(codexSearchResult.ok, true);
+      assert.equal(codexSearchResult.results.some((entry) => entry.tool_id === 'notebook-draft'), false);
+      assert.equal(codexSearchResult.results.some((entry) => entry.tool_id === 'protocol-generation'), false);
+      assert.equal(codexSearchResult.results.some((entry) => entry.tool_id === 'inventory-lookup'), false);
 
       const infoResult = gateway.toolInfo({ tool_id: 'literature-search', detail_level: 'schema' });
       assert.equal(infoResult.ok, true);
@@ -603,6 +648,25 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(calls[calls.length - 1].toolId, 'protocol-generation');
       assert.equal(calls[calls.length - 1].args.save, true);
 
+      const notebookDraftResult = await gateway.callGatewayTool('notebook_draft', {
+        project_name: 'Atlas',
+        workflow_id: 'wf-1',
+        protocol_candidates: ['Protein purification'],
+        message: 'Plan the next purification notebook draft.'
+      }, {
+        requestId: 'req-notebook-draft',
+        provider: 'codex'
+      });
+      assert.equal(notebookDraftResult.ok, true);
+      assert.equal(notebookDraftResult.status, 'proposal_ready');
+      assert.equal(notebookDraftResult.app_tool, 'notebook-draft');
+      assert.equal(notebookDraftResult.selected_protocol.name, 'Protein purification');
+      assert.equal(notebookDraftResult.notebook.title, 'Protein purification');
+      assert.equal(calls[calls.length - 1].toolId, 'notebook-draft');
+      assert.equal(calls[calls.length - 1].args.project.name, 'Atlas');
+      assert.deepEqual(calls[calls.length - 1].args.protocol_candidates, ['Protein purification']);
+      assert.equal(calls[calls.length - 1].context.parserPayload.primary_intent, 'notebook_draft');
+
       const askUserResult = await gateway.callGatewayTool('ask_user', {
         question: 'Which project should I use?',
         options: [
@@ -618,7 +682,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(askUserResult.user_question.question, 'Which project should I use?');
       assert.equal(askUserResult.user_question.options.length, 2);
       assert.equal(askUserResult.final_response.status, 'needs_more_info');
-      assert.equal(calls[calls.length - 1].toolId, 'protocol-generation');
+      assert.equal(calls[calls.length - 1].toolId, 'notebook-draft');
 
       const invalidResult = await gateway.toolCall({
         tool_id: 'inventory-lookup',
@@ -636,6 +700,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.match(instructions.contents, /Direct Hikari MCP tools available without `tool_search`/);
       assert.match(instructions.contents, /`protocol_generation`/);
       assert.match(instructions.contents, /save: true/);
+      assert.match(instructions.contents, /`notebook_draft`/);
       assert.match(instructions.contents, /`ask_user`/);
       assert.match(instructions.contents, /paper-download/);
       const legacyInstructions = gateway.resourceRead({ uri: 'enana://instructions/codex-agent' });

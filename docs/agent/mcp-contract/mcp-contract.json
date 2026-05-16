@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-05-15T20:47:33.542Z",
+  "exported_at": "2026-05-16T01:17:42.258Z",
   "source_files": {
     "mcp_instructions": "src/main/helpers/agent/mcp-contract/instructions.js",
     "mcp_stdio_server": "src/main/helpers/agent/mcp-contract/stdio-server.js",
@@ -10,7 +10,7 @@
     "codex_runtime_files": "src/main/helpers/agent/codex-agent/runtime-files.js",
     "app_tools": "src/main/helpers/agent/tools/Tool-call.json"
   },
-  "agent_mcp_instructions": "# Hikari Agent MCP Instructions\n\nThis MCP server is the provider-neutral Hikari app contract. Any agent provider that can use MCP should call these tools for local Hikari data, protocols, notebooks, inventory, papers, memory, and structured app actions.\n\nUse direct MCP tools first when the task matches them. Use `tool_search`, `tool_info`, and `tool_call` for broader Hikari app tools that are not already exposed as direct MCP tools. Request a schema with `tool_info` before calling a broader app tool when the argument shape is not already known.\n\nDirect Hikari MCP tools available without `tool_search`:\n- `inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.\n- `chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.\n- `protocol_lookup`: search local protocols through Hikari protocol matching.\n- `protocol_generation`: normalize a complete protocol JSON object into the app import format without generating content; set `save: true` in the same call to add it to the Hikari Protocols module.\n- `notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.\n- `ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.\n\nTool-use rules:\n- Prefer local Hikari records through direct MCP tools before guessing from conversation context.\n- Use `record-lookup` through `tool_call` only when the direct lookup tools are not specific enough.\n- Use `literature-search` for finding papers, references, recent literature, or external scientific evidence.\n- Use `paper-download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.\n- Use `paper-analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use direct `protocol_generation` only after complete protocol JSON already exists.\n- When the user asks to save or add a generated protocol, call `protocol_generation` once with `save: true`.\n\nClarification rule:\nWhen one blocking user answer is required, call `ask_user`. It returns a renderable `final_response` payload. Do not wait inside MCP for the human answer; the host app renders the options and sends the user answer as the next turn.\n\nVerification rule:\nSeparate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.",
+  "agent_mcp_instructions": "# Hikari Agent MCP Instructions\n\nThis MCP server is the provider-neutral Hikari app contract. Any agent provider that can use MCP should call these tools for local Hikari data, protocols, notebooks, inventory, papers, memory, and structured app actions.\n\nUse direct MCP tools first when the task matches them. Use `tool_search`, `tool_info`, and `tool_call` for broader Hikari app tools that are not already exposed as direct MCP tools. Request a schema with `tool_info` before calling a broader app tool when the argument shape is not already known.\n\nDirect Hikari MCP tools available without `tool_search`:\n- `inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.\n- `chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.\n- `protocol_lookup`: search local protocols through Hikari protocol matching.\n- `protocol_generation`: normalize a complete protocol JSON object into the app import format without generating content; set `save: true` in the same call to add it to the Hikari Protocols module.\n- `notebook_draft`: prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.\n- `notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.\n- `ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.\n\nTool-use rules:\n- Prefer local Hikari records through direct MCP tools before guessing from conversation context.\n- Use `record-lookup` through `tool_call` only when the direct lookup tools are not specific enough.\n- Use `literature-search` for finding papers, references, recent literature, or external scientific evidence.\n- Use `paper-download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.\n- Use `paper-analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use direct `protocol_generation` only after complete protocol JSON already exists.\n- When the user asks to save or add a generated protocol, call `protocol_generation` once with `save: true`.\n- Use direct `notebook_draft` for planned next-experiment notebook drafts instead of discovering `notebook-draft` through `tool_search`.\n\nClarification rule:\nWhen one blocking user answer is required, call `ask_user`. It returns a renderable `final_response` payload. Do not wait inside MCP for the human answer; the host app renders the options and sends the user answer as the next turn.\n\nVerification rule:\nSeparate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.",
   "provider_examples": {
     "codex_cli": {
       "config_template": "# HIKARI_MCP_CONFIG_START\n[mcp_servers.hikari]\ncommand = \"node\"\nargs = [\"/Users/shiyifan/Projects/Enana/src/main/helpers/agent/mcp-contract/stdio-server.js\"]\nenv = { HIKARI_AGENT_MCP = \"1\", ENANA_AGENT_MCP = \"1\", HIKARI_CODEX_MCP = \"1\", ENANA_CODEX_MCP = \"1\", HIKARI_AGENT_MCP_WORKSPACE = \"/runtime/workspace\", ENANA_AGENT_MCP_WORKSPACE = \"/runtime/workspace\", HIKARI_CODEX_WORKSPACE = \"/runtime/workspace\", ENANA_CODEX_WORKSPACE = \"/runtime/workspace\", HIKARI_AGENT_DATA_FILE = \"/path/to/hikari-data.json\", ENANA_AGENT_DATA_FILE = \"/path/to/hikari-data.json\", HIKARI_AGENT_STORAGE_PATH = \"/path/to/storage\", ENANA_AGENT_STORAGE_PATH = \"/path/to/storage\", HIKARI_AGENT_MCP_HOST = \"http://127.0.0.1:<port>\", ENANA_AGENT_MCP_HOST = \"http://127.0.0.1:<port>\", HIKARI_AGENT_MCP_TOKEN = \"<opaque bearer token>\", ENANA_AGENT_MCP_TOKEN = \"<opaque bearer token>\", HIKARI_CODEX_MCP_HOST = \"http://127.0.0.1:<port>\", ENANA_CODEX_MCP_HOST = \"http://127.0.0.1:<port>\", HIKARI_CODEX_MCP_TOKEN = \"<opaque bearer token>\", ENANA_CODEX_MCP_TOKEN = \"<opaque bearer token>\" }\n# HIKARI_MCP_CONFIG_END",
@@ -288,6 +288,102 @@
             },
             "upsert": {
               "type": "boolean"
+            }
+          }
+        }
+      },
+      {
+        "name": "notebook_draft",
+        "description": "Prepare a planned Hikari biology notebook draft for explicit user confirmation before any notebook page is created.",
+        "annotations": {
+          "title": "Notebook draft",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "message": {
+              "type": "string"
+            },
+            "project": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "project_id": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                }
+              }
+            },
+            "project_id": {
+              "type": "string"
+            },
+            "project_name": {
+              "type": "string"
+            },
+            "workflow_id": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "workflowId": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "protocol_name": {
+              "type": "string"
+            },
+            "protocolName": {
+              "type": "string"
+            },
+            "protocol_candidates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 5
+            },
+            "protocolCandidates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 5
+            },
+            "evidence_context": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "maxItems": 8
+            },
+            "evidenceContext": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true
+              },
+              "maxItems": 8
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "parserPayload": {
+              "type": "object",
+              "additionalProperties": true
             }
           }
         }

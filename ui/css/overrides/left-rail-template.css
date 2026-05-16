@@ -2,6 +2,8 @@
 
 .left-rail-template {
   --left-rail-main-gap: 24px;
+  --left-rail-item-min-height: 36px;
+  --left-rail-item-padding-block: 8px;
   position: relative;
   display: grid;
   grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr);
@@ -128,7 +130,8 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
     height: auto;
     min-height: 0;
     max-height: min(42vh, 360px);
-    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
     padding: 14px 16px 12px !important;
     border-right: 0 !important;
     border-bottom: 1px solid var(--app-left-rail-divider) !important;
@@ -141,10 +144,6 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
 
   .left-rail-template.agent-chat-layout .agent-session-panel {
     min-height: 0;
-  }
-
-  .left-rail-template.agent-chat-layout .agent-session-list {
-    overflow-y: auto;
   }
 }
 

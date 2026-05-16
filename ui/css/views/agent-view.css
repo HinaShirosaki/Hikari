@@ -39,16 +39,10 @@ body.agent-view-fixed-scroll .workspace-main {
 
 .agent-session-rail {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
   gap: 16px;
-  align-content: stretch;
+  align-content: start;
   min-height: 100%;
   max-height: var(--shared-left-rail-layout-height);
-  overflow: hidden;
-}
-
-#agent-view .agent-session-rail {
-  overflow: hidden !important;
 }
 
 .agent-session-toolbar {
@@ -99,16 +93,16 @@ body.agent-view-fixed-scroll .workspace-main {
   display: grid;
   gap: 0;
   align-content: start;
+  grid-auto-rows: max-content;
   min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  overflow: visible;
 }
 
 .agent-session-card {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
+  min-height: var(--left-rail-item-min-height, 36px);
   margin: 0;
   border: 0 !important;
   background: none !important;
@@ -850,6 +844,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   border: 0;
   border-radius: 0;
   min-width: 0;
+  min-height: var(--left-rail-item-min-height, 36px);
   overflow: hidden;
 }
 

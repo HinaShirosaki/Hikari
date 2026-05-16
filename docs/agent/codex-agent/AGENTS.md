@@ -18,6 +18,7 @@ Direct Hikari MCP tools available without `tool_search`:
 - `chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.
 - `protocol_lookup`: search local protocols through Hikari protocol matching.
 - `protocol_generation`: normalize complete protocol JSON into the app import format without generating content; set `save: true` in the same call to add it to the Hikari Protocols module.
+- `notebook_draft`: prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.
 - `notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.
 - `ask_user`: prepare one blocking clarification with options and optional custom text.
 
@@ -35,6 +36,7 @@ Literature and paper rules:
 - Use `paper-analysis` to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.
 - Use direct `protocol_generation` only after complete protocol JSON exists.
 - When the user asks to save or add a generated protocol, call `protocol_generation` once with `save: true`.
+- Use direct `notebook_draft` for planned next-experiment notebook drafts instead of discovering `notebook-draft` through `tool_search`.
 - Claim downloads, full text, figures, or chunks only when a tool result proves them.
 
 Keep tool calls small and targeted. Use the MCP bridge over shell commands for app data, papers, protocols, notebook drafts, inventory, and structured Hikari state.

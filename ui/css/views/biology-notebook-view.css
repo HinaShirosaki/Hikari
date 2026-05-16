@@ -31,14 +31,8 @@
 .biology-notebook-rail {
   min-height: 100%;
   max-height: var(--shared-left-rail-layout-height);
-  grid-template-rows: auto auto auto minmax(0, 1fr);
-  align-content: stretch;
-  overflow: hidden;
+  align-content: start;
   padding: 2px 18px 16px 0;
-}
-
-#biology-notebook-view .biology-notebook-rail {
-  overflow: hidden !important;
 }
 
 .biology-notebook-rail-head,
@@ -60,9 +54,7 @@
   gap: 0;
   align-content: start;
   min-height: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  overflow: visible;
 }
 
 .biology-notebook-folder {
