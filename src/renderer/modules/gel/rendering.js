@@ -1,4 +1,5 @@
 import { buildLanesFromManualSegmentation } from './analysis-core.js';
+import { buildQuantificationSignal } from './image-processing.js';
 import { clamp, mean, normalizeManualOverrides, round } from './shared.js';
 import { formatAnalysisTypeLabel } from './presentation.js';
 
@@ -11,7 +12,10 @@ const LANE_PROFILE_VIEWBOX = Object.freeze({
   plotBottom: 164
 });
 
-export function selectViewerBaseImageData(currentImage, _preprocessed = null) {
+export function selectViewerBaseImageData(currentImage, preprocessed = null, viewerMode = 'original') {
+  if (viewerMode === 'processed' && preprocessed?.previewImageData) {
+    return preprocessed.previewImageData;
+  }
   return currentImage?.imageData || null;
 }
 
@@ -164,16 +168,6 @@ function getLaneProfileLanes(runtime) {
   }));
 }
 
-function createFallbackSignal(gray = null) {
-  if (!gray?.length) {
-    return null;
-  }
-  const inverted = new Float32Array(gray.length);
-  for (let index = 0; index < gray.length; index += 1) {
-    inverted[index] = 1 - gray[index];
-  }
-  return inverted;
-}
 
 function renderLaneProfilePlaceholder(svg, message) {
   const {
@@ -239,7 +233,69 @@ function renderLaneProfileSvg(svg, profile, bandTop = null, bandBottom = null) {
     <circle class="lane-profile-peak" cx="${peakX}" cy="${peakY}" r="4" />
     <text class="lane-profile-axis-label" x="${plotLeft}" y="${height - 8}">Top</text>
     <text class="lane-profile-axis-label" x="${plotRight}" y="${height - 8}" text-anchor="end">Bottom</text>
+    <g class="lane-profile-hover" data-role="hover" style="display: none;">
+      <line class="lane-profile-hover-line" x1="0" y1="${plotTop}" x2="0" y2="${plotBottom}" />
+      <circle class="lane-profile-hover-dot" cx="0" cy="0" r="4" />
+      <text class="lane-profile-hover-label" x="0" y="${plotTop - 4}" text-anchor="middle"></text>
+    </g>
   `;
+}
+
+function setLaneProfileHover(svg, profile, rowIndex) {
+  if (!svg || !profile) return;
+  const group = svg.querySelector('[data-role="hover"]');
+  if (!group) return;
+  const { plotLeft, plotRight, plotTop, plotBottom } = LANE_PROFILE_VIEWBOX;
+  const plotWidth = plotRight - plotLeft;
+  const plotHeight = plotBottom - plotTop;
+  const rowMax = Math.max(1, profile.values.length - 1);
+  const valueSpan = Math.max(1e-6, profile.maxValue - profile.minValue);
+  const safeRow = Math.min(Math.max(0, Math.round(rowIndex)), rowMax);
+  const value = profile.values[safeRow];
+  const x = plotLeft + ((safeRow / rowMax) * plotWidth);
+  const y = plotBottom - (((value - profile.minValue) / valueSpan) * plotHeight);
+  group.style.display = '';
+  const line = group.querySelector('line');
+  if (line) {
+    line.setAttribute('x1', String(x));
+    line.setAttribute('x2', String(x));
+  }
+  const dot = group.querySelector('circle');
+  if (dot) {
+    dot.setAttribute('cx', String(x));
+    dot.setAttribute('cy', String(y));
+  }
+  const label = group.querySelector('text');
+  if (label) {
+    label.setAttribute('x', String(x));
+    label.textContent = `y=${safeRow}`;
+  }
+}
+
+function clearLaneProfileHover(svg) {
+  const group = svg?.querySelector?.('[data-role="hover"]');
+  if (group) group.style.display = 'none';
+}
+
+function formatIntensity(value) {
+  if (!Number.isFinite(value)) {
+    return '-';
+  }
+  if (Math.abs(value) >= 1000) {
+    return value.toFixed(0);
+  }
+  return value.toFixed(2);
+}
+
+function readSnrThreshold(input) {
+  if (!input) {
+    return 3;
+  }
+  const value = Number(input.value);
+  if (!Number.isFinite(value) || value < 0) {
+    return 3;
+  }
+  return value;
 }
 
 export function createRenderingController({ runtime, elements, safeText, deps = {} }) {
@@ -293,14 +349,13 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       .join('');
     elements.gelLaneProfileSelect.value = String(selectedLane.laneIndex);
 
-    const preprocessed = deps.getPreprocessedImageForCurrentSettings?.();
-    const signal = preprocessed?.cleanNormalized || createFallbackSignal(runtime.currentImage.gray);
-    const profile = computeLaneIntensityProfile({
+    const { signal, polarity } = buildQuantificationSignal(runtime.currentImage.gray);
+    const profile = signal ? computeLaneIntensityProfile({
       signal,
       width: runtime.currentImage.width,
       height: runtime.currentImage.height,
       lane: selectedLane
-    });
+    }) : null;
 
     if (!profile) {
       elements.gelLaneProfileCaption.textContent = 'Lane profile could not be calculated for this image.';
@@ -310,9 +365,12 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     }
 
     const hasBandWindow = Number.isFinite(overrides.laneSegmentation?.bandTop) && Number.isFinite(overrides.laneSegmentation?.bandBottom);
+    const polarityNote = polarity === 'dark-on-light'
+      ? 'Dark-on-light gel: signal inverted so bands appear as peaks.'
+      : 'Bright-on-dark gel: bands appear as peaks.';
     elements.gelLaneProfileCaption.textContent = hasBandWindow
-      ? `Average row signal for lane ${selectedLane.laneIndex}. The highlighted band window follows steps 6 and 7.`
-      : `Average row signal for lane ${selectedLane.laneIndex} using the current enhancement settings.`;
+      ? `Row signal from grayscale image for lane ${selectedLane.laneIndex}. Band window follows steps 6 and 7. ${polarityNote}`
+      : `Row signal from grayscale image for lane ${selectedLane.laneIndex}. ${polarityNote}`;
     elements.gelLaneProfileMeta.innerHTML = [
       `x ${selectedLane.xStart}-${selectedLane.xEnd}`,
       `width ${profile.laneWidth}px`,
@@ -329,28 +387,250 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       overrides.laneSegmentation?.bandTop,
       overrides.laneSegmentation?.bandBottom
     );
+
+    lastProfile = profile;
+    lastProfileLane = selectedLane;
+    if (runtime.laneProfileHoverY != null) {
+      setLaneProfileHover(elements.gelLaneProfileChart, profile, runtime.laneProfileHoverY);
+    }
   }
 
-  function renderCanvas() {
-    if (!elements.gelCanvas) {
-      deps.renderLaneTable?.();
+  let lastProfile = null;
+  let lastProfileLane = null;
+
+  function drawHoverLineOnCanvas(context) {
+    if (runtime.laneProfileHoverY == null || !lastProfileLane) return;
+    const y = Math.max(0, Math.min(runtime.currentImage.height - 1, Math.round(runtime.laneProfileHoverY)));
+    context.save();
+    context.lineWidth = 1.4;
+    context.strokeStyle = 'rgba(250, 204, 21, 0.95)';
+    context.setLineDash([3, 3]);
+    context.beginPath();
+    context.moveTo(lastProfileLane.xStart + 0.5, y + 0.5);
+    context.lineTo(lastProfileLane.xEnd + 0.5, y + 0.5);
+    context.stroke();
+    context.setLineDash([]);
+    context.restore();
+  }
+
+  function onLaneProfileChartMouseMove(event) {
+    if (!lastProfile || !elements.gelLaneProfileChart) return;
+    const svg = elements.gelLaneProfileChart;
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width) return;
+    const { plotLeft, plotRight, width: viewBoxWidth } = LANE_PROFILE_VIEWBOX;
+    const svgX = ((event.clientX - rect.left) / rect.width) * viewBoxWidth;
+    if (svgX < plotLeft - 1 || svgX > plotRight + 1) {
+      onLaneProfileChartMouseLeave();
+      return;
+    }
+    const rowMax = Math.max(1, lastProfile.values.length - 1);
+    const fraction = (svgX - plotLeft) / (plotRight - plotLeft);
+    const rowIndex = Math.min(Math.max(0, Math.round(fraction * rowMax)), rowMax);
+    setLaneProfileHover(svg, lastProfile, rowIndex);
+    runtime.laneProfileHoverY = rowIndex;
+    drawCanvas();
+  }
+
+  function onLaneProfileChartMouseLeave() {
+    clearLaneProfileHover(elements.gelLaneProfileChart);
+    if (runtime.laneProfileHoverY != null) {
+      runtime.laneProfileHoverY = null;
+      drawCanvas();
+    }
+  }
+
+  function canvasPointFromEvent(event) {
+    const canvas = elements.gelCanvas;
+    if (!canvas || !runtime.currentImage) return null;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
+    const x = ((event.clientX - rect.left) / rect.width) * runtime.currentImage.width;
+    const y = ((event.clientY - rect.top) / rect.height) * runtime.currentImage.height;
+    return {
+      x: clamp(Math.round(x), 0, runtime.currentImage.width - 1),
+      y: clamp(Math.round(y), 0, runtime.currentImage.height - 1)
+    };
+  }
+
+  function findLaneAtX(x) {
+    const lanes = getLaneProfileLanes(runtime);
+    if (!lanes.length) return null;
+    return lanes.find((lane) => x >= lane.xStart && x <= lane.xEnd) || null;
+  }
+
+  function onCanvasHoverMove(event) {
+    if (!runtime.currentImage || runtime.cropperActive) return;
+    const point = canvasPointFromEvent(event);
+    if (!point) return;
+    const lane = findLaneAtX(point.x);
+    if (!lane) {
+      onCanvasHoverLeave();
+      return;
+    }
+    let needsProfileRender = false;
+    if (lane.laneIndex !== runtime.selectedLaneProfileLane) {
+      runtime.selectedLaneProfileLane = lane.laneIndex;
+      needsProfileRender = true;
+    }
+    runtime.laneProfileHoverY = point.y;
+    if (needsProfileRender) {
       renderLaneProfile();
+    } else if (lastProfile) {
+      setLaneProfileHover(elements.gelLaneProfileChart, lastProfile, point.y);
+    }
+    drawCanvas();
+  }
+
+  function onCanvasHoverLeave() {
+    if (runtime.laneProfileHoverY == null) return;
+    runtime.laneProfileHoverY = null;
+    clearLaneProfileHover(elements.gelLaneProfileChart);
+    drawCanvas();
+  }
+
+  function renderCellTable() {
+    const panel = elements.gelCellTablePanel;
+    const host = elements.gelCellTableHost;
+    const summary = elements.gelCellTableSummary;
+    if (!panel || !host) {
       return;
     }
 
+    const overrides = normalizeManualOverrides(runtime.manualOverrides);
+    const segmentation = overrides.laneSegmentation || {};
+    const hasBandWindow = Number.isFinite(segmentation.bandTop) && Number.isFinite(segmentation.bandBottom);
+    const reportLanes = runtime.currentReport?.lanes || [];
+    const cells = reportLanes
+      .map((lane) => ({ lane, cell: lane.targetBand || null }))
+      .filter((entry) => entry.cell);
+
+    if (!hasBandWindow || !cells.length) {
+      panel.hidden = true;
+      host.innerHTML = '';
+      if (summary) {
+        summary.textContent = '';
+      }
+      return;
+    }
+
+    panel.hidden = false;
+    const threshold = readSnrThreshold(elements.gelCellSnrThresholdInput);
+    const labelRow = (overrides.laneTable?.rows || []).find((row) => /label/i.test(row?.label || '')) || null;
+
+    const rowsHtml = cells.map(({ lane, cell }) => {
+      const snr = Number(cell.snr);
+      const hasBand = Number.isFinite(snr) && snr >= threshold;
+      const label = labelRow ? safeText(labelRow.values?.[lane.laneIndex - 1] || '') : '';
+      const className = `gel-cell-row ${hasBand ? 'is-has-band' : 'is-empty'}`;
+      const intensity = formatIntensity(Number(cell.correctedIntensity));
+      const bandSum = formatIntensity(Number(cell.bandSignalSum));
+      const baselineSum = formatIntensity(Number(cell.baselineSum));
+      const saturationPct = Number.isFinite(Number(cell.saturationFraction))
+        ? `${(Number(cell.saturationFraction) * 100).toFixed(1)}%`
+        : '-';
+      return `
+        <tr class="${className}">
+          <td>${safeText(String(lane.laneIndex))}</td>
+          <td>${label}</td>
+          <td class="num">${safeText(bandSum)}</td>
+          <td class="num">${safeText(baselineSum)}</td>
+          <td class="num gel-cell-intensity">${safeText(intensity)}</td>
+          <td class="num">${safeText(Number.isFinite(snr) ? snr.toFixed(2) : '-')}</td>
+          <td class="gel-cell-hasband">${hasBand ? 'yes' : 'no'}</td>
+          <td class="num">${safeText(saturationPct)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    host.innerHTML = `
+      <table class="gel-cell-table">
+        <thead>
+          <tr>
+            <th>Lane</th>
+            <th>Label</th>
+            <th class="num">Band sum</th>
+            <th class="num">Baseline sum</th>
+            <th class="num">Corrected</th>
+            <th class="num">SNR</th>
+            <th>Has band?</th>
+            <th class="num">Sat %</th>
+          </tr>
+        </thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    `;
+
+    if (summary) {
+      const presentCells = cells.filter(({ cell }) => Number(cell.snr) >= threshold).length;
+      const baselineMode = cells[0]?.cell?.baselineMode || 'lane-profile';
+      summary.textContent = `${presentCells}/${cells.length} cells classified as band (SNR ≥ ${threshold.toFixed(1)}). Baseline: ${baselineMode}.`;
+    }
+  }
+
+  function drawCellOverlays(context, overrides) {
+    const reportLanes = runtime.currentReport?.lanes || [];
+    if (!reportLanes.length) {
+      return;
+    }
+    const segmentation = overrides.laneSegmentation || {};
+    if (!Number.isFinite(segmentation.bandTop) || !Number.isFinite(segmentation.bandBottom)) {
+      return;
+    }
+    const threshold = readSnrThreshold(elements.gelCellSnrThresholdInput);
+
+    context.save();
+    context.font = '11px "SF Pro Text", "Segoe UI", sans-serif';
+    reportLanes.forEach((lane) => {
+      const cell = lane.targetBand;
+      if (!cell) {
+        return;
+      }
+      const top = clamp(Math.min(cell.top, cell.bottom), 0, runtime.currentImage.height - 1);
+      const bottom = clamp(Math.max(cell.top, cell.bottom), top + 1, runtime.currentImage.height - 1);
+      const hasBand = Number(cell.snr) >= threshold;
+      context.lineWidth = 1.4;
+      if (hasBand) {
+        context.setLineDash([]);
+        context.strokeStyle = 'rgba(34, 197, 94, 0.95)';
+      } else {
+        context.setLineDash([4, 3]);
+        context.strokeStyle = 'rgba(148, 163, 184, 0.85)';
+      }
+      context.strokeRect(
+        lane.xStart + 0.5,
+        top + 0.5,
+        Math.max(1, lane.xEnd - lane.xStart),
+        Math.max(1, bottom - top)
+      );
+      context.setLineDash([]);
+      const label = formatIntensity(Number(cell.correctedIntensity));
+      context.fillStyle = hasBand ? 'rgba(34, 197, 94, 0.95)' : 'rgba(148, 163, 184, 0.9)';
+      const textY = Math.max(10, top - 2);
+      context.fillText(label, lane.xStart + 2, textY);
+    });
+    context.restore();
+  }
+
+  function drawCanvas() {
+    if (!elements.gelCanvas) {
+      return;
+    }
     const context = elements.gelCanvas.getContext('2d');
     if (!runtime.currentImage || !context) {
       elements.gelCanvas.width = 1;
       elements.gelCanvas.height = 1;
       context?.clearRect(0, 0, 1, 1);
-      deps.renderLaneTable?.();
-      renderLaneProfile();
       return;
     }
 
     elements.gelCanvas.width = runtime.currentImage.width;
     elements.gelCanvas.height = runtime.currentImage.height;
-    const baseImageData = selectViewerBaseImageData(runtime.currentImage);
+    const viewerMode = runtime.viewerMode === 'processed' ? 'processed' : 'original';
+    const preprocessed = viewerMode === 'processed'
+      ? deps.getPreprocessedImageForCurrentSettings?.()
+      : null;
+    const baseImageData = selectViewerBaseImageData(runtime.currentImage, preprocessed, viewerMode);
     context.putImageData(baseImageData, 0, 0);
 
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
@@ -449,6 +729,8 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       context.restore();
     }
 
+    drawCellOverlays(context, overrides);
+
     if (runtime.currentReport?.lanes?.length) {
       runtime.currentReport.lanes.forEach((lane) => {
         const isLadder = (overrides.ladderLane === lane.laneIndex)
@@ -482,8 +764,14 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       });
     }
 
+    drawHoverLineOnCanvas(context);
+  }
+
+  function renderCanvas() {
+    drawCanvas();
     deps.renderLaneTable?.();
     renderLaneProfile();
+    renderCellTable();
   }
 
   function renderReport() {
@@ -532,7 +820,12 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
   }
 
   return {
+    onCanvasHoverLeave,
+    onCanvasHoverMove,
+    onLaneProfileChartMouseLeave,
+    onLaneProfileChartMouseMove,
     renderCanvas,
+    renderCellTable,
     renderLaneProfile,
     renderReport
   };

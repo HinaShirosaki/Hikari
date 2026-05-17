@@ -182,6 +182,18 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(css, /\.papers-viewer-text-layer span\s*\{[\s\S]*font-family:\s*var\(--font-app\)/);
     });
 
+    test('papers PDF first-load sizing stays inside the app shell', () => {
+      const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
+      const papersCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
+      const viewerSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer.js');
+      assert.match(coreCss, /html\s*\{[\s\S]*height:\s*100%;[\s\S]*overflow:\s*hidden;/);
+      assert.match(coreCss, /body\s*\{[\s\S]*height:\s*100%;[\s\S]*overflow:\s*hidden;/);
+      assert.match(papersCss, /\.papers-viewer-workspace\s*\{[\s\S]*overflow:\s*hidden;/);
+      assert.match(viewerSource, /function getElementLayoutWidth\(element\)/);
+      assert.match(viewerSource, /const layoutWidth = \[\s*stage,\s*workspace,\s*shell\s*\]/);
+      assert.match(viewerSource, /Math\.max\(layoutWidth - horizontalPadding, 320\)/);
+    });
+
     test('ketcher embedded page uses portable static path resolution', () => {
       const html = fs.readFileSync(path.join(__dirname, 'ketcher-embedded.html'), 'utf8');
       assert.equal(html.includes('/Users/'), false);

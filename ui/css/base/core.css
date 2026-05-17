@@ -66,12 +66,15 @@
 
 html {
   font-size: var(--app-font-size);
+  height: 100%;
+  overflow: hidden;
 }
 
 body {
   margin: 0;
+  height: 100%;
   min-height: 100svh;
-  overflow-x: hidden;
+  overflow: hidden;
   color: var(--text);
   background: var(--bg);
   font-family: var(--font-app);

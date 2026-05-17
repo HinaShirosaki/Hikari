@@ -1,34 +1,36 @@
 <section id="biology-notebook-view" class="view">
       <div class="biology-notebook-layout left-rail-template">
-        <aside class="biology-notebook-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="biology-notebook-rail-head">
-            <h2>Biology Notebook</h2>
-            <p class="small-note">Projects and notebook pages</p>
-          </div>
+        <aside class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="left-rail-template__pinned">
+            <div class="biology-notebook-rail-head">
+              <h2>Biology Notebook</h2>
+              <p class="small-note">Projects and notebook pages</p>
+            </div>
 
-          <div class="stack-form biology-notebook-select-stack">
-            <label>
-              Select Project
-              <select id="biology-notebook-project-select">
-                <option value="">Select project</option>
-              </select>
-            </label>
-            <label>
-              Search Protocol
-              <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
-            </label>
-            <label>
-              Select Protocol
-              <select id="biology-notebook-protocol-select">
-                <option value="">Select protocol</option>
-              </select>
-            </label>
-          </div>
+            <div class="stack-form biology-notebook-select-stack">
+              <label>
+                Select Project
+                <select id="biology-notebook-project-select">
+                  <option value="">Select project</option>
+                </select>
+              </label>
+              <label>
+                Search Protocol
+                <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
+              </label>
+              <label>
+                Select Protocol
+                <select id="biology-notebook-protocol-select">
+                  <option value="">Select protocol</option>
+                </select>
+              </label>
+            </div>
 
-          <div class="biology-notebook-page-list-head">
-            <h3>Notebook Pages</h3>
+            <div class="biology-notebook-page-list-head">
+              <h3>Notebook Pages</h3>
+            </div>
           </div>
-          <div id="biology-notebook-entry-list" class="biology-notebook-page-list"></div>
+          <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
         </aside>
 
         <div class="biology-notebook-viewer-column left-rail-template__main">

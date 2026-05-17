@@ -82,6 +82,10 @@
                   <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
                   <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
                   <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
+                  <button type="button" id="gel-rotate-left-btn" class="ghost-btn" disabled title="Rotate 90° counterclockwise">↺ Rotate</button>
+                  <button type="button" id="gel-rotate-right-btn" class="ghost-btn" disabled title="Rotate 90° clockwise">Rotate ↻</button>
+                  <button type="button" id="gel-process-image-btn" class="ghost-btn">Process Image</button>
+                  <button type="button" id="gel-view-original-btn" class="ghost-btn" aria-pressed="true">View Original</button>
                   <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
                   <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
                   <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
@@ -127,10 +131,11 @@
                     <li id="gel-step-right">2. Click right gel border</li>
                     <li id="gel-step-dividers">3. Click lane dividers</li>
                     <li id="gel-step-ladder">4. Click ladder lane</li>
-                    <li id="gel-step-ladder-mw">5. Click ladder band and assign MW</li>
+                    <li id="gel-step-ladder-mw">5. Click ladder band (uses MW input) or right-click to type MW</li>
                     <li id="gel-step-band-top">6. Click top line of target band</li>
                     <li id="gel-step-band-bottom">7. Click bottom line of target band</li>
-                    <li id="gel-step-bands">8. (Optional) Click bands to add</li>
+                    <li id="gel-step-quantify">8. Review per-cell intensities</li>
+                    <li id="gel-step-bands">9. (Optional) Click bands to add</li>
                   </ol>
                   <div class="form-actions">
                     <button type="button" id="gel-manual-prev-btn" class="ghost-btn">Previous Step</button>
@@ -147,6 +152,17 @@
             </div>
 
             <div class="gel-secondary-panels">
+              <section id="gel-cell-table-panel" class="panel gel-cell-table-panel" hidden>
+                <header class="gel-cell-table-header">
+                  <h3>Per-Cell Band Intensity</h3>
+                  <label class="small-note gel-cell-snr-label">
+                    SNR threshold:
+                    <input type="number" id="gel-cell-snr-threshold" min="0" step="0.1" value="3" />
+                  </label>
+                </header>
+                <div id="gel-cell-table-summary" class="small-note"></div>
+                <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
+              </section>
               <div class="panel gel-report-panel">
                 <h3>Analysis Report</h3>
                 <div id="gel-report-summary" class="cards"></div>

@@ -6,6 +6,7 @@ import {
   round
 } from './shared.js';
 import {
+  buildQuantificationSignal,
   normalizeEnhancementSettings,
   preprocessWithJs
 } from './image-processing.js';
@@ -106,6 +107,157 @@ function computeManualBand({
   };
 }
 
+function smoothFloat32(values, radius) {
+  const n = values.length;
+  const safeRadius = Math.max(1, Math.floor(radius));
+  const out = new Float32Array(n);
+  for (let i = 0; i < n; i += 1) {
+    let weighted = 0;
+    let weights = 0;
+    for (let off = -safeRadius; off <= safeRadius; off += 1) {
+      const idx = clamp(i + off, 0, n - 1);
+      const w = (safeRadius + 1) - Math.abs(off);
+      weighted += values[idx] * w;
+      weights += w;
+    }
+    out[i] = weights ? (weighted / weights) : values[i];
+  }
+  return out;
+}
+
+function rollingMinimum(values, halfWindow) {
+  const n = values.length;
+  const out = new Float32Array(n);
+  const w = Math.max(1, Math.floor(halfWindow));
+  for (let i = 0; i < n; i += 1) {
+    const start = Math.max(0, i - w);
+    const end = Math.min(n - 1, i + w);
+    let m = Number.POSITIVE_INFINITY;
+    for (let j = start; j <= end; j += 1) {
+      if (values[j] < m) {
+        m = values[j];
+      }
+    }
+    out[i] = Number.isFinite(m) ? m : values[i];
+  }
+  return out;
+}
+
+function computeLaneRowMeans({ signal, width, lane, height }) {
+  const laneWidth = Math.max(1, lane.xEnd - lane.xStart + 1);
+  const rowMeans = new Float32Array(height);
+  for (let y = 0; y < height; y += 1) {
+    const rowOffset = y * width;
+    let rowSum = 0;
+    for (let x = lane.xStart; x <= lane.xEnd; x += 1) {
+      rowSum += signal[rowOffset + x];
+    }
+    rowMeans[y] = rowSum / laneWidth;
+  }
+  return rowMeans;
+}
+
+function computeLaneBaseline({ signal, width, lane, height, bandThickness }) {
+  const rowMeans = computeLaneRowMeans({ signal, width, lane, height });
+  const smoothingRadius = clamp(Math.round(height / 90), 2, 10);
+  const smoothed = smoothFloat32(rowMeans, smoothingRadius);
+  const windowFromBand = bandThickness * 3;
+  const clampedWindow = clamp(windowFromBand, 20, Math.max(20, Math.floor(height / 4)));
+  const minimum = rollingMinimum(smoothed, Math.floor(clampedWindow / 2));
+  const baseline = smoothFloat32(minimum, smoothingRadius);
+  return { rowMeans, smoothed, baseline };
+}
+
+function computeCellIntensity({
+  signal,
+  rawGray,
+  width,
+  height,
+  lane,
+  bandTop,
+  bandBottom
+}) {
+  const top = clamp(Math.floor(Math.min(bandTop, bandBottom)), 0, height - 1);
+  const bottom = clamp(Math.floor(Math.max(bandTop, bandBottom)), top, height - 1);
+  const thickness = Math.max(1, bottom - top + 1);
+  const laneWidth = Math.max(1, lane.xEnd - lane.xStart + 1);
+
+  const { rowMeans, smoothed, baseline } = computeLaneBaseline({
+    signal,
+    width,
+    lane,
+    height,
+    bandThickness: thickness
+  });
+
+  let bandSignalSum = 0;
+  let saturatedCount = 0;
+  for (let y = top; y <= bottom; y += 1) {
+    const rowOffset = y * width;
+    for (let x = lane.xStart; x <= lane.xEnd; x += 1) {
+      bandSignalSum += signal[rowOffset + x];
+      if (rawGray[rowOffset + x] >= 0.99) {
+        saturatedCount += 1;
+      }
+    }
+  }
+  const bandPixelCount = laneWidth * thickness;
+
+  let baselineSum = 0;
+  let baselineInWindowSum = 0;
+  for (let y = top; y <= bottom; y += 1) {
+    baselineSum += baseline[y] * laneWidth;
+    baselineInWindowSum += baseline[y];
+  }
+  const baselineMean = baselineInWindowSum / thickness;
+  const correctedIntensity = Math.max(0, bandSignalSum - baselineSum);
+
+  let residualSquares = 0;
+  let residualCount = 0;
+  const noisePad = 4;
+  for (let y = 0; y < height; y += 1) {
+    if (y >= top - noisePad && y <= bottom + noisePad) {
+      continue;
+    }
+    const residual = smoothed[y] - baseline[y];
+    residualSquares += residual * residual;
+    residualCount += 1;
+  }
+  const noiseStd = residualCount > 0
+    ? Math.sqrt(residualSquares / residualCount)
+    : 0;
+
+  const bandMeanPerPixel = bandPixelCount ? (bandSignalSum / bandPixelCount) : 0;
+  const noiseFloor = Math.max(noiseStd, 1e-6);
+  const snr = (bandMeanPerPixel - baselineMean) / noiseFloor;
+  const sharpness = Math.max(0.01, Math.abs(bandMeanPerPixel - baselineMean) / Math.max(1, thickness));
+
+  return {
+    bandIndex: 0,
+    pixelY: clamp(Math.round((top + bottom) / 2), 0, height - 1),
+    top,
+    bottom,
+    thickness,
+    rawIntensity: correctedIntensity,
+    correctedIntensity,
+    bandSignalSum,
+    baselineSum,
+    backgroundMean: baselineMean,
+    backgroundStd: noiseStd,
+    areaPx: bandPixelCount,
+    measurementMode: 'target-window',
+    baselineMode: 'lane-profile',
+    snr,
+    sharpness,
+    saturationFraction: bandPixelCount ? (saturatedCount / bandPixelCount) : 0,
+    normalizedIntensity: null,
+    estimatedMw: null,
+    groupId: null,
+    groupLabel: null,
+    manual: true
+  };
+}
+
 function buildLanesFromManualSegmentation(overrides, width) {
   const segmentation = overrides?.laneSegmentation || {};
   const gelLeft = Number.isFinite(segmentation.gelLeft) ? clamp(segmentation.gelLeft, 0, width - 1) : null;
@@ -167,17 +319,14 @@ function applyBandOverrides({
     const laneIndex = lane.index + 1;
 
     if (Number.isFinite(targetTop) && Number.isFinite(targetBottom) && targetBottom >= targetTop) {
-      const centerY = clamp(Math.round((targetTop + targetBottom) / 2), 0, height - 1);
-      const targetBand = computeManualBand({
+      const targetBand = computeCellIntensity({
         signal,
         rawGray,
         width,
         height,
         lane,
-        pixelY: centerY,
-        bandTopOverride: targetTop,
-        bandBottomOverride: targetBottom,
-        measurementMode: 'target-window'
+        bandTop: targetTop,
+        bandBottom: targetBottom
       });
       lane.bands.push(targetBand);
     }
@@ -624,11 +773,17 @@ function buildReport({
         ? {
           top: targetBand.top,
           bottom: targetBand.bottom,
+          thickness: targetBand.thickness,
           areaPx: targetBand.areaPx,
           rawIntensity: round(targetBand.rawIntensity, 4),
           correctedIntensity: round(targetBand.correctedIntensity, 4),
+          bandSignalSum: round(targetBand.bandSignalSum, 4),
+          baselineSum: round(targetBand.baselineSum, 4),
           backgroundMean: round(targetBand.backgroundMean, 6),
-          backgroundStd: round(targetBand.backgroundStd, 6)
+          backgroundStd: round(targetBand.backgroundStd, 6),
+          snr: round(targetBand.snr, 4),
+          saturationFraction: round(targetBand.saturationFraction, 4),
+          baselineMode: targetBand.baselineMode || 'lane-profile'
         }
         : null,
       bands: lane.bands.map((band) => ({
@@ -742,7 +897,8 @@ export function analyzeGelImage({
     height,
     params.enhancement
   );
-  const signal = preprocessingResult.cleanNormalized;
+  const { signal: quantSignal, polarity: gelPolarity } = buildQuantificationSignal(gray);
+  const signal = quantSignal || preprocessingResult.cleanNormalized;
 
   const segmentedLanes = buildLanesFromManualSegmentation(manualOverrides, width);
   const laneBlueprints = segmentedLanes || [];
@@ -763,7 +919,7 @@ export function analyzeGelImage({
     lanes,
     overrides: manualOverrides,
     signal,
-    rawGray: gray,
+    rawGray: signal,
     width,
     height
   });
@@ -793,6 +949,8 @@ export function analyzeGelImage({
     params,
     preprocessing: {
       ...preprocessingResult.preprocessing,
+      quantificationSignal: 'raw-gray',
+      gelPolarity,
       manualOverridesSummary: {
         laneSegmentationLeft: manualOverrides.laneSegmentation?.gelLeft ?? null,
         laneSegmentationRight: manualOverrides.laneSegmentation?.gelRight ?? null,

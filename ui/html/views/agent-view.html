@@ -1,7 +1,7 @@
 <section id="agent-view" class="view">
       <div class="agent-chat-layout left-rail-template">
-        <aside class="agent-session-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="agent-session-toolbar">
+        <aside class="agent-session-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="agent-session-toolbar left-rail-template__pinned">
             <div class="agent-session-toolbar-copy">
               <h3>Saved Chats</h3>
               <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
@@ -13,7 +13,7 @@
               </svg>
             </button>
           </div>
-          <div id="agent-session-list" class="agent-session-list" aria-live="polite"></div>
+          <div id="agent-session-list" class="agent-session-list left-rail-template__scroll" aria-live="polite"></div>
         </aside>
 
         <div class="panel agent-chat-panel left-rail-template__main">

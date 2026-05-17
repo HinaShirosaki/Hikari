@@ -541,35 +541,37 @@
 <!-- SOURCE: ui/html/views/biology-notebook-view.html -->
 <section id="biology-notebook-view" class="view">
       <div class="biology-notebook-layout left-rail-template">
-        <aside class="biology-notebook-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="biology-notebook-rail-head">
-            <h2>Biology Notebook</h2>
-            <p class="small-note">Projects and notebook pages</p>
-          </div>
+        <aside class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="left-rail-template__pinned">
+            <div class="biology-notebook-rail-head">
+              <h2>Biology Notebook</h2>
+              <p class="small-note">Projects and notebook pages</p>
+            </div>
 
-          <div class="stack-form biology-notebook-select-stack">
-            <label>
-              Select Project
-              <select id="biology-notebook-project-select">
-                <option value="">Select project</option>
-              </select>
-            </label>
-            <label>
-              Search Protocol
-              <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
-            </label>
-            <label>
-              Select Protocol
-              <select id="biology-notebook-protocol-select">
-                <option value="">Select protocol</option>
-              </select>
-            </label>
-          </div>
+            <div class="stack-form biology-notebook-select-stack">
+              <label>
+                Select Project
+                <select id="biology-notebook-project-select">
+                  <option value="">Select project</option>
+                </select>
+              </label>
+              <label>
+                Search Protocol
+                <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
+              </label>
+              <label>
+                Select Protocol
+                <select id="biology-notebook-protocol-select">
+                  <option value="">Select protocol</option>
+                </select>
+              </label>
+            </div>
 
-          <div class="biology-notebook-page-list-head">
-            <h3>Notebook Pages</h3>
+            <div class="biology-notebook-page-list-head">
+              <h3>Notebook Pages</h3>
+            </div>
           </div>
-          <div id="biology-notebook-entry-list" class="biology-notebook-page-list"></div>
+          <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
         </aside>
 
         <div class="biology-notebook-viewer-column left-rail-template__main">
@@ -1370,6 +1372,10 @@
                   <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
                   <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
                   <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
+                  <button type="button" id="gel-rotate-left-btn" class="ghost-btn" disabled title="Rotate 90° counterclockwise">↺ Rotate</button>
+                  <button type="button" id="gel-rotate-right-btn" class="ghost-btn" disabled title="Rotate 90° clockwise">Rotate ↻</button>
+                  <button type="button" id="gel-process-image-btn" class="ghost-btn">Process Image</button>
+                  <button type="button" id="gel-view-original-btn" class="ghost-btn" aria-pressed="true">View Original</button>
                   <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
                   <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
                   <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
@@ -1415,10 +1421,11 @@
                     <li id="gel-step-right">2. Click right gel border</li>
                     <li id="gel-step-dividers">3. Click lane dividers</li>
                     <li id="gel-step-ladder">4. Click ladder lane</li>
-                    <li id="gel-step-ladder-mw">5. Click ladder band and assign MW</li>
+                    <li id="gel-step-ladder-mw">5. Click ladder band (uses MW input) or right-click to type MW</li>
                     <li id="gel-step-band-top">6. Click top line of target band</li>
                     <li id="gel-step-band-bottom">7. Click bottom line of target band</li>
-                    <li id="gel-step-bands">8. (Optional) Click bands to add</li>
+                    <li id="gel-step-quantify">8. Review per-cell intensities</li>
+                    <li id="gel-step-bands">9. (Optional) Click bands to add</li>
                   </ol>
                   <div class="form-actions">
                     <button type="button" id="gel-manual-prev-btn" class="ghost-btn">Previous Step</button>
@@ -1435,6 +1442,17 @@
             </div>
 
             <div class="gel-secondary-panels">
+              <section id="gel-cell-table-panel" class="panel gel-cell-table-panel" hidden>
+                <header class="gel-cell-table-header">
+                  <h3>Per-Cell Band Intensity</h3>
+                  <label class="small-note gel-cell-snr-label">
+                    SNR threshold:
+                    <input type="number" id="gel-cell-snr-threshold" min="0" step="0.1" value="3" />
+                  </label>
+                </header>
+                <div id="gel-cell-table-summary" class="small-note"></div>
+                <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
+              </section>
               <div class="panel gel-report-panel">
                 <h3>Analysis Report</h3>
                 <div id="gel-report-summary" class="cards"></div>
@@ -2104,8 +2122,8 @@
 <!-- SOURCE: ui/html/views/agent-view.html -->
 <section id="agent-view" class="view">
       <div class="agent-chat-layout left-rail-template">
-        <aside class="agent-session-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="agent-session-toolbar">
+        <aside class="agent-session-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="agent-session-toolbar left-rail-template__pinned">
             <div class="agent-session-toolbar-copy">
               <h3>Saved Chats</h3>
               <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
@@ -2117,7 +2135,7 @@
               </svg>
             </button>
           </div>
-          <div id="agent-session-list" class="agent-session-list" aria-live="polite"></div>
+          <div id="agent-session-list" class="agent-session-list left-rail-template__scroll" aria-live="polite"></div>
         </aside>
 
         <div class="panel agent-chat-panel left-rail-template__main">
