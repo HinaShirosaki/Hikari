@@ -206,6 +206,7 @@ module.exports = function registerAgentContractsB(context = {}) {
       assert.equal(Boolean(toolCallCatalog['paper-analysis']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['notebook-draft']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
+      assert.equal(toolCallCatalog['protocol-generation']?.input_schema?.properties?.save?.type, 'boolean');
     });
 
     test('direct LLM module registry exposes owned module calls outside the agent chat runtime', async () => {

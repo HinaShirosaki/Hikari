@@ -72,8 +72,8 @@ export function buildPlatePreviewHtml({
 
   const rowAxisRole = sampleAxis === 'row' ? 'sample' : 'concentration';
   const columnAxisRole = sampleAxis === 'row' ? 'concentration' : 'sample';
-  const rowAxisLabel = rowAxisRole === 'sample' ? 'Sample ID' : 'Concentration';
-  const columnAxisLabel = columnAxisRole === 'sample' ? 'Sample ID' : 'Concentration';
+  const rowAxisLabel = rowAxisRole === 'sample' ? 'Sample ID' : 'Conc.';
+  const columnAxisLabel = columnAxisRole === 'sample' ? 'Sample ID' : 'Conc.';
   const rowAxisValues = rowAxisRole === 'sample' ? sampleValues : concentrationValues;
   const columnAxisValues = columnAxisRole === 'sample' ? sampleValues : concentrationValues;
   const filledLayouts = Object.values(cellMap).filter((item) => item && (item.sampleId || item.concentration));
@@ -129,14 +129,14 @@ export function buildPlatePreviewHtml({
       const concentrationValue = String(cellLayout?.concentration || '').trim();
       const sampleLabel = sampleValue || '-';
       const concentrationLabel = concentrationValue || '-';
-      const editable = plateEditField === 'concentration' ? 'Concentration' : 'Sample ID';
+      const editable = plateEditField === 'concentration' ? 'Conc.' : 'Sample ID';
       const editableValue = plateEditField === 'concentration' ? concentrationValue : sampleValue;
       const secondaryMeta = plateEditField === 'concentration'
         ? `S: ${safeText(sampleLabel)}`
         : `C: ${safeText(concentrationLabel)}`;
       const meta = cellLayout
-        ? `Sample ID: ${cellLayout.sampleId || '-'} | Concentration: ${cellLayout.concentration || '-'}`
-        : 'Sample ID: - | Concentration: -';
+        ? `Sample ID: ${cellLayout.sampleId || '-'} | Conc.: ${cellLayout.concentration || '-'}`
+        : 'Sample ID: - | Conc.: -';
       const color = sampleValue
         ? sampleColor(sampleValue)
         : { hue: 210, saturation: 72 };

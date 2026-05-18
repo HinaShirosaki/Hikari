@@ -107,6 +107,7 @@ The direct Hikari MCP contract tools are first-class MCP tools in `tools/list`. 
 - `chemical_lookup`
 - `protocol_lookup`
 - `protocol_generation`
+- `notebook_draft`
 - `notebook_lookup`
 - `ask_user`
 
@@ -257,7 +258,7 @@ Input schema:
 
 ### `protocol_generation`
 
-Direct MCP convenience wrapper for protocol JSON normalization. It calls `protocol-generation` with the supplied protocol JSON, does not call an LLM, and does not require a protocol id.
+Direct MCP convenience wrapper for protocol JSON normalization. It calls `protocol-generation` with the supplied protocol JSON, does not call an LLM, and saves the normalized record into Protocols when `save` is true.
 
 Input schema:
 
@@ -272,6 +273,7 @@ Input schema:
       "additionalProperties": true,
       "required": ["steps"],
       "properties": {
+        "id": { "type": "string" },
         "name": { "type": "string" },
         "title": { "type": "string" },
         "purpose": { "type": "string" },
@@ -300,7 +302,11 @@ Input schema:
         "updatedAt": { "type": "string" }
       }
     },
-    "result_summary": { "type": "string" }
+    "result_summary": { "type": "string" },
+    "save": { "type": "boolean" },
+    "persist": { "type": "boolean" },
+    "overwrite": { "type": "boolean" },
+    "upsert": { "type": "boolean" }
   }
 }
 ```
@@ -322,6 +328,38 @@ Input schema:
     "project_id": { "type": "string" },
     "project_name": { "type": "string" },
     "protocol_name": { "type": "string" }
+  }
+}
+```
+
+### `notebook_draft`
+
+Direct MCP convenience wrapper for planned next-experiment notebook drafts. It calls `notebook-draft`, returns a confirmation-ready draft payload, and does not create the notebook page itself.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "message": { "type": "string" },
+    "project": { "type": "object", "additionalProperties": true },
+    "project_id": { "type": "string" },
+    "project_name": { "type": "string" },
+    "workflow_id": { "type": "string", "maxLength": 160 },
+    "protocol_name": { "type": "string" },
+    "protocol_candidates": {
+      "type": "array",
+      "items": { "type": "string" },
+      "maxItems": 5
+    },
+    "evidence_context": {
+      "type": "array",
+      "items": { "type": "object", "additionalProperties": true },
+      "maxItems": 8
+    },
+    "parser_payload": { "type": "object", "additionalProperties": true }
   }
 }
 ```
@@ -520,7 +558,7 @@ Unauthorized calls return HTTP 401 with `status: "unauthorized"`. Missing execut
 
 ## Hikari app tools exposed through `tool_search` / `tool_info`
 
-These generic app tools remain available through the bridge for cases that do not match a direct MCP contract tool. Do not route `inventory_lookup`, `chemical_lookup`, `protocol_lookup`, `protocol_generation`, `notebook_lookup`, or `ask_user` through `tool_search`; call those direct MCP tools instead.
+These generic app tools remain available through the bridge for cases that do not match a direct MCP contract tool. Do not route `inventory_lookup`, `chemical_lookup`, `protocol_lookup`, `protocol_generation`, `notebook_draft`, `notebook_lookup`, or `ask_user` through `tool_search`; call those direct MCP tools instead. For Codex-backed agent runs, `tool_search` suppresses exact direct-tool duplicates such as `inventory-lookup`, `notebook-draft`, and `protocol-generation`.
 
 The current exported tool ids are:
 

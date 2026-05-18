@@ -2,6 +2,7 @@
 
 const {
   buildCommonLookupInputSchema,
+  buildReadOnlyToolAnnotations,
   cleanText,
   compactObject,
   filterRecordItems,
@@ -22,6 +23,7 @@ const PROJECT_FILTER_SCHEMA = Object.freeze({
 const NOTEBOOK_LOOKUP_MCP_TOOL = Object.freeze({
   name: 'notebook_lookup',
   description: 'Look up local Hikari notebook entries by project, protocol, result text, or entry identifier.',
+  annotations: buildReadOnlyToolAnnotations('Notebook lookup'),
   inputSchema: buildCommonLookupInputSchema(PROJECT_FILTER_SCHEMA)
 });
 

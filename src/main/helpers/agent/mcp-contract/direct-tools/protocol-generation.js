@@ -2,6 +2,7 @@
 
 const {
   asArray,
+  buildWriteToolAnnotations,
   cleanText,
   cloneJson,
   compactObject,
@@ -11,7 +12,8 @@ const {
 
 const PROTOCOL_GENERATION_MCP_TOOL = Object.freeze({
   name: 'protocol_generation',
-  description: 'Normalize supplied protocol JSON into Hikari import-ready protocol format without an internal LLM call or required protocol id.',
+  description: 'Normalize supplied protocol JSON into Hikari import-ready protocol format without an internal LLM call, and save it into Protocols when save is true.',
+  annotations: buildWriteToolAnnotations('Protocol generation'),
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -22,6 +24,7 @@ const PROTOCOL_GENERATION_MCP_TOOL = Object.freeze({
         additionalProperties: true,
         required: ['steps'],
         properties: {
+          id: { type: 'string' },
           name: { type: 'string' },
           title: { type: 'string' },
           purpose: { type: 'string' },
@@ -71,7 +74,12 @@ const PROTOCOL_GENERATION_MCP_TOOL = Object.freeze({
           updatedAt: { type: 'string' }
         }
       },
-      result_summary: { type: 'string' }
+      result_summary: { type: 'string' },
+      save: { type: 'boolean' },
+      persist: { type: 'boolean' },
+      save_to_protocol_module: { type: 'boolean' },
+      overwrite: { type: 'boolean' },
+      upsert: { type: 'boolean' }
     }
   }
 });
@@ -117,7 +125,13 @@ function resolveProtocolGenerationPayload(result = {}) {
 }
 
 async function callProtocolGeneration(input = {}, context = {}, deps = {}) {
-  const protocol = normalizeProtocolForApp(input.protocol);
+  const rawProtocol = ensureObject(input.protocol);
+  const protocol = normalizeProtocolForApp(rawProtocol);
+  const shouldSave = input.save === true || input.persist === true || input.save_to_protocol_module === true;
+  const requestedId = cleanText(rawProtocol.id || rawProtocol.protocol_id || rawProtocol.protocolId, 220);
+  if (shouldSave && requestedId) {
+    protocol.id = requestedId;
+  }
   if (!Object.keys(protocol).length || !asArray(protocol.steps).length) {
     return {
       ok: false,
@@ -133,7 +147,10 @@ async function callProtocolGeneration(input = {}, context = {}, deps = {}) {
     toolId: 'protocol-generation',
     args: compactObject({
       protocol,
-      result_summary: cleanText(input.result_summary || input.resultSummary || input.summary, 320)
+      result_summary: cleanText(input.result_summary || input.resultSummary || input.summary, 320),
+      save: shouldSave,
+      overwrite: input.overwrite === true,
+      upsert: input.upsert === true
     }),
     context
   });
@@ -150,6 +167,7 @@ async function callProtocolGeneration(input = {}, context = {}, deps = {}) {
     app_tool: 'protocol-generation',
     summary: cleanText(payload.summary || result?.summary, 320),
     protocol: outputProtocol,
+    sidecar_paths: cloneJson(payload.sidecar_paths || payload.sidecarPaths, {}),
     error
   });
 }

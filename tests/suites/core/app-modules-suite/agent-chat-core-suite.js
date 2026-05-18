@@ -213,6 +213,29 @@ test('agent-chat normalizes Codex agent answer envelopes', () => {
   assert.equal(completed.assistantText, 'Codex owned the lifecycle and produced this answer.');
   assert.equal(completed.codexAgent.status, 'completed');
   assert.equal(completed.codexAgent.citations.length, 1);
+  assert.equal(completed.userQuestion, null);
+
+  const completedWithStaleQuestion = responseModule.normalizeAgentResponse({
+    parser: {
+      primary_intent: 'codex_agent',
+      needs_clarification: false,
+      reasoning_summary: 'Codex completed the answer.'
+    },
+    codex_agent: {
+      status: 'completed',
+      answer: 'mRNA display links peptides to their encoding mRNA.',
+      user_question: {
+        question: 'mRNA display links peptides to their encoding mRNA.',
+        options: [],
+        allow_custom: true
+      },
+      follow_up_questions: [],
+      citations: []
+    }
+  });
+
+  assert.equal(completedWithStaleQuestion.assistantText, 'mRNA display links peptides to their encoding mRNA.');
+  assert.equal(completedWithStaleQuestion.userQuestion, null);
 
   const needsMoreInfo = responseModule.normalizeAgentResponse({
     parser: {
@@ -1128,6 +1151,36 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
   });
   assert.match(history.innerHTML, /Partial Codex answer/);
   assert.match(status.textContent, /Partial Codex answer/);
+
+  progressHandler({
+    client_request_id: payloadSeen.clientRequestId,
+    request_id: 'req-live-1',
+    chat_session_id: 'chat-2',
+    routing_intent: 'codex_agent',
+    stage: 'codex_agent_thinking',
+    status: 'streaming',
+    message: 'Checking project context.',
+    meta: {
+      thinking_trace: 'Checking project context.'
+    }
+  });
+  assert.match(history.innerHTML, /Checking project context/);
+  assert.match(history.innerHTML, /<details class="agent-thinking-trace" open aria-label="Thinking Trace">/);
+
+  progressHandler({
+    client_request_id: payloadSeen.clientRequestId,
+    request_id: 'req-live-1',
+    chat_session_id: 'chat-2',
+    routing_intent: 'codex_agent',
+    stage: 'tool_call_started',
+    status: 'started',
+    tool_name: 'inventory_lookup',
+    message: 'inventory_lookup: {"query":"yield"}',
+    meta: {
+      tool_call_text: 'inventory_lookup: {"query":"yield"}'
+    }
+  });
+  assert.match(history.innerHTML, /inventory_lookup: \{&quot;query&quot;:&quot;yield&quot;\}/);
 
   progressHandler({
     client_request_id: payloadSeen.clientRequestId,

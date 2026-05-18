@@ -145,14 +145,29 @@ export function analyzeStandardCurve(observations, method) {
         fit.parameters || '-'
       ]);
 
-      const fittedLine = points
-        .map((point) => ({ x: point.x, y: fit.predict(point.x) }))
+      const sortedPoints = points.slice().sort((a, b) => a.x - b.x);
+      const xMin = sortedPoints[0].x;
+      const xMax = sortedPoints[sortedPoints.length - 1].x;
+      const SAMPLE_COUNT = 120;
+      const span = xMax - xMin;
+      const fittedLine = [];
+      if (Number.isFinite(span) && span > 0) {
+        for (let stepIndex = 0; stepIndex <= SAMPLE_COUNT; stepIndex += 1) {
+          const xValue = xMin + ((span * stepIndex) / SAMPLE_COUNT);
+          const yValue = fit.predict(xValue);
+          if (Number.isFinite(yValue)) {
+            fittedLine.push({ x: xValue, y: yValue });
+          }
+        }
+      }
+      const markerPoints = sortedPoints
         .filter((point) => Number.isFinite(point.y))
-        .sort((a, b) => a.x - b.x);
-      if (fittedLine.length >= 2) {
+        .map((point) => ({ x: point.x, y: point.y }));
+      if (fittedLine.length >= 2 || markerPoints.length) {
         chartSeries.push({
           label: normalizedLabel,
-          data: fittedLine
+          data: fittedLine,
+          markers: markerPoints
         });
       }
     });

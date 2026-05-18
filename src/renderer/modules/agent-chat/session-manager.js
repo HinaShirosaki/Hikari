@@ -88,14 +88,16 @@ export function createAgentChatSessionManager(deps = {}) {
     sessionList.innerHTML = sessions.map((session) => {
       const sessionId = trimText(session?.id, 120);
       const isActive = activeSessionId && sessionId === activeSessionId;
+      const title = trimText(session?.title, 160) || 'New Chat';
       return `
         <button
           type="button"
           class="agent-session-card${isActive ? ' is-active' : ''}"
           data-session-id="${safeText(sessionId)}"
+          title="${safeText(title)}"
           ${interactionLocked ? 'disabled' : ''}
         >
-          <strong>${safeText(trimText(session?.title, 160) || 'New Chat')}</strong>
+          <strong>${safeText(title)}</strong>
         </button>
       `;
     }).join('');

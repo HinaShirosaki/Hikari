@@ -20,6 +20,11 @@ const { createPurchaseRecommendationRuntime } = require('./agent-purchase-recomm
 const { createPaperDownloadRuntime } = require('./agent-paper-download.js');
 const { createPaperAnalysisRuntime } = require('./agent-paper-analysis.js');
 const { createProtocolGenerationRuntime } = require('./agent-protocol-generation.js');
+const { createProtocolSaveRuntime } = require('./agent-protocol-save.js');
+const {
+  hydrateSnapshotFromBundle,
+  syncBundleFromSnapshot
+} = require('../../main/storage-bundle');
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -896,23 +901,45 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   }
 
   async function smokeProtocolGeneration(options = {}) {
-    const runtime = createProtocolGenerationRuntime();
-    const requestMessage = resolveToolMessage(options.message, 'Normalize the supplied protocol JSON.');
-    const result = await runtime.generateProtocol({
-      protocol: {
-        name: 'Atlas Binder Purification',
-        purpose: 'Purify the Atlas binder from clarified lysate.',
-        materials: ['Ni-NTA resin', 'imidazole buffer'],
-        steps: ['Clarify lysate.', 'Bind to Ni-NTA resin for [time].', 'Elute with imidazole.'],
-        troubleshooting: 'Keep buffers cold during purification.'
-      },
-      result_summary: requestMessage
-    });
-    return {
-      ...result,
-      ok: result?.ok !== false,
-      summary: cleanText(result?.summary, 320) || 'Protocol generation smoke test completed.'
-    };
+    const tempDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'hikari-protocol-save-'));
+    let emittedPayload = null;
+    try {
+      const runtime = createProtocolSaveRuntime({
+        protocolGenerationRuntime: createProtocolGenerationRuntime(),
+        hydrateSnapshotFromBundle,
+        syncBundleFromSnapshot,
+        getDefaultDataFilePath: () => '',
+        emitProtocolSaved: (payload) => {
+          emittedPayload = payload;
+        }
+      });
+      const requestMessage = resolveToolMessage(options.message, 'Normalize and save the supplied protocol JSON.');
+      const result = await runtime.saveProtocol({
+        protocol: {
+          name: 'Atlas Binder Purification',
+          purpose: 'Purify the Atlas binder from clarified lysate.',
+          materials: ['Ni-NTA resin', 'imidazole buffer'],
+          steps: ['Clarify lysate.', 'Bind to Ni-NTA resin for [time].', 'Elute with imidazole.'],
+          troubleshooting: 'Keep buffers cold during purification.'
+        },
+        result_summary: requestMessage,
+        save: true
+      }, {
+        snapshot: {
+          settings: {
+            storagePath: tempDir
+          },
+          protocols: []
+        }
+      });
+      return {
+        ...result,
+        ok: result?.ok !== false && Boolean(cleanText(emittedPayload?.protocol?.id, 120)),
+        summary: cleanText(result?.summary, 320) || 'Protocol generation smoke test completed.'
+      };
+    } finally {
+      await fsPromises.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    }
   }
 
   async function smokePurchaseRecommendation(options = {}) {

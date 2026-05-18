@@ -109,11 +109,6 @@
   display: grid;
   gap: 10px;
   padding: 12px 0;
-  border-top: 1px solid var(--line-soft);
-}
-
-.assay-browser-item:first-child {
-  border-top: 0;
 }
 
 .assay-browser-item-copy {
@@ -228,6 +223,7 @@
 .assay-create-preview-panel {
   display: flex;
   flex-direction: column;
+  height: 100%;
   min-height: 0;
   align-self: stretch;
 }
@@ -237,6 +233,12 @@
   display: grid;
   gap: 8px;
   min-height: 0;
+}
+
+.assay-create-preview-panel .assay-plate-preview {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
 }
 
 .assay-mode-switch {
@@ -552,9 +554,15 @@
   overscroll-behavior: contain;
 }
 
+.assay-create-preview-panel .assay-plate-table-wrap {
+  flex: 1 1 auto;
+  max-height: none;
+  min-height: 0;
+}
+
 .assay-plate-table {
-  --assay-row-header-width: 156px;
-  --assay-axis-column-width: 116px;
+  --assay-row-header-width: 96px;
+  --assay-axis-column-width: 86px;
   --assay-header-row-height: 38px;
   width: max-content;
   min-width: 100%;
@@ -564,11 +572,21 @@
 
 .assay-plate-table th,
 .assay-plate-table td {
-  border: 1px solid rgba(53, 99, 153, 0.2);
-  padding: 4px 6px;
+  border: 0;
+  border-right: 1px solid rgba(53, 99, 153, 0.14);
+  border-bottom: 1px solid rgba(53, 99, 153, 0.14);
+  padding: 4px 5px;
   text-align: center;
   font-size: 0.75rem;
   white-space: nowrap;
+}
+
+.assay-plate-table thead tr:first-child > * {
+  border-top: 1px solid rgba(53, 99, 153, 0.14);
+}
+
+.assay-plate-table tr > *:first-child {
+  border-left: 1px solid rgba(53, 99, 153, 0.14);
 }
 
 .assay-plate-table thead th,
@@ -641,10 +659,10 @@
 }
 
 .assay-well {
-  width: 78px;
-  min-width: 78px;
+  width: 64px;
+  min-width: 64px;
   height: 78px;
-  padding: 4px;
+  padding: 3px 4px;
   vertical-align: top;
   background: rgba(255, 255, 255, 0.9);
   cursor: pointer;
@@ -688,8 +706,8 @@
 .assay-plate-editor-row td {
   white-space: normal;
   padding: 0;
-  width: 72px;
-  min-width: 72px;
+  width: 64px;
+  min-width: 64px;
 }
 
 .assay-axis-input,
@@ -698,7 +716,7 @@
   width: 100%;
   min-width: 0;
   height: 34px;
-  padding: 4px 6px;
+  padding: 4px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -920,9 +938,12 @@
   stroke: rgba(53, 99, 153, 0.2);
 }
 
-.assay-analysis-chart .rv-xy-plot__axis__line,
 .assay-analysis-chart .rv-xy-plot__axis__tick__line {
   stroke: rgba(53, 99, 153, 0.46);
+}
+
+.assay-analysis-chart-canvas.frame-none .rv-xy-plot__axis__line {
+  display: none;
 }
 
 .assay-analysis-chart .rv-xy-plot__axis__tick__text {
@@ -1056,4 +1077,118 @@ body.theme-night .assay-analysis-chart-title {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.assay-chart-style {
+  display: block;
+}
+
+.assay-chart-style-summary {
+  cursor: pointer;
+  color: var(--strong);
+  font-weight: 650;
+  padding: 4px 0;
+  list-style: none;
+}
+
+.assay-chart-style-summary::-webkit-details-marker {
+  display: none;
+}
+
+.assay-chart-style-summary::after {
+  content: '▸';
+  margin-left: 6px;
+  font-size: 0.8em;
+  color: var(--muted);
+  transition: transform 140ms ease;
+  display: inline-block;
+}
+
+.assay-chart-style[open] .assay-chart-style-summary::after {
+  transform: rotate(90deg);
+}
+
+.assay-chart-style-body {
+  display: grid;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.assay-chart-style-group {
+  display: grid;
+  gap: 8px;
+  padding: 8px 10px 10px;
+  margin: 0;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+}
+
+.assay-chart-style-group legend {
+  padding: 0 4px;
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.assay-chart-style-group label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--strong);
+}
+
+.assay-chart-style-checkbox {
+  flex-direction: row;
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.assay-chart-style-checkbox input[type="checkbox"] {
+  width: auto;
+}
+
+.assay-chart-style-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.assay-chart-style-group input[type="range"] {
+  width: 100%;
+}
+
+.assay-chart-style-group input[type="color"] {
+  width: 100%;
+  min-height: 32px;
+  padding: 2px;
+}
+
+.assay-chart-style-series {
+  display: grid;
+  gap: 6px;
+}
+
+.assay-chart-style-series-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.assay-chart-style-series-row input[type="color"] {
+  width: 44px;
+  min-height: 28px;
+  padding: 2px;
+}
+
+.assay-chart-style-series-empty {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.assay-chart-style-actions {
+  justify-content: flex-start;
 }

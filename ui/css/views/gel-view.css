@@ -98,6 +98,29 @@
   width: 100%;
   height: 190px;
   overflow: visible;
+  cursor: crosshair;
+}
+
+.gel-lane-profile-chart .lane-profile-hover-line {
+  stroke: rgba(250, 204, 21, 0.95);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+}
+
+.gel-lane-profile-chart .lane-profile-hover-dot {
+  fill: rgba(250, 204, 21, 1);
+  stroke: rgba(255, 255, 255, 0.92);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+
+.gel-lane-profile-chart .lane-profile-hover-label {
+  fill: rgba(90, 60, 0, 0.95);
+  font-size: 10px;
+  font-family: var(--font-app);
+  font-weight: 600;
+  pointer-events: none;
 }
 
 .gel-lane-profile-chart .lane-profile-frame {
@@ -164,6 +187,80 @@
 .gel-setup-panel #gel-form {
   grid-template-columns: minmax(0, 1fr);
   gap: 14px;
+}
+
+.gel-browser-panel {
+  margin: 0;
+  padding: 0 0 6px;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.gel-browser-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 0 10px;
+  cursor: pointer;
+  color: var(--strong);
+  font-weight: 650;
+}
+
+.gel-browser-summary::-webkit-details-marker {
+  display: none;
+}
+
+.gel-browser-summary::after {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.gel-browser-panel[open] .gel-browser-summary::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.gel-browser-body {
+  display: grid;
+  gap: 12px;
+  padding: 0 0 8px;
+}
+
+.gel-browser-list {
+  display: grid;
+  gap: 0;
+}
+
+.gel-browser-empty {
+  padding: 6px 0 2px;
+}
+
+.gel-browser-item {
+  display: grid;
+  gap: 10px;
+  padding: 12px 0;
+}
+
+.gel-browser-item-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.gel-browser-item-title {
+  margin: 0;
+  color: var(--strong);
+  font-size: 0.94rem;
+  font-weight: 650;
+}
+
+.gel-browser-item-actions {
+  gap: 6px;
 }
 
 .gel-viewer-panel {
@@ -579,4 +676,70 @@ body.theme-night .gel-report-json {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+.gel-cell-table-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.gel-cell-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.gel-cell-snr-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.gel-cell-snr-label input {
+  width: 64px;
+}
+
+.gel-cell-table-host {
+  overflow-x: auto;
+}
+
+.gel-cell-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.gel-cell-table th,
+.gel-cell-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+  text-align: left;
+}
+
+.gel-cell-table th.num,
+.gel-cell-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.gel-cell-table tbody tr.is-has-band td.gel-cell-intensity {
+  color: rgb(34, 139, 70);
+  font-weight: 600;
+}
+
+.gel-cell-table tbody tr.is-empty td {
+  color: rgba(100, 116, 139, 0.85);
+}
+
+.gel-cell-table tbody tr.is-has-band td.gel-cell-hasband {
+  color: rgb(34, 139, 70);
+  font-weight: 600;
+}
+
+.gel-cell-table tbody tr.is-empty td.gel-cell-hasband {
+  color: rgba(100, 116, 139, 0.85);
 }

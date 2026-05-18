@@ -105,25 +105,63 @@
 
 .buffer-row {
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  align-items: end;
+  gap: 10px;
   padding: 12px;
   border: 1px solid var(--line);
   background: var(--surface-subtle);
 }
 
+.buffer-row-main {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(110px, 0.55fr) minmax(170px, 0.8fr) minmax(320px, 1.35fr) minmax(86px, auto);
+  gap: 10px;
+  align-items: end;
+}
+
+.buffer-row-main label,
+.buffer-custom-panel label {
+  min-width: 0;
+}
+
 .buffer-output {
-  align-self: stretch;
+  align-self: end;
   display: flex;
   align-items: center;
+  min-width: 0;
+  height: 42px;
   padding: 9px 10px;
+  overflow: hidden;
   border: 1px solid var(--line);
   background: var(--surface);
 }
 
 .buffer-weight {
-  font-size: 0.9rem;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.buffer-remove-btn {
+  align-self: end;
+  min-width: 86px;
+  height: 42px;
+  white-space: nowrap;
+}
+
+.buffer-custom-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(140px, 220px);
+  gap: 10px;
+  padding: 10px;
+  border: 1px dashed var(--line);
+  background: var(--surface);
+}
+
+.buffer-custom-panel[hidden] {
+  display: none;
 }
 
 .reaction-mix-shell {
@@ -629,11 +667,12 @@ body.ui-neutral-compact input[id*="api-key"] {
 }
 
 .buffer-row {
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .buffer-row label,
 .buffer-row .buffer-output,
+.buffer-row .buffer-custom-panel,
 .buffer-row .buffer-remove-btn {
   min-width: 0;
 }
@@ -670,9 +709,32 @@ body.ui-neutral-compact input[id*="api-key"] {
 
 #tool-buffer-view .buffer-chemical-select,
 #tool-buffer-view .buffer-custom-name,
+#tool-buffer-view .buffer-custom-form,
 #tool-buffer-view .buffer-mw,
 #tool-buffer-view .buffer-concentration {
   width: 100%;
+  min-height: 42px;
+}
+
+@media (max-width: 1180px) {
+  .buffer-row-main {
+    grid-template-columns: minmax(210px, 1.1fr) minmax(110px, 0.6fr) minmax(160px, 0.85fr) minmax(240px, 1fr) minmax(86px, auto);
+  }
+}
+
+@media (max-width: 900px) {
+  .buffer-row-main {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .buffer-output,
+  .buffer-remove-btn {
+    width: 100%;
+  }
+
+  .buffer-custom-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .crispr-guide-seq,

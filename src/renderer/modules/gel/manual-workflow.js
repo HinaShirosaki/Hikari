@@ -41,6 +41,9 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     if (!Number.isFinite(segmentation.bandBottom)) {
       return 'band-bottom';
     }
+    if (!Boolean(segmentation.quantifyConfirmed)) {
+      return 'quantify';
+    }
     return 'bands';
   }
 
@@ -63,14 +66,21 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     updateStepClass(elements.gelStepLadderMw, activeStep === 'ladder-mw' ? 'active' : (Boolean(overrides.ladderBandsDone) ? 'done' : 'todo'));
     updateStepClass(elements.gelStepBandTop, activeStep === 'band-top' ? 'active' : (Number.isFinite(overrides.laneSegmentation?.bandTop) ? 'done' : 'todo'));
     updateStepClass(elements.gelStepBandBottom, activeStep === 'band-bottom' ? 'active' : (Number.isFinite(overrides.laneSegmentation?.bandBottom) ? 'done' : 'todo'));
+    updateStepClass(elements.gelStepQuantify, activeStep === 'quantify' ? 'active' : (Boolean(overrides.laneSegmentation?.quantifyConfirmed) ? 'done' : 'todo'));
     updateStepClass(elements.gelStepBands, activeStep === 'bands' ? 'active' : ((overrides.addedBands?.length || 0) > 0 ? 'done' : 'todo'));
 
     if (elements.gelManualPrevBtn) {
       elements.gelManualPrevBtn.disabled = activeStep === 'left';
     }
     if (elements.gelManualNextBtn) {
-      elements.gelManualNextBtn.disabled = !(activeStep === 'dividers' || activeStep === 'ladder-mw');
-      elements.gelManualNextBtn.textContent = activeStep === 'ladder-mw' ? 'Done Ladder MW' : 'Done Dividers';
+      elements.gelManualNextBtn.disabled = !(activeStep === 'dividers' || activeStep === 'ladder-mw' || activeStep === 'quantify');
+      if (activeStep === 'ladder-mw') {
+        elements.gelManualNextBtn.textContent = 'Done Ladder MW';
+      } else if (activeStep === 'quantify') {
+        elements.gelManualNextBtn.textContent = 'Done Quantify';
+      } else {
+        elements.gelManualNextBtn.textContent = 'Done Dividers';
+      }
     }
     renderViewerToolbar(elements, runtime.selectedViewerTool);
   }
@@ -101,7 +111,8 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       dividers: [],
       dividerDone: false,
       bandTop: null,
-      bandBottom: null
+      bandBottom: null,
+      quantifyConfirmed: false
     };
     const next = {
       gelLeft: current.gelLeft,
@@ -110,6 +121,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       dividerDone: Boolean(current.dividerDone),
       bandTop: Number.isFinite(current.bandTop) ? current.bandTop : null,
       bandBottom: Number.isFinite(current.bandBottom) ? current.bandBottom : null,
+      quantifyConfirmed: Boolean(current.quantifyConfirmed),
       ...patch
     };
     next.dividers = next.dividers
@@ -187,17 +199,25 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
 
     if (step === 'ladder-mw') {
       const normalized = normalizeManualOverrides(runtime.manualOverrides);
-      if ((normalized.ladderBands?.length || 0) < 2) {
-        deps.setStatus('Add at least 2 ladder MW points before continuing.');
-        return;
-      }
+      const ladderCount = normalized.ladderBands?.length || 0;
       runtime.manualOverrides = {
         ...normalized,
         ladderBandsDone: true
       };
       renderOverrideStatus();
-      deps.setStatus('Ladder MW step completed. Click the top line of target band.');
+      if (ladderCount < 2) {
+        deps.setStatus(`Ladder MW step skipped (${ladderCount} point${ladderCount === 1 ? '' : 's'}). MW calibration disabled. Click the top line of target band.`);
+      } else {
+        deps.setStatus('Ladder MW step completed. Click the top line of target band.');
+      }
       deps.onRunAnalysis();
+      return;
+    }
+
+    if (step === 'quantify') {
+      updateLaneSegmentation({ quantifyConfirmed: true });
+      renderOverrideStatus();
+      deps.setStatus('Quantification confirmed. (Optional) click additional band points in lanes.');
     }
   }
 
@@ -244,13 +264,19 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         ladderBandsDone: false
       };
     } else if (step === 'band-bottom') {
-      updateLaneSegmentation({ bandTop: null, bandBottom: null });
+      updateLaneSegmentation({ bandTop: null, bandBottom: null, quantifyConfirmed: false });
+      runtime.manualOverrides = {
+        ...normalizeManualOverrides(runtime.manualOverrides),
+        addedBands: []
+      };
+    } else if (step === 'quantify') {
+      updateLaneSegmentation({ bandBottom: null, quantifyConfirmed: false });
       runtime.manualOverrides = {
         ...normalizeManualOverrides(runtime.manualOverrides),
         addedBands: []
       };
     } else {
-      updateLaneSegmentation({ bandBottom: null });
+      updateLaneSegmentation({ quantifyConfirmed: false });
       runtime.manualOverrides = {
         ...normalizeManualOverrides(runtime.manualOverrides),
         addedBands: []
@@ -310,6 +336,47 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       ...overrides,
       addedBands: current
     };
+  }
+
+  function onCanvasContextMenu(event) {
+    if (!runtime.currentImage || runtime.cropperActive) {
+      return;
+    }
+    const step = getCanvasInteractionStep();
+    if (step !== 'ladder-mw') {
+      return;
+    }
+    const point = getCanvasPoint(event);
+    if (!point) {
+      return;
+    }
+    const normalized = normalizeManualOverrides(runtime.manualOverrides);
+    const laneIndex = inferLaneIndexFromSegmentationX(point.x);
+    if (!laneIndex || laneIndex !== normalized.ladderLane) {
+      deps.setStatus(`Right-click inside the ladder lane (${normalized.ladderLane || '-'}) to set ladder MW.`);
+      return;
+    }
+
+    event.preventDefault();
+    const existing = normalized.ladderBands.find((item) => Math.abs(item.pixelY - point.y) <= 8);
+    const promptDefault = existing ? String(existing.mw) : (elements.gelLadderBandMwInput?.value || '');
+    const raw = window.prompt(`MW for ladder band at y=${point.y} (kDa):`, promptDefault);
+    if (raw === null) {
+      return;
+    }
+    const mw = Number(String(raw).trim());
+    if (!Number.isFinite(mw) || mw <= 0) {
+      deps.setStatus('Invalid MW value. Right-click again and enter a positive number (kDa).');
+      return;
+    }
+    upsertLadderBandMw(point.y, mw);
+    if (elements.gelLadderBandMwInput) {
+      elements.gelLadderBandMwInput.value = String(mw);
+    }
+    renderOverrideStatus();
+    deps.renderCanvas();
+    deps.setStatus(`Added ladder calibration point: y=${point.y}, MW=${mw} kDa.`);
+    deps.onRunAnalysis();
   }
 
   function getCanvasPoint(event) {
@@ -423,7 +490,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       return;
     }
     if (step === 'band-top') {
-      updateLaneSegmentation({ bandTop: point.y, bandBottom: null });
+      updateLaneSegmentation({ bandTop: point.y, bandBottom: null, quantifyConfirmed: false });
       runtime.manualOverrides = {
         ...normalizeManualOverrides(runtime.manualOverrides),
         addedBands: []
@@ -439,10 +506,10 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         deps.setStatus('Bottom line must be below top line.');
         return;
       }
-      updateLaneSegmentation({ bandBottom: point.y });
+      updateLaneSegmentation({ bandBottom: point.y, quantifyConfirmed: false });
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Band bottom line set at y=${point.y}. Target band region applied to all lanes.`);
+      deps.setStatus(`Band bottom line set at y=${point.y}. Per-lane intensities ready in the Quantify panel.`);
       deps.onRunAnalysis();
       return;
     }
@@ -517,6 +584,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     getManualStep,
     onAutoDetectLanes,
     onCanvasClick,
+    onCanvasContextMenu,
     onManualNextStep,
     onManualPrevStep,
     onManualResetSteps,

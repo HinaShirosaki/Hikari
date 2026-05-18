@@ -302,8 +302,8 @@ export const DEVELOPER_TOOL_TEST_OPTIONS = [
   {
     name: 'protocol-generation',
     label: 'Protocol Generation',
-    description: 'Pass complete protocol JSON and inspect the normalized protocol payload.',
-    example: '{"protocol":{"name":"Atlas Binder Purification","steps":["Clarify lysate.","Bind to Ni-NTA resin for [time]."]}}'
+    description: 'Pass complete protocol JSON; add "save": true to persist it into Protocols.',
+    example: '{"protocol":{"name":"Atlas Binder Purification","steps":["Clarify lysate.","Bind to Ni-NTA resin for [time]."]},"save":true}'
   }
 ];
 

@@ -363,13 +363,22 @@ function renderAssistantThinkingTrace(meta, safeText) {
 }
 
 function renderUserQuestionCard(meta, messageId = '', safeText, { disabled = false } = {}) {
-  const question = normalizeAgentUserQuestion(
-    meta?.user_question
-      || meta?.userQuestion
-      || meta?.codex_agent?.user_question
-      || meta?.codex_agent?.userQuestion,
-    meta?.codex_agent?.answer
+  const explicitUserQuestion = meta?.user_question
+    || meta?.userQuestion
+    || meta?.codex_agent?.user_question
+    || meta?.codex_agent?.userQuestion;
+  const codexStatus = trimText(meta?.codex_agent?.status, 40);
+  const keepUserQuestion = Boolean(
+    explicitUserQuestion
+    && (
+      codexStatus === 'needs_more_info'
+      || codexStatus === 'needs_user_answer'
+      || (!meta?.codex_agent && meta?.parser?.needs_clarification === true)
+    )
   );
+  const question = keepUserQuestion
+    ? normalizeAgentUserQuestion(explicitUserQuestion, '')
+    : null;
   if (!question) {
     return '';
   }

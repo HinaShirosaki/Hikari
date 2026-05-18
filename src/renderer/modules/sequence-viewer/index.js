@@ -86,8 +86,6 @@ export function initSequenceViewer(options = {}) {
     featureSearchQuery: '',
     featureSearchResults: [],
     isSearchingFeatures: false,
-    lastLibraryClickEntryId: '',
-    lastLibraryClickAt: 0,
     sequenceSelectionAnchor: null,
     sequenceSelectionFocus: null,
     sequenceCursorBase: null,

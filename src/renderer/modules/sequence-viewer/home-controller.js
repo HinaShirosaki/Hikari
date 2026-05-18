@@ -30,13 +30,45 @@ export function createSequenceViewerHomeController(config = {}) {
   const onLibraryEntryLoaded = typeof config?.onLibraryEntryLoaded === 'function'
     ? config.onLibraryEntryLoaded
     : () => {};
+  const libraryPreviewDelayMs = 320;
+  let libraryPreviewTimer = null;
 
-  function setHomeStatus(message, isError = false) {
-    if (!elements.homeStatusNote) {
+  function compactElementList(...items) {
+    const seen = new Set();
+    return items.filter((item) => {
+      if (!item || seen.has(item)) {
+        return false;
+      }
+      seen.add(item);
+      return true;
+    });
+  }
+
+  function getLibraryListElements() {
+    return compactElementList(elements.libraryList, elements.detailLibraryList);
+  }
+
+  function getLibrarySavedFilterButtons() {
+    return compactElementList(elements.libraryFilterSavedBtn, elements.detailLibraryFilterSavedBtn);
+  }
+
+  function getLibraryTemporaryFilterButtons() {
+    return compactElementList(elements.libraryFilterTemporaryBtn, elements.detailLibraryFilterTemporaryBtn);
+  }
+
+  function clearLibraryPreviewTimer() {
+    if (!libraryPreviewTimer) {
       return;
     }
-    elements.homeStatusNote.textContent = message;
-    elements.homeStatusNote.style.color = isError ? 'var(--danger)' : '';
+    globalThis?.clearTimeout?.(libraryPreviewTimer);
+    libraryPreviewTimer = null;
+  }
+
+  function setHomeStatus(message, isError = false) {
+    compactElementList(elements.homeStatusNote, elements.detailLibraryStatusNote).forEach((statusNode) => {
+      statusNode.textContent = message;
+      statusNode.style.color = isError ? 'var(--danger)' : '';
+    });
   }
 
   function setFeatureSearchStatus(message, isError = false) {
@@ -124,28 +156,28 @@ export function createSequenceViewerHomeController(config = {}) {
 
   function setLibraryFilter(status) {
     state.libraryFilter = status === libraryStatusTemporary ? libraryStatusTemporary : libraryStatusSaved;
-    if (elements.libraryFilterSavedBtn) {
-      elements.libraryFilterSavedBtn.classList.toggle(
+    getLibrarySavedFilterButtons().forEach((button) => {
+      button.classList.toggle(
         'sequence-viewer-library-switch-btn-active',
         state.libraryFilter === libraryStatusSaved
       );
-    }
-    if (elements.libraryFilterTemporaryBtn) {
-      elements.libraryFilterTemporaryBtn.classList.toggle(
+    });
+    getLibraryTemporaryFilterButtons().forEach((button) => {
+      button.classList.toggle(
         'sequence-viewer-library-switch-btn-active',
         state.libraryFilter === libraryStatusTemporary
       );
-    }
+    });
   }
 
   function syncHomeControlsState() {
     const hasStorage = hasStoragePath();
-    if (elements.libraryFilterSavedBtn) {
-      elements.libraryFilterSavedBtn.disabled = !hasStorage;
-    }
-    if (elements.libraryFilterTemporaryBtn) {
-      elements.libraryFilterTemporaryBtn.disabled = !hasStorage;
-    }
+    getLibrarySavedFilterButtons().forEach((button) => {
+      button.disabled = !hasStorage;
+    });
+    getLibraryTemporaryFilterButtons().forEach((button) => {
+      button.disabled = !hasStorage;
+    });
     if (elements.saveBtn) {
       elements.saveBtn.disabled = !getSelectedRecord()?.sequence?.length;
     }
@@ -308,18 +340,21 @@ export function createSequenceViewerHomeController(config = {}) {
   }
 
   function renderLibraryList() {
-    if (!elements.libraryList) {
+    const libraryLists = getLibraryListElements();
+    if (!libraryLists.length) {
       return;
     }
 
     const entries = Array.isArray(state.libraryEntries) ? state.libraryEntries : [];
     if (!entries.length) {
       const noun = state.libraryFilter === libraryStatusSaved ? 'saved' : 'unsaved';
-      elements.libraryList.innerHTML = `<p class="small-note">No ${noun} sequence entries.</p>`;
+      libraryLists.forEach((libraryList) => {
+        libraryList.innerHTML = `<p class="small-note">No ${noun} sequence entries.</p>`;
+      });
       return;
     }
 
-    elements.libraryList.innerHTML = entries
+    const html = entries
       .map((entry) => {
         const active = cleanText(entry.id, 200) === cleanText(state.selectedLibraryEntryId, 200);
         return `
@@ -334,6 +369,9 @@ export function createSequenceViewerHomeController(config = {}) {
         `;
       })
       .join('');
+    libraryLists.forEach((libraryList) => {
+      libraryList.innerHTML = html;
+    });
   }
 
   async function loadSelectedLibraryPreview() {
@@ -547,6 +585,7 @@ export function createSequenceViewerHomeController(config = {}) {
   }
 
   async function openLibraryEntryInDetail(entryId) {
+    clearLibraryPreviewTimer();
     const storagePath = getStoragePath();
     if (!storagePath) {
       setHomeStatus('Set Storage Folder Path in Settings before opening library entries.', true);
@@ -595,6 +634,42 @@ export function createSequenceViewerHomeController(config = {}) {
     } catch (error) {
       setHomeStatus(error?.message || 'Failed to open sequence entry.', true);
     }
+  }
+
+  function previewLibraryEntryFromList(entryId, options = {}) {
+    const resolvedEntryId = cleanText(entryId, 200);
+    if (!resolvedEntryId) {
+      return;
+    }
+    clearLibraryPreviewTimer();
+    const preview = async () => {
+      libraryPreviewTimer = null;
+      if (options.navigateHome === true) {
+        navigateToHome();
+      }
+      await setSelectedLibraryEntry(resolvedEntryId);
+    };
+
+    if (typeof globalThis?.setTimeout === 'function') {
+      libraryPreviewTimer = globalThis.setTimeout(() => {
+        void preview();
+      }, libraryPreviewDelayMs);
+      return;
+    }
+
+    void preview();
+  }
+
+  function openLibraryEntryFromList(entryId) {
+    const resolvedEntryId = cleanText(entryId, 200);
+    if (!resolvedEntryId) {
+      return;
+    }
+    clearLibraryPreviewTimer();
+    void (async () => {
+      await setSelectedLibraryEntry(resolvedEntryId);
+      await openLibraryEntryInDetail(resolvedEntryId);
+    })();
   }
 
   async function openSequenceFileInDetail(file) {
@@ -661,46 +736,51 @@ export function createSequenceViewerHomeController(config = {}) {
       }
     });
 
-    elements.libraryFilterSavedBtn?.addEventListener('click', () => {
-      setLibraryFilter(libraryStatusSaved);
-      void refreshLibraryEntries({ silent: true });
+    getLibrarySavedFilterButtons().forEach((button) => {
+      button.addEventListener('click', () => {
+        clearLibraryPreviewTimer();
+        setLibraryFilter(libraryStatusSaved);
+        void refreshLibraryEntries({ silent: true });
+      });
     });
 
-    elements.libraryFilterTemporaryBtn?.addEventListener('click', () => {
-      setLibraryFilter(libraryStatusTemporary);
-      void refreshLibraryEntries({ silent: true });
+    getLibraryTemporaryFilterButtons().forEach((button) => {
+      button.addEventListener('click', () => {
+        clearLibraryPreviewTimer();
+        setLibraryFilter(libraryStatusTemporary);
+        void refreshLibraryEntries({ silent: true });
+      });
     });
 
-    elements.libraryList?.addEventListener('click', (event) => {
-      const entryId = resolveLibraryEntryIdFromEvent(event);
-      if (!entryId) {
+    const bindLibraryList = (libraryList, options = {}) => {
+      if (!libraryList) {
         return;
       }
-      if (Number.isFinite(Number(event?.detail)) && Number(event.detail) > 1) {
-        return;
-      }
+      libraryList.addEventListener('click', (event) => {
+        const entryId = resolveLibraryEntryIdFromEvent(event);
+        if (!entryId) {
+          return;
+        }
+        if (Number.isFinite(Number(event?.detail)) && Number(event.detail) > 1) {
+          return;
+        }
 
-      const now = Date.now();
-      const previousEntryId = cleanText(state.lastLibraryClickEntryId, 200);
-      const elapsedMs = now - (Number(state.lastLibraryClickAt) || 0);
-      const isDoubleActivate = previousEntryId === entryId && elapsedMs >= 0 && elapsedMs <= 450;
-      state.lastLibraryClickEntryId = entryId;
-      state.lastLibraryClickAt = now;
+        previewLibraryEntryFromList(entryId, {
+          navigateHome: options.navigateHome === true
+        });
+      });
 
-      void setSelectedLibraryEntry(entryId);
-      if (isDoubleActivate) {
-        void openLibraryEntryInDetail(entryId);
-      }
-    });
+      libraryList.addEventListener('dblclick', (event) => {
+        const entryId = resolveLibraryEntryIdFromEvent(event);
+        if (!entryId) {
+          return;
+        }
+        openLibraryEntryFromList(entryId);
+      });
+    };
 
-    elements.libraryList?.addEventListener('dblclick', (event) => {
-      const entryId = resolveLibraryEntryIdFromEvent(event);
-      if (!entryId) {
-        return;
-      }
-      void setSelectedLibraryEntry(entryId);
-      void openLibraryEntryInDetail(entryId);
-    });
+    bindLibraryList(elements.libraryList);
+    bindLibraryList(elements.detailLibraryList, { navigateHome: true });
 
     elements.featureSearchBtn?.addEventListener('click', () => {
       void runFeatureSearch();

@@ -66,7 +66,6 @@
         <section class="home-tile home-tile-contribution" aria-labelledby="dashboard-contribution-heading">
           <div class="home-tile-head">
             <h2 id="dashboard-contribution-heading">Contribution Heatmap</h2>
-            <p id="dashboard-contribution-summary" class="small-note">No activity logged yet.</p>
           </div>
           <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
             <div id="dashboard-contribution-months" class="home-contribution-months" aria-hidden="true"></div>
@@ -126,7 +125,6 @@
                 </div>
               </div>
             </label>
-            <div id="dashboard-quick-log-recent-list" class="home-quick-log-recent-list" aria-label="Recent quick logs"></div>
           </div>
         </section>
 
@@ -543,35 +541,37 @@
 <!-- SOURCE: ui/html/views/biology-notebook-view.html -->
 <section id="biology-notebook-view" class="view">
       <div class="biology-notebook-layout left-rail-template">
-        <aside class="biology-notebook-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="biology-notebook-rail-head">
-            <h2>Biology Notebook</h2>
-            <p class="small-note">Projects and notebook pages</p>
-          </div>
+        <aside class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="left-rail-template__pinned">
+            <div class="biology-notebook-rail-head">
+              <h2>Biology Notebook</h2>
+              <p class="small-note">Projects and notebook pages</p>
+            </div>
 
-          <div class="stack-form biology-notebook-select-stack">
-            <label>
-              Select Project
-              <select id="biology-notebook-project-select">
-                <option value="">Select project</option>
-              </select>
-            </label>
-            <label>
-              Search Protocol
-              <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
-            </label>
-            <label>
-              Select Protocol
-              <select id="biology-notebook-protocol-select">
-                <option value="">Select protocol</option>
-              </select>
-            </label>
-          </div>
+            <div class="stack-form biology-notebook-select-stack">
+              <label>
+                Select Project
+                <select id="biology-notebook-project-select">
+                  <option value="">Select project</option>
+                </select>
+              </label>
+              <label>
+                Search Protocol
+                <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
+              </label>
+              <label>
+                Select Protocol
+                <select id="biology-notebook-protocol-select">
+                  <option value="">Select protocol</option>
+                </select>
+              </label>
+            </div>
 
-          <div class="biology-notebook-page-list-head">
-            <h3>Notebook Pages</h3>
+            <div class="biology-notebook-page-list-head">
+              <h3>Notebook Pages</h3>
+            </div>
           </div>
-          <div id="biology-notebook-entry-list" class="biology-notebook-page-list"></div>
+          <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
         </aside>
 
         <div class="biology-notebook-viewer-column left-rail-template__main">
@@ -968,7 +968,7 @@
           <div class="form-actions">
             <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
-              <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn">Edit Concentration</button>
+              <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Edit Conc.</button>
             </div>
             <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
             <button type="button" id="assay-serial-dilution-btn" class="ghost-btn">Serial Dilution</button>
@@ -981,7 +981,6 @@
       <div class="assay-results-layout assay-mode-results-panel left-rail-template" hidden>
         <div class="assay-results-sheet-panel assay-results-controls-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="assay-results-control-section">
-            <p class="small-note">Select an assay plate, paste values into the table on the right, then save and analyze.</p>
             <label>
               Assay Plate
               <select id="assay-results-assay-select">
@@ -989,7 +988,6 @@
               </select>
             </label>
             <div class="form-actions assay-results-actions">
-              <button type="button" id="assay-results-load-btn" class="ghost-btn">Load Plate</button>
               <button type="button" id="assay-attach-result-file-btn" class="ghost-btn">Attach Result File</button>
               <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
               <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
@@ -1048,15 +1046,196 @@
                 <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
               </div>
               <div id="assay-analysis-selection-status" class="small-note"></div>
-              <p class="small-note assay-analysis-help">
-                Drag-select replicate wells in the result table, then add as row or column group. Manual format also works: <code>Group: item1,item2</code>; ranges: <code>A-C</code> or <code>1-3</code>.
-              </p>
             </div>
             <div class="form-actions assay-results-actions">
               <button type="button" id="assay-analyze-results-btn" class="ghost-btn">Analyze Results</button>
             </div>
             <div id="assay-analysis-summary" class="small-note"></div>
           </div>
+
+          <details id="assay-chart-style-panel" class="assay-results-control-section assay-chart-style">
+            <summary class="assay-chart-style-summary">Chart Style</summary>
+            <div class="assay-chart-style-body">
+              <fieldset class="assay-chart-style-group">
+                <legend>Axes</legend>
+                <label>
+                  X column
+                  <select id="assay-chart-x-column"><option value="auto">Auto</option></select>
+                </label>
+                <label>
+                  Y column
+                  <select id="assay-chart-y-column"><option value="auto">Auto</option></select>
+                </label>
+                <label>
+                  Series column
+                  <select id="assay-chart-series-column"><option value="auto">Auto</option></select>
+                </label>
+              </fieldset>
+
+              <fieldset class="assay-chart-style-group">
+                <legend>Scale &amp; range</legend>
+                <label>
+                  X scale
+                  <select id="assay-chart-x-scale">
+                    <option value="auto">Auto</option>
+                    <option value="linear">Linear</option>
+                    <option value="log">Log</option>
+                    <option value="ordinal">Ordinal</option>
+                  </select>
+                </label>
+                <label>
+                  Y scale
+                  <select id="assay-chart-y-scale">
+                    <option value="linear">Linear</option>
+                    <option value="log">Log</option>
+                  </select>
+                </label>
+                <label class="assay-chart-style-checkbox">
+                  <input type="checkbox" id="assay-chart-x-range-auto" checked />
+                  X auto range
+                </label>
+                <div class="assay-chart-style-row">
+                  <label>
+                    X min
+                    <input type="number" step="any" id="assay-chart-x-min" />
+                  </label>
+                  <label>
+                    X max
+                    <input type="number" step="any" id="assay-chart-x-max" />
+                  </label>
+                </div>
+                <label class="assay-chart-style-checkbox">
+                  <input type="checkbox" id="assay-chart-y-range-auto" checked />
+                  Y auto range
+                </label>
+                <div class="assay-chart-style-row">
+                  <label>
+                    Y min
+                    <input type="number" step="any" id="assay-chart-y-min" />
+                  </label>
+                  <label>
+                    Y max
+                    <input type="number" step="any" id="assay-chart-y-max" />
+                  </label>
+                </div>
+              </fieldset>
+
+              <fieldset class="assay-chart-style-group">
+                <legend>Points</legend>
+                <label>
+                  Shape
+                  <select id="assay-chart-point-shape">
+                    <option value="circle">Circle</option>
+                    <option value="square">Square</option>
+                    <option value="triangle">Triangle</option>
+                    <option value="diamond">Diamond</option>
+                    <option value="cross">Cross</option>
+                  </select>
+                </label>
+                <label>
+                  Size
+                  <input type="range" id="assay-chart-point-size" min="1" max="20" step="0.5" />
+                </label>
+              </fieldset>
+
+              <fieldset class="assay-chart-style-group">
+                <legend>Lines</legend>
+                <label>
+                  Style
+                  <select id="assay-chart-line-style">
+                    <option value="solid">Solid</option>
+                    <option value="dashed">Dashed</option>
+                    <option value="dotted">Dotted</option>
+                  </select>
+                </label>
+                <label>
+                  Curve
+                  <select id="assay-chart-curve">
+                    <option value="curveMonotoneX">Monotone</option>
+                    <option value="curveLinear">Linear</option>
+                    <option value="curveStep">Step</option>
+                  </select>
+                </label>
+                <label>
+                  Width
+                  <input type="range" id="assay-chart-line-width" min="0.5" max="8" step="0.1" />
+                </label>
+              </fieldset>
+
+              <fieldset class="assay-chart-style-group">
+                <legend>Frame</legend>
+                <label>
+                  Style
+                  <select id="assay-chart-frame-style">
+                    <option value="box">Box</option>
+                    <option value="l-shape">L-shape</option>
+                    <option value="none">None</option>
+                  </select>
+                </label>
+                <label>
+                  Stroke
+                  <input type="color" id="assay-chart-frame-stroke" />
+                </label>
+                <label>
+                  Stroke width
+                  <input type="range" id="assay-chart-frame-stroke-width" min="0" max="6" step="0.1" />
+                </label>
+                <label>
+                  Corner radius
+                  <input type="range" id="assay-chart-frame-corner-radius" min="0" max="40" step="1" />
+                </label>
+                <label>
+                  Background
+                  <input type="color" id="assay-chart-background-color" />
+                </label>
+              </fieldset>
+
+              <fieldset class="assay-chart-style-group">
+                <legend>Size</legend>
+                <label class="assay-chart-style-checkbox">
+                  <input type="checkbox" id="assay-chart-size-auto" checked />
+                  Auto size
+                </label>
+                <label>
+                  Width (px)
+                  <input type="range" id="assay-chart-frame-width" min="320" max="2000" step="10" />
+                </label>
+                <label>
+                  Height (px)
+                  <input type="range" id="assay-chart-frame-height" min="180" max="1200" step="10" />
+                </label>
+              </fieldset>
+
+              <fieldset class="assay-chart-style-group">
+                <legend>Grid lines</legend>
+                <label class="assay-chart-style-checkbox">
+                  <input type="checkbox" id="assay-chart-grid-vertical" checked />
+                  Vertical lines
+                </label>
+                <label class="assay-chart-style-checkbox">
+                  <input type="checkbox" id="assay-chart-grid-horizontal" checked />
+                  Horizontal lines
+                </label>
+                <label>
+                  Color
+                  <input type="color" id="assay-chart-grid-color" />
+                </label>
+                <label>
+                  Width
+                  <input type="range" id="assay-chart-grid-stroke-width" min="0" max="6" step="0.1" />
+                </label>
+              </fieldset>
+
+              <fieldset class="assay-chart-style-group">
+                <legend>Series colors</legend>
+                <div id="assay-chart-series-colors" class="assay-chart-style-series"></div>
+              </fieldset>
+
+              <div class="form-actions assay-chart-style-actions">
+                <button type="button" id="assay-chart-style-reset-btn" class="ghost-btn">Reset to defaults</button>
+              </div>
+            </div>
+          </details>
         </div>
 
         <div class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main">
@@ -1112,6 +1291,19 @@
 <section id="gel-view" class="view">
       <div class="gel-workspace left-rail-template">
         <div class="gel-setup-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
+          <details id="gel-browser-panel" class="gel-browser-panel">
+            <summary class="gel-browser-summary">
+              <span>Existing Gels</span>
+              <span id="gel-browser-count" class="small-note">0</span>
+            </summary>
+            <div class="gel-browser-body">
+              <label>
+                Search Gels
+                <input id="gel-search" placeholder="Search saved gels" />
+              </label>
+              <div id="gel-list" class="gel-browser-list"></div>
+            </div>
+          </details>
           <h3>Setup</h3>
           <form id="gel-form" class="form-grid">
             <input type="hidden" id="gel-id" />
@@ -1180,6 +1372,10 @@
                   <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
                   <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
                   <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
+                  <button type="button" id="gel-rotate-left-btn" class="ghost-btn" disabled title="Rotate 90° counterclockwise">↺ Rotate</button>
+                  <button type="button" id="gel-rotate-right-btn" class="ghost-btn" disabled title="Rotate 90° clockwise">Rotate ↻</button>
+                  <button type="button" id="gel-process-image-btn" class="ghost-btn">Process Image</button>
+                  <button type="button" id="gel-view-original-btn" class="ghost-btn" aria-pressed="true">View Original</button>
                   <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
                   <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
                   <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
@@ -1225,10 +1421,11 @@
                     <li id="gel-step-right">2. Click right gel border</li>
                     <li id="gel-step-dividers">3. Click lane dividers</li>
                     <li id="gel-step-ladder">4. Click ladder lane</li>
-                    <li id="gel-step-ladder-mw">5. Click ladder band and assign MW</li>
+                    <li id="gel-step-ladder-mw">5. Click ladder band (uses MW input) or right-click to type MW</li>
                     <li id="gel-step-band-top">6. Click top line of target band</li>
                     <li id="gel-step-band-bottom">7. Click bottom line of target band</li>
-                    <li id="gel-step-bands">8. (Optional) Click bands to add</li>
+                    <li id="gel-step-quantify">8. Review per-cell intensities</li>
+                    <li id="gel-step-bands">9. (Optional) Click bands to add</li>
                   </ol>
                   <div class="form-actions">
                     <button type="button" id="gel-manual-prev-btn" class="ghost-btn">Previous Step</button>
@@ -1245,19 +1442,21 @@
             </div>
 
             <div class="gel-secondary-panels">
+              <section id="gel-cell-table-panel" class="panel gel-cell-table-panel" hidden>
+                <header class="gel-cell-table-header">
+                  <h3>Per-Cell Band Intensity</h3>
+                  <label class="small-note gel-cell-snr-label">
+                    SNR threshold:
+                    <input type="number" id="gel-cell-snr-threshold" min="0" step="0.1" value="3" />
+                  </label>
+                </header>
+                <div id="gel-cell-table-summary" class="small-note"></div>
+                <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
+              </section>
               <div class="panel gel-report-panel">
                 <h3>Analysis Report</h3>
                 <div id="gel-report-summary" class="cards"></div>
                 <pre id="gel-report-json" class="gel-report-json"></pre>
-              </div>
-
-              <div class="panel gel-library-panel">
-                <h3>Saved Gel Analyses</h3>
-                <label>
-                  Search
-                  <input id="gel-search" placeholder="Name, type, project, notebook..." />
-                </label>
-                <div id="gel-list" class="cards"></div>
               </div>
             </div>
           </div>
@@ -1923,22 +2122,20 @@
 <!-- SOURCE: ui/html/views/agent-view.html -->
 <section id="agent-view" class="view">
       <div class="agent-chat-layout left-rail-template">
-        <aside class="agent-session-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="agent-session-panel">
-            <div class="agent-session-toolbar">
-              <div>
-                <h3>Saved Chats</h3>
-                <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
-              </div>
-              <button type="button" id="agent-new-chat-btn" class="ghost-btn agent-new-chat-btn" aria-label="New Chat" title="New Chat">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-                  <path d="M5 5.75A2.75 2.75 0 0 1 7.75 3h8.5A2.75 2.75 0 0 1 19 5.75v5.5A2.75 2.75 0 0 1 16.25 14H12l-4.15 3.2A.8.8 0 0 1 6.55 16.58V14A2.75 2.75 0 0 1 5 11.25v-5.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
-                  <path d="M12 6.75v3.5M10.25 8.5h3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-              </button>
+        <aside class="agent-session-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="agent-session-toolbar left-rail-template__pinned">
+            <div class="agent-session-toolbar-copy">
+              <h3>Saved Chats</h3>
+              <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
             </div>
-            <div id="agent-session-list" class="agent-session-list" aria-live="polite"></div>
+            <button type="button" id="agent-new-chat-btn" class="ghost-btn agent-new-chat-btn" aria-label="New Chat" title="New Chat">
+              <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                <path d="M5 5.75A2.75 2.75 0 0 1 7.75 3h8.5A2.75 2.75 0 0 1 19 5.75v5.5A2.75 2.75 0 0 1 16.25 14H12l-4.15 3.2A.8.8 0 0 1 6.55 16.58V14A2.75 2.75 0 0 1 5 11.25v-5.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
+                <path d="M12 6.75v3.5M10.25 8.5h3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </button>
           </div>
+          <div id="agent-session-list" class="agent-session-list left-rail-template__scroll" aria-live="polite"></div>
         </aside>
 
         <div class="panel agent-chat-panel left-rail-template__main">
@@ -2856,6 +3053,26 @@
           </div>
         </div>
 
+        <div class="sequence-viewer-detail-layout left-rail-template">
+          <aside class="sequence-viewer-detail-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+            <div class="left-rail-template__stack">
+              <section class="sequence-viewer-library-card left-rail-template__section">
+                <div class="result-card-head">
+                  <h4>Sequences</h4>
+                </div>
+                <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
+                  <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
+                  <button id="sequence-viewer-detail-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
+                </div>
+                <div id="sequence-viewer-detail-library-list" class="sequence-viewer-library-list">
+                  <p class="small-note">No sequence entries found.</p>
+                </div>
+                <span id="sequence-viewer-detail-library-status" class="small-note"></span>
+              </section>
+            </div>
+          </aside>
+
+          <div class="sequence-viewer-detail-main left-rail-template__main">
         <div class="sequence-viewer-detail-topbar">
           <button id="sequence-viewer-back-btn" type="button" class="ghost-btn">Back to Library</button>
           <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
@@ -2868,7 +3085,7 @@
         </div>
 
         <form id="sequence-viewer-form" class="stack-form sequence-viewer-controls" autocomplete="off">
-          <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Sequence viewer input mode">
+          <div class="sequence-viewer-mode-switch sequence-viewer-detail-input-switch" role="tablist" aria-label="Sequence viewer input mode" hidden aria-hidden="true">
             <button id="sequence-viewer-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Paste Text</button>
             <button id="sequence-viewer-mode-file" class="sequence-viewer-mode-btn" type="button">Load File</button>
           </div>
@@ -2938,7 +3155,7 @@
             <span id="sequence-viewer-status" class="small-note">Idle</span>
           </div>
 
-          <label>
+          <label class="sequence-viewer-hidden-control" hidden aria-hidden="true">
             Record
             <select id="sequence-viewer-record-select">
               <option value="">No records loaded</option>
@@ -2947,10 +3164,7 @@
         </form>
 
         <div class="sequence-viewer-results">
-          <section class="result-card sequence-viewer-sequence-card">
-            <div class="result-card-head">
-              <h4>Sequence (Dual Strand)</h4>
-            </div>
+          <section class="sequence-viewer-sequence-card">
             <div id="sequence-viewer-sequence-host" class="sequence-viewer-sequence-host">
               <p class="small-note">Load sequence data to begin.</p>
             </div>
@@ -2967,10 +3181,7 @@
             </div>
           </section>
 
-          <section class="result-card">
-            <div class="result-card-head">
-              <h4>Summary</h4>
-            </div>
+          <div class="sequence-viewer-hidden-summary" hidden aria-hidden="true">
             <div class="sequence-viewer-stats">
               <div><strong>Format:</strong> <span id="sequence-viewer-stat-format">-</span></div>
               <div><strong>Length:</strong> <span id="sequence-viewer-stat-length">0</span> bp</div>
@@ -2984,7 +3195,7 @@
             <div id="sequence-viewer-messages" class="calc-output sequence-viewer-message-box">
               <p class="small-note">No parser warnings.</p>
             </div>
-          </section>
+          </div>
         </div>
 
         <div id="sequence-viewer-feature-context-menu" class="sequence-viewer-context-menu" hidden></div>
@@ -3111,6 +3322,8 @@
               <button id="sequence-viewer-backbone-dialog-apply-btn" type="button" class="primary-btn">Apply Selection</button>
               <button id="sequence-viewer-backbone-dialog-cancel-btn" type="button" class="ghost-btn">Cancel</button>
             </div>
+          </div>
+        </div>
           </div>
         </div>
       </div>

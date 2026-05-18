@@ -39,7 +39,8 @@ const STORAGE = Object.freeze({
   DISCOVER_PAPERS: 'storage:discover-papers',
   OPEN_FILE: 'storage:open-file',
   READ_FILE_BASE64: 'storage:read-file-base64',
-  APPEND_NOTEBOOK_PAGE_LOG: 'storage:append-notebook-page-log'
+  APPEND_NOTEBOOK_PAGE_LOG: 'storage:append-notebook-page-log',
+  PROTOCOL_RECORD_SAVED: 'storage:protocol-record-saved'
 });
 
 const SYSTEM = Object.freeze({

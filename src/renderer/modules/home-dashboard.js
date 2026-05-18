@@ -36,7 +36,6 @@ export function initHomeDashboard({
   };
 
   const contributionElements = {
-    summary: document.getElementById('dashboard-contribution-summary'),
     monthLabels: document.getElementById('dashboard-contribution-months'),
     grid: document.getElementById('dashboard-contribution-grid')
   };
@@ -56,7 +55,6 @@ export function initHomeDashboard({
     quickLogStatus: document.getElementById('dashboard-quick-log-status'),
     quickLogSaveBtn: document.getElementById('dashboard-quick-log-save-btn'),
     quickLogAgentBtn: document.getElementById('dashboard-quick-log-agent-btn'),
-    quickLogRecentList: document.getElementById('dashboard-quick-log-recent-list'),
     quickActionButtons: [...document.querySelectorAll('[data-dashboard-action]')]
   };
 
@@ -91,7 +89,6 @@ export function initHomeDashboard({
     quickLogElements.quickLogStatus,
     quickLogElements.quickLogSaveBtn,
     quickLogElements.quickLogAgentBtn,
-    quickLogElements.quickLogRecentList,
     ...Object.values(notebookElements),
     ...Object.values(timerElements)
   ];

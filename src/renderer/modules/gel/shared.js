@@ -35,7 +35,8 @@ export function createEmptyManualOverrides() {
       dividers: [],
       dividerDone: false,
       bandTop: null,
-      bandBottom: null
+      bandBottom: null,
+      quantifyConfirmed: false
     },
     addedBands: [],
     ladderLane: null,
@@ -80,7 +81,8 @@ export function normalizeManualOverrides(raw) {
       .filter((value, index, all) => index === 0 || value !== all[index - 1]),
     dividerDone: Boolean(rawSegmentation.dividerDone),
     bandTop: Number.isFinite(bandTop) ? Math.max(0, Math.floor(bandTop)) : null,
-    bandBottom: Number.isFinite(bandBottom) ? Math.max(0, Math.floor(bandBottom)) : null
+    bandBottom: Number.isFinite(bandBottom) ? Math.max(0, Math.floor(bandBottom)) : null,
+    quantifyConfirmed: Boolean(rawSegmentation.quantifyConfirmed)
   };
 
   normalized.addedBands = (Array.isArray(input.addedBands) ? input.addedBands : [])

@@ -138,6 +138,10 @@ function registerAgentChatHandler({
     try {
       await sessionService.ensureSession();
       controllerRuntime.chatSessionId = cleanText(sessionService.getSession()?.id, 120);
+      controllerRuntime.codexSessionId = cleanText(
+        sessionService.getSession()?.codex_session_id || sessionService.getSession()?.codexSessionId,
+        240
+      );
       observability.recordLifecycleEvent(lifecycleRecorder, {
         stage: 'request_received',
         status: 'ok',

@@ -136,6 +136,24 @@ function normalizeAgentUserQuestion(value, fallbackQuestion = '') {
   };
 }
 
+function extractCodexSessionId(value = {}) {
+  const source = value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  const meta = source.meta && typeof source.meta === 'object' && !Array.isArray(source.meta) ? source.meta : {};
+  const codexAgent = source.codex_agent && typeof source.codex_agent === 'object' && !Array.isArray(source.codex_agent)
+    ? source.codex_agent
+    : (meta.codex_agent && typeof meta.codex_agent === 'object' && !Array.isArray(meta.codex_agent) ? meta.codex_agent : {});
+  return cleanText(
+    source.codex_session_id
+      || source.codexSessionId
+      || source.codexSessionID
+      || meta.codex_session_id
+      || meta.codexSessionId
+      || codexAgent.codex_session_id
+      || codexAgent.codexSessionId,
+    240
+  );
+}
+
 // Build a concise assistant-facing summary from inventory lookup results.
 function summarizeInventoryLookup(lookup) {
   const payload = lookup && typeof lookup === 'object' ? lookup : {};
@@ -261,7 +279,10 @@ function summarizeCodexAgent(codexAgent) {
   if (!status) {
     return '';
   }
-  const userQuestion = normalizeAgentUserQuestion(payload.user_question || payload.userQuestion, payload.answer);
+  const explicitUserQuestion = payload.user_question || payload.userQuestion;
+  const userQuestion = explicitUserQuestion
+    ? normalizeAgentUserQuestion(explicitUserQuestion, '')
+    : null;
   if (status === 'needs_more_info') {
     if (userQuestion?.question) {
       return userQuestion.question;
@@ -369,20 +390,30 @@ function buildAssistantMetaFromResult(result, requestText = '') {
   const notebookPayload = protocolWorkflow?.notebook && typeof protocolWorkflow.notebook === 'object'
     ? protocolWorkflow.notebook
     : (payload.notebookDraft && typeof payload.notebookDraft === 'object' ? payload.notebookDraft : null);
+  const explicitUserQuestion = payload.user_question
+    || payload.userQuestion
+    || payload.codex_agent?.user_question
+    || payload.codex_agent?.userQuestion;
+  const codexStatus = cleanText(payload.codex_agent?.status, 40);
+  const keepUserQuestion = Boolean(
+    explicitUserQuestion
+    && (
+      codexStatus === 'needs_more_info'
+      || codexStatus === 'needs_user_answer'
+      || (!payload.codex_agent && payload.parser?.needs_clarification === true)
+    )
+  );
   return {
     parser: payload.parser && typeof payload.parser === 'object' ? cloneJson(payload.parser, {}) : {},
+    codex_session_id: extractCodexSessionId(payload),
     protocol_to_notebook: protocolWorkflow ? cloneJson(protocolWorkflow, null) : null,
     notebook_draft: notebookDraftWorkflow ? cloneJson(notebookDraftWorkflow, null) : null,
     codex_agent: payload.codex_agent && typeof payload.codex_agent === 'object'
       ? cloneJson(payload.codex_agent, null)
       : null,
-    user_question: normalizeAgentUserQuestion(
-      payload.user_question
-        || payload.userQuestion
-        || payload.codex_agent?.user_question
-        || payload.codex_agent?.userQuestion,
-      payload.codex_agent?.answer
-    ),
+    user_question: keepUserQuestion
+      ? normalizeAgentUserQuestion(explicitUserQuestion, '')
+      : null,
     purchase_recommendation: payload.purchase_recommendation && typeof payload.purchase_recommendation === 'object'
       ? cloneJson(payload.purchase_recommendation, null)
       : null,
@@ -577,6 +608,7 @@ function normalizeSessionSummary(rawSummary = {}) {
     log_file: cleanText(source.log_file || source.logFile, 240) || `${sanitizeFileName(id)}.log`,
     created_at: cleanText(source.created_at || source.createdAt, 80),
     updated_at: cleanText(source.updated_at || source.updatedAt, 80),
+    codex_session_id: extractCodexSessionId(source),
     status: cleanText(source.status, 40) || 'ready',
     message_count: Math.max(0, Number(source.message_count) || 0),
     request_count: Math.max(0, Number(source.request_count) || 0),
@@ -703,6 +735,7 @@ function applyEntryToSummary(summary, entry) {
     next.project_id = cleanText(row.project_id || next.project_id, 120) || next.project_id;
     next.project_name = cleanText(row.project_name || next.project_name, 220) || next.project_name;
     next.title = cleanText(row.title, 220) || next.title;
+    next.codex_session_id = extractCodexSessionId(row) || next.codex_session_id;
     return next;
   }
 
@@ -725,6 +758,7 @@ function applyEntryToSummary(summary, entry) {
     next.last_message_preview = cleanText(row.text, 320);
     next.status = 'active';
     next.last_error = '';
+    next.codex_session_id = extractCodexSessionId(row) || next.codex_session_id;
     return next;
   }
 
@@ -740,6 +774,7 @@ function applyEntryToSummary(summary, entry) {
   // Result events record the latest response type and clear stale errors.
   if (row.type === CHAT_LOG_EVENT_TYPES.AGENT_CHAT_RESULT) {
     next.response_type = cleanText(row.response_type || row.responseType, 80);
+    next.codex_session_id = extractCodexSessionId(row) || next.codex_session_id;
     next.last_error = '';
     return next;
   }
@@ -989,6 +1024,7 @@ function createAgentChatLogRuntime(deps = {}) {
       title,
       project_id: projectId,
       project_name: projectName,
+      codex_session_id: input.codex_session_id || input.codexSessionId,
       log_file: `${sanitizeFileName(sessionId)}.log`,
       created_at: timestamp,
       updated_at: timestamp,

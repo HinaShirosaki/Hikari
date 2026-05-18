@@ -2,6 +2,7 @@
 
 const {
   buildCommonLookupInputSchema,
+  buildReadOnlyToolAnnotations,
   compactObject,
   ensureObject,
   normalizeLookupQuery,
@@ -15,6 +16,7 @@ const {
 const INVENTORY_LOOKUP_MCP_TOOL = Object.freeze({
   name: 'inventory_lookup',
   description: 'Look up local Hikari inventory items, including chemicals, personal containers, and samples.',
+  annotations: buildReadOnlyToolAnnotations('Inventory lookup'),
   inputSchema: buildCommonLookupInputSchema({
     inventory_search: {
       type: 'object',

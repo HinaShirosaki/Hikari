@@ -31,9 +31,11 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     persist,
     preprocessedCache: null,
     safeText,
+    laneProfileHoverY: null,
     selectedLaneProfileLane: null,
     selectedViewerTool: '',
-    state
+    state,
+    viewerMode: 'original'
   };
 
   function setStatus(message) {
@@ -133,7 +135,10 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   elements.gelStartCropBtn?.addEventListener('click', cropController.onCropAction);
   elements.gelCancelCropBtn?.addEventListener('click', cropController.onCancelCrop);
   elements.gelResetCropBtn?.addEventListener('click', cropController.onResetCrop);
+  elements.gelRotateLeftBtn?.addEventListener('click', cropController.onRotateLeft);
+  elements.gelRotateRightBtn?.addEventListener('click', cropController.onRotateRight);
   elements.gelCanvas?.addEventListener('click', manualWorkflow.onCanvasClick);
+  elements.gelCanvas?.addEventListener('contextmenu', manualWorkflow.onCanvasContextMenu);
   elements.gelCancelBtn?.addEventListener('click', recordsManager.resetForm);
   elements.gelExportJsonBtn?.addEventListener('click', recordsManager.onExportJson);
   elements.gelExportCsvBtn?.addEventListener('click', recordsManager.onExportCsv);
@@ -151,13 +156,51 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   elements.gelManualNextBtn?.addEventListener('click', manualWorkflow.onManualNextStep);
   elements.gelManualResetBtn?.addEventListener('click', manualWorkflow.onManualResetSteps);
   elements.gelAutoDetectLanesBtn?.addEventListener('click', manualWorkflow.onAutoDetectLanes);
+  elements.gelCellSnrThresholdInput?.addEventListener('input', () => {
+    rendering.renderCellTable();
+    rendering.renderCanvas();
+  });
+  function updateViewerModeButtons() {
+    const isProcessed = runtime.viewerMode === 'processed';
+    if (elements.gelProcessImageBtn) {
+      elements.gelProcessImageBtn.setAttribute('aria-pressed', String(isProcessed));
+      elements.gelProcessImageBtn.classList.toggle('is-active', isProcessed);
+    }
+    if (elements.gelViewOriginalBtn) {
+      elements.gelViewOriginalBtn.setAttribute('aria-pressed', String(!isProcessed));
+      elements.gelViewOriginalBtn.classList.toggle('is-active', !isProcessed);
+    }
+  }
+  elements.gelProcessImageBtn?.addEventListener('click', () => {
+    if (!runtime.currentImage) {
+      setStatus('Load a gel image before processing.');
+      return;
+    }
+    runtime.viewerMode = 'processed';
+    updateViewerModeButtons();
+    rendering.renderCanvas();
+    setStatus('Showing processed image (denoise + contrast applied).');
+  });
+  elements.gelViewOriginalBtn?.addEventListener('click', () => {
+    runtime.viewerMode = 'original';
+    updateViewerModeButtons();
+    rendering.renderCanvas();
+    setStatus('Showing original gel image.');
+  });
+  updateViewerModeButtons();
   elements.gelLaneProfileSelect?.addEventListener('change', (event) => {
     const nextLane = Number(event?.target?.value);
     runtime.selectedLaneProfileLane = Number.isFinite(nextLane) && nextLane > 0
       ? Math.floor(nextLane)
       : null;
+    runtime.laneProfileHoverY = null;
     rendering.renderLaneProfile();
+    rendering.renderCanvas();
   });
+  elements.gelLaneProfileChart?.addEventListener('mousemove', rendering.onLaneProfileChartMouseMove);
+  elements.gelLaneProfileChart?.addEventListener('mouseleave', rendering.onLaneProfileChartMouseLeave);
+  elements.gelCanvas?.addEventListener('mousemove', rendering.onCanvasHoverMove);
+  elements.gelCanvas?.addEventListener('mouseleave', rendering.onCanvasHoverLeave);
 
   function render() {
     recordsManager.ensureState();

@@ -70,7 +70,7 @@ export function createCropController({ runtime, elements, deps }) {
       movable: true,
       zoomable: true,
       scalable: false,
-      rotatable: false,
+      rotatable: true,
       minContainerWidth: runtime.cropDisplaySize?.width || 200,
       minContainerHeight: runtime.cropDisplaySize?.height || 200
     });
@@ -92,6 +92,29 @@ export function createCropController({ runtime, elements, deps }) {
     if (elements.gelResetCropBtn) {
       elements.gelResetCropBtn.disabled = !runtime.originalImage;
     }
+    if (elements.gelRotateLeftBtn) {
+      elements.gelRotateLeftBtn.disabled = !isCropping;
+    }
+    if (elements.gelRotateRightBtn) {
+      elements.gelRotateRightBtn.disabled = !isCropping;
+    }
+  }
+
+  function rotateBy(degrees) {
+    if (!runtime.cropperActive || !runtime.cropperInstance) {
+      deps.setStatus('Start crop mode first to rotate.');
+      return;
+    }
+    runtime.cropperInstance.rotate(degrees);
+    deps.setStatus(`Rotated ${degrees > 0 ? 'clockwise' : 'counterclockwise'} ${Math.abs(degrees)}°. Adjust selection then Apply Crop.`);
+  }
+
+  function onRotateLeft() {
+    rotateBy(-90);
+  }
+
+  function onRotateRight() {
+    rotateBy(90);
   }
 
   function leaveCropMode() {
@@ -194,6 +217,8 @@ export function createCropController({ runtime, elements, deps }) {
     onCancelCrop,
     onCropAction,
     onResetCrop,
+    onRotateLeft,
+    onRotateRight,
     onStartCrop,
     setCropUiState
   };

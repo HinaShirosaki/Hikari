@@ -121,6 +121,21 @@ export function createPapersPdfViewer(elements = {}) {
     return getDocumentRef()?.getSelection?.() || getWindowRef()?.getSelection?.() || null;
   }
 
+  function getElementLayoutWidth(element) {
+    if (!element) {
+      return 0;
+    }
+    const clientWidth = Number(element.clientWidth) || 0;
+    if (clientWidth > 0) {
+      return clientWidth;
+    }
+    const rectWidth = Number(element.getBoundingClientRect?.().width) || 0;
+    if (rectWidth > 0) {
+      return rectWidth;
+    }
+    return Number(element.offsetWidth) || 0;
+  }
+
   function clearSelection() {
     try {
       getSelectionRef()?.removeAllRanges?.();
@@ -178,7 +193,12 @@ export function createPapersPdfViewer(elements = {}) {
       : null;
     const horizontalPadding = (Number.parseFloat(computedStyle?.paddingLeft || '0') || 0)
       + (Number.parseFloat(computedStyle?.paddingRight || '0') || 0);
-    const viewportWidth = Math.max((stage?.clientWidth || 0) - horizontalPadding, 320);
+    const layoutWidth = [
+      stage,
+      workspace,
+      shell
+    ].reduce((width, element) => width || getElementLayoutWidth(element), 0);
+    const viewportWidth = Math.max(layoutWidth - horizontalPadding, 320);
     return clamp(viewportWidth / baseWidth, MIN_ZOOM, MAX_ZOOM);
   }
 

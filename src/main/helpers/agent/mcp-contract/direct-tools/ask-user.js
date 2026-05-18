@@ -2,6 +2,7 @@
 
 const {
   asArray,
+  buildReadOnlyToolAnnotations,
   cleanText,
   compactObject,
   ensureObject
@@ -10,6 +11,7 @@ const {
 const ASK_USER_MCP_TOOL = Object.freeze({
   name: 'ask_user',
   description: 'Prepare one blocking user clarification question with suggested options and optional custom text input for Hikari to render.',
+  annotations: buildReadOnlyToolAnnotations('Ask user clarification'),
   inputSchema: {
     type: 'object',
     additionalProperties: false,

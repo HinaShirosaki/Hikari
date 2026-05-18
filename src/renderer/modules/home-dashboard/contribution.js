@@ -4,7 +4,7 @@ import { formatDateLocal, normalizeNotebookState } from './utils.js';
 // notebook entries, completed protocol steps, file uploads, analysis notes,
 // and quick logs into per-day buckets.
 export function initContributionWidget({ state, safeText, elements }) {
-  const { summary, monthLabels, grid } = elements;
+  const { monthLabels, grid } = elements;
 
   function createContributionBucket() {
     return {
@@ -257,15 +257,6 @@ export function initContributionWidget({ state, safeText, elements }) {
 
   function renderContributionWidget(dayMap) {
     const days = buildContributionDays(dayMap);
-    const visibleDays = days.filter((day) => !day.isFuture);
-    const activeDays = visibleDays.filter((day) => day.bucket.total > 0).length;
-    const totalActivity = visibleDays.reduce((sum, day) => sum + day.bucket.total, 0);
-    const todayKey = formatDateLocal(new Date());
-    const todayTotal = dayMap.get(todayKey)?.total || 0;
-    summary.textContent = totalActivity
-      ? `${totalActivity} logged activit${totalActivity === 1 ? 'y' : 'ies'} across ${activeDays} active day${activeDays === 1 ? '' : 's'} | Today: ${todayTotal}`
-      : 'No activity logged in the last 18 weeks.';
-
     renderContributionMonthLabels(days);
     grid.innerHTML = days.map((day) => `
       <span

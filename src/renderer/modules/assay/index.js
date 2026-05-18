@@ -1,8 +1,8 @@
-import { exportAssayDefinitionPdf } from '../pdf-export/index.js';
 import { getAssayElements } from './dom.js';
 import { createAssayLayoutManager } from './layout-manager.js';
 import { createAssayResultsManager } from './results-manager.js';
-import { createAssayAnalysisView } from './analysis-view.js';
+import { createAssayAnalysisView, normalizeChartStyle } from './analysis-view.js';
+import { createAssayChartStyleControls } from './chart-style-controls.js';
 import {
   ensureAssayNumbers,
   nextAssayNumber,
@@ -143,6 +143,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       serialDilutionSummary: assay.serialDilutionSummary,
       wellLayout: assay.wellLayout,
       resultAttachments: Array.isArray(assay.resultAttachments) ? assay.resultAttachments : [],
+      chartStyle: assay.chartStyle || null,
       updatedAt: assay.updatedAt
     };
     const latestAnalysis = assay.latestAnalysis && typeof assay.latestAnalysis === 'object'
@@ -364,11 +365,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     if (!elements.assayActiveAssayInfo) {
       return;
     }
-    if (!assay) {
-      elements.assayActiveAssayInfo.textContent = 'No assay plate loaded.';
-      return;
-    }
-    elements.assayActiveAssayInfo.textContent = `Loaded ${assay.assayNumber || assay.id} | ${assay.name || '-'} | ${assay.plateLabel || `${assay.wellCount || '-'} well`}`;
+    elements.assayActiveAssayInfo.textContent = '';
   }
 
   function renderProjectOptions() {
@@ -529,6 +526,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     onResultImportApplied: onAssayResultImportApplied
   });
 
+  let chartStyleControls = null;
+
   analysisView = createAssayAnalysisView({
     runtime,
     elements,
@@ -539,7 +538,25 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     getCurrentDefinition: layoutManager.getCurrentDefinition,
     syncCurrentResultsFromGrid: resultsManager.syncCurrentResultsFromGrid,
     getResultValueCount: resultsManager.getResultValueCount,
-    onAnalysisRendered: saveAssayAnalysisPreview
+    onAnalysisRendered: (info) => {
+      saveAssayAnalysisPreview(info);
+      chartStyleControls?.refresh();
+    }
+  });
+
+  chartStyleControls = createAssayChartStyleControls({
+    elements,
+    analysisView,
+    safeText,
+    onStyleChanged: (style) => {
+      const activeAssay = getAssayById(runtime.activeResultsAssayId);
+      if (activeAssay) {
+        activeAssay.chartStyle = style;
+        activeAssay.updatedAt = new Date().toISOString();
+        persist();
+      }
+      analysisView.onAnalysisConfigChange();
+    }
   });
 
   function sortedAssaysByUpdated() {
@@ -625,8 +642,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
             <p class="assay-browser-item-title">${safeText(title)}</p>
           </div>
           <div class="card-actions assay-browser-item-actions">
-            <button type="button" class="primary-btn" data-assay-open-results="${assay.id}">Open Results</button>
-            <button type="button" class="ghost-btn" data-assay-export-pdf="${assay.id}">Export PDF</button>
             <button type="button" class="ghost-btn" data-assay-edit="${assay.id}">Edit</button>
             <button type="button" class="danger-btn" data-assay-delete="${assay.id}">Delete</button>
           </div>
@@ -656,8 +671,9 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     layoutManager.renderPlateDefinition();
     resultsManager.renderResultTable();
     renderActiveAssayInfo(assay);
+    runtime.chartStyle = normalizeChartStyle(assay.chartStyle);
+    chartStyleControls?.refresh();
     analysisView.clearOutput();
-    setResultStatus(`Loaded ${resultsManager.getResultValueCount()} result value(s) for ${assay.assayNumber || assay.id}.`);
   }
 
   function setAssayMode(mode) {
@@ -697,15 +713,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       runtime.activeResultsAssayId = '';
       renderActiveAssayInfo(null);
       setResultStatus('No assay plate selected.');
-      return;
-    }
-    loadAssayForResults(assayId);
-  }
-
-  function onResultsAssayLoad() {
-    const assayId = elements.assayResultsAssaySelect?.value || '';
-    if (!assayId) {
-      setResultStatus('Select an assay plate first.');
       return;
     }
     loadAssayForResults(assayId);
@@ -925,28 +932,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     }
   }
 
-  function exportAssayPdf(assayId) {
-    const assay = getAssayById(assayId);
-    if (!assay) {
-      return;
-    }
-    exportAssayDefinitionPdf(assay);
-  }
-
   function onListClick(event) {
-    const openResultsBtn = event.target.closest('[data-assay-open-results]');
-    if (openResultsBtn) {
-      setAssayMode('results');
-      loadAssayForResults(openResultsBtn.dataset.assayOpenResults);
-      return;
-    }
-
-    const exportBtn = event.target.closest('[data-assay-export-pdf]');
-    if (exportBtn) {
-      exportAssayPdf(exportBtn.dataset.assayExportPdf);
-      return;
-    }
-
     const editBtn = event.target.closest('[data-assay-edit]');
     if (editBtn) {
       setAssayMode('create');
@@ -1045,7 +1031,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   elements.assayAnalysisAddRowGroupBtn?.addEventListener('click', resultsManager.onAddSelectedRowGroup);
   elements.assayAnalysisAddColumnGroupBtn?.addEventListener('click', resultsManager.onAddSelectedColumnGroup);
   elements.assayAnalysisClearGroupsBtn?.addEventListener('click', resultsManager.onClearAnalysisGroups);
-  elements.assayResultsLoadBtn?.addEventListener('click', onResultsAssayLoad);
   elements.assayAttachResultFileBtn?.addEventListener('click', resultsManager.onAttachResultFileClick);
   elements.assayResultFileInput?.addEventListener('change', resultsManager.onResultFileChange);
   elements.assayResultImportOverlay?.addEventListener('click', resultsManager.onResultImportOverlayClick);

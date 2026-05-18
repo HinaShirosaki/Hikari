@@ -2,6 +2,8 @@
 
 .left-rail-template {
   --left-rail-main-gap: 24px;
+  --left-rail-item-min-height: 36px;
+  --left-rail-item-padding-block: 8px;
   position: relative;
   display: grid;
   grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr);
@@ -50,6 +52,32 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.left-rail-template > .left-rail-template__rail--pinned.left-rail-template__rail {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  padding-right: 0 !important;
+  overflow: hidden !important;
+}
+
+.left-rail-template__pinned {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+  min-width: 0;
+  padding-right: var(--app-left-rail-padding-inline, 16px);
+}
+
+.left-rail-template__scroll {
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: var(--app-left-rail-padding-inline, 16px);
   scrollbar-gutter: stable;
 }
 
@@ -115,6 +143,38 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
 .sample-layout,
 .chemical-layout {
   --left-rail-main-gap: 28px;
+}
+
+@media (max-width: 720px) {
+  .left-rail-template.agent-chat-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    min-height: 100%;
+  }
+
+  .left-rail-template.agent-chat-layout > .agent-session-rail.left-rail-template__rail {
+    height: auto;
+    min-height: 0;
+    max-height: min(42vh, 360px);
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    padding: 14px 0 12px 16px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--app-left-rail-divider) !important;
+  }
+
+  .left-rail-template.agent-chat-layout > .left-rail-template__main {
+    padding-left: 0;
+    overflow: hidden;
+  }
+
+  .left-rail-template.agent-chat-layout .agent-session-panel {
+    min-height: 0;
+  }
+
+  .left-rail-template.agent-chat-layout > .agent-session-rail.left-rail-template__rail--pinned {
+    overflow: hidden !important;
+  }
 }
 
 .sample-main-grid {

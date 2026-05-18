@@ -84,8 +84,10 @@ export function initBufferTool(options = {}) {
       if (form === 'liquid') {
         const requiredMl = (concentrationValue / 100) * volumeMl;
         const requiredUl = requiredMl * 1000;
+        const outputText = `${name}: ${formatSigFig(requiredMl)} mL (${formatSigFig(requiredUl)} uL) at ${formatSigFig(concentrationValue)}% v/v`;
         totalLiquidMl += requiredMl;
-        rowWeight.textContent = `${name}: ${formatSigFig(requiredMl)} mL (${formatSigFig(requiredUl)} uL) at ${formatSigFig(concentrationValue)}% v/v`;
+        rowWeight.textContent = outputText;
+        rowWeight.title = outputText;
         return;
       }
 
@@ -93,8 +95,10 @@ export function initBufferTool(options = {}) {
       const concentrationMm = concentrationValue;
       const grams = (concentrationMm / 1000) * volumeL * mw;
       const mg = grams * 1000;
+      const outputText = `${name}: ${formatSigFig(mg)} mg (${formatSigFig(grams)} g) at ${formatSigFig(concentrationMm)} mM`;
       totalSolidMg += mg;
-      rowWeight.textContent = `${name}: ${formatSigFig(mg)} mg (${formatSigFig(grams)} g) at ${formatSigFig(concentrationMm)} mM`;
+      rowWeight.textContent = outputText;
+      rowWeight.title = outputText;
     });
 
     bufferTotalResult.textContent = `Total solids: ${formatSigFig(totalSolidMg)} mg (${formatSigFig(totalSolidMg / 1000)} g) | Total liquids: ${formatSigFig(totalLiquidMl)} mL (${formatSigFig(totalLiquidMl * 1000)} uL)`;
@@ -158,27 +162,32 @@ export function initBufferTool(options = {}) {
 
     const row = select.closest('.buffer-row');
     const customNameInput = row?.querySelector('.buffer-custom-name');
-    const customFormWrap = row?.querySelector('.buffer-custom-form-wrap');
+    const customPanel = row?.querySelector('.buffer-custom-panel');
     const customFormSelect = row?.querySelector('.buffer-custom-form');
     const mwInput = row?.querySelector('.buffer-mw');
-    if (!row || !customNameInput || !customFormWrap || !customFormSelect || !mwInput) {
+    if (!row || !customNameInput || !customPanel || !customFormSelect || !mwInput) {
       return;
     }
 
     if (select.value === '__custom__') {
       customNameInput.disabled = false;
       customNameInput.focus();
-      customFormWrap.hidden = false;
+      customPanel.hidden = false;
       customFormSelect.disabled = false;
       mwInput.disabled = customFormSelect.value !== 'solid';
+      if (customFormSelect.value === 'solid') {
+        mwInput.value = '';
+      }
+      applyBufferRowMode(row);
       renderBuffer();
       return;
     }
 
     customNameInput.disabled = true;
     customNameInput.value = '';
-    customFormWrap.hidden = true;
+    customPanel.hidden = true;
     customFormSelect.disabled = true;
+    customFormSelect.value = 'solid';
 
     const chemical = BUFFER_COMPOUNDS.find((item) => item.name === select.value);
     mwInput.value = chemical ? chemical.mw : '';

@@ -48,6 +48,26 @@ function compactObject(value = {}) {
   }, {});
 }
 
+function buildReadOnlyToolAnnotations(title = '') {
+  return compactObject({
+    title: cleanText(title, 120),
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: false
+  });
+}
+
+function buildWriteToolAnnotations(title = '') {
+  return compactObject({
+    title: cleanText(title, 120),
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false
+  });
+}
+
 function uniqueStrings(values = [], max = 20) {
   const seen = new Set();
   const out = [];
@@ -289,6 +309,8 @@ module.exports = {
   ensureObject,
   cloneJson,
   compactObject,
+  buildReadOnlyToolAnnotations,
+  buildWriteToolAnnotations,
   uniqueStrings,
   toIntegerInRange,
   buildCommonLookupInputSchema,

@@ -18,6 +18,9 @@
   --home-bottom-row: minmax(136px, 0.04fr);
   --contribution-cell-size: 15px;
   --contribution-cell-gap: 4px;
+  --contribution-card-width: calc(
+    (22 * var(--contribution-cell-size)) + (21 * var(--contribution-cell-gap)) + 37px + (2 * var(--home-tile-padding))
+  );
   height: 100%;
   max-height: 100%;
   min-height: 0;
@@ -41,7 +44,7 @@ body.theme-night #home-view {
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-columns: minmax(470px, 1.28fr) minmax(330px, 0.86fr) minmax(300px, 0.72fr);
+  grid-template-columns: var(--contribution-card-width) minmax(330px, 1.28fr) minmax(300px, 0.86fr);
   grid-template-areas:
     "contribution notebook timer"
     "contribution notebook passage"
@@ -498,49 +501,6 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
   padding-right: 96px;
   padding-bottom: 56px;
   resize: none;
-}
-
-#home-view .home-quick-log-recent-list {
-  display: grid;
-  align-content: start;
-  min-height: 0;
-  overflow: auto;
-  border-top: 1px solid var(--home-tile-line-soft);
-}
-
-#home-view .home-quick-log-empty {
-  margin: 0;
-  padding-top: 11px;
-  color: var(--home-tile-muted);
-  font-size: 0.84rem;
-}
-
-#home-view .home-quick-log-recent-row {
-  display: grid;
-  gap: 3px;
-  padding: 9px 0;
-  border-bottom: 1px solid var(--home-tile-line-soft);
-}
-
-#home-view .home-quick-log-recent-row:last-child {
-  border-bottom: 0;
-}
-
-#home-view .home-quick-log-recent-time {
-  color: var(--home-tile-muted);
-  font-size: 0.76rem;
-  line-height: 1.2;
-}
-
-#home-view .home-quick-log-recent-text {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  color: var(--home-tile-text);
-  font-size: 0.86rem;
-  line-height: 1.28;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 #home-view .home-quick-log-actions {

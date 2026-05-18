@@ -110,14 +110,29 @@ function applyClaheLike(data, width, height, {
   }
 
   const output = new Float32Array(data.length);
+  const halfTileWidth = tileWidth / 2;
+  const halfTileHeight = tileHeight / 2;
   for (let y = 0; y < height; y += 1) {
-    const tileY = Math.min(tilesY - 1, Math.floor(y / tileHeight));
+    const ty = (y + 0.5 - halfTileHeight) / tileHeight;
+    const ty0Raw = Math.floor(ty);
+    const fy = ty - ty0Raw;
+    const ty0 = clamp(ty0Raw, 0, tilesY - 1);
+    const ty1 = clamp(ty0Raw + 1, 0, tilesY - 1);
     const rowOffset = y * width;
     for (let x = 0; x < width; x += 1) {
-      const tileX = Math.min(tilesX - 1, Math.floor(x / tileWidth));
-      const map = maps[(tileY * tilesX) + tileX];
+      const tx = (x + 0.5 - halfTileWidth) / tileWidth;
+      const tx0Raw = Math.floor(tx);
+      const fx = tx - tx0Raw;
+      const tx0 = clamp(tx0Raw, 0, tilesX - 1);
+      const tx1 = clamp(tx0Raw + 1, 0, tilesX - 1);
       const bucket = clamp(Math.round(data[rowOffset + x] * 255), 0, 255);
-      output[rowOffset + x] = map[bucket];
+      const v00 = maps[(ty0 * tilesX) + tx0][bucket];
+      const v10 = maps[(ty0 * tilesX) + tx1][bucket];
+      const v01 = maps[(ty1 * tilesX) + tx0][bucket];
+      const v11 = maps[(ty1 * tilesX) + tx1][bucket];
+      const top = (v00 * (1 - fx)) + (v10 * fx);
+      const bottom = (v01 * (1 - fx)) + (v11 * fx);
+      output[rowOffset + x] = (top * (1 - fy)) + (bottom * fy);
     }
   }
 
@@ -184,13 +199,30 @@ export function normalizeEnhancementSettings(raw = {}) {
   };
 }
 
+function approximateMedian(data) {
+  if (!data.length) {
+    return 0.5;
+  }
+  const stride = Math.max(1, Math.floor(data.length / 10000));
+  const samples = [];
+  for (let i = 0; i < data.length; i += stride) {
+    samples.push(data[i]);
+  }
+  samples.sort((a, b) => a - b);
+  return samples[Math.floor(samples.length / 2)] || 0.5;
+}
+
 function applyPreviewContrast(data, contrastBoost) {
-  const contrastFactor = clamp((Number(contrastBoost) || 100) / 100, 0, 2.2);
-  const gain = 0.95 + (contrastFactor * 0.95);
-  const gamma = clamp(1.2 - (contrastFactor * 0.42), 0.45, 1.4);
+  const contrastFactor = clamp((Number(contrastBoost) || 0) / 100, 0, 2.2);
+  if (contrastFactor === 0) {
+    return data;
+  }
+  const gain = 1 + (contrastFactor * 0.4);
+  const gamma = clamp(1 - (contrastFactor * 0.12), 0.55, 1);
+  const pivot = approximateMedian(data);
   const output = new Float32Array(data.length);
   for (let index = 0; index < data.length; index += 1) {
-    const centered = ((data[index] - 0.5) * gain) + 0.5;
+    const centered = ((data[index] - pivot) * gain) + pivot;
     output[index] = Math.pow(clamp(centered, 0, 1), gamma);
   }
   return output;
@@ -208,55 +240,141 @@ export function grayArrayToImageData(gray, width, height) {
   return new ImageData(rgba, width, height);
 }
 
+const BACKGROUND_SIGMA = 24;
+const CLAHE_ACTIVATION_THRESHOLD = 0.5;
+
 export function preprocessWithJs(gray, width, height, settings = {}) {
   const enhancement = normalizeEnhancementSettings(settings);
   const denoiseFactor = enhancement.denoiseStrength / 100;
   const contrastFactor = enhancement.contrastBoost / 100;
-  const claheClipFactor = 1 + (contrastFactor * 1.5);
-  const denoiseSigma = 0.6 + (denoiseFactor * 1.8);
-  const backgroundSigma = 10 + (denoiseFactor * 18);
+  const denoiseSigma = denoiseFactor * 2.0;
 
-  const clahe = applyClaheLike(gray, width, height, {
-    tilesX: 8,
-    tilesY: 8,
-    clipFactor: claheClipFactor
-  });
-  const smooth = gaussianBlur2d(clahe, width, height, denoiseSigma);
-  const background = gaussianBlur2d(smooth, width, height, backgroundSigma);
+  const denoised = denoiseSigma > 0.05
+    ? gaussianBlur2d(gray, width, height, denoiseSigma)
+    : gray;
+  const background = gaussianBlur2d(denoised, width, height, BACKGROUND_SIGMA);
 
-  const cleaned = new Float32Array(gray.length);
+  let backgroundSum = 0;
+  for (let index = 0; index < background.length; index += 1) {
+    backgroundSum += background[index];
+  }
+  const backgroundMean = background.length ? (backgroundSum / background.length) : 0;
+
+  const flatField = new Float32Array(gray.length);
   for (let index = 0; index < gray.length; index += 1) {
-    cleaned[index] = smooth[index] - background[index];
+    flatField[index] = clamp(denoised[index] - background[index] + backgroundMean, 0, 1);
   }
 
-  const cleanNormalized = normalizeArrayRange(cleaned);
-  const previewGray = applyPreviewContrast(cleanNormalized, enhancement.contrastBoost);
+  const claheEnabled = contrastFactor > CLAHE_ACTIVATION_THRESHOLD;
+  const claheClipFactor = claheEnabled
+    ? (2.0 + ((contrastFactor - CLAHE_ACTIVATION_THRESHOLD) * 2.0))
+    : null;
+  const claheStage = claheEnabled
+    ? applyClaheLike(flatField, width, height, {
+      tilesX: 8,
+      tilesY: 8,
+      clipFactor: claheClipFactor
+    })
+    : flatField;
+
+  const previewGray = applyPreviewContrast(claheStage, enhancement.contrastBoost);
 
   return {
-    cleanNormalized,
+    cleanNormalized: flatField,
     previewGray,
     previewImageData: grayArrayToImageData(previewGray, width, height),
     preprocessing: {
       grayscale: true,
-      clahe: true,
+      clahe: claheEnabled,
       backend: 'js',
       denoiseStrength: enhancement.denoiseStrength,
       contrastBoost: enhancement.contrastBoost,
-      claheClipFactor: round(claheClipFactor, 4),
-      gaussianSigma: round(denoiseSigma, 4),
-      rollingBallApproxRadius: round(backgroundSigma * 3, 2)
+      claheClipFactor: claheEnabled ? round(claheClipFactor, 4) : null,
+      denoiseSigma: round(denoiseSigma, 4),
+      backgroundSigma: BACKGROUND_SIGMA,
+      pipeline: 'denoise -> flat-field -> contrast'
     }
   };
 }
 
+export function detectGelPolarity(gray) {
+  if (!gray?.length) {
+    return 'bright-on-dark';
+  }
+  const sampleStride = Math.max(1, Math.floor(gray.length / 20000));
+  const samples = [];
+  for (let i = 0; i < gray.length; i += sampleStride) {
+    samples.push(gray[i]);
+  }
+  samples.sort((a, b) => a - b);
+  const median = samples[Math.floor(samples.length / 2)] || 0;
+  return median > 0.5 ? 'dark-on-light' : 'bright-on-dark';
+}
+
+export function buildQuantificationSignal(gray) {
+  if (!gray?.length) {
+    return { signal: null, polarity: 'bright-on-dark' };
+  }
+  const polarity = detectGelPolarity(gray);
+  const out = new Float32Array(gray.length);
+  if (polarity === 'dark-on-light') {
+    for (let i = 0; i < gray.length; i += 1) {
+      out[i] = 1 - gray[i];
+    }
+  } else {
+    out.set(gray);
+  }
+  return { signal: out, polarity };
+}
+
+const LIVE_CHANNEL_THRESHOLD = 8;
+const MONOCHROME_RGB_FRACTION = 0.98;
+
 export function convertRgbaToGray(imageData) {
   const { data } = imageData;
-  const gray = new Float32Array(imageData.width * imageData.height);
-  for (let index = 0, grayIndex = 0; index < data.length; index += 4, grayIndex += 1) {
+  const pixelCount = (imageData.width * imageData.height) || (data.length / 4);
+  const gray = new Float32Array(pixelCount);
+
+  let maxR = 0;
+  let maxG = 0;
+  let maxB = 0;
+  let rgbEqualCount = 0;
+  for (let index = 0; index < data.length; index += 4) {
+    const r = data[index];
+    const g = data[index + 1];
+    const b = data[index + 2];
+    if (r > maxR) maxR = r;
+    if (g > maxG) maxG = g;
+    if (b > maxB) maxB = b;
+    if (r === g && g === b) rgbEqualCount += 1;
+  }
+
+  const isMonochromeRgb = pixelCount > 0
+    && (rgbEqualCount / pixelCount) >= MONOCHROME_RGB_FRACTION;
+  const liveR = maxR > LIVE_CHANNEL_THRESHOLD;
+  const liveG = maxG > LIVE_CHANNEL_THRESHOLD;
+  const liveB = maxB > LIVE_CHANNEL_THRESHOLD;
+  const liveCount = Number(liveR) + Number(liveG) + Number(liveB);
+
+  let pickChannel = null;
+  if (isMonochromeRgb) {
+    pickChannel = 0;
+  } else if (liveCount === 1) {
+    pickChannel = liveR ? 0 : (liveG ? 1 : 2);
+  }
+
+  if (pickChannel !== null) {
+    for (let index = pickChannel, grayIndex = 0; grayIndex < pixelCount; index += 4, grayIndex += 1) {
+      gray[grayIndex] = clamp(data[index] / 255, 0, 1);
+    }
+    return gray;
+  }
+
+  for (let index = 0, grayIndex = 0; grayIndex < pixelCount; index += 4, grayIndex += 1) {
     const r = data[index] / 255;
     const g = data[index + 1] / 255;
     const b = data[index + 2] / 255;
-    gray[grayIndex] = clamp((0.299 * r) + (0.587 * g) + (0.114 * b), 0, 1);
+    gray[grayIndex] = clamp((0.2126 * r) + (0.7152 * g) + (0.0722 * b), 0, 1);
   }
   return gray;
 }

@@ -421,12 +421,28 @@ function createAgentControllerUtils(deps = {}) {
       codex_agent: codexAgent
         ? {
           status: cleanText(codexAgent.status, 40),
+          codex_session_id: cleanText(codexAgent.codex_session_id || codexAgent.codexSessionId, 240),
+          resumed_codex_session_id: cleanText(codexAgent.resumed_codex_session_id || codexAgent.resumedCodexSessionId, 240),
           answer: cleanText(codexAgent.answer, 500),
           reasoning_summary: cleanText(codexAgent.reasoning_summary, 500),
           follow_up_count: asArray(codexAgent.follow_up_questions).length,
           citation_count: asArray(codexAgent.citations).length
         }
         : null,
+      codex_session_id: cleanText(
+        source.codex_session_id
+          || source.codexSessionId
+          || codexAgent?.codex_session_id
+          || codexAgent?.codexSessionId,
+        240
+      ),
+      resumed_codex_session_id: cleanText(
+        source.resumed_codex_session_id
+          || source.resumedCodexSessionId
+          || codexAgent?.resumed_codex_session_id
+          || codexAgent?.resumedCodexSessionId,
+        240
+      ),
       general_science_question: generalScienceQuestion
         ? {
           status: cleanText(generalScienceQuestion.status, 40),

@@ -549,17 +549,7 @@ export function createAssayResultsManager({
 
   function updateResultRangeSelectionStatus() {
     const selection = getCurrentResultRangeSelection();
-    if (!selection.rowLabels.length && !selection.columnLabels.length) {
-      setAnalysisSelectionStatus('Drag-select replicate wells in the table to build groups.');
-      return selection;
-    }
-    const rowText = selection.rowLabels.length
-      ? `${selection.rowLabels.length} row(s): ${summarizeSelectionLabels(selection.rowLabels)}`
-      : '0 row(s)';
-    const columnText = selection.columnLabels.length
-      ? `${selection.columnLabels.length} column(s): ${summarizeSelectionLabels(selection.columnLabels)}`
-      : '0 column(s)';
-    setAnalysisSelectionStatus(`Selected range -> ${rowText}; ${columnText}.`);
+    setAnalysisSelectionStatus('');
     return selection;
   }
 

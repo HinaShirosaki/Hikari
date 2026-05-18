@@ -53,8 +53,17 @@ function replaceManagedBlock(existing = '', start = '', end = '', block = '') {
   return existing.replace(pattern, block);
 }
 
+function resolveUnpackedAsarPath(filePath = '') {
+  const targetPath = cleanText(filePath, 2400);
+  if (targetPath.includes(`${path.sep}app.asar${path.sep}`)) {
+    return targetPath.replace(`${path.sep}app.asar${path.sep}`, `${path.sep}app.asar.unpacked${path.sep}`);
+  }
+  return targetPath;
+}
+
 function resolveHikariAgentMcpServerPath() {
-  return path.join(__dirname, '..', 'mcp-contract', 'stdio-server.js');
+  const serverPath = path.join(__dirname, '..', 'mcp-contract', 'stdio-server.js');
+  return resolveUnpackedAsarPath(serverPath);
 }
 
 function resolveEnanaCodexMcpServerPath() {
@@ -214,6 +223,7 @@ module.exports = {
   HIKARI_MCP_CONFIG_END,
   ENANA_MCP_CONFIG_START,
   ENANA_MCP_CONFIG_END,
+  resolveUnpackedAsarPath,
   resolveHikariAgentMcpServerPath,
   resolveHikariCodexMcpServerPath,
   resolveEnanaCodexMcpServerPath,

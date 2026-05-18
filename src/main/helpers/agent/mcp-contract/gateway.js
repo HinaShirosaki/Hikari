@@ -9,6 +9,12 @@ const {
 const { createDirectMcpToolRouter } = require('./direct-tools/index.js');
 const { buildHikariAgentMcpInstructions } = require('./instructions.js');
 
+const CODEX_DIRECT_APP_TOOL_SEARCH_EXCLUSIONS = Object.freeze(new Set([
+  'inventory-lookup',
+  'notebook-draft',
+  'protocol-generation'
+]));
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -72,6 +78,17 @@ function summarizeTool(entry) {
   };
 }
 
+function isCodexBackedContext(context = {}) {
+  return cleanText(context.provider, 80).toLowerCase() === 'codex';
+}
+
+function getSearchableToolCatalog(context = {}) {
+  if (!isCodexBackedContext(context)) {
+    return AGENT_TOOL_CATALOG;
+  }
+  return AGENT_TOOL_CATALOG.filter((entry) => !CODEX_DIRECT_APP_TOOL_SEARCH_EXCLUSIONS.has(entry.name));
+}
+
 function createAgentMcpGateway(deps = {}) {
   const runTool = typeof deps.runTool === 'function'
     ? deps.runTool
@@ -80,10 +97,10 @@ function createAgentMcpGateway(deps = {}) {
     runTool
   });
 
-  function toolSearch(input = {}) {
+  function toolSearch(input = {}, context = {}) {
     const tokens = normalizeQuery(input.query);
     const limit = Math.max(1, Math.min(30, Number(input.limit) || 8));
-    const results = AGENT_TOOL_CATALOG
+    const results = getSearchableToolCatalog(context)
       .map((entry) => {
         const schema = getToolSchema(entry.name);
         return {
@@ -235,7 +252,7 @@ function createAgentMcpGateway(deps = {}) {
   async function callGatewayTool(name = '', args = {}, context = {}) {
     const toolName = cleanText(name, 120);
     if (toolName === 'tool_search') {
-      return toolSearch(args);
+      return toolSearch(args, context);
     }
     if (toolName === 'tool_info') {
       return toolInfo(args);

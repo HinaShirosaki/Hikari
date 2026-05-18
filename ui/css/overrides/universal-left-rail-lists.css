@@ -187,11 +187,34 @@ body.theme-night {
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ) {
-  padding-top: 3px !important;
-  padding-bottom: 3px !important;
-  min-height: 0 !important;
+  padding-top: var(--left-rail-item-padding-block, 8px) !important;
+  padding-bottom: var(--left-rail-item-padding-block, 8px) !important;
+  min-height: var(--left-rail-item-min-height, 36px) !important;
   line-height: 1.35 !important;
   font-size: 0.88rem !important;
+}
+
+.left-rail-template__rail .agent-session-card {
+  display: grid !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: var(--left-rail-item-min-height, 36px) !important;
+  padding-top: var(--left-rail-item-padding-block, 8px) !important;
+  padding-bottom: var(--left-rail-item-padding-block, 8px) !important;
+  overflow: hidden !important;
+  align-items: center !important;
+}
+
+.left-rail-template__rail .agent-session-card strong {
+  display: block !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 0.88rem !important;
+  line-height: 1.25 !important;
 }
 
 .left-rail-template__rail :is(

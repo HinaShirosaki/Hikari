@@ -17,6 +17,10 @@ const {
   callProtocolGeneration
 } = require('./protocol-generation.js');
 const {
+  NOTEBOOK_DRAFT_MCP_TOOL,
+  callNotebookDraft
+} = require('./notebook-draft.js');
+const {
   NOTEBOOK_LOOKUP_MCP_TOOL,
   callNotebookLookup
 } = require('./notebook-lookup.js');
@@ -41,6 +45,10 @@ const DIRECT_MCP_TOOLS = Object.freeze([
   {
     definition: PROTOCOL_GENERATION_MCP_TOOL,
     handler: callProtocolGeneration
+  },
+  {
+    definition: NOTEBOOK_DRAFT_MCP_TOOL,
+    handler: callNotebookDraft
   },
   {
     definition: NOTEBOOK_LOOKUP_MCP_TOOL,

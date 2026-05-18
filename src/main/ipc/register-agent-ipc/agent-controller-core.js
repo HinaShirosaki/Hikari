@@ -436,7 +436,7 @@ function createAgentControllerCore({
         model,
         reasoningEffort,
         message: effectiveMessage,
-        conversation: promptConversation,
+        conversation: [],
         attachments,
         snapshot,
         executionFlags,
@@ -446,6 +446,8 @@ function createAgentControllerCore({
         projectName,
         skillPromptPayload,
         selectionInsight: payload?.agent?.selectionInsight || payload?.selectionInsight || null,
+        chatSessionId: cleanText(runtime?.chatSessionId, 120),
+        codexSessionId: cleanText(runtime?.codexSessionId || runtime?.codex_session_id, 240),
         lifecycleRecorder,
         emitAgentProgress: runtime?.emitAgentProgress
       });

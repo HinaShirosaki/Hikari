@@ -522,6 +522,34 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         assert.match(inventoryAssistantMessage.text, /location Shelf 4/i);
         assert.match(inventoryAssistantMessage.text, /amount 500 mL/i);
 
+        const codexAssistantMessage = runtime.buildAssistantMessageFromResult({
+          result: {
+            ok: true,
+            parser: {
+              primary_intent: 'codex_agent',
+              needs_clarification: false,
+              reasoning_summary: 'Codex handled this turn.'
+            },
+            codex_agent: {
+              status: 'completed',
+              answer: 'mRNA display links a peptide to its encoding mRNA.',
+              follow_up_questions: [],
+              user_question: {
+                question: 'mRNA display links a peptide to its encoding mRNA.',
+                options: [],
+                allow_custom: true
+              },
+              citations: []
+            },
+            developer_trace: []
+          },
+          requestText: 'What is mRNA display?',
+          messageId: 'assistant-codex-no-question',
+          timestamp: '2026-03-22T15:00:02.750Z'
+        });
+        assert.equal(codexAssistantMessage.text, 'mRNA display links a peptide to its encoding mRNA.');
+        assert.equal(codexAssistantMessage.meta.user_question, null);
+
         await runtime.appendRows(tempDir, created.session.id, [
           {
             type: 'agent-chat-request',
@@ -653,6 +681,62 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuite(context = {}
         const assistantRow = loaded.rows.find((row) => row.type === 'assistant-message');
         assert.ok(assistantRow);
         assert.equal(assistantRow.text, longAnswer);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+
+    test('agent chat log runtime persists Codex session ids on chat summaries', async () => {
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-chat-log-codex-session-'));
+      try {
+        const runtime = agentChatLog.createAgentChatLogRuntime({
+          now: () => '2026-03-22T15:35:00.000Z',
+          createId: () => 'chat-codex-session-1'
+        });
+        const created = await runtime.createSession({
+          storagePath: tempDir,
+          projectId: 'proj-codex',
+          projectName: 'Codex Project'
+        });
+
+        await runtime.appendRows(tempDir, created.session.id, [
+          {
+            type: 'agent-chat-result',
+            session_id: created.session.id,
+            requestId: 'req-codex-1',
+            timestamp: '2026-03-22T15:35:01.000Z',
+            response_type: 'codex_agent',
+            codex_session_id: 'codex-chat-session-1',
+            codex_agent: {
+              status: 'completed',
+              codex_session_id: 'codex-chat-session-1',
+              answer: 'Codex handled this turn.'
+            },
+            ok: true
+          },
+          {
+            type: 'assistant-message',
+            session_id: created.session.id,
+            message_id: 'assistant-codex-1',
+            timestamp: '2026-03-22T15:35:02.000Z',
+            text: 'Codex handled this turn.',
+            meta: {
+              codex_session_id: 'codex-chat-session-1',
+              codex_agent: {
+                status: 'completed',
+                codex_session_id: 'codex-chat-session-1'
+              }
+            }
+          }
+        ]);
+
+        const listed = await runtime.listSessions({ storagePath: tempDir });
+        assert.equal(listed.items[0].codex_session_id, 'codex-chat-session-1');
+        const loaded = await runtime.getSession({
+          storagePath: tempDir,
+          sessionId: created.session.id
+        });
+        assert.equal(loaded.session.codex_session_id, 'codex-chat-session-1');
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
