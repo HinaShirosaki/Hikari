@@ -968,7 +968,7 @@
           <div class="form-actions">
             <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
-              <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn">Edit Concentration</button>
+              <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Edit Conc.</button>
             </div>
             <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
             <button type="button" id="assay-serial-dilution-btn" class="ghost-btn">Serial Dilution</button>
@@ -3053,6 +3053,26 @@
           </div>
         </div>
 
+        <div class="sequence-viewer-detail-layout left-rail-template">
+          <aside class="sequence-viewer-detail-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+            <div class="left-rail-template__stack">
+              <section class="sequence-viewer-library-card left-rail-template__section">
+                <div class="result-card-head">
+                  <h4>Sequences</h4>
+                </div>
+                <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
+                  <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
+                  <button id="sequence-viewer-detail-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
+                </div>
+                <div id="sequence-viewer-detail-library-list" class="sequence-viewer-library-list">
+                  <p class="small-note">No sequence entries found.</p>
+                </div>
+                <span id="sequence-viewer-detail-library-status" class="small-note"></span>
+              </section>
+            </div>
+          </aside>
+
+          <div class="sequence-viewer-detail-main left-rail-template__main">
         <div class="sequence-viewer-detail-topbar">
           <button id="sequence-viewer-back-btn" type="button" class="ghost-btn">Back to Library</button>
           <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
@@ -3065,7 +3085,7 @@
         </div>
 
         <form id="sequence-viewer-form" class="stack-form sequence-viewer-controls" autocomplete="off">
-          <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Sequence viewer input mode">
+          <div class="sequence-viewer-mode-switch sequence-viewer-detail-input-switch" role="tablist" aria-label="Sequence viewer input mode" hidden aria-hidden="true">
             <button id="sequence-viewer-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Paste Text</button>
             <button id="sequence-viewer-mode-file" class="sequence-viewer-mode-btn" type="button">Load File</button>
           </div>
@@ -3135,7 +3155,7 @@
             <span id="sequence-viewer-status" class="small-note">Idle</span>
           </div>
 
-          <label>
+          <label class="sequence-viewer-hidden-control" hidden aria-hidden="true">
             Record
             <select id="sequence-viewer-record-select">
               <option value="">No records loaded</option>
@@ -3144,10 +3164,7 @@
         </form>
 
         <div class="sequence-viewer-results">
-          <section class="result-card sequence-viewer-sequence-card">
-            <div class="result-card-head">
-              <h4>Sequence (Dual Strand)</h4>
-            </div>
+          <section class="sequence-viewer-sequence-card">
             <div id="sequence-viewer-sequence-host" class="sequence-viewer-sequence-host">
               <p class="small-note">Load sequence data to begin.</p>
             </div>
@@ -3164,10 +3181,7 @@
             </div>
           </section>
 
-          <section class="result-card">
-            <div class="result-card-head">
-              <h4>Summary</h4>
-            </div>
+          <div class="sequence-viewer-hidden-summary" hidden aria-hidden="true">
             <div class="sequence-viewer-stats">
               <div><strong>Format:</strong> <span id="sequence-viewer-stat-format">-</span></div>
               <div><strong>Length:</strong> <span id="sequence-viewer-stat-length">0</span> bp</div>
@@ -3181,7 +3195,7 @@
             <div id="sequence-viewer-messages" class="calc-output sequence-viewer-message-box">
               <p class="small-note">No parser warnings.</p>
             </div>
-          </section>
+          </div>
         </div>
 
         <div id="sequence-viewer-feature-context-menu" class="sequence-viewer-context-menu" hidden></div>
@@ -3308,6 +3322,8 @@
               <button id="sequence-viewer-backbone-dialog-apply-btn" type="button" class="primary-btn">Apply Selection</button>
               <button id="sequence-viewer-backbone-dialog-cancel-btn" type="button" class="ghost-btn">Cancel</button>
             </div>
+          </div>
+        </div>
           </div>
         </div>
       </div>

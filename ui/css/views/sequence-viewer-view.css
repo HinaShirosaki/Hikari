@@ -881,6 +881,31 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-detail-workspace {
   display: grid;
   gap: 12px;
+  min-width: 0;
+  min-height: var(--shared-left-rail-layout-height);
+  height: var(--shared-left-rail-layout-height);
+}
+
+#sequence-viewer-detail-view.view.is-active {
+  align-content: stretch;
+  grid-auto-rows: minmax(0, 1fr);
+}
+
+.sequence-viewer-detail-layout {
+  --left-rail-main-gap: 20px;
+  min-height: 0;
+  height: 100%;
+}
+
+.sequence-viewer-detail-sidebar,
+.sequence-viewer-detail-main {
+  min-height: 0;
+}
+
+.sequence-viewer-detail-main {
+  display: grid;
+  gap: 12px;
+  align-content: start;
 }
 
 .sequence-viewer-protein-builder-confirmation {
@@ -1157,6 +1182,11 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   padding: 12px;
 }
 
+.sequence-viewer-hidden-control[hidden],
+.sequence-viewer-detail-input-switch[hidden] {
+  display: none !important;
+}
+
 .sequence-viewer-mode-switch {
   display: inline-flex;
   border: 1px solid var(--line);
@@ -1316,7 +1346,13 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-sequence-card {
   display: grid;
-  gap: 10px;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .sequence-viewer-feature-bottom {
@@ -1332,10 +1368,10 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   --sequence-viewer-sequence-font: "SF Mono", "SFMono-Regular", "Cascadia Mono", "Roboto Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
   --sequence-viewer-nt-gap: 1.5px;
   --sequence-viewer-selection-highlight: rgba(78, 127, 255, 0.22);
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  padding: 10px;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
   max-height: none;
   overflow: visible;
 }
@@ -2044,7 +2080,6 @@ body.theme-night .sequence-viewer-aa-chip {
 }
 
 body.theme-night .sequence-viewer-feature-rail-host,
-body.theme-night .sequence-viewer-sequence-host,
 body.theme-night .sequence-viewer-feature-detail {
   border-color: rgba(186, 218, 255, 0.3);
   background: rgba(20, 31, 48, 0.5);
