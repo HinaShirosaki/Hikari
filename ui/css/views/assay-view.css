@@ -868,6 +868,7 @@
   border: 1px solid rgba(53, 99, 153, 0.22);
   border-radius: 10px;
   background: #ffffff;
+  font-family: Arial, sans-serif;
   padding: 10px;
 }
 
@@ -955,7 +956,14 @@
 
 .assay-analysis-chart .rv-xy-plot__axis__tick__text {
   fill: var(--primary);
+  font-family: Arial, sans-serif;
   font-size: 11px;
+}
+
+.assay-analysis-chart .rv-xy-plot text,
+.assay-analysis-chart .rv-xy-plot__axis__title text,
+.assay-analysis-chart .rv-discrete-color-legend {
+  font-family: Arial, sans-serif;
 }
 
 body.theme-night .assay-plate-table-wrap {

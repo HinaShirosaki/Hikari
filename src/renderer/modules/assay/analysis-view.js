@@ -24,6 +24,7 @@ const LINE_STYLES = Object.freeze(['solid', 'dashed', 'dotted']);
 const FRAME_STYLES = Object.freeze(['box', 'l-shape', 'none']);
 const CURVE_TYPES = Object.freeze(['curveMonotoneX', 'curveLinear', 'curveStep']);
 const SCALE_TYPES = Object.freeze(['linear', 'log', 'ordinal']);
+const CHART_FONT_FAMILY = 'Arial, sans-serif';
 
 export function createDefaultChartStyle() {
   return {
@@ -632,10 +633,19 @@ export function createAssayAnalysisView({
     const yDomain = computeDomain(style.yRange, allPoints, (p) => p.y);
     if (yDomain) plotProps.yDomain = yDomain;
 
+    const axisColor = style.frameStroke || '#9bb0c9';
     const axisLineStyle = {
       line: {
-        stroke: style.frameStroke || '#9bb0c9',
+        stroke: axisColor,
         strokeWidth: style.frameStrokeWidth ?? 1
+      },
+      text: {
+        fill: axisColor,
+        fontFamily: CHART_FONT_FAMILY
+      },
+      title: {
+        fill: axisColor,
+        fontFamily: CHART_FONT_FAMILY
       }
     };
 
@@ -654,13 +664,11 @@ export function createAssayAnalysisView({
     plotChildren.push(
       ReactLib.createElement(XAxis, {
         key: 'x-axis',
-        title: chartModel.xLabel,
         tickLabelAngle: chartModel.chartType === 'bar' ? -35 : 0,
         style: axisLineStyle
       }),
       ReactLib.createElement(YAxis, {
         key: 'y-axis',
-        title: chartModel.yLabel,
         style: axisLineStyle
       })
     );
@@ -766,7 +774,6 @@ export function createAssayAnalysisView({
         items: legendItems
       })
       : null;
-    const titleText = `${chartModel.yLabel} by ${chartModel.xLabel}`;
 
     const canvasClassName = ['assay-analysis-chart-canvas', `frame-${style.frameStyle || 'box'}`].join(' ');
     const canvasStyle = {
@@ -774,11 +781,7 @@ export function createAssayAnalysisView({
       borderRadius: `${style.frameCornerRadius ?? 0}px`
     };
 
-    const chartElement = ReactLib.createElement('div', null, [
-      ReactLib.createElement('div', { className: 'assay-analysis-chart-head', key: 'head' }, [
-        ReactLib.createElement('div', { className: 'assay-analysis-chart-title', key: 'title' }, titleText),
-        legendElement
-      ]),
+    const chartContent = [
       ReactLib.createElement('div', { className: 'assay-analysis-chart-plot', key: 'plot' }, [
         ReactLib.createElement(
           'div',
@@ -786,7 +789,14 @@ export function createAssayAnalysisView({
           ReactLib.createElement(XYPlot, { ...plotProps, key: 'xy-plot' }, plotChildren)
         )
       ])
-    ]);
+    ];
+    if (legendElement) {
+      chartContent.unshift(ReactLib.createElement('div', { className: 'assay-analysis-chart-head', key: 'head' }, [
+        legendElement
+      ]));
+    }
+
+    const chartElement = ReactLib.createElement('div', null, chartContent);
 
     ReactDOMLib.render(chartElement, chartTarget);
     analysisChartHost = chartTarget;
