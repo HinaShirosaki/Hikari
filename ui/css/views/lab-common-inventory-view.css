@@ -212,10 +212,11 @@
 }
 
 body.theme-night .chemical-dialog-overlay {
-  background: rgba(9, 18, 33, 0.52);
+  background: var(--night-overlay-soft);
 }
 
 body.theme-night .chemical-dialog {
-  border-color: rgba(145, 174, 214, 0.32);
-  background: rgba(20, 33, 57, 0.98);
+  border-color: color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
+  background: color-mix(in srgb, var(--surface-elevated) 94%, var(--surface-subtle) 6%);
+  color: var(--text);
 }

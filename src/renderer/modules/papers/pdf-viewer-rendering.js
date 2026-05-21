@@ -45,6 +45,132 @@ function safePageCleanup(page) {
   }
 }
 
+function normalizeHttpUrl(value) {
+  const raw = String(value || '').trim();
+  if (!raw) {
+    return '';
+  }
+  try {
+    const parsed = new URL(raw);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      return '';
+    }
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
+function getLinkAnnotationUrl(annotation = {}) {
+  return normalizeHttpUrl(annotation.url || annotation.unsafeUrl || annotation.href);
+}
+
+function getLinkAnnotationRect(annotation = {}, viewport = null) {
+  const rect = Array.isArray(annotation.rect) ? annotation.rect : [];
+  if (!viewport || rect.length < 4 || typeof viewport.convertToViewportRectangle !== 'function') {
+    return null;
+  }
+  const viewportRect = viewport.convertToViewportRectangle(rect);
+  const left = Math.min(Number(viewportRect[0]) || 0, Number(viewportRect[2]) || 0);
+  const top = Math.min(Number(viewportRect[1]) || 0, Number(viewportRect[3]) || 0);
+  const width = Math.abs((Number(viewportRect[0]) || 0) - (Number(viewportRect[2]) || 0));
+  const height = Math.abs((Number(viewportRect[1]) || 0) - (Number(viewportRect[3]) || 0));
+  if (!Number.isFinite(left) || !Number.isFinite(top) || width <= 0 || height <= 0) {
+    return null;
+  }
+  return { left, top, width, height };
+}
+
+function hasPdfLinkTarget(annotation = {}) {
+  return Boolean(
+    getLinkAnnotationUrl(annotation)
+    || annotation.dest
+    || annotation.action
+  );
+}
+
+async function renderPageLinkLayer({
+  page,
+  viewport,
+  record,
+  onExternalLink,
+  onDestination,
+  onNamedAction,
+  isLinkActivationEnabled = () => true,
+  isStale = () => false
+} = {}) {
+  if (!record?.linkLayer || !page) {
+    return;
+  }
+
+  record.linkLayer.innerHTML = '';
+  const cssWidth = Math.max(Math.ceil(viewport.width), 1);
+  const cssHeight = Math.max(Math.ceil(viewport.height), 1);
+  record.linkLayer.style.width = `${cssWidth}px`;
+  record.linkLayer.style.height = `${cssHeight}px`;
+
+  if (typeof page.getAnnotations !== 'function') {
+    return;
+  }
+
+  let annotations = [];
+  try {
+    annotations = await page.getAnnotations({ intent: 'display' });
+  } catch {
+    return;
+  }
+  if (isStale()) {
+    return;
+  }
+
+  const doc = record.linkLayer.ownerDocument || (typeof document !== 'undefined' ? document : null);
+  if (!doc?.createElement) {
+    return;
+  }
+
+  const fragment = doc.createDocumentFragment();
+  annotations
+    .filter(hasPdfLinkTarget)
+    .forEach((annotation) => {
+      const rect = getLinkAnnotationRect(annotation, viewport);
+      if (!rect) {
+        return;
+      }
+
+      const url = getLinkAnnotationUrl(annotation);
+      const linkButton = doc.createElement('button');
+      linkButton.type = 'button';
+      linkButton.className = 'papers-viewer-link';
+      linkButton.style.left = `${rect.left}px`;
+      linkButton.style.top = `${rect.top}px`;
+      linkButton.style.width = `${rect.width}px`;
+      linkButton.style.height = `${rect.height}px`;
+      linkButton.setAttribute('aria-label', url ? `Open external website: ${url}` : 'Open PDF link');
+      linkButton.title = url || 'PDF link';
+      linkButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (isStale() || isLinkActivationEnabled() === false) {
+          return;
+        }
+        if (url && typeof onExternalLink === 'function') {
+          void onExternalLink(url);
+          return;
+        }
+        if (annotation.dest && typeof onDestination === 'function') {
+          void onDestination(annotation.dest);
+          return;
+        }
+        if (annotation.action && typeof onNamedAction === 'function') {
+          onNamedAction(annotation.action);
+        }
+      });
+      fragment.appendChild(linkButton);
+    });
+
+  record.linkLayer.replaceChildren(fragment);
+}
+
 async function renderPageCanvasToOffscreen({
   pdfDocument,
   record,
@@ -185,14 +311,19 @@ async function renderPageRecord({
   scale,
   outputScale = 1,
   isStale = () => false,
-  skipIfRendered = false
+  skipIfRendered = false,
+  onExternalLink,
+  onDestination,
+  onNamedAction,
+  isLinkActivationEnabled = () => true
 } = {}) {
   if (!pdfDocument || !record?.canvas || !record?.element) {
     return;
   }
 
   if (skipIfRendered && record.renderedScale === scale && record.canvas.width > 0) {
-    if (record.textLayer && record.textLayer.childElementCount === 0) {
+    if ((record.textLayer && record.textLayer.childElementCount === 0)
+      || (record.linkLayer && record.linkLayer.childElementCount === 0)) {
       const page = await pdfDocument.getPage(record.pageNumber);
       if (isStale()) {
         safePageCleanup(page);
@@ -200,7 +331,21 @@ async function renderPageRecord({
       }
       const viewport = page.getViewport({ scale });
       try {
-        await renderPageTextLayer({ page, viewport, record, isStale });
+        if (record.textLayer && record.textLayer.childElementCount === 0) {
+          await renderPageTextLayer({ page, viewport, record, isStale });
+        }
+        if (record.linkLayer && record.linkLayer.childElementCount === 0) {
+          await renderPageLinkLayer({
+            page,
+            viewport,
+            record,
+            onExternalLink,
+            onDestination,
+            onNamedAction,
+            isLinkActivationEnabled,
+            isStale
+          });
+        }
       } finally {
         safePageCleanup(page);
       }
@@ -231,6 +376,16 @@ async function renderPageRecord({
 
   try {
     await renderPageTextLayer({ page, viewport, record, isStale });
+    await renderPageLinkLayer({
+      page,
+      viewport,
+      record,
+      onExternalLink,
+      onDestination,
+      onNamedAction,
+      isLinkActivationEnabled,
+      isStale
+    });
   } finally {
     record.renderedScale = scale;
     safePageCleanup(page);
@@ -242,5 +397,6 @@ export {
   loadEmbeddedPdfMetadata,
   renderPageRecord,
   renderPageCanvasToOffscreen,
-  commitOffscreenToVisibleCanvas
+  commitOffscreenToVisibleCanvas,
+  renderPageLinkLayer
 };

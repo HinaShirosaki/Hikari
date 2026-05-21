@@ -48,7 +48,7 @@ export function initMolarityTool(options = {}) {
     const massOutput = massFromG(massG, massOutputUnit);
 
     if (massM > 0 && massL > 0 && massMw > 0) {
-      massCalcResult.textContent = `Mass needed: ${massOutput.toFixed(6)} ${massOutputUnit} (${massG.toExponential(6)} g, ${massMoles.toExponential(6)} mol).`;
+      massCalcResult.textContent = `Mass needed: ${massOutput.toFixed(6)} ${massOutputUnit}.`;
     } else {
       massCalcResult.textContent = 'Enter concentration, formula weight, and volume to calculate mass.';
     }
@@ -67,7 +67,7 @@ export function initMolarityTool(options = {}) {
     const volumeOutput = volumeFromL(volumeL, volumeOutputUnit);
 
     if (volumeG > 0 && volumeMw > 0 && volumeM > 0) {
-      volumeCalcResult.textContent = `Final volume: ${volumeOutput.toFixed(6)} ${volumeOutputUnit} (${volumeL.toExponential(6)} L).`;
+      volumeCalcResult.textContent = `Final volume: ${volumeOutput.toFixed(6)} ${volumeOutputUnit}.`;
     } else {
       volumeCalcResult.textContent = 'Enter mass, formula weight, and concentration to calculate volume.';
     }
@@ -86,7 +86,7 @@ export function initMolarityTool(options = {}) {
     const concOutput = concentrationFromM(concM, concOutputUnit);
 
     if (concMassG > 0 && concMw > 0 && concVolumeL > 0) {
-      concCalcResult.textContent = `Concentration: ${concOutput.toFixed(6)} ${concOutputUnit} (${concM.toExponential(6)} M).`;
+      concCalcResult.textContent = `Concentration: ${concOutput.toFixed(6)} ${concOutputUnit}.`;
     } else {
       concCalcResult.textContent = 'Enter mass, formula weight, and volume to calculate concentration.';
     }

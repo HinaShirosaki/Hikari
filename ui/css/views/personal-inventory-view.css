@@ -716,12 +716,34 @@
   margin-top: -2px;
 }
 
-.inventory-sample-structure-btn[hidden] {
+.inventory-sample-structure-btn[hidden],
+.inventory-sample-structure-paste-btn[hidden] {
   display: none !important;
 }
 
 .inventory-sample-structure-status {
   margin: 0;
+}
+
+.inventory-sample-structure-preview {
+  width: min(340px, 100%);
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  border: 1px dashed color-mix(in srgb, var(--line) 74%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface) 92%, white);
+}
+
+.inventory-sample-structure-preview[hidden] {
+  display: none !important;
+}
+
+.inventory-sample-structure-preview img {
+  max-width: 100%;
+  max-height: 220px;
+  object-fit: contain;
 }
 
 .well-side-editor {

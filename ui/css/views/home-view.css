@@ -31,13 +31,21 @@
 }
 
 body.theme-night #home-view {
-  --home-tile-bg: #526257;
-  --home-tile-bg-strong: #48564d;
-  --home-tile-bg-soft: #5c6a61;
-  --home-tile-line: rgba(245, 239, 230, 0.18);
-  --home-tile-line-soft: rgba(245, 239, 230, 0.1);
-  --home-tile-text: #f7f3ec;
-  --home-tile-muted: rgba(247, 243, 236, 0.72);
+  --home-tile-bg: color-mix(in srgb, var(--surface-elevated) 88%, var(--accent) 12%);
+  --home-tile-bg-strong: color-mix(in srgb, var(--surface) 90%, var(--accent) 10%);
+  --home-tile-bg-soft: color-mix(in srgb, var(--surface-subtle) 86%, var(--accent) 14%);
+  --home-tile-line: color-mix(in srgb, var(--line) 82%, transparent);
+  --home-tile-line-soft: color-mix(in srgb, var(--line-soft) 82%, transparent);
+  --home-tile-text: var(--strong);
+  --home-tile-muted: color-mix(in srgb, var(--muted) 88%, var(--strong) 12%);
+  --home-tile-control-bg: var(--night-control-bg);
+  --home-tile-control-bg-hover: var(--night-control-bg-hover);
+  --home-tile-control-border: var(--night-control-border);
+  --home-tile-filled-bg: var(--night-filled-bg);
+  --home-tile-filled-text: var(--night-filled-text);
+  --home-tile-disabled-bg: var(--night-disabled-bg);
+  --home-tile-disabled-text: var(--night-disabled-text);
+  --home-contribution-empty-bg: color-mix(in srgb, var(--surface) 74%, black 26%);
 }
 
 #home-view .home-layout {
@@ -329,8 +337,9 @@ body.theme-night #home-view {
 body.theme-night #home-view .dashboard-incubation-action,
 body.theme-night #home-view .dashboard-incubation-action:hover,
 body.theme-night #home-view .dashboard-incubation-action:focus-visible {
-  background: #ffffff;
-  color: var(--strong);
+  border-color: var(--home-tile-control-border);
+  background: var(--home-tile-control-bg);
+  color: var(--home-tile-text);
 }
 
 
@@ -634,48 +643,52 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
 body.theme-night #home-view .home-tile input,
 body.theme-night #home-view .home-tile textarea,
 body.theme-night #home-view .home-tile select {
-  background: rgba(12, 11, 9, 0.14);
+  border-color: var(--home-tile-control-border);
+  background: var(--home-tile-control-bg);
+  color: var(--home-tile-text);
 }
 
 body.theme-night #home-view .home-tile input::placeholder,
 body.theme-night #home-view .home-tile textarea::placeholder {
-  color: rgba(247, 243, 236, 0.52);
+  color: color-mix(in srgb, var(--home-tile-muted) 82%, transparent);
 }
 
 body.theme-night #home-view .home-tile button {
-  background: rgba(12, 11, 9, 0.16);
+  background: var(--home-tile-control-bg);
+  color: var(--home-tile-text);
 }
 
 body.theme-night #home-view .home-tile button:hover,
 body.theme-night #home-view .home-tile button:focus-visible {
-  background: rgba(12, 11, 9, 0.24);
+  background: var(--home-tile-control-bg-hover);
 }
 
 body.theme-night #home-view .home-tile .home-passage-add-btn,
 body.theme-night #home-view .home-tile .home-passage-add-btn:hover,
 body.theme-night #home-view .home-tile .home-passage-add-btn:focus-visible {
-  background: #a8a8a8;
-  color: #ffffff;
+  background: var(--home-tile-filled-bg);
+  color: var(--home-tile-filled-text);
 }
 
 body.theme-night #home-view .home-tile .home-quick-log-send-btn,
 body.theme-night #home-view .home-tile .home-quick-log-send-btn:hover,
 body.theme-night #home-view .home-tile .home-quick-log-send-btn:focus-visible {
-  background: #1f2328;
-  color: #ffffff;
+  background: var(--home-tile-filled-bg);
+  color: var(--home-tile-filled-text);
 }
 
 body.theme-night #home-view .home-tile .home-quick-log-icon-btn:not(.home-quick-log-send-btn),
 body.theme-night #home-view .home-tile .home-quick-log-icon-btn:not(.home-quick-log-send-btn):hover,
 body.theme-night #home-view .home-tile .home-quick-log-icon-btn:not(.home-quick-log-send-btn):focus-visible {
-  background: #ffffff;
-  color: var(--strong);
+  background: var(--home-tile-control-bg);
+  color: var(--home-tile-text);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
 }
 
 body.theme-night #home-view .home-contribution-cell,
 body.theme-night #home-view .home-contribution-legend-cell {
-  border-color: rgba(245, 239, 230, 0.08);
-  background: rgba(12, 11, 9, 0.22);
+  border-color: color-mix(in srgb, var(--home-tile-line-soft) 88%, transparent);
+  background: var(--home-contribution-empty-bg);
 }
 
 body.theme-night #home-view .home-contribution-cell[data-level="1"],
@@ -701,8 +714,15 @@ body.theme-night #home-view .home-contribution-legend-cell[data-level="4"] {
 body.theme-night #home-view .home-tile .home-quick-log-send-btn:disabled,
 body.theme-night #home-view .home-tile .home-quick-log-send-btn:disabled:hover,
 body.theme-night #home-view .home-tile .home-quick-log-send-btn:disabled:focus-visible {
-  background: #8c939b;
-  color: #ffffff;
+  background: var(--home-tile-disabled-bg);
+  color: var(--home-tile-disabled-text);
+}
+
+body.theme-night #home-view .home-tile .home-quick-log-icon-btn:disabled,
+body.theme-night #home-view .home-tile .home-quick-log-icon-btn:disabled:hover,
+body.theme-night #home-view .home-tile .home-quick-log-icon-btn:disabled:focus-visible {
+  background: var(--home-tile-disabled-bg);
+  color: var(--home-tile-disabled-text);
 }
 
 body.theme-night #home-view .home-tile .primary-btn {
@@ -903,14 +923,15 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
 
 body.theme-night #home-view .dashboard-timer-active-row,
 body.theme-night #home-view .home-timer-template-row {
-  background: rgba(12, 11, 9, 0.16);
+  background: var(--home-tile-control-bg);
 }
 
 body.theme-night #home-view .home-timer-template-start-btn,
 body.theme-night #home-view .home-timer-template-start-btn:hover,
 body.theme-night #home-view .home-timer-template-start-btn:focus-visible {
-  background: #ffffff;
-  color: var(--strong);
+  border-color: var(--home-tile-control-border);
+  background: var(--home-tile-control-bg);
+  color: var(--home-tile-text);
 }
 
 body.theme-night #home-view .dashboard-timer-remove-btn,
@@ -965,6 +986,7 @@ body.theme-night #home-view .dashboard-timer-remove-btn:focus-visible {
 
 body.theme-night #home-view .home-dialog {
   background: var(--home-tile-bg-strong);
+  color: var(--home-tile-text);
 }
 
 #home-view .home-incubation-location-list {
@@ -1027,7 +1049,7 @@ body.theme-night #home-view .home-dialog {
 }
 
 body.theme-night #home-view .home-incubation-location-row {
-  background: rgba(12, 11, 9, 0.16);
+  background: var(--home-tile-control-bg);
 }
 
 body.theme-night #home-view .home-incubation-delete-btn,
@@ -1081,8 +1103,9 @@ body.theme-night #home-view .home-incubation-delete-btn:focus-visible {
 body.theme-night #home-view .home-tile .home-action-btn,
 body.theme-night #home-view .home-tile .home-action-btn:hover,
 body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
-  background: #ffffff;
-  color: var(--strong);
+  border-color: var(--home-tile-control-border);
+  background: var(--home-tile-control-bg);
+  color: var(--home-tile-text);
 }
 
 #home-view .home-action-btn:hover,

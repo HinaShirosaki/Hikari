@@ -9,6 +9,10 @@ import {
   clampNumber,
   escapeHtml
 } from './common.js';
+import {
+  bindFileDropTarget,
+  mergeFilesIntoInput
+} from '../file-drop.js';
 
 // Convert a pointer event into canvas pixel coordinates, accounting for CSS scaling and letterboxing.
 function getCanvasPointerPosition(canvas, event) {
@@ -138,6 +142,7 @@ export function initColonyCounterTool() {
     return;
   }
 
+  const colonyCounterShell = document.querySelector('#tool-colony-counter-view .colony-counter-shell');
   const colonyImageInput = document.getElementById('colony-image-file');
   const colonyMaxSizeInput = document.getElementById('colony-max-size');
   const colonyRunBtn = document.getElementById('colony-run-btn');
@@ -192,7 +197,7 @@ export function initColonyCounterTool() {
     if (!colonySummary) {
       return;
     }
-    colonySummary.innerHTML = '<p class="small-note">Load a plate image, then click each colony to count manually.</p>';
+    colonySummary.innerHTML = '<p class="small-note">Choose or drop a plate image, then click each colony to count manually.</p>';
   }
 
   // Render the current manual colony count and interaction hints.
@@ -551,6 +556,27 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
+  // Load an image from either the picker or a drop gesture through the same pipeline.
+  async function handleColonyImageFile(file, { syncFileInput = false } = {}) {
+    if (!file) {
+      return;
+    }
+
+    setColonyStatus('Loading image...');
+    try {
+      await loadColonyImage(file);
+      if (syncFileInput) {
+        mergeFilesIntoInput(colonyImageInput, [file], { append: false });
+      }
+    } catch (error) {
+      const message = error?.message || 'Image load failed.';
+      setColonyStatus(message, true);
+      if (colonySummary) {
+        colonySummary.innerHTML = `<p class="small-note">${escapeHtml(message)}</p>`;
+      }
+    }
+  }
+
   // Enter crop mode by copying the current source canvas into the CropperJS host image.
   async function startCropMode() {
     if (!colonyState.hasImage || !colonySourceCanvas) {
@@ -818,7 +844,7 @@ export function initColonyCounterTool() {
     clearCanvas(colonyPreviewCanvas);
     clearCanvas(colonyMaskCanvas);
     resetColonySummary();
-    setColonyStatus('Load an image, then click colonies to count manually.');
+    setColonyStatus('Choose or drop an image, then click colonies to count manually.');
     updateControlState();
   }
 
@@ -910,7 +936,7 @@ export function initColonyCounterTool() {
 
   syncDisplayInput();
   resetColonySummary();
-  setColonyStatus('Load an image, then click colonies to count manually.');
+  setColonyStatus('Choose or drop an image, then click colonies to count manually.');
   updateControlState();
 
   // Clamp the max-size display input so preview rendering stays within supported bounds.
@@ -933,18 +959,18 @@ export function initColonyCounterTool() {
   // Load a newly selected image file into the tool.
   colonyImageInput?.addEventListener('change', async () => {
     const file = colonyImageInput.files?.[0];
-    if (!file) {
-      return;
-    }
+    await handleColonyImageFile(file);
+  });
 
-    setColonyStatus('Loading image...');
-    try {
-      await loadColonyImage(file);
-    } catch (error) {
-      setColonyStatus(error.message || 'Failed to load image.', true);
-      if (colonySummary) {
-        colonySummary.innerHTML = `<p class="small-note">${escapeHtml(error.message || 'Image load failed.')}</p>`;
-      }
+  bindFileDropTarget({
+    target: colonyCounterShell || colonyCounterForm,
+    accept: colonyImageInput?.getAttribute?.('accept') || 'image/*',
+    onFiles: ([file]) => handleColonyImageFile(file, { syncFileInput: true }),
+    onRejected: () => {
+      setColonyStatus('Drop an image file to load a colony plate.', true);
+    },
+    onError: (error) => {
+      setColonyStatus(String(error?.message || error || 'Failed to load the dropped colony image.'), true);
     }
   });
 

@@ -69,9 +69,6 @@ export function initBufferTool(options = {}) {
     const volumeMl = toNumber(bufferVolumeInput.value);
     const volumeL = volumeMl / 1000;
 
-    let totalSolidMg = 0;
-    let totalLiquidMl = 0;
-
     [...bufferRows.querySelectorAll('.buffer-row')].forEach((row) => {
       const name = resolveChemicalName(row);
       const form = getBufferRowForm(row);
@@ -84,8 +81,7 @@ export function initBufferTool(options = {}) {
       if (form === 'liquid') {
         const requiredMl = (concentrationValue / 100) * volumeMl;
         const requiredUl = requiredMl * 1000;
-        const outputText = `${name}: ${formatSigFig(requiredMl)} mL (${formatSigFig(requiredUl)} uL) at ${formatSigFig(concentrationValue)}% v/v`;
-        totalLiquidMl += requiredMl;
+        const outputText = `${name}: ${formatSigFig(requiredMl)} mL (${formatSigFig(requiredUl)} uL)`;
         rowWeight.textContent = outputText;
         rowWeight.title = outputText;
         return;
@@ -95,13 +91,13 @@ export function initBufferTool(options = {}) {
       const concentrationMm = concentrationValue;
       const grams = (concentrationMm / 1000) * volumeL * mw;
       const mg = grams * 1000;
-      const outputText = `${name}: ${formatSigFig(mg)} mg (${formatSigFig(grams)} g) at ${formatSigFig(concentrationMm)} mM`;
-      totalSolidMg += mg;
+      const outputText = `${name}: ${formatSigFig(mg)} mg (${formatSigFig(grams)} g)`;
       rowWeight.textContent = outputText;
       rowWeight.title = outputText;
     });
 
-    bufferTotalResult.textContent = `Total solids: ${formatSigFig(totalSolidMg)} mg (${formatSigFig(totalSolidMg / 1000)} g) | Total liquids: ${formatSigFig(totalLiquidMl)} mL (${formatSigFig(totalLiquidMl * 1000)} uL)`;
+    bufferTotalResult.textContent = '';
+    bufferTotalResult.hidden = true;
   }
 
   function addRow() {

@@ -1,6 +1,7 @@
 import { createDefaultWells, normalizeCustomGridDimensions } from './constants.js';
 import { createPersonalInventoryStateHelpers } from './state.js';
 import { createPersonalInventoryDetailRenderer } from './detail-rendering.js';
+import { readChemicalStructureClipboard } from '../chemical-structure-clipboard.js';
 
 export function initPersonalInventory({
   state,
@@ -38,9 +39,14 @@ export function initPersonalInventory({
     shouldAutoOpenContainer: true
   };
 
-  const helpers = createPersonalInventoryStateHelpers({ state, safeText, uiState });
-  const { renderContainerDetail } = createPersonalInventoryDetailRenderer({ safeText, uiState, helpers });
   const pendingStructureDrafts = new Map();
+  const helpers = createPersonalInventoryStateHelpers({ state, safeText, uiState });
+  const { renderContainerDetail } = createPersonalInventoryDetailRenderer({
+    safeText,
+    uiState,
+    helpers,
+    getPendingStructureDraft: (mode) => pendingStructureDrafts.get(getPendingStructureKey(mode))
+  });
   let structureEditorContext = null;
 
   function notifySamplesChanged() {
@@ -102,6 +108,17 @@ export function initPersonalInventory({
     }
   }
 
+  function buildStructureClipboardNotFoundMessage(formats = []) {
+    const base = 'No CDXML, MOL, SDF, SMILES, InChI, or ChemDraw image found on the clipboard.';
+    const visibleFormats = Array.from(new Set((Array.isArray(formats) ? formats : [])
+      .map((format) => String(format || '').trim())
+      .filter(Boolean)));
+    if (!visibleFormats.length) {
+      return base;
+    }
+    return `${base} Clipboard formats seen: ${visibleFormats.slice(0, 8).join(', ')}.`;
+  }
+
   function syncStructureButtons() {
     inventorySections?.querySelectorAll('[data-inventory-sample-structure-open]').forEach((button) => {
       const mode = String(button.dataset.inventorySampleStructureOpen || '');
@@ -114,6 +131,29 @@ export function initPersonalInventory({
           ? normalizeStructureData(sample.compoundStructure)
           : normalizeStructureData(pendingStructureDrafts.get(getPendingStructureKey(mode)));
         button.textContent = draft ? 'Edit Structure' : 'Add Structure';
+      }
+    });
+    inventorySections?.querySelectorAll('[data-inventory-sample-structure-paste]').forEach((button) => {
+      const mode = String(button.dataset.inventorySampleStructurePaste || '');
+      const typeInput = getStructureTypeInput(mode);
+      button.hidden = !isChemicalSampleType(typeInput?.value);
+    });
+    inventorySections?.querySelectorAll('[data-inventory-sample-structure-preview]').forEach((preview) => {
+      const mode = String(preview.dataset.inventorySampleStructurePreview || '');
+      const isChemical = isChemicalSampleType(getStructureTypeInput(mode)?.value);
+      const sample = preview.dataset.sampleId ? helpers.getSampleById(preview.dataset.sampleId) : null;
+      const structure = sample
+        ? normalizeStructureData(sample.compoundStructure)
+        : normalizeStructureData(pendingStructureDrafts.get(getPendingStructureKey(mode)));
+      const imageDataUrl = String(structure?.imageDataUrl || '').trim();
+      const image = preview.querySelector('[data-inventory-sample-structure-preview-image]');
+      preview.hidden = !isChemical || !imageDataUrl;
+      if (image) {
+        if (imageDataUrl) {
+          image.src = imageDataUrl;
+        } else {
+          image.removeAttribute('src');
+        }
       }
     });
   }
@@ -170,6 +210,72 @@ export function initPersonalInventory({
     return toStructureDraft({ smiles, molfile, imageDataUrl });
   }
 
+  async function waitForKetcherInstance() {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      try {
+        return await getKetcherInstance();
+      } catch {
+        await delay(180);
+      }
+    }
+    throw new Error('Ketcher is still initializing.');
+  }
+
+  function buildStructureEditorContextFromButton(button, pasteDatasetKey) {
+    const mode = String(button.dataset[pasteDatasetKey] || '');
+    const typeInput = getStructureTypeInput(mode);
+    if (!isChemicalSampleType(typeInput?.value)) {
+      syncStructureButtons();
+      return null;
+    }
+
+    const sampleId = String(button.dataset.sampleId || '');
+    return {
+      mode,
+      sampleId,
+      pendingKey: getPendingStructureKey(mode)
+    };
+  }
+
+  async function captureStructureFromSource(structureSource) {
+    const source = String(structureSource || '').trim();
+    if (!source) {
+      throw new Error('No structure source provided.');
+    }
+    const ketcher = await waitForKetcherInstance();
+    await ketcher.setMolecule(source);
+    if (typeof ketcher.layout === 'function') {
+      try {
+        await ketcher.layout();
+      } catch {
+        // Layout is best-effort; setMolecule already loaded the structure.
+      }
+    }
+    return captureStructureDraftFromEditor();
+  }
+
+  async function applyStructurePasteCandidates(candidates, formats = []) {
+    if (!Array.isArray(candidates) || !candidates.length) {
+      setStructureStatus(buildStructureClipboardNotFoundMessage(formats));
+      return false;
+    }
+
+    for (const candidate of candidates) {
+      try {
+        const draft = candidate?.imageDataUrl
+          ? toStructureDraft({ imageDataUrl: candidate.imageDataUrl })
+          : await captureStructureFromSource(candidate.source);
+        applyCapturedStructureDraft(draft);
+        return true;
+      } catch {
+        // Try the next clipboard representation if Ketcher cannot parse this one.
+      }
+    }
+
+    setStructureStatus('Cannot render that structure yet. Try Copy As CDXML or MOL from ChemDraw.');
+    return false;
+  }
+
   async function openInventoryStructureEditor(button) {
     const mode = String(button.dataset.inventorySampleStructureOpen || '');
     const typeInput = getStructureTypeInput(mode);
@@ -193,6 +299,19 @@ export function initPersonalInventory({
       return;
     }
     setStructureStatus('Ketcher is ready.');
+  }
+
+  async function pasteInventoryStructure(button) {
+    const context = buildStructureEditorContextFromButton(button, 'inventorySampleStructurePaste');
+    if (!context) {
+      return;
+    }
+    structureEditorContext = context;
+    setStructureStatus('Reading chemical structure from clipboard...');
+    const clipboard = await readChemicalStructureClipboard();
+    await applyStructurePasteCandidates(clipboard.candidates, clipboard.formats);
+    closeStructureDialog();
+    syncStructureButtons();
   }
 
   function applyCapturedStructureDraft(draft) {
@@ -278,22 +397,22 @@ export function initPersonalInventory({
       return '';
     }
     try {
-      const pngBlob = await ketcher.generateImage(structureSource, {
-        outputFormat: 'png',
-        backgroundColor: '#ffffff',
-        bondThickness: 1
-      });
-      return normalizeImagePayload(pngBlob, 'image/png');
-    } catch {
-      // Fall through to SVG generation.
-    }
-    try {
       const svgBlob = await ketcher.generateImage(structureSource, {
         outputFormat: 'svg',
         backgroundColor: '#ffffff',
         bondThickness: 1
       });
       return normalizeImagePayload(svgBlob, 'image/svg+xml');
+    } catch {
+      // Fall through to PNG generation.
+    }
+    try {
+      const pngBlob = await ketcher.generateImage(structureSource, {
+        outputFormat: 'png',
+        backgroundColor: '#ffffff',
+        bondThickness: 1
+      });
+      return normalizeImagePayload(pngBlob, 'image/png');
     } catch {
       return '';
     }
@@ -913,6 +1032,14 @@ export function initPersonalInventory({
       button.addEventListener('click', () => {
         openInventoryStructureEditor(button).catch(() => {
           setStructureStatus('Cannot open Ketcher yet. Wait a second and try again.');
+        });
+      });
+    });
+
+    inventorySections.querySelectorAll('[data-inventory-sample-structure-paste]').forEach((button) => {
+      button.addEventListener('click', () => {
+        pasteInventoryStructure(button).catch(() => {
+          setStructureStatus('Cannot read ChemDraw structure from the clipboard yet.');
         });
       });
     });

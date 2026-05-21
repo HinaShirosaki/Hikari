@@ -664,6 +664,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(notebookDraftResult.notebook.title, 'Protein purification');
       assert.equal(calls[calls.length - 1].toolId, 'notebook-draft');
       assert.equal(calls[calls.length - 1].args.project.name, 'Atlas');
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[calls.length - 1].args.project, 'project_name'), false);
       assert.deepEqual(calls[calls.length - 1].args.protocol_candidates, ['Protein purification']);
       assert.equal(calls[calls.length - 1].context.parserPayload.primary_intent, 'notebook_draft');
 
@@ -706,6 +707,162 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       const legacyInstructions = gateway.resourceRead({ uri: 'enana://instructions/codex-agent' });
       assert.equal(legacyInstructions.ok, true);
       assert.match(legacyInstructions.contents, /provider-neutral Hikari app contract/);
+    });
+
+    test('agent tool executors hydrate bundle snapshots for direct protocol MCP paths', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+      const executors = new Map();
+      const hydratedProtocol = {
+        id: 'prot-tev',
+        name: 'TEV Protease Cleavage of Fusion Protein',
+        purpose: 'Cleave a fusion tag with TEV protease.',
+        steps: [
+          { id: 'step-1', text: 'Combine fusion protein with TEV protease.' }
+        ]
+      };
+      const staleProtocol = {
+        id: 'prot-smoke',
+        name: 'MCP Fused Protocol Generation Smoke 2026-05-15 20-06',
+        purpose: 'A partial in-memory protocol snapshot.'
+      };
+      const protocolInputs = [];
+      const notebookInputs = [];
+      registerAgentToolExecutors({
+        cleanText: (value, maxLength = 500) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, executor) {
+            executors.set(name, executor);
+          }
+        },
+        agentLookupRuntime: {},
+        agentAppApi: {
+          protocol: {
+            async matchForNotebook(input) {
+              protocolInputs.push(input);
+              return {
+                ok: true,
+                ranked_matches: [{ ...input.snapshot.protocols[0], score: 120 }],
+                selected_protocol: { ...input.snapshot.protocols[0], score: 120 },
+                selection_method: 'deterministic',
+                rationale: 'Exact protocol candidate match.'
+              };
+            }
+          }
+        },
+        notebookDraftRuntime: {
+          async generateNotebookDraft(input) {
+            notebookInputs.push(input);
+            return {
+              status: 'proposal_ready',
+              selected_protocol: input.snapshot.protocols[0],
+              notebook: { title: input.snapshot.protocols[0]?.name || '' },
+              summary: 'Draft ready.'
+            };
+          }
+        },
+        hydrateSnapshotFromBundle: async ({ snapshot, dataFilePath }) => ({
+          snapshot: {
+            ...snapshot,
+            data_file_path: dataFilePath,
+            protocols: [hydratedProtocol],
+            notebookEntries: []
+          }
+        }),
+        getDefaultDataFilePath: () => '/tmp/enana-data.json'
+      });
+
+      const protocolResult = await executors.get('protocol-matching')({
+        args: {
+          protocol_candidates: ['TEV Protease Cleavage of Fusion Protein']
+        },
+        context: {
+          snapshot: { data_file_path: '/tmp/enana-data.json', protocols: [staleProtocol] },
+          dataFilePath: '/tmp/enana-data.json'
+        },
+        state: {}
+      });
+      assert.equal(protocolResult.status, 'selected');
+      assert.equal(protocolInputs[0].snapshot.protocols[0].name, hydratedProtocol.name);
+
+      const notebookResult = await executors.get('notebook-draft')({
+        args: {
+          project: { name: 'PD-1 Nanobody Binder Discovery' },
+          protocol_candidates: ['TEV Protease Cleavage of Fusion Protein']
+        },
+        context: {
+          snapshot: { data_file_path: '/tmp/enana-data.json', protocols: [staleProtocol] },
+          dataFilePath: '/tmp/enana-data.json',
+          parserPayload: { primary_intent: 'notebook_draft' }
+        }
+      });
+      assert.equal(notebookResult.status, 'proposal_ready');
+      assert.equal(notebookInputs[0].snapshot.protocols[0].id, 'prot-tev');
+
+      const fallbackExecutors = new Map();
+      const { createProtocolMatchingRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'agent-protocol-matching.js'
+      ));
+      registerAgentToolExecutors({
+        cleanText: (value, maxLength = 500) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, executor) {
+            fallbackExecutors.set(name, executor);
+          }
+        },
+        protocolMatchingRuntime: createProtocolMatchingRuntime({}),
+        hydrateSnapshotFromBundle: async ({ snapshot, dataFilePath }) => ({
+          snapshot: {
+            ...snapshot,
+            data_file_path: dataFilePath,
+            protocols: [hydratedProtocol],
+            notebookEntries: []
+          }
+        }),
+        getDefaultDataFilePath: () => '/tmp/enana-data.json'
+      });
+      const fallbackResult = await fallbackExecutors.get('protocol-matching')({
+        args: {
+          protocol_candidates: ['TEV Protease Cleavage of Fusion Protein']
+        },
+        context: {
+          snapshot: { data_file_path: '/tmp/enana-data.json', protocols: [staleProtocol] },
+          dataFilePath: '/tmp/enana-data.json'
+        },
+        state: {}
+      });
+      assert.equal(fallbackResult.selected_protocol.name, hydratedProtocol.name);
+
+      const weakResult = await createProtocolMatchingRuntime({}).selectProtocol({
+        protocols: [staleProtocol],
+        protocolCandidates: ['TEV Protease Cleavage of Fusion Protein'],
+        message: 'TEV Protease Cleavage of Fusion Protein',
+        parserPayload: {
+          entities: {
+            protocol_name: 'TEV Protease Cleavage of Fusion Protein'
+          }
+        }
+      });
+      assert.equal(weakResult.selected_protocol, null);
     });
 
     test('codex agent runtime builds a Codex-session prompt and renders plain final text', async () => {

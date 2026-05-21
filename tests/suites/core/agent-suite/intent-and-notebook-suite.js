@@ -2910,6 +2910,75 @@ module.exports = function registerAgentIntentAndNotebookSuite(context = {}) {
       assert.equal(result.notebook.unresolved_placeholders.length, 1);
     });
 
+    test('notebook draft runtime accepts explicit project names without a hydrated project record', async () => {
+      const runtime = agentNotebookDraft.createNotebookDraftRuntime({
+        requestStructuredJsonPayload: async (options = {}) => {
+          if (options.stage === 'notebook_draft_selection') {
+            return {
+              ok: true,
+              payload: {
+                selected_candidate_id: 'protocol-only::prot-starter::Small-Scale Overnight Starter Culture',
+                title: 'Starter Culture Draft',
+                purpose: 'Plan starter culture setup.',
+                rationale: 'The caller named the starter culture protocol.',
+                planned_materials: ['Starter media'],
+                checkpoints: ['Confirm antibiotic.']
+              }
+            };
+          }
+          if (options.stage === 'notebook_fill') {
+            return {
+              ok: true,
+              payload: {
+                filled_values: [],
+                missing_placeholders: [],
+                follow_up_questions: [],
+                result_summary: 'Starter culture draft prepared.'
+              }
+            };
+          }
+          return {
+            ok: false,
+            error: `Unhandled stage ${String(options.stage || '')}`
+          };
+        }
+      });
+      const result = await runtime.generateNotebookDraft({
+        message: 'Plan the next notebook draft using starter culture.',
+        conversation: [],
+        snapshot: {
+          projects: [],
+          protocols: [
+            {
+              id: 'prot-starter',
+              name: 'Small-Scale Overnight Starter Culture',
+              purpose: 'Prepare an overnight starter culture.',
+              steps: [
+                { id: 'step-1', text: 'Inoculate starter media.', placeholders: [] }
+              ]
+            }
+          ],
+          workflows: []
+        },
+        parserPayload: {
+          primary_intent: 'notebook_draft',
+          entities: {
+            project_name: 'PD-1 Nanobody Binder Discovery'
+          },
+          protocol_candidates: ['Small-Scale Overnight Starter Culture']
+        },
+        project: {
+          name: 'PD-1 Nanobody Binder Discovery'
+        },
+        protocolCandidates: ['Small-Scale Overnight Starter Culture']
+      });
+
+      assert.equal(result.status, 'proposal_ready');
+      assert.equal(result.project_name, 'PD-1 Nanobody Binder Discovery');
+      assert.equal(result.selected_protocol.name, 'Small-Scale Overnight Starter Culture');
+      assert.equal(result.notebook.entry_template.projectName, 'PD-1 Nanobody Binder Discovery');
+    });
+
     test('notebook draft runtime can resolve helper runtimes from registry factories', async () => {
       const requestedFactories = [];
       const runtime = agentNotebookDraft.createNotebookDraftRuntime({

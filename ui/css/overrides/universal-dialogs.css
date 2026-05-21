@@ -125,17 +125,18 @@
 }
 
 body.theme-night .app-dialog-overlay {
-  background: rgba(9, 18, 33, 0.54);
+  background: var(--night-overlay);
 }
 
 body.theme-night .app-dialog-surface {
-  border-color: rgba(145, 174, 214, 0.32);
-  background: rgba(20, 33, 57, 0.98);
-  box-shadow: 0 24px 58px rgba(4, 10, 20, 0.42);
+  border-color: color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
+  background: color-mix(in srgb, var(--surface-elevated) 94%, var(--surface-subtle) 6%);
+  color: var(--text);
+  box-shadow: 0 24px 58px rgba(0, 0, 0, 0.46);
 }
 
 body.theme-night #home-view .home-dialog.app-dialog-surface {
-  background: rgba(20, 33, 57, 0.98);
+  background: color-mix(in srgb, var(--surface-elevated) 92%, var(--accent) 8%);
 }
 
 @media (max-width: 720px) {

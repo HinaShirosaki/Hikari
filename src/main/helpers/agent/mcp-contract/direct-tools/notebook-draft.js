@@ -110,12 +110,9 @@ function normalizeProject(input = {}, context = {}) {
     220
   );
   return compactObject({
-    ...contextProject,
-    ...inputProject,
     id: projectId,
     name: projectName,
-    project_id: projectId,
-    project_name: projectName
+    resolution_source: cleanText(inputProject.resolution_source || inputProject.resolutionSource || contextProject.resolution_source || contextProject.resolutionSource, 120)
   });
 }
 

@@ -64,6 +64,13 @@ export function buildPageRecords({ doc, pageMetrics = [] } = {}) {
     textLayer.dataset.pageWidth = String(pageWidth);
     textLayer.dataset.pageHeight = String(pageHeight);
 
+    const linkLayer = doc.createElement('div');
+    linkLayer.className = 'papers-viewer-link-layer';
+    linkLayer.dataset.pageNumber = String(pageNumber);
+    linkLayer.dataset.pageWidth = String(pageWidth);
+    linkLayer.dataset.pageHeight = String(pageHeight);
+    linkLayer.setAttribute('aria-label', `Paper page ${pageNumber} links`);
+
     const overlay = doc.createElement('div');
     overlay.className = 'papers-viewer-overlay';
     overlay.dataset.pageNumber = String(pageNumber);
@@ -71,7 +78,7 @@ export function buildPageRecords({ doc, pageMetrics = [] } = {}) {
     overlay.dataset.pageHeight = String(pageHeight);
     overlay.setAttribute('aria-label', `Paper page ${pageNumber} comment pins`);
 
-    pageElement.append(canvas, highlightLayer, textLayer, overlay);
+    pageElement.append(canvas, highlightLayer, textLayer, linkLayer, overlay);
 
     return {
       pageNumber,
@@ -80,6 +87,7 @@ export function buildPageRecords({ doc, pageMetrics = [] } = {}) {
       canvas,
       highlightLayer,
       textLayer,
+      linkLayer,
       overlay,
       renderTask: null,
       textLayerBuilder: null,
@@ -143,6 +151,10 @@ export function applyPageSizing({ pageRecords = [], scale } = {}) {
     record.canvas.style.height = `${height}px`;
     if (record.textLayer) {
       record.textLayer.style.setProperty('--total-scale-factor', String(scale));
+    }
+    if (record.linkLayer) {
+      record.linkLayer.style.width = `${width}px`;
+      record.linkLayer.style.height = `${height}px`;
     }
   });
 }

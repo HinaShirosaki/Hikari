@@ -254,7 +254,7 @@
             <button id="add-buffer-chemical-btn" type="button" class="ghost-btn">Add Chemical</button>
           </div>
           <div id="buffer-rows" class="buffer-rows"></div>
-          <p id="buffer-total-result" class="calc-output"></p>
+          <p id="buffer-total-result" class="calc-output" hidden></p>
         </div>
       </div>
 
@@ -537,7 +537,7 @@
           <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
             <label>
               Plate Image
-              <input id="colony-image-file" type="file" accept="image/*" />
+              <input id="colony-image-file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif" />
             </label>
 
             <div class="form-actions">
@@ -563,7 +563,7 @@
           </form>
 
           <div id="colony-summary" class="calc-output">
-            <p class="small-note">Load a plate image, then click each colony to count manually.</p>
+            <p class="small-note">Choose or drop a plate image, then click each colony to count manually.</p>
           </div>
 
           <div id="colony-cropper-shell" class="colony-cropper-shell" hidden>

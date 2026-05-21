@@ -262,11 +262,18 @@
 .assay-axis-switch .assay-mode-switch {
   justify-self: stretch;
   width: 100%;
+  box-sizing: border-box;
+  gap: 5px;
+  padding: 5px;
+  border-radius: 10px;
 }
 
 .assay-axis-switch .assay-mode-switch > button {
   flex: 1 1 0;
   min-width: 0;
+  box-sizing: border-box;
+  padding: 7px 8px;
+  border-radius: 7px;
 }
 
 .assay-sample-picker {
@@ -957,78 +964,78 @@ body.theme-night .assay-plate-table-wrap {
 
 body.theme-night .assay-plate-table th,
 body.theme-night .assay-plate-table td {
-  border-color: rgba(145, 174, 214, 0.3);
+  border-color: color-mix(in srgb, var(--line) 84%, transparent);
 }
 
 body.theme-night .assay-plate-table thead th,
 body.theme-night .assay-plate-table thead td,
 body.theme-night .assay-plate-table tbody th {
-  background: rgba(33, 55, 90, 0.95);
+  background: var(--surface-subtle);
 }
 
 body.theme-night .assay-plate-table tr > *:nth-child(2) {
-  background: rgb(23, 38, 64);
+  background: color-mix(in srgb, var(--surface) 88%, var(--surface-subtle) 12%);
 }
 
 body.theme-night .assay-sample-picker {
-  border-color: rgba(145, 174, 214, 0.32);
-  background: rgba(20, 33, 57, 0.96);
+  border-color: color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
+  background: color-mix(in srgb, var(--surface-elevated) 94%, var(--surface-subtle) 6%);
 }
 
 body.theme-night .assay-sample-picker-item {
-  border-color: rgba(145, 174, 214, 0.18);
-  background: rgba(31, 49, 81, 0.88);
-  color: #e7eefb;
+  border-color: color-mix(in srgb, var(--line-soft) 86%, transparent);
+  background: var(--night-control-bg);
+  color: var(--text);
 }
 
 body.theme-night .assay-sample-picker-item:hover,
 body.theme-night .assay-sample-picker-item:focus-visible,
 body.theme-night .assay-sample-picker-item.is-current {
-  background: rgba(56, 82, 127, 0.92);
+  background: var(--night-control-bg-hover);
 }
 
 body.theme-night .assay-sample-picker-item-meta {
-  color: #b6c7e6;
+  color: var(--muted);
 }
 
 body.theme-night .assay-serial-dilution-overlay,
 body.theme-night .assay-result-import-overlay {
-  background: rgba(9, 18, 33, 0.46);
+  background: var(--night-overlay-soft);
 }
 
 body.theme-night .assay-serial-dilution-dialog,
 body.theme-night .assay-result-import-dialog {
-  border-color: rgba(145, 174, 214, 0.32);
-  background: rgba(20, 33, 57, 0.98);
+  border-color: color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
+  background: color-mix(in srgb, var(--surface-elevated) 94%, var(--surface-subtle) 6%);
 }
 
 body.theme-night .assay-result-import-choice {
-  border-color: rgba(145, 174, 214, 0.2);
-  background: rgba(31, 49, 81, 0.72);
+  border-color: color-mix(in srgb, var(--line-soft) 86%, transparent);
+  background: var(--night-control-bg);
 }
 
 body.theme-night .assay-result-import-choice:hover,
 body.theme-night .assay-result-import-choice:focus-visible,
 body.theme-night .assay-result-import-choice.is-active {
-  border-color: rgba(151, 184, 235, 0.5);
-  background: rgba(56, 82, 127, 0.92);
+  border-color: color-mix(in srgb, var(--accent) 56%, var(--line));
+  background: var(--night-control-bg-hover);
 }
 
 body.theme-night .assay-serial-dilution-sample {
-  border-color: rgba(145, 174, 214, 0.2);
-  background: rgba(31, 49, 81, 0.7);
+  border-color: color-mix(in srgb, var(--line-soft) 86%, transparent);
+  background: var(--night-control-bg);
 }
 
 body.theme-night .assay-serial-dilution-stock-table th,
 body.theme-night .assay-serial-dilution-stock-table td,
 body.theme-night .assay-serial-dilution-table th,
 body.theme-night .assay-serial-dilution-table td {
-  border-color: rgba(145, 174, 214, 0.18);
+  border-color: color-mix(in srgb, var(--line-soft) 86%, transparent);
 }
 
 body.theme-night .assay-serial-dilution-stock-table th,
 body.theme-night .assay-serial-dilution-table th {
-  background: rgba(44, 69, 110, 0.72);
+  background: var(--surface-subtle);
 }
 
 body.theme-night .assay-serial-dilution-error {
@@ -1036,12 +1043,12 @@ body.theme-night .assay-serial-dilution-error {
 }
 
 body.theme-night .assay-well {
-  background: rgba(23, 38, 64, 0.92);
+  background: var(--surface-elevated);
 }
 
 body.theme-night .assay-tabulator {
-  border-color: rgba(145, 174, 214, 0.32);
-  background: rgba(20, 33, 57, 0.78);
+  border-color: color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
 }
 
 body.theme-night .assay-analysis-chart {

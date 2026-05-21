@@ -327,6 +327,19 @@ function buildCodexAgentParserPayload(codexAgent = {}, {
 
 function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {}) {
   const snapshot = ensureObject(input.snapshot);
+  const dataFilePath = cleanText(
+    input.dataFilePath
+      || input.data_file_path
+      || snapshot?.data_file_path
+      || snapshot?.dataFilePath,
+    2000
+  );
+  const fallbackDataFilePath = cleanText(
+    input.fallbackDataFilePath
+      || input.fallback_data_file_path
+      || dataFilePath,
+    2000
+  );
   return {
     provider: 'codex',
     model: cleanText(input.model, 120),
@@ -341,7 +354,8 @@ function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {})
     },
     projectId: cleanText(input.projectId, 120),
     projectName: cleanText(input.projectName, 220),
-    dataFilePath: cleanText(snapshot?.data_file_path || snapshot?.dataFilePath, 2000),
+    dataFilePath,
+    fallbackDataFilePath,
     traceRequestId: cleanText(input.traceContext?.requestId, 120)
   };
 }

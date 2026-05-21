@@ -1,4 +1,8 @@
 import { getWellName, isMultiWellContainer } from '../personal-inventory/constants.js';
+import {
+  getChemicalStructureCandidatesFromClipboardData,
+  readChemicalStructureClipboard
+} from '../chemical-structure-clipboard.js';
 
 export function initSampleRegistry({ state, persist, safeText, onNotebookSampleCaptured }) {
   const sampleForm = document.getElementById('sample-form');
@@ -19,6 +23,7 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
   const samplePassageIntervalDaysInput = document.getElementById('sample-passage-interval-days');
   const sampleCompoundFields = document.getElementById('sample-compound-fields');
   const sampleCompoundOpenBtn = document.getElementById('sample-compound-open-btn');
+  const sampleCompoundPasteBtn = document.getElementById('sample-compound-paste-btn');
   const sampleCompoundCaptureBtn = document.getElementById('sample-compound-capture-btn');
   const sampleCompoundClearBtn = document.getElementById('sample-compound-clear-btn');
   const sampleCompoundSmilesInput = document.getElementById('sample-compound-smiles');
@@ -50,12 +55,14 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
   sampleLinkContainerInput?.addEventListener('change', onLinkedContainerChange);
   sampleTypeInput?.addEventListener('change', onSampleTypeChange);
   sampleCompoundOpenBtn?.addEventListener('click', onCompoundOpenClick);
+  sampleCompoundPasteBtn?.addEventListener('click', onCompoundPasteClick);
   sampleCompoundCaptureBtn?.addEventListener('click', onCompoundCaptureClick);
   sampleCompoundClearBtn?.addEventListener('click', onCompoundClearClick);
   sampleCompoundDialogCloseBtn?.addEventListener('click', closeCompoundDialog);
   sampleCompoundDialogCancelBtn?.addEventListener('click', closeCompoundDialog);
   sampleCompoundDialogApplyBtn?.addEventListener('click', onCompoundDialogApplyClick);
   sampleCompoundDialogOverlay?.addEventListener('click', onCompoundDialogOverlayClick);
+  sampleCompoundFields?.addEventListener('paste', onCompoundStructurePaste);
   sampleForm?.addEventListener('submit', onSubmit);
   sampleCancelBtn?.addEventListener('click', resetForm);
   sampleSearchInput?.addEventListener('input', renderList);
@@ -780,7 +787,7 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
       renderCompoundFields();
       return;
     }
-    setCompoundStatus('Chemical structure mode enabled. Open Ketcher to draw structure.', false);
+    setCompoundStatus('Chemical structure mode enabled. Paste from ChemDraw or open Ketcher.', false);
     renderCompoundFields();
   }
 
@@ -808,6 +815,30 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
     setCompoundStatus('Ketcher is ready. Draw the structure and apply it to the sample.', false);
   }
 
+  async function onCompoundPasteClick() {
+    if (!isChemicalStructureSampleType(sampleTypeInput?.value)) {
+      return;
+    }
+    setCompoundStatus('Reading chemical structure from clipboard...', false);
+    const clipboard = await readChemicalStructureClipboard();
+    await applyCompoundStructurePasteCandidates(clipboard.candidates, clipboard.formats);
+  }
+
+  function onCompoundStructurePaste(event) {
+    if (!isChemicalStructureSampleType(sampleTypeInput?.value)) {
+      return;
+    }
+    const candidates = getChemicalStructureCandidatesFromClipboardData(event.clipboardData);
+    if (!candidates.length) {
+      return;
+    }
+    event.preventDefault();
+    setCompoundStatus('Reading pasted chemical structure...', false);
+    applyCompoundStructurePasteCandidates(candidates, Array.from(event.clipboardData?.types || [])).catch(() => {
+      setCompoundStatus('Cannot render that structure yet. Try Copy As CDXML or MOL from ChemDraw.', true);
+    });
+  }
+
   async function onCompoundDialogApplyClick() {
     try {
       await captureCompoundStructureFromEditor();
@@ -816,6 +847,32 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
     } catch {
       setCompoundStatus('Cannot read Ketcher yet. Wait a second and try again.', true);
     }
+  }
+
+  async function applyCompoundStructurePasteCandidates(candidates, formats = []) {
+    if (!Array.isArray(candidates) || !candidates.length) {
+      setCompoundStatus(buildCompoundClipboardNotFoundMessage(formats), true);
+      return false;
+    }
+
+    for (const candidate of candidates) {
+      try {
+        if (candidate?.imageDataUrl) {
+          compoundStructureDraft = toCompoundStructureDraft({ imageDataUrl: candidate.imageDataUrl });
+          renderCompoundFields();
+          setCompoundStatus('Structure image pasted from clipboard. Save the sample to keep it.', false);
+          return true;
+        }
+        await loadCompoundStructureSource(candidate.source);
+        setCompoundStatus('Structure pasted from clipboard. Save the sample to keep it.', false);
+        return true;
+      } catch {
+        // Try the next clipboard representation if Ketcher cannot parse this one.
+      }
+    }
+
+    setCompoundStatus('Cannot render that structure yet. Try Copy As CDXML or MOL from ChemDraw.', true);
+    return false;
   }
 
   async function onCompoundCaptureClick() {
@@ -923,6 +980,34 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
     return ketcher;
   }
 
+  async function waitForCompoundKetcher() {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      try {
+        return await getCompoundKetcher();
+      } catch {
+        await delay(180);
+      }
+    }
+    throw new Error('Ketcher is still initializing.');
+  }
+
+  async function loadCompoundStructureSource(structureSource) {
+    const source = String(structureSource || '').trim();
+    if (!source) {
+      throw new Error('No structure source provided.');
+    }
+    const ketcher = await waitForCompoundKetcher();
+    await ketcher.setMolecule(source);
+    if (typeof ketcher.layout === 'function') {
+      try {
+        await ketcher.layout();
+      } catch {
+        // Layout is best-effort; setMolecule already loaded the structure.
+      }
+    }
+    await captureCompoundStructureFromEditor();
+  }
+
   async function syncCompoundDraftToEditor() {
     const molecule = compoundStructureDraft.molfile || compoundStructureDraft.smiles || '';
     for (let attempt = 0; attempt < 10; attempt += 1) {
@@ -952,6 +1037,17 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
     }
     sampleCompoundStatus.textContent = String(message || '');
     sampleCompoundStatus.style.color = isError ? '#982a38' : '';
+  }
+
+  function buildCompoundClipboardNotFoundMessage(formats = []) {
+    const base = 'No CDXML, MOL, SDF, SMILES, InChI, or ChemDraw image found on the clipboard.';
+    const visibleFormats = Array.from(new Set((Array.isArray(formats) ? formats : [])
+      .map((format) => String(format || '').trim())
+      .filter(Boolean)));
+    if (!visibleFormats.length) {
+      return base;
+    }
+    return `${base} Clipboard formats seen: ${visibleFormats.slice(0, 8).join(', ')}.`;
   }
 
   function normalizeCompoundStructureData(input) {
@@ -1087,23 +1183,23 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
     }
 
     try {
-      const pngBlob = await ketcher.generateImage(structureSource, {
-        outputFormat: 'png',
-        backgroundColor: '#ffffff',
-        bondThickness: 1
-      });
-      return normalizeImagePayload(pngBlob, 'image/png');
-    } catch {
-      // Fall through to SVG preview generation.
-    }
-
-    try {
       const svgBlob = await ketcher.generateImage(structureSource, {
         outputFormat: 'svg',
         backgroundColor: '#ffffff',
         bondThickness: 1
       });
       return normalizeImagePayload(svgBlob, 'image/svg+xml');
+    } catch {
+      // Fall through to PNG preview generation.
+    }
+
+    try {
+      const pngBlob = await ketcher.generateImage(structureSource, {
+        outputFormat: 'png',
+        backgroundColor: '#ffffff',
+        bondThickness: 1
+      });
+      return normalizeImagePayload(pngBlob, 'image/png');
     } catch {
       return '';
     }

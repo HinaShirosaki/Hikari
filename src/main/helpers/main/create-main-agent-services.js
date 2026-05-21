@@ -291,6 +291,29 @@ function createMainAgentServices(deps = {}) {
     async runAgentTool(toolName, args, rawSnapshot, options = {}) {
       const normalizedArgs = normalizeToolInvocationArgs(args);
       const snapshot = agentRuntimeSupport.normalizeAgentSnapshot(rawSnapshot);
+      const snapshotDataFilePath = cleanText(
+        snapshot?.data_file_path || snapshot?.dataFilePath,
+        1600
+      );
+      const optionDataFilePath = cleanText(
+        options?.dataFilePath || options?.data_file_path,
+        1600
+      );
+      const defaultDataFilePath = cleanText(getDefaultDataFilePath(), 1600);
+      const dataFilePath = snapshotDataFilePath || optionDataFilePath || defaultDataFilePath;
+      const fallbackDataFilePath = cleanText(
+        options?.fallbackDataFilePath
+          || options?.fallback_data_file_path
+          || defaultDataFilePath
+          || dataFilePath,
+        1600
+      );
+      const executionSnapshot = dataFilePath && !snapshotDataFilePath
+        ? {
+          ...snapshot,
+          data_file_path: dataFilePath
+        }
+        : snapshot;
       const envelope = await genericAgentToolRuntime.executeToolCall(
         {
           tool_name: toolName,
@@ -298,9 +321,9 @@ function createMainAgentServices(deps = {}) {
         },
         {
           ...options,
-          snapshot,
-          dataFilePath: cleanText(snapshot?.data_file_path, 1600),
-          fallbackDataFilePath: getDefaultDataFilePath()
+          snapshot: executionSnapshot,
+          dataFilePath,
+          fallbackDataFilePath
         }
       );
       const normalizedResult = envelope?.result && typeof envelope.result === 'object'
@@ -448,6 +471,8 @@ function createMainAgentServices(deps = {}) {
             || agentMetadata.projectName,
           220
         ),
+        dataFilePath: cleanText(getDefaultDataFilePath(), 2000),
+        fallbackDataFilePath: cleanText(getDefaultDataFilePath(), 2000),
         snapshot: {
           data_file_path: cleanText(getDefaultDataFilePath(), 2000)
         },
@@ -582,7 +607,9 @@ function createMainAgentServices(deps = {}) {
     paperAnalysisRuntime,
     protocolGenerationRuntime,
     protocolSaveRuntime,
-    getAgentPythonSandboxRoot
+    getAgentPythonSandboxRoot,
+    hydrateSnapshotFromBundle,
+    getDefaultDataFilePath
   });
 
   codexAgentMcpHost = createAgentMcpHost({

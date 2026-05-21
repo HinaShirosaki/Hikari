@@ -49,10 +49,11 @@
             </section>
             <section id="sample-compound-fields" class="sample-compound-fields">
               <div class="inline-row sample-compound-head">
-                <strong>Chemical Structure (Ketcher)</strong>
-                <span class="small-note">Open the editor, draw the structure, then save the snapshot with the sample</span>
+                <strong>Chemical Structure</strong>
+                <span class="small-note">Paste CDXML or MOL from ChemDraw, or open Ketcher to draw</span>
               </div>
               <div class="form-actions">
+                <button id="sample-compound-paste-btn" type="button" class="ghost-btn">Paste Structure</button>
                 <button id="sample-compound-capture-btn" type="button" class="ghost-btn">Refresh Snapshot</button>
                 <button id="sample-compound-clear-btn" type="button" class="ghost-btn">Clear Structure</button>
               </div>
@@ -148,7 +149,7 @@
             class="ketcher-frame sample-ketcher-frame"
             title="Sample chemical Ketcher editor"
             src="./ketcher-embedded.html"
-            loading="lazy"
+            loading="eager"
             referrerpolicy="no-referrer"
           ></iframe>
           <div class="form-actions sample-compound-dialog-actions">

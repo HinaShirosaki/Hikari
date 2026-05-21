@@ -102,6 +102,7 @@ export function createPapersPdfViewer(elements = {}) {
     onPlacement: typeof elements.onPlacement === 'function' ? elements.onPlacement : null,
     onPinSelect: typeof elements.onPinSelect === 'function' ? elements.onPinSelect : null,
     onHighlightSelection: typeof elements.onHighlightSelection === 'function' ? elements.onHighlightSelection : null,
+    onExternalLink: typeof elements.onExternalLink === 'function' ? elements.onExternalLink : null,
     onClose: typeof elements.onClose === 'function' ? elements.onClose : null
   };
 
@@ -530,7 +531,11 @@ export function createPapersPdfViewer(elements = {}) {
           record,
           scale,
           outputScale,
-          isStale
+          isStale,
+          onExternalLink: openExternalLink,
+          onDestination: goToDestination,
+          onNamedAction: handleNamedPdfAction,
+          isLinkActivationEnabled: () => !state.placementMode
         });
       }
       if (isStale()) {
@@ -581,6 +586,92 @@ export function createPapersPdfViewer(elements = {}) {
       updateCurrentPageFromScroll({ force: true });
     } else {
       scheduleScrollSync();
+    }
+  }
+
+  async function resolveDestinationPageNumber(destination) {
+    if (!state.pdfDocument || !destination) {
+      return 0;
+    }
+
+    let resolvedDestination = destination;
+    if (typeof resolvedDestination === 'string' && typeof state.pdfDocument.getDestination === 'function') {
+      try {
+        resolvedDestination = await state.pdfDocument.getDestination(resolvedDestination);
+      } catch {
+        return 0;
+      }
+    }
+
+    if (!Array.isArray(resolvedDestination) || !resolvedDestination.length) {
+      return 0;
+    }
+
+    const pageRef = resolvedDestination[0];
+    if (pageRef && typeof pageRef === 'object' && typeof state.pdfDocument.getPageIndex === 'function') {
+      try {
+        const pageIndex = await state.pdfDocument.getPageIndex(pageRef);
+        return clamp(pageIndex + 1, 1, state.pageCount);
+      } catch {
+        return 0;
+      }
+    }
+
+    const pageValue = Number(pageRef);
+    if (!Number.isFinite(pageValue)) {
+      return 0;
+    }
+    if (pageValue >= 0 && pageValue < state.pageCount) {
+      return clamp(pageValue + 1, 1, state.pageCount);
+    }
+    return clamp(pageValue, 1, state.pageCount);
+  }
+
+  async function goToDestination(destination) {
+    if (!state.pdfDocument) {
+      return;
+    }
+    const pageNumber = await resolveDestinationPageNumber(destination);
+    if (!pageNumber) {
+      setStatus('Unable to follow this PDF link.', true);
+      return;
+    }
+    goToPage(pageNumber, { behavior: 'smooth' });
+  }
+
+  function handleNamedPdfAction(action) {
+    const normalizedAction = String(action || '').trim();
+    if (!normalizedAction || !state.pdfDocument) {
+      return;
+    }
+    if (normalizedAction === 'NextPage') {
+      goToPage(state.pageNumber + 1, { behavior: 'smooth' });
+    } else if (normalizedAction === 'PrevPage') {
+      goToPage(state.pageNumber - 1, { behavior: 'smooth' });
+    } else if (normalizedAction === 'FirstPage') {
+      goToPage(1, { behavior: 'smooth' });
+    } else if (normalizedAction === 'LastPage') {
+      goToPage(state.pageCount, { behavior: 'smooth' });
+    }
+  }
+
+  async function openExternalLink(url) {
+    const externalUrl = String(url || '').trim();
+    if (!externalUrl || typeof state.onExternalLink !== 'function') {
+      setStatus('External link opening is unavailable in this build.', true);
+      return;
+    }
+    setStatus('Opening external website...');
+    try {
+      const result = await state.onExternalLink(externalUrl);
+      if (result?.ok === true) {
+        setStatus('Opened external website.');
+      } else {
+        const error = String(result?.error || '').trim();
+        setStatus(error || 'External website was not opened.');
+      }
+    } catch (error) {
+      setStatus(String(error?.message || error || 'Failed to open external website.'), true);
     }
   }
 
