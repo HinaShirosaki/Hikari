@@ -28,6 +28,37 @@ function registerAgentChatHandler({
   } = lifecycleService;
   const activeRequests = new Map();
 
+  function buildPersistedActivityTraceRows(events = []) {
+    const seen = new Set();
+    return asArray(events)
+      .map((entry) => {
+        const source = entry && typeof entry === 'object' ? entry : {};
+        const text = cleanText(source.message, 420);
+        if (!text) {
+          return null;
+        }
+        const key = [
+          cleanText(source.stage, 80),
+          cleanText(source.tool_name || source.toolName, 120),
+          text
+        ].filter(Boolean).join(':').toLowerCase();
+        if (seen.has(key)) {
+          return null;
+        }
+        seen.add(key);
+        return {
+          key,
+          status: cleanText(source.status, 40),
+          stage: cleanText(source.stage, 80),
+          routing_intent: cleanText(source.routing_intent || source.routingIntent, 120),
+          tool_name: cleanText(source.tool_name || source.toolName, 120),
+          text
+        };
+      })
+      .filter(Boolean)
+      .slice(-32);
+  }
+
   function summarizeAttachments(payloadAttachments = []) {
     return asArray(payloadAttachments).map((attachment) => {
       const source = attachment && typeof attachment === 'object' ? attachment : {};
@@ -260,6 +291,13 @@ function registerAgentChatHandler({
             messageId: `assistant-${requestId}`,
             timestamp: responseTimestamp
           });
+          const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
+          if (activityTraceRows.length) {
+            assistantMessage.meta = {
+              ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
+              activity_trace_rows: activityTraceRows
+            };
+          }
           const traceEntries = asArray(controllerRuntime?.traceContext?.entries);
           await sessionService.appendRows(sessionService.sortChatSessionRows([
             ...asArray(lifecycleRecorder.events).map((entry) => ({
@@ -341,6 +379,13 @@ function registerAgentChatHandler({
               messageId: `assistant-${requestId}`,
               timestamp: errorTimestamp
             });
+          const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
+          if (activityTraceRows.length) {
+            assistantMessage.meta = {
+              ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
+              activity_trace_rows: activityTraceRows
+            };
+          }
           const traceEntries = asArray(controllerRuntime?.traceContext?.entries);
           await sessionService.appendRows(sessionService.sortChatSessionRows([
             ...asArray(lifecycleRecorder.events).map((entry) => ({

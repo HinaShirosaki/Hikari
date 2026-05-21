@@ -483,6 +483,12 @@ export function initAgentChat({
       controller_error: 'Request failed'
     };
     if (stage === 'tool_call_started' || stage === 'tool_call_completed' || stage === 'tool_call_failed') {
+      if (trimText(eventPayload?.routing_intent, 120) === 'codex_agent') {
+        const message = trimText(eventPayload?.message, 420);
+        if (message) {
+          return message;
+        }
+      }
       return toolLabel;
     }
     if (stage === 'science_round_started') {
@@ -573,6 +579,7 @@ export function initAgentChat({
   function upsertLiveProgressRows(rows = [], eventPayload = {}) {
     const nextRows = asArray(rows).map((row) => ({ ...row }));
     const key = getProgressRowKey(eventPayload);
+    const stage = trimText(eventPayload?.stage, 80);
     const nextStatus = progressBadgeStatus(eventPayload?.status);
     const nextText = getProgressRowText(eventPayload);
     if (!key || !nextText) {
@@ -583,7 +590,10 @@ export function initAgentChat({
       nextRows.push({
         key,
         status: nextStatus,
-        text: nextText
+        text: nextText,
+        stage,
+        routing_intent: trimText(eventPayload?.routing_intent, 120),
+        tool_name: trimText(eventPayload?.tool_name, 120)
       });
       return nextRows.slice(-12);
     }
@@ -593,7 +603,10 @@ export function initAgentChat({
       status: progressStatusRank(nextStatus) >= progressStatusRank(existingRow?.status)
         ? nextStatus
         : existingRow?.status,
-      text: nextText || existingRow?.text
+      text: nextText || existingRow?.text,
+      stage: stage || existingRow?.stage,
+      routing_intent: trimText(eventPayload?.routing_intent, 120) || existingRow?.routing_intent,
+      tool_name: trimText(eventPayload?.tool_name, 120) || existingRow?.tool_name
     };
     return nextRows.slice(-12);
   }
@@ -717,6 +730,17 @@ export function initAgentChat({
   function cloneLiveThinkingRows(source) {
     return asArray(source).map((row) => ({
       key: trimText(row?.key, 620),
+      text: trimText(row?.text || row, 420)
+    })).filter((row) => row.text);
+  }
+
+  function cloneLiveActivityRows(source) {
+    return asArray(source).map((row) => ({
+      key: trimText(row?.key, 620),
+      status: trimText(row?.status, 40),
+      stage: trimText(row?.stage, 80),
+      routing_intent: trimText(row?.routing_intent || row?.routingIntent, 120),
+      tool_name: trimText(row?.tool_name || row?.toolName, 120),
       text: trimText(row?.text || row, 420)
     })).filter((row) => row.text);
   }
@@ -1281,6 +1305,7 @@ export function initAgentChat({
         onNotebookEntriesChanged
       });
       const persistedThinkingRows = cloneLiveThinkingRows(liveAssistantMessage?.meta?.live_progress?.thinking_rows);
+      const persistedActivityRows = cloneLiveActivityRows(liveAssistantMessage?.meta?.live_progress?.activity_rows);
       if (notebookDraft?.save?.applied === true) {
         renderContextSummary();
       }
@@ -1307,6 +1332,7 @@ export function initAgentChat({
           notebookDraft: notebookDraft || null,
           developer_trace: response.developerTrace,
           thinking_trace_rows: persistedThinkingRows,
+          activity_trace_rows: persistedActivityRows,
           requestText: messageText
         }
       });
@@ -1326,6 +1352,7 @@ export function initAgentChat({
         return;
       }
       const persistedThinkingRows = cloneLiveThinkingRows(liveAssistantMessage?.meta?.live_progress?.thinking_rows);
+      const persistedActivityRows = cloneLiveActivityRows(liveAssistantMessage?.meta?.live_progress?.activity_rows);
       clearLiveAssistantState();
       state.agentChat.messages.push({
         id: createId(),
@@ -1361,6 +1388,7 @@ export function initAgentChat({
           notebookDraft: null,
           developer_trace: [],
           thinking_trace_rows: persistedThinkingRows,
+          activity_trace_rows: persistedActivityRows,
           requestText: messageText
         }
       });

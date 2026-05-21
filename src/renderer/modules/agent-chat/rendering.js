@@ -285,6 +285,55 @@ function normalizeThinkingTraceRows(rows) {
     .slice(0, 32);
 }
 
+function normalizeActivityTraceRows(rows) {
+  const seen = new Set();
+  return asArray(rows)
+    .map((row) => {
+      const source = row && typeof row === 'object' ? row : { text: row };
+      const text = trimText(source.text, 420);
+      if (!text) {
+        return '';
+      }
+      const routingIntent = trimText(source.routing_intent || source.routingIntent, 120);
+      if (routingIntent && routingIntent !== 'codex_agent') {
+        return '';
+      }
+      const stage = trimText(source.stage, 80);
+      if (stage && ![
+        'codex_agent_started',
+        'codex_agent_completed',
+        'tool_call_started',
+        'tool_call_completed',
+        'tool_call_failed'
+      ].includes(stage)) {
+        return '';
+      }
+      if (text === 'Request received') {
+        return '';
+      }
+      const status = trimText(source.status, 40).toLowerCase();
+      if (status === 'failed') {
+        return `Failed: ${text}`;
+      }
+      if (status === 'completed' || status === 'done') {
+        return `Done: ${text}`;
+      }
+      return text;
+    })
+    .filter((row) => {
+      if (!row) {
+        return false;
+      }
+      const key = row.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 32);
+}
+
 function buildStructuredThinkingTraceRows(trace) {
   const source = trace && typeof trace === 'object'
     ? trace
@@ -353,6 +402,20 @@ function collectAssistantThinkingTraceRows(meta) {
   return persistedThinkingRows;
 }
 
+function collectAssistantActivityRows(meta) {
+  if (!meta || typeof meta !== 'object') {
+    return [];
+  }
+  const liveProgress = meta.live_progress && typeof meta.live_progress === 'object'
+    ? meta.live_progress
+    : null;
+  const liveActivityRows = normalizeActivityTraceRows(liveProgress?.activity_rows);
+  if (liveActivityRows.length) {
+    return liveActivityRows;
+  }
+  return normalizeActivityTraceRows(meta.activity_trace_rows || meta.activityTraceRows);
+}
+
 function renderAssistantThinkingTrace(meta, safeText) {
   const thinkingRows = collectAssistantThinkingTraceRows(meta);
   if (!thinkingRows.length) {
@@ -360,6 +423,15 @@ function renderAssistantThinkingTrace(meta, safeText) {
   }
   const isLive = Boolean(meta?.live_progress && typeof meta.live_progress === 'object');
   return renderCollapsibleThinkingTrace('Thinking Trace', thinkingRows, safeText, { open: isLive });
+}
+
+function renderAssistantActivityTrace(meta, safeText) {
+  const activityRows = collectAssistantActivityRows(meta);
+  if (!activityRows.length) {
+    return '';
+  }
+  const isLive = Boolean(meta?.live_progress && typeof meta.live_progress === 'object');
+  return renderCollapsibleThinkingTrace('Activity', activityRows, safeText, { open: isLive });
 }
 
 function renderUserQuestionCard(meta, messageId = '', safeText, { disabled = false } = {}) {
@@ -580,6 +652,9 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
     const assistantThinkingTrace = role === 'assistant'
       ? renderAssistantThinkingTrace(message.meta, safeText)
       : '';
+    const assistantActivityTrace = role === 'assistant'
+      ? renderAssistantActivityTrace(message.meta, safeText)
+      : '';
     const assistantMeta = role === 'assistant'
       ? renderAssistantMeta(message.meta, message.id, {
         state,
@@ -604,6 +679,7 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
             <span>${safeText(timestamp)}</span>
           </header>
           ${assistantThinkingTrace}
+          ${assistantActivityTrace}
           ${messageBody}
           ${role === 'user' ? renderUserAttachments(message.attachments, safeText) : ''}
           ${assistantMeta}

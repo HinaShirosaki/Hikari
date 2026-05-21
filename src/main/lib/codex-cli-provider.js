@@ -354,6 +354,119 @@ function stringifyCodexEventValue(value, maxLength = 2000) {
   }
 }
 
+function parseCodexToolArguments(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function basenameForCodexDisplay(value = '') {
+  const text = cleanText(value, 1200);
+  if (!text) {
+    return '';
+  }
+  try {
+    return path.basename(text.replace(/^file:\/\//u, '')) || text;
+  } catch {
+    return text.split(/[\\/]/u).filter(Boolean).pop() || text;
+  }
+}
+
+function firstQuotedPath(value = '') {
+  const text = cleanText(value, 4000);
+  const quoted = text.match(/["']([^"']+\.(?:js|mjs|cjs|json|md|txt|css|html|ts|tsx|jsx|py|toml|yaml|yml|pdf))["']/iu);
+  if (quoted?.[1]) {
+    return quoted[1];
+  }
+  const bare = text.match(/(?:^|\s)(\/[^\s"'`]+\.(?:js|mjs|cjs|json|md|txt|css|html|ts|tsx|jsx|py|toml|yaml|yml|pdf))/iu);
+  return bare?.[1] || '';
+}
+
+function summarizeExecCommandForCodexProgress(args = {}, status = '') {
+  const cmd = cleanText(args.cmd || args.command || args.input, 4000);
+  if (!cmd) {
+    return status === 'completed' ? 'Local command completed.' : 'Running local command.';
+  }
+  const targetPath = firstQuotedPath(cmd);
+  const targetName = basenameForCodexDisplay(targetPath);
+  const completed = status === 'completed';
+  if (/^\s*(sed|cat|head|tail|nl)\b/u.test(cmd)) {
+    return completed
+      ? `Read ${targetName || 'workspace file'}.`
+      : `Reading ${targetName || 'workspace file'}...`;
+  }
+  if (/^\s*rg\b/u.test(cmd)) {
+    return completed
+      ? `Search completed${targetName ? ` in ${targetName}` : ''}.`
+      : `Searching${targetName ? ` ${targetName}` : ' workspace'}...`;
+  }
+  if (/^\s*(ls|find)\b/u.test(cmd)) {
+    return completed ? 'Workspace listing completed.' : 'Listing workspace files...';
+  }
+  if (/^\s*node\b/u.test(cmd)) {
+    return completed ? 'Node check completed.' : 'Running Node check...';
+  }
+  if (/^\s*(curl|wget)\b/u.test(cmd)) {
+    return completed ? 'Network request completed.' : 'Calling local service...';
+  }
+  return completed ? 'Local command completed.' : 'Running local command...';
+}
+
+function summarizeCodexToolCallForProgress({
+  toolName = '',
+  status = '',
+  argumentValue = null,
+  outputText = '',
+  directText = ''
+} = {}) {
+  const name = cleanText(toolName, 160) || 'codex-tool';
+  const args = parseCodexToolArguments(argumentValue);
+  const completed = status === 'completed';
+  if (name === 'exec_command') {
+    return summarizeExecCommandForCodexProgress(args, status);
+  }
+  if (name === 'codex-tool') {
+    return completed ? 'Tool call completed.' : 'Running tool...';
+  }
+  if (completed && outputText) {
+    return cleanText(`${name}: ${outputText}`, 2400);
+  }
+  if (directText) {
+    return cleanText(`${name}: ${directText}`, 2400);
+  }
+  return completed ? `${name} completed.` : `${name} started.`;
+}
+
+function completeCodexProgressText(value = '', toolName = '') {
+  const text = cleanText(value, 2400);
+  if (/^Reading\s+(.+)\.\.\.$/u.test(text)) {
+    return text.replace(/^Reading\s+(.+)\.\.\.$/u, 'Read $1.');
+  }
+  if (/^Searching\s+(.+)\.\.\.$/u.test(text)) {
+    return text.replace(/^Searching\s+(.+)\.\.\.$/u, 'Search completed in $1.');
+  }
+  if (/^Listing\s+(.+)\.\.\.$/u.test(text)) {
+    return text.replace(/^Listing\s+(.+)\.\.\.$/u, 'Listed $1.');
+  }
+  if (/^Running\s+(.+)\.\.\.$/u.test(text)) {
+    return text.replace(/^Running\s+(.+)\.\.\.$/u, 'Completed $1.');
+  }
+  if (text) {
+    return text.endsWith('.') ? text : `${text}.`;
+  }
+  const name = cleanText(toolName, 160);
+  return name ? `${name} completed.` : 'Tool call completed.';
+}
+
 function clampCodexSummaryText(value = '', maxLength = 2000) {
   const text = cleanText(value, maxLength);
   const limit = Math.max(120, Number(maxLength) || 2000);
@@ -617,6 +730,9 @@ function inferCodexToolStatus(type = '') {
   if (/fail|error|errored|rejected/u.test(text)) {
     return 'failed';
   }
+  if (/function_call_output|tool_result|tool_result_end|mcp_tool_call_end|call_output/u.test(text)) {
+    return 'completed';
+  }
   if (/complete|completed|done|end|ended|finish|finished|success|succeeded/u.test(text)) {
     return 'completed';
   }
@@ -644,24 +760,25 @@ function extractCodexJsonEventToolCall(event = {}) {
       || name,
     160
   ) || 'codex-tool';
+  const argumentValue = source.arguments
+    || source.args
+    || source.input
+    || source.command
+    || source.arguments_delta
+    || source.argumentsDelta
+    || source.delta
+    || invocation.arguments
+    || invocation.args
+    || invocation.input
+    || item.arguments
+    || item.args
+    || item.input
+    || item.command
+    || call.arguments
+    || call.args
+    || call.input;
   const argsText = stringifyCodexEventValue(
-    source.arguments
-      || source.args
-      || source.input
-      || source.command
-      || source.arguments_delta
-      || source.argumentsDelta
-      || source.delta
-      || invocation.arguments
-      || invocation.args
-      || invocation.input
-      || item.arguments
-      || item.args
-      || item.input
-      || item.command
-      || call.arguments
-      || call.args
-      || call.input,
+    argumentValue,
     2000
   );
   const outputValue = source.output
@@ -690,12 +807,19 @@ function extractCodexJsonEventToolCall(event = {}) {
     || ((status === 'completed' || status === 'streaming') && outputText ? outputText : '')
     || argsText
     || outputText;
-  const toolCallText = cleanText(detailText ? `${toolName}: ${detailText}` : toolName, 2400);
+  const toolCallText = summarizeCodexToolCallForProgress({
+    toolName,
+    status,
+    argumentValue,
+    outputText,
+    directText: detailText
+  });
   return {
     type: 'codex_tool_call',
     event_type: type,
     status,
     tool_name: toolName,
+    call_id: cleanText(source.call_id || source.callId || item.call_id || item.callId || call.call_id || call.callId, 160),
     tool_call_text: toolCallText,
     tool_output_text: outputText
   };
@@ -1884,6 +2008,7 @@ async function requestCodexCliText({
   let codexSessionId = cleanResumeSessionId;
   let streamedText = '';
   const seenProgressEvents = new Set();
+  const activeToolCallsById = new Map();
   function handleJsonStreamEvent(event = {}) {
     const extracted = extractCodexJsonEventText(event);
     if (extracted) {
@@ -1913,6 +2038,25 @@ async function requestCodexCliText({
       }
     }
     extractCodexJsonEventProgress(event).forEach((progressEvent) => {
+      if (progressEvent?.type === 'codex_tool_call') {
+        const callId = cleanText(progressEvent.call_id || progressEvent.callId, 160);
+        const status = cleanText(progressEvent.status, 40);
+        if (callId && status !== 'completed' && status !== 'failed') {
+          activeToolCallsById.set(callId, {
+            tool_name: cleanText(progressEvent.tool_name || progressEvent.toolName, 160),
+            tool_call_text: cleanText(progressEvent.tool_call_text || progressEvent.toolCallText, 2400)
+          });
+        } else if (callId && activeToolCallsById.has(callId)) {
+          const previous = activeToolCallsById.get(callId) || {};
+          if (!cleanText(progressEvent.tool_name, 160) || cleanText(progressEvent.tool_name, 160) === 'codex-tool') {
+            progressEvent.tool_name = previous.tool_name || progressEvent.tool_name;
+          }
+          if (!cleanText(progressEvent.tool_call_text, 2400) || cleanText(progressEvent.tool_call_text, 2400) === 'Tool call completed.') {
+            progressEvent.tool_call_text = completeCodexProgressText(previous.tool_call_text, previous.tool_name);
+          }
+          activeToolCallsById.delete(callId);
+        }
+      }
       const progressKey = buildCodexProgressEventKey(progressEvent);
       if (progressKey && seenProgressEvents.has(progressKey)) {
         return;
