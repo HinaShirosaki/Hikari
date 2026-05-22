@@ -401,6 +401,13 @@ function createCodexAgentRuntime(deps = {}) {
     let lastStreamText = '';
     let streamedAskUserPayload = null;
 
+    function publishCodexProgress(progressEvent = {}) {
+      const recorded = recordLifecycleEvent(lifecycleRecorder, progressEvent);
+      if (!recorded && emitAgentProgress) {
+        emitAgentProgress(progressEvent);
+      }
+    }
+
     function emitStreamProgress(streamEvent = {}, { force = false } = {}) {
       const eventType = cleanText(streamEvent.type || streamEvent.event_type || streamEvent.eventType, 120);
       if (eventType === 'codex_tool_call') {
@@ -408,6 +415,32 @@ function createCodexAgentRuntime(deps = {}) {
         if (askUserPayload?.user_question?.question) {
           streamedAskUserPayload = askUserPayload;
         }
+      }
+      if (eventType === 'codex_cli_display') {
+        const displayText = cleanText(
+          streamEvent.display_text
+            || streamEvent.displayText
+            || streamEvent.text
+            || streamEvent.message,
+          4000
+        );
+        if (!displayText) {
+          return;
+        }
+        publishCodexProgress({
+          stage: 'codex_cli_display',
+          status: cleanText(streamEvent.status, 40) || 'streaming',
+          routing_intent: 'codex_agent',
+          tool_name: cleanText(streamEvent.tool_name || streamEvent.toolName, 160),
+          message: displayText,
+          meta: {
+            codex_display_text: displayText,
+            codex_display_kind: cleanText(streamEvent.display_kind || streamEvent.displayKind, 80),
+            codex_display_stream: cleanText(streamEvent.display_stream || streamEvent.displayStream, 40),
+            codex_event_type: cleanText(streamEvent.event_type || streamEvent.eventType, 120)
+          }
+        });
+        return;
       }
       if (!emitAgentProgress) {
         return;

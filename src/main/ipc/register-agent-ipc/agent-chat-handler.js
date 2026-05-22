@@ -59,6 +59,44 @@ function registerAgentChatHandler({
       .slice(-32);
   }
 
+  function buildPersistedCodexCliDisplayRows(events = []) {
+    const seen = new Set();
+    return asArray(events)
+      .map((entry) => {
+        const source = entry && typeof entry === 'object' ? entry : {};
+        const stage = cleanText(source.stage, 80);
+        const text = cleanText(
+          source.meta?.codex_display_text
+            || source.meta?.codexDisplayText
+            || source.message,
+          1200
+        );
+        if (stage !== 'codex_cli_display' || !text) {
+          return null;
+        }
+        const key = [
+          stage,
+          cleanText(source.timestamp, 80),
+          cleanText(source.meta?.codex_display_kind || source.meta?.codexDisplayKind, 80),
+          text
+        ].filter(Boolean).join(':').toLowerCase();
+        if (seen.has(key)) {
+          return null;
+        }
+        seen.add(key);
+        return {
+          key,
+          stage,
+          routing_intent: cleanText(source.routing_intent || source.routingIntent, 120),
+          kind: cleanText(source.meta?.codex_display_kind || source.meta?.codexDisplayKind, 80),
+          stream: cleanText(source.meta?.codex_display_stream || source.meta?.codexDisplayStream, 40),
+          text
+        };
+      })
+      .filter(Boolean)
+      .slice(-80);
+  }
+
   function summarizeAttachments(payloadAttachments = []) {
     return asArray(payloadAttachments).map((attachment) => {
       const source = attachment && typeof attachment === 'object' ? attachment : {};
@@ -292,10 +330,12 @@ function registerAgentChatHandler({
             timestamp: responseTimestamp
           });
           const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
-          if (activityTraceRows.length) {
+          const codexCliDisplayRows = buildPersistedCodexCliDisplayRows(lifecycleRecorder.events);
+          if (activityTraceRows.length || codexCliDisplayRows.length) {
             assistantMessage.meta = {
               ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
-              activity_trace_rows: activityTraceRows
+              ...(activityTraceRows.length ? { activity_trace_rows: activityTraceRows } : {}),
+              ...(codexCliDisplayRows.length ? { codex_cli_display_rows: codexCliDisplayRows } : {})
             };
           }
           const traceEntries = asArray(controllerRuntime?.traceContext?.entries);
@@ -380,10 +420,12 @@ function registerAgentChatHandler({
               timestamp: errorTimestamp
             });
           const activityTraceRows = buildPersistedActivityTraceRows(lifecycleRecorder.events);
-          if (activityTraceRows.length) {
+          const codexCliDisplayRows = buildPersistedCodexCliDisplayRows(lifecycleRecorder.events);
+          if (activityTraceRows.length || codexCliDisplayRows.length) {
             assistantMessage.meta = {
               ...(assistantMessage.meta && typeof assistantMessage.meta === 'object' ? assistantMessage.meta : {}),
-              activity_trace_rows: activityTraceRows
+              ...(activityTraceRows.length ? { activity_trace_rows: activityTraceRows } : {}),
+              ...(codexCliDisplayRows.length ? { codex_cli_display_rows: codexCliDisplayRows } : {})
             };
           }
           const traceEntries = asArray(controllerRuntime?.traceContext?.entries);

@@ -121,7 +121,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(homeBlock.includes('id="sequence-viewer-detail-workspace"'), false);
 
       assert.match(detailBlock, /id="sequence-viewer-detail-workspace"/);
-      assert.match(detailBlock, /id="sequence-viewer-back-btn"/);
+      assert.equal(detailBlock.includes('id="sequence-viewer-back-btn"'), false);
+      assert.equal(detailBlock.includes('Back to Library'), false);
       assert.match(detailBlock, /id="sequence-viewer-detail-protein-builder-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-save-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-annotate-btn"/);

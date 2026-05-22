@@ -38,8 +38,6 @@ export function createSequenceViewerDetailController(config = {}) {
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
   const onConfirmProteinBuilderConstruct = config?.onConfirmProteinBuilderConstruct || (() => {});
   const onReturnToProteinBuilder = config?.onReturnToProteinBuilder || (() => {});
-  const onNavigateHome = config?.onNavigateHome || (() => {});
-  const onRefreshLibraryEntries = config?.onRefreshLibraryEntries || (() => {});
   const onReferenceRecordChanged = config?.onReferenceRecordChanged || (() => {});
   const onApplySequenceEdit = config?.onApplySequenceEdit || (async () => {});
   const hasCloningDesignSource = config?.hasCloningDesignSource || (() => false);
@@ -578,8 +576,6 @@ export function createSequenceViewerDetailController(config = {}) {
       onSelectAlignmentSession,
       onConfirmProteinBuilderConstruct,
       onReturnToProteinBuilder,
-      onNavigateHome,
-      onRefreshLibraryEntries,
       onReferenceRecordChanged
     });
   }

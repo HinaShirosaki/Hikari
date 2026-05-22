@@ -1901,13 +1901,6 @@ export function initSequenceViewer(options = {}) {
       showProteinBuilderWorkspace();
       setStatus('Returned to Protein Builder to adjust the construct.');
     },
-    onNavigateHome: () => {
-      setProteinBuilderConfirmation(null, { render: false });
-      detailController?.hidePrimerDesignOverlay?.();
-      detailController?.hideSequenceEditDialog?.();
-      homeController.navigateToHome();
-    },
-    onRefreshLibraryEntries: homeController.refreshLibraryEntries,
     onReferenceRecordChanged: () => {
       resetAlignmentState({ preserveSessions: true });
       alignmentController?.handleReferenceRecordChanged?.();
