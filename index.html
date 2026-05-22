@@ -770,10 +770,11 @@
             </section>
             <section id="sample-compound-fields" class="sample-compound-fields">
               <div class="inline-row sample-compound-head">
-                <strong>Chemical Structure (Ketcher)</strong>
-                <span class="small-note">Open the editor, draw the structure, then save the snapshot with the sample</span>
+                <strong>Chemical Structure</strong>
+                <span class="small-note">Paste CDXML or MOL from ChemDraw, or open Ketcher to draw</span>
               </div>
               <div class="form-actions">
+                <button id="sample-compound-paste-btn" type="button" class="ghost-btn">Paste Structure</button>
                 <button id="sample-compound-capture-btn" type="button" class="ghost-btn">Refresh Snapshot</button>
                 <button id="sample-compound-clear-btn" type="button" class="ghost-btn">Clear Structure</button>
               </div>
@@ -869,7 +870,7 @@
             class="ketcher-frame sample-ketcher-frame"
             title="Sample chemical Ketcher editor"
             src="./ketcher-embedded.html"
-            loading="lazy"
+            loading="eager"
             referrerpolicy="no-referrer"
           ></iframe>
           <div class="form-actions sample-compound-dialog-actions">
@@ -2480,7 +2481,7 @@
             <button id="add-buffer-chemical-btn" type="button" class="ghost-btn">Add Chemical</button>
           </div>
           <div id="buffer-rows" class="buffer-rows"></div>
-          <p id="buffer-total-result" class="calc-output"></p>
+          <p id="buffer-total-result" class="calc-output" hidden></p>
         </div>
       </div>
 
@@ -2763,7 +2764,7 @@
           <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
             <label>
               Plate Image
-              <input id="colony-image-file" type="file" accept="image/*" />
+              <input id="colony-image-file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif" />
             </label>
 
             <div class="form-actions">
@@ -2789,7 +2790,7 @@
           </form>
 
           <div id="colony-summary" class="calc-output">
-            <p class="small-note">Load a plate image, then click each colony to count manually.</p>
+            <p class="small-note">Choose or drop a plate image, then click each colony to count manually.</p>
           </div>
 
           <div id="colony-cropper-shell" class="colony-cropper-shell" hidden>
@@ -3074,7 +3075,6 @@
 
           <div class="sequence-viewer-detail-main left-rail-template__main">
         <div class="sequence-viewer-detail-topbar">
-          <button id="sequence-viewer-back-btn" type="button" class="ghost-btn">Back to Library</button>
           <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
           <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
           <label class="sequence-viewer-save-name-wrap">

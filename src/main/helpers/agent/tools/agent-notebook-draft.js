@@ -361,6 +361,22 @@ function createNotebookDraftRuntime(deps = {}) {
       };
     }
 
+    if (projectName) {
+      return {
+        id: projectId,
+        name: projectName,
+        resolution_source: 'tool_project_name_unverified'
+      };
+    }
+
+    if (parserProjectName) {
+      return {
+        id: '',
+        name: parserProjectName,
+        resolution_source: 'parser_project_name_unverified'
+      };
+    }
+
     if (projects.length === 1) {
       return {
         id: projects[0].id,

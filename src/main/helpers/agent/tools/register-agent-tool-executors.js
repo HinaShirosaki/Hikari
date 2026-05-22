@@ -127,6 +127,50 @@ function resolveProjectSelector(cleanText, args = {}, context = {}, parserPayloa
   };
 }
 
+async function hydrateToolSnapshot({
+  snapshot = {},
+  context = {},
+  cleanText,
+  hydrateSnapshotFromBundle,
+  getDefaultDataFilePath
+} = {}) {
+  const sourceSnapshot = ensureObject(snapshot);
+  if (typeof hydrateSnapshotFromBundle !== 'function') {
+    return sourceSnapshot;
+  }
+  const defaultDataFilePath = typeof getDefaultDataFilePath === 'function'
+    ? cleanText(getDefaultDataFilePath(), 2400)
+    : '';
+  const dataFilePath = cleanText(
+    context?.dataFilePath
+      || sourceSnapshot.data_file_path
+      || sourceSnapshot.dataFilePath
+      || defaultDataFilePath,
+    2400
+  );
+  const fallbackDataFilePath = cleanText(
+    context?.fallbackDataFilePath
+      || defaultDataFilePath,
+    2400
+  );
+  if (!dataFilePath && !fallbackDataFilePath) {
+    return sourceSnapshot;
+  }
+  try {
+    const hydrated = await hydrateSnapshotFromBundle({
+      dataFilePath,
+      fallbackDataFilePath,
+      snapshot: {
+        ...sourceSnapshot,
+        ...(dataFilePath ? { data_file_path: dataFilePath } : {})
+      }
+    });
+    return ensureObject(hydrated?.snapshot);
+  } catch {
+    return sourceSnapshot;
+  }
+}
+
 function resolvePaperDownloadContext(args = {}, context = {}) {
   const snapshot = context?.snapshot && typeof context.snapshot === 'object'
     ? context.snapshot
@@ -190,6 +234,12 @@ function registerAgentToolExecutors(deps = {}) {
     : {};
   const getAgentPythonSandboxRoot = typeof deps.getAgentPythonSandboxRoot === 'function'
     ? deps.getAgentPythonSandboxRoot
+    : (() => '');
+  const hydrateSnapshotFromBundle = typeof deps.hydrateSnapshotFromBundle === 'function'
+    ? deps.hydrateSnapshotFromBundle
+    : null;
+  const getDefaultDataFilePath = typeof deps.getDefaultDataFilePath === 'function'
+    ? deps.getDefaultDataFilePath
     : (() => '');
 
   if (!genericAgentToolRuntime || typeof genericAgentToolRuntime.registerToolExecutor !== 'function') {
@@ -265,14 +315,22 @@ function registerAgentToolExecutors(deps = {}) {
     const protocolCandidates = asArray(args?.protocol_candidates).length
       ? asArray(args.protocol_candidates)
       : asArray(parserPayload?.protocol_candidates);
-    const snapshot = context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {};
+    const snapshot = await hydrateToolSnapshot({
+      snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
+      context,
+      cleanText,
+      hydrateSnapshotFromBundle,
+      getDefaultDataFilePath
+    });
     const input = {
       provider: cleanText(context?.provider, 80),
       endpoint: cleanText(context?.endpoint, 2000),
       apiKey: cleanText(context?.apiKey, 400),
       model: cleanText(context?.model, 120),
       snapshot,
-      protocols: asArray(args?.protocols),
+      protocols: asArray(args?.protocols).length
+        ? asArray(args.protocols)
+        : asArray(snapshot?.protocols),
       protocolCandidates,
       message: cleanText(args?.message || context?.message, 3200),
       conversation: Array.isArray(context?.conversation) ? context.conversation : [],
@@ -685,24 +743,33 @@ function registerAgentToolExecutors(deps = {}) {
     });
   });
 
-  genericAgentToolRuntime.registerToolExecutor('notebook-draft', async ({ args, context }) => notebookDraftRuntime.generateNotebookDraft({
-    provider: cleanText(context?.provider, 80),
-    endpoint: cleanText(context?.endpoint, 2000),
-    apiKey: cleanText(context?.apiKey, 400),
-    model: cleanText(context?.model, 120),
-    message: cleanText(context?.message, 3200),
-    conversation: Array.isArray(context?.conversation) ? context.conversation : [],
-    snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
-    parserPayload: context?.parserPayload && typeof context.parserPayload === 'object' ? context.parserPayload : {},
-    project: args?.project && typeof args.project === 'object'
-      ? args.project
-      : (context?.project && typeof context.project === 'object' ? context.project : {}),
-    workflowId: cleanText(args?.workflow_id, 120),
-    protocolCandidates: Array.isArray(args?.protocol_candidates) ? args.protocol_candidates : [],
-    evidenceContext: Array.isArray(args?.evidence_context) ? args.evidence_context : [],
-    traceContext: context?.traceContext || null,
-    lifecycleRecorder: context?.lifecycleRecorder || null
-  }));
+  genericAgentToolRuntime.registerToolExecutor('notebook-draft', async ({ args, context }) => {
+    const snapshot = await hydrateToolSnapshot({
+      snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
+      context,
+      cleanText,
+      hydrateSnapshotFromBundle,
+      getDefaultDataFilePath
+    });
+    return notebookDraftRuntime.generateNotebookDraft({
+      provider: cleanText(context?.provider, 80),
+      endpoint: cleanText(context?.endpoint, 2000),
+      apiKey: cleanText(context?.apiKey, 400),
+      model: cleanText(context?.model, 120),
+      message: cleanText(context?.message, 3200),
+      conversation: Array.isArray(context?.conversation) ? context.conversation : [],
+      snapshot,
+      parserPayload: context?.parserPayload && typeof context.parserPayload === 'object' ? context.parserPayload : {},
+      project: args?.project && typeof args.project === 'object'
+        ? args.project
+        : (context?.project && typeof context.project === 'object' ? context.project : {}),
+      workflowId: cleanText(args?.workflow_id, 120),
+      protocolCandidates: Array.isArray(args?.protocol_candidates) ? args.protocol_candidates : [],
+      evidenceContext: Array.isArray(args?.evidence_context) ? args.evidence_context : [],
+      traceContext: context?.traceContext || null,
+      lifecycleRecorder: context?.lifecycleRecorder || null
+    });
+  });
 
   return [
     'inventory-lookup',

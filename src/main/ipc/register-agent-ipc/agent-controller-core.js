@@ -254,7 +254,17 @@ function createAgentControllerCore({
       throw new Error('Message is required.');
     }
     const rawSnapshot = normalizeJsonPayload(payload?.stateSnapshot, {});
-    const snapshot = agentToolRuntime.normalizeAgentSnapshot(rawSnapshot);
+    const defaultDataFilePath = cleanText(
+      typeof getDefaultDataFilePath === 'function' ? getDefaultDataFilePath() : '',
+      1600
+    );
+    const snapshotInput = {
+      ...rawSnapshot,
+      ...(!cleanText(rawSnapshot?.data_file_path || rawSnapshot?.dataFilePath, 1600) && defaultDataFilePath
+        ? { data_file_path: defaultDataFilePath }
+        : {})
+    };
+    const snapshot = agentToolRuntime.normalizeAgentSnapshot(snapshotInput);
     const workspaceDir = process.cwd();
     const listedSkills = typeof agentToolRuntime.listSkills === 'function'
       ? agentToolRuntime.listSkills({ workspaceDir })
@@ -439,6 +449,8 @@ function createAgentControllerCore({
         conversation: [],
         attachments,
         snapshot,
+        dataFilePath: cleanText(snapshot?.data_file_path || defaultDataFilePath, 1600),
+        fallbackDataFilePath: defaultDataFilePath,
         executionFlags,
         deepResearchEnabled,
         traceContext,

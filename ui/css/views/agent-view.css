@@ -672,6 +672,10 @@ body.agent-view-fixed-scroll .workspace-main {
   gap: 8px;
 }
 
+details.agent-thinking-trace:not([open]) > .agent-thinking-trace-list {
+  display: none;
+}
+
 .agent-thinking-trace-item {
   margin: 0;
   line-height: 1.55;

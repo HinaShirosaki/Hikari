@@ -440,14 +440,16 @@ test('agent-chat renders completed science thinking trace details in assistant m
     safeText: shared.safeText
   });
 
-  assert.match(history.innerHTML, /Thinking Trace/);
-  assert.match(history.innerHTML, /<details class="agent-thinking-trace" aria-label="Thinking Trace">/);
-  assert.doesNotMatch(history.innerHTML, /<details class="agent-thinking-trace" open aria-label="Thinking Trace">/);
+  assert.match(history.innerHTML, /Agent Trace/);
+  assert.match(history.innerHTML, /<details[\s\S]*class="agent-thinking-trace"[\s\S]*aria-label="Agent Trace"/);
+  assert.match(history.innerHTML, /data-agent-generated-trace="true"/);
+  assert.match(history.innerHTML, /data-agent-trace-open="false"/);
+  assert.doesNotMatch(history.innerHTML, /<details[^>]*\sopen(?:\s|=|>)/);
   assert.match(history.innerHTML, /Intent parse: This is a general science question/);
   assert.match(history.innerHTML, /Round 1 call: I want to use literature-search to investigate/);
   assert.match(history.innerHTML, /Final synthesis: I am synthesizing the final grounded answer/);
   assert.equal(
-    history.innerHTML.indexOf('Thinking Trace') < history.innerHTML.indexOf('MAPK resistance commonly involves pathway reactivation.'),
+    history.innerHTML.indexOf('MAPK resistance commonly involves pathway reactivation.') < history.innerHTML.indexOf('Agent Trace'),
     true
   );
 });
@@ -1165,7 +1167,8 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
     }
   });
   assert.match(history.innerHTML, /Checking project context/);
-  assert.match(history.innerHTML, /<details class="agent-thinking-trace" open aria-label="Thinking Trace">/);
+  assert.match(history.innerHTML, /<div class="agent-thinking-trace agent-generated-trace-live" aria-label="Agent Trace">/);
+  assert.doesNotMatch(history.innerHTML, /Thinking Trace/);
 
   progressHandler({
     client_request_id: payloadSeen.clientRequestId,
@@ -1186,6 +1189,41 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
     client_request_id: payloadSeen.clientRequestId,
     request_id: 'req-live-1',
     chat_session_id: 'chat-2',
+    routing_intent: 'codex_agent',
+    stage: 'codex_cli_display',
+    status: 'streaming',
+    message: 'Reading paper.md...',
+    meta: {
+      codex_display_text: 'Reading paper.md...',
+      codex_display_kind: 'tool'
+    }
+  });
+  assert.doesNotMatch(history.innerHTML, /Codex CLI/);
+  assert.match(history.innerHTML, /Reading paper\.md/);
+  assert.match(history.innerHTML, /<div class="agent-thinking-trace agent-generated-trace-live" aria-label="Agent Trace">/);
+  assert.doesNotMatch(history.innerHTML, /\{&quot;cmd&quot;:/);
+
+  progressHandler({
+    client_request_id: payloadSeen.clientRequestId,
+    request_id: 'req-live-1',
+    chat_session_id: 'chat-2',
+    routing_intent: 'codex_agent',
+    stage: 'codex_cli_display',
+    status: 'streaming',
+    message: '# Hikari Codex Chat Turn\n\nInternal prompt text should stay hidden.',
+    meta: {
+      codex_display_text: '# Hikari Codex Chat Turn\n\nInternal prompt text should stay hidden.',
+      codex_display_kind: 'assistant',
+      codex_event_type: 'user_message'
+    }
+  });
+  assert.doesNotMatch(history.innerHTML, /Hikari Codex Chat Turn/);
+  assert.doesNotMatch(history.innerHTML, /Internal prompt text should stay hidden/);
+
+  progressHandler({
+    client_request_id: payloadSeen.clientRequestId,
+    request_id: 'req-live-1',
+    chat_session_id: 'chat-2',
     routing_intent: 'general_science_question',
     stage: 'science_clarification_completed',
     status: 'ok',
@@ -1195,8 +1233,8 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
     }
   });
   assert.match(history.innerHTML, /I am clarifying the exact question before I search for evidence/);
-  assert.match(history.innerHTML, /Thinking Trace/);
-  assert.match(history.innerHTML, /<details class="agent-thinking-trace" open aria-label="Thinking Trace">/);
+  assert.doesNotMatch(history.innerHTML, /Thinking Trace/);
+  assert.match(history.innerHTML, /<div class="agent-thinking-trace agent-generated-trace-live" aria-label="Agent Trace">/);
 
   progressHandler({
     client_request_id: payloadSeen.clientRequestId,
@@ -1275,11 +1313,16 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
   assert.equal(state.agentChat.messages.length, 2);
   assert.match(history.innerHTML, /Literature-backed answer/);
   assert.match(history.innerHTML, /I want to use literature-search to investigate &quot;yield drop causes&quot;/);
-  assert.match(history.innerHTML, /<details class="agent-thinking-trace" aria-label="Thinking Trace">/);
-  assert.doesNotMatch(history.innerHTML, /<details class="agent-thinking-trace" open aria-label="Thinking Trace">/);
+  assert.match(history.innerHTML, /<details[\s\S]*class="agent-thinking-trace"[\s\S]*aria-label="Agent Trace"/);
+  assert.match(history.innerHTML, /data-agent-generated-trace="true"/);
+  assert.match(history.innerHTML, /data-agent-trace-open="false"/);
+  assert.doesNotMatch(history.innerHTML, /<details[^>]*\sopen(?:\s|=|>)/);
+  assert.doesNotMatch(history.innerHTML, /Codex CLI/);
+  assert.doesNotMatch(history.innerHTML, /Reading paper\.md/);
+  assert.doesNotMatch(history.innerHTML, /<details class="agent-thinking-trace" aria-label="Codex CLI">/);
   assert.equal(
-    history.innerHTML.indexOf('I want to use literature-search to investigate &quot;yield drop causes&quot;')
-      < history.innerHTML.indexOf('Literature-backed answer.'),
+    history.innerHTML.indexOf('Literature-backed answer.')
+      < history.innerHTML.indexOf('Agent Trace'),
     true
   );
   assert.equal(/Working on this/.test(history.innerHTML), false);

@@ -26,7 +26,6 @@ export function getSequenceViewerElements(rootDocument) {
     featureSearchBtn: rootDocument?.getElementById?.('sequence-viewer-feature-search-btn'),
     featureSearchStatus: rootDocument?.getElementById?.('sequence-viewer-feature-search-status'),
     featureSearchResults: rootDocument?.getElementById?.('sequence-viewer-feature-search-results'),
-    backBtn: rootDocument?.getElementById?.('sequence-viewer-back-btn'),
     detailProteinBuilderBtn: rootDocument?.getElementById?.('sequence-viewer-detail-protein-builder-btn'),
     cloningDesignBtn: rootDocument?.getElementById?.('sequence-viewer-cloning-design-btn'),
     cloningDesignBackBtn: rootDocument?.getElementById?.('sequence-viewer-cloning-design-back-btn'),

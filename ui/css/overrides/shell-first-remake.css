@@ -38,7 +38,6 @@
 }
 
 #tool-box-view .calc-output,
-#tool-box-view .buffer-output,
 #tool-box-view .sequence-block,
 #tool-box-view .result-card,
 #tool-box-view .result-table-wrap,
@@ -63,7 +62,6 @@
   box-shadow: none;
 }
 
-#tool-box-view .buffer-row,
 #tool-box-view .workflow-card {
   border: 1px solid var(--line-soft);
   border-radius: 8px;

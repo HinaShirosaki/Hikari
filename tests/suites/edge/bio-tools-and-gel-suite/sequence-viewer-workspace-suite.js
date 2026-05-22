@@ -15,7 +15,6 @@ test('[EDGE] sequence-viewer initializes home workspace and keeps detail workspa
     'sequence-viewer-home-paste-btn',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
-    'sequence-viewer-back-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -78,7 +77,6 @@ test('[EDGE] sequence-viewer loadFromExternal switches to detail workspace', () 
     'sequence-viewer-home-import-input',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
-    'sequence-viewer-back-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -140,7 +138,6 @@ test('[EDGE] sequence-viewer render sync returns to the home workspace when the 
     'sequence-viewer-home-paste-btn',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
-    'sequence-viewer-back-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -233,7 +230,6 @@ test('[EDGE] sequence-viewer render sync keeps Protein Builder visible inside th
     'sequence-viewer-library-filter-temporary',
     'sequence-viewer-library-list',
     'sequence-viewer-preview-host',
-    'sequence-viewer-back-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -312,7 +308,6 @@ test('[EDGE] sequence-viewer home paste button opens detail workspace even with 
     'sequence-viewer-home-import-input',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
-    'sequence-viewer-back-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -357,12 +352,11 @@ test('[EDGE] sequence-viewer home paste button opens detail workspace even with 
   assert.match(status.textContent, /Paste sequence text/i);
 });
 
-test('[EDGE] sequence-viewer New and Back actions use navigation callbacks', () => {
+test('[EDGE] sequence-viewer New action uses navigation callback', () => {
   const ids = [
     'sequence-viewer-home-workspace',
     'sequence-viewer-detail-workspace',
-    'sequence-viewer-home-paste-btn',
-    'sequence-viewer-back-btn'
+    'sequence-viewer-home-paste-btn'
   ];
   const document = createMockDocument(ids);
   const transitions = [];
@@ -376,8 +370,7 @@ test('[EDGE] sequence-viewer New and Back actions use navigation callbacks', () 
   });
 
   trigger(document.getElementById('sequence-viewer-home-paste-btn'), 'click');
-  trigger(document.getElementById('sequence-viewer-back-btn'), 'click');
-  assert.deepEqual(transitions, ['detail', 'home']);
+  assert.deepEqual(transitions, ['detail']);
 });
 
 test('[EDGE] sequence-viewer library native dblclick opens detail while single click only previews', async () => {
@@ -515,7 +508,6 @@ test('[EDGE] sequence-viewer opens detail workspace when a library row is double
     'sequence-viewer-home-paste-btn',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
-    'sequence-viewer-back-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -624,7 +616,6 @@ test('[EDGE] sequence-viewer hides input composer after successful load', () => 
     'sequence-viewer-home-paste-btn',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
-    'sequence-viewer-back-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -686,7 +677,6 @@ test('[EDGE] sequence-viewer importing GenBank with features stores a temporary 
     'sequence-viewer-home-paste-btn',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
-    'sequence-viewer-back-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -801,7 +791,6 @@ test('[EDGE] sequence-viewer importing a single GenBank record keeps it visible 
     'sequence-viewer-home-paste-btn',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
-    'sequence-viewer-back-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -915,7 +904,6 @@ test('[EDGE] sequence-viewer feature search can trace a stored feature back to i
     'sequence-viewer-home-paste-btn',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
-    'sequence-viewer-back-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -2355,7 +2343,6 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
     'sequence-viewer-library-filter-temporary',
     'sequence-viewer-library-list',
     'sequence-viewer-preview-host',
-    'sequence-viewer-back-btn',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',

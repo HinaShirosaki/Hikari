@@ -354,6 +354,225 @@ function stringifyCodexEventValue(value, maxLength = 2000) {
   }
 }
 
+function looksLikeJsonLine(value = '') {
+  const text = String(value || '').trim();
+  return text.startsWith('{') || text.startsWith('[');
+}
+
+function parseCodexToolArguments(value) {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value;
+  }
+  if (typeof value !== 'string') {
+    return {};
+  }
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function basenameForCodexDisplay(value = '') {
+  const text = cleanText(value, 1200);
+  if (!text) {
+    return '';
+  }
+  try {
+    return path.basename(text.replace(/^file:\/\//u, '')) || text;
+  } catch {
+    return text.split(/[\\/]/u).filter(Boolean).pop() || text;
+  }
+}
+
+function firstQuotedPath(value = '') {
+  const text = cleanText(value, 4000);
+  const quoted = text.match(/["']([^"']+\.(?:js|mjs|cjs|json|md|txt|css|html|ts|tsx|jsx|py|toml|yaml|yml|pdf))["']/iu);
+  if (quoted?.[1]) {
+    return quoted[1];
+  }
+  const bare = text.match(/(?:^|\s)(\/[^\s"'`]+\.(?:js|mjs|cjs|json|md|txt|css|html|ts|tsx|jsx|py|toml|yaml|yml|pdf))/iu);
+  return bare?.[1] || '';
+}
+
+function summarizeExecCommandForCodexProgress(args = {}, status = '') {
+  const cmd = cleanText(args.cmd || args.command || args.input, 4000);
+  if (!cmd) {
+    return status === 'completed' ? 'Local command completed.' : 'Running local command.';
+  }
+  const targetPath = firstQuotedPath(cmd);
+  const targetName = basenameForCodexDisplay(targetPath);
+  const completed = status === 'completed';
+  if (/^\s*(sed|cat|head|tail|nl)\b/u.test(cmd)) {
+    return completed
+      ? `Read ${targetName || 'workspace file'}.`
+      : `Reading ${targetName || 'workspace file'}...`;
+  }
+  if (/^\s*rg\b/u.test(cmd)) {
+    return completed
+      ? `Search completed${targetName ? ` in ${targetName}` : ''}.`
+      : `Searching${targetName ? ` ${targetName}` : ' workspace'}...`;
+  }
+  if (/^\s*(ls|find)\b/u.test(cmd)) {
+    return completed ? 'Workspace listing completed.' : 'Listing workspace files...';
+  }
+  if (/^\s*node\b/u.test(cmd)) {
+    return completed ? 'Node check completed.' : 'Running Node check...';
+  }
+  if (/^\s*(curl|wget)\b/u.test(cmd)) {
+    return completed ? 'Network request completed.' : 'Calling local service...';
+  }
+  return completed ? 'Local command completed.' : 'Running local command...';
+}
+
+function summarizeCodexToolCallForProgress({
+  toolName = '',
+  status = '',
+  argumentValue = null,
+  outputText = '',
+  directText = ''
+} = {}) {
+  const name = cleanText(toolName, 160) || 'codex-tool';
+  const args = parseCodexToolArguments(argumentValue);
+  const completed = status === 'completed';
+  if (name === 'exec_command') {
+    return summarizeExecCommandForCodexProgress(args, status);
+  }
+  if (name === 'codex-tool') {
+    return completed ? 'Tool call completed.' : 'Running tool...';
+  }
+  if (completed && outputText) {
+    return cleanText(`${name}: ${outputText}`, 2400);
+  }
+  if (directText) {
+    return cleanText(`${name}: ${directText}`, 2400);
+  }
+  return completed ? `${name} completed.` : `${name} started.`;
+}
+
+function completeCodexProgressText(value = '', toolName = '') {
+  const text = cleanText(value, 2400);
+  if (/^Reading\s+(.+)\.\.\.$/u.test(text)) {
+    return text.replace(/^Reading\s+(.+)\.\.\.$/u, 'Read $1.');
+  }
+  if (/^Searching\s+(.+)\.\.\.$/u.test(text)) {
+    return text.replace(/^Searching\s+(.+)\.\.\.$/u, 'Search completed in $1.');
+  }
+  if (/^Listing\s+(.+)\.\.\.$/u.test(text)) {
+    return text.replace(/^Listing\s+(.+)\.\.\.$/u, 'Listed $1.');
+  }
+  if (/^Running\s+(.+)\.\.\.$/u.test(text)) {
+    return text.replace(/^Running\s+(.+)\.\.\.$/u, 'Completed $1.');
+  }
+  if (text) {
+    return text.endsWith('.') ? text : `${text}.`;
+  }
+  const name = cleanText(toolName, 160);
+  return name ? `${name} completed.` : 'Tool call completed.';
+}
+
+function buildCodexCliDisplayEvent({
+  text = '',
+  kind = '',
+  eventType = '',
+  status = '',
+  toolName = '',
+  stream = ''
+} = {}) {
+  const displayText = cleanText(text, 12000);
+  if (!displayText) {
+    return null;
+  }
+  return {
+    type: 'codex_cli_display',
+    event_type: cleanText(eventType, 160),
+    display_kind: cleanText(kind, 80) || 'message',
+    display_stream: cleanText(stream, 40),
+    status: cleanText(status, 40),
+    tool_name: cleanText(toolName, 160),
+    display_text: displayText
+  };
+}
+
+function buildCodexCliDisplayEventKey(event = {}) {
+  if (!event || typeof event !== 'object' || Array.isArray(event)) {
+    return '';
+  }
+  return [
+    cleanText(event.type, 80),
+    cleanText(event.event_type || event.eventType, 160),
+    cleanText(event.display_kind || event.displayKind, 80),
+    cleanText(event.display_stream || event.displayStream, 40),
+    cleanText(event.status, 40),
+    cleanText(event.tool_name || event.toolName, 160),
+    cleanText(event.display_text || event.displayText || event.text, 12000)
+  ].join('\u0001');
+}
+
+function emitCodexCliDisplayEvent(onStream, seenDisplayEvents, event = {}) {
+  if (typeof onStream !== 'function') {
+    return;
+  }
+  const displayEvent = event?.type === 'codex_cli_display'
+    ? event
+    : buildCodexCliDisplayEvent(event);
+  if (!displayEvent) {
+    return;
+  }
+  const displayKey = buildCodexCliDisplayEventKey(displayEvent);
+  if (displayKey && seenDisplayEvents?.has(displayKey)) {
+    return;
+  }
+  if (displayKey && seenDisplayEvents && typeof seenDisplayEvents.add === 'function') {
+    seenDisplayEvents.add(displayKey);
+  }
+  try {
+    onStream(displayEvent);
+  } catch {
+    // Keep display streaming best-effort; the final Codex response still resolves below.
+  }
+}
+
+function extractCodexPlainOutputDisplayEvent(event = {}) {
+  const source = event && typeof event === 'object' && !Array.isArray(event) ? event : {};
+  const type = cleanText(source.type, 120).toLowerCase();
+  if (type !== 'codex_cli_output') {
+    return null;
+  }
+  return buildCodexCliDisplayEvent({
+    text: source.text,
+    kind: source.stream === 'stderr' ? 'stderr' : 'stdout',
+    eventType: type,
+    stream: source.stream
+  });
+}
+
+function buildCodexDisplayEventFromProgress(progressEvent = {}) {
+  if (!progressEvent || typeof progressEvent !== 'object' || Array.isArray(progressEvent)) {
+    return null;
+  }
+  const eventType = cleanText(progressEvent.event_type || progressEvent.eventType, 160);
+  const progressType = cleanText(progressEvent.type, 80);
+  if (progressType === 'codex_thinking') {
+    return buildCodexCliDisplayEvent({
+      text: progressEvent.thinking_text || progressEvent.thinkingText,
+      kind: 'thinking',
+      eventType
+    });
+  }
+  if (progressType === 'codex_tool_call') {
+    return buildCodexCliDisplayEvent({
+      text: progressEvent.tool_call_text || progressEvent.toolCallText,
+      kind: 'tool',
+      eventType,
+      status: progressEvent.status,
+      toolName: progressEvent.tool_name || progressEvent.toolName
+    });
+  }
+  return null;
+}
+
 function clampCodexSummaryText(value = '', maxLength = 2000) {
   const text = cleanText(value, maxLength);
   const limit = Math.max(120, Number(maxLength) || 2000);
@@ -517,13 +736,20 @@ function extractCodexJsonEventText(event = {}) {
   const descriptor = getCodexJsonEventDescriptor(event);
   const source = descriptor.source;
   const { item, message, type, phase, outerType } = descriptor;
+  const eventType = phase ? `${type}:${phase}` : type;
+  if (type === 'codex_cli_output') {
+    return null;
+  }
+  const role = cleanText(source.role || message.role || item.role, 80).toLowerCase();
+  if (type === 'user_message' || type === 'input_message' || type === 'user' || role === 'user') {
+    return null;
+  }
   if (isCodexThinkingEvent(event) || isCodexToolEvent(event)) {
     return null;
   }
   if (type === 'agent_message' && phase && phase !== 'final_answer') {
     return null;
   }
-  const role = cleanText(source.role || message.role || item.role, 80).toLowerCase();
   const looksAssistant = !role || role === 'assistant' || role === 'agent';
   if (!looksAssistant) {
     return null;
@@ -541,7 +767,7 @@ function extractCodexJsonEventText(event = {}) {
     return {
       deltaText: directDelta,
       fullText: '',
-      eventType: type
+      eventType
     };
   }
 
@@ -550,7 +776,7 @@ function extractCodexJsonEventText(event = {}) {
     return {
       deltaText,
       fullText: '',
-      eventType: type
+      eventType
     };
   }
 
@@ -571,7 +797,7 @@ function extractCodexJsonEventText(event = {}) {
     return {
       deltaText: '',
       fullText,
-      eventType: type
+      eventType
     };
   }
   return null;
@@ -617,6 +843,9 @@ function inferCodexToolStatus(type = '') {
   if (/fail|error|errored|rejected/u.test(text)) {
     return 'failed';
   }
+  if (/function_call_output|tool_result|tool_result_end|mcp_tool_call_end|call_output/u.test(text)) {
+    return 'completed';
+  }
   if (/complete|completed|done|end|ended|finish|finished|success|succeeded/u.test(text)) {
     return 'completed';
   }
@@ -644,24 +873,25 @@ function extractCodexJsonEventToolCall(event = {}) {
       || name,
     160
   ) || 'codex-tool';
+  const argumentValue = source.arguments
+    || source.args
+    || source.input
+    || source.command
+    || source.arguments_delta
+    || source.argumentsDelta
+    || source.delta
+    || invocation.arguments
+    || invocation.args
+    || invocation.input
+    || item.arguments
+    || item.args
+    || item.input
+    || item.command
+    || call.arguments
+    || call.args
+    || call.input;
   const argsText = stringifyCodexEventValue(
-    source.arguments
-      || source.args
-      || source.input
-      || source.command
-      || source.arguments_delta
-      || source.argumentsDelta
-      || source.delta
-      || invocation.arguments
-      || invocation.args
-      || invocation.input
-      || item.arguments
-      || item.args
-      || item.input
-      || item.command
-      || call.arguments
-      || call.args
-      || call.input,
+    argumentValue,
     2000
   );
   const outputValue = source.output
@@ -690,12 +920,19 @@ function extractCodexJsonEventToolCall(event = {}) {
     || ((status === 'completed' || status === 'streaming') && outputText ? outputText : '')
     || argsText
     || outputText;
-  const toolCallText = cleanText(detailText ? `${toolName}: ${detailText}` : toolName, 2400);
+  const toolCallText = summarizeCodexToolCallForProgress({
+    toolName,
+    status,
+    argumentValue,
+    outputText,
+    directText: detailText
+  });
   return {
     type: 'codex_tool_call',
     event_type: type,
     status,
     tool_name: toolName,
+    call_id: cleanText(source.call_id || source.callId || item.call_id || item.callId || call.call_id || call.callId, 160),
     tool_call_text: toolCallText,
     tool_output_text: outputText
   };
@@ -759,7 +996,8 @@ async function replayCodexSessionProgressFromTranscript({
   sessionId = '',
   cwd = '',
   onStream = null,
-  seenProgressEvents = new Set()
+  seenProgressEvents = new Set(),
+  seenDisplayEvents = new Set()
 } = {}) {
   if (!sessionId || typeof onStream !== 'function') {
     return '';
@@ -783,6 +1021,14 @@ async function replayCodexSessionProgressFromTranscript({
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
       return;
     }
+    const extracted = extractCodexJsonEventText(parsed);
+    if (extracted) {
+      emitCodexCliDisplayEvent(onStream, seenDisplayEvents, {
+        text: extracted.deltaText || extracted.fullText,
+        kind: 'assistant',
+        eventType: extracted.eventType
+      });
+    }
     extractCodexJsonEventProgress(parsed).forEach((progressEvent) => {
       const key = buildCodexProgressEventKey(progressEvent);
       if (key && seenProgressEvents.has(key)) {
@@ -796,6 +1042,11 @@ async function replayCodexSessionProgressFromTranscript({
       } catch {
         // Transcript replay is best-effort; the final Codex response still resolves below.
       }
+      emitCodexCliDisplayEvent(
+        onStream,
+        seenDisplayEvents,
+        buildCodexDisplayEventFromProgress(progressEvent)
+      );
     });
   });
   return transcriptPath;
@@ -1020,6 +1271,111 @@ async function copyFileIfChanged(sourcePath = '', targetPath = '') {
   }
 }
 
+async function getPathStats(targetPath = '', { followSymlink = false } = {}) {
+  try {
+    return followSymlink ? await fs.stat(targetPath) : await fs.lstat(targetPath);
+  } catch {
+    return null;
+  }
+}
+
+async function isDirectoryLike(targetPath = '') {
+  const stats = await getPathStats(targetPath);
+  if (!stats) {
+    return false;
+  }
+  if (stats.isDirectory()) {
+    return true;
+  }
+  if (!stats.isSymbolicLink()) {
+    return false;
+  }
+  const resolvedStats = await getPathStats(targetPath, { followSymlink: true });
+  return Boolean(resolvedStats?.isDirectory());
+}
+
+async function copyPathIfMissing(sourcePath = '', targetPath = '') {
+  const sourceStats = await getPathStats(sourcePath, { followSymlink: true });
+  if (!sourceStats) {
+    return false;
+  }
+  if (await getPathStats(targetPath)) {
+    return false;
+  }
+  try {
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    const symlinkType = sourceStats.isDirectory()
+      ? (process.platform === 'win32' ? 'junction' : 'dir')
+      : 'file';
+    await fs.symlink(sourcePath, targetPath, symlinkType);
+    return true;
+  } catch {
+    try {
+      if (sourceStats.isDirectory()) {
+        await fs.cp(sourcePath, targetPath, { recursive: true, force: false, errorOnExist: false });
+      } else if (sourceStats.isFile()) {
+        await copyFileIfChanged(sourcePath, targetPath);
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
+
+async function syncCodexCliRuntimePluginCacheEntry(sourcePath = '', targetPath = '', depth = 0) {
+  const sourceStats = await getPathStats(sourcePath, { followSymlink: true });
+  if (!sourceStats) {
+    return false;
+  }
+  const targetStats = await getPathStats(targetPath);
+  if (!targetStats) {
+    return copyPathIfMissing(sourcePath, targetPath);
+  }
+  if (!sourceStats.isDirectory() || !(await isDirectoryLike(targetPath)) || depth >= 2) {
+    return false;
+  }
+  let entries = [];
+  try {
+    entries = await fs.readdir(sourcePath, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  const results = await Promise.all(entries
+    .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+    .map((entry) => syncCodexCliRuntimePluginCacheEntry(
+      path.join(sourcePath, entry.name),
+      path.join(targetPath, entry.name),
+      depth + 1
+    )));
+  return results.some(Boolean);
+}
+
+async function syncCodexCliRuntimePluginCache(sourceHome = '', runtimeHome = '') {
+  const sourceCacheRoot = path.join(sourceHome, 'plugins', 'cache');
+  const targetCacheRoot = path.join(runtimeHome, 'plugins', 'cache');
+  if (path.resolve(sourceCacheRoot) === path.resolve(targetCacheRoot)) {
+    return false;
+  }
+  if (!(await isDirectoryLike(sourceCacheRoot))) {
+    return false;
+  }
+  await fs.mkdir(targetCacheRoot, { recursive: true });
+  let marketplaces = [];
+  try {
+    marketplaces = await fs.readdir(sourceCacheRoot, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  const results = await Promise.all(marketplaces
+    .filter((entry) => entry.isDirectory() || entry.isSymbolicLink())
+    .map((entry) => syncCodexCliRuntimePluginCacheEntry(
+      path.join(sourceCacheRoot, entry.name),
+      path.join(targetCacheRoot, entry.name)
+    )));
+  return results.some(Boolean);
+}
+
 async function ensureCodexCliRuntimeHome(cwd = '') {
   const runtimeHome = resolveCodexCliRuntimeHomeDirectory(cwd);
   if (!runtimeHome) {
@@ -1052,6 +1408,7 @@ async function ensureCodexCliRuntimeHome(cwd = '') {
       path.join(resolvedTarget, fileName)
     )
   )));
+  await syncCodexCliRuntimePluginCache(resolvedSource, resolvedTarget);
   await ensureHikariCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
     workspace: resolveWorkingDirectory(cwd)
   });
@@ -1558,6 +1915,7 @@ async function runCodexCommand({
     let timedOut = false;
     let aborted = false;
     let jsonLineBuffer = '';
+    let stderrLineBuffer = '';
     const abortSignal = getAgentRequestAbortSignal();
 
     const timeout = setTimeout(() => {
@@ -1604,6 +1962,25 @@ async function runCodexCommand({
       }
     });
 
+    function emitPlainCodexOutputLine(line = '', stream = 'stdout') {
+      if (typeof onJsonEvent !== 'function') {
+        return;
+      }
+      const text = cleanText(line, 12000);
+      if (!text || looksLikeJsonLine(text)) {
+        return;
+      }
+      try {
+        onJsonEvent({
+          type: 'codex_cli_output',
+          stream,
+          text
+        });
+      } catch {
+        // Streaming callbacks should not be able to fail the Codex request.
+      }
+    }
+
     function handleJsonLines(chunkText = '', force = false) {
       if (typeof onJsonEvent !== 'function') {
         return;
@@ -1625,7 +2002,36 @@ async function runCodexCommand({
           } catch {
             // Streaming callbacks should not be able to fail the Codex request.
           }
+          return;
         }
+        emitPlainCodexOutputLine(trimmed, 'stdout');
+      });
+    }
+
+    function handleStderrLines(chunkText = '', force = false) {
+      if (typeof onJsonEvent !== 'function') {
+        return;
+      }
+      stderrLineBuffer += String(chunkText || '');
+      const lines = stderrLineBuffer.split(/\r?\n/u);
+      const pendingLine = lines.pop() || '';
+      stderrLineBuffer = force ? '' : pendingLine;
+      const parseLines = force ? lines.concat(pendingLine ? [pendingLine] : []) : lines;
+      parseLines.forEach((line) => {
+        const trimmed = line.trim();
+        if (!trimmed) {
+          return;
+        }
+        const parsed = safeParseJson(trimmed, null);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          try {
+            onJsonEvent(parsed);
+          } catch {
+            // Streaming callbacks should not be able to fail the Codex request.
+          }
+          return;
+        }
+        emitPlainCodexOutputLine(trimmed, 'stderr');
       });
     }
 
@@ -1636,7 +2042,9 @@ async function runCodexCommand({
     });
 
     child.stderr.on('data', (chunk) => {
-      stderr += String(chunk || '');
+      const text = String(chunk || '');
+      stderr += text;
+      handleStderrLines(text);
     });
 
     child.on('error', (error) => {
@@ -1645,6 +2053,7 @@ async function runCodexCommand({
 
     child.on('close', (code, signal) => {
       handleJsonLines('', true);
+      handleStderrLines('', true);
       if (aborted || abortSignal?.aborted) {
         const abortError = isAgentRequestAbortError(abortSignal?.reason)
           ? abortSignal.reason
@@ -1884,7 +2293,14 @@ async function requestCodexCliText({
   let codexSessionId = cleanResumeSessionId;
   let streamedText = '';
   const seenProgressEvents = new Set();
+  const seenDisplayEvents = new Set();
+  const activeToolCallsById = new Map();
   function handleJsonStreamEvent(event = {}) {
+    const plainDisplayEvent = extractCodexPlainOutputDisplayEvent(event);
+    if (plainDisplayEvent) {
+      emitCodexCliDisplayEvent(onStream, seenDisplayEvents, plainDisplayEvent);
+      return;
+    }
     const extracted = extractCodexJsonEventText(event);
     if (extracted) {
       let deltaText = cleanText(extracted.deltaText, 120000);
@@ -1910,9 +2326,33 @@ async function requestCodexCliText({
         } catch {
           // Keep streaming best-effort; the final Codex response still resolves below.
         }
+        emitCodexCliDisplayEvent(onStream, seenDisplayEvents, {
+          text: deltaText || fullText,
+          kind: 'assistant',
+          eventType: extracted.eventType
+        });
       }
     }
     extractCodexJsonEventProgress(event).forEach((progressEvent) => {
+      if (progressEvent?.type === 'codex_tool_call') {
+        const callId = cleanText(progressEvent.call_id || progressEvent.callId, 160);
+        const status = cleanText(progressEvent.status, 40);
+        if (callId && status !== 'completed' && status !== 'failed') {
+          activeToolCallsById.set(callId, {
+            tool_name: cleanText(progressEvent.tool_name || progressEvent.toolName, 160),
+            tool_call_text: cleanText(progressEvent.tool_call_text || progressEvent.toolCallText, 2400)
+          });
+        } else if (callId && activeToolCallsById.has(callId)) {
+          const previous = activeToolCallsById.get(callId) || {};
+          if (!cleanText(progressEvent.tool_name, 160) || cleanText(progressEvent.tool_name, 160) === 'codex-tool') {
+            progressEvent.tool_name = previous.tool_name || progressEvent.tool_name;
+          }
+          if (!cleanText(progressEvent.tool_call_text, 2400) || cleanText(progressEvent.tool_call_text, 2400) === 'Tool call completed.') {
+            progressEvent.tool_call_text = completeCodexProgressText(previous.tool_call_text, previous.tool_name);
+          }
+          activeToolCallsById.delete(callId);
+        }
+      }
       const progressKey = buildCodexProgressEventKey(progressEvent);
       if (progressKey && seenProgressEvents.has(progressKey)) {
         return;
@@ -1925,6 +2365,11 @@ async function requestCodexCliText({
       } catch {
         // Keep streaming best-effort; the final Codex response still resolves below.
       }
+      emitCodexCliDisplayEvent(
+        onStream,
+        seenDisplayEvents,
+        buildCodexDisplayEventFromProgress(progressEvent)
+      );
     });
   }
   function handleJsonEvent(event = {}) {
@@ -1982,7 +2427,8 @@ async function requestCodexCliText({
       sessionId: codexSessionId,
       cwd: safeCwd,
       onStream,
-      seenProgressEvents
+      seenProgressEvents,
+      seenDisplayEvents
     });
   }
   const resultText = cleanText(outputText || streamedText || commandResult.stdout, 120000);

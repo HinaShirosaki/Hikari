@@ -1,6 +1,11 @@
 import { getContainerLayout, getContainerTypeLabel } from './constants.js';
 
-export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpers }) {
+export function createPersonalInventoryDetailRenderer({
+  safeText,
+  uiState,
+  helpers,
+  getPendingStructureDraft = () => null
+}) {
   const {
     getLinkedSamples,
     getSampleTypeColor,
@@ -20,8 +25,15 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
     );
   }
 
+  function getStructureImageDataUrl(structure) {
+    return String(structure?.imageDataUrl || '').trim();
+  }
+
   function renderStructureAction({ mode, sample = null }) {
-    const buttonText = sample && hasStructure(sample) ? 'Edit Structure' : 'Add Structure';
+    const structure = sample?.compoundStructure || getPendingStructureDraft(mode);
+    const imageDataUrl = getStructureImageDataUrl(structure);
+    const hasCapturedStructure = sample ? hasStructure(sample) : Boolean(structure);
+    const buttonText = hasCapturedStructure ? 'Edit Structure' : 'Add Structure';
     const sampleId = sample?.id ? ` data-sample-id="${safeText(sample.id)}"` : '';
     return `
       <div class="inventory-sample-structure-control">
@@ -31,6 +43,23 @@ export function createPersonalInventoryDetailRenderer({ safeText, uiState, helpe
           data-inventory-sample-structure-open="${safeText(mode)}"${sampleId}
           hidden
         >${safeText(buttonText)}</button>
+        <button
+          type="button"
+          class="ghost-btn inventory-sample-structure-paste-btn"
+          data-inventory-sample-structure-paste="${safeText(mode)}"${sampleId}
+          hidden
+        >Paste Structure</button>
+        <div
+          class="inventory-sample-structure-preview"
+          data-inventory-sample-structure-preview="${safeText(mode)}"${sampleId}
+          ${imageDataUrl ? '' : 'hidden'}
+        >
+          <img
+            data-inventory-sample-structure-preview-image
+            src="${safeText(imageDataUrl)}"
+            alt="Chemical structure preview"
+          />
+        </div>
         <span class="small-note inventory-sample-structure-status" data-inventory-sample-structure-status></span>
       </div>
     `;

@@ -41,8 +41,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
   const onConfirmProteinBuilderConstruct = config?.onConfirmProteinBuilderConstruct || (() => {});
   const onReturnToProteinBuilder = config?.onReturnToProteinBuilder || (() => {});
-  const onNavigateHome = config?.onNavigateHome || (() => {});
-  const onRefreshLibraryEntries = config?.onRefreshLibraryEntries || (() => {});
   const onReferenceRecordChanged = config?.onReferenceRecordChanged || (() => {});
 
   elements.annotateBtn?.addEventListener('click', (event) => {
@@ -131,12 +129,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   elements.proteinBuilderConfirmationBackBtn?.addEventListener('click', (event) => {
     event.preventDefault();
     onReturnToProteinBuilder();
-  });
-
-  elements.backBtn?.addEventListener('click', (event) => {
-    event.preventDefault();
-    onNavigateHome();
-    void onRefreshLibraryEntries({ silent: true });
   });
 
   elements.recordSelect?.addEventListener('change', () => {

@@ -258,13 +258,61 @@ function renderCollapsibleThinkingTrace(title, rows, safeText, { open = false } 
     return '';
   }
   return `
-    <details class="agent-thinking-trace"${open ? ' open' : ''} aria-label="${safeText(title)}">
+    <details
+      class="agent-thinking-trace"
+      ${open ? 'open ' : ''}
+      data-agent-generated-trace="true"
+      data-agent-trace-open="${open ? 'true' : 'false'}"
+      aria-label="${safeText(title)}"
+    >
       <summary class="agent-thinking-trace-summary">${safeText(title)}</summary>
       <ul class="agent-thinking-trace-list">
         ${rows.map((row) => `<li class="agent-thinking-trace-item">${safeText(row)}</li>`).join('')}
       </ul>
     </details>
   `;
+}
+
+function renderLiveGeneratedTrace(rows, safeText) {
+  if (!rows.length) {
+    return '';
+  }
+  return `
+    <div class="agent-thinking-trace agent-generated-trace-live" aria-label="Agent Trace">
+      <ul class="agent-thinking-trace-list">
+        ${rows.map((row) => `<li class="agent-thinking-trace-item">${safeText(row)}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+
+function normalizeTraceComparableText(value = '') {
+  return trimText(value, 2000)
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function isInternalCodexPromptText(value = '') {
+  return /^#\s*Hikari Codex Chat Turn\b/u.test(trimText(value, 200));
+}
+
+function filterGeneratedTraceRows(rows = [], finalText = '') {
+  const seen = new Set();
+  const finalKey = normalizeTraceComparableText(finalText);
+  return asArray(rows)
+    .map((row) => trimText(row, 1200))
+    .filter((row) => {
+      if (!row || isInternalCodexPromptText(row)) {
+        return false;
+      }
+      const key = normalizeTraceComparableText(row);
+      if (!key || key === finalKey || seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
 }
 
 function normalizeThinkingTraceRows(rows) {
@@ -283,6 +331,90 @@ function normalizeThinkingTraceRows(rows) {
       return true;
     })
     .slice(0, 32);
+}
+
+function normalizeActivityTraceRows(rows) {
+  const seen = new Set();
+  return asArray(rows)
+    .map((row) => {
+      const source = row && typeof row === 'object' ? row : { text: row };
+      const text = trimText(source.text, 420);
+      if (!text) {
+        return '';
+      }
+      const routingIntent = trimText(source.routing_intent || source.routingIntent, 120);
+      if (routingIntent && routingIntent !== 'codex_agent') {
+        return '';
+      }
+      const stage = trimText(source.stage, 80);
+      if (stage && ![
+        'codex_agent_started',
+        'codex_agent_completed',
+        'tool_call_started',
+        'tool_call_completed',
+        'tool_call_failed'
+      ].includes(stage)) {
+        return '';
+      }
+      if (text === 'Request received') {
+        return '';
+      }
+      const status = trimText(source.status, 40).toLowerCase();
+      if (status === 'failed') {
+        return `Failed: ${text}`;
+      }
+      if (status === 'completed' || status === 'done') {
+        return `Done: ${text}`;
+      }
+      return text;
+    })
+    .filter((row) => {
+      if (!row) {
+        return false;
+      }
+      const key = row.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 32);
+}
+
+function normalizeCodexCliDisplayRows(rows) {
+  const seen = new Set();
+  return asArray(rows)
+    .map((row) => {
+      const source = row && typeof row === 'object' ? row : { text: row };
+      const text = trimText(
+        source.text
+          || source.display_text
+          || source.displayText
+          || source.message,
+        1200
+      );
+      if (!text) {
+        return '';
+      }
+      const routingIntent = trimText(source.routing_intent || source.routingIntent, 120);
+      if (routingIntent && routingIntent !== 'codex_agent') {
+        return '';
+      }
+      return text;
+    })
+    .filter((row) => {
+      if (!row) {
+        return false;
+      }
+      const key = row.toLowerCase();
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .slice(-80);
 }
 
 function buildStructuredThinkingTraceRows(trace) {
@@ -353,13 +485,81 @@ function collectAssistantThinkingTraceRows(meta) {
   return persistedThinkingRows;
 }
 
-function renderAssistantThinkingTrace(meta, safeText) {
-  const thinkingRows = collectAssistantThinkingTraceRows(meta);
-  if (!thinkingRows.length) {
+function collectAssistantActivityRows(meta) {
+  if (!meta || typeof meta !== 'object') {
+    return [];
+  }
+  const liveProgress = meta.live_progress && typeof meta.live_progress === 'object'
+    ? meta.live_progress
+    : null;
+  const liveActivityRows = normalizeActivityTraceRows(liveProgress?.activity_rows);
+  if (liveActivityRows.length) {
+    return liveActivityRows;
+  }
+  return normalizeActivityTraceRows(meta.activity_trace_rows || meta.activityTraceRows);
+}
+
+function collectAssistantCodexCliDisplayRows(meta) {
+  if (!meta || typeof meta !== 'object') {
+    return [];
+  }
+  const liveProgress = meta.live_progress && typeof meta.live_progress === 'object'
+    ? meta.live_progress
+    : null;
+  const liveDisplayRows = normalizeCodexCliDisplayRows(liveProgress?.codex_cli_display_rows);
+  if (liveDisplayRows.length) {
+    return liveDisplayRows;
+  }
+  return normalizeCodexCliDisplayRows(
+    meta.codex_cli_display_rows
+      || meta.codexCliDisplayRows
+      || meta.codex_display_rows
+      || meta.codexDisplayRows
+  );
+}
+
+function isCodexAgentTraceMeta(meta) {
+  if (!meta || typeof meta !== 'object') {
+    return false;
+  }
+  const liveProgress = meta.live_progress && typeof meta.live_progress === 'object'
+    ? meta.live_progress
+    : null;
+  const routingIntent = trimText(
+    liveProgress?.routing_intent
+      || meta.routing_intent
+      || meta.routingIntent
+      || meta.parser?.primary_intent
+      || meta.parser?.primaryIntent,
+    120
+  );
+  return routingIntent === 'codex_agent' || Boolean(meta.codex_agent || meta.codexAgent);
+}
+
+function collectAssistantGeneratedTraceRows(meta, finalText = '') {
+  if (!meta || typeof meta !== 'object') {
+    return [];
+  }
+  const codexCliRows = collectAssistantCodexCliDisplayRows(meta);
+  if (codexCliRows.length && isCodexAgentTraceMeta(meta)) {
+    return filterGeneratedTraceRows(codexCliRows, finalText);
+  }
+  return filterGeneratedTraceRows([
+    ...collectAssistantThinkingTraceRows(meta),
+    ...collectAssistantActivityRows(meta)
+  ], finalText);
+}
+
+function renderAssistantGeneratedTrace(meta, safeText, finalText = '') {
+  const rows = collectAssistantGeneratedTraceRows(meta, finalText);
+  if (!rows.length) {
     return '';
   }
   const isLive = Boolean(meta?.live_progress && typeof meta.live_progress === 'object');
-  return renderCollapsibleThinkingTrace('Thinking Trace', thinkingRows, safeText, { open: isLive });
+  if (isLive) {
+    return renderLiveGeneratedTrace(rows, safeText);
+  }
+  return renderCollapsibleThinkingTrace('Agent Trace', rows, safeText, { open: false });
 }
 
 function renderUserQuestionCard(meta, messageId = '', safeText, { disabled = false } = {}) {
@@ -577,8 +777,8 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
     const rowClass = role === 'assistant' ? 'agent-chat-row-assistant' : 'agent-chat-row-user';
     const hasLiveProgress = Boolean(message?.meta?.live_progress && typeof message.meta.live_progress === 'object');
     const timestamp = formatTime(message.createdAt);
-    const assistantThinkingTrace = role === 'assistant'
-      ? renderAssistantThinkingTrace(message.meta, safeText)
+    const assistantGeneratedTrace = role === 'assistant'
+      ? renderAssistantGeneratedTrace(message.meta, safeText, hasLiveProgress ? '' : (message.text || ''))
       : '';
     const assistantMeta = role === 'assistant'
       ? renderAssistantMeta(message.meta, message.id, {
@@ -590,6 +790,8 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
     const messageBody = role === 'assistant'
       ? `<div class="agent-chat-body agent-chat-markdown">${renderMarkdown(message.text || '', safeText)}</div>`
       : `<p class="agent-chat-body agent-chat-body-plain">${safeText(message.text || '')}</p>`;
+    const liveGeneratedTrace = hasLiveProgress ? assistantGeneratedTrace : '';
+    const completedGeneratedTrace = hasLiveProgress ? '' : assistantGeneratedTrace;
     return `
       <div class="agent-chat-row ${rowClass}${hasLiveProgress ? ' is-live' : ''}">
         <div class="agent-chat-identity" aria-hidden="true">
@@ -603,12 +805,17 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
             </div>
             <span>${safeText(timestamp)}</span>
           </header>
-          ${assistantThinkingTrace}
+          ${liveGeneratedTrace}
           ${messageBody}
+          ${completedGeneratedTrace}
           ${role === 'user' ? renderUserAttachments(message.attachments, safeText) : ''}
           ${assistantMeta}
         </article>
       </div>
     `;
   }).join('');
+
+  historyNode.querySelectorAll('details[data-agent-generated-trace="true"]').forEach((traceNode) => {
+    traceNode.open = traceNode?.dataset?.agentTraceOpen === 'true';
+  });
 }

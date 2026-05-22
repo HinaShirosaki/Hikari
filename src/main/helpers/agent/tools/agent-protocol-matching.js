@@ -35,6 +35,7 @@ function createProtocolMatchingRuntime(deps = {}) {
     'Do not invent protocol IDs or names.',
     'Return a concise rationale.'
   ];
+  const MIN_PROTOCOL_MATCH_SCORE = 24;
 
   function buildProtocolTieBreakPrompt({
     message = '',
@@ -334,7 +335,7 @@ function createProtocolMatchingRuntime(deps = {}) {
       protocolCandidates,
       message,
       parserPayload
-    });
+    }).filter((item) => (Number(item?.score) || 0) >= MIN_PROTOCOL_MATCH_SCORE);
 
     if (!rankedMatches.length && fallbackProtocol && typeof fallbackProtocol === 'object') {
       const carryOver = findProtocolBySelection(

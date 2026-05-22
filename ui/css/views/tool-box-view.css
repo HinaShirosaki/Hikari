@@ -100,15 +100,16 @@
 
 .buffer-rows {
   display: grid;
-  gap: 10px;
+  gap: 0;
+  border-top: 1px solid var(--line-soft);
 }
 
 .buffer-row {
   display: grid;
   gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  background: var(--surface-subtle);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
 }
 
 .buffer-row-main {
@@ -128,11 +129,11 @@
   display: flex;
   align-items: center;
   min-width: 0;
-  height: 42px;
-  padding: 9px 10px;
+  min-height: 42px;
+  padding: 0;
   overflow: hidden;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  border: 0;
+  background: transparent;
 }
 
 .buffer-weight {
@@ -155,9 +156,9 @@
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(140px, 220px);
   gap: 10px;
-  padding: 10px;
-  border: 1px dashed var(--line);
-  background: var(--surface);
+  padding: 4px 0 0;
+  border: 0;
+  background: transparent;
 }
 
 .buffer-custom-panel[hidden] {
@@ -541,9 +542,7 @@
 }
 
 /* Extracted from ui/css/themes/modes.css */
-body.theme-night .calc-output,
-body.theme-night .buffer-row,
-body.theme-night .buffer-output {
+body.theme-night .calc-output {
   color: #e2edf9;
   border-color: rgba(186, 218, 255, 0.3);
   background: var(--surface);

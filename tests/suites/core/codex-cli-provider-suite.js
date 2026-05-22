@@ -245,6 +245,12 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       fs.writeFileSync(path.join(sourceHome, 'auth.json'), '{"token":"abc"}', 'utf8');
       fs.writeFileSync(path.join(sourceHome, 'config.toml'), 'model = "gpt-5.4"\n', 'utf8');
       fs.writeFileSync(path.join(sourceHome, 'models_cache.json'), JSON.stringify(defaultModelsCache), 'utf8');
+      const browserPluginDir = path.join(sourceHome, 'plugins', 'cache', 'openai-bundled', 'browser', '1.0.0');
+      const documentsPluginDir = path.join(sourceHome, 'plugins', 'cache', 'openai-primary-runtime', 'documents', '1.0.0');
+      fs.mkdirSync(browserPluginDir, { recursive: true });
+      fs.mkdirSync(documentsPluginDir, { recursive: true });
+      fs.writeFileSync(path.join(browserPluginDir, '.mcp.json'), '{"name":"browser"}', 'utf8');
+      fs.writeFileSync(path.join(documentsPluginDir, 'SKILL.md'), '# Documents\n', 'utf8');
       process.env.CODEX_HOME = sourceHome;
       delete process.env.ENANA_CODEX_HOME;
 
@@ -256,6 +262,14 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         assert.equal(fs.existsSync(path.join(runtimeHome, 'config.toml')), true);
         assert.equal(fs.existsSync(path.join(runtimeHome, 'models_cache.json')), true);
         assert.equal(fs.existsSync(path.join(runtimeHome, 'skills')), true);
+        assert.equal(
+          fs.existsSync(path.join(runtimeHome, 'plugins', 'cache', 'openai-bundled', 'browser', '1.0.0', '.mcp.json')),
+          true
+        );
+        assert.equal(
+          fs.existsSync(path.join(runtimeHome, 'plugins', 'cache', 'openai-primary-runtime', 'documents', '1.0.0', 'SKILL.md')),
+          true
+        );
         const runtimeConfig = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
         assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
         assert.match(runtimeConfig, /HIKARI_AGENT_MCP/);
@@ -664,6 +678,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(notebookDraftResult.notebook.title, 'Protein purification');
       assert.equal(calls[calls.length - 1].toolId, 'notebook-draft');
       assert.equal(calls[calls.length - 1].args.project.name, 'Atlas');
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[calls.length - 1].args.project, 'project_name'), false);
       assert.deepEqual(calls[calls.length - 1].args.protocol_candidates, ['Protein purification']);
       assert.equal(calls[calls.length - 1].context.parserPayload.primary_intent, 'notebook_draft');
 
@@ -708,6 +723,162 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.match(legacyInstructions.contents, /provider-neutral Hikari app contract/);
     });
 
+    test('agent tool executors hydrate bundle snapshots for direct protocol MCP paths', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+      const executors = new Map();
+      const hydratedProtocol = {
+        id: 'prot-tev',
+        name: 'TEV Protease Cleavage of Fusion Protein',
+        purpose: 'Cleave a fusion tag with TEV protease.',
+        steps: [
+          { id: 'step-1', text: 'Combine fusion protein with TEV protease.' }
+        ]
+      };
+      const staleProtocol = {
+        id: 'prot-smoke',
+        name: 'MCP Fused Protocol Generation Smoke 2026-05-15 20-06',
+        purpose: 'A partial in-memory protocol snapshot.'
+      };
+      const protocolInputs = [];
+      const notebookInputs = [];
+      registerAgentToolExecutors({
+        cleanText: (value, maxLength = 500) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, executor) {
+            executors.set(name, executor);
+          }
+        },
+        agentLookupRuntime: {},
+        agentAppApi: {
+          protocol: {
+            async matchForNotebook(input) {
+              protocolInputs.push(input);
+              return {
+                ok: true,
+                ranked_matches: [{ ...input.snapshot.protocols[0], score: 120 }],
+                selected_protocol: { ...input.snapshot.protocols[0], score: 120 },
+                selection_method: 'deterministic',
+                rationale: 'Exact protocol candidate match.'
+              };
+            }
+          }
+        },
+        notebookDraftRuntime: {
+          async generateNotebookDraft(input) {
+            notebookInputs.push(input);
+            return {
+              status: 'proposal_ready',
+              selected_protocol: input.snapshot.protocols[0],
+              notebook: { title: input.snapshot.protocols[0]?.name || '' },
+              summary: 'Draft ready.'
+            };
+          }
+        },
+        hydrateSnapshotFromBundle: async ({ snapshot, dataFilePath }) => ({
+          snapshot: {
+            ...snapshot,
+            data_file_path: dataFilePath,
+            protocols: [hydratedProtocol],
+            notebookEntries: []
+          }
+        }),
+        getDefaultDataFilePath: () => '/tmp/enana-data.json'
+      });
+
+      const protocolResult = await executors.get('protocol-matching')({
+        args: {
+          protocol_candidates: ['TEV Protease Cleavage of Fusion Protein']
+        },
+        context: {
+          snapshot: { data_file_path: '/tmp/enana-data.json', protocols: [staleProtocol] },
+          dataFilePath: '/tmp/enana-data.json'
+        },
+        state: {}
+      });
+      assert.equal(protocolResult.status, 'selected');
+      assert.equal(protocolInputs[0].snapshot.protocols[0].name, hydratedProtocol.name);
+
+      const notebookResult = await executors.get('notebook-draft')({
+        args: {
+          project: { name: 'PD-1 Nanobody Binder Discovery' },
+          protocol_candidates: ['TEV Protease Cleavage of Fusion Protein']
+        },
+        context: {
+          snapshot: { data_file_path: '/tmp/enana-data.json', protocols: [staleProtocol] },
+          dataFilePath: '/tmp/enana-data.json',
+          parserPayload: { primary_intent: 'notebook_draft' }
+        }
+      });
+      assert.equal(notebookResult.status, 'proposal_ready');
+      assert.equal(notebookInputs[0].snapshot.protocols[0].id, 'prot-tev');
+
+      const fallbackExecutors = new Map();
+      const { createProtocolMatchingRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'agent-protocol-matching.js'
+      ));
+      registerAgentToolExecutors({
+        cleanText: (value, maxLength = 500) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, executor) {
+            fallbackExecutors.set(name, executor);
+          }
+        },
+        protocolMatchingRuntime: createProtocolMatchingRuntime({}),
+        hydrateSnapshotFromBundle: async ({ snapshot, dataFilePath }) => ({
+          snapshot: {
+            ...snapshot,
+            data_file_path: dataFilePath,
+            protocols: [hydratedProtocol],
+            notebookEntries: []
+          }
+        }),
+        getDefaultDataFilePath: () => '/tmp/enana-data.json'
+      });
+      const fallbackResult = await fallbackExecutors.get('protocol-matching')({
+        args: {
+          protocol_candidates: ['TEV Protease Cleavage of Fusion Protein']
+        },
+        context: {
+          snapshot: { data_file_path: '/tmp/enana-data.json', protocols: [staleProtocol] },
+          dataFilePath: '/tmp/enana-data.json'
+        },
+        state: {}
+      });
+      assert.equal(fallbackResult.selected_protocol.name, hydratedProtocol.name);
+
+      const weakResult = await createProtocolMatchingRuntime({}).selectProtocol({
+        protocols: [staleProtocol],
+        protocolCandidates: ['TEV Protease Cleavage of Fusion Protein'],
+        message: 'TEV Protease Cleavage of Fusion Protein',
+        parserPayload: {
+          entities: {
+            protocol_name: 'TEV Protease Cleavage of Fusion Protein'
+          }
+        }
+      });
+      assert.equal(weakResult.selected_protocol, null);
+    });
+
     test('codex agent runtime builds a Codex-session prompt and renders plain final text', async () => {
       const { createCodexAgentRuntime } = require(path.join(
         __dirname,
@@ -740,6 +911,13 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
             tool_name: 'inventory_lookup',
             tool_call_text: 'inventory_lookup: {"query":"SUMO1"}',
             event_type: 'tool_call_started'
+          });
+          input.onStream?.({
+            type: 'codex_cli_display',
+            display_kind: 'tool',
+            display_text: 'Reading paper.md...',
+            tool_name: 'exec_command',
+            event_type: 'function_call'
           });
           input.onStream?.({
             text_delta: 'Streaming answer.',
@@ -847,6 +1025,8 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
       assert.equal(lifecycleEvents.some((event) => event.stage === 'codex_agent_completed'), true);
       assert.equal(progressEvents.some((event) => event.stage === 'codex_agent_thinking' && event.meta?.thinking_trace === 'Checking the relevant project records.'), true);
       assert.equal(progressEvents.some((event) => event.stage === 'tool_call_started' && event.tool_name === 'inventory_lookup' && event.meta?.tool_call_text.includes('SUMO1')), true);
+      assert.equal(progressEvents.some((event) => event.stage === 'codex_cli_display' && event.meta?.codex_display_text === 'Reading paper.md...'), true);
+      assert.equal(lifecycleEvents.some((event) => event.stage === 'codex_cli_display' && event.message === 'Reading paper.md...'), true);
       assert.equal(progressEvents.some((event) => event.stage === 'codex_agent_stream'), true);
       assert.equal(progressEvents.some((event) => event.meta?.stream_text === 'Streaming answer.'), true);
     });
@@ -1314,9 +1494,11 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
         const previousCodexCli = process.env.ENANA_CODEX_CLI;
         const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
         const previousStdout = process.env.ENANA_FAKE_CODEX_STDOUT;
+        const previousStderr = process.env.ENANA_FAKE_CODEX_STDERR;
         process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
         process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
         process.env.ENANA_FAKE_CODEX_STDOUT = [
+          'Plain Codex status line',
           JSON.stringify({ type: 'event_msg', payload: { type: 'agent_reasoning', text: 'Checking project context.' } }),
           JSON.stringify({ type: 'event_msg', payload: { type: 'agent_message', phase: 'commentary', message: 'I am checking inventory.' } }),
           JSON.stringify({ type: 'response_item', payload: { type: 'function_call', name: 'inventory_lookup', arguments: { query: 'SUMO1' } } }),
@@ -1342,6 +1524,7 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
           JSON.stringify({ type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Final response from Codex.' }], phase: 'final_answer' } }),
           ''
         ].join('\n');
+        process.env.ENANA_FAKE_CODEX_STDERR = 'Codex stderr warning\n';
 
         try {
           const streamEvents = [];
@@ -1366,6 +1549,91 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
           assert.equal(streamEvents.some((event) => event.type === 'codex_thinking' && event.thinking_text === 'I am checking inventory.'), true);
           assert.equal(streamEvents.some((event) => event.type === 'codex_tool_call' && event.tool_name === 'inventory_lookup' && event.status === 'started'), true);
           assert.equal(streamEvents.some((event) => event.type === 'codex_tool_call' && event.status === 'completed' && /Found 2/.test(event.tool_call_text)), true);
+          const displayEvents = streamEvents.filter((event) => event.type === 'codex_cli_display');
+          assert.equal(displayEvents.some((event) => event.display_text === 'Plain Codex status line' && event.display_kind === 'stdout'), true);
+          assert.equal(displayEvents.some((event) => event.display_text === 'Codex stderr warning' && event.display_kind === 'stderr'), true);
+          assert.equal(displayEvents.some((event) => event.display_text === 'Checking project context.' && event.display_kind === 'thinking'), true);
+          assert.equal(displayEvents.some((event) => event.display_text === 'I am checking inventory.' && event.display_kind === 'thinking'), true);
+          assert.equal(displayEvents.some((event) => event.display_kind === 'tool' && /inventory_lookup/.test(event.display_text) && /SUMO1/.test(event.display_text)), true);
+          assert.equal(displayEvents.some((event) => event.display_kind === 'assistant' && event.display_text === 'Final response from Codex.'), true);
+          assert.equal(displayEvents.some((event) => /^\s*\{/.test(event.display_text || '')), false);
+        } finally {
+          if (typeof previousCodexCli === 'string') {
+            process.env.ENANA_CODEX_CLI = previousCodexCli;
+          } else {
+            delete process.env.ENANA_CODEX_CLI;
+          }
+          if (typeof previousCapture === 'string') {
+            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+          }
+          if (typeof previousStdout === 'string') {
+            process.env.ENANA_FAKE_CODEX_STDOUT = previousStdout;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_STDOUT;
+          }
+          if (typeof previousStderr === 'string') {
+            process.env.ENANA_FAKE_CODEX_STDERR = previousStderr;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_STDERR;
+          }
+          fs.rmSync(workspaceDir, { recursive: true, force: true });
+        }
+      });
+    });
+
+    test('codex cli provider replays assistant transcript text into display rows', async () => {
+      const accessToken = buildJwt({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        email: 'scientist@example.com'
+      });
+      await withCodexHome({
+        authFile: {
+          auth_mode: 'chatgpt',
+          tokens: {
+            access_token: accessToken,
+            refresh_token: 'refresh-token',
+            account_id: 'acct-replay'
+          }
+        }
+      }, async () => {
+        const provider = loadProvider();
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-replay-'));
+        const fakeCodex = createFakeCodexBinary(workspaceDir);
+        const sessionId = 'codex-replay-session-1';
+        const transcriptDir = path.join(process.env.CODEX_HOME, 'sessions', '2026', '05', '21');
+        fs.mkdirSync(transcriptDir, { recursive: true });
+        fs.writeFileSync(path.join(transcriptDir, `rollout-${sessionId}.jsonl`), [
+          JSON.stringify({ type: 'session_meta', payload: { id: sessionId } }),
+          JSON.stringify({ type: 'event_msg', payload: { type: 'user_message', message: '# Hikari Codex Chat Turn\nCurrent user request: do not render this envelope.' } }),
+          JSON.stringify({ type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'I found the package file.' }], phase: 'commentary' } }),
+          JSON.stringify({ type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Replay final answer.' }], phase: 'final_answer' } }),
+          ''
+        ].join('\n'), 'utf8');
+        const previousCodexCli = process.env.ENANA_CODEX_CLI;
+        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
+        const previousStdout = process.env.ENANA_FAKE_CODEX_STDOUT;
+        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
+        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        process.env.ENANA_FAKE_CODEX_STDOUT = `${JSON.stringify({ type: 'session_meta', payload: { id: sessionId } })}\n`;
+
+        try {
+          const streamEvents = [];
+          const result = await provider.requestCodexCliText({
+            prompt: 'Replay transcript please.',
+            cwd: workspaceDir,
+            stream: true,
+            onStream: (event) => {
+              streamEvents.push(event);
+            }
+          });
+          const displayEvents = streamEvents.filter((event) => event.type === 'codex_cli_display');
+          assert.equal(result, 'OK from fake codex');
+          assert.equal(displayEvents.some((event) => event.display_kind === 'assistant' && event.display_text === 'I found the package file.'), true);
+          assert.equal(displayEvents.some((event) => event.display_kind === 'assistant' && event.display_text === 'Replay final answer.'), true);
+          assert.equal(displayEvents.some((event) => /Hikari Codex Chat Turn/.test(event.display_text || '')), false);
+          assert.equal(displayEvents.some((event) => /^\s*\{/.test(event.display_text || '')), false);
         } finally {
           if (typeof previousCodexCli === 'string') {
             process.env.ENANA_CODEX_CLI = previousCodexCli;
