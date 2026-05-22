@@ -222,9 +222,9 @@
 .project-contribution-legend-cell {
   width: var(--project-contribution-cell-size);
   height: var(--project-contribution-cell-size);
-  border: 1px solid rgba(42, 36, 29, 0.08);
+  border: 1px solid var(--palette-rgba-42-36-29-a08);
   border-radius: 3px;
-  background: color-mix(in srgb, var(--surface-subtle) 68%, white);
+  background: color-mix(in srgb, var(--surface-subtle) 68%, var(--palette-white));
 }
 
 .project-contribution-cell {
@@ -241,22 +241,22 @@
 
 .project-contribution-cell[data-level="1"],
 .project-contribution-legend-cell[data-level="1"] {
-  background: color-mix(in srgb, var(--accent) 32%, white);
+  background: color-mix(in srgb, var(--accent) 32%, var(--palette-white));
 }
 
 .project-contribution-cell[data-level="2"],
 .project-contribution-legend-cell[data-level="2"] {
-  background: color-mix(in srgb, var(--accent) 52%, white);
+  background: color-mix(in srgb, var(--accent) 52%, var(--palette-white));
 }
 
 .project-contribution-cell[data-level="3"],
 .project-contribution-legend-cell[data-level="3"] {
-  background: color-mix(in srgb, var(--accent) 74%, white);
+  background: color-mix(in srgb, var(--accent) 74%, var(--palette-white));
 }
 
 .project-contribution-cell[data-level="4"],
 .project-contribution-legend-cell[data-level="4"] {
-  background: color-mix(in srgb, var(--accent) 92%, black);
+  background: color-mix(in srgb, var(--accent) 92%, var(--palette-black));
 }
 
 .project-contribution-legend {
@@ -463,9 +463,9 @@
 .project-contribution-legend-cell {
   width: var(--project-contribution-cell-size);
   height: var(--project-contribution-cell-size);
-  border: 1px solid rgba(42, 36, 29, 0.08);
+  border: 1px solid var(--palette-rgba-42-36-29-a08);
   border-radius: 3px;
-  background: color-mix(in srgb, var(--surface-subtle) 68%, white);
+  background: color-mix(in srgb, var(--surface-subtle) 68%, var(--palette-white));
 }
 
 .project-contribution-cell {
@@ -482,22 +482,22 @@
 
 .project-contribution-cell[data-level="1"],
 .project-contribution-legend-cell[data-level="1"] {
-  background: color-mix(in srgb, var(--accent) 32%, white);
+  background: color-mix(in srgb, var(--accent) 32%, var(--palette-white));
 }
 
 .project-contribution-cell[data-level="2"],
 .project-contribution-legend-cell[data-level="2"] {
-  background: color-mix(in srgb, var(--accent) 52%, white);
+  background: color-mix(in srgb, var(--accent) 52%, var(--palette-white));
 }
 
 .project-contribution-cell[data-level="3"],
 .project-contribution-legend-cell[data-level="3"] {
-  background: color-mix(in srgb, var(--accent) 74%, white);
+  background: color-mix(in srgb, var(--accent) 74%, var(--palette-white));
 }
 
 .project-contribution-cell[data-level="4"],
 .project-contribution-legend-cell[data-level="4"] {
-  background: color-mix(in srgb, var(--accent) 92%, black);
+  background: color-mix(in srgb, var(--accent) 92%, var(--palette-black));
 }
 
 .project-contribution-legend {
@@ -525,8 +525,8 @@ body.theme-night #project-management-view .project-stat-card {
 
 body.theme-night #project-management-view .project-contribution-cell,
 body.theme-night #project-management-view .project-contribution-legend-cell {
-  border-color: rgba(250, 246, 239, 0.12);
-  background: color-mix(in srgb, var(--surface-subtle) 70%, black);
+  border-color: var(--palette-rgba-250-246-239-a12);
+  background: color-mix(in srgb, var(--surface-subtle) 70%, var(--palette-black));
 }
 
 body.theme-night #project-management-view .project-contribution-cell[data-level="1"],
@@ -546,7 +546,7 @@ body.theme-night #project-management-view .project-contribution-legend-cell[data
 
 body.theme-night #project-management-view .project-contribution-cell[data-level="4"],
 body.theme-night #project-management-view .project-contribution-legend-cell[data-level="4"] {
-  background: color-mix(in srgb, var(--accent) 94%, white);
+  background: color-mix(in srgb, var(--accent) 94%, var(--palette-white));
 }
 
 @media (max-width: 980px) {

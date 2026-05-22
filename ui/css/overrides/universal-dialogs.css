@@ -8,7 +8,7 @@
   align-items: center;
   overflow: auto;
   padding: 18px;
-  background: rgba(18, 34, 55, 0.24);
+  background: var(--palette-rgba-18-34-55-a24);
 }
 
 .app-dialog-overlay--top {
@@ -39,7 +39,7 @@
   border: 1px solid color-mix(in srgb, var(--line) 88%, var(--accent) 12%);
   border-radius: 12px;
   background: color-mix(in srgb, var(--surface-elevated) 96%, var(--surface-subtle) 4%);
-  box-shadow: 0 24px 58px rgba(18, 34, 55, 0.2);
+  box-shadow: 0 24px 58px var(--palette-rgba-18-34-55-a2);
 }
 
 .app-dialog-head {
@@ -60,7 +60,7 @@
   position: absolute;
   z-index: 20;
   padding: 84px 24px 24px;
-  background: rgba(18, 34, 55, 0.22);
+  background: var(--palette-rgba-18-34-55-a22);
 }
 
 #home-view .home-dialog.app-dialog-surface {
@@ -132,7 +132,7 @@ body.theme-night .app-dialog-surface {
   border-color: color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
   background: color-mix(in srgb, var(--surface-elevated) 94%, var(--surface-subtle) 6%);
   color: var(--text);
-  box-shadow: 0 24px 58px rgba(0, 0, 0, 0.46);
+  box-shadow: 0 24px 58px var(--palette-rgba-0-0-0-a46);
 }
 
 body.theme-night #home-view .home-dialog.app-dialog-surface {

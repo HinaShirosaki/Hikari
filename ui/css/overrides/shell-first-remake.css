@@ -101,11 +101,11 @@
 }
 
 #tool-box-view .crispr-risk-low {
-  color: #45533a;
+  color: var(--palette-hex-45533a);
 }
 
 #tool-box-view .crispr-risk-medium {
-  color: #72562b;
+  color: var(--palette-hex-72562b);
 }
 
 #tool-box-view .crispr-risk-high {
@@ -351,7 +351,7 @@
 }
 
 #sequence-viewer-detail-view .sequence-viewer-feature-editor-overlay {
-  background: rgba(23, 21, 18, 0.22);
+  background: var(--palette-rgba-23-21-18-a22);
 }
 
 #sequence-viewer-detail-view .sequence-viewer-feature-editor-grid label {

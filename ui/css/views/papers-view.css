@@ -253,7 +253,7 @@
 
 .papers-folder-rename-btn:hover,
 .papers-folder-rename-btn:focus-visible {
-  background: rgba(18, 48, 84, 0.06);
+  background: var(--palette-rgba-18-48-84-a06);
 }
 
 .papers-folder-rename-btn.is-secondary {
@@ -332,7 +332,7 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   background: var(--surface-elevated);
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 10px 28px var(--palette-rgba-15-23-42-a14);
 }
 
 .papers-context-item {
@@ -348,7 +348,7 @@
 
 .papers-context-item:hover,
 .papers-context-item:focus-visible {
-  background: rgba(18, 48, 84, 0.06);
+  background: var(--palette-rgba-18-48-84-a06);
 }
 
 .papers-context-item-danger {
@@ -508,9 +508,9 @@
 .papers-viewer-page {
   position: relative;
   overflow: hidden;
-  background: #fff;
+  background: var(--palette-white);
   border-radius: 8px;
-  box-shadow: 0 0 0 1px rgba(18, 48, 84, 0.08);
+  box-shadow: 0 0 0 1px var(--palette-rgba-18-48-84-a08);
 }
 
 .papers-viewer-canvas {
@@ -536,7 +536,7 @@
 .papers-viewer-highlight {
   position: absolute;
   border-radius: 2px;
-  background: rgba(255, 224, 102, 0.5);
+  background: var(--palette-rgba-255-224-102-a5);
 }
 
 .papers-viewer-highlight-svg {
@@ -548,7 +548,7 @@
 }
 
 .papers-viewer-highlight-path {
-  fill: rgba(255, 224, 102, 0.5);
+  fill: var(--palette-rgba-255-224-102-a5);
 }
 
 .papers-viewer-text-layer {
@@ -651,7 +651,7 @@
   height: 18px;
   margin: 0;
   padding: 0;
-  border: 2px solid rgba(255, 255, 255, 0.95);
+  border: 2px solid var(--palette-rgba-255-255-255-a95);
   border-radius: 6px;
   background: var(--danger);
   box-shadow: none;
@@ -894,7 +894,7 @@
 
 .papers-viewer-canvas {
   display: block;
-  background: #fff;
+  background: var(--palette-white);
   border-radius: inherit;
 }
 

@@ -1,6 +1,7 @@
 {
   "output": "styles.css",
   "inputs": [
+    "ui/css/base/palette.css",
     "ui/css/base/core.css",
     "ui/css/themes/modes.css",
     "ui/css/views/home-view.css",

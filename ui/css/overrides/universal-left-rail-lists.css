@@ -8,8 +8,8 @@
 }
 
 body.theme-night {
-  --enana-left-rail-list-hover: color-mix(in srgb, var(--surface-subtle) 72%, #ffffff 4%);
-  --enana-left-rail-list-selected: color-mix(in srgb, var(--surface-subtle) 86%, #ffffff 7%);
+  --enana-left-rail-list-hover: color-mix(in srgb, var(--surface-subtle) 72%, var(--palette-white) 4%);
+  --enana-left-rail-list-selected: color-mix(in srgb, var(--surface-subtle) 86%, var(--palette-white) 7%);
   --enana-left-rail-list-focus: color-mix(in srgb, var(--focus) 28%, transparent);
 }
 

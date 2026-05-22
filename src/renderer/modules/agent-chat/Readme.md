@@ -21,7 +21,15 @@ The rest of the folder is split by responsibility:
 - `developer-mock-response.js`: developer-mode mock response injection.
 - `developer-tool-tests.js`: developer-mode manual tool smoke tests.
 - `developer-tools.js`: pure helpers for developer previews and tool-test message rendering.
-- `rendering.js`: chat history and assistant-card rendering.
+- `rendering.js`: public `renderHistory(...)` entry point for chat history rendering.
+- `rendering-attachments.js`: user attachment pill rendering.
+- `rendering-empty-state.js`: empty chat prompt rendering.
+- `rendering-meta.js`: assistant metadata panels and action sections.
+- `rendering-purchase.js`: purchase recommendation tiles.
+- `rendering-python.js`: Python sandbox output collection and cards.
+- `rendering-question-card.js`: clarification card markup.
+- `rendering-time.js`: timestamp formatting.
+- `rendering-trace.js`, `rendering-trace-rows.js`, `rendering-trace-normalizers.js`: generated trace rendering and row normalization.
 - `response.js`: agent result normalization and assistant text summaries.
 - `session-manager.js`: persistent chat session list, load, create, and refresh logic.
 - `shared.js`: common text, array, mapping, and tool-label helpers.

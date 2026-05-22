@@ -169,11 +169,11 @@
 }
 
 .biology-notebook-page-row.is-planned .biology-notebook-page-badge {
-  color: #8a5a00;
+  color: var(--palette-hex-8a5a00);
 }
 
 .biology-notebook-page-row.is-executed .biology-notebook-page-badge {
-  color: #23622b;
+  color: var(--palette-hex-23622b);
 }
 
 .biology-notebook-page-list-empty {
@@ -249,7 +249,7 @@
   padding: 14px;
   border: 1px dashed color-mix(in srgb, var(--line) 78%, transparent);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--panel) 90%, white);
+  background: color-mix(in srgb, var(--panel) 90%, var(--palette-white));
 }
 
 .biology-notebook-protocol-editor-note {
@@ -283,7 +283,7 @@
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--panel) 92%, white);
+  background: color-mix(in srgb, var(--panel) 92%, var(--palette-white));
 }
 
 .biology-notebook-result-table-head p {
@@ -294,7 +294,7 @@
   border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
   border-radius: 10px;
   overflow: hidden;
-  background: #fff;
+  background: var(--palette-white);
 }
 
 .biology-notebook-result-table.tabulator {
@@ -313,7 +313,7 @@
 
 .biology-notebook-result-table .tabulator-header {
   border-bottom: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
-  background: color-mix(in srgb, white 90%, var(--panel));
+  background: color-mix(in srgb, var(--palette-white) 90%, var(--panel));
 }
 
 .biology-notebook-result-table .tabulator-col,
@@ -322,7 +322,7 @@
 }
 
 .biology-notebook-result-table .tabulator-row {
-  background: #fff;
+  background: var(--palette-white);
 }
 
 .biology-notebook-result-table .tabulator-row:not(:last-child) {
@@ -330,7 +330,7 @@
 }
 
 .biology-notebook-result-table .tabulator-cell:focus {
-  outline: 2px solid color-mix(in srgb, #3d79c5 72%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--palette-hex-3d79c5) 72%, transparent);
   outline-offset: -2px;
 }
 
@@ -340,7 +340,7 @@
   padding: 12px;
   border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--panel) 92%, white);
+  background: color-mix(in srgb, var(--panel) 92%, var(--palette-white));
 }
 
 .biology-notebook-linked-preview-head {
@@ -383,7 +383,7 @@
   max-width: 100%;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
-  background: #fff;
+  background: var(--palette-white);
 }
 
 .biology-notebook-linked-assay-grid {
@@ -426,7 +426,7 @@
 }
 
 .biology-notebook-linked-results .assay-plate-table tr > *:nth-child(2) {
-  background: color-mix(in srgb, white 94%, var(--panel));
+  background: color-mix(in srgb, var(--palette-white) 94%, var(--panel));
 }
 
 .biology-notebook-linked-results .assay-well {
@@ -509,9 +509,9 @@
 }
 
 #biology-notebook-view .inline-placeholder-token.is-linked-sample {
-  border-color: color-mix(in srgb, #23622b 46%, var(--line));
-  background: color-mix(in srgb, #e8f5e9 70%, white);
-  color: #1f5c27;
+  border-color: color-mix(in srgb, var(--palette-hex-23622b) 46%, var(--line));
+  background: color-mix(in srgb, var(--palette-hex-e8f5e9) 70%, var(--palette-white));
+  color: var(--palette-hex-1f5c27);
   font-weight: 600;
 }
 
@@ -526,8 +526,8 @@
   padding: 8px;
   border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
   border-radius: 8px;
-  background: var(--surface-elevated, #fff);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
+  background: var(--surface-elevated, var(--palette-white));
+  box-shadow: 0 18px 42px var(--palette-rgba-15-23-42-a18);
 }
 
 .biology-notebook-sample-link-menu[hidden] {
@@ -568,7 +568,7 @@
 .biology-notebook-sample-link-option:hover,
 .biology-notebook-sample-link-option:focus-visible {
   border-color: color-mix(in srgb, var(--line) 84%, transparent);
-  background: color-mix(in srgb, var(--surface-subtle, #f8fafc) 86%, white);
+  background: color-mix(in srgb, var(--surface-subtle, var(--palette-slate-25)) 86%, var(--palette-white));
   outline: none;
 }
 

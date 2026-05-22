@@ -283,9 +283,9 @@
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid rgba(53, 99, 153, 0.22);
-  background: color-mix(in srgb, var(--surface-elevated, #ffffff) 92%, #f5efe5 8%);
-  box-shadow: 0 18px 40px rgba(27, 20, 14, 0.14);
+  border: 1px solid var(--palette-rgba-53-99-153-a22);
+  background: color-mix(in srgb, var(--surface-elevated, var(--palette-white)) 92%, var(--palette-cream-125) 8%);
+  box-shadow: 0 18px 40px var(--palette-rgba-27-20-14-a14);
 }
 
 .assay-sample-picker[hidden] {
@@ -322,8 +322,8 @@
   gap: 2px;
   width: 100%;
   padding: 9px 10px;
-  border: 1px solid rgba(53, 99, 153, 0.14);
-  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid var(--palette-rgba-53-99-153-a14);
+  background: var(--palette-rgba-255-255-255-a8);
   color: var(--text);
   text-align: left;
   cursor: pointer;
@@ -331,13 +331,13 @@
 
 .assay-sample-picker-item:hover,
 .assay-sample-picker-item:focus-visible {
-  background: color-mix(in srgb, var(--accent) 10%, #ffffff);
-  border-color: rgba(53, 99, 153, 0.28);
+  background: color-mix(in srgb, var(--accent) 10%, var(--palette-white));
+  border-color: var(--palette-rgba-53-99-153-a28);
 }
 
 .assay-sample-picker-item.is-current {
-  border-color: color-mix(in srgb, var(--accent) 45%, #ffffff);
-  background: color-mix(in srgb, var(--accent) 12%, #ffffff);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--palette-white));
+  background: color-mix(in srgb, var(--accent) 12%, var(--palette-white));
 }
 
 .assay-sample-picker-item-title {
@@ -352,7 +352,7 @@
 }
 
 .assay-sample-picker-clear .assay-sample-picker-item-title {
-  color: #9f1c1c;
+  color: var(--palette-hex-9f1c1c);
 }
 
 .assay-sample-picker-empty {
@@ -364,7 +364,7 @@
   position: fixed;
   inset: 0;
   z-index: 2550;
-  background: rgba(18, 34, 55, 0.18);
+  background: var(--palette-rgba-18-34-55-a18);
   display: grid;
   justify-items: center;
   align-items: start;
@@ -385,9 +385,9 @@
   display: grid;
   gap: 12px;
   padding: 16px;
-  border: 1px solid rgba(53, 99, 153, 0.22);
-  background: color-mix(in srgb, var(--surface-elevated, #ffffff) 94%, #f5efe5 6%);
-  box-shadow: 0 18px 40px rgba(27, 20, 14, 0.14);
+  border: 1px solid var(--palette-rgba-53-99-153-a22);
+  background: color-mix(in srgb, var(--surface-elevated, var(--palette-white)) 94%, var(--palette-cream-125) 6%);
+  box-shadow: 0 18px 40px var(--palette-rgba-27-20-14-a14);
 }
 
 .assay-serial-dilution-head,
@@ -438,8 +438,8 @@
   gap: 4px;
   width: 100%;
   padding: 10px;
-  border: 1px solid rgba(53, 99, 153, 0.18);
-  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid var(--palette-rgba-53-99-153-a18);
+  background: var(--palette-rgba-255-255-255-a74);
   color: var(--text);
   text-align: left;
 }
@@ -447,8 +447,8 @@
 .assay-result-import-choice:hover,
 .assay-result-import-choice:focus-visible,
 .assay-result-import-choice.is-active {
-  border-color: color-mix(in srgb, var(--accent) 42%, #ffffff);
-  background: color-mix(in srgb, var(--accent) 12%, #ffffff);
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--palette-white));
+  background: color-mix(in srgb, var(--accent) 12%, var(--palette-white));
 }
 
 .assay-result-import-choice strong,
@@ -488,8 +488,8 @@
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid rgba(53, 99, 153, 0.18);
-  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--palette-rgba-53-99-153-a18);
+  background: var(--palette-rgba-255-255-255-a7);
 }
 
 .assay-serial-dilution-sample-head {
@@ -524,7 +524,7 @@
 .assay-serial-dilution-table th,
 .assay-serial-dilution-table td {
   padding: 8px 10px;
-  border: 1px solid rgba(53, 99, 153, 0.16);
+  border: 1px solid var(--palette-rgba-53-99-153-a16);
   text-align: left;
   font-size: 0.78rem;
   vertical-align: top;
@@ -540,12 +540,12 @@
 
 .assay-serial-dilution-stock-table th,
 .assay-serial-dilution-table th {
-  background: rgba(222, 237, 255, 0.72);
+  background: var(--palette-rgba-222-237-255-a72);
   font-weight: 700;
 }
 
 .assay-serial-dilution-error {
-  color: #9f1c1c;
+  color: var(--palette-hex-9f1c1c);
 }
 
 .assay-serial-dilution-note {
@@ -580,8 +580,8 @@
 .assay-plate-table th,
 .assay-plate-table td {
   border: 0;
-  border-right: 1px solid rgba(53, 99, 153, 0.14);
-  border-bottom: 1px solid rgba(53, 99, 153, 0.14);
+  border-right: 1px solid var(--palette-rgba-53-99-153-a14);
+  border-bottom: 1px solid var(--palette-rgba-53-99-153-a14);
   padding: 4px 5px;
   text-align: center;
   font-size: 0.75rem;
@@ -589,17 +589,17 @@
 }
 
 .assay-plate-table thead tr:first-child > * {
-  border-top: 1px solid rgba(53, 99, 153, 0.14);
+  border-top: 1px solid var(--palette-rgba-53-99-153-a14);
 }
 
 .assay-plate-table tr > *:first-child {
-  border-left: 1px solid rgba(53, 99, 153, 0.14);
+  border-left: 1px solid var(--palette-rgba-53-99-153-a14);
 }
 
 .assay-plate-table thead th,
 .assay-plate-table thead td {
   position: sticky;
-  background: rgba(222, 237, 255, 0.95);
+  background: var(--palette-rgba-222-237-255-a95);
 }
 
 .assay-plate-table thead tr:first-child th,
@@ -625,14 +625,14 @@
   min-width: var(--assay-axis-column-width);
   position: sticky;
   left: var(--assay-row-header-width);
-  background: rgb(255, 255, 255);
+  background: var(--palette-white);
 }
 
 .assay-plate-table tbody th {
   position: sticky;
   left: 0;
   z-index: 1;
-  background: rgba(222, 237, 255, 0.95);
+  background: var(--palette-rgba-222-237-255-a95);
 }
 
 .assay-plate-table thead th:first-child,
@@ -643,22 +643,22 @@
 
 .assay-plate-table thead tr:first-child > *:first-child {
   z-index: 8;
-  background: rgb(222, 237, 255);
+  background: var(--palette-rgb-222-237-255);
 }
 
 .assay-plate-table thead tr.assay-plate-editor-row > *:first-child {
   z-index: 7;
-  background: rgb(222, 237, 255);
+  background: var(--palette-rgb-222-237-255);
 }
 
 .assay-plate-table thead tr:first-child > *:nth-child(2) {
   z-index: 6;
-  background: rgb(222, 237, 255);
+  background: var(--palette-rgb-222-237-255);
 }
 
 .assay-plate-table thead tr.assay-plate-editor-row > *:nth-child(2) {
   z-index: 6;
-  background: rgb(222, 237, 255);
+  background: var(--palette-rgb-222-237-255);
 }
 
 .assay-plate-table tbody > tr > *:nth-child(2) {
@@ -671,7 +671,7 @@
   height: 78px;
   padding: 3px 4px;
   vertical-align: top;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--palette-rgba-255-255-255-a9);
   cursor: pointer;
 }
 
@@ -699,14 +699,14 @@
 .assay-well-meta {
   font-size: 0.68rem;
   line-height: 1.15;
-  color: #334155;
+  color: var(--palette-slate-700);
   margin-top: 4px;
   white-space: normal;
   word-break: break-word;
 }
 
 .assay-plate-editor-row th {
-  background: rgba(222, 237, 255, 0.95);
+  background: var(--palette-rgba-222-237-255-a95);
 }
 
 .assay-axis-cell,
@@ -737,11 +737,11 @@
 
 .assay-well.is-filled {
   font-weight: 600;
-  background: color-mix(in srgb, var(--accent) 18%, #ffffff);
+  background: color-mix(in srgb, var(--accent) 18%, var(--palette-white));
 }
 
 .assay-well.is-active {
-  outline: 2px solid color-mix(in srgb, var(--accent) 45%, #ffffff);
+  outline: 2px solid color-mix(in srgb, var(--accent) 45%, var(--palette-white));
   outline-offset: -2px;
 }
 
@@ -749,20 +749,20 @@
 
 
 .assay-result-disabled {
-  background: rgba(232, 236, 242, 0.75);
-  color: #6b7280;
+  background: var(--palette-rgba-232-236-242-a75);
+  color: var(--palette-hex-6b7280);
 }
 
 .assay-result-paste-target:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 40%, #ffffff);
+  outline: 2px solid color-mix(in srgb, var(--accent) 40%, var(--palette-white));
   outline-offset: 0;
 }
 
 .assay-tabulator {
-  border: 1px solid rgba(53, 99, 153, 0.22);
+  border: 1px solid var(--palette-rgba-53-99-153-a22);
   border-radius: 10px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.84);
+  background: var(--palette-rgba-255-255-255-a84);
 }
 
 .assay-tabulator.tabulator {
@@ -781,8 +781,8 @@
 
 .assay-tabulator .tabulator-cell {
   text-align: center;
-  border-bottom: 1px solid rgba(53, 99, 153, 0.22);
-  background: rgba(255, 255, 255, 0.92);
+  border-bottom: 1px solid var(--palette-rgba-53-99-153-a22);
+  background: var(--palette-rgba-255-255-255-a92);
 }
 
 .assay-tabulator .tabulator-col {
@@ -795,7 +795,7 @@
 }
 
 .assay-tabulator .tabulator-cell.tabulator-frozen-left {
-  background: rgba(255, 255, 255, 0.98);
+  background: var(--palette-rgba-255-255-255-a98);
 }
 
 .assay-tabulator .tabulator-col[tabulator-field="rowMeta"] .tabulator-col-title,
@@ -865,15 +865,15 @@
 }
 
 .assay-analysis-chart {
-  border: 1px solid rgba(53, 99, 153, 0.22);
+  border: 1px solid var(--palette-rgba-53-99-153-a22);
   border-radius: 10px;
-  background: #ffffff;
+  background: var(--palette-white);
   font-family: Arial, sans-serif;
   padding: 10px;
 }
 
 .assay-analysis-chart-canvas {
-  background: #ffffff;
+  background: var(--palette-white);
   border-radius: 6px;
 }
 
@@ -943,11 +943,11 @@
 }
 
 .assay-analysis-chart .rv-xy-plot__grid-lines__line {
-  stroke: rgba(53, 99, 153, 0.2);
+  stroke: var(--palette-rgba-53-99-153-a2);
 }
 
 .assay-analysis-chart .rv-xy-plot__axis__tick__line {
-  stroke: rgba(53, 99, 153, 0.46);
+  stroke: var(--palette-rgba-53-99-153-a46);
 }
 
 .assay-analysis-chart-canvas.frame-none .rv-xy-plot__axis__line {
@@ -1047,7 +1047,7 @@ body.theme-night .assay-serial-dilution-table th {
 }
 
 body.theme-night .assay-serial-dilution-error {
-  color: #f1a7a7;
+  color: var(--palette-hex-f1a7a7);
 }
 
 body.theme-night .assay-well {
@@ -1060,29 +1060,29 @@ body.theme-night .assay-tabulator {
 }
 
 body.theme-night .assay-analysis-chart {
-  border-color: rgba(145, 174, 214, 0.32);
-  background: #ffffff;
+  border-color: var(--palette-rgba-145-174-214-a32);
+  background: var(--palette-white);
 }
 
 body.theme-night .assay-analysis-chart-canvas {
-  background: #ffffff;
+  background: var(--palette-white);
 }
 
 body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__grid-lines__line {
-  stroke: rgba(53, 99, 153, 0.2);
+  stroke: var(--palette-rgba-53-99-153-a2);
 }
 
 body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__line,
 body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__line {
-  stroke: rgba(53, 99, 153, 0.46);
+  stroke: var(--palette-rgba-53-99-153-a46);
 }
 
 body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__text {
-  fill: #1f3b66;
+  fill: var(--palette-lab-blue-800);
 }
 
 body.theme-night .assay-analysis-chart-title {
-  color: #1f3b66;
+  color: var(--palette-lab-blue-800);
 }
 
 #assay-view .panel,

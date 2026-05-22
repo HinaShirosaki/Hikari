@@ -74,9 +74,9 @@
   width: 96px;
   height: 72px;
   object-fit: contain;
-  background: #fff;
+  background: var(--palette-white);
   border-radius: 6px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--palette-rgba-0-0-0-a08);
 }
 
 .reaction-node-label {
@@ -122,7 +122,7 @@
 
 .chem-mw-table th,
 .chem-mw-table td {
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--palette-rgba-255-255-255-a72);
   padding: 6px 8px;
   text-align: left;
 }
@@ -146,14 +146,14 @@
 body.ui-neutral-compact .chem-mw-table th,
 body.ui-neutral-compact .chem-mw-table td {
   border: 0;
-  border-bottom: 1px solid #d7dee7;
+  border-bottom: 1px solid var(--palette-slate-250);
   padding: 3px 6px;
   font-size: 0.84rem;
 }
 
 body.ui-neutral-compact.theme-night .chem-mw-table th,
 body.ui-neutral-compact.theme-night .chem-mw-table td {
-  border-bottom-color: #334155;
+  border-bottom-color: var(--palette-slate-700);
 }
 
 body.ui-neutral-compact .chem-mw-table th {
@@ -167,15 +167,15 @@ body.ui-neutral-compact .chem-mw-table tr:last-child td {
 
 body.ui-neutral-compact .reaction-number,
 body.ui-neutral-compact .inline-placeholder-token {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  color: #1e293b;
+  background: var(--palette-slate-50);
+  border-color: var(--palette-slate-300);
+  color: var(--palette-slate-850);
 }
 
 body.ui-neutral-compact.theme-night .reaction-number,
 body.ui-neutral-compact.theme-night .inline-placeholder-token {
-  background: #1e293b;
-  border-color: #475569;
+  background: var(--palette-slate-850);
+  border-color: var(--palette-slate-600);
   color: var(--text);
 }
 

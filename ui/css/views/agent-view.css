@@ -430,7 +430,7 @@ body.agent-view-fixed-scroll .workspace-main {
   aspect-ratio: 1 / 1;
   border-radius: 18px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--surface) 92%, white 8%);
+  background: color-mix(in srgb, var(--surface) 92%, var(--palette-white) 8%);
 }
 
 .agent-purchase-image {
@@ -579,7 +579,7 @@ body.agent-view-fixed-scroll .workspace-main {
   padding: 10px 12px;
   border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 88%, white 12%);
+  background: color-mix(in srgb, var(--surface) 88%, var(--palette-white) 12%);
   color: var(--strong);
   text-align: left;
   font: inherit;
@@ -629,7 +629,7 @@ body.agent-view-fixed-scroll .workspace-main {
   border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
   border-radius: 8px;
   padding: 10px 12px;
-  background: color-mix(in srgb, var(--surface) 88%, white 12%);
+  background: color-mix(in srgb, var(--surface) 88%, var(--palette-white) 12%);
   color: var(--strong);
   font: inherit;
   line-height: 1.45;
@@ -771,8 +771,8 @@ details.agent-thinking-trace:not([open]) > .agent-thinking-trace-list {
 }
 
 body.ui-neutral-compact .agent-chat-item {
-  border: 1px solid #d7dee7;
-  background: #fff;
+  border: 1px solid var(--palette-slate-250);
+  background: var(--palette-white);
 }
 
 body.ui-neutral-compact .agent-chat-item-assistant {
@@ -782,13 +782,13 @@ body.ui-neutral-compact .agent-chat-item-assistant {
 
 
 body.ui-neutral-compact .agent-meta-grid details {
-  border-color: #d7dee7;
-  background: #f8fafc;
+  border-color: var(--palette-slate-250);
+  background: var(--palette-slate-25);
 }
 
 body.ui-neutral-compact.theme-night .agent-chat-item {
-  border-color: #334155;
-  background: #0f172a;
+  border-color: var(--palette-slate-700);
+  background: var(--palette-slate-950);
 }
 
 body.ui-neutral-compact.theme-night .agent-chat-item-assistant {
@@ -798,8 +798,8 @@ body.ui-neutral-compact.theme-night .agent-chat-item-assistant {
 
 
 body.ui-neutral-compact.theme-night .agent-meta-grid details {
-  border-color: #334155;
-  background: #1e293b;
+  border-color: var(--palette-slate-700);
+  background: var(--palette-slate-850);
 }
 
 .agent-session-card,
@@ -905,7 +905,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   padding: 7px 12px;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
-  background: color-mix(in srgb, var(--surface) 90%, white 10%);
+  background: color-mix(in srgb, var(--surface) 90%, var(--palette-white) 10%);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -915,15 +915,15 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .agent-status-pill[data-state="working"] {
-  color: color-mix(in srgb, var(--strong) 76%, #8c6d1f);
+  color: color-mix(in srgb, var(--strong) 76%, var(--palette-hex-8c6d1f));
   border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
   background: color-mix(in srgb, var(--accent) 10%, var(--surface));
 }
 
 .agent-status-pill[data-state="complete"] {
-  color: #35513b;
-  border-color: color-mix(in srgb, #35513b 18%, var(--line));
-  background: color-mix(in srgb, #d8ead9 62%, white 38%);
+  color: var(--palette-hex-35513b);
+  border-color: color-mix(in srgb, var(--palette-hex-35513b) 18%, var(--line));
+  background: color-mix(in srgb, var(--palette-hex-d8ead9) 62%, var(--palette-white) 38%);
 }
 
 .agent-status-pill[data-state="error"] {
@@ -952,10 +952,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   width: min(560px, calc(100% - 32px));
   max-height: calc(100% - 76px);
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, #8b7d58 18%);
+  border: 1px solid color-mix(in srgb, var(--line) 82%, var(--palette-hex-8b7d58) 18%);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 94%, white 6%);
-  box-shadow: 0 18px 44px color-mix(in srgb, #1f2933 18%, transparent);
+  background: color-mix(in srgb, var(--surface) 94%, var(--palette-white) 6%);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--palette-hex-1f2933) 18%, transparent);
 }
 
 .agent-dev-response-header {
@@ -965,7 +965,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   gap: 12px;
   padding: 10px 12px;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
-  background: color-mix(in srgb, var(--surface) 86%, #f5f1df 14%);
+  background: color-mix(in srgb, var(--surface) 86%, var(--palette-hex-f5f1df) 14%);
 }
 
 .agent-dev-response-header > div {
@@ -1005,7 +1005,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   font-size: 0.78rem;
   line-height: 1.45;
   color: var(--strong);
-  background: color-mix(in srgb, var(--surface) 82%, white 18%);
+  background: color-mix(in srgb, var(--surface) 82%, var(--palette-white) 18%);
 }
 
 #agent-dev-visible-context {
@@ -1089,7 +1089,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   border-radius: 999px;
   padding: 8px 14px;
   border: 1px solid color-mix(in srgb, var(--line) 84%, transparent);
-  background: color-mix(in srgb, var(--surface) 92%, white 8%);
+  background: color-mix(in srgb, var(--surface) 92%, var(--palette-white) 8%);
   box-shadow: none;
 }
 
@@ -1109,7 +1109,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   padding: 16px 18px 18px;
   border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--surface) 90%, white 10%);
+  background: color-mix(in srgb, var(--surface) 90%, var(--palette-white) 10%);
   box-shadow: none;
   filter: none;
 }
@@ -1356,8 +1356,8 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   padding: 14px 16px;
   border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--surface) 88%, white 12%);
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
+  background: color-mix(in srgb, var(--surface) 88%, var(--palette-white) 12%);
+  box-shadow: 0 12px 32px var(--palette-rgba-15-23-42-a05);
 }
 
 .agent-chat-item-assistant {
