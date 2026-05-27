@@ -91,9 +91,9 @@ Supported JSON-RPC methods:
 | Method | Result |
 | --- | --- |
 | `initialize` | Protocol version, capabilities, server info |
-| `tools/list` | Direct Hikari contract tools plus generic search/bridge/resource tools listed below |
+| `tools/list` | Direct Hikari app and contract tools only |
 | `tools/call` | Gateway result encoded as one text content item |
-| `resources/list` | `resource_search({ query: "", limit: 40 })` |
+| `resources/list` | Instruction and app-tool manifest resources |
 | `resources/read` | Resource contents for the requested URI |
 | `ping` | Empty object |
 
@@ -101,101 +101,41 @@ Unsupported methods return JSON-RPC error `-32601`. Internal failures return `-3
 
 ## MCP tools
 
-The direct Hikari MCP contract tools are first-class MCP tools in `tools/list`. Agent providers can call them by name without using `tool_search`, `tool_info`, or `tool_call`:
+The Hikari MCP surface is direct-only. Agent providers call the named tools below without using `tool_search`, `tool_info`, generic `tool_call`, `resource_search`, or `resource_read` as tools:
 
 - `inventory_lookup`
 - `chemical_lookup`
+- `record_lookup`
 - `protocol_lookup`
+- `protocol_matching`
 - `protocol_generation`
 - `notebook_draft`
+- `notebook_generation`
 - `notebook_lookup`
+- `literature_search`
+- `paper_download`
+- `paper_analysis`
+- `web_search`
+- `purchase_recommendation`
+- `python_sandbox`
+- `command_line`
+- `sub_agent`
+- `memory`
 - `ask_user`
 
-Use `tool_search`, `tool_info`, and `tool_call` only for broader app tools that are not already exposed as direct MCP tools.
-
-### `tool_search`
-
-Search Hikari app tools by natural-language goal.
-
-Input schema:
-
-```json
-{
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["query"],
-  "properties": {
-    "query": { "type": "string", "minLength": 1 },
-    "limit": { "type": "integer", "minimum": 1, "maximum": 30 }
-  }
-}
-```
-
-Result shape:
-
-```json
-{
-  "ok": true,
-  "results": [
-    {
-      "tool_id": "literature-search",
-      "summary": "Tool description",
-      "input_hint": "query, source?, limit?"
-    }
-  ]
-}
-```
-
-### `tool_info`
-
-Load one Hikari tool manifest, including schema when requested.
-
-Input schema:
-
-```json
-{
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["tool_id"],
-  "properties": {
-    "tool_id": { "type": "string", "minLength": 1 },
-    "detail_level": { "type": "string", "enum": ["summary", "schema", "full"] }
-  }
-}
-```
-
-Use `detail_level: "schema"` or `"full"` before calling a tool whose argument schema is not already known.
-
-### `tool_call`
-
-Validate and call a Hikari app tool through the MCP bridge.
-
-Input schema:
-
-```json
-{
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["tool_id", "args"],
-  "properties": {
-    "tool_id": { "type": "string", "minLength": 1 },
-    "args": { "type": "object", "additionalProperties": true }
-  }
-}
-```
-
-Result shape:
+Generic direct app-tool wrappers use the app tool schema and return this envelope:
 
 ```json
 {
   "ok": true,
   "status": "completed",
-  "tool_id": "record-lookup",
+  "mcp_tool": "record_lookup",
+  "app_tool": "record-lookup",
   "output": {}
 }
 ```
 
-Invalid tools return `status: "invalid_tool"`. Schema validation failures return `status: "invalid_arguments"`. App execution failures return `status: "failed"`.
+Unknown tool names are rejected by the gateway. Schema validation failures return `status: "invalid_arguments"`. App execution failures return `status: "failed"`.
 
 ### `inventory_lookup`
 
@@ -450,47 +390,12 @@ Direct lookup result shape:
 }
 ```
 
-### `resource_search`
-
-Search Hikari MCP resources such as instructions and tool manifests.
-
-Input schema:
-
-```json
-{
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["query"],
-  "properties": {
-    "query": { "type": "string", "minLength": 1 },
-    "limit": { "type": "integer", "minimum": 1, "maximum": 40 }
-  }
-}
-```
-
-### `resource_read`
-
-Read one Hikari MCP resource by URI.
-
-Input schema:
-
-```json
-{
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["uri"],
-  "properties": {
-    "uri": { "type": "string", "minLength": 1 }
-  }
-}
-```
-
 ## Resources
 
 | URI | MIME type | Contents |
 | --- | --- | --- |
 | `hikari://instructions/agent-mcp` | `text/markdown` | Provider-neutral MCP usage instructions |
-| `hikari://tool/<tool-id>` | `application/json` | Full `tool_info({ detail_level: "full" })` envelope |
+| `hikari://tool/<tool-id>` | `application/json` | Full app tool manifest envelope |
 
 Resource discovery also returns one resource per Hikari app tool manifest. Legacy `enana://` resource URIs are still accepted for direct reads. The old `hikari://instructions/codex-agent` URI is accepted as a compatibility alias, but it returns the provider-neutral MCP instructions.
 
@@ -556,26 +461,8 @@ Response:
 
 Unauthorized calls return HTTP 401 with `status: "unauthorized"`. Missing executor returns HTTP 503 with `status: "executor_unavailable"`.
 
-## Hikari app tools exposed through `tool_search` / `tool_info`
+## Direct app tool wrappers
 
-These generic app tools remain available through the bridge for cases that do not match a direct MCP contract tool. Do not route `inventory_lookup`, `chemical_lookup`, `protocol_lookup`, `protocol_generation`, `notebook_draft`, `notebook_lookup`, or `ask_user` through `tool_search`; call those direct MCP tools instead. For Codex-backed agent runs, `tool_search` suppresses exact direct-tool duplicates such as `inventory-lookup`, `notebook-draft`, and `protocol-generation`.
-
-The current exported tool ids are:
-
-- `inventory-lookup`
-- `record-lookup`
-- `protocol-matching`
-- `notebook-generation`
-- `notebook-draft`
-- `python-sandbox`
-- `command-line`
-- `web-search`
-- `sub-agent`
-- `memory`
-- `literature-search`
-- `purchase-recommendation`
-- `paper-download`
-- `paper-analysis`
-- `protocol-generation`
+The former generic app-tool bridge is now exposed through direct MCP tool names. Hyphenated app tool ids are available as snake-case MCP tools, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `record-lookup` as `record_lookup`.
 
 See `mcp-contract.json` next to this file for the exact generated MCP tool definitions, resource list, app tool summaries, and app tool input schemas.

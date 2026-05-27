@@ -4,37 +4,6 @@ body.ui-neutral-compact {
   color-scheme: light;
 }
 
-body.theme-night {
-  color-scheme: dark;
-  --bg: #11140f;
-  --surface: #171c17;
-  --surface-subtle: #222a22;
-  --surface-elevated: #1c231d;
-  --line: #3c473d;
-  --line-soft: #2e382f;
-  --text: #e8eee5;
-  --muted: #b4c0ae;
-  --strong: #f8fbf4;
-  --primary: var(--strong);
-  --accent: #91aa75;
-  --focus: #a4bd8a;
-  --danger: #ef8b77;
-  --border: color-mix(in srgb, var(--line) 90%, transparent);
-  --surface-muted: color-mix(in srgb, var(--surface-subtle) 78%, var(--surface-elevated) 22%);
-  --accent-soft: color-mix(in srgb, var(--accent) 18%, transparent);
-  --scrollbar-thumb: rgba(226, 236, 220, 0.24);
-  --scrollbar-thumb-hover: rgba(226, 236, 220, 0.36);
-  --night-overlay: rgba(5, 9, 6, 0.58);
-  --night-overlay-soft: rgba(5, 9, 6, 0.46);
-  --night-control-bg: color-mix(in srgb, var(--surface-subtle) 76%, var(--surface-elevated) 24%);
-  --night-control-bg-hover: color-mix(in srgb, var(--surface-subtle) 84%, var(--accent) 16%);
-  --night-control-border: color-mix(in srgb, var(--line) 84%, transparent);
-  --night-filled-bg: color-mix(in srgb, var(--accent) 76%, #162014 24%);
-  --night-filled-text: #071006;
-  --night-disabled-bg: color-mix(in srgb, var(--surface-subtle) 66%, #6f786f 34%);
-  --night-disabled-text: color-mix(in srgb, var(--muted) 82%, var(--strong) 18%);
-}
-
 body.ui-neutral-compact.theme-night {
   color-scheme: dark;
 }

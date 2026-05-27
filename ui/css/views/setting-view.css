@@ -28,8 +28,8 @@
   gap: 2px;
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--line, rgba(100, 114, 85, 0.2)) 80%, transparent);
-  background: color-mix(in srgb, var(--panel, rgba(255, 255, 255, 0.75)) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line, var(--palette-rgba-100-114-85-a2)) 80%, transparent);
+  background: color-mix(in srgb, var(--panel, var(--palette-rgba-255-255-255-a75)) 92%, transparent);
   color: inherit;
   text-align: left;
   transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
@@ -50,7 +50,7 @@
 
 #setting-view .settings-nav-item.is-active {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  background: color-mix(in srgb, var(--accent) 10%, var(--panel, rgba(255, 255, 255, 0.75)));
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel, var(--palette-rgba-255-255-255-a75)));
 }
 
 #setting-view .settings-detail {
@@ -64,8 +64,8 @@
   gap: 14px;
   margin-top: 0;
   padding: 16px 18px;
-  border: 1px solid color-mix(in srgb, var(--line, rgba(100, 114, 85, 0.18)) 78%, transparent);
-  background: color-mix(in srgb, var(--panel, rgba(255, 255, 255, 0.78)) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line, var(--palette-rgba-100-114-85-a18)) 78%, transparent);
+  background: color-mix(in srgb, var(--panel, var(--palette-rgba-255-255-255-a78)) 94%, transparent);
 }
 
 #setting-view .settings-section[hidden] {
@@ -101,8 +101,8 @@
 #setting-view #setting-location-list .card-actions {
   justify-content: space-between;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--line, rgba(100, 114, 85, 0.14)) 70%, transparent);
-  background: color-mix(in srgb, var(--panel, rgba(255, 255, 255, 0.72)) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line, var(--palette-rgba-100-114-85-a14)) 70%, transparent);
+  background: color-mix(in srgb, var(--panel, var(--palette-rgba-255-255-255-a72)) 90%, transparent);
 }
 
 @media (max-width: 840px) {

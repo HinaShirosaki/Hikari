@@ -1,6 +1,7 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY. */
 /* Source config: ui/config/css-order.json */
 /* Intentionally kept as an import manifest to reduce merge conflicts across branches. */
+@import url("./ui/css/base/palette.css");
 @import url("./ui/css/base/core.css");
 @import url("./ui/css/themes/modes.css");
 @import url("./ui/css/views/home-view.css");

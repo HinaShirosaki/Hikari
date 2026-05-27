@@ -761,6 +761,41 @@
         "prefer_recent": {
           "type": "boolean"
         },
+        "use_codex_paper_context": {
+          "type": "boolean"
+        },
+        "disable_codex_paper_context": {
+          "type": "boolean"
+        },
+        "codex_paper_context": {
+          "type": "boolean"
+        },
+        "max_context_blocks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "max_download_concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 24
+        },
+        "reasoning_effort": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "sub_agent_name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "storage_path": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "storagePath": {
+          "type": "string",
+          "maxLength": 2000
+        },
         "parser_payload": {
           "$ref": "#/$defs/parser_payload"
         }
@@ -816,7 +851,7 @@
     }
   },
   "paper-download": {
-    "description": "Use this tool when the user wants a paper PDF downloaded into app storage. `download` performs the full flow in one call, first extracting candidate PDF URLs from the provided fields and then streaming the PDF with progress tracking. `start` begins the download in the background so the caller can poll with `status`. When direct bot fetching is blocked, the tool should fall back to a browser-assisted session, optionally simulate a one-click download, let the user click the site download button if needed, and close the browser session after the file is saved.",
+    "description": "Use this tool when the user wants a paper PDF downloaded into app storage. `download` performs the full flow in one call, first extracting candidate PDF URLs from the provided fields and then streaming the PDF with progress tracking. `start` begins the download in the background so the caller can poll with `status`. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,

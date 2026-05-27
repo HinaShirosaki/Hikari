@@ -5,6 +5,7 @@ import { createComposerAttachmentsController } from './composer-attachments.js';
 import { createDeveloperContextController } from './developer-context.js';
 import { createAssistantQuestionController } from './assistant-questions.js';
 import { createHistoryActionController } from './history-actions.js';
+import { createAgentReviewOverlayController } from './review-overlay.js';
 import { createAgentRequestController } from './agent-request-controller.js';
 import { createDeveloperMockResponseController } from './developer-mock-response.js';
 import { createDeveloperToolTestController } from './developer-tool-tests.js';
@@ -26,7 +27,8 @@ export function initAgentChat({
   createId,
   safeText,
   onNotebookEntriesChanged,
-  onOpenNotebookEntry = () => {}
+  onOpenNotebookEntry = () => {},
+  onProtocolsChanged = () => {}
 }) {
   const api = windowObject?.enanaApi || null;
   const dom = collectAgentChatDom(rootDocument);
@@ -108,6 +110,19 @@ export function initAgentChat({
     onOpenNotebookEntry
   });
 
+  const reviewController = createAgentReviewOverlayController({
+    dom,
+    state,
+    persist,
+    createId,
+    safeText,
+    setStatus: shell.setStatus,
+    renderContextSummary: shell.renderContextSummary,
+    renderHistoryView: shell.renderHistoryView,
+    notebookActions: historyController.notebookActions,
+    onProtocolsChanged
+  });
+
   requestController = createAgentRequestController({
     api,
     state,
@@ -126,7 +141,8 @@ export function initAgentChat({
     setStatus: shell.setStatus,
     syncComposerHeight: shell.syncComposerHeight,
     updateInFlightState: shell.updateInFlightState,
-    onNotebookEntriesChanged
+    onNotebookEntriesChanged,
+    openReviewForMessage: reviewController.openForMessage
   });
 
   const developerMockController = createDeveloperMockResponseController({
@@ -145,7 +161,8 @@ export function initAgentChat({
     syncComposerHeight: shell.syncComposerHeight,
     updateInFlightState: shell.updateInFlightState,
     ensureAgentState: shell.ensureAgentState,
-    onNotebookEntriesChanged
+    onNotebookEntriesChanged,
+    openReviewForMessage: reviewController.openForMessage
   });
 
   const developerToolTestController = createDeveloperToolTestController({

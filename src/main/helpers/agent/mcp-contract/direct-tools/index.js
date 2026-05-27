@@ -28,6 +28,9 @@ const {
   ASK_USER_MCP_TOOL,
   callAskUser
 } = require('./ask-user.js');
+const {
+  APP_CATALOG_DIRECT_MCP_TOOLS
+} = require('./app-catalog-tools.js');
 
 const DIRECT_MCP_TOOLS = Object.freeze([
   {
@@ -57,7 +60,8 @@ const DIRECT_MCP_TOOLS = Object.freeze([
   {
     definition: ASK_USER_MCP_TOOL,
     handler: callAskUser
-  }
+  },
+  ...APP_CATALOG_DIRECT_MCP_TOOLS
 ]);
 
 const DIRECT_MCP_TOOL_NAMES = Object.freeze(

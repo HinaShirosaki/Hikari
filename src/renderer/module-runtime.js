@@ -103,6 +103,10 @@ export function createRendererModuleRuntime(config = {}) {
       createId,
       safeText,
       onNotebookEntriesChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged,
+      onProtocolsChanged: () => {
+        rendererServices.protocol.handleProtocolsChanged();
+        modules.protocol?.renderList?.();
+      },
       onOpenNotebookEntry: (entryId = '') => {
         showView(views.BIOLOGY_NOTEBOOK);
         modules.biologyNotebook?.openEntry?.(entryId);

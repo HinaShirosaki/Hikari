@@ -49,6 +49,24 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.2;
 
+function escapeHtml(value = '') {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+export function buildHighlightCommentPopoverMarkup(comment = {}) {
+  const author = String(comment.author || 'Local user').trim() || 'Local user';
+  const text = String(comment.text || '').trim();
+  return `
+      <p><strong>${escapeHtml(author)}</strong></p>
+      <p>${escapeHtml(text)}</p>
+    `;
+}
+
 export function createPapersPdfViewer(elements = {}) {
   const shell = elements.shell || null;
   const emptyState = elements.emptyState || null;
@@ -67,10 +85,18 @@ export function createPapersPdfViewer(elements = {}) {
   const zoomInBtn = elements.zoomInBtn || null;
   const zoomResetBtn = elements.zoomResetBtn || null;
   const fitWidthBtn = elements.fitWidthBtn || null;
-  const highlightBtn = elements.highlightBtn || null;
   const zoomLabel = elements.zoomLabel || null;
   const openExternalBtn = elements.openExternalBtn || null;
   const closeBtn = elements.closeBtn || null;
+  const selectionMenu = elements.selectionMenu || null;
+  const selectionCommentBtn = elements.selectionCommentBtn || null;
+  const selectionHighlightBtn = elements.selectionHighlightBtn || null;
+  const selectionUnderlineBtn = elements.selectionUnderlineBtn || null;
+  const selectionCommentPopover = elements.selectionCommentPopover || null;
+  const selectionCommentText = elements.selectionCommentText || null;
+  const selectionCommentSaveBtn = elements.selectionCommentSaveBtn || null;
+  const selectionCommentCancelBtn = elements.selectionCommentCancelBtn || null;
+  const highlightCommentPopover = elements.highlightCommentPopover || null;
 
   const state = {
     paperId: '',
@@ -91,8 +117,10 @@ export function createPapersPdfViewer(elements = {}) {
     loadingTask: null,
     comments: [],
     highlights: [],
+    bookmarks: [],
     selectedCommentId: '',
     pendingSelection: null,
+    pendingCommentSelection: null,
     selectionPointerDown: false,
     placementMode: false,
     openExternal: null,
@@ -102,6 +130,8 @@ export function createPapersPdfViewer(elements = {}) {
     onPlacement: typeof elements.onPlacement === 'function' ? elements.onPlacement : null,
     onPinSelect: typeof elements.onPinSelect === 'function' ? elements.onPinSelect : null,
     onHighlightSelection: typeof elements.onHighlightSelection === 'function' ? elements.onHighlightSelection : null,
+    onSelectionComment: typeof elements.onSelectionComment === 'function' ? elements.onSelectionComment : null,
+    onBookmarksResolved: typeof elements.onBookmarksResolved === 'function' ? elements.onBookmarksResolved : null,
     onExternalLink: typeof elements.onExternalLink === 'function' ? elements.onExternalLink : null,
     onClose: typeof elements.onClose === 'function' ? elements.onClose : null
   };
@@ -142,6 +172,8 @@ export function createPapersPdfViewer(elements = {}) {
       getSelectionRef()?.removeAllRanges?.();
     } catch {}
     state.selectionPointerDown = false;
+    hideSelectionMenu();
+    hideSelectionCommentPopover();
   }
 
   function setStatus(message, isError = false) {
@@ -150,6 +182,92 @@ export function createPapersPdfViewer(elements = {}) {
     }
     status.textContent = String(message || '').trim();
     status.classList.toggle('is-error', Boolean(isError));
+  }
+
+  function emitBookmarksResolved() {
+    if (typeof state.onBookmarksResolved !== 'function') {
+      return;
+    }
+    state.onBookmarksResolved({
+      paperId: state.paperId,
+      bookmarks: state.bookmarks
+    });
+  }
+
+  function clampShellPosition(left, top, element) {
+    const shellRect = shell?.getBoundingClientRect?.();
+    const width = Math.max(Number(element?.offsetWidth) || 0, 1);
+    const height = Math.max(Number(element?.offsetHeight) || 0, 1);
+    const maxLeft = Math.max((Number(shellRect?.width) || 0) - width - 8, 8);
+    const maxTop = Math.max((Number(shellRect?.height) || 0) - height - 8, 8);
+    return {
+      left: clamp(left, 8, maxLeft),
+      top: clamp(top, 8, maxTop)
+    };
+  }
+
+  function positionFloatingElement(element, clientRect, { preferBelow = false } = {}) {
+    if (!element || !shell || !clientRect) {
+      return;
+    }
+    const shellRect = shell.getBoundingClientRect?.();
+    if (!shellRect) {
+      return;
+    }
+    const width = Math.max(Number(element.offsetWidth) || 0, 1);
+    const height = Math.max(Number(element.offsetHeight) || 0, 1);
+    const rawLeft = (Number(clientRect.left) || 0) + ((Number(clientRect.width) || 0) / 2) - Number(shellRect.left || 0) - (width / 2);
+    const rawTop = preferBelow
+      ? (Number(clientRect.top) || 0) + (Number(clientRect.height) || 0) - Number(shellRect.top || 0) + 8
+      : (Number(clientRect.top) || 0) - Number(shellRect.top || 0) - height - 8;
+    const next = clampShellPosition(rawLeft, rawTop, element);
+    element.style.left = `${Math.round(next.left)}px`;
+    element.style.top = `${Math.round(next.top)}px`;
+  }
+
+  function hideSelectionMenu() {
+    if (selectionMenu) {
+      selectionMenu.hidden = true;
+    }
+  }
+
+  function showSelectionMenu() {
+    if (!selectionMenu || !state.pendingSelection?.clientRect || selectionCommentPopover?.hidden === false) {
+      return;
+    }
+    selectionMenu.hidden = false;
+    positionFloatingElement(selectionMenu, state.pendingSelection.clientRect);
+  }
+
+  function hideSelectionCommentPopover() {
+    state.pendingCommentSelection = null;
+    if (selectionCommentPopover) {
+      selectionCommentPopover.hidden = true;
+    }
+    if (selectionCommentText) {
+      selectionCommentText.value = '';
+    }
+  }
+
+  function hideHighlightCommentPopover() {
+    if (highlightCommentPopover) {
+      highlightCommentPopover.hidden = true;
+      highlightCommentPopover.innerHTML = '';
+    }
+  }
+
+  function showHighlightCommentPopover(comment, clientX, clientY) {
+    if (!highlightCommentPopover || !comment || !shell) {
+      return;
+    }
+    highlightCommentPopover.innerHTML = buildHighlightCommentPopoverMarkup(comment);
+    highlightCommentPopover.hidden = false;
+    const shellRect = shell.getBoundingClientRect?.();
+    const rawLeft = (Number(clientX) || 0) - Number(shellRect?.left || 0) + 12;
+    const rawTop = (Number(clientY) || 0) - Number(shellRect?.top || 0) + 12;
+    const next = clampShellPosition(rawLeft, rawTop, highlightCommentPopover);
+    highlightCommentPopover.style.left = `${Math.round(next.left)}px`;
+    highlightCommentPopover.style.top = `${Math.round(next.top)}px`;
   }
 
   function setTitle(text) {
@@ -180,6 +298,55 @@ export function createPapersPdfViewer(elements = {}) {
       isActive: hasActiveDocument(),
       onPinSelect: state.onPinSelect
     });
+  }
+
+  function getCommentForHighlight(highlight) {
+    const commentId = String(highlight?.commentId || '').trim();
+    if (commentId) {
+      return state.comments.find((comment) => comment.id === commentId) || null;
+    }
+    const highlightId = String(highlight?.id || '').trim();
+    if (!highlightId) {
+      return null;
+    }
+    return state.comments.find((comment) => String(comment.highlightId || '').trim() === highlightId) || null;
+  }
+
+  function findCommentAtClientPoint(clientX, clientY) {
+    const targetElement = getDocumentRef()?.elementFromPoint?.(clientX, clientY) || null;
+    const pageElement = targetElement?.closest?.('.papers-viewer-page') || null;
+    if (!pageElement || !pageLayer?.contains?.(pageElement)) {
+      return null;
+    }
+    const pageNumber = Math.max(1, Math.round(Number(pageElement.dataset.pageNumber) || 1));
+    const rect = pageElement.getBoundingClientRect?.();
+    const width = Number(rect?.width) || 0;
+    const height = Number(rect?.height) || 0;
+    if (width <= 0 || height <= 0) {
+      return null;
+    }
+    const x = clamp((Number(clientX) - Number(rect.left || 0)) / width, 0, 1);
+    const y = clamp((Number(clientY) - Number(rect.top || 0)) / height, 0, 1);
+    const pageHighlights = state.highlights.filter((highlight) => highlight.pageNumber === pageNumber);
+    for (let index = pageHighlights.length - 1; index >= 0; index -= 1) {
+      const highlight = pageHighlights[index];
+      const comment = getCommentForHighlight(highlight);
+      if (!comment) {
+        continue;
+      }
+      const boxes = Array.isArray(highlight.boxes) ? highlight.boxes : [];
+      const matched = boxes.some((box) => {
+        const left = Number(box.x) || 0;
+        const top = Number(box.y) || 0;
+        const right = left + (Number(box.width) || 0);
+        const bottom = top + (Number(box.height) || 0);
+        return x >= left && x <= right && y >= top && y <= bottom;
+      });
+      if (matched) {
+        return comment;
+      }
+    }
+    return null;
   }
 
   function getDocumentScale() {
@@ -359,9 +526,6 @@ export function createPapersPdfViewer(elements = {}) {
     if (fitWidthBtn) {
       fitWidthBtn.disabled = !active;
     }
-    if (highlightBtn) {
-      highlightBtn.disabled = !active || state.placementMode || !state.pendingSelection;
-    }
     if (openExternalBtn) {
       openExternalBtn.disabled = !active;
     }
@@ -391,9 +555,14 @@ export function createPapersPdfViewer(elements = {}) {
     state.fitWidth = true;
     state.comments = [];
     state.highlights = [];
+    state.bookmarks = [];
     state.selectedCommentId = '';
     state.pendingSelection = null;
+    state.pendingCommentSelection = null;
     state.placementMode = false;
+    hideSelectionMenu();
+    hideSelectionCommentPopover();
+    hideHighlightCommentPopover();
     setStageScrollTop(0);
     setTitle('No paper selected');
     setMeta('');
@@ -403,6 +572,10 @@ export function createPapersPdfViewer(elements = {}) {
 
   function updatePendingSelection() {
     state.selectionFrame = 0;
+    if (selectionCommentPopover && selectionCommentPopover.hidden === false) {
+      refreshToolbar();
+      return;
+    }
     if (!hasActiveDocument() || !pageLayer || state.placementMode) {
       state.pendingSelection = null;
     } else {
@@ -410,6 +583,13 @@ export function createPapersPdfViewer(elements = {}) {
         selection: getSelectionRef(),
         pageLayer
       });
+    }
+    if (state.pendingSelection) {
+      hideSelectionCommentPopover();
+      showSelectionMenu();
+    } else {
+      hideSelectionMenu();
+      hideSelectionCommentPopover();
     }
     refreshToolbar();
   }
@@ -655,6 +835,54 @@ export function createPapersPdfViewer(elements = {}) {
     }
   }
 
+  function getOutlineUrl(item) {
+    const rawUrl = String(item?.url || item?.unsafeUrl || '').trim();
+    if (!rawUrl) {
+      return '';
+    }
+    try {
+      const parsed = new URL(rawUrl);
+      return ['http:', 'https:'].includes(parsed.protocol) ? parsed.toString() : '';
+    } catch {
+      return '';
+    }
+  }
+
+  async function normalizeOutlineItems(items = [], prefix = '') {
+    const normalized = [];
+    for (let index = 0; index < items.length; index += 1) {
+      const item = items[index];
+      const title = String(item?.title || '').replace(/\s+/g, ' ').trim();
+      const id = [prefix, String(index + 1)].filter(Boolean).join('.');
+      const children = await normalizeOutlineItems(Array.isArray(item?.items) ? item.items : [], id);
+      const pageNumber = await resolveDestinationPageNumber(item?.dest);
+      const url = getOutlineUrl(item);
+      if (!title && !children.length) {
+        continue;
+      }
+      normalized.push({
+        id,
+        title: title || `Bookmark ${id}`,
+        ...(pageNumber ? { pageNumber } : {}),
+        ...(url ? { url } : {}),
+        items: children
+      });
+    }
+    return normalized;
+  }
+
+  async function loadPdfBookmarks(pdfDocument) {
+    if (!pdfDocument || typeof pdfDocument.getOutline !== 'function') {
+      return [];
+    }
+    try {
+      const outline = await pdfDocument.getOutline();
+      return normalizeOutlineItems(Array.isArray(outline) ? outline : []);
+    } catch {
+      return [];
+    }
+  }
+
   async function openExternalLink(url) {
     const externalUrl = String(url || '').trim();
     if (!externalUrl || typeof state.onExternalLink !== 'function') {
@@ -701,6 +929,67 @@ export function createPapersPdfViewer(elements = {}) {
     await renderDocumentPages({ preserveScroll: true });
   }
 
+  function createSelectionAnnotation(kind = 'highlight') {
+    if (!state.pendingSelection || typeof state.onHighlightSelection !== 'function') {
+      return false;
+    }
+    const selection = {
+      pageNumber: state.pendingSelection.pageNumber,
+      text: state.pendingSelection.text,
+      boxes: state.pendingSelection.boxes,
+      pageWidth: state.pendingSelection.pageWidth,
+      pageHeight: state.pendingSelection.pageHeight,
+      kind
+    };
+    const didCreateHighlight = state.onHighlightSelection(selection);
+    if (didCreateHighlight === false) {
+      return false;
+    }
+    clearSelection();
+    state.pendingSelection = null;
+    refreshToolbar();
+    setStatus(`${kind === 'underline' ? 'Underlined' : 'Highlighted'} selection on page ${selection.pageNumber}.`);
+    return true;
+  }
+
+  function openSelectionCommentPopover() {
+    if (!state.pendingSelection || !selectionCommentPopover) {
+      return;
+    }
+    state.pendingCommentSelection = { ...state.pendingSelection };
+    hideSelectionMenu();
+    selectionCommentPopover.hidden = false;
+    if (selectionCommentText) {
+      selectionCommentText.value = '';
+    }
+    positionFloatingElement(selectionCommentPopover, state.pendingSelection.clientRect, { preferBelow: true });
+    selectionCommentText?.focus?.();
+  }
+
+  function saveSelectionComment() {
+    const text = String(selectionCommentText?.value || '').trim();
+    const selection = state.pendingCommentSelection || state.pendingSelection;
+    if (!text || !selection || typeof state.onSelectionComment !== 'function') {
+      return;
+    }
+    const didCreateComment = state.onSelectionComment({
+      pageNumber: selection.pageNumber,
+      text: selection.text,
+      boxes: selection.boxes,
+      pageWidth: selection.pageWidth,
+      pageHeight: selection.pageHeight,
+      commentText: text
+    });
+    if (didCreateComment === false) {
+      return;
+    }
+    hideSelectionCommentPopover();
+    clearSelection();
+    state.pendingSelection = null;
+    refreshToolbar();
+    setStatus(`Saved comment on page ${selection.pageNumber}.`);
+  }
+
   async function openPaper({ paper, summary = '', resolveBytes, onOpenExternal }) {
     if (!paper?.id || typeof resolveBytes !== 'function') {
       return false;
@@ -718,6 +1007,7 @@ export function createPapersPdfViewer(elements = {}) {
       fitWidth: state.fitWidth,
       comments: state.comments,
       highlights: state.highlights,
+      bookmarks: state.bookmarks,
       selectedCommentId: state.selectedCommentId,
       pendingSelection: state.pendingSelection,
       placementMode: state.placementMode,
@@ -732,9 +1022,15 @@ export function createPapersPdfViewer(elements = {}) {
     state.paperMeta = summary || String(paper.fileName || '').trim() || 'PDF preview';
     state.comments = [];
     state.highlights = [];
+    state.bookmarks = [];
     state.selectedCommentId = '';
     state.pendingSelection = null;
+    state.pendingCommentSelection = null;
     state.placementMode = false;
+    hideSelectionMenu();
+    hideSelectionCommentPopover();
+    hideHighlightCommentPopover();
+    emitBookmarksResolved();
     cancelScrollSync();
     cancelAllRenderTasks(state.pageRecords);
     await cleanupLoadingTask();
@@ -804,6 +1100,14 @@ export function createPapersPdfViewer(elements = {}) {
       state.maxBasePageWidth = pageMetrics.maxBasePageWidth;
       state.zoom = DEFAULT_ZOOM;
       state.fitWidth = true;
+      state.bookmarks = await loadPdfBookmarks(pdfDocument);
+      if (activeLoadToken !== state.loadToken) {
+        try {
+          await pdfDocument.destroy();
+        } catch {}
+        return false;
+      }
+      emitBookmarksResolved();
       if (previousState.pdfDocument && previousState.pdfDocument !== pdfDocument) {
         Promise.resolve(destroyPdfDocument(previousState.pdfDocument)).catch(() => {});
       }
@@ -905,9 +1209,11 @@ export function createPapersPdfViewer(elements = {}) {
         state.fitWidth = previousState.fitWidth;
         state.comments = previousState.comments;
         state.highlights = previousState.highlights;
+        state.bookmarks = previousState.bookmarks;
         state.selectedCommentId = previousState.selectedCommentId;
         state.pendingSelection = previousState.pendingSelection;
         state.placementMode = previousState.placementMode;
+        emitBookmarksResolved();
         setTitle(state.paperTitle);
         setMeta(state.paperMeta);
         paintHighlights();
@@ -925,11 +1231,13 @@ export function createPapersPdfViewer(elements = {}) {
 
   function setComments(comments = []) {
     state.comments = normalizeCommentList(comments);
+    hideHighlightCommentPopover();
     paintPins();
   }
 
   function setHighlights(highlights = []) {
     state.highlights = normalizeHighlightList(highlights);
+    hideHighlightCommentPopover();
     paintHighlights();
   }
 
@@ -977,6 +1285,9 @@ export function createPapersPdfViewer(elements = {}) {
   }
 
   function handleResize() {
+    hideSelectionMenu();
+    hideSelectionCommentPopover();
+    hideHighlightCommentPopover();
     if (!state.pdfDocument) {
       paintHighlights();
       paintPins();
@@ -988,6 +1299,26 @@ export function createPapersPdfViewer(elements = {}) {
     }
     paintPins();
     updateCurrentPageFromScroll({ force: true });
+  }
+
+  function handleStageScroll() {
+    hideSelectionMenu();
+    hideSelectionCommentPopover();
+    hideHighlightCommentPopover();
+    scheduleScrollSync();
+  }
+
+  function handleHighlightHover(event) {
+    if (!hasActiveDocument() || selectionMenu?.hidden === false || selectionCommentPopover?.hidden === false) {
+      hideHighlightCommentPopover();
+      return;
+    }
+    const comment = findCommentAtClientPoint(event?.clientX, event?.clientY);
+    if (!comment) {
+      hideHighlightCommentPopover();
+      return;
+    }
+    showHighlightCommentPopover(comment, event.clientX, event.clientY);
   }
 
   function bindEvents() {
@@ -1012,25 +1343,31 @@ export function createPapersPdfViewer(elements = {}) {
     fitWidthBtn?.addEventListener('click', () => {
       void fitToWidth();
     });
-    highlightBtn?.addEventListener('click', () => {
-      if (!state.pendingSelection || typeof state.onHighlightSelection !== 'function') {
-        return;
+    selectionHighlightBtn?.addEventListener('click', () => {
+      createSelectionAnnotation('highlight');
+    });
+    selectionUnderlineBtn?.addEventListener('click', () => {
+      createSelectionAnnotation('underline');
+    });
+    selectionCommentBtn?.addEventListener('click', () => {
+      openSelectionCommentPopover();
+    });
+    selectionCommentSaveBtn?.addEventListener('click', () => {
+      saveSelectionComment();
+    });
+    selectionCommentCancelBtn?.addEventListener('click', () => {
+      hideSelectionCommentPopover();
+      showSelectionMenu();
+    });
+    selectionCommentText?.addEventListener('keydown', (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+        event.preventDefault();
+        saveSelectionComment();
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        hideSelectionCommentPopover();
+        showSelectionMenu();
       }
-      const selection = {
-        pageNumber: state.pendingSelection.pageNumber,
-        text: state.pendingSelection.text,
-        boxes: state.pendingSelection.boxes,
-        pageWidth: state.pendingSelection.pageWidth,
-        pageHeight: state.pendingSelection.pageHeight
-      };
-      const didCreateHighlight = state.onHighlightSelection(selection);
-      if (didCreateHighlight === false) {
-        return;
-      }
-      clearSelection();
-      state.pendingSelection = null;
-      refreshToolbar();
-      setStatus(`Highlighted selection on page ${selection.pageNumber}.`);
     });
     openExternalBtn?.addEventListener('click', () => {
       if (!state.paperId || typeof state.openExternal !== 'function') {
@@ -1041,9 +1378,11 @@ export function createPapersPdfViewer(elements = {}) {
     closeBtn?.addEventListener('click', () => {
       void resetViewer();
     });
-    stage?.addEventListener('scroll', scheduleScrollSync, { passive: true });
+    stage?.addEventListener('scroll', handleStageScroll, { passive: true });
     pageLayer?.addEventListener('click', handleOverlayClick);
     pageLayer?.addEventListener('pointerdown', handleTextSelectionPointerDown);
+    pageLayer?.addEventListener('pointermove', handleHighlightHover, { passive: true });
+    pageLayer?.addEventListener('pointerleave', hideHighlightCommentPopover);
 
     const win = getWindowRef();
     const doc = getDocumentRef();
@@ -1054,6 +1393,13 @@ export function createPapersPdfViewer(elements = {}) {
     }
     if (typeof doc?.addEventListener === 'function') {
       doc.addEventListener('selectionchange', schedulePendingSelectionUpdate);
+      doc.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          hideSelectionMenu();
+          hideSelectionCommentPopover();
+          hideHighlightCommentPopover();
+        }
+      });
     }
 
     if (stage && typeof ResizeObserver === 'function') {
@@ -1077,6 +1423,8 @@ export function createPapersPdfViewer(elements = {}) {
       return state.pageNumber;
     },
     hasActiveDocument,
+    goToPage,
+    openExternalUrl: openExternalLink,
     setComments,
     setHighlights,
     setSelectedCommentId,

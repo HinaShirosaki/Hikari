@@ -2024,21 +2024,34 @@
                 <div class="papers-viewer-head">
                   <div id="paper-viewer-toolbar" class="papers-viewer-toolbar" hidden>
                     <div class="papers-viewer-page-cluster">
-                      <button type="button" id="paper-viewer-prev-btn" class="ghost-btn">Prev</button>
+                      <button
+                        type="button"
+                        id="paper-viewer-prev-btn"
+                        class="ghost-btn papers-viewer-page-nav-btn"
+                        aria-label="Previous page"
+                        title="Previous page"
+                      >
+                        <span aria-hidden="true">&lt;</span>
+                      </button>
                       <label class="papers-viewer-page-field">
-                        <span class="papers-viewer-page-label">Page</span>
-                        <input id="paper-viewer-page-input" type="number" min="1" value="1" />
+                        <input id="paper-viewer-page-input" type="number" min="1" value="1" aria-label="Page number" />
                       </label>
                       <span id="paper-viewer-page-count" class="small-note">/ 0</span>
-                      <button type="button" id="paper-viewer-next-btn" class="ghost-btn">Next</button>
+                      <button
+                        type="button"
+                        id="paper-viewer-next-btn"
+                        class="ghost-btn papers-viewer-page-nav-btn"
+                        aria-label="Next page"
+                        title="Next page"
+                      >
+                        <span aria-hidden="true">&gt;</span>
+                      </button>
                     </div>
                     <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn">-</button>
                     <span id="paper-viewer-zoom-label" class="small-note">100%</span>
                     <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
                     <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
                     <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
-                    <button type="button" id="paper-viewer-highlight-btn" class="ghost-btn">Highlight Selection</button>
-                    <button type="button" id="paper-viewer-summarize-btn" class="ghost-btn">Summarize</button>
                     <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
                   </div>
                   <div class="papers-viewer-summary" hidden>
@@ -2059,6 +2072,43 @@
                       </div>
                     </div>
                   </div>
+                  <div id="paper-selection-menu" class="papers-selection-menu" role="toolbar" aria-label="Selected text actions" hidden>
+                    <button type="button" id="paper-selection-comment-btn" class="ghost-btn papers-selection-action-btn" aria-label="Add comment" title="Add comment">
+                      <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M6.25 5.75h11.5a2 2 0 0 1 2 2v6.5a2 2 0 0 1-2 2H11l-4.75 3v-3h-.25a2 2 0 0 1-2-2v-6.5a2 2 0 0 1 2-2Z"></path>
+                        <path d="M8 9.4h8"></path>
+                        <path d="M8 12.4h5.5"></path>
+                      </svg>
+                      <span class="sr-only">Add comment</span>
+                    </button>
+                    <button type="button" id="paper-selection-highlight-btn" class="ghost-btn papers-selection-action-btn" aria-label="Highlight" title="Highlight">
+                      <svg class="papers-selection-action-icon papers-selection-action-icon--highlight" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M14.75 4.25 19.75 9.25 11.25 17.75H6.25v-5L14.75 4.25Z"></path>
+                        <path d="M13.25 5.75 18.25 10.75"></path>
+                        <path d="M6.75 17.25 4.25 19.75"></path>
+                        <path class="papers-selection-action-accent" d="M4.25 20.25h15.5"></path>
+                      </svg>
+                      <span class="sr-only">Highlight</span>
+                    </button>
+                    <button type="button" id="paper-selection-underline-btn" class="ghost-btn papers-selection-action-btn" aria-label="Underline" title="Underline">
+                      <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M7 5.75v5.75a5 5 0 0 0 10 0V5.75"></path>
+                        <path d="M5.5 20h13"></path>
+                      </svg>
+                      <span class="sr-only">Underline</span>
+                    </button>
+                  </div>
+                  <div id="paper-selection-comment-popover" class="papers-selection-comment-popover" hidden>
+                    <label>
+                      Comment
+                      <textarea id="paper-selection-comment-text" rows="3" placeholder="Add a note for the selected text"></textarea>
+                    </label>
+                    <div class="papers-selection-comment-actions">
+                      <button type="button" id="paper-selection-comment-save-btn" class="primary-btn">Save</button>
+                      <button type="button" id="paper-selection-comment-cancel-btn" class="ghost-btn">Cancel</button>
+                    </div>
+                  </div>
+                  <div id="paper-highlight-comment-popover" class="papers-highlight-comment-popover" hidden></div>
                 </div>
               </div>
             </div>
@@ -2071,12 +2121,29 @@
                   class="papers-comment-toggle"
                   aria-controls="paper-comment-sidebar"
                   aria-expanded="true"
-                  aria-label="Fold comments panel to the right"
-                  title="Fold comments panel to the right"
+                  aria-label="Fold paper details panel to the right"
+                  title="Fold paper details panel to the right"
                 >
                   <span class="papers-comment-toggle-icon" aria-hidden="true"></span>
                 </button>
                 <aside id="paper-comment-sidebar" class="panel papers-comment-sidebar">
+                  <section id="paper-bookmark-section" class="papers-bookmark-section">
+                    <button
+                      type="button"
+                      id="paper-bookmark-toggle-btn"
+                      class="papers-section-toggle"
+                      aria-controls="paper-bookmark-content"
+                      aria-expanded="true"
+                      aria-label="Hide PDF bookmarks"
+                      title="Hide PDF bookmarks"
+                    >
+                      <span class="papers-section-toggle-icon" aria-hidden="true"></span>
+                      <span>Bookmarks</span>
+                    </button>
+                    <div id="paper-bookmark-content" class="papers-bookmark-content">
+                      <div id="paper-bookmark-list" class="papers-bookmark-list"></div>
+                    </div>
+                  </section>
                   <section id="paper-summary-section" class="papers-summary-section">
                     <button
                       type="button"
@@ -2094,23 +2161,6 @@
                       <dl id="paper-summary-list" class="papers-summary-list"></dl>
                     </div>
                   </section>
-                  <div class="papers-comment-meta">
-                    <h4>Comments</h4>
-                    <p id="paper-comment-page" class="small-note">Page 0</p>
-                    <p id="paper-comment-count" class="small-note">0 comments on this page</p>
-                  </div>
-                  <div class="papers-comment-actions">
-                    <button type="button" id="paper-comment-add-btn" class="primary-btn">Add Comment</button>
-                    <button type="button" id="paper-comment-save-btn" class="ghost-btn">Save</button>
-                    <button type="button" id="paper-comment-cancel-btn" class="ghost-btn">Cancel</button>
-                    <button type="button" id="paper-comment-delete-btn" class="danger-btn">Delete</button>
-                  </div>
-                  <label class="papers-comment-input">
-                    Comment
-                    <textarea id="paper-comment-text" rows="5" placeholder="Click &quot;Add Comment&quot;, place a pin on the page, then write your note."></textarea>
-                  </label>
-                  <p id="paper-comment-status" class="small-note"></p>
-                  <div id="paper-comment-list" class="papers-comment-list"></div>
                 </aside>
               </div>
             </div>
@@ -2218,6 +2268,23 @@
                   </div>
                 </div>
               </div>
+            </div>
+            <div id="agent-review-overlay" class="agent-review-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
+              <section class="agent-review-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
+                <header class="agent-review-dialog-header">
+                  <div>
+                    <h3 id="agent-review-title">Review Generated Drafts</h3>
+                    <p class="small-note">Approve or reject generated protocol and notebook pages before they are added.</p>
+                  </div>
+                  <button type="button" id="agent-review-close-btn" class="ghost-btn">Close</button>
+                </header>
+                <div id="agent-review-track" class="agent-review-track" tabindex="0" aria-live="polite"></div>
+                <footer class="agent-review-footer">
+                  <button type="button" id="agent-review-prev-btn" class="ghost-btn" aria-label="Previous generated draft">Previous</button>
+                  <span id="agent-review-page-label" class="small-note">1 / 1</span>
+                  <button type="button" id="agent-review-next-btn" class="ghost-btn" aria-label="Next generated draft">Next</button>
+                </footer>
+              </section>
             </div>
           </div>
         </div>

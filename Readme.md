@@ -72,6 +72,7 @@ Supported providers:
 - `OpenAI`
 - `Gemini`
 - `Claude`
+- `DeepSeek`
 - `Codex Agent (CLI)`
 
 Environment variable fallbacks:
@@ -83,6 +84,7 @@ Notes:
 
 - `Papers` and `Agent` require valid LLM settings.
 - Provider defaults come from [`config/llm-providers.json`](./config/llm-providers.json).
+- DeepSeek uses the OpenAI-compatible Chat Completions API at `https://api.deepseek.com`.
 - Codex Agent mode does not use an API endpoint or API key; it uses the signed-in `codex` CLI plus Enana MCP tools.
 
 ### Codex Agent Setup
@@ -194,7 +196,7 @@ If you are onboarding to the codebase, these are the best starting points:
 
 ### Papers or Agent says an API key is missing
 
-- For OpenAI, Gemini, or Claude, set the provider, model, endpoint, and key in `Settings > LLM Model & Access`.
+- For OpenAI, Gemini, Claude, or DeepSeek, set the provider, model, endpoint, and key in `Settings > LLM Model & Access`.
 - For Codex Agent, sign in with `codex login`; no endpoint or API key is used.
 - Or export `ENANA_LLM_API_KEY` / `LLM_API_KEY` before launching the app.
 

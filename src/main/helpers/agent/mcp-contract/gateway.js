@@ -251,23 +251,8 @@ function createAgentMcpGateway(deps = {}) {
 
   async function callGatewayTool(name = '', args = {}, context = {}) {
     const toolName = cleanText(name, 120);
-    if (toolName === 'tool_search') {
-      return toolSearch(args, context);
-    }
-    if (toolName === 'tool_info') {
-      return toolInfo(args);
-    }
-    if (toolName === 'tool_call') {
-      return toolCall(args, context);
-    }
     if (directToolRouter.hasTool(toolName)) {
       return directToolRouter.callTool(toolName, args, context);
-    }
-    if (toolName === 'resource_search') {
-      return resourceSearch(args);
-    }
-    if (toolName === 'resource_read') {
-      return resourceRead(args);
     }
     return {
       ok: false,

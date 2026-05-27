@@ -37,20 +37,14 @@ function getPapersElements(doc = null) {
     paperCommentPanel: getById('paper-comment-panel'),
     paperCommentToggleBtn: getById('paper-comment-toggle-btn'),
     paperCommentSidebar: getById('paper-comment-sidebar'),
+    paperBookmarkSection: getById('paper-bookmark-section'),
+    paperBookmarkToggleBtn: getById('paper-bookmark-toggle-btn'),
+    paperBookmarkContent: getById('paper-bookmark-content'),
+    paperBookmarkList: getById('paper-bookmark-list'),
     paperSummarySection: getById('paper-summary-section'),
     paperSummaryToggleBtn: getById('paper-summary-toggle-btn'),
     paperSummaryContent: getById('paper-summary-content'),
     paperSummaryList: getById('paper-summary-list'),
-    paperCommentPage: getById('paper-comment-page'),
-    paperCommentCount: getById('paper-comment-count'),
-    paperCommentAddBtn: getById('paper-comment-add-btn'),
-    paperCommentSaveBtn: getById('paper-comment-save-btn'),
-    paperCommentCancelBtn: getById('paper-comment-cancel-btn'),
-    paperCommentDeleteBtn: getById('paper-comment-delete-btn'),
-    paperCommentText: getById('paper-comment-text'),
-    paperCommentStatus: getById('paper-comment-status'),
-    paperCommentList: getById('paper-comment-list'),
-    paperViewerSummarizeBtn: getById('paper-viewer-summarize-btn'),
     journalClubList: getById('journal-club-list'),
     paperViewerShell: getById('paper-viewer-shell'),
     paperViewerEmpty: getById('paper-viewer-empty'),
@@ -71,9 +65,17 @@ function getPapersElements(doc = null) {
     paperViewerZoomInBtn: getById('paper-viewer-zoom-in-btn'),
     paperViewerZoomResetBtn: getById('paper-viewer-zoom-reset-btn'),
     paperViewerFitWidthBtn: getById('paper-viewer-fit-width-btn'),
-    paperViewerHighlightBtn: getById('paper-viewer-highlight-btn'),
     paperViewerZoomLabel: getById('paper-viewer-zoom-label'),
-    paperViewerOpenExternalBtn: getById('paper-viewer-open-btn')
+    paperViewerOpenExternalBtn: getById('paper-viewer-open-btn'),
+    paperSelectionMenu: getById('paper-selection-menu'),
+    paperSelectionCommentBtn: getById('paper-selection-comment-btn'),
+    paperSelectionHighlightBtn: getById('paper-selection-highlight-btn'),
+    paperSelectionUnderlineBtn: getById('paper-selection-underline-btn'),
+    paperSelectionCommentPopover: getById('paper-selection-comment-popover'),
+    paperSelectionCommentText: getById('paper-selection-comment-text'),
+    paperSelectionCommentSaveBtn: getById('paper-selection-comment-save-btn'),
+    paperSelectionCommentCancelBtn: getById('paper-selection-comment-cancel-btn'),
+    paperHighlightCommentPopover: getById('paper-highlight-comment-popover')
   };
 }
 
@@ -112,6 +114,7 @@ export function initPapersManagement({
   };
   const uiState = {
     commentsCollapsed: false,
+    bookmarksCollapsed: false,
     summaryCollapsed: false
   };
   const discoveryState = {
@@ -268,6 +271,17 @@ export function initPapersManagement({
     toggleSummaryCollapsed() {
       context.setSummaryCollapsed(!uiState.summaryCollapsed);
     },
+    setBookmarksCollapsed(collapsed) {
+      const nextValue = Boolean(collapsed);
+      if (uiState.bookmarksCollapsed === nextValue) {
+        return;
+      }
+      uiState.bookmarksCollapsed = nextValue;
+      context.comments?.renderBookmarkSection?.();
+    },
+    toggleBookmarksCollapsed() {
+      context.setBookmarksCollapsed(!uiState.bookmarksCollapsed);
+    },
     getPaperById(paperId) {
       return (state.papers || []).find((paper) => paper.id === paperId) || null;
     },
@@ -303,6 +317,14 @@ export function initPapersManagement({
       persist();
       context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
       context.renderSummarySection();
+    },
+    applyResolvedPdfBookmarks({ paperId = '', bookmarks = [] } = {}) {
+      const paper = context.getPaperById(paperId);
+      if (!paper) {
+        return;
+      }
+      paper.pdfBookmarks = Array.isArray(bookmarks) ? bookmarks : [];
+      context.comments?.renderBookmarkSection?.();
     }
   };
 
@@ -326,14 +348,24 @@ export function initPapersManagement({
     zoomInBtn: elements.paperViewerZoomInBtn,
     zoomResetBtn: elements.paperViewerZoomResetBtn,
     fitWidthBtn: elements.paperViewerFitWidthBtn,
-    highlightBtn: elements.paperViewerHighlightBtn,
     zoomLabel: elements.paperViewerZoomLabel,
     openExternalBtn: elements.paperViewerOpenExternalBtn,
+    selectionMenu: elements.paperSelectionMenu,
+    selectionCommentBtn: elements.paperSelectionCommentBtn,
+    selectionHighlightBtn: elements.paperSelectionHighlightBtn,
+    selectionUnderlineBtn: elements.paperSelectionUnderlineBtn,
+    selectionCommentPopover: elements.paperSelectionCommentPopover,
+    selectionCommentText: elements.paperSelectionCommentText,
+    selectionCommentSaveBtn: elements.paperSelectionCommentSaveBtn,
+    selectionCommentCancelBtn: elements.paperSelectionCommentCancelBtn,
+    highlightCommentPopover: elements.paperHighlightCommentPopover,
     onMetadataResolved: (...args) => context.applyResolvedPdfMetadata(...args),
+    onBookmarksResolved: (...args) => context.applyResolvedPdfBookmarks(...args),
     onPageChange: (...args) => context.comments?.onViewerPageChange(...args),
     onPlacement: (...args) => context.comments?.onViewerPlacement(...args),
     onPinSelect: (...args) => context.comments?.onViewerPinSelect(...args),
     onHighlightSelection: (...args) => context.createPaperHighlight?.(...args),
+    onSelectionComment: (...args) => context.createPaperTextComment?.(...args),
     onExternalLink: openPdfExternalWebsite,
     onClose: (...args) => context.comments?.onViewerClose(...args)
   });
@@ -395,13 +427,15 @@ export function initPapersManagement({
     const activePaper = context.getActivePaper?.() || null;
     paperViewer.setHighlights(activePaper ? ensurePaperHighlights(activePaper) : []);
   };
-  context.createPaperHighlight = ({ pageNumber, text, boxes, pageWidth, pageHeight } = {}) => {
+  context.createPaperHighlight = ({ pageNumber, text, boxes, pageWidth, pageHeight, kind = 'highlight', commentId = '' } = {}) => {
     const activePaper = context.getActivePaper?.() || null;
     const normalizedText = String(text || '').trim();
     const normalizedPageNumber = Math.max(1, Math.round(Number(pageNumber) || 1));
     const normalizedBoxes = normalizeHighlightBoxes(boxes);
     const normalizedPageWidth = normalizePageDimension(pageWidth);
     const normalizedPageHeight = normalizePageDimension(pageHeight);
+    const normalizedKind = String(kind || '').trim().toLowerCase() === 'underline' ? 'underline' : 'highlight';
+    const normalizedCommentId = String(commentId || '').trim();
     const quadPoints = boxesToPdfQuadPoints(normalizedBoxes, {
       pageWidth: normalizedPageWidth,
       pageHeight: normalizedPageHeight
@@ -416,10 +450,14 @@ export function initPapersManagement({
       id: createId(),
       pageNumber: normalizedPageNumber,
       text: normalizedText,
+      kind: normalizedKind,
       boxes: normalizedBoxes,
       createdAt: now,
       updatedAt: now
     };
+    if (normalizedCommentId) {
+      highlightRecord.commentId = normalizedCommentId;
+    }
     if (normalizedPageWidth && normalizedPageHeight && quadPoints.length) {
       highlightRecord.pageWidth = normalizedPageWidth;
       highlightRecord.pageHeight = normalizedPageHeight;
@@ -432,6 +470,67 @@ export function initPapersManagement({
     context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
     return true;
   };
+  context.createPaperTextComment = ({ pageNumber, text, boxes, pageWidth, pageHeight, commentText } = {}) => {
+    const activePaper = context.getActivePaper?.() || null;
+    const normalizedCommentText = String(commentText || '').trim();
+    const normalizedSelectedText = String(text || '').trim();
+    const normalizedPageNumber = Math.max(1, Math.round(Number(pageNumber) || 1));
+    const normalizedBoxes = normalizeHighlightBoxes(boxes);
+    const normalizedPageWidth = normalizePageDimension(pageWidth);
+    const normalizedPageHeight = normalizePageDimension(pageHeight);
+    const quadPoints = boxesToPdfQuadPoints(normalizedBoxes, {
+      pageWidth: normalizedPageWidth,
+      pageHeight: normalizedPageHeight
+    });
+
+    if (!activePaper || !normalizedCommentText || !normalizedSelectedText || !normalizedBoxes.length) {
+      return false;
+    }
+
+    const now = new Date().toISOString();
+    const commentId = createId();
+    const highlightId = createId();
+    const commentRecord = {
+      id: commentId,
+      pageNumber: normalizedPageNumber,
+      highlightId,
+      text: normalizedCommentText,
+      selectedText: normalizedSelectedText,
+      author: String(
+        state.settings?.personalInfo?.name
+        || state.settings?.personalInfo?.enanaEmail
+        || 'Local user'
+      ).trim() || 'Local user',
+      createdAt: now,
+      updatedAt: now
+    };
+    const highlightRecord = {
+      id: highlightId,
+      pageNumber: normalizedPageNumber,
+      text: normalizedSelectedText,
+      kind: 'highlight',
+      commentId,
+      boxes: normalizedBoxes,
+      createdAt: now,
+      updatedAt: now
+    };
+    if (normalizedPageWidth && normalizedPageHeight && quadPoints.length) {
+      highlightRecord.pageWidth = normalizedPageWidth;
+      highlightRecord.pageHeight = normalizedPageHeight;
+      highlightRecord.quadPoints = quadPoints;
+    }
+
+    ensurePaperHighlights(activePaper).push(highlightRecord);
+    if (!Array.isArray(activePaper.comments)) {
+      activePaper.comments = [];
+    }
+    activePaper.comments.push(commentRecord);
+    activePaper.updatedAt = now;
+    persist();
+    context.comments?.syncViewerComments?.();
+    context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
+    return true;
+  };
   context.renderCommentPanelState = () => {
     const collapsed = Boolean(uiState.commentsCollapsed);
     elements.papersLayout?.classList?.toggle('is-comments-collapsed', collapsed);
@@ -441,8 +540,8 @@ export function initPapersManagement({
     }
     if (elements.paperCommentToggleBtn) {
       const label = collapsed
-        ? 'Unfold comments panel from the right'
-        : 'Fold comments panel to the right';
+        ? 'Unfold paper details panel from the right'
+        : 'Fold paper details panel to the right';
       elements.paperCommentToggleBtn.classList?.toggle('is-collapsed', collapsed);
       elements.paperCommentToggleBtn.setAttribute?.('aria-expanded', String(!collapsed));
       elements.paperCommentToggleBtn.setAttribute?.('aria-label', label);

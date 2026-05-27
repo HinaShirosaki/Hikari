@@ -91,5 +91,5 @@ export function createHistoryActionController({
     }
   }
 
-  return { onHistoryClick };
+  return { onHistoryClick, notebookActions };
 }

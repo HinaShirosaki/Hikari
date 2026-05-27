@@ -17,15 +17,17 @@ export function normalizeCommentList(comments) {
       const pageNumber = Math.round(Number(comment.pageNumber));
       const anchorX = clampCommentAnchor(comment.anchorX);
       const anchorY = clampCommentAnchor(comment.anchorY);
-      if (!id || !Number.isFinite(pageNumber) || pageNumber < 1 || !Number.isFinite(anchorX) || !Number.isFinite(anchorY)) {
+      const highlightId = String(comment.highlightId || '').trim();
+      const hasAnchor = Number.isFinite(anchorX) && Number.isFinite(anchorY);
+      if (!id || !Number.isFinite(pageNumber) || pageNumber < 1 || (!hasAnchor && !highlightId)) {
         return null;
       }
       return {
         ...comment,
         id,
         pageNumber,
-        anchorX,
-        anchorY,
+        ...(hasAnchor ? { anchorX, anchorY } : {}),
+        ...(highlightId ? { highlightId } : {}),
         author: String(comment.author || 'Local user').trim() || 'Local user'
       };
     })
@@ -45,6 +47,9 @@ export function normalizeHighlightList(highlights) {
       const pageHeight = normalizePageDimension(highlight.pageHeight);
       const sourceQuadPoints = normalizeQuadPointList(highlight.quadPoints);
       const boxes = normalizeHighlightBoxes(highlight.boxes);
+      const kind = String(highlight.kind || highlight.type || '').trim().toLowerCase() === 'underline'
+        ? 'underline'
+        : 'highlight';
       const derivedBoxes = boxes.length
         ? boxes
         : pdfQuadPointsToBoxes(sourceQuadPoints, { pageWidth, pageHeight });
@@ -59,6 +64,7 @@ export function normalizeHighlightList(highlights) {
         id,
         pageNumber,
         text,
+        kind,
         boxes: derivedBoxes,
         ...(pageWidth ? { pageWidth } : {}),
         ...(pageHeight ? { pageHeight } : {}),

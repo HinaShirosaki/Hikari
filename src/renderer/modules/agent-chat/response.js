@@ -85,6 +85,22 @@ export function collectAgentActivityRows(meta) {
     upsertRow('pending', `Planned draft missing placeholders: ${notebookDraftMissingCount}`);
   }
 
+  const protocolGeneration = meta.protocol_generation && typeof meta.protocol_generation === 'object'
+    ? meta.protocol_generation
+    : {};
+  const protocolGenerationStatus = trimText(protocolGeneration.status, 40);
+  if (protocolGenerationStatus) {
+    upsertRow(
+      protocolGenerationStatus === 'awaiting_user_approval' ? 'pending' : 'done',
+      `Protocol generation status: ${protocolGenerationStatus}`
+    );
+  }
+  const generatedProtocolCount = asArray(protocolGeneration.protocols).length
+    || (protocolGeneration.protocol && typeof protocolGeneration.protocol === 'object' ? 1 : 0);
+  if (generatedProtocolCount > 0) {
+    upsertRow('pending', `Generated protocol awaiting review: ${generatedProtocolCount}`);
+  }
+
   const inventoryLookup = meta.inventory_lookup && typeof meta.inventory_lookup === 'object'
     ? meta.inventory_lookup
     : {};
@@ -347,6 +363,25 @@ export function summarizeNotebookDraft(payload) {
   return '';
 }
 
+export function summarizeProtocolGeneration(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const protocols = asArray(source.protocols).length
+    ? asArray(source.protocols)
+    : (source.protocol && typeof source.protocol === 'object' ? [source.protocol] : []);
+  if (!protocols.length) {
+    return '';
+  }
+  const names = protocols.map((protocol) => trimText(protocol?.name || protocol?.title, 160)).filter(Boolean);
+  const status = trimText(source.status, 40);
+  const prefix = protocols.length === 1
+    ? `Generated protocol ready${names[0] ? `: ${names[0]}` : ''}.`
+    : `Generated ${protocols.length} protocols${names.length ? `: ${names.slice(0, 3).join(', ')}` : ''}.`;
+  if (status === 'awaiting_user_approval') {
+    return `${prefix} Review it before adding it to Protocol Module.`;
+  }
+  return `${prefix} Review it before adding it to Protocol Module.`;
+}
+
 function extractStructuredThinkingTrace(result) {
   const source = result && typeof result === 'object' ? result : {};
   const candidates = [
@@ -369,9 +404,16 @@ export function normalizeAgentResponse(result) {
   const notebookDraftWorkflow = result?.notebook_draft && typeof result.notebook_draft === 'object'
     ? result.notebook_draft
     : null;
+  const protocolGeneration = result?.protocol_generation && typeof result.protocol_generation === 'object'
+    ? result.protocol_generation
+    : (result?.protocolGeneration && typeof result.protocolGeneration === 'object'
+      ? result.protocolGeneration
+      : null);
   const notebookPayload = protocolWorkflow?.notebook && typeof protocolWorkflow.notebook === 'object'
     ? protocolWorkflow.notebook
-    : result?.notebookDraft;
+    : (notebookDraftWorkflow?.notebook && typeof notebookDraftWorkflow.notebook === 'object'
+      ? notebookDraftWorkflow.notebook
+      : result?.notebookDraft);
   const parser = result?.parser && typeof result.parser === 'object' ? result.parser : {};
   const protocolStatus = trimText(protocolWorkflow?.status, 40);
   const followUpQuestions = asArray(protocolWorkflow?.follow_up_questions).map((item) => trimText(item, 320)).filter(Boolean);
@@ -423,10 +465,12 @@ export function normalizeAgentResponse(result) {
   const purchaseRecommendationText = summarizePurchaseRecommendation(purchaseRecommendation);
   const codexAgentText = summarizeCodexAgent(codexAgent);
   const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
+  const protocolGenerationText = summarizeProtocolGeneration(protocolGeneration);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
     || summarizeScienceResult(projectScienceQuestion)
     || summarizeScienceResult(resultAnalysis);
   const assistantText = notebookDraftText
+    || protocolGenerationText
     || codexAgentText
     || (protocolStatus === 'completed'
       ? (completedNotebookText
@@ -444,6 +488,7 @@ export function normalizeAgentResponse(result) {
     parser,
     protocolWorkflow,
     notebookDraftWorkflow,
+    protocolGeneration,
     notebookPayload,
     purchaseRecommendation,
     codexAgent,

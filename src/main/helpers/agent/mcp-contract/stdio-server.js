@@ -15,7 +15,6 @@ const {
 const { createAgentMcpGateway } = require('./gateway.js');
 const { createAgentMcpHostToolRunner } = require('./host-client.js');
 const { getDirectMcpToolDefinitions } = require('./direct-tools/index.js');
-const { buildReadOnlyToolAnnotations } = require('./direct-tools/shared.js');
 
 const SERVER_NAME = 'hikari-agent-mcp';
 const SERVER_VERSION = '0.1.0';
@@ -43,77 +42,7 @@ function getRequestContextFromEnv(env = process.env) {
 }
 
 function createMcpToolDefinitions() {
-  return [
-    ...getDirectMcpToolDefinitions(),
-    {
-      name: 'tool_search',
-      description: 'Search Hikari app tools by natural-language goal.',
-      annotations: buildReadOnlyToolAnnotations('Tool search'),
-      inputSchema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['query'],
-        properties: {
-          query: { type: 'string', minLength: 1 },
-          limit: { type: 'integer', minimum: 1, maximum: 30 }
-        }
-      }
-    },
-    {
-      name: 'tool_info',
-      description: 'Load one Hikari tool manifest, including schema when requested.',
-      annotations: buildReadOnlyToolAnnotations('Tool info'),
-      inputSchema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['tool_id'],
-        properties: {
-          tool_id: { type: 'string', minLength: 1 },
-          detail_level: { type: 'string', enum: ['summary', 'schema', 'full'] }
-        }
-      }
-    },
-    {
-      name: 'tool_call',
-      description: 'Validate and call a Hikari app tool through the MCP bridge.',
-      inputSchema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['tool_id', 'args'],
-        properties: {
-          tool_id: { type: 'string', minLength: 1 },
-          args: { type: 'object', additionalProperties: true }
-        }
-      }
-    },
-    {
-      name: 'resource_search',
-      description: 'Search Hikari MCP resources such as instructions and tool manifests.',
-      annotations: buildReadOnlyToolAnnotations('Resource search'),
-      inputSchema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['query'],
-        properties: {
-          query: { type: 'string', minLength: 1 },
-          limit: { type: 'integer', minimum: 1, maximum: 40 }
-        }
-      }
-    },
-    {
-      name: 'resource_read',
-      description: 'Read one Hikari MCP resource by URI.',
-      annotations: buildReadOnlyToolAnnotations('Resource read'),
-      inputSchema: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['uri'],
-        properties: {
-          uri: { type: 'string', minLength: 1 }
-        }
-      }
-    }
-  ];
+  return getDirectMcpToolDefinitions();
 }
 
 function createAgentMcpStdioServer(deps = {}) {

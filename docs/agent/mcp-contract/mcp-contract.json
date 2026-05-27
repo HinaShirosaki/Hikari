@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-05-16T01:17:42.258Z",
+  "exported_at": "2026-05-27T16:27:36.023Z",
   "source_files": {
     "mcp_instructions": "src/main/helpers/agent/mcp-contract/instructions.js",
     "mcp_stdio_server": "src/main/helpers/agent/mcp-contract/stdio-server.js",
@@ -10,7 +10,7 @@
     "codex_runtime_files": "src/main/helpers/agent/codex-agent/runtime-files.js",
     "app_tools": "src/main/helpers/agent/tools/Tool-call.json"
   },
-  "agent_mcp_instructions": "# Hikari Agent MCP Instructions\n\nThis MCP server is the provider-neutral Hikari app contract. Any agent provider that can use MCP should call these tools for local Hikari data, protocols, notebooks, inventory, papers, memory, and structured app actions.\n\nUse direct MCP tools first when the task matches them. Use `tool_search`, `tool_info`, and `tool_call` for broader Hikari app tools that are not already exposed as direct MCP tools. Request a schema with `tool_info` before calling a broader app tool when the argument shape is not already known.\n\nDirect Hikari MCP tools available without `tool_search`:\n- `inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.\n- `chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.\n- `protocol_lookup`: search local protocols through Hikari protocol matching.\n- `protocol_generation`: normalize a complete protocol JSON object into the app import format without generating content; set `save: true` in the same call to add it to the Hikari Protocols module.\n- `notebook_draft`: prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.\n- `notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.\n- `ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.\n\nTool-use rules:\n- Prefer local Hikari records through direct MCP tools before guessing from conversation context.\n- Use `record-lookup` through `tool_call` only when the direct lookup tools are not specific enough.\n- Use `literature-search` for finding papers, references, recent literature, or external scientific evidence.\n- Use `paper-download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.\n- Use `paper-analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use direct `protocol_generation` only after complete protocol JSON already exists.\n- When the user asks to save or add a generated protocol, call `protocol_generation` once with `save: true`.\n- Use direct `notebook_draft` for planned next-experiment notebook drafts instead of discovering `notebook-draft` through `tool_search`.\n\nClarification rule:\nWhen one blocking user answer is required, call `ask_user`. It returns a renderable `final_response` payload. Do not wait inside MCP for the human answer; the host app renders the options and sends the user answer as the next turn.\n\nVerification rule:\nSeparate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.",
+  "agent_mcp_instructions": "# Hikari Agent MCP Instructions\n\nThis MCP server is the provider-neutral Hikari app contract. Any agent provider that can use MCP should call these tools for local Hikari data, protocols, notebooks, inventory, papers, memory, and structured app actions.\n\nUse direct MCP tools only. This server no longer exposes Hikari app `tool_search`, `tool_info`, `tool_call`, `resource_search`, or `resource_read` as callable tools; the full app tool surface is available as first-class direct MCP tools.\n\nDirect Hikari MCP tools:\n- `inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.\n- `chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.\n- `record_lookup`: search local projects, protocols, notebooks, workflows, assays, gels, and related records.\n- `protocol_lookup`: search local protocols through Hikari protocol matching.\n- `protocol_matching`: rank supplied protocol candidates against local protocols.\n- `protocol_generation`: normalize a complete protocol JSON object into the app import format without generating content; set `save: true` in the same call to queue Hikari user approval for adding it to the Protocols module.\n- `notebook_draft`: prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.\n- `notebook_generation`: generate a protocol-based notebook draft from selected protocol and project context.\n- `notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.\n- `literature_search`: find papers, download selected PDFs when possible, write paper markdown, and load bounded paper context blocks.\n- `paper_download`: download a paper PDF into Hikari storage.\n- `paper_analysis`: summarize or extract methods from a specific paper.\n- `web_search`: search public web evidence through Hikari provider transport.\n- `purchase_recommendation`: search and rank purchasable products.\n- `python_sandbox`: run isolated Python for analysis or artifact generation.\n- `command_line`: run focused local CLI inspection in the project workspace.\n- `sub_agent`: create, message, inspect, list, and delete Codex-backed helper sub-agent sessions.\n- `memory`: recall, remember, forget, and list sparse long-term memory records.\n- `ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.\n\nTool-use rules:\n- Prefer local Hikari records through direct MCP tools before guessing from conversation context.\n- Use `record_lookup` when local lookup needs records beyond the specialized inventory, protocol, or notebook lookup tools.\n- Use `literature_search` for finding papers, references, recent literature, or external scientific evidence.\n- Use `paper_download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.\n- Use `paper_analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use direct `protocol_generation` only after complete protocol JSON already exists.\n- When the user asks to save or add a generated protocol, call `protocol_generation` once with `save: true`; Hikari will ask the user to approve or reject the generated protocol.\n- Use direct `notebook_draft` for planned next-experiment notebook drafts.\n\nClarification rule:\nWhen one blocking user answer is required, call `ask_user`. It returns a renderable `final_response` payload. Do not wait inside MCP for the human answer; the host app renders the options and sends the user answer as the next turn.\n\nVerification rule:\nSeparate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.",
   "provider_examples": {
     "codex_cli": {
       "config_template": "# HIKARI_MCP_CONFIG_START\n[mcp_servers.hikari]\ncommand = \"node\"\nargs = [\"/Users/shiyifan/Projects/Enana/src/main/helpers/agent/mcp-contract/stdio-server.js\"]\nenv = { HIKARI_AGENT_MCP = \"1\", ENANA_AGENT_MCP = \"1\", HIKARI_CODEX_MCP = \"1\", ENANA_CODEX_MCP = \"1\", HIKARI_AGENT_MCP_WORKSPACE = \"/runtime/workspace\", ENANA_AGENT_MCP_WORKSPACE = \"/runtime/workspace\", HIKARI_CODEX_WORKSPACE = \"/runtime/workspace\", ENANA_CODEX_WORKSPACE = \"/runtime/workspace\", HIKARI_AGENT_DATA_FILE = \"/path/to/hikari-data.json\", ENANA_AGENT_DATA_FILE = \"/path/to/hikari-data.json\", HIKARI_AGENT_STORAGE_PATH = \"/path/to/storage\", ENANA_AGENT_STORAGE_PATH = \"/path/to/storage\", HIKARI_AGENT_MCP_HOST = \"http://127.0.0.1:<port>\", ENANA_AGENT_MCP_HOST = \"http://127.0.0.1:<port>\", HIKARI_AGENT_MCP_TOKEN = \"<opaque bearer token>\", ENANA_AGENT_MCP_TOKEN = \"<opaque bearer token>\", HIKARI_CODEX_MCP_HOST = \"http://127.0.0.1:<port>\", ENANA_CODEX_MCP_HOST = \"http://127.0.0.1:<port>\", HIKARI_CODEX_MCP_TOKEN = \"<opaque bearer token>\", ENANA_CODEX_MCP_TOKEN = \"<opaque bearer token>\" }\n# HIKARI_MCP_CONFIG_END",
@@ -167,7 +167,7 @@
       },
       {
         "name": "protocol_generation",
-        "description": "Normalize supplied protocol JSON into Hikari import-ready protocol format without an internal LLM call, and save it into Protocols when save is true.",
+        "description": "Normalize supplied protocol JSON into Hikari import-ready protocol format without an internal LLM call. When save is true, Hikari queues the generated protocol for user approval before adding it to Protocols.",
         "annotations": {
           "title": "Protocol generation",
           "readOnlyHint": false,
@@ -498,10 +498,10 @@
         }
       },
       {
-        "name": "tool_search",
-        "description": "Search Hikari app tools by natural-language goal.",
+        "name": "record_lookup",
+        "description": "Use this tool when the user is asking about stored lab records beyond raw inventory, such as projects, protocols, notebook entries, workflows, assays, gels, or linked historical context. Prefer it for 'what did we do last time', 'find the protocol record', or project-specific evidence retrieval. Provide `query` for the entity or topic to search, and pass `parser_payload` when parser entities can help narrow record matching.",
         "annotations": {
-          "title": "Tool search",
+          "title": "Record Lookup",
           "readOnlyHint": true,
           "destructiveHint": false,
           "idempotentHint": true,
@@ -510,81 +510,355 @@
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "query"
-          ],
           "properties": {
             "query": {
-              "type": "string",
-              "minLength": 1
+              "type": "string"
             },
             "limit": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 30
-            }
-          }
-        }
-      },
-      {
-        "name": "tool_info",
-        "description": "Load one Hikari tool manifest, including schema when requested.",
-        "annotations": {
-          "title": "Tool info",
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        },
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "tool_id"
-          ],
-          "properties": {
-            "tool_id": {
-              "type": "string",
-              "minLength": 1
+              "maximum": 25
             },
-            "detail_level": {
+            "parser_payload": {
+              "$ref": "#/$defs/parser_payload"
+            }
+          },
+          "$defs": {
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
+                }
+              }
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "protocol_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "placeholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "maxItems": 60
+                }
+              }
+            },
+            "protocol_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/protocol_step"
+                  },
+                  "maxItems": 160
+                },
+                "project_id": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                }
+              }
+            },
+            "project_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "resolution_source": {
+                  "type": "string"
+                }
+              }
+            },
+            "pending_values": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "python_sandbox_file": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
+            },
+            "sub_agent_metadata": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "task_type": {
+                  "type": "string"
+                },
+                "parent_request_id": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                }
+              }
+            },
+            "memory_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 600
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "project_name": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "source": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              }
+            },
+            "paper_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paper_title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "full_text": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  "maxItems": 40
+                },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20
+                }
+              }
+            },
+            "protocol_generation_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
+              }
+            },
+            "literature_source": {
               "type": "string",
               "enum": [
-                "summary",
-                "schema",
-                "full"
+                "auto",
+                "web",
+                "pubmed",
+                "crossref",
+                "uniprot",
+                "europe_pmc"
               ]
             }
           }
         }
       },
       {
-        "name": "tool_call",
-        "description": "Validate and call a Hikari app tool through the MCP bridge.",
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "tool_id",
-            "args"
-          ],
-          "properties": {
-            "tool_id": {
-              "type": "string",
-              "minLength": 1
-            },
-            "args": {
-              "type": "object",
-              "additionalProperties": true
-            }
-          }
-        }
-      },
-      {
-        "name": "resource_search",
-        "description": "Search Hikari MCP resources such as instructions and tool manifests.",
+        "name": "protocol_matching",
+        "description": "Use this tool to choose the best local protocol for a user-described activity before generating a notebook entry or protocol-driven draft. It ranks candidate protocols against parser hints, protocol names, aliases, purposes, and step overlap. Provide `protocol_candidates` when the parser or caller already identified likely names, and optionally provide `fallback_protocol` only when there is one specific protocol record that should be considered if ranked candidates are weak.",
         "annotations": {
-          "title": "Resource search",
+          "title": "Protocol Matching",
           "readOnlyHint": true,
           "destructiveHint": false,
           "idempotentHint": true,
@@ -593,42 +867,3615 @@
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
-          "required": [
-            "query"
+          "properties": {
+            "protocol_candidates": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 5
+            },
+            "fallback_protocol": {
+              "$ref": "#/$defs/protocol_record"
+            }
+          },
+          "$defs": {
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
+                }
+              }
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "protocol_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "placeholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "maxItems": 60
+                }
+              }
+            },
+            "protocol_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/protocol_step"
+                  },
+                  "maxItems": 160
+                },
+                "project_id": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                }
+              }
+            },
+            "project_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "resolution_source": {
+                  "type": "string"
+                }
+              }
+            },
+            "pending_values": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "python_sandbox_file": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
+            },
+            "sub_agent_metadata": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "task_type": {
+                  "type": "string"
+                },
+                "parent_request_id": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                }
+              }
+            },
+            "memory_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 600
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "project_name": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "source": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              }
+            },
+            "paper_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paper_title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "full_text": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  "maxItems": 40
+                },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20
+                }
+              }
+            },
+            "protocol_generation_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
+              }
+            },
+            "literature_source": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "web",
+                "pubmed",
+                "crossref",
+                "uniprot",
+                "europe_pmc"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "notebook_generation",
+        "description": "Use this tool after protocol selection to generate a structured notebook draft from a selected protocol, project context, and known placeholder values. It fills placeholders conservatively, keeps unresolved placeholders visible, and can return follow-up questions when key details are missing. Provide `selected_protocol` when already known, `project` when a project has been resolved, and `pending_values` for explicit user-supplied placeholder answers.",
+        "annotations": {
+          "title": "Notebook Generation",
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "selected_protocol": {
+              "$ref": "#/$defs/protocol_record"
+            },
+            "project": {
+              "$ref": "#/$defs/project_record"
+            },
+            "pending_values": {
+              "$ref": "#/$defs/pending_values"
+            }
+          },
+          "$defs": {
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
+                }
+              }
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "protocol_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "placeholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "maxItems": 60
+                }
+              }
+            },
+            "protocol_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/protocol_step"
+                  },
+                  "maxItems": 160
+                },
+                "project_id": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                }
+              }
+            },
+            "project_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "resolution_source": {
+                  "type": "string"
+                }
+              }
+            },
+            "pending_values": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "python_sandbox_file": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
+            },
+            "sub_agent_metadata": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "task_type": {
+                  "type": "string"
+                },
+                "parent_request_id": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                }
+              }
+            },
+            "memory_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 600
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "project_name": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "source": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              }
+            },
+            "paper_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paper_title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "full_text": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  "maxItems": 40
+                },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20
+                }
+              }
+            },
+            "protocol_generation_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
+              }
+            },
+            "literature_source": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "web",
+                "pubmed",
+                "crossref",
+                "uniprot",
+                "europe_pmc"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "python_sandbox",
+        "description": "Use this tool when the agent needs to write and run Python code to compute, transform, inspect, or generate artifacts in a controlled sandbox. The agent can start a new sandbox run by supplying runnable `code`, optionally stage input files in `files`, and request outputs through `readback_paths`. The managed Python sandbox sub-agent will try to repair failing runs itself before giving up. To continue a prior sandbox helper after the main agent decides the result is insufficient, call this tool again with `sub_agent_id` and optional `feedback`; the same helper will keep working instead of starting over. Inside the sandbox, `import enana_sandbox as sandbox` to read staged files and emit chat-renderable text or image outputs. Prefer this for deterministic analysis or file generation, not for calling local lab records that already have dedicated lookup tools.",
+        "annotations": {
+          "title": "Python Sandbox",
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "anyOf": [
+            {
+              "required": [
+                "code"
+              ]
+            },
+            {
+              "required": [
+                "sub_agent_id"
+              ]
+            }
           ],
+          "properties": {
+            "code": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 40000
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 500,
+              "maximum": 15000
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/python_sandbox_file"
+              },
+              "maxItems": 32
+            },
+            "readback_paths": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 240
+              },
+              "maxItems": 20
+            },
+            "sub_agent_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "feedback": {
+              "type": "string",
+              "maxLength": 40000
+            },
+            "max_repair_attempts": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 6
+            }
+          },
+          "$defs": {
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
+                }
+              }
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "protocol_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "placeholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "maxItems": 60
+                }
+              }
+            },
+            "protocol_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/protocol_step"
+                  },
+                  "maxItems": 160
+                },
+                "project_id": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                }
+              }
+            },
+            "project_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "resolution_source": {
+                  "type": "string"
+                }
+              }
+            },
+            "pending_values": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "python_sandbox_file": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
+            },
+            "sub_agent_metadata": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "task_type": {
+                  "type": "string"
+                },
+                "parent_request_id": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                }
+              }
+            },
+            "memory_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 600
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "project_name": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "source": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              }
+            },
+            "paper_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paper_title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "full_text": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  "maxItems": 40
+                },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20
+                }
+              }
+            },
+            "protocol_generation_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
+              }
+            },
+            "literature_source": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "web",
+                "pubmed",
+                "crossref",
+                "uniprot",
+                "europe_pmc"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "command_line",
+        "description": "Use this tool when a focused local shell command is the fastest way to inspect or operate on the current workspace, such as `pwd`, `ls`, `git status`, `npm test`, or another project CLI. Provide the complete shell command in `command`, and optionally override `cwd` or `timeout_ms`. Mutating commands may be blocked unless the runtime explicitly enables write-capable tool execution.",
+        "annotations": {
+          "title": "Command Line",
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "command"
+          ],
+          "properties": {
+            "command": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 12000
+            },
+            "cwd": {
+              "type": "string",
+              "maxLength": 1200
+            },
+            "working_directory": {
+              "type": "string",
+              "maxLength": 1200
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 500,
+              "maximum": 120000
+            },
+            "commandName": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "skillName": {
+              "type": "string",
+              "maxLength": 160
+            }
+          }
+        }
+      },
+      {
+        "name": "web_search",
+        "description": "Use this tool for broad external web retrieval when the agent needs current or general internet sources rather than paper-specific scholarly search. Provide `query` when possible, and optionally constrain `allowed_domains` for focused retrieval. The runtime routes through the shared web-search transport, including provider-native search and Codex agent search support.",
+        "annotations": {
+          "title": "Web Search",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
           "properties": {
             "query": {
               "type": "string",
-              "minLength": 1
+              "maxLength": 1200
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 1200
+            },
+            "topic": {
+              "type": "string",
+              "maxLength": 240
             },
             "limit": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 40
+              "maximum": 25
+            },
+            "allowed_domains": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 160
+              },
+              "maxItems": 12
+            },
+            "external_web_access": {
+              "type": "boolean"
+            },
+            "user_location": {
+              "type": "object"
+            },
+            "parser_payload": {
+              "$ref": "#/$defs/parser_payload"
+            }
+          },
+          "$defs": {
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
+                }
+              }
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "protocol_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "placeholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "maxItems": 60
+                }
+              }
+            },
+            "protocol_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/protocol_step"
+                  },
+                  "maxItems": 160
+                },
+                "project_id": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                }
+              }
+            },
+            "project_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "resolution_source": {
+                  "type": "string"
+                }
+              }
+            },
+            "pending_values": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "python_sandbox_file": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
+            },
+            "sub_agent_metadata": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "task_type": {
+                  "type": "string"
+                },
+                "parent_request_id": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                }
+              }
+            },
+            "memory_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 600
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "project_name": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "source": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              }
+            },
+            "paper_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paper_title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "full_text": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  "maxItems": 40
+                },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20
+                }
+              }
+            },
+            "protocol_generation_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
+              }
+            },
+            "literature_source": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "web",
+                "pubmed",
+                "crossref",
+                "uniprot",
+                "europe_pmc"
+              ]
             }
           }
         }
       },
       {
-        "name": "resource_read",
-        "description": "Read one Hikari MCP resource by URI.",
+        "name": "sub_agent",
+        "description": "Use this tool to manage real Codex CLI-backed helper sub-agent sessions for multi-step or delegated work that should persist across turns. `create` starts a Codex session with a system prompt and initial message, `message` resumes that session with a follow-up, `get` inspects one session, `list` shows active sessions, and `delete` removes a session. Use it when the agent needs a reusable delegated Codex workspace rather than a one-shot tool execution.",
         "annotations": {
-          "title": "Resource read",
-          "readOnlyHint": true,
+          "title": "Sub Agent",
+          "readOnlyHint": false,
           "destructiveHint": false,
-          "idempotentHint": true,
+          "idempotentHint": false,
           "openWorldHint": false
         },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "uri"
+            "action"
           ],
           "properties": {
-            "uri": {
+            "action": {
               "type": "string",
-              "minLength": 1
+              "enum": [
+                "create",
+                "message",
+                "delete",
+                "get",
+                "list"
+              ]
+            },
+            "agent_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "system_prompt": {
+              "type": "string",
+              "maxLength": 40000
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 40000
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "metadata": {
+              "$ref": "#/$defs/sub_agent_metadata"
+            }
+          },
+          "$defs": {
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
+                }
+              }
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "protocol_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "placeholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "maxItems": 60
+                }
+              }
+            },
+            "protocol_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/protocol_step"
+                  },
+                  "maxItems": 160
+                },
+                "project_id": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                }
+              }
+            },
+            "project_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "resolution_source": {
+                  "type": "string"
+                }
+              }
+            },
+            "pending_values": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "python_sandbox_file": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
+            },
+            "sub_agent_metadata": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "task_type": {
+                  "type": "string"
+                },
+                "parent_request_id": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                }
+              }
+            },
+            "memory_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 600
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "project_name": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "source": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              }
+            },
+            "paper_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paper_title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "full_text": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  "maxItems": 40
+                },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20
+                }
+              }
+            },
+            "protocol_generation_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
+              }
+            },
+            "literature_source": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "web",
+                "pubmed",
+                "crossref",
+                "uniprot",
+                "europe_pmc"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "memory",
+        "description": "Use this tool to manage sparse long-term user memory across sessions. `recall` searches previously stored preferences, project names, workflow habits, or other stable context. `remember` stores or updates a structured memory record with `key`, `summary`, and optional `value`. `forget` removes matching memory entries. `list` enumerates stored memory, optionally filtered by category, project, or tags. Use it only for durable facts or preferences, not for replaying whole conversations.",
+        "annotations": {
+          "title": "Memory",
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "action"
+          ],
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "recall",
+                "remember",
+                "forget",
+                "list"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "query": {
+              "type": "string",
+              "maxLength": 320
+            },
+            "category": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "key": {
+              "type": "string",
+              "maxLength": 220
+            },
+            "summary": {
+              "type": "string",
+              "maxLength": 600
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "object"
+                },
+                {
+                  "type": "array"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "project_name": {
+              "type": "string",
+              "maxLength": 220
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 12
+            },
+            "source": {
+              "type": "string",
+              "maxLength": 120
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "record": {
+              "$ref": "#/$defs/memory_record"
+            }
+          },
+          "$defs": {
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
+                }
+              }
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "protocol_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "placeholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "maxItems": 60
+                }
+              }
+            },
+            "protocol_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/protocol_step"
+                  },
+                  "maxItems": 160
+                },
+                "project_id": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                }
+              }
+            },
+            "project_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "resolution_source": {
+                  "type": "string"
+                }
+              }
+            },
+            "pending_values": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "python_sandbox_file": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
+            },
+            "sub_agent_metadata": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "task_type": {
+                  "type": "string"
+                },
+                "parent_request_id": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                }
+              }
+            },
+            "memory_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 600
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "project_name": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "source": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              }
+            },
+            "paper_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paper_title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "full_text": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  "maxItems": 40
+                },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20
+                }
+              }
+            },
+            "protocol_generation_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
+              }
+            },
+            "literature_source": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "web",
+                "pubmed",
+                "crossref",
+                "uniprot",
+                "europe_pmc"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "literature_search",
+        "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for scholarly-first auto mode. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. The literature workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads selected paper context back into the main agent; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Auto mode searches literature sources first and only falls back to generic web search when those sources do not produce results. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+        "annotations": {
+          "title": "Literature Search",
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "query": {
+              "type": "string",
+              "maxLength": 600
+            },
+            "topic": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 1200
+            },
+            "source": {
+              "$ref": "#/$defs/literature_source"
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/literature_source"
+              },
+              "maxItems": 6
+            },
+            "preferred_literature_source": {
+              "$ref": "#/$defs/literature_source"
+            },
+            "preferred_web_source": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 25
+            },
+            "max_papers": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 24
+            },
+            "max_per_source": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "allow_web_fallback": {
+              "type": "boolean"
+            },
+            "prefer_recent": {
+              "type": "boolean"
+            },
+            "use_codex_paper_context": {
+              "type": "boolean"
+            },
+            "disable_codex_paper_context": {
+              "type": "boolean"
+            },
+            "codex_paper_context": {
+              "type": "boolean"
+            },
+            "max_context_blocks": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "max_download_concurrency": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 24
+            },
+            "reasoning_effort": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "sub_agent_name": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "storage_path": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "storagePath": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "parser_payload": {
+              "$ref": "#/$defs/parser_payload"
+            }
+          },
+          "$defs": {
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
+                }
+              }
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "protocol_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "placeholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "maxItems": 60
+                }
+              }
+            },
+            "protocol_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/protocol_step"
+                  },
+                  "maxItems": 160
+                },
+                "project_id": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                }
+              }
+            },
+            "project_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "resolution_source": {
+                  "type": "string"
+                }
+              }
+            },
+            "pending_values": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "python_sandbox_file": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
+            },
+            "sub_agent_metadata": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "task_type": {
+                  "type": "string"
+                },
+                "parent_request_id": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                }
+              }
+            },
+            "memory_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 600
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "project_name": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "source": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              }
+            },
+            "paper_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paper_title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "full_text": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  "maxItems": 40
+                },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20
+                }
+              }
+            },
+            "protocol_generation_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
+              }
+            },
+            "literature_source": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "web",
+                "pubmed",
+                "crossref",
+                "uniprot",
+                "europe_pmc"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "purchase_recommendation",
+        "description": "Use this tool when the user wants products they can purchase from external vendors. Provide a compact product query, explicit `required_terms` and `excluded_terms` when known, and a `budget_preference` such as `cheap` when price sensitivity matters. The tool searches generic web results, extracts product metadata from vendor pages, rejects incomplete results, and returns chat-card-ready items with image, vendor, price, and destination URL.",
+        "annotations": {
+          "title": "Purchase Recommendation",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "query": {
+              "type": "string",
+              "maxLength": 600
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 1200
+            },
+            "required_terms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 12
+            },
+            "excluded_terms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 12
+            },
+            "budget_preference": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "search_limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16
+            },
+            "parser_payload": {
+              "$ref": "#/$defs/parser_payload"
+            }
+          },
+          "$defs": {
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
+                }
+              }
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "protocol_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "placeholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "maxItems": 60
+                }
+              }
+            },
+            "protocol_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/protocol_step"
+                  },
+                  "maxItems": 160
+                },
+                "project_id": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                }
+              }
+            },
+            "project_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "resolution_source": {
+                  "type": "string"
+                }
+              }
+            },
+            "pending_values": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "python_sandbox_file": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
+            },
+            "sub_agent_metadata": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "task_type": {
+                  "type": "string"
+                },
+                "parent_request_id": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                }
+              }
+            },
+            "memory_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 600
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "project_name": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "source": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              }
+            },
+            "paper_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paper_title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "full_text": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  "maxItems": 40
+                },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20
+                }
+              }
+            },
+            "protocol_generation_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
+              }
+            },
+            "literature_source": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "web",
+                "pubmed",
+                "crossref",
+                "uniprot",
+                "europe_pmc"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "paper_download",
+        "description": "Use this tool when the user wants a paper PDF downloaded into app storage. `download` performs the full flow in one call, first extracting candidate PDF URLs from the provided fields and then streaming the PDF with progress tracking. `start` begins the download in the background so the caller can poll with `status`. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
+        "annotations": {
+          "title": "Paper Download",
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "download",
+                "start",
+                "status"
+              ]
+            },
+            "download_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "paper_pdf_url": {
+              "type": "string"
+            },
+            "doi": {
+              "type": "string"
+            },
+            "pdf_url": {
+              "type": "string"
+            },
+            "page_url": {
+              "type": "string"
+            },
+            "candidate_urls": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 24
+            },
+            "page_html": {
+              "type": "string",
+              "maxLength": 400000
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 12000
+            },
+            "paper_title": {
+              "type": "string"
+            },
+            "file_name": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "linked_type": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "linked_name": {
+              "type": "string",
+              "maxLength": 220
+            },
+            "storage_path": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 120000
+            },
+            "use_browser_fallback": {
+              "type": "boolean"
+            },
+            "simulate_one_click": {
+              "type": "boolean"
+            },
+            "request_headers": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "paper_analysis",
+        "description": "Use this tool when the user asks to summarize a paper, extract the important findings, explain methods, or pull a protocol candidate out of paper text. Provide the richest available paper context through `paper`, `paper_summary`, `paper_abstract`, or `paper_text`. Set `extract_protocol` when the user explicitly wants procedural extraction, and set `generate_protocol` when the extracted methods should also be converted into an import-ready protocol JSON record.",
+        "annotations": {
+          "title": "Paper Analysis",
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paper": {
+              "$ref": "#/$defs/paper_record"
+            },
+            "paper_title": {
+              "type": "string"
+            },
+            "paper_summary": {
+              "type": "string"
+            },
+            "paper_abstract": {
+              "type": "string"
+            },
+            "paper_text": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "extract_protocol": {
+              "type": "boolean"
+            },
+            "generate_protocol": {
+              "type": "boolean"
+            },
+            "protocol_title_hint": {
+              "type": "string"
+            }
+          },
+          "$defs": {
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
+                }
+              }
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "protocol_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                },
+                "placeholders": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "properties": {
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "maxItems": 60
+                }
+              }
+            },
+            "protocol_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "purpose": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "steps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/$defs/protocol_step"
+                  },
+                  "maxItems": 160
+                },
+                "project_id": {
+                  "type": "string"
+                },
+                "project_name": {
+                  "type": "string"
+                },
+                "projectId": {
+                  "type": "string"
+                },
+                "projectName": {
+                  "type": "string"
+                }
+              }
+            },
+            "project_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "resolution_source": {
+                  "type": "string"
+                }
+              }
+            },
+            "pending_values": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "python_sandbox_file": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 240
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
+            },
+            "sub_agent_metadata": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "task_type": {
+                  "type": "string"
+                },
+                "parent_request_id": {
+                  "type": "string"
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                }
+              }
+            },
+            "memory_record": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "maxLength": 160
+                },
+                "category": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "key": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "summary": {
+                  "type": "string",
+                  "maxLength": 600
+                },
+                "value": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "project_name": {
+                  "type": "string",
+                  "maxLength": 220
+                },
+                "tags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 12
+                },
+                "source": {
+                  "type": "string",
+                  "maxLength": 120
+                }
+              }
+            },
+            "paper_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paper_title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "full_text": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  "maxItems": 40
+                },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20
+                }
+              }
+            },
+            "protocol_generation_step": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "text": {
+                  "type": "string"
+                },
+                "instruction": {
+                  "type": "string"
+                },
+                "action": {
+                  "type": "string"
+                }
+              }
+            },
+            "literature_source": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "web",
+                "pubmed",
+                "crossref",
+                "uniprot",
+                "europe_pmc"
+              ]
             }
           }
         }
@@ -4564,6 +8411,41 @@
           "prefer_recent": {
             "type": "boolean"
           },
+          "use_codex_paper_context": {
+            "type": "boolean"
+          },
+          "disable_codex_paper_context": {
+            "type": "boolean"
+          },
+          "codex_paper_context": {
+            "type": "boolean"
+          },
+          "max_context_blocks": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50
+          },
+          "max_download_concurrency": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 24
+          },
+          "reasoning_effort": {
+            "type": "string",
+            "maxLength": 40
+          },
+          "sub_agent_name": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "storage_path": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "storagePath": {
+            "type": "string",
+            "maxLength": 2000
+          },
           "parser_payload": {
             "$ref": "#/$defs/parser_payload"
           }
@@ -5283,7 +9165,7 @@
       "tool_id": "paper-download",
       "summary": "Extract a downloadable paper PDF URL, stream the file into app storage with progress tracking, and fall back to a browser-assisted download session when sites block automated fetches.",
       "input_hint": "action?, download_id?, paper_pdf_url?, doi?, pdf_url?, page_url?, candidate_urls?",
-      "detailed_description": "Use this tool when the user wants a paper PDF downloaded into app storage. `download` performs the full flow in one call, first extracting candidate PDF URLs from the provided fields and then streaming the PDF with progress tracking. `start` begins the download in the background so the caller can poll with `status`. When direct bot fetching is blocked, the tool should fall back to a browser-assisted session, optionally simulate a one-click download, let the user click the site download button if needed, and close the browser session after the file is saved.",
+      "detailed_description": "Use this tool when the user wants a paper PDF downloaded into app storage. `download` performs the full flow in one call, first extracting candidate PDF URLs from the provided fields and then streaming the PDF with progress tracking. `start` begins the download in the background so the caller can poll with `status`. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
       "input_schema": {
         "type": "object",
         "additionalProperties": false,

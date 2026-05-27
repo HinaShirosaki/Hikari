@@ -1,6 +1,7 @@
 'use strict';
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { normalizePaperAnnotationSnapshot } = require('../shared/paper-comment-context.js');
 const { normalizeChemicalStorePayload } = require('../../main/data/data-snapshot-utils.js');
 
 const DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE =
@@ -174,13 +175,7 @@ function createAgentRuntimeSupport(deps = {}) {
     }
     const normalizedPapers = asArray(snapshot.papers)
       .slice(0, 80)
-      .map((paper) => {
-        if (!paper || typeof paper !== 'object' || Array.isArray(paper)) {
-          return paper;
-        }
-        const { comments, ...rest } = paper;
-        return rest;
-      });
+      .map((paper) => normalizePaperAnnotationSnapshot(paper, { asArray, cleanText }));
     const normalizedSnapshot = {
       projects: asArray(snapshot.projects).slice(0, 40),
       protocols: asArray(snapshot.protocols).slice(0, 100),

@@ -27,6 +27,10 @@ export function summarizeNotebookDraft(payload) {
   return responseModule.summarizeNotebookDraft(payload);
 }
 
+export function summarizeProtocolGeneration(payload) {
+  return responseModule.summarizeProtocolGeneration(payload);
+}
+
 export function summarizeCodexAgent(codexAgent) {
   return responseModule.summarizeCodexAgent(codexAgent);
 }

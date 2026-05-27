@@ -18,13 +18,25 @@ function getHighlightBoxesForRecord(highlight, record) {
   return pdfQuadPointsToBoxes(highlight?.quadPoints, { pageWidth, pageHeight });
 }
 
+function getHighlightKind(highlight) {
+  return String(highlight?.kind || highlight?.type || '').trim().toLowerCase() === 'underline'
+    ? 'underline'
+    : 'highlight';
+}
+
 function renderHighlightDivFallback({ doc, layer, highlight, boxes }) {
+  const kind = getHighlightKind(highlight);
   boxes.forEach((box) => {
     const mark = doc.createElement('div');
-    mark.className = 'papers-viewer-highlight';
+    mark.className = `papers-viewer-highlight${highlight.commentId ? ' is-commented' : ''}${kind === 'underline' ? ' is-underline' : ''}`;
     mark.dataset.highlightId = highlight.id;
+    if (highlight.commentId) {
+      mark.dataset.commentId = highlight.commentId;
+    }
     mark.style.left = `${(box.x * 100).toFixed(3)}%`;
-    mark.style.top = `${(box.y * 100).toFixed(3)}%`;
+    mark.style.top = kind === 'underline'
+      ? `${((box.y + box.height) * 100).toFixed(3)}%`
+      : `${(box.y * 100).toFixed(3)}%`;
     mark.style.width = `${(box.width * 100).toFixed(3)}%`;
     mark.style.height = `${(box.height * 100).toFixed(3)}%`;
     mark.title = highlight.text;
@@ -80,7 +92,7 @@ export function renderHighlights({ pageRecords = [], highlights = [] } = {}) {
       if (!boxes.length) {
         return;
       }
-      if (!svg) {
+      if (!svg || getHighlightKind(highlight) === 'underline') {
         renderHighlightDivFallback({ doc, layer: highlightLayer, highlight, boxes });
         return;
       }
@@ -90,6 +102,10 @@ export function renderHighlights({ pageRecords = [], highlights = [] } = {}) {
       }
       const path = doc.createElementNS(SVG_NS, 'path');
       path.classList.add('papers-viewer-highlight-path');
+      if (highlight.commentId) {
+        path.classList.add('is-commented');
+        path.dataset.commentId = highlight.commentId;
+      }
       path.dataset.highlightId = highlight.id;
       path.setAttribute('d', pathData);
       const title = doc.createElementNS(SVG_NS, 'title');
@@ -136,6 +152,9 @@ export function renderPins({
       return;
     }
     pageComments.forEach((comment) => {
+      if (!Number.isFinite(Number(comment.anchorX)) || !Number.isFinite(Number(comment.anchorY))) {
+        return;
+      }
       const pin = doc.createElement('button');
       pin.type = 'button';
       pin.className = 'papers-viewer-pin';

@@ -12,7 +12,7 @@ const {
 
 const PROTOCOL_GENERATION_MCP_TOOL = Object.freeze({
   name: 'protocol_generation',
-  description: 'Normalize supplied protocol JSON into Hikari import-ready protocol format without an internal LLM call, and save it into Protocols when save is true.',
+  description: 'Normalize supplied protocol JSON into Hikari import-ready protocol format without an internal LLM call. When save is true, Hikari queues the generated protocol for user approval before adding it to Protocols.',
   annotations: buildWriteToolAnnotations('Protocol generation'),
   inputSchema: {
     type: 'object',
@@ -148,7 +148,6 @@ async function callProtocolGeneration(input = {}, context = {}, deps = {}) {
     args: compactObject({
       protocol,
       result_summary: cleanText(input.result_summary || input.resultSummary || input.summary, 320),
-      save: shouldSave,
       overwrite: input.overwrite === true,
       upsert: input.upsert === true
     }),
@@ -161,11 +160,15 @@ async function callProtocolGeneration(input = {}, context = {}, deps = {}) {
   return compactObject({
     ok,
     status: ok
-      ? (cleanText(payload.status || result?.status, 80) || 'normalized')
+      ? (shouldSave
+        ? 'awaiting_user_approval'
+        : (cleanText(payload.status || result?.status, 80) || 'normalized'))
       : (cleanText(payload.status || result?.status, 80) || 'failed'),
     mcp_tool: PROTOCOL_GENERATION_MCP_TOOL.name,
     app_tool: 'protocol-generation',
     summary: cleanText(payload.summary || result?.summary, 320),
+    save_requested: shouldSave,
+    requires_user_approval: shouldSave,
     protocol: outputProtocol,
     sidecar_paths: cloneJson(payload.sidecar_paths || payload.sidecarPaths, {}),
     error

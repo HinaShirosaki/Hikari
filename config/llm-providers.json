@@ -122,6 +122,37 @@
       ]
     },
     {
+      "id": "deepseek",
+      "label": "DeepSeek",
+      "defaultEndpoint": "https://api.deepseek.com",
+      "defaultModel": "deepseek-v4-flash",
+      "modelPlaceholder": "e.g. deepseek-v4-pro",
+      "apiKeyPlaceholder": "DeepSeek API key",
+      "requiresApiKey": true,
+      "endpointHints": [
+        "api.deepseek.com",
+        "deepseek.com"
+      ],
+      "models": [
+        {
+          "id": "deepseek-v4-flash",
+          "label": "DeepSeek V4 Flash"
+        },
+        {
+          "id": "deepseek-v4-pro",
+          "label": "DeepSeek V4 Pro"
+        },
+        {
+          "id": "deepseek-chat",
+          "label": "DeepSeek Chat (legacy)"
+        },
+        {
+          "id": "deepseek-reasoner",
+          "label": "DeepSeek Reasoner (legacy)"
+        }
+      ]
+    },
+    {
       "id": "codex",
       "label": "Codex Agent (CLI)",
       "defaultEndpoint": "",

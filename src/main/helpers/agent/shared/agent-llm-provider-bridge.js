@@ -4,6 +4,7 @@ const { createCodexAgentLlmProvider } = require('./llm-providers/codex-agent-pro
 const { createOpenAiLlmProvider } = require('./llm-providers/openai-provider.js');
 const { createClaudeLlmProvider } = require('./llm-providers/claude-provider.js');
 const { createGeminiLlmProvider } = require('./llm-providers/gemini-provider.js');
+const { createDeepSeekLlmProvider } = require('./llm-providers/deepseek-provider.js');
 
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
@@ -112,6 +113,32 @@ function defaultExtractGeminiResponseText(payload, asArray = defaultAsArray) {
     .trim();
 }
 
+function defaultExtractChatCompletionText(payload, asArray = defaultAsArray) {
+  const message = Array.isArray(payload?.choices) && payload.choices.length > 0
+    ? payload.choices[0]?.message
+    : null;
+  const content = message?.content;
+  if (typeof content === 'string') {
+    return content.trim();
+  }
+  return asArray(content)
+    .map((item) => {
+      if (typeof item === 'string') {
+        return item;
+      }
+      if (typeof item?.text === 'string') {
+        return item.text;
+      }
+      if (typeof item?.content === 'string') {
+        return item.content;
+      }
+      return '';
+    })
+    .filter(Boolean)
+    .join('\n')
+    .trim();
+}
+
 function createAgentLlmProviderBridge(deps = {}) {
   const LLM_PROVIDERS = deps.LLM_PROVIDERS && typeof deps.LLM_PROVIDERS === 'object'
     ? deps.LLM_PROVIDERS
@@ -128,12 +155,16 @@ function createAgentLlmProviderBridge(deps = {}) {
   const requestClaudeMessagesWithBackoff = deps.requestClaudeMessagesWithBackoff;
   const requestGeminiGenerateContentWithBackoff = deps.requestGeminiGenerateContentWithBackoff;
   const requestOpenAiResponsesWithBackoff = deps.requestOpenAiResponsesWithBackoff;
+  const requestOpenAiCompatibleChatCompletionsWithBackoff = deps.requestOpenAiCompatibleChatCompletionsWithBackoff;
   const extractClaudeResponseText = typeof deps.extractClaudeResponseText === 'function'
     ? deps.extractClaudeResponseText
     : ((payload) => defaultExtractClaudeResponseText(payload, asArray));
   const extractGeminiResponseText = typeof deps.extractGeminiResponseText === 'function'
     ? deps.extractGeminiResponseText
     : ((payload) => defaultExtractGeminiResponseText(payload, asArray));
+  const extractChatCompletionText = typeof deps.extractChatCompletionText === 'function'
+    ? deps.extractChatCompletionText
+    : ((payload) => defaultExtractChatCompletionText(payload, asArray));
   const extractResponseText = typeof deps.extractResponseText === 'function'
     ? deps.extractResponseText
     : ((payload) => defaultExtractResponseText(payload, asArray));
@@ -268,6 +299,16 @@ function createAgentLlmProviderBridge(deps = {}) {
     parseJsonObjectFromText,
     isAbortError
   });
+  const deepSeekProvider = createDeepSeekLlmProvider({
+    asArray,
+    cleanText,
+    providerId: LLM_PROVIDERS.DEEPSEEK,
+    requestOpenAiCompatibleChatCompletionsWithBackoff,
+    extractChatCompletionText,
+    recordTrace,
+    parseJsonObjectFromText,
+    isAbortError
+  });
 
   function getProviderAdapter(provider = '') {
     if (provider === LLM_PROVIDERS.CODEX) {
@@ -278,6 +319,9 @@ function createAgentLlmProviderBridge(deps = {}) {
     }
     if (provider === LLM_PROVIDERS.GEMINI) {
       return geminiProvider;
+    }
+    if (provider === LLM_PROVIDERS.DEEPSEEK) {
+      return deepSeekProvider;
     }
     if (provider === LLM_PROVIDERS.OPENAI) {
       return openAiProvider;

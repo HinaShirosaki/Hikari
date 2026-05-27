@@ -106,8 +106,30 @@ export function createNotebookHistoryActions({
     setStatus('Planned notebook page created.');
   }
 
+  function rejectPlannedPage(messageId = '') {
+    const message = findMessage(messageId);
+    const draft = normalizeNotebookDraft(message?.meta?.notebookDraft);
+    if (!draft || draft.save.mode !== 'confirm_before_save') {
+      setStatus('Planned notebook draft is unavailable for rejection.');
+      return;
+    }
+    updateAssistantNotebookDraftMessage(state.agentChat.messages, messageId, (currentDraft) => ({
+      ...currentDraft,
+      save: {
+        ...currentDraft.save,
+        applied: false,
+        status: 'rejected',
+        reason: 'Planned page rejected by user.'
+      }
+    }));
+    persist();
+    renderHistoryView({ forceScroll: true });
+    setStatus('Planned notebook draft rejected.');
+  }
+
   return {
     createPlannedPage,
-    openNotebookPage
+    openNotebookPage,
+    rejectPlannedPage
   };
 }

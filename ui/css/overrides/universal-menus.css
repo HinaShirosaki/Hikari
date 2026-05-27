@@ -9,17 +9,17 @@
   --enana-menu-hover: color-mix(in srgb, var(--surface-subtle) 74%, var(--surface-elevated) 26%);
   --enana-menu-pressed: color-mix(in srgb, var(--surface-subtle) 88%, var(--surface-elevated) 12%);
   --enana-menu-search: color-mix(in srgb, var(--surface-subtle) 64%, var(--surface-elevated) 36%);
-  --enana-menu-shadow: 0 16px 34px rgba(27, 20, 14, 0.14), 0 2px 8px rgba(27, 20, 14, 0.08);
+  --enana-menu-shadow: 0 16px 34px var(--palette-rgba-27-20-14-a14), 0 2px 8px var(--palette-rgba-27-20-14-a08);
 }
 
 body.theme-night {
-  --enana-menu-surface: color-mix(in srgb, var(--surface-elevated) 92%, #14110e 8%);
-  --enana-menu-border: color-mix(in srgb, var(--line) 84%, #ffffff 8%);
-  --enana-menu-separator: color-mix(in srgb, var(--line-soft) 86%, #ffffff 8%);
-  --enana-menu-hover: color-mix(in srgb, var(--surface-subtle) 82%, #ffffff 8%);
-  --enana-menu-pressed: color-mix(in srgb, var(--surface-subtle) 92%, #ffffff 10%);
-  --enana-menu-search: color-mix(in srgb, var(--surface-subtle) 84%, #ffffff 4%);
-  --enana-menu-shadow: 0 18px 40px rgba(0, 0, 0, 0.34), 0 2px 10px rgba(0, 0, 0, 0.22);
+  --enana-menu-surface: color-mix(in srgb, var(--surface-elevated) 92%, var(--palette-hex-14110e) 8%);
+  --enana-menu-border: color-mix(in srgb, var(--line) 84%, var(--palette-white) 8%);
+  --enana-menu-separator: color-mix(in srgb, var(--line-soft) 86%, var(--palette-white) 8%);
+  --enana-menu-hover: color-mix(in srgb, var(--surface-subtle) 82%, var(--palette-white) 8%);
+  --enana-menu-pressed: color-mix(in srgb, var(--surface-subtle) 92%, var(--palette-white) 10%);
+  --enana-menu-search: color-mix(in srgb, var(--surface-subtle) 84%, var(--palette-white) 4%);
+  --enana-menu-shadow: 0 18px 40px var(--palette-rgba-0-0-0-a34), 0 2px 10px var(--palette-rgba-0-0-0-a22);
 }
 
 .app-more-menu,
@@ -193,7 +193,7 @@ body.theme-night {
   font-size: 0.95rem;
   letter-spacing: 0;
   outline: none;
-  box-shadow: inset 0 1px 2px rgba(27, 20, 14, 0.05);
+  box-shadow: inset 0 1px 2px var(--palette-rgba-27-20-14-a05);
 }
 
 body.theme-night .biology-notebook-sample-link-search,
@@ -210,7 +210,7 @@ body.theme-night .assay-sample-picker-search-input {
 .assay-sample-picker-search-input:focus {
   border-color: color-mix(in srgb, var(--focus) 58%, var(--line));
   background-color: color-mix(in srgb, var(--enana-menu-search) 84%, var(--surface-elevated) 16%);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent), inset 0 1px 2px rgba(27, 20, 14, 0.04);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent), inset 0 1px 2px var(--palette-rgba-27-20-14-a04);
 }
 
 .biology-notebook-sample-link-results,
@@ -296,12 +296,12 @@ body.theme-night .assay-sample-picker-search-input {
   background-position: 10px 50%;
   background-size: 15px 15px;
   font-size: 0.86rem;
-  box-shadow: inset 0 1px 2px rgba(27, 20, 14, 0.04);
+  box-shadow: inset 0 1px 2px var(--palette-rgba-27-20-14-a04);
 }
 
 .biology-notebook-sample-link-search:focus {
   border-color: color-mix(in srgb, var(--focus) 42%, var(--line));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 14%, transparent), inset 0 1px 2px rgba(27, 20, 14, 0.04);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 14%, transparent), inset 0 1px 2px var(--palette-rgba-27-20-14-a04);
 }
 
 .biology-notebook-sample-link-results {

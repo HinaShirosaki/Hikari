@@ -4,6 +4,12 @@ const { Buffer } = require('node:buffer');
 const fsPromises = require('node:fs/promises');
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const {
+  attachRelatedCommentsToContextBlocks,
+  buildPaperAnnotationContext,
+  getRelatedCommentsForPaperId,
+  normalizeRelatedComments
+} = require('../shared/paper-comment-context.js');
 
 const PAPER_CONTEXT_SOURCE_ORDER = Object.freeze([
   'europe_pmc_full_text',
@@ -411,6 +417,9 @@ function createPaperContextLoaderRuntime(deps = {}) {
 
   function parseEuropePmcMetadata(payload = {}) {
     const source = ensureObject(payload);
+    const pmid = cleanText(source.pmid, 120);
+    const pmcid = cleanText(source.pmcid, 120);
+    const doi = cleanText(source.doi, 180);
     const abstractText = cleanText(stripHtml(source.abstractText || source.abstract || ''), 12000);
     const fullTextEntries = asArray(source.fullTextUrlList?.fullTextUrl || source.fullTextUrls || source.fullTextUrl);
     const pdfUrls = uniqueStrings([
@@ -423,13 +432,19 @@ function createPaperContextLoaderRuntime(deps = {}) {
       })
     ].filter(Boolean), 8);
     return {
-      pmid: cleanText(source.pmid, 120),
-      pmcid: cleanText(source.pmcid, 120),
-      doi: cleanText(source.doi, 180),
+      pmid,
+      pmcid,
+      doi,
       abstract_sections: abstractText
         ? [{ label: 'Abstract', text: abstractText }]
         : [],
-      pdf_urls: pdfUrls
+      pdf_urls: buildPaperPdfUrls({
+        ...source,
+        pmid,
+        pmcid,
+        doi,
+        pdf_urls: pdfUrls
+      })
     };
   }
 
@@ -606,14 +621,15 @@ function createPaperContextLoaderRuntime(deps = {}) {
     };
   }
 
-  function buildCandidateBlocks(papers = [], query = '') {
+  function buildCandidateBlocks(papers = [], query = '', options = {}) {
     const candidates = [];
+    const annotationContext = options?.annotationContext || options?.annotation_context || null;
     asArray(papers).forEach((paper) => {
       const sectionCandidates = [];
       asArray(paper.sections).forEach((section, sectionIndex) => {
         const sectionLabel = cleanText(section?.label, 160) || 'Section';
         chunkSectionText(section?.text, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP).forEach((chunk, chunkIndex) => {
-          sectionCandidates.push({
+          const block = {
             block_id: `${cleanText(paper.paper_id, 160)}::${sectionIndex + 1}-${chunkIndex + 1}`,
             paper_id: cleanText(paper.paper_id, 160),
             paper_title: cleanText(paper.paper_title, 320),
@@ -624,7 +640,12 @@ function createPaperContextLoaderRuntime(deps = {}) {
             evidence_kind: 'text',
             rank_score: scoreTextAgainstQuery(query, chunk, sectionLabel),
             pdf_urls: asArray(paper.pdf_urls)
-          });
+          };
+          sectionCandidates.push(attachRelatedCommentsToContextBlocks(
+            [block],
+            annotationContext,
+            { asArray, cleanText }
+          )[0]);
         });
       });
       sectionCandidates
@@ -661,7 +682,10 @@ function createPaperContextLoaderRuntime(deps = {}) {
         `Paper title: ${cleanText(block.paper_title, 220)}`,
         `Section: ${cleanText(block.section_label, 120)}`,
         `Source: ${cleanText(block.source, 80)}`,
-        `Excerpt:\n${cleanText(block.excerpt, 1800)}`
+        `Excerpt:\n${cleanText(block.excerpt, 1800)}`,
+        asArray(block.related_comments).length
+          ? `Related paper comments JSON:\n${JSON.stringify(asArray(block.related_comments).slice(0, 4), null, 2)}`
+          : 'Related paper comments JSON: []'
       ].join('\n'))
     ].join('\n\n');
   }
@@ -747,6 +771,7 @@ function createPaperContextLoaderRuntime(deps = {}) {
       `- Section: ${cleanText(block.section_label, 120) || 'Section'}`,
       `  Excerpt anchor: ${cleanText(block.excerpt, 400)}`
     ].join('\n')).join('\n');
+    const relatedComments = normalizeRelatedComments(paper?.related_comments || paper?.relatedComments, { asArray, cleanText });
     return [
       'You have the full paper PDF attached. Read it before answering.',
       `Select up to ${DEFAULT_MAX_BLOCKS_PER_PAPER_WITH_PDF} short excerpts from the PDF that most directly support the clarified request.`,
@@ -755,6 +780,9 @@ function createPaperContextLoaderRuntime(deps = {}) {
       'Each excerpt needs a section_label (e.g., "Results", "Discussion", "Figure 2 caption") and a specific relevance_reason.',
       `Clarified request:\n${cleanText(query, 1200)}`,
       `Paper title: ${cleanText(paper?.paper_title, 320)}`,
+      relatedComments.length
+        ? `Related paper comments JSON:\n${JSON.stringify(relatedComments, null, 2)}`
+        : 'Related paper comments JSON: []',
       anchorLines
         ? `Existing abstract-derived excerpts (reference only — you may pick entirely different content from the PDF):\n${anchorLines}`
         : '',
@@ -876,6 +904,7 @@ function createPaperContextLoaderRuntime(deps = {}) {
       `- Section: ${cleanText(block.section_label, 120) || 'Section'}`,
       `  Excerpt anchor: ${cleanText(block.excerpt, 300)}`
     ].join('\n')).join('\n');
+    const relatedComments = normalizeRelatedComments(paper?.related_comments || paper?.relatedComments, { asArray, cleanText });
     return [
       'You are reading the extracted text of a scientific paper. The PDF binary is NOT attached on this turn.',
       `Select up to ${DEFAULT_MAX_BLOCKS_PER_PAPER_WITH_PDF} short excerpts from the extracted text that most directly support the clarified request.`,
@@ -883,6 +912,9 @@ function createPaperContextLoaderRuntime(deps = {}) {
       `Set request_pdf_review=true ONLY when the relevant evidence is figure-only (microscopy, gels, blots, plots, structures, schematics) AND nothing equivalent appears in the captured text. In that case, set excerpts=[] and put a one-sentence pdf_review_reason. Otherwise set request_pdf_review=false and pdf_review_reason="".`,
       `Clarified request:\n${cleanText(query, 1200)}`,
       `Paper title: ${cleanText(paper?.paper_title, 320)}`,
+      relatedComments.length
+        ? `Related paper comments JSON:\n${JSON.stringify(relatedComments, null, 2)}`
+        : 'Related paper comments JSON: []',
       sectionsText
         ? `Extracted paper text (sections labeled; figures and images are NOT present):\n${sectionsText}`
         : '',
@@ -1245,7 +1277,8 @@ function createPaperContextLoaderRuntime(deps = {}) {
         excerpt: cleanText(block?.excerpt, 1800),
         relevance_reason: cleanText(block?.relevance_reason, 260),
         source: cleanText(block?.source, 80),
-        evidence_kind: cleanText(block?.evidence_kind, 40) || 'text'
+        evidence_kind: cleanText(block?.evidence_kind, 40) || 'text',
+        related_comments: normalizeRelatedComments(block?.related_comments || block?.relatedComments, { asArray, cleanText })
       }))
       .filter((block) => block.paper_id && block.excerpt);
   }
@@ -1259,7 +1292,12 @@ function createPaperContextLoaderRuntime(deps = {}) {
       const paper = await readPaperContext(item);
       papers.push(paper);
     }
-    const candidateBlocks = buildCandidateBlocks(papers, query);
+    let annotationContext = buildPaperAnnotationContext({
+      snapshot: input.snapshot,
+      selectedPapers: items,
+      downloadedPapers: input.downloaded_papers
+    }, { asArray, cleanText });
+    const candidateBlocks = buildCandidateBlocks(papers, query, { annotationContext });
     const papersById = new Map(papers.map((paper) => [cleanText(paper.paper_id, 120), paper]));
 
     let downloadedPapers = asArray(input.downloaded_papers);
@@ -1273,6 +1311,20 @@ function createPaperContextLoaderRuntime(deps = {}) {
         // Ignore — we'll proceed without attached PDFs.
       }
     }
+    annotationContext = buildPaperAnnotationContext({
+      snapshot: input.snapshot,
+      selectedPapers: items,
+      downloadedPapers
+    }, { asArray, cleanText });
+    papersById.forEach((paper, paperId) => {
+      papersById.set(paperId, {
+        ...paper,
+        related_comments: normalizeRelatedComments(
+          getRelatedCommentsForPaperId(paperId, annotationContext),
+          { asArray, cleanText }
+        )
+      });
+    });
     const paperPdfs = new Map();
     const paperPdfTexts = new Map();
     for (const entry of downloadedPapers) {
@@ -1331,7 +1383,11 @@ function createPaperContextLoaderRuntime(deps = {}) {
       })
       : [];
     const loadedContextBlocks = normalizeLoadedContextBlocks(
-      mergeFigureBlocks(selectedBlocks, figureBlocks)
+      attachRelatedCommentsToContextBlocks(
+        mergeFigureBlocks(selectedBlocks, figureBlocks),
+        annotationContext,
+        { asArray, cleanText }
+      )
     );
     const readPaperIds = new Set(
       papers

@@ -48,6 +48,7 @@ function hasAgentResultShape(source) {
       source.parser
       || source.protocol_to_notebook
       || source.notebook_draft
+      || source.protocol_generation
       || source.codex_agent
       || source.inventory_lookup
       || source.record_lookup
