@@ -27,7 +27,7 @@ function renderLiveGeneratedTrace(rows, safeText) {
   return `
     <div class="agent-thinking-trace agent-generated-trace-live" aria-label="Agent Trace">
       <ul class="agent-thinking-trace-list">
-        ${rows.map((row) => `<li class="agent-thinking-trace-item">${safeText(row)}</li>`).join('')}
+        ${rows.map((row) => `<li class="agent-thinking-trace-item"><span class="agent-progress-flow-text">${safeText(row)}</span></li>`).join('')}
       </ul>
     </div>
   `;

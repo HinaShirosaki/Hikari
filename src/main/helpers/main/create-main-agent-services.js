@@ -12,7 +12,9 @@ const {
   defaultExtractResponseText,
   defaultExtractClaudeResponseText,
   defaultExtractGeminiResponseText,
+  defaultExtractChatCompletionText,
   requestOpenAiResponsesWithBackoff,
+  requestOpenAiCompatibleChatCompletionsWithBackoff,
   requestClaudeMessagesWithBackoff,
   requestGeminiGenerateContentWithBackoff
 } = require('./llm/llm-provider-runtime.js');
@@ -98,6 +100,9 @@ function createMainAgentServices(deps = {}) {
   const extractGeminiResponseText = typeof deps.extractGeminiResponseText === 'function'
     ? deps.extractGeminiResponseText
     : defaultExtractGeminiResponseText;
+  const extractChatCompletionText = typeof deps.extractChatCompletionText === 'function'
+    ? deps.extractChatCompletionText
+    : defaultExtractChatCompletionText;
   const LLM_PROVIDERS = deps.LLM_PROVIDERS && typeof deps.LLM_PROVIDERS === 'object'
     ? deps.LLM_PROVIDERS
     : {};
@@ -170,9 +175,11 @@ function createMainAgentServices(deps = {}) {
     getCodexCliWorkingDirectory,
     requestClaudeMessagesWithBackoff,
     requestGeminiGenerateContentWithBackoff,
+    requestOpenAiCompatibleChatCompletionsWithBackoff,
     requestOpenAiResponsesWithBackoff,
     extractClaudeResponseText,
     extractGeminiResponseText,
+    extractChatCompletionText,
     extractResponseText
   };
 
@@ -630,7 +637,8 @@ function createMainAgentServices(deps = {}) {
     requestCodexAgentText,
     recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
     recordLifecycleEvent: observability.recordLifecycleEvent,
-    getWorkingDirectory: getCodexCliWorkingDirectory
+    getWorkingDirectory: getCodexCliWorkingDirectory,
+    runTool: agentToolRuntime.runAgentTool
   });
 
   const scienceReasoningLoopRuntime = createScienceReasoningLoopRuntime({

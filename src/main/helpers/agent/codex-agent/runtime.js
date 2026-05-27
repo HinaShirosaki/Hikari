@@ -2,6 +2,7 @@
 
 const path = require('node:path');
 const { throwIfAgentRequestAborted } = require('../shared/agent-request-context.js');
+const { callProtocolGeneration } = require('../mcp-contract/direct-tools/protocol-generation.js');
 
 function defaultCleanText(value, _maxLength = 2000) {
   const text = String(value || '');
@@ -75,6 +76,13 @@ function normalizeCitation(cleanText, citation = {}) {
     pointer: cleanText(source.pointer || source.url || source.title || source.id, 320),
     reason: cleanText(source.reason || source.summary, 500)
   };
+}
+
+function normalizeCodexToolName(rawToolName = '', { cleanText = defaultCleanText } = {}) {
+  return cleanText(rawToolName, 180).trim()
+    .replace(/^mcp__[^_]+__/, '')
+    .replace(/^hikari__/, '')
+    .replace(/^enana__/, '');
 }
 
 function slugText(cleanText, value = '', fallback = 'option') {
@@ -198,7 +206,7 @@ function extractAskUserPayloadFromToolEvent(streamEvent = {}) {
   const source = streamEvent && typeof streamEvent === 'object' && !Array.isArray(streamEvent)
     ? streamEvent
     : {};
-  const toolName = defaultCleanText(source.tool_name || source.toolName, 160);
+  const toolName = normalizeCodexToolName(source.tool_name || source.toolName, { cleanText: defaultCleanText });
   if (toolName !== 'ask_user') {
     return null;
   }
@@ -249,6 +257,270 @@ function extractAskUserPayloadFromToolEvent(streamEvent = {}) {
   return null;
 }
 
+function collectToolEventObjects(streamEvent = {}) {
+  const source = streamEvent && typeof streamEvent === 'object' && !Array.isArray(streamEvent)
+    ? streamEvent
+    : {};
+  const objectCandidates = [
+    source.tool_result,
+    source.toolResult,
+    source.tool_output,
+    source.toolOutput,
+    source.result,
+    source.output,
+    source.arguments,
+    source.args
+  ].filter((candidate) => candidate && typeof candidate === 'object' && !Array.isArray(candidate));
+  const textCandidates = [
+    source.tool_output_text,
+    source.toolOutputText,
+    source.output_text,
+    source.outputText,
+    source.tool_call_text,
+    source.toolCallText,
+    source.text,
+    source.message
+  ];
+  textCandidates.forEach((candidate) => {
+    const parsed = parseJsonObjectFromText(candidate);
+    if (parsed) {
+      objectCandidates.push(parsed);
+    }
+  });
+  return objectCandidates;
+}
+
+function normalizeProtocolGenerationArtifact(payload = {}, { cleanText = defaultCleanText } = {}) {
+  const source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+  const protocol = source.protocol && typeof source.protocol === 'object' && !Array.isArray(source.protocol)
+    ? cloneJson(source.protocol, null)
+    : null;
+  if (!protocol || !Object.keys(protocol).length) {
+    return null;
+  }
+  return {
+    ok: source.ok !== false,
+    status: cleanText(source.status, 80) || (source.save_requested === true ? 'awaiting_user_approval' : 'normalized'),
+    mcp_tool: cleanText(source.mcp_tool || source.mcpTool, 120) || 'protocol_generation',
+    app_tool: cleanText(source.app_tool || source.appTool, 120) || 'protocol-generation',
+    summary: cleanText(source.summary || source.result_summary || source.resultSummary, 500),
+    save_requested: source.save_requested === true || source.saveRequested === true || source.requires_user_approval === true,
+    requires_user_approval: source.requires_user_approval === true || source.requiresUserApproval === true || source.save_requested === true,
+    protocol
+  };
+}
+
+function extractProtocolGenerationArtifactFromToolEvent(streamEvent = {}) {
+  const source = streamEvent && typeof streamEvent === 'object' && !Array.isArray(streamEvent)
+    ? streamEvent
+    : {};
+  const toolName = normalizeCodexToolName(source.tool_name || source.toolName, { cleanText: defaultCleanText });
+  if (toolName !== 'protocol_generation') {
+    return null;
+  }
+  const rawStatus = defaultCleanText(source.status, 40).trim();
+  const hasResultPayload = Boolean(
+    source.tool_result
+    || source.toolResult
+    || source.tool_output
+    || source.toolOutput
+    || source.result
+    || source.output
+    || source.tool_output_text
+    || source.toolOutputText
+    || source.output_text
+    || source.outputText
+  );
+  if (rawStatus && !['completed', 'done', 'ok'].includes(rawStatus) && !hasResultPayload) {
+    return null;
+  }
+  for (const candidate of collectToolEventObjects(source)) {
+    const artifact = normalizeProtocolGenerationArtifact(candidate, { cleanText: defaultCleanText });
+    if (artifact?.protocol) {
+      return artifact;
+    }
+  }
+  return null;
+}
+
+function normalizeNotebookDraftArtifact(payload = {}, { cleanText = defaultCleanText } = {}) {
+  const source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : {};
+  const notebook = source.notebook && typeof source.notebook === 'object' && !Array.isArray(source.notebook)
+    ? cloneJson(source.notebook, null)
+    : null;
+  if (!notebook || !Object.keys(notebook).length) {
+    return null;
+  }
+  return {
+    ok: source.ok !== false,
+    status: cleanText(source.status, 80) || 'proposal_ready',
+    mcp_tool: cleanText(source.mcp_tool || source.mcpTool, 120) || 'notebook_draft',
+    app_tool: cleanText(source.app_tool || source.appTool, 120) || 'notebook-draft',
+    summary: cleanText(source.summary, 500),
+    project_name: cleanText(source.project_name || source.projectName, 220),
+    selected_protocol: cloneJson(source.selected_protocol || source.selectedProtocol, null),
+    source_workflow: cloneJson(source.source_workflow || source.sourceWorkflow, null),
+    missing_placeholders: asArray(source.missing_placeholders || source.missingPlaceholders),
+    follow_up_questions: asArray(source.follow_up_questions || source.followUpQuestions)
+      .map((item) => cleanText(item, 500))
+      .filter(Boolean)
+      .slice(0, 10),
+    proposal_summary: cleanText(source.proposal_summary || source.proposalSummary, 600),
+    proposal: cloneJson(source.proposal, null),
+    notebook
+  };
+}
+
+function extractNotebookDraftArtifactFromToolEvent(streamEvent = {}) {
+  const source = streamEvent && typeof streamEvent === 'object' && !Array.isArray(streamEvent)
+    ? streamEvent
+    : {};
+  const toolName = normalizeCodexToolName(source.tool_name || source.toolName, { cleanText: defaultCleanText });
+  if (toolName !== 'notebook_draft') {
+    return null;
+  }
+  const rawStatus = defaultCleanText(source.status, 40).trim();
+  const hasResultPayload = Boolean(
+    source.tool_result
+    || source.toolResult
+    || source.tool_output
+    || source.toolOutput
+    || source.result
+    || source.output
+    || source.tool_output_text
+    || source.toolOutputText
+    || source.output_text
+    || source.outputText
+  );
+  if (rawStatus && !['completed', 'done', 'ok'].includes(rawStatus) && !hasResultPayload) {
+    return null;
+  }
+  for (const candidate of collectToolEventObjects(source)) {
+    const artifact = normalizeNotebookDraftArtifact(candidate, { cleanText: defaultCleanText });
+    if (artifact?.notebook) {
+      return artifact;
+    }
+  }
+  return null;
+}
+
+function buildProtocolGenerationAggregate(artifacts = []) {
+  const protocols = [];
+  const seen = new Set();
+  asArray(artifacts).forEach((artifact) => {
+    const protocol = artifact?.protocol && typeof artifact.protocol === 'object' ? artifact.protocol : null;
+    if (!protocol) {
+      return;
+    }
+    const key = [
+      defaultCleanText(protocol.id || protocol.protocol_id || protocol.protocolId, 220),
+      defaultCleanText(protocol.name || protocol.title, 220),
+      JSON.stringify(asArray(protocol.steps || protocol.procedure).slice(0, 3))
+    ].join(':');
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    protocols.push(cloneJson(protocol, null));
+  });
+  if (!protocols.length) {
+    return null;
+  }
+  const lastArtifact = asArray(artifacts).filter(Boolean).at(-1) || {};
+  const saveRequested = asArray(artifacts).some((artifact) => (
+    artifact?.save_requested === true
+    || artifact?.saveRequested === true
+    || artifact?.requires_user_approval === true
+    || artifact?.requiresUserApproval === true
+  ));
+  return {
+    ok: true,
+    status: saveRequested
+      ? 'awaiting_user_approval'
+      : (defaultCleanText(lastArtifact.status, 80) || 'normalized'),
+    mcp_tool: 'protocol_generation',
+    app_tool: 'protocol-generation',
+    summary: defaultCleanText(lastArtifact.summary, 500),
+    save_requested: saveRequested,
+    requires_user_approval: saveRequested,
+    protocol: protocols[0],
+    protocols
+  };
+}
+
+function textNamesDirectProtocolGenerationTool(rawText = '') {
+  const text = String(rawText || '');
+  return /\bmcp__[^_\s]+__protocol_generation\b/i.test(text)
+    || /\bprotocol_generation\b/i.test(text);
+}
+
+function textRequestsProtocolSave(rawText = '') {
+  return /(?:\bsave\b|\bpersist\b|\bsave_to_protocol_module\b|\bsaveToProtocolModule\b)\s*(?::|=)?\s*true\b/i.test(String(rawText || ''));
+}
+
+function protocolHasSteps(protocol = {}) {
+  const source = protocol && typeof protocol === 'object' && !Array.isArray(protocol) ? protocol : {};
+  return asArray(source.steps).length > 0 || asArray(source.procedure).length > 0;
+}
+
+function buildDirectProtocolGenerationFallbackArgs(rawMessage = '', { cleanText = defaultCleanText } = {}) {
+  if (!textNamesDirectProtocolGenerationTool(rawMessage)) {
+    return null;
+  }
+  const parsed = parseJsonObjectFromText(rawMessage);
+  const source = ensureObject(parsed);
+  const protocol = ensureObject(source.protocol);
+  const candidateProtocol = Object.keys(protocol).length ? protocol : source;
+  if (!protocolHasSteps(candidateProtocol)) {
+    return null;
+  }
+  const args = {
+    protocol: cloneJson(candidateProtocol, {})
+  };
+  const resultSummary = cleanText(source.result_summary || source.resultSummary || source.summary, 320);
+  if (resultSummary) {
+    args.result_summary = resultSummary;
+  }
+  if (
+    source.save === true
+    || source.persist === true
+    || source.save_to_protocol_module === true
+    || source.saveToProtocolModule === true
+    || textRequestsProtocolSave(rawMessage)
+  ) {
+    args.save = true;
+  }
+  if (source.overwrite === true) {
+    args.overwrite = true;
+  }
+  if (source.upsert === true) {
+    args.upsert = true;
+  }
+  return args;
+}
+
+function looksLikeDirectToolMaterializationFailure(rawText = '') {
+  const text = String(rawText || '').toLowerCase();
+  if (!text) {
+    return false;
+  }
+  return [
+    /not exposed/,
+    /not available/,
+    /\bunavailable\b/,
+    /not visible/,
+    /not found/,
+    /couldn['’]?t submit/,
+    /could not submit/,
+    /cannot submit/,
+    /couldn['’]?t call/,
+    /could not call/,
+    /cannot call/,
+    /unable to call/,
+    /unable to submit/
+  ].some((pattern) => pattern.test(text));
+}
+
 function summarizeAttachments(cleanText, attachments = []) {
   return asArray(attachments)
     .map((attachment, index) => {
@@ -277,7 +549,9 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     '',
     'Hikari provides rendering and the MCP server. Do not depend on Hikari to replay chat history, choose tools, parse intent, or synthesize for you. Use your Codex session context for continuity and return normal assistant prose for Hikari to render.',
     '',
-    'Use the MCP server named `hikari` for Hikari app data, papers, protocols, notebooks, inventory, memory, and structured tool access. Use native Codex search or the Hikari `web-search` tool for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
+    'Use the MCP server named `hikari` for Hikari app data, papers, protocols, notebooks, inventory, memory, and structured tool access. Hikari exposes app tools as direct MCP tools such as `mcp__hikari__literature_search`, `mcp__hikari__paper_download`, and `mcp__hikari__protocol_generation`; do not route through `tool_search`, `tool_info`, or generic `tool_call`. Use native Codex search or the Hikari `web_search` tool for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
+    '',
+    'Native Codex `tool_search` is disabled for this run. If a named `mcp__hikari__...` function is not visible, report that the direct Hikari MCP surface is unavailable for that tool. Do not use shell commands or MCP resource reads as a substitute for a named direct tool call.',
     '',
     projectId || projectName
       ? `Selected project:\n${JSON.stringify({ id: projectId, name: projectName }, null, 2)}`
@@ -374,6 +648,9 @@ function createCodexAgentRuntime(deps = {}) {
   const getWorkingDirectory = typeof deps.getWorkingDirectory === 'function'
     ? deps.getWorkingDirectory
     : (() => process.cwd());
+  const runTool = typeof deps.runTool === 'function'
+    ? deps.runTool
+    : null;
 
   async function run(input = {}) {
     if (!requestCodexAgentText) {
@@ -400,6 +677,8 @@ function createCodexAgentRuntime(deps = {}) {
     const resumeSessionId = cleanText(input.codexSessionId || input.codex_session_id, 240);
     let lastStreamText = '';
     let streamedAskUserPayload = null;
+    let streamedNotebookDraftPayload = null;
+    const streamedProtocolGenerationPayloads = [];
 
     function publishCodexProgress(progressEvent = {}) {
       const recorded = recordLifecycleEvent(lifecycleRecorder, progressEvent);
@@ -414,6 +693,14 @@ function createCodexAgentRuntime(deps = {}) {
         const askUserPayload = extractAskUserPayloadFromToolEvent(streamEvent);
         if (askUserPayload?.user_question?.question) {
           streamedAskUserPayload = askUserPayload;
+        }
+        const notebookDraftArtifact = extractNotebookDraftArtifactFromToolEvent(streamEvent);
+        if (notebookDraftArtifact?.notebook) {
+          streamedNotebookDraftPayload = notebookDraftArtifact;
+        }
+        const protocolGenerationArtifact = extractProtocolGenerationArtifactFromToolEvent(streamEvent);
+        if (protocolGenerationArtifact?.protocol) {
+          streamedProtocolGenerationPayloads.push(protocolGenerationArtifact);
         }
       }
       if (eventType === 'codex_cli_display') {
@@ -612,6 +899,68 @@ function createCodexAgentRuntime(deps = {}) {
       codexMetadata.resumed_session_id || codexMetadata.resumedSessionId || resumeSessionId,
       240
     );
+    let protocolGenerationArtifact = buildProtocolGenerationAggregate(streamedProtocolGenerationPayloads);
+    if (!protocolGenerationArtifact && runTool && codexAgent.status !== 'needs_more_info') {
+      const fallbackArgs = buildDirectProtocolGenerationFallbackArgs(input.message, { cleanText });
+      if (fallbackArgs && looksLikeDirectToolMaterializationFailure(`${rawText}\n${codexAgent.answer}`)) {
+        recordLifecycleEvent(lifecycleRecorder, {
+          stage: 'codex_agent_direct_tool_fallback',
+          status: 'started',
+          routing_intent: 'codex_agent',
+          tool_name: 'protocol_generation',
+          message: 'Recovering direct protocol_generation call after Codex could not materialize the named MCP tool.'
+        });
+        try {
+          const directToolContext = {
+            ...buildCodexMcpContext({ ...input, cwd, model }, { cleanText }),
+            snapshot: ensureObject(input.snapshot),
+            traceContext,
+            lifecycleRecorder
+          };
+          const fallbackResult = await callProtocolGeneration(fallbackArgs, directToolContext, { runTool });
+          const fallbackArtifact = normalizeProtocolGenerationArtifact(fallbackResult, { cleanText });
+          if (fallbackArtifact?.protocol) {
+            streamedProtocolGenerationPayloads.push(fallbackArtifact);
+            protocolGenerationArtifact = buildProtocolGenerationAggregate(streamedProtocolGenerationPayloads);
+            codexAgent.status = 'completed';
+            codexAgent.answer = fallbackArtifact.save_requested || fallbackArtifact.requires_user_approval
+              ? 'The protocol is ready for review.'
+              : (cleanText(codexAgent.answer, 120000) || 'The protocol was normalized.');
+            codexAgent.follow_up_questions = [];
+            codexAgent.user_question = null;
+            codexAgent.reasoning_summary = 'Recovered by directly executing the named Hikari protocol_generation tool after Codex could not materialize it.';
+            recordLifecycleEvent(lifecycleRecorder, {
+              stage: 'codex_agent_direct_tool_fallback',
+              status: 'ok',
+              routing_intent: 'codex_agent',
+              tool_name: 'protocol_generation',
+              message: cleanText(fallbackArtifact.summary, 320) || 'Direct protocol_generation fallback completed.',
+              meta: {
+                save_requested: fallbackArtifact.save_requested === true,
+                protocol_name: cleanText(fallbackArtifact.protocol?.name || fallbackArtifact.protocol?.title, 220)
+              }
+            });
+          } else {
+            recordLifecycleEvent(lifecycleRecorder, {
+              stage: 'codex_agent_direct_tool_fallback',
+              status: 'failed',
+              routing_intent: 'codex_agent',
+              tool_name: 'protocol_generation',
+              message: cleanText(fallbackResult?.error || fallbackResult?.status, 320)
+                || 'Direct protocol_generation fallback did not return a protocol.'
+            });
+          }
+        } catch (error) {
+          recordLifecycleEvent(lifecycleRecorder, {
+            stage: 'codex_agent_direct_tool_fallback',
+            status: 'failed',
+            routing_intent: 'codex_agent',
+            tool_name: 'protocol_generation',
+            message: cleanText(error?.message, 320) || 'Direct protocol_generation fallback failed.'
+          });
+        }
+      }
+    }
     const parser = buildCodexAgentParserPayload(codexAgent, {
       projectId: input.projectId,
       projectName: input.projectName,
@@ -652,6 +1001,13 @@ function createCodexAgentRuntime(deps = {}) {
       resumed_codex_session_id: cleanText(codexAgent.resumed_codex_session_id, 240),
       parser,
       codex_agent: codexAgent,
+      ...(streamedNotebookDraftPayload
+        ? {
+          notebook_draft: streamedNotebookDraftPayload,
+          notebookDraft: streamedNotebookDraftPayload.notebook
+        }
+        : {}),
+      ...(protocolGenerationArtifact ? { protocol_generation: protocolGenerationArtifact } : {}),
       thinking_trace: {
         intent_parse_question: 'Codex owned this request without Hikari parser dispatch.',
         final_synthesize: cleanText(codexAgent.reasoning_summary, 1000)

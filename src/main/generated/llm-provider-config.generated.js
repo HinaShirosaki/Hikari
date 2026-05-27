@@ -164,6 +164,46 @@ const RAW_LLM_PROVIDER_CONFIGS = [
     ]
   },
   {
+    "id": "deepseek",
+    "key": "DEEPSEEK",
+    "label": "DeepSeek",
+    "defaultEndpoint": "https://api.deepseek.com",
+    "defaultModel": "deepseek-v4-flash",
+    "modelPlaceholder": "e.g. deepseek-v4-pro",
+    "apiKeyPlaceholder": "DeepSeek API key",
+    "requiresApiKey": true,
+    "endpointHints": [
+      "api.deepseek.com",
+      "deepseek.com"
+    ],
+    "models": [
+      {
+        "id": "deepseek-v4-flash",
+        "label": "DeepSeek V4 Flash",
+        "reasoningEfforts": [],
+        "defaultReasoningEffort": ""
+      },
+      {
+        "id": "deepseek-v4-pro",
+        "label": "DeepSeek V4 Pro",
+        "reasoningEfforts": [],
+        "defaultReasoningEffort": ""
+      },
+      {
+        "id": "deepseek-chat",
+        "label": "DeepSeek Chat (legacy)",
+        "reasoningEfforts": [],
+        "defaultReasoningEffort": ""
+      },
+      {
+        "id": "deepseek-reasoner",
+        "label": "DeepSeek Reasoner (legacy)",
+        "reasoningEfforts": [],
+        "defaultReasoningEffort": ""
+      }
+    ]
+  },
+  {
     "id": "codex",
     "key": "CODEX",
     "label": "Codex Agent (CLI)",
@@ -348,6 +388,7 @@ const LLM_PROVIDERS = Object.freeze({
   OPENAI: "openai",
   GEMINI: "gemini",
   CLAUDE: "claude",
+  DEEPSEEK: "deepseek",
   CODEX: "codex"
 });
 

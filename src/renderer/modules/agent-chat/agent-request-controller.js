@@ -36,7 +36,8 @@ export function createAgentRequestController(deps) {
     setStatus,
     syncComposerHeight,
     updateInFlightState,
-    onNotebookEntriesChanged
+    onNotebookEntriesChanged,
+    openReviewForMessage = () => {}
   } = deps;
 
   function clearLiveAssistantState() {
@@ -152,7 +153,9 @@ export function createAgentRequestController(deps) {
       }
       const traceRows = collectTraceRows();
       clearLiveAssistantState();
-      persistAssistantMessage(buildAssistantResponseMessage({ createId, response, notebookDraft, traceRows, messageText }));
+      const assistantMessage = buildAssistantResponseMessage({ createId, response, notebookDraft, traceRows, messageText });
+      persistAssistantMessage(assistantMessage);
+      openReviewForMessage(assistantMessage);
       if (state.agentChat.currentSessionId) {
         void sessionManager.refreshPersistentSessions({ force: true, loadCurrent: false });
       }

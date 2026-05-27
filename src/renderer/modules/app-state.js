@@ -341,8 +341,10 @@ export function normalizePaperComment(rawComment) {
   const pageNumber = Math.round(Number(rawComment.pageNumber));
   const anchorX = clampUnitInterval(rawComment.anchorX);
   const anchorY = clampUnitInterval(rawComment.anchorY);
+  const highlightId = String(rawComment.highlightId || '').trim();
   const text = String(rawComment.text || '').trim();
-  if (!id || !Number.isFinite(pageNumber) || pageNumber < 1 || !Number.isFinite(anchorX) || !Number.isFinite(anchorY) || !text) {
+  const hasAnchor = Number.isFinite(anchorX) && Number.isFinite(anchorY);
+  if (!id || !Number.isFinite(pageNumber) || pageNumber < 1 || (!hasAnchor && !highlightId) || !text) {
     return null;
   }
 
@@ -353,8 +355,8 @@ export function normalizePaperComment(rawComment) {
     ...rawComment,
     id,
     pageNumber,
-    anchorX,
-    anchorY,
+    ...(hasAnchor ? { anchorX, anchorY } : {}),
+    ...(highlightId ? { highlightId } : {}),
     text,
     author: String(rawComment.author || 'Local user').trim() || 'Local user',
     createdAt,
@@ -370,6 +372,9 @@ export function normalizePaperHighlight(rawHighlight) {
   const id = String(rawHighlight.id || '').trim();
   const pageNumber = Math.round(Number(rawHighlight.pageNumber));
   const text = String(rawHighlight.text || '').trim();
+  const kind = String(rawHighlight.kind || rawHighlight.type || '').trim().toLowerCase() === 'underline'
+    ? 'underline'
+    : 'highlight';
   const boxes = (Array.isArray(rawHighlight.boxes) ? rawHighlight.boxes : [])
     .map((box) => {
       if (!box || typeof box !== 'object' || Array.isArray(box)) {
@@ -408,6 +413,7 @@ export function normalizePaperHighlight(rawHighlight) {
     id,
     pageNumber,
     text,
+    kind,
     boxes,
     createdAt,
     updatedAt

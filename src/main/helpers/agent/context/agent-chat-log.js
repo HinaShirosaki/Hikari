@@ -353,6 +353,21 @@ function summarizeNotebookDraft(payload) {
   return '';
 }
 
+function summarizeProtocolGeneration(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  const protocols = asArray(source.protocols).length
+    ? asArray(source.protocols)
+    : (source.protocol && typeof source.protocol === 'object' ? [source.protocol] : []);
+  if (!protocols.length) {
+    return '';
+  }
+  const names = protocols.map((protocol) => cleanText(protocol?.name || protocol?.title, 160)).filter(Boolean);
+  const prefix = protocols.length === 1
+    ? `Generated protocol ready${names[0] ? `: ${names[0]}` : ''}.`
+    : `Generated ${protocols.length} protocols${names.length ? `: ${names.slice(0, 3).join(', ')}` : ''}.`;
+  return `${prefix} Review it before adding it to Protocol Module.`;
+}
+
 function extractStructuredThinkingTrace(result) {
   const payload = result && typeof result === 'object' ? result : {};
   const candidates = [
@@ -387,9 +402,14 @@ function buildAssistantMetaFromResult(result, requestText = '') {
   const notebookDraftWorkflow = payload.notebook_draft && typeof payload.notebook_draft === 'object'
     ? payload.notebook_draft
     : null;
+  const protocolGeneration = payload.protocol_generation && typeof payload.protocol_generation === 'object'
+    ? payload.protocol_generation
+    : null;
   const notebookPayload = protocolWorkflow?.notebook && typeof protocolWorkflow.notebook === 'object'
     ? protocolWorkflow.notebook
-    : (payload.notebookDraft && typeof payload.notebookDraft === 'object' ? payload.notebookDraft : null);
+    : (notebookDraftWorkflow?.notebook && typeof notebookDraftWorkflow.notebook === 'object'
+      ? notebookDraftWorkflow.notebook
+      : (payload.notebookDraft && typeof payload.notebookDraft === 'object' ? payload.notebookDraft : null));
   const explicitUserQuestion = payload.user_question
     || payload.userQuestion
     || payload.codex_agent?.user_question
@@ -408,6 +428,7 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     codex_session_id: extractCodexSessionId(payload),
     protocol_to_notebook: protocolWorkflow ? cloneJson(protocolWorkflow, null) : null,
     notebook_draft: notebookDraftWorkflow ? cloneJson(notebookDraftWorkflow, null) : null,
+    protocol_generation: protocolGeneration ? cloneJson(protocolGeneration, null) : null,
     codex_agent: payload.codex_agent && typeof payload.codex_agent === 'object'
       ? cloneJson(payload.codex_agent, null)
       : null,
@@ -452,6 +473,9 @@ function buildAssistantTextFromResult(result) {
   const notebookDraftWorkflow = payload.notebook_draft && typeof payload.notebook_draft === 'object'
     ? payload.notebook_draft
     : null;
+  const protocolGeneration = payload.protocol_generation && typeof payload.protocol_generation === 'object'
+    ? payload.protocol_generation
+    : null;
   const parser = payload.parser && typeof payload.parser === 'object' ? payload.parser : {};
   const inventoryLookup = payload.inventory_lookup && typeof payload.inventory_lookup === 'object'
     ? payload.inventory_lookup
@@ -491,11 +515,15 @@ function buildAssistantTextFromResult(result) {
   const codexAgentText = summarizeCodexAgent(codexAgent);
   const skillCommandText = summarizeSkillCommand(skillCommand);
   const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
+  const protocolGenerationText = summarizeProtocolGeneration(protocolGeneration);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
     || summarizeScienceResult(projectScienceQuestion)
     || summarizeScienceResult(resultAnalysis);
   if (notebookDraftText) {
     return notebookDraftText;
+  }
+  if (protocolGenerationText) {
+    return protocolGenerationText;
   }
   if (codexAgentText) {
     return codexAgentText;
@@ -559,6 +587,7 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
       },
       protocol_to_notebook: null,
       notebook_draft: null,
+      protocol_generation: null,
       codex_agent: null,
       purchase_recommendation: null,
       inventory_lookup: null,

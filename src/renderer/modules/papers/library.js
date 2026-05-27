@@ -559,23 +559,11 @@ export function createPapersLibraryController(context) {
     }
   }
 
-  function renderViewerToolbarState() {
-    if (!elements.paperViewerSummarizeBtn) {
-      return;
-    }
-    const activePaper = context.getActivePaper?.() || null;
-    elements.paperViewerSummarizeBtn.disabled = !activePaper || activePaper.summaryStatus === 'running';
-    elements.paperViewerSummarizeBtn.textContent = activePaper?.summaryStatus === 'running'
-      ? 'Summarizing...'
-      : 'Summarize';
-  }
-
   function renderLibrarySidebar(preferredFolderKey = '') {
     const selectedFolder = syncSelectedFolder(preferredFolderKey);
     hideLibraryContextMenu();
     renderUploadTargetSummary(selectedFolder);
     renderFolderList(selectedFolder);
-    renderViewerToolbarState();
     schedulePapersEdgeBleedSync();
   }
 
@@ -602,14 +590,6 @@ export function createPapersLibraryController(context) {
     context.actions?.onPaperSubmit({
       preventDefault() {}
     });
-  }
-
-  function onViewerSummarizeClick() {
-    const activePaper = context.getActivePaper?.() || null;
-    if (!activePaper) {
-      return;
-    }
-    context.actions?.summarizePaper(activePaper.id);
   }
 
   function onFolderListClick(event) {
@@ -745,7 +725,6 @@ export function createPapersLibraryController(context) {
     elements.papersLibraryRail?.addEventListener('contextmenu', onLibraryContextMenu);
     elements.papersLibraryContextMenu?.addEventListener('click', onLibraryContextMenuClick);
     elements.paperList?.addEventListener('click', onPaperListClick);
-    elements.paperViewerSummarizeBtn?.addEventListener('click', onViewerSummarizeClick);
     elements.papersContextNewFolderBtn?.addEventListener('click', onCreateJournalClubFromMenuClick);
     elements.papersContextRenameFolderBtn?.addEventListener('click', onRenameJournalClubFromMenuClick);
     elements.papersContextDeleteFolderBtn?.addEventListener('click', onDeleteJournalClubFromMenuClick);
@@ -789,7 +768,6 @@ export function createPapersLibraryController(context) {
     hideLibraryContextMenu,
     renderLinkTargets,
     renderLibrarySidebar,
-    renderViewerToolbarState,
     schedulePapersEdgeBleedSync
   };
 }

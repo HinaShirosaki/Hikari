@@ -1,6 +1,7 @@
 'use strict';
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { normalizeRelatedComments } = require('../shared/paper-comment-context.js');
 const { createAgentSubAgentRuntime } = require('../tools/agent-sub-agent.js');
 const {
   runCodexPaperContextSubAgent,
@@ -443,6 +444,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
         figure_policy: cleanText(input.figure_policy, 40) || 'when_needed',
         max_papers: batch.length,
         items: batch,
+        snapshot: input.snapshot || null,
         download_promise: input.downloadPromise || null
       }).catch((error) => ({
         ok: false,
@@ -465,7 +467,8 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
           excerpt: cleanText(block?.excerpt, 1800),
           relevance_reason: cleanText(block?.relevance_reason, 260),
           source: cleanText(block?.source, 80),
-          evidence_kind: cleanText(block?.evidence_kind, 40)
+          evidence_kind: cleanText(block?.evidence_kind, 40),
+          related_comments: normalizeRelatedComments(block?.related_comments || block?.relatedComments, { asArray, cleanText })
         };
         const key = [
           normalized.paper_id,
@@ -592,6 +595,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
         copiedContext: copiedContext,
         selectedPapers,
         downloadedPapers,
+        snapshot: source.snapshot || null,
         source,
         parentRequestId: cleanText(source.traceContext?.requestId || source.request_id, 160),
         cwd: cleanText(source.cwd, 2400),

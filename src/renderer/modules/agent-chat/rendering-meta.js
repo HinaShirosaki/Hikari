@@ -44,6 +44,8 @@ export function renderAssistantMeta(meta, messageId = '', { state, safeText, can
   const showCreatePlannedPageButton = Boolean(
     notebookDraft
     && notebookDraft?.save?.mode === 'confirm_before_save'
+    && notebookDraft?.save?.applied !== true
+    && trimText(notebookDraft?.save?.status, 80) !== 'rejected'
     && hasMessageId
     && !existingNotebookEntry
   );

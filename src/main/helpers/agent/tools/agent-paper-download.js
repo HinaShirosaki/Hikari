@@ -442,9 +442,10 @@ function createPaperDownloadRuntime(deps = {}) {
   const terminateBrowserDownloadSession = typeof deps.terminateBrowserDownloadSession === 'function'
     ? deps.terminateBrowserDownloadSession
     : null;
-  const BrowserWindow = typeof deps.BrowserWindow === 'function'
+  const allowDefaultBrowserSession = deps.enableDefaultBrowserSession === true;
+  const BrowserWindow = allowDefaultBrowserSession && typeof deps.BrowserWindow === 'function'
     ? deps.BrowserWindow
-    : (typeof deps.electron?.BrowserWindow === 'function' ? deps.electron.BrowserWindow : null);
+    : (allowDefaultBrowserSession && typeof deps.electron?.BrowserWindow === 'function' ? deps.electron.BrowserWindow : null);
   const paperKnowledgeDatabaseRuntime = deps.paperKnowledgeDatabaseRuntime
     && typeof deps.paperKnowledgeDatabaseRuntime === 'object'
     ? deps.paperKnowledgeDatabaseRuntime

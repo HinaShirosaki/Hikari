@@ -21,7 +21,8 @@ export function createDeveloperMockResponseController({
   syncComposerHeight,
   updateInFlightState,
   ensureAgentState,
-  onNotebookEntriesChanged
+  onNotebookEntriesChanged,
+  openReviewForMessage = () => {}
 }) {
   async function useDeveloperMockResponse() {
     if (runtime.inFlight) {
@@ -95,6 +96,7 @@ export function createDeveloperMockResponseController({
       persist();
       sessionManager.renderSessionList();
       renderHistoryView({ forceScroll: true });
+      openReviewForMessage(assistantMessage);
       developerContextController.render();
       setStatus('Developer mock response injected.');
     } catch (error) {

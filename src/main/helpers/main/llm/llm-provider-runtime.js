@@ -73,6 +73,35 @@ function defaultExtractGeminiResponseText(payload, asArray = defaultAsArray) {
     .trim();
 }
 
+function defaultExtractChatCompletionText(payload, asArray = defaultAsArray) {
+  const message = Array.isArray(payload?.choices) && payload.choices.length > 0
+    ? payload.choices[0]?.message
+    : null;
+  const content = message?.content;
+  if (typeof content === 'string') {
+    return content.trim();
+  }
+  if (Array.isArray(content)) {
+    return asArray(content)
+      .map((item) => {
+        if (typeof item === 'string') {
+          return item;
+        }
+        if (typeof item?.text === 'string') {
+          return item.text;
+        }
+        if (typeof item?.content === 'string') {
+          return item.content;
+        }
+        return '';
+      })
+      .filter(Boolean)
+      .join('\n')
+      .trim();
+  }
+  return '';
+}
+
 function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -169,6 +198,38 @@ async function requestOpenAiResponsesWithBackoff({ endpoint, apiKey, body } = {}
   });
 }
 
+function buildOpenAiCompatibleChatCompletionsUrl(endpoint, fallbackEndpoint = 'https://api.deepseek.com') {
+  const cleanEndpoint = String(endpoint || '').trim()
+    || String(fallbackEndpoint || '').trim()
+    || 'https://api.deepseek.com';
+  try {
+    const parsed = new URL(cleanEndpoint);
+    if (!/\/chat\/completions\/?$/i.test(parsed.pathname)) {
+      parsed.pathname = `${parsed.pathname.replace(/\/+$/, '')}/chat/completions`;
+    }
+    return parsed.toString();
+  } catch {
+    return `${cleanEndpoint.replace(/\/+$/, '')}/chat/completions`;
+  }
+}
+
+async function requestOpenAiCompatibleChatCompletionsWithBackoff({
+  endpoint,
+  apiKey,
+  body,
+  fallbackEndpoint
+} = {}) {
+  return requestJsonWithBackoff({
+    endpoint: buildOpenAiCompatibleChatCompletionsUrl(endpoint, fallbackEndpoint),
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`
+    },
+    body,
+    retryStatuses: [429, 503]
+  });
+}
+
 async function requestClaudeMessagesWithBackoff({ endpoint, apiKey, body } = {}) {
   return requestJsonWithBackoff({
     endpoint,
@@ -220,10 +281,13 @@ module.exports = {
   defaultExtractResponseText,
   defaultExtractClaudeResponseText,
   defaultExtractGeminiResponseText,
+  defaultExtractChatCompletionText,
   sleep,
   sleepWithAbort,
   requestJsonWithBackoff,
   requestOpenAiResponsesWithBackoff,
+  buildOpenAiCompatibleChatCompletionsUrl,
+  requestOpenAiCompatibleChatCompletionsWithBackoff,
   requestClaudeMessagesWithBackoff,
   buildGeminiGenerateContentUrl,
   requestGeminiGenerateContentWithBackoff
