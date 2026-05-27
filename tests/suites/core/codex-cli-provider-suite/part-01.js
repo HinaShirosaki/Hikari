@@ -322,9 +322,9 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         const firstContent = fs.readFileSync(agentsPath, 'utf8');
         assert.equal(agentsPath, path.join(workspaceDir, 'AGENTS.md'));
         assert.match(firstContent, /HIKARI_CODEX_AGENT_INSTRUCTIONS_START/);
-        assert.match(firstContent, /literature-search/);
-        assert.match(firstContent, /paper-download/);
-        assert.match(firstContent, /loads bounded paper context blocks/);
+        assert.match(firstContent, /literature_search/);
+        assert.match(firstContent, /paper_download/);
+        assert.match(firstContent, /load bounded paper context blocks/);
 
         fs.writeFileSync(agentsPath, `${firstContent}\nLocal note stays here.\n`, 'utf8');
         await provider.ensureCodexCliAgentsFile(workspaceDir);

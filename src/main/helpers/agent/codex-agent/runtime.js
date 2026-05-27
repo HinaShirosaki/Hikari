@@ -549,9 +549,9 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     '',
     'Hikari provides rendering and the MCP server. Do not depend on Hikari to replay chat history, choose tools, parse intent, or synthesize for you. Use your Codex session context for continuity and return normal assistant prose for Hikari to render.',
     '',
-    'Use the MCP server named `hikari` for Hikari app data, papers, protocols, notebooks, inventory, memory, and structured tool access. Hikari exposes app tools as direct MCP tools such as `mcp__hikari__literature_search`, `mcp__hikari__paper_download`, and `mcp__hikari__protocol_generation`; do not route through `tool_search`, `tool_info`, or generic `tool_call`. Use native Codex search or the Hikari `web_search` tool for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
+    'Use the MCP server named `hikari` for Hikari app data, papers, protocols, notebooks, inventory, memory, and structured tool access. Hikari exposes app tools as direct MCP tools such as `mcp__hikari__literature_search`, `mcp__hikari__paper_download`, and `mcp__hikari__protocol_generation`; do not route through `tool_search`, `tool_info`, or generic `tool_call`. Use native Codex search for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
     '',
-    'Native Codex `tool_search` is disabled for this run. If a named `mcp__hikari__...` function is not visible, report that the direct Hikari MCP surface is unavailable for that tool. Do not use shell commands or MCP resource reads as a substitute for a named direct tool call.',
+    'Native Codex `tool_search` is disabled for this run. If a named `mcp__hikari__...` function is not visible, report that the direct Hikari MCP surface is unavailable for that tool. Do not use shell commands as a substitute for a named direct tool call.',
     '',
     projectId || projectName
       ? `Selected project:\n${JSON.stringify({ id: projectId, name: projectName }, null, 2)}`

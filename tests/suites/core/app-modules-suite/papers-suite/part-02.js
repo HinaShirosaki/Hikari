@@ -22,6 +22,7 @@ function buildFakePapersViewerFactory() {
         onPlacement: elements.onPlacement,
         onPinSelect: elements.onPinSelect,
         onHighlightSelection: elements.onHighlightSelection,
+        onSelectionSearch: elements.onSelectionSearch,
         onMetadataResolved: elements.onMetadataResolved,
         onClose: elements.onClose
       };
@@ -122,6 +123,24 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     'paper-viewer-summarize-btn',
     'paper-viewer-zoom-label',
     'paper-viewer-open-btn',
+    'paper-selection-menu',
+    'paper-selection-comment-btn',
+    'paper-selection-highlight-btn',
+    'paper-selection-underline-btn',
+    'paper-selection-search-btn',
+    'paper-selection-search-popover',
+    'paper-selection-search-pdf-btn',
+    'paper-selection-search-library-btn',
+    'paper-selection-search-nav',
+    'paper-selection-search-prev-btn',
+    'paper-selection-search-next-btn',
+    'paper-selection-search-count',
+    'paper-selection-search-results',
+    'paper-selection-comment-popover',
+    'paper-selection-comment-text',
+    'paper-selection-comment-save-btn',
+    'paper-selection-comment-cancel-btn',
+    'paper-highlight-comment-popover',
     'paper-comment-panel',
     'paper-comment-toggle-btn',
     'paper-comment-sidebar',
@@ -379,6 +398,113 @@ test('papers highlight normalizer derives boxes from stored quad points', () => 
   assert.deepEqual(JSON.parse(JSON.stringify(highlights[0].boxes)), [
     { x: 0.1, y: 0.2, width: 0.3, height: 0.04 }
   ]);
+});
+test('papers PDF selection search helper finds matching pages and next target', () => {
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+  );
+  const result = viewerModule.buildCurrentPdfSelectionSearchResult([
+    { pageNumber: 1, text: 'Selected kinase appears here. Selected kinase appears again.' },
+    { pageNumber: 2, text: 'A different pathway appears here.' },
+    { pageNumber: 3, text: 'The selected kinase returns in the discussion.' }
+  ], 'selected kinase', 1);
+
+  assert.equal(result.totalMatches, 3);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.pages)), [
+    { pageNumber: 1, count: 2 },
+    { pageNumber: 3, count: 1 }
+  ]);
+  assert.equal(result.targetPageNumber, 3);
+});
+test('papers PDF selection search terms omit short filler words and split hyphenated terms', () => {
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+  );
+  const terms = viewerModule.getPdfSelectionSearchTerms('the β-strand of P53 macrocycles');
+
+  assert.deepEqual(Array.from(terms), ['β-strand', 'strand', 'p53', 'macrocycles']);
+});
+test('papers PDF selection search match summary supports individual matched-word navigation', () => {
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+  );
+  const result = viewerModule.buildPdfSelectionSearchResultFromMatches([
+    { id: 'm3', pageNumber: 3, boxes: [{ x: 0.3, y: 0.2, width: 0.1, height: 0.02 }] },
+    { id: 'm1', pageNumber: 1, boxes: [{ x: 0.1, y: 0.4, width: 0.1, height: 0.02 }] },
+    { id: 'm2', pageNumber: 1, boxes: [{ x: 0.1, y: 0.2, width: 0.1, height: 0.02 }] }
+  ], 1);
+
+  assert.deepEqual(JSON.parse(JSON.stringify(result.pages)), [
+    { pageNumber: 1, count: 2 },
+    { pageNumber: 3, count: 1 }
+  ]);
+  assert.deepEqual(result.matches.map((match) => match.id), ['m2', 'm1', 'm3']);
+  assert.equal(result.targetMatchIndex, 2);
+});
+test('papers database search matches selected text against stored paper records', () => {
+  const papersModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'index.js')
+  );
+  const matches = papersModule.searchPaperDatabaseForSelectedText([
+    {
+      id: 'paper-1',
+      title: 'Unrelated MAPK Paper',
+      linkedName: 'Cancer Study',
+      summary: 'A control paper about a different pathway.'
+    },
+    {
+      id: 'paper-2',
+      title: 'Macrocycle Scaffolds',
+      linkedName: 'Journal Club',
+      methodsExtract: [
+        { title: 'Synthesis', summary: 'A beta strand macrocycle scaffold was optimized by NMR.' }
+      ],
+      pdfBookmarks: [
+        { title: 'Conformational ensembles', pageNumber: 4 }
+      ]
+    }
+  ], 'beta strand macrocycle scaffold');
+
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].paperId, 'paper-2');
+  assert.equal(matches[0].title, 'Macrocycle Scaffolds');
+  assert.equal(matches[0].folderLabel, 'Journal Club');
+});
+test('papers module exposes selected text paper search to the PDF viewer', async () => {
+  const harness = buildPapersManagementHarness();
+  harness.state.papers.push({
+    id: 'paper-2',
+    title: 'Macrocycle Scaffolds',
+    fileName: 'macrocycle.pdf',
+    linkedType: 'project',
+    linkedId: 'p1',
+    linkedName: 'Cancer Study',
+    summary: 'A beta strand macrocycle scaffold was optimized by NMR.',
+    summaryStatus: 'idle',
+    methodsExtract: [],
+    keyReagents: [],
+    keyFigures: [],
+    comments: [],
+    highlights: [],
+    pdfDataUrl: 'data:application/pdf;base64,BBBB',
+    updatedAt: '2026-02-02T00:00:00.000Z'
+  });
+
+  await openPaperInHarness(harness);
+  const result = await harness.viewerFactory.controller.callbacks.onSelectionSearch({
+    scope: 'library',
+    text: 'beta strand macrocycle scaffold'
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.matches[0].paperId, 'paper-2');
+
+  await harness.viewerFactory.controller.callbacks.onSelectionSearch({
+    scope: 'open-paper',
+    paperId: 'paper-2'
+  });
+
+  assert.equal(harness.viewerFactory.controller.activePaperId, 'paper-2');
 });
 test('papers module renders embedded PDF metadata in the right-rail summary section', async () => {
   const harness = buildPapersManagementHarness();

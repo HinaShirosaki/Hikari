@@ -5,11 +5,7 @@ const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
 const {
   CallToolRequestSchema,
-  ListResourcesRequestSchema,
-  ListToolsRequestSchema,
-  ReadResourceRequestSchema,
-  McpError,
-  ErrorCode
+  ListToolsRequestSchema
 } = require('@modelcontextprotocol/sdk/types.js');
 
 const { createAgentMcpGateway } = require('./gateway.js');
@@ -57,7 +53,7 @@ function createAgentMcpStdioServer(deps = {}) {
 
   const server = new Server(
     { name: SERVER_NAME, version: SERVER_VERSION },
-    { capabilities: { tools: {}, resources: {} } }
+    { capabilities: { tools: { listChanged: false } } }
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -80,30 +76,6 @@ function createAgentMcpStdioServer(deps = {}) {
         text: JSON.stringify(result, null, 2)
       }],
       isError: result?.ok === false
-    };
-  });
-
-  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
-    resources: gateway.resourceSearch({ query: '', limit: 40 }).results
-  }));
-
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-    const params = ensureObject(request?.params);
-    const result = gateway.resourceRead({ uri: params.uri });
-    if (!result.ok) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        result.error || `Resource "${params.uri || 'unknown'}" is not available.`
-      );
-    }
-    return {
-      contents: [{
-        uri: params.uri,
-        mimeType: result.mimeType || 'application/json',
-        text: typeof result.contents === 'string'
-          ? result.contents
-          : JSON.stringify(result.contents, null, 2)
-      }]
     };
   });
 

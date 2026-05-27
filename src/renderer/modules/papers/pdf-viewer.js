@@ -27,6 +27,7 @@ import {
 } from './pdf-viewer-page-records.js';
 import {
   renderHighlights,
+  renderSearchHighlights,
   renderPins
 } from './pdf-viewer-overlays.js';
 import {
@@ -36,7 +37,10 @@ import {
   renderPageCanvasToOffscreen,
   renderPageRecord
 } from './pdf-viewer-rendering.js';
-import { getSelectionInfo } from './pdf-viewer-selection.js';
+import {
+  getSelectionInfo,
+  getTextLayerRangeInfo
+} from './pdf-viewer-selection.js';
 
 export {
   clampCommentAnchor,
@@ -48,6 +52,30 @@ const DEFAULT_ZOOM = 1;
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.2;
+const PDF_SELECTION_SEARCH_STOP_WORDS = new Set([
+  'about',
+  'after',
+  'also',
+  'among',
+  'and',
+  'are',
+  'between',
+  'from',
+  'has',
+  'have',
+  'into',
+  'our',
+  'that',
+  'the',
+  'their',
+  'these',
+  'this',
+  'through',
+  'using',
+  'was',
+  'were',
+  'with'
+]);
 
 function escapeHtml(value = '') {
   return String(value || '')
@@ -65,6 +93,123 @@ export function buildHighlightCommentPopoverMarkup(comment = {}) {
       <p><strong>${escapeHtml(author)}</strong></p>
       <p>${escapeHtml(text)}</p>
     `;
+}
+
+export function normalizePdfSelectionSearchText(value = '') {
+  return String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function stripSearchTermEdges(value = '') {
+  return String(value || '').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+}
+
+function shouldKeepSearchTerm(term = '') {
+  const normalized = normalizePdfSelectionSearchText(term);
+  if (!normalized || PDF_SELECTION_SEARCH_STOP_WORDS.has(normalized)) {
+    return false;
+  }
+  return normalized.length >= 3 || /\d/.test(normalized);
+}
+
+export function getPdfSelectionSearchTerms(value = '') {
+  const normalized = normalizePdfSelectionSearchText(value);
+  if (!normalized) {
+    return [];
+  }
+  const terms = [];
+  const addTerm = (rawTerm) => {
+    const term = stripSearchTermEdges(rawTerm).toLowerCase();
+    if (!shouldKeepSearchTerm(term) || terms.includes(term)) {
+      return;
+    }
+    terms.push(term);
+  };
+  normalized.split(/\s+/).forEach((token) => {
+    addTerm(token);
+    token.split(/[-‐‑‒–—/]+/u).forEach(addTerm);
+  });
+  if (!terms.length) {
+    normalized.split(/\s+/).forEach((token) => {
+      const term = stripSearchTermEdges(token).toLowerCase();
+      if (term && !terms.includes(term)) {
+        terms.push(term);
+      }
+    });
+  }
+  return terms.slice(0, 20);
+}
+
+export function countPdfSelectionSearchMatches(sourceText = '', queryText = '') {
+  const source = normalizePdfSelectionSearchText(sourceText);
+  const query = normalizePdfSelectionSearchText(queryText);
+  if (!source || !query) {
+    return 0;
+  }
+  let count = 0;
+  let index = source.indexOf(query);
+  while (index >= 0) {
+    count += 1;
+    index = source.indexOf(query, index + query.length);
+  }
+  return count;
+}
+
+export function buildCurrentPdfSelectionSearchResult(pageTexts = [], queryText = '', currentPageNumber = 1) {
+  const query = normalizePdfSelectionSearchText(queryText);
+  if (!query) {
+    return { query, totalMatches: 0, pages: [], targetPageNumber: 0 };
+  }
+  const pages = (Array.isArray(pageTexts) ? pageTexts : [])
+    .map((item) => {
+      const pageNumber = Math.max(1, Math.round(Number(item?.pageNumber) || 0));
+      const count = countPdfSelectionSearchMatches(item?.text, query);
+      return pageNumber && count > 0 ? { pageNumber, count } : null;
+    })
+    .filter(Boolean)
+    .sort((left, right) => left.pageNumber - right.pageNumber);
+  const currentPage = Math.max(1, Math.round(Number(currentPageNumber) || 1));
+  const target = pages.find((item) => item.pageNumber > currentPage) || pages[0] || null;
+  return {
+    query,
+    totalMatches: pages.reduce((sum, item) => sum + item.count, 0),
+    pages,
+    targetPageNumber: target?.pageNumber || 0
+  };
+}
+
+export function buildPdfSelectionSearchResultFromMatches(matches = [], currentPageNumber = 1) {
+  const normalizedMatches = (Array.isArray(matches) ? matches : [])
+    .filter((match) => match && Math.max(1, Math.round(Number(match.pageNumber) || 0)))
+    .slice()
+    .sort((left, right) => {
+      const pageDelta = (Number(left.pageNumber) || 0) - (Number(right.pageNumber) || 0);
+      if (pageDelta) {
+        return pageDelta;
+      }
+      const leftBox = Array.isArray(left.boxes) ? left.boxes[0] : null;
+      const rightBox = Array.isArray(right.boxes) ? right.boxes[0] : null;
+      const topDelta = (Number(leftBox?.y) || 0) - (Number(rightBox?.y) || 0);
+      return Math.abs(topDelta) > 0.002 ? topDelta : (Number(leftBox?.x) || 0) - (Number(rightBox?.x) || 0);
+    });
+  const pageCounts = new Map();
+  normalizedMatches.forEach((match) => {
+    const pageNumber = Math.max(1, Math.round(Number(match.pageNumber) || 1));
+    pageCounts.set(pageNumber, (pageCounts.get(pageNumber) || 0) + 1);
+  });
+  const currentPage = Math.max(1, Math.round(Number(currentPageNumber) || 1));
+  let targetMatchIndex = normalizedMatches.findIndex((match) => Math.max(1, Math.round(Number(match.pageNumber) || 1)) > currentPage);
+  if (targetMatchIndex < 0 && normalizedMatches.length) {
+    targetMatchIndex = 0;
+  }
+  return {
+    totalMatches: normalizedMatches.length,
+    pages: [...pageCounts.entries()].map(([pageNumber, count]) => ({ pageNumber, count })),
+    matches: normalizedMatches,
+    targetMatchIndex
+  };
 }
 
 export function createPapersPdfViewer(elements = {}) {
@@ -92,6 +237,15 @@ export function createPapersPdfViewer(elements = {}) {
   const selectionCommentBtn = elements.selectionCommentBtn || null;
   const selectionHighlightBtn = elements.selectionHighlightBtn || null;
   const selectionUnderlineBtn = elements.selectionUnderlineBtn || null;
+  const selectionSearchBtn = elements.selectionSearchBtn || null;
+  const selectionSearchPopover = elements.selectionSearchPopover || null;
+  const selectionSearchPdfBtn = elements.selectionSearchPdfBtn || null;
+  const selectionSearchLibraryBtn = elements.selectionSearchLibraryBtn || null;
+  const selectionSearchNav = elements.selectionSearchNav || null;
+  const selectionSearchPrevBtn = elements.selectionSearchPrevBtn || null;
+  const selectionSearchNextBtn = elements.selectionSearchNextBtn || null;
+  const selectionSearchCount = elements.selectionSearchCount || null;
+  const selectionSearchResults = elements.selectionSearchResults || null;
   const selectionCommentPopover = elements.selectionCommentPopover || null;
   const selectionCommentText = elements.selectionCommentText || null;
   const selectionCommentSaveBtn = elements.selectionCommentSaveBtn || null;
@@ -121,6 +275,10 @@ export function createPapersPdfViewer(elements = {}) {
     selectedCommentId: '',
     pendingSelection: null,
     pendingCommentSelection: null,
+    pendingSearchSelection: null,
+    searchMatches: [],
+    activeSearchMatchIndex: -1,
+    searchToneIndex: 0,
     selectionPointerDown: false,
     placementMode: false,
     openExternal: null,
@@ -131,6 +289,7 @@ export function createPapersPdfViewer(elements = {}) {
     onPinSelect: typeof elements.onPinSelect === 'function' ? elements.onPinSelect : null,
     onHighlightSelection: typeof elements.onHighlightSelection === 'function' ? elements.onHighlightSelection : null,
     onSelectionComment: typeof elements.onSelectionComment === 'function' ? elements.onSelectionComment : null,
+    onSelectionSearch: typeof elements.onSelectionSearch === 'function' ? elements.onSelectionSearch : null,
     onBookmarksResolved: typeof elements.onBookmarksResolved === 'function' ? elements.onBookmarksResolved : null,
     onExternalLink: typeof elements.onExternalLink === 'function' ? elements.onExternalLink : null,
     onClose: typeof elements.onClose === 'function' ? elements.onClose : null
@@ -174,6 +333,7 @@ export function createPapersPdfViewer(elements = {}) {
     state.selectionPointerDown = false;
     hideSelectionMenu();
     hideSelectionCommentPopover();
+    hideSelectionSearchPopover();
   }
 
   function setStatus(message, isError = false) {
@@ -232,7 +392,12 @@ export function createPapersPdfViewer(elements = {}) {
   }
 
   function showSelectionMenu() {
-    if (!selectionMenu || !state.pendingSelection?.clientRect || selectionCommentPopover?.hidden === false) {
+    if (
+      !selectionMenu
+      || !state.pendingSelection?.clientRect
+      || selectionCommentPopover?.hidden === false
+      || selectionSearchPopover?.hidden === false
+    ) {
       return;
     }
     selectionMenu.hidden = false;
@@ -246,6 +411,275 @@ export function createPapersPdfViewer(elements = {}) {
     }
     if (selectionCommentText) {
       selectionCommentText.value = '';
+    }
+  }
+
+  function hideSelectionSearchPopover({ clearMatches = true } = {}) {
+    state.pendingSearchSelection = null;
+    if (selectionSearchPopover) {
+      selectionSearchPopover.hidden = true;
+    }
+    if (selectionSearchResults) {
+      selectionSearchResults.innerHTML = '';
+    }
+    if (clearMatches) {
+      clearSelectionSearchMatches();
+    }
+  }
+
+  function renderSelectionSearchMessage(message = '', isError = false) {
+    if (!selectionSearchResults) {
+      return;
+    }
+    const text = String(message || '').trim();
+    selectionSearchResults.innerHTML = text
+      ? `<p class="${isError ? 'is-error' : 'small-note'}">${escapeHtml(text)}</p>`
+      : '';
+  }
+
+  function updateSelectionSearchNav() {
+    const total = state.searchMatches.length;
+    const activeIndex = total ? clamp(state.activeSearchMatchIndex, 0, total - 1) : -1;
+    if (selectionSearchNav) {
+      selectionSearchNav.hidden = total <= 0;
+    }
+    if (selectionSearchPrevBtn) {
+      selectionSearchPrevBtn.disabled = total <= 1;
+    }
+    if (selectionSearchNextBtn) {
+      selectionSearchNextBtn.disabled = total <= 1;
+    }
+    if (selectionSearchCount) {
+      selectionSearchCount.textContent = total ? `${activeIndex + 1} / ${total}` : '0 / 0';
+    }
+  }
+
+  function getActiveSearchMatch() {
+    return state.searchMatches[state.activeSearchMatchIndex] || null;
+  }
+
+  function paintSearchHighlights() {
+    renderSearchHighlights({
+      pageRecords: state.pageRecords,
+      matches: state.searchMatches,
+      activeMatchId: getActiveSearchMatch()?.id || '',
+      activeTone: state.searchToneIndex
+    });
+  }
+
+  function clearSelectionSearchMatches() {
+    state.searchMatches = [];
+    state.activeSearchMatchIndex = -1;
+    state.searchToneIndex = 0;
+    paintSearchHighlights();
+    updateSelectionSearchNav();
+  }
+
+  function buildSearchMatchId(pageNumber, term, index) {
+    return `search-${pageNumber}-${index}-${String(term || '').replace(/[^a-z0-9]+/gi, '-').slice(0, 24)}`;
+  }
+
+  function collectPdfSearchMatches(queryText = '') {
+    const terms = getPdfSelectionSearchTerms(queryText);
+    if (!terms.length) {
+      return [];
+    }
+    const matches = [];
+    state.pageRecords.forEach((record) => {
+      const textLayer = record?.textLayer || null;
+      const doc = textLayer?.ownerDocument || null;
+      if (!textLayer || !doc?.createTreeWalker || !doc?.createRange) {
+        return;
+      }
+      const walker = doc.createTreeWalker(textLayer, 4);
+      let node = walker.nextNode();
+      while (node) {
+        const sourceText = String(node.nodeValue || '');
+        const sourceLower = sourceText.toLowerCase();
+        terms.forEach((term) => {
+          let index = sourceLower.indexOf(term);
+          while (index >= 0) {
+            const range = doc.createRange();
+            try {
+              range.setStart(node, index);
+              range.setEnd(node, index + term.length);
+              const info = getTextLayerRangeInfo({ textLayer, range });
+              if (info?.boxes?.length) {
+                matches.push({
+                  id: buildSearchMatchId(record.pageNumber, term, matches.length + 1),
+                  pageNumber: record.pageNumber,
+                  term,
+                  text: sourceText.slice(index, index + term.length),
+                  boxes: info.boxes,
+                  clientRect: info.clientRect
+                });
+              }
+            } finally {
+              range.detach?.();
+            }
+            index = sourceLower.indexOf(term, index + Math.max(term.length, 1));
+          }
+        });
+        node = walker.nextNode();
+      }
+    });
+    return buildPdfSelectionSearchResultFromMatches(matches, state.pageNumber).matches;
+  }
+
+  function scrollToSearchMatch(match, { behavior = 'smooth' } = {}) {
+    const firstBox = Array.isArray(match?.boxes) ? match.boxes[0] : null;
+    goToPage(match?.pageNumber, {
+      behavior,
+      yRatio: Number(firstBox?.y) || 0
+    });
+  }
+
+  function activateSearchMatch(index, { jump = true, cycleTone = true } = {}) {
+    const total = state.searchMatches.length;
+    if (!total) {
+      updateSelectionSearchNav();
+      paintSearchHighlights();
+      return;
+    }
+    const nextIndex = ((Math.round(Number(index) || 0) % total) + total) % total;
+    state.activeSearchMatchIndex = nextIndex;
+    if (cycleTone) {
+      state.searchToneIndex = (state.searchToneIndex + 1) % 4;
+    }
+    updateSelectionSearchNav();
+    paintSearchHighlights();
+    const match = getActiveSearchMatch();
+    if (jump && match) {
+      scrollToSearchMatch(match);
+      setStatus(`Showing match ${nextIndex + 1} of ${total} on page ${match.pageNumber}.`);
+    }
+  }
+
+  function setPdfSearchMatches(matches = [], targetMatchIndex = 0) {
+    state.searchMatches = Array.isArray(matches) ? matches : [];
+    state.activeSearchMatchIndex = state.searchMatches.length
+      ? clamp(Math.round(Number(targetMatchIndex) || 0), 0, state.searchMatches.length - 1)
+      : -1;
+    state.searchToneIndex = 0;
+    updateSelectionSearchNav();
+    paintSearchHighlights();
+  }
+
+  function renderPdfSearchResults(result = {}) {
+    if (!selectionSearchResults) {
+      return;
+    }
+    const pages = Array.isArray(result.pages) ? result.pages : [];
+    const totalMatches = Math.max(0, Math.round(Number(result.totalMatches) || 0));
+    if (!pages.length || totalMatches <= 0) {
+      renderSelectionSearchMessage('No matching text was found in this PDF.');
+      return;
+    }
+    const matchLabel = `${totalMatches} matched word${totalMatches === 1 ? '' : 's'}`;
+    const pageLabel = `${pages.length} page${pages.length === 1 ? '' : 's'}`;
+    selectionSearchResults.innerHTML = `
+      <p class="small-note">Found ${escapeHtml(matchLabel)} on ${escapeHtml(pageLabel)}.</p>
+      <div class="papers-selection-search-result-list">
+        ${pages.slice(0, 12).map((page) => {
+          const count = Math.max(1, Math.round(Number(page.count) || 1));
+          return `
+            <button
+              type="button"
+              class="papers-selection-search-result"
+              data-paper-selection-search-page="${escapeHtml(String(page.pageNumber))}"
+            >
+              <span class="papers-selection-search-result-title">Page ${escapeHtml(String(page.pageNumber))}</span>
+              <span class="papers-selection-search-result-meta">${escapeHtml(`${count}x`)}</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function renderPaperDatabaseSearchResults(result = {}) {
+    if (!selectionSearchResults) {
+      return;
+    }
+    const matches = Array.isArray(result.matches) ? result.matches : [];
+    if (!matches.length) {
+      clearSelectionSearchMatches();
+      renderSelectionSearchMessage('No matching papers were found in the paper database.');
+      return;
+    }
+    clearSelectionSearchMatches();
+    selectionSearchResults.innerHTML = `
+      <p class="small-note">Found ${escapeHtml(String(matches.length))} matching paper${matches.length === 1 ? '' : 's'}.</p>
+      <div class="papers-selection-search-result-list">
+        ${matches.slice(0, 10).map((match) => {
+          const titleText = String(match.title || 'Untitled paper').trim() || 'Untitled paper';
+          const folderLabel = String(match.folderLabel || '').trim();
+          const metaText = folderLabel || (match.isActive ? 'open' : 'paper');
+          return `
+            <button
+              type="button"
+              class="papers-selection-search-result"
+              data-paper-selection-search-paper="${escapeHtml(String(match.paperId || ''))}"
+            >
+              <span class="papers-selection-search-result-title">${escapeHtml(titleText)}</span>
+              <span class="papers-selection-search-result-meta">${escapeHtml(metaText)}</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function openSelectionSearchPopover() {
+    if (!state.pendingSelection || !selectionSearchPopover) {
+      return;
+    }
+    state.pendingSearchSelection = { ...state.pendingSelection };
+    hideSelectionMenu();
+    hideSelectionCommentPopover();
+    selectionSearchPopover.hidden = false;
+    clearSelectionSearchMatches();
+    renderSelectionSearchMessage('Choose where to search.');
+    positionFloatingElement(selectionSearchPopover, state.pendingSearchSelection.clientRect, { preferBelow: true });
+    selectionSearchPdfBtn?.focus?.();
+  }
+
+  async function runSelectionSearch(scope = 'pdf') {
+    const selection = state.pendingSearchSelection || state.pendingSelection;
+    const selectedText = String(selection?.text || '').trim();
+    if (!selectedText) {
+      renderSelectionSearchMessage('Select text before searching.', true);
+      return;
+    }
+    if (scope === 'pdf') {
+      const matches = collectPdfSearchMatches(selectedText);
+      const result = buildPdfSelectionSearchResultFromMatches(matches, state.pageNumber);
+      renderPdfSearchResults(result);
+      setPdfSearchMatches(result.matches, result.targetMatchIndex);
+      if (result.targetMatchIndex >= 0) {
+        activateSearchMatch(result.targetMatchIndex, { jump: true, cycleTone: false });
+        setStatus(`Found ${result.totalMatches} matched word${result.totalMatches === 1 ? '' : 's'} on ${result.pages.length} page${result.pages.length === 1 ? '' : 's'}.`);
+      }
+      return;
+    }
+    if (typeof state.onSelectionSearch !== 'function') {
+      renderSelectionSearchMessage('Paper database search is unavailable in this build.', true);
+      return;
+    }
+    renderSelectionSearchMessage('Searching paper database...');
+    try {
+      const result = await state.onSelectionSearch({
+        scope: 'library',
+        text: selectedText,
+        paperId: state.paperId
+      });
+      if (result?.ok === false) {
+        renderSelectionSearchMessage(result.error || 'Paper database search failed.', true);
+        return;
+      }
+      renderPaperDatabaseSearchResults(result);
+    } catch (error) {
+      renderSelectionSearchMessage(String(error?.message || error || 'Paper database search failed.'), true);
     }
   }
 
@@ -287,6 +721,7 @@ export function createPapersPdfViewer(elements = {}) {
       pageRecords: state.pageRecords,
       highlights: state.highlights
     });
+    paintSearchHighlights();
   }
 
   function paintPins() {
@@ -559,9 +994,11 @@ export function createPapersPdfViewer(elements = {}) {
     state.selectedCommentId = '';
     state.pendingSelection = null;
     state.pendingCommentSelection = null;
+    state.pendingSearchSelection = null;
     state.placementMode = false;
     hideSelectionMenu();
     hideSelectionCommentPopover();
+    hideSelectionSearchPopover();
     hideHighlightCommentPopover();
     setStageScrollTop(0);
     setTitle('No paper selected');
@@ -572,7 +1009,10 @@ export function createPapersPdfViewer(elements = {}) {
 
   function updatePendingSelection() {
     state.selectionFrame = 0;
-    if (selectionCommentPopover && selectionCommentPopover.hidden === false) {
+    if (
+      selectionCommentPopover?.hidden === false
+      || selectionSearchPopover?.hidden === false
+    ) {
       refreshToolbar();
       return;
     }
@@ -586,10 +1026,12 @@ export function createPapersPdfViewer(elements = {}) {
     }
     if (state.pendingSelection) {
       hideSelectionCommentPopover();
+      hideSelectionSearchPopover();
       showSelectionMenu();
     } else {
       hideSelectionMenu();
       hideSelectionCommentPopover();
+      hideSelectionSearchPopover();
     }
     refreshToolbar();
   }
@@ -751,7 +1193,13 @@ export function createPapersPdfViewer(elements = {}) {
       return;
     }
 
-    const targetTop = Math.max(targetRecord.element.offsetTop - 8, 0);
+    const yRatio = Number.isFinite(Number(options.yRatio))
+      ? clamp(Number(options.yRatio), 0, 1)
+      : 0;
+    const targetOffset = yRatio > 0
+      ? (targetRecord.element.offsetHeight || 0) * yRatio - Math.max((stage.clientHeight || 0) * 0.35, 0)
+      : -8;
+    const targetTop = Math.max(targetRecord.element.offsetTop + targetOffset, 0);
     const behavior = options.behavior === 'smooth' ? 'smooth' : 'auto';
     if (typeof stage.scrollTo === 'function') {
       try {
@@ -958,6 +1406,7 @@ export function createPapersPdfViewer(elements = {}) {
     }
     state.pendingCommentSelection = { ...state.pendingSelection };
     hideSelectionMenu();
+    hideSelectionSearchPopover();
     selectionCommentPopover.hidden = false;
     if (selectionCommentText) {
       selectionCommentText.value = '';
@@ -1010,6 +1459,7 @@ export function createPapersPdfViewer(elements = {}) {
       bookmarks: state.bookmarks,
       selectedCommentId: state.selectedCommentId,
       pendingSelection: state.pendingSelection,
+      pendingSearchSelection: state.pendingSearchSelection,
       placementMode: state.placementMode,
       pdfDocument: state.pdfDocument
     };
@@ -1026,9 +1476,11 @@ export function createPapersPdfViewer(elements = {}) {
     state.selectedCommentId = '';
     state.pendingSelection = null;
     state.pendingCommentSelection = null;
+    state.pendingSearchSelection = null;
     state.placementMode = false;
     hideSelectionMenu();
     hideSelectionCommentPopover();
+    hideSelectionSearchPopover();
     hideHighlightCommentPopover();
     emitBookmarksResolved();
     cancelScrollSync();
@@ -1212,6 +1664,7 @@ export function createPapersPdfViewer(elements = {}) {
         state.bookmarks = previousState.bookmarks;
         state.selectedCommentId = previousState.selectedCommentId;
         state.pendingSelection = previousState.pendingSelection;
+        state.pendingSearchSelection = previousState.pendingSearchSelection;
         state.placementMode = previousState.placementMode;
         emitBookmarksResolved();
         setTitle(state.paperTitle);
@@ -1287,6 +1740,7 @@ export function createPapersPdfViewer(elements = {}) {
   function handleResize() {
     hideSelectionMenu();
     hideSelectionCommentPopover();
+    hideSelectionSearchPopover();
     hideHighlightCommentPopover();
     if (!state.pdfDocument) {
       paintHighlights();
@@ -1304,12 +1758,20 @@ export function createPapersPdfViewer(elements = {}) {
   function handleStageScroll() {
     hideSelectionMenu();
     hideSelectionCommentPopover();
+    if (!state.searchMatches.length) {
+      hideSelectionSearchPopover();
+    }
     hideHighlightCommentPopover();
     scheduleScrollSync();
   }
 
   function handleHighlightHover(event) {
-    if (!hasActiveDocument() || selectionMenu?.hidden === false || selectionCommentPopover?.hidden === false) {
+    if (
+      !hasActiveDocument()
+      || selectionMenu?.hidden === false
+      || selectionCommentPopover?.hidden === false
+      || selectionSearchPopover?.hidden === false
+    ) {
       hideHighlightCommentPopover();
       return;
     }
@@ -1351,6 +1813,57 @@ export function createPapersPdfViewer(elements = {}) {
     });
     selectionCommentBtn?.addEventListener('click', () => {
       openSelectionCommentPopover();
+    });
+    selectionSearchBtn?.addEventListener('click', () => {
+      openSelectionSearchPopover();
+    });
+    selectionSearchPdfBtn?.addEventListener('click', () => {
+      void runSelectionSearch('pdf');
+    });
+    selectionSearchLibraryBtn?.addEventListener('click', () => {
+      void runSelectionSearch('library');
+    });
+    selectionSearchPrevBtn?.addEventListener('click', () => {
+      activateSearchMatch(state.activeSearchMatchIndex - 1);
+    });
+    selectionSearchNextBtn?.addEventListener('click', () => {
+      activateSearchMatch(state.activeSearchMatchIndex + 1);
+    });
+    selectionSearchPopover?.addEventListener('click', (event) => {
+      const pageTarget = event?.target?.closest?.('[data-paper-selection-search-page]');
+      if (pageTarget) {
+        const pageNumber = Math.max(1, Math.round(Number(pageTarget.dataset.paperSelectionSearchPage) || 1));
+        const matchIndex = state.searchMatches.findIndex((match) => match.pageNumber === pageNumber);
+        if (matchIndex >= 0) {
+          activateSearchMatch(matchIndex);
+        } else {
+          goToPage(pageNumber, { behavior: 'smooth' });
+          setStatus(`Jumped to search match on page ${pageNumber}.`);
+        }
+        return;
+      }
+      const paperTarget = event?.target?.closest?.('[data-paper-selection-search-paper]');
+      if (!paperTarget || typeof state.onSelectionSearch !== 'function') {
+        return;
+      }
+      const paperId = String(paperTarget.dataset.paperSelectionSearchPaper || '').trim();
+      if (!paperId) {
+        return;
+      }
+      renderSelectionSearchMessage('Opening paper...');
+      void Promise.resolve(state.onSelectionSearch({
+        scope: 'open-paper',
+        paperId,
+        text: String((state.pendingSearchSelection || state.pendingSelection)?.text || '').trim()
+      })).then((result) => {
+        if (result?.ok === false) {
+          renderSelectionSearchMessage(result.error || 'Unable to open paper.', true);
+        } else {
+          hideSelectionSearchPopover();
+        }
+      }).catch((error) => {
+        renderSelectionSearchMessage(String(error?.message || error || 'Unable to open paper.'), true);
+      });
     });
     selectionCommentSaveBtn?.addEventListener('click', () => {
       saveSelectionComment();
@@ -1397,6 +1910,7 @@ export function createPapersPdfViewer(elements = {}) {
         if (event.key === 'Escape') {
           hideSelectionMenu();
           hideSelectionCommentPopover();
+          hideSelectionSearchPopover();
           hideHighlightCommentPopover();
         }
       });

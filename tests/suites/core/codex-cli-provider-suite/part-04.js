@@ -351,9 +351,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
               ok: true,
               results: []
             };
-          },
-          resourceSearch: () => ({ results: [] }),
-          resourceRead: () => ({ ok: false, error: 'unused' })
+          }
         }
       });
 
@@ -367,7 +365,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
 
       try {
         const response = await client.callTool({
-          name: 'tool_search',
+          name: 'record_lookup',
           arguments: { query: 'paper' }
         });
 
@@ -376,7 +374,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         assert.equal(capturedContext.project.name, 'Atlas');
         assert.equal(capturedContext.traceRequestId, 'req-ctx');
         assert.equal(capturedContext.mcpRequest.method, 'tools/call');
-        assert.equal(capturedContext.mcpRequest.params.name, 'tool_search');
+        assert.equal(capturedContext.mcpRequest.params.name, 'record_lookup');
         assert.equal(response.isError, false);
         assert.equal(Array.isArray(response.content), true);
         assert.equal(response.content[0].type, 'text');

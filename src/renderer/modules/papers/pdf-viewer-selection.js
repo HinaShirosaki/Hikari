@@ -254,3 +254,82 @@ export function getSelectionInfo({ selection, pageLayer } = {}) {
       : null
   };
 }
+
+export function getTextLayerRangeInfo({ textLayer, range } = {}) {
+  if (!textLayer || !range || range.collapsed || !textLayer.contains(range.commonAncestorContainer)) {
+    return null;
+  }
+
+  const layerRect = textLayer.getBoundingClientRect?.();
+  const layerLeft = Number(layerRect?.x ?? layerRect?.left);
+  const layerTop = Number(layerRect?.y ?? layerRect?.top);
+  const parentWidth = Number(layerRect?.width);
+  const parentHeight = Number(layerRect?.height);
+  const pageWidth = Number(textLayer.dataset.pageWidth) || parentWidth;
+  const pageHeight = Number(textLayer.dataset.pageHeight) || parentHeight;
+  if (!Number.isFinite(parentWidth) || !Number.isFinite(parentHeight) || parentWidth <= 0 || parentHeight <= 0) {
+    return null;
+  }
+
+  const rotator = pickRotator(textLayer, layerLeft, layerTop, parentWidth, parentHeight);
+  const clientRects = [];
+  const clientRect = {
+    left: Number.POSITIVE_INFINITY,
+    top: Number.POSITIVE_INFINITY,
+    right: Number.NEGATIVE_INFINITY,
+    bottom: Number.NEGATIVE_INFINITY
+  };
+
+  for (const rect of range.getClientRects()) {
+    const normalizedRect = normalizeClientSelectionRect(rect);
+    if (!normalizedRect) {
+      continue;
+    }
+    clientRect.left = Math.min(clientRect.left, normalizedRect.left);
+    clientRect.top = Math.min(clientRect.top, normalizedRect.top);
+    clientRect.right = Math.max(clientRect.right, normalizedRect.right);
+    clientRect.bottom = Math.max(clientRect.bottom, normalizedRect.bottom);
+    clientRects.push(normalizedRect);
+  }
+
+  const boxes = [];
+  mergeSelectionClientRects(clientRects).forEach((rect) => {
+    const normalized = rotator(
+      rect.left,
+      rect.top,
+      rect.width,
+      rect.height
+    );
+    const left = clamp(normalized.x, 0, 1);
+    const top = clamp(normalized.y, 0, 1);
+    const right = clamp(normalized.x + normalized.width, 0, 1);
+    const bottom = clamp(normalized.y + normalized.height, 0, 1);
+    if (right <= left || bottom <= top) {
+      return;
+    }
+    boxes.push({
+      x: left,
+      y: top,
+      width: right - left,
+      height: bottom - top
+    });
+  });
+
+  if (!boxes.length) {
+    return null;
+  }
+  return {
+    pageNumber: Math.max(1, Math.round(Number(textLayer.dataset.pageNumber) || 1)),
+    pageWidth,
+    pageHeight,
+    boxes,
+    clientRect: Number.isFinite(clientRect.left) && Number.isFinite(clientRect.top)
+      ? {
+          left: clientRect.left,
+          top: clientRect.top,
+          width: Math.max(clientRect.right - clientRect.left, 1),
+          height: Math.max(clientRect.bottom - clientRect.top, 1)
+        }
+      : null
+  };
+}

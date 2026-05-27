@@ -1,7 +1,6 @@
 'use strict';
 
 const {
-  AGENT_TOOL_CATALOG,
   AGENT_TOOL_CALL_CATALOG,
   normalizeToolArgumentsPayload
 } = require('../../tools/agent-tool-loading.js');
@@ -15,21 +14,12 @@ const {
   runAppTool
 } = require('./shared.js');
 
-const CUSTOM_DIRECT_APP_TOOL_IDS = Object.freeze(new Set([
-  'inventory-lookup',
-  'notebook-draft',
-  'protocol-generation'
-]));
-
 const READ_ONLY_APP_TOOL_IDS = Object.freeze(new Set([
   'record-lookup',
-  'protocol-matching',
-  'web-search',
   'purchase-recommendation'
 ]));
 
 const OPEN_WORLD_APP_TOOL_IDS = Object.freeze(new Set([
-  'web-search',
   'literature-search',
   'paper-download',
   'paper-analysis',
@@ -56,6 +46,49 @@ function schemaUsesSharedDefs(schema = {}) {
   }
 }
 
+function collectSchemaRefs(value, refs = new Set()) {
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectSchemaRefs(item, refs));
+    return refs;
+  }
+  if (!value || typeof value !== 'object') {
+    return refs;
+  }
+  const ref = cleanText(value.$ref, 200);
+  const match = ref.match(/^#\/\$defs\/([A-Za-z0-9_-]+)$/);
+  if (match) {
+    refs.add(match[1]);
+  }
+  Object.entries(value).forEach(([key, entryValue]) => {
+    if (key === '$defs') {
+      return;
+    }
+    collectSchemaRefs(entryValue, refs);
+  });
+  return refs;
+}
+
+function pickReferencedDefs(inputSchema = {}, sharedDefs = {}) {
+  const defs = ensureObject(sharedDefs);
+  const picked = {};
+  const pending = [...collectSchemaRefs(inputSchema)];
+  const seen = new Set();
+  while (pending.length) {
+    const name = pending.shift();
+    if (seen.has(name) || !defs[name]) {
+      continue;
+    }
+    seen.add(name);
+    picked[name] = cloneJson(defs[name], {});
+    collectSchemaRefs(defs[name]).forEach((refName) => {
+      if (!seen.has(refName)) {
+        pending.push(refName);
+      }
+    });
+  }
+  return picked;
+}
+
 function buildDirectInputSchema(appToolId = '') {
   const schemaEntry = ensureObject(AGENT_TOOL_CALL_CATALOG[appToolId]);
   const inputSchema = cloneJson(schemaEntry.input_schema, {
@@ -64,7 +97,10 @@ function buildDirectInputSchema(appToolId = '') {
     properties: {}
   });
   if (schemaUsesSharedDefs(inputSchema)) {
-    inputSchema.$defs = cloneJson(AGENT_TOOL_CALL_CATALOG.$defs, {});
+    const referencedDefs = pickReferencedDefs(inputSchema, AGENT_TOOL_CALL_CATALOG.$defs);
+    if (Object.keys(referencedDefs).length) {
+      inputSchema.$defs = referencedDefs;
+    }
   }
   return inputSchema;
 }
@@ -83,43 +119,45 @@ function buildDirectToolAnnotations(appToolId = '') {
   return annotations;
 }
 
-function buildGenericDirectToolDefinition(entry = {}) {
-  const appToolId = cleanText(entry.name, 160);
-  const directName = toDirectMcpToolName(appToolId);
-  const schemaEntry = ensureObject(AGENT_TOOL_CALL_CATALOG[appToolId]);
-  return Object.freeze({
+function createDirectAppTool(appToolId = '', options = {}) {
+  const toolId = cleanText(appToolId, 160);
+  const directName = cleanText(options.name, 160) || toDirectMcpToolName(toolId);
+  const schemaEntry = ensureObject(AGENT_TOOL_CALL_CATALOG[toolId]);
+  const definition = Object.freeze({
     name: directName,
-    description: cleanText(schemaEntry.description, 2400)
-      || cleanText(entry.description, 1200)
-      || `Call the Hikari ${appToolId} tool directly.`,
-    annotations: buildDirectToolAnnotations(appToolId),
-    inputSchema: buildDirectInputSchema(appToolId)
+    description: cleanText(options.description, 2400)
+      || cleanText(schemaEntry.description, 2400)
+      || `Call the Hikari ${toolId} tool directly.`,
+    annotations: ensureObject(options.annotations).title
+      ? cloneJson(options.annotations, {})
+      : buildDirectToolAnnotations(toolId),
+    inputSchema: ensureObject(options.inputSchema).type
+      ? cloneJson(options.inputSchema, {})
+      : buildDirectInputSchema(toolId)
   });
-}
 
-function buildGenericDirectToolHandler(appToolId = '', directName = '') {
-  return async function callGenericDirectAppTool(input = {}, context = {}, deps = {}) {
+  async function callDirectAppTool(input = {}, context = {}, deps = {}) {
     const normalized = normalizeToolArgumentsPayload({
       tool_calls: [{
-        tool_name: appToolId,
+        tool_name: toolId,
         arguments: ensureObject(input)
       }]
     }, {
-      selectedToolNames: [appToolId]
+      selectedToolNames: [toolId]
     });
     if (!normalized.ok) {
       return {
         ok: false,
         status: 'invalid_arguments',
         mcp_tool: directName,
-        app_tool: appToolId,
+        app_tool: toolId,
         error: normalized.error
       };
     }
 
     const result = await runAppTool({
       runTool: deps.runTool,
-      toolId: appToolId,
+      toolId,
       args: normalized.payload.tool_calls[0].arguments,
       context
     });
@@ -130,28 +168,20 @@ function buildGenericDirectToolHandler(appToolId = '', directName = '') {
       ok: result?.ok !== false,
       status,
       mcp_tool: directName,
-      app_tool: appToolId,
+      app_tool: toolId,
       output: cloneJson(result, result),
       error: cleanText(result?.error || result?.result?.error || result?.output?.error, 1200)
     });
-  };
+  }
+
+  return Object.freeze({
+    appToolId: toolId,
+    definition,
+    handler: callDirectAppTool
+  });
 }
 
-const APP_CATALOG_DIRECT_MCP_TOOLS = Object.freeze(
-  AGENT_TOOL_CATALOG
-    .filter((entry) => !CUSTOM_DIRECT_APP_TOOL_IDS.has(entry.name))
-    .map((entry) => {
-      const appToolId = cleanText(entry.name, 160);
-      const definition = buildGenericDirectToolDefinition(entry);
-      return Object.freeze({
-        appToolId,
-        definition,
-        handler: buildGenericDirectToolHandler(appToolId, definition.name)
-      });
-    })
-);
-
 module.exports = {
-  APP_CATALOG_DIRECT_MCP_TOOLS,
+  createDirectAppTool,
   toDirectMcpToolName
 };

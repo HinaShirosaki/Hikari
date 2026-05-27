@@ -1,19 +1,16 @@
 'use strict';
 
-function buildHikariAgentMcpInstructions() {
+function buildHikariAgentMcpInstructionBodyLines() {
   return [
-    '# Hikari Agent MCP Instructions',
-    '',
     'This MCP server is the provider-neutral Hikari app contract. Any agent provider that can use MCP should call these tools for local Hikari data, protocols, notebooks, inventory, papers, memory, and structured app actions.',
     '',
-    'Use direct MCP tools only. This server no longer exposes Hikari app `tool_search`, `tool_info`, `tool_call`, `resource_search`, or `resource_read` as callable tools; the full app tool surface is available as first-class direct MCP tools.',
+    'Use direct MCP tools only. This server does not expose Hikari app `tool_search`, `tool_info`, generic `tool_call`, MCP resources, or any other discovery side channel; the full app tool surface is available as first-class direct MCP tools.',
     '',
     'Direct Hikari MCP tools:',
     '- `inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.',
     '- `chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.',
     '- `record_lookup`: search local projects, protocols, notebooks, workflows, assays, gels, and related records.',
     '- `protocol_lookup`: search local protocols through Hikari protocol matching.',
-    '- `protocol_matching`: rank supplied protocol candidates against local protocols.',
     '- `protocol_generation`: normalize a complete protocol JSON object into the app import format without generating content; set `save: true` in the same call to queue Hikari user approval for adding it to the Protocols module.',
     '- `notebook_draft`: prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.',
     '- `notebook_generation`: generate a protocol-based notebook draft from selected protocol and project context.',
@@ -21,11 +18,7 @@ function buildHikariAgentMcpInstructions() {
     '- `literature_search`: find papers, download selected PDFs when possible, write paper markdown, and load bounded paper context blocks.',
     '- `paper_download`: download a paper PDF into Hikari storage.',
     '- `paper_analysis`: summarize or extract methods from a specific paper.',
-    '- `web_search`: search public web evidence through Hikari provider transport.',
     '- `purchase_recommendation`: search and rank purchasable products.',
-    '- `python_sandbox`: run isolated Python for analysis or artifact generation.',
-    '- `command_line`: run focused local CLI inspection in the project workspace.',
-    '- `sub_agent`: create, message, inspect, list, and delete Codex-backed helper sub-agent sessions.',
     '- `memory`: recall, remember, forget, and list sparse long-term memory records.',
     '- `ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.',
     '',
@@ -44,9 +37,18 @@ function buildHikariAgentMcpInstructions() {
     '',
     'Verification rule:',
     'Separate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.'
+  ];
+}
+
+function buildHikariAgentMcpInstructions() {
+  return [
+    '# Hikari Agent MCP Instructions',
+    '',
+    ...buildHikariAgentMcpInstructionBodyLines()
   ].join('\n');
 }
 
 module.exports = {
+  buildHikariAgentMcpInstructionBodyLines,
   buildHikariAgentMcpInstructions
 };

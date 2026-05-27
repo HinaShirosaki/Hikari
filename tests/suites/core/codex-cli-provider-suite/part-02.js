@@ -107,7 +107,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         capturePath
       };
     }
-    test('agent MCP gateway exposes Hikari tools and instruction resources', async () => {
+    test('agent MCP gateway exposes direct Hikari tools only', async () => {
       const { createAgentMcpGateway } = require(path.join(
         __dirname,
         'src',
@@ -262,7 +262,23 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         }
       });
 
-      const mcpToolNames = createMcpToolDefinitions().map((tool) => tool.name);
+      const mcpTools = createMcpToolDefinitions();
+      const mcpToolNames = mcpTools.map((tool) => tool.name);
+      const directToolDir = path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'mcp-contract',
+        'direct-tools'
+      );
+      const helperDirectToolFiles = new Set(['index.js', 'shared.js', 'generic-app-tool.js']);
+      const directToolFileNames = fs.readdirSync(directToolDir)
+        .filter((name) => name.endsWith('.js') && !helperDirectToolFiles.has(name))
+        .map((name) => name.replace(/\.js$/u, '').replace(/-/g, '_'))
+        .sort();
+      assert.deepEqual([...mcpToolNames].sort(), directToolFileNames);
       assert.deepEqual(mcpToolNames.slice(0, 7), [
         'inventory_lookup',
         'chemical_lookup',
@@ -279,13 +295,27 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(mcpToolNames.includes('protocol_save'), false);
       assert.equal(mcpToolNames.includes('notebook_draft'), true);
       assert.equal(mcpToolNames.includes('notebook_lookup'), true);
+      assert.equal(mcpToolNames.includes('record_lookup'), true);
+      assert.equal(mcpToolNames.includes('literature_search'), true);
+      assert.equal(mcpToolNames.includes('paper_download'), true);
+      assert.equal(mcpToolNames.includes('paper_analysis'), true);
+      assert.equal(mcpToolNames.includes('protocol_matching'), false);
+      assert.equal(mcpToolNames.includes('web_search'), false);
+      assert.equal(mcpToolNames.includes('python_sandbox'), false);
+      assert.equal(mcpToolNames.includes('command_line'), false);
+      assert.equal(mcpToolNames.includes('sub_agent'), false);
+      assert.equal(mcpToolNames.includes('memory'), true);
       assert.equal(mcpToolNames.includes('ask_user'), true);
-      assert.equal(mcpToolNames.indexOf('tool_search') > mcpToolNames.indexOf('ask_user'), true);
-      const askUserDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'ask_user');
-      const protocolGenerationDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'protocol_generation');
-      const notebookDraftDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'notebook_draft');
-      const toolSearchDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'tool_search');
-      const toolCallDefinition = createMcpToolDefinitions().find((tool) => tool.name === 'tool_call');
+      assert.equal(mcpToolNames.includes('tool_search'), false);
+      assert.equal(mcpToolNames.includes('tool_info'), false);
+      assert.equal(mcpToolNames.includes('tool_call'), false);
+      assert.equal(mcpToolNames.includes('resource_search'), false);
+      assert.equal(mcpToolNames.includes('resource_read'), false);
+      const askUserDefinition = mcpTools.find((tool) => tool.name === 'ask_user');
+      const protocolGenerationDefinition = mcpTools.find((tool) => tool.name === 'protocol_generation');
+      const notebookDraftDefinition = mcpTools.find((tool) => tool.name === 'notebook_draft');
+      const literatureSearchDefinition = mcpTools.find((tool) => tool.name === 'literature_search');
+      const paperDownloadDefinition = mcpTools.find((tool) => tool.name === 'paper_download');
       assert.equal(askUserDefinition.annotations.readOnlyHint, true);
       assert.equal(askUserDefinition.annotations.destructiveHint, false);
       assert.equal(askUserDefinition.annotations.openWorldHint, false);
@@ -293,44 +323,35 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(protocolGenerationDefinition.annotations.destructiveHint, false);
       assert.equal(notebookDraftDefinition.annotations.readOnlyHint, true);
       assert.equal(notebookDraftDefinition.annotations.idempotentHint, false);
-      assert.equal(toolSearchDefinition.annotations.readOnlyHint, true);
-      assert.equal(toolCallDefinition.annotations, undefined);
+      assert.equal(literatureSearchDefinition.annotations.openWorldHint, true);
+      assert.equal(literatureSearchDefinition.inputSchema.type, 'object');
+      assert.equal(literatureSearchDefinition.inputSchema.properties.use_codex_paper_context.type, 'boolean');
+      assert.equal(literatureSearchDefinition.inputSchema.properties.max_context_blocks.maximum, 50);
+      assert.equal(literatureSearchDefinition.inputSchema.properties.max_download_concurrency.maximum, 24);
+      assert.equal(literatureSearchDefinition.inputSchema.properties.storage_path.maxLength, 2000);
+      assert.equal(paperDownloadDefinition.annotations.readOnlyHint, false);
+      assert.equal(paperDownloadDefinition.annotations.openWorldHint, true);
 
-      const searchResult = gateway.toolSearch({ query: 'download paper pdf', limit: 6 });
-      assert.equal(searchResult.ok, true);
-      assert.equal(searchResult.results.some((entry) => entry.tool_id === 'paper-download'), true);
-
-      const codexSearchResult = await gateway.callGatewayTool('tool_search', {
-        query: 'notebook draft protocol generation inventory',
-        limit: 30
-      }, {
-        provider: 'codex'
+      const hiddenSearchResult = await gateway.callGatewayTool('tool_search', {
+        query: 'download paper pdf'
       });
-      assert.equal(codexSearchResult.ok, true);
-      assert.equal(codexSearchResult.results.some((entry) => entry.tool_id === 'notebook-draft'), false);
-      assert.equal(codexSearchResult.results.some((entry) => entry.tool_id === 'protocol-generation'), false);
-      assert.equal(codexSearchResult.results.some((entry) => entry.tool_id === 'inventory-lookup'), false);
+      assert.equal(hiddenSearchResult.ok, false);
+      assert.match(hiddenSearchResult.error, /Unknown Hikari MCP gateway tool/);
 
-      const infoResult = gateway.toolInfo({ tool_id: 'literature-search', detail_level: 'schema' });
-      assert.equal(infoResult.ok, true);
-      assert.equal(infoResult.tool.tool_id, 'literature-search');
-      assert.equal(infoResult.tool.input_schema.type, 'object');
-
-      const callResult = await gateway.toolCall({
-        tool_id: 'inventory-lookup',
-        args: {
-          query: 'PEI',
-          limit: 3
-        }
+      const callResult = await gateway.callGatewayTool('record_lookup', {
+        query: 'Protein purification',
+        limit: 3
       }, {
         snapshot: { inventory: [] },
         requestId: 'req-1'
       });
       assert.equal(callResult.ok, true);
-      assert.equal(callResult.status, 'completed');
+      assert.equal(callResult.status, 'matched');
+      assert.equal(callResult.mcp_tool, 'record_lookup');
+      assert.equal(callResult.app_tool, 'record-lookup');
       assert.equal(calls.length, 1);
-      assert.equal(calls[0].toolId, 'inventory-lookup');
-      assert.equal(calls[0].args.query, 'PEI');
+      assert.equal(calls[0].toolId, 'record-lookup');
+      assert.equal(calls[0].args.query, 'Protein purification');
       assert.equal(calls[0].snapshot.inventory.length, 0);
       assert.equal(calls[0].context.requestId, 'req-1');
 
@@ -395,10 +416,12 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         requestId: 'req-protocol-save'
       });
       assert.equal(protocolSaveResult.ok, true);
-      assert.equal(protocolSaveResult.status, 'saved');
-      assert.equal(protocolSaveResult.protocol.id, 'protocol-saved-1');
+      assert.equal(protocolSaveResult.status, 'awaiting_user_approval');
+      assert.equal(protocolSaveResult.save_requested, true);
+      assert.equal(protocolSaveResult.requires_user_approval, true);
+      assert.equal(Object.prototype.hasOwnProperty.call(protocolSaveResult.protocol, 'id'), false);
       assert.equal(calls[calls.length - 1].toolId, 'protocol-generation');
-      assert.equal(calls[calls.length - 1].args.save, true);
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[calls.length - 1].args, 'save'), false);
 
       const notebookDraftResult = await gateway.callGatewayTool('notebook_draft', {
         project_name: 'Atlas',
@@ -437,28 +460,12 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(askUserResult.final_response.status, 'needs_more_info');
       assert.equal(calls[calls.length - 1].toolId, 'notebook-draft');
 
-      const invalidResult = await gateway.toolCall({
-        tool_id: 'inventory-lookup',
-        args: {
-          query: 'PEI',
-          limit: 'many'
-        }
+      const invalidResult = await gateway.callGatewayTool('record_lookup', {
+        query: 'PEI',
+        limit: 'many'
       });
       assert.equal(invalidResult.ok, false);
       assert.equal(invalidResult.status, 'invalid_arguments');
-
-      const instructions = gateway.resourceRead({ uri: 'hikari://instructions/agent-mcp' });
-      assert.equal(instructions.ok, true);
-      assert.match(instructions.contents, /provider-neutral Hikari app contract/);
-      assert.match(instructions.contents, /Direct Hikari MCP tools available without `tool_search`/);
-      assert.match(instructions.contents, /`protocol_generation`/);
-      assert.match(instructions.contents, /save: true/);
-      assert.match(instructions.contents, /`notebook_draft`/);
-      assert.match(instructions.contents, /`ask_user`/);
-      assert.match(instructions.contents, /paper-download/);
-      const legacyInstructions = gateway.resourceRead({ uri: 'enana://instructions/codex-agent' });
-      assert.equal(legacyInstructions.ok, true);
-      assert.match(legacyInstructions.contents, /provider-neutral Hikari app contract/);
     });
   }
 };

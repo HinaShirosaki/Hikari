@@ -120,6 +120,31 @@
                       </svg>
                       <span class="sr-only">Underline</span>
                     </button>
+                    <button type="button" id="paper-selection-search-btn" class="ghost-btn papers-selection-action-btn" aria-label="Search selected text" title="Search selected text">
+                      <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M10.75 5.25a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"></path>
+                        <path d="M15 15 19.25 19.25"></path>
+                      </svg>
+                      <span class="sr-only">Search selected text</span>
+                    </button>
+                  </div>
+                  <div id="paper-selection-search-popover" class="papers-selection-search-popover" hidden>
+                    <div class="papers-selection-search-top">
+                      <div class="papers-selection-search-actions">
+                        <button type="button" id="paper-selection-search-pdf-btn" class="ghost-btn">This PDF</button>
+                        <button type="button" id="paper-selection-search-library-btn" class="ghost-btn">Paper database</button>
+                      </div>
+                      <div id="paper-selection-search-nav" class="papers-selection-search-nav" aria-label="Search match navigation" hidden>
+                        <button type="button" id="paper-selection-search-prev-btn" class="ghost-btn" aria-label="Previous matched word" title="Previous matched word">
+                          <span aria-hidden="true">&lt;</span>
+                        </button>
+                        <span id="paper-selection-search-count" class="papers-selection-search-count">0 / 0</span>
+                        <button type="button" id="paper-selection-search-next-btn" class="ghost-btn" aria-label="Next matched word" title="Next matched word">
+                          <span aria-hidden="true">&gt;</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div id="paper-selection-search-results" class="papers-selection-search-results"></div>
                   </div>
                   <div id="paper-selection-comment-popover" class="papers-selection-comment-popover" hidden>
                     <label>
