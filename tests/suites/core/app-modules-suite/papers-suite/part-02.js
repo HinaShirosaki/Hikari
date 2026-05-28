@@ -441,6 +441,32 @@ test('papers PDF selection search match summary supports individual matched-word
   assert.deepEqual(result.matches.map((match) => match.id), ['m2', 'm1', 'm3']);
   assert.equal(result.targetMatchIndex, 2);
 });
+test('papers selection search popover omits result lists and keeps match arrows horizontal', () => {
+  const viewerSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js'),
+    'utf8'
+  );
+  const css = fs.readFileSync(
+    path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'),
+    'utf8'
+  );
+
+  assert.equal(viewerSource.includes('papers-selection-search-result-list'), false);
+  assert.equal(css.includes('papers-selection-search-result-list'), false);
+  assert.match(css, /\.papers-selection-search-nav\s*\{[\s\S]*display:\s*inline-flex;/);
+});
+test('papers selection search popover dismisses on outside document pointer down', () => {
+  const viewerSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js'),
+    'utf8'
+  );
+
+  assert.match(viewerSource, /function handleDocumentPointerDown\(event\)/);
+  assert.match(viewerSource, /selectionSearchPopover\?\.hidden === false/);
+  assert.match(viewerSource, /!isSelectionSearchPopoverEvent\(event\)/);
+  assert.match(viewerSource, /hideSelectionSearchPopover\(\)/);
+  assert.match(viewerSource, /doc\.addEventListener\('pointerdown', handleDocumentPointerDown\)/);
+});
 test('papers database search matches selected text against stored paper records', () => {
   const papersModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'index.js')

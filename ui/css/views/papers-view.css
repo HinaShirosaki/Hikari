@@ -805,7 +805,7 @@
 
 .papers-selection-search-top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
@@ -826,10 +826,11 @@
 }
 
 .papers-selection-search-nav {
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  min-width: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 82px;
 }
 
 .papers-selection-search-nav[hidden] {
@@ -869,44 +870,6 @@
 
 .papers-selection-search-results .is-error {
   color: var(--danger);
-}
-
-.papers-selection-search-result-list {
-  display: grid;
-  gap: 4px;
-}
-
-.papers-selection-search-result {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-  width: 100%;
-  min-height: 30px;
-  padding: 5px 6px;
-  border: 0;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--text);
-  text-align: left;
-}
-
-.papers-selection-search-result:hover,
-.papers-selection-search-result:focus-visible {
-  background: color-mix(in srgb, var(--surface-subtle) 88%, var(--accent) 12%);
-}
-
-.papers-selection-search-result-title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.papers-selection-search-result-meta {
-  color: var(--muted);
-  font-size: 0.72rem;
-  font-variant-numeric: tabular-nums;
 }
 
 .papers-selection-comment-popover label {

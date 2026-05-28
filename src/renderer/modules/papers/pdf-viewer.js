@@ -427,6 +427,26 @@ export function createPapersPdfViewer(elements = {}) {
     }
   }
 
+  function isSelectionSearchPopoverEvent(event) {
+    const target = event?.target || null;
+    return Boolean(
+      target
+      && (
+        selectionSearchPopover?.contains?.(target)
+        || selectionMenu?.contains?.(target)
+      )
+    );
+  }
+
+  function handleDocumentPointerDown(event) {
+    if (
+      selectionSearchPopover?.hidden === false
+      && !isSelectionSearchPopoverEvent(event)
+    ) {
+      hideSelectionSearchPopover();
+    }
+  }
+
   function renderSelectionSearchMessage(message = '', isError = false) {
     if (!selectionSearchResults) {
       return;
@@ -577,24 +597,7 @@ export function createPapersPdfViewer(elements = {}) {
     }
     const matchLabel = `${totalMatches} matched word${totalMatches === 1 ? '' : 's'}`;
     const pageLabel = `${pages.length} page${pages.length === 1 ? '' : 's'}`;
-    selectionSearchResults.innerHTML = `
-      <p class="small-note">Found ${escapeHtml(matchLabel)} on ${escapeHtml(pageLabel)}.</p>
-      <div class="papers-selection-search-result-list">
-        ${pages.slice(0, 12).map((page) => {
-          const count = Math.max(1, Math.round(Number(page.count) || 1));
-          return `
-            <button
-              type="button"
-              class="papers-selection-search-result"
-              data-paper-selection-search-page="${escapeHtml(String(page.pageNumber))}"
-            >
-              <span class="papers-selection-search-result-title">Page ${escapeHtml(String(page.pageNumber))}</span>
-              <span class="papers-selection-search-result-meta">${escapeHtml(`${count}x`)}</span>
-            </button>
-          `;
-        }).join('')}
-      </div>
-    `;
+    selectionSearchResults.innerHTML = `<p class="small-note">Found ${escapeHtml(matchLabel)} on ${escapeHtml(pageLabel)}.</p>`;
   }
 
   function renderPaperDatabaseSearchResults(result = {}) {
@@ -608,26 +611,7 @@ export function createPapersPdfViewer(elements = {}) {
       return;
     }
     clearSelectionSearchMatches();
-    selectionSearchResults.innerHTML = `
-      <p class="small-note">Found ${escapeHtml(String(matches.length))} matching paper${matches.length === 1 ? '' : 's'}.</p>
-      <div class="papers-selection-search-result-list">
-        ${matches.slice(0, 10).map((match) => {
-          const titleText = String(match.title || 'Untitled paper').trim() || 'Untitled paper';
-          const folderLabel = String(match.folderLabel || '').trim();
-          const metaText = folderLabel || (match.isActive ? 'open' : 'paper');
-          return `
-            <button
-              type="button"
-              class="papers-selection-search-result"
-              data-paper-selection-search-paper="${escapeHtml(String(match.paperId || ''))}"
-            >
-              <span class="papers-selection-search-result-title">${escapeHtml(titleText)}</span>
-              <span class="papers-selection-search-result-meta">${escapeHtml(metaText)}</span>
-            </button>
-          `;
-        }).join('')}
-      </div>
-    `;
+    selectionSearchResults.innerHTML = `<p class="small-note">Found ${escapeHtml(String(matches.length))} matching paper${matches.length === 1 ? '' : 's'}.</p>`;
   }
 
   function openSelectionSearchPopover() {
@@ -1829,42 +1813,6 @@ export function createPapersPdfViewer(elements = {}) {
     selectionSearchNextBtn?.addEventListener('click', () => {
       activateSearchMatch(state.activeSearchMatchIndex + 1);
     });
-    selectionSearchPopover?.addEventListener('click', (event) => {
-      const pageTarget = event?.target?.closest?.('[data-paper-selection-search-page]');
-      if (pageTarget) {
-        const pageNumber = Math.max(1, Math.round(Number(pageTarget.dataset.paperSelectionSearchPage) || 1));
-        const matchIndex = state.searchMatches.findIndex((match) => match.pageNumber === pageNumber);
-        if (matchIndex >= 0) {
-          activateSearchMatch(matchIndex);
-        } else {
-          goToPage(pageNumber, { behavior: 'smooth' });
-          setStatus(`Jumped to search match on page ${pageNumber}.`);
-        }
-        return;
-      }
-      const paperTarget = event?.target?.closest?.('[data-paper-selection-search-paper]');
-      if (!paperTarget || typeof state.onSelectionSearch !== 'function') {
-        return;
-      }
-      const paperId = String(paperTarget.dataset.paperSelectionSearchPaper || '').trim();
-      if (!paperId) {
-        return;
-      }
-      renderSelectionSearchMessage('Opening paper...');
-      void Promise.resolve(state.onSelectionSearch({
-        scope: 'open-paper',
-        paperId,
-        text: String((state.pendingSearchSelection || state.pendingSelection)?.text || '').trim()
-      })).then((result) => {
-        if (result?.ok === false) {
-          renderSelectionSearchMessage(result.error || 'Unable to open paper.', true);
-        } else {
-          hideSelectionSearchPopover();
-        }
-      }).catch((error) => {
-        renderSelectionSearchMessage(String(error?.message || error || 'Unable to open paper.'), true);
-      });
-    });
     selectionCommentSaveBtn?.addEventListener('click', () => {
       saveSelectionComment();
     });
@@ -1905,6 +1853,7 @@ export function createPapersPdfViewer(elements = {}) {
       win.addEventListener('blur', handleTextSelectionPointerUp);
     }
     if (typeof doc?.addEventListener === 'function') {
+      doc.addEventListener('pointerdown', handleDocumentPointerDown);
       doc.addEventListener('selectionchange', schedulePendingSelectionUpdate);
       doc.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {

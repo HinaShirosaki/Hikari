@@ -22,6 +22,8 @@ export { mapExperimentDataToLlmJson };
 export function initAgentChat({
   document: rootDocument = globalThis?.document || (typeof document !== 'undefined' ? document : null),
   windowObject = globalThis?.window || (typeof window !== 'undefined' ? window : null),
+  idPrefix = 'agent',
+  loadPersistentSessions = true,
   state,
   persist,
   createId,
@@ -31,7 +33,7 @@ export function initAgentChat({
   onProtocolsChanged = () => {}
 }) {
   const api = windowObject?.enanaApi || null;
-  const dom = collectAgentChatDom(rootDocument);
+  const dom = collectAgentChatDom(rootDocument, { idPrefix });
   if (!hasRequiredAgentChatDom(dom)) {
     return { render: () => {} };
   }
@@ -189,7 +191,8 @@ export function initAgentChat({
     sessionManager,
     developerToolUi,
     developerContextController,
-    attachmentsController
+    attachmentsController,
+    loadPersistentSessions
   });
 
   bindAgentChatEvents({

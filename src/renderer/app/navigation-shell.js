@@ -54,6 +54,7 @@ export function createNavigationShell({
   const appDockDivider = documentObject.querySelector('.app-dock-divider');
   const moreBtn = documentObject.getElementById('app-more-btn');
   const moreMenu = documentObject.getElementById('app-more-menu');
+  const agentChatRail = documentObject.getElementById('universal-agent-chat-rail');
   const views = [...documentObject.querySelectorAll('.view')];
 
   let appNavButtons = [];
@@ -103,6 +104,21 @@ export function createNavigationShell({
 
   function getAppForView(viewId) {
     return appsByViewId.get(normalize(viewId)) || null;
+  }
+
+  function isAgentChatRailEnabledForView(viewId) {
+    const app = getAppForView(viewId);
+    return app?.agentChatRail === true;
+  }
+
+  function syncAgentChatRailState(activeViewId) {
+    const enabled = isAgentChatRailEnabledForView(activeViewId);
+    documentObject.body.classList.toggle('has-agent-chat-rail', enabled);
+    if (agentChatRail) {
+      agentChatRail.hidden = !enabled;
+      agentChatRail.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+    }
+    return enabled;
   }
 
   function createInlineIcon(iconMarkup) {
@@ -431,6 +447,7 @@ export function createNavigationShell({
 
     const activeNavView = nextView === sequenceViewerDetailViewId ? VIEWS.SEQUENCE_VIEWER : nextView;
     const activeApp = getAppForView(activeNavView);
+    const agentChatRailEnabled = syncAgentChatRailState(activeNavView);
     const dockCapacity = getDockCapacity();
     const activeVisibleInDock = Boolean(activeApp && renderedDockApps.some((app) => app.id === activeApp.id));
     if (activeApp && APP_DOCK_ORDER.includes(activeApp.id) && !activeVisibleInDock && dockCapacity < dockApps.length) {
@@ -450,6 +467,9 @@ export function createNavigationShell({
     }
     closeMoreMenu();
     moduleRuntime.renderView(nextView);
+    if (agentChatRailEnabled) {
+      moduleRuntime.renderAgentChatRail?.();
+    }
     sharedLeftRailRuntime.ensureHandles();
     sharedLeftRailRuntime.syncWidth();
     syncSharedLeftRailShellChrome();

@@ -393,6 +393,7 @@ async function buildAppRegistry(validViewIds) {
       ? rawApp.aliases.map((value) => String(value || '').trim()).filter(Boolean)
       : [];
     const searchInputId = String(rawApp.searchInputId || '').trim();
+    const agentChatRail = rawApp.agentChatRail === true;
 
     if (!id || !label || !viewId || !icon || !placement) {
       throw new Error(`App entry "${id || `index ${index}`}" is missing a required field`);
@@ -434,7 +435,8 @@ async function buildAppRegistry(validViewIds) {
       iconMarkup,
       placement,
       aliases,
-      searchInputId
+      searchInputId,
+      agentChatRail
     };
     if (placement === 'dock') {
       dockApps.push(id);

@@ -13,7 +13,8 @@ export const APP_REGISTRY = [
       "dashboard",
       "overview"
     ],
-    "searchInputId": ""
+    "searchInputId": "",
+    "agentChatRail": false
   },
   {
     "id": "protocols",
@@ -26,7 +27,8 @@ export const APP_REGISTRY = [
       "protocol",
       "procedure"
     ],
-    "searchInputId": ""
+    "searchInputId": "",
+    "agentChatRail": false
   },
   {
     "id": "biology-notebook",
@@ -40,7 +42,8 @@ export const APP_REGISTRY = [
       "bio notebook",
       "wet lab"
     ],
-    "searchInputId": ""
+    "searchInputId": "",
+    "agentChatRail": false
   },
   {
     "id": "chemicals",
@@ -54,7 +57,8 @@ export const APP_REGISTRY = [
       "reagents",
       "inventory chemicals"
     ],
-    "searchInputId": "chemical-search"
+    "searchInputId": "chemical-search",
+    "agentChatRail": false
   },
   {
     "id": "sample-inventory",
@@ -70,7 +74,8 @@ export const APP_REGISTRY = [
       "sample inventory",
       "sampleinventory"
     ],
-    "searchInputId": "sample-search"
+    "searchInputId": "sample-search",
+    "agentChatRail": false
   },
   {
     "id": "assay",
@@ -83,7 +88,8 @@ export const APP_REGISTRY = [
       "assays",
       "plate"
     ],
-    "searchInputId": ""
+    "searchInputId": "",
+    "agentChatRail": false
   },
   {
     "id": "gel",
@@ -97,7 +103,8 @@ export const APP_REGISTRY = [
       "blot",
       "western"
     ],
-    "searchInputId": "gel-search"
+    "searchInputId": "gel-search",
+    "agentChatRail": false
   },
   {
     "id": "projects",
@@ -109,7 +116,8 @@ export const APP_REGISTRY = [
     "aliases": [
       "project"
     ],
-    "searchInputId": ""
+    "searchInputId": "",
+    "agentChatRail": false
   },
   {
     "id": "workflows",
@@ -121,7 +129,8 @@ export const APP_REGISTRY = [
     "aliases": [
       "workflow"
     ],
-    "searchInputId": ""
+    "searchInputId": "",
+    "agentChatRail": false
   },
   {
     "id": "papers",
@@ -135,7 +144,8 @@ export const APP_REGISTRY = [
       "literature",
       "journal"
     ],
-    "searchInputId": ""
+    "searchInputId": "",
+    "agentChatRail": false
   },
   {
     "id": "agent",
@@ -149,7 +159,8 @@ export const APP_REGISTRY = [
       "chat",
       "lab assistant"
     ],
-    "searchInputId": ""
+    "searchInputId": "",
+    "agentChatRail": false
   },
   {
     "id": "sequence-viewer",
@@ -164,7 +175,8 @@ export const APP_REGISTRY = [
       "sequence viewer",
       "dna"
     ],
-    "searchInputId": ""
+    "searchInputId": "",
+    "agentChatRail": false
   },
   {
     "id": "tools",
@@ -178,7 +190,8 @@ export const APP_REGISTRY = [
       "toolbox",
       "calculator"
     ],
-    "searchInputId": ""
+    "searchInputId": "",
+    "agentChatRail": false
   },
   {
     "id": "settings",
@@ -191,7 +204,8 @@ export const APP_REGISTRY = [
       "setting",
       "preferences"
     ],
-    "searchInputId": ""
+    "searchInputId": "",
+    "agentChatRail": false
   }
 ];
 

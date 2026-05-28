@@ -112,6 +112,23 @@ export function createRendererModuleRuntime(config = {}) {
         modules.biologyNotebook?.openEntry?.(entryId);
       }
     }),
+    agentChatRail: initAndRegisterModule(moduleRegistry, 'agentChatRail', initAgentChat, {
+      idPrefix: 'agent-rail',
+      loadPersistentSessions: false,
+      state,
+      persist,
+      createId,
+      safeText,
+      onNotebookEntriesChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged,
+      onProtocolsChanged: () => {
+        rendererServices.protocol.handleProtocolsChanged();
+        modules.protocol?.renderList?.();
+      },
+      onOpenNotebookEntry: (entryId = '') => {
+        showView(views.BIOLOGY_NOTEBOOK);
+        modules.biologyNotebook?.openEntry?.(entryId);
+      }
+    }),
     workflowManagement: initAndRegisterModule(moduleRegistry, 'workflowManagement', initWorkflowManagement, {
       state,
       persist,
@@ -263,6 +280,7 @@ export function createRendererModuleRuntime(config = {}) {
   return {
     modules,
     renderAll,
+    renderAgentChatRail: () => modules.agentChatRail.render(),
     renderView
   };
 }

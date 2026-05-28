@@ -56,6 +56,28 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(registry.apps.some((app) => app.viewId === 'personal-inventory-view'), false);
     });
 
+    test('universal agent chat rail is shell-scoped and registry gated', () => {
+      const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+      const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
+      const generatedRegistry = readLocalSource('src', 'renderer', 'modules', 'app-registry.generated.js');
+      const rendererShellSource = readRendererShellSource();
+      const moduleRuntimeSource = readSource('src/renderer/module-runtime.js');
+      const domBindingsSource = readLocalSource('src', 'renderer', 'modules', 'agent-chat', 'dom-bindings.js');
+      const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
+
+      assert.match(html, /id="universal-agent-chat-rail"/);
+      assert.match(html, /id="agent-rail-chat-history"/);
+      assert.equal((registry.apps || []).every((app) => app.agentChatRail !== true), true);
+      assert.match(generatedRegistry, /"agentChatRail": false/);
+      assert.match(rendererShellSource, /app\?\.agentChatRail === true/);
+      assert.match(rendererShellSource, /agentChatRail\.hidden = !enabled/);
+      assert.match(rendererShellSource, /moduleRuntime\.renderAgentChatRail\?\.\(\)/);
+      assert.match(moduleRuntimeSource, /idPrefix:\s*'agent-rail'/);
+      assert.match(moduleRuntimeSource, /loadPersistentSessions:\s*false/);
+      assert.match(domBindingsSource, /const id = \(suffix\) => `\$\{idPrefix\}-\$\{suffix\}`;/);
+      assert.match(coreCss, /body\.has-agent-chat-rail \.workspace-shell/);
+    });
+
     test('renderer routes personal inventory aliases to merged sample workspace', () => {
       const source = readRendererShellSource();
       const moduleRuntimeSource = readSource('src/renderer/module-runtime.js');
