@@ -10,6 +10,9 @@ import {
 export { mapExperimentDataToLlmJson };
 
 export function buildStateSnapshot(state, projectId) {
+  const agentChatContext = state.agentChatContext && typeof state.agentChatContext === 'object'
+    ? state.agentChatContext
+    : {};
   const filteredProjects = projectId
     ? asArray(state.projects).filter((project) => project.id === projectId)
     : asArray(state.projects);
@@ -34,6 +37,18 @@ export function buildStateSnapshot(state, projectId) {
     .filter((paper) => !projectIds.size || (paper.linkedType === 'project' && projectIds.has(paper.linkedId)))
     .slice(0, 60)
     .map(mapPaper);
+  const activePaperId = trimText(agentChatContext.paperId, 120);
+  const activePaper = activePaperId
+    ? asArray(state.papers).find((paper) => trimText(paper?.id, 120) === activePaperId)
+    : null;
+  const activePaperRecord = activePaper ? mapPaper(activePaper) : null;
+  const activePaperMarkdownPath = trimText(
+    agentChatContext.knowledgeMarkdownRelativePath
+      || activePaperRecord?.transformed_markdown_relative_path
+      || activePaperRecord?.knowledge_markdown_relative_path,
+    2400
+  );
+  const paperAgentSessionPrompt = trimText(agentChatContext.sessionPrompt, 2400);
   const protocols = asArray(state.protocols)
     .slice(0, 120)
     .map((protocol) => ({
@@ -70,6 +85,15 @@ export function buildStateSnapshot(state, projectId) {
     gelAnalyses,
     experimentData,
     papers,
+    activePaper: activePaperRecord,
+    paper_agent: activePaperRecord ? {
+      active_paper_id: trimText(agentChatContext.paperId || activePaperRecord.id, 220),
+      active_paper_title: trimText(agentChatContext.paperTitle || activePaperRecord.title, 320),
+      session_prompt: paperAgentSessionPrompt,
+      transformed_markdown_relative_path: activePaperMarkdownPath,
+      knowledge_status: trimText(agentChatContext.knowledgeStatus || activePaperRecord.knowledge_status, 80),
+      has_transformed_markdown: Boolean(activePaperMarkdownPath)
+    } : null,
     inventory: {
       personal: [],
       chemicals: []
@@ -83,6 +107,7 @@ export function buildStateSnapshot(state, projectId) {
       assays: assays.length,
       gelAnalyses: gelAnalyses.length,
       papers: papers.length,
+      active_paper: activePaper ? 1 : 0,
       inventory_chemicals: chemicalCount,
       inventory_personal_sections: personalSections.length,
       inventory_personal_items: personalItemCount

@@ -271,6 +271,113 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       assert.equal(result.warnings, undefined);
       assert.equal(traceRows.some((row) => row.stage === 'codex_agent_completed'), true);
     });
+    test('codex agent runtime normalizes authored protocol prose through protocol generation fallback', async () => {
+      const { createCodexAgentRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'codex-agent',
+        'runtime.js'
+      ));
+      const toolCalls = [];
+      const lifecycleEvents = [];
+      const runtime = createCodexAgentRuntime({
+        cleanText: (value, maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        requestCodexAgentText: async () => ({
+          text: [
+            '**Protocol: TEVp-ZF5.3 Fusion Protein Expression and Validation**',
+            '',
+            'This is reconstructed from the transformed paper methods.',
+            '',
+            '**Materials**',
+            '- pET28a-TEVp-ZF5.3 plasmid',
+            '- E. coli BL21(DE3)',
+            '- IPTG',
+            '',
+            '**Step-by-Step**',
+            '1. Clone ZF5.3 onto the C terminus of TEVp and confirm by sequencing.',
+            '2. Transform the plasmid into BL21(DE3) cells and select colonies.',
+            '3. Induce expression with IPTG and purify the fusion protein.',
+            '',
+            '**Controls**',
+            '- Uninduced culture control',
+            '',
+            '**Key Caveats**',
+            '- Convert rpm to g for the local rotor.'
+          ].join('\n'),
+          metadata: {
+            session_id: 'codex-protocol-prose-session'
+          }
+        }),
+        runTool: async (toolId, args, snapshot, context) => {
+          toolCalls.push({ toolId, args, snapshot, context });
+          return {
+            ok: true,
+            result: {
+              ok: true,
+              status: 'normalized',
+              protocol: {
+                name: args.protocol.name,
+                purpose: args.protocol.purpose,
+                materials: args.protocol.materials,
+                steps: args.protocol.steps.map((step, index) => ({
+                  id: `step-${index + 1}`,
+                  text: step.text,
+                  placeholders: []
+                })),
+                troubleshooting: args.protocol.troubleshooting
+              },
+              summary: 'Prepared protocol JSON.'
+            }
+          };
+        },
+        recordLifecycleEvent: (_recorder, event = {}) => {
+          lifecycleEvents.push(event);
+        }
+      });
+
+      const result = await runtime.run({
+        message: 'Generate a step-by-step experimental protocol from this paper. Include materials, timing, controls, and key caveats.',
+        model: 'gpt-5.4',
+        cwd: '/tmp/enana-workspace',
+        snapshot: {
+          activePaper: {
+            id: 'paper-1',
+            title: 'Protease specificity paper'
+          }
+        }
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(toolCalls.length, 1);
+      assert.equal(toolCalls[0].toolId, 'protocol-generation');
+      assert.equal(toolCalls[0].args.protocol.name, 'TEVp-ZF5.3 Fusion Protein Expression and Validation');
+      assert.deepEqual(toolCalls[0].args.protocol.materials, [
+        'pET28a-TEVp-ZF5.3 plasmid',
+        'E. coli BL21(DE3)',
+        'IPTG'
+      ]);
+      assert.equal(toolCalls[0].args.protocol.steps.length, 3);
+      assert.match(toolCalls[0].args.protocol.troubleshooting, /Controls:/);
+      assert.match(toolCalls[0].args.protocol.troubleshooting, /Key caveats:/);
+      assert.equal(result.protocol_generation.status, 'awaiting_user_approval');
+      assert.equal(result.protocol_generation.save_requested, true);
+      assert.equal(result.protocol_generation.protocol.name, 'TEVp-ZF5.3 Fusion Protein Expression and Validation');
+      assert.equal(result.codex_agent.answer, 'The protocol is ready for review.');
+      assert.equal(
+        lifecycleEvents.some((event) => (
+          event.stage === 'codex_agent_direct_tool_fallback'
+          && event.status === 'started'
+          && /protocol prose/.test(event.message)
+        )),
+        true
+      );
+    });
     test('codex agent runtime resumes the Codex session stored on a Hikari chat', async () => {
       const { createCodexAgentRuntime } = require(path.join(
         __dirname,

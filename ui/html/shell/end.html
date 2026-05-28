@@ -1,39 +1,38 @@
       </section>
-      <aside id="universal-agent-chat-rail" class="universal-agent-chat-rail" aria-label="Agent Chat Rail" aria-hidden="true" hidden>
-        <header class="universal-agent-chat-rail__header">
-          <div>
-            <p class="universal-agent-chat-rail__kicker">Agent</p>
-            <h2>Chat</h2>
-          </div>
-          <p id="agent-rail-status" class="small-note agent-status-pill">Ready.</p>
-        </header>
-        <div class="agent-conversation-shell universal-agent-chat-rail__conversation">
-          <div class="agent-history-viewport">
-            <div id="agent-rail-chat-history" class="agent-chat-history universal-agent-chat-rail__history" aria-live="polite"></div>
-            <button type="button" id="agent-rail-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden>Latest</button>
-          </div>
-          <div class="agent-composer-shell universal-agent-chat-rail__composer">
-            <div class="stack-form agent-composer-card">
-              <input id="agent-rail-attachment-input" type="file" multiple hidden />
-              <label class="agent-composer-label">
-                <span>Message</span>
-                <textarea id="agent-rail-message-input" rows="3" placeholder="Ask Hikari about this workspace."></textarea>
-              </label>
-              <div id="agent-rail-attachment-list" class="agent-attachment-list" hidden></div>
-              <div class="agent-composer-toolbar">
-                <div class="agent-composer-toolbar-start">
-                  <button type="button" id="agent-rail-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
-                  <label class="agent-composer-project agent-composer-project-inline">
-                    <span class="sr-only">Project Scope</span>
-                    <select id="agent-rail-project-select" aria-label="Project Scope">
-                      <option value="">All projects</option>
-                    </select>
-                  </label>
+      <aside id="universal-agent-chat-rail" class="universal-agent-chat-rail" aria-label="Agent Chat Rail" aria-hidden="true" data-state="collapsed" hidden>
+        <button type="button" id="agent-chat-rail-toggle-btn" class="universal-agent-chat-rail__toggle" aria-label="Open agent chat rail" aria-expanded="false" title="Open chat">&lt;</button>
+        <div class="universal-agent-chat-rail__content">
+          <header class="universal-agent-chat-rail__header">
+            <div>
+              <h2>Chat</h2>
+            </div>
+          </header>
+          <div class="agent-conversation-shell universal-agent-chat-rail__conversation">
+            <div class="agent-history-viewport">
+              <div id="agent-rail-chat-history" class="agent-chat-history universal-agent-chat-rail__history" aria-live="polite"></div>
+              <button type="button" id="agent-rail-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden>Latest</button>
+            </div>
+            <div class="agent-composer-shell universal-agent-chat-rail__composer">
+              <div class="stack-form agent-composer-card">
+                <input id="agent-rail-attachment-input" type="file" multiple hidden />
+                <div id="agent-rail-quick-prompts" class="agent-rail-quick-prompts" aria-label="Common paper prompts">
+                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Generate a step-by-step experimental protocol from this paper. Include materials, timing, controls, and key caveats.">Generate protocol</button>
+                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Summarize the main finding, evidence, and limitations of this paper.">Summarize</button>
+                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Extract the methods that are directly reusable for my experiment.">Extract methods</button>
                 </div>
-                <div class="form-actions agent-composer-actions">
-                  <button type="button" id="agent-rail-send-btn" class="primary-btn">Send</button>
-                  <button type="button" id="agent-rail-stop-btn" class="danger-btn" hidden>Stop</button>
-                  <button type="button" id="agent-rail-clear-btn" class="ghost-btn">New</button>
+                <label class="agent-composer-label">
+                  <span>Message</span>
+                  <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this paper."></textarea>
+                </label>
+                <div id="agent-rail-attachment-list" class="agent-attachment-list" hidden></div>
+                <div class="agent-composer-toolbar">
+                  <div class="agent-composer-toolbar-start">
+                    <button type="button" id="agent-rail-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
+                  </div>
+                  <div class="form-actions agent-composer-actions">
+                    <button type="button" id="agent-rail-send-btn" class="primary-btn">Send</button>
+                    <button type="button" id="agent-rail-stop-btn" class="danger-btn" hidden>Stop</button>
+                  </div>
                 </div>
               </div>
             </div>

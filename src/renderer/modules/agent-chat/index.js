@@ -195,6 +195,20 @@ export function initAgentChat({
     loadPersistentSessions
   });
 
+  function focusComposer() {
+    dom.input?.focus?.();
+    shell.syncComposerHeight();
+  }
+
+  function primeHiddenContext(context = {}) {
+    const didPrime = payloadBuilder.primeHiddenContext?.(context);
+    if (!didPrime) {
+      return false;
+    }
+    focusComposer();
+    return true;
+  }
+
   bindAgentChatEvents({
     dom,
     api,
@@ -214,6 +228,8 @@ export function initAgentChat({
   });
 
   return {
+    focusComposer,
+    primeHiddenContext,
     render
   };
 }

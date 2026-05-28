@@ -29,6 +29,7 @@ function buildHikariAgentMcpInstructionBodyLines() {
     '- Use `paper_download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.',
     '- Use `paper_analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.',
     '- Use direct `protocol_generation` only after complete protocol JSON already exists.',
+    '- When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first and then call `protocol_generation` with `save: true`; do not return only markdown or prose.',
     '- When the user asks to save or add a generated protocol, call `protocol_generation` once with `save: true`; Hikari will ask the user to approve or reject the generated protocol.',
     '- Use direct `notebook_draft` for planned next-experiment notebook drafts.',
     '',

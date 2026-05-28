@@ -74,8 +74,8 @@ export function createAgentRequestController(deps) {
     if (runtime.inFlight) {
       return;
     }
-    const { rawMessageText, attachments, messageText } = payloadBuilder.getDraftRequest();
-    if (!messageText && !attachments.length) {
+    const { rawMessageText, attachments, messageText, hiddenContexts } = payloadBuilder.getDraftRequest();
+    if (!rawMessageText && !attachments.length) {
       return;
     }
     if (!api?.agentChat) {
@@ -100,6 +100,7 @@ export function createAgentRequestController(deps) {
     persist();
     input.value = '';
     attachmentsController.reset();
+    payloadBuilder.consumeHiddenContexts?.();
     syncComposerHeight();
     renderHistoryView({ forceScroll: true });
 
@@ -125,7 +126,7 @@ export function createAgentRequestController(deps) {
         conversation: toConversation(state.agentChat.messages),
         stateSnapshot,
         llm: payloadBuilder.buildAgentLlmPayload(),
-        agent: payloadBuilder.buildAgentFlagsPayload()
+        agent: payloadBuilder.buildAgentFlagsPayload({ hiddenContexts })
       });
       if (!result?.ok) {
         if (result?.canceled === true) {

@@ -169,6 +169,14 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
           reasoningEffort: 'high'
         },
         agent: {
+          hiddenContexts: [{
+            kind: 'paper-selection',
+            label: 'Selected paper text',
+            text: 'SUMO1 signal is weak in the selected paragraph.',
+            paperId: 'paper-1',
+            paperTitle: 'Atlas Uploaded Paper',
+            pageNumber: 3
+          }],
           selectionInsight: {
             actionType: 'what_is_it',
             selectedText: 'SUMO1'
@@ -202,6 +210,9 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
       assert.equal(codexRunInput.model, 'gpt-5.4');
       assert.equal(codexRunInput.reasoningEffort, 'high');
       assert.equal(codexRunInput.projectName, 'Atlas');
+      assert.match(codexRunInput.message, /not visible in the user composer/);
+      assert.match(codexRunInput.message, /SUMO1 signal is weak in the selected paragraph/);
+      assert.match(codexRunInput.message, /User question:\nWhy was SUMO1 weak\?/);
       assert.equal(codexRunInput.selectionInsight.selectedText, 'SUMO1');
       assert.equal(codexRunInput.attachments[0].name, 'atlas.pdf');
       assert.deepEqual(codexRunInput.conversation, []);

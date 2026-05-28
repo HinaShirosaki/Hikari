@@ -433,6 +433,7 @@ export function createPapersActions(context) {
         resolveBytes: resolvePaperPdfBytes,
         onOpenExternal: openPaperPdf
       });
+      context.onActivePaperChanged?.(paper);
       context.renderLibrarySidebar?.(libraryState.selectedFolderKey);
       const opened = await openPaperPromise;
       if (!opened) {

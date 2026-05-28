@@ -1148,9 +1148,11 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .agent-composer-card textarea {
+  --agent-composer-min-height: 92px;
+  --agent-composer-max-height: 220px;
   width: 100%;
-  min-height: 92px;
-  max-height: 220px;
+  min-height: var(--agent-composer-min-height);
+  max-height: var(--agent-composer-max-height);
   border: 0;
   padding: 0;
   margin: 0;

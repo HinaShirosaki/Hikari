@@ -346,7 +346,23 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
           selectedText: 'weak conjugation'
         },
         snapshot: {
-          data_file_path: '/tmp/enana-data.json'
+          data_file_path: '/tmp/enana-data.json',
+          settings: {
+            storagePath: '/tmp/enana-storage'
+          },
+          activePaper: {
+            id: 'paper-1',
+            title: 'Atlas SUMO1 pilot paper',
+            knowledge_markdown_relative_path: 'KnowledgeBase/papers.md/atlas-sumo1/paper.md'
+          },
+          paper_agent: {
+            active_paper_id: 'paper-1',
+            active_paper_title: 'Atlas SUMO1 pilot paper',
+            session_prompt: 'This Papers chat is scoped to the active PDF. Read the transformed markdown before answering paper-specific questions.',
+            transformed_markdown_relative_path: 'KnowledgeBase/papers.md/atlas-sumo1/paper.md',
+            knowledge_status: 'ready',
+            has_transformed_markdown: true
+          }
         },
         cwd: path.parse('/tmp/enana-workspace').root,
         model: 'gpt-5.4',
@@ -370,8 +386,14 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.equal(calls[0].resumeSessionId, '');
       assert.match(calls[0].prompt, /Codex Chat Turn/);
       assert.match(calls[0].prompt, /Current user request:\nWhy was SUMO1 conjugation weak\?/);
+      assert.match(calls[0].prompt, /Protocol generation handoff:/);
+      assert.match(calls[0].prompt, /mcp__hikari__protocol_generation/);
+      assert.match(calls[0].prompt, /Do not answer only with markdown or prose/);
       assert.doesNotMatch(calls[0].prompt, /Recent conversation:/);
       assert.match(calls[0].prompt, /Selection insight context:/);
+      assert.match(calls[0].prompt, /Paper agent session:/);
+      assert.match(calls[0].prompt, /Read the transformed markdown before answering paper-specific questions/);
+      assert.match(calls[0].prompt, /\/tmp\/enana-storage\/KnowledgeBase\/papers\.md\/atlas-sumo1\/paper\.md/);
       assert.match(calls[0].prompt, /pilot\.pdf/);
       assert.doesNotMatch(calls[0].prompt, /"assistant_text"/);
       const mcpContext = JSON.parse(calls[0].envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT);
@@ -382,6 +404,9 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.equal(mcpContext.codexSessionId, '');
       assert.deepEqual(mcpContext.conversation, []);
       assert.equal(mcpContext.project.name, 'Atlas SUMO1');
+      assert.equal(mcpContext.activePaper.title, 'Atlas SUMO1 pilot paper');
+      assert.equal(mcpContext.paperAgent.transformed_markdown_relative_path, 'KnowledgeBase/papers.md/atlas-sumo1/paper.md');
+      assert.equal(mcpContext.paperAgent.transformed_markdown_path, '/tmp/enana-storage/KnowledgeBase/papers.md/atlas-sumo1/paper.md');
       assert.equal(mcpContext.dataFilePath, '/tmp/enana-data.json');
       assert.deepEqual(
         JSON.parse(calls[0].envOverrides.ENANA_AGENT_MCP_REQUEST_CONTEXT),

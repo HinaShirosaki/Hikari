@@ -34,6 +34,7 @@ export function collectAgentChatDom(rootDocument, options = {}) {
     reviewNextBtn: byId(id('review-next-btn')),
     reviewPageLabel: byId(id('review-page-label')),
     input: byId(id('message-input')),
+    quickPrompts: byId(id('quick-prompts')),
     attachmentInput: byId(id('attachment-input')),
     attachmentList: byId(id('attachment-list')),
     attachBtn: byId(id('attach-btn')),
@@ -47,11 +48,8 @@ export function collectAgentChatDom(rootDocument, options = {}) {
 
 export function hasRequiredAgentChatDom(dom = {}) {
   return Boolean(
-    dom.projectSelect
-    && dom.historyNode
+    dom.historyNode
     && dom.input
     && dom.sendBtn
-    && dom.clearBtn
-    && dom.status
   );
 }

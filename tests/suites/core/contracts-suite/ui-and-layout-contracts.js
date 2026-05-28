@@ -66,16 +66,34 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
 
       assert.match(html, /id="universal-agent-chat-rail"/);
+      assert.match(html, /id="agent-chat-rail-toggle-btn"/);
       assert.match(html, /id="agent-rail-chat-history"/);
-      assert.equal((registry.apps || []).every((app) => app.agentChatRail !== true), true);
-      assert.match(generatedRegistry, /"agentChatRail": false/);
+      assert.match(html, /id="agent-rail-quick-prompts"/);
+      assert.match(html, /Generate protocol/);
+      assert.match(html, /id="paper-selection-ask-btn"/);
+      assert.doesNotMatch(html, /id="agent-rail-status"/);
+      assert.doesNotMatch(html, /universal-agent-chat-rail__kicker/);
+      assert.doesNotMatch(html, /id="agent-rail-clear-btn"/);
+      assert.doesNotMatch(html, /id="agent-rail-project-select"/);
+      assert.equal((registry.apps || []).filter((app) => app.agentChatRail === true).map((app) => app.id).join(','), 'papers');
+      assert.match(generatedRegistry, /"id": "papers"[\s\S]*"agentChatRail": true/);
       assert.match(rendererShellSource, /app\?\.agentChatRail === true/);
       assert.match(rendererShellSource, /agentChatRail\.hidden = !enabled/);
+      assert.match(rendererShellSource, /has-agent-chat-rail-expanded/);
+      assert.match(rendererShellSource, /enana:open-agent-chat-rail/);
       assert.match(rendererShellSource, /moduleRuntime\.renderAgentChatRail\?\.\(\)/);
       assert.match(moduleRuntimeSource, /idPrefix:\s*'agent-rail'/);
       assert.match(moduleRuntimeSource, /loadPersistentSessions:\s*false/);
+      assert.match(moduleRuntimeSource, /createPaperScopedAgentChatState/);
+      assert.match(moduleRuntimeSource, /getActivePaperId/);
+      assert.match(moduleRuntimeSource, /onAskSelectedText:\s*openPaperAgentChatWithSelection/);
+      assert.match(moduleRuntimeSource, /primeHiddenContext/);
       assert.match(domBindingsSource, /const id = \(suffix\) => `\$\{idPrefix\}-\$\{suffix\}`;/);
-      assert.match(coreCss, /body\.has-agent-chat-rail \.workspace-shell/);
+      assert.match(domBindingsSource, /quickPrompts:\s*byId\(id\('quick-prompts'\)\)/);
+      assert.match(coreCss, /--agent-chat-rail-collapsed-width/);
+      assert.match(coreCss, /--agent-composer-min-height:\s*54px/);
+      assert.match(coreCss, /\.agent-rail-quick-prompt/);
+      assert.match(coreCss, /body\.has-agent-chat-rail\.has-agent-chat-rail-expanded \.workspace-shell/);
     });
 
     test('renderer routes personal inventory aliases to merged sample workspace', () => {

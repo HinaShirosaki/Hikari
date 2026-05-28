@@ -238,6 +238,7 @@ export function createPapersPdfViewer(elements = {}) {
   const selectionHighlightBtn = elements.selectionHighlightBtn || null;
   const selectionUnderlineBtn = elements.selectionUnderlineBtn || null;
   const selectionSearchBtn = elements.selectionSearchBtn || null;
+  const selectionAskBtn = elements.selectionAskBtn || null;
   const selectionSearchPopover = elements.selectionSearchPopover || null;
   const selectionSearchPdfBtn = elements.selectionSearchPdfBtn || null;
   const selectionSearchLibraryBtn = elements.selectionSearchLibraryBtn || null;
@@ -290,6 +291,7 @@ export function createPapersPdfViewer(elements = {}) {
     onHighlightSelection: typeof elements.onHighlightSelection === 'function' ? elements.onHighlightSelection : null,
     onSelectionComment: typeof elements.onSelectionComment === 'function' ? elements.onSelectionComment : null,
     onSelectionSearch: typeof elements.onSelectionSearch === 'function' ? elements.onSelectionSearch : null,
+    onSelectionAsk: typeof elements.onSelectionAsk === 'function' ? elements.onSelectionAsk : null,
     onBookmarksResolved: typeof elements.onBookmarksResolved === 'function' ? elements.onBookmarksResolved : null,
     onExternalLink: typeof elements.onExternalLink === 'function' ? elements.onExternalLink : null,
     onClose: typeof elements.onClose === 'function' ? elements.onClose : null
@@ -626,6 +628,30 @@ export function createPapersPdfViewer(elements = {}) {
     renderSelectionSearchMessage('Choose where to search.');
     positionFloatingElement(selectionSearchPopover, state.pendingSearchSelection.clientRect, { preferBelow: true });
     selectionSearchPdfBtn?.focus?.();
+  }
+
+  function askAgentAboutSelection() {
+    if (!state.pendingSelection || typeof state.onSelectionAsk !== 'function') {
+      return false;
+    }
+    const selection = { ...state.pendingSelection };
+    const didOpen = state.onSelectionAsk({
+      paperId: state.paperId,
+      paperTitle: state.paperTitle,
+      pageNumber: selection.pageNumber,
+      text: selection.text,
+      boxes: selection.boxes,
+      pageWidth: selection.pageWidth,
+      pageHeight: selection.pageHeight
+    });
+    if (didOpen === false) {
+      return false;
+    }
+    clearSelection();
+    state.pendingSelection = null;
+    refreshToolbar();
+    setStatus(`Loaded selected text from page ${selection.pageNumber} into chat context.`);
+    return true;
   }
 
   async function runSelectionSearch(scope = 'pdf') {
@@ -1800,6 +1826,9 @@ export function createPapersPdfViewer(elements = {}) {
     });
     selectionSearchBtn?.addEventListener('click', () => {
       openSelectionSearchPopover();
+    });
+    selectionAskBtn?.addEventListener('click', () => {
+      askAgentAboutSelection();
     });
     selectionSearchPdfBtn?.addEventListener('click', () => {
       void runSelectionSearch('pdf');

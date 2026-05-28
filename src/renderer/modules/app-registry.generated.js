@@ -145,7 +145,7 @@ export const APP_REGISTRY = [
       "journal"
     ],
     "searchInputId": "",
-    "agentChatRail": false
+    "agentChatRail": true
   },
   {
     "id": "agent",

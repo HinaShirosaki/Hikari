@@ -55,12 +55,14 @@ export function createNavigationShell({
   const moreBtn = documentObject.getElementById('app-more-btn');
   const moreMenu = documentObject.getElementById('app-more-menu');
   const agentChatRail = documentObject.getElementById('universal-agent-chat-rail');
+  const agentChatRailToggleBtn = documentObject.getElementById('agent-chat-rail-toggle-btn');
   const views = [...documentObject.querySelectorAll('.view')];
 
   let appNavButtons = [];
   let renderedDockApps = dockApps;
   let renderedOverflowApps = moreApps;
   let lastViewPersistenceEnabled = false;
+  let agentChatRailExpanded = false;
 
   function isValidStartupViewId(viewId) {
     return validStartupViewIds.has(normalize(String(viewId || '').trim()));
@@ -111,6 +113,38 @@ export function createNavigationShell({
     return app?.agentChatRail === true;
   }
 
+  function syncAgentChatRailExpansion(enabled) {
+    const expanded = enabled && agentChatRailExpanded;
+    documentObject.body.classList.toggle('has-agent-chat-rail-expanded', expanded);
+    if (agentChatRail) {
+      agentChatRail.classList.toggle('is-expanded', expanded);
+      agentChatRail.classList.toggle('is-collapsed', enabled && !expanded);
+      agentChatRail.dataset.state = expanded ? 'expanded' : 'collapsed';
+    }
+    if (agentChatRailToggleBtn) {
+      agentChatRailToggleBtn.textContent = expanded ? '>' : '<';
+      agentChatRailToggleBtn.setAttribute('aria-expanded', String(expanded));
+      const label = expanded ? 'Fold agent chat rail' : 'Open agent chat rail';
+      agentChatRailToggleBtn.setAttribute('aria-label', label);
+      agentChatRailToggleBtn.title = expanded ? 'Fold chat' : 'Open chat';
+    }
+    return expanded;
+  }
+
+  function setAgentChatRailExpanded(expanded) {
+    agentChatRailExpanded = Boolean(expanded);
+    const enabled = documentObject.body.classList.contains('has-agent-chat-rail');
+    const visibleExpanded = syncAgentChatRailExpansion(enabled);
+    if (visibleExpanded) {
+      moduleRuntime.renderAgentChatRail?.();
+    }
+    sharedLeftRailRuntime.syncWidth();
+  }
+
+  function openAgentChatRail() {
+    setAgentChatRailExpanded(true);
+  }
+
   function syncAgentChatRailState(activeViewId) {
     const enabled = isAgentChatRailEnabledForView(activeViewId);
     documentObject.body.classList.toggle('has-agent-chat-rail', enabled);
@@ -118,7 +152,7 @@ export function createNavigationShell({
       agentChatRail.hidden = !enabled;
       agentChatRail.setAttribute('aria-hidden', enabled ? 'false' : 'true');
     }
-    return enabled;
+    return syncAgentChatRailExpansion(enabled);
   }
 
   function createInlineIcon(iconMarkup) {
@@ -489,6 +523,10 @@ export function createNavigationShell({
       event.stopPropagation();
       toggleMoreMenu();
     });
+    agentChatRailToggleBtn?.addEventListener('click', () => {
+      setAgentChatRailExpanded(!agentChatRailExpanded);
+    });
+    documentObject.addEventListener('enana:open-agent-chat-rail', openAgentChatRail);
     exitBtn?.addEventListener('click', () => windowObject.close());
     if (topbarSearchInput) {
       topbarSearchInput.setAttribute('role', 'combobox');
@@ -634,6 +672,7 @@ export function createNavigationShell({
     getActiveViewId,
     initNavigation,
     normalizeViewId: normalize,
+    openAgentChatRail,
     renderAppNavigation,
     resolveStartupViewId,
     setSearchInputValue,

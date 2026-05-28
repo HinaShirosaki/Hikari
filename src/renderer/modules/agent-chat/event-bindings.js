@@ -18,7 +18,24 @@ export function bindAgentChatEvents({
   historyController,
   renderDeveloperToolHint
 }) {
-  dom.projectSelect.addEventListener('change', () => {
+  function applySuggestedPrompt(event) {
+    const suggestedPromptButton = event?.target?.closest?.('[data-agent-suggest-prompt]')
+      || (event?.target?.dataset?.agentSuggestPrompt ? event.target : null);
+    if (!suggestedPromptButton) {
+      return false;
+    }
+    const prompt = trimText(suggestedPromptButton.dataset.agentSuggestPrompt, 3000);
+    if (!prompt) {
+      return true;
+    }
+    dom.input.value = prompt;
+    shell.syncComposerHeight();
+    dom.input.focus();
+    shell.setStatus('Prompt ready.');
+    return true;
+  }
+
+  dom.projectSelect?.addEventListener('change', () => {
     shell.ensureAgentState();
     state.agentChat.projectId = dom.projectSelect.value || '';
     developerContextController.invalidate();
@@ -77,7 +94,7 @@ export function bindAgentChatEvents({
       : 'Deep research disabled.');
   });
 
-  dom.clearBtn.addEventListener('click', () => {
+  dom.clearBtn?.addEventListener('click', () => {
     dom.input.value = '';
     attachmentsController.reset();
     shell.syncComposerHeight();
@@ -86,6 +103,10 @@ export function bindAgentChatEvents({
 
   dom.historyNode.addEventListener('click', (event) => {
     void historyController.onHistoryClick(event);
+  });
+
+  dom.quickPrompts?.addEventListener('click', (event) => {
+    applySuggestedPrompt(event);
   });
 
   dom.historyNode.addEventListener('scroll', () => {

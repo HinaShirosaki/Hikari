@@ -11,6 +11,7 @@ import { initGelAnalysis } from './modules/gel-analysis.js';
 import { initPapersManagement } from './modules/papers-management.js';
 import { initToolBox } from './modules/tool-box.js';
 import { initAgentChat } from './modules/agent-chat.js';
+import { createPaperScopedAgentChatState } from './modules/agent-chat/scoped-state.js';
 import { initHomeDashboard } from './modules/home-dashboard.js';
 import { initSequenceViewer } from './modules/sequence-viewer.js';
 import { createSelectionInsightsController } from './modules/selection-insights/index.js';
@@ -63,8 +64,56 @@ export function createRendererModuleRuntime(config = {}) {
     rootDocument,
     windowObject: globalThis?.window || null
   });
+  let modules = null;
 
-  const modules = {
+  function getActivePaperAgentChatContext() {
+    const paperId = String(modules?.papers?.getActivePaperId?.() || '').trim();
+    const paper = paperId
+      ? (state.papers || []).find((item) => String(item?.id || '').trim() === paperId)
+      : null;
+    const projectId = paper?.linkedType === 'project'
+      ? String(paper?.linkedId || '').trim()
+      : '';
+    return {
+      paperId,
+      paperTitle: String(paper?.title || paper?.fileName || '').trim(),
+      projectId,
+      knowledgeMarkdownRelativePath: String(paper?.knowledgeMarkdownRelativePath || paper?.knowledge_markdown_relative_path || '').trim(),
+      knowledgeExtractedTextRelativePath: String(paper?.knowledgeExtractedTextRelativePath || paper?.knowledge_extracted_text_relative_path || '').trim(),
+      knowledgeMetaRelativePath: String(paper?.knowledgeMetaRelativePath || paper?.knowledge_meta_relative_path || '').trim(),
+      knowledgeStatus: String(paper?.knowledgeStatus || paper?.knowledge_status || '').trim()
+    };
+  }
+
+  const paperAgentChatState = createPaperScopedAgentChatState(state, {
+    getPaperContext: getActivePaperAgentChatContext
+  });
+
+  function openPaperAgentChatWithSelection(selection = {}) {
+    const selectedText = String(selection?.text || '').replace(/\s+/g, ' ').trim();
+    if (!selectedText) {
+      return false;
+    }
+    const paperTitle = String(selection?.paperTitle || '').trim();
+    modules?.agentChatRail?.primeHiddenContext?.({
+      kind: 'paper-selection',
+      label: 'Selected paper text',
+      text: selectedText,
+      paperId: String(selection?.paperId || '').trim(),
+      paperTitle,
+      pageNumber: Number.isFinite(Number(selection?.pageNumber))
+        ? Math.max(1, Math.round(Number(selection.pageNumber)))
+        : 0
+    });
+    const EventCtor = rootDocument?.defaultView?.CustomEvent || globalThis?.CustomEvent;
+    if (rootDocument && typeof EventCtor === 'function') {
+      rootDocument.dispatchEvent(new EventCtor('enana:open-agent-chat-rail'));
+    }
+    modules?.agentChatRail?.focusComposer?.();
+    return true;
+  }
+
+  modules = {
     biologyNotebook: initAndRegisterModule(moduleRegistry, 'biologyNotebook', initBiologyNotebook, {
       state,
       persist,
@@ -115,7 +164,7 @@ export function createRendererModuleRuntime(config = {}) {
     agentChatRail: initAndRegisterModule(moduleRegistry, 'agentChatRail', initAgentChat, {
       idPrefix: 'agent-rail',
       loadPersistentSessions: false,
-      state,
+      state: paperAgentChatState,
       persist,
       createId,
       safeText,
@@ -147,7 +196,11 @@ export function createRendererModuleRuntime(config = {}) {
       persist,
       createId,
       safeText,
-      onCreateProtocolDraft: rendererServices.protocol.createDraftFromPaper
+      onCreateProtocolDraft: rendererServices.protocol.createDraftFromPaper,
+      onActivePaperChanged: () => {
+        modules?.agentChatRail?.render?.();
+      },
+      onAskSelectedText: openPaperAgentChatWithSelection
     }),
     labCommonInventory: initAndRegisterModule(moduleRegistry, 'labCommonInventory', initLabCommonInventory, {
       state,

@@ -208,6 +208,7 @@ function getPapersElements(doc = null) {
     paperSelectionHighlightBtn: getById('paper-selection-highlight-btn'),
     paperSelectionUnderlineBtn: getById('paper-selection-underline-btn'),
     paperSelectionSearchBtn: getById('paper-selection-search-btn'),
+    paperSelectionAskBtn: getById('paper-selection-ask-btn'),
     paperSelectionSearchPopover: getById('paper-selection-search-popover'),
     paperSelectionSearchPdfBtn: getById('paper-selection-search-pdf-btn'),
     paperSelectionSearchLibraryBtn: getById('paper-selection-search-library-btn'),
@@ -230,6 +231,8 @@ export function initPapersManagement({
   createId,
   safeText,
   onCreateProtocolDraft,
+  onActivePaperChanged = () => {},
+  onAskSelectedText = () => {},
   document: providedDocument = null,
   window: providedWindow = null,
   createPdfViewer = createPapersPdfViewer
@@ -377,6 +380,7 @@ export function initPapersManagement({
     createId,
     safeText,
     onCreateProtocolDraft,
+    onActivePaperChanged,
     document: documentRef,
     window: windowRef,
     elements,
@@ -454,6 +458,24 @@ export function initPapersManagement({
         total: matches.length
       };
     },
+    askAgentAboutSelection(selection = {}) {
+      const selectedText = String(selection?.text || '').replace(/\s+/g, ' ').trim();
+      if (!selectedText || typeof onAskSelectedText !== 'function') {
+        return false;
+      }
+      const activePaper = context.getActivePaper?.() || context.getPaperById?.(selection?.paperId) || null;
+      const didOpen = onAskSelectedText({
+        text: selectedText,
+        pageNumber: Math.max(1, Math.round(Number(selection?.pageNumber) || 1)),
+        paperId: String(selection?.paperId || activePaper?.id || '').trim(),
+        paperTitle: getPaperDisplayTitle(activePaper || {
+          title: selection?.paperTitle,
+          fileName: selection?.paperTitle
+        }),
+        selection
+      });
+      return didOpen !== false;
+    },
     applyResolvedPdfMetadata({ paperId = '', metadata = null } = {}) {
       const paper = context.getPaperById(paperId);
       if (!paper) {
@@ -520,6 +542,7 @@ export function initPapersManagement({
     selectionHighlightBtn: elements.paperSelectionHighlightBtn,
     selectionUnderlineBtn: elements.paperSelectionUnderlineBtn,
     selectionSearchBtn: elements.paperSelectionSearchBtn,
+    selectionAskBtn: elements.paperSelectionAskBtn,
     selectionSearchPopover: elements.paperSelectionSearchPopover,
     selectionSearchPdfBtn: elements.paperSelectionSearchPdfBtn,
     selectionSearchLibraryBtn: elements.paperSelectionSearchLibraryBtn,
@@ -541,8 +564,12 @@ export function initPapersManagement({
     onHighlightSelection: (...args) => context.createPaperHighlight?.(...args),
     onSelectionComment: (...args) => context.createPaperTextComment?.(...args),
     onSelectionSearch: (...args) => context.searchSelectedTextInPapers?.(...args),
+    onSelectionAsk: (...args) => context.askAgentAboutSelection?.(...args),
     onExternalLink: openPdfExternalWebsite,
-    onClose: (...args) => context.comments?.onViewerClose(...args)
+    onClose: (...args) => {
+      context.comments?.onViewerClose(...args);
+      context.onActivePaperChanged?.(null);
+    }
   });
 
   context.paperViewer = paperViewer;
@@ -743,6 +770,7 @@ export function initPapersManagement({
   context.renderCommentPanelState();
 
   return {
+    getActivePaperId: () => paperViewer.getActivePaperId(),
     render: context.render,
     renderLinkTargets: library.renderLinkTargets
   };

@@ -10,6 +10,7 @@ import {
 } from './llm-provider-config.generated.js';
 import { VIEWS } from './views.js';
 import { createId } from './utils.js';
+import { normalizePaperAgentChatSessions } from './agent-chat/scoped-state.js';
 
 export const STORAGE_KEY = 'enana_state_v1';
 const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
@@ -42,6 +43,7 @@ export const defaultState = {
   papers: [],
   paperExperimentLinks: [],
   knowledgeChats: {},
+  paperAgentChatSessions: {},
   agentChat: {
     projectId: '',
     deepResearchEnabled: false,
@@ -506,6 +508,7 @@ export function normalizeState(parsed) {
       sessions: Array.isArray(source.agentChat?.sessions) ? source.agentChat.sessions : [],
       messages: Array.isArray(source.agentChat?.messages) ? source.agentChat.messages : []
     },
+    paperAgentChatSessions: normalizePaperAgentChatSessions(source.paperAgentChatSessions),
     notebookEntries: Array.isArray(source.notebookEntries) ? source.notebookEntries : [],
     synthesisChemistryDrafts:
       source.synthesisChemistryDrafts && typeof source.synthesisChemistryDrafts === 'object'

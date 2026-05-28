@@ -98,7 +98,8 @@
       "icon": "papers.svg",
       "placement": "dock",
       "aliases": ["paper", "literature", "journal"],
-      "searchInputId": ""
+      "searchInputId": "",
+      "agentChatRail": true
     },
     {
       "id": "agent",

@@ -1,5 +1,7 @@
 'use strict';
 
+const path = require('path');
+
 const {
   asArray,
   defaultCleanText,
@@ -19,12 +21,90 @@ function summarizeAttachments(cleanText, attachments = []) {
     .join('\n');
 }
 
+function resolveTransformedMarkdownPath({
+  storagePath = '',
+  relativePath = ''
+} = {}, cleanText = defaultCleanText) {
+  const normalizedRelativePath = cleanText(relativePath, 2400);
+  if (!normalizedRelativePath) {
+    return '';
+  }
+  if (path.isAbsolute(normalizedRelativePath)) {
+    return normalizedRelativePath;
+  }
+  const normalizedStoragePath = cleanText(storagePath, 2400);
+  if (!normalizedStoragePath) {
+    return normalizedRelativePath;
+  }
+  return path.join(normalizedStoragePath, normalizedRelativePath);
+}
+
+function buildPaperAgentSessionBlock(input = {}, cleanText = defaultCleanText) {
+  const snapshot = ensureObject(input.snapshot);
+  const paperAgent = ensureObject(snapshot.paper_agent || snapshot.paperAgent);
+  const activePaper = ensureObject(snapshot.activePaper || snapshot.active_paper);
+  const sessionPrompt = cleanText(
+    paperAgent.session_prompt
+      || paperAgent.sessionPrompt
+      || input.agent?.paperSessionPrompt,
+    2400
+  );
+  const transformedMarkdownRelativePath = cleanText(
+    paperAgent.transformed_markdown_relative_path
+      || paperAgent.transformedMarkdownRelativePath
+      || paperAgent.knowledge_markdown_relative_path
+      || activePaper.transformed_markdown_relative_path
+      || activePaper.knowledge_markdown_relative_path
+      || activePaper.knowledgeMarkdownRelativePath,
+    2400
+  );
+  const activePaperTitle = cleanText(
+    paperAgent.active_paper_title
+      || paperAgent.activePaperTitle
+      || activePaper.title
+      || activePaper.paper_title
+      || activePaper.paperTitle,
+    320
+  );
+  const activePaperId = cleanText(
+    paperAgent.active_paper_id
+      || paperAgent.activePaperId
+      || activePaper.id
+      || activePaper.paper_id
+      || activePaper.paperId,
+    220
+  );
+  if (!sessionPrompt && !transformedMarkdownRelativePath && !activePaperTitle && !activePaperId) {
+    return '';
+  }
+  const storagePath = cleanText(snapshot.settings?.storagePath || snapshot.storagePath, 2400);
+  const transformedMarkdownPath = resolveTransformedMarkdownPath({
+    storagePath,
+    relativePath: transformedMarkdownRelativePath
+  }, cleanText);
+  const paperContext = {
+    active_paper_id: activePaperId,
+    active_paper_title: activePaperTitle,
+    transformed_markdown_relative_path: transformedMarkdownRelativePath,
+    transformed_markdown_path: transformedMarkdownPath,
+    knowledge_status: cleanText(paperAgent.knowledge_status || paperAgent.knowledgeStatus || activePaper.knowledge_status, 80)
+  };
+  return [
+    'Paper agent session:',
+    sessionPrompt || 'This chat is scoped to the active paper in the Papers view.',
+    '',
+    'Active paper context:',
+    JSON.stringify(paperContext, null, 2)
+  ].join('\n');
+}
+
 function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}) {
   const message = cleanText(input.message, 24000);
   const attachmentText = summarizeAttachments(cleanText, input.attachments);
   const projectId = cleanText(input.projectId, 120);
   const projectName = cleanText(input.projectName, 220);
   const selectionInsight = ensureObject(input.selectionInsight);
+  const paperAgentSessionBlock = buildPaperAgentSessionBlock(input, cleanText);
   const blocks = [
     '# Hikari Codex Chat Turn',
     '',
@@ -36,6 +116,8 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     '',
     'Use the MCP server named `hikari` for Hikari app data, papers, protocols, notebooks, inventory, memory, and structured tool access. Hikari exposes app tools as direct MCP tools such as `mcp__hikari__literature_search`, `mcp__hikari__paper_download`, and `mcp__hikari__protocol_generation`; do not route through `tool_search`, `tool_info`, or generic `tool_call`. Use native Codex search for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
     '',
+    'Protocol generation handoff: when the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, first author complete protocol JSON from the evidence, then call `mcp__hikari__protocol_generation` with `{ protocol, save: true }`. Do not answer only with markdown or prose for these protocol-generation requests; after the tool call, summarize that the generated protocol is ready for review.',
+    '',
     'Native Codex `tool_search` is disabled for this run. If a named `mcp__hikari__...` function is not visible, report that the direct Hikari MCP surface is unavailable for that tool. Do not use shell commands as a substitute for a named direct tool call.',
     '',
     projectId || projectName
@@ -45,6 +127,7 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     selectionInsight.actionType || selectionInsight.selectedText
       ? `Selection insight context:\n${JSON.stringify(selectionInsight, null, 2)}`
       : '',
+    paperAgentSessionBlock,
     attachmentText ? `Attachments supplied by Hikari:\n${attachmentText}` : '',
     '',
     `Current user request:\n${message}`
@@ -86,6 +169,8 @@ function buildCodexAgentParserPayload(codexAgent = {}, {
 
 function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {}) {
   const snapshot = ensureObject(input.snapshot);
+  const activePaper = ensureObject(snapshot.activePaper || snapshot.active_paper);
+  const paperAgent = ensureObject(snapshot.paper_agent || snapshot.paperAgent);
   const dataFilePath = cleanText(
     input.dataFilePath
       || input.data_file_path
@@ -99,6 +184,24 @@ function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {})
       || dataFilePath,
     2000
   );
+  const paperAgentRelativePath = cleanText(
+    paperAgent.transformed_markdown_relative_path
+      || paperAgent.transformedMarkdownRelativePath
+      || paperAgent.knowledge_markdown_relative_path
+      || activePaper.transformed_markdown_relative_path
+      || activePaper.knowledge_markdown_relative_path
+      || activePaper.knowledgeMarkdownRelativePath,
+    2400
+  );
+  const paperAgentContext = Object.keys(paperAgent).length || paperAgentRelativePath
+    ? {
+      ...paperAgent,
+      transformed_markdown_path: resolveTransformedMarkdownPath({
+        storagePath: snapshot.settings?.storagePath || snapshot.storagePath,
+        relativePath: paperAgentRelativePath
+      }, cleanText)
+    }
+    : null;
   return {
     provider: 'codex',
     model: cleanText(input.model, 120),
@@ -113,6 +216,8 @@ function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {})
     },
     projectId: cleanText(input.projectId, 120),
     projectName: cleanText(input.projectName, 220),
+    activePaper: Object.keys(activePaper).length ? activePaper : null,
+    paperAgent: paperAgentContext,
     dataFilePath,
     fallbackDataFilePath,
     traceRequestId: cleanText(input.traceContext?.requestId, 120)
