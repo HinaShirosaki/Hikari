@@ -130,6 +130,8 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         assert.equal(args[args.indexOf('-m') + 1], 'gpt-5.4');
         assert.equal(args.includes('-c'), true);
         assert.equal(args[args.indexOf('-c') + 1], 'model_reasoning_effort=xhigh');
+        assert.equal(args.includes('project_doc_fallback_filenames=["MEMORY.md"]'), true);
+        assert.equal(args.includes('project_doc_max_bytes=65536'), true);
         assert.equal(args[args.length - 1], '-');
         provider.setCodexCliModel('');
       });
@@ -261,6 +263,7 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
           fs.existsSync(path.join(runtimeHome, 'plugins', 'cache', 'openai-primary-runtime', 'documents', '1.0.0', 'SKILL.md')),
           true
         );
+        assert.equal(fs.existsSync(path.join(runtimeHome, 'AGENTS.md')), true);
         const runtimeConfig = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
         assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
         assert.match(runtimeConfig, /HIKARI_AGENT_MCP/);

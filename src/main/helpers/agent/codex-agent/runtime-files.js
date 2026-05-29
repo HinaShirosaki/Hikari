@@ -53,6 +53,14 @@ function replaceManagedBlock(existing = '', start = '', end = '', block = '') {
   return existing.replace(pattern, block);
 }
 
+function removeManagedBlock(existing = '', start = '', end = '') {
+  if (!existing.includes(start) || !existing.includes(end)) {
+    return null;
+  }
+  const pattern = new RegExp(`${escapeRegExp(start)}[\\s\\S]*?${escapeRegExp(end)}`, 'm');
+  return existing.replace(pattern, '').trim();
+}
+
 function resolveUnpackedAsarPath(filePath = '') {
   const targetPath = cleanText(filePath, 2400);
   if (targetPath.includes(`${path.sep}app.asar${path.sep}`)) {
@@ -178,6 +186,34 @@ async function ensureHikariCodexAgentsFile(cwd = '') {
   return agentsPath;
 }
 
+async function removeHikariCodexAgentsFileIfOnlyManaged(cwd = '') {
+  const safeCwd = cleanText(cwd, 2400);
+  if (!safeCwd || isFilesystemRoot(safeCwd)) {
+    return false;
+  }
+  const agentsPath = path.join(safeCwd, CODEX_AGENTS_FILE);
+  let existing = '';
+  try {
+    existing = await fs.readFile(agentsPath, 'utf8');
+  } catch {
+    return false;
+  }
+
+  const stripped = removeManagedBlock(existing, HIKARI_AGENTS_BLOCK_START, HIKARI_AGENTS_BLOCK_END)
+    ?? removeManagedBlock(existing, ENANA_AGENTS_BLOCK_START, ENANA_AGENTS_BLOCK_END);
+  if (stripped === null) {
+    return false;
+  }
+
+  if (stripped.trim()) {
+    await fs.writeFile(agentsPath, `${stripped.replace(/\s+$/u, '')}\n`, 'utf8');
+    return false;
+  }
+
+  await fs.rm(agentsPath, { force: true });
+  return true;
+}
+
 async function ensureEnanaCodexAgentsFile(cwd = '') {
   return ensureHikariCodexAgentsFile(cwd);
 }
@@ -230,6 +266,7 @@ module.exports = {
   buildHikariCodexMcpConfigBlock,
   buildEnanaCodexMcpConfigBlock,
   ensureHikariCodexAgentsFile,
+  removeHikariCodexAgentsFileIfOnlyManaged,
   ensureEnanaCodexAgentsFile,
   ensureHikariCodexMcpConfig,
   ensureEnanaCodexMcpConfig

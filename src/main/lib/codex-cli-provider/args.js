@@ -1,0 +1,124 @@
+'use strict';
+
+const {
+  CODEX_PROJECT_DOC_MAX_BYTES,
+  CODEX_PROJECT_MEMORY_FILE
+} = require('./constants');
+const {
+  getCodexCliCatalog,
+  resolveCodexCliModel,
+  resolveCodexCliReasoningEffort
+} = require('./catalog');
+const { normalizeCodexSessionId } = require('./session-id');
+
+function appendCodexCliModelArgs(args, {
+  model = '',
+  reasoningEffort = '',
+  catalog = null
+} = {}) {
+  const resolvedCatalog = catalog && typeof catalog === 'object'
+    ? catalog
+    : getCodexCliCatalog();
+  const resolvedModel = resolveCodexCliModel(model, resolvedCatalog);
+  if (resolvedModel) {
+    args.push('-m', resolvedModel);
+  }
+  const resolvedReasoningEffort = resolveCodexCliReasoningEffort(reasoningEffort, resolvedModel, resolvedCatalog);
+  if (resolvedReasoningEffort) {
+    args.push('-c', `model_reasoning_effort=${resolvedReasoningEffort}`);
+  }
+  return args;
+}
+
+function appendCodexProjectMemoryConfigArgs(args) {
+  args.push(
+    '-c',
+    `project_doc_fallback_filenames=["${CODEX_PROJECT_MEMORY_FILE}"]`,
+    '-c',
+    `project_doc_max_bytes=${CODEX_PROJECT_DOC_MAX_BYTES}`
+  );
+  return args;
+}
+
+function buildCodexCliExecArgs({
+  outputFile = '',
+  model = '',
+  reasoningEffort = '',
+  enableWebSearch = false,
+  disableToolSearch = false,
+  streamJson = false
+} = {}) {
+  const catalog = getCodexCliCatalog();
+  const args = [
+    '-a', 'never',
+    '-s', 'read-only'
+  ];
+  if (enableWebSearch === true) {
+    args.push('--search');
+  }
+  if (disableToolSearch === true) {
+    args.push('--disable', 'tool_search');
+  }
+  args.push(
+    'exec',
+    '--skip-git-repo-check',
+    '--output-last-message', outputFile,
+    '--color', 'never'
+  );
+  if (streamJson === true) {
+    args.push('--json');
+  }
+  appendCodexCliModelArgs(args, { model, reasoningEffort, catalog });
+  appendCodexProjectMemoryConfigArgs(args);
+  args.push('-');
+  return args;
+}
+
+function buildCodexCliExecResumeArgs({
+  outputFile = '',
+  sessionId = '',
+  useLastSession = false,
+  model = '',
+  reasoningEffort = '',
+  enableWebSearch = false,
+  disableToolSearch = false,
+  streamJson = false
+} = {}) {
+  const catalog = getCodexCliCatalog();
+  const args = [
+    '-a', 'never',
+    '-s', 'read-only'
+  ];
+  if (enableWebSearch === true) {
+    args.push('--search');
+  }
+  if (disableToolSearch === true) {
+    args.push('--disable', 'tool_search');
+  }
+  args.push(
+    'exec',
+    'resume',
+    '--skip-git-repo-check',
+    '--output-last-message', outputFile
+  );
+  if (streamJson === true) {
+    args.push('--json');
+  }
+  appendCodexCliModelArgs(args, { model, reasoningEffort, catalog });
+  appendCodexProjectMemoryConfigArgs(args);
+  const cleanSessionId = normalizeCodexSessionId(sessionId);
+  if (cleanSessionId) {
+    args.push(cleanSessionId);
+  } else if (useLastSession === true) {
+    args.push('--last');
+  }
+  args.push('-');
+  return args;
+}
+
+module.exports = {
+  appendCodexCliModelArgs,
+  appendCodexProjectMemoryConfigArgs,
+  buildCodexCliExecArgs,
+  buildCodexCliExecResumeArgs
+};

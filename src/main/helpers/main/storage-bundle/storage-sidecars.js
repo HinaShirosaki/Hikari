@@ -4,6 +4,11 @@ const fs = require('fs/promises');
 const path = require('path');
 const { getBundlePaths } = require('./storage-paths');
 const {
+  releaseOfficialMcpSkillsForWorkspace
+} = require('../../agent/codex-agent/official-mcp-skills.js');
+const {
+  CODEX_AGENTS_FOLDER_NAME,
+  CODEX_SKILLS_FOLDER_NAME,
   MEMORY_FILE_NAME,
   buildProjectMemoryMarkdown,
   collectProjectMemoryRecords
@@ -186,6 +191,8 @@ async function writeProjectMemoryFiles(storageRootPath, snapshot) {
     const folderPath = path.join(projectRootPath, cleanText(projectRecord.folderName, 320) || 'Untitled_Project');
     const filePath = path.join(folderPath, MEMORY_FILE_NAME);
     await fs.mkdir(folderPath, { recursive: true });
+    await fs.mkdir(path.join(folderPath, CODEX_AGENTS_FOLDER_NAME, CODEX_SKILLS_FOLDER_NAME), { recursive: true });
+    await releaseOfficialMcpSkillsForWorkspace(folderPath);
     await fs.writeFile(filePath, buildProjectMemoryMarkdown(projectRecord), 'utf8');
     writtenPaths.push(filePath);
   }
@@ -226,6 +233,7 @@ async function syncBundleFromSnapshot({
   }
   const updatedAt = new Date().toISOString();
   await fs.mkdir(storageRootPath, { recursive: true });
+  await releaseOfficialMcpSkillsForWorkspace(storageRootPath);
   if (bundlePaths.dataFilePath) {
     await fs.mkdir(path.dirname(bundlePaths.dataFilePath), { recursive: true });
   }

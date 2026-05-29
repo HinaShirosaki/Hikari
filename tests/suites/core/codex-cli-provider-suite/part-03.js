@@ -387,7 +387,8 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.match(calls[0].prompt, /Codex Chat Turn/);
       assert.match(calls[0].prompt, /Current user request:\nWhy was SUMO1 conjugation weak\?/);
       assert.match(calls[0].prompt, /Protocol generation handoff:/);
-      assert.match(calls[0].prompt, /mcp__hikari__protocol_generation/);
+      assert.match(calls[0].prompt, /call `protocol_generation` with/);
+      assert.doesNotMatch(calls[0].prompt, /mcp__hikari__/);
       assert.match(calls[0].prompt, /Do not answer only with markdown or prose/);
       assert.doesNotMatch(calls[0].prompt, /Recent conversation:/);
       assert.match(calls[0].prompt, /Selection insight context:/);
@@ -437,6 +438,54 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.equal(lifecycleEvents.some((event) => event.stage === 'codex_cli_display' && event.message === 'Reading paper.md...'), true);
       assert.equal(progressEvents.some((event) => event.stage === 'codex_agent_stream'), true);
       assert.equal(progressEvents.some((event) => event.meta?.stream_text === 'Streaming answer.'), true);
+    });
+    test('codex agent runtime prefers a prepared selected-project workspace when cwd is not explicit', async () => {
+      const { createCodexAgentRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'codex-agent',
+        'runtime.js'
+      ));
+      const calls = [];
+      const projectWorkspace = path.join(os.tmpdir(), 'enana-storage', 'Project', 'Atlas');
+      const runtime = createCodexAgentRuntime({
+        cleanText: (value, maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        prepareProjectWorkspace: async (input = {}) => {
+          assert.equal(input.projectName, 'Atlas');
+          return projectWorkspace;
+        },
+        requestCodexAgentText: async (input = {}) => {
+          calls.push(input);
+          return {
+            text: 'Atlas project answer.',
+            metadata: {
+              session_id: 'codex-project-session'
+            }
+          };
+        },
+        getWorkingDirectory: () => '/tmp/enana-workspace'
+      });
+
+      const result = await runtime.run({
+        message: 'Summarize Atlas memory.',
+        projectId: 'project-1',
+        projectName: 'Atlas',
+        model: 'gpt-5.4'
+      });
+
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].cwd, projectWorkspace);
+      const mcpContext = JSON.parse(calls[0].envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT);
+      assert.equal(mcpContext.cwd, projectWorkspace);
+      assert.equal(mcpContext.project.name, 'Atlas');
+      assert.equal(result.ok, true);
+      assert.equal(result.codex_agent.codex_session_id, 'codex-project-session');
     });
     test('codex agent runtime preserves renderable user questions', async () => {
       const { createCodexAgentRuntime } = require(path.join(

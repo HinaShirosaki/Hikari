@@ -9,9 +9,9 @@ Scope guard: direct Codex utility calls, such as protocol polish, protocol gener
 Codex runtime rules:
 - Use the shared Hikari MCP contract below.
 - Hikari exposes its app tool surface as direct MCP tools; do not use native Codex `tool_search` or a Hikari `tool_search` bridge for evidence or routing.
-- If a named `mcp__hikari__...` function is not visible, report that the direct Hikari MCP surface is unavailable for that tool instead of searching for an alternate bridge.
+- If a named direct MCP tool is not visible, report that the direct Hikari MCP surface is unavailable for that tool instead of searching for an alternate bridge.
 - Do not use shell commands as a substitute for a named direct Hikari tool call.
-- In Codex tool-call form, call direct tools through the `mcp__hikari__<tool_name>` namespace, for example `mcp__hikari__inventory_lookup`.
+- Call direct Hikari MCP tools by their contract names, such as `inventory_lookup`, `protocol_generation`, and `notebook_draft`.
 - JSON-only prompts require JSON-only replies.
 
 Shared Hikari MCP contract:

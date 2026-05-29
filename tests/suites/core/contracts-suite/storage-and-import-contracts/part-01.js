@@ -84,6 +84,35 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
+    test('storage bundle writes project memory and codex skill folders for project records', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-project-skills-'));
+      const dataFilePath = path.join(tempDir, 'example.ena.json');
+      try {
+        await bundleHelpers.syncBundleFromSnapshot({
+          dataFilePath,
+          snapshot: {
+            projects: [{ id: 'project-1', name: 'Atlas', description: 'Project-specific Codex context.' }],
+            settings: { storagePath: tempDir }
+          }
+        });
+
+        const memoryPath = path.join(tempDir, 'Project', 'Atlas', 'MEMORY.md');
+        const memoryText = await fsPromises.readFile(memoryPath, 'utf8');
+        const rootProtocolSkillPath = path.join(tempDir, '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
+        const rootNotebookSkillPath = path.join(tempDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
+        const projectProtocolSkillPath = path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
+        const projectNotebookSkillPath = path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
+        assert.match(memoryText, /Name: Atlas/);
+        assert.match(memoryText, /ID: project-1/);
+        assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /Call the direct Hikari MCP tool `protocol_generation`/);
+        assert.match(await fsPromises.readFile(rootNotebookSkillPath, 'utf8'), /Call the direct Hikari MCP tool `notebook_draft`/);
+        assert.match(await fsPromises.readFile(projectProtocolSkillPath, 'utf8'), /name: "hikari-protocol-generation"/);
+        assert.match(await fsPromises.readFile(projectNotebookSkillPath, 'utf8'), /name: "hikari-notebook-draft"/);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
     test('storage bundle helper sync + hydrate roundtrip restores protocols notebook inventory and samples from folders/sqlite', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
@@ -120,6 +149,9 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         };
         await bundleHelpers.syncBundleFromSnapshot({ dataFilePath, snapshot: sourceSnapshot });
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', 'MEMORY.md'));
+        await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills'));
+        await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md'));
+        await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md'));
         await fsPromises.access(path.join(tempDir, 'KnowledgeBase', 'papers.md'));
         const samplesPath = path.join(tempDir, 'Samples', 'samples.json');
         const samplesPayload = JSON.parse(await fsPromises.readFile(samplesPath, 'utf8'));

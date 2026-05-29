@@ -205,7 +205,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
       const pageRecordsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-records.js');
       const renderingSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-rendering.js');
-      const viewerSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer.js');
+      const selectionMenuSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-selection-menu-controller.js');
+      const eventsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-events-controller.js');
       const selectionSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-text-selection.js');
       assert.match(pageRecordsSource, /className\s*=\s*'papers-viewer-text-layer textLayer'/);
       assert.match(pageRecordsSource, /textSelectionCleanup/);
@@ -213,8 +214,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(selectionSource, /endOfContent/);
       assert.match(selectionSource, /range\.compareBoundaryPoints/);
       assert.match(selectionSource, /endDiv\.style\.userSelect\s*=\s*'text'/);
-      assert.match(viewerSource, /selectionPointerDown/);
-      assert.match(viewerSource, /doc\.addEventListener\('selectionchange', schedulePendingSelectionUpdate\)/);
+      assert.match(selectionMenuSource, /selectionPointerDown/);
+      assert.match(eventsSource, /doc\.addEventListener\('selectionchange', ctx\.schedulePendingSelectionUpdate\)/);
       assert.match(css, /\.papers-viewer-text-layer\s*\{[\s\S]*overflow:\s*clip;/);
       assert.match(css, /\.papers-viewer-text-layer\s*\{[\s\S]*--text-scale-factor:/);
       assert.match(css, /\.papers-viewer-text-layer br::selection\s*\{[\s\S]*background:\s*transparent;/);
@@ -226,13 +227,14 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('papers PDF first-load sizing stays inside the app shell', () => {
       const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
       const papersCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
-      const viewerSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer.js');
+      const domSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-dom-controller.js');
+      const navigationSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-navigation-controller.js');
       assert.match(coreCss, /html\s*\{[\s\S]*height:\s*100%;[\s\S]*overflow:\s*hidden;/);
       assert.match(coreCss, /body\s*\{[\s\S]*height:\s*100%;[\s\S]*overflow:\s*hidden;/);
       assert.match(papersCss, /\.papers-viewer-workspace\s*\{[\s\S]*overflow:\s*hidden;/);
-      assert.match(viewerSource, /function getElementLayoutWidth\(element\)/);
-      assert.match(viewerSource, /const layoutWidth = \[\s*stage,\s*workspace,\s*shell\s*\]/);
-      assert.match(viewerSource, /Math\.max\(layoutWidth - horizontalPadding, 320\)/);
+      assert.match(domSource, /function getElementLayoutWidth\(element\)/);
+      assert.match(navigationSource, /const layoutWidth = \[\s*stage,\s*workspace,\s*shell\s*\]/);
+      assert.match(navigationSource, /Math\.max\(layoutWidth - horizontalPadding, 320\)/);
     });
 
     test('ketcher embedded page uses portable static path resolution', () => {

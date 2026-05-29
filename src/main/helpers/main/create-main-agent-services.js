@@ -1,5 +1,6 @@
 'use strict';
 
+const path = require('node:path');
 const {
   defaultCleanText,
   defaultSafeParseJson,
@@ -74,6 +75,9 @@ const {
   buildCodexMcpContext,
   createCodexAgentRuntime
 } = require('../agent/codex-agent/runtime.js');
+const {
+  sanitizeProjectMemoryFolderName
+} = require('./storage-bundle/storage-memory.js');
 const { registerAgentToolExecutors } = require('../agent/tools/register-agent-tool-executors.js');
 const {
   createDirectLlmModuleRegistry,
@@ -166,6 +170,126 @@ function createMainAgentServices(deps = {}) {
       await codexAgentMcpHost.ensureStarted();
     }
     return requestCodexCliText(input);
+  }
+
+  function ensurePlainObject(value) {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+  }
+
+  function findProjectForCodexWorkspace(snapshot = {}, {
+    projectId = '',
+    projectName = ''
+  } = {}) {
+    const selectedProjectId = cleanText(projectId, 220);
+    const selectedProjectName = cleanText(projectName, 320);
+    const projects = asArray(snapshot.projects).map((project) => ensurePlainObject(project));
+    const matchedProjectById = selectedProjectId
+      ? projects.find((project) => cleanText(project.id, 220) === selectedProjectId)
+      : null;
+    const matchedProjectByName = !matchedProjectById && selectedProjectName
+      ? projects.find((project) => cleanText(project.name, 320) === selectedProjectName)
+      : null;
+    const matchedProject = matchedProjectById || matchedProjectByName || null;
+    const name = cleanText(matchedProject?.name || selectedProjectName, 320);
+    const id = cleanText(matchedProject?.id || selectedProjectId, 220);
+    if (!name && !id) {
+      return null;
+    }
+    return {
+      id,
+      name: name || 'Untitled Project',
+      projects
+    };
+  }
+
+  async function prepareCodexProjectWorkspace(input = {}) {
+    const snapshot = ensurePlainObject(input.snapshot);
+    const project = findProjectForCodexWorkspace(snapshot, {
+      projectId: input.projectId || input.project_id,
+      projectName: input.projectName || input.project_name
+    });
+    if (!project) {
+      return '';
+    }
+
+    const snapshotSettings = ensurePlainObject(snapshot.settings);
+    const storagePath = cleanText(
+      snapshotSettings.storagePath
+        || snapshotSettings.storage_path
+        || snapshot.storagePath
+        || snapshot.storage_path
+        || input.storagePath
+        || input.storage_path,
+      2400
+    );
+    const dataFilePath = cleanText(
+      input.dataFilePath
+        || input.data_file_path
+        || snapshot.data_file_path
+        || getDefaultDataFilePath(),
+      2400
+    );
+    const fallbackDataFilePath = cleanText(
+      input.fallbackDataFilePath
+        || input.fallback_data_file_path
+        || getDefaultDataFilePath(),
+      2400
+    );
+    const projects = project.projects;
+    const hasSelectedProject = projects.some((entry) => (
+      (project.id && cleanText(entry.id, 220) === project.id)
+      || (project.name && cleanText(entry.name, 320) === project.name)
+    ));
+    const syncSnapshot = {
+      ...snapshot,
+      settings: {
+        ...snapshotSettings,
+        ...(storagePath ? { storagePath } : {})
+      },
+      projects: hasSelectedProject
+        ? projects
+        : [
+          ...projects,
+          {
+            ...(project.id ? { id: project.id } : {}),
+            name: project.name
+          }
+        ]
+    };
+
+    let bundlePaths = null;
+    try {
+      const syncResult = await syncBundleFromSnapshot({
+        dataFilePath,
+        fallbackDataFilePath,
+        snapshot: syncSnapshot
+      });
+      bundlePaths = syncResult?.bundlePaths || null;
+    } catch {
+      bundlePaths = null;
+    }
+    if (!bundlePaths) {
+      try {
+        bundlePaths = getBundlePaths({
+          dataFilePath,
+          fallbackDataFilePath,
+          storagePath
+        });
+      } catch {
+        bundlePaths = null;
+      }
+    }
+
+    const storageRootPath = cleanText(bundlePaths?.storageRootPath, 2400)
+      || (dataFilePath ? path.dirname(path.resolve(dataFilePath)) : '');
+    if (!storageRootPath) {
+      return '';
+    }
+    return path.join(
+      storageRootPath,
+      'Project',
+      sanitizeProjectMemoryFolderName(project.name, 'Untitled_Project')
+    );
   }
 
   const sharedLlmTransportDeps = {
@@ -638,6 +762,7 @@ function createMainAgentServices(deps = {}) {
     recordAgentLlmTrace: controllerUtils.recordAgentLlmTrace,
     recordLifecycleEvent: observability.recordLifecycleEvent,
     getWorkingDirectory: getCodexCliWorkingDirectory,
+    prepareProjectWorkspace: prepareCodexProjectWorkspace,
     runTool: agentToolRuntime.runAgentTool
   });
 

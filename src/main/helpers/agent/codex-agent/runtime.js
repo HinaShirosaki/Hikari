@@ -37,6 +37,9 @@ function createCodexAgentRuntime(deps = {}) {
   const getWorkingDirectory = typeof deps.getWorkingDirectory === 'function'
     ? deps.getWorkingDirectory
     : (() => process.cwd());
+  const prepareProjectWorkspace = typeof deps.prepareProjectWorkspace === 'function'
+    ? deps.prepareProjectWorkspace
+    : null;
   const runTool = typeof deps.runTool === 'function'
     ? deps.runTool
     : null;
@@ -52,9 +55,19 @@ function createCodexAgentRuntime(deps = {}) {
     }
     const inputCwd = cleanText(input.cwd, 2400);
     const fallbackCwd = cleanText(getWorkingDirectory(), 2400);
-    const cwd = inputCwd && !isFilesystemRoot(inputCwd)
+    let cwd = inputCwd && !isFilesystemRoot(inputCwd)
       ? inputCwd
       : (fallbackCwd || inputCwd || process.cwd());
+    if (!inputCwd && prepareProjectWorkspace) {
+      try {
+        const projectWorkspace = cleanText(await prepareProjectWorkspace(input), 2400);
+        if (projectWorkspace && !isFilesystemRoot(projectWorkspace)) {
+          cwd = projectWorkspace;
+        }
+      } catch {
+        // Falling back to the normal Codex workspace still keeps the turn usable.
+      }
+    }
     const prompt = buildCodexAgentPrompt(input, { cleanText });
     const traceContext = input.traceContext || null;
     const lifecycleRecorder = input.lifecycleRecorder || null;

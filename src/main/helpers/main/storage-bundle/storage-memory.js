@@ -3,6 +3,8 @@
 const { asArray, cleanText, ensureObject } = require('./storage-utils');
 
 const MEMORY_FILE_NAME = 'MEMORY.md';
+const CODEX_AGENTS_FOLDER_NAME = '.agents';
+const CODEX_SKILLS_FOLDER_NAME = 'skills';
 
 function sanitizeFolderName(value, fallback = 'item') {
   const cleaned = String(value || '')
@@ -12,6 +14,10 @@ function sanitizeFolderName(value, fallback = 'item') {
     .replace(/^_+|_+$/g, '')
     .slice(0, 180);
   return cleaned || fallback;
+}
+
+function sanitizeProjectMemoryFolderName(value, fallback = 'Untitled_Project') {
+  return sanitizeFolderName(value, fallback);
 }
 
 function normalizeFolderKey(value) {
@@ -87,15 +93,17 @@ function collectProjectMemoryRecords(snapshot = {}) {
     }
   });
 
-  function resolveProjectMeta({ projectId = '', projectName = '', description = '', createdAt = '', updatedAt = '' } = {}) {
-    const matchedProject = projectById.get(cleanText(projectId, 220)) || null;
+  function resolveProjectMeta({ projectId = '', projectName = '', id = '', name = '', description = '', createdAt = '', updatedAt = '' } = {}) {
+    const resolvedProjectId = cleanText(projectId, 220) || cleanText(id, 220);
+    const matchedProject = projectById.get(resolvedProjectId) || null;
     const displayName = cleanText(projectName, 320)
+      || cleanText(name, 320)
       || cleanText(matchedProject?.name, 320)
       || 'Untitled Project';
     return {
       folderName: sanitizeFolderName(displayName, 'Untitled_Project'),
       displayName,
-      projectId: cleanText(projectId, 220) || cleanText(matchedProject?.id, 220),
+      projectId: resolvedProjectId || cleanText(matchedProject?.id, 220),
       description: cleanText(description, 4000) || cleanText(matchedProject?.description, 4000),
       createdAt: cleanText(createdAt, 80) || cleanText(matchedProject?.createdAt, 80),
       updatedAt: cleanText(updatedAt, 80) || cleanText(matchedProject?.updatedAt, 80)
@@ -286,8 +294,11 @@ function buildWorkflowMemoryMarkdown({
 }
 
 module.exports = {
+  CODEX_AGENTS_FOLDER_NAME,
+  CODEX_SKILLS_FOLDER_NAME,
   MEMORY_FILE_NAME,
   buildProjectMemoryMarkdown,
   buildWorkflowMemoryMarkdown,
-  collectProjectMemoryRecords
+  collectProjectMemoryRecords,
+  sanitizeProjectMemoryFolderName
 };

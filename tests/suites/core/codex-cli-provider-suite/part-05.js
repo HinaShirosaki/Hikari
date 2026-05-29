@@ -162,6 +162,66 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         }
       });
     });
+    test('codex cli provider lets project MEMORY.md provide project-scoped guidance', async () => {
+      const accessToken = buildJwt({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        email: 'scientist@example.com'
+      });
+      await withCodexHome({
+        authFile: {
+          auth_mode: 'chatgpt',
+          tokens: {
+            access_token: accessToken,
+            refresh_token: 'refresh-token',
+            account_id: 'acct-456'
+          }
+        }
+      }, async () => {
+        const provider = loadProvider();
+        const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-memory-storage-'));
+        const projectDir = path.join(storageRoot, 'Project', 'Atlas');
+        fs.mkdirSync(projectDir, { recursive: true });
+        fs.writeFileSync(path.join(projectDir, 'MEMORY.md'), '# Project Memory\n\nName: Atlas\n', 'utf8');
+        await provider.ensureCodexCliAgentsFile(projectDir);
+        assert.equal(fs.existsSync(path.join(projectDir, 'AGENTS.md')), true);
+
+        const fakeCodex = createFakeCodexBinary(storageRoot);
+        const previousCodexCli = process.env.ENANA_CODEX_CLI;
+        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
+        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
+        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+
+        try {
+          const result = await provider.requestCodexCliText({
+            prompt: 'Return OK only.',
+            cwd: projectDir
+          });
+          const captured = JSON.parse(fs.readFileSync(fakeCodex.capturePath, 'utf8'));
+          assert.equal(result, 'OK from fake codex');
+          assert.equal(fs.realpathSync(captured.cwd), fs.realpathSync(projectDir));
+          assert.equal(fs.existsSync(path.join(projectDir, 'MEMORY.md')), true);
+          assert.equal(fs.existsSync(path.join(projectDir, '.agents', 'skills')), true);
+          assert.equal(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md')), true);
+          assert.equal(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md')), true);
+          assert.equal(fs.existsSync(path.join(projectDir, 'AGENTS.md')), false);
+          assert.equal(fs.existsSync(path.join(captured.codexHome, 'AGENTS.md')), true);
+          assert.equal(captured.args.includes('project_doc_fallback_filenames=["MEMORY.md"]'), true);
+          assert.equal(captured.args.includes('project_doc_max_bytes=65536'), true);
+        } finally {
+          if (typeof previousCodexCli === 'string') {
+            process.env.ENANA_CODEX_CLI = previousCodexCli;
+          } else {
+            delete process.env.ENANA_CODEX_CLI;
+          }
+          if (typeof previousCapture === 'string') {
+            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+          }
+          fs.rmSync(storageRoot, { recursive: true, force: true });
+        }
+      });
+    });
     test('codex cli provider streams assistant text from codex json events', async () => {
       const accessToken = buildJwt({
         exp: Math.floor(Date.now() / 1000) + 3600,
