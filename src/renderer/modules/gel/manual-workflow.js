@@ -1,12 +1,21 @@
 import { buildLanesFromManualSegmentation } from './analysis-core.js';
 import { detectLanes } from './auto-lanes.js';
 import { getViewerToolLabel, renderViewerToolbar, updateStepClass } from './manual-ui.js';
-import { clamp, createEmptyManualOverrides, normalizeManualOverrides } from './shared.js';
+import {
+  clamp,
+  countCompleteLaneBandWindows,
+  createEmptyManualOverrides,
+  getLaneBandWindow,
+  hasCompleteLaneBandWindow,
+  isPerLaneBandMode,
+  normalizeLaneBandWindows,
+  normalizeManualOverrides
+} from './shared.js';
 
 export function createManualWorkflowController({ runtime, elements, deps }) {
   function onViewerToolSelected(tool) {
     runtime.selectedViewerTool = runtime.selectedViewerTool === tool ? '' : tool;
-    renderViewerToolbar(elements, runtime.selectedViewerTool);
+    renderViewerToolbar(elements, runtime.selectedViewerTool, isPerLaneBandMode(runtime.manualOverrides?.laneSegmentation));
     const label = getViewerToolLabel(runtime.selectedViewerTool);
     if (label) {
       deps.setStatus(`${label} selected. Click the gel image to apply it.`);
@@ -35,6 +44,19 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     if (!Boolean(overrides.ladderBandsDone)) {
       return 'ladder-mw';
     }
+    if (isPerLaneBandMode(segmentation)) {
+      const progress = getLaneBandProgress(overrides);
+      if (progress.pendingBottomLaneIndex) {
+        return 'band-bottom';
+      }
+      if (!progress.totalLanes || progress.completeCount < progress.totalLanes) {
+        return 'band-top';
+      }
+      if (!Boolean(segmentation.quantifyConfirmed)) {
+        return 'quantify';
+      }
+      return 'bands';
+    }
     if (!Number.isFinite(segmentation.bandTop)) {
       return 'band-top';
     }
@@ -59,13 +81,31 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
     const activeStep = getManualStep(overrides);
     const dividerDone = Boolean(overrides.laneSegmentation?.dividerDone) || runtime.manualDividerConfirmed;
+    const laneBandMode = isPerLaneBandMode(overrides.laneSegmentation);
+    const laneBandProgress = getLaneBandProgress(overrides);
+    const laneBandComplete = laneBandMode && laneBandProgress.totalLanes > 0 && laneBandProgress.completeCount >= laneBandProgress.totalLanes;
+
+    if (elements.gelStepBandTop) {
+      elements.gelStepBandTop.textContent = laneBandMode
+        ? `6. Click top line of target band (${laneBandProgress.completeCount}/${laneBandProgress.totalLanes || '-'} lanes)`
+        : '6. Click top line of target band';
+    }
+    if (elements.gelStepBandBottom) {
+      const laneLabel = laneBandProgress.pendingBottomLaneIndex
+        ? ` lane ${laneBandProgress.pendingBottomLaneIndex}`
+        : '';
+      elements.gelStepBandBottom.textContent = laneBandMode
+        ? `7. Click bottom line of target band${laneLabel}`
+        : '7. Click bottom line of target band';
+    }
+
     updateStepClass(elements.gelStepLeft, activeStep === 'left' ? 'active' : (Number.isFinite(overrides.laneSegmentation?.gelLeft) ? 'done' : 'todo'));
     updateStepClass(elements.gelStepRight, activeStep === 'right' ? 'active' : (Number.isFinite(overrides.laneSegmentation?.gelRight) ? 'done' : 'todo'));
     updateStepClass(elements.gelStepDividers, activeStep === 'dividers' ? 'active' : (dividerDone ? 'done' : 'todo'));
     updateStepClass(elements.gelStepLadder, activeStep === 'ladder' ? 'active' : (Number.isFinite(overrides.ladderLane) ? 'done' : 'todo'));
     updateStepClass(elements.gelStepLadderMw, activeStep === 'ladder-mw' ? 'active' : (Boolean(overrides.ladderBandsDone) ? 'done' : 'todo'));
-    updateStepClass(elements.gelStepBandTop, activeStep === 'band-top' ? 'active' : (Number.isFinite(overrides.laneSegmentation?.bandTop) ? 'done' : 'todo'));
-    updateStepClass(elements.gelStepBandBottom, activeStep === 'band-bottom' ? 'active' : (Number.isFinite(overrides.laneSegmentation?.bandBottom) ? 'done' : 'todo'));
+    updateStepClass(elements.gelStepBandTop, activeStep === 'band-top' ? 'active' : (laneBandMode ? (laneBandComplete ? 'done' : 'todo') : (Number.isFinite(overrides.laneSegmentation?.bandTop) ? 'done' : 'todo')));
+    updateStepClass(elements.gelStepBandBottom, activeStep === 'band-bottom' ? 'active' : (laneBandMode ? (laneBandComplete ? 'done' : 'todo') : (Number.isFinite(overrides.laneSegmentation?.bandBottom) ? 'done' : 'todo')));
     updateStepClass(elements.gelStepQuantify, activeStep === 'quantify' ? 'active' : (Boolean(overrides.laneSegmentation?.quantifyConfirmed) ? 'done' : 'todo'));
     updateStepClass(elements.gelStepBands, activeStep === 'bands' ? 'active' : ((overrides.addedBands?.length || 0) > 0 ? 'done' : 'todo'));
 
@@ -82,7 +122,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         elements.gelManualNextBtn.textContent = 'Done Dividers';
       }
     }
-    renderViewerToolbar(elements, runtime.selectedViewerTool);
+    renderViewerToolbar(elements, runtime.selectedViewerTool, laneBandMode);
   }
 
   function renderOverrideStatus() {
@@ -90,10 +130,14 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       return;
     }
     const summary = normalizeManualOverrides(runtime.manualOverrides);
+    const laneBandMode = isPerLaneBandMode(summary.laneSegmentation);
+    const laneBandProgress = getLaneBandProgress(summary);
     const parts = [
       `gel ${summary.laneSegmentation?.gelLeft ?? '-'}-${summary.laneSegmentation?.gelRight ?? '-'}`,
       `div ${summary.laneSegmentation?.dividers?.length || 0}`,
-      `bandY ${summary.laneSegmentation?.bandTop ?? '-'}-${summary.laneSegmentation?.bandBottom ?? '-'}`,
+      laneBandMode
+        ? `bandY lanes ${countCompleteLaneBandWindows(summary.laneSegmentation)}/${laneBandProgress.totalLanes || '-'}`
+        : `bandY ${summary.laneSegmentation?.bandTop ?? '-'}-${summary.laneSegmentation?.bandBottom ?? '-'}`,
       `add ${summary.addedBands.length}`,
       `ladderMW ${summary.ladderBands?.length || 0}`,
       `ladder ${summary.ladderLane || '-'}`
@@ -121,6 +165,8 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       dividerDone: Boolean(current.dividerDone),
       bandTop: Number.isFinite(current.bandTop) ? current.bandTop : null,
       bandBottom: Number.isFinite(current.bandBottom) ? current.bandBottom : null,
+      perLaneBandEnabled: isPerLaneBandMode(current),
+      laneBandWindows: normalizeLaneBandWindows(current.laneBandWindows),
       quantifyConfirmed: Boolean(current.quantifyConfirmed),
       ...patch
     };
@@ -137,6 +183,8 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     next.bandBottom = (rawBandBottom === null || rawBandBottom === undefined || rawBandBottom === '')
       ? null
       : (Number.isFinite(Number(rawBandBottom)) ? Math.max(0, Math.floor(Number(rawBandBottom))) : null);
+    next.perLaneBandEnabled = Boolean(next.perLaneBandEnabled);
+    next.laneBandWindows = normalizeLaneBandWindows(next.laneBandWindows);
     runtime.manualOverrides = {
       ...normalized,
       laneSegmentation: next
@@ -182,6 +230,98 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     return bestLane ? bestLane.index + 1 : null;
   }
 
+  function getSegmentationLanes(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
+    if (!runtime.currentImage) {
+      return [];
+    }
+    return buildLanesFromManualSegmentation(overrides, runtime.currentImage.width) || [];
+  }
+
+  function getLaneBandProgress(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
+    const normalized = normalizeManualOverrides(overrides);
+    const segmentation = normalized.laneSegmentation || {};
+    const lanes = getSegmentationLanes(normalized);
+    const validLaneIndexes = new Set(lanes.map((lane) => lane.index + 1));
+    const windows = normalizeLaneBandWindows(segmentation.laneBandWindows)
+      .filter((window) => validLaneIndexes.has(window.laneIndex));
+    const laneWindowByIndex = new Map(windows.map((window) => [window.laneIndex, window]));
+    const pendingBottomLane = lanes.find((lane) => {
+      const laneIndex = lane.index + 1;
+      const window = laneWindowByIndex.get(laneIndex);
+      return Number.isFinite(window?.bandTop) && !Number.isFinite(window?.bandBottom);
+    });
+    const missingCompleteLane = lanes.find((lane) => {
+      const laneIndex = lane.index + 1;
+      return !hasCompleteLaneBandWindow(laneWindowByIndex.get(laneIndex));
+    });
+
+    return {
+      completeCount: lanes.filter((lane) => hasCompleteLaneBandWindow(laneWindowByIndex.get(lane.index + 1))).length,
+      missingCompleteLaneIndex: missingCompleteLane ? missingCompleteLane.index + 1 : null,
+      pendingBottomLaneIndex: pendingBottomLane ? pendingBottomLane.index + 1 : null,
+      totalLanes: lanes.length,
+      windows
+    };
+  }
+
+  function upsertLaneBandWindow(laneIndex, patch) {
+    const normalized = normalizeManualOverrides(runtime.manualOverrides);
+    const windows = normalizeLaneBandWindows(normalized.laneSegmentation?.laneBandWindows);
+    const existing = windows.find((window) => window.laneIndex === laneIndex) || {
+      laneIndex,
+      bandTop: null,
+      bandBottom: null
+    };
+    const nextWindow = {
+      ...existing,
+      ...patch,
+      laneIndex
+    };
+    updateLaneSegmentation({
+      laneBandWindows: [
+        ...windows.filter((window) => window.laneIndex !== laneIndex),
+        nextWindow
+      ],
+      quantifyConfirmed: false
+    });
+  }
+
+  function setLaneBandMode(enabled) {
+    const normalized = normalizeManualOverrides(runtime.manualOverrides);
+    updateLaneSegmentation({
+      perLaneBandEnabled: Boolean(enabled),
+      quantifyConfirmed: false
+    });
+    runtime.manualOverrides = {
+      ...normalizeManualOverrides(runtime.manualOverrides),
+      addedBands: []
+    };
+    runtime.currentReport = null;
+    renderOverrideStatus();
+    deps.renderCanvas();
+    deps.renderReport();
+    const nextMode = isPerLaneBandMode(runtime.manualOverrides.laneSegmentation);
+    if (nextMode) {
+      const progress = getLaneBandProgress();
+      deps.setStatus(progress.totalLanes
+        ? `Lane-by-lane target band enabled. Click the top line in lane ${progress.missingCompleteLaneIndex || 1}.`
+        : 'Lane-by-lane target band enabled. Finish lane dividers before setting target bands.');
+      return;
+    }
+    deps.setStatus('Lane-by-lane target band disabled. Top and bottom lines will apply to every lane.');
+    if (
+      runtime.currentImage
+      && Number.isFinite(normalized.laneSegmentation?.bandTop)
+      && Number.isFinite(normalized.laneSegmentation?.bandBottom)
+    ) {
+      deps.onRunAnalysis();
+    }
+  }
+
+  function onLaneBandModeToggle() {
+    setLaneBandMode(!isPerLaneBandMode(runtime.manualOverrides?.laneSegmentation));
+  }
+
   function onManualNextStep() {
     const step = getManualStep();
     const segmentation = normalizeManualOverrides(runtime.manualOverrides).laneSegmentation || {};
@@ -206,9 +346,11 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       };
       renderOverrideStatus();
       if (ladderCount < 2) {
-        deps.setStatus(`Ladder MW step skipped (${ladderCount} point${ladderCount === 1 ? '' : 's'}). MW calibration disabled. Click the top line of target band.`);
+        deps.setStatus(`Ladder MW step skipped (${ladderCount} point${ladderCount === 1 ? '' : 's'}). MW calibration disabled. ${isPerLaneBandMode(normalized.laneSegmentation) ? 'Click the top line of the target band in each lane.' : 'Click the top line of target band.'}`);
       } else {
-        deps.setStatus('Ladder MW step completed. Click the top line of target band.');
+        deps.setStatus(isPerLaneBandMode(normalized.laneSegmentation)
+          ? 'Ladder MW step completed. Click the top line of the target band in each lane.'
+          : 'Ladder MW step completed. Click the top line of target band.');
       }
       deps.onRunAnalysis();
       return;
@@ -231,7 +373,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       updateLaneSegmentation({ gelLeft: null });
       runtime.manualDividerConfirmed = false;
     } else if (step === 'dividers') {
-      updateLaneSegmentation({ gelRight: null, dividers: [], dividerDone: false, bandTop: null, bandBottom: null });
+      updateLaneSegmentation({ gelRight: null, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [] });
       runtime.manualDividerConfirmed = false;
       runtime.manualOverrides = {
         ...normalizeManualOverrides(runtime.manualOverrides),
@@ -241,7 +383,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         addedBands: []
       };
     } else if (step === 'ladder') {
-      updateLaneSegmentation({ dividerDone: false, bandTop: null, bandBottom: null });
+      updateLaneSegmentation({ dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [] });
       runtime.manualDividerConfirmed = false;
       runtime.manualOverrides = {
         ...normalizeManualOverrides(runtime.manualOverrides),
@@ -258,6 +400,8 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         ladderBandsDone: false,
         addedBands: []
       };
+    } else if (isPerLaneBandMode(normalized.laneSegmentation) && (step === 'band-top' || step === 'band-bottom' || step === 'quantify' || step === 'bands')) {
+      rewindPerLaneBandStep(step, normalized);
     } else if (step === 'band-top') {
       runtime.manualOverrides = {
         ...normalized,
@@ -288,6 +432,76 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     deps.renderCanvas();
     deps.renderReport();
     deps.setStatus('Moved back to previous step.');
+  }
+
+  function rewindPerLaneBandStep(step, normalized) {
+    const progress = getLaneBandProgress(normalized);
+    const windows = normalizeLaneBandWindows(normalized.laneSegmentation?.laneBandWindows);
+    const completedWindows = progress.windows
+      .filter(hasCompleteLaneBandWindow)
+      .sort((a, b) => a.laneIndex - b.laneIndex);
+
+    if (step === 'band-bottom' && progress.pendingBottomLaneIndex) {
+      updateLaneSegmentation({
+        laneBandWindows: windows.filter((window) => window.laneIndex !== progress.pendingBottomLaneIndex),
+        quantifyConfirmed: false
+      });
+      runtime.manualOverrides = {
+        ...normalizeManualOverrides(runtime.manualOverrides),
+        addedBands: []
+      };
+      return;
+    }
+
+    if (step === 'band-top') {
+      const lastComplete = completedWindows[completedWindows.length - 1];
+      if (!lastComplete) {
+        runtime.manualOverrides = {
+          ...normalized,
+          ladderBandsDone: false,
+          addedBands: []
+        };
+        return;
+      }
+      updateLaneSegmentation({
+        laneBandWindows: windows.map((window) => (
+          window.laneIndex === lastComplete.laneIndex
+            ? { ...window, bandBottom: null }
+            : window
+        )),
+        quantifyConfirmed: false
+      });
+      runtime.manualOverrides = {
+        ...normalizeManualOverrides(runtime.manualOverrides),
+        addedBands: []
+      };
+      return;
+    }
+
+    if (step === 'quantify') {
+      const lastComplete = completedWindows[completedWindows.length - 1];
+      updateLaneSegmentation({
+        laneBandWindows: lastComplete
+          ? windows.map((window) => (
+            window.laneIndex === lastComplete.laneIndex
+              ? { ...window, bandBottom: null }
+              : window
+          ))
+          : windows,
+        quantifyConfirmed: false
+      });
+      runtime.manualOverrides = {
+        ...normalizeManualOverrides(runtime.manualOverrides),
+        addedBands: []
+      };
+      return;
+    }
+
+    updateLaneSegmentation({ quantifyConfirmed: false });
+    runtime.manualOverrides = {
+      ...normalizeManualOverrides(runtime.manualOverrides),
+      addedBands: []
+    };
   }
 
   function onManualResetSteps() {
@@ -322,7 +536,9 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       return false;
     }
     updateLaneSegmentation({
-      dividers: [...(segmentation.dividers || []), divider]
+      dividers: [...(segmentation.dividers || []), divider],
+      laneBandWindows: [],
+      quantifyConfirmed: false
     });
     return true;
   }
@@ -418,7 +634,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
 
     const step = getCanvasInteractionStep();
     if (step === 'left') {
-      updateLaneSegmentation({ gelLeft: point.x, dividers: [], dividerDone: false, bandTop: null, bandBottom: null });
+      updateLaneSegmentation({ gelLeft: point.x, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [] });
       runtime.manualDividerConfirmed = false;
       resetDownstreamManualSelections();
       renderOverrideStatus();
@@ -432,7 +648,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         deps.setStatus('Right border must be to the right of left border.');
         return;
       }
-      updateLaneSegmentation({ gelRight: point.x, dividers: [], dividerDone: false, bandTop: null, bandBottom: null });
+      updateLaneSegmentation({ gelRight: point.x, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [] });
       runtime.manualDividerConfirmed = false;
       resetDownstreamManualSelections();
       renderOverrideStatus();
@@ -490,7 +706,23 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       return;
     }
     if (step === 'band-top') {
-      updateLaneSegmentation({ bandTop: point.y, bandBottom: null, quantifyConfirmed: false });
+      if (isPerLaneBandMode(normalizeManualOverrides(runtime.manualOverrides).laneSegmentation)) {
+        const laneIndex = inferLaneIndexFromSegmentationX(point.x);
+        if (!laneIndex) {
+          deps.setStatus('Click inside a lane to set a lane-specific top line.');
+          return;
+        }
+        upsertLaneBandWindow(laneIndex, { bandTop: point.y, bandBottom: null });
+        runtime.manualOverrides = {
+          ...normalizeManualOverrides(runtime.manualOverrides),
+          addedBands: []
+        };
+        renderOverrideStatus();
+        deps.renderCanvas();
+        deps.setStatus(`Lane ${laneIndex} top line set at y=${point.y}. Click the bottom line in lane ${laneIndex}.`);
+        return;
+      }
+      updateLaneSegmentation({ bandTop: point.y, bandBottom: null, laneBandWindows: [], quantifyConfirmed: false });
       runtime.manualOverrides = {
         ...normalizeManualOverrides(runtime.manualOverrides),
         addedBands: []
@@ -501,6 +733,41 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       return;
     }
     if (step === 'band-bottom') {
+      const normalized = normalizeManualOverrides(runtime.manualOverrides);
+      if (isPerLaneBandMode(normalized.laneSegmentation)) {
+        const progress = getLaneBandProgress(normalized);
+        const pendingLaneIndex = progress.pendingBottomLaneIndex;
+        if (!pendingLaneIndex) {
+          deps.setStatus('Click a lane top line before setting a lane bottom line.');
+          return;
+        }
+        const laneIndex = inferLaneIndexFromSegmentationX(point.x);
+        if (laneIndex !== pendingLaneIndex) {
+          deps.setStatus(`Click the bottom line in lane ${pendingLaneIndex} before starting another lane.`);
+          return;
+        }
+        const window = getLaneBandWindow(normalized.laneSegmentation, pendingLaneIndex);
+        const top = window?.bandTop;
+        if (!Number.isFinite(top) || point.y <= top + 1) {
+          deps.setStatus('Bottom line must be below top line.');
+          return;
+        }
+        upsertLaneBandWindow(pendingLaneIndex, { bandBottom: point.y });
+        runtime.manualOverrides = {
+          ...normalizeManualOverrides(runtime.manualOverrides),
+          addedBands: []
+        };
+        renderOverrideStatus();
+        deps.renderCanvas();
+        const nextProgress = getLaneBandProgress();
+        if (nextProgress.totalLanes && nextProgress.completeCount >= nextProgress.totalLanes) {
+          deps.setStatus(`Lane ${pendingLaneIndex} bottom line set at y=${point.y}. Per-lane intensities ready in the Quantify panel.`);
+        } else {
+          deps.setStatus(`Lane ${pendingLaneIndex} bottom line set at y=${point.y}. Click the top line in lane ${nextProgress.missingCompleteLaneIndex || 1}.`);
+        }
+        deps.onRunAnalysis();
+        return;
+      }
       const top = normalizeManualOverrides(runtime.manualOverrides).laneSegmentation?.bandTop;
       if (!Number.isFinite(top) || point.y <= top + 1) {
         deps.setStatus('Bottom line must be below top line.');
@@ -556,7 +823,8 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       dividers: result.dividers,
       dividerDone: false,
       bandTop: segmentation.bandTop,
-      bandBottom: segmentation.bandBottom
+      bandBottom: segmentation.bandBottom,
+      laneBandWindows: []
     });
     resetDownstreamManualSelections();
     runtime.manualDividerConfirmed = false;
@@ -585,6 +853,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     onAutoDetectLanes,
     onCanvasClick,
     onCanvasContextMenu,
+    onLaneBandModeToggle,
     onManualNextStep,
     onManualPrevStep,
     onManualResetSteps,
@@ -592,6 +861,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     onViewerToolSelected,
     renderManualProgress,
     renderOverrideStatus,
-    renderViewerToolbar: () => renderViewerToolbar(elements, runtime.selectedViewerTool)
+    renderViewerToolbar: () => renderViewerToolbar(elements, runtime.selectedViewerTool, isPerLaneBandMode(runtime.manualOverrides?.laneSegmentation))
   };
 }

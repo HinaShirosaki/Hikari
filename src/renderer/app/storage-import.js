@@ -323,6 +323,21 @@ export function createStorageImportController({
     }
   }
 
+  async function syncStateSidecarsFromStorageRoot() {
+    const storagePath = String(state.settings?.storagePath || '').trim();
+    if (!storagePath || !windowObject.enanaApi?.autoSaveDataFile) {
+      return { ok: false, skipped: true };
+    }
+    try {
+      return await windowObject.enanaApi.autoSaveDataFile(state, '');
+    } catch (error) {
+      return {
+        ok: false,
+        error: error?.message || 'Storage sidecar sync failed.'
+      };
+    }
+  }
+
   async function runStorageRootImport(storagePath, options = {}) {
     const resolvedStoragePath = String(storagePath || '').trim();
     if (!resolvedStoragePath || !windowObject.enanaApi?.importStorageRoot) {
@@ -331,6 +346,7 @@ export function createStorageImportController({
 
     const persistMergedState = options.persistMergedState === true;
     const resetWorkspace = options.resetWorkspace === true;
+    const syncSidecars = options.syncSidecars === true;
     try {
       const ensured = await ensureStorageRootDirectory(resolvedStoragePath);
       if (!ensured.ok) {
@@ -360,6 +376,7 @@ export function createStorageImportController({
 
       mergeStorageImportPatch(result.statePatch);
       updateStorageImportState(result);
+      let sidecarSync = null;
       if (persistMergedState) {
         persist();
       } else {
@@ -367,12 +384,16 @@ export function createStorageImportController({
         state.objectGraph = rebuildObjectGraph(state);
         persistState(state);
       }
+      if (syncSidecars) {
+        sidecarSync = await syncStateSidecarsFromStorageRoot();
+      }
       return {
         ok: true,
         refreshed: resetWorkspace,
         summary: result.summary || {},
         warnings: result.warnings || [],
-        manifestPath: result.manifestPath || ''
+        manifestPath: result.manifestPath || '',
+        sidecarSync
       };
     } catch (error) {
       updateStorageImportError(error?.message || 'Storage import failed.');
@@ -390,13 +411,14 @@ export function createStorageImportController({
     if (!storagePath) {
       return;
     }
-    await runStorageRootImport(storagePath, { persistMergedState: false });
+    return runStorageRootImport(storagePath, { persistMergedState: false, syncSidecars: true });
   }
 
   return {
     hydrateStateFromStorageRoot,
     mergeStorageImportPatch,
     refreshWorkspaceForStorageRoot,
-    runStorageRootImport
+    runStorageRootImport,
+    syncStateSidecarsFromStorageRoot
   };
 }

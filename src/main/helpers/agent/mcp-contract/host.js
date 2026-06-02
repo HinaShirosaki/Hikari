@@ -182,13 +182,30 @@ function createAgentMcpHost(deps = {}) {
     if (started) {
       return started;
     }
-    server = http.createServer((request, response) => {
+    const localServer = http.createServer((request, response) => {
       void handleRequest(request, response);
     });
+    localServer.headersTimeout = 65_000;
+    localServer.requestTimeout = 60_000;
+    localServer.keepAliveTimeout = 5_000;
+    server = localServer;
     started = new Promise((resolve, reject) => {
-      server.once('error', reject);
-      server.listen(0, hostname, () => {
-        const address = server.address();
+      const failStart = (error) => {
+        if (server === localServer) {
+          server = null;
+          started = null;
+        }
+        try {
+          localServer.close();
+        } catch {
+          /* ignore */
+        }
+        reject(error);
+      };
+      localServer.once('error', failStart);
+      localServer.listen(0, hostname, () => {
+        localServer.off('error', failStart);
+        const address = localServer.address();
         const port = typeof address === 'object' && address ? address.port : 0;
         hostUrl = `http://${hostname}:${port}`;
         env.HIKARI_AGENT_MCP_HOST = hostUrl;

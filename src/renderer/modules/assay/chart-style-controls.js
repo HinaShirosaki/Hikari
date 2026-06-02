@@ -1,3 +1,32 @@
+import {
+  createChartStylePicker,
+  SHAPE_OPTIONS,
+  LINE_STYLE_OPTIONS,
+  FRAME_STYLE_OPTIONS,
+  POINT_SIZE_OPTIONS,
+  LINE_WIDTH_OPTIONS,
+  STROKE_WIDTH_OPTIONS,
+  CORNER_RADIUS_OPTIONS,
+  FRAME_WIDTH_OPTIONS,
+  FRAME_HEIGHT_OPTIONS
+} from './chart-style-pickers.js';
+import { createChartTextControls } from './chart-text-controls.js';
+
+function nearestOption(value, options) {
+  if (!options.length) return value;
+  if (!Number.isFinite(value)) return options[0].value;
+  let best = options[0].value;
+  let bestDist = Math.abs(value - best);
+  for (let i = 1; i < options.length; i++) {
+    const dist = Math.abs(value - options[i].value);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = options[i].value;
+    }
+  }
+  return best;
+}
+
 export function createAssayChartStyleControls({ elements, analysisView, safeText, onStyleChanged }) {
   const fieldKeys = [
     'assayChartXColumn',
@@ -39,6 +68,116 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
 
   let suppressInputEvents = false;
   const seriesColorListeners = [];
+  const pickers = {};
+  let textControls = null;
+
+  function emitChange() {
+    if (suppressInputEvents) return;
+    applyPatch(readFormPatch());
+  }
+
+  function buildPickers() {
+    if (elements.assayChartPointShape) {
+      pickers.pointShape = createChartStylePicker(elements.assayChartPointShape, {
+        kind: 'shape',
+        options: SHAPE_OPTIONS,
+        value: 'circle',
+        onChange: () => {
+          if (pickers.pointSize) {
+            pickers.pointSize.setShapeContext(pickers.pointShape.value);
+          }
+          emitChange();
+        }
+      });
+    }
+    if (elements.assayChartPointSize) {
+      pickers.pointSize = createChartStylePicker(elements.assayChartPointSize, {
+        kind: 'point-size',
+        options: POINT_SIZE_OPTIONS,
+        value: POINT_SIZE_OPTIONS[1].value,
+        shapeContext: pickers.pointShape ? pickers.pointShape.value : 'circle',
+        onChange: emitChange
+      });
+    }
+    if (elements.assayChartLineStyle) {
+      pickers.lineStyle = createChartStylePicker(elements.assayChartLineStyle, {
+        kind: 'line-style',
+        options: LINE_STYLE_OPTIONS,
+        value: 'solid',
+        onChange: emitChange
+      });
+    }
+    if (elements.assayChartLineWidth) {
+      pickers.lineWidth = createChartStylePicker(elements.assayChartLineWidth, {
+        kind: 'line-width',
+        options: LINE_WIDTH_OPTIONS,
+        value: 1.5,
+        onChange: emitChange
+      });
+    }
+    if (elements.assayChartFrameStyle) {
+      pickers.frameStyle = createChartStylePicker(elements.assayChartFrameStyle, {
+        kind: 'frame-style',
+        options: FRAME_STYLE_OPTIONS,
+        value: 'box',
+        onChange: emitChange
+      });
+    }
+    if (elements.assayChartFrameStrokeWidth) {
+      pickers.frameStrokeWidth = createChartStylePicker(elements.assayChartFrameStrokeWidth, {
+        kind: 'stroke-width',
+        options: STROKE_WIDTH_OPTIONS,
+        value: 1,
+        onChange: emitChange
+      });
+    }
+    if (elements.assayChartFrameCornerRadius) {
+      pickers.frameCornerRadius = createChartStylePicker(elements.assayChartFrameCornerRadius, {
+        kind: 'corner-radius',
+        options: CORNER_RADIUS_OPTIONS,
+        value: 0,
+        onChange: emitChange
+      });
+    }
+    if (elements.assayChartFrameWidth) {
+      pickers.frameWidth = createChartStylePicker(elements.assayChartFrameWidth, {
+        kind: 'dim-width',
+        options: FRAME_WIDTH_OPTIONS,
+        value: 720,
+        min: FRAME_WIDTH_OPTIONS[0].value,
+        max: FRAME_WIDTH_OPTIONS[FRAME_WIDTH_OPTIONS.length - 1].value,
+        onChange: emitChange
+      });
+    }
+    if (elements.assayChartFrameHeight) {
+      pickers.frameHeight = createChartStylePicker(elements.assayChartFrameHeight, {
+        kind: 'dim-height',
+        options: FRAME_HEIGHT_OPTIONS,
+        value: 360,
+        min: FRAME_HEIGHT_OPTIONS[0].value,
+        max: FRAME_HEIGHT_OPTIONS[FRAME_HEIGHT_OPTIONS.length - 1].value,
+        onChange: emitChange
+      });
+    }
+    if (elements.assayChartGridStrokeWidth) {
+      pickers.gridStrokeWidth = createChartStylePicker(elements.assayChartGridStrokeWidth, {
+        kind: 'grid-width',
+        options: STROKE_WIDTH_OPTIONS,
+        value: 1,
+        onChange: emitChange
+      });
+    }
+    if (elements.assayChartTextBar) {
+      const initialText = analysisView.getChartStyle().text || {};
+      textControls = createChartTextControls(elements.assayChartTextBar, {
+        value: initialText,
+        onChange: (textValue) => {
+          if (suppressInputEvents) return;
+          applyPatch({ text: textValue });
+        }
+      });
+    }
+  }
 
   function populateColumnOptions(select, headers) {
     if (!select) return;
@@ -64,6 +203,12 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
     }
   }
 
+  function setPickerValue(picker, value, options) {
+    if (!picker) return;
+    const snapped = options ? nearestOption(Number(value), options) : value;
+    picker.setValue(snapped);
+  }
+
   function syncFormFromStyle() {
     const style = analysisView.getChartStyle();
     const ctx = analysisView.getChartContext();
@@ -82,29 +227,34 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
     setValueIfPresent(elements.assayChartYRangeAuto, style.yRange.auto);
     setValueIfPresent(elements.assayChartYMin, style.yRange.min);
     setValueIfPresent(elements.assayChartYMax, style.yRange.max);
-    setValueIfPresent(elements.assayChartPointShape, style.pointShape);
-    setValueIfPresent(elements.assayChartPointSize, style.pointSize);
-    setValueIfPresent(elements.assayChartLineStyle, style.lineStyle);
+
+    if (pickers.pointShape) pickers.pointShape.setValue(style.pointShape);
+    setPickerValue(pickers.pointSize, style.pointSize, POINT_SIZE_OPTIONS);
+    if (pickers.pointSize) pickers.pointSize.setShapeContext(style.pointShape);
+    if (pickers.lineStyle) pickers.lineStyle.setValue(style.lineStyle);
     setValueIfPresent(elements.assayChartCurve, style.curve);
-    setValueIfPresent(elements.assayChartLineWidth, style.lineWidth);
-    setValueIfPresent(elements.assayChartFrameStyle, style.frameStyle);
+    setPickerValue(pickers.lineWidth, style.lineWidth, LINE_WIDTH_OPTIONS);
+    if (pickers.frameStyle) pickers.frameStyle.setValue(style.frameStyle);
     setValueIfPresent(elements.assayChartFrameStroke, style.frameStroke);
-    setValueIfPresent(elements.assayChartFrameStrokeWidth, style.frameStrokeWidth);
-    setValueIfPresent(elements.assayChartFrameCornerRadius, style.frameCornerRadius);
+    setPickerValue(pickers.frameStrokeWidth, style.frameStrokeWidth, STROKE_WIDTH_OPTIONS);
+    setPickerValue(pickers.frameCornerRadius, style.frameCornerRadius, CORNER_RADIUS_OPTIONS);
     setValueIfPresent(elements.assayChartBackgroundColor, style.backgroundColor);
     setValueIfPresent(elements.assayChartSizeAuto, style.sizeAuto !== false);
-    setValueIfPresent(
-      elements.assayChartFrameWidth,
-      Number.isFinite(style.frameWidth) ? style.frameWidth : 720
+    setPickerValue(
+      pickers.frameWidth,
+      Number.isFinite(style.frameWidth) ? style.frameWidth : 720,
+      FRAME_WIDTH_OPTIONS
     );
-    setValueIfPresent(
-      elements.assayChartFrameHeight,
-      Number.isFinite(style.frameHeight) ? style.frameHeight : 280
+    setPickerValue(
+      pickers.frameHeight,
+      Number.isFinite(style.frameHeight) ? style.frameHeight : 360,
+      FRAME_HEIGHT_OPTIONS
     );
     setValueIfPresent(elements.assayChartGridVertical, style.showVerticalGrid !== false);
     setValueIfPresent(elements.assayChartGridHorizontal, style.showHorizontalGrid !== false);
     setValueIfPresent(elements.assayChartGridColor, style.gridColor);
-    setValueIfPresent(elements.assayChartGridStrokeWidth, style.gridStrokeWidth);
+    setPickerValue(pickers.gridStrokeWidth, style.gridStrokeWidth, STROKE_WIDTH_OPTIONS);
+    if (textControls) textControls.setValue(style.text || {});
 
     applyRangeDisabledState();
     applySizeDisabledState();
@@ -129,10 +279,10 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
   function applySizeDisabledState() {
     const auto = Boolean(elements.assayChartSizeAuto?.checked);
     if (elements.assayChartFrameWidth) {
-      elements.assayChartFrameWidth.disabled = auto;
+      elements.assayChartFrameWidth.classList.toggle('is-disabled', auto);
     }
     if (elements.assayChartFrameHeight) {
-      elements.assayChartFrameHeight.disabled = auto;
+      elements.assayChartFrameHeight.classList.toggle('is-disabled', auto);
     }
   }
 
@@ -188,6 +338,12 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
     return Number.isFinite(num) ? num : null;
   }
 
+  function pickerNumberValue(picker, fallback) {
+    if (!picker) return fallback;
+    const v = Number(picker.value);
+    return Number.isFinite(v) ? v : fallback;
+  }
+
   function readFormPatch() {
     const style = analysisView.getChartStyle();
     return {
@@ -206,33 +362,21 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
         min: parseRangeNumber(elements.assayChartYMin),
         max: parseRangeNumber(elements.assayChartYMax)
       },
-      pointShape: elements.assayChartPointShape?.value || style.pointShape,
-      pointSize: elements.assayChartPointSize
-        ? Number(elements.assayChartPointSize.value) || style.pointSize
-        : style.pointSize,
-      lineStyle: elements.assayChartLineStyle?.value || style.lineStyle,
+      pointShape: pickers.pointShape ? pickers.pointShape.value : style.pointShape,
+      pointSize: pickerNumberValue(pickers.pointSize, style.pointSize),
+      lineStyle: pickers.lineStyle ? pickers.lineStyle.value : style.lineStyle,
       curve: elements.assayChartCurve?.value || style.curve,
-      lineWidth: elements.assayChartLineWidth
-        ? Number(elements.assayChartLineWidth.value) || style.lineWidth
-        : style.lineWidth,
-      frameStyle: elements.assayChartFrameStyle?.value || style.frameStyle,
+      lineWidth: pickerNumberValue(pickers.lineWidth, style.lineWidth),
+      frameStyle: pickers.frameStyle ? pickers.frameStyle.value : style.frameStyle,
       frameStroke: elements.assayChartFrameStroke?.value || style.frameStroke,
-      frameStrokeWidth: elements.assayChartFrameStrokeWidth
-        ? Number(elements.assayChartFrameStrokeWidth.value)
-        : style.frameStrokeWidth,
-      frameCornerRadius: elements.assayChartFrameCornerRadius
-        ? Number(elements.assayChartFrameCornerRadius.value)
-        : style.frameCornerRadius,
+      frameStrokeWidth: pickerNumberValue(pickers.frameStrokeWidth, style.frameStrokeWidth),
+      frameCornerRadius: pickerNumberValue(pickers.frameCornerRadius, style.frameCornerRadius),
       backgroundColor: elements.assayChartBackgroundColor?.value || style.backgroundColor,
       sizeAuto: elements.assayChartSizeAuto
         ? Boolean(elements.assayChartSizeAuto.checked)
         : style.sizeAuto,
-      frameWidth: elements.assayChartFrameWidth
-        ? Number(elements.assayChartFrameWidth.value) || style.frameWidth
-        : style.frameWidth,
-      frameHeight: elements.assayChartFrameHeight
-        ? Number(elements.assayChartFrameHeight.value) || style.frameHeight
-        : style.frameHeight,
+      frameWidth: pickerNumberValue(pickers.frameWidth, style.frameWidth),
+      frameHeight: pickerNumberValue(pickers.frameHeight, style.frameHeight),
       showVerticalGrid: elements.assayChartGridVertical
         ? Boolean(elements.assayChartGridVertical.checked)
         : style.showVerticalGrid,
@@ -240,9 +384,7 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
         ? Boolean(elements.assayChartGridHorizontal.checked)
         : style.showHorizontalGrid,
       gridColor: elements.assayChartGridColor?.value || style.gridColor,
-      gridStrokeWidth: elements.assayChartGridStrokeWidth
-        ? Number(elements.assayChartGridStrokeWidth.value)
-        : style.gridStrokeWidth
+      gridStrokeWidth: pickerNumberValue(pickers.gridStrokeWidth, style.gridStrokeWidth)
     };
   }
 
@@ -270,7 +412,7 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
     }
   }
 
-  const inputBindings = [
+  const nativeInputBindings = [
     elements.assayChartXColumn,
     elements.assayChartYColumn,
     elements.assayChartSeriesColumn,
@@ -282,26 +424,17 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
     elements.assayChartYRangeAuto,
     elements.assayChartYMin,
     elements.assayChartYMax,
-    elements.assayChartPointShape,
-    elements.assayChartPointSize,
-    elements.assayChartLineStyle,
     elements.assayChartCurve,
-    elements.assayChartLineWidth,
-    elements.assayChartFrameStyle,
     elements.assayChartFrameStroke,
-    elements.assayChartFrameStrokeWidth,
-    elements.assayChartFrameCornerRadius,
     elements.assayChartBackgroundColor,
     elements.assayChartSizeAuto,
-    elements.assayChartFrameWidth,
-    elements.assayChartFrameHeight,
     elements.assayChartGridVertical,
     elements.assayChartGridHorizontal,
-    elements.assayChartGridColor,
-    elements.assayChartGridStrokeWidth
+    elements.assayChartGridColor
   ];
 
-  inputBindings.forEach((input) => {
+  buildPickers();
+  nativeInputBindings.forEach((input) => {
     if (!input) return;
     const event = input.tagName === 'SELECT' || input.type === 'checkbox' ? 'change' : 'input';
     input.addEventListener(event, onFormInput);
@@ -319,13 +452,15 @@ export function createAssayChartStyleControls({ elements, analysisView, safeText
       suppressInputEvents = false;
     },
     destroy() {
-      inputBindings.forEach((input) => {
+      nativeInputBindings.forEach((input) => {
         if (!input) return;
         const event = input.tagName === 'SELECT' || input.type === 'checkbox' ? 'change' : 'input';
         input.removeEventListener(event, onFormInput);
       });
       elements.assayChartStyleResetBtn?.removeEventListener('click', onResetClick);
       clearSeriesColorListeners();
+      Object.values(pickers).forEach((picker) => picker && picker.destroy());
+      if (textControls) textControls.destroy();
     }
   };
 }

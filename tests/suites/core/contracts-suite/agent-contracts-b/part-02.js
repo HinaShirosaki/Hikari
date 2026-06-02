@@ -10,6 +10,7 @@ module.exports = function registerAgentContractsBPart02(context = {}) {
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');

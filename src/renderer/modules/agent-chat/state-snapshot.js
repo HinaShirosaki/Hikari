@@ -114,7 +114,13 @@ export function buildStateSnapshot(state, projectId) {
     },
     data_file_path: '',
     settings: {
-      storagePath: trimText(state.settings?.storagePath, 1200)
+      storagePath: trimText(state.settings?.storagePath, 1200),
+      agent: {
+        externalSkillsEnabled: state.settings?.agent?.externalSkillsEnabled !== false,
+        disabledExternalSkillNames: asArray(state.settings?.agent?.disabledExternalSkillNames)
+          .map((item) => trimText(item, 160))
+          .filter(Boolean)
+      }
     },
     timestamp: new Date().toISOString()
   };

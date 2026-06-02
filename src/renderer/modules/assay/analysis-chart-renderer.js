@@ -375,19 +375,35 @@ export function createAssayAnalysisChartRenderer({
     if (yDomain) plotProps.yDomain = yDomain;
 
     const axisColor = style.frameStroke || '#9bb0c9';
+    const textStyle = style.text || {};
+    const textFontFamily = textStyle.fontFamily
+      ? `${textStyle.fontFamily}, ${CHART_FONT_FAMILY}`
+      : CHART_FONT_FAMILY;
+    const textFill = textStyle.color || axisColor;
+    const textFontSize = Number.isFinite(textStyle.fontSize) ? textStyle.fontSize : 11;
+    const textFontWeight = textStyle.bold ? 700 : 400;
+    const textFontStyle = textStyle.italic ? 'italic' : 'normal';
+    const textDecoration = textStyle.underline ? 'underline' : 'none';
+    const baselineShift = textStyle.baseline === 'super'
+      ? 'super'
+      : textStyle.baseline === 'sub' ? 'sub' : 'baseline';
+    const textAnchor = textStyle.textAlign || 'middle';
+    const svgTextStyle = {
+      fill: textFill,
+      fontFamily: textFontFamily,
+      fontSize: textFontSize,
+      fontWeight: textFontWeight,
+      fontStyle: textFontStyle,
+      textDecoration,
+      baselineShift
+    };
     const axisLineStyle = {
       line: {
         stroke: axisColor,
         strokeWidth: style.frameStrokeWidth ?? 1
       },
-      text: {
-        fill: axisColor,
-        fontFamily: CHART_FONT_FAMILY
-      },
-      title: {
-        fill: axisColor,
-        fontFamily: CHART_FONT_FAMILY
-      }
+      text: svgTextStyle,
+      title: { ...svgTextStyle, textAnchor }
     };
 
     const gridStyle = {
@@ -508,11 +524,28 @@ export function createAssayAnalysisChartRenderer({
       title: series.label,
       color: pickSeriesColor(style, series.label, index)
     }));
+    const legendAlign = textStyle.textAlign === 'start'
+      ? 'left'
+      : textStyle.textAlign === 'end' ? 'right' : 'center';
+    const legendVerticalAlign = textStyle.baseline === 'super'
+      ? 'super'
+      : textStyle.baseline === 'sub' ? 'sub' : 'baseline';
+    const legendStyle = {
+      fontFamily: textFontFamily,
+      fontSize: `${textFontSize}px`,
+      color: textFill,
+      fontWeight: textFontWeight,
+      fontStyle: textFontStyle,
+      textDecoration,
+      textAlign: legendAlign,
+      verticalAlign: legendVerticalAlign
+    };
     const legendElement = DiscreteColorLegend && legendItems.length > 1
       ? ReactLib.createElement(DiscreteColorLegend, {
         key: 'legend',
         orientation: 'horizontal',
-        items: legendItems
+        items: legendItems,
+        style: legendStyle
       })
       : null;
 

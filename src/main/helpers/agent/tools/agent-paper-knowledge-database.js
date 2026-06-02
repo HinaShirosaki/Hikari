@@ -135,6 +135,7 @@ function buildKnowledgeDatabasePaths({
     markdown_path: path.join(paperFolderPath, 'paper.md'),
     extracted_text_path: path.join(paperFolderPath, 'extracted.txt'),
     meta_path: path.join(paperFolderPath, 'meta.json'),
+    figures_path: path.join(paperFolderPath, 'figures'),
     sqlite_path: path.join(rootPath, KNOWLEDGE_INDEX_FILE_NAME),
     json_index_path: path.join(rootPath, KNOWLEDGE_JSON_INDEX_FILE_NAME)
   };
@@ -187,7 +188,7 @@ function guessTitleFromText(text = '') {
   return lines[0] || '';
 }
 
-function buildMarkdownRewritePrompt({ metadata = {}, extraction = {}, extractedText = '', maxPromptChars = DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT } = {}) {
+function buildMarkdownRewritePrompt({ metadata = {}, extraction = {}, extractedText = '', figures = [], maxPromptChars = DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT } = {}) {
   const promptText = limitText(extractedText, maxPromptChars);
   const sectionSummary = asArrayDefault(extraction.sections)
     .slice(0, 24)
@@ -196,11 +197,22 @@ function buildMarkdownRewritePrompt({ metadata = {}, extraction = {}, extractedT
       start_page: section?.start_page || section?.page_number || null,
       end_page: section?.end_page || section?.page_number || null
     }));
+  const figureSummary = asArrayDefault(figures)
+    .map((figure) => ({
+      page_number: figure?.page_number || null,
+      relative_path: figure?.relative_path || `figures/${figure?.file_name || ''}`,
+      width: figure?.width || null,
+      height: figure?.height || null
+    }))
+    .filter((figure) => figure.relative_path && figure.relative_path !== 'figures/');
   return [
     'Rewrite this scientific paper into dense wiki-form Markdown for a future LLM reader.',
     'Use only the extracted paper text. Do not add outside knowledge.',
     'Make every important claim traceable to a page using citations like `(p. 4)` or `(pp. 4-5)`.',
     'Keep it self-contained, concise, and link-ready. Use `[[doi]]` only for clearly named related papers already present in the text.',
+    figureSummary.length
+      ? 'Embed extracted figures inline near their captions using `![Figure on page N](relative_path)`; only use the relative paths listed in "Available figures JSON".'
+      : '',
     'Return Markdown only with this skeleton:',
     '# <Title>',
     '**Authors:** ...   **Year:** ...   **DOI:** ...',
@@ -215,8 +227,9 @@ function buildMarkdownRewritePrompt({ metadata = {}, extraction = {}, extractedT
     '',
     `Metadata JSON:\n${JSON.stringify(metadata, null, 2)}`,
     `Detected sections JSON:\n${JSON.stringify(sectionSummary, null, 2)}`,
+    figureSummary.length ? `Available figures JSON:\n${JSON.stringify(figureSummary, null, 2)}` : '',
     `Extracted text with page markers:\n${promptText}`
-  ].join('\n\n');
+  ].filter(Boolean).join('\n\n');
 }
 
 function extractLlmText(result = {}) {
@@ -491,6 +504,35 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     ? deps.pdfTextExtractionRuntime
     : null;
 
+  async function reconcileFiguresDir({ provisionalDir, canonicalDir, paperFolderPath, figures } = {}) {
+    const descriptors = Array.isArray(figures) ? figures : [];
+    if (!descriptors.length || !canonicalDir) {
+      return descriptors.map((figure) => ({ ...figure }));
+    }
+    let activeDir = canonicalDir;
+    if (provisionalDir && provisionalDir !== canonicalDir) {
+      try {
+        await fsPromises.mkdir(paperFolderPath, { recursive: true });
+        try {
+          await fsPromises.rm(canonicalDir, { recursive: true, force: true });
+        } catch {
+          // ignore — target may not exist
+        }
+        await fsPromises.rename(provisionalDir, canonicalDir);
+      } catch {
+        // If rename fails, keep figures where they landed.
+        activeDir = provisionalDir;
+      }
+    }
+    return descriptors.map((figure) => {
+      const fileName = figure?.file_name || '';
+      return {
+        ...figure,
+        file_path: fileName ? path.join(activeDir, fileName) : (figure?.file_path || '')
+      };
+    });
+  }
+
   function normalizeMetadata(input = {}, extraction = {}, pdfSha256 = '') {
     const source = ensureObject(input);
     const extractedText = String(extraction.text || '');
@@ -540,6 +582,7 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
           metadata,
           extraction,
           extractedText,
+          figures: asArrayDefault(source.figures),
           sourcePdfPath: source.file_path || source.filePath || source.path || '',
           sourcePdfRelativePath: source.source_pdf_relative_path || source.sourcePdfRelativePath || '',
           transformedAt: now(),
@@ -547,10 +590,12 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
         })
       };
     }
+    const figures = asArrayDefault(source.figures);
     const prompt = buildMarkdownRewritePrompt({
       metadata,
       extraction,
       extractedText,
+      figures,
       maxPromptChars: Number(source.maxPromptChars) || DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT
     });
 
@@ -600,6 +645,7 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
         metadata,
         extraction,
         extractedText,
+        figures,
         sourcePdfPath: source.file_path || source.filePath || source.path || '',
         sourcePdfRelativePath: source.source_pdf_relative_path || source.sourcePdfRelativePath || '',
         transformedAt: now(),
@@ -781,13 +827,29 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     }
 
     const pdfSha256 = sha256Buffer(pdfBuffer);
+    const provisionalSlug = buildKnowledgePaperSlug({
+      doi: normalizeDoi(source.doi || source.paper_doi || source.paperDoi),
+      title: cleanText(source.title || source.paper_title || source.paperTitle, 320),
+      pdfSha256
+    });
+    const provisionalFiguresDir = path.join(
+      resolvedStoragePath,
+      KNOWLEDGE_BASE_FOLDER_NAME,
+      KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME,
+      provisionalSlug,
+      'figures'
+    );
+    const figuresEnabled = source.extract_figures !== false && source.extractFigures !== false;
     const extraction = await pdfTextExtractionRuntime.extractText({
       action: 'extract',
       file_path: resolvedFilePath,
       include_pages: true,
       include_sections: true,
       max_pages: Number(source.max_pages || source.maxPages) || 300,
-      max_total_chars: Number(source.max_total_chars || source.maxTotalChars) || 500000
+      max_total_chars: Number(source.max_total_chars || source.maxTotalChars) || 500000,
+      figures_output_dir: figuresEnabled ? provisionalFiguresDir : '',
+      figure_min_dimension: Number(source.figure_min_dimension || source.figureMinDimension) || undefined,
+      figure_min_pixels: Number(source.figure_min_pixels || source.figureMinPixels) || undefined
     }).catch((error) => ({
       ok: false,
       status: 'error',
@@ -811,12 +873,20 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     await fsPromises.mkdir(paths.paper_folder_path, { recursive: true });
     await fsPromises.writeFile(paths.extracted_text_path, extractedText, 'utf8');
 
+    const figureDescriptors = await reconcileFiguresDir({
+      provisionalDir: provisionalFiguresDir,
+      canonicalDir: paths.figures_path,
+      paperFolderPath: paths.paper_folder_path,
+      figures: Array.isArray(extraction?.figures) ? extraction.figures : []
+    });
+
     const markdownResult = extraction?.ok === true
       ? await generateKnowledgeMarkdown({
         ...source,
         metadata,
         extraction,
         extractedText,
+        figures: figureDescriptors,
         source_pdf_relative_path: buildRelativePath(resolvedStoragePath, resolvedFilePath),
         allowFallbackMarkdown: source.allow_fallback_markdown !== false && source.allowFallbackMarkdown !== false
       })
@@ -840,6 +910,9 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       wikiStatus,
       nowIso
     });
+    const figuresRelativeDir = figureDescriptors.length
+      ? buildRelativePath(resolvedStoragePath, paths.figures_path)
+      : '';
     const meta = {
       version: 1,
       paper_id: indexResult.paper_id,
@@ -857,6 +930,21 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       extracted_text_path: buildRelativePath(resolvedStoragePath, paths.extracted_text_path),
       markdown_path: buildRelativePath(resolvedStoragePath, paths.markdown_path),
       sqlite_path: buildRelativePath(resolvedStoragePath, paths.sqlite_path),
+      figures_path: figuresRelativeDir,
+      figure_count: figureDescriptors.length,
+      figures: figureDescriptors.map((figure) => ({
+        page_number: figure.page_number,
+        image_index: figure.image_index,
+        file_name: figure.file_name,
+        relative_path: figuresRelativeDir
+          ? `${figuresRelativeDir}/${figure.file_name}`
+          : `figures/${figure.file_name}`,
+        width: figure.width,
+        height: figure.height,
+        kind: figure.kind || 0,
+        byte_length: figure.byte_length || 0
+      })),
+      figures_error: cleanText(extraction?.figures_error, 1200),
       updated_at: nowIso,
       error: cleanText(markdownResult?.error || extraction?.error, 1200),
       warning: cleanText(markdownResult?.warning, 1200)
@@ -882,12 +970,16 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       sqlite_relative_path: buildRelativePath(resolvedStoragePath, paths.sqlite_path),
       source_pdf_path: resolvedFilePath,
       source_pdf_relative_path: buildRelativePath(resolvedStoragePath, resolvedFilePath),
+      figures_path: figureDescriptors.length ? paths.figures_path : '',
+      figures_relative_path: figuresRelativeDir,
+      figure_count: figureDescriptors.length,
+      figures: meta.figures,
       extraction_status: extractionStatus,
       wiki_generation_method: markdownResult?.method || '',
       error: cleanText(markdownResult?.error || extraction?.error, 1200),
       warning: cleanText(markdownResult?.warning, 1200),
       summary: wikiStatus === 'ready'
-        ? `Wrote paper knowledge markdown to ${buildRelativePath(resolvedStoragePath, paths.markdown_path)}.`
+        ? `Wrote paper knowledge markdown to ${buildRelativePath(resolvedStoragePath, paths.markdown_path)}${figureDescriptors.length ? ` with ${figureDescriptors.length} figure(s)` : ''}.`
         : (cleanText(markdownResult?.error || extraction?.error, 600) || 'Paper knowledge ingestion failed.')
     };
   }

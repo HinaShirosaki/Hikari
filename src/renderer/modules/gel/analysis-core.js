@@ -1,6 +1,9 @@
 import {
   confidenceLabel,
   clamp,
+  countCompleteLaneBandWindows,
+  getTargetBandWindowForLane,
+  isPerLaneBandMode,
   mean,
   normalizeManualOverrides,
   round
@@ -307,18 +310,14 @@ function applyBandOverrides({
   height
 }) {
   const segmentation = overrides?.laneSegmentation || {};
-  const hasTargetWindow = Number.isFinite(segmentation.bandTop) && Number.isFinite(segmentation.bandBottom);
-  const targetTop = hasTargetWindow
-    ? clamp(Math.floor(Math.min(segmentation.bandTop, segmentation.bandBottom)), 0, height - 1)
-    : null;
-  const targetBottom = hasTargetWindow
-    ? clamp(Math.floor(Math.max(segmentation.bandTop, segmentation.bandBottom)), 0, height - 1)
-    : null;
 
   lanes.forEach((lane) => {
     const laneIndex = lane.index + 1;
+    const targetWindow = getTargetBandWindowForLane(segmentation, laneIndex);
 
-    if (Number.isFinite(targetTop) && Number.isFinite(targetBottom) && targetBottom >= targetTop) {
+    if (targetWindow) {
+      const targetTop = clamp(Math.floor(Math.min(targetWindow.bandTop, targetWindow.bandBottom)), 0, height - 1);
+      const targetBottom = clamp(Math.floor(Math.max(targetWindow.bandTop, targetWindow.bandBottom)), targetTop, height - 1);
       const targetBand = computeCellIntensity({
         signal,
         rawGray,
@@ -328,6 +327,7 @@ function applyBandOverrides({
         bandTop: targetTop,
         bandBottom: targetBottom
       });
+      targetBand.perLaneWindow = Boolean(targetWindow.perLane);
       lane.bands.push(targetBand);
     }
 
@@ -957,6 +957,8 @@ export function analyzeGelImage({
         laneSegmentationDividers: manualOverrides.laneSegmentation?.dividers?.length || 0,
         laneSegmentationBandTop: manualOverrides.laneSegmentation?.bandTop ?? null,
         laneSegmentationBandBottom: manualOverrides.laneSegmentation?.bandBottom ?? null,
+        laneSegmentationBandMode: isPerLaneBandMode(manualOverrides.laneSegmentation) ? 'per-lane' : 'global',
+        laneSegmentationLaneBandWindows: countCompleteLaneBandWindows(manualOverrides.laneSegmentation),
         addedBands: manualOverrides.addedBands.length,
         ladderLaneOverride: manualOverrides.ladderLane || null,
         ladderBands: manualOverrides.ladderBands.length,

@@ -5,13 +5,13 @@ const path = require('path');
 const fs = require('node:fs/promises');
 
 const { createMainWindow } = require('../windows/create-main-window');
-const { createMainRuntime } = require('./main-runtime');
+const { createHikariMainCore } = require('../core/start-hikari-main-core');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 
 function startMainApp() {
   let mainWindow = null;
-  const runtime = createMainRuntime({
+  const mainCore = createHikariMainCore({
     app,
     BrowserWindow,
     dialog,
@@ -29,7 +29,7 @@ function startMainApp() {
       BrowserWindow,
       path,
       projectRoot: PROJECT_ROOT,
-      appIconPath: runtime.appIconPath,
+      appIconPath: mainCore.appIconPath,
       preloadPath: path.join(__dirname, '..', 'preload.js'),
       onClosed: () => {
         mainWindow = null;
@@ -37,19 +37,19 @@ function startMainApp() {
     });
   }
 
-  runtime.registerIpcHandlers();
+  mainCore.registerIpcHandlers();
 
   app.whenReady().then(async () => {
     if (process.platform === 'darwin' && app.dock) {
-      app.dock.setIcon(runtime.appIconPath);
+      app.dock.setIcon(mainCore.appIconPath);
     }
 
     createWindow();
-    await runtime.telegramRuntime.hydrateSavedTelegramToken();
-    runtime.telegramRuntime.restartTelegramBot();
-    void runtime.agentLogRuntime.ensureAgentChatLogFile(runtime.appPaths.getAgentChatLogPath());
-    void runtime.llmPromptsRuntime.loadLlmPrompts();
-    runtime.startChatLogTransformMonitor();
+    await mainCore.telegramRuntime.hydrateSavedTelegramToken();
+    mainCore.telegramRuntime.restartTelegramBot();
+    void mainCore.agentLogRuntime.ensureAgentChatLogFile(mainCore.appPaths.getAgentChatLogPath());
+    void mainCore.llmPromptsRuntime.loadLlmPrompts();
+    mainCore.startChatLogTransformMonitor();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -65,11 +65,11 @@ function startMainApp() {
   });
 
   app.on('before-quit', () => {
-    runtime.chatLogTransformMonitor.stop();
-    if (runtime.codexAgentMcpHost && typeof runtime.codexAgentMcpHost.close === 'function') {
-      void runtime.codexAgentMcpHost.close();
+    mainCore.chatLogTransformMonitor.stop();
+    if (mainCore.codexAgentMcpHost && typeof mainCore.codexAgentMcpHost.close === 'function') {
+      void mainCore.codexAgentMcpHost.close();
     }
-    runtime.telegramRuntime.stopTelegramBot('app quit');
+    mainCore.telegramRuntime.stopTelegramBot('app quit');
   });
 }
 

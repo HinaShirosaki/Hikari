@@ -11,6 +11,7 @@ const {
 const { createAgentMcpGateway } = require('./gateway.js');
 const { createAgentMcpHostToolRunner } = require('./host-client.js');
 const { getDirectMcpToolDefinitions } = require('./direct-tools/index.js');
+const { buildHikariAgentMcpInstructions } = require('./instructions.js');
 
 const SERVER_NAME = 'hikari-agent-mcp';
 const SERVER_VERSION = '0.1.0';
@@ -53,7 +54,10 @@ function createAgentMcpStdioServer(deps = {}) {
 
   const server = new Server(
     { name: SERVER_NAME, version: SERVER_VERSION },
-    { capabilities: { tools: { listChanged: false } } }
+    {
+      capabilities: { tools: { listChanged: false } },
+      instructions: buildHikariAgentMcpInstructions()
+    }
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -75,6 +79,7 @@ function createAgentMcpStdioServer(deps = {}) {
         type: 'text',
         text: JSON.stringify(result, null, 2)
       }],
+      structuredContent: ensureObject(result),
       isError: result?.ok === false
     };
   });

@@ -1,10 +1,10 @@
 # Boot And Shell
 
-This walkthrough focuses on `src/renderer/renderer.js`, which is the browser-side composition root for the whole app.
+This walkthrough follows the browser-side boot path from `src/renderer/renderer.js` into the renderer core.
 
-## Why `renderer.js` matters
+## Why The Core Matters
 
-Most feature code lives under `src/renderer/modules/`, but `renderer.js` is the file that turns those isolated controllers into one application. It owns:
+Most feature code lives under `src/renderer/modules/`, while `src/renderer/core/start-hikari-core.js` is the file that turns those isolated controllers into one application. It owns:
 
 - initial state load
 - appearance setup
@@ -12,7 +12,7 @@ Most feature code lives under `src/renderer/modules/`, but `renderer.js` is the 
 - feature-module initialization
 - storage hydration
 - dock and overflow navigation
-- topbar search routing
+- topbar search wiring
 - startup-view selection
 - a few renderer-global debug and integration hooks
 
@@ -20,19 +20,17 @@ Most feature code lives under `src/renderer/modules/`, but `renderer.js` is the 
 
 The boot path is straightforward once you read it as a pipeline instead of a monolith:
 
-1. `loadState()` from `modules/shared.js` creates the mutable renderer `state`.
+1. `loadState()` from `modules/app-state.js` creates the mutable renderer `state`.
 2. `applyAppearanceSnapshot(...)` applies the saved font size and day/night mode before the UI starts rendering.
 3. `APP_REGISTRY` and `APP_DOCK_ORDER` from `modules/app-registry.generated.js` are turned into lookup maps for:
    - app id to app metadata
    - view id to app metadata
    - global view aliases
    - search scopes
-4. `createModuleRegistry(...)` is seeded with a few UI bridge functions such as `showView`, `setSearchInputValue`, `VIEWS`, and the sequence-viewer detail view id.
+4. `createModuleRegistry(...)` is seeded with generic UI bridge functions such as `showView`, `setSearchInputValue`, and `VIEWS`.
 5. `createRendererServices(...)` builds the thin cross-feature service layer.
-6. Every feature module is initialized and then registered into the module registry.
-7. `initApp()` runs asynchronous hydration:
-   - `hydrateStateFromDataFile()`
-   - `hydrateStateFromStorageRoot()`
+6. Feature modules are initialized through `module-manifests/`, then registered into the module registry by `module-runtime.js`.
+7. `initApp()` runs asynchronous storage-root hydration through `hydrateStateFromStorageRoot()`.
 8. The shell renders navigation, binds listeners, calls `renderAll()`, then opens `resolveStartupViewId()`.
 
 The important pattern is that feature modules are created before async hydration finishes, but most visible UI does not matter until `renderAll()` runs after hydration.
@@ -47,7 +45,7 @@ The important pattern is that feature modules are created before async hydration
 - aliases for topbar search and command routing
 - optional search input ids for scoped searches
 
-`renderer.js` then computes:
+The renderer core then computes:
 
 - `DOCK_APPS`: the preferred visible apps
 - `MORE_APPS`: overflow candidates
@@ -80,9 +78,8 @@ Examples:
 
 ## State replacement and persistence
 
-`renderer.js` owns two important shell-level helpers:
+The renderer core owns two important shell-level helpers:
 
-- `replaceState(nextState)`: swaps the contents of the existing mutable state object in place
 - `persist()`: rebuilds the object graph, writes local storage, and optionally auto-saves the `.ena` file through `window.enanaApi.autoSaveDataFile(...)`
 
 That means feature modules usually mutate shared state directly and then call the shared `persist()` callback instead of owning their own storage layer.
@@ -98,6 +95,7 @@ Key boot-time or shell-level calls include:
 - `saveEnaFile(...)`
 - `loadEnaFile()`
 - `pickStorageDirectory(...)`
+- `onProtocolRecordSaved(...)` (delegated immediately to `protocolService.handleExternalProtocolRecordSaved(...)`)
 - `onTelegramCommand(...)`
 
 For the main-process implementation of those calls, use [doc/main-helpers/README.md](../../main-helpers/README.md).
@@ -111,4 +109,4 @@ Two shell-level hooks are worth knowing about:
 - `initTelegramCommandBridge()`
   - subscribes to `window.enanaApi.onTelegramCommand(...)` and routes open-view or search commands back into the normal navigation/search pipeline
 
-Those hooks make `renderer.js` the place where local UI behavior and external automation meet.
+Those hooks make the renderer core the place where local UI behavior and external automation meet.

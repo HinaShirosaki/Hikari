@@ -10,6 +10,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
@@ -148,7 +149,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('codex-owned lifecycle stays scoped to agent chat while utility calls use the CLI adapter', () => {
-      const mainRuntimeSource = readLocalSource('src', 'main', 'app', 'main-runtime.js');
+      const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js');
       const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
       const systemRegistrarSource = readLocalSource('src', 'main', 'ipc', 'register-system-ipc.js');

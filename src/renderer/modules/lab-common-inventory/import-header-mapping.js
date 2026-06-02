@@ -1,0 +1,189 @@
+import { CHEMICAL_IMPORT_FIELDS, normalizeImportFieldKey, normalizeImportHeader } from './import-schema.js';
+import { guessChemicalImportField } from './import-field-guessing.js';
+export function installImportHeaderMapping(ctx) {
+  const { state } = ctx;
+function mapChemicalImportHeadersLocally(headers) {
+  const fieldToColumn = {};
+  const columnToField = {};
+  const decisions = [];
+  const unmappedHeaders = [];
+  headers.forEach((header, index) => {
+    const cleanHeader = String(header || '').trim();
+    if (!cleanHeader) {
+      return;
+    }
+    const field = guessChemicalImportField(cleanHeader);
+    if (field && fieldToColumn[field] == null) {
+      fieldToColumn[field] = index;
+      columnToField[index] = field;
+      decisions.push({
+        header: cleanHeader,
+        field,
+        source: 'local'
+      });
+      return;
+    }
+    unmappedHeaders.push(cleanHeader);
+  });
+  return {
+    fieldToColumn,
+    columnToField,
+    decisions,
+    unmappedHeaders,
+    usedLlm: false,
+    llmError: ''
+  };
+}
+function buildLlmHeaderPrompt(headers, rows, localInference) {
+  const previewRows = rows.slice(0, 5).map((row) => {
+    const entry = {};
+    headers.forEach((header, index) => {
+      entry[String(header || `Column ${index + 1}`).trim() || `Column ${index + 1}`] = String(row[index] ?? '').trim();
+    });
+    return entry;
+  });
+  const fields = CHEMICAL_IMPORT_FIELDS.map((field) => ({
+    key: field.key,
+    label: field.label,
+    description: field.description
+  }));
+  return [
+    'Map spreadsheet column headers into this chemical inventory schema.',
+    'Return only JSON with this shape: {"mapping":{"Source Header":"fieldKey or ignore"},"notes":"short"}',
+    'Use "ignore" for columns that do not fit. Important example: "position" should map to "location" when it means storage position.',
+    `Allowed field keys: ${CHEMICAL_IMPORT_FIELDS.map((field) => field.key).join(', ')}`,
+    '',
+    `Schema: ${JSON.stringify(fields)}`,
+    `Headers: ${JSON.stringify(headers)}`,
+    `Local mapping already found: ${JSON.stringify(localInference.decisions)}`,
+    `Preview rows: ${JSON.stringify(previewRows)}`
+  ].join('\n');
+}
+function parseJsonObjectFromText(text) {
+  const raw = String(text || '').trim();
+  if (!raw) {
+    return null;
+  }
+  const unfenced = raw
+    .replace(/^```(?:json)?/i, '')
+    .replace(/```$/i, '')
+    .trim();
+  try {
+    return JSON.parse(unfenced);
+  } catch {
+    const start = unfenced.indexOf('{');
+    const end = unfenced.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(unfenced.slice(start, end + 1));
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+function buildDirectLlmSettings() {
+  const provider = String(state.settings?.llm?.provider || '').trim();
+  return {
+    provider,
+    model: String(state.settings?.llm?.model || '').trim(),
+    reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim().toLowerCase(),
+    apiEndpoint: provider === 'codex' ? '' : String(state.settings?.llm?.apiEndpoint || '').trim(),
+    apiKey: provider === 'codex' ? '' : String(state.settings?.llm?.apiKey || '').trim()
+  };
+}
+async function requestLlmChemicalHeaderMapping(headers, rows, localInference) {
+  if (!window.enanaApi?.runDirectLlmPrompt && !window.enanaApi?.runCodexLlmPrompt) {
+    return null;
+  }
+  const prompt = buildLlmHeaderPrompt(headers, rows, localInference);
+  const result = window.enanaApi?.runDirectLlmPrompt
+    ? await window.enanaApi.runDirectLlmPrompt({
+      moduleId: 'inventory',
+      task: 'chemical-header-mapping',
+      prompt,
+      expectJson: true,
+      llm: buildDirectLlmSettings()
+    })
+    : await window.enanaApi.runCodexLlmPrompt({
+      model: String(state.settings?.llm?.model || '').trim(),
+      reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim(),
+      prompt
+    });
+  if (!result?.ok) {
+    throw new Error(result?.error || 'LLM header mapping failed.');
+  }
+  return result.payload && typeof result.payload === 'object'
+    ? result.payload
+    : parseJsonObjectFromText(result.text);
+}
+function findHeaderIndex(headers, headerName) {
+  const normalized = normalizeImportHeader(headerName);
+  return headers.findIndex((header) => normalizeImportHeader(header) === normalized);
+}
+function applyLlmHeaderMapping(headers, inference, llmPayload) {
+  const rawMapping = llmPayload?.mapping && typeof llmPayload.mapping === 'object'
+    ? llmPayload.mapping
+    : (llmPayload && typeof llmPayload === 'object' ? llmPayload : {});
+  Object.entries(rawMapping).forEach(([headerName, fieldName]) => {
+    let headerIndex = findHeaderIndex(headers, headerName);
+    let field = normalizeImportFieldKey(fieldName);
+    if (headerIndex < 0) {
+      const keyAsField = normalizeImportFieldKey(headerName);
+      const valueAsHeaderIndex = findHeaderIndex(headers, fieldName);
+      if (keyAsField && valueAsHeaderIndex >= 0) {
+        headerIndex = valueAsHeaderIndex;
+        field = keyAsField;
+      }
+    }
+    if (headerIndex < 0 || !field || field === 'ignore') {
+      return;
+    }
+    if (inference.fieldToColumn[field] != null || inference.columnToField[headerIndex]) {
+      return;
+    }
+    inference.fieldToColumn[field] = headerIndex;
+    inference.columnToField[headerIndex] = field;
+    inference.decisions.push({
+      header: String(headers[headerIndex] || '').trim(),
+      field,
+      source: 'llm'
+    });
+  });
+  inference.unmappedHeaders = headers.filter((header, index) => {
+    return String(header || '').trim() && !inference.columnToField[index];
+  });
+  inference.usedLlm = true;
+  return inference;
+}
+async function inferChemicalImportHeaders(headers, rows) {
+  const cleanHeaders = headers.map((header, index) => String(header || `Column ${index + 1}`).trim() || `Column ${index + 1}`);
+  const inference = mapChemicalImportHeadersLocally(cleanHeaders);
+  const needsLlm = inference.unmappedHeaders.length > 0
+    || inference.fieldToColumn.name == null
+    || inference.fieldToColumn.location == null;
+  if (!needsLlm || (!window.enanaApi?.runDirectLlmPrompt && !window.enanaApi?.runCodexLlmPrompt)) {
+    return inference;
+  }
+  try {
+    const llmPayload = await requestLlmChemicalHeaderMapping(cleanHeaders, rows, inference);
+    if (llmPayload) {
+      applyLlmHeaderMapping(cleanHeaders, inference, llmPayload);
+    }
+  } catch (error) {
+    inference.llmError = String(error?.message || error);
+  }
+  return inference;
+}
+  Object.assign(ctx, {
+    mapChemicalImportHeadersLocally,
+    buildLlmHeaderPrompt,
+    parseJsonObjectFromText,
+    buildDirectLlmSettings,
+    requestLlmChemicalHeaderMapping,
+    findHeaderIndex,
+    applyLlmHeaderMapping,
+    inferChemicalImportHeaders
+  });
+}

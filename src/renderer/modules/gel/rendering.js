@@ -1,6 +1,15 @@
 import { buildLanesFromManualSegmentation } from './analysis-core.js';
 import { buildQuantificationSignal } from './image-processing.js';
-import { clamp, mean, normalizeManualOverrides, round } from './shared.js';
+import {
+  clamp,
+  getTargetBandWindowForLane,
+  hasAnyTargetBandWindow,
+  isPerLaneBandMode,
+  mean,
+  normalizeLaneBandWindows,
+  normalizeManualOverrides,
+  round
+} from './shared.js';
 import { formatAnalysisTypeLabel } from './presentation.js';
 
 const LANE_PROFILE_VIEWBOX = Object.freeze({
@@ -364,12 +373,13 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       return;
     }
 
-    const hasBandWindow = Number.isFinite(overrides.laneSegmentation?.bandTop) && Number.isFinite(overrides.laneSegmentation?.bandBottom);
+    const selectedBandWindow = getTargetBandWindowForLane(overrides.laneSegmentation, selectedLane.laneIndex);
+    const hasBandWindow = Boolean(selectedBandWindow);
     const polarityNote = polarity === 'dark-on-light'
       ? 'Dark-on-light gel: signal inverted so bands appear as peaks.'
       : 'Bright-on-dark gel: bands appear as peaks.';
     elements.gelLaneProfileCaption.textContent = hasBandWindow
-      ? `Row signal from grayscale image for lane ${selectedLane.laneIndex}. Band window follows steps 6 and 7. ${polarityNote}`
+      ? `Row signal from grayscale image for lane ${selectedLane.laneIndex}. Band window follows steps 6 and 7${selectedBandWindow.perLane ? ' for this lane' : ''}. ${polarityNote}`
       : `Row signal from grayscale image for lane ${selectedLane.laneIndex}. ${polarityNote}`;
     elements.gelLaneProfileMeta.innerHTML = [
       `x ${selectedLane.xStart}-${selectedLane.xEnd}`,
@@ -384,8 +394,8 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     renderLaneProfileSvg(
       elements.gelLaneProfileChart,
       profile,
-      overrides.laneSegmentation?.bandTop,
-      overrides.laneSegmentation?.bandBottom
+      selectedBandWindow?.bandTop,
+      selectedBandWindow?.bandBottom
     );
 
     lastProfile = profile;
@@ -499,7 +509,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
 
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
     const segmentation = overrides.laneSegmentation || {};
-    const hasBandWindow = Number.isFinite(segmentation.bandTop) && Number.isFinite(segmentation.bandBottom);
+    const hasBandWindow = hasAnyTargetBandWindow(segmentation);
     const reportLanes = runtime.currentReport?.lanes || [];
     const cells = reportLanes
       .map((lane) => ({ lane, cell: lane.targetBand || null }))
@@ -574,7 +584,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       return;
     }
     const segmentation = overrides.laneSegmentation || {};
-    if (!Number.isFinite(segmentation.bandTop) || !Number.isFinite(segmentation.bandBottom)) {
+    if (!hasAnyTargetBandWindow(segmentation)) {
       return;
     }
     const threshold = readSnrThreshold(elements.gelCellSnrThresholdInput);
@@ -668,7 +678,8 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
         context.stroke();
       });
 
-      if (Number.isFinite(segmentation.bandTop)) {
+      const laneBandMode = isPerLaneBandMode(segmentation);
+      if (!laneBandMode && Number.isFinite(segmentation.bandTop)) {
         const y = clamp(segmentation.bandTop, 0, runtime.currentImage.height - 1);
         context.strokeStyle = 'rgba(56, 189, 248, 0.95)';
         context.beginPath();
@@ -676,7 +687,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
         context.lineTo(runtime.currentImage.width, y + 0.5);
         context.stroke();
       }
-      if (Number.isFinite(segmentation.bandBottom)) {
+      if (!laneBandMode && Number.isFinite(segmentation.bandBottom)) {
         const y = clamp(segmentation.bandBottom, 0, runtime.currentImage.height - 1);
         context.strokeStyle = 'rgba(56, 189, 248, 0.95)';
         context.beginPath();
@@ -685,7 +696,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
         context.stroke();
       }
 
-      if (Number.isFinite(segmentation.bandTop) && Number.isFinite(segmentation.bandBottom) && segmentationLanes.length) {
+      if (!laneBandMode && Number.isFinite(segmentation.bandTop) && Number.isFinite(segmentation.bandBottom) && segmentationLanes.length) {
         const top = clamp(Math.min(segmentation.bandTop, segmentation.bandBottom), 0, runtime.currentImage.height - 1);
         const bottom = clamp(Math.max(segmentation.bandTop, segmentation.bandBottom), top + 1, runtime.currentImage.height - 1);
         segmentationLanes.forEach((lane) => {
@@ -697,6 +708,48 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
             Math.max(1, lane.xEnd - lane.xStart),
             Math.max(1, bottom - top)
           );
+        });
+      }
+
+      if (laneBandMode && segmentationLanes.length) {
+        const laneWindowByIndex = new Map(
+          normalizeLaneBandWindows(segmentation.laneBandWindows)
+            .map((window) => [window.laneIndex, window])
+        );
+        segmentationLanes.forEach((lane) => {
+          const laneIndex = lane.index + 1;
+          const window = laneWindowByIndex.get(laneIndex);
+          if (!window) {
+            return;
+          }
+          context.lineWidth = 1.4;
+          context.strokeStyle = 'rgba(56, 189, 248, 0.95)';
+          if (Number.isFinite(window.bandTop)) {
+            const y = clamp(window.bandTop, 0, runtime.currentImage.height - 1);
+            context.beginPath();
+            context.moveTo(lane.xStart, y + 0.5);
+            context.lineTo(lane.xEnd, y + 0.5);
+            context.stroke();
+          }
+          if (Number.isFinite(window.bandBottom)) {
+            const y = clamp(window.bandBottom, 0, runtime.currentImage.height - 1);
+            context.beginPath();
+            context.moveTo(lane.xStart, y + 0.5);
+            context.lineTo(lane.xEnd, y + 0.5);
+            context.stroke();
+          }
+          if (Number.isFinite(window.bandTop) && Number.isFinite(window.bandBottom)) {
+            const top = clamp(Math.min(window.bandTop, window.bandBottom), 0, runtime.currentImage.height - 1);
+            const bottom = clamp(Math.max(window.bandTop, window.bandBottom), top + 1, runtime.currentImage.height - 1);
+            context.strokeStyle = 'rgba(34, 197, 94, 0.95)';
+            context.lineWidth = 1.2;
+            context.strokeRect(
+              lane.xStart + 0.5,
+              top + 0.5,
+              Math.max(1, lane.xEnd - lane.xStart),
+              Math.max(1, bottom - top)
+            );
+          }
         });
       }
 

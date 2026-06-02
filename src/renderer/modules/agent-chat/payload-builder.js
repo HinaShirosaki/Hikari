@@ -85,6 +85,10 @@ export function createAgentPayloadBuilder({
     const hiddenContexts = asArray(options.hiddenContexts).map(normalizeHiddenContext).filter(Boolean);
     return {
       developerMode: state.settings?.agent?.developerMode === true,
+      externalSkillsEnabled: state.settings?.agent?.externalSkillsEnabled !== false,
+      disabledExternalSkillNames: asArray(state.settings?.agent?.disabledExternalSkillNames)
+        .map((item) => trimText(item, 160))
+        .filter(Boolean),
       deepResearchEnabled: state.agentChat.deepResearchEnabled === true,
       ...(hiddenContexts.length ? { hiddenContexts } : {}),
       ...(paperSessionPrompt ? {

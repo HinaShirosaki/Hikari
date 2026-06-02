@@ -94,6 +94,10 @@
   margin-top: 2px;
 }
 
+#setting-view .settings-switch-row {
+  width: fit-content;
+}
+
 #setting-view #setting-location-list {
   gap: 8px;
 }
@@ -105,6 +109,53 @@
   background: color-mix(in srgb, var(--panel, var(--palette-rgba-255-255-255-a72)) 90%, transparent);
 }
 
+#setting-view .settings-skill-list {
+  display: grid;
+  gap: 8px;
+}
+
+#setting-view .settings-skill-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--line, var(--palette-rgba-100-114-85-a14)) 72%, transparent);
+  background: color-mix(in srgb, var(--panel, var(--palette-rgba-255-255-255-a72)) 91%, transparent);
+}
+
+#setting-view .settings-skill-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+#setting-view .settings-skill-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  font-weight: 700;
+}
+
+#setting-view .settings-skill-command {
+  color: var(--muted);
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 0.86em;
+}
+
+#setting-view .settings-skill-description,
+#setting-view .settings-skill-path {
+  overflow-wrap: anywhere;
+}
+
+#setting-view .settings-skill-toggle {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+
 @media (max-width: 840px) {
   #setting-view .settings-nav-list {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -112,6 +163,14 @@
 
   #setting-view .settings-nav-item:hover {
     transform: none;
+  }
+
+  #setting-view .settings-skill-row {
+    grid-template-columns: 1fr;
+  }
+
+  #setting-view .settings-skill-toggle {
+    white-space: normal;
   }
 }
 

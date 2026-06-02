@@ -7,6 +7,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'app', 'agent-log-runtime.js')
     ].join('\n');
@@ -17,6 +18,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
     ].join('\n');
     const readRendererStorageSource = () => [
       readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
       readLocalSource('src', 'renderer', 'app', 'storage-import.js')
     ].join('\n');
     test('data-helpers default bundle hydrator preserves parsed snapshot settings', async () => {
@@ -38,6 +40,75 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         assert.equal(result.ok, true);
         assert.equal(result.data?.settings?.appearance?.uiStyle, 'classic');
         assert.equal(result.data?.settings?.appearance?.themeColor, '#123456');
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+    test('data-helpers auto-load repairs project codex skill sidecars after hydration', async () => {
+      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data', 'data-helpers.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'data-helpers-load-skills-'));
+      const storageRoot = path.join(tempDir, 'Workspace');
+      const dataFilePath = path.join(tempDir, 'hikari-data.json');
+      try {
+        await fsPromises.writeFile(dataFilePath, JSON.stringify({
+          projects: [{ id: 'project-1', name: 'Atlas' }],
+          settings: { storagePath: storageRoot }
+        }, null, 2), 'utf8');
+        const projectProtocolSkillPath = path.join(storageRoot, 'Project', 'Atlas', '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
+        const projectNotebookSkillPath = path.join(storageRoot, 'Project', 'Atlas', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
+        await assert.rejects(fsPromises.access(projectProtocolSkillPath));
+
+        const helpers = createMainDataHelpers({
+          fs: fsPromises,
+          path,
+          hasSupportedDataExtension: mainUtils.hasSupportedDataExtension,
+          normalizeDataFilePath: mainUtils.normalizeDataFilePath,
+          hydrateSnapshotFromBundle: bundleHelpers.hydrateSnapshotFromBundle,
+          syncBundleFromSnapshot: bundleHelpers.syncBundleFromSnapshot,
+          writeSnapshot: async () => {},
+          getDefaultDataFilePath: () => dataFilePath
+        });
+        const result = await helpers.autoLoadDataFile(dataFilePath);
+        assert.equal(result.ok, true);
+        assert.equal(result.bundlePaths.storageRootPath, storageRoot);
+        assert.match(await fsPromises.readFile(projectProtocolSkillPath, 'utf8'), /name: "hikari-protocol-generation"/);
+        assert.match(await fsPromises.readFile(projectNotebookSkillPath, 'utf8'), /name: "hikari-notebook-draft"/);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+    test('data-helpers auto-load still returns hydrated data when sidecar repair fails', async () => {
+      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data', 'data-helpers.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'data-helpers-load-sync-failure-'));
+      const dataFilePath = path.join(tempDir, 'state.json');
+      try {
+        await fsPromises.writeFile(dataFilePath, JSON.stringify({
+          settings: { appearance: { uiStyle: 'classic' } }
+        }, null, 2), 'utf8');
+        const helpers = createMainDataHelpers({
+          fs: fsPromises,
+          path,
+          hasSupportedDataExtension: mainUtils.hasSupportedDataExtension,
+          normalizeDataFilePath: mainUtils.normalizeDataFilePath,
+          hydrateSnapshotFromBundle: async ({ snapshot }) => ({
+            snapshot: {
+              ...snapshot,
+              hydrated: true
+            },
+            bundlePaths: { storageRootPath: tempDir },
+            sidecarPaths: {}
+          }),
+          syncBundleFromSnapshot: async () => {
+            throw new Error('simulated sidecar repair failure');
+          },
+          writeSnapshot: async () => {},
+          getDefaultDataFilePath: () => dataFilePath
+        });
+        const result = await helpers.autoLoadDataFile(dataFilePath);
+        assert.equal(result.ok, true);
+        assert.equal(result.data.hydrated, true);
+        assert.equal(result.bundlePaths.storageRootPath, tempDir);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -497,12 +568,12 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
     test('chemical inventory sync uses sqlite-only bundle writes instead of a chemical json file', () => {
       const preloadSource = readPreloadStorageSource();
       const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8');
-      const chemicalInventorySource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'lab-common-inventory', 'index.js'), 'utf8');
+      const chemicalSqliteSyncSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'lab-common-inventory', 'sqlite-sync.js'), 'utf8');
       assert.match(preloadSource, /syncSqliteBundle:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(STORAGE\.SYNC_SQLITE_BUNDLE, payload\)/);
       assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.SYNC_SQLITE_BUNDLE/);
-      assert.match(chemicalInventorySource, /window\.enanaApi\?\.syncSqliteBundle/);
-      assert.match(chemicalInventorySource, /const targetPath = `\$\{normalizedRoot\}\/hikari-chemicals\.index\.sqlite`;/);
-      assert.equal(chemicalInventorySource.includes('hikari-chemicals.ena.json'), false);
+      assert.match(chemicalSqliteSyncSource, /window\.enanaApi\?\.syncSqliteBundle/);
+      assert.match(chemicalSqliteSyncSource, /const targetPath = `\$\{normalizedRoot\}\/hikari-chemicals\.index\.sqlite`;/);
+      assert.equal(chemicalSqliteSyncSource.includes('hikari-chemicals.ena.json'), false);
     });
   }
 };

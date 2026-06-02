@@ -422,5 +422,139 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
       assert.match(text, /^\| 2 \| phen \| 72% \|$/m);
       assert.match(text, /^Narrative text follows\.$/m);
     });
+    test('pdf-figure-extraction round-trips an embedded RGB image into a PNG file', async () => {
+      const pdfFigureExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-figure-extraction.js'));
+      const zlib = require('node:zlib');
+
+      // Sanity-check the pure encoder: a 2x2 RGB block decodes back to the same pixels.
+      const rgbPixels = Buffer.from([
+        0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00,
+        0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF
+      ]);
+      const png = pdfFigureExtraction.encodePng({ width: 2, height: 2, channels: 3, pixels: rgbPixels });
+      assert.equal(png.slice(0, 8).toString('hex'), '89504e470d0a1a0a');
+      const ihdrLen = png.readUInt32BE(8);
+      assert.equal(ihdrLen, 13);
+      assert.equal(png.slice(12, 16).toString('ascii'), 'IHDR');
+      assert.equal(png.readUInt32BE(16), 2);
+      assert.equal(png.readUInt32BE(20), 2);
+      assert.equal(png[24], 8);
+      assert.equal(png[25], 2);
+
+      // Build a fake pdf.js document with one large embedded image XObject.
+      const width = 64;
+      const height = 48;
+      const pageImage = Buffer.alloc(width * height * 3);
+      for (let i = 0; i < pageImage.length; i += 3) {
+        pageImage[i] = 0x10;
+        pageImage[i + 1] = 0x80;
+        pageImage[i + 2] = 0xC0;
+      }
+      const pdfDocument = {
+        numPages: 1,
+        getPage: async () => ({
+          getOperatorList: async () => ({
+            fnArray: [pdfFigureExtraction.OPS_PAINT_IMAGE_X_OBJECT],
+            argsArray: [['img-fixture-1']]
+          }),
+          objs: {
+            get: (_objId, callback) => callback({
+              kind: pdfFigureExtraction.IMAGE_KIND_RGB_24BPP,
+              width,
+              height,
+              data: pageImage
+            })
+          },
+          commonObjs: { get: () => null },
+          cleanup: () => {}
+        })
+      };
+
+      const outputDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'pdf-figures-'));
+      try {
+        const figures = await pdfFigureExtraction.extractFiguresFromPdfDocument({
+          pdfDocument,
+          outputDir,
+          minDimension: 16
+        });
+        assert.equal(figures.length, 1);
+        assert.equal(figures[0].page_number, 1);
+        assert.equal(figures[0].width, width);
+        assert.equal(figures[0].height, height);
+        assert.equal(figures[0].file_name, 'page-1-img-1.png');
+        const onDisk = await fsPromises.readFile(figures[0].file_path);
+        assert.equal(onDisk.slice(0, 8).toString('hex'), '89504e470d0a1a0a');
+        // Verify IHDR encodes RGB color type with our dimensions.
+        assert.equal(onDisk.slice(12, 16).toString('ascii'), 'IHDR');
+        assert.equal(onDisk.readUInt32BE(16), width);
+        assert.equal(onDisk.readUInt32BE(20), height);
+        assert.equal(onDisk[24], 8);
+        assert.equal(onDisk[25], 2);
+        // Decode the IDAT and confirm the first pixel survived end-to-end.
+        const idatLen = onDisk.readUInt32BE(33);
+        const idatBody = onDisk.subarray(41, 41 + idatLen);
+        const inflated = zlib.inflateSync(idatBody);
+        assert.equal(inflated[0], 0); // filter byte
+        assert.equal(inflated[1], 0x10);
+        assert.equal(inflated[2], 0x80);
+        assert.equal(inflated[3], 0xC0);
+      } finally {
+        await fsPromises.rm(outputDir, { recursive: true, force: true });
+      }
+    });
+    test('pdfTextExtractionRuntime threads figures_output_dir into the result', async () => {
+      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-pdf-text-extraction.js'));
+      const pdfFigureExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-figure-extraction.js'));
+
+      const width = 40;
+      const height = 32;
+      const pageImage = Buffer.alloc(width * height * 3, 0x77);
+      const runtime = pdfTextExtraction.createPdfTextExtractionRuntime({
+        pdfJsLib: {
+          getDocument: () => ({
+            promise: Promise.resolve({
+              numPages: 1,
+              getPage: async () => ({
+                getTextContent: async () => ({ items: [{ str: 'page text', hasEOL: true }] }),
+                getOperatorList: async () => ({
+                  fnArray: [pdfFigureExtraction.OPS_PAINT_IMAGE_X_OBJECT],
+                  argsArray: [['img-figure-thread-1']]
+                }),
+                objs: {
+                  get: (_objId, callback) => callback({
+                    kind: pdfFigureExtraction.IMAGE_KIND_RGB_24BPP,
+                    width,
+                    height,
+                    data: pageImage
+                  })
+                },
+                commonObjs: { get: () => null },
+                cleanup: () => {}
+              }),
+              getOutline: async () => [],
+              destroy: async () => {}
+            })
+          })
+        }
+      });
+
+      const outputDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'pdf-text-extract-figures-'));
+      try {
+        const result = await runtime.extractText({
+          buffer: Buffer.from('%PDF-1.7\nfake bytes'),
+          figures_output_dir: outputDir,
+          figure_min_dimension: 16
+        });
+        assert.equal(result.ok, true);
+        assert.equal(Array.isArray(result.figures), true);
+        assert.equal(result.figures.length, 1);
+        assert.equal(result.figures[0].file_name, 'page-1-img-1.png');
+        assert.equal(result.figures_output_dir, outputDir);
+        const onDisk = await fsPromises.readdir(outputDir);
+        assert.deepEqual(onDisk.sort(), ['page-1-img-1.png']);
+      } finally {
+        await fsPromises.rm(outputDir, { recursive: true, force: true });
+      }
+    });
   }
 };

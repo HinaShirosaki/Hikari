@@ -30,6 +30,10 @@
               <span>LLM Model &amp; Access</span>
               <small>Provider, model, endpoint</small>
             </button>
+            <button type="button" class="settings-nav-item" data-settings-target="skills">
+              <span>External Skills</span>
+              <small>Agent skill files</small>
+            </button>
             <button type="button" class="settings-nav-item" data-settings-target="telegram">
               <span>Telegram Bot</span>
               <small>Bot token and status</small>
@@ -179,6 +183,24 @@
                 </div>
               </form>
             </section>
+
+          <section class="settings-section" data-settings-panel="skills" hidden>
+            <div class="settings-section-head">
+              <h3>External Skills</h3>
+              <p class="small-note">View discovered skill files and control which ones the agent may use.</p>
+            </div>
+            <div class="stack-form">
+              <label class="inline-row settings-switch-row">
+                <input id="setting-agent-external-skills-enabled" type="checkbox" />
+                External skills enabled
+              </label>
+              <p id="setting-external-skills-status" class="small-note">External skills: loading...</p>
+              <div class="form-actions">
+                <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn">Refresh Skills</button>
+              </div>
+              <div id="setting-external-skills-list" class="settings-skill-list" aria-live="polite"></div>
+            </div>
+          </section>
 
           <section class="settings-section" data-settings-panel="telegram" hidden>
             <div class="settings-section-head">

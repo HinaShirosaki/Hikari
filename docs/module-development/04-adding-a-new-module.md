@@ -12,9 +12,9 @@ This walks through every file you need to touch to add a new view called `My Fea
 | 4 | `ui/config/css-order.json` | register the stylesheet |
 | 5 | `assets/icons/my-feature.svg` | drop the dock icon |
 | 6 | `ui/config/app-registry.json` | declare dock entry, label, aliases |
-| 7 | `src/renderer/modules/shared.js` | add to `VIEWS` and `TITLES` |
+| 7 | `src/renderer/modules/views.js` | add to `VIEWS` and `TITLES` |
 | 8 | `src/renderer/modules/my-feature.js` (or folder) | controller |
-| 9 | `src/renderer/module-runtime.js` | import + init + register + dispatch |
+| 9 | `src/renderer/module-manifests/my-feature.js` | declare init + registry key + render hooks |
 | 10 *(optional)* | `src/renderer/services/myFeatureService.js` | only if other modules need to react to your changes |
 
 If you skip 5/6/7/9 the module exists but has no entry point. If you skip 1–4 the build fails with a clear error.
@@ -142,7 +142,7 @@ If you want this in the always-visible dock (not the overflow "More" menu), set 
 
 `searchInputId` lets the topbar search route a query to a specific input inside your view — leave it empty unless your view has its own search field.
 
-## Step 7 — `src/renderer/modules/shared.js`
+## Step 7 — `src/renderer/modules/views.js`
 
 Add your view ID to `VIEWS` and a subtitle to `TITLES`:
 
@@ -258,42 +258,47 @@ export function initMyFeature({
 
 If you expect this to grow, start with a folder layout from day one (see the section below).
 
-## Step 9 — `src/renderer/module-runtime.js`
+## Step 9 — `src/renderer/module-manifests/<name>.js`
 
-Three edits:
-
-**(a) Import the init function** at the top:
+Create one manifest file:
 
 ```js
-import { initMyFeature } from './modules/my-feature.js';
+import { initMyFeature } from '../modules/my-feature/index.js';
+
+export const myFeatureManifest = {
+  key: 'myFeature',
+  init: initMyFeature,
+  viewKey: 'MY_FEATURE',
+  bootOrder: 130,
+  createOptions: ({
+    state,
+    persist,
+    createId,
+    safeText,
+    rendererServices
+  }) => ({
+    state,
+    persist,
+    createId,
+    safeText,
+    onMyFeatureChanged: rendererServices.notebook.handleNotebookEntriesChanged
+  }),
+  render: ({ modules }) => modules.myFeature.render()
+};
 ```
 
-**(b) Initialize and register inside `createRendererModuleRuntime`**, alongside the others:
+The `key` is the registry key other modules will use. `viewKey` points at the matching `VIEWS.<KEY>` entry and lets the runtime add the normal `renderView()` dispatcher. Use `viewIds` when one module owns multiple route ids, and `navigationAliases` when one route should highlight or title itself as another route.
+
+Then export it from [src/renderer/module-manifests/index.js](../../src/renderer/module-manifests/index.js), usually in the group that matches when it should initialize:
 
 ```js
-myFeature: initAndRegisterModule(moduleRegistry, 'myFeature', initMyFeature, {
-  state,
-  persist,
-  createId,
-  safeText,
-  onMyFeatureChanged: () => {
-    rendererServices.notebook.handleNotebookEntriesChanged();  // example fan-out
-  }
-})
-```
-
-The second argument (`'myFeature'`) is the registry key other modules will use.
-
-**(c) Add a render dispatcher** in the `renderByViewId` map:
-
-```js
-const renderByViewId = new Map([
+export const inventoryModuleManifests = [
   // ...
-  [views.MY_FEATURE, () => modules.myFeature.render()]
-]);
+  myFeatureManifest
+];
 ```
 
-If you want your module to also render at app boot (in the cold-start `renderAll()` path), append a call inside `renderAll()`. Most modules do — the cost is one render and it ensures the data is consistent before the user navigates in.
+If you want your module to also render at app boot, add `bootOrder`. The runtime uses `renderAll` when present and otherwise falls back to `render`. For modules that are only event/tool wiring, omit `viewKey`, route render hooks, and `bootOrder`.
 
 ## Step 10 (optional) — service
 
@@ -336,7 +341,7 @@ export function createRendererServices(registry) {
 }
 ```
 
-Then in `module-runtime.js` you can pass the service to other modules (`rendererServices.myFeature.handleMyFeatureChanged`) and they call it after their own mutations.
+Then in your module manifest you can pass the service to other modules (`rendererServices.myFeature.handleMyFeatureChanged`) and they call it after their own mutations.
 
 ## Build and run
 
@@ -375,11 +380,11 @@ src/renderer/modules/my-feature/
   Readme.md         # short note on layout
 ```
 
-Update [src/renderer/module-runtime.js](../../src/renderer/module-runtime.js) to import from `./modules/my-feature/index.js`. Look at [src/renderer/modules/personal-inventory/](../../src/renderer/modules/personal-inventory/) for a complete example.
+Update your manifest to import from `../modules/my-feature/index.js`. Look at [src/renderer/modules/personal-inventory/](../../src/renderer/modules/personal-inventory/) and [src/renderer/module-manifests/personal-inventory.js](../../src/renderer/module-manifests/personal-inventory.js) for a complete example.
 
 ## Removing a module
 
-Reverse the steps. Delete view/stylesheet, remove from html/css/app-registry configs, drop the `VIEWS`/`TITLES` entries, drop the imports/init/render-dispatch in `module-runtime.js`, drop any service references, run `npm run build:ui`. The build will yell at you if you forget any of them.
+Reverse the steps. Delete view/stylesheet, remove from html/css/app-registry configs, drop the `VIEWS`/`TITLES` entries, drop the module manifest export, drop any service references, run `npm run build:ui`. The build will yell at you if you forget any of them.
 
 ## Done
 

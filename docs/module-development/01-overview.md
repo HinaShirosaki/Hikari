@@ -26,10 +26,13 @@ config/
 src/renderer/
   bootstrap/index-shell.js # pre-app loading cover, theme application
   renderer.js              # entry point: imports startRendererApp()
-  app/start-renderer-app.js
+  app/start-renderer-app.js # compatibility wrapper into renderer core
+  core/start-hikari-core.js # state, services, modules, navigation, search boot
   app/navigation-shell.js  # dock, view switching, page title
+  app/topbar-open-handlers.js # search result open routing
   app/topbar-search.js
-  module-runtime.js        # static module instantiation
+  module-runtime.js        # manifest composition plus shared render dispatch
+  module-manifests/        # per-module init/render declarations
   modules/                 # per-feature controllers
   services/                # cross-module fan-out (registry + services)
 scripts/
@@ -57,10 +60,10 @@ Once Electron loads `index.html`:
 1. `<script type="module" src="src/renderer/bootstrap/index-shell.js">` runs in `<head>`. It paints the loading cover, applies the saved appearance (font size, day/night) so first paint matches the user's last session, and listens for the `hikari:app-ready` event.
 2. The body finishes parsing. All view `<section>`s are present in the DOM, but only `home-view` has `class="view is-active"` — everything else is hidden by `core.css` (`.view { display: none } .view.is-active { display: block }`).
 3. `<script type="module" src="src/renderer/renderer.js">` runs at end of body. It calls `startRendererApp()`.
-4. `startRendererApp()` ([src/renderer/app/start-renderer-app.js](../../src/renderer/app/start-renderer-app.js)):
+4. `startRendererApp()` delegates to `startHikariCore()` ([src/renderer/core/start-hikari-core.js](../../src/renderer/core/start-hikari-core.js)):
    - `loadState()` from localStorage (key `enana_state_v1`).
    - Creates the **module registry** (a `Map`-based bus) and the **renderer services** (cross-module fan-out helpers).
-   - Calls `createRendererModuleRuntime({...})` ([src/renderer/module-runtime.js](../../src/renderer/module-runtime.js)) which statically imports every `init*` function and registers each module with the registry.
+   - Calls `createRendererModuleRuntime({...})` ([src/renderer/module-runtime.js](../../src/renderer/module-runtime.js)) which initializes manifest-declared modules from [src/renderer/module-manifests/](../../src/renderer/module-manifests/), registers each module with the registry, and builds route/boot render dispatch from manifest metadata.
    - Creates the **navigation shell**, which renders the dock from `APP_REGISTRY` and wires `showView()`.
    - Hydrates extra state from `window.enanaApi` if a storage path is set, runs `renderAll()`, then activates the startup view.
    - Dispatches `hikari:app-ready`. The bootstrap cover fades out.
@@ -100,9 +103,9 @@ You write only the markup specific to your view. The next page covers exactly wh
 
 There is one mutable state object created by `loadState()` and passed to every module by reference. Mutations happen in-place; persistence is explicit via the `persist()` callback (writes localStorage and, if `state.settings.storagePath` is set, autosaves to disk through `window.enanaApi.autoSaveDataFile`).
 
-`defaultState` in [src/renderer/modules/shared.js](../../src/renderer/modules/shared.js) defines every top-level key. If your module needs a new top-level field, add it there with a sensible default — every consumer derefs `state.<field>` directly with `?.` or `||` fallbacks, so missing keys leak silently.
+`defaultState` in [src/renderer/modules/app-state.js](../../src/renderer/modules/app-state.js) defines every top-level key. If your module needs a new top-level field, add it there with a sensible default — every consumer derefs `state.<field>` directly with `?.` or `||` fallbacks, so missing keys leak silently.
 
-`state.objectGraph` is rebuilt from the rest of the state on every `persist()` (in `start-renderer-app.js:persist()`). Don't write to it manually.
+`state.objectGraph` is rebuilt from the rest of the state on every `persist()` in the renderer core. Don't write to it manually.
 
 ## What the dock and navigation give you
 

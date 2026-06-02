@@ -280,6 +280,27 @@ function buildMetadataLines(metadata = {}, extraction = {}) {
   return lines;
 }
 
+function buildFiguresMarkdown(figures = [], { figuresRelativeDir = 'figures' } = {}) {
+  const rows = asArray(figures)
+    .map((figure) => {
+      const source = ensureObject(figure);
+      const fileName = cleanText(source.file_name || source.fileName, 320);
+      if (!fileName) {
+        return '';
+      }
+      const relative = cleanText(source.relative_path || source.relativePath, 1200)
+        || `${figuresRelativeDir}/${fileName}`;
+      const pageNumber = Number(source.page_number || source.pageNumber) || 0;
+      const width = Number(source.width) || 0;
+      const height = Number(source.height) || 0;
+      const dimensions = width && height ? ` (${width}×${height} px)` : '';
+      const label = pageNumber ? `Figure from page ${pageNumber}${dimensions}` : `Figure${dimensions}`;
+      return `- ![${label}](${relative})`;
+    })
+    .filter(Boolean);
+  return rows.join('\n');
+}
+
 function buildPdfMarkdownFromExtraction({
   metadata = {},
   extraction = {},
@@ -289,7 +310,9 @@ function buildPdfMarkdownFromExtraction({
   transformedAt = '',
   maxSectionChars = DEFAULT_MAX_SECTION_CHARS,
   maxPageChars = DEFAULT_MAX_PAGE_CHARS,
-  includePages
+  includePages,
+  figures = [],
+  figuresRelativeDir = 'figures'
 } = {}) {
   const normalizedExtraction = ensureObject(extraction);
   const normalizedMetadata = normalizePdfMarkdownMetadata({
@@ -310,6 +333,10 @@ function buildPdfMarkdownFromExtraction({
   const transformedLine = cleanText(transformedAt, 120)
     ? [`- Transformed at: ${cleanText(transformedAt, 120)}`]
     : [];
+  const resolvedFigures = asArray(figures).length
+    ? asArray(figures)
+    : asArray(normalizedExtraction.figures);
+  const figuresMarkdown = buildFiguresMarkdown(resolvedFigures, { figuresRelativeDir });
   const parts = [
     `# ${title}`,
     '',
@@ -324,6 +351,9 @@ function buildPdfMarkdownFromExtraction({
     '',
     sectionMarkdown || '- No section headings were detected.',
   ];
+  if (figuresMarkdown) {
+    parts.push('', '## Figures', '', figuresMarkdown);
+  }
   if (resolvedIncludePages) {
     parts.push('', '## Pages', '', pageMarkdown || rawText || '- No extractable page text was found.');
   } else if (!sectionMarkdown) {
@@ -393,6 +423,7 @@ async function transformPdfToMarkdown({
 module.exports = {
   PDF_TO_MD_FORMAT,
   buildExtractedTextFile,
+  buildFiguresMarkdown,
   buildPdfMarkdownFromExtraction,
   formatMarkdownBodyText,
   normalizePdfMarkdownMetadata,

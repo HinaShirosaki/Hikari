@@ -120,7 +120,9 @@ export const defaultState = {
       apiKey: ''
     },
     agent: {
-      developerMode: false
+      developerMode: false,
+      externalSkillsEnabled: true,
+      disabledExternalSkillNames: []
     },
     inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood'],
     dashboard: {
@@ -458,6 +460,9 @@ export function normalizeState(parsed) {
   const rawAgent = rawSettings.agent && typeof rawSettings.agent === 'object'
     ? rawSettings.agent
     : {};
+  const rawDisabledExternalSkillNames = Array.isArray(rawAgent.disabledExternalSkillNames)
+    ? rawAgent.disabledExternalSkillNames
+    : (Array.isArray(rawAgent.disabled_external_skill_names) ? rawAgent.disabled_external_skill_names : null);
   const rawDashboard = rawSettings.dashboard && typeof rawSettings.dashboard === 'object'
     ? rawSettings.dashboard
     : {};
@@ -599,7 +604,11 @@ export function normalizeState(parsed) {
       agent: {
         ...defaultState.settings.agent,
         ...rawAgent,
-        developerMode: rawAgent.developerMode === true
+        developerMode: rawAgent.developerMode === true,
+        externalSkillsEnabled: rawAgent.externalSkillsEnabled !== false && rawAgent.external_skills_enabled !== false,
+        disabledExternalSkillNames: rawDisabledExternalSkillNames
+          ? rawDisabledExternalSkillNames.map((item) => String(item || '').trim()).filter(Boolean)
+          : defaultState.settings.agent.disabledExternalSkillNames
       },
       inventoryLocations: Array.isArray(rawSettings.inventoryLocations)
         ? rawSettings.inventoryLocations

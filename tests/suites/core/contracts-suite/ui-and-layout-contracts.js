@@ -7,6 +7,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
@@ -22,8 +23,17 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     ].join('\n');
     const readRendererShellSource = () => [
       readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
       readLocalSource('src', 'renderer', 'app', 'navigation-shell.js'),
+      readLocalSource('src', 'renderer', 'app', 'topbar-open-handlers.js'),
       readLocalSource('src', 'renderer', 'app', 'topbar-search.js')
+    ].join('\n');
+    const readRendererModuleRuntimeSource = () => [
+      readLocalSource('src', 'renderer', 'module-runtime.js'),
+      ...fs.readdirSync(path.join(__dirname, 'src', 'renderer', 'module-manifests'))
+        .filter((fileName) => fileName.endsWith('.js'))
+        .sort()
+        .map((fileName) => readLocalSource('src', 'renderer', 'module-manifests', fileName))
     ].join('\n');
 
     test('view constants, index sections, and app registry stay in sync', () => {
@@ -61,7 +71,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const generatedRegistry = readLocalSource('src', 'renderer', 'modules', 'app-registry.generated.js');
       const rendererShellSource = readRendererShellSource();
-      const moduleRuntimeSource = readSource('src/renderer/module-runtime.js');
+      const moduleRuntimeSource = readRendererModuleRuntimeSource();
       const domBindingsSource = readLocalSource('src', 'renderer', 'modules', 'agent-chat', 'dom-bindings.js');
       const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
 
@@ -86,7 +96,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(moduleRuntimeSource, /loadPersistentSessions:\s*false/);
       assert.match(moduleRuntimeSource, /createPaperScopedAgentChatState/);
       assert.match(moduleRuntimeSource, /getActivePaperId/);
-      assert.match(moduleRuntimeSource, /onAskSelectedText:\s*openPaperAgentChatWithSelection/);
+      assert.match(moduleRuntimeSource, /onAskSelectedText:[\s\S]*openPaperAgentChatWithSelection/);
       assert.match(moduleRuntimeSource, /primeHiddenContext/);
       assert.match(domBindingsSource, /const id = \(suffix\) => `\$\{idPrefix\}-\$\{suffix\}`;/);
       assert.match(domBindingsSource, /quickPrompts:\s*byId\(id\('quick-prompts'\)\)/);
@@ -98,7 +108,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
     test('renderer routes personal inventory aliases to merged sample workspace', () => {
       const source = readRendererShellSource();
-      const moduleRuntimeSource = readSource('src/renderer/module-runtime.js');
+      const moduleRuntimeSource = readRendererModuleRuntimeSource();
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const sampleEntry = registry.apps.find((app) => app.id === 'sample-inventory');
       assert.match(source, /function normalizeViewId\(VIEWS, viewId\)\s*\{\s*return viewId === VIEWS\.PERSONAL_INVENTORY \? VIEWS\.SAMPLE_REGISTRY : viewId;\s*\}/);
@@ -108,23 +118,29 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(source, /const searchScopeTargets = buildSearchScopeMap\(\{\s*apps: APP_REGISTRY,/);
       assert.match(source, /const showSampleInventoryWorkspace = nextView === VIEWS\.SAMPLE_REGISTRY;/);
       assert.match(source, /moduleRuntime\.renderView\(nextView\);/);
-      assert.match(moduleRuntimeSource, /function renderSampleRegistryWorkspace\(modules\) \{\s*modules\.personalInventory\.renderSections\(\);\s*modules\.sampleRegistry\.render\(\);\s*\}/);
-      assert.match(moduleRuntimeSource, /\[views\.SAMPLE_REGISTRY,\s*\(\)\s*=>\s*renderSampleRegistryWorkspace\(modules\)\]/);
+      assert.match(moduleRuntimeSource, /key:\s*'sampleRegistry'[\s\S]*viewKey:\s*'SAMPLE_REGISTRY'[\s\S]*modules\.personalInventory\.renderSections\(\);[\s\S]*modules\.sampleRegistry\.render\(\);/);
+      assert.doesNotMatch(moduleRuntimeSource, /\[views\.SAMPLE_REGISTRY,\s*\(\)\s*=>/);
     });
 
     test('renderer defines sequence viewer aliases and showView render hook', () => {
       const source = readRendererShellSource();
-      const moduleRuntimeSource = readSource('src/renderer/module-runtime.js');
+      const moduleRuntimeSource = readRendererModuleRuntimeSource();
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const sequenceEntry = registry.apps.find((app) => app.id === 'sequence-viewer');
       assert.ok(sequenceEntry);
       assert.ok(sequenceEntry.aliases.includes('sequence'));
       assert.ok(sequenceEntry.aliases.includes('seqviewer'));
-      assert.match(source, /const SEQUENCE_VIEWER_DETAIL_VIEW_ID = 'sequence-viewer-detail-view';/);
+      assert.doesNotMatch(source, /SEQUENCE_VIEWER_DETAIL_VIEW_ID/);
+      assert.doesNotMatch(source, /sequenceViewerDetailViewId/);
+      assert.match(source, /navigationViewAliases:\s*moduleRuntime\.navigationViewAliases/);
       assert.match(source, /moduleRuntime\.renderView\(nextView\);/);
-      assert.match(moduleRuntimeSource, /if \(viewId === views\.SEQUENCE_VIEWER \|\| viewId === sequenceViewerDetailViewId\) \{\s*modules\.sequenceViewer\?\.\s*render\?\.\(\{\s*activeViewId:\s*viewId\s*\}\);\s*return;\s*\}/);
-      assert.match(moduleRuntimeSource, /sequenceViewer:\s*initAndRegisterModule\(moduleRegistry,\s*'sequenceViewer',\s*initSequenceViewer,\s*\{\s*homeViewId:\s*views\.SEQUENCE_VIEWER,\s*detailViewId:\s*sequenceViewerDetailViewId,\s*onNavigateHome:\s*\(\)\s*=>\s*\{\s*showView\(views\.SEQUENCE_VIEWER\);/);
-      assert.match(moduleRuntimeSource, /onNavigateDetail:\s*\(\)\s*=>\s*\{\s*showView\(sequenceViewerDetailViewId\);/);
+      assert.doesNotMatch(moduleRuntimeSource, /if \(viewId === views\.SEQUENCE_VIEWER \|\| viewId === sequenceViewerDetailViewId\)/);
+      assert.match(moduleRuntimeSource, /const SEQUENCE_VIEWER_DETAIL_VIEW_ID = 'sequence-viewer-detail-view';/);
+      assert.match(moduleRuntimeSource, /navigationAliases:\s*\[[\s\S]*viewId:\s*SEQUENCE_VIEWER_DETAIL_VIEW_ID,[\s\S]*navigationViewKey:\s*'SEQUENCE_VIEWER'/);
+      assert.match(moduleRuntimeSource, /key:\s*'sequenceViewer'[\s\S]*init:\s*initSequenceViewerWithRoutes[\s\S]*viewKey:\s*'SEQUENCE_VIEWER'[\s\S]*viewIds:\s*\[[\s\S]*SEQUENCE_VIEWER_DETAIL_VIEW_ID/);
+      assert.match(moduleRuntimeSource, /homeViewId:\s*views\.SEQUENCE_VIEWER[\s\S]*detailViewId:\s*SEQUENCE_VIEWER_DETAIL_VIEW_ID[\s\S]*onNavigateHome:\s*\(\)\s*=>\s*\{\s*showView\(views\.SEQUENCE_VIEWER\);/);
+      assert.match(moduleRuntimeSource, /onNavigateDetail:\s*\(\)\s*=>\s*\{\s*showView\(SEQUENCE_VIEWER_DETAIL_VIEW_ID\);/);
+      assert.match(moduleRuntimeSource, /render:\s*\(\{ modules \},\s*\{ viewId \}\s*=\s*\{\}\)\s*=>\s*\{\s*modules\.sequenceViewer\?\.\s*render\?\.\(\{\s*activeViewId:\s*viewId\s*\}\);/);
     });
 
     test('sequence viewer uses bottom feature track without table dependency', () => {

@@ -5,12 +5,7 @@ export function createSequenceService(registry) {
       return;
     }
     sequenceViewer.loadFromExternal(payload);
-
-    const showView = registry.get('showView');
-    const detailViewId = registry.get('sequenceViewerDetailViewId');
-    if (typeof showView === 'function' && typeof detailViewId === 'string' && detailViewId) {
-      showView(detailViewId);
-    }
+    sequenceViewer.openDetailView?.();
   }
 
   return {

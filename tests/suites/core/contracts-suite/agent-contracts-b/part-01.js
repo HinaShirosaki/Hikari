@@ -10,6 +10,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
@@ -295,13 +296,13 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     test('direct LLM module registry is wired through main IPC and preload', () => {
       const channelsSource = readLocalSource('src', 'shared', 'ipc', 'channels.js');
       const preloadSource = readLocalSource('src', 'main', 'preload', 'api', 'llm-api.js');
-      const mainRuntimeSource = readLocalSource('src', 'main', 'app', 'main-runtime.js');
+      const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js');
       const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
       const systemRegistrarSource = readLocalSource('src', 'main', 'ipc', 'register-system-ipc.js');
       const directLlmSource = readLocalSource('src', 'renderer', 'modules', 'direct-llm.js');
       const papersLlmSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'llm.js');
       const protocolGenerationSource = readLocalSource('src', 'renderer', 'modules', 'protocol', 'generation.js');
-      const inventorySource = readLocalSource('src', 'renderer', 'modules', 'lab-common-inventory', 'index.js');
+      const chemicalImportMappingSource = readLocalSource('src', 'renderer', 'modules', 'lab-common-inventory', 'import-header-mapping.js');
 
       assert.match(channelsSource, /DIRECT_MODULES:\s*'llm:direct-modules'/);
       assert.match(channelsSource, /DIRECT_GENERATE:\s*'llm:direct-generate'/);
@@ -317,7 +318,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(papersLlmSource, /requestDirectLlmText/);
       assert.doesNotMatch(papersLlmSource, /runDirectLlmPrompt/);
       assert.match(protocolGenerationSource, /task:\s*'protocol-generation'/);
-      assert.match(inventorySource, /chemical-header-mapping/);
+      assert.match(chemicalImportMappingSource, /chemical-header-mapping/);
     });
     test('purchase recommendation helper exposes reusable runtime and tool contracts', () => {
       const purchaseSource = fs.readFileSync(agentPath('tools', 'agent-purchase-recommendation.js'), 'utf8');

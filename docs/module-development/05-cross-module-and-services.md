@@ -45,14 +45,13 @@ const protocol = registry.get('protocol');
 registry.get('biologyNotebook').renderEntries?.();
 ```
 
-The pre-seeded keys (passed in by `start-renderer-app.js` as `uiBridge`):
+The pre-seeded keys (passed in by the renderer core as `uiBridge`):
 
 | Key | Value |
 | --- | --- |
 | `showView` | `(viewId) => void`, used by services that need to navigate |
 | `setSearchInputValue` | `(inputId, value) => boolean`, used to drive in-view search inputs |
 | `VIEWS` | the `VIEWS` constants map |
-| `sequenceViewerDetailViewId` | string, the detail view id |
 
 After init, every module is also registered under its own key. Current keys: `biologyNotebook`, `protocol`, `projectManagement`, `agentChat`, `workflowManagement`, `papers`, `labCommonInventory`, `personalInventory`, `sampleRegistry`, `assay`, `gel`, `sequenceViewer`, `toolBox`, `settings`, `homeDashboard`.
 
@@ -64,7 +63,7 @@ The service layer is the glue you should reach for whenever a change in one modu
 
 | Service | Methods (examples) |
 | --- | --- |
-| `protocolService` | `handleProtocolsChanged()`, `handleProtocolsImported()`, `importProtocolsFromJson(json, opts)`, `createDraftFromPaper({method, paper})` |
+| `protocolService` | `handleProtocolsChanged()`, `handleProtocolsImported()`, `handleExternalProtocolRecordSaved(payload)`, `openProtocol(id)`, `importProtocolsFromJson(json, opts)`, `createDraftFromPaper({method, paper})` |
 | `notebookService` | `handleNotebookEntriesChanged()`, `handleAgentNotebookEntriesChanged()` |
 | `projectService` | `handleProjectsChanged()` |
 | `inventoryService` | `handleSamplesChanged()`, `openSampleSearch(query)` |
@@ -92,12 +91,14 @@ export function createProtocolService(registry) {
 You hand the service callback to a module at init time, and it calls it after mutations:
 
 ```js
-// in module-runtime.js
-protocol: initAndRegisterModule(moduleRegistry, 'protocol', initProtocolManagement, {
-  state, persist, createId, safeText,
-  onProtocolsChanged: rendererServices.protocol.handleProtocolsChanged,
-  ...
-})
+// in a module manifest
+export const myFeatureManifest = {
+  key: 'myFeature',
+  createOptions: ({ state, persist, createId, safeText, rendererServices }) => ({
+    state, persist, createId, safeText,
+    onMyFeatureChanged: rendererServices.protocol.handleProtocolsChanged
+  })
+};
 ```
 
 ```js
@@ -115,7 +116,7 @@ This keeps each module ignorant of who else cares about its data.
 
 1. New file `src/renderer/services/myAreaService.js` exporting `createMyAreaService(registry)`.
 2. Re-export from `src/renderer/services/index.js` and add to `createRendererServices` return value.
-3. Pass the desired methods into modules at init time in `module-runtime.js`.
+3. Pass the desired methods into modules from their manifest `createOptions(...)` hook.
 
 Keep services thin — they should call `registry.get('<other>').<method>?.()` and nothing more. Business logic belongs in the module that owns the data.
 
@@ -129,7 +130,7 @@ Keep services thin — they should call `registry.get('<other>').<method>?.()` a
 
 If unsure, ask: *"If the user reloads, do they expect this back?"* If yes, `state`. If no, locals.
 
-`state.objectGraph` is a **derived** index that links nodes (notebooks, samples, protocols…) and their backlinks. Don't write to it. `start-renderer-app.js`'s `persist()` rebuilds it on every save via `rebuildObjectGraph(state)`.
+`state.objectGraph` is a **derived** index that links nodes (notebooks, samples, protocols…) and their backlinks. Don't write to it. The renderer core's `persist()` rebuilds it on every save via `rebuildObjectGraph(state)`.
 
 ## The IPC bridge: `window.enanaApi`
 
@@ -139,7 +140,7 @@ Common methods (full surface in [docs/main-helpers/](../main-helpers/)):
 
 | Method | Purpose |
 | --- | --- |
-| `autoSaveDataFile(state, manifestPath?)` | autosave the state bundle (called from `start-renderer-app.js`'s `persist`) |
+| `autoSaveDataFile(state, manifestPath?)` | autosave the state bundle (called from the renderer core's `persist`) |
 | `loadDataFile()` / `saveDataFile(state)` | manual import/export of `.ena.json` |
 | `runScript(name, payload)` | invoke a registered main-process script (used by tool-box, agent) |
 | `openExternalUrl(url)` | shell-open a URL |

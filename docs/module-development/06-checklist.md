@@ -22,18 +22,21 @@ Before you call your module done, verify all of the following.
 
 ### Renderer wiring
 
-- [ ] `src/renderer/modules/shared.js` — new entry in `VIEWS` and `TITLES`. Optional: in `STARTUP_DEFAULT_VIEW_IDS`.
-- [ ] `src/renderer/modules/shared.js` — new top-level field added to `defaultState` (and normalized in `normalizeState`) if your module owns persisted data.
+- [ ] `src/renderer/modules/views.js` — new entry in `VIEWS` and `TITLES`.
+- [ ] `src/renderer/modules/app-state.js` — optional entry in `STARTUP_DEFAULT_VIEW_IDS`, plus a new top-level field in `defaultState` and `normalizeState()` if your module owns persisted data.
 - [ ] `src/renderer/modules/<id>.js` (or folder) exists and exports `init<Name>`.
-- [ ] `src/renderer/module-runtime.js`:
+- [ ] `src/renderer/module-manifests/<id>.js`:
   - [ ] imports `init<Name>`,
-  - [ ] calls `initAndRegisterModule(moduleRegistry, '<key>', init<Name>, { ... })`,
-  - [ ] adds the renderer to `renderByViewId` for `views.<KEY>`,
-  - [ ] (optional) calls `modules.<key>.render()` in `renderAll()` for boot-time render.
+  - [ ] sets `key` to the registry key,
+	  - [ ] builds the module options in `createOptions(...)`,
+	  - [ ] adds `viewKey` plus `render(...)` for navigation rendering,
+	  - [ ] (optional) adds `bootOrder` for boot-time rendering,
+	  - [ ] (optional) adds `renderAll(...)` when the boot render differs from `render(...)`.
+- [ ] `src/renderer/module-manifests/index.js` exports the manifest in the correct initialization group.
 
 ### Cross-module
 
-- [ ] If other modules need to react when your data changes, you added/extended a service in `src/renderer/services/` and wired it through `module-runtime.js`.
+- [ ] If other modules need to react when your data changes, you added/extended a service in `src/renderer/services/` and passed it through your manifest options.
 - [ ] You did not import another feature module's internals directly.
 
 ### Build and run
@@ -82,8 +85,8 @@ Keep the same root noun across all the names. It dramatically reduces the cognit
 | --- | --- |
 | Build error `Duplicate HTML id attributes` | another view or shell uses the same id; namespace yours |
 | Build error `View file ... does not contain expected section id` | typo between `app-registry.json`/`html-order.json` and the `<section>` id |
-| `npm start` boots, button shows, view stays blank | `renderByViewId` missing the entry, or the init function was added but never registered |
-| Click the dock button — page title updates but the view stays empty | The view fragment is registered in `html-order.json` but the `<section>` does not have `class="view"`; or `start-renderer-app.js`'s startup `showView()` resolves to a different id |
+| `npm start` boots, button shows, view stays blank | manifest `viewKey`/`render` is missing, or the init function was added but never exported from `module-manifests/index.js` |
+| Click the dock button — page title updates but the view stays empty | The view fragment is registered in `html-order.json` but the `<section>` does not have `class="view"`; or the renderer core's startup `showView()` resolves to a different id |
 | State survives reload but other modules don't refresh after edits | You forgot to call the injected `on…Changed()` callback after `persist()` |
 | Other modules update fine, yours doesn't refresh after their edits | Their service callback list (e.g. `protocolService.handleProtocolsChanged`) does not call your module — extend the service |
 | Topbar search behaves oddly | An alias in `app-registry.json` collides with another app's alias; aliases are matched globally |

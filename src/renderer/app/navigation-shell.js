@@ -20,12 +20,26 @@ export function applyAppearanceSnapshot(appearance, rootDocument = document) {
   rootDocument.body.classList.add('ui-neutral-compact');
 }
 
+function createNavigationAliasMap(aliases, normalize) {
+  const entries = aliases instanceof Map
+    ? Array.from(aliases.entries())
+    : Array.isArray(aliases)
+      ? aliases
+      : Object.entries(aliases || {});
+  return new Map(entries
+    .map(([sourceViewId, navigationViewId]) => [
+      normalize(sourceViewId),
+      normalize(navigationViewId)
+    ])
+    .filter(([sourceViewId, navigationViewId]) => sourceViewId && navigationViewId));
+}
+
 export function createNavigationShell({
   VIEWS,
   TITLES,
   APP_DOCK_ORDER,
   APP_REGISTRY,
-  sequenceViewerDetailViewId,
+  navigationViewAliases,
   moduleRuntime,
   sharedLeftRailRuntime,
   executeTopbarSearch,
@@ -35,6 +49,11 @@ export function createNavigationShell({
   windowObject = window
 }) {
   const normalize = (viewId) => normalizeViewId(VIEWS, viewId);
+  const navigationAliases = createNavigationAliasMap(navigationViewAliases, normalize);
+  const resolveNavigationViewId = (viewId) => {
+    const normalizedViewId = normalize(viewId);
+    return navigationAliases.get(normalizedViewId) || normalizedViewId;
+  };
   const appsById = new Map(APP_REGISTRY.map((app) => [app.id, app]));
   const appsByViewId = new Map(APP_REGISTRY.map((app) => [normalize(app.viewId), app]));
   const validStartupViewIds = new Set(APP_REGISTRY.map((app) => normalize(app.viewId)));
@@ -105,7 +124,7 @@ export function createNavigationShell({
   }
 
   function getAppForView(viewId) {
-    return appsByViewId.get(normalize(viewId)) || null;
+    return appsByViewId.get(resolveNavigationViewId(viewId)) || null;
   }
 
   function isAgentChatRailEnabledForView(viewId) {
@@ -286,9 +305,7 @@ export function createNavigationShell({
   }
 
   function syncNavigationState(activeViewId) {
-    const activeNavView = activeViewId === sequenceViewerDetailViewId
-      ? VIEWS.SEQUENCE_VIEWER
-      : activeViewId;
+    const activeNavView = resolveNavigationViewId(activeViewId);
     const activeApp = getAppForView(activeNavView);
     appNavButtons.forEach((button) => {
       const buttonView = normalize(button.dataset.view);
@@ -479,7 +496,7 @@ export function createNavigationShell({
       view.classList.toggle('is-active', active);
     });
 
-    const activeNavView = nextView === sequenceViewerDetailViewId ? VIEWS.SEQUENCE_VIEWER : nextView;
+    const activeNavView = resolveNavigationViewId(nextView);
     const activeApp = getAppForView(activeNavView);
     const agentChatRailEnabled = syncAgentChatRailState(activeNavView);
     const dockCapacity = getDockCapacity();
@@ -489,7 +506,7 @@ export function createNavigationShell({
     }
     syncNavigationState(activeNavView);
 
-    const subtitleView = nextView === sequenceViewerDetailViewId ? VIEWS.SEQUENCE_VIEWER : nextView;
+    const subtitleView = activeNavView;
     if (pageTitle) {
       pageTitle.textContent = activeApp?.label || 'Home';
     }

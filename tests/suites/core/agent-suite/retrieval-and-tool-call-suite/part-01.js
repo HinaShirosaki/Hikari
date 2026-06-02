@@ -450,6 +450,32 @@ Workspace body
         assert.equal(invocation.tool_name, 'command-line');
         assert.equal(invocation.active_skill_names.includes('command-line'), true);
         assert.equal(invocation.raw_args, 'pwd');
+
+        const globallyDisabledSkills = runtime.listSkills({
+          workspaceDir,
+          externalSkillsEnabled: false
+        });
+        const visibleDisabledSkills = runtime.listSkills({
+          workspaceDir,
+          externalSkillsEnabled: false,
+          includeDisabled: true
+        });
+        const individuallyDisabledPrompt = runtime.buildSkillsPromptPayload({
+          workspaceDir,
+          disabledExternalSkillNames: ['command-line'],
+          activeSkillNames: ['command-line']
+        });
+        const disabledInvocation = runtime.parseSkillInvocation('/skill command-line pwd', {
+          workspaceDir,
+          disabledExternalSkillNames: ['command-line']
+        });
+
+        assert.equal(globallyDisabledSkills.length, 0);
+        assert.equal(visibleDisabledSkills.length, 1);
+        assert.equal(visibleDisabledSkills[0].settings_enabled, false);
+        assert.equal(individuallyDisabledPrompt.skills_catalog_prompt, '');
+        assert.equal(individuallyDisabledPrompt.active_skills_prompt, '');
+        assert.equal(disabledInvocation.type, 'unknown_skill');
       } finally {
         fs.rmSync(tempRoot, { recursive: true, force: true });
       }

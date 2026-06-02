@@ -96,6 +96,7 @@ export function getAssayElements(root = document) {
     assayChartGridHorizontal: root.getElementById('assay-chart-grid-horizontal'),
     assayChartGridColor: root.getElementById('assay-chart-grid-color'),
     assayChartGridStrokeWidth: root.getElementById('assay-chart-grid-stroke-width'),
+    assayChartTextBar: root.getElementById('assay-chart-text-bar'),
     assayChartSeriesColors: root.getElementById('assay-chart-series-colors')
   };
 }

@@ -36,6 +36,8 @@ export function createEmptyManualOverrides() {
       dividerDone: false,
       bandTop: null,
       bandBottom: null,
+      perLaneBandEnabled: false,
+      laneBandWindows: [],
       quantifyConfirmed: false
     },
     addedBands: [],
@@ -46,6 +48,98 @@ export function createEmptyManualOverrides() {
       rows: []
     }
   };
+}
+
+function normalizeOptionalPixel(value) {
+  if (value === null || value === undefined || value === '') {
+    return null;
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? Math.max(0, Math.floor(numeric)) : null;
+}
+
+export function normalizeLaneBandWindows(raw) {
+  const byLane = new Map();
+  (Array.isArray(raw) ? raw : []).forEach((item) => {
+    const laneValue = Number(item?.laneIndex ?? item?.lane ?? item?.index);
+    const laneIndex = Number.isFinite(laneValue) && laneValue >= 1
+      ? Math.floor(laneValue)
+      : null;
+    if (!laneIndex) {
+      return;
+    }
+    const bandTop = normalizeOptionalPixel(item?.bandTop ?? item?.top ?? item?.yTop);
+    const bandBottom = normalizeOptionalPixel(item?.bandBottom ?? item?.bottom ?? item?.yBottom);
+    if (!Number.isFinite(bandTop) && !Number.isFinite(bandBottom)) {
+      return;
+    }
+    byLane.set(laneIndex, {
+      laneIndex,
+      bandTop,
+      bandBottom
+    });
+  });
+
+  return [...byLane.values()].sort((a, b) => a.laneIndex - b.laneIndex);
+}
+
+export function isPerLaneBandMode(laneSegmentation = {}) {
+  return Boolean(
+    laneSegmentation?.perLaneBandEnabled
+    || laneSegmentation?.perLaneBandMode
+    || laneSegmentation?.laneBandMode
+  );
+}
+
+export function hasCompleteLaneBandWindow(window) {
+  return Number.isFinite(window?.bandTop) && Number.isFinite(window?.bandBottom);
+}
+
+export function getLaneBandWindow(laneSegmentation = {}, laneIndex) {
+  const targetLane = Math.floor(Number(laneIndex));
+  if (!Number.isFinite(targetLane) || targetLane < 1) {
+    return null;
+  }
+  return normalizeLaneBandWindows(laneSegmentation?.laneBandWindows)
+    .find((window) => window.laneIndex === targetLane) || null;
+}
+
+export function getTargetBandWindowForLane(laneSegmentation = {}, laneIndex) {
+  if (isPerLaneBandMode(laneSegmentation)) {
+    const laneWindow = getLaneBandWindow(laneSegmentation, laneIndex);
+    return hasCompleteLaneBandWindow(laneWindow)
+      ? {
+        laneIndex: laneWindow.laneIndex,
+        bandTop: laneWindow.bandTop,
+        bandBottom: laneWindow.bandBottom,
+        perLane: true
+      }
+      : null;
+  }
+
+  const bandTop = normalizeOptionalPixel(laneSegmentation?.bandTop);
+  const bandBottom = normalizeOptionalPixel(laneSegmentation?.bandBottom);
+  return Number.isFinite(bandTop) && Number.isFinite(bandBottom)
+    ? {
+      laneIndex: Math.max(1, Math.floor(Number(laneIndex) || 1)),
+      bandTop,
+      bandBottom,
+      perLane: false
+    }
+    : null;
+}
+
+export function countCompleteLaneBandWindows(laneSegmentation = {}) {
+  return normalizeLaneBandWindows(laneSegmentation?.laneBandWindows)
+    .filter(hasCompleteLaneBandWindow)
+    .length;
+}
+
+export function hasAnyTargetBandWindow(laneSegmentation = {}) {
+  if (isPerLaneBandMode(laneSegmentation)) {
+    return countCompleteLaneBandWindows(laneSegmentation) > 0;
+  }
+  return Boolean(getTargetBandWindowForLane(laneSegmentation, 1));
 }
 
 export function normalizeManualOverrides(raw) {
@@ -82,6 +176,8 @@ export function normalizeManualOverrides(raw) {
     dividerDone: Boolean(rawSegmentation.dividerDone),
     bandTop: Number.isFinite(bandTop) ? Math.max(0, Math.floor(bandTop)) : null,
     bandBottom: Number.isFinite(bandBottom) ? Math.max(0, Math.floor(bandBottom)) : null,
+    perLaneBandEnabled: isPerLaneBandMode(rawSegmentation),
+    laneBandWindows: normalizeLaneBandWindows(rawSegmentation.laneBandWindows),
     quantifyConfirmed: Boolean(rawSegmentation.quantifyConfirmed)
   };
 

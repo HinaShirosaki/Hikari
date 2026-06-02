@@ -10,6 +10,10 @@ test('[EDGE] gel-analysis internal functions are exposed for unit tests', () => 
     'mean',
     'confidenceLabel',
     'normalizeManualOverrides',
+    'normalizeLaneBandWindows',
+    'getTargetBandWindowForLane',
+    'isPerLaneBandMode',
+    'analyzeGelImage',
     'safeFilePart',
     'escapeCsv',
     'computeHistogramPercentiles',
@@ -90,6 +94,97 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
   assert.match(elements.gelLaneTableShell.innerHTML, /width:31\.25%;/);
 });
 
+test('[EDGE] gel-analysis lane-by-lane band mode records top and bottom per clicked lane', () => {
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual-workflow.js'));
+  const gelCanvas = new MockElement('gel-canvas');
+  gelCanvas.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    width: 100,
+    height: 100
+  });
+  const runtime = {
+    currentImage: {
+      width: 100,
+      height: 100,
+      gray: new Float32Array(10000).fill(0.1)
+    },
+    cropperActive: false,
+    currentReport: null,
+    manualDividerConfirmed: true,
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0,
+        gelRight: 99,
+        dividers: [50],
+        dividerDone: true
+      },
+      ladderLane: 1,
+      ladderBandsDone: true
+    }),
+    selectedViewerTool: ''
+  };
+  const elements = {
+    gelCanvas,
+    gelLaneBandModeBtn: new MockElement('gel-lane-band-mode-btn'),
+    gelOverrideStatus: new MockElement('gel-override-status'),
+    gelManualProgress: new MockElement('gel-manual-progress'),
+    gelStepLeft: new MockElement('gel-step-left'),
+    gelStepRight: new MockElement('gel-step-right'),
+    gelStepDividers: new MockElement('gel-step-dividers'),
+    gelStepLadder: new MockElement('gel-step-ladder'),
+    gelStepLadderMw: new MockElement('gel-step-ladder-mw'),
+    gelStepBandTop: new MockElement('gel-step-band-top'),
+    gelStepBandBottom: new MockElement('gel-step-band-bottom'),
+    gelStepQuantify: new MockElement('gel-step-quantify'),
+    gelStepBands: new MockElement('gel-step-bands'),
+    gelManualPrevBtn: new MockElement('gel-manual-prev-btn'),
+    gelManualNextBtn: new MockElement('gel-manual-next-btn')
+  };
+  const statuses = [];
+  let analysisRuns = 0;
+  const controller = manualModule.createManualWorkflowController({
+    runtime,
+    elements,
+    deps: {
+      onRunAnalysis: () => {
+        analysisRuns += 1;
+      },
+      renderCanvas() {},
+      renderLaneTable() {},
+      renderReport() {},
+      setStatus: (message) => statuses.push(message)
+    }
+  });
+
+  controller.onLaneBandModeToggle();
+  assert.equal(runtime.manualOverrides.laneSegmentation.perLaneBandEnabled, true);
+  assert.equal(controller.getManualStep(), 'band-top');
+
+  controller.onCanvasClick({ clientX: 25, clientY: 12 });
+  assert.equal(controller.getManualStep(), 'band-bottom');
+  assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.laneBandWindows), JSON.stringify([
+    { laneIndex: 1, bandTop: 12, bandBottom: null }
+  ]));
+
+  controller.onCanvasClick({ clientX: 75, clientY: 22 });
+  assert.match(statuses[statuses.length - 1], /lane 1/i);
+  assert.equal(runtime.manualOverrides.laneSegmentation.laneBandWindows[0].bandBottom, null);
+
+  controller.onCanvasClick({ clientX: 25, clientY: 22 });
+  assert.equal(controller.getManualStep(), 'band-top');
+  assert.equal(runtime.manualOverrides.laneSegmentation.laneBandWindows[0].bandBottom, 22);
+
+  controller.onCanvasClick({ clientX: 75, clientY: 40 });
+  controller.onCanvasClick({ clientX: 75, clientY: 55 });
+  assert.equal(controller.getManualStep(), 'quantify');
+  assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.laneBandWindows), JSON.stringify([
+    { laneIndex: 1, bandTop: 12, bandBottom: 22 },
+    { laneIndex: 2, bandTop: 40, bandBottom: 55 }
+  ]));
+  assert.equal(analysisRuns, 2);
+});
+
 [
   [0, 0, 10, 0],
   [5, 0, 10, 5],
@@ -163,7 +258,13 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
         dividers: [30, '30', 50, -3, 120, 50],
         dividerDone: 'yes',
         bandTop: '5',
-        bandBottom: '20'
+        bandBottom: '20',
+        perLaneBandEnabled: true,
+        laneBandWindows: [
+          { laneIndex: '2', bandTop: '15.9', bandBottom: '30.2' },
+          { lane: '1', top: '8', bottom: '' },
+          { laneIndex: '2', bandTop: '16', bandBottom: '31' }
+        ]
       },
       addedBands: [{ laneIndex: '2', pixelY: '33.2' }, { laneIndex: -1, pixelY: 5 }],
       ladderLane: '3',
@@ -180,6 +281,11 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
       assert.equal(value.laneSegmentation.gelLeft, 10);
       assert.equal(value.laneSegmentation.gelRight, 100);
       assert.equal(JSON.stringify(value.laneSegmentation.dividers), JSON.stringify([30, 50, 120]));
+      assert.equal(value.laneSegmentation.perLaneBandEnabled, true);
+      assert.equal(JSON.stringify(value.laneSegmentation.laneBandWindows), JSON.stringify([
+        { laneIndex: 1, bandTop: 8, bandBottom: null },
+        { laneIndex: 2, bandTop: 16, bandBottom: 31 }
+      ]));
       assert.equal(value.addedBands.length, 2);
       assert.equal(value.ladderLane, 3);
       assert.equal(JSON.stringify(value.ladderBands.map((item) => item.mw)), JSON.stringify([150, 50]));
@@ -200,6 +306,107 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
     const value = gelAnalysisInternals.normalizeManualOverrides(scenario.raw);
     scenario.expectation(value);
   });
+});
+
+test('[EDGE] gel-analysis resolves target band windows by global or per-lane mode', () => {
+  const global = gelAnalysisInternals.getTargetBandWindowForLane({
+    bandTop: 6,
+    bandBottom: 14,
+    perLaneBandEnabled: false,
+    laneBandWindows: [
+      { laneIndex: 2, bandTop: 20, bandBottom: 28 }
+    ]
+  }, 2);
+  assert.equal(JSON.stringify(global), JSON.stringify({
+    laneIndex: 2,
+    bandTop: 6,
+    bandBottom: 14,
+    perLane: false
+  }));
+
+  const perLane = gelAnalysisInternals.getTargetBandWindowForLane({
+    bandTop: 6,
+    bandBottom: 14,
+    perLaneBandEnabled: true,
+    laneBandWindows: [
+      { laneIndex: 1, bandTop: 4, bandBottom: 8 },
+      { laneIndex: 2, bandTop: 20, bandBottom: 28 }
+    ]
+  }, 2);
+  assert.equal(JSON.stringify(perLane), JSON.stringify({
+    laneIndex: 2,
+    bandTop: 20,
+    bandBottom: 28,
+    perLane: true
+  }));
+
+  const missing = gelAnalysisInternals.getTargetBandWindowForLane({
+    perLaneBandEnabled: true,
+    laneBandWindows: [
+      { laneIndex: 1, bandTop: 4, bandBottom: 8 }
+    ]
+  }, 2);
+  assert.equal(missing, null);
+});
+
+test('[EDGE] gel-analysis manual per-lane target windows feed lane-specific report cells', () => {
+  const width = 40;
+  const height = 30;
+  const gray = new Float32Array(width * height).fill(0.05);
+  for (let y = 4; y <= 8; y += 1) {
+    for (let x = 0; x < 20; x += 1) {
+      gray[(y * width) + x] = 0.9;
+    }
+  }
+  for (let y = 18; y <= 23; y += 1) {
+    for (let x = 20; x < 40; x += 1) {
+      gray[(y * width) + x] = 0.85;
+    }
+  }
+
+  const result = gelAnalysisInternals.analyzeGelImage({
+    gray,
+    imageName: 'per-lane.png',
+    width,
+    height,
+    preprocessed: {
+      cleanNormalized: gray,
+      preprocessing: {
+        grayscale: true,
+        backend: 'test'
+      }
+    },
+    params: {
+      analysisType: 'western',
+      ladderLane: 1,
+      ladderStandards: [250, 150, 100],
+      normalization: 'none',
+      enhancement: {},
+      manualOverrides: {
+        laneSegmentation: {
+          gelLeft: 0,
+          gelRight: 39,
+          dividers: [20],
+          dividerDone: true,
+          perLaneBandEnabled: true,
+          laneBandWindows: [
+            { laneIndex: 1, bandTop: 4, bandBottom: 8 },
+            { laneIndex: 2, bandTop: 18, bandBottom: 23 }
+          ]
+        },
+        ladderLane: 1,
+        ladderBandsDone: true
+      }
+    }
+  });
+
+  assert.equal(result.report.preprocessing.manualOverridesSummary.laneSegmentationBandMode, 'per-lane');
+  assert.equal(result.report.preprocessing.manualOverridesSummary.laneSegmentationLaneBandWindows, 2);
+  assert.equal(result.report.lanes.length, 2);
+  assert.equal(result.report.lanes[0].targetBand.top, 4);
+  assert.equal(result.report.lanes[0].targetBand.bottom, 8);
+  assert.equal(result.report.lanes[1].targetBand.top, 18);
+  assert.equal(result.report.lanes[1].targetBand.bottom, 23);
 });
 
 [

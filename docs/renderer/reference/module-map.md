@@ -13,10 +13,15 @@ This is a quick lookup map for `src/renderer`.
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `renderer.js` | Main path | browser-side composition root, boot flow, navigation, search, hydration, persistence |
+| `renderer.js` | Main path | browser-side script entry that calls the app wrapper |
+| `app/start-renderer-app.js` | Main path | compatibility wrapper into the renderer core |
+| `core/start-hikari-core.js` | Main path | renderer core: state, services, modules, navigation, search, hydration, persistence |
+| `module-runtime.js` | Main path | composes manifest-declared modules and builds route/boot render dispatch from manifest metadata |
+| `module-manifests/` | Main path | per-module init/render declarations grouped by boot order and feature family |
+| `app/topbar-open-handlers.js` | Main path | topbar search result open routing for domain records |
 | `services/index.js` | Main path | builds the renderer service bundle plus re-exports registry/service factories |
 | `services/module-registry.js` | Cross-cutting | tiny DI-style registry shared by the shell and services |
-| `services/protocolService.js` | Cross-cutting | protocol import/share hooks plus paper-to-protocol drafts |
+| `services/protocolService.js` | Cross-cutting | protocol import/share hooks, external saved-protocol merges, and paper-to-protocol drafts |
 | `services/notebookService.js` | Cross-cutting | notebook-driven rerender fan-out |
 | `services/projectService.js` | Cross-cutting | project-driven rerender fan-out |
 | `services/inventoryService.js` | Cross-cutting | sample-registry refresh and sample-search handoff |
@@ -27,7 +32,9 @@ This is a quick lookup map for `src/renderer`.
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `modules/shared.js` | Cross-cutting | canonical renderer state contract and helper surface |
+| `modules/views.js` | Cross-cutting | `VIEWS` and `TITLES` constants |
+| `modules/app-state.js` | Cross-cutting | canonical renderer state contract, normalization, local-storage helpers |
+| `modules/utils.js` | Cross-cutting | shared renderer helpers such as `createId`, `safeText`, and `cssEscape` |
 | `modules/app-registry.generated.js` | Main path | generated shell config for dock, aliases, and view metadata |
 | `modules/object-graph.js` | Cross-cutting | derived graph builder over protocols, notebooks, inventory, workflows, assays, gels, and papers |
 | `modules/pdf-export.js` | Support | shared export helpers for protocol/notebook-like views |
@@ -85,10 +92,12 @@ This is a quick lookup map for `src/renderer`.
 
 If you want to read the code after this doc set, start here:
 
-1. `src/renderer/renderer.js`
-2. `src/renderer/modules/shared.js`
-3. `src/renderer/services/index.js`
-4. one simple controller such as `src/renderer/modules/project-management.js`
-5. one large subsystem entry such as `src/renderer/modules/sequence-viewer/index.js`
+1. `src/renderer/core/start-hikari-core.js`
+2. `src/renderer/module-runtime.js`
+3. `src/renderer/module-manifests/index.js`
+4. `src/renderer/modules/app-state.js`
+5. `src/renderer/services/index.js`
+6. one simple controller such as `src/renderer/modules/project-management/index.js`
+7. one large subsystem entry such as `src/renderer/modules/sequence-viewer/index.js`
 
 That order makes the rest of the package much easier to place.

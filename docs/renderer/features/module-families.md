@@ -43,7 +43,7 @@ Some top-level module files are not primary views. They are wrappers, adapters, 
 
 | File | Purpose |
 | --- | --- |
-| `shared.js` | renderer-wide constants, default state, normalization, persistence helpers |
+| `views.js`, `app-state.js`, `utils.js` | renderer-wide constants, default state, normalization, persistence helpers, and small shared utilities |
 | `object-graph.js` | derived relationship graph builder and query helpers |
 | `pdf-export.js` | shared PDF export helpers used by protocols and notebook-like views |
 | `agent-chat-response.js` | stable re-export layer for agent response formatting helpers |

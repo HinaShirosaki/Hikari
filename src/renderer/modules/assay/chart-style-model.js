@@ -12,8 +12,42 @@ const LINE_STYLES = Object.freeze(['solid', 'dashed', 'dotted']);
 const FRAME_STYLES = Object.freeze(['box', 'l-shape', 'none']);
 const CURVE_TYPES = Object.freeze(['curveMonotoneX', 'curveLinear', 'curveStep']);
 const SCALE_TYPES = Object.freeze(['linear', 'log', 'ordinal']);
+const TEXT_BASELINES = Object.freeze(['baseline', 'super', 'sub']);
+const TEXT_ALIGNMENTS = Object.freeze(['start', 'middle', 'end']);
 
 export const CHART_FONT_FAMILY = 'Arial, sans-serif';
+
+function createDefaultChartTextStyle() {
+  return {
+    fontFamily: 'Arial',
+    fontSize: 12,
+    color: '#222222',
+    bold: false,
+    italic: false,
+    underline: false,
+    baseline: 'baseline',
+    textAlign: 'middle'
+  };
+}
+
+function sanitizeChartTextStyle(input) {
+  const base = createDefaultChartTextStyle();
+  if (!input || typeof input !== 'object') return base;
+  return {
+    fontFamily: typeof input.fontFamily === 'string' && input.fontFamily.trim()
+      ? input.fontFamily.trim()
+      : base.fontFamily,
+    fontSize: Number.isFinite(input.fontSize)
+      ? Math.max(6, Math.min(72, input.fontSize))
+      : base.fontSize,
+    color: sanitizeColor(input.color, base.color),
+    bold: Boolean(input.bold),
+    italic: Boolean(input.italic),
+    underline: Boolean(input.underline),
+    baseline: TEXT_BASELINES.includes(input.baseline) ? input.baseline : base.baseline,
+    textAlign: TEXT_ALIGNMENTS.includes(input.textAlign) ? input.textAlign : base.textAlign
+  };
+}
 
 export function createDefaultChartStyle() {
   return {
@@ -42,7 +76,8 @@ export function createDefaultChartStyle() {
     showVerticalGrid: true,
     showHorizontalGrid: true,
     gridColor: '#9bb0c9',
-    gridStrokeWidth: 1
+    gridStrokeWidth: 1,
+    text: createDefaultChartTextStyle()
   };
 }
 
@@ -128,7 +163,8 @@ export function normalizeChartStyle(input) {
     gridColor: sanitizeColor(input.gridColor, base.gridColor),
     gridStrokeWidth: Number.isFinite(input.gridStrokeWidth)
       ? Math.max(0, Math.min(6, input.gridStrokeWidth))
-      : base.gridStrokeWidth
+      : base.gridStrokeWidth,
+    text: sanitizeChartTextStyle(input.text)
   };
 }
 
@@ -138,5 +174,7 @@ export const CHART_STYLE_OPTIONS = Object.freeze({
   frameStyles: FRAME_STYLES,
   curves: CURVE_TYPES,
   scales: SCALE_TYPES,
+  textBaselines: TEXT_BASELINES,
+  textAlignments: TEXT_ALIGNMENTS,
   defaultPalette: DEFAULT_CHART_PALETTE
 });

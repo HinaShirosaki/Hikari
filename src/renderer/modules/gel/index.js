@@ -146,6 +146,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   elements.gelToolRightBorderBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('right'));
   elements.gelToolDividersBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('dividers'));
   elements.gelToolLadderLaneBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('ladder'));
+  elements.gelLaneBandModeBtn?.addEventListener('click', manualWorkflow.onLaneBandModeToggle);
   elements.gelAddTableBtn?.addEventListener('click', laneTable.onAddTableClick);
   elements.gelLaneTableShell?.addEventListener('click', laneTable.onShellClick);
   elements.gelLaneTableShell?.addEventListener('input', laneTable.onShellInput);

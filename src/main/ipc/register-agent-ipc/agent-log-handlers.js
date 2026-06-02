@@ -69,8 +69,16 @@ function registerAgentLogHandlers({
       : rawSnapshot;
     const message = cleanText(normalizedPayload?.message, 3000);
     const workspaceDir = process.cwd();
+    const skillRuntimeInput = {
+      workspaceDir,
+      settings: rawSnapshot?.settings || {},
+      snapshot: rawSnapshot,
+      agent: normalizedPayload?.agent && typeof normalizedPayload.agent === 'object'
+        ? normalizedPayload.agent
+        : {}
+    };
     const skillInvocation = typeof agentToolRuntime.parseSkillInvocation === 'function'
-      ? agentToolRuntime.parseSkillInvocation(message, { workspaceDir })
+      ? agentToolRuntime.parseSkillInvocation(message, skillRuntimeInput)
       : {
         type: 'none',
         active_skill_names: [],
@@ -84,6 +92,7 @@ function registerAgentLogHandlers({
     ) || message;
     const skillPromptPayload = typeof agentToolRuntime.buildSkillsPromptPayload === 'function'
       ? agentToolRuntime.buildSkillsPromptPayload({
+        ...skillRuntimeInput,
         workspaceDir,
         activeSkillNames: asArray(skillInvocation?.active_skill_names)
       })
@@ -197,6 +206,81 @@ function registerAgentLogHandlers({
       state_snapshot: snapshot
     };
   }
+
+  function resolveExternalSkillsEnabled(normalizedPayload = {}, rawSnapshot = {}) {
+    const agentSettings = rawSnapshot?.settings?.agent && typeof rawSnapshot.settings.agent === 'object'
+      ? rawSnapshot.settings.agent
+      : {};
+    const payloadAgent = normalizedPayload?.agent && typeof normalizedPayload.agent === 'object'
+      ? normalizedPayload.agent
+      : {};
+    const candidates = [
+      payloadAgent.externalSkillsEnabled,
+      payloadAgent.external_skills_enabled,
+      agentSettings.externalSkillsEnabled,
+      agentSettings.external_skills_enabled
+    ];
+    const explicit = candidates.find((item) => typeof item === 'boolean');
+    return explicit === undefined ? true : explicit !== false;
+  }
+
+  function summarizeExternalSkill(skill = {}) {
+    const source = skill && typeof skill === 'object' ? skill : {};
+    return {
+      name: cleanText(source.name, 160),
+      description: cleanText(source.description, 600),
+      command_name: cleanText(source.command_name, 80),
+      path: cleanText(source.path, 1600),
+      directory: cleanText(source.directory, 1600),
+      homepage: cleanText(source.homepage, 1200),
+      eligible: source.eligible !== false,
+      settings_enabled: source.settings_enabled !== false,
+      enabled: source.enabled === true,
+      disabled_reason: cleanText(source.disabled_reason, 320),
+      user_invocable: source.user_invocable !== false,
+      disable_model_invocation: source.disable_model_invocation === true
+    };
+  }
+
+  ipcMain.handle(AGENT.LIST_SKILLS, async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const rawSnapshot = normalizeJsonPayload(normalizedPayload?.stateSnapshot, {});
+    const workspaceDir = process.cwd();
+    if (!agentToolRuntime || typeof agentToolRuntime.listSkills !== 'function') {
+      return {
+        ok: false,
+        error: 'Agent skill runtime is unavailable.',
+        external_skills_enabled: resolveExternalSkillsEnabled(normalizedPayload, rawSnapshot),
+        skills: []
+      };
+    }
+
+    try {
+      const skills = agentToolRuntime.listSkills({
+        workspaceDir,
+        includeIneligible: true,
+        includeDisabled: true,
+        settings: rawSnapshot?.settings || {},
+        snapshot: rawSnapshot,
+        agent: normalizedPayload?.agent && typeof normalizedPayload.agent === 'object'
+          ? normalizedPayload.agent
+          : {}
+      }).map(summarizeExternalSkill).filter((skill) => skill.name);
+      return {
+        ok: true,
+        external_skills_enabled: resolveExternalSkillsEnabled(normalizedPayload, rawSnapshot),
+        skill_count: skills.length,
+        skills
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: cleanText(error?.message || error, 2400) || 'Failed to list external skills.',
+        external_skills_enabled: resolveExternalSkillsEnabled(normalizedPayload, rawSnapshot),
+        skills: []
+      };
+    }
+  });
 
   ipcMain.handle(AGENT.CHAT_LOG_CREATE_SESSION, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});

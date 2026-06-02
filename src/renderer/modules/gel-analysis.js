@@ -11,6 +11,10 @@ export function selectViewerBaseImageData(currentImage, preprocessed = null) {
   return gelIndexModule.selectViewerBaseImageData(currentImage, preprocessed);
 }
 
+export function analyzeGelImage(options) {
+  return gelAnalysisCoreModule.analyzeGelImage(options);
+}
+
 export function clamp(value, min, max) {
   return gelSharedModule.clamp(value, min, max);
 }
@@ -29,6 +33,18 @@ export function confidenceLabel(score) {
 
 export function createEmptyManualOverrides() {
   return gelSharedModule.createEmptyManualOverrides();
+}
+
+export function normalizeLaneBandWindows(raw) {
+  return gelSharedModule.normalizeLaneBandWindows(raw);
+}
+
+export function getTargetBandWindowForLane(laneSegmentation, laneIndex) {
+  return gelSharedModule.getTargetBandWindowForLane(laneSegmentation, laneIndex);
+}
+
+export function isPerLaneBandMode(laneSegmentation) {
+  return gelSharedModule.isPerLaneBandMode(laneSegmentation);
 }
 
 export function normalizeManualOverrides(raw) {

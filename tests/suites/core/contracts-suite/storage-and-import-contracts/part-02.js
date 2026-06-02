@@ -7,6 +7,7 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'app', 'agent-log-runtime.js')
     ].join('\n');
@@ -17,6 +18,7 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
     ].join('\n');
     const readRendererStorageSource = () => [
       readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
       readLocalSource('src', 'renderer', 'app', 'storage-import.js')
     ].join('\n');
     test('chemical bundle hydration/import no longer depends on legacy chemical json fallback', () => {
@@ -108,6 +110,54 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       assert.equal(state.settings.llm.apiKey, 'keep-this-key');
       assert.equal(persistedSnapshot.projects.some((project) => project.id === 'new-project'), true);
     });
+    test('startup storage hydration syncs sidecars for imported project state', async () => {
+      const { createStorageImportController } = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'app', 'storage-import.js'),
+        { window: {} }
+      );
+      const state = structuredClone(shared.defaultState);
+      state.settings.storagePath = '/existing/root';
+      let autoSavedPayload = null;
+      let persistedState = null;
+      const controller = createStorageImportController({
+        state,
+        persist: () => {},
+        persistState: () => {
+          persistedState = structuredClone(state);
+        },
+        normalizeStateStoragePaths: () => {},
+        rebuildObjectGraph: () => ({ nodes: {}, edges: [], backlinks: {}, updatedAt: 'rebuilt' }),
+        windowObject: {
+          enanaApi: {
+            ensureStorageDirectory: async (storagePath) => ({ ok: true, path: storagePath }),
+            importStorageRoot: async () => ({
+              ok: true,
+              statePatch: {
+                projects: [{ id: 'project-1', name: 'Atlas' }]
+              },
+              summary: { bundles: 1 },
+              warnings: [],
+              manifestPath: '/existing/root/hikari-storage-manifest.json'
+            }),
+            autoSaveDataFile: async (data, filePath) => {
+              autoSavedPayload = {
+                data: structuredClone(data),
+                filePath
+              };
+              return { ok: true, filePath: '', sidecarPaths: {} };
+            }
+          }
+        }
+      });
+
+      const result = await controller.hydrateStateFromStorageRoot();
+      assert.equal(result.ok, true);
+      assert.equal(result.sidecarSync.ok, true);
+      assert.equal(autoSavedPayload.filePath, '');
+      assert.equal(autoSavedPayload.data.settings.storagePath, '/existing/root');
+      assert.equal(autoSavedPayload.data.projects.some((project) => project.name === 'Atlas'), true);
+      assert.equal(persistedState.projects.some((project) => project.name === 'Atlas'), true);
+    });
     test('renderer storage import wiring runs on save callback and startup hydration path', () => {
       const rendererSource = readRendererStorageSource();
       const settingsSource = readLocalSource('src', 'renderer', 'modules', 'settings', 'index.js');
@@ -117,6 +167,9 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       assert.match(rendererSource, /refreshWorkspaceForStorageRoot,\s*runStorageRootImport/);
       assert.match(rendererSource, /async function hydrateStateFromStorageRoot\(\)/);
       assert.equal(rendererSource.includes('hydrateStateFromDataFile'), false);
+      assert.match(rendererSource, /syncStateSidecarsFromStorageRoot/);
+      assert.match(rendererSource, /autoSaveDataFile\(state,\s*''\)/);
+      assert.match(rendererSource, /syncSidecars:\s*true/);
       assert.match(rendererSource, /async function initApp\(\)\s*\{\s*await storageImportController\.hydrateStateFromStorageRoot\(\);/);
       assert.match(rendererSource, /state\.projects = mergeRecordsById\(state\.projects, patch\.projects, 'project'\);/);
       assert.match(rendererSource, /mergeStorageImportPatch\(result\.statePatch\);/);
@@ -139,7 +192,7 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       assert.match(mainSource, /const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log';/);
-      assert.match(mainSource, /runtime\.agentLogRuntime\.ensureAgentChatLogFile\(runtime\.appPaths\.getAgentChatLogPath\(\)\)/);
+      assert.match(mainSource, /mainCore\.agentLogRuntime\.ensureAgentChatLogFile\(mainCore\.appPaths\.getAgentChatLogPath\(\)\)/);
       assert.match(mainSource, /createMainAppPaths/);
       assert.match(appPathsSource, /ENANA_AGENT_CHAT_LOG_PATH/);
       assert.match(controllerUtilsSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);

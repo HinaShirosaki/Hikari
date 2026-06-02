@@ -41,6 +41,10 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   const startCodexLoginBtn = document.getElementById('start-codex-login-btn');
   const clearCodexLoginBtn = document.getElementById('clear-codex-login-btn');
   const settingAgentDeveloperMode = document.getElementById('setting-agent-developer-mode');
+  const settingAgentExternalSkillsEnabled = document.getElementById('setting-agent-external-skills-enabled');
+  const settingExternalSkillsStatus = document.getElementById('setting-external-skills-status');
+  const settingExternalSkillsRefreshBtn = document.getElementById('setting-external-skills-refresh-btn');
+  const settingExternalSkillsList = document.getElementById('setting-external-skills-list');
   const telegramForm = document.getElementById('telegram-form');
   const settingTelegramToken = document.getElementById('setting-telegram-token');
   const settingTelegramStatus = document.getElementById('setting-telegram-status');
@@ -62,6 +66,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     message: 'Checking Codex login...'
   };
   let storageImportInFlight = false;
+  let externalSkillsLoading = false;
+  let externalSkillCatalog = {
+    ok: false,
+    error: '',
+    skills: []
+  };
   let activeLlmProvider = DEFAULT_LLM_PROVIDER;
   let codexCatalog = null;
   let codexLoginRefreshTimers = [];
@@ -107,6 +117,10 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   settingModel?.addEventListener('change', onModelChanged);
   startCodexLoginBtn?.addEventListener('click', onStartCodexLogin);
   clearCodexLoginBtn?.addEventListener('click', onClearCodexLogin);
+  settingAgentExternalSkillsEnabled?.addEventListener('change', onExternalSkillsEnabledChanged);
+  settingExternalSkillsRefreshBtn?.addEventListener('click', () => {
+    void refreshExternalSkills();
+  });
   telegramForm?.addEventListener('submit', onSaveTelegramToken);
   clearTelegramTokenBtn?.addEventListener('click', onClearTelegramToken);
   locationAddBtn.addEventListener('click', onAddLocation);
@@ -116,6 +130,7 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     }
   });
   void refreshTelegramBotStatus();
+  void refreshExternalSkills();
   void refreshCodexCatalog();
   void refreshCodexLoginStatus();
   activateSettingsPanel(activeSettingsPanel);
@@ -137,6 +152,9 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
 
     if (activeSettingsPanel === 'llm' && activeLlmProvider === 'codex') {
       void refreshCodexLoginStatus();
+    }
+    if (activeSettingsPanel === 'skills' && !externalSkillCatalog.skills.length && !externalSkillsLoading) {
+      void refreshExternalSkills();
     }
   }
 
@@ -341,7 +359,11 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     if (settingAgentDeveloperMode) {
       settingAgentDeveloperMode.checked = state.settings?.agent?.developerMode === true;
     }
+    if (settingAgentExternalSkillsEnabled) {
+      settingAgentExternalSkillsEnabled.checked = state.settings?.agent?.externalSkillsEnabled !== false;
+    }
     renderCodexStatus();
+    renderExternalSkills();
     renderTelegramStatus();
     renderLocationList();
     renderStorageImportStatus();
@@ -372,6 +394,201 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
         renderForms();
       });
     });
+  }
+
+  function normalizeDisabledExternalSkillNames(value = []) {
+    return Array.isArray(value)
+      ? value.map((item) => String(item || '').trim()).filter(Boolean)
+      : [];
+  }
+
+  function getAgentSettings() {
+    const currentAgentSettings = state.settings?.agent && typeof state.settings.agent === 'object'
+      ? state.settings.agent
+      : {};
+    state.settings.agent = {
+      ...currentAgentSettings,
+      developerMode: currentAgentSettings.developerMode === true,
+      externalSkillsEnabled: currentAgentSettings.externalSkillsEnabled !== false,
+      disabledExternalSkillNames: normalizeDisabledExternalSkillNames(currentAgentSettings.disabledExternalSkillNames)
+    };
+    return state.settings.agent;
+  }
+
+  function getDisabledExternalSkillSet() {
+    return new Set(
+      normalizeDisabledExternalSkillNames(getAgentSettings().disabledExternalSkillNames)
+        .map((item) => item.toLowerCase())
+    );
+  }
+
+  function normalizeExternalSkillCatalog(result = {}) {
+    const source = result && typeof result === 'object' ? result : {};
+    const skills = Array.isArray(source.skills)
+      ? source.skills.map((skill) => ({
+        name: String(skill?.name || '').trim(),
+        description: String(skill?.description || '').trim(),
+        commandName: String(skill?.command_name || skill?.commandName || '').trim(),
+        path: String(skill?.path || '').trim(),
+        homepage: String(skill?.homepage || '').trim(),
+        eligible: skill?.eligible !== false,
+        enabled: skill?.enabled === true,
+        settingsEnabled: skill?.settings_enabled !== false,
+        disabledReason: String(skill?.disabled_reason || '').trim(),
+        userInvocable: skill?.user_invocable !== false,
+        modelVisible: skill?.disable_model_invocation !== true
+      })).filter((skill) => skill.name)
+      : [];
+    return {
+      ok: source.ok === true,
+      error: String(source.error || '').trim(),
+      skills
+    };
+  }
+
+  function buildExternalSkillsPayload() {
+    const agentSettings = getAgentSettings();
+    return {
+      agent: {
+        externalSkillsEnabled: agentSettings.externalSkillsEnabled !== false,
+        disabledExternalSkillNames: normalizeDisabledExternalSkillNames(agentSettings.disabledExternalSkillNames)
+      },
+      stateSnapshot: {
+        settings: {
+          agent: {
+            externalSkillsEnabled: agentSettings.externalSkillsEnabled !== false,
+            disabledExternalSkillNames: normalizeDisabledExternalSkillNames(agentSettings.disabledExternalSkillNames)
+          }
+        }
+      }
+    };
+  }
+
+  function renderExternalSkills() {
+    if (!settingExternalSkillsStatus || !settingExternalSkillsList) {
+      return;
+    }
+    const agentSettings = getAgentSettings();
+    const externalSkillsEnabled = agentSettings.externalSkillsEnabled !== false;
+    const disabledSet = getDisabledExternalSkillSet();
+    const skills = externalSkillCatalog.skills || [];
+    const availableCount = skills.filter((skill) => (
+      externalSkillsEnabled
+      && skill.eligible
+      && !disabledSet.has(skill.name.toLowerCase())
+    )).length;
+    if (externalSkillsLoading) {
+      settingExternalSkillsStatus.textContent = 'External skills: loading...';
+    } else if (externalSkillCatalog.error) {
+      settingExternalSkillsStatus.textContent = `External skills: ${externalSkillCatalog.error}`;
+    } else {
+      const switchText = externalSkillsEnabled ? 'enabled' : 'off';
+      settingExternalSkillsStatus.textContent = `External skills: ${switchText} · ${skills.length} discovered · ${availableCount} available.`;
+    }
+
+    if (!skills.length) {
+      settingExternalSkillsList.innerHTML = '<p class="small-note">No external skills discovered.</p>';
+      return;
+    }
+
+    settingExternalSkillsList.innerHTML = skills.map((skill) => {
+      const skillKey = skill.name.toLowerCase();
+      const individuallyEnabled = !disabledSet.has(skillKey);
+      const statusText = !externalSkillsEnabled
+        ? 'Paused by global switch.'
+        : !individuallyEnabled
+          ? 'Hidden from agent prompts.'
+          : skill.eligible
+            ? 'Available to agent.'
+            : (skill.disabledReason || 'Not eligible in this environment.');
+      const toggleText = individuallyEnabled
+        ? (externalSkillsEnabled ? 'On' : 'Allowed')
+        : 'Off';
+      const commandText = skill.commandName ? `/${escapeHtml(skill.commandName)}` : 'no command';
+      const modelText = skill.modelVisible ? 'model visible' : 'command only';
+      const pathText = skill.path ? `<p class="small-note settings-skill-path">${escapeHtml(skill.path)}</p>` : '';
+      return `
+        <div class="settings-skill-row">
+          <div class="settings-skill-main">
+            <div class="settings-skill-title">
+              <span>${escapeHtml(skill.name)}</span>
+              <span class="settings-skill-command">${commandText}</span>
+            </div>
+            <p class="small-note settings-skill-description">${escapeHtml(skill.description || 'No description provided.')}</p>
+            <p class="small-note">${escapeHtml(statusText)} ${escapeHtml(modelText)}.</p>
+            ${pathText}
+          </div>
+          <label class="settings-skill-toggle">
+            <input type="checkbox" data-external-skill-toggle data-skill-name="${escapeHtml(skill.name)}" ${individuallyEnabled ? 'checked' : ''} />
+            <span>${escapeHtml(toggleText)}</span>
+          </label>
+        </div>
+      `;
+    }).join('');
+
+    settingExternalSkillsList.querySelectorAll('[data-external-skill-toggle]').forEach((input) => {
+      input.addEventListener('change', () => {
+        setExternalSkillEnabled(input.dataset.skillName, input.checked === true);
+      });
+    });
+  }
+
+  async function refreshExternalSkills() {
+    if (!window.enanaApi?.listAgentSkills) {
+      externalSkillCatalog = {
+        ok: false,
+        error: 'Agent skill listing is unavailable.',
+        skills: []
+      };
+      renderExternalSkills();
+      return;
+    }
+    externalSkillsLoading = true;
+    renderExternalSkills();
+    try {
+      const result = await window.enanaApi.listAgentSkills(buildExternalSkillsPayload());
+      externalSkillCatalog = normalizeExternalSkillCatalog(result);
+    } catch {
+      externalSkillCatalog = {
+        ok: false,
+        error: 'Failed to load external skills.',
+        skills: []
+      };
+    } finally {
+      externalSkillsLoading = false;
+      renderExternalSkills();
+    }
+  }
+
+  function onExternalSkillsEnabledChanged() {
+    const agentSettings = getAgentSettings();
+    state.settings.agent = {
+      ...agentSettings,
+      externalSkillsEnabled: settingAgentExternalSkillsEnabled?.checked === true
+    };
+    persist();
+    renderExternalSkills();
+  }
+
+  function setExternalSkillEnabled(skillName = '', enabled = true) {
+    const cleanName = String(skillName || '').trim();
+    if (!cleanName) {
+      return;
+    }
+    const agentSettings = getAgentSettings();
+    const disabledNames = normalizeDisabledExternalSkillNames(agentSettings.disabledExternalSkillNames);
+    const nextDisabledByKey = new Map(disabledNames.map((item) => [item.toLowerCase(), item]));
+    if (enabled) {
+      nextDisabledByKey.delete(cleanName.toLowerCase());
+    } else {
+      nextDisabledByKey.set(cleanName.toLowerCase(), cleanName);
+    }
+    state.settings.agent = {
+      ...agentSettings,
+      disabledExternalSkillNames: Array.from(nextDisabledByKey.values()).sort((left, right) => left.localeCompare(right))
+    };
+    persist();
+    renderExternalSkills();
   }
 
   function applyAppearance() {

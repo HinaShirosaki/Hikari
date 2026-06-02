@@ -14,6 +14,7 @@
 const AGENT = Object.freeze({
   CHAT: 'agent:chat',
   CHAT_CANCEL: 'agent:chat:cancel',
+  LIST_SKILLS: 'agent:list-skills',
   GENERATE_PROTOCOL: 'agent:generate-protocol',
   CHAT_LOG_CREATE_SESSION: 'agent:chat-log:create-session',
   CHAT_LOG_LIST_SESSIONS: 'agent:chat-log:list-sessions',

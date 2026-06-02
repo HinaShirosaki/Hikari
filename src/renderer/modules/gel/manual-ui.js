@@ -14,11 +14,13 @@ export function getViewerToolLabel(tool = '') {
   return '';
 }
 
-export function renderViewerToolbar(elements, selectedViewerTool) {
+export function renderViewerToolbar(elements, selectedViewerTool, laneBandMode = false) {
   elements.gelToolLeftBorderBtn?.classList.toggle('is-active', selectedViewerTool === 'left');
   elements.gelToolRightBorderBtn?.classList.toggle('is-active', selectedViewerTool === 'right');
   elements.gelToolDividersBtn?.classList.toggle('is-active', selectedViewerTool === 'dividers');
   elements.gelToolLadderLaneBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder');
+  elements.gelLaneBandModeBtn?.classList.toggle('is-active', Boolean(laneBandMode));
+  elements.gelLaneBandModeBtn?.setAttribute?.('aria-pressed', String(Boolean(laneBandMode)));
 }
 
 export function updateStepClass(element, state) {

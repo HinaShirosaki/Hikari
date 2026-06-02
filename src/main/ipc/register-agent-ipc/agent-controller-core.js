@@ -319,11 +319,18 @@ function createAgentControllerCore({
     };
     const snapshot = agentToolRuntime.normalizeAgentSnapshot(snapshotInput);
     const workspaceDir = process.cwd();
+    const skillRuntimeInput = {
+      workspaceDir,
+      settings: rawSnapshot?.settings || {},
+      snapshot: rawSnapshot,
+      agent: payload?.agent && typeof payload.agent === 'object' ? payload.agent : {}
+    };
     const listedSkills = typeof agentToolRuntime.listSkills === 'function'
-      ? agentToolRuntime.listSkills({ workspaceDir })
+      ? agentToolRuntime.listSkills(skillRuntimeInput)
       : [];
     const skillInvocation = typeof agentToolRuntime.parseSkillInvocation === 'function'
       ? agentToolRuntime.parseSkillInvocation(message, {
+        ...skillRuntimeInput,
         workspaceDir
       })
       : {
@@ -426,6 +433,7 @@ function createAgentControllerCore({
     const effectiveMessage = composeAgentMessageWithHiddenContext(visibleEffectiveMessage, hiddenContextText) || message;
     const skillPromptPayload = typeof agentToolRuntime.buildSkillsPromptPayload === 'function'
       ? agentToolRuntime.buildSkillsPromptPayload({
+        ...skillRuntimeInput,
         workspaceDir,
         activeSkillNames: skillInvocation.active_skill_names
       })
