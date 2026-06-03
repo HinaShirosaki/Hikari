@@ -39,6 +39,30 @@ export function normalizeLaneBandWindows(raw) {
   return gelSharedModule.normalizeLaneBandWindows(raw);
 }
 
+export function normalizeLaneVertices(raw) {
+  return gelSharedModule.normalizeLaneVertices(raw);
+}
+
+export function getLaneRowBounds(lane, rowY, width = Number.POSITIVE_INFINITY) {
+  return gelSharedModule.getLaneRowBounds(lane, rowY, width);
+}
+
+export function getLaneRowSegment(lane, rowY, imageHeight = null) {
+  return gelSharedModule.getLaneRowSegment(lane, rowY, imageHeight);
+}
+
+export function getLaneRectifiedWidth(lane) {
+  return gelSharedModule.getLaneRectifiedWidth(lane);
+}
+
+export function lanePointToRectifiedRow(lane, point, imageHeight = null) {
+  return gelSharedModule.lanePointToRectifiedRow(lane, point, imageHeight);
+}
+
+export function laneContainsPoint(lane, x, y, width = Number.POSITIVE_INFINITY) {
+  return gelSharedModule.laneContainsPoint(lane, x, y, width);
+}
+
 export function getTargetBandWindowForLane(laneSegmentation, laneIndex) {
   return gelSharedModule.getTargetBandWindowForLane(laneSegmentation, laneIndex);
 }

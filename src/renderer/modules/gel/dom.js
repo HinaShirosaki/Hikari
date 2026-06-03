@@ -30,6 +30,7 @@ export function getGelElements(root = document) {
     gelToolRightBorderBtn: root.getElementById('gel-tool-right-border-btn'),
     gelToolDividersBtn: root.getElementById('gel-tool-dividers-btn'),
     gelToolLadderLaneBtn: root.getElementById('gel-tool-ladder-lane-btn'),
+    gelToolLaneVerticesBtn: root.getElementById('gel-tool-lane-vertices-btn'),
     gelLaneBandModeBtn: root.getElementById('gel-lane-band-mode-btn'),
     gelAddTableBtn: root.getElementById('gel-add-table-btn'),
     gelViewerStage: root.getElementById('gel-viewer-stage'),

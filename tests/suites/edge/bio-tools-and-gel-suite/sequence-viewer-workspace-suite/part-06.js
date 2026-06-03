@@ -395,7 +395,7 @@ ACGTACGT
   assert.equal(Boolean(document.getElementById('sequence-viewer-alignment-workspace').hidden), true);
   assert.equal(document.getElementById('sequence-viewer-alignment-toggle').disabled, false);
   assert.equal(document.getElementById('sequence-viewer-alignment-toggle').checked, true);
-  assert.match(document.getElementById('sequence-viewer-alignment-active-note').textContent, /query_b|visible/i);
+  assert.equal(document.getElementById('sequence-viewer-alignment-active-note').textContent, '');
 });
   }
 };

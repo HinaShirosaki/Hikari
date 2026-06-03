@@ -258,7 +258,7 @@ function applyPopupPosition(trigger, popup) {
   const triggerRect = trigger.getBoundingClientRect();
   popup.style.minWidth = `${triggerRect.width}px`;
   popup.style.visibility = 'hidden';
-  popup.style.display = 'block';
+  popup.style.display = 'grid';
   const popupRect = popup.getBoundingClientRect();
   const viewportH = window.innerHeight;
   const viewportW = window.innerWidth;

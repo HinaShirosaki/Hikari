@@ -21,6 +21,7 @@ export function createPapersPdfViewerContext(elements = {}) {
     fitWidthBtn: elements.fitWidthBtn || null,
     zoomLabel: elements.zoomLabel || null,
     openExternalBtn: elements.openExternalBtn || null,
+    printBtn: elements.printBtn || null,
     closeBtn: elements.closeBtn || null,
     selectionMenu: elements.selectionMenu || null,
     selectionCommentBtn: elements.selectionCommentBtn || null,

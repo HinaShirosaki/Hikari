@@ -29,6 +29,7 @@ test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () 
     'computeGcPercent',
     'countAmbiguousBases',
     'summarizeFastqQuality',
+    'renderAlignmentTracePanelHtml',
     'buildCircularPreviewHtmlDocument'
   ].forEach((name) => {
     assert.equal(typeof sequenceViewerInternals[name], 'function');
@@ -298,6 +299,85 @@ test('[EDGE] sequence-viewer parseAb1Record captures chromatogram traces and bas
   const gChannel = parsed.records[0].trace.channels.find((channel) => channel.base === 'G');
   assert.deepEqual(Array.from(aChannel.values), [7, 9, 12, 8]);
   assert.deepEqual(Array.from(gChannel.values), [1, 4, 2, 1]);
+});
+test('[EDGE] sequence-viewer renders AB1 chromatogram traces for the active alignment view', () => {
+  const html = sequenceViewerInternals.renderAlignmentTracePanelHtml({
+    state: {
+      alignmentViewEnabled: true,
+      activeAlignmentQueryRecord: {
+        name: 'trace_with_channels',
+        sourceFormat: 'ab1',
+        sequence: 'ACGT',
+        trace: {
+          positions: [5, 15, 25, 35],
+          channels: [
+            { base: 'A', values: [7, 9, 12, 8] },
+            { base: 'C', values: [6, 3, 2, 1] },
+            { base: 'G', values: [1, 4, 2, 1] },
+            { base: 'T', values: [2, 1, 8, 10] }
+          ]
+        }
+      },
+      activeAlignmentResult: {
+        queryName: 'trace_with_channels',
+        queryFormat: 'ab1',
+        orientation: 'forward',
+        identityPercent: 75,
+        queryCoveragePercent: 100,
+        differences: [
+          {
+            type: 'mismatch',
+            queryStart: 1,
+            queryEnd: 2
+          }
+        ]
+      }
+    }
+  });
+
+  assert.match(html, /Chromatogram/);
+  assert.match(html, /sequence-viewer-alignment-trace-svg/);
+  assert.match(html, /sequence-viewer-trace-line-a/);
+  assert.match(html, /sequence-viewer-trace-line-c/);
+  assert.match(html, /<path class="sequence-viewer-trace-line sequence-viewer-trace-line-a" d="M[^"]+ C/u);
+  assert.equal(/<polyline class="sequence-viewer-trace-line/u.test(html), false);
+  assert.match(html, /sequence-viewer-trace-base-call-mismatch/);
+});
+test('[EDGE] sequence-viewer expands long AB1 chromatograms instead of squeezing them into the minimum plot width', () => {
+  const sequence = 'ACGT'.repeat(120);
+  const sampleCount = sequence.length * 10;
+  const values = Array.from({ length: sampleCount }, (_item, index) => index % 18);
+  const html = sequenceViewerInternals.renderAlignmentTracePanelHtml({
+    state: {
+      alignmentViewEnabled: true,
+      activeAlignmentQueryRecord: {
+        name: 'long_trace',
+        sourceFormat: 'ab1',
+        sequence,
+        trace: {
+          positions: Array.from({ length: sequence.length }, (_item, index) => index * 10),
+          channels: [
+            { base: 'A', values },
+            { base: 'C', values },
+            { base: 'G', values },
+            { base: 'T', values }
+          ]
+        }
+      },
+      activeAlignmentResult: {
+        queryName: 'long_trace',
+        queryFormat: 'ab1',
+        orientation: 'forward',
+        identityPercent: 100,
+        queryCoveragePercent: 100,
+        differences: []
+      }
+    }
+  });
+  const match = html.match(/viewBox="0 0 ([0-9]+) 220"/);
+  assert.equal(Boolean(match), true);
+  assert.equal(Number(match[1]) > 960, true);
+  assert.match(html, /style="width:[0-9]+px;"/);
 });
 test('[EDGE] sequence-viewer alignSequenceToReference finds an exact forward hit', () => {
   const result = sequenceViewerInternals.alignSequenceToReference(

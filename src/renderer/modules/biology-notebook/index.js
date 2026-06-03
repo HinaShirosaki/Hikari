@@ -57,6 +57,7 @@ import {
   logNotebookPageEvent
 } from './page-log.js';
 import { bindFileDropTarget, mergeFilesIntoInput } from '../file-drop.js';
+import { printElement } from '../print/index.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({
@@ -86,6 +87,7 @@ export function initLabNotebook({
   const notebookApplyProtocolEditBtn = document.getElementById('biology-notebook-apply-protocol-edit-btn');
   const notebookCancelProtocolEditBtn = document.getElementById('biology-notebook-cancel-protocol-edit-btn');
   const notebookExportBtn = document.getElementById('biology-notebook-export-btn');
+  const notebookPrintBtn = document.getElementById('biology-notebook-print-btn');
   const notebookMarkExecutedBtn = document.getElementById('biology-notebook-mark-executed-btn');
   const notebookProtocolEditor = document.getElementById('biology-notebook-protocol-editor');
   const notebookProtocolDraftName = document.getElementById('biology-notebook-page-protocol-name');
@@ -138,6 +140,7 @@ export function initLabNotebook({
     applyBtn: notebookApplyProtocolEditBtn,
     cancelBtn: notebookCancelProtocolEditBtn,
     exportBtn: notebookExportBtn,
+    printBtn: notebookPrintBtn,
     markExecutedBtn: notebookMarkExecutedBtn,
     draftNameInput: notebookProtocolDraftName,
     draftStepsInput: notebookProtocolDraftSteps,
@@ -725,6 +728,22 @@ export function initLabNotebook({
     void linkedWorkActions.exportEntryPdf(editingEntryId);
   }
 
+  function onPrintButtonClick() {
+    if (!editingEntryId || !notebookProtocolArea) {
+      return;
+    }
+    const title = String(notebookProtocolTitle?.textContent || '').trim() || 'Notebook Page';
+    printElement(notebookProtocolArea, {
+      title: `Notebook - ${title}`,
+      omitSelectors: [
+        '.biology-notebook-viewer-actions',
+        '.biology-notebook-linked-toolbar',
+        '.form-actions',
+        '#biology-notebook-protocol-editor'
+      ]
+    });
+  }
+
   function editEntry(entryId) {
     const entry = state.notebookEntries.find((item) => item.id === entryId && matchesType(item));
     if (!entry) {
@@ -1012,6 +1031,7 @@ export function initLabNotebook({
   cancelEditBtn?.addEventListener('click', cancelEdit);
   notebookEntryList?.addEventListener('click', onEntryListClick);
   notebookExportBtn?.addEventListener('click', onExportButtonClick);
+  notebookPrintBtn?.addEventListener('click', onPrintButtonClick);
   notebookMarkExecutedBtn?.addEventListener('click', markEntryExecuted);
   bindFileDropTarget({
     target: notebookProtocolArea || notebookResultFile,

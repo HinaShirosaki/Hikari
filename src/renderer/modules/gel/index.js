@@ -32,6 +32,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     preprocessedCache: null,
     safeText,
     laneProfileHoverY: null,
+    laneVertexDrag: null,
     selectedLaneProfileLane: null,
     selectedViewerTool: '',
     state,
@@ -139,6 +140,11 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   elements.gelRotateRightBtn?.addEventListener('click', cropController.onRotateRight);
   elements.gelCanvas?.addEventListener('click', manualWorkflow.onCanvasClick);
   elements.gelCanvas?.addEventListener('contextmenu', manualWorkflow.onCanvasContextMenu);
+  elements.gelCanvas?.addEventListener('mousedown', manualWorkflow.onCanvasMouseDown);
+  if (typeof window !== 'undefined') {
+    window.addEventListener('mousemove', manualWorkflow.onCanvasMouseMove);
+    window.addEventListener('mouseup', manualWorkflow.onCanvasMouseUp);
+  }
   elements.gelCancelBtn?.addEventListener('click', recordsManager.resetForm);
   elements.gelExportJsonBtn?.addEventListener('click', recordsManager.onExportJson);
   elements.gelExportCsvBtn?.addEventListener('click', recordsManager.onExportCsv);
@@ -146,6 +152,7 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   elements.gelToolRightBorderBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('right'));
   elements.gelToolDividersBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('dividers'));
   elements.gelToolLadderLaneBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('ladder'));
+  elements.gelToolLaneVerticesBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('lane-vertices'));
   elements.gelLaneBandModeBtn?.addEventListener('click', manualWorkflow.onLaneBandModeToggle);
   elements.gelAddTableBtn?.addEventListener('click', laneTable.onAddTableClick);
   elements.gelLaneTableShell?.addEventListener('click', laneTable.onShellClick);

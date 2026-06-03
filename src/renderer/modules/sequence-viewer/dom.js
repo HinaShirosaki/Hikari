@@ -75,6 +75,8 @@ export function getSequenceViewerElements(rootDocument) {
     featureRailHost: rootDocument?.getElementById?.('sequence-viewer-feature-rail-host'),
     featureDetail: rootDocument?.getElementById?.('sequence-viewer-feature-detail'),
     sequenceHost: rootDocument?.getElementById?.('sequence-viewer-sequence-host'),
+    alignmentTracePanel: rootDocument?.getElementById?.('sequence-viewer-alignment-trace-panel'),
+    alignmentTraceHost: rootDocument?.getElementById?.('sequence-viewer-alignment-trace-host'),
     featureContextMenu: rootDocument?.getElementById?.('sequence-viewer-feature-context-menu'),
     featureEditorOverlay: rootDocument?.getElementById?.('sequence-viewer-feature-editor-overlay'),
     featureEditorForm: rootDocument?.getElementById?.('sequence-viewer-feature-editor-form'),

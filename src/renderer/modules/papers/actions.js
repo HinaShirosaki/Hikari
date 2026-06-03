@@ -472,6 +472,7 @@ export function createPapersActions(context) {
     extractReagents,
     openPaperPdf,
     viewPaperPdf,
-    handleMethodToProtocol
+    handleMethodToProtocol,
+    resolvePaperPdfBytes
   };
 }

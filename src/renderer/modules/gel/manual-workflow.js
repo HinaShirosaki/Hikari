@@ -5,12 +5,31 @@ import {
   clamp,
   countCompleteLaneBandWindows,
   createEmptyManualOverrides,
+  getLaneVerticesForLane,
+  getLaneVertexArray,
   getLaneBandWindow,
   hasCompleteLaneBandWindow,
   isPerLaneBandMode,
+  laneContainsPoint,
+  lanePointToRectifiedRow,
   normalizeLaneBandWindows,
+  normalizeLaneVertices,
   normalizeManualOverrides
 } from './shared.js';
+
+const LANE_VERTEX_KEYS = Object.freeze(['topLeft', 'topRight', 'bottomRight', 'bottomLeft']);
+const LANE_VERTEX_LABELS = Object.freeze({
+  topLeft: 'top-left',
+  topRight: 'top-right',
+  bottomRight: 'bottom-right',
+  bottomLeft: 'bottom-left'
+});
+const GLUED_LANE_VERTEX = Object.freeze({
+  topLeft: { laneOffset: -1, vertexKey: 'topRight' },
+  bottomLeft: { laneOffset: -1, vertexKey: 'bottomRight' },
+  topRight: { laneOffset: 1, vertexKey: 'topLeft' },
+  bottomRight: { laneOffset: 1, vertexKey: 'bottomLeft' }
+});
 
 export function createManualWorkflowController({ runtime, elements, deps }) {
   function onViewerToolSelected(tool) {
@@ -18,6 +37,10 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     renderViewerToolbar(elements, runtime.selectedViewerTool, isPerLaneBandMode(runtime.manualOverrides?.laneSegmentation));
     const label = getViewerToolLabel(runtime.selectedViewerTool);
     if (label) {
+      if (runtime.selectedViewerTool === 'lane-vertices') {
+        deps.setStatus('Adjust lane vertices selected. Drag one of the four corner handles for a lane.');
+        return;
+      }
       deps.setStatus(`${label} selected. Click the gel image to apply it.`);
       return;
     }
@@ -138,6 +161,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       laneBandMode
         ? `bandY lanes ${countCompleteLaneBandWindows(summary.laneSegmentation)}/${laneBandProgress.totalLanes || '-'}`
         : `bandY ${summary.laneSegmentation?.bandTop ?? '-'}-${summary.laneSegmentation?.bandBottom ?? '-'}`,
+      `tilt ${summary.laneSegmentation?.laneVertices?.length || 0}`,
       `add ${summary.addedBands.length}`,
       `ladderMW ${summary.ladderBands?.length || 0}`,
       `ladder ${summary.ladderLane || '-'}`
@@ -167,6 +191,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       bandBottom: Number.isFinite(current.bandBottom) ? current.bandBottom : null,
       perLaneBandEnabled: isPerLaneBandMode(current),
       laneBandWindows: normalizeLaneBandWindows(current.laneBandWindows),
+      laneVertices: normalizeLaneVertices(current.laneVertices),
       quantifyConfirmed: Boolean(current.quantifyConfirmed),
       ...patch
     };
@@ -185,6 +210,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       : (Number.isFinite(Number(rawBandBottom)) ? Math.max(0, Math.floor(Number(rawBandBottom))) : null);
     next.perLaneBandEnabled = Boolean(next.perLaneBandEnabled);
     next.laneBandWindows = normalizeLaneBandWindows(next.laneBandWindows);
+    next.laneVertices = normalizeLaneVertices(next.laneVertices);
     runtime.manualOverrides = {
       ...normalized,
       laneSegmentation: next
@@ -206,22 +232,26 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     };
   }
 
-  function inferLaneIndexFromSegmentationX(x) {
+  function inferLaneIndexFromSegmentationPoint(pointOrX, y = null) {
     if (!runtime.currentImage) {
       return null;
     }
-    const lanes = buildLanesFromManualSegmentation(normalizeManualOverrides(runtime.manualOverrides), runtime.currentImage.width);
+    const point = typeof pointOrX === 'object'
+      ? pointOrX
+      : { x: pointOrX, y: Number.isFinite(y) ? y : Math.floor(runtime.currentImage.height / 2) };
+    const lanes = getSegmentationLanes();
     if (!lanes?.length) {
       return null;
     }
-    const match = lanes.find((lane) => x >= lane.xStart && x <= lane.xEnd);
+    const match = lanes.find((lane) => laneContainsPoint(lane, point.x, point.y, runtime.currentImage.width))
+      || lanes.find((lane) => point.x >= lane.xStart && point.x <= lane.xEnd);
     if (match) {
       return match.index + 1;
     }
     let bestLane = null;
     let bestDistance = Number.POSITIVE_INFINITY;
     lanes.forEach((lane) => {
-      const distance = Math.abs(((lane.xStart + lane.xEnd) / 2) - x);
+      const distance = Math.abs(((lane.xStart + lane.xEnd) / 2) - point.x);
       if (distance < bestDistance) {
         bestDistance = distance;
         bestLane = lane;
@@ -234,7 +264,25 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     if (!runtime.currentImage) {
       return [];
     }
-    return buildLanesFromManualSegmentation(overrides, runtime.currentImage.width) || [];
+    return buildLanesFromManualSegmentation(
+      overrides,
+      runtime.currentImage.width,
+      runtime.currentImage.height
+    ) || [];
+  }
+
+  function getRectifiedLaneRowFromPoint(point, laneIndex = null) {
+    if (!runtime.currentImage || !point) {
+      return null;
+    }
+    const lanes = getSegmentationLanes();
+    const lane = Number.isFinite(laneIndex)
+      ? lanes.find((item) => item.index + 1 === laneIndex)
+      : lanes.find((item) => laneContainsPoint(item, point.x, point.y, runtime.currentImage.width));
+    const row = lane
+      ? lanePointToRectifiedRow(lane, point, runtime.currentImage.height)
+      : point.y;
+    return clamp(Math.round(row), 0, runtime.currentImage.height - 1);
   }
 
   function getLaneBandProgress(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
@@ -262,6 +310,127 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       totalLanes: lanes.length,
       windows
     };
+  }
+
+  function findLaneVertexTarget(point) {
+    const lanes = getSegmentationLanes();
+    if (!lanes.length || !runtime.currentImage) {
+      return null;
+    }
+    const handleRadius = Math.max(8, Math.round(Math.min(runtime.currentImage.width, runtime.currentImage.height) / 50));
+    const containingLane = lanes.find((lane) =>
+      laneContainsPoint(lane, point.x, point.y, runtime.currentImage.width)
+    );
+    let best = null;
+    lanes.forEach((lane) => {
+      const laneIndex = lane.index + 1;
+      const points = getLaneVertexArray(lane);
+      points.forEach((vertex, vertexIndex) => {
+        const dx = vertex.x - point.x;
+        const dy = vertex.y - point.y;
+        const distance = Math.sqrt((dx * dx) + (dy * dy));
+        if (!best || distance < best.distance) {
+          best = {
+            laneIndex,
+            lane,
+            vertexKey: LANE_VERTEX_KEYS[vertexIndex],
+            distance
+          };
+        }
+      });
+    });
+
+    if (best && best.distance <= handleRadius) {
+      return best;
+    }
+    if (containingLane) {
+      const laneIndex = containingLane.index + 1;
+      const points = getLaneVertexArray(containingLane);
+      return points.reduce((closest, vertex, vertexIndex) => {
+        const dx = vertex.x - point.x;
+        const dy = vertex.y - point.y;
+        const distance = Math.sqrt((dx * dx) + (dy * dy));
+        if (!closest || distance < closest.distance) {
+          return {
+            laneIndex,
+            lane: containingLane,
+            vertexKey: LANE_VERTEX_KEYS[vertexIndex],
+            distance
+          };
+        }
+        return closest;
+      }, null);
+    }
+    return null;
+  }
+
+  function updateLaneVertex(laneIndex, vertexKey, point) {
+    if (!runtime.currentImage || !LANE_VERTEX_KEYS.includes(vertexKey)) {
+      return false;
+    }
+    const lanes = getSegmentationLanes();
+    const laneByIndex = new Map(lanes.map((item) => [item.index + 1, item]));
+    if (!laneByIndex.has(laneIndex)) {
+      return false;
+    }
+    const normalized = normalizeManualOverrides(runtime.manualOverrides);
+    const pointOnImage = {
+      x: clamp(Math.round(point.x), 0, runtime.currentImage.width - 1),
+      y: clamp(Math.round(point.y), 0, runtime.currentImage.height - 1)
+    };
+    const verticesByLane = new Map(
+      normalizeLaneVertices(normalized.laneSegmentation?.laneVertices)
+        .map((item) => [item.laneIndex, item])
+    );
+    const writeVertex = (targetLaneIndex, targetVertexKey, targetPoint) => {
+      const targetLane = laneByIndex.get(targetLaneIndex);
+      if (!targetLane) {
+        return false;
+      }
+      const currentVertices = verticesByLane.get(targetLaneIndex) || getLaneVerticesForLane(
+        normalized.laneSegmentation,
+        targetLaneIndex,
+        targetLane,
+        runtime.currentImage.width,
+        runtime.currentImage.height
+      );
+      verticesByLane.set(targetLaneIndex, {
+        laneIndex: targetLaneIndex,
+        topLeft: currentVertices.topLeft,
+        topRight: currentVertices.topRight,
+        bottomRight: currentVertices.bottomRight,
+        bottomLeft: currentVertices.bottomLeft,
+        [targetVertexKey]: targetPoint
+      });
+      return true;
+    };
+    writeVertex(laneIndex, vertexKey, pointOnImage);
+    const glued = GLUED_LANE_VERTEX[vertexKey];
+    if (glued) {
+      writeVertex(laneIndex + glued.laneOffset, glued.vertexKey, pointOnImage);
+    }
+    const laneVertices = [...verticesByLane.values()]
+      .sort((a, b) => a.laneIndex - b.laneIndex);
+    updateLaneSegmentation({
+      laneVertices,
+      quantifyConfirmed: false
+    });
+    runtime.manualOverrides = {
+      ...normalizeManualOverrides(runtime.manualOverrides),
+      addedBands: []
+    };
+    runtime.currentReport = null;
+    return true;
+  }
+
+  function updateLaneVertexFromPoint(point, target = null) {
+    const nextTarget = target || findLaneVertexTarget(point);
+    if (!nextTarget) {
+      deps.setStatus('Set lane dividers first, then click near a lane corner to adjust tilt.');
+      return null;
+    }
+    const changed = updateLaneVertex(nextTarget.laneIndex, nextTarget.vertexKey, point);
+    return changed ? nextTarget : null;
   }
 
   function upsertLaneBandWindow(laneIndex, patch) {
@@ -370,10 +539,10 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       return;
     }
     if (step === 'right') {
-      updateLaneSegmentation({ gelLeft: null });
+      updateLaneSegmentation({ gelLeft: null, laneVertices: [] });
       runtime.manualDividerConfirmed = false;
     } else if (step === 'dividers') {
-      updateLaneSegmentation({ gelRight: null, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [] });
+      updateLaneSegmentation({ gelRight: null, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [], laneVertices: [] });
       runtime.manualDividerConfirmed = false;
       runtime.manualOverrides = {
         ...normalizeManualOverrides(runtime.manualOverrides),
@@ -508,6 +677,8 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     runtime.manualOverrides = createEmptyManualOverrides();
     runtime.manualDividerConfirmed = false;
     runtime.selectedViewerTool = '';
+    runtime.laneVertexDrag = null;
+    runtime.suppressNextLaneVertexClick = false;
     runtime.currentReport = null;
     renderOverrideStatus();
     renderManualProgress();
@@ -538,6 +709,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     updateLaneSegmentation({
       dividers: [...(segmentation.dividers || []), divider],
       laneBandWindows: [],
+      laneVertices: [],
       quantifyConfirmed: false
     });
     return true;
@@ -567,16 +739,17 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       return;
     }
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
-    const laneIndex = inferLaneIndexFromSegmentationX(point.x);
+    const laneIndex = inferLaneIndexFromSegmentationPoint(point);
     if (!laneIndex || laneIndex !== normalized.ladderLane) {
       deps.setStatus(`Right-click inside the ladder lane (${normalized.ladderLane || '-'}) to set ladder MW.`);
       return;
     }
 
     event.preventDefault();
-    const existing = normalized.ladderBands.find((item) => Math.abs(item.pixelY - point.y) <= 8);
+    const rowY = getRectifiedLaneRowFromPoint(point, laneIndex);
+    const existing = normalized.ladderBands.find((item) => Math.abs(item.pixelY - rowY) <= 8);
     const promptDefault = existing ? String(existing.mw) : (elements.gelLadderBandMwInput?.value || '');
-    const raw = window.prompt(`MW for ladder band at y=${point.y} (kDa):`, promptDefault);
+    const raw = window.prompt(`MW for ladder band at row=${rowY} (kDa):`, promptDefault);
     if (raw === null) {
       return;
     }
@@ -585,13 +758,13 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       deps.setStatus('Invalid MW value. Right-click again and enter a positive number (kDa).');
       return;
     }
-    upsertLadderBandMw(point.y, mw);
+    upsertLadderBandMw(rowY, mw);
     if (elements.gelLadderBandMwInput) {
       elements.gelLadderBandMwInput.value = String(mw);
     }
     renderOverrideStatus();
     deps.renderCanvas();
-    deps.setStatus(`Added ladder calibration point: y=${point.y}, MW=${mw} kDa.`);
+    deps.setStatus(`Added ladder calibration point: row=${rowY}, MW=${mw} kDa.`);
     deps.onRunAnalysis();
   }
 
@@ -606,6 +779,63 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       x: clamp(Math.round(x), 0, runtime.currentImage.width - 1),
       y: clamp(Math.round(y), 0, runtime.currentImage.height - 1)
     };
+  }
+
+  function onCanvasMouseDown(event) {
+    if (!runtime.currentImage || runtime.cropperActive || getCanvasInteractionStep() !== 'lane-vertices') {
+      return;
+    }
+    const point = getCanvasPoint(event);
+    if (!point) {
+      return;
+    }
+    const target = updateLaneVertexFromPoint(point);
+    if (!target) {
+      return;
+    }
+    runtime.laneVertexDrag = {
+      laneIndex: target.laneIndex,
+      vertexKey: target.vertexKey
+    };
+    runtime.suppressNextLaneVertexClick = true;
+    renderOverrideStatus();
+    deps.renderCanvas();
+    deps.renderReport();
+    deps.setStatus(`Lane ${target.laneIndex} ${LANE_VERTEX_LABELS[target.vertexKey]} vertex selected.`);
+    event.preventDefault?.();
+  }
+
+  function onCanvasMouseMove(event) {
+    if (!runtime.currentImage || runtime.cropperActive || !runtime.laneVertexDrag) {
+      return;
+    }
+    const point = getCanvasPoint(event);
+    if (!point) {
+      return;
+    }
+    updateLaneVertexFromPoint(point, runtime.laneVertexDrag);
+    renderOverrideStatus();
+    deps.renderCanvas();
+    deps.renderReport();
+    event.preventDefault?.();
+  }
+
+  function onCanvasMouseUp(event) {
+    if (!runtime.currentImage || !runtime.laneVertexDrag) {
+      return;
+    }
+    const point = getCanvasPoint(event);
+    const target = runtime.laneVertexDrag;
+    if (point) {
+      updateLaneVertexFromPoint(point, target);
+    }
+    runtime.laneVertexDrag = null;
+    renderOverrideStatus();
+    deps.renderCanvas();
+    deps.renderReport();
+    deps.setStatus(`Lane ${target.laneIndex} ${LANE_VERTEX_LABELS[target.vertexKey]} vertex updated.`);
+    deps.onRunAnalysis();
+    event.preventDefault?.();
   }
 
   function resetDownstreamManualSelections() {
@@ -633,8 +863,24 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     }
 
     const step = getCanvasInteractionStep();
+    if (step === 'lane-vertices') {
+      if (runtime.suppressNextLaneVertexClick) {
+        runtime.suppressNextLaneVertexClick = false;
+        return;
+      }
+      const target = updateLaneVertexFromPoint(point);
+      if (!target) {
+        return;
+      }
+      renderOverrideStatus();
+      deps.renderCanvas();
+      deps.renderReport();
+      deps.setStatus(`Lane ${target.laneIndex} ${LANE_VERTEX_LABELS[target.vertexKey]} vertex updated.`);
+      deps.onRunAnalysis();
+      return;
+    }
     if (step === 'left') {
-      updateLaneSegmentation({ gelLeft: point.x, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [] });
+      updateLaneSegmentation({ gelLeft: point.x, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [], laneVertices: [] });
       runtime.manualDividerConfirmed = false;
       resetDownstreamManualSelections();
       renderOverrideStatus();
@@ -648,7 +894,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         deps.setStatus('Right border must be to the right of left border.');
         return;
       }
-      updateLaneSegmentation({ gelRight: point.x, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [] });
+      updateLaneSegmentation({ gelRight: point.x, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [], laneVertices: [] });
       runtime.manualDividerConfirmed = false;
       resetDownstreamManualSelections();
       renderOverrideStatus();
@@ -668,7 +914,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       return;
     }
     if (step === 'ladder') {
-      const laneIndex = inferLaneIndexFromSegmentationX(point.x);
+      const laneIndex = inferLaneIndexFromSegmentationPoint(point);
       if (!laneIndex) {
         deps.setStatus('No lane found at click position.');
         return;
@@ -688,7 +934,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     }
     if (step === 'ladder-mw') {
       const normalized = normalizeManualOverrides(runtime.manualOverrides);
-      const laneIndex = inferLaneIndexFromSegmentationX(point.x);
+      const laneIndex = inferLaneIndexFromSegmentationPoint(point);
       if (!laneIndex || laneIndex !== normalized.ladderLane) {
         deps.setStatus(`Click inside the ladder lane (${normalized.ladderLane || '-'}) to set ladder MW.`);
         return;
@@ -698,38 +944,41 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         deps.setStatus('Enter Ladder Band MW (kDa) before clicking the band.');
         return;
       }
-      upsertLadderBandMw(point.y, mw);
+      const rowY = getRectifiedLaneRowFromPoint(point, laneIndex);
+      upsertLadderBandMw(rowY, mw);
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Added ladder calibration point: y=${point.y}, MW=${mw} kDa.`);
+      deps.setStatus(`Added ladder calibration point: row=${rowY}, MW=${mw} kDa.`);
       deps.onRunAnalysis();
       return;
     }
     if (step === 'band-top') {
       if (isPerLaneBandMode(normalizeManualOverrides(runtime.manualOverrides).laneSegmentation)) {
-        const laneIndex = inferLaneIndexFromSegmentationX(point.x);
+        const laneIndex = inferLaneIndexFromSegmentationPoint(point);
         if (!laneIndex) {
           deps.setStatus('Click inside a lane to set a lane-specific top line.');
           return;
         }
-        upsertLaneBandWindow(laneIndex, { bandTop: point.y, bandBottom: null });
+        const rowY = getRectifiedLaneRowFromPoint(point, laneIndex);
+        upsertLaneBandWindow(laneIndex, { bandTop: rowY, bandBottom: null });
         runtime.manualOverrides = {
           ...normalizeManualOverrides(runtime.manualOverrides),
           addedBands: []
         };
         renderOverrideStatus();
         deps.renderCanvas();
-        deps.setStatus(`Lane ${laneIndex} top line set at y=${point.y}. Click the bottom line in lane ${laneIndex}.`);
+        deps.setStatus(`Lane ${laneIndex} top line set at row=${rowY}. Click the bottom line in lane ${laneIndex}.`);
         return;
       }
-      updateLaneSegmentation({ bandTop: point.y, bandBottom: null, laneBandWindows: [], quantifyConfirmed: false });
+      const rowY = getRectifiedLaneRowFromPoint(point);
+      updateLaneSegmentation({ bandTop: rowY, bandBottom: null, laneBandWindows: [], quantifyConfirmed: false });
       runtime.manualOverrides = {
         ...normalizeManualOverrides(runtime.manualOverrides),
         addedBands: []
       };
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Band top line set at y=${point.y}.`);
+      deps.setStatus(`Band top line set at row=${rowY}.`);
       return;
     }
     if (step === 'band-bottom') {
@@ -741,18 +990,19 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
           deps.setStatus('Click a lane top line before setting a lane bottom line.');
           return;
         }
-        const laneIndex = inferLaneIndexFromSegmentationX(point.x);
+        const laneIndex = inferLaneIndexFromSegmentationPoint(point);
         if (laneIndex !== pendingLaneIndex) {
           deps.setStatus(`Click the bottom line in lane ${pendingLaneIndex} before starting another lane.`);
           return;
         }
+        const rowY = getRectifiedLaneRowFromPoint(point, laneIndex);
         const window = getLaneBandWindow(normalized.laneSegmentation, pendingLaneIndex);
         const top = window?.bandTop;
-        if (!Number.isFinite(top) || point.y <= top + 1) {
+        if (!Number.isFinite(top) || rowY <= top + 1) {
           deps.setStatus('Bottom line must be below top line.');
           return;
         }
-        upsertLaneBandWindow(pendingLaneIndex, { bandBottom: point.y });
+        upsertLaneBandWindow(pendingLaneIndex, { bandBottom: rowY });
         runtime.manualOverrides = {
           ...normalizeManualOverrides(runtime.manualOverrides),
           addedBands: []
@@ -761,34 +1011,36 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         deps.renderCanvas();
         const nextProgress = getLaneBandProgress();
         if (nextProgress.totalLanes && nextProgress.completeCount >= nextProgress.totalLanes) {
-          deps.setStatus(`Lane ${pendingLaneIndex} bottom line set at y=${point.y}. Per-lane intensities ready in the Quantify panel.`);
+          deps.setStatus(`Lane ${pendingLaneIndex} bottom line set at row=${rowY}. Per-lane intensities ready in the Quantify panel.`);
         } else {
-          deps.setStatus(`Lane ${pendingLaneIndex} bottom line set at y=${point.y}. Click the top line in lane ${nextProgress.missingCompleteLaneIndex || 1}.`);
+          deps.setStatus(`Lane ${pendingLaneIndex} bottom line set at row=${rowY}. Click the top line in lane ${nextProgress.missingCompleteLaneIndex || 1}.`);
         }
         deps.onRunAnalysis();
         return;
       }
       const top = normalizeManualOverrides(runtime.manualOverrides).laneSegmentation?.bandTop;
-      if (!Number.isFinite(top) || point.y <= top + 1) {
+      const rowY = getRectifiedLaneRowFromPoint(point);
+      if (!Number.isFinite(top) || rowY <= top + 1) {
         deps.setStatus('Bottom line must be below top line.');
         return;
       }
-      updateLaneSegmentation({ bandBottom: point.y, quantifyConfirmed: false });
+      updateLaneSegmentation({ bandBottom: rowY, quantifyConfirmed: false });
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Band bottom line set at y=${point.y}. Per-lane intensities ready in the Quantify panel.`);
+      deps.setStatus(`Band bottom line set at row=${rowY}. Per-lane intensities ready in the Quantify panel.`);
       deps.onRunAnalysis();
       return;
     }
     if (step === 'bands') {
-      const laneIndex = inferLaneIndexFromSegmentationX(point.x);
+      const laneIndex = inferLaneIndexFromSegmentationPoint(point);
       if (!laneIndex) {
         deps.setStatus('No lane found at click position.');
         return;
       }
-      appendBandOverride(laneIndex, point.y);
+      const rowY = getRectifiedLaneRowFromPoint(point, laneIndex);
+      appendBandOverride(laneIndex, rowY);
       renderOverrideStatus();
-      deps.setStatus(`Band added in lane ${laneIndex} near y=${point.y}.`);
+      deps.setStatus(`Band added in lane ${laneIndex} near row=${rowY}.`);
       deps.onRunAnalysis();
     }
   }
@@ -824,7 +1076,8 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       dividerDone: false,
       bandTop: segmentation.bandTop,
       bandBottom: segmentation.bandBottom,
-      laneBandWindows: []
+      laneBandWindows: [],
+      laneVertices: []
     });
     resetDownstreamManualSelections();
     runtime.manualDividerConfirmed = false;
@@ -837,6 +1090,8 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     runtime.manualOverrides = createEmptyManualOverrides();
     runtime.manualDividerConfirmed = false;
     runtime.selectedViewerTool = '';
+    runtime.laneVertexDrag = null;
+    runtime.suppressNextLaneVertexClick = false;
     runtime.currentReport = null;
     renderOverrideStatus();
     deps.renderReport();
@@ -853,6 +1108,9 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     onAutoDetectLanes,
     onCanvasClick,
     onCanvasContextMenu,
+    onCanvasMouseDown,
+    onCanvasMouseMove,
+    onCanvasMouseUp,
     onLaneBandModeToggle,
     onManualNextStep,
     onManualPrevStep,

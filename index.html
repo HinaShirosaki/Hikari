@@ -442,6 +442,7 @@
               </div>
               <div class="form-actions">
                 <button type="button" id="protocol-export-pdf-btn" class="ghost-btn">Export PDF</button>
+                <button type="button" id="protocol-print-btn" class="ghost-btn">Print</button>
                 <button type="button" id="protocol-view-back-btn" class="ghost-btn" hidden>Back to List</button>
               </div>
             </div>
@@ -597,6 +598,7 @@
                 <button id="biology-notebook-cancel-protocol-edit-btn" class="ghost-btn" type="button" hidden>Cancel Page Edit</button>
                 <button id="biology-notebook-mark-executed-btn" class="primary-btn" type="button" hidden>Executed</button>
                 <button id="biology-notebook-export-btn" class="ghost-btn" type="button" hidden>Export PDF</button>
+                <button id="biology-notebook-print-btn" class="ghost-btn" type="button" hidden>Print</button>
               </div>
             </div>
 
@@ -1372,6 +1374,7 @@
                   <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
                   <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
                   <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
+                  <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Adjust lane vertices</button>
                   <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false">Lane-by-lane band</button>
                   <button type="button" id="gel-add-table-btn" class="ghost-btn" hidden>Add table</button>
                 </div>
@@ -2067,6 +2070,7 @@
                     <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
                     <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
                     <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
+                    <button type="button" id="paper-viewer-print-btn" class="ghost-btn">Print</button>
                   </div>
                   <div class="papers-viewer-summary" hidden>
                     <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
@@ -3277,9 +3281,12 @@
         </form>
 
         <div class="sequence-viewer-results">
-          <section class="sequence-viewer-sequence-card">
+          <section class="sequence-viewer-sequence-region">
             <div id="sequence-viewer-sequence-host" class="sequence-viewer-sequence-host">
               <p class="small-note">Load sequence data to begin.</p>
+            </div>
+            <div id="sequence-viewer-alignment-trace-panel" class="sequence-viewer-alignment-trace-panel" hidden>
+              <div id="sequence-viewer-alignment-trace-host" class="sequence-viewer-alignment-trace-host"></div>
             </div>
             <div class="sequence-viewer-feature-bottom">
               <div class="result-card-head">

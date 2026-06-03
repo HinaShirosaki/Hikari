@@ -13,6 +13,7 @@ export function getProtocolDom(documentRef = document) {
     protocolCancelBtn: doc.getElementById('protocol-cancel-btn'),
     protocolViewBackBtn: doc.getElementById('protocol-view-back-btn'),
     protocolExportPdfBtn: doc.getElementById('protocol-export-pdf-btn'),
+    protocolPrintBtn: doc.getElementById('protocol-print-btn'),
     protocolEditorHeading: doc.getElementById('protocol-editor-heading'),
     protocolViewTitle: doc.getElementById('protocol-view-title'),
     protocolViewContent: doc.getElementById('protocol-view-content'),

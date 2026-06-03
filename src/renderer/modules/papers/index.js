@@ -1,4 +1,5 @@
 import { createPapersPdfViewer } from './pdf-viewer.js';
+import { printPdfBytes } from '../print/index.js';
 import { createPapersActions } from './actions.js';
 import { createPapersCommentController } from './comments.js';
 import { createPapersLibraryController } from './library.js';
@@ -203,6 +204,7 @@ function getPapersElements(doc = null) {
     paperViewerFitWidthBtn: getById('paper-viewer-fit-width-btn'),
     paperViewerZoomLabel: getById('paper-viewer-zoom-label'),
     paperViewerOpenExternalBtn: getById('paper-viewer-open-btn'),
+    paperViewerPrintBtn: getById('paper-viewer-print-btn'),
     paperSelectionMenu: getById('paper-selection-menu'),
     paperSelectionCommentBtn: getById('paper-selection-comment-btn'),
     paperSelectionHighlightBtn: getById('paper-selection-highlight-btn'),
@@ -537,6 +539,7 @@ export function initPapersManagement({
     fitWidthBtn: elements.paperViewerFitWidthBtn,
     zoomLabel: elements.paperViewerZoomLabel,
     openExternalBtn: elements.paperViewerOpenExternalBtn,
+    printBtn: elements.paperViewerPrintBtn,
     selectionMenu: elements.paperSelectionMenu,
     selectionCommentBtn: elements.paperSelectionCommentBtn,
     selectionHighlightBtn: elements.paperSelectionHighlightBtn,
@@ -761,6 +764,22 @@ export function initPapersManagement({
 
   elements.paperCommentToggleBtn?.addEventListener('click', () => {
     context.toggleCommentsCollapsed();
+  });
+
+  elements.paperViewerPrintBtn?.addEventListener('click', async () => {
+    const activePaper = context.getActivePaper?.() || null;
+    if (!activePaper) {
+      return;
+    }
+    try {
+      const bytes = await actions.resolvePaperPdfBytes(activePaper);
+      if (!bytes) {
+        return;
+      }
+      printPdfBytes(bytes, { title: getPaperDisplayTitle(activePaper) || 'Paper' });
+    } catch (error) {
+      windowRef?.alert?.(String(error?.message || error || 'Failed to open the PDF for printing.'));
+    }
   });
 
   actions.bindEvents();

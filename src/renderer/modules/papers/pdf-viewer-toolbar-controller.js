@@ -20,6 +20,7 @@ export const installPdfViewerToolbarController = (ctx) => {
     fitWidthBtn,
     zoomLabel,
     openExternalBtn,
+    printBtn,
     closeBtn
   } = elements;
 
@@ -41,7 +42,7 @@ export const installPdfViewerToolbarController = (ctx) => {
     if (pageCount) {
       pageCount.textContent = active ? `/ ${state.pageCount}` : '/ 0';
     }
-    [zoomOutBtn, zoomInBtn, zoomResetBtn, fitWidthBtn, openExternalBtn, closeBtn]
+    [zoomOutBtn, zoomInBtn, zoomResetBtn, fitWidthBtn, openExternalBtn, printBtn, closeBtn]
       .forEach((button) => {
         if (button) button.disabled = !active;
       });

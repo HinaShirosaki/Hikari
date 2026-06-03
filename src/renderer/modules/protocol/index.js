@@ -1,4 +1,5 @@
 import { exportProtocolPdf } from '../pdf-export/index.js';
+import { printElement } from '../print/index.js';
 import { requestLlmText } from '../direct-llm.js';
 import { parseJsonFromText } from '../papers/normalizers.js';
 import { DEFAULT_PROTOCOL_JSON_IMPORT_STATUS, DEFAULT_SHARE_STATUS, PLACEHOLDER_TOKEN_REGEX } from './constants.js';
@@ -239,6 +240,24 @@ export function initProtocolManagement({
     if (protocol) {
       exportProtocolPdf(protocol);
     }
+  }
+
+  function onPrintViewedProtocol() {
+    const protocol = getSelectedProtocol();
+    if (!protocol || !ui.protocolViewContent) {
+      return;
+    }
+    const name = String(protocol.name || 'Protocol').trim() || 'Protocol';
+    const header = `<h1>${safeText(name)}</h1>`;
+    const body = `${header}${ui.protocolViewContent.innerHTML}`;
+    printElement(
+      (() => {
+        const wrapper = documentRef.createElement('div');
+        wrapper.innerHTML = body;
+        return wrapper;
+      })(),
+      { title: `Protocol - ${name}` }
+    );
   }
 
   function deleteProtocol(protocolId) {
@@ -550,6 +569,7 @@ export function initProtocolManagement({
     listController.renderList();
   });
   ui.protocolExportPdfBtn?.addEventListener('click', onExportViewedProtocolPdf);
+  ui.protocolPrintBtn?.addEventListener('click', onPrintViewedProtocol);
   ui.importProtocolJsonBtn?.addEventListener('click', importController.onImportProtocolJson);
 
   sharingController.setShareStatus(DEFAULT_SHARE_STATUS);

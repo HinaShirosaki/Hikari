@@ -8,6 +8,7 @@ import {
 import { buildSelectedOrfTranslationContext } from './orf-analysis.js';
 import { summarizeFastqQuality } from './parsing.js';
 import { computeSequenceLayoutMetrics } from './detail-layout.js';
+import { renderAlignmentTracePanelHtml } from './detail-alignment.js';
 import {
   formatSelectedFeatureDetailHtml,
   normalizeHighlightSegments,
@@ -158,6 +159,16 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
     }
   }
 
+  function renderAlignmentTrace() {
+    if (!elements.alignmentTracePanel || !elements.alignmentTraceHost) {
+      return;
+    }
+
+    const html = renderAlignmentTracePanelHtml({ state });
+    elements.alignmentTracePanel.hidden = !html;
+    elements.alignmentTraceHost.innerHTML = html || '';
+  }
+
   function renderStats(record) {
     if (!record) {
       if (elements.statFormat) elements.statFormat.textContent = '-';
@@ -208,6 +219,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
   }
 
   return {
+    renderAlignmentTrace,
     renderFeatureRail,
     renderSelectedFeatureDetail,
     renderSequence,

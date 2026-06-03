@@ -123,6 +123,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   margin-top: 10px;
   display: grid;
   gap: 2px;
+  min-width: 0;
   min-height: 0;
   max-height: none;
   overflow: visible;
@@ -134,7 +135,10 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   background: transparent;
   padding: 7px 8px;
   display: block;
+  box-sizing: border-box;
   cursor: pointer;
+  min-width: 0;
+  max-width: 100%;
   text-align: left;
   width: 100%;
   font: inherit;
@@ -152,6 +156,8 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-library-item-name {
   display: block;
+  min-width: 0;
+  max-width: 100%;
   font-weight: 650;
   color: var(--palette-hex-18385f);
   white-space: nowrap;
@@ -908,6 +914,15 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   align-content: start;
 }
 
+#sequence-viewer-detail-view .sequence-viewer-detail-main {
+  grid-template-rows: auto auto minmax(0, 1fr);
+  align-content: stretch;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  scrollbar-gutter: auto;
+}
+
 .sequence-viewer-protein-builder-confirmation {
   border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--line) 74%);
   background: color-mix(in srgb, var(--surface) 82%, var(--accent) 18%);
@@ -1162,8 +1177,8 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   border: 1px solid var(--line);
   background: var(--surface);
   padding: 12px;
-  display: grid;
-  grid-template-columns: auto auto auto minmax(190px, 320px) auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: end;
 }
@@ -1171,6 +1186,9 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-save-name-wrap {
   display: grid;
   gap: 5px;
+  flex: 1 1 190px;
+  min-width: min(190px, 100%);
+  max-width: 320px;
   font-size: 0.8rem;
   color: var(--muted);
 }
@@ -1279,7 +1297,10 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   display: grid;
   gap: 12px;
   grid-template-columns: minmax(0, 1fr);
-  align-items: start;
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .sequence-viewer-stats {
@@ -1344,9 +1365,11 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   transform: translateX(-100%);
 }
 
-.sequence-viewer-sequence-card {
+.sequence-viewer-sequence-region {
   display: grid;
-  gap: 0;
+  gap: 10px;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  min-height: 0;
   margin: 0;
   padding: 0;
   border: 0;
@@ -1368,12 +1391,179 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   --sequence-viewer-sequence-font: "SF Mono", "SFMono-Regular", "Cascadia Mono", "Roboto Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
   --sequence-viewer-nt-gap: 1.5px;
   --sequence-viewer-selection-highlight: var(--palette-rgba-78-127-255-a22);
+  min-height: 0;
+  height: 100%;
   border-radius: 0;
   border: 0;
   background: transparent;
   padding: 0;
   max-height: none;
-  overflow: visible;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.sequence-viewer-alignment-trace-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 10px;
+  min-width: 0;
+}
+
+.sequence-viewer-alignment-trace-panel[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-alignment-trace-host {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sequence-viewer-alignment-trace-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.sequence-viewer-alignment-trace-head strong {
+  color: var(--strong);
+  font-size: 0.9rem;
+}
+
+.sequence-viewer-alignment-trace-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--surface-subtle);
+}
+
+.sequence-viewer-alignment-trace-svg {
+  display: block;
+  min-width: 100%;
+  max-width: none;
+  height: 220px;
+}
+
+.sequence-viewer-trace-plot-bg {
+  fill: var(--surface-elevated);
+}
+
+.sequence-viewer-trace-grid-line {
+  stroke: var(--line-soft);
+  stroke-width: 1;
+}
+
+.sequence-viewer-trace-line {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+
+.sequence-viewer-trace-line-a,
+.sequence-viewer-trace-base-a .sequence-viewer-trace-legend-swatch {
+  stroke: var(--palette-hex-258d49);
+  color: var(--palette-hex-176a35);
+  background: var(--palette-hex-258d49);
+}
+
+.sequence-viewer-trace-base-a {
+  fill: var(--palette-hex-176a35);
+}
+
+.sequence-viewer-trace-line-c,
+.sequence-viewer-trace-base-c .sequence-viewer-trace-legend-swatch {
+  stroke: var(--palette-hex-2f6fec);
+  color: var(--palette-hex-17385f);
+  background: var(--palette-hex-2f6fec);
+}
+
+.sequence-viewer-trace-base-c {
+  fill: var(--palette-hex-17385f);
+}
+
+.sequence-viewer-trace-line-g,
+.sequence-viewer-trace-base-g .sequence-viewer-trace-legend-swatch {
+  stroke: var(--strong);
+  color: var(--strong);
+  background: var(--strong);
+}
+
+.sequence-viewer-trace-base-g {
+  fill: var(--strong);
+}
+
+.sequence-viewer-trace-line-t,
+.sequence-viewer-trace-base-t .sequence-viewer-trace-legend-swatch {
+  stroke: var(--palette-hex-c7362f);
+  color: var(--palette-hex-a61717);
+  background: var(--palette-hex-c7362f);
+}
+
+.sequence-viewer-trace-base-t {
+  fill: var(--palette-hex-a61717);
+}
+
+.sequence-viewer-trace-base-tick {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.sequence-viewer-trace-base-tick-mismatch,
+.sequence-viewer-trace-base-tick-insertion {
+  stroke: var(--danger);
+  stroke-width: 1.4;
+}
+
+.sequence-viewer-trace-base-call {
+  dominant-baseline: middle;
+  font-family: var(--sequence-viewer-sequence-font);
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.sequence-viewer-trace-base-call-mismatch,
+.sequence-viewer-trace-base-call-insertion {
+  fill: var(--danger);
+}
+
+.sequence-viewer-trace-diff-marker {
+  fill: var(--danger);
+  stroke: var(--surface-elevated);
+  stroke-width: 1.5;
+}
+
+.sequence-viewer-alignment-trace-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.sequence-viewer-trace-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+}
+
+.sequence-viewer-trace-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.sequence-viewer-trace-legend-diff {
+  color: var(--danger);
+  font-weight: 700;
 }
 
 .sequence-viewer-dual-line {
@@ -1906,8 +2096,11 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   }
 
   .sequence-viewer-detail-topbar {
-    grid-template-columns: 1fr;
-    align-items: stretch;
+    align-items: flex-end;
+  }
+
+  .sequence-viewer-save-name-wrap {
+    max-width: none;
   }
 
   .sequence-viewer-protein-builder-confirmation {

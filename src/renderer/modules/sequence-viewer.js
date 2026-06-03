@@ -1,5 +1,6 @@
 import * as indexModule from './sequence-viewer/index.js';
 import * as alignmentModule from './sequence-viewer/alignment.js';
+import * as detailAlignmentModule from './sequence-viewer/detail-alignment.js';
 import * as orfAnalysisModule from './sequence-viewer/orf-analysis.js';
 import * as parsingModule from './sequence-viewer/parsing.js';
 import * as renderingModule from './sequence-viewer/rendering.js';
@@ -140,6 +141,10 @@ export function summarizeFastqQuality(qualityText) {
 
 export function alignSequenceToReference(referenceRecord, queryRecord, options = {}) {
   return alignmentModule.alignSequenceToReference(referenceRecord, queryRecord, options);
+}
+
+export function renderAlignmentTracePanelHtml(input = {}) {
+  return detailAlignmentModule.renderAlignmentTracePanelHtml(input);
 }
 
 export function buildCircularPreviewHtmlDocument(record) {
