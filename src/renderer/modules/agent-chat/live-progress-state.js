@@ -107,6 +107,78 @@ function appendLiveCodexCliDisplayRows(rows = [], eventPayload = {}) {
   return nextRows.slice(-80);
 }
 
+function isInternalCodexPromptText(value = '') {
+  return /^#\s*Hikari Codex Chat Turn\b/u.test(trimText(value, 200));
+}
+
+function isGenericToolProgressText(value = '') {
+  const text = trimText(value, 240).toLowerCase();
+  return text === 'running tool...'
+    || text === 'running tool'
+    || text === 'tool call completed.'
+    || text === 'tool call completed'
+    || text === 'request received';
+}
+
+function extractLiveResponseCandidate(eventPayload = {}) {
+  const stage = trimText(eventPayload?.stage, 80);
+  if (stage === 'codex_cli_display') {
+    const displayText = extractLiveCodexCliDisplayText(eventPayload);
+    if (!displayText || isInternalCodexPromptText(displayText) || isGenericToolProgressText(displayText)) {
+      return '';
+    }
+    return displayText;
+  }
+  if (stage === 'codex_agent_thinking') {
+    const thinkingTrace = extractLiveThinkingTrace(eventPayload);
+    if (!thinkingTrace || isGenericToolProgressText(thinkingTrace)) {
+      return '';
+    }
+    return thinkingTrace;
+  }
+  return '';
+}
+
+function normalizeLiveResponseSegments(source) {
+  return asArray(source).map((row) => {
+    const text = trimText(row?.text || row, 120000);
+    if (!text || isInternalCodexPromptText(text) || isGenericToolProgressText(text)) {
+      return '';
+    }
+    return text;
+  }).filter(Boolean).slice(-24);
+}
+
+function appendLiveResponseSegment(segments = [], value = '') {
+  const text = trimText(value, 120000);
+  const nextSegments = normalizeLiveResponseSegments(segments);
+  if (!text || isInternalCodexPromptText(text) || isGenericToolProgressText(text)) {
+    return nextSegments;
+  }
+  const lastIndex = nextSegments.length - 1;
+  const lastText = lastIndex >= 0 ? nextSegments[lastIndex] : '';
+  if (lastText === text || lastText.startsWith(text)) {
+    return nextSegments;
+  }
+  if (lastText && text.startsWith(lastText)) {
+    nextSegments[lastIndex] = text;
+    return nextSegments.slice(-24);
+  }
+  if (nextSegments.some((row) => row === text)) {
+    return nextSegments;
+  }
+  nextSegments.push(text);
+  return nextSegments.slice(-24);
+}
+
+function joinLiveResponseSegments(segments = []) {
+  return normalizeLiveResponseSegments(segments).join('\n\n');
+}
+
+function extractLiveResponseSegment(eventPayload = {}) {
+  return extractLiveStreamText(eventPayload) || extractLiveResponseCandidate(eventPayload);
+}
+
 function upsertLiveThinkingRows(rows = [], eventPayload = {}) {
   const nextRows = asArray(rows).map((row) => ({ ...row }));
   const text = extractLiveThinkingTrace(eventPayload);
@@ -172,8 +244,17 @@ export function applyLiveProgressEvent(liveAssistantMessage, eventPayload = {}) 
     return liveAssistantMessage;
   }
   const currentMeta = liveAssistantMessage.meta?.live_progress || {};
-  const streamText = extractLiveStreamText(eventPayload) || currentMeta.stream_text || '';
-  const summaryText = streamText || buildLiveProgressSummary(eventPayload);
+  const eventStreamText = extractLiveStreamText(eventPayload);
+  const streamText = eventStreamText || currentMeta.stream_text || '';
+  const currentResponseSegments = normalizeLiveResponseSegments(
+    currentMeta.response_segments || currentMeta.responseSegments
+  );
+  const eventResponseSegment = extractLiveResponseSegment(eventPayload);
+  const responseSegments = eventResponseSegment
+    ? appendLiveResponseSegment(currentResponseSegments, eventResponseSegment)
+    : currentResponseSegments;
+  const responseText = joinLiveResponseSegments(responseSegments);
+  const summaryText = responseText || buildLiveProgressSummary(eventPayload);
   return {
     ...liveAssistantMessage,
     text: summaryText,
@@ -189,6 +270,8 @@ export function applyLiveProgressEvent(liveAssistantMessage, eventPayload = {}) 
         status: trimText(eventPayload?.status, 40) || currentMeta.status,
         message: summaryText,
         stream_text: streamText,
+        response_text: responseText,
+        response_segments: responseSegments,
         meta: eventPayload?.meta && typeof eventPayload.meta === 'object' ? eventPayload.meta : currentMeta.meta,
         activity_rows: upsertLiveProgressRows(currentMeta.activity_rows, eventPayload),
         thinking_rows: upsertLiveThinkingRows(currentMeta.thinking_rows, eventPayload),

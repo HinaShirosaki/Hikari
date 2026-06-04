@@ -1424,13 +1424,55 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-alignment-trace-head {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.sequence-viewer-alignment-trace-head-title {
+  display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
+  min-width: 0;
 }
 
 .sequence-viewer-alignment-trace-head strong {
   color: var(--strong);
   font-size: 0.9rem;
+}
+
+.sequence-viewer-trace-source-switch {
+  display: inline-flex;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-subtle);
+}
+
+.sequence-viewer-trace-source-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 4px 10px;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.sequence-viewer-trace-source-btn + .sequence-viewer-trace-source-btn {
+  border-left: 1px solid var(--line-soft);
+}
+
+.sequence-viewer-trace-source-btn:hover {
+  color: var(--strong);
+}
+
+.sequence-viewer-trace-source-btn-active {
+  background: var(--surface-elevated);
+  color: var(--strong);
 }
 
 .sequence-viewer-alignment-trace-scroll {

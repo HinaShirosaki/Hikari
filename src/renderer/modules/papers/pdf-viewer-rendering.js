@@ -45,6 +45,10 @@ function safePageCleanup(page) {
   }
 }
 
+function getViewportScale(viewport) {
+  return Math.max(Number(viewport?.scale) || 0, 0);
+}
+
 function normalizeHttpUrl(value) {
   const raw = String(value || '').trim();
   if (!raw) {
@@ -108,6 +112,7 @@ async function renderPageLinkLayer({
   const cssHeight = Math.max(Math.ceil(viewport.height), 1);
   record.linkLayer.style.width = `${cssWidth}px`;
   record.linkLayer.style.height = `${cssHeight}px`;
+  record.renderedLinkScale = getViewportScale(viewport);
 
   if (typeof page.getAnnotations !== 'function') {
     return;
@@ -150,7 +155,7 @@ async function renderPageLinkLayer({
       linkButton.addEventListener('click', (event) => {
         event.preventDefault();
         event.stopPropagation();
-        if (isStale() || isLinkActivationEnabled() === false) {
+        if (isLinkActivationEnabled() === false) {
           return;
         }
         if (url && typeof onExternalLink === 'function') {
@@ -303,6 +308,32 @@ async function renderPageTextLayer({ page, viewport, record, isStale = () => fal
     record.textLayerBuilder = null;
   }
   record.textSelectionCleanup = bindPdfTextLayerSelection(record.textLayer);
+  record.renderedTextScale = getViewportScale(viewport);
+}
+
+async function renderPageTextLayerRecord({
+  pdfDocument,
+  record,
+  scale,
+  isStale = () => false
+} = {}) {
+  if (!pdfDocument || !record?.textLayer) {
+    return;
+  }
+  if (record.renderedTextScale === scale && record.textLayer.childElementCount > 0) {
+    return;
+  }
+  const page = await pdfDocument.getPage(record.pageNumber);
+  if (isStale()) {
+    safePageCleanup(page);
+    return;
+  }
+  const viewport = page.getViewport({ scale });
+  try {
+    await renderPageTextLayer({ page, viewport, record, isStale });
+  } finally {
+    safePageCleanup(page);
+  }
 }
 
 async function renderPageRecord({
@@ -321,9 +352,17 @@ async function renderPageRecord({
     return;
   }
 
-  if (skipIfRendered && record.renderedScale === scale && record.canvas.width > 0) {
-    if ((record.textLayer && record.textLayer.childElementCount === 0)
-      || (record.linkLayer && record.linkLayer.childElementCount === 0)) {
+  const canvasAlreadyRendered = record.renderedScale === scale && record.canvas.width > 0;
+  if (skipIfRendered && canvasAlreadyRendered) {
+    const needsTextLayer = record.textLayer
+      && (
+        record.renderedTextScale !== scale
+        || record.textLayer.childElementCount === 0
+        || typeof record.textSelectionCleanup !== 'function'
+      );
+    const needsLinkLayer = record.linkLayer
+      && (record.renderedLinkScale !== scale || record.linkLayer.childElementCount === 0);
+    if (needsTextLayer || needsLinkLayer) {
       const page = await pdfDocument.getPage(record.pageNumber);
       if (isStale()) {
         safePageCleanup(page);
@@ -331,10 +370,10 @@ async function renderPageRecord({
       }
       const viewport = page.getViewport({ scale });
       try {
-        if (record.textLayer && record.textLayer.childElementCount === 0) {
+        if (needsTextLayer) {
           await renderPageTextLayer({ page, viewport, record, isStale });
         }
-        if (record.linkLayer && record.linkLayer.childElementCount === 0) {
+        if (needsLinkLayer) {
           await renderPageLinkLayer({
             page,
             viewport,
@@ -398,5 +437,6 @@ export {
   renderPageRecord,
   renderPageCanvasToOffscreen,
   commitOffscreenToVisibleCanvas,
+  renderPageTextLayerRecord,
   renderPageLinkLayer
 };

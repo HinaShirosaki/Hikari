@@ -14,12 +14,20 @@
   --home-tile-padding: 16px;
   --home-tile-inner-gap: 12px;
   --home-top-row: minmax(226px, 0.98fr);
-  --home-middle-row: minmax(156px, 0.72fr);
-  --home-bottom-row: minmax(136px, 0.04fr);
+  --home-middle-row: minmax(156px, 0.48fr);
+  --home-bottom-row: minmax(156px, 0.48fr);
   --contribution-cell-size: 15px;
   --contribution-cell-gap: 4px;
+  --contribution-weekday-width: 28px;
+  --contribution-body-gap: 9px;
+  --contribution-grid-width: calc(
+    (22 * var(--contribution-cell-size)) + (21 * var(--contribution-cell-gap))
+  );
+  --contribution-map-width: calc(
+    var(--contribution-weekday-width) + var(--contribution-body-gap) + var(--contribution-grid-width)
+  );
   --contribution-card-width: calc(
-    (22 * var(--contribution-cell-size)) + (21 * var(--contribution-cell-gap)) + 37px + (2 * var(--home-tile-padding))
+    var(--contribution-map-width) + (2 * var(--home-tile-padding))
   );
   height: 100%;
   max-height: 100%;
@@ -52,7 +60,7 @@ body.theme-night #home-view {
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-columns: var(--contribution-card-width) minmax(330px, 1.28fr) minmax(300px, 0.86fr);
+  grid-template-columns: minmax(var(--contribution-card-width), 1fr) minmax(var(--contribution-card-width), 1fr) minmax(300px, 0.86fr);
   grid-template-areas:
     "contribution notebook timer"
     "contribution notebook passage"
@@ -361,8 +369,9 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
   display: grid;
   gap: 8px;
   align-content: center;
+  justify-items: center;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
   padding: 8px 0 12px;
   border-bottom: 1px solid var(--home-tile-line-soft);
 }
@@ -371,8 +380,9 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
   display: grid;
   grid-template-columns: repeat(var(--contribution-week-count, 18), var(--contribution-cell-size));
   column-gap: var(--contribution-cell-gap);
+  width: min(100%, var(--contribution-map-width));
   min-width: 0;
-  padding-left: 36px;
+  padding-left: calc(var(--contribution-weekday-width) + var(--contribution-body-gap));
   color: var(--home-tile-muted);
   font-size: 0.72rem;
   line-height: 1.1;
@@ -385,11 +395,11 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
 
 #home-view .home-contribution-body {
   display: grid;
-  grid-template-columns: 28px minmax(0, max-content);
-  gap: 9px;
+  grid-template-columns: var(--contribution-weekday-width) var(--contribution-grid-width);
+  gap: var(--contribution-body-gap);
+  width: min(100%, var(--contribution-map-width));
   min-width: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
+  overflow: visible;
   padding-bottom: 2px;
 }
 
@@ -1120,8 +1130,8 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
     --home-tile-padding: 14px;
     --home-tile-inner-gap: 10px;
     --home-top-row: minmax(220px, 0.96fr);
-    --home-middle-row: minmax(150px, 0.72fr);
-    --home-bottom-row: minmax(136px, 0.04fr);
+    --home-middle-row: minmax(150px, 0.48fr);
+    --home-bottom-row: minmax(150px, 0.48fr);
     --contribution-cell-size: 14px;
   }
 
@@ -1145,8 +1155,8 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
     --home-tile-padding: 12px;
     --home-tile-inner-gap: 8px;
     --home-top-row: minmax(198px, 0.92fr);
-    --home-middle-row: minmax(132px, 0.66fr);
-    --home-bottom-row: minmax(128px, 0.04fr);
+    --home-middle-row: minmax(132px, 0.46fr);
+    --home-bottom-row: minmax(132px, 0.46fr);
     --contribution-cell-size: 11px;
   }
 
@@ -1175,7 +1185,7 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
   }
 }
 
-@media (max-width: 1260px) {
+@media (max-width: 1320px) {
   #home-view {
     height: auto;
     max-height: none;
@@ -1201,6 +1211,12 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
 }
 
 @media (max-width: 900px) {
+  #home-view {
+    --contribution-cell-size: clamp(7px, 2.1vw, 15px);
+    --contribution-cell-gap: clamp(2px, 0.55vw, 4px);
+    --contribution-body-gap: clamp(7px, 1vw, 9px);
+  }
+
   #home-view .home-layout {
     grid-template-columns: 1fr;
     grid-template-areas:

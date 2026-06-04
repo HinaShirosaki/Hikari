@@ -4,6 +4,7 @@ import {
   buildPdfSelectionSearchResultFromMatches,
   getPdfSelectionSearchTerms
 } from './pdf-viewer-search.js';
+import { renderPageTextLayerRecord } from './pdf-viewer-rendering.js';
 
 export const installPdfViewerSearchExecutionController = (ctx) => {
   const { state } = ctx;
@@ -12,9 +13,38 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
     return `search-${pageNumber}-${index}-${String(term || '').replace(/[^a-z0-9]+/gi, '-').slice(0, 24)}`;
   }
 
-  function collectPdfSearchMatches(queryText = '') {
+  async function ensurePdfSearchTextLayers() {
+    if (!state.pdfDocument || !state.pageRecords.length) {
+      return false;
+    }
+    const activeRenderToken = ++state.renderToken;
+    const isStale = () => activeRenderToken !== state.renderToken;
+    const scale = ctx.getDocumentScale();
+    for (const record of state.pageRecords) {
+      if (isStale()) {
+        return false;
+      }
+      if (record.renderedTextScale === scale && record.textLayer?.childElementCount > 0) {
+        continue;
+      }
+      ctx.setStatus(`Preparing PDF search... page ${record.pageNumber} of ${state.pageCount}`);
+      await renderPageTextLayerRecord({
+        pdfDocument: state.pdfDocument,
+        record,
+        scale,
+        isStale
+      });
+    }
+    return !isStale();
+  }
+
+  async function collectPdfSearchMatches(queryText = '') {
     const terms = getPdfSelectionSearchTerms(queryText);
     if (!terms.length) {
+      return [];
+    }
+    const ready = await ensurePdfSearchTextLayers();
+    if (!ready) {
       return [];
     }
     const matches = [];
@@ -96,13 +126,20 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
       return;
     }
     if (scope === 'pdf') {
-      const matches = collectPdfSearchMatches(selectedText);
-      const result = buildPdfSelectionSearchResultFromMatches(matches, state.pageNumber);
-      ctx.renderPdfSearchResults(result);
-      ctx.setPdfSearchMatches(result.matches, result.targetMatchIndex);
-      if (result.targetMatchIndex >= 0) {
-        activateSearchMatch(result.targetMatchIndex, { jump: true, cycleTone: false });
-        ctx.setStatus(`Found ${result.totalMatches} matched word${result.totalMatches === 1 ? '' : 's'} on ${result.pages.length} page${result.pages.length === 1 ? '' : 's'}.`);
+      try {
+        const matches = await collectPdfSearchMatches(selectedText);
+        const result = buildPdfSelectionSearchResultFromMatches(matches, state.pageNumber);
+        ctx.renderPdfSearchResults(result);
+        ctx.setPdfSearchMatches(result.matches, result.targetMatchIndex);
+        if (result.targetMatchIndex >= 0) {
+          activateSearchMatch(result.targetMatchIndex, { jump: true, cycleTone: false });
+          ctx.setStatus(`Found ${result.totalMatches} matched word${result.totalMatches === 1 ? '' : 's'} on ${result.pages.length} page${result.pages.length === 1 ? '' : 's'}.`);
+        }
+      } catch (error) {
+        ctx.renderSelectionSearchMessage(String(error?.message || error || 'PDF search failed.'), true);
+      } finally {
+        ctx.pruneRenderedPageRecords?.();
+        ctx.scheduleVisiblePageRender?.();
       }
       return;
     }
@@ -129,6 +166,7 @@ export const installPdfViewerSearchExecutionController = (ctx) => {
 
   Object.assign(ctx, {
     collectPdfSearchMatches,
+    ensurePdfSearchTextLayers,
     scrollToSearchMatch,
     activateSearchMatch,
     runSelectionSearch

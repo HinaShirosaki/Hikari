@@ -107,6 +107,37 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         capturePath
       };
     }
+
+    function createFakeCodexTranscriptWriterBinary(workspaceDir, sessionId, transcriptPath) {
+      const fakePath = path.join(workspaceDir, 'fake-codex-transcript-writer.js');
+      const capturePath = path.join(workspaceDir, 'fake-codex-transcript-writer-call.json');
+      fs.writeFileSync(fakePath, [
+        '#!/usr/bin/env node',
+        "const fs = require('node:fs');",
+        'const args = process.argv.slice(2);',
+        'let stdin = "";',
+        "process.stdin.on('data', (chunk) => { stdin += String(chunk || ''); });",
+        "process.stdin.on('end', () => {",
+        "  const outputIndex = args.indexOf('--output-last-message');",
+        "  const outputFile = outputIndex >= 0 ? args[outputIndex + 1] : '';",
+        '  fs.writeFileSync(process.env.ENANA_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
+        `  process.stdout.write(${JSON.stringify(`${JSON.stringify({ type: 'session_meta', payload: { id: sessionId } })}\n`)});`,
+        '  setTimeout(() => {',
+        `    fs.mkdirSync(${JSON.stringify(path.dirname(transcriptPath))}, { recursive: true });`,
+        `    fs.appendFileSync(${JSON.stringify(transcriptPath)}, JSON.stringify({ timestamp: new Date().toISOString(), type: 'event_msg', payload: { type: 'agent_message', phase: 'commentary', message: 'Transcript-only commentary is live.' } }) + '\\n');`,
+        '  }, 50);',
+        '  setTimeout(() => {',
+        "    if (outputFile) { fs.writeFileSync(outputFile, 'OK from fake codex'); }",
+        '    process.exit(0);',
+        '  }, 350);',
+        '});'
+      ].join('\n'), 'utf8');
+      fs.chmodSync(fakePath, 0o755);
+      return {
+        fakePath,
+        capturePath
+      };
+    }
     test('codex cli provider runs codex exec with Hikari AGENTS.md and MCP config', async () => {
       const accessToken = buildJwt({
         exp: Math.floor(Date.now() / 1000) + 3600,
@@ -273,7 +304,11 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           JSON.stringify({ type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Final response from Codex.' }], phase: 'final_answer' } }),
           ''
         ].join('\n');
-        process.env.ENANA_FAKE_CODEX_STDERR = 'Codex stderr warning\n';
+        process.env.ENANA_FAKE_CODEX_STDERR = [
+          'Codex stderr warning',
+          '2026-06-04T14:45:32.625950Z ERROR codex_memories_write::phase2: Phase 2 no changes',
+          ''
+        ].join('\n');
 
         try {
           const streamEvents = [];
@@ -291,18 +326,20 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.equal(captured.args.includes('--json'), true);
           assert.deepEqual(
             assistantStreamEvents.map((event) => event.text_delta),
-            ['Final response from Codex.']
+            ['I am checking inventory.', 'Final response from Codex.']
           );
           assert.equal(assistantStreamEvents[assistantStreamEvents.length - 1].accumulated_text, 'Final response from Codex.');
           assert.equal(streamEvents.some((event) => event.type === 'codex_thinking' && event.thinking_text === 'Checking project context.'), true);
-          assert.equal(streamEvents.some((event) => event.type === 'codex_thinking' && event.thinking_text === 'I am checking inventory.'), true);
+          assert.equal(streamEvents.some((event) => event.type === 'codex_thinking' && event.thinking_text === 'I am checking inventory.'), false);
           assert.equal(streamEvents.some((event) => event.type === 'codex_tool_call' && event.tool_name === 'inventory_lookup' && event.status === 'started'), true);
           assert.equal(streamEvents.some((event) => event.type === 'codex_tool_call' && event.status === 'completed' && /Found 2/.test(event.tool_call_text)), true);
           const displayEvents = streamEvents.filter((event) => event.type === 'codex_cli_display');
           assert.equal(displayEvents.some((event) => event.display_text === 'Plain Codex status line' && event.display_kind === 'stdout'), true);
           assert.equal(displayEvents.some((event) => event.display_text === 'Codex stderr warning' && event.display_kind === 'stderr'), true);
+          assert.equal(displayEvents.some((event) => /codex_memories_write/u.test(event.display_text || '')), false);
           assert.equal(displayEvents.some((event) => event.display_text === 'Checking project context.' && event.display_kind === 'thinking'), true);
-          assert.equal(displayEvents.some((event) => event.display_text === 'I am checking inventory.' && event.display_kind === 'thinking'), true);
+          assert.equal(displayEvents.some((event) => event.display_text === 'I am checking inventory.' && event.display_kind === 'assistant'), true);
+          assert.equal(displayEvents.some((event) => event.display_text === 'I am checking inventory.' && event.display_kind === 'thinking'), false);
           assert.equal(displayEvents.some((event) => event.display_kind === 'tool' && /inventory_lookup/.test(event.display_text) && /SUMO1/.test(event.display_text)), true);
           assert.equal(displayEvents.some((event) => event.display_kind === 'assistant' && event.display_text === 'Final response from Codex.'), true);
           assert.equal(displayEvents.some((event) => /^\s*\{/.test(event.display_text || '')), false);
@@ -326,6 +363,87 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
             process.env.ENANA_FAKE_CODEX_STDERR = previousStderr;
           } else {
             delete process.env.ENANA_FAKE_CODEX_STDERR;
+          }
+          fs.rmSync(workspaceDir, { recursive: true, force: true });
+        }
+      });
+    });
+    test('codex cli provider streams assistant messages appended only to the live transcript', async () => {
+      const accessToken = buildJwt({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        email: 'scientist@example.com'
+      });
+      await withCodexHome({
+        authFile: {
+          auth_mode: 'chatgpt',
+          tokens: {
+            access_token: accessToken,
+            refresh_token: 'refresh-token',
+            account_id: 'acct-transcript-live'
+          }
+        }
+      }, async () => {
+        const provider = loadProvider();
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-live-transcript-'));
+        const sessionId = 'codex-live-transcript-session-1';
+        const transcriptPath = path.join(
+          process.env.CODEX_HOME,
+          'sessions',
+          '2026',
+          '06',
+          '04',
+          `rollout-${sessionId}.jsonl`
+        );
+        const fakeCodex = createFakeCodexTranscriptWriterBinary(workspaceDir, sessionId, transcriptPath);
+        const previousCodexCli = process.env.ENANA_CODEX_CLI;
+        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
+        const previousFollowInterval = process.env.ENANA_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS;
+        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
+        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        process.env.ENANA_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS = '50';
+
+        try {
+          let requestResolved = false;
+          const streamEvents = [];
+          const result = await provider.requestCodexCliText({
+            prompt: 'Stream transcript please.',
+            cwd: workspaceDir,
+            stream: true,
+            onStream: (event) => {
+              streamEvents.push({
+                ...event,
+                requestResolved
+              });
+            }
+          });
+          requestResolved = true;
+          const transcriptStreamEvent = streamEvents.find((event) => (
+            event.type === 'codex_stream'
+              && event.text_delta === 'Transcript-only commentary is live.'
+          ));
+          assert.equal(result, 'OK from fake codex');
+          assert.equal(Boolean(transcriptStreamEvent), true);
+          assert.equal(transcriptStreamEvent.requestResolved, false);
+          assert.equal(streamEvents.some((event) => (
+            event.type === 'codex_cli_display'
+              && event.display_kind === 'assistant'
+              && event.display_text === 'Transcript-only commentary is live.'
+          )), true);
+        } finally {
+          if (typeof previousCodexCli === 'string') {
+            process.env.ENANA_CODEX_CLI = previousCodexCli;
+          } else {
+            delete process.env.ENANA_CODEX_CLI;
+          }
+          if (typeof previousCapture === 'string') {
+            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+          } else {
+            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+          }
+          if (typeof previousFollowInterval === 'string') {
+            process.env.ENANA_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS = previousFollowInterval;
+          } else {
+            delete process.env.ENANA_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS;
           }
           fs.rmSync(workspaceDir, { recursive: true, force: true });
         }

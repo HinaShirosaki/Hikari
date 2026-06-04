@@ -51,6 +51,7 @@ export const installPdfViewerDocumentOpenController = (ctx) => {
     const activeLoadToken = state.loadToken;
     applyPaperOpenShellState(ctx, { paper, summary, resolveBytes, onOpenExternal });
     ctx.cancelScrollSync();
+    ctx.cancelScheduledRender?.();
     cancelAllRenderTasks(state.pageRecords);
     await ctx.cleanupLoadingTask();
     if (activeLoadToken !== state.loadToken) {

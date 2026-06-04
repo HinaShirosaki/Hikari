@@ -56,6 +56,7 @@ export const installPdfViewerToolbarController = (ctx) => {
 
   function renderEmptyViewer(message = '') {
     ctx.cancelScrollSync();
+    ctx.cancelScheduledRender?.();
     releasePageRecords({ pageLayer, pageRecords: state.pageRecords });
     state.pageRecords = [];
     state.paperId = '';

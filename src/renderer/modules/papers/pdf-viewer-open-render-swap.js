@@ -67,6 +67,7 @@ export const prepareAndSwapPageRecords = async (ctx, { pdfDocument, activeLoadTo
         bitmapWidth: prerenderedFirst.bitmapWidth,
         bitmapHeight: prerenderedFirst.bitmapHeight
       });
+      firstRecord.renderedScale = swapScale;
       try {
         prerenderedFirst.page?.cleanup?.();
       } catch {}

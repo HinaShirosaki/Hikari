@@ -119,7 +119,7 @@ function createCodexAgentRuntime(deps = {}) {
       reasoningEffort,
       cwd,
       enableWebSearch: true,
-      disableToolSearch: true,
+      disableToolSearch: false,
       attachments: asArray(input.attachments),
       stream: true,
       onStream: streamProgress.emitStreamProgress,

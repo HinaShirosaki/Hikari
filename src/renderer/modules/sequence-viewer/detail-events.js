@@ -121,6 +121,21 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     renderActiveRecord();
   });
 
+  elements.alignmentTraceHost?.addEventListener('click', (event) => {
+    const target = event?.target?.closest?.('[data-trace-source]');
+    if (!target) {
+      return;
+    }
+    event.preventDefault();
+    const requested = target.getAttribute('data-trace-source');
+    const nextUseProcessed = requested !== 'raw';
+    if (Boolean(state.traceUseProcessed) === nextUseProcessed) {
+      return;
+    }
+    state.traceUseProcessed = nextUseProcessed;
+    renderActiveRecord();
+  });
+
   elements.proteinBuilderConfirmationConfirmBtn?.addEventListener('click', (event) => {
     event.preventDefault();
     onConfirmProteinBuilderConstruct();

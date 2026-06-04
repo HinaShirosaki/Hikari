@@ -50,6 +50,7 @@ export function createInitialSequenceViewerState() {
     activeAlignmentResult: null,
     activeAlignmentQueryRecord: null,
     alignmentViewEnabled: false,
+    traceUseProcessed: true,
     proteinBuilderConfirmation: null,
     sequenceEditDesignSource: null,
     cloningDesign: {},

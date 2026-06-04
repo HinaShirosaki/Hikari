@@ -11,9 +11,10 @@ import {
 } from './llm.js';
 import {
   buildPaperStorageFolder,
+  buildPdfDataUrlFromBase64,
   decodeBase64Pdf,
-  extractBase64Payload,
-  fileToDataUrl,
+  fileToBytes,
+  normalizePdfBytePayload,
   openPdfDataUrl,
   parsePdfDataUrl,
   resolveStoredPaperPath
@@ -114,9 +115,8 @@ export function createPapersActions(context) {
       linkedType
     } = uploadTarget;
 
-    const pdfDataUrl = await fileToDataUrl(file);
-    const dataBase64 = extractBase64Payload(pdfDataUrl);
-    if (!dataBase64) {
+    const pdfBytes = await fileToBytes(file);
+    if (!pdfBytes?.byteLength) {
       windowRef?.alert?.('Cannot read the selected PDF.');
       return null;
     }
@@ -136,7 +136,7 @@ export function createPapersActions(context) {
           linkedName: linked.name
         }),
         fileName: file.name,
-        dataBase64,
+        dataBytes: pdfBytes.buffer.slice(pdfBytes.byteOffset, pdfBytes.byteOffset + pdfBytes.byteLength),
         transformPdfToMarkdown: true,
         paperTitle: elements.paperTitleInput?.value?.trim() || file.name.replace(/\.pdf$/i, ''),
         linkedType,
@@ -156,7 +156,7 @@ export function createPapersActions(context) {
       id: createId(),
       title: elements.paperTitleInput?.value?.trim() || file.name.replace(/\.pdf$/i, ''),
       fileName: storedFile.fileName || file.name,
-      pdfDataUrl,
+      pdfDataUrl: '',
       storedFilePath: storedFile.filePath || '',
       storedRelativePath: storedFile.relativePath || '',
       linkedType,
@@ -269,7 +269,7 @@ export function createPapersActions(context) {
       const prompts = await getLlmPrompts();
       const summary = await requestSummary({
         llm: state.settings?.llm,
-        pdfDataUrl: paper.pdfDataUrl,
+        pdfDataUrl: await resolvePaperPdfDataUrl(paper),
         fileName: paper.fileName,
         title: paper.title,
         prompts
@@ -305,7 +305,7 @@ export function createPapersActions(context) {
       const prompts = await getLlmPrompts();
       const result = await requestStructuredFromPaper({
         llm: state.settings?.llm,
-        pdfDataUrl: paper.pdfDataUrl,
+        pdfDataUrl: await resolvePaperPdfDataUrl(paper),
         fileName: paper.fileName,
         title: paper.title,
         instruction: requirePrompt(prompts, 'extractMethods'),
@@ -341,7 +341,7 @@ export function createPapersActions(context) {
       const prompts = await getLlmPrompts();
       const result = await requestStructuredFromPaper({
         llm: state.settings?.llm,
-        pdfDataUrl: paper.pdfDataUrl,
+        pdfDataUrl: await resolvePaperPdfDataUrl(paper),
         fileName: paper.fileName,
         title: paper.title,
         instruction: requirePrompt(prompts, 'extractReagents'),
@@ -391,12 +391,15 @@ export function createPapersActions(context) {
   }
 
   async function resolvePaperPdfBytes(paper) {
-    const embeddedBase64 = parsePdfDataUrl(paper?.pdfDataUrl);
-    if (embeddedBase64) {
-      return decodeBase64Pdf(embeddedBase64);
+    const candidatePath = resolveStoredPaperPath(paper, state.settings?.storagePath);
+    if (candidatePath && windowRef?.enanaApi?.readFileBytes) {
+      const result = await windowRef.enanaApi.readFileBytes(candidatePath);
+      const bytes = normalizePdfBytePayload(result?.bytes);
+      if (result?.ok && bytes?.byteLength) {
+        return bytes;
+      }
     }
 
-    const candidatePath = resolveStoredPaperPath(paper, state.settings?.storagePath);
     if (candidatePath && windowRef?.enanaApi?.readFileBase64) {
       const result = await windowRef.enanaApi.readFileBase64(candidatePath);
       const dataBase64 = String(result?.dataBase64 || '').trim();
@@ -405,7 +408,30 @@ export function createPapersActions(context) {
       }
     }
 
+    const embeddedBase64 = parsePdfDataUrl(paper?.pdfDataUrl);
+    if (embeddedBase64) {
+      return decodeBase64Pdf(embeddedBase64);
+    }
+
     throw new Error('Unable to load this PDF from app storage.');
+  }
+
+  async function resolvePaperPdfDataUrl(paper) {
+    const embeddedBase64 = parsePdfDataUrl(paper?.pdfDataUrl);
+    if (embeddedBase64) {
+      return buildPdfDataUrlFromBase64(embeddedBase64);
+    }
+
+    const candidatePath = resolveStoredPaperPath(paper, state.settings?.storagePath);
+    if (candidatePath && windowRef?.enanaApi?.readFileBase64) {
+      const result = await windowRef.enanaApi.readFileBase64(candidatePath);
+      const dataBase64 = String(result?.dataBase64 || '').trim();
+      if (result?.ok && dataBase64) {
+        return buildPdfDataUrlFromBase64(dataBase64);
+      }
+    }
+
+    return '';
   }
 
   function buildPaperViewerSummary(paper) {
@@ -473,6 +499,7 @@ export function createPapersActions(context) {
     openPaperPdf,
     viewPaperPdf,
     handleMethodToProtocol,
-    resolvePaperPdfBytes
+    resolvePaperPdfBytes,
+    resolvePaperPdfDataUrl
   };
 }

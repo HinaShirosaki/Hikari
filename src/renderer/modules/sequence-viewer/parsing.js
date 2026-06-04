@@ -6,6 +6,7 @@ import {
   normalizeSequenceText,
   normalizeTopology
 } from './shared.js';
+import { postProcessAb1Trace } from './algorithms/ab1-trace-postprocess.js';
 
 function readAsciiString(bytes) {
   let result = '';
@@ -283,6 +284,18 @@ export function parseAb1Record(rawInput, options = {}) {
       .replace(/\.[^.]+$/u, '')
       .trim();
 
+    let processedTrace = trace;
+    if (trace && options?.postProcess !== false) {
+      try {
+        const processed = postProcessAb1Trace({ ...trace, sequence }, quality, options?.postProcessOptions || {});
+        if (processed) {
+          processedTrace = { ...trace, processed };
+        }
+      } catch (postProcessError) {
+        warnings.push(`AB1 post-processing skipped: ${postProcessError?.message || 'unknown error'}.`);
+      }
+    }
+
     return {
       format: 'ab1',
       records: [{
@@ -293,7 +306,7 @@ export function parseAb1Record(rawInput, options = {}) {
         topology: 'linear',
         sequence,
         quality,
-        trace,
+        trace: processedTrace,
         features: []
       }],
       warnings,

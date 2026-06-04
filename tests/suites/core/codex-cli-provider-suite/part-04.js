@@ -290,6 +290,8 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         },
         requestCodexAgentText: async () => ({
           text: [
+            'I read the transformed paper markdown. I could not queue this into Hikari Protocols because the direct Hikari MCP tool `protocol_generation` is not visible in this session.',
+            '',
             '**Protocol: TEVp-ZF5.3 Fusion Protein Expression and Validation**',
             '',
             'This is reconstructed from the transformed paper methods.',
@@ -357,6 +359,8 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       assert.equal(toolCalls.length, 1);
       assert.equal(toolCalls[0].toolId, 'protocol-generation');
       assert.equal(toolCalls[0].args.protocol.name, 'TEVp-ZF5.3 Fusion Protein Expression and Validation');
+      assert.doesNotMatch(toolCalls[0].args.protocol.purpose, /protocol_generation/i);
+      assert.doesNotMatch(toolCalls[0].args.protocol.purpose, /not visible/i);
       assert.deepEqual(toolCalls[0].args.protocol.materials, [
         'pET28a-TEVp-ZF5.3 plasmid',
         'E. coli BL21(DE3)',

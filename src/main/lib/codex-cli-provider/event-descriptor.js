@@ -54,7 +54,10 @@ function getCodexJsonEventDescriptor(source = {}) {
 
 function isCodexThinkingEvent(source = {}) {
   const { type, phase, combined } = getCodexJsonEventDescriptor(source);
-  if (type === 'agent_message' && phase && phase !== 'final_answer') {
+  if (type === 'agent_message') {
+    if (!phase || phase === 'commentary' || phase === 'final_answer') {
+      return false;
+    }
     return true;
   }
   return /reasoning|thinking|thought/u.test(combined);

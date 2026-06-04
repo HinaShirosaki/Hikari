@@ -18,6 +18,15 @@ const {
 const { normalizeCodexSessionId } = require('./session-id');
 const { safeParseJson } = require('./utils');
 
+function readTranscriptTimestampMs(event = {}) {
+  const rawTimestamp = String(event?.timestamp || event?.payload?.timestamp || '').trim();
+  if (!rawTimestamp) {
+    return 0;
+  }
+  const timestampMs = Date.parse(rawTimestamp);
+  return Number.isFinite(timestampMs) ? timestampMs : 0;
+}
+
 async function findCodexSessionTranscriptPath(sessionId = '', cwd = '') {
   const cleanSessionId = normalizeCodexSessionId(sessionId);
   if (!cleanSessionId) {
@@ -112,7 +121,108 @@ async function replayCodexSessionProgressFromTranscript({
   return transcriptPath;
 }
 
+function createCodexSessionTranscriptFollower({
+  cwd = '',
+  getSessionId = null,
+  onJsonEvent = null,
+  minTimestampMs = Date.now() - 2000,
+  intervalMs = 250
+} = {}) {
+  if (typeof getSessionId !== 'function' || typeof onJsonEvent !== 'function') {
+    return {
+      stop: async () => {}
+    };
+  }
+
+  let transcriptPath = '';
+  let readOffset = 0;
+  let stopped = false;
+  let ticking = false;
+  let bufferedLine = '';
+  let completedInitialRead = false;
+
+  async function tick() {
+    if (stopped || ticking) {
+      return;
+    }
+    ticking = true;
+    try {
+      const sessionId = normalizeCodexSessionId(getSessionId());
+      if (!sessionId) {
+        return;
+      }
+      if (!transcriptPath) {
+        transcriptPath = await findCodexSessionTranscriptPath(sessionId, cwd);
+        if (!transcriptPath) {
+          return;
+        }
+      }
+      const stat = await fs.stat(transcriptPath).catch(() => null);
+      if (!stat || !Number.isFinite(Number(stat.size)) || Number(stat.size) <= readOffset) {
+        return;
+      }
+      const file = await fs.open(transcriptPath, 'r');
+      try {
+        const length = Number(stat.size) - readOffset;
+        const buffer = Buffer.alloc(length);
+        await file.read(buffer, 0, length, readOffset);
+        readOffset = Number(stat.size);
+        consumeTranscriptChunk(buffer.toString('utf8'), { initialRead: !completedInitialRead });
+        completedInitialRead = true;
+      } finally {
+        await file.close().catch(() => {});
+      }
+    } finally {
+      ticking = false;
+    }
+  }
+
+  function consumeTranscriptChunk(chunkText = '', { initialRead = false } = {}) {
+    const combined = `${bufferedLine}${String(chunkText || '')}`;
+    const lines = combined.split(/\r?\n/u);
+    bufferedLine = lines.pop() || '';
+    lines.forEach((line) => emitTranscriptLine(line, { initialRead }));
+  }
+
+  function emitTranscriptLine(line = '', { initialRead = false } = {}) {
+    const trimmed = String(line || '').trim();
+    if (!trimmed) {
+      return;
+    }
+    const parsed = safeParseJson(trimmed, null);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return;
+    }
+    const timestampMs = readTranscriptTimestampMs(parsed);
+    if (timestampMs && timestampMs < minTimestampMs) {
+      return;
+    }
+    if (!timestampMs && initialRead) {
+      return;
+    }
+    try {
+      onJsonEvent(parsed);
+    } catch {
+      // Live transcript following is best-effort; stdout and final replay still run.
+    }
+  }
+
+  const interval = setInterval(() => {
+    void tick();
+  }, Math.max(50, Number(intervalMs) || 250));
+  void tick();
+
+  return {
+    stop: async () => {
+      stopped = true;
+      clearInterval(interval);
+      await tick();
+    }
+  };
+}
+
 module.exports = {
+  createCodexSessionTranscriptFollower,
   findCodexSessionTranscriptPath,
   replayCodexSessionProgressFromTranscript
 };

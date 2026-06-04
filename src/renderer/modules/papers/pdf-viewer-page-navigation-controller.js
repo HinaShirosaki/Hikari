@@ -123,6 +123,9 @@ export const installPdfViewerPageNavigationController = (ctx) => {
     }
 
     state.pageNumber = nextPageNumber;
+    if (Math.round(Number(state.pendingNavigationPageNumber) || 0) === nextPageNumber) {
+      state.pendingNavigationPageNumber = 0;
+    }
     ctx.refreshToolbar();
     emitPageChange();
   }
@@ -174,6 +177,7 @@ export const installPdfViewerPageNavigationController = (ctx) => {
     } else {
       scheduleScrollSync();
     }
+    ctx.scheduleVisiblePageRender?.();
   }
 
   Object.assign(ctx, {

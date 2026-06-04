@@ -33,15 +33,31 @@ const OFFICIAL_MCP_SKILLS = Object.freeze([
 # Hikari Protocol Generation MCP
 
 Use this skill when the user asks Codex to prepare, normalize, add, save, or import a wet-lab protocol for Hikari.
+Also use it when the user asks to turn paper methods, selected paper text, local records, or a draft procedure into a Protocols-module candidate.
+
+Direct tool:
+
+- Call the direct Hikari MCP tool \`protocol_generation\`.
+
+Protocol JSON checklist:
+
+- \`protocol.name\`: concise protocol title suitable for the Protocols module.
+- \`protocol.purpose\`: short experimental goal, including the biological system or assay when known.
+- \`protocol.materials\`: array of reagents, samples, equipment, strains, plasmids, cell lines, buffers, and controls supported by the loaded evidence.
+- \`protocol.steps\`: ordered array of strings or step objects. Include timing, temperature, volumes, concentrations, incubation conditions, controls, and readouts inside the relevant step text.
+- \`protocol.troubleshooting\`: caveats, quality checks, expected outcomes, failure modes, safety notes, and paper-specific limitations when available.
+- \`result_summary\`: one sentence describing what was prepared.
+- \`save: true\`: include this when the user asks to add, save, import, persist, or queue the generated protocol for review.
 
 Workflow:
 
-1. Build or collect a complete protocol JSON object first. Include a clear \`name\`, \`purpose\`, \`materials\`, and non-empty \`steps\`.
-2. Call the direct Hikari MCP tool \`protocol_generation\`.
-3. Set \`save: true\` only when the user explicitly asks to add, save, import, or persist the protocol. Hikari will queue user approval before adding it to Protocols.
-4. Use the tool result as the source of truth for normalized protocol fields and approval status.
+1. Gather the source evidence first: active paper markdown, selected methods text, local protocols, records, or user-provided procedure text.
+2. Author the complete protocol JSON yourself from that evidence.
+3. Call \`protocol_generation\` once with \`{ protocol, result_summary, save: true }\` for generated protocols that should enter Hikari review.
+4. Read the tool result and use the returned \`protocol\`, \`status\`, \`save_requested\`, and \`requires_user_approval\` fields as the source of truth.
+5. Reply in normal assistant prose that the generated protocol is ready for review, and mention the normalized protocol name plus any important caveats.
 
-Do not call \`protocol_generation\` with prose alone. The MCP tool normalizes protocol JSON; it does not author missing protocol content internally.
+The \`protocol_generation\` tool expects complete protocol JSON and returns the normalized protocol fields plus approval status.
 `
     })
   }),
@@ -57,13 +73,26 @@ Do not call \`protocol_generation\` with prose alone. The MCP tool normalizes pr
 
 Use this skill when the user asks for a planned notebook draft, next experiment plan, workflow follow-up, or future biology notebook page.
 
+Direct tool:
+
+- Call the direct Hikari MCP tool \`notebook_draft\`.
+
+Draft context checklist:
+
+- \`message\`: the user's notebook-draft request or planning goal.
+- \`project_id\` or \`project_name\`: include the selected or resolved Hikari project when known.
+- \`workflow_id\`: include the workflow step identifier when the next experiment should follow a workflow.
+- \`protocol_name\` or \`protocol_candidates\`: include likely protocol names when the draft should be based on a protocol.
+- \`evidence_context\`: include compact summaries from records, protocol lookup, notebook lookup, literature, or paper analysis that were actually loaded for this turn.
+- \`parser_payload\`: include intent/entity hints when the surrounding Hikari run already prepared them.
+
 Workflow:
 
-1. Prefer local project, protocol, workflow, and notebook context from Hikari MCP tools before guessing.
-2. Call the direct Hikari MCP tool \`notebook_draft\`.
-3. Include \`project_id\` or \`project_name\` when known. Include \`workflow_id\`, \`protocol_name\`, or \`protocol_candidates\` when the draft should follow a specific workflow or protocol.
-4. Include \`evidence_context\` only when evidence was actually loaded from records, literature, or paper analysis.
-5. Return the confirmation-ready draft. Do not create or save the notebook page yourself.
+1. Resolve the project and experiment target from the selected project, user request, recent workflow state, protocol candidates, and loaded notebook history.
+2. Gather local Hikari context first when it matters: protocol candidates, workflow progress, previous notebook results, relevant records, and paper-derived evidence.
+3. Call \`notebook_draft\` with the resolved project fields, workflow/protocol hints, and evidence context.
+4. Read the tool result and use \`status\`, \`proposal_summary\`, \`proposal\`, \`notebook\`, \`missing_placeholders\`, and \`follow_up_questions\` as the source of truth.
+5. Return the confirmation-ready draft for user approval. Include concise next-step context and any follow-up questions reported by the tool.
 
 If one blocking detail is missing, ask the user through the Hikari clarification flow instead of inventing values.
 `

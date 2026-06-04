@@ -132,14 +132,18 @@ function mergePaperRecords(existingRecords, importedRecords) {
       ...source,
       id
     };
-    if (!String(source.pdfDataUrl || '').trim()) {
-      next.pdfDataUrl = String(previous.pdfDataUrl || '').trim();
-    }
     if (!String(source.storedFilePath || '').trim()) {
       next.storedFilePath = String(previous.storedFilePath || '').trim();
     }
     if (!String(source.storedRelativePath || '').trim()) {
       next.storedRelativePath = String(previous.storedRelativePath || '').trim();
+    }
+    const hasStoredPdfReference = Boolean(String(next.storedFilePath || '').trim())
+      || Boolean(String(next.storedRelativePath || '').trim());
+    if (hasStoredPdfReference) {
+      next.pdfDataUrl = '';
+    } else if (!String(source.pdfDataUrl || '').trim()) {
+      next.pdfDataUrl = String(previous.pdfDataUrl || '').trim();
     }
     merged.set(id, next);
   };

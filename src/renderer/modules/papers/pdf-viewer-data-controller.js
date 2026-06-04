@@ -79,6 +79,7 @@ export const installPdfViewerDataController = (ctx) => {
     }
     ctx.paintPins();
     ctx.updateCurrentPageFromScroll({ force: true });
+    ctx.scheduleVisiblePageRender?.();
   }
 
   function handleStageScroll() {
@@ -89,6 +90,7 @@ export const installPdfViewerDataController = (ctx) => {
     }
     ctx.hideHighlightCommentPopover();
     ctx.scheduleScrollSync();
+    ctx.scheduleVisiblePageRender?.();
   }
 
   Object.assign(ctx, {

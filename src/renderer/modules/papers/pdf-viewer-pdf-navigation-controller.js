@@ -55,6 +55,7 @@ export const installPdfViewerPdfNavigationController = (ctx) => {
       ctx.setStatus('Unable to follow this PDF link.', true);
       return;
     }
+    state.pendingNavigationPageNumber = pageNumber;
     ctx.goToPage(pageNumber, { behavior: 'smooth' });
   }
 

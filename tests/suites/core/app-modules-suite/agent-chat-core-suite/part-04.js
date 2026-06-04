@@ -169,6 +169,45 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
     request_id: 'req-live-1',
     chat_session_id: 'chat-2',
     routing_intent: 'codex_agent',
+    stage: 'codex_cli_display',
+    status: 'streaming',
+    message: "I'll use the Hikari protocol-generation workflow and first read the selected methods.",
+    meta: {
+      codex_display_text: "I'll use the Hikari protocol-generation workflow and first read the selected methods.",
+      codex_display_kind: 'assistant',
+      codex_event_type: 'assistant_message'
+    }
+  });
+  assert.match(history.innerHTML, /Hikari[\s\S]*protocol-generation[\s\S]*workflow/);
+  assert.match(history.innerHTML, /agent-stream-output-text/);
+  assert.doesNotMatch(history.innerHTML, /Agent Trace/);
+  assert.doesNotMatch(history.innerHTML, /agent-generated-trace-live/);
+  assert.match(status.textContent, /I'll use the Hikari protocol-generation workflow/);
+
+  progressHandler({
+    client_request_id: payloadSeen.clientRequestId,
+    request_id: 'req-live-1',
+    chat_session_id: 'chat-2',
+    routing_intent: 'codex_agent',
+    stage: 'codex_cli_display',
+    status: 'completed',
+    message: 'Tool call completed.',
+    meta: {
+      codex_display_text: 'Tool call completed.',
+      codex_display_kind: 'tool',
+      codex_event_type: 'tool_call'
+    }
+  });
+  assert.doesNotMatch(history.innerHTML, /Tool call completed/);
+  assert.doesNotMatch(history.innerHTML, /Agent Trace/);
+  assert.doesNotMatch(history.innerHTML, /agent-generated-trace-live/);
+  assert.match(status.textContent, /I'll use the Hikari protocol-generation workflow/);
+
+  progressHandler({
+    client_request_id: payloadSeen.clientRequestId,
+    request_id: 'req-live-1',
+    chat_session_id: 'chat-2',
+    routing_intent: 'codex_agent',
     stage: 'codex_agent_stream',
     status: 'streaming',
     message: 'Partial Codex answer',
@@ -177,6 +216,13 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
     }
   });
   assert.match(history.innerHTML, /Partial Codex answer/);
+  assert.equal(
+    history.innerHTML.indexOf('Hikari')
+      < history.innerHTML.indexOf('Partial Codex answer'),
+    true
+  );
+  assert.doesNotMatch(history.innerHTML, /Agent Trace/);
+  assert.doesNotMatch(history.innerHTML, /agent-generated-trace-live/);
   assert.match(status.textContent, /Partial Codex answer/);
 
   progressHandler({
@@ -192,7 +238,13 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
     }
   });
   assert.match(history.innerHTML, /Checking project context/);
-  assert.match(history.innerHTML, /<div class="agent-thinking-trace agent-generated-trace-live" aria-label="Agent Trace">/);
+  assert.equal(
+    history.innerHTML.indexOf('Partial Codex answer')
+      < history.innerHTML.indexOf('Checking project context'),
+    true
+  );
+  assert.doesNotMatch(history.innerHTML, /Agent Trace/);
+  assert.doesNotMatch(history.innerHTML, /agent-generated-trace-live/);
   assert.doesNotMatch(history.innerHTML, /Thinking Trace/);
 
   progressHandler({
@@ -208,7 +260,9 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
       tool_call_text: 'inventory_lookup: {"query":"yield"}'
     }
   });
-  assert.match(history.innerHTML, /inventory_lookup: \{&quot;query&quot;:&quot;yield&quot;\}/);
+  assert.doesNotMatch(history.innerHTML, /inventory_lookup: \{&quot;query&quot;:&quot;yield&quot;\}/);
+  assert.doesNotMatch(history.innerHTML, /Agent Trace/);
+  assert.doesNotMatch(history.innerHTML, /agent-generated-trace-live/);
 
   progressHandler({
     client_request_id: payloadSeen.clientRequestId,
@@ -225,7 +279,13 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
   });
   assert.doesNotMatch(history.innerHTML, /Codex CLI/);
   assert.match(history.innerHTML, /Reading paper\.md/);
-  assert.match(history.innerHTML, /<div class="agent-thinking-trace agent-generated-trace-live" aria-label="Agent Trace">/);
+  assert.equal(
+    history.innerHTML.indexOf('Checking project context')
+      < history.innerHTML.indexOf('Reading paper.md'),
+    true
+  );
+  assert.doesNotMatch(history.innerHTML, /Agent Trace/);
+  assert.doesNotMatch(history.innerHTML, /agent-generated-trace-live/);
   assert.doesNotMatch(history.innerHTML, /\{&quot;cmd&quot;:/);
 
   progressHandler({
@@ -244,6 +304,7 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
   });
   assert.doesNotMatch(history.innerHTML, /Hikari Codex Chat Turn/);
   assert.doesNotMatch(history.innerHTML, /Internal prompt text should stay hidden/);
+  assert.doesNotMatch(history.innerHTML, /Agent Trace/);
 
   progressHandler({
     client_request_id: payloadSeen.clientRequestId,
@@ -257,9 +318,10 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
       thinking_trace: 'I am clarifying the exact question before I search for evidence.'
     }
   });
-  assert.match(history.innerHTML, /I am clarifying the exact question before I search for evidence/);
+  assert.doesNotMatch(history.innerHTML, /I am clarifying the exact question before I search for evidence/);
   assert.doesNotMatch(history.innerHTML, /Thinking Trace/);
-  assert.match(history.innerHTML, /<div class="agent-thinking-trace agent-generated-trace-live" aria-label="Agent Trace">/);
+  assert.doesNotMatch(history.innerHTML, /Agent Trace/);
+  assert.doesNotMatch(history.innerHTML, /agent-generated-trace-live/);
 
   progressHandler({
     client_request_id: payloadSeen.clientRequestId,
@@ -275,8 +337,10 @@ test('agent-chat shows live progress ephemerally in the chat history and locks s
       thinking_trace: 'I want to use literature-search to investigate "yield drop causes".'
     }
   });
-  assert.match(history.innerHTML, /I want to use literature-search to investigate &quot;yield drop causes&quot;/);
+  assert.doesNotMatch(history.innerHTML, /I want to use literature-search to investigate &quot;yield drop causes&quot;/);
   assert.doesNotMatch(history.innerHTML, /Searching literature sources/);
+  assert.doesNotMatch(history.innerHTML, /Agent Trace/);
+  assert.doesNotMatch(history.innerHTML, /agent-generated-trace-live/);
 
   resolveAgentRequest({
     ok: true,

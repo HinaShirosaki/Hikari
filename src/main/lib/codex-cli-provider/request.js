@@ -22,7 +22,10 @@ const {
   extractCodexSessionIdFromText,
   normalizeCodexSessionId
 } = require('./session-id');
-const { replayCodexSessionProgressFromTranscript } = require('./transcript');
+const {
+  createCodexSessionTranscriptFollower,
+  replayCodexSessionProgressFromTranscript
+} = require('./transcript');
 const { runCodexCommand } = require('./run-command');
 const { cleanText } = require('./utils');
 
@@ -89,14 +92,28 @@ async function requestCodexCliText({
     collectJsonEvents
   });
 
-  const commandResult = await runCodexCommand({
-    args,
-    cwd: safeCwd,
-    env: requestState.env,
-    input: requestState.promptWithAttachments,
-    timeoutMs,
-    onJsonEvent: collectJsonEvents ? streamHandler.handleJsonEvent : null
-  });
+  const transcriptFollower = streamingEnabled
+    ? createCodexSessionTranscriptFollower({
+      cwd: safeCwd,
+      getSessionId: streamHandler.getCodexSessionId,
+      onJsonEvent: streamHandler.handleJsonEvent,
+      minTimestampMs: Date.now() - 2000,
+      intervalMs: process.env.ENANA_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS
+    })
+    : null;
+  let commandResult;
+  try {
+    commandResult = await runCodexCommand({
+      args,
+      cwd: safeCwd,
+      env: requestState.env,
+      input: requestState.promptWithAttachments,
+      timeoutMs,
+      onJsonEvent: collectJsonEvents ? streamHandler.handleJsonEvent : null
+    });
+  } finally {
+    await transcriptFollower?.stop?.();
+  }
 
   return readCodexRequestResult({
     commandResult,

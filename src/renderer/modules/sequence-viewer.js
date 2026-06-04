@@ -7,6 +7,7 @@ import * as renderingModule from './sequence-viewer/rendering.js';
 import * as restrictionAnalysisModule from './sequence-viewer/restriction-analysis.js';
 import * as sharedModule from './sequence-viewer/shared.js';
 import * as storageModule from './sequence-viewer/storage.js';
+import * as ab1PostProcessModule from './sequence-viewer/algorithms/ab1-trace-postprocess.js';
 
 function readWrapperStoragePath() {
   try {
@@ -149,4 +150,12 @@ export function renderAlignmentTracePanelHtml(input = {}) {
 
 export function buildCircularPreviewHtmlDocument(record) {
   return storageModule.buildCircularPreviewHtmlDocument(record);
+}
+
+export function postProcessAb1Trace(trace, quality = '', options = {}) {
+  return ab1PostProcessModule.postProcessAb1Trace(trace, quality, options);
+}
+
+export function trimAb1ByMottAlgorithm(qualityString, options = {}) {
+  return ab1PostProcessModule.trimByMottAlgorithm(qualityString, options);
 }

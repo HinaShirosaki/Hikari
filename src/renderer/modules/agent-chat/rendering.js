@@ -13,7 +13,13 @@ function getLiveStreamText(message) {
   if (!liveProgress) {
     return '';
   }
-  return trimText(liveProgress.stream_text || liveProgress.streamText, 120000);
+  return trimText(
+    liveProgress.response_text
+      || liveProgress.responseText
+      || liveProgress.stream_text
+      || liveProgress.streamText,
+    120000
+  );
 }
 
 function renderLiveStreamOutputText(text, safeText) {
@@ -64,7 +70,7 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
     const hasLiveProgress = Boolean(message?.meta?.live_progress && typeof message.meta.live_progress === 'object');
     const timestamp = formatTime(message.createdAt);
     const assistantGeneratedTrace = role === 'assistant'
-      ? renderAssistantGeneratedTrace(message.meta, safeText, hasLiveProgress ? '' : (message.text || ''))
+      ? (hasLiveProgress ? '' : renderAssistantGeneratedTrace(message.meta, safeText, message.text || ''))
       : '';
     const assistantMeta = role === 'assistant'
       ? renderAssistantMeta(message.meta, message.id, {
@@ -76,8 +82,6 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
     const messageBody = role === 'assistant'
       ? renderAssistantMessageBody(message, safeText, { hasLiveProgress })
       : `<p class="agent-chat-body agent-chat-body-plain">${safeText(message.text || '')}</p>`;
-    const liveGeneratedTrace = hasLiveProgress ? assistantGeneratedTrace : '';
-    const completedGeneratedTrace = hasLiveProgress ? '' : assistantGeneratedTrace;
     return `
       <div class="agent-chat-row ${rowClass}${hasLiveProgress ? ' is-live' : ''}">
         <div class="agent-chat-identity" aria-hidden="true">
@@ -91,9 +95,8 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
             </div>
             <span>${safeText(timestamp)}</span>
           </header>
-          ${liveGeneratedTrace}
           ${messageBody}
-          ${completedGeneratedTrace}
+          ${assistantGeneratedTrace}
           ${role === 'user' ? renderUserAttachments(message.attachments, safeText) : ''}
           ${assistantMeta}
         </article>

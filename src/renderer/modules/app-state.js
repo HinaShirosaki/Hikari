@@ -429,8 +429,12 @@ export function normalizePaperRecord(rawPaper) {
     return rawPaper;
   }
 
+  const hasStoredPdfReference = Boolean(String(rawPaper.storedFilePath || '').trim())
+    || Boolean(String(rawPaper.storedRelativePath || '').trim());
+
   return {
     ...rawPaper,
+    pdfDataUrl: hasStoredPdfReference ? '' : String(rawPaper.pdfDataUrl || ''),
     highlights: Array.isArray(rawPaper.highlights)
       ? rawPaper.highlights.map((highlight) => normalizePaperHighlight(highlight)).filter(Boolean)
       : [],

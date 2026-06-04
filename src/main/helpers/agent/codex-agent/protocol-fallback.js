@@ -88,6 +88,65 @@ function extractProtocolTitle(lines = [], cleanText = defaultCleanText) {
   return '';
 }
 
+function findProtocolHeadingLineIndex(lines = []) {
+  return lines.findIndex((rawLine) => {
+    const line = String(rawLine || '').trim();
+    if (!line) {
+      return false;
+    }
+    const cleaned = stripInlineMarkdown(line).replace(/^#{1,6}\s*/, '').trim();
+    return /^protocol\s*:/i.test(cleaned)
+      || (isHeadingLike(line) && /\bprotocol\b/i.test(cleaned) && !normalizeSectionKey(line));
+  });
+}
+
+function lineHasProtocolGenerationUnavailableWarning(rawLine = '') {
+  const line = stripInlineMarkdown(rawLine).toLowerCase();
+  return /\bprotocol_generation\b/.test(line)
+    && (
+      /not visible/.test(line)
+      || /not exposed/.test(line)
+      || /not available/.test(line)
+      || /\bunavailable\b/.test(line)
+      || /not found/.test(line)
+      || /couldn['’]?t queue/.test(line)
+      || /could not queue/.test(line)
+      || /couldn['’]?t submit/.test(line)
+      || /could not submit/.test(line)
+      || /couldn['’]?t call/.test(line)
+      || /could not call/.test(line)
+      || /cannot call/.test(line)
+      || /unable to call/.test(line)
+    );
+}
+
+function stripProtocolGenerationUnavailablePreamble(rawAnswer = '') {
+  const text = String(rawAnswer || '').replace(/\r\n?/g, '\n');
+  const lines = text.split('\n');
+  const warningIndex = lines.findIndex(lineHasProtocolGenerationUnavailableWarning);
+  if (warningIndex < 0) {
+    return text;
+  }
+  const headingIndex = findProtocolHeadingLineIndex(lines);
+  if (headingIndex >= 0 && headingIndex > warningIndex) {
+    return lines.slice(headingIndex).join('\n').trim();
+  }
+  if (headingIndex === warningIndex) {
+    const line = lines[headingIndex] || '';
+    const headingMatch = line.match(/(?:#{1,6}\s*)?(?:\*\*)?protocol\s*:/i);
+    if (headingMatch?.index >= 0) {
+      return [
+        line.slice(headingMatch.index),
+        ...lines.slice(headingIndex + 1)
+      ].join('\n').trim();
+    }
+  }
+  return lines
+    .filter((line) => !lineHasProtocolGenerationUnavailableWarning(line))
+    .join('\n')
+    .trim();
+}
+
 function uniqueCleanItems(items = [], cleanText = defaultCleanText, maxItems = 80) {
   const seen = new Set();
   const out = [];
@@ -142,7 +201,7 @@ function buildTroubleshootingText(sections, cleanText = defaultCleanText) {
 }
 
 function parseAuthoredProtocolMarkdown(rawAnswer = '', { cleanText = defaultCleanText } = {}) {
-  const text = String(rawAnswer || '').replace(/\r\n?/g, '\n');
+  const text = stripProtocolGenerationUnavailablePreamble(rawAnswer);
   if (!text.trim()) {
     return null;
   }

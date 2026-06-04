@@ -54,22 +54,30 @@ function normalizeTraceChannel(channel) {
   return values.length ? { base, values } : null;
 }
 
-function normalizeTracePayload(trace) {
+function normalizeTracePayload(trace, options = {}) {
   const safeTrace = trace && typeof trace === 'object' ? trace : null;
   if (!safeTrace) {
     return null;
   }
 
-  const rawChannels = Array.isArray(safeTrace.channels) ? safeTrace.channels : [];
+  const processed = safeTrace.processed && typeof safeTrace.processed === 'object'
+    ? safeTrace.processed
+    : null;
+  const useProcessed = options?.useProcessed !== false && processed;
+  const sourceChannels = Array.isArray(useProcessed ? processed.channels : safeTrace.channels)
+    ? (useProcessed ? processed.channels : safeTrace.channels)
+    : [];
+  const sourcePositions = useProcessed ? processed.positions : safeTrace.positions;
+
   const channels = TRACE_BASE_ORDER
-    .map((base) => rawChannels.find((channel) => cleanText(channel?.base, 1).toUpperCase() === base))
+    .map((base) => sourceChannels.find((channel) => cleanText(channel?.base, 1).toUpperCase() === base))
     .map((channel) => normalizeTraceChannel(channel))
     .filter(Boolean);
   if (!channels.length) {
     return null;
   }
 
-  const rawPositions = toNumberList(safeTrace.positions)
+  const rawPositions = toNumberList(sourcePositions)
     .map((value) => Math.max(0, Math.round(Number(value) || 0)));
   const maxPosition = rawPositions.reduce((max, value) => Math.max(max, value), 0);
   const sampleCount = Math.max(
@@ -81,7 +89,8 @@ function normalizeTracePayload(trace) {
   return {
     channels,
     positions: rawPositions,
-    sampleCount
+    sampleCount,
+    source: useProcessed ? 'processed' : 'raw'
   };
 }
 
@@ -123,9 +132,9 @@ function reverseTraceChannelValues(channels) {
     .filter(Boolean);
 }
 
-function buildDisplayAlignmentTrace(queryRecord, result) {
+function buildDisplayAlignmentTrace(queryRecord, result, options = {}) {
   const sourceSequence = normalizeSequenceText(queryRecord?.sequence || '');
-  const trace = normalizeTracePayload(queryRecord?.trace);
+  const trace = normalizeTracePayload(queryRecord?.trace, options);
   if (!sourceSequence.length || !trace) {
     return null;
   }
@@ -138,7 +147,8 @@ function buildDisplayAlignmentTrace(queryRecord, result) {
       positions: basePositions,
       channels: trace.channels,
       sampleCount: trace.sampleCount,
-      orientation: 'forward'
+      orientation: 'forward',
+      source: trace.source
     };
   }
 
@@ -148,7 +158,8 @@ function buildDisplayAlignmentTrace(queryRecord, result) {
     positions: [...basePositions].reverse().map((position) => clampTraceValue(sampleLast - position, 0, sampleLast)),
     channels: reverseTraceChannelValues(trace.channels),
     sampleCount: trace.sampleCount,
-    orientation: 'reverse'
+    orientation: 'reverse',
+    source: trace.source
   };
 }
 
@@ -379,7 +390,8 @@ export function renderAlignmentTracePanelHtml({ state = {} } = {}) {
     return '';
   }
 
-  const displayTrace = buildDisplayAlignmentTrace(queryRecord, result);
+  const useProcessed = state?.traceUseProcessed !== false;
+  const displayTrace = buildDisplayAlignmentTrace(queryRecord, result, { useProcessed });
   if (!displayTrace) {
     return sourceFormat === 'ab1' ? renderTraceUnavailableHtml(queryRecord) : '';
   }
@@ -397,11 +409,34 @@ export function renderAlignmentTracePanelHtml({ state = {} } = {}) {
     Number.isFinite(coverage) ? `${coverage.toFixed(2)}% coverage` : ''
   ].filter(Boolean);
   const svgLabel = `AB1 chromatogram for ${queryName}`;
+  const hasProcessed = Boolean(
+    queryRecord?.trace
+    && queryRecord.trace.processed
+    && Array.isArray(queryRecord.trace.processed.channels)
+    && queryRecord.trace.processed.channels.length
+  );
+  const sourceSwitch = hasProcessed ? `
+    <div class="sequence-viewer-trace-source-switch" role="group" aria-label="Chromatogram signal source">
+      <button type="button"
+              class="sequence-viewer-trace-source-btn${useProcessed ? '' : ' sequence-viewer-trace-source-btn-active'}"
+              data-trace-source="raw"
+              aria-pressed="${useProcessed ? 'false' : 'true'}"
+              title="Show the raw chromatogram channels exactly as recorded in the AB1 file.">Raw</button>
+      <button type="button"
+              class="sequence-viewer-trace-source-btn${useProcessed ? ' sequence-viewer-trace-source-btn-active' : ''}"
+              data-trace-source="processed"
+              aria-pressed="${useProcessed ? 'true' : 'false'}"
+              title="Show the post-processed chromatogram: baseline subtraction, cross-talk reduction, normalization, Savitzky-Golay smoothing, and peak refinement.">Processed</button>
+    </div>
+  ` : '';
 
   return `
     <div class="sequence-viewer-alignment-trace-head">
-      <strong>Chromatogram</strong>
-      <span class="small-note">${escapeHtml(queryName)} | ${escapeHtml(details.join(' | '))}</span>
+      <div class="sequence-viewer-alignment-trace-head-title">
+        <strong>Chromatogram</strong>
+        <span class="small-note">${escapeHtml(queryName)} | ${escapeHtml(details.join(' | '))}</span>
+      </div>
+      ${sourceSwitch}
     </div>
     <div class="sequence-viewer-alignment-trace-scroll">
       <svg

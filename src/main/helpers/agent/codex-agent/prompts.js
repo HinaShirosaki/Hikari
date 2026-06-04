@@ -112,13 +112,9 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     '',
     'The Codex instruction chain contains the durable Hikari Codex agent contract. If this turn is scoped to a selected project, the working directory may also contain project `MEMORY.md` and `.agents/skills`; treat them as the project-specific context and skill layers for this run.',
     '',
-    'Hikari provides rendering and the MCP server. Do not depend on Hikari to replay chat history, choose tools, parse intent, or synthesize for you. Use your Codex session context for continuity and return normal assistant prose for Hikari to render.',
+    'Hikari provides rendering and the MCP server. Use your Codex session context for continuity, tool choice, intent parsing, synthesis, and normal assistant prose for Hikari to render. Use native Codex search for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
     '',
-    'Use the MCP server named `hikari` for Hikari app data, papers, protocols, notebooks, inventory, memory, and structured tool access. Hikari exposes app tools as direct MCP tools such as `literature_search`, `paper_download`, `protocol_generation`, and `notebook_draft`; do not route through `tool_search`, `tool_info`, or generic `tool_call`. Use native Codex search for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
-    '',
-    'Protocol generation handoff: when the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, first author complete protocol JSON from the evidence, then call `protocol_generation` with `{ protocol, save: true }`. Do not answer only with markdown or prose for these protocol-generation requests; after the tool call, summarize that the generated protocol is ready for review.',
-    '',
-    'Native Codex `tool_search` is disabled for this run. If a named direct MCP tool is not visible, report that the direct Hikari MCP surface is unavailable for that tool. Do not use shell commands as a substitute for a named direct tool call.',
+    'Protocol generation handoff: when the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, first author complete protocol JSON from the evidence, then call `protocol_generation` with `{ protocol, save: true }`. After the tool call, summarize that the generated protocol is ready for review.',
     '',
     projectId || projectName
       ? `Selected project:\n${JSON.stringify({ id: projectId, name: projectName }, null, 2)}`

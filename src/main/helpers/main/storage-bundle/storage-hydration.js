@@ -139,9 +139,12 @@ function mergePaperRecords(existingRecords, importedRecords) {
   asArray(existingRecords).forEach((record, index) => {
     const source = ensureObject(record);
     const id = cleanText(source.id, 220) || `paper_existing_${index + 1}`;
+    const storedFilePath = cleanText(source.storedFilePath, 2400);
+    const storedRelativePath = cleanText(source.storedRelativePath, 2400);
     byId.set(id, {
       ...source,
-      id
+      id,
+      ...(storedFilePath || storedRelativePath ? { pdfDataUrl: '' } : {})
     });
   });
   asArray(importedRecords).forEach((record, index) => {
@@ -153,14 +156,18 @@ function mergePaperRecords(existingRecords, importedRecords) {
       ...source,
       id
     };
-    if (!cleanText(source.pdfDataUrl, 80)) {
-      merged.pdfDataUrl = cleanText(previous.pdfDataUrl, 10_000_000);
-    }
     if (!cleanText(source.storedFilePath, 2400)) {
       merged.storedFilePath = cleanText(previous.storedFilePath, 2400);
     }
     if (!cleanText(source.storedRelativePath, 2400)) {
       merged.storedRelativePath = cleanText(previous.storedRelativePath, 2400);
+    }
+    const hasStoredPdfReference = Boolean(cleanText(merged.storedFilePath, 2400))
+      || Boolean(cleanText(merged.storedRelativePath, 2400));
+    if (hasStoredPdfReference) {
+      merged.pdfDataUrl = '';
+    } else if (!cleanText(source.pdfDataUrl, 80)) {
+      merged.pdfDataUrl = cleanText(previous.pdfDataUrl, 10_000_000);
     }
     byId.set(id, merged);
   });

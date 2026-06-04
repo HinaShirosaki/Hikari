@@ -23,7 +23,7 @@ function extractCodexJsonEventText(event = {}) {
   if (isCodexThinkingEvent(event) || isCodexToolEvent(event)) {
     return null;
   }
-  if (type === 'agent_message' && phase && phase !== 'final_answer') {
+  if (type === 'agent_message' && phase && phase !== 'commentary' && phase !== 'final_answer') {
     return null;
   }
   const looksAssistant = !role || role === 'assistant' || role === 'agent';

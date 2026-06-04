@@ -472,6 +472,158 @@ test('papers selection search popover dismisses on outside document pointer down
   assert.match(searchUiSource, /hideSelectionSearchPopover\(\)/);
   assert.match(eventsSource, /doc\.addEventListener\('pointerdown', ctx\.handleDocumentPointerDown\)/);
 });
+test('papers PDF loading prefers stored bytes and compacts embedded PDF state', () => {
+  const actionsSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'actions.js'),
+    'utf8'
+  );
+  const storageApiSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'preload', 'api', 'storage-api.js'),
+    'utf8'
+  );
+  const dataRegistrarSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'),
+    'utf8'
+  );
+  const appState = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'app-state.js')
+  );
+  const resolveBytesBlock = actionsSource.slice(actionsSource.indexOf('async function resolvePaperPdfBytes'));
+
+  assert.match(storageApiSource, /readFileBytes:\s*\(path\) => ipcRenderer\.invoke\(STORAGE\.READ_FILE_BYTES/);
+  assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.READ_FILE_BYTES/);
+  assert.match(dataRegistrarSource, /bytes\.buffer\.slice\(bytes\.byteOffset,\s*bytes\.byteOffset \+ bytes\.byteLength\)/);
+  assert.match(dataRegistrarSource, /normalizeImportedDataBytes/);
+  assert.match(dataRegistrarSource, /dataBytes\?\.byteLength \? dataBytes : Buffer\.from\(dataBase64, 'base64'\)/);
+  assert.match(actionsSource, /const pdfBytes = await fileToBytes\(file\)/);
+  assert.match(actionsSource, /dataBytes:\s*pdfBytes\.buffer\.slice/);
+  assert.match(actionsSource, /pdfDataUrl:\s*''/);
+  assert.equal(actionsSource.includes('fileToDataUrl'), false);
+  assert.ok(resolveBytesBlock.indexOf('readFileBytes') >= 0);
+  assert.ok(resolveBytesBlock.indexOf('readFileBytes') < resolveBytesBlock.indexOf('parsePdfDataUrl(paper?.pdfDataUrl)'));
+
+  const normalized = appState.normalizePaperRecord({
+    id: 'paper-1',
+    storedRelativePath: 'Project/Atlas/Papers/paper.pdf',
+    pdfDataUrl: 'data:application/pdf;base64,AAAA'
+  });
+  assert.equal(normalized.pdfDataUrl, '');
+});
+test('papers PDF viewer virtualizes page rendering and prunes offscreen canvases', () => {
+  const renderSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-render-controller.js'),
+    'utf8'
+  );
+  const pageRecordsSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-records.js'),
+    'utf8'
+  );
+  const searchSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-search-execution-controller.js'),
+    'utf8'
+  );
+  const renderingSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-rendering.js'),
+    'utf8'
+  );
+  const navigationSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-pdf-navigation-controller.js'),
+    'utf8'
+  );
+
+  assert.match(renderSource, /const ACTIVE_PAGE_RENDER_BUFFER = 4/);
+  assert.match(renderSource, /const RETAINED_PAGE_RENDER_BUFFER = 8/);
+  assert.match(renderSource, /clearPageRecordsOutsideRange/);
+  assert.match(renderSource, /pendingNavigationPageNumber/);
+  assert.match(renderSource, /getActiveRenderRanges/);
+  assert.match(renderSource, /getPageRecordsInRanges\(renderRanges\)/);
+  assert.match(renderSource, /scheduleVisiblePageRender/);
+  assert.equal(renderSource.includes('for (const record of state.pageRecords)'), false);
+  assert.match(pageRecordsSource, /record\.canvas\.width = 0/);
+  assert.match(pageRecordsSource, /record\.canvas\.height = 0/);
+  assert.match(searchSource, /async function ensurePdfSearchTextLayers\(\)/);
+  assert.match(searchSource, /renderPageTextLayerRecord/);
+  assert.match(searchSource, /ctx\.pruneRenderedPageRecords\?\.\(\)/);
+  assert.equal(renderingSource.includes('isStale() || isLinkActivationEnabled() === false'), false);
+  assert.match(renderingSource, /if \(isLinkActivationEnabled\(\) === false\)/);
+  assert.match(navigationSource, /state\.pendingNavigationPageNumber = pageNumber/);
+});
+test('papers PDF link buttons remain active after later virtualized render passes', async () => {
+  const renderingModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-rendering.js'),
+    { URL }
+  );
+  const createdButtons = [];
+  const doc = {
+    createDocumentFragment() {
+      return {
+        children: [],
+        appendChild(child) {
+          this.children.push(child);
+        }
+      };
+    },
+    createElement(tagName) {
+      const element = {
+        tagName,
+        style: {},
+        attributes: {},
+        listeners: {},
+        type: '',
+        className: '',
+        title: '',
+        setAttribute(name, value) {
+          this.attributes[name] = String(value);
+        },
+        addEventListener(name, listener) {
+          this.listeners[name] = listener;
+        }
+      };
+      createdButtons.push(element);
+      return element;
+    }
+  };
+  const linkLayer = {
+    ownerDocument: doc,
+    innerHTML: '',
+    style: {},
+    replaceChildren(fragment) {
+      this.children = fragment.children;
+    }
+  };
+  const page = {
+    async getAnnotations() {
+      return [{ rect: [0, 0, 40, 12], url: 'https://example.com/article' }];
+    }
+  };
+  const viewport = {
+    width: 200,
+    height: 300,
+    convertToViewportRectangle(rect) {
+      return rect;
+    }
+  };
+  let stale = false;
+  let openedUrl = '';
+
+  await renderingModule.renderPageLinkLayer({
+    page,
+    viewport,
+    record: { linkLayer },
+    onExternalLink(url) {
+      openedUrl = url;
+    },
+    isLinkActivationEnabled: () => true,
+    isStale: () => stale
+  });
+  stale = true;
+  createdButtons[0].listeners.click({
+    preventDefault() {},
+    stopPropagation() {}
+  });
+
+  assert.equal(openedUrl, 'https://example.com/article');
+});
 test('papers database search matches selected text against stored paper records', () => {
   const papersModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'index.js')

@@ -40,6 +40,15 @@ function buildCodexCliDisplayEventKey(event = {}) {
   ].join('\u0001');
 }
 
+function isIgnorableCodexPlainOutput({ text = '', stream = '' } = {}) {
+  const outputText = cleanText(text, 12000);
+  const outputStream = cleanText(stream, 40).toLowerCase();
+  if (outputStream !== 'stderr' || !outputText) {
+    return false;
+  }
+  return /\bcodex_memories_write::phase2:\s*phase\s+2\s+no\s+changes\b/iu.test(outputText);
+}
+
 function emitCodexCliDisplayEvent(onStream, seenDisplayEvents, event = {}) {
   if (typeof onStream !== 'function') {
     return;
@@ -68,6 +77,9 @@ function extractCodexPlainOutputDisplayEvent(event = {}) {
   const source = event && typeof event === 'object' && !Array.isArray(event) ? event : {};
   const type = cleanText(source.type, 120).toLowerCase();
   if (type !== 'codex_cli_output') {
+    return null;
+  }
+  if (isIgnorableCodexPlainOutput(source)) {
     return null;
   }
   return buildCodexCliDisplayEvent({
