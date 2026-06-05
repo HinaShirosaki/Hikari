@@ -381,15 +381,14 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.equal(calls[0].stream, true);
       assert.equal(typeof calls[0].onStream, 'function');
       assert.equal(calls[0].enableWebSearch, true);
-      assert.equal(calls[0].disableToolSearch, false);
       assert.equal(calls[0].returnMetadata, true);
       assert.equal(calls[0].resumeSessionId, '');
       assert.match(calls[0].prompt, /Codex Chat Turn/);
       assert.match(calls[0].prompt, /Current user request:\nWhy was SUMO1 conjugation weak\?/);
       assert.match(calls[0].prompt, /Protocol generation handoff:/);
-      assert.match(calls[0].prompt, /call `protocol_generation` with/);
+      assert.match(calls[0].prompt, /call `mcp__hikari__protocol_generation` with/);
       assert.match(calls[0].prompt, /summarize that the generated protocol is ready for review/);
-      assert.doesNotMatch(calls[0].prompt, /mcp__hikari__/);
+      assert.match(calls[0].prompt, /mcp__hikari__protocol_generation/);
       assert.doesNotMatch(calls[0].prompt, /initially visible tool list/);
       assert.doesNotMatch(calls[0].prompt, /Do not answer only with markdown or prose/);
       assert.doesNotMatch(calls[0].prompt, /Recent conversation:/);

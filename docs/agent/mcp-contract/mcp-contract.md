@@ -9,34 +9,62 @@ Any agent provider that supports MCP can launch the shared stdio server. The Cod
 ```toml
 # HIKARI_MCP_CONFIG_START
 [mcp_servers.hikari]
-command = "node"
+enabled = true
+required = true
+command = "/absolute/path/to/node"
 args = ["/absolute/path/to/src/main/helpers/agent/mcp-contract/stdio-server.js"]
+enabled_tools = [
+  "inventory_lookup",
+  "chemical_lookup",
+  "record_lookup",
+  "protocol_lookup",
+  "protocol_generation",
+  "notebook_draft",
+  "notebook_generation",
+  "notebook_lookup",
+  "literature_search",
+  "paper_download",
+  "paper_analysis",
+  "purchase_recommendation",
+  "memory",
+  "ask_user"
+]
+default_tools_approval_mode = "approve"
+startup_timeout_sec = 30
+tool_timeout_sec = 120
 env = {
   HIKARI_AGENT_MCP = "1",
   HIKARI_AGENT_MCP_WORKSPACE = "/runtime/workspace",
   HIKARI_AGENT_MCP_HOST = "http://127.0.0.1:<port>",
   HIKARI_AGENT_MCP_TOKEN = "<opaque bearer token>",
+  HIKARI_AGENT_MCP_REQUEST_CONTEXT = "<per-turn JSON>",
   HIKARI_CODEX_MCP = "1",
   HIKARI_CODEX_WORKSPACE = "/runtime/workspace",
   HIKARI_CODEX_MCP_HOST = "http://127.0.0.1:<port>",
   HIKARI_CODEX_MCP_TOKEN = "<opaque bearer token>",
+  HIKARI_CODEX_REQUEST_CONTEXT = "<per-turn JSON>",
   HIKARI_AGENT_DATA_FILE = "/path/to/hikari-data.json",
   HIKARI_AGENT_STORAGE_PATH = "/path/to/storage",
   ENANA_AGENT_MCP = "1",
   ENANA_AGENT_MCP_WORKSPACE = "/runtime/workspace",
   ENANA_AGENT_MCP_HOST = "http://127.0.0.1:<port>",
   ENANA_AGENT_MCP_TOKEN = "<opaque bearer token>",
+  ENANA_AGENT_MCP_REQUEST_CONTEXT = "<per-turn JSON>",
   ENANA_CODEX_MCP = "1",
   ENANA_CODEX_WORKSPACE = "/runtime/workspace",
   ENANA_CODEX_MCP_HOST = "http://127.0.0.1:<port>",
   ENANA_CODEX_MCP_TOKEN = "<opaque bearer token>",
+  ENANA_CODEX_REQUEST_CONTEXT = "<per-turn JSON>",
   ENANA_AGENT_DATA_FILE = "/path/to/hikari-data.json",
   ENANA_AGENT_STORAGE_PATH = "/path/to/storage"
 }
+
+[mcp_servers.hikari.tools.protocol_generation]
+approval_mode = "approve"
 # HIKARI_MCP_CONFIG_END
 ```
 
-`HIKARI_AGENT_MCP_HOST` and `HIKARI_AGENT_MCP_TOKEN` are present when the app-side callback host is running. The `HIKARI_CODEX_*` values are compatibility aliases for the Codex CLI integration, and the legacy `ENANA_*` aliases are still emitted for compatibility. The stdio MCP server uses these values to relay direct tool execution requests into the live Hikari process.
+`HIKARI_AGENT_MCP_HOST` and `HIKARI_AGENT_MCP_TOKEN` are present when the app-side callback host is running. The `HIKARI_CODEX_*` values are compatibility aliases for the Codex CLI integration, and the legacy `ENANA_*` aliases are still emitted for compatibility. The stdio MCP server uses these values to relay direct tool execution requests into the live Hikari process. In packaged Electron builds, `command` is resolved to an absolute Node executable path, such as `/opt/homebrew/bin/node`, so Codex does not depend on the Finder-launched app inheriting a shell `PATH`.
 
 ## Per-request context
 
@@ -96,7 +124,7 @@ Unsupported methods return JSON-RPC error `-32601`. Internal failures return `-3
 
 ## MCP tools
 
-The Hikari MCP surface is direct-tool-only. Agent providers call the named tools below without using `tool_search`, `tool_info`, generic `tool_call`, MCP resources, or any other discovery side channel:
+The Hikari MCP surface is direct-tool-only. Agent providers call the named tools below as the complete Hikari app tool surface for this server:
 
 - `inventory_lookup`
 - `chemical_lookup`
@@ -112,6 +140,23 @@ The Hikari MCP surface is direct-tool-only. Agent providers call the named tools
 - `purchase_recommendation`
 - `memory`
 - `ask_user`
+
+Codex exposes the same server tools to the model with the server namespace prefix. Codex-facing instructions, skills, and model-facing examples should use:
+
+- `mcp__hikari__inventory_lookup`
+- `mcp__hikari__chemical_lookup`
+- `mcp__hikari__record_lookup`
+- `mcp__hikari__protocol_lookup`
+- `mcp__hikari__protocol_generation`
+- `mcp__hikari__notebook_draft`
+- `mcp__hikari__notebook_generation`
+- `mcp__hikari__notebook_lookup`
+- `mcp__hikari__literature_search`
+- `mcp__hikari__paper_download`
+- `mcp__hikari__paper_analysis`
+- `mcp__hikari__purchase_recommendation`
+- `mcp__hikari__memory`
+- `mcp__hikari__ask_user`
 
 Direct wrappers that delegate to app executors use the app tool schema and return this envelope:
 

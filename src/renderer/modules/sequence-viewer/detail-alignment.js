@@ -7,6 +7,7 @@ import {
   normalizeSequenceText,
   reverseComplementIupac
 } from './shared.js';
+import { postProcessAb1Trace } from './algorithms/ab1-trace-postprocess.js';
 
 const TRACE_BASE_ORDER = ['A', 'C', 'G', 'T'];
 const TRACE_MIN_WIDTH = 960;
@@ -132,8 +133,39 @@ function reverseTraceChannelValues(channels) {
     .filter(Boolean);
 }
 
+function ensureProcessedTrace(queryRecord) {
+  // Old alignment sessions were persisted before the post-processor existed —
+  // their queryRecord.trace has raw channels but no `processed` payload.
+  // Compute it once on demand and cache it on the trace object so the
+  // Raw/Processed switch can render and subsequent renders don't re-run
+  // the pipeline.
+  const trace = queryRecord?.trace;
+  if (!trace || typeof trace !== 'object') {
+    return;
+  }
+  if (trace.processed && Array.isArray(trace.processed.channels) && trace.processed.channels.length) {
+    return;
+  }
+  const channels = Array.isArray(trace.channels) ? trace.channels : [];
+  if (!channels.length) {
+    return;
+  }
+  try {
+    const processed = postProcessAb1Trace(
+      { ...trace, sequence: queryRecord?.sequence || '' },
+      queryRecord?.quality || ''
+    );
+    if (processed) {
+      trace.processed = processed;
+    }
+  } catch {
+    // Silently fall back to raw rendering — the switch stays hidden.
+  }
+}
+
 function buildDisplayAlignmentTrace(queryRecord, result, options = {}) {
   const sourceSequence = normalizeSequenceText(queryRecord?.sequence || '');
+  ensureProcessedTrace(queryRecord);
   const trace = normalizeTracePayload(queryRecord?.trace, options);
   if (!sourceSequence.length || !trace) {
     return null;

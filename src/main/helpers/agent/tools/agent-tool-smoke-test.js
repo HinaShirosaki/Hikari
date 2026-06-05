@@ -383,6 +383,9 @@ function buildPreview(toolName, result) {
   if (toolName === 'paper-analysis') {
     return cleanText(source.generated_protocol?.name || source.paper_title, 220);
   }
+  if (toolName === 'paper-search') {
+    return cleanText(source.items?.[0]?.section_heading || source.items?.[0]?.title, 220);
+  }
   if (toolName === 'protocol-generation') {
     return cleanText(source.protocol?.name, 220);
   }
@@ -900,6 +903,68 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     };
   }
 
+  async function smokePaperSearch(options = {}) {
+    const requestMessage = resolveToolMessage(options.message, 'binder purification Ni-NTA methods');
+    const focusedQuery = resolveFocusedToolText(options.message, 'binder purification', 8);
+    const runtime = {
+      searchWikiSections: async ({ query, limit }) => {
+        const matches = [
+          {
+            chunk_id: 'chunk-1',
+            paper_id: 'paper-1',
+            title: 'Binder Methods',
+            doi: '10.1000/binder-methods-smoke',
+            year: '2026',
+            journal: 'Hikari Smoke Journal',
+            section_heading: 'Methods',
+            section_text: 'The binder workflow clarifies lysate and binds the clarified sample to Ni-NTA resin.',
+            snippet: `The binder workflow uses Ni-NTA resin for ${cleanText(query, 120) || 'purification'}.`,
+            page_citation: 'p. 3',
+            page_start: 3,
+            page_end: 3,
+            rank_score: -1.2
+          }
+        ].slice(0, Math.max(1, Number(limit) || 1));
+        return {
+          ok: true,
+          status: matches.length ? 'matched' : 'no_match',
+          query,
+          match_count: matches.length,
+          matches,
+          summary: matches.length
+            ? `Found ${matches.length} matching section${matches.length === 1 ? '' : 's'} across 1 paper.`
+            : 'No matching paper sections.'
+        };
+      }
+    };
+    const result = await runtime.searchWikiSections({
+      storage_path: path.join(os.tmpdir(), 'enana-agent-tool-smoke-paper-wiki'),
+      query: focusedQuery,
+      limit: 3,
+      scope: 'project',
+      container: 'Atlas'
+    });
+    const matches = asArray(result?.matches);
+    return {
+      ...result,
+      items: matches,
+      ok: options.strict === true ? matches.length > 0 : result?.ok !== false,
+      citations: matches.slice(0, 8).map((match, index) => ({
+        source: 'paper-wiki',
+        pointer: [
+          cleanText(match?.title, 200),
+          match?.page_citation ? `(${match.page_citation})` : '',
+          cleanText(match?.doi, 120)
+        ].filter(Boolean).join(' ') || `paper-wiki:${index + 1}`,
+        reason: cleanText(match?.section_heading, 120) || 'Matched section from paper wiki.'
+      })),
+      summary: matches.length
+        ? `paper-search matched ${matches.length} section${matches.length === 1 ? '' : 's'}.`
+        : 'paper-search returned no matches.',
+      request_message: requestMessage
+    };
+  }
+
   async function smokeProtocolGeneration(options = {}) {
     const tempDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'hikari-protocol-save-'));
     let emittedPayload = null;
@@ -1019,6 +1084,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     'purchase-recommendation': async (options = {}) => smokePurchaseRecommendation(options),
     'paper-download': async (options = {}) => smokePaperDownload(options),
     'paper-analysis': async (options = {}) => smokePaperAnalysis(options),
+    'paper-search': async (options = {}) => smokePaperSearch(options),
     'protocol-generation': async (options = {}) => smokeProtocolGeneration(options)
   };
 

@@ -162,10 +162,21 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
 
         try {
+          const requestContext = JSON.stringify({
+            provider: 'codex',
+            chatSessionId: 'chat-request-env',
+            traceRequestId: 'req-request-env'
+          });
           const result = await provider.requestCodexCliText({
             prompt: 'Return OK only.',
             cwd: workspaceDir,
-            enableWebSearch: true
+            enableWebSearch: true,
+            envOverrides: {
+              HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
+              ENANA_AGENT_MCP_REQUEST_CONTEXT: requestContext,
+              HIKARI_CODEX_REQUEST_CONTEXT: requestContext,
+              ENANA_CODEX_REQUEST_CONTEXT: requestContext
+            }
           });
           const captured = JSON.parse(fs.readFileSync(fakeCodex.capturePath, 'utf8'));
           const runtimeConfig = fs.readFileSync(path.join(captured.codexHome, 'config.toml'), 'utf8');
@@ -173,11 +184,18 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.equal(fs.realpathSync(captured.cwd), fs.realpathSync(workspaceDir));
           assert.equal(captured.args.includes('exec'), true);
           assert.equal(captured.args.includes('--search'), true);
+          assert.equal(captured.args.includes('non_prefixed_mcp_tool_names'), false);
           assert.equal(captured.args.includes('--output-last-message'), true);
           assert.match(captured.stdin, /Return OK only\./);
           assert.equal(fs.existsSync(path.join(workspaceDir, 'AGENTS.md')), true);
           assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
           assert.match(runtimeConfig, /mcp-contract\/stdio-server\.js/);
+          assert.match(runtimeConfig, /required = true/);
+          assert.match(runtimeConfig, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
+          assert.match(runtimeConfig, /default_tools_approval_mode = "approve"/);
+          assert.match(runtimeConfig, /HIKARI_AGENT_MCP_REQUEST_CONTEXT/);
+          assert.match(runtimeConfig, /chat-request-env/);
+          assert.match(runtimeConfig, /req-request-env/);
         } finally {
           if (typeof previousCodexCli === 'string') {
             process.env.ENANA_CODEX_CLI = previousCodexCli;

@@ -306,7 +306,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(mcpToolNames.includes('sub_agent'), false);
       assert.equal(mcpToolNames.includes('memory'), true);
       assert.equal(mcpToolNames.includes('ask_user'), true);
-      assert.equal(mcpToolNames.includes('tool_search'), false);
+      assert.equal(mcpToolNames.includes('unknown_direct_tool'), false);
       assert.equal(mcpToolNames.includes('tool_info'), false);
       assert.equal(mcpToolNames.includes('tool_call'), false);
       assert.equal(mcpToolNames.includes('resource_search'), false);
@@ -332,7 +332,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(paperDownloadDefinition.annotations.readOnlyHint, false);
       assert.equal(paperDownloadDefinition.annotations.openWorldHint, true);
 
-      const hiddenSearchResult = await gateway.callGatewayTool('tool_search', {
+      const hiddenSearchResult = await gateway.callGatewayTool('unknown_direct_tool', {
         query: 'download paper pdf'
       });
       assert.equal(hiddenSearchResult.ok, false);

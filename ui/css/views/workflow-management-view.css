@@ -42,6 +42,11 @@
   align-content: start;
 }
 
+#workflow-management-view .workflow-editor-main:has(> .workflow-list-panel:not([hidden])) {
+  grid-template-rows: minmax(0, 1fr);
+  align-content: stretch;
+}
+
 #workflow-management-view .workflow-editor-main > .workflow-list-panel:not([hidden]) {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -369,7 +374,6 @@
   display: grid;
   grid-template-rows: minmax(0, 1fr);
   align-content: stretch;
-  min-height: clamp(420px, 68vh, 860px);
   height: 100%;
   padding: 0;
   border: 0;
@@ -380,10 +384,9 @@
   position: relative;
   isolation: isolate;
   overflow: auto;
-  min-height: inherit;
   height: 100%;
-  border: 1px solid var(--line-soft);
-  background: var(--surface);
+  border: 0;
+  background: transparent;
 }
 
 .workflow-execution-table {

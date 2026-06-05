@@ -194,20 +194,16 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         assert.equal(execIndex > searchIndex, true);
       });
     });
-    test('codex cli provider can disable native tool search before exec', () => {
+    test('codex cli provider keeps Codex MCP tool names prefixed before exec', () => {
       withCodexHome({}, () => {
         const provider = loadProvider();
         const args = provider.buildCodexCliExecArgs({
-          outputFile: '/tmp/codex-last-message.txt',
-          disableToolSearch: true
+          outputFile: '/tmp/codex-last-message.txt'
         });
 
-        const disableIndex = args.indexOf('--disable');
-        const toolSearchIndex = args.indexOf('tool_search');
         const execIndex = args.indexOf('exec');
-        assert.equal(disableIndex >= 0, true);
-        assert.equal(toolSearchIndex, disableIndex + 1);
-        assert.equal(execIndex > toolSearchIndex, true);
+        assert.equal(args.includes('non_prefixed_mcp_tool_names'), false);
+        assert.equal(execIndex >= 0, true);
       });
     });
     test('codex cli provider builds noninteractive resume args for Codex sub-agent sessions', () => {
@@ -224,6 +220,7 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         assert.equal(args.includes('exec'), true);
         assert.equal(args.includes('resume'), true);
         assert.equal(args.includes('--json'), true);
+        assert.equal(args.includes('non_prefixed_mcp_tool_names'), false);
         assert.equal(args.includes('--color'), false);
         assert.equal(args.includes('codex-session-1'), true);
         assert.equal(args[args.length - 2], 'codex-session-1');
@@ -266,6 +263,11 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         assert.equal(fs.existsSync(path.join(runtimeHome, 'AGENTS.md')), true);
         const runtimeConfig = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
         assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
+        assert.match(runtimeConfig, /required = true/);
+        assert.match(runtimeConfig, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
+        assert.match(runtimeConfig, /default_tools_approval_mode = "approve"/);
+        assert.match(runtimeConfig, /\[mcp_servers\.hikari\.tools\.protocol_generation\]/);
+        assert.match(runtimeConfig, /approval_mode = "approve"/);
         assert.match(runtimeConfig, /HIKARI_AGENT_MCP/);
         assert.match(runtimeConfig, /HIKARI_CODEX_MCP/);
       } finally {
@@ -286,6 +288,7 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
     test('codex MCP config points packaged app paths at app.asar.unpacked', () => {
       const {
         resolveUnpackedAsarPath,
+        resolveHikariCodexMcpCommandPath,
         buildHikariCodexMcpConfigBlock
       } = require(path.join(
         __dirname,
@@ -315,7 +318,32 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
       assert.equal(unpackedServerPath.includes(`${path.sep}app.asar.unpacked${path.sep}`), true);
       assert.equal(unpackedServerPath.includes(`${path.sep}app.asar${path.sep}`), false);
       assert.equal(resolveUnpackedAsarPath('/tmp/Hikari/src/main.js'), '/tmp/Hikari/src/main.js');
-      assert.match(buildHikariCodexMcpConfigBlock({ workspace: '/tmp/Hikari' }), /\[mcp_servers\.hikari\]/);
+      const configBlock = buildHikariCodexMcpConfigBlock({ workspace: '/tmp/Hikari' });
+      assert.match(configBlock, /\[mcp_servers\.hikari\]/);
+      assert.match(configBlock, new RegExp(`command = ${JSON.stringify(process.execPath).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+      assert.match(configBlock, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
+      assert.match(configBlock, /default_tools_approval_mode = "approve"/);
+      assert.match(configBlock, /\[mcp_servers\.hikari\.tools\.protocol_generation\]/);
+      assert.doesNotMatch(configBlock, /ELECTRON_RUN_AS_NODE/);
+      const fakeNodeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-node-bin-'));
+      const packagedCommand = path.join(fakeNodeDir, 'node');
+      fs.writeFileSync(packagedCommand, '#!/bin/sh\n', 'utf8');
+      fs.chmodSync(packagedCommand, 0o755);
+      const packagedConfigBlock = buildHikariCodexMcpConfigBlock({
+        workspace: '/tmp/Hikari',
+        processExecPath: '/Applications/Hikari.app/Contents/MacOS/Hikari',
+        envPath: '',
+        commonNodePaths: [packagedCommand]
+      });
+      assert.equal(resolveHikariCodexMcpCommandPath({
+        processExecPath: '/Applications/Hikari.app/Contents/MacOS/Hikari',
+        envPath: '',
+        commonNodePaths: [packagedCommand]
+      }), packagedCommand);
+      assert.match(packagedConfigBlock, new RegExp(`command = ${JSON.stringify(packagedCommand).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+      assert.doesNotMatch(packagedConfigBlock, /ELECTRON_RUN_AS_NODE/);
+      assert.doesNotMatch(packagedConfigBlock, /command = "node"/);
+      fs.rmSync(fakeNodeDir, { recursive: true, force: true });
     });
     test('codex cli provider writes Hikari AGENTS.md guidance into the runtime workspace', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-agents-'));

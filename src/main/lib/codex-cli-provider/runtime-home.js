@@ -77,14 +77,15 @@ async function syncCodexCliRuntimePluginCache(sourceHome = '', runtimeHome = '')
   return results.some(Boolean);
 }
 
-async function writeRuntimeGuidance(runtimeHome = '', cwd = '') {
+async function writeRuntimeGuidance(runtimeHome = '', cwd = '', options = {}) {
   await ensureHikariCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
-    workspace: resolveWorkingDirectory(cwd)
+    workspace: resolveWorkingDirectory(cwd),
+    envOverrides: options.envOverrides
   });
   await ensureHikariCodexAgentsFile(runtimeHome).catch(() => '');
 }
 
-async function ensureCodexCliRuntimeHome(cwd = '') {
+async function ensureCodexCliRuntimeHome(cwd = '', options = {}) {
   const runtimeHome = resolveCodexCliRuntimeHomeDirectory(cwd);
   if (!runtimeHome) {
     return '';
@@ -96,13 +97,13 @@ async function ensureCodexCliRuntimeHome(cwd = '') {
 
   const sourceHome = getNativeCodexCliHomeDirectory();
   if (!sourceHome) {
-    await writeRuntimeGuidance(runtimeHome, cwd);
+    await writeRuntimeGuidance(runtimeHome, cwd, options);
     return runtimeHome;
   }
   const resolvedSource = path.resolve(sourceHome);
   const resolvedTarget = path.resolve(runtimeHome);
   if (resolvedSource === resolvedTarget || !(await pathExists(resolvedSource))) {
-    await writeRuntimeGuidance(runtimeHome, cwd);
+    await writeRuntimeGuidance(runtimeHome, cwd, options);
     return runtimeHome;
   }
 
@@ -113,15 +114,17 @@ async function ensureCodexCliRuntimeHome(cwd = '') {
     )
   )));
   await syncCodexCliRuntimePluginCache(resolvedSource, resolvedTarget);
-  await writeRuntimeGuidance(runtimeHome, cwd);
+  await writeRuntimeGuidance(runtimeHome, cwd, options);
   return runtimeHome;
 }
 
-async function buildCodexCommandEnv(cwd = '') {
+async function buildCodexCommandEnv(cwd = '', options = {}) {
   const env = {
     ...process.env
   };
-  const runtimeHome = await ensureCodexCliRuntimeHome(cwd).catch(() => '');
+  const runtimeHome = await ensureCodexCliRuntimeHome(cwd, {
+    envOverrides: options.envOverrides
+  }).catch(() => '');
   if (runtimeHome) {
     env.CODEX_HOME = runtimeHome;
   }

@@ -45,7 +45,6 @@ function buildCodexCliExecArgs({
   model = '',
   reasoningEffort = '',
   enableWebSearch = false,
-  disableToolSearch = false,
   streamJson = false
 } = {}) {
   const catalog = getCodexCliCatalog();
@@ -55,9 +54,6 @@ function buildCodexCliExecArgs({
   ];
   if (enableWebSearch === true) {
     args.push('--search');
-  }
-  if (disableToolSearch === true) {
-    args.push('--disable', 'tool_search');
   }
   args.push(
     'exec',
@@ -81,7 +77,6 @@ function buildCodexCliExecResumeArgs({
   model = '',
   reasoningEffort = '',
   enableWebSearch = false,
-  disableToolSearch = false,
   streamJson = false
 } = {}) {
   const catalog = getCodexCliCatalog();
@@ -91,9 +86,6 @@ function buildCodexCliExecResumeArgs({
   ];
   if (enableWebSearch === true) {
     args.push('--search');
-  }
-  if (disableToolSearch === true) {
-    args.push('--disable', 'tool_search');
   }
   args.push(
     'exec',

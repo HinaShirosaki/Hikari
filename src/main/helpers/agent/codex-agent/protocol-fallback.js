@@ -102,7 +102,12 @@ function findProtocolHeadingLineIndex(lines = []) {
 
 function lineHasProtocolGenerationUnavailableWarning(rawLine = '') {
   const line = stripInlineMarkdown(rawLine).toLowerCase();
-  return /\bprotocol_generation\b/.test(line)
+  const rawLower = String(rawLine || '').toLowerCase();
+  const mentionsProtocolGeneration = line.includes('protocol_generation')
+    || line.includes('protocol-generation')
+    || rawLower.includes('protocol_generation')
+    || rawLower.includes('protocol-generation');
+  return mentionsProtocolGeneration
     && (
       /not visible/.test(line)
       || /not exposed/.test(line)

@@ -290,7 +290,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         },
         requestCodexAgentText: async () => ({
           text: [
-            'I read the transformed paper markdown. I could not queue this into Hikari Protocols because the direct Hikari MCP tool `protocol_generation` is not visible in this session.',
+            'I generated this as a standard paper-derived protocol. The Hikari protocol-generation MCP tool is not exposed in this Codex session, so I could not queue it inside Hikari for approval/save.',
             '',
             '**Protocol: TEVp-ZF5.3 Fusion Protein Expression and Validation**',
             '',
@@ -360,6 +360,8 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       assert.equal(toolCalls[0].toolId, 'protocol-generation');
       assert.equal(toolCalls[0].args.protocol.name, 'TEVp-ZF5.3 Fusion Protein Expression and Validation');
       assert.doesNotMatch(toolCalls[0].args.protocol.purpose, /protocol_generation/i);
+      assert.doesNotMatch(toolCalls[0].args.protocol.purpose, /protocol-generation/i);
+      assert.doesNotMatch(toolCalls[0].args.protocol.purpose, /not exposed/i);
       assert.doesNotMatch(toolCalls[0].args.protocol.purpose, /not visible/i);
       assert.deepEqual(toolCalls[0].args.protocol.materials, [
         'pET28a-TEVp-ZF5.3 plasmid',
@@ -538,6 +540,41 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         } else {
           delete process.env.HIKARI_CODEX_MCP_TOKEN;
         }
+        fs.rmSync(workspaceDir, { recursive: true, force: true });
+      }
+    });
+    test('codex agent MCP config carries per-request context into the stdio server env', async () => {
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-mcp-request-env-'));
+      try {
+        const provider = loadProvider();
+        const requestContext = JSON.stringify({
+          provider: 'codex',
+          model: 'gpt-5.5',
+          cwd: workspaceDir,
+          chatSessionId: 'chat-mq0exc0j-palwrhxm',
+          traceRequestId: '1780633035654-8d479f65'
+        });
+        const runtimeHome = await provider.ensureCodexCliRuntimeHome(workspaceDir, {
+          envOverrides: {
+            HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
+            ENANA_AGENT_MCP_REQUEST_CONTEXT: requestContext,
+            HIKARI_CODEX_REQUEST_CONTEXT: requestContext,
+            ENANA_CODEX_REQUEST_CONTEXT: requestContext
+          }
+        });
+        const configText = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
+        assert.match(configText, /\[mcp_servers\.hikari\]/);
+        assert.match(configText, /required = true/);
+        assert.match(configText, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
+        assert.match(configText, /default_tools_approval_mode = "approve"/);
+        assert.match(configText, /\[mcp_servers\.hikari\.tools\.protocol_generation\]/);
+        assert.match(configText, /HIKARI_AGENT_MCP_REQUEST_CONTEXT/);
+        assert.match(configText, /ENANA_AGENT_MCP_REQUEST_CONTEXT/);
+        assert.match(configText, /HIKARI_CODEX_REQUEST_CONTEXT/);
+        assert.match(configText, /ENANA_CODEX_REQUEST_CONTEXT/);
+        assert.match(configText, /chat-mq0exc0j-palwrhxm/);
+        assert.match(configText, /1780633035654-8d479f65/);
+      } finally {
         fs.rmSync(workspaceDir, { recursive: true, force: true });
       }
     });

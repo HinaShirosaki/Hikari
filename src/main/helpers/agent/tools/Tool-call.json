@@ -967,6 +967,42 @@
       }
     }
   },
+  "paper-search": {
+    "description": "Use this tool to look up information across the local paper wiki. Each paper has been rewritten into a structured Markdown file with sections like Background, Methods, Key results, Limitations, etc., chunked and indexed with FTS5. Provide a compact keyword `query` (e.g. `MAPK inhibitor resistance`). Optionally pass `paper_id` to restrict to one paper, or `scope`/`container` (`scope`=`project`|`journal-club`, `container`=project or club name) to restrict to one folder. Returns top section matches with title, DOI, section heading, page citation, and a snippet — prefer this over re-reading the full PDF when answering a focused question.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["query"],
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 400
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "paper_id": {
+          "type": "string",
+          "maxLength": 180
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["project", "journal-club", "global"]
+        },
+        "container": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "storage_path": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      }
+    }
+  },
   "protocol-generation": {
     "description": "Use this tool only when the agent already has a complete protocol JSON object and needs to normalize it into the app's import-ready protocol format. The tool does not call an LLM or synthesize method content. Set save to true in the same call when the user wants the protocol added to the Hikari Protocols module.",
     "input_schema": {

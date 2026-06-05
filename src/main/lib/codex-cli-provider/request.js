@@ -45,7 +45,6 @@ async function requestCodexCliText({
   stream = false,
   onStream = null,
   resumeSessionId = '',
-  disableToolSearch = false,
   returnMetadata = false
 }) {
   throwIfAgentRequestAborted('Agent request stopped before starting Codex prompt.');
@@ -88,7 +87,6 @@ async function requestCodexCliText({
     model,
     reasoningEffort,
     enableWebSearch,
-    disableToolSearch,
     collectJsonEvents
   });
 
@@ -147,7 +145,9 @@ async function prepareCodexRequest({
   });
   const promptWithAttachments = buildCodexPromptWithStagedAttachments(cleanPrompt, stagedAttachments);
   const outputFile = await createCodexOutputFilePath(cwd);
-  const baseEnv = await buildCodexCommandEnv(cwd);
+  const baseEnv = await buildCodexCommandEnv(cwd, {
+    envOverrides
+  });
   return {
     env: {
       ...baseEnv,
@@ -164,7 +164,6 @@ function buildRequestArgs({
   model,
   reasoningEffort,
   enableWebSearch,
-  disableToolSearch,
   collectJsonEvents
 }) {
   return cleanResumeSessionId
@@ -174,7 +173,6 @@ function buildRequestArgs({
       model,
       reasoningEffort,
       enableWebSearch,
-      disableToolSearch,
       streamJson: collectJsonEvents
     })
     : buildCodexCliExecArgs({
@@ -182,7 +180,6 @@ function buildRequestArgs({
       model,
       reasoningEffort,
       enableWebSearch,
-      disableToolSearch,
       streamJson: collectJsonEvents
     });
 }

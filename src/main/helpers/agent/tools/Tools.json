@@ -56,6 +56,10 @@
     "description": "Summarize a paper briefly, extract protocol-relevant methods, and optionally draft a generated protocol from the paper."
   },
   {
+    "name": "paper-search",
+    "description": "Full-text search across the LLM-facing paper wiki (per-paper `paper.md` files in the local KnowledgeBase). Returns ranked section matches with title, DOI, section heading, page citation, and a snippet. Scope the search to a single paper, a project, or a journal club when relevant."
+  },
+  {
     "name": "protocol-generation",
     "description": "Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call, and save it into the Hikari Protocols module when save is true."
   }

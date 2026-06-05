@@ -503,6 +503,9 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
   const pdfTextExtractionRuntime = deps.pdfTextExtractionRuntime && typeof deps.pdfTextExtractionRuntime === 'object'
     ? deps.pdfTextExtractionRuntime
     : null;
+  const paperWikiChunkerRuntime = deps.paperWikiChunkerRuntime && typeof deps.paperWikiChunkerRuntime === 'object'
+    ? deps.paperWikiChunkerRuntime
+    : null;
 
   async function reconcileFiguresDir({ provisionalDir, canonicalDir, paperFolderPath, figures } = {}) {
     const descriptors = Array.isArray(figures) ? figures : [];
@@ -951,6 +954,17 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     };
     await writeJsonFile(paths.meta_path, meta);
 
+    let chunkResult = null;
+    if (wikiStatus === 'ready' && paperWikiChunkerRuntime && typeof paperWikiChunkerRuntime.chunkPaperMarkdown === 'function') {
+      chunkResult = await paperWikiChunkerRuntime.chunkPaperMarkdown({
+        storage_path: resolvedStoragePath,
+        paper_id: indexResult.paper_id
+      }).catch((error) => ({
+        ok: false,
+        error: cleanText(error?.message || error, 1200) || 'Wiki chunking failed.'
+      }));
+    }
+
     return {
       ok: wikiStatus === 'ready',
       status: wikiStatus,
@@ -976,6 +990,9 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       figures: meta.figures,
       extraction_status: extractionStatus,
       wiki_generation_method: markdownResult?.method || '',
+      wiki_chunk_status: chunkResult?.ok === true ? 'ready' : (chunkResult ? 'failed' : 'skipped'),
+      wiki_chunk_count: Number.isFinite(chunkResult?.chunk_count) ? chunkResult.chunk_count : 0,
+      wiki_chunk_error: cleanText(chunkResult?.error, 1200),
       error: cleanText(markdownResult?.error || extraction?.error, 1200),
       warning: cleanText(markdownResult?.warning, 1200),
       summary: wikiStatus === 'ready'
@@ -1111,5 +1128,9 @@ module.exports = {
   buildLegacyKnowledgeDatabasePaths,
   buildKnowledgePaperSlug,
   normalizeDoi,
-  createPaperKnowledgeDatabaseRuntime
+  createPaperKnowledgeDatabaseRuntime,
+  openKnowledgeDatabase,
+  persistKnowledgeDatabase,
+  queryRows,
+  runStatement
 };

@@ -63,6 +63,8 @@ const { createPaperAnalysisRuntime } = require('../agent/tools/agent-paper-analy
 const { createPaperContextLoaderRuntime } = require('../agent/tools/agent-paper-context-loader.js');
 const { createPaperDownloadRuntime } = require('../agent/tools/agent-paper-download.js');
 const { createPaperKnowledgeDatabaseRuntime } = require('../agent/tools/agent-paper-knowledge-database.js');
+const { createPaperWikiChunkerRuntime } = require('../agent/tools/agent-paper-wiki-chunker.js');
+const { createPaperWikiSearchRuntime } = require('../agent/tools/agent-paper-wiki-search.js');
 const { createPdfTextExtractionRuntime } = require('../agent/tools/agent-pdf-text-extraction.js');
 const { createProtocolMatchingRuntime } = require('../agent/tools/agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('../agent/tools/agent-notebook-generation.js');
@@ -679,9 +681,12 @@ function createMainAgentServices(deps = {}) {
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null,
     pdfTextExtractionRuntime
   });
+  const paperWikiChunkerRuntime = createPaperWikiChunkerRuntime({});
+  const paperWikiSearchRuntime = createPaperWikiSearchRuntime();
   const paperKnowledgeDatabaseRuntime = createPaperKnowledgeDatabaseRuntime({
     ...sharedAgentLlmDeps,
-    pdfTextExtractionRuntime
+    pdfTextExtractionRuntime,
+    paperWikiChunkerRuntime
   });
   const webSearchRuntime = createWebSearchRuntime({
     ...sharedAgentLlmDeps
@@ -736,6 +741,7 @@ function createMainAgentServices(deps = {}) {
     memoryRuntime,
     paperDownloadRuntime,
     paperAnalysisRuntime,
+    paperWikiSearchRuntime,
     protocolGenerationRuntime,
     protocolSaveRuntime,
     getAgentPythonSandboxRoot,

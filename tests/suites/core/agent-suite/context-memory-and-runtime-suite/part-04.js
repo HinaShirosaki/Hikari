@@ -477,6 +477,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart04(contex
       assert.equal(result.items.some((item) => item.tool_name === 'notebook-draft' && /Viability Assay/i.test(String(item.preview || ''))), true);
       assert.equal(result.items.some((item) => item.tool_name === 'python-sandbox' && /out\.json/.test(String(item.preview || ''))), true);
       assert.equal(result.items.some((item) => item.tool_name === 'paper-download' && /\.pdf/i.test(String(item.preview || ''))), true);
+      assert.equal(result.items.some((item) => item.tool_name === 'paper-search' && /Methods/i.test(String(item.preview || ''))), true);
       assert.match(String(result.summary || ''), /tools passed/i);
     });
   }
