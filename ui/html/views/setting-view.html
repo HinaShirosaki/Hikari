@@ -26,6 +26,10 @@
               <span>Inventory Locations</span>
               <small>Shared location vocabulary</small>
             </button>
+            <button type="button" class="settings-nav-item" data-settings-target="preferred-journal">
+              <span>Preferred Journal</span>
+              <small>Default journal name or URL</small>
+            </button>
             <button type="button" class="settings-nav-item" data-settings-target="llm">
               <span>LLM Model &amp; Access</span>
               <small>Provider, model, endpoint</small>
@@ -137,6 +141,23 @@
                 </div>
                 <div id="setting-location-list" class="stack-form"></div>
               </div>
+            </section>
+
+            <section class="settings-section" data-settings-panel="preferred-journal" hidden>
+              <div class="settings-section-head">
+                <h3>Preferred Journal</h3>
+                <p class="small-note">Set the journal you most often submit to or browse. Enter a journal name (e.g. <em>Nature Chemistry</em>) or a URL (e.g. <em>https://www.nature.com/nchem/</em>).</p>
+              </div>
+              <form id="preferred-journal-form" class="stack-form">
+                <label>
+                  Journal Name or URL
+                  <input id="setting-preferred-journal" placeholder="Journal name or https://..." />
+                </label>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Save Preferred Journal</button>
+                  <button type="button" id="clear-preferred-journal-btn" class="ghost-btn">Clear</button>
+                </div>
+              </form>
             </section>
 
             <section class="settings-section" data-settings-panel="llm" hidden>

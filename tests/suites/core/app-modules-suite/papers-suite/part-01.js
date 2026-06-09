@@ -208,14 +208,14 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     settings: {
       personalInfo: {
         name: 'Alice Scientist',
-        enanaEmail: 'alice@enana.test'
+        hikariEmail: 'alice@hikari.test'
       },
       llm: {}
     }
   };
   const window = {
     alert() {},
-    enanaApi: {},
+    hikariApi: {},
     prompt() {
       return promptQueue.length ? promptQueue.shift() : '';
     },
@@ -423,66 +423,6 @@ test('papers module renames a journal club folder from the library context menu'
   assert.equal(harness.state.journalClubs[0].name, 'Weekly Biochem JC');
   assert.match(journalClubList.innerHTML, /Weekly Biochem JC/);
   assert.equal(/data-folder-rename-input/.test(journalClubList.innerHTML), false);
-});
-test('papers module creates a pinned page comment after placement and save', async () => {
-  const harness = buildPapersManagementHarness();
-  const addBtn = harness.document.getElementById('paper-comment-add-btn');
-  const saveBtn = harness.document.getElementById('paper-comment-save-btn');
-  const commentInput = harness.document.getElementById('paper-comment-text');
-  const commentStatus = harness.document.getElementById('paper-comment-status');
-
-  await openPaperInHarness(harness);
-
-  trigger(addBtn, 'click');
-  assert.equal(harness.viewerFactory.controller.placementMode, true);
-  assert.match(commentStatus.textContent, /place a comment pin/i);
-
-  harness.viewerFactory.emitPlacement({
-    pageNumber: 1,
-    anchorX: 0.25,
-    anchorY: 0.75
-  });
-  commentInput.value = 'Important result near panel C.';
-  trigger(commentInput, 'input');
-  trigger(saveBtn, 'click');
-
-  assert.equal(harness.state.papers[0].comments.length, 1);
-  assert.equal(harness.state.papers[0].comments[0].pageNumber, 1);
-  assert.equal(harness.state.papers[0].comments[0].anchorX, 0.25);
-  assert.equal(harness.state.papers[0].comments[0].anchorY, 0.75);
-  assert.equal(harness.state.papers[0].comments[0].text, 'Important result near panel C.');
-  assert.equal(harness.state.papers[0].comments[0].author, 'Alice Scientist');
-  assert.equal(harness.viewerFactory.controller.comments.length, 1);
-  assert.equal(harness.persistCalls >= 1, true);
-});
-test('papers module edits an existing pinned page comment from pin selection', async () => {
-  const existingComment = {
-    id: 'comment-1',
-    pageNumber: 1,
-    anchorX: 0.15,
-    anchorY: 0.45,
-    text: 'Original note.',
-    author: 'Alice Scientist',
-    createdAt: '2026-03-22T17:00:00.000Z',
-    updatedAt: '2026-03-22T17:00:00.000Z'
-  };
-  const harness = buildPapersManagementHarness({
-    comments: [existingComment]
-  });
-  const commentInput = harness.document.getElementById('paper-comment-text');
-  const saveBtn = harness.document.getElementById('paper-comment-save-btn');
-
-  await openPaperInHarness(harness);
-  harness.viewerFactory.selectPin(existingComment);
-
-  assert.equal(commentInput.value, 'Original note.');
-  commentInput.value = 'Updated note from reviewer.';
-  trigger(commentInput, 'input');
-  trigger(saveBtn, 'click');
-
-  assert.equal(harness.state.papers[0].comments.length, 1);
-  assert.equal(harness.state.papers[0].comments[0].text, 'Updated note from reviewer.');
-  assert.equal(harness.viewerFactory.controller.selectedCommentId, 'comment-1');
 });
   }
 };

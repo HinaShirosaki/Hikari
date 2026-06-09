@@ -94,19 +94,19 @@ function buildDirectLlmSettings() {
   };
 }
 async function requestLlmChemicalHeaderMapping(headers, rows, localInference) {
-  if (!window.enanaApi?.runDirectLlmPrompt && !window.enanaApi?.runCodexLlmPrompt) {
+  if (!window.hikariApi?.runDirectLlmPrompt && !window.hikariApi?.runCodexLlmPrompt) {
     return null;
   }
   const prompt = buildLlmHeaderPrompt(headers, rows, localInference);
-  const result = window.enanaApi?.runDirectLlmPrompt
-    ? await window.enanaApi.runDirectLlmPrompt({
+  const result = window.hikariApi?.runDirectLlmPrompt
+    ? await window.hikariApi.runDirectLlmPrompt({
       moduleId: 'inventory',
       task: 'chemical-header-mapping',
       prompt,
       expectJson: true,
       llm: buildDirectLlmSettings()
     })
-    : await window.enanaApi.runCodexLlmPrompt({
+    : await window.hikariApi.runCodexLlmPrompt({
       model: String(state.settings?.llm?.model || '').trim(),
       reasoningEffort: String(state.settings?.llm?.reasoningEffort || '').trim(),
       prompt
@@ -163,7 +163,7 @@ async function inferChemicalImportHeaders(headers, rows) {
   const needsLlm = inference.unmappedHeaders.length > 0
     || inference.fieldToColumn.name == null
     || inference.fieldToColumn.location == null;
-  if (!needsLlm || (!window.enanaApi?.runDirectLlmPrompt && !window.enanaApi?.runCodexLlmPrompt)) {
+  if (!needsLlm || (!window.hikariApi?.runDirectLlmPrompt && !window.hikariApi?.runCodexLlmPrompt)) {
     return inference;
   }
   try {

@@ -63,7 +63,7 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
   const upsertCalls = [];
   const document = createMockDocument(ids);
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryList: async () => ({ ok: true, entries: [] }),
       sequenceLibraryUpsert: async (payload) => {
         upsertCalls.push(payload);
@@ -87,7 +87,7 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;

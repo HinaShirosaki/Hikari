@@ -109,7 +109,7 @@ export function getCommentsForPage(paper, pageNumber) {
 export function getCommentAuthorLabel(state) {
   return String(
     state.settings?.personalInfo?.name
-    || state.settings?.personalInfo?.enanaEmail
+    || state.settings?.personalInfo?.hikariEmail
     || 'Local user'
   ).trim() || 'Local user';
 }

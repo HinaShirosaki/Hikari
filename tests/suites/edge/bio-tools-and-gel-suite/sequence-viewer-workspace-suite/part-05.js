@@ -77,7 +77,7 @@ test('[EDGE] sequence-viewer protein builder only lists recognized backbone sele
   const sequenceLibraryListCalls = [];
   const document = createMockDocument(ids);
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryListBackbones: async () => ({
         ok: true,
         results: []
@@ -124,7 +124,7 @@ ORIGIN
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;
@@ -249,7 +249,7 @@ test('[EDGE] sequence-viewer protein builder does not hydrate saved library entr
   const sequenceLibraryListCalls = [];
   const document = createMockDocument(ids);
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryListBackbones: async () => ({
         ok: true,
         results: []
@@ -302,7 +302,7 @@ ORIGIN
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;

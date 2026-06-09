@@ -61,11 +61,11 @@ Once Electron loads `index.html`:
 2. The body finishes parsing. All view `<section>`s are present in the DOM, but only `home-view` has `class="view is-active"` — everything else is hidden by `core.css` (`.view { display: none } .view.is-active { display: block }`).
 3. `<script type="module" src="src/renderer/renderer.js">` runs at end of body. It calls `startRendererApp()`.
 4. `startRendererApp()` delegates to `startHikariCore()` ([src/renderer/core/start-hikari-core.js](../../src/renderer/core/start-hikari-core.js)):
-   - `loadState()` from localStorage (key `enana_state_v1`).
+   - `loadState()` from localStorage (key `hikari_state_v1`).
    - Creates the **module registry** (a `Map`-based bus) and the **renderer services** (cross-module fan-out helpers).
    - Calls `createRendererModuleRuntime({...})` ([src/renderer/module-runtime.js](../../src/renderer/module-runtime.js)) which initializes manifest-declared modules from [src/renderer/module-manifests/](../../src/renderer/module-manifests/), registers each module with the registry, and builds route/boot render dispatch from manifest metadata.
    - Creates the **navigation shell**, which renders the dock from `APP_REGISTRY` and wires `showView()`.
-   - Hydrates extra state from `window.enanaApi` if a storage path is set, runs `renderAll()`, then activates the startup view.
+   - Hydrates extra state from `window.hikariApi` if a storage path is set, runs `renderAll()`, then activates the startup view.
    - Dispatches `hikari:app-ready`. The bootstrap cover fades out.
 
 ## What "module" means here
@@ -82,7 +82,7 @@ A module owns the DOM inside its `<section>`. It must not reach into another mod
 - the **module registry** (`registry.get('protocol').renderList?.()`),
 - the **services layer** (`rendererServices.notebook.handleNotebookEntriesChanged()`),
 - callbacks injected at init time (`onSamplesChanged`, `onOpenSampleRecorder`, …),
-- the `window.enanaApi` IPC bridge (file system, scripts, agent calls).
+- the `window.hikariApi` IPC bridge (file system, scripts, agent calls).
 
 Details on each: [03-module-contract.md](./03-module-contract.md).
 
@@ -101,7 +101,7 @@ You write only the markup specific to your view. The next page covers exactly wh
 
 ## State and persistence
 
-There is one mutable state object created by `loadState()` and passed to every module by reference. Mutations happen in-place; persistence is explicit via the `persist()` callback (writes localStorage and, if `state.settings.storagePath` is set, autosaves to disk through `window.enanaApi.autoSaveDataFile`).
+There is one mutable state object created by `loadState()` and passed to every module by reference. Mutations happen in-place; persistence is explicit via the `persist()` callback (writes localStorage and, if `state.settings.storagePath` is set, autosaves to disk through `window.hikariApi.autoSaveDataFile`).
 
 `defaultState` in [src/renderer/modules/app-state.js](../../src/renderer/modules/app-state.js) defines every top-level key. If your module needs a new top-level field, add it there with a sensible default — every consumer derefs `state.<field>` directly with `?.` or `||` fallbacks, so missing keys leak silently.
 

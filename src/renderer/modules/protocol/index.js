@@ -25,7 +25,7 @@ export function initProtocolManagement({
 }) {
   const documentRef = __globals.document || globalThis.document;
   const windowObject = __globals.windowObject || globalThis.window || null;
-  const api = __globals.enanaApi || windowObject?.enanaApi || globalThis.enanaApi || null;
+  const api = __globals.hikariApi || windowObject?.hikariApi || globalThis.hikariApi || null;
   const navigatorRef = __globals.navigator || globalThis.navigator || null;
   const FileReaderClass = __globals.FileReader || globalThis.FileReader || null;
   const TextEncoderClass = __globals.TextEncoder || globalThis.TextEncoder || null;

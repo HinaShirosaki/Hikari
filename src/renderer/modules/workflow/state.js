@@ -24,10 +24,10 @@ export function createWorkflowRuntime() {
 
 export function resolveDefaultAssigneeId(state = {}) {
   const personal = state.settings?.personalInfo || {};
-  const personalEmail = String(personal.enanaEmail || '').trim().toLowerCase();
+  const personalEmail = String(personal.hikariEmail || '').trim().toLowerCase();
   if (personalEmail) {
     const byEmail = (state.members || []).find(
-      (member) => String(member.enanaEmail || '').trim().toLowerCase() === personalEmail
+      (member) => String(member.hikariEmail || '').trim().toLowerCase() === personalEmail
     );
     if (byEmail) {
       return String(byEmail.id || '').trim();

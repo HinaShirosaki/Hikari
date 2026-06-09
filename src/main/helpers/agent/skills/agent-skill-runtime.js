@@ -244,7 +244,7 @@ function createAgentSkillRuntime(deps = {}) {
     const workspace = resolveWorkspaceDir(workspaceDir);
     return [
       ...extraSkillDirs.map((item) => cleanText(item, 1200)).filter(Boolean),
-      path.join(homeDir, '.enana', 'skills'),
+      path.join(homeDir, '.hikari', 'skills'),
       path.join(homeDir, '.agents', 'skills'),
       path.join(workspace, '.agents', 'skills'),
       path.join(workspace, 'skills')

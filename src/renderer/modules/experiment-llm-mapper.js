@@ -1,4 +1,4 @@
-// Converts Enana experiment records into a compact JSON payload tailored for LLM context.
+// Converts Hikari experiment records into a compact JSON payload tailored for LLM context.
 // The mapper intentionally caps large arrays to keep prompts small and predictable.
 
 function asArray(value) {
@@ -233,7 +233,7 @@ export function mapExperimentDataToLlmJson(state, projectId = '') {
     .map(mapGelRun);
 
   return {
-    schema_name: 'enana_experiment_json',
+    schema_name: 'hikari_experiment_json',
     schema_version: '1.0',
     generated_utc: new Date().toISOString(),
     notebook_runs: notebookRuns,

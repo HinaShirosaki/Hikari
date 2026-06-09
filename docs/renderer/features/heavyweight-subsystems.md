@@ -138,7 +138,7 @@ This is the largest renderer subsystem by a wide margin. Read it as several coop
 - align sequences
 - build proteins
 
-`modules/sequence-viewer.js` is also a wrapper layer. It injects the `window.enanaApi` bridge and re-exports many pure helpers for parsing, rendering, ORF generation, restriction analysis, and alignment.
+`modules/sequence-viewer.js` is also a wrapper layer. It injects the `window.hikariApi` bridge and re-exports many pure helpers for parsing, rendering, ORF generation, restriction analysis, and alignment.
 
 ## `workflow/`
 

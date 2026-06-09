@@ -19,8 +19,7 @@ function normalizeCitation(cleanText, citation = {}) {
 function normalizeCodexToolName(rawToolName = '', { cleanText = defaultCleanText } = {}) {
   return cleanText(rawToolName, 180).trim()
     .replace(/^mcp__[^_]+__/, '')
-    .replace(/^hikari__/, '')
-    .replace(/^enana__/, '');
+    .replace(/^hikari__/, '');
 }
 
 function slugText(cleanText, value = '', fallback = 'option') {

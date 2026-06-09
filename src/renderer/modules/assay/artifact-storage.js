@@ -57,10 +57,10 @@ export function createAssayArtifactStorage({
   async function persistAssayImageArtifact({ targetFolder, fileName, dataUrl }) {
     const storageRoot = getStorageRoot();
     const dataBase64 = encodeDataUrlPayload(dataUrl);
-    if (!storageRoot || !targetFolder || !dataBase64 || !window.enanaApi?.storeImportedFile) {
+    if (!storageRoot || !targetFolder || !dataBase64 || !window.hikariApi?.storeImportedFile) {
       return null;
     }
-    const result = await window.enanaApi.storeImportedFile({
+    const result = await window.hikariApi.storeImportedFile({
       storagePath: storageRoot,
       targetFolder,
       fileName,
@@ -73,7 +73,7 @@ export function createAssayArtifactStorage({
     const assay = getAssayById(assayId);
     const storageRoot = getStorageRoot();
     const targetFolder = buildAssayArtifactFolder(assay);
-    if (!assay || !storageRoot || !targetFolder || !window.enanaApi?.writeJsonFile) {
+    if (!assay || !storageRoot || !targetFolder || !window.hikariApi?.writeJsonFile) {
       return;
     }
 
@@ -117,13 +117,13 @@ export function createAssayArtifactStorage({
     let chartResult = null;
     try {
       [definitionResult, analysisResult, chartResult] = await Promise.all([
-        window.enanaApi.writeJsonFile({
+        window.hikariApi.writeJsonFile({
           storagePath: storageRoot,
           targetFolder,
           fileName: 'assay-definition.json',
           data: definitionPayload
         }),
-        window.enanaApi.writeJsonFile({
+        window.hikariApi.writeJsonFile({
           storagePath: storageRoot,
           targetFolder,
           fileName: 'analysis-result.json',
@@ -198,11 +198,11 @@ export function createAssayArtifactStorage({
     if (!dataBase64) {
       throw new Error('Result attachment file data is missing.');
     }
-    if (!window.enanaApi?.storeImportedFile) {
+    if (!window.hikariApi?.storeImportedFile) {
       throw new Error('Result attachment storage is unavailable.');
     }
 
-    const stored = await window.enanaApi.storeImportedFile({
+    const stored = await window.hikariApi.storeImportedFile({
       storagePath: storageRoot,
       targetFolder,
       fileName,

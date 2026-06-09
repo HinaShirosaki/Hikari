@@ -19,6 +19,10 @@ const WORKFLOW_METADATA_FILE_NAME = 'workflow.json';
 const RELATED_PAPERS_FILE_NAME = 'related-papers.json';
 const NOTEBOOK_PAGE_FILE_NAME = 'page.json';
 
+function isPermissionDeniedError(error) {
+  return error?.code === 'EPERM' || error?.code === 'EACCES';
+}
+
 function sanitizeFolderName(value, fallback = 'item') {
   const cleaned = String(value || '')
     .trim()
@@ -707,7 +711,16 @@ async function readWorkflowStatusIndex(sqlitePath) {
       return {
         exists: false,
         templateRows: [],
-        workflowRows: []
+        workflowRows: [],
+        warnings: []
+      };
+    }
+    if (isPermissionDeniedError(error)) {
+      return {
+        exists: false,
+        templateRows: [],
+        workflowRows: [],
+        warnings: [`Permission denied reading workflow status index ${sqlitePath}: ${String(error?.message || error)}`]
       };
     }
     throw error;
@@ -780,7 +793,7 @@ async function hydrateWorkflowRootFromStoragePath({
       notebookEntries: [],
       papers: [],
       paperExperimentLinks: [],
-      warnings: []
+      warnings: asArray(sqlData.warnings)
     };
   }
 

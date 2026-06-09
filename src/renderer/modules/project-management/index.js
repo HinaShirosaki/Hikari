@@ -1,4 +1,5 @@
-import { summarizeNotebookResultTable } from '../notebook-result-table.js';
+import { summarizeNotebookResultTables } from '../notebook-result-table.js';
+import { createProjectDashboardRenderer } from './dashboard-renderer.js';
 
 const CONTRIBUTION_WEEK_COUNT = 22;
 
@@ -12,6 +13,7 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
   const projectDashboard = document.getElementById('project-dashboard');
   const projectNotebookFilter = getOptionalElementById('project-notebook-filter');
   const projectNotebookPages = getOptionalElementById('project-notebook-pages');
+  const dashboardRenderer = createProjectDashboardRenderer({ state, safeText });
 
   let selectedProjectId = '';
 
@@ -117,14 +119,14 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
 
   async function ensureProjectDirectory(projectName) {
     const rootPath = cleanText(state.settings?.storagePath);
-    if (!rootPath || !window.enanaApi?.ensureStorageDirectory) {
+    if (!rootPath || !window.hikariApi?.ensureStorageDirectory) {
       return;
     }
 
     const safeProjectName = sanitizeFolderName(projectName) || 'Untitled_Project';
     const projectFolder = `${rootPath}/Project/${safeProjectName}`;
     try {
-      const result = await window.enanaApi.ensureStorageDirectory(projectFolder);
+      const result = await window.hikariApi.ensureStorageDirectory(projectFolder);
       if (result?.ok !== true) {
         console.warn('Failed to create project directory:', result?.error || projectFolder);
       }
@@ -416,11 +418,14 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
     });
   }
 
-  function resultTableHasContent(table) {
-    const rows = asArray(table?.rows);
-    return rows.some((row) => Object.entries(row || {}).some(([key, value]) => (
-      key !== 'id' && cleanText(value)
-    )));
+  function resultTableHasContent(entry) {
+    const tables = asArray(entry?.resultTables).length ? asArray(entry.resultTables) : [entry?.resultTable].filter(Boolean);
+    return tables.some((table) => {
+      const rows = asArray(table?.rows);
+      return rows.some((row) => Object.entries(row || {}).some(([key, value]) => (
+        key !== 'id' && cleanText(value)
+      )));
+    });
   }
 
   function collectProjectContributionActivity({ project, notebookEntries, workflows, assays, gelAnalyses, papers, samples }) {
@@ -443,7 +448,7 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
         addContributionActivity(dayMap, entryTimestamp, 'dataUploads', entry.resultFiles.length);
       }
 
-      if (cleanText(entry?.result) || resultTableHasContent(entry?.resultTable) || asArray(entry?.selectionInsights).length) {
+      if (cleanText(entry?.result) || resultTableHasContent(entry) || asArray(entry?.selectionInsights).length) {
         addContributionActivity(dayMap, entryTimestamp, 'analysisNotes');
       }
     });
@@ -721,7 +726,7 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
         <p><strong>State:</strong> ${safeText(notebookStateLabel(entry))}</p>
         <p><strong>Updated:</strong> ${safeText(formatTimestamp(entry.updatedAt))}</p>
         <p><strong>Result:</strong> ${safeText(entry.result || '-')}</p>
-        <p><strong>Result Table:</strong> ${safeText(summarizeNotebookResultTable(entry.resultTable) || '-')}</p>
+        <p><strong>Result Table:</strong> ${safeText(summarizeNotebookResultTables(entry.resultTables, entry.resultTable) || '-')}</p>
         <p><strong>Files:</strong> ${safeText(asArray(entry.resultFiles).join(', ') || '-')}</p>
         <p><strong>Linked Assays:</strong> ${safeText(formatLinkedAssays(entry.id))}</p>
         <p><strong>Linked Gels:</strong> ${safeText(formatLinkedGels(entry.id))}</p>
@@ -793,7 +798,7 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
     }
 
     projectList.innerHTML = projects.map((project) => {
-      const summary = getProjectSummary(project);
+      const summary = dashboardRenderer.getProjectSummary(project);
       const isActive = project.id === selectedProjectId;
       const meta = `${summary.samples.length} samples | ${summary.papers.length} papers`;
       return `
@@ -829,35 +834,13 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
   }
 
   function renderDashboard() {
-    const project = getActiveProject();
     if (!projectDashboard) {
       return;
     }
-    if (!project) {
-      projectDashboard.innerHTML = `
-        <section class="panel project-empty-panel">
-          <h3>No Project Selected</h3>
-          <p class="small-note">Create a project in the left rail to start tracking project-specific activity.</p>
-        </section>
-      `;
-      return;
-    }
-
-    const summary = getProjectSummary(project);
-    projectDashboard.innerHTML = `
-      <section class="panel project-dashboard-hero">
-        <div class="project-dashboard-title">
-          <span class="project-eyebrow">Project Activity</span>
-          <h2>Dashboard</h2>
-          <p class="small-note">${safeText(project.description || 'No description yet.')}</p>
-        </div>
-        <div class="project-dashboard-actions">
-          <button type="button" class="ghost-btn" data-project-edit="${safeText(project.id)}">Edit Project</button>
-        </div>
-      </section>
-      ${renderStats(summary)}
-      ${renderContributionHeatmap(summary.activeDayMap)}
-    `;
+    dashboardRenderer.renderDashboardInto(projectDashboard, getActiveProject(), {
+      includeEditAction: true,
+      contributionHeadingId: 'project-contribution-heading'
+    });
   }
 
   function renderProjectFilterOptions() {
@@ -883,7 +866,7 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
     projectNotebookPages.classList?.add?.('project-notebook-list');
     const project = getActiveProject();
     projectNotebookPages.innerHTML = project
-      ? renderNotebookPageItems(getProjectNotebookEntries(project))
+      ? dashboardRenderer.renderNotebookPageItems(dashboardRenderer.getProjectNotebookEntries(project))
       : '<p class="small-note">Select a project to view related lab notebook pages.</p>';
   }
 
@@ -904,6 +887,7 @@ export function initProjectManagement({ state, persist, createId, safeText, onPr
 
   return {
     render,
+    renderProjectDashboardInto: dashboardRenderer.renderDashboardInto,
     renderNotebookPages: renderLegacyNotebookPages
   };
 }

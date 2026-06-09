@@ -441,7 +441,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
   const pythonSandboxFn = typeof deps.runPythonSandbox === 'function' ? deps.runPythonSandbox : runPythonSandbox;
   const pythonSandboxRoot = cleanText(deps.pythonSandboxRoot, 1200)
-    || path.join(os.tmpdir(), 'enana-agent-tool-smoke-python');
+    || path.join(os.tmpdir(), 'hikari-agent-tool-smoke-python');
   const structuredResponder = createStructuredJsonResponder();
 
   async function smokeInventoryLookup(snapshot, options = {}) {
@@ -829,7 +829,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   }
 
   async function smokePaperDownload(options = {}) {
-    const storageRoot = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'enana-agent-tool-smoke-download-'));
+    const storageRoot = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'hikari-agent-tool-smoke-download-'));
     try {
       const runtime = createPaperDownloadRuntime({
         createId: () => 'paper-download-smoke-1',
@@ -938,7 +938,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       }
     };
     const result = await runtime.searchWikiSections({
-      storage_path: path.join(os.tmpdir(), 'enana-agent-tool-smoke-paper-wiki'),
+      storage_path: path.join(os.tmpdir(), 'hikari-agent-tool-smoke-paper-wiki'),
       query: focusedQuery,
       limit: 3,
       scope: 'project',

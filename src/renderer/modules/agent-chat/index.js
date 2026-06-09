@@ -32,7 +32,7 @@ export function initAgentChat({
   onOpenNotebookEntry = () => {},
   onProtocolsChanged = () => {}
 }) {
-  const api = windowObject?.enanaApi || null;
+  const api = windowObject?.hikariApi || null;
   const dom = collectAgentChatDom(rootDocument, { idPrefix });
   if (!hasRequiredAgentChatDom(dom)) {
     return { render: () => {} };

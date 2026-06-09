@@ -456,7 +456,7 @@ function createAgentControllerCore({
     const model = cleanText(llmSource?.model, 120);
     const reasoningEffort = cleanText(payload?.llm?.reasoningEffort, 40).toLowerCase();
     if (provider !== deps.LLM_PROVIDERS.CODEX && !apiKey) {
-      throw new Error('Missing LLM API key. Set it in Settings > LLM Model & Access, or use LLM_API_KEY / ENANA_LLM_API_KEY.');
+      throw new Error('Missing LLM API key. Set it in Settings > LLM Model & Access, or use LLM_API_KEY / HIKARI_LLM_API_KEY.');
     }
     if (provider === deps.LLM_PROVIDERS.CODEX) {
       setCodexCliModel(model);

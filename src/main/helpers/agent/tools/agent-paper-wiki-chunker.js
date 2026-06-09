@@ -25,6 +25,7 @@ function applyWikiChunkSchema(db) {
       section_index INTEGER NOT NULL,
       section_heading TEXT,
       body TEXT,
+      body_lower TEXT,
       page_start INTEGER,
       page_end INTEGER,
       char_length INTEGER,
@@ -32,13 +33,6 @@ function applyWikiChunkSchema(db) {
       updated_at TEXT
     );
     CREATE INDEX IF NOT EXISTS idx_paper_chunks_paper ON paper_chunks(paper_id);
-    CREATE VIRTUAL TABLE IF NOT EXISTS paper_chunks_fts USING fts5(
-      body,
-      section_heading,
-      paper_id UNINDEXED,
-      chunk_id UNINDEXED,
-      tokenize = 'porter unicode61'
-    );
   `);
 }
 
@@ -102,7 +96,6 @@ function buildChunkId(paperId, sectionIndex, heading) {
 }
 
 function deletePaperChunks(db, paperId) {
-  runStatement(db, 'DELETE FROM paper_chunks_fts WHERE paper_id = ?', [paperId]);
   runStatement(db, 'DELETE FROM paper_chunks WHERE paper_id = ?', [paperId]);
 }
 
@@ -111,25 +104,22 @@ function insertChunk(db, paperId, section, nowIso) {
   const { pageStart, pageEnd } = extractPageRange(section.body);
   runStatement(db, `
     INSERT INTO paper_chunks (
-      id, paper_id, section_index, section_heading, body,
+      id, paper_id, section_index, section_heading, body, body_lower,
       page_start, page_end, char_length, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [
     chunkId,
     paperId,
     section.index,
     section.heading,
     section.body,
+    section.body.toLowerCase(),
     pageStart,
     pageEnd,
     section.body.length,
     nowIso,
     nowIso
   ]);
-  runStatement(db, `
-    INSERT INTO paper_chunks_fts (body, section_heading, paper_id, chunk_id)
-    VALUES (?, ?, ?, ?)
-  `, [section.body, section.heading, paperId, chunkId]);
   return chunkId;
 }
 

@@ -15,9 +15,7 @@ export function initCollaborationManagement({
 }) {
   // Constants and DOM references for the messaging form, inbox, and protocol-link import UI.
   const PROTOCOL_SHARE_LINK_PREFIX = 'hikari://protocol-share/';
-  const LEGACY_PROTOCOL_SHARE_LINK_PREFIX = 'enana://protocol-share/';
   const PROTOCOL_SHARE_TOKEN_PREFIX = 'HIKARI_PROTOCOL_SHARE:';
-  const LEGACY_PROTOCOL_SHARE_TOKEN_PREFIX = 'ENANA_PROTOCOL_SHARE:';
   const messageForm = document.getElementById('message-form');
   const fromSelect = document.getElementById('message-from');
   const toSelect = document.getElementById('message-to');
@@ -165,16 +163,16 @@ export function initCollaborationManagement({
   }
 
   // Collect the unique Hikari email addresses defined in the Members section.
-  function getEnanaEmails() {
+  function getHikariEmails() {
     const emails = state.members
-      .map((member) => member.enanaEmail)
+      .map((member) => member.hikariEmail)
       .filter((email) => email && email.trim());
     return Array.from(new Set(emails));
   }
 
   // Populate sender, recipient, and inbox selectors and keep the inbox view up to date.
   function renderEmailSelectors() {
-    const emails = getEnanaEmails();
+    const emails = getHikariEmails();
     const options = emails.map((email) => `<option value="${safeText(email)}">${safeText(email)}</option>`).join('');
     const fallback = '<option value="">No Hikari emails in Members</option>';
 
@@ -298,26 +296,10 @@ export function initCollaborationManagement({
         return tokenFromLink;
       }
     }
-    const legacyLinkIndex = value.indexOf(LEGACY_PROTOCOL_SHARE_LINK_PREFIX);
-    if (legacyLinkIndex >= 0) {
-      const after = value.slice(legacyLinkIndex + LEGACY_PROTOCOL_SHARE_LINK_PREFIX.length);
-      const tokenFromLink = after.split(/[\s?#&]/)[0];
-      if (tokenFromLink) {
-        return tokenFromLink;
-      }
-    }
 
     const prefixedIndex = value.indexOf(PROTOCOL_SHARE_TOKEN_PREFIX);
     if (prefixedIndex >= 0) {
       const after = value.slice(prefixedIndex + PROTOCOL_SHARE_TOKEN_PREFIX.length);
-      const tokenFromPrefix = after.split(/\s/)[0];
-      if (tokenFromPrefix) {
-        return tokenFromPrefix;
-      }
-    }
-    const legacyPrefixedIndex = value.indexOf(LEGACY_PROTOCOL_SHARE_TOKEN_PREFIX);
-    if (legacyPrefixedIndex >= 0) {
-      const after = value.slice(legacyPrefixedIndex + LEGACY_PROTOCOL_SHARE_TOKEN_PREFIX.length);
       const tokenFromPrefix = after.split(/\s/)[0];
       if (tokenFromPrefix) {
         return tokenFromPrefix;

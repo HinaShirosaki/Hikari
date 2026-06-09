@@ -71,7 +71,7 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   ];
   const document = createMockDocument(ids);
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryListBackbones: async () => ({
         ok: true,
         results: [
@@ -93,7 +93,7 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;

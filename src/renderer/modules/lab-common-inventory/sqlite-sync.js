@@ -19,7 +19,7 @@ function buildChemicalSqliteSyncKey() {
 
 async function syncChemicalSqliteBundle(force = false) {
   const storagePath = String(state.settings?.storagePath || '').trim();
-  if (!storagePath || !window.enanaApi?.syncSqliteBundle) {
+  if (!storagePath || !window.hikariApi?.syncSqliteBundle) {
     return;
   }
 
@@ -48,7 +48,7 @@ async function syncChemicalSqliteBundle(force = false) {
   };
 
   try {
-    const result = await window.enanaApi.syncSqliteBundle({
+    const result = await window.hikariApi.syncSqliteBundle({
       mode: 'chemical',
       snapshot: inventorySnapshot,
       sqlitePath: targetPath

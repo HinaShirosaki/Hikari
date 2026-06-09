@@ -55,6 +55,23 @@
   scrollbar-gutter: stable;
 }
 
+.left-rail-template.biology-notebook-layout {
+  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr) minmax(280px, 320px);
+  gap: 24px;
+}
+
+.left-rail-template.biology-notebook-layout.is-tool-sidebar-collapsed {
+  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr) 44px;
+}
+
+.left-rail-template.biology-notebook-layout > .biology-notebook-viewer-column.left-rail-template__main {
+  padding-left: 0;
+}
+
+.left-rail-template.biology-notebook-layout > .biology-notebook-tool-sidebar {
+  align-self: stretch;
+}
+
 .left-rail-template > .left-rail-template__rail--pinned.left-rail-template__rail {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -244,6 +261,18 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
 }
 
 @media (max-width: 980px) {
+  .left-rail-template.biology-notebook-layout,
+  .left-rail-template.biology-notebook-layout.is-tool-sidebar-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .left-rail-template.biology-notebook-layout > .biology-notebook-viewer-column.left-rail-template__main {
+    height: auto;
+    padding-top: 18px;
+    overflow: visible;
+  }
+
   .left-rail-template:not(.papers-layout) {
     grid-template-columns: 1fr;
   }

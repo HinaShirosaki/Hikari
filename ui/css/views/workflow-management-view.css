@@ -513,19 +513,26 @@
 .workflow-progress-connector {
   position: absolute;
   top: 50%;
+  z-index: 0;
   border-top: 2px dashed color-mix(in srgb, var(--line) 92%, var(--text));
   transform: translateY(-50%);
   pointer-events: none;
 }
 
+/*
+ * The two halves run all the way to the node center so the line is continuous
+ * underneath the dot. The dot (z-index 1, opaque fill) is painted on top, so it
+ * reads as one drawn line with the dots placed on it — not line stubs assembled
+ * around each dot.
+ */
 .workflow-progress-connector-start {
   left: 0;
-  width: calc(50% - 7px);
+  width: 50%;
 }
 
 .workflow-progress-connector-end {
   right: 0;
-  width: calc(50% - 7px);
+  width: 50%;
 }
 
 .workflow-progress-connector.is-complete {

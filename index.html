@@ -541,7 +541,7 @@
 
 <!-- SOURCE: ui/html/views/biology-notebook-view.html -->
 <section id="biology-notebook-view" class="view">
-      <div class="biology-notebook-layout left-rail-template">
+      <div id="biology-notebook-layout" class="biology-notebook-layout left-rail-template">
         <aside class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="left-rail-template__pinned">
             <div class="biology-notebook-rail-head">
@@ -549,13 +549,27 @@
               <p class="small-note">Projects and notebook pages</p>
             </div>
 
-            <div class="stack-form biology-notebook-select-stack">
-              <label>
-                Select Project
-                <select id="biology-notebook-project-select">
-                  <option value="">Select project</option>
-                </select>
-              </label>
+            <select id="biology-notebook-project-select" hidden aria-hidden="true" tabindex="-1">
+              <option value="">Select project</option>
+            </select>
+
+            <div class="biology-notebook-page-list-head">
+              <h3>Notebook Pages</h3>
+            </div>
+          </div>
+          <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
+        </aside>
+
+        <div class="biology-notebook-viewer-column left-rail-template__main">
+          <button id="biology-notebook-tool-mobile-toggle" class="ghost-btn biology-notebook-tool-mobile-toggle" type="button" aria-expanded="false">Bench Tools</button>
+          <div id="biology-notebook-page-starter" class="panel biology-notebook-page-starter">
+            <div class="biology-notebook-page-starter-head">
+              <div>
+                <p class="small-note biology-notebook-viewer-kicker">Add Notebook Page</p>
+                <h3 id="biology-notebook-page-starter-project">Choose a project folder</h3>
+              </div>
+            </div>
+            <div class="stack-form biology-notebook-select-stack biology-notebook-page-starter-controls">
               <label>
                 Search Protocol
                 <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
@@ -567,19 +581,14 @@
                 </select>
               </label>
             </div>
-
-            <div class="biology-notebook-page-list-head">
-              <h3>Notebook Pages</h3>
-            </div>
           </div>
-          <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
-        </aside>
 
-        <div class="biology-notebook-viewer-column left-rail-template__main">
           <div id="biology-notebook-empty-state" class="panel biology-notebook-empty-state">
             <h3>Protocol / Result Viewer</h3>
-            <p>Select a project and protocol to create a notebook page, or choose an existing page from the left panel.</p>
+            <p>Choose an existing notebook page from the left panel.</p>
           </div>
+
+          <div id="biology-notebook-project-dashboard" class="biology-notebook-project-dashboard project-dashboard" hidden></div>
 
           <div id="biology-notebook-protocol-area" class="panel biology-notebook-viewer" hidden>
             <div class="biology-notebook-viewer-head">
@@ -641,11 +650,14 @@
                 <div id="biology-notebook-linked-results" class="biology-notebook-linked-results">
                   <p class="small-note">Linked gel, assay, and plot previews will appear here.</p>
                 </div>
+                <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations">
+                  <p class="small-note biology-notebook-tool-calculation-empty">Recorded bench calculations will appear here.</p>
+                </div>
                 <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
                   <div class="biology-notebook-result-table-head">
                     <p id="biology-notebook-result-table-status" class="small-note">Add a table to capture structured notebook results.</p>
                   </div>
-                  <div id="biology-notebook-result-table" class="biology-notebook-result-table" aria-label="Notebook result table"></div>
+                  <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables"></div>
                 </div>
                 <label>
                   Experiment Results File / Notes
@@ -664,6 +676,189 @@
             </section>
           </div>
         </div>
+
+        <aside id="biology-notebook-tool-sidebar" class="biology-notebook-tool-sidebar" data-notebook-tool-sidebar aria-label="Biology notebook bench tools">
+          <button id="biology-notebook-tool-fold-toggle" class="ghost-btn biology-notebook-tool-fold-toggle" type="button" aria-controls="biology-notebook-tool-sidebar" aria-expanded="false">Tool Box</button>
+          <div class="biology-notebook-tool-content">
+            <div class="biology-notebook-tool-head">
+              <div>
+                <p class="small-note biology-notebook-viewer-kicker">Bench Tools</p>
+                <h3>Tool Box</h3>
+              </div>
+              <button id="biology-notebook-tool-collapse-btn" class="ghost-btn" type="button" aria-controls="biology-notebook-tool-sidebar" aria-expanded="true">Fold</button>
+            </div>
+
+            <div class="biology-notebook-tool-tabs" role="tablist" aria-label="Notebook bench tools">
+              <button id="biology-notebook-tool-tab-molarity" class="biology-notebook-tool-tab is-active" type="button" data-notebook-tool-tab="molarity" role="tab" aria-selected="true">Molarity</button>
+              <button id="biology-notebook-tool-tab-buffer" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="buffer" role="tab" aria-selected="false">Buffer</button>
+              <button id="biology-notebook-tool-tab-reaction" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="reaction" role="tab" aria-selected="false">Reaction</button>
+            </div>
+
+            <div class="biology-notebook-tool-body">
+              <section id="biology-notebook-tool-panel-molarity" class="biology-notebook-tool-panel" data-notebook-tool-panel="molarity">
+              <label>
+                Calculation
+                <select id="biology-notebook-tool-molarity-mode">
+                  <option value="mass" selected>Mass from concentration</option>
+                  <option value="volume">Volume from mass</option>
+                  <option value="concentration">Concentration from mass</option>
+                  <option value="dilution">Dilute stock</option>
+                </select>
+              </label>
+
+              <div id="biology-notebook-tool-molarity-mass" class="biology-notebook-tool-mode">
+                <label>Concentration <input id="biology-notebook-tool-mass-concentration" type="number" min="0" step="0.000001" placeholder="10" /></label>
+                <select id="biology-notebook-tool-mass-concentration-unit">
+                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
+                </select>
+                <label>Formula Weight <input id="biology-notebook-tool-mass-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
+                <label>Volume <input id="biology-notebook-tool-mass-volume" type="number" min="0" step="0.000001" placeholder="100" /></label>
+                <select id="biology-notebook-tool-mass-volume-unit">
+                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
+                </select>
+                <select id="biology-notebook-tool-mass-output-unit">
+                  <option value="ug">ug</option><option value="mg" selected>mg</option><option value="g">g</option>
+                </select>
+              </div>
+
+              <div id="biology-notebook-tool-molarity-volume" class="biology-notebook-tool-mode" hidden>
+                <label>Mass <input id="biology-notebook-tool-volume-mass" type="number" min="0" step="0.000001" placeholder="50" /></label>
+                <select id="biology-notebook-tool-volume-mass-unit">
+                  <option value="ug">ug</option><option value="mg" selected>mg</option><option value="g">g</option>
+                </select>
+                <label>Formula Weight <input id="biology-notebook-tool-volume-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
+                <label>Concentration <input id="biology-notebook-tool-volume-concentration" type="number" min="0" step="0.000001" placeholder="10" /></label>
+                <select id="biology-notebook-tool-volume-concentration-unit">
+                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
+                </select>
+                <select id="biology-notebook-tool-volume-output-unit">
+                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
+                </select>
+              </div>
+
+              <div id="biology-notebook-tool-molarity-concentration" class="biology-notebook-tool-mode" hidden>
+                <label>Mass <input id="biology-notebook-tool-concentration-mass" type="number" min="0" step="0.000001" placeholder="50" /></label>
+                <select id="biology-notebook-tool-concentration-mass-unit">
+                  <option value="ug">ug</option><option value="mg" selected>mg</option><option value="g">g</option>
+                </select>
+                <label>Formula Weight <input id="biology-notebook-tool-concentration-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
+                <label>Volume <input id="biology-notebook-tool-concentration-volume" type="number" min="0" step="0.000001" placeholder="1" /></label>
+                <select id="biology-notebook-tool-concentration-volume-unit">
+                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
+                </select>
+                <select id="biology-notebook-tool-concentration-output-unit">
+                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
+                </select>
+              </div>
+
+              <div id="biology-notebook-tool-molarity-dilution" class="biology-notebook-tool-mode" hidden>
+                <label>Stock Conc <input id="biology-notebook-tool-dilution-stock" type="number" min="0" step="0.000001" placeholder="100" /></label>
+                <select id="biology-notebook-tool-dilution-stock-unit">
+                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
+                </select>
+                <label>Desired Conc <input id="biology-notebook-tool-dilution-target" type="number" min="0" step="0.000001" placeholder="10" /></label>
+                <select id="biology-notebook-tool-dilution-target-unit">
+                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
+                </select>
+                <label>Final Volume <input id="biology-notebook-tool-dilution-volume" type="number" min="0" step="0.000001" placeholder="1" /></label>
+                <select id="biology-notebook-tool-dilution-volume-unit">
+                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
+                </select>
+                <select id="biology-notebook-tool-dilution-output-unit">
+                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
+                </select>
+              </div>
+            </section>
+
+            <section id="biology-notebook-tool-panel-buffer" class="biology-notebook-tool-panel" data-notebook-tool-panel="buffer" hidden>
+              <label>Buffer Volume (mL) <input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" value="100" /></label>
+              <div class="form-actions">
+                <button id="biology-notebook-tool-buffer-add-row" class="ghost-btn" type="button">Add Ingredient</button>
+              </div>
+              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-1">
+                <input id="biology-notebook-tool-buffer-name-1" placeholder="Tris Base" value="Tris Base" />
+                <select id="biology-notebook-tool-buffer-form-1"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
+                <input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" value="121.14" />
+                <input id="biology-notebook-tool-buffer-concentration-1" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
+              </div>
+              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-2" hidden>
+                <input id="biology-notebook-tool-buffer-name-2" placeholder="NaCl" />
+                <select id="biology-notebook-tool-buffer-form-2"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
+                <input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" />
+                <input id="biology-notebook-tool-buffer-concentration-2" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
+              </div>
+              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-3" hidden>
+                <input id="biology-notebook-tool-buffer-name-3" placeholder="Tween 20" />
+                <select id="biology-notebook-tool-buffer-form-3"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
+                <input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" />
+                <input id="biology-notebook-tool-buffer-concentration-3" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
+              </div>
+              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-4" hidden>
+                <input id="biology-notebook-tool-buffer-name-4" placeholder="Ingredient" />
+                <select id="biology-notebook-tool-buffer-form-4"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
+                <input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" />
+                <input id="biology-notebook-tool-buffer-concentration-4" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
+              </div>
+            </section>
+
+            <section id="biology-notebook-tool-panel-reaction" class="biology-notebook-tool-panel" data-notebook-tool-panel="reaction" hidden>
+              <label>Total Volume <input id="biology-notebook-tool-reaction-total-volume" type="number" min="0" step="0.000001" value="100" /></label>
+              <select id="biology-notebook-tool-reaction-total-unit"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
+              <label>Fill Solution <input id="biology-notebook-tool-reaction-fill-name" value="Water / buffer" /></label>
+              <div class="form-actions">
+                <button id="biology-notebook-tool-reaction-add-row" class="ghost-btn" type="button">Add Reagent</button>
+              </div>
+              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-1">
+                <input id="biology-notebook-tool-reaction-name-1" placeholder="Reagent" />
+                <input id="biology-notebook-tool-reaction-stock-1" type="number" min="0" step="0.000001" placeholder="Stock" />
+                <select id="biology-notebook-tool-reaction-stock-unit-1"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-final-1" type="number" min="0" step="0.000001" placeholder="Final" />
+                <select id="biology-notebook-tool-reaction-final-unit-1"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-volume-1" type="number" min="0" step="0.000001" placeholder="Manual vol" />
+                <select id="biology-notebook-tool-reaction-volume-unit-1"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
+              </div>
+              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-2" hidden>
+                <input id="biology-notebook-tool-reaction-name-2" placeholder="Reagent" />
+                <input id="biology-notebook-tool-reaction-stock-2" type="number" min="0" step="0.000001" placeholder="Stock" />
+                <select id="biology-notebook-tool-reaction-stock-unit-2"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-final-2" type="number" min="0" step="0.000001" placeholder="Final" />
+                <select id="biology-notebook-tool-reaction-final-unit-2"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-volume-2" type="number" min="0" step="0.000001" placeholder="Manual vol" />
+                <select id="biology-notebook-tool-reaction-volume-unit-2"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
+              </div>
+              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-3" hidden>
+                <input id="biology-notebook-tool-reaction-name-3" placeholder="Reagent" />
+                <input id="biology-notebook-tool-reaction-stock-3" type="number" min="0" step="0.000001" placeholder="Stock" />
+                <select id="biology-notebook-tool-reaction-stock-unit-3"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-final-3" type="number" min="0" step="0.000001" placeholder="Final" />
+                <select id="biology-notebook-tool-reaction-final-unit-3"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-volume-3" type="number" min="0" step="0.000001" placeholder="Manual vol" />
+                <select id="biology-notebook-tool-reaction-volume-unit-3"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
+              </div>
+              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-4" hidden>
+                <input id="biology-notebook-tool-reaction-name-4" placeholder="Reagent" />
+                <input id="biology-notebook-tool-reaction-stock-4" type="number" min="0" step="0.000001" placeholder="Stock" />
+                <select id="biology-notebook-tool-reaction-stock-unit-4"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-final-4" type="number" min="0" step="0.000001" placeholder="Final" />
+                <select id="biology-notebook-tool-reaction-final-unit-4"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-volume-4" type="number" min="0" step="0.000001" placeholder="Manual vol" />
+                <select id="biology-notebook-tool-reaction-volume-unit-4"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
+              </div>
+            </section>
+
+            <div class="biology-notebook-tool-output" aria-live="polite">
+              <p id="biology-notebook-tool-output">Enter values to calculate or show a bench formula.</p>
+              <p id="biology-notebook-tool-formula" class="small-note"></p>
+            </div>
+            <div class="form-actions biology-notebook-tool-actions">
+              <button id="biology-notebook-tool-insert-notes-btn" class="ghost-btn" type="button">Insert into Notes</button>
+              <button id="biology-notebook-tool-use-placeholder-btn" class="ghost-btn" type="button">Use for Placeholder</button>
+              <button id="biology-notebook-tool-record-btn" class="primary-btn" type="button">Record</button>
+            </div>
+              <p id="biology-notebook-tool-status" class="small-note"></p>
+            </div>
+          </div>
+        </aside>
       </div>
     </section>
 
@@ -1618,6 +1813,10 @@
               <span>Inventory Locations</span>
               <small>Shared location vocabulary</small>
             </button>
+            <button type="button" class="settings-nav-item" data-settings-target="preferred-journal">
+              <span>Preferred Journal</span>
+              <small>Default journal name or URL</small>
+            </button>
             <button type="button" class="settings-nav-item" data-settings-target="llm">
               <span>LLM Model &amp; Access</span>
               <small>Provider, model, endpoint</small>
@@ -1729,6 +1928,23 @@
                 </div>
                 <div id="setting-location-list" class="stack-form"></div>
               </div>
+            </section>
+
+            <section class="settings-section" data-settings-panel="preferred-journal" hidden>
+              <div class="settings-section-head">
+                <h3>Preferred Journal</h3>
+                <p class="small-note">Set the journal you most often submit to or browse. Enter a journal name (e.g. <em>Nature Chemistry</em>) or a URL (e.g. <em>https://www.nature.com/nchem/</em>).</p>
+              </div>
+              <form id="preferred-journal-form" class="stack-form">
+                <label>
+                  Journal Name or URL
+                  <input id="setting-preferred-journal" placeholder="Journal name or https://..." />
+                </label>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Save Preferred Journal</button>
+                  <button type="button" id="clear-preferred-journal-btn" class="ghost-btn">Clear</button>
+                </div>
+              </form>
             </section>
 
             <section class="settings-section" data-settings-panel="llm" hidden>
@@ -2320,7 +2536,7 @@
               </div>
             </div>
             <div id="agent-review-overlay" class="agent-review-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
-              <section class="agent-review-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
+              <section class="agent-review-dialog" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
                 <header class="agent-review-dialog-header">
                   <div>
                     <h3 id="agent-review-title">Review Generated Drafts</h3>

@@ -631,9 +631,7 @@ function createMainAgentServices(deps = {}) {
         returnMetadata: true,
         envOverrides: {
           HIKARI_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
-          ENANA_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
-          HIKARI_CODEX_REQUEST_CONTEXT: mcpContextJson,
-          ENANA_CODEX_REQUEST_CONTEXT: mcpContextJson
+          HIKARI_CODEX_REQUEST_CONTEXT: mcpContextJson
         }
       });
       const resultMetadata = result && typeof result === 'object' && !Array.isArray(result)

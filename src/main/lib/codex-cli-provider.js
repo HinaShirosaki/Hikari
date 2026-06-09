@@ -1,8 +1,7 @@
 'use strict';
 
 const {
-  buildHikariCodexAgentsInstructions,
-  buildEnanaCodexAgentsInstructions
+  buildHikariCodexAgentsInstructions
 } = require('../helpers/agent/codex-agent/agent-instructions.js');
 const { OPENAI_CODEX_LOGIN_URL } = require('./codex-cli-provider/constants');
 const {
@@ -46,7 +45,6 @@ const { extractCodexJsonEventSessionId } = require('./codex-cli-provider/session
 module.exports = {
   OPENAI_CODEX_LOGIN_URL,
   buildHikariCodexAgentsInstructions,
-  buildEnanaCodexAgentsInstructions,
   buildCodexCliExecArgs,
   buildCodexCliExecResumeArgs,
   clearCodexCliStoredLogin,

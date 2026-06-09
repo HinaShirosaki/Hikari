@@ -66,6 +66,21 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(registry.apps.some((app) => app.viewId === 'personal-inventory-view'), false);
     });
 
+    test('project management stays registered but hidden from top navigation', () => {
+      const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
+      const generatedRegistry = readLocalSource('src', 'renderer', 'modules', 'app-registry.generated.js');
+      const rendererShellSource = readRendererShellSource();
+      const topbarSearchSource = readLocalSource('src', 'renderer', 'app', 'topbar-search.js');
+      const projectEntry = registry.apps.find((app) => app.id === 'projects');
+
+      assert.ok(projectEntry);
+      assert.equal(projectEntry.viewId, 'project-management-view');
+      assert.equal(projectEntry.hiddenFromNavigation, true);
+      assert.match(generatedRegistry, /"id": "projects"[\s\S]*"hiddenFromNavigation": true/);
+      assert.match(rendererShellSource, /const navigationApps = APP_REGISTRY\.filter\(\(app\) => app\.hiddenFromNavigation !== true\);/);
+      assert.match(topbarSearchSource, /hiddenFromNavigation === true/);
+    });
+
     test('universal agent chat rail is shell-scoped and registry gated', () => {
       const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
@@ -90,7 +105,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(rendererShellSource, /app\?\.agentChatRail === true/);
       assert.match(rendererShellSource, /agentChatRail\.hidden = !enabled/);
       assert.match(rendererShellSource, /has-agent-chat-rail-expanded/);
-      assert.match(rendererShellSource, /enana:open-agent-chat-rail/);
+      assert.match(rendererShellSource, /hikari:open-agent-chat-rail/);
       assert.match(rendererShellSource, /moduleRuntime\.renderAgentChatRail\?\.\(\)/);
       assert.match(moduleRuntimeSource, /idPrefix:\s*'agent-rail'/);
       assert.match(moduleRuntimeSource, /loadPersistentSessions:\s*false/);
@@ -206,15 +221,6 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('sequence viewer input panels force-hide when hidden attribute is set', () => {
       const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sequence-viewer-view.css'), 'utf8');
       assert.match(css, /\.sequence-viewer-input-panel\[hidden\]\s*\{\s*display:\s*none !important;/);
-    });
-
-    test('sequence viewer home sidebar owns scrolling instead of nesting it inside the library list', () => {
-      const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sequence-viewer-view.css'), 'utf8');
-      assert.match(css, /\.sequence-viewer-home-sidebar,\s*\.sequence-viewer-home-main\s*\{[\s\S]*min-height:\s*0;/);
-      assert.match(css, /\.sequence-viewer-home-sidebar\s*\{[\s\S]*scrollbar-width:\s*thin;/);
-      assert.match(css, /\.sequence-viewer-home-sidebar::-webkit-scrollbar/);
-      assert.match(css, /\.sequence-viewer-library-list\s*\{[\s\S]*max-height:\s*none;/);
-      assert.match(css, /\.sequence-viewer-library-list\s*\{[\s\S]*overflow:\s*visible;/);
     });
 
     test('papers PDF text layer keeps native browser selection stable during drag', () => {
@@ -367,8 +373,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(preloadSource, /clearCodexLlmLogin:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(LLM\.CODEX_CLEAR_LOGIN\)/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_LOGIN/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_CLEAR_LOGIN/);
-      assert.match(settingsSource, /window\.enanaApi\?\.loginCodexLlm/);
-      assert.match(settingsSource, /window\.enanaApi\?\.clearCodexLlmLogin/);
+      assert.match(settingsSource, /window\.hikariApi\?\.loginCodexLlm/);
+      assert.match(settingsSource, /window\.hikariApi\?\.clearCodexLlmLogin/);
       assert.match(settingsHtml, /id="setting-codex-status"/);
       assert.match(settingsHtml, /id="start-codex-login-btn"/);
       assert.match(settingsHtml, /id="clear-codex-login-btn"/);

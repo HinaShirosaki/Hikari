@@ -115,6 +115,7 @@ export function buildStateSnapshot(state, projectId) {
     data_file_path: '',
     settings: {
       storagePath: trimText(state.settings?.storagePath, 1200),
+      preferredJournal: trimText(state.settings?.preferredJournal, 1200),
       agent: {
         externalSkillsEnabled: state.settings?.agent?.externalSkillsEnabled !== false,
         disabledExternalSkillNames: asArray(state.settings?.agent?.disabledExternalSkillNames)

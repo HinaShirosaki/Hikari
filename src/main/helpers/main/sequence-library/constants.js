@@ -14,9 +14,9 @@ const ALIGNMENTS_MANIFEST_FILE_NAME = 'alignment-sessions.json';
 
 const RECOGNIZED_BACKBONE_ARTIFACT_DIR_NAME = 'protein-builder/backbones';
 const RECOGNIZED_BACKBONE_STORE_FILE_NAME = 'protein-builder-backbones.json';
-const RECOGNIZED_BACKBONE_STORE_SCHEMA_NAME = 'enana_recognized_backbone_store';
+const RECOGNIZED_BACKBONE_STORE_SCHEMA_NAME = 'hikari_recognized_backbone_store';
 const RECOGNIZED_BACKBONE_STORE_SCHEMA_VERSION = '1.0.0';
-const RECOGNIZED_BACKBONE_SCHEMA_NAME = 'enana_recognized_backbone';
+const RECOGNIZED_BACKBONE_SCHEMA_NAME = 'hikari_recognized_backbone';
 
 const ORF_START_CODONS = new Set(['ATG']);
 const ORF_STOP_CODONS = new Set(['TAA', 'TAG', 'TGA']);

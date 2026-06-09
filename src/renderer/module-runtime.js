@@ -20,10 +20,10 @@ export function createRendererModuleRuntime(config = {}) {
   const views = config?.views || {};
   const onStoragePathSaved = config?.onStoragePathSaved || (async () => {});
   const rootDocument = config?.rootDocument || globalThis?.document || null;
-  const apiBridge = config?.apiBridge || globalThis?.window?.enanaApi || globalThis?.enanaApi || null;
+  const apiBridge = config?.apiBridge || globalThis?.window?.hikariApi || globalThis?.hikariApi || null;
   const getApiBridge = typeof config?.getApiBridge === 'function'
     ? config.getApiBridge
-    : () => apiBridge || globalThis?.window?.enanaApi || globalThis?.enanaApi || null;
+    : () => apiBridge || globalThis?.window?.hikariApi || globalThis?.hikariApi || null;
   const modules = {};
   const selectionInsightsController = createSelectionInsightsController({
     state,

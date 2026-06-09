@@ -160,7 +160,7 @@ function createAgentRuntimeSupport(deps = {}) {
       ? asArray(snapshot.inventory.chemicals).slice(0, 220)
       : asArray(snapshot.labInventory?.chemicals).slice(0, 220);
     const normalizedExperimentData = {
-      schema_name: cleanText(experimentData.schema_name, 80) || 'enana_experiment_json',
+      schema_name: cleanText(experimentData.schema_name, 80) || 'hikari_experiment_json',
       schema_version: cleanText(experimentData.schema_version, 20) || '1.0',
       generated_utc: cleanText(experimentData.generated_utc, 80) || cleanText(snapshot.timestamp, 80),
       notebook_runs: asArray(experimentData.notebook_runs).slice(0, 120),

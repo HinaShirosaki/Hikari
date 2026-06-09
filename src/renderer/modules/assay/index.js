@@ -245,10 +245,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   });
 
   async function parseAssayResultImport(payload) {
-    if (!window.enanaApi?.parseAssayResultImportFile) {
+    if (!window.hikariApi?.parseAssayResultImportFile) {
       throw new Error('Assay result file parser is unavailable.');
     }
-    const result = await window.enanaApi.parseAssayResultImportFile(payload);
+    const result = await window.hikariApi.parseAssayResultImportFile(payload);
     if (!result?.ok) {
       throw new Error(result?.error || 'Unable to parse assay result file.');
     }

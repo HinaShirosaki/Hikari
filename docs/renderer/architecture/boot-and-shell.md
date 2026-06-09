@@ -80,13 +80,13 @@ Examples:
 
 The renderer core owns two important shell-level helpers:
 
-- `persist()`: rebuilds the object graph, writes local storage, and optionally auto-saves the `.ena` file through `window.enanaApi.autoSaveDataFile(...)`
+- `persist()`: rebuilds the object graph, writes local storage, and optionally auto-saves the `.ena` file through `window.hikariApi.autoSaveDataFile(...)`
 
 That means feature modules usually mutate shared state directly and then call the shared `persist()` callback instead of owning their own storage layer.
 
 ## Main-process integration points
 
-The renderer shell talks to the main process through `window.enanaApi`.
+The renderer shell talks to the main process through `window.hikariApi`.
 
 Key boot-time or shell-level calls include:
 
@@ -104,9 +104,9 @@ For the main-process implementation of those calls, use [doc/main-helpers/README
 
 Two shell-level hooks are worth knowing about:
 
-- `window.enanaGraph`
+- `window.hikariGraph`
   - exposes object-graph rebuild and a few graph queries for debugging and external scripting
 - `initTelegramCommandBridge()`
-  - subscribes to `window.enanaApi.onTelegramCommand(...)` and routes open-view or search commands back into the normal navigation/search pipeline
+  - subscribes to `window.hikariApi.onTelegramCommand(...)` and routes open-view or search commands back into the normal navigation/search pipeline
 
 Those hooks make the renderer core the place where local UI behavior and external automation meet.

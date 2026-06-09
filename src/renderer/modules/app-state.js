@@ -12,8 +12,7 @@ import { VIEWS } from './views.js';
 import { createId } from './utils.js';
 import { normalizePaperAgentChatSessions } from './agent-chat/scoped-state.js';
 
-export const STORAGE_KEY = 'enana_state_v1';
-const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
+export const STORAGE_KEY = 'hikari_state_v1';
 
 const STARTUP_DEFAULT_VIEW_IDS = new Set([
   VIEWS.HOME,
@@ -84,7 +83,7 @@ export const defaultState = {
       name: '',
       position: '',
       institutionEmail: '',
-      enanaEmail: ''
+      hikariEmail: ''
     },
     appearance: {
       fontSize: 16,
@@ -125,6 +124,7 @@ export const defaultState = {
       disabledExternalSkillNames: []
     },
     inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood'],
+    preferredJournal: '',
     dashboard: {
       currentWorkflowId: '',
       workflowProgress: {},
@@ -500,6 +500,7 @@ export function normalizeState(parsed) {
   return {
     ...structuredClone(defaultState),
     ...source,
+    members: Array.isArray(source.members) ? source.members : [],
     instruments: Array.isArray(source.instruments) ? source.instruments : [],
     projects: Array.isArray(source.projects) ? source.projects : [],
     workflows: Array.isArray(source.workflows) ? source.workflows : [],
@@ -616,7 +617,8 @@ export function normalizeState(parsed) {
       },
       inventoryLocations: Array.isArray(rawSettings.inventoryLocations)
         ? rawSettings.inventoryLocations
-        : defaultState.settings.inventoryLocations
+        : defaultState.settings.inventoryLocations,
+      preferredJournal: String(rawSettings.preferredJournal || '').trim()
     },
     inventory: {
       ...defaultState.inventory,
@@ -628,27 +630,7 @@ export function normalizeState(parsed) {
 export function loadState() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    const state = raw ? normalizeState(JSON.parse(raw)) : structuredClone(defaultState);
-    const hasDrafts = state.synthesisChemistryDrafts && Object.keys(state.synthesisChemistryDrafts).length > 0;
-    if (hasDrafts) {
-      return state;
-    }
-
-    const legacyRaw = localStorage.getItem(LEGACY_CHEMISTRY_DRAFT_KEY);
-    if (!legacyRaw) {
-      return state;
-    }
-
-    const legacyDrafts = JSON.parse(legacyRaw);
-    if (!legacyDrafts || typeof legacyDrafts !== 'object' || Array.isArray(legacyDrafts)) {
-      localStorage.removeItem(LEGACY_CHEMISTRY_DRAFT_KEY);
-      return state;
-    }
-
-    state.synthesisChemistryDrafts = legacyDrafts;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    localStorage.removeItem(LEGACY_CHEMISTRY_DRAFT_KEY);
-    return state;
+    return raw ? normalizeState(JSON.parse(raw)) : structuredClone(defaultState);
   } catch {
     return structuredClone(defaultState);
   }

@@ -12,6 +12,10 @@ const {
 const { asArray, cleanText, cloneJson, ensureObject, parseJsonObject, readJsonFile } = require('./storage-utils');
 const { hydrateWorkflowRootFromStoragePath } = require('./workflow-storage');
 
+function isPermissionDeniedError(error) {
+  return error?.code === 'EPERM' || error?.code === 'EACCES';
+}
+
 function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
   const inventoryPersonalMap = {};
   asArray(sqliteData.inventoryPersonal).forEach((row) => {
@@ -362,6 +366,14 @@ async function hydrateProjectRootFromStoragePath({
         warnings: []
       };
     }
+    if (isPermissionDeniedError(error)) {
+      return {
+        exists: false,
+        projects: [],
+        notebookEntries: [],
+        warnings: [`Permission denied reading project root ${projectRootPath}: ${String(error?.message || error)}`]
+      };
+    }
     throw error;
   }
 
@@ -609,19 +621,24 @@ async function hydrateSnapshotFromBundle({
     const projectHydrated = await hydrateProjectRootFromStoragePath({
       storagePath: storageRootPath
     });
+    asArray(projectHydrated.warnings).forEach((warning) => {
+      if (warning) {
+        migration.warnings.push(String(warning));
+      }
+    });
     if (projectHydrated.exists) {
       nextSnapshot.projects = mergeRecordsById(nextSnapshot.projects, projectHydrated.projects, 'project');
       nextSnapshot.notebookEntries = mergeRecordsById(nextSnapshot.notebookEntries, projectHydrated.notebookEntries, 'notebook');
       migration.applied.push('project_root_storage');
-      asArray(projectHydrated.warnings).forEach((warning) => {
-        if (warning) {
-          migration.warnings.push(String(warning));
-        }
-      });
     }
 
     const workflowHydrated = await hydrateWorkflowRootFromStoragePath({
       storagePath: storageRootPath
+    });
+    asArray(workflowHydrated.warnings).forEach((warning) => {
+      if (warning) {
+        migration.warnings.push(String(warning));
+      }
     });
     if (workflowHydrated.exists) {
       nextSnapshot.workflowTemplates = mergeRecordsById(nextSnapshot.workflowTemplates, workflowHydrated.workflowTemplates, 'workflow_template');
@@ -633,11 +650,6 @@ async function hydrateSnapshotFromBundle({
         workflowHydrated.paperExperimentLinks
       );
       migration.applied.push('workflow_root_storage');
-      asArray(workflowHydrated.warnings).forEach((warning) => {
-        if (warning) {
-          migration.warnings.push(String(warning));
-        }
-      });
     }
   }
 
@@ -646,9 +658,6 @@ async function hydrateSnapshotFromBundle({
     commonSqliteData = await readSqliteBundleIndex(getLegacySqlitePath(bundlePaths));
   }
   let chemicalSqliteData = await readSqliteBundleIndex(bundlePaths.chemicalsSqlitePath);
-  if (!chemicalSqliteData.exists) {
-    chemicalSqliteData = await readSqliteBundleIndex(bundlePaths.legacyChemicalsSqlitePath);
-  }
   if (!chemicalSqliteData.exists && commonSqliteData.exists) {
     chemicalSqliteData = commonSqliteData;
   }

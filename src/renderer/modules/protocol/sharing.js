@@ -47,13 +47,13 @@ export function createProtocolSharingController({
   }
 
   function resolveSenderEmail() {
-    const personal = String(state.settings?.personalInfo?.enanaEmail || '').trim();
+    const personal = String(state.settings?.personalInfo?.hikariEmail || '').trim();
     if (personal) {
       return personal;
     }
 
     const firstMemberEmail = state.members
-      .map((member) => String(member.enanaEmail || '').trim())
+      .map((member) => String(member.hikariEmail || '').trim())
       .find(Boolean);
     return firstMemberEmail || 'system@hikari.local';
   }
@@ -61,7 +61,7 @@ export function createProtocolSharingController({
   function getShareTargetEmails() {
     return Array.from(new Set(
       state.members
-        .map((member) => String(member.enanaEmail || '').trim())
+        .map((member) => String(member.hikariEmail || '').trim())
         .filter(Boolean)
     ));
   }

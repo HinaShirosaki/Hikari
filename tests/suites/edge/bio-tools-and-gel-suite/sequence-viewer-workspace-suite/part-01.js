@@ -397,7 +397,7 @@ ORIGIN
   const document = createMockDocument(ids);
   const transitions = [];
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryList: async () => ({ ok: true, entries: [entry] }),
       sequenceLibraryGet: async (payload) => {
         if (payload?.includeGbk) {
@@ -409,7 +409,7 @@ ORIGIN
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;

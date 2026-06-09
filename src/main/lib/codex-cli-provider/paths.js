@@ -64,8 +64,6 @@ function resolveCodexBinary() {
   const explicit = String(
     process.env.HIKARI_CODEX_CLI
       || process.env.HIKARI_CODEX_BIN
-      || process.env.ENANA_CODEX_CLI
-      || process.env.ENANA_CODEX_BIN
       || ''
   ).trim();
   const candidates = [];
@@ -146,8 +144,6 @@ function resolveWorkingDirectory(cwd = '') {
     cwd,
     process.env.HIKARI_CODEX_WORKSPACE,
     process.env.HIKARI_APP_DATA_ROOT,
-    process.env.ENANA_CODEX_WORKSPACE,
-    process.env.ENANA_APP_DATA_ROOT,
     process.cwd(),
     os.homedir(),
     path.dirname(process.execPath)
@@ -164,7 +160,7 @@ function getNativeCodexCliHomeDirectory() {
 }
 
 function getCodexCliHomeDirectory() {
-  const appManagedHome = String(process.env.HIKARI_CODEX_HOME || process.env.ENANA_CODEX_HOME || '').trim();
+  const appManagedHome = String(process.env.HIKARI_CODEX_HOME || '').trim();
   if (appManagedHome) {
     return appManagedHome;
   }
@@ -183,7 +179,7 @@ function getCodexCliAuthFilePath() {
 }
 
 function resolveCodexCliRuntimeHomeDirectory(cwd = '') {
-  const explicit = String(process.env.HIKARI_CODEX_HOME || process.env.ENANA_CODEX_HOME || '').trim();
+  const explicit = String(process.env.HIKARI_CODEX_HOME || '').trim();
   if (explicit) {
     return explicit;
   }

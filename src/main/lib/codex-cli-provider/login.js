@@ -118,7 +118,6 @@ async function getCodexLoginStatus({ forceRefresh = false } = {}) {
 function readEnvironmentCodexToken() {
   return cleanText(
     process.env.HIKARI_CODEX_ACCESS_TOKEN
-      || process.env.ENANA_CODEX_ACCESS_TOKEN
       || process.env.OPENAI_OAUTH_TOKEN
       || process.env.CHATGPT_OAUTH_TOKEN,
     20000

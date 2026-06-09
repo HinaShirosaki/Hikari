@@ -8,7 +8,7 @@ import {
 
 export function readStoragePathFromLocalState() {
   try {
-    const raw = globalThis?.localStorage?.getItem?.('enana_state_v1');
+    const raw = globalThis?.localStorage?.getItem?.('hikari_state_v1');
     if (!raw) {
       return '';
     }

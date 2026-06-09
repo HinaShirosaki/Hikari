@@ -49,7 +49,7 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       agentChatLogListSessions: async () => ({
         ok: true,
         items: [
@@ -241,7 +241,7 @@ test('agent-chat session switching honors nested click targets and replays the l
 
   let releaseChat2Load = null;
   const window = {
-    enanaApi: {
+    hikariApi: {
       agentChatLogListSessions: async () => ({
         ok: true,
         items: [

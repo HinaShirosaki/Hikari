@@ -63,7 +63,7 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
         normalizeStateStoragePaths: () => {},
         rebuildObjectGraph: () => ({ nodes: {}, edges: [], backlinks: {}, updatedAt: 'rebuilt' }),
         windowObject: {
-          enanaApi: {
+          hikariApi: {
             ensureStorageDirectory: async (storagePath) => {
               ensuredPath = storagePath;
               return { ok: true, path: storagePath };
@@ -128,7 +128,7 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
         normalizeStateStoragePaths: () => {},
         rebuildObjectGraph: () => ({ nodes: {}, edges: [], backlinks: {}, updatedAt: 'rebuilt' }),
         windowObject: {
-          enanaApi: {
+          hikariApi: {
             ensureStorageDirectory: async (storagePath) => ({ ok: true, path: storagePath }),
             importStorageRoot: async () => ({
               ok: true,
@@ -192,7 +192,7 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       assert.match(mainSource, /const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log';/);
-      assert.match(mainSource, /mainCore\.agentLogRuntime\.ensureAgentChatLogFile\(mainCore\.appPaths\.getAgentChatLogPath\(\)\)/);
+      assert.match(mainSource, /agentLogRuntime\.ensureAgentChatLogFile\([^)]*getAgentChatLogPath\(\)\)/);
       assert.match(mainSource, /createMainAppPaths/);
       assert.match(appPathsSource, /ENANA_AGENT_CHAT_LOG_PATH/);
       assert.match(controllerUtilsSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);

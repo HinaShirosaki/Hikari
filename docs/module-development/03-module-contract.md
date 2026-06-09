@@ -52,7 +52,7 @@ Modules get their options bag from a manifest in `src/renderer/module-manifests/
 | `safeText` | `(value) => string` | `utils.js` | HTML-escape helper, use whenever you build innerHTML |
 | `cssEscape` | `(value) => string` | `utils.js` | escapes a value for use inside a CSS attribute selector |
 | `notebookType` | string | constant per call site | e.g. `'biology'` for the notebook module |
-| `apiBridge` | object \| null | `window.enanaApi` | IPC bridge exposed by the preload script |
+| `apiBridge` | object \| null | `window.hikariApi` | IPC bridge exposed by the preload script |
 | `getApiBridge` | `() => object \| null` | factory | use this if you may need the bridge after lazy initialization |
 | `rootDocument` | Document | `globalThis.document` | useful when supporting iframes or off-screen render in tests |
 | `selectionInsightsController` | object | `selection-insights.js` | optional: text selection insights service |
@@ -216,7 +216,7 @@ sequenceViewer, toolBox, settings, homeDashboard
 
 You usually only reach for the registry inside service files. From inside your module, prefer the injected callback (see 3.1).
 
-### 3.3 IPC bridge (`window.enanaApi`)
+### 3.3 IPC bridge (`window.hikariApi`)
 
 For anything that crosses the renderer/main boundary — file system, agent calls, scripts, autosave, native dialogs — use the `apiBridge`/`getApiBridge` option:
 

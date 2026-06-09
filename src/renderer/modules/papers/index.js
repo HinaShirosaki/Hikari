@@ -302,10 +302,10 @@ export function initPapersManagement({
       return { ok: false, cancelled: true, error: 'External website was not opened.' };
     }
 
-    if (typeof windowRef?.enanaApi?.openExternalUrl !== 'function') {
+    if (typeof windowRef?.hikariApi?.openExternalUrl !== 'function') {
       return { ok: false, error: 'External link opening is unavailable in this build.' };
     }
-    return windowRef.enanaApi.openExternalUrl(normalizedUrl);
+    return windowRef.hikariApi.openExternalUrl(normalizedUrl);
   }
 
   function mergeDiscoveredJournalClubs(discoveredClubs = []) {
@@ -591,7 +591,7 @@ export function initPapersManagement({
     if (!storagePath || !elements.papersView?.classList?.contains?.('is-active')) {
       return;
     }
-    if (!windowRef?.enanaApi?.discoverStoredPapers || discoveryState.inFlight) {
+    if (!windowRef?.hikariApi?.discoverStoredPapers || discoveryState.inFlight) {
       return;
     }
     const now = Date.now();
@@ -601,7 +601,7 @@ export function initPapersManagement({
 
     discoveryState.inFlight = true;
     try {
-      const result = await windowRef.enanaApi.discoverStoredPapers({
+      const result = await windowRef.hikariApi.discoverStoredPapers({
         storagePath,
         knownPapers: state.papers || [],
         projects: state.projects || [],
@@ -703,7 +703,7 @@ export function initPapersManagement({
       selectedText: normalizedSelectedText,
       author: String(
         state.settings?.personalInfo?.name
-        || state.settings?.personalInfo?.enanaEmail
+        || state.settings?.personalInfo?.hikariEmail
         || 'Local user'
       ).trim() || 'Local user',
       createdAt: now,

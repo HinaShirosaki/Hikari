@@ -29,7 +29,7 @@ If `doc/main-helpers/` explains the main-process bridge, this folder explains th
 2. The renderer core loads state from `modules/app-state.js`.
 3. It creates a module registry plus a small set of cross-feature services.
 4. It initializes feature modules through manifests, with the same mutable `state`, a shared `persist()` callback, and targeted change hooks.
-5. During `initApp()`, it optionally hydrates from an `.ena` file and an external storage root through `window.enanaApi`.
+5. During `initApp()`, it optionally hydrates from an `.ena` file and an external storage root through `window.hikariApi`.
 6. It renders everything once, then activates the configured startup view.
 7. After boot, most user actions stay inside a feature module, but navigation, persistence, search routing, and cross-module refreshes still flow back through the renderer core, the registry, and the service layer.
 
@@ -43,6 +43,6 @@ If `doc/main-helpers/` explains the main-process bridge, this folder explains th
 
 ## Important boundaries
 
-- `window.enanaApi` is the renderer-to-main bridge. For the main-process side of those calls, use [doc/main-helpers/README.md](../main-helpers/README.md).
+- `window.hikariApi` is the renderer-to-main bridge. For the main-process side of those calls, use [doc/main-helpers/README.md](../main-helpers/README.md).
 - The renderer-side Agent UI lives in `src/renderer/modules/agent-chat*`, but the actual agent backend is documented separately in [doc/agent/README.md](../agent/README.md).
 - `src/renderer/modules/app-registry.generated.js` is generated from `ui/config/app-registry.json`, so dock layout, labels, aliases, and search-scope wiring start from config, not handwritten renderer code.

@@ -12,8 +12,11 @@ export function createEntryListRenderer({
   safeText,
   getNotebookEntries,
   getProjects,
-  getEditingEntryId
+  getEditingEntryId,
+  getActiveProjectDashboardId = () => ''
 } = {}) {
+  const collapsedFolderKeys = new Set();
+
   function matchesType(entry) {
     return matchesNotebookType(entry, notebookType);
   }
@@ -44,12 +47,20 @@ export function createEntryListRenderer({
       const workflowName = String(entry?.workflowContext?.workflowName || '').trim();
       const isWorkflowEntry = Boolean(workflowEntryId || workflowName);
       const groupName = resolveEntryCollectionName(entry, projects);
+      const project = isWorkflowEntry
+        ? null
+        : (projects.find((item) => String(item?.id || '') === String(entry?.projectId || ''))
+          || projects.find((item) => String(item?.name || '').trim().toLowerCase() === String(groupName || '').trim().toLowerCase())
+          || null);
+      const projectId = project?.id || '';
       const groupKey = isWorkflowEntry
         ? `__workflow__:${workflowEntryId || workflowName || entry.id}`
-        : (entry.projectId || `__project__:${groupName}`);
+        : (projectId || entry.projectId || `__project__:${groupName}`);
       if (!groups.has(groupKey)) {
         groups.set(groupKey, {
+          groupKey,
           groupName,
+          projectId,
           groupClass: isWorkflowEntry
             ? 'biology-notebook-folder--workflow'
             : 'biology-notebook-folder--project',
@@ -87,23 +98,55 @@ export function createEntryListRenderer({
     }
 
     const groups = groupEntries(entries);
+    const activeProjectDashboardId = String(getActiveProjectDashboardId() || '');
     listEl.innerHTML = Array.from(groups.values()).map((group) => {
       const entryButtons = group.entries.map((entry) => buildEntryButtonHtml(entry)).join('');
+      const projectDataAttrs = group.projectId
+        ? ` data-notebook-project-id="${safeText(group.projectId)}" data-notebook-project-name="${safeText(group.groupName)}"`
+        : '';
+      const isActiveProject = group.projectId && group.projectId === activeProjectDashboardId;
+      const isCollapsed = collapsedFolderKeys.has(group.groupKey);
+      const folderNameTag = group.projectId ? 'button' : 'span';
+      const folderNameAttrs = group.projectId
+        ? ` type="button" class="biology-notebook-folder-name biology-notebook-folder-name-btn"${projectDataAttrs}`
+        : ' class="biology-notebook-folder-name"';
       return `
-        <details class="biology-notebook-folder ${group.groupClass}" open>
-          <summary class="biology-notebook-folder-item ${group.itemClass}">
-            <span class="biology-notebook-folder-glyph" aria-hidden="true"></span>
-            <span class="biology-notebook-folder-name">${safeText(group.groupName)}</span>
-          </summary>
-          <div class="biology-notebook-folder-children biology-notebook-folder-children--pages">
+        <div class="biology-notebook-folder ${group.groupClass}${isActiveProject ? ' is-active' : ''}${isCollapsed ? ' is-collapsed' : ''}">
+          <div class="biology-notebook-folder-item ${group.itemClass}">
+            <button
+              type="button"
+              class="biology-notebook-folder-toggle"
+              data-notebook-folder-toggle="${safeText(group.groupKey)}"
+              aria-expanded="${isCollapsed ? 'false' : 'true'}"
+              aria-label="Toggle ${safeText(group.groupName)}"
+            >
+              <span class="biology-notebook-folder-glyph" aria-hidden="true"></span>
+            </button>
+            <${folderNameTag}${folderNameAttrs}>${safeText(group.groupName)}</${folderNameTag}>
+          </div>
+          <div class="biology-notebook-folder-children biology-notebook-folder-children--pages"${isCollapsed ? ' hidden' : ''}>
             ${entryButtons}
           </div>
-        </details>
+        </div>
       `;
     }).join('');
   }
 
+  function toggleFolder(folderKey) {
+    const key = String(folderKey || '');
+    if (!key) {
+      return;
+    }
+    if (collapsedFolderKeys.has(key)) {
+      collapsedFolderKeys.delete(key);
+    } else {
+      collapsedFolderKeys.add(key);
+    }
+    renderEntries();
+  }
+
   return {
-    renderEntries
+    renderEntries,
+    toggleFolder
   };
 }

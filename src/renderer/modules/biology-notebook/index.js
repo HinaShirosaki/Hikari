@@ -1,7 +1,7 @@
 // Biology notebook controller.
 //
 // Responsibilities:
-// - render project/protocol selections for notebook entry creation
+// - render protocol selection for notebook entry creation
 // - populate inline placeholder editors from protocol step definitions
 // - save notebook entries plus imported result files into app state
 // - support editing existing entries and exporting them to PDF
@@ -41,6 +41,8 @@ import { createEntryListRenderer } from './entry-list-renderer.js';
 import { createDropdownRenderer } from './dropdown-renderer.js';
 import { createProtocolSnapshotEditor } from './protocol-snapshot-editor.js';
 import { createLinkedWorkActions } from './linked-work-actions.js';
+import { createProjectDashboardRenderer } from '../project-management/dashboard-renderer.js';
+import { createNotebookToolSidebarController } from './tool-sidebar.js';
 import {
   buildProtocolStepsHtml,
   buildViewerMeta
@@ -78,7 +80,10 @@ export function initLabNotebook({
   const notebookProjectSelect = document.getElementById('biology-notebook-project-select');
   const notebookProtocolSearchInput = document.getElementById('biology-notebook-protocol-search');
   const notebookProtocolSelect = document.getElementById('biology-notebook-protocol-select');
+  const notebookPageStarter = document.getElementById('biology-notebook-page-starter');
+  const notebookPageStarterProject = document.getElementById('biology-notebook-page-starter-project');
   const notebookEmptyState = document.getElementById('biology-notebook-empty-state');
+  const notebookProjectDashboard = document.getElementById('biology-notebook-project-dashboard');
   const notebookProtocolArea = document.getElementById('biology-notebook-protocol-area');
   const notebookExperimentName = document.getElementById('biology-notebook-experiment-name');
   const notebookProtocolTitle = document.getElementById('biology-notebook-protocol-title');
@@ -106,18 +111,24 @@ export function initLabNotebook({
   const notebookAddAssayBtn = document.getElementById('biology-notebook-add-assay-btn');
   const notebookAddSamplesBtn = document.getElementById('biology-notebook-add-samples-btn');
   const notebookLinkedResults = document.getElementById('biology-notebook-linked-results');
+  const notebookToolCalculations = document.getElementById('biology-notebook-tool-calculations');
   const saveNotebookBtn = document.getElementById('save-biology-notebook-btn');
   const clarifySaveNotebookBtn = document.getElementById('clarify-save-biology-notebook-btn');
   const cancelEditBtn = document.getElementById('cancel-biology-notebook-edit-btn');
   const notebookEntryList = document.getElementById('biology-notebook-entry-list');
 
   let editingEntryId = null;
+  let activeProjectDashboardId = '';
   let linkedPreviewRenderToken = 0;
   let sampleLinkDrafts = new Map();
   let pendingDroppedResultFiles = [];
 
+  if (notebookProjectDashboard) {
+    notebookProjectDashboard.hidden = true;
+  }
+
   const previewImageLoader = createLinkedPreviewImageLoader({
-    readFileBase64: window.enanaApi?.readFileBase64?.bind(window.enanaApi)
+    readFileBase64: window.hikariApi?.readFileBase64?.bind(window.hikariApi)
   });
 
   const resultTableController = createResultTableController({
@@ -174,7 +185,13 @@ export function initLabNotebook({
     safeText,
     getNotebookEntries: () => state.notebookEntries,
     getProjects: () => state.projects,
-    getEditingEntryId: () => editingEntryId
+    getEditingEntryId: () => editingEntryId,
+    getActiveProjectDashboardId: () => activeProjectDashboardId
+  });
+
+  const projectDashboardRenderer = createProjectDashboardRenderer({
+    state,
+    safeText
   });
 
   const dropdownRenderer = createDropdownRenderer({
@@ -184,6 +201,7 @@ export function initLabNotebook({
     safeText,
     getProjects: () => state.projects,
     getProtocols: () => state.protocols,
+    onAfterRender: () => syncPageStarterProject(),
     onProtocolChange: () => onProtocolChange()
   });
 
@@ -204,6 +222,17 @@ export function initLabNotebook({
     onOpenSampleRecorder
   });
 
+  const toolSidebarController = createNotebookToolSidebarController({
+    doc: typeof document !== 'undefined' ? document : null,
+    win: typeof window !== 'undefined' ? window : null,
+    safeText,
+    createId,
+    notesInput: notebookResult,
+    stepsHost: notebookSteps,
+    calculationsHost: notebookToolCalculations,
+    onAppendNote: appendNotebookResultLine
+  });
+
   function matchesType(entry) {
     return matchesNotebookType(entry, notebookType);
   }
@@ -218,6 +247,34 @@ export function initLabNotebook({
 
   function findSelectedProject() {
     return state.projects.find((item) => item.id === notebookProjectSelect.value) || null;
+  }
+
+  function syncPageStarterProject() {
+    const project = findSelectedProject();
+    if (notebookPageStarterProject) {
+      notebookPageStarterProject.textContent = project?.name || 'Choose a project folder';
+    }
+    if (notebookPageStarter) {
+      notebookPageStarter.dataset.projectId = project?.id || '';
+    }
+    if (notebookProtocolSearchInput) {
+      notebookProtocolSearchInput.disabled = !project;
+    }
+  }
+
+  function findDashboardProject(projectId, projectName = '') {
+    const cleanProjectId = String(projectId || '').trim();
+    if (cleanProjectId) {
+      const project = state.projects.find((item) => String(item?.id || '') === cleanProjectId);
+      if (project) {
+        return project;
+      }
+    }
+    const cleanProjectName = String(projectName || '').trim().toLowerCase();
+    if (!cleanProjectName) {
+      return null;
+    }
+    return state.projects.find((item) => String(item?.name || '').trim().toLowerCase() === cleanProjectName) || null;
   }
 
   function findSelectedProtocol() {
@@ -383,7 +440,7 @@ export function initLabNotebook({
     protocolEditor.setEditing(false);
 
     if (!entry) {
-      const resultTable = resultTableController.getCurrent();
+      const resultTables = resultTableController.getCurrentTables();
       protocolEditor.setDraft(cloneProtocolSnapshot(nextProtocol));
       renderProtocolViewer({
         project,
@@ -391,12 +448,14 @@ export function initLabNotebook({
         entry: null,
         isSavedEntry: false,
         experimentNameOverride: nextExperimentName,
-        resultTableOverride: resultTable,
-        preserveSelectedFiles: true
+        resultTablesOverride: resultTables,
+        preserveSelectedFiles: true,
+        preserveToolCalculations: true
       });
       return;
     }
 
+    const resultTables = resultTableController.getCurrentTables();
     const nextEntry = {
       ...entry,
       protocolId: String(nextProtocol.id || entry.protocolId || '').trim(),
@@ -408,7 +467,9 @@ export function initLabNotebook({
         nextProtocol
       ),
       result: String(notebookResult.value || '').trim(),
-      resultTable: resultTableController.getCurrent(),
+      resultTable: resultTables[0] || null,
+      resultTables,
+      toolCalculations: toolSidebarController.getCalculations(),
       sampleLinks: collectNotebookSampleLinks(entry, nextProtocol),
       updatedAt: new Date().toISOString()
     };
@@ -446,6 +507,7 @@ export function initLabNotebook({
   }
 
   function onProjectChange() {
+    hideProjectDashboard();
     editingEntryId = null;
     sampleLinkDrafts = new Map();
     sampleLinkMenu.close();
@@ -456,6 +518,7 @@ export function initLabNotebook({
   }
 
   function onProtocolChange() {
+    hideProjectDashboard();
     protocolEditor.clearDraft();
     sampleLinkDrafts = new Map();
     sampleLinkMenu.close();
@@ -531,12 +594,12 @@ export function initLabNotebook({
 
     let importedResultFileRecords = [];
     try {
-      await ensureStorageFolderExists(storageFolder, window.enanaApi?.ensureStorageDirectory?.bind(window.enanaApi));
+      await ensureStorageFolderExists(storageFolder, window.hikariApi?.ensureStorageDirectory?.bind(window.hikariApi));
       importedResultFileRecords = await persistImportedNotebookFiles({
         files: selectedResultFiles,
         storageFolder,
         storagePath: state.settings.storagePath,
-        storeImportedFile: window.enanaApi?.storeImportedFile?.bind(window.enanaApi)
+        storeImportedFile: window.hikariApi?.storeImportedFile?.bind(window.hikariApi)
       });
     } catch (error) {
       window.alert(String(error?.message || error || 'Failed to store notebook files.'));
@@ -549,6 +612,7 @@ export function initLabNotebook({
       importedResultFileRecords,
       selectedResultFiles
     });
+    const resultTables = resultTableController.getCurrentTables();
 
     const entry = buildSaveableNotebookEntry({
       editingEntry,
@@ -559,7 +623,8 @@ export function initLabNotebook({
       entryId,
       values,
       resultText: String(options.resultText ?? notebookResult.value).trim(),
-      resultTable: resultTableController.getCurrent(),
+      resultTables,
+      toolCalculations: toolSidebarController.getCalculations(),
       sampleLinks: collectNotebookSampleLinks(editingEntry, protocol),
       resultFiles,
       resultFileRecords,
@@ -715,10 +780,25 @@ export function initLabNotebook({
   function onEntryListClick(event) {
     const entryButton = event?.target?.closest?.('[data-notebook-entry-id]')
       || (event?.target?.dataset?.notebookEntryId ? event.target : null);
-    if (!entryButton) {
+    if (entryButton) {
+      editEntry(entryButton.dataset.notebookEntryId);
       return;
     }
-    editEntry(entryButton.dataset.notebookEntryId);
+
+    const folderToggle = event?.target?.closest?.('[data-notebook-folder-toggle]')
+      || (event?.target?.dataset?.notebookFolderToggle ? event.target : null);
+    if (folderToggle) {
+      entryListRenderer.toggleFolder(folderToggle.dataset.notebookFolderToggle);
+      return;
+    }
+
+    const projectFolder = event?.target?.closest?.('[data-notebook-project-id]')
+      || (event?.target?.dataset?.notebookProjectId ? event.target : null);
+    if (!projectFolder) {
+      return;
+    }
+    event?.preventDefault?.();
+    showProjectDashboard(projectFolder.dataset.notebookProjectId, projectFolder.dataset.notebookProjectName);
   }
 
   function onExportButtonClick() {
@@ -759,6 +839,7 @@ export function initLabNotebook({
 
     notebookProjectSelect.value = hasLiveProject ? project.id : '';
     dropdownRenderer.renderProtocolOptions(hasLiveProtocol ? protocol.id : '', { triggerChange: false });
+    syncPageStarterProject();
 
     if (!project || !protocol) {
       clearViewer();
@@ -787,8 +868,11 @@ export function initLabNotebook({
     isSavedEntry,
     experimentNameOverride = '',
     resultTableOverride = null,
-    preserveSelectedFiles = false
+    resultTablesOverride = null,
+    preserveSelectedFiles = false,
+    preserveToolCalculations = false
   }) {
+    hideProjectDashboard();
     notebookProtocolArea.hidden = false;
     if (notebookEmptyState) {
       notebookEmptyState.hidden = true;
@@ -817,7 +901,14 @@ export function initLabNotebook({
     });
 
     notebookResult.value = entry?.result || '';
-    resultTableController.renderEditor(resultTableOverride ?? entry?.resultTable ?? null);
+    resultTableController.renderEditor(resultTablesOverride ?? resultTableOverride ?? entry?.resultTables ?? entry?.resultTable ?? null);
+    if (entry) {
+      toolSidebarController.setCalculations(entry.toolCalculations || []);
+    } else if (!preserveToolCalculations) {
+      toolSidebarController.setCalculations([]);
+    } else {
+      toolSidebarController.renderCalculations();
+    }
     if (!preserveSelectedFiles) {
       clearPendingNotebookResultFiles();
     }
@@ -828,7 +919,77 @@ export function initLabNotebook({
     selectionInsightsController?.refreshHost?.('biology-notebook-protocol');
   }
 
-  function clearViewer() {
+  function hideProjectDashboard() {
+    activeProjectDashboardId = '';
+    if (!notebookProjectDashboard) {
+      return;
+    }
+    notebookProjectDashboard.hidden = true;
+    notebookProjectDashboard.innerHTML = '';
+  }
+
+  function showProjectDashboard(projectId, projectName = '') {
+    const project = findDashboardProject(projectId, projectName);
+    if (!project || !notebookProjectDashboard) {
+      return;
+    }
+
+    clearViewer({ preserveProjectDashboard: true });
+    activeProjectDashboardId = project.id;
+    notebookProjectSelect.value = project.id;
+    dropdownRenderer.renderProtocolOptions('', { triggerChange: false });
+    syncPageStarterProject();
+    projectDashboardRenderer.renderDashboardInto(notebookProjectDashboard, project.id, {
+      includeEditAction: false,
+      contributionHeadingId: 'biology-notebook-project-contribution-heading'
+    });
+    renderProjectDashboardActions(project);
+    notebookProjectDashboard.hidden = false;
+    syncViewerVisibility();
+    entryListRenderer.renderEntries();
+  }
+
+  function renderProjectDashboardActions(project) {
+    if (!notebookProjectDashboard || !project) {
+      return;
+    }
+    const heroSection = notebookProjectDashboard.querySelector('.project-dashboard-hero');
+    if (!heroSection) {
+      return;
+    }
+    let actionsContainer = heroSection.querySelector('.project-dashboard-actions');
+    if (!actionsContainer) {
+      actionsContainer = document.createElement('div');
+      actionsContainer.className = 'project-dashboard-actions';
+      heroSection.appendChild(actionsContainer);
+    }
+
+    const exportBtn = document.createElement('button');
+    exportBtn.type = 'button';
+    exportBtn.className = 'ghost-btn';
+    exportBtn.id = 'biology-notebook-project-export-pdf-btn';
+    exportBtn.textContent = 'Export All Pages as PDF';
+    exportBtn.addEventListener('click', () => {
+      const entries = projectDashboardRenderer.getProjectNotebookEntries(project) || [];
+      exportBtn.disabled = true;
+      const originalLabel = exportBtn.textContent;
+      exportBtn.textContent = 'Exporting...';
+      Promise.resolve(linkedWorkActions.exportProjectPagesPdf({ project, entries }))
+        .catch((error) => {
+          console.error('Failed to export project notebook PDF:', error);
+        })
+        .finally(() => {
+          exportBtn.disabled = false;
+          exportBtn.textContent = originalLabel;
+        });
+    });
+    actionsContainer.appendChild(exportBtn);
+  }
+
+  function clearViewer({ preserveProjectDashboard = false } = {}) {
+    if (!preserveProjectDashboard) {
+      hideProjectDashboard();
+    }
     notebookProtocolArea.hidden = true;
     protocolEditor.clearDraft();
     sampleLinkDrafts = new Map();
@@ -838,6 +999,7 @@ export function initLabNotebook({
     notebookResult.value = '';
     clearPendingNotebookResultFiles();
     resultTableController.renderEditor(null);
+    toolSidebarController.setCalculations([]);
     if (notebookExperimentName) {
       notebookExperimentName.value = '';
     }
@@ -851,7 +1013,7 @@ export function initLabNotebook({
   }
 
   function syncViewerVisibility() {
-    const hasViewer = !notebookProtocolArea.hidden;
+    const hasViewer = !notebookProtocolArea.hidden || Boolean(notebookProjectDashboard && !notebookProjectDashboard.hidden);
     if (notebookEmptyState) {
       notebookEmptyState.hidden = hasViewer;
     }
@@ -951,6 +1113,7 @@ export function initLabNotebook({
       return;
     }
     const timestamp = new Date().toISOString();
+    const resultTables = resultTableController.getCurrentTables();
     const nextEntry = {
       ...state.notebookEntries[index],
       values: pruneNotebookValuesForProtocol(
@@ -958,7 +1121,9 @@ export function initLabNotebook({
         protocol
       ),
       result: String(notebookResult.value || '').trim(),
-      resultTable: resultTableController.getCurrent(),
+      resultTable: resultTables[0] || null,
+      resultTables,
+      toolCalculations: toolSidebarController.getCalculations(),
       sampleLinks: collectNotebookSampleLinks(state.notebookEntries[index], protocol),
       updatedAt: timestamp
     };
@@ -969,6 +1134,7 @@ export function initLabNotebook({
       'values',
       'result',
       'resultTable',
+      'resultTables',
       'sampleLinks'
     ]);
     const changedFields = changedFieldList(changes);
@@ -1055,6 +1221,7 @@ export function initLabNotebook({
     window.addEventListener('resize', sampleLinkMenu.close);
   }
   updateSaveButtonLabel();
+  syncPageStarterProject();
   syncViewerVisibility();
   renderLinkedPreviews(null);
   resultTableController.renderEditor(null);
@@ -1073,6 +1240,7 @@ export function initLabNotebook({
 
   return {
     openEntry: editEntry,
+    openProjectDashboard: showProjectDashboard,
     renderProjectOptions: dropdownRenderer.renderProjectOptions,
     renderProtocolOptions: dropdownRenderer.renderProtocolOptions,
     renderEntries: entryListRenderer.renderEntries,

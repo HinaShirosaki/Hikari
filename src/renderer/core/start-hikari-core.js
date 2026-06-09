@@ -39,7 +39,8 @@ function createAppReadyEvent(windowObject, init) {
 
 export function startHikariCore({
   documentObject = document,
-  windowObject = window
+  windowObject = window,
+  exposeDebugGlobals = false
 } = {}) {
   const state = loadState();
   const normalizeAppViewId = (viewId) => normalizeViewId(VIEWS, viewId);
@@ -75,8 +76,8 @@ export function startHikariCore({
     normalizeStateStoragePaths(state);
     state.objectGraph = rebuildObjectGraph(state);
     persistState(state);
-    if (windowObject.enanaApi?.autoSaveDataFile && String(state.settings?.storagePath || '').trim()) {
-      windowObject.enanaApi
+    if (windowObject.hikariApi?.autoSaveDataFile && String(state.settings?.storagePath || '').trim()) {
+      windowObject.hikariApi
         .autoSaveDataFile(state, '')
         .catch(() => {});
     }
@@ -119,8 +120,8 @@ export function startHikariCore({
     trackGrowthEvent,
     showView,
     views: VIEWS,
-    apiBridge: windowObject.enanaApi || null,
-    getApiBridge: () => windowObject.enanaApi || null,
+    apiBridge: windowObject.hikariApi || null,
+    getApiBridge: () => windowObject.hikariApi || null,
     rootDocument: documentObject,
     onStoragePathSaved: async (storagePath, options = {}) => {
       const result = await storageImportController.runStorageRootImport(storagePath, {
@@ -173,25 +174,43 @@ export function startHikariCore({
     windowObject
   });
 
-  windowObject.enanaApi?.onProtocolRecordSaved?.((payload) => {
-    rendererServices.protocol.handleExternalProtocolRecordSaved(payload);
+  let hydrationComplete = false;
+  const pendingProtocolRecordEvents = [];
+
+  windowObject.hikariApi?.onProtocolRecordSaved?.((payload) => {
+    if (hydrationComplete) {
+      rendererServices.protocol.handleExternalProtocolRecordSaved(payload);
+    } else {
+      pendingProtocolRecordEvents.push(payload);
+    }
   });
 
-  windowObject.enanaGraph = {
-    rebuild: () => {
-      state.objectGraph = rebuildObjectGraph(state);
-      persistState(state);
-      return state.objectGraph;
-    },
-    entriesUsingReagentLot: (lot) => queryNotebookEntriesByRelation(state, {
-      relation: 'uses_reagent_lot',
-      targetType: 'reagent_lot',
-      targetId: lot
-    })
-  };
+  if (exposeDebugGlobals) {
+    windowObject.hikariGraph = {
+      rebuild: () => {
+        state.objectGraph = rebuildObjectGraph(state);
+        persistState(state);
+        return state.objectGraph;
+      },
+      entriesUsingReagentLot: (lot) => queryNotebookEntriesByRelation(state, {
+        relation: 'uses_reagent_lot',
+        targetType: 'reagent_lot',
+        targetId: lot
+      })
+    };
+  }
 
   async function initApp() {
     await storageImportController.hydrateStateFromStorageRoot();
+    hydrationComplete = true;
+    while (pendingProtocolRecordEvents.length) {
+      const payload = pendingProtocolRecordEvents.shift();
+      try {
+        rendererServices.protocol.handleExternalProtocolRecordSaved(payload);
+      } catch (error) {
+        console.error('Failed to apply queued protocol record:', error);
+      }
+    }
     navigationShell.applyAppearanceSnapshot(state.settings?.appearance);
     navigationShell.renderAppNavigation();
     navigationShell.initNavigation();
@@ -201,9 +220,15 @@ export function startHikariCore({
     navigationShell.showView(navigationShell.resolveStartupViewId(state));
   }
 
+  let resolveReady;
+  const readyPromise = new Promise((resolve) => {
+    resolveReady = resolve;
+  });
+
   initApp()
     .then(() => {
       windowObject.dispatchEvent(createAppReadyEvent(windowObject));
+      resolveReady({ ok: true });
     })
     .catch((error) => {
       console.error('Failed to initialize Hikari:', error);
@@ -212,6 +237,7 @@ export function startHikariCore({
           error: true
         }
       }));
+      resolveReady({ ok: false, error });
     });
 
   return {
@@ -223,6 +249,7 @@ export function startHikariCore({
     renderAll,
     state,
     storageImportController,
-    topbarSearchController
+    topbarSearchController,
+    whenReady: () => readyPromise
   };
 }

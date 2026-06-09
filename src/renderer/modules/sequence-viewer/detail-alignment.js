@@ -348,10 +348,6 @@ function renderTraceChannelPolylines(displayTrace, traceWidth) {
 
 function renderTraceBaseCalls(displayTrace, differenceMap, traceWidth) {
   const sequence = String(displayTrace.sequence || '');
-  const maxLabels = Math.max(1, Math.floor(traceWidth / 18));
-  const maxTicks = Math.max(1, Math.floor(traceWidth / 7));
-  const labelStep = Math.max(1, Math.ceil(sequence.length / maxLabels));
-  const tickStep = Math.max(1, Math.ceil(sequence.length / maxTicks));
 
   return displayTrace.positions
     .map((position, index) => {
@@ -359,12 +355,8 @@ function renderTraceBaseCalls(displayTrace, differenceMap, traceWidth) {
       const base = sequence[index] || 'N';
       const baseClass = TRACE_BASE_ORDER.includes(base) ? base.toLowerCase() : 'unknown';
       const diffType = differenceMap.get(index) || '';
-      const tick = index % tickStep === 0
-        ? `<line class="sequence-viewer-trace-base-tick${diffType ? ` sequence-viewer-trace-base-tick-${diffType}` : ''}" x1="${x}" y1="${TRACE_SIGNAL_TOP + TRACE_SIGNAL_HEIGHT + 6}" x2="${x}" y2="${TRACE_SIGNAL_TOP + TRACE_SIGNAL_HEIGHT + 18}"></line>`
-        : '';
-      const label = index % labelStep === 0 || diffType
-        ? `<text class="sequence-viewer-trace-base-call sequence-viewer-trace-base-${baseClass}${diffType ? ` sequence-viewer-trace-base-call-${diffType}` : ''}" x="${x}" y="${TRACE_BASE_LABEL_Y}">${escapeHtml(base)}</text>`
-        : '';
+      const tick = `<line class="sequence-viewer-trace-base-tick${diffType ? ` sequence-viewer-trace-base-tick-${diffType}` : ''}" x1="${x}" y1="${TRACE_SIGNAL_TOP + TRACE_SIGNAL_HEIGHT + 6}" x2="${x}" y2="${TRACE_SIGNAL_TOP + TRACE_SIGNAL_HEIGHT + 18}"></line>`;
+      const label = `<text class="sequence-viewer-trace-base-call sequence-viewer-trace-base-${baseClass}${diffType ? ` sequence-viewer-trace-base-call-${diffType}` : ''}" x="${x}" y="${TRACE_BASE_LABEL_Y}">${escapeHtml(base)}</text>`;
       return `${tick}${label}`;
     })
     .join('');

@@ -86,7 +86,7 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
   const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
     document,
     window: {
-      enanaApi: {}
+      hikariApi: {}
     }
   });
   const notebook = notebookModule.initLabNotebook({
@@ -196,7 +196,7 @@ test('biology-notebook edits only the saved page protocol copy and keeps the ori
   const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
     document,
     window: {
-      enanaApi: {}
+      hikariApi: {}
     }
   });
   const notebook = notebookModule.initLabNotebook({
@@ -244,7 +244,7 @@ test('biology-notebook edits only the saved page protocol copy and keeps the ori
   assert.ok(persistCalls >= 1);
   assert.ok(notebookChangedCalls >= 1);
 });
-test('biology-notebook saves and reopens result tables with Tabulator', async () => {
+test('biology-notebook saves and reopens multiple result tables with Tabulator', async () => {
   const document = createMockDocument([
     'biology-notebook-project-select',
     'biology-notebook-protocol-search',
@@ -326,7 +326,7 @@ test('biology-notebook saves and reopens result tables with Tabulator', async ()
   const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
     document,
     window: {
-      enanaApi: {},
+      hikariApi: {},
       Tabulator: MockTabulator
     }
   });
@@ -348,6 +348,7 @@ test('biology-notebook saves and reopens result tables with Tabulator', async ()
 
   trigger(document.getElementById('biology-notebook-add-table-btn'), 'click');
   assert.equal(document.getElementById('biology-notebook-result-table-wrap').hidden, false);
+  assert.equal(document.getElementById('biology-notebook-add-table-btn').hidden, false);
 
   let tableInstance = MockTabulator.instances[MockTabulator.instances.length - 1];
   const firstField = tableInstance.columns[0].field;
@@ -364,11 +365,18 @@ test('biology-notebook saves and reopens result tables with Tabulator', async ()
   tableInstance = MockTabulator.instances[MockTabulator.instances.length - 1];
   tableInstance.data[tableInstance.data.length - 1][firstField] = 'Control';
 
+  trigger(document.getElementById('biology-notebook-add-table-btn'), 'click');
+  const secondTableInstance = MockTabulator.instances[MockTabulator.instances.length - 1];
+  const secondField = secondTableInstance.columns[0].field;
+  secondTableInstance.columns[0].title = 'Condition';
+  secondTableInstance.data[0][secondField] = 'Induced';
+
   document.getElementById('biology-notebook-result').value = 'Measured expression panel.';
   trigger(document.getElementById('save-biology-notebook-btn'), 'click');
   await flushAsync();
 
   assert.equal(state.notebookEntries.length, 1);
+  assert.equal(state.notebookEntries[0].resultTables.length, 2);
   assert.equal(state.notebookEntries[0].resultTable.columns.length, 4);
   assert.equal(state.notebookEntries[0].resultTable.rows.length, 4);
   assert.equal(state.notebookEntries[0].resultTable.columns[0].title, 'Sample');
@@ -376,16 +384,144 @@ test('biology-notebook saves and reopens result tables with Tabulator', async ()
   assert.equal(state.notebookEntries[0].resultTable.rows[0][state.notebookEntries[0].resultTable.columns[0].field], 'A1');
   assert.equal(state.notebookEntries[0].resultTable.rows[0][state.notebookEntries[0].resultTable.columns[3].field], '0.82');
   assert.equal(state.notebookEntries[0].resultTable.rows[3][state.notebookEntries[0].resultTable.columns[0].field], 'Control');
+  assert.equal(state.notebookEntries[0].resultTables[1].columns[0].title, 'Condition');
+  assert.equal(state.notebookEntries[0].resultTables[1].rows[0][state.notebookEntries[0].resultTables[1].columns[0].field], 'Induced');
 
   notebook.openEntry(state.notebookEntries[0].id);
-  tableInstance = MockTabulator.instances[MockTabulator.instances.length - 1];
-  assert.equal(tableInstance.columns.length, 4);
-  assert.equal(tableInstance.columns[0].title, 'Sample');
-  assert.equal(tableInstance.columns[3].title, 'OD600');
-  assert.equal(tableInstance.data[0][tableInstance.columns[0].field], 'A1');
-  assert.equal(tableInstance.data[0][tableInstance.columns[3].field], '0.82');
-  assert.match(document.getElementById('biology-notebook-result-table-status').textContent, /4 columns x 4 rows/i);
+  const reopenedTables = MockTabulator.instances.slice(-2);
+  assert.equal(reopenedTables.length, 2);
+  assert.equal(reopenedTables[0].columns.length, 4);
+  assert.equal(reopenedTables[0].columns[0].title, 'Sample');
+  assert.equal(reopenedTables[0].columns[3].title, 'OD600');
+  assert.equal(reopenedTables[0].data[0][reopenedTables[0].columns[0].field], 'A1');
+  assert.equal(reopenedTables[0].data[0][reopenedTables[0].columns[3].field], '0.82');
+  assert.equal(reopenedTables[1].columns[0].title, 'Condition');
+  assert.equal(reopenedTables[1].data[0][reopenedTables[1].columns[0].field], 'Induced');
+  assert.match(document.getElementById('biology-notebook-result-table-status').textContent, /2 tables/i);
   assert.ok(persistCalls >= 1);
+});
+test('biology-notebook sidebar records bench calculations and inserts readable notes', async () => {
+  const document = createMockDocument([
+    'biology-notebook-project-select',
+    'biology-notebook-protocol-search',
+    'biology-notebook-protocol-select',
+    'biology-notebook-page-starter',
+    'biology-notebook-page-starter-project',
+    'biology-notebook-empty-state',
+    'biology-notebook-protocol-area',
+    'biology-notebook-protocol-title',
+    'biology-notebook-protocol-meta',
+    'biology-notebook-export-btn',
+    'biology-notebook-mark-executed-btn',
+    'biology-notebook-steps',
+    'biology-notebook-result',
+    'biology-notebook-result-file',
+    'biology-notebook-layout',
+    'biology-notebook-tool-sidebar',
+    'biology-notebook-tool-collapse-btn',
+    'biology-notebook-tool-fold-toggle',
+    'biology-notebook-tool-mobile-toggle',
+    'biology-notebook-tool-calculations',
+    'save-biology-notebook-btn',
+    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-entry-list'
+  ]);
+  document.querySelector = (selector) => (
+    selector === '[data-notebook-tool-sidebar]'
+      ? document.getElementById('biology-notebook-tool-sidebar')
+      : null
+  );
+
+  const state = {
+    projects: [
+      { id: 'p1', name: 'Atlas' }
+    ],
+    protocols: [
+      {
+        id: 'pr1',
+        name: 'Bench Prep',
+        steps: [
+          { id: 's1', text: 'Prepare reaction.', placeholders: [] }
+        ]
+      }
+    ],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    settings: {
+      storagePath: ''
+    }
+  };
+  let idIndex = 0;
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
+    document,
+    window: {
+      hikariApi: {}
+    }
+  });
+  const notebook = notebookModule.initLabNotebook({
+    state,
+    persist: () => {},
+    createId: () => `generated-${idIndex += 1}`,
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  notebook.renderProjectOptions();
+  notebook.renderProtocolOptions('pr1');
+
+  const layout = document.getElementById('biology-notebook-layout');
+  trigger(document.getElementById('biology-notebook-tool-collapse-btn'), 'click');
+  assert.ok(layout.classList.contains('is-tool-sidebar-collapsed'));
+  trigger(document.getElementById('biology-notebook-tool-fold-toggle'), 'click');
+  assert.ok(layout.classList.contains('is-tool-sidebar-open'));
+  assert.equal(layout.classList.contains('is-tool-sidebar-collapsed'), false);
+
+  document.getElementById('biology-notebook-tool-mass-concentration').value = '10';
+  document.getElementById('biology-notebook-tool-mass-concentration-unit').value = 'mM';
+  document.getElementById('biology-notebook-tool-mass-mw').value = '58.44';
+  document.getElementById('biology-notebook-tool-mass-volume').value = '1';
+  document.getElementById('biology-notebook-tool-mass-volume-unit').value = 'L';
+  document.getElementById('biology-notebook-tool-mass-output-unit').value = 'mg';
+  trigger(document.getElementById('biology-notebook-tool-mass-volume'), 'input');
+  trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
+
+  trigger(document.getElementById('biology-notebook-tool-tab-buffer'), 'click');
+  document.getElementById('biology-notebook-tool-buffer-volume').value = '1000';
+  document.getElementById('biology-notebook-tool-buffer-name-1').value = 'NaCl';
+  document.getElementById('biology-notebook-tool-buffer-form-1').value = 'solid';
+  document.getElementById('biology-notebook-tool-buffer-mw-1').value = '58.44';
+  document.getElementById('biology-notebook-tool-buffer-concentration-1').value = '150';
+  trigger(document.getElementById('biology-notebook-tool-buffer-concentration-1'), 'input');
+  trigger(document.getElementById('biology-notebook-tool-record-btn'), 'click');
+
+  trigger(document.getElementById('biology-notebook-tool-tab-reaction'), 'click');
+  document.getElementById('biology-notebook-tool-reaction-total-volume').value = '100';
+  document.getElementById('biology-notebook-tool-reaction-total-unit').value = 'uL';
+  document.getElementById('biology-notebook-tool-reaction-fill-name').value = 'Water';
+  document.getElementById('biology-notebook-tool-reaction-name-1').value = 'ATP';
+  document.getElementById('biology-notebook-tool-reaction-stock-1').value = '10';
+  document.getElementById('biology-notebook-tool-reaction-stock-unit-1').value = 'mM';
+  document.getElementById('biology-notebook-tool-reaction-final-1').value = '1';
+  document.getElementById('biology-notebook-tool-reaction-final-unit-1').value = 'mM';
+  trigger(document.getElementById('biology-notebook-tool-reaction-final-1'), 'input');
+  trigger(document.getElementById('biology-notebook-tool-record-btn'), 'click');
+
+  trigger(document.getElementById('save-biology-notebook-btn'), 'click');
+  await flushAsync();
+
+  assert.equal(state.notebookEntries.length, 1);
+  assert.equal(state.notebookEntries[0].toolCalculations.length, 3);
+  assert.match(state.notebookEntries[0].result, /Molarity - Mass: Mass needed: 584\.4 mg/i);
+  assert.match(state.notebookEntries[0].toolCalculations[1].result, /NaCl: 8766 mg/i);
+  assert.match(state.notebookEntries[0].toolCalculations[2].result, /Water: 90 uL/i);
+
+  notebook.openEntry(state.notebookEntries[0].id);
+  const renderedCalculations = document.getElementById('biology-notebook-tool-calculations').innerHTML;
+  assert.match(renderedCalculations, /Molarity - Mass/);
+  assert.match(renderedCalculations, /Buffer Preparer/);
+  assert.match(renderedCalculations, /Fixed Volume Reaction/);
+  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Tool calculations: 3 calculations/i);
 });
   }
 };

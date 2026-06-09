@@ -12,7 +12,7 @@ export const LIBRARY_STATUS_SAVED = 'saved';
 export const LIBRARY_STATUS_TEMPORARY = 'temporary';
 export const FEATURE_SOURCE_BACKBONE_RECOGNITION = 'backbone_recognition';
 export const RECOGNIZED_BACKBONE_ARTIFACT_FOLDER = 'SequenceViewer/protein-builder/backbones';
-export const RECOGNIZED_BACKBONE_SCHEMA_NAME = 'enana_recognized_backbone';
+export const RECOGNIZED_BACKBONE_SCHEMA_NAME = 'hikari_recognized_backbone';
 export const RECOGNIZED_BACKBONE_SCHEMA_VERSION = '1.0.0';
 export const FILE_ACCEPT = '.gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq';
 

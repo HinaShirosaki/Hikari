@@ -34,6 +34,31 @@ function summarizeNotebookResultTable(rawTable) {
   return `${columnCount} columns x ${rowCount} rows`;
 }
 
+function normalizeNotebookResultTables(rawTables, legacyTable = null) {
+  const tables = Array.isArray(rawTables)
+    ? rawTables.filter((table) => summarizeNotebookResultTable(table))
+    : [];
+  if (tables.length) {
+    return tables;
+  }
+  const fallback = summarizeNotebookResultTable(Array.isArray(rawTables) ? legacyTable : rawTables)
+    ? (Array.isArray(rawTables) ? legacyTable : rawTables)
+    : legacyTable;
+  return summarizeNotebookResultTable(fallback) ? [fallback] : [];
+}
+
+function summarizeNotebookResultTables(rawTables, legacyTable = null) {
+  const tables = normalizeNotebookResultTables(rawTables, legacyTable);
+  if (!tables.length) {
+    return '';
+  }
+  if (tables.length === 1) {
+    return summarizeNotebookResultTable(tables[0]);
+  }
+  const parts = tables.map((table, index) => `Table ${index + 1}: ${summarizeNotebookResultTable(table)}`);
+  return `${tables.length} tables (${parts.join('; ')})`;
+}
+
 function flattenNotebookResultTableText(rawTable) {
   const source = ensureObject(rawTable);
   const columns = asArray(source.columns)
@@ -51,6 +76,59 @@ function flattenNotebookResultTableText(rawTable) {
     return columns.map((column) => cleanText(row[column.field], 320)).filter(Boolean).join(' ');
   });
   return buildSearchText([headerText, ...rowText]);
+}
+
+function flattenNotebookResultTablesText(rawTables, legacyTable = null) {
+  return buildSearchText(normalizeNotebookResultTables(rawTables, legacyTable).map((table, index) => (
+    `Table ${index + 1} ${flattenNotebookResultTableText(table)}`
+  )));
+}
+
+function normalizeNotebookToolCalculations(rawCalculations) {
+  return asArray(rawCalculations)
+    .map((rawCalculation) => {
+      const calculation = ensureObject(rawCalculation);
+      const id = cleanText(calculation.id, 220);
+      const type = cleanText(calculation.type, 80);
+      const title = cleanText(calculation.title, 320);
+      const result = cleanText(calculation.result || calculation.resultText, 2000);
+      const formula = cleanText(calculation.formula || calculation.formulaText, 2000);
+      const summary = cleanText(calculation.summary || calculation.summaryText || result || formula, 2000);
+      if (!id || !type || (!title && !summary)) {
+        return null;
+      }
+      return {
+        id,
+        type,
+        title: title || 'Bench Calculation',
+        result,
+        formula,
+        summary,
+        inputs: ensureObject(calculation.inputs)
+      };
+    })
+    .filter(Boolean);
+}
+
+function summarizeNotebookToolCalculations(rawCalculations) {
+  const calculations = normalizeNotebookToolCalculations(rawCalculations);
+  if (!calculations.length) {
+    return '';
+  }
+  const labels = calculations.map((calculation) => calculation.title).filter(Boolean).slice(0, 3);
+  const suffix = calculations.length > labels.length ? ` + ${calculations.length - labels.length} more` : '';
+  return `${calculations.length} calculation${calculations.length === 1 ? '' : 's'}${labels.length ? ` (${labels.join('; ')}${suffix})` : ''}`;
+}
+
+function flattenNotebookToolCalculationsText(rawCalculations) {
+  return buildSearchText(normalizeNotebookToolCalculations(rawCalculations).map((calculation) => [
+    calculation.title,
+    calculation.type,
+    calculation.result,
+    calculation.formula,
+    calculation.summary,
+    JSON.stringify(calculation.inputs || {})
+  ].filter(Boolean).join(' ')));
 }
 
 function resolvePersonalInventorySections(inventoryPayload) {
@@ -150,12 +228,17 @@ function collectRecordIndexRows(snapshot, updatedAtDefault) {
 
   asArray(snapshot.notebookEntries).forEach((rawEntry) => {
     const entry = ensureObject(rawEntry);
-    const tableSummary = summarizeNotebookResultTable(entry.resultTable);
+    const tableSummary = summarizeNotebookResultTables(entry.resultTables, entry.resultTable);
+    const toolSummary = summarizeNotebookToolCalculations(entry.toolCalculations);
     pushRow('notebook', entry.id, {
       title: entry.protocolName || entry.id,
       projectId: entry.projectId,
       projectName: entry.projectName,
-      summary: [cleanText(entry.result, 6000), tableSummary ? `Result table: ${tableSummary}` : '']
+      summary: [
+        cleanText(entry.result, 6000),
+        tableSummary ? `Result table: ${tableSummary}` : '',
+        toolSummary ? `Tool calculations: ${toolSummary}` : ''
+      ]
         .filter(Boolean)
         .join('\n'),
       linkedProtocolId: entry.protocolId,
@@ -164,7 +247,8 @@ function collectRecordIndexRows(snapshot, updatedAtDefault) {
       searchHints: [
         asArray(entry.resultFiles).join(' '),
         JSON.stringify(entry.values || {}),
-        flattenNotebookResultTableText(entry.resultTable)
+        flattenNotebookResultTablesText(entry.resultTables, entry.resultTable),
+        flattenNotebookToolCalculationsText(entry.toolCalculations)
       ].join(' '),
       raw: entry
     });
@@ -482,8 +566,10 @@ function writeSqlNotebookIndex(db, snapshot, updatedAtDefault) {
       updatedAt,
       asArray(entry.resultFiles).join(' '),
       JSON.stringify(entry.values || {}),
-      flattenNotebookResultTableText(entry.resultTable),
-      summarizeNotebookResultTable(entry.resultTable)
+      flattenNotebookResultTablesText(entry.resultTables, entry.resultTable),
+      summarizeNotebookResultTables(entry.resultTables, entry.resultTable),
+      flattenNotebookToolCalculationsText(entry.toolCalculations),
+      summarizeNotebookToolCalculations(entry.toolCalculations)
     ]);
     db.run(
       `INSERT OR REPLACE INTO notebook_index

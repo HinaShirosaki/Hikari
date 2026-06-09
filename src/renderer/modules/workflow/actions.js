@@ -640,10 +640,10 @@ export function createWorkflowActions(config = {}) {
   }
 
   async function ensureStorageFolderExists(storageFolder) {
-    if (!storageFolder || !window.enanaApi?.ensureStorageDirectory) {
+    if (!storageFolder || !window.hikariApi?.ensureStorageDirectory) {
       return;
     }
-    await window.enanaApi.ensureStorageDirectory(storageFolder);
+    await window.hikariApi.ensureStorageDirectory(storageFolder);
   }
 
   function blobToDataUrl(blob) {
@@ -677,7 +677,7 @@ export function createWorkflowActions(config = {}) {
     if (!storageFolder) {
       throw new Error('Workflow storage folder is missing.');
     }
-    if (!window.enanaApi?.storeImportedFile) {
+    if (!window.hikariApi?.storeImportedFile) {
       throw new Error('Imported file storage API is unavailable.');
     }
 
@@ -691,7 +691,7 @@ export function createWorkflowActions(config = {}) {
       if (!dataBase64) {
         throw new Error(`Cannot read ${file.name}.`);
       }
-      const result = await window.enanaApi.storeImportedFile({
+      const result = await window.hikariApi.storeImportedFile({
         storagePath: rootPath,
         targetFolder,
         fileName: file.name,

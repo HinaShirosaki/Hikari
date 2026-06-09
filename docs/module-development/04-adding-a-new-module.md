@@ -364,7 +364,7 @@ In the running app:
 2. Verify the topbar title is "My Feature" and the subtitle matches `TITLES[VIEWS.MY_FEATURE]`.
 3. Verify the rail list, detail panel, and Add button work.
 4. Reload the window — the items you added should still be there (state persisted to localStorage).
-5. Open DevTools → Application → Local Storage → `enana_state_v1` and check that `myFeatureItems` is present in the stored JSON.
+5. Open DevTools → Application → Local Storage → `hikari_state_v1` and check that `myFeatureItems` is present in the stored JSON.
 
 ## Folder layout when you split
 

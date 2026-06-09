@@ -27,11 +27,11 @@ function appendBlock(action, payload) {
 function broadcastInventoryUpdate(chemical) {
   const recipients = Array.from(new Set(
     state.members
-      .map((member) => member.enanaEmail)
+      .map((member) => member.hikariEmail)
       .filter((email) => email && email.trim())
   ));
 
-  const from = state.settings.personalInfo.enanaEmail || 'system@hikari.local';
+  const from = state.settings.personalInfo.hikariEmail || 'system@hikari.local';
   recipients
     .filter((to) => to !== from)
     .forEach((to) => {

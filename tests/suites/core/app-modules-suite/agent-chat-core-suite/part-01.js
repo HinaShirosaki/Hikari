@@ -59,7 +59,7 @@ test('agent-chat maps assay experiment data with numeric summaries and preview c
     gelAnalyses: []
   }, 'p1');
 
-  assert.equal(mapped.schema_name, 'enana_experiment_json');
+  assert.equal(mapped.schema_name, 'hikari_experiment_json');
   assert.equal(mapped.schema_version, '1.0');
   assert.equal(mapped.notebook_runs.length, 1);
   assert.equal(mapped.assay_runs.length, 1);
@@ -288,7 +288,7 @@ test('agent-chat renders Codex user questions and returns option answers', async
     agentChat: { projectId: '', messages: [] }
   };
   const window = {
-    enanaApi: {
+    hikariApi: {
       agentChat: async (payload) => {
         payloads.push(payload);
         if (payloads.length === 1) {

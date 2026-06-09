@@ -2808,7 +2808,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
         ctx.reply(`Discarded draft ${discarded.draft_id}.`);
         return;
       }
-      if (/^open\s+in\s+(?:hikari|enana)$/i.test(msg)) {
+      if (/^open\s+in\s+hikari$/i.test(msg)) {
         const sent = openDraftInHikari(ctx, activeDraft);
         if (!sent) {
           noWindowMessage(ctx);

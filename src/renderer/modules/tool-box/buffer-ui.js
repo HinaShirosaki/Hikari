@@ -1,6 +1,7 @@
 import { BUFFER_COMPOUNDS } from '../buffer-compounds.js';
-import { formatSigFig, toNumber } from './common.js';
+import { toNumber } from './common.js';
 import { makeBufferRow } from './buffer.js';
+import { calculateBufferIngredient } from './bench-calculations.js';
 
 export function initBufferTool(options = {}) {
   const rootDocument = options?.document || globalThis?.document || null;
@@ -67,7 +68,6 @@ export function initBufferTool(options = {}) {
 
   function renderBuffer() {
     const volumeMl = toNumber(bufferVolumeInput.value);
-    const volumeL = volumeMl / 1000;
 
     [...bufferRows.querySelectorAll('.buffer-row')].forEach((row) => {
       const name = resolveChemicalName(row);
@@ -78,20 +78,14 @@ export function initBufferTool(options = {}) {
         return;
       }
 
-      if (form === 'liquid') {
-        const requiredMl = (concentrationValue / 100) * volumeMl;
-        const requiredUl = requiredMl * 1000;
-        const outputText = `${name}: ${formatSigFig(requiredMl)} mL (${formatSigFig(requiredUl)} uL)`;
-        rowWeight.textContent = outputText;
-        rowWeight.title = outputText;
-        return;
-      }
-
-      const mw = toNumber(row.querySelector('.buffer-mw')?.value);
-      const concentrationMm = concentrationValue;
-      const grams = (concentrationMm / 1000) * volumeL * mw;
-      const mg = grams * 1000;
-      const outputText = `${name}: ${formatSigFig(mg)} mg (${formatSigFig(grams)} g)`;
+      const result = calculateBufferIngredient({
+        name,
+        form,
+        molecularWeight: row.querySelector('.buffer-mw')?.value,
+        concentrationValue,
+        volumeMl
+      });
+      const outputText = result.resultText || result.formulaText;
       rowWeight.textContent = outputText;
       rowWeight.title = outputText;
     });

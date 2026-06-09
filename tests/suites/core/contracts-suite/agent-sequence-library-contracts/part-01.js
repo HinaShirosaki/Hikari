@@ -363,7 +363,7 @@ ORIGIN
         const artifactDir = path.join(storageRoot, 'SequenceViewer', 'protein-builder', 'backbones');
         await fsPromises.mkdir(artifactDir, { recursive: true });
         await fsPromises.writeFile(path.join(artifactDir, 'host.recognized-backbone.json'), JSON.stringify({
-          schema_name: 'enana_recognized_backbone',
+          schema_name: 'hikari_recognized_backbone',
           schema_version: '1.0.0',
           updated_at: '2026-04-25T12:00:00.000Z',
           source_record: {

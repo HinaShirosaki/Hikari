@@ -250,8 +250,13 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.equal(fs.realpathSync(captured.cwd), fs.realpathSync(projectDir));
           assert.equal(fs.existsSync(path.join(projectDir, 'MEMORY.md')), true);
           assert.equal(fs.existsSync(path.join(projectDir, '.agents', 'skills')), true);
-          assert.equal(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md')), true);
+          const protocolSkillPath = path.join(projectDir, '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
+          assert.equal(fs.existsSync(protocolSkillPath), true);
           assert.equal(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md')), true);
+          const protocolSkillText = fs.readFileSync(protocolSkillPath, 'utf8');
+          assert.match(protocolSkillText, /Placeholder usage:/);
+          assert.match(protocolSkillText, /Use bracket placeholders/);
+          assert.match(protocolSkillText, /\[volume\]/);
           assert.equal(fs.existsSync(path.join(projectDir, 'AGENTS.md')), false);
           assert.equal(fs.existsSync(path.join(captured.codexHome, 'AGENTS.md')), true);
           assert.equal(captured.args.includes('project_doc_fallback_filenames=["MEMORY.md"]'), true);

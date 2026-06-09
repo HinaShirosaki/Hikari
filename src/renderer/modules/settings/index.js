@@ -52,6 +52,9 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   const locationInput = document.getElementById('setting-location-input');
   const locationAddBtn = document.getElementById('setting-location-add-btn');
   const locationList = document.getElementById('setting-location-list');
+  const preferredJournalForm = document.getElementById('preferred-journal-form');
+  const settingPreferredJournal = document.getElementById('setting-preferred-journal');
+  const clearPreferredJournalBtn = document.getElementById('clear-preferred-journal-btn');
   let telegramConfig = {
     enabled: false,
     source: 'none',
@@ -124,6 +127,8 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   telegramForm?.addEventListener('submit', onSaveTelegramToken);
   clearTelegramTokenBtn?.addEventListener('click', onClearTelegramToken);
   locationAddBtn.addEventListener('click', onAddLocation);
+  preferredJournalForm?.addEventListener('submit', onSavePreferredJournal);
+  clearPreferredJournalBtn?.addEventListener('click', onClearPreferredJournal);
   window.addEventListener('focus', () => {
     if (activeLlmProvider === 'codex') {
       void refreshCodexLoginStatus();
@@ -366,6 +371,7 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     renderExternalSkills();
     renderTelegramStatus();
     renderLocationList();
+    renderPreferredJournal();
     renderStorageImportStatus();
     if (didSyncCodexSettings) {
       persist();
@@ -534,7 +540,7 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function refreshExternalSkills() {
-    if (!window.enanaApi?.listAgentSkills) {
+    if (!window.hikariApi?.listAgentSkills) {
       externalSkillCatalog = {
         ok: false,
         error: 'Agent skill listing is unavailable.',
@@ -546,7 +552,7 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     externalSkillsLoading = true;
     renderExternalSkills();
     try {
-      const result = await window.enanaApi.listAgentSkills(buildExternalSkillsPayload());
+      const result = await window.hikariApi.listAgentSkills(buildExternalSkillsPayload());
       externalSkillCatalog = normalizeExternalSkillCatalog(result);
     } catch {
       externalSkillCatalog = {
@@ -602,7 +608,7 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
 
     document.body.classList.toggle('theme-night', appearance.mode === 'night');
     document.body.classList.add('ui-neutral-compact');
-    window.dispatchEvent(new CustomEvent('enana:appearance-changed'));
+    window.dispatchEvent(new CustomEvent('hikari:appearance-changed'));
   }
 
   function onSaveAppearance(event) {
@@ -624,11 +630,11 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function onSelectStoragePath() {
-    if (!window.enanaApi?.pickStorageDirectory) {
+    if (!window.hikariApi?.pickStorageDirectory) {
       return;
     }
 
-    const result = await window.enanaApi.pickStorageDirectory(settingStoragePath.value);
+    const result = await window.hikariApi.pickStorageDirectory(settingStoragePath.value);
     if (!result?.ok || !result.path) {
       return;
     }
@@ -742,12 +748,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function refreshCodexLoginStatus() {
-    if (!window.enanaApi?.getCodexLlmStatus) {
+    if (!window.hikariApi?.getCodexLlmStatus) {
       renderCodexStatus('Codex login is unavailable.');
       return codexLoginConfig;
     }
     try {
-      const result = await window.enanaApi.getCodexLlmStatus();
+      const result = await window.hikariApi.getCodexLlmStatus();
       codexLoginConfig = normalizeCodexLoginStatus(result);
       renderCodexStatus();
       return codexLoginConfig;
@@ -758,12 +764,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function startCodexLoginFlow() {
-    if (!window.enanaApi?.loginCodexLlm) {
+    if (!window.hikariApi?.loginCodexLlm) {
       renderCodexStatus('Codex login is unavailable.');
       return { ok: false };
     }
     try {
-      const result = await window.enanaApi.loginCodexLlm();
+      const result = await window.hikariApi.loginCodexLlm();
       if (!result?.ok) {
         renderCodexStatus(result?.error || 'Failed to start the OpenAI login flow.');
         return result;
@@ -783,12 +789,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
 
   async function onClearCodexLogin() {
     clearCodexLoginRefreshTimers();
-    if (!window.enanaApi?.clearCodexLlmLogin) {
+    if (!window.hikariApi?.clearCodexLlmLogin) {
       renderCodexStatus('Codex login reset is unavailable.');
       return;
     }
 
-    const result = await window.enanaApi.clearCodexLlmLogin();
+    const result = await window.hikariApi.clearCodexLlmLogin();
     if (!result?.ok) {
       renderCodexStatus(result?.error || 'Failed to clear the saved Codex login.');
       return;
@@ -826,11 +832,11 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     if (provider === 'codex') {
       try {
         await Promise.all([
-          window.enanaApi?.setCodexLlmModel
-            ? window.enanaApi.setCodexLlmModel(state.settings.llm.model)
+          window.hikariApi?.setCodexLlmModel
+            ? window.hikariApi.setCodexLlmModel(state.settings.llm.model)
             : Promise.resolve(),
-          window.enanaApi?.setCodexLlmReasoningEffort
-            ? window.enanaApi.setCodexLlmReasoningEffort(state.settings.llm.reasoningEffort)
+          window.hikariApi?.setCodexLlmReasoningEffort
+            ? window.hikariApi.setCodexLlmReasoningEffort(state.settings.llm.reasoningEffort)
             : Promise.resolve()
         ]);
         const status = await refreshCodexLoginStatus();
@@ -873,11 +879,11 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function refreshCodexCatalog() {
-    if (!window.enanaApi?.getCodexLlmCatalog) {
+    if (!window.hikariApi?.getCodexLlmCatalog) {
       return;
     }
     try {
-      const result = await window.enanaApi.getCodexLlmCatalog();
+      const result = await window.hikariApi.getCodexLlmCatalog();
       if (!result?.ok) {
         return;
       }
@@ -895,12 +901,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
       renderTelegramStatus('Token is required.');
       return;
     }
-    if (!window.enanaApi?.setTelegramBotToken) {
+    if (!window.hikariApi?.setTelegramBotToken) {
       renderTelegramStatus('Telegram integration is unavailable.');
       return;
     }
 
-    const result = await window.enanaApi.setTelegramBotToken(token);
+    const result = await window.hikariApi.setTelegramBotToken(token);
     if (!result?.ok) {
       renderTelegramStatus(result?.error || 'Failed to save token.');
       return;
@@ -918,12 +924,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function onClearTelegramToken() {
-    if (!window.enanaApi?.clearTelegramBotToken) {
+    if (!window.hikariApi?.clearTelegramBotToken) {
       renderTelegramStatus('Telegram integration is unavailable.');
       return;
     }
 
-    const result = await window.enanaApi.clearTelegramBotToken();
+    const result = await window.hikariApi.clearTelegramBotToken();
     if (!result?.ok) {
       renderTelegramStatus(result?.error || 'Failed to clear saved token.');
       return;
@@ -938,6 +944,28 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
       settingTelegramToken.value = '';
     }
     renderTelegramStatus();
+  }
+
+  function renderPreferredJournal() {
+    if (!settingPreferredJournal) {
+      return;
+    }
+    settingPreferredJournal.value = String(state.settings.preferredJournal || '').trim();
+  }
+
+  function onSavePreferredJournal(event) {
+    event.preventDefault();
+    state.settings.preferredJournal = String(settingPreferredJournal?.value || '').trim();
+    persist();
+    renderPreferredJournal();
+  }
+
+  function onClearPreferredJournal() {
+    if (settingPreferredJournal) {
+      settingPreferredJournal.value = '';
+    }
+    state.settings.preferredJournal = '';
+    persist();
   }
 
   function onAddLocation() {
@@ -960,12 +988,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function refreshTelegramBotStatus() {
-    if (!window.enanaApi?.getTelegramBotConfig) {
+    if (!window.hikariApi?.getTelegramBotConfig) {
       renderTelegramStatus('Telegram integration is unavailable.');
       return;
     }
 
-    const result = await window.enanaApi.getTelegramBotConfig();
+    const result = await window.hikariApi.getTelegramBotConfig();
     if (!result?.ok) {
       renderTelegramStatus(result?.error || 'Failed to load Telegram bot status.');
       return;

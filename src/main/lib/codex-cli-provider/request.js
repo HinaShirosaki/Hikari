@@ -96,7 +96,7 @@ async function requestCodexCliText({
       getSessionId: streamHandler.getCodexSessionId,
       onJsonEvent: streamHandler.handleJsonEvent,
       minTimestampMs: Date.now() - 2000,
-      intervalMs: process.env.ENANA_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS
+      intervalMs: process.env.HIKARI_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS
     })
     : null;
   let commandResult;

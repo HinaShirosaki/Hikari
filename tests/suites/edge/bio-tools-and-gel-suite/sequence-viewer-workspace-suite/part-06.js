@@ -41,7 +41,7 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
   const upsertBackboneCalls = [];
   const document = createMockDocument(ids);
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryUpsertBackbone: async (payload) => {
         upsertBackboneCalls.push(payload);
         return {
@@ -143,7 +143,7 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;
@@ -232,7 +232,7 @@ test('[EDGE] sequence-viewer annotate button adds SQL DNA and CDS features to th
   const annotateCalls = [];
   const document = createMockDocument(ids);
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryAnnotate: async (payload) => {
         annotateCalls.push(payload);
         return {
@@ -266,7 +266,7 @@ test('[EDGE] sequence-viewer annotate button adds SQL DNA and CDS features to th
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;

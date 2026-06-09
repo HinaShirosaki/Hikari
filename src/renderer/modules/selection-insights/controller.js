@@ -18,7 +18,7 @@ export function createSelectionInsightsController({
   safeText,
   rootDocument = globalThis.document || null,
   windowObject = globalThis.window || null,
-  api = windowObject?.enanaApi || globalThis.enanaApi || null
+  api = windowObject?.hikariApi || globalThis.hikariApi || null
 } = {}) {
   const ctx = {
     state,

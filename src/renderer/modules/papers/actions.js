@@ -121,14 +121,14 @@ export function createPapersActions(context) {
       return null;
     }
 
-    if (!windowRef?.enanaApi?.storeImportedFile) {
+    if (!windowRef?.hikariApi?.storeImportedFile) {
       windowRef?.alert?.('Imported file storage API is unavailable.');
       return null;
     }
 
     let storedFile = null;
     try {
-      const result = await windowRef.enanaApi.storeImportedFile({
+      const result = await windowRef.hikariApi.storeImportedFile({
         storagePath: rootPath,
         targetFolder: buildPaperStorageFolder({
           rootPath,
@@ -376,8 +376,8 @@ export function createPapersActions(context) {
     }
 
     const candidatePath = resolveStoredPaperPath(paper, state.settings?.storagePath);
-    if (candidatePath && windowRef?.enanaApi?.openFilePath) {
-      const result = await windowRef.enanaApi.openFilePath(candidatePath);
+    if (candidatePath && windowRef?.hikariApi?.openFilePath) {
+      const result = await windowRef.hikariApi.openFilePath(candidatePath);
       if (result?.ok) {
         return;
       }
@@ -392,16 +392,16 @@ export function createPapersActions(context) {
 
   async function resolvePaperPdfBytes(paper) {
     const candidatePath = resolveStoredPaperPath(paper, state.settings?.storagePath);
-    if (candidatePath && windowRef?.enanaApi?.readFileBytes) {
-      const result = await windowRef.enanaApi.readFileBytes(candidatePath);
+    if (candidatePath && windowRef?.hikariApi?.readFileBytes) {
+      const result = await windowRef.hikariApi.readFileBytes(candidatePath);
       const bytes = normalizePdfBytePayload(result?.bytes);
       if (result?.ok && bytes?.byteLength) {
         return bytes;
       }
     }
 
-    if (candidatePath && windowRef?.enanaApi?.readFileBase64) {
-      const result = await windowRef.enanaApi.readFileBase64(candidatePath);
+    if (candidatePath && windowRef?.hikariApi?.readFileBase64) {
+      const result = await windowRef.hikariApi.readFileBase64(candidatePath);
       const dataBase64 = String(result?.dataBase64 || '').trim();
       if (result?.ok && dataBase64) {
         return decodeBase64Pdf(dataBase64);
@@ -423,8 +423,8 @@ export function createPapersActions(context) {
     }
 
     const candidatePath = resolveStoredPaperPath(paper, state.settings?.storagePath);
-    if (candidatePath && windowRef?.enanaApi?.readFileBase64) {
-      const result = await windowRef.enanaApi.readFileBase64(candidatePath);
+    if (candidatePath && windowRef?.hikariApi?.readFileBase64) {
+      const result = await windowRef.hikariApi.readFileBase64(candidatePath);
       const dataBase64 = String(result?.dataBase64 || '').trim();
       if (result?.ok && dataBase64) {
         return buildPdfDataUrlFromBase64(dataBase64);

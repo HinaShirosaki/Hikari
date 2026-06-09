@@ -7,8 +7,6 @@ const {
 
 const HIKARI_AGENTS_BLOCK_START = '<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_START -->';
 const HIKARI_AGENTS_BLOCK_END = '<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_END -->';
-const ENANA_AGENTS_BLOCK_START = '<!-- ENANA_CODEX_AGENT_INSTRUCTIONS_START -->';
-const ENANA_AGENTS_BLOCK_END = '<!-- ENANA_CODEX_AGENT_INSTRUCTIONS_END -->';
 
 function buildHikariCodexAgentsInstructions() {
   const sharedMcpContractLines = buildHikariAgentMcpInstructionBodyLines();
@@ -51,21 +49,9 @@ function buildHikariCodexAgentsBlock() {
   ].join('\n');
 }
 
-function buildEnanaCodexAgentsInstructions() {
-  return buildHikariCodexAgentsInstructions();
-}
-
-function buildEnanaCodexAgentsBlock() {
-  return buildHikariCodexAgentsBlock();
-}
-
 module.exports = {
   HIKARI_AGENTS_BLOCK_START,
   HIKARI_AGENTS_BLOCK_END,
-  ENANA_AGENTS_BLOCK_START,
-  ENANA_AGENTS_BLOCK_END,
   buildHikariCodexAgentsInstructions,
-  buildHikariCodexAgentsBlock,
-  buildEnanaCodexAgentsInstructions,
-  buildEnanaCodexAgentsBlock
+  buildHikariCodexAgentsBlock
 };

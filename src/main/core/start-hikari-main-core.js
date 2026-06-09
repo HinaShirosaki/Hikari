@@ -91,14 +91,9 @@ function createHikariMainCore({
     agentChatLogFileName: AGENT_CHAT_LOG_FILE_NAME
   });
 
-  if (!String(processObject.env.HIKARI_CODEX_HOME || processObject.env.ENANA_CODEX_HOME || '').trim()) {
+  if (!String(processObject.env.HIKARI_CODEX_HOME || '').trim()) {
     processObject.env.HIKARI_CODEX_HOME = appPaths.getCodexCliHomePath()
       || resolveCodexCliRuntimeHomeDirectory(appPaths.getCodexCliWorkingDirectory());
-    processObject.env.ENANA_CODEX_HOME = processObject.env.HIKARI_CODEX_HOME;
-  } else if (!String(processObject.env.HIKARI_CODEX_HOME || '').trim()) {
-    processObject.env.HIKARI_CODEX_HOME = processObject.env.ENANA_CODEX_HOME;
-  } else if (!String(processObject.env.ENANA_CODEX_HOME || '').trim()) {
-    processObject.env.ENANA_CODEX_HOME = processObject.env.HIKARI_CODEX_HOME;
   }
 
   const chatLogTransformMonitor = createChatLogTransformMonitor({
@@ -263,6 +258,25 @@ function createHikariMainCore({
     });
   }
 
+  async function onAppReady() {
+    await telegramRuntime.hydrateSavedTelegramToken();
+    telegramRuntime.restartTelegramBot();
+    void agentLogRuntime.ensureAgentChatLogFile(appPaths.getAgentChatLogPath());
+    void llmPromptsRuntime.loadLlmPrompts();
+    startChatLogTransformMonitor();
+  }
+
+  async function shutdown() {
+    chatLogTransformMonitor.stop();
+    const codexAgentMcpHost = agentServices.codexAgentMcpHost;
+    if (codexAgentMcpHost && typeof codexAgentMcpHost.close === 'function') {
+      try {
+        await codexAgentMcpHost.close();
+      } catch {}
+    }
+    telegramRuntime.stopTelegramBot('app quit');
+  }
+
   return {
     agentLogRuntime,
     appIconPath,
@@ -270,7 +284,9 @@ function createHikariMainCore({
     chatLogTransformMonitor,
     codexAgentMcpHost: agentServices.codexAgentMcpHost,
     llmPromptsRuntime,
+    onAppReady,
     registerIpcHandlers,
+    shutdown,
     startChatLogTransformMonitor,
     telegramRuntime
   };

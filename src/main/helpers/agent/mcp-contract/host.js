@@ -51,12 +51,8 @@ function createAgentMcpHost(deps = {}) {
   const managedEnvKeys = Object.freeze([
     'HIKARI_AGENT_MCP_HOST',
     'HIKARI_AGENT_MCP_TOKEN',
-    'ENANA_AGENT_MCP_HOST',
-    'ENANA_AGENT_MCP_TOKEN',
     'HIKARI_CODEX_MCP_HOST',
-    'HIKARI_CODEX_MCP_TOKEN',
-    'ENANA_CODEX_MCP_HOST',
-    'ENANA_CODEX_MCP_TOKEN'
+    'HIKARI_CODEX_MCP_TOKEN'
   ]);
   const previousEnvValues = new Map(
     managedEnvKeys.map((key) => [key, captureEnvValue(env, key)])
@@ -101,9 +97,7 @@ function createAgentMcpHost(deps = {}) {
     const auth = cleanText(request.headers.authorization, 5000);
     const headerTokens = [
       request.headers['x-hikari-agent-mcp-token'],
-      request.headers['x-enana-agent-mcp-token'],
-      request.headers['x-hikari-codex-mcp-token'],
-      request.headers['x-enana-codex-mcp-token']
+      request.headers['x-hikari-codex-mcp-token']
     ].map((value) => cleanText(value, 5000));
     return auth === `Bearer ${token}` || headerTokens.includes(token);
   }
@@ -210,12 +204,8 @@ function createAgentMcpHost(deps = {}) {
         hostUrl = `http://${hostname}:${port}`;
         env.HIKARI_AGENT_MCP_HOST = hostUrl;
         env.HIKARI_AGENT_MCP_TOKEN = token;
-        env.ENANA_AGENT_MCP_HOST = hostUrl;
-        env.ENANA_AGENT_MCP_TOKEN = token;
         env.HIKARI_CODEX_MCP_HOST = hostUrl;
         env.HIKARI_CODEX_MCP_TOKEN = token;
-        env.ENANA_CODEX_MCP_HOST = hostUrl;
-        env.ENANA_CODEX_MCP_TOKEN = token;
         resolve({
           url: hostUrl,
           token

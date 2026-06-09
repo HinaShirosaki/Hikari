@@ -12,7 +12,7 @@ import * as ab1PostProcessModule from './sequence-viewer/algorithms/ab1-trace-po
 function readWrapperStoragePath() {
   try {
     const storage = globalThis?.localStorage || (typeof localStorage !== 'undefined' ? localStorage : null);
-    const raw = storage?.getItem?.('enana_state_v1');
+    const raw = storage?.getItem?.('hikari_state_v1');
     if (!raw) {
       return '';
     }
@@ -28,9 +28,9 @@ export function initSequenceViewer(options = {}) {
     ? options.getApiBridge
     : () => options?.apiBridge
       || options?.bridge
-      || globalThis?.window?.enanaApi
-      || globalThis?.enanaApi
-      || ((typeof window !== 'undefined' && window?.enanaApi) ? window.enanaApi : null);
+      || globalThis?.window?.hikariApi
+      || globalThis?.hikariApi
+      || ((typeof window !== 'undefined' && window?.hikariApi) ? window.hikariApi : null);
   return indexModule.initSequenceViewer({
     ...options,
     document: options?.document || globalThis?.document || (typeof document !== 'undefined' ? document : null),

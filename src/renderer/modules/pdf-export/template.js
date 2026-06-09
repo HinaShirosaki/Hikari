@@ -26,7 +26,7 @@ export const STYLES = `
     -webkit-font-smoothing: antialiased;
   }
 
-  .enana-pdf { padding: 0; }
+  .hikari-pdf { padding: 0; }
 
   .pdf-cover { border-bottom: 1px solid #d6dbe2; padding-bottom: 14pt; margin-bottom: 14pt; }
   .pdf-kind { text-transform: uppercase; letter-spacing: 0.08em; font-size: 9pt; color: #6b7280; margin: 0; }
@@ -219,7 +219,7 @@ export function buildDocumentHtml({
 <style>${STYLES}${extraStyles || ''}</style>
 </head>
 <body>
-<article class="enana-pdf"${dataKindAttr}>${cover}${main}</article>
+<article class="hikari-pdf"${dataKindAttr}>${cover}${main}</article>
 </body>
 </html>`;
 }

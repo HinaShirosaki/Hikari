@@ -317,22 +317,22 @@
   margin-top: 12px;
 }
 
-.protocol-polish-overlay,
-.protocol-generate-overlay {
+.protocol-polish-overlay.app-dialog-overlay,
+.protocol-generate-overlay.app-dialog-overlay {
   position: fixed;
   inset: 0;
   z-index: 220;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: clamp(16px, 3vw, 30px);
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  overflow: hidden;
+  padding: max(86px, env(safe-area-inset-top, 0px)) clamp(16px, 3vw, 30px) clamp(16px, 3vw, 30px);
   background: color-mix(in srgb, var(--strong) 20%, transparent);
   backdrop-filter: blur(10px);
 }
 
-.protocol-generate-overlay {
-  align-items: flex-start;
-  padding-top: 78px;
+.protocol-generate-overlay.app-dialog-overlay {
+  align-items: start;
 }
 
 .protocol-polish-overlay[hidden],
@@ -344,31 +344,39 @@
 .protocol-generate-input-shell,
 .protocol-generate-result-shell {
   width: min(1180px, 100%);
-  max-height: calc(100vh - 32px);
+  max-height: calc(100svh - 116px);
+  min-height: 0;
   display: grid;
   gap: 16px;
 }
 
+.protocol-polish-dialog-shell,
+.protocol-generate-result-shell {
+  height: min(760px, calc(100svh - 116px));
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
 .protocol-generate-input-shell {
   width: min(900px, 100%);
-  max-height: calc(100vh - 110px);
+  max-height: calc(100svh - 116px);
 }
 
 .protocol-generate-result-shell {
   width: min(820px, 100%);
-  max-height: calc(100vh - 110px);
 }
 
 .protocol-polish-dialog-stack {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
+  align-items: stretch;
   gap: 18px;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.protocol-polish-dialog,
-.protocol-generate-input-dialog,
-.protocol-generate-result-dialog {
+.protocol-polish-dialog.app-dialog-surface,
+.protocol-generate-input-dialog.app-dialog-surface,
+.protocol-generate-result-dialog.app-dialog-surface {
   position: relative;
   display: grid;
   gap: 14px;
@@ -379,8 +387,20 @@
     linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 95%, transparent), color-mix(in srgb, var(--surface) 96%, transparent)),
     radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 10%, transparent), transparent 38%);
   box-shadow: 0 28px 72px var(--palette-rgba-27-20-14-a16);
+  max-height: calc(100svh - 132px);
+}
+
+.protocol-polish-dialog.app-dialog-surface,
+.protocol-generate-result-dialog.app-dialog-surface {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  overflow: hidden;
+}
+
+.protocol-generate-input-dialog.app-dialog-surface {
   overflow: auto;
-  max-height: calc(100vh - 130px);
 }
 
 .protocol-generate-composer-shell {
@@ -392,12 +412,11 @@
   margin: 0;
 }
 
-.protocol-generate-result-dialog {
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+.protocol-generate-result-dialog.app-dialog-surface {
   overflow: hidden;
-  max-height: calc(100vh - 172px);
 }
 
+.protocol-polish-preview,
 .protocol-generate-result-dialog .protocol-polish-preview {
   min-height: 0;
   overflow-y: auto;
@@ -423,7 +442,8 @@
 .protocol-polish-preview {
   display: grid;
   gap: 0;
-  min-height: 280px;
+  min-height: 0;
+  align-content: start;
 }
 
 .protocol-polish-preview .protocol-view-section:first-child {
@@ -431,6 +451,7 @@
 }
 
 .protocol-polish-actions {
+  align-self: end;
   justify-content: flex-end;
   flex-wrap: wrap;
   padding: 0 6px;
@@ -605,40 +626,40 @@
     min-height: 240px;
   }
 
-  .protocol-polish-overlay,
-.protocol-generate-overlay {
-    padding: 12px;
-  }
-
-  .protocol-generate-overlay {
-    padding-top: 68px;
+  .protocol-polish-overlay.app-dialog-overlay,
+.protocol-generate-overlay.app-dialog-overlay {
+    padding: max(76px, env(safe-area-inset-top, 0px)) 12px 12px;
   }
 
   .protocol-polish-dialog-shell,
 .protocol-generate-input-shell,
 .protocol-generate-result-shell {
-    max-height: calc(100vh - 24px);
+    max-height: calc(100svh - 88px);
   }
 
   .protocol-polish-dialog-stack {
     grid-template-columns: 1fr;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
     gap: 14px;
   }
 
-  .protocol-polish-dialog,
-.protocol-generate-input-dialog,
-.protocol-generate-result-dialog {
-    max-height: min(44vh, 460px);
+  .protocol-polish-dialog-shell,
+.protocol-generate-result-shell {
+    height: calc(100svh - 88px);
   }
 
   .protocol-generate-input-shell,
 .protocol-generate-result-shell {
-    max-height: calc(100vh - 84px);
+    max-height: calc(100svh - 88px);
   }
 
-  .protocol-generate-input-dialog,
-.protocol-generate-result-dialog {
-    max-height: calc(100vh - 128px);
+  .protocol-polish-dialog.app-dialog-surface,
+.protocol-generate-result-dialog.app-dialog-surface {
+    max-height: none;
+  }
+
+  .protocol-generate-input-dialog.app-dialog-surface {
+    max-height: calc(100svh - 100px);
   }
 
   .protocol-polish-actions {

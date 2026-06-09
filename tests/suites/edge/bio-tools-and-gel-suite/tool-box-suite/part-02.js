@@ -64,6 +64,48 @@ test('[EDGE] tool-box designPcrPrimerPair designs a forward and reverse primer f
   assert.equal(primerPlan.primers[0].role, 'pcr-forward');
   assert.equal(primerPlan.primers[1].role, 'pcr-reverse');
 });
+test('[EDGE] bench tool calculations return instant results and substituted formulas', () => {
+  const massResult = toolBox.calculateMolarityMass({
+    concentrationValue: 10,
+    concentrationUnit: 'mM',
+    molecularWeight: 58.44,
+    volumeValue: 1,
+    volumeUnit: 'L',
+    outputUnit: 'mg'
+  });
+  assert.match(massResult.resultText, /584\.4 mg/i);
+  assert.match(massResult.formulaText, /10 mM x 1 L x 58\.44 g\/mol/i);
+
+  const missingDilution = toolBox.calculateMolarityDilution({
+    stockConcentrationValue: 100,
+    stockConcentrationUnit: 'mM',
+    finalVolumeValue: 1,
+    finalVolumeUnit: 'mL'
+  });
+  assert.equal(missingDilution.resultText, '');
+  assert.match(missingDilution.formulaText, /\[desired concentration\]/i);
+
+  const bufferResult = toolBox.calculateBufferRecipe({
+    volumeMl: 1000,
+    rows: [
+      { name: 'NaCl', form: 'solid', molecularWeight: 58.44, concentrationValue: 150 }
+    ]
+  });
+  assert.match(bufferResult.resultText, /NaCl: 8766 mg/i);
+  assert.match(bufferResult.formulaText, /150 mM x 1 L x 58\.44 g\/mol/i);
+
+  const reactionResult = toolBox.calculateFixedReaction({
+    totalVolumeValue: 100,
+    totalVolumeUnit: 'uL',
+    fillName: 'Water',
+    reagents: [
+      { name: 'ATP', stockValue: 10, stockUnit: 'mM', finalValue: 1, finalUnit: 'mM' }
+    ]
+  });
+  assert.match(reactionResult.resultText, /ATP: 10 uL/i);
+  assert.match(reactionResult.resultText, /Water: 90 uL/i);
+  assert.match(reactionResult.formulaText, /ATP volume = 1 mM x 100 uL \/ 10 mM/i);
+});
 test('[EDGE] tool-box assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {
   const plan = toolBox.assembleCloningPlan({
     hostVectors: [
@@ -380,11 +422,6 @@ test('[EDGE] protein-builder Gibson insert primers bind the linked source CDS an
     assert.equal(typeof stats.mass, 'number');
     assert.equal(Array.isArray(stats.invalidResidues), true);
   });
-});
-test('[EDGE] tool-box renderChemicalOptions includes Custom option', () => {
-  const html = toolBox.renderChemicalOptions();
-  assert.match(html, /Custom<\/option>/);
-  assert.match(html, /<option value="[^"]+">/);
 });
 test('[EDGE] tool-box parseCrisprTargetsInput parses FASTA entries and normalizes sequence', () => {
   const parsed = toolBox.parseCrisprTargetsInput(`

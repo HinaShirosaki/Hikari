@@ -47,8 +47,8 @@ async function resolvePythonExecutable(explicit = '', preferred = '') {
   const candidates = [
     cleanText(explicit, 240),
     cleanText(preferred, 240),
-    cleanText(process.env.ENANA_AGENT_PYTHON_EXECUTABLE, 240),
-    cleanText(process.env.ENANA_AGENT_PYTHON_BIN, 240),
+    cleanText(process.env.HIKARI_AGENT_PYTHON_EXECUTABLE, 240),
+    cleanText(process.env.HIKARI_AGENT_PYTHON_BIN, 240),
     'python3',
     'python'
   ].filter(Boolean);
@@ -65,7 +65,7 @@ async function resolvePythonExecutable(explicit = '', preferred = '') {
     }
   }
 
-  throw new Error('Python executable was not found. Set ENANA_AGENT_PYTHON_EXECUTABLE or install python3.');
+  throw new Error('Python executable was not found. Set HIKARI_AGENT_PYTHON_EXECUTABLE or install python3.');
 }
 
 async function runPythonSandbox(input, options = {}) {
@@ -120,7 +120,7 @@ async function runPythonSandbox(input, options = {}) {
   }
 
   const sandboxRoot = cleanText(options.sandboxRoot, 1200)
-    || path.join(os.tmpdir(), 'enana-agent-python-sandbox');
+    || path.join(os.tmpdir(), 'hikari-agent-python-sandbox');
   const sandboxDir = path.join(sandboxRoot, runId);
   const renderOutputPath = path.join(sandboxDir, SANDBOX_RENDER_OUTPUT_FILE_NAME);
 
@@ -166,8 +166,8 @@ async function runPythonSandbox(input, options = {}) {
       cwd: sandboxDir,
       env: {
         ...process.env,
-        ENANA_SANDBOX_ROOT: sandboxDir,
-        ENANA_SANDBOX_OUTPUT_PATH: renderOutputPath
+        HIKARI_SANDBOX_ROOT: sandboxDir,
+        HIKARI_SANDBOX_OUTPUT_PATH: renderOutputPath
       },
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe']

@@ -6,8 +6,6 @@ const path = require('node:path');
 const {
   HIKARI_AGENTS_BLOCK_START,
   HIKARI_AGENTS_BLOCK_END,
-  ENANA_AGENTS_BLOCK_START,
-  ENANA_AGENTS_BLOCK_END,
   buildHikariCodexAgentsBlock
 } = require('./agent-instructions.js');
 const {
@@ -17,8 +15,6 @@ const {
 const CODEX_AGENTS_FILE = 'AGENTS.md';
 const HIKARI_MCP_CONFIG_START = '# HIKARI_MCP_CONFIG_START';
 const HIKARI_MCP_CONFIG_END = '# HIKARI_MCP_CONFIG_END';
-const ENANA_MCP_CONFIG_START = '# ENANA_MCP_CONFIG_START';
-const ENANA_MCP_CONFIG_END = '# ENANA_MCP_CONFIG_END';
 
 function cleanText(value, _maxLength = 1200) {
   const text = String(value || '');
@@ -141,9 +137,7 @@ function resolveHikariCodexMcpCommandPath(options = {}) {
   }
   const envNodeCommand = cleanText(
     process.env.HIKARI_CODEX_NODE_PATH
-      || process.env.ENANA_CODEX_NODE_PATH
-      || process.env.HIKARI_NODE_PATH
-      || process.env.ENANA_NODE_PATH,
+      || process.env.HIKARI_NODE_PATH,
     2400
   );
   if (envNodeCommand) {
@@ -170,21 +164,16 @@ function resolveHikariCodexMcpCommandPath(options = {}) {
   return commonNodePaths.find(fileIsExecutable) || 'node';
 }
 
-function resolveEnanaCodexMcpServerPath() {
-  return resolveHikariAgentMcpServerPath();
-}
-
 function resolveHikariCodexMcpServerPath() {
   return resolveHikariAgentMcpServerPath();
 }
 
-function addEnvAlias(envEntries, hikariKey, enanaKey, value, maxLength = 2400) {
+function addEnvEntry(envEntries, hikariKey, value, maxLength = 2400) {
   const text = cleanText(value, maxLength);
   if (!text) {
     return;
   }
   envEntries[hikariKey] = text;
-  envEntries[enanaKey] = text;
 }
 
 function getMcpConfigEnvSource(options = {}) {
@@ -220,76 +209,34 @@ function buildHikariCodexMcpConfigBlock(options = {}) {
   const envEntries = {};
   const envSource = getMcpConfigEnvSource(options);
   const commandPath = resolveHikariCodexMcpCommandPath(options);
-  addEnvAlias(envEntries, 'HIKARI_AGENT_MCP', 'ENANA_AGENT_MCP', '1', 40);
-  addEnvAlias(envEntries, 'HIKARI_CODEX_MCP', 'ENANA_CODEX_MCP', '1', 40);
-  addEnvAlias(envEntries, 'HIKARI_AGENT_MCP_WORKSPACE', 'ENANA_AGENT_MCP_WORKSPACE', options.workspace, 2400);
-  addEnvAlias(envEntries, 'HIKARI_CODEX_WORKSPACE', 'ENANA_CODEX_WORKSPACE', options.workspace, 2400);
-  addEnvAlias(envEntries, 'HIKARI_AGENT_DATA_FILE', 'ENANA_AGENT_DATA_FILE', options.dataFilePath, 2400);
-  addEnvAlias(envEntries, 'HIKARI_AGENT_STORAGE_PATH', 'ENANA_AGENT_STORAGE_PATH', options.storagePath, 2400);
+  addEnvEntry(envEntries, 'HIKARI_AGENT_MCP', '1', 40);
+  addEnvEntry(envEntries, 'HIKARI_CODEX_MCP', '1', 40);
+  addEnvEntry(envEntries, 'HIKARI_AGENT_MCP_WORKSPACE', options.workspace, 2400);
+  addEnvEntry(envEntries, 'HIKARI_CODEX_WORKSPACE', options.workspace, 2400);
+  addEnvEntry(envEntries, 'HIKARI_AGENT_DATA_FILE', options.dataFilePath, 2400);
+  addEnvEntry(envEntries, 'HIKARI_AGENT_STORAGE_PATH', options.storagePath, 2400);
   const mcpHostUrl = options.mcpHostUrl
     || readFirstEnvValue(envSource, [
       'HIKARI_AGENT_MCP_HOST',
-      'ENANA_AGENT_MCP_HOST',
-      'HIKARI_CODEX_MCP_HOST',
-      'ENANA_CODEX_MCP_HOST'
+      'HIKARI_CODEX_MCP_HOST'
     ]);
   const mcpToken = options.mcpToken
     || readFirstEnvValue(envSource, [
       'HIKARI_AGENT_MCP_TOKEN',
-      'ENANA_AGENT_MCP_TOKEN',
-      'HIKARI_CODEX_MCP_TOKEN',
-      'ENANA_CODEX_MCP_TOKEN'
+      'HIKARI_CODEX_MCP_TOKEN'
     ]);
   const agentRequestContext = readFirstEnvValue(envSource, [
-    'HIKARI_AGENT_MCP_REQUEST_CONTEXT',
-    'ENANA_AGENT_MCP_REQUEST_CONTEXT'
+    'HIKARI_AGENT_MCP_REQUEST_CONTEXT'
   ]);
   const codexRequestContext = readFirstEnvValue(envSource, [
-    'HIKARI_CODEX_REQUEST_CONTEXT',
-    'ENANA_CODEX_REQUEST_CONTEXT'
+    'HIKARI_CODEX_REQUEST_CONTEXT'
   ]) || agentRequestContext;
-  addEnvAlias(
-    envEntries,
-    'HIKARI_AGENT_MCP_HOST',
-    'ENANA_AGENT_MCP_HOST',
-    mcpHostUrl,
-    2400
-  );
-  addEnvAlias(
-    envEntries,
-    'HIKARI_AGENT_MCP_TOKEN',
-    'ENANA_AGENT_MCP_TOKEN',
-    mcpToken,
-    4000
-  );
-  addEnvAlias(
-    envEntries,
-    'HIKARI_CODEX_MCP_HOST',
-    'ENANA_CODEX_MCP_HOST',
-    mcpHostUrl,
-    2400
-  );
-  addEnvAlias(
-    envEntries,
-    'HIKARI_CODEX_MCP_TOKEN',
-    'ENANA_CODEX_MCP_TOKEN',
-    mcpToken,
-    4000
-  );
-  addEnvAlias(
-    envEntries,
-    'HIKARI_AGENT_MCP_REQUEST_CONTEXT',
-    'ENANA_AGENT_MCP_REQUEST_CONTEXT',
-    agentRequestContext || codexRequestContext,
-    120000
-  );
-  addEnvAlias(
-    envEntries,
-    'HIKARI_CODEX_REQUEST_CONTEXT',
-    'ENANA_CODEX_REQUEST_CONTEXT',
-    codexRequestContext || agentRequestContext,
-    120000
-  );
+  addEnvEntry(envEntries, 'HIKARI_AGENT_MCP_HOST', mcpHostUrl, 2400);
+  addEnvEntry(envEntries, 'HIKARI_AGENT_MCP_TOKEN', mcpToken, 4000);
+  addEnvEntry(envEntries, 'HIKARI_CODEX_MCP_HOST', mcpHostUrl, 2400);
+  addEnvEntry(envEntries, 'HIKARI_CODEX_MCP_TOKEN', mcpToken, 4000);
+  addEnvEntry(envEntries, 'HIKARI_AGENT_MCP_REQUEST_CONTEXT', agentRequestContext || codexRequestContext, 120000);
+  addEnvEntry(envEntries, 'HIKARI_CODEX_REQUEST_CONTEXT', codexRequestContext || agentRequestContext, 120000);
   const envText = Object.entries(envEntries)
     .map(([key, value]) => `${key} = ${tomlString(value)}`)
     .join(', ');
@@ -312,10 +259,6 @@ function buildHikariCodexMcpConfigBlock(options = {}) {
   ].join('\n');
 }
 
-function buildEnanaCodexMcpConfigBlock(options = {}) {
-  return buildHikariCodexMcpConfigBlock(options);
-}
-
 async function ensureHikariCodexAgentsFile(cwd = '') {
   const safeCwd = cleanText(cwd, 2400);
   if (!safeCwd || isFilesystemRoot(safeCwd)) {
@@ -332,8 +275,7 @@ async function ensureHikariCodexAgentsFile(cwd = '') {
   }
 
   let nextContent = '';
-  nextContent = replaceManagedBlock(existing, HIKARI_AGENTS_BLOCK_START, HIKARI_AGENTS_BLOCK_END, block)
-    || replaceManagedBlock(existing, ENANA_AGENTS_BLOCK_START, ENANA_AGENTS_BLOCK_END, block);
+  nextContent = replaceManagedBlock(existing, HIKARI_AGENTS_BLOCK_START, HIKARI_AGENTS_BLOCK_END, block);
   if (nextContent) {
     // Existing managed block was replaced above.
   } else {
@@ -361,8 +303,7 @@ async function removeHikariCodexAgentsFileIfOnlyManaged(cwd = '') {
     return false;
   }
 
-  const stripped = removeManagedBlock(existing, HIKARI_AGENTS_BLOCK_START, HIKARI_AGENTS_BLOCK_END)
-    ?? removeManagedBlock(existing, ENANA_AGENTS_BLOCK_START, ENANA_AGENTS_BLOCK_END);
+  const stripped = removeManagedBlock(existing, HIKARI_AGENTS_BLOCK_START, HIKARI_AGENTS_BLOCK_END);
   if (stripped === null) {
     return false;
   }
@@ -374,10 +315,6 @@ async function removeHikariCodexAgentsFileIfOnlyManaged(cwd = '') {
 
   await fs.rm(agentsPath, { force: true });
   return true;
-}
-
-async function ensureEnanaCodexAgentsFile(cwd = '') {
-  return ensureHikariCodexAgentsFile(cwd);
 }
 
 async function ensureHikariCodexMcpConfig(configPath = '', options = {}) {
@@ -395,8 +332,7 @@ async function ensureHikariCodexMcpConfig(configPath = '', options = {}) {
   }
 
   let nextContent = '';
-  nextContent = replaceManagedBlock(existing, HIKARI_MCP_CONFIG_START, HIKARI_MCP_CONFIG_END, block)
-    || replaceManagedBlock(existing, ENANA_MCP_CONFIG_START, ENANA_MCP_CONFIG_END, block);
+  nextContent = replaceManagedBlock(existing, HIKARI_MCP_CONFIG_START, HIKARI_MCP_CONFIG_END, block);
   if (nextContent) {
     // Existing managed block was replaced above.
   } else {
@@ -411,26 +347,16 @@ async function ensureHikariCodexMcpConfig(configPath = '', options = {}) {
   return targetPath;
 }
 
-async function ensureEnanaCodexMcpConfig(configPath = '', options = {}) {
-  return ensureHikariCodexMcpConfig(configPath, options);
-}
-
 module.exports = {
   CODEX_AGENTS_FILE,
   HIKARI_MCP_CONFIG_START,
   HIKARI_MCP_CONFIG_END,
-  ENANA_MCP_CONFIG_START,
-  ENANA_MCP_CONFIG_END,
   resolveUnpackedAsarPath,
   resolveHikariAgentMcpServerPath,
   resolveHikariCodexMcpCommandPath,
   resolveHikariCodexMcpServerPath,
-  resolveEnanaCodexMcpServerPath,
   buildHikariCodexMcpConfigBlock,
-  buildEnanaCodexMcpConfigBlock,
   ensureHikariCodexAgentsFile,
   removeHikariCodexAgentsFileIfOnlyManaged,
-  ensureEnanaCodexAgentsFile,
-  ensureHikariCodexMcpConfig,
-  ensureEnanaCodexMcpConfig
+  ensureHikariCodexMcpConfig
 };

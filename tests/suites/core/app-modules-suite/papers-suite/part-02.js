@@ -208,14 +208,14 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     settings: {
       personalInfo: {
         name: 'Alice Scientist',
-        enanaEmail: 'alice@enana.test'
+        hikariEmail: 'alice@hikari.test'
       },
       llm: {}
     }
   };
   const window = {
     alert() {},
-    enanaApi: {},
+    hikariApi: {},
     prompt() {
       return promptQueue.length ? promptQueue.shift() : '';
     },
@@ -269,72 +269,6 @@ async function openPaperInHarness(harness) {
   await flushAsync();
   await flushAsync();
 }
-test('papers module deletes the selected pinned page comment', async () => {
-  const existingComment = {
-    id: 'comment-1',
-    pageNumber: 1,
-    anchorX: 0.15,
-    anchorY: 0.45,
-    text: 'Delete me.',
-    author: 'Alice Scientist',
-    createdAt: '2026-03-22T17:00:00.000Z',
-    updatedAt: '2026-03-22T17:00:00.000Z'
-  };
-  const harness = buildPapersManagementHarness({
-    comments: [existingComment]
-  });
-  const deleteBtn = harness.document.getElementById('paper-comment-delete-btn');
-
-  await openPaperInHarness(harness);
-  harness.viewerFactory.selectPin(existingComment);
-  trigger(deleteBtn, 'click');
-
-  assert.equal(harness.state.papers[0].comments.length, 0);
-  assert.equal(harness.viewerFactory.controller.comments.length, 0);
-  assert.match(harness.document.getElementById('paper-comment-list').innerHTML, /No comments on page 1 yet/);
-});
-test('papers module scopes sidebar comments to the active PDF page', async () => {
-  const harness = buildPapersManagementHarness({
-    comments: [
-      {
-        id: 'comment-1',
-        pageNumber: 1,
-        anchorX: 0.15,
-        anchorY: 0.45,
-        text: 'Page one note.',
-        author: 'Alice Scientist',
-        createdAt: '2026-03-22T17:00:00.000Z',
-        updatedAt: '2026-03-22T17:00:00.000Z'
-      },
-      {
-        id: 'comment-2',
-        pageNumber: 2,
-        anchorX: 0.55,
-        anchorY: 0.65,
-        text: 'Page two note.',
-        author: 'Alice Scientist',
-        createdAt: '2026-03-22T18:00:00.000Z',
-        updatedAt: '2026-03-22T18:00:00.000Z'
-      }
-    ]
-  });
-  const commentPage = harness.document.getElementById('paper-comment-page');
-  const commentCount = harness.document.getElementById('paper-comment-count');
-  const commentList = harness.document.getElementById('paper-comment-list');
-
-  await openPaperInHarness(harness);
-  assert.equal(commentPage.textContent, 'Page 1');
-  assert.equal(commentCount.textContent, '1 comment on this page');
-  assert.match(commentList.innerHTML, /Page one note/);
-  assert.equal(/Page two note/.test(commentList.innerHTML), false);
-
-  harness.viewerFactory.emitPageChange(2);
-
-  assert.equal(commentPage.textContent, 'Page 2');
-  assert.equal(commentCount.textContent, '1 comment on this page');
-  assert.match(commentList.innerHTML, /Page two note/);
-  assert.equal(/Page one note/.test(commentList.innerHTML), false);
-});
 test('papers module syncs stored highlights into the PDF viewer when a paper opens', async () => {
   const harness = buildPapersManagementHarness();
   harness.state.papers[0].highlights = [

@@ -25,7 +25,7 @@ Do I need to read or mutate persisted data?
     Don't channel data through services.
 
 Do I need filesystem, native dialog, agent call, scripts, autosave?
-  → window.enanaApi (passed in as apiBridge / getApiBridge).
+  → window.hikariApi (passed in as apiBridge / getApiBridge).
 ```
 
 The full set of helpers used by existing modules is below.
@@ -132,9 +132,9 @@ If unsure, ask: *"If the user reloads, do they expect this back?"* If yes, `stat
 
 `state.objectGraph` is a **derived** index that links nodes (notebooks, samples, protocols…) and their backlinks. Don't write to it. The renderer core's `persist()` rebuilds it on every save via `rebuildObjectGraph(state)`.
 
-## The IPC bridge: `window.enanaApi`
+## The IPC bridge: `window.hikariApi`
 
-Anything that touches the OS or main process goes through the preload-injected `window.enanaApi`. In modules, accept it as `apiBridge` / `getApiBridge` rather than referencing `window` directly.
+Anything that touches the OS or main process goes through the preload-injected `window.hikariApi`. In modules, accept it as `apiBridge` / `getApiBridge` rather than referencing `window` directly.
 
 Common methods (full surface in [docs/main-helpers/](../main-helpers/)):
 
@@ -171,7 +171,7 @@ Three custom events broadcast from the renderer app shell:
 | Event | When | Listened by |
 | --- | --- | --- |
 | `hikari:app-ready` | after `initApp()` finishes (or fails) | `bootstrap/index-shell.js` (drops the loading cover), tests |
-| `enana:appearance-changed` | when `Settings` writes new appearance | `navigation-shell.js` (re-renders active view to pick up theme) |
+| `hikari:appearance-changed` | when `Settings` writes new appearance | `navigation-shell.js` (re-renders active view to pick up theme) |
 | `enana:storage-path-changed` | when storage path is saved | `app/storage-import.js` |
 
 If your module needs to listen, attach to `window` and remember to remove the listener if you ever support hot-reload.
@@ -187,4 +187,4 @@ The topbar search command bar is wired to a Telegram bot bridge (see [src/render
 - **Direct DOM access into another view's nodes** (e.g. `document.querySelector('#protocol-list')`). The other module owns its DOM. Use its render API.
 - **Throttled persistence inside a module.** `persist()` already accounts for the autosave path; calling it eagerly is correct.
 - **Skipping `safeText` when building innerHTML.** All user-supplied strings flow through `safeText` to avoid HTML injection. Keep that pattern even when the string "looks safe."
-- **Re-fetching the bridge** (`window.enanaApi`) inside a hot loop. Capture once at init or use the `getApiBridge()` factory exactly when you need it.
+- **Re-fetching the bridge** (`window.hikariApi`) inside a hot loop. Capture once at init or use the `getApiBridge()` factory exactly when you need it.

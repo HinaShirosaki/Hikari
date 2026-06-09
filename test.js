@@ -232,8 +232,6 @@ const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
   'download_paper_pdf'
 ]);
 
-const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
-
 const {
   buildAgentSimulationSnapshot,
   pickMockRows,
@@ -338,7 +336,6 @@ const suiteScope = {
   forgeConfig,
   packageManifest,
   AGENT_SIMULATION_DISPATCH_TOOL_NAMES,
-  LEGACY_CHEMISTRY_DRAFT_KEY,
   buildAgentSimulationSnapshot,
   runSimulatedAgentTurn,
   pickMockRows,

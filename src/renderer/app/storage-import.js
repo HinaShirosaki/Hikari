@@ -307,11 +307,11 @@ export function createStorageImportController({
   }
 
   async function ensureStorageRootDirectory(storagePath) {
-    if (!windowObject.enanaApi?.ensureStorageDirectory) {
+    if (!windowObject.hikariApi?.ensureStorageDirectory) {
       return { ok: true, skipped: true };
     }
     try {
-      const result = await windowObject.enanaApi.ensureStorageDirectory(storagePath);
+      const result = await windowObject.hikariApi.ensureStorageDirectory(storagePath);
       if (result?.ok === false) {
         return {
           ok: false,
@@ -329,11 +329,11 @@ export function createStorageImportController({
 
   async function syncStateSidecarsFromStorageRoot() {
     const storagePath = String(state.settings?.storagePath || '').trim();
-    if (!storagePath || !windowObject.enanaApi?.autoSaveDataFile) {
+    if (!storagePath || !windowObject.hikariApi?.autoSaveDataFile) {
       return { ok: false, skipped: true };
     }
     try {
-      return await windowObject.enanaApi.autoSaveDataFile(state, '');
+      return await windowObject.hikariApi.autoSaveDataFile(state, '');
     } catch (error) {
       return {
         ok: false,
@@ -344,7 +344,7 @@ export function createStorageImportController({
 
   async function runStorageRootImport(storagePath, options = {}) {
     const resolvedStoragePath = String(storagePath || '').trim();
-    if (!resolvedStoragePath || !windowObject.enanaApi?.importStorageRoot) {
+    if (!resolvedStoragePath || !windowObject.hikariApi?.importStorageRoot) {
       return { ok: false, skipped: true };
     }
 
@@ -367,7 +367,7 @@ export function createStorageImportController({
         refreshWorkspaceForStorageRoot(resolvedStoragePath);
       }
 
-      const result = await windowObject.enanaApi.importStorageRoot(resolvedStoragePath);
+      const result = await windowObject.hikariApi.importStorageRoot(resolvedStoragePath);
       if (!result?.ok) {
         updateStorageImportError(result?.error || 'Storage import failed.');
         persistState(state);

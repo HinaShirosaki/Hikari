@@ -1473,15 +1473,16 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   animation: agent-chat-pulse 1.8s ease-in-out infinite;
 }
 
-.agent-review-overlay {
+.agent-review-overlay.app-dialog-overlay {
   position: absolute;
   inset: 0;
   z-index: 18;
   display: grid;
   align-items: start;
   justify-items: center;
-  padding: 48px 24px 24px;
-  background: color-mix(in srgb, var(--surface) 74%, transparent);
+  overflow: hidden;
+  padding: clamp(20px, 3vw, 34px) 24px 24px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -1492,14 +1493,16 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-review-dialog {
   width: min(1120px, 100%);
-  max-height: min(760px, calc(100vh - 120px));
+  height: min(760px, calc(100svh - 132px));
+  max-height: calc(100svh - 132px);
+  min-height: min(520px, calc(100svh - 132px));
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 94%, var(--palette-white) 6%);
-  box-shadow: 0 24px 64px color-mix(in srgb, var(--palette-hex-1f2933) 22%, transparent);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .agent-review-dialog-header {
@@ -1507,8 +1510,8 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 20px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  padding: 0 10px 8px;
+  border-bottom: 0;
 }
 
 .agent-review-dialog-header > div {
@@ -1536,12 +1539,13 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
   scrollbar-gutter: stable both-edges;
-  padding: 20px;
+  padding: 8px 0 10px;
 }
 
 .agent-review-card {
-  flex: 0 0 min(720px, calc(100vw - 88px));
-  max-width: 720px;
+  flex: 0 0 min(560px, calc((100% - 18px) / 2));
+  max-width: 560px;
+  height: 100%;
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -1551,6 +1555,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 88%, var(--palette-white) 12%);
+  overflow: hidden;
 }
 
 .agent-review-card-header {
@@ -1642,8 +1647,8 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-review-footer {
   justify-content: center;
-  padding: 14px 20px 18px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  padding: 8px 10px 0;
+  border-top: 0;
 }
 
 .agent-review-footer .small-note {
@@ -1776,12 +1781,15 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
     width: auto;
   }
 
-  .agent-review-overlay {
-    padding: 18px 12px;
+  .agent-review-overlay.app-dialog-overlay {
+    padding: 14px 12px;
   }
 
   .agent-review-dialog {
-    max-height: calc(100vh - 36px);
+    width: 100%;
+    height: calc(100svh - 28px);
+    max-height: calc(100svh - 28px);
+    min-height: 0;
   }
 
   .agent-review-dialog-header {
@@ -1792,11 +1800,12 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
   .agent-review-track {
     gap: 12px;
-    padding: 14px;
+    padding: 8px 0;
   }
 
   .agent-review-card {
-    flex-basis: calc(100vw - 52px);
+    flex-basis: calc(100vw - 24px);
+    max-width: none;
     padding: 14px;
   }
 

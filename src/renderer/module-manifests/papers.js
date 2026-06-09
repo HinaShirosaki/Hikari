@@ -21,7 +21,7 @@ function openPaperAgentChatWithSelection({
   });
   const EventCtor = rootDocument?.defaultView?.CustomEvent || globalThis?.CustomEvent;
   if (rootDocument && typeof EventCtor === 'function') {
-    rootDocument.dispatchEvent(new EventCtor('enana:open-agent-chat-rail'));
+    rootDocument.dispatchEvent(new EventCtor('hikari:open-agent-chat-rail'));
   }
   modules?.agentChatRail?.focusComposer?.();
   return true;

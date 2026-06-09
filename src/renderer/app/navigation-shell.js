@@ -1,4 +1,4 @@
-const LAST_ACTIVE_VIEW_STORAGE_KEY = 'enana_last_active_view_v1';
+const LAST_ACTIVE_VIEW_STORAGE_KEY = 'hikari_last_active_view_v1';
 const FIXED_ACCENT = '#647255';
 const FIXED_FOCUS = '#7a8a69';
 
@@ -56,11 +56,12 @@ export function createNavigationShell({
   };
   const appsById = new Map(APP_REGISTRY.map((app) => [app.id, app]));
   const appsByViewId = new Map(APP_REGISTRY.map((app) => [normalize(app.viewId), app]));
-  const validStartupViewIds = new Set(APP_REGISTRY.map((app) => normalize(app.viewId)));
+  const navigationApps = APP_REGISTRY.filter((app) => app.hiddenFromNavigation !== true);
+  const validStartupViewIds = new Set(navigationApps.map((app) => normalize(app.viewId)));
   const dockApps = APP_DOCK_ORDER
     .map((id) => appsById.get(id))
-    .filter(Boolean);
-  const moreApps = APP_REGISTRY.filter((app) => !APP_DOCK_ORDER.includes(app.id));
+    .filter((app) => app && app.hiddenFromNavigation !== true);
+  const moreApps = navigationApps.filter((app) => !APP_DOCK_ORDER.includes(app.id));
   const expandedDockApps = [...dockApps, ...moreApps];
 
   const pageTitle = documentObject.getElementById('page-title');
@@ -543,7 +544,7 @@ export function createNavigationShell({
     agentChatRailToggleBtn?.addEventListener('click', () => {
       setAgentChatRailExpanded(!agentChatRailExpanded);
     });
-    documentObject.addEventListener('enana:open-agent-chat-rail', openAgentChatRail);
+    documentObject.addEventListener('hikari:open-agent-chat-rail', openAgentChatRail);
     exitBtn?.addEventListener('click', () => windowObject.close());
     if (topbarSearchInput) {
       topbarSearchInput.setAttribute('role', 'combobox');
@@ -679,7 +680,7 @@ export function createNavigationShell({
     lastViewPersistenceEnabled = true;
   }
 
-  windowObject.addEventListener('enana:appearance-changed', () => {
+  windowObject.addEventListener('hikari:appearance-changed', () => {
     showView(getActiveViewId());
   });
 

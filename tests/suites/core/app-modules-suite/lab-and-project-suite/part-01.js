@@ -12,7 +12,7 @@ test('lab-management supports member create, edit, and delete lifecycle', () => 
     'member-name',
     'member-institution-email',
     'member-position',
-    'member-enana-email',
+    'member-hikari-email',
     'member-cancel-btn',
     'member-cards'
   ]);
@@ -21,9 +21,9 @@ test('lab-management supports member create, edit, and delete lifecycle', () => 
   const memberName = document.getElementById('member-name');
   const memberInstitutionEmail = document.getElementById('member-institution-email');
   const memberPosition = document.getElementById('member-position');
-  const memberEnanaEmail = document.getElementById('member-enana-email');
+  const memberHikariEmail = document.getElementById('member-hikari-email');
   const memberCards = document.getElementById('member-cards');
-  wireFormReset(memberForm, [memberName, memberInstitutionEmail, memberPosition, memberEnanaEmail]);
+  wireFormReset(memberForm, [memberName, memberInstitutionEmail, memberPosition, memberHikariEmail]);
 
   let persistCalls = 0;
   const state = { members: [] };
@@ -42,7 +42,7 @@ test('lab-management supports member create, edit, and delete lifecycle', () => 
   memberName.value = '  Alice <Admin>  ';
   memberInstitutionEmail.value = 'alice@example.edu';
   memberPosition.value = 'PI';
-  memberEnanaEmail.value = 'alice@enana.test';
+  memberHikariEmail.value = 'alice@hikari.test';
   trigger(memberForm, 'submit');
 
   assert.equal(state.members.length, 1);
@@ -293,7 +293,7 @@ test('personal-inventory previews a pasted ChemDraw image before saving a chemic
   const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'index.js'), {
     document,
     window: {
-      enanaApi: {
+      hikariApi: {
         readChemicalClipboard: async () => ({
           formats: ['public.tiff'],
           candidates: [
@@ -405,7 +405,7 @@ test('chemical structure clipboard helper extracts ChemDraw CDXML and MOL text',
   assert.equal(imageCandidates[0].imageDataUrl.includes('SHARPCHEMDRAW'), true);
 
   const bridgeClipboard = await clipboardModule.readChemicalStructureClipboard({
-    enanaApi: {
+    hikariApi: {
       readChemicalClipboard: async () => ({
         formats: ['com.cambridgesoft.chemdraw', 'public.tiff'],
         candidates: [

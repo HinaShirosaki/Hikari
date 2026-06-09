@@ -119,6 +119,14 @@ test('notebook pdf export includes linked page content and omits notebook type p
           { id: 'row-1', sample: 'Clone 12', od600: '0.82' }
         ]
       },
+      toolCalculations: [{
+        id: 'calc-1',
+        type: 'molarity',
+        title: 'Molarity - Mass',
+        result: 'Mass needed: 584.4 mg.',
+        formula: 'mass = 10 mM x 1 L x 58.44 g/mol',
+        summary: 'Mass needed: 584.4 mg.'
+      }],
       resultFiles: ['gel.png', 'assay.csv'],
       values: {
         'step-1:buffer': 'PBS'
@@ -194,6 +202,9 @@ test('notebook pdf export includes linked page content and omits notebook type p
   assert.match(allText, /Serial Dilution/);
   assert.match(allText, /Initial Dilution/);
   assert.match(allText, /Following Dilution/);
+  assert.match(allText, /Tool Calculation/);
+  assert.match(allText, /Molarity - Mass: Mass needed: 584\.4 mg\./);
+  assert.match(allText, /Formula: mass = 10 mM x 1 L x 58\.44 g\/mol/);
   assert.match(allText, /Result Table/);
   assert.doesNotMatch(allText, /Mapped Wells/);
   assert.doesNotMatch(allText, /Mapped Well Definitions/);
@@ -290,6 +301,27 @@ test('notebook pdf export paginates wrapped notes and draws result tables as cel
           { id: 'row-2', sample: 'Clone 18', reading: '0.76' }
         ]
       },
+      resultTables: [
+        {
+          columns: [
+            { field: 'sample', title: 'Sample' },
+            { field: 'reading', title: 'Reading' }
+          ],
+          rows: [
+            { id: 'row-1', sample: 'Clone 12', reading: '0.82' },
+            { id: 'row-2', sample: 'Clone 18', reading: '0.76' }
+          ]
+        },
+        {
+          columns: [
+            { field: 'replicate', title: 'Replicate' },
+            { field: 'note', title: 'Note' }
+          ],
+          rows: [
+            { id: 'row-1', replicate: 'R1', note: 'Accepted' }
+          ]
+        }
+      ],
       values: {}
     },
     protocol: {
@@ -313,6 +345,8 @@ test('notebook pdf export paginates wrapped notes and draws result tables as cel
   assert.ok(pdf.rectCalls.length >= 6, 'Expected result table cells to be drawn as bordered rectangles.');
   assert.doesNotMatch(allText, /Sample \| Reading/);
   assert.match(allText, /Clone 12/);
+  assert.match(allText, /Table 2/);
+  assert.match(allText, /Accepted/);
 });
 test('assay pdf export omits mapped well text section', () => {
   class MockJsPdf {

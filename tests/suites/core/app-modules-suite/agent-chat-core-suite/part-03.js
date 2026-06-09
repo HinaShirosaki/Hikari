@@ -170,7 +170,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async (data, filePath) => {
         autoSaveCalls.push({ data, filePath });
         return {
@@ -346,7 +346,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.stateSnapshot.assays[0].project_id, 'p1');
   assert.equal(payloadSeen.stateSnapshot.gelAnalyses.length, 1);
   assert.equal(payloadSeen.stateSnapshot.gelAnalyses[0].project_id, 'p1');
-  assert.equal(payloadSeen.stateSnapshot.experimentData.schema_name, 'enana_experiment_json');
+  assert.equal(payloadSeen.stateSnapshot.experimentData.schema_name, 'hikari_experiment_json');
   assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].notebook_state, 'executed');
   assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].executed_at, '');
   assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].agent_draft_status, '');

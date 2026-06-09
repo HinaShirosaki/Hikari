@@ -66,9 +66,9 @@ function parseCsvRows(rawText) {
 }
 
 async function parseChemicalImportFile(file) {
-  if (window.enanaApi?.parseChemicalImportFile) {
+  if (window.hikariApi?.parseChemicalImportFile) {
     const dataBase64 = await readImportFileBase64(file);
-    const parsed = await window.enanaApi.parseChemicalImportFile({
+    const parsed = await window.hikariApi.parseChemicalImportFile({
       fileName: file.name,
       dataBase64
     });

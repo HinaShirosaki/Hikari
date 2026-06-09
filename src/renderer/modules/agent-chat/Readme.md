@@ -33,7 +33,7 @@ The rest of the folder is split by responsibility:
 - `response.js`: agent result normalization and assistant text summaries.
 - `session-manager.js`: persistent chat session list, load, create, and refresh logic.
 - `shared.js`: common text, array, mapping, and tool-label helpers.
-- `state-snapshot.js`: thin Enana state snapshot and experiment-data mapping.
+- `state-snapshot.js`: thin Hikari state snapshot and experiment-data mapping.
 - `markdown.js`: small markdown renderer used by chat output.
 - `notebook-drafts.js`: notebook draft normalization and persistence helpers.
 

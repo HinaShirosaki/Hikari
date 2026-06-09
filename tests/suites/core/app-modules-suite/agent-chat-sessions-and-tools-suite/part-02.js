@@ -48,7 +48,7 @@ test('agent-chat exposes developer-only manual tool smoke test action and render
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
         filePath: '/tmp/enana-data.ena.json'
@@ -172,7 +172,7 @@ test('agent-chat lets developers run one tool with a manual message and inspect 
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
         filePath: '/tmp/enana-data.ena.json'
@@ -331,7 +331,7 @@ test('agent-chat developer response simulator previews context and injects typed
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
         filePath: '/tmp/enana-data.ena.json'

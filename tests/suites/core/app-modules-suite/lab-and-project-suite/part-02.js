@@ -126,6 +126,8 @@ test('biology-notebook keeps planned pages distinct, marks them executed, and pr
     'biology-notebook-project-select',
     'biology-notebook-protocol-search',
     'biology-notebook-protocol-select',
+    'biology-notebook-page-starter',
+    'biology-notebook-page-starter-project',
     'biology-notebook-empty-state',
     'biology-notebook-protocol-area',
     'biology-notebook-protocol-title',
@@ -203,7 +205,7 @@ test('biology-notebook keeps planned pages distinct, marks them executed, and pr
   const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
     document,
     window: {
-      enanaApi: {}
+      hikariApi: {}
     }
   });
   const notebook = notebookModule.initLabNotebook({
@@ -264,6 +266,8 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
     'biology-notebook-project-select',
     'biology-notebook-protocol-search',
     'biology-notebook-protocol-select',
+    'biology-notebook-page-starter',
+    'biology-notebook-page-starter-project',
     'biology-notebook-empty-state',
     'biology-notebook-protocol-area',
     'biology-notebook-protocol-title',
@@ -359,7 +363,7 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
   const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
     document,
     window: {
-      enanaApi: {}
+      hikariApi: {}
     }
   });
   const notebook = notebookModule.initLabNotebook({
@@ -380,6 +384,135 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
   assert.doesNotMatch(document.getElementById('biology-notebook-entry-list').innerHTML, /Untitled Project/);
   assert.equal((document.getElementById('biology-notebook-entry-list').innerHTML.match(/biology-notebook-folder-name">Clone 12</g) || []).length, 1);
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Ni-NTA Purification/);
+});
+test('biology-notebook project folder click renders the project dashboard in place', () => {
+  const document = createMockDocument([
+    'biology-notebook-project-select',
+    'biology-notebook-protocol-search',
+    'biology-notebook-protocol-select',
+    'biology-notebook-page-starter',
+    'biology-notebook-page-starter-project',
+    'biology-notebook-empty-state',
+    'biology-notebook-project-dashboard',
+    'biology-notebook-protocol-area',
+    'biology-notebook-protocol-title',
+    'biology-notebook-protocol-meta',
+    'biology-notebook-export-btn',
+    'biology-notebook-mark-executed-btn',
+    'biology-notebook-steps',
+    'biology-notebook-result',
+    'biology-notebook-result-file',
+    'save-biology-notebook-btn',
+    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-entry-list'
+  ]);
+
+  const state = {
+    projects: [
+      { id: 'p1', name: 'Atlas', description: 'Notebook-visible project.' }
+    ],
+    protocols: [
+      {
+        id: 'pr2',
+        name: 'Fresh Protocol',
+        steps: [
+          { id: 's1', text: 'Run the fresh protocol.', placeholders: [] }
+        ]
+      }
+    ],
+    notebookEntries: [
+      {
+        id: 'n1',
+        notebookType: 'biology',
+        projectId: 'p1',
+        projectName: 'Atlas',
+        protocolId: 'pr1',
+        protocolName: 'Viability Assay',
+        values: {},
+        result: 'Measured viability.',
+        resultFiles: [],
+        resultFileRecords: [],
+        updatedAt: '2026-03-19T00:00:00.000Z',
+        notebookState: 'executed',
+        executedAt: '2026-03-19T00:00:00.000Z'
+      }
+    ],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    samples: [],
+    paperExperimentLinks: [],
+    settings: {
+      storagePath: ''
+    }
+  };
+
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
+    document,
+    window: {
+      hikariApi: {}
+    }
+  });
+  const notebook = notebookModule.initLabNotebook({
+    state,
+    persist: () => {},
+    createId: () => 'new-entry',
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  notebook.renderProjectOptions();
+  notebook.renderProtocolOptions('', { triggerChange: false });
+  notebook.renderEntries();
+
+  const entryList = document.getElementById('biology-notebook-entry-list');
+  const projectFolder = entryList.querySelector('[data-notebook-project-id]');
+  const folderToggle = entryList.querySelector('[data-notebook-folder-toggle]');
+  const dashboard = document.getElementById('biology-notebook-project-dashboard');
+
+  let iconClickPrevented = false;
+  trigger(entryList, 'click', {
+    target: folderToggle,
+    preventDefault: () => {
+      iconClickPrevented = true;
+    }
+  });
+
+  assert.equal(iconClickPrevented, false);
+  assert.equal(dashboard.hidden, true);
+  assert.match(entryList.innerHTML, /biology-notebook-folder biology-notebook-folder--project is-collapsed/);
+  assert.match(entryList.innerHTML, /biology-notebook-folder-children biology-notebook-folder-children--pages" hidden/);
+
+  let nameClickPrevented = false;
+  trigger(entryList, 'click', {
+    target: projectFolder,
+    preventDefault: () => {
+      nameClickPrevented = true;
+    }
+  });
+
+  assert.equal(nameClickPrevented, true);
+  assert.equal(dashboard.hidden, false);
+  assert.equal(document.getElementById('biology-notebook-protocol-area').hidden, true);
+  assert.equal(document.getElementById('biology-notebook-empty-state').hidden, true);
+  assert.match(dashboard.innerHTML, /Project Activity/);
+  assert.match(dashboard.innerHTML, /Notebook-visible project\./);
+  assert.match(dashboard.innerHTML, /Contribution Heatmap/);
+  assert.doesNotMatch(dashboard.innerHTML, /data-project-edit/);
+  assert.equal(document.getElementById('biology-notebook-project-select').value, 'p1');
+  assert.equal(document.getElementById('biology-notebook-page-starter-project').textContent, 'Atlas');
+  assert.match(entryList.innerHTML, /biology-notebook-folder biology-notebook-folder--project is-active/);
+
+  const protocolSelect = document.getElementById('biology-notebook-protocol-select');
+  protocolSelect.value = 'pr2';
+  trigger(protocolSelect, 'change');
+
+  assert.equal(dashboard.hidden, true);
+  assert.equal(document.getElementById('biology-notebook-protocol-area').hidden, false);
+  assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Fresh Protocol');
+  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Atlas protocol draft/);
+  assert.equal(document.getElementById('biology-notebook-page-starter-project').textContent, 'Atlas');
 });
   }
 };

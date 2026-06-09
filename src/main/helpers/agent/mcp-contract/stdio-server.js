@@ -32,9 +32,7 @@ function parseJsonObject(raw = '') {
 function getRequestContextFromEnv(env = process.env) {
   return parseJsonObject(
     env.HIKARI_AGENT_MCP_REQUEST_CONTEXT
-      || env.ENANA_AGENT_MCP_REQUEST_CONTEXT
       || env.HIKARI_CODEX_REQUEST_CONTEXT
-      || env.ENANA_CODEX_REQUEST_CONTEXT
   );
 }
 

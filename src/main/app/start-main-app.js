@@ -45,11 +45,7 @@ function startMainApp() {
     }
 
     createWindow();
-    await mainCore.telegramRuntime.hydrateSavedTelegramToken();
-    mainCore.telegramRuntime.restartTelegramBot();
-    void mainCore.agentLogRuntime.ensureAgentChatLogFile(mainCore.appPaths.getAgentChatLogPath());
-    void mainCore.llmPromptsRuntime.loadLlmPrompts();
-    mainCore.startChatLogTransformMonitor();
+    await mainCore.onAppReady();
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -65,11 +61,7 @@ function startMainApp() {
   });
 
   app.on('before-quit', () => {
-    mainCore.chatLogTransformMonitor.stop();
-    if (mainCore.codexAgentMcpHost && typeof mainCore.codexAgentMcpHost.close === 'function') {
-      void mainCore.codexAgentMcpHost.close();
-    }
-    mainCore.telegramRuntime.stopTelegramBot('app quit');
+    void mainCore.shutdown();
   });
 }
 
