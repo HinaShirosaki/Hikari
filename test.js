@@ -141,6 +141,8 @@ const sequenceViewerInternals = loadEsmStyleModule(
     'parseInputRecords',
     'normalizeExternalPayload',
     'parseGenBankLocationSegments',
+    'normalizeFeatureType',
+    'getFeatureTypeGenbankKey',
     'complementBase',
     'complementSequence',
     'renderDualStrandSequenceLinesHtml',

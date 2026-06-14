@@ -4,6 +4,7 @@ import {
   normalizeRecordName,
   normalizeTopology
 } from './shared.js';
+import { normalizeFeatureType } from './feature-types.js';
 
 const FEATURE_SOURCE_SQL_ANNOTATION_DNA = 'sql_annotation_dna';
 const FEATURE_SOURCE_SQL_ANNOTATION_PROTEIN = 'sql_annotation_protein';
@@ -118,7 +119,7 @@ function buildDnaAnnotationFeatures(matches, sequenceLength) {
       return {
         id: buildFeatureId(FEATURE_SOURCE_SQL_ANNOTATION_DNA, match, segments),
         name: normalizeRecordName(match?.name || match?.type || 'feature', 'feature'),
-        type: cleanText(match?.type || 'misc_feature', 120).toLowerCase() || 'misc_feature',
+        type: normalizeFeatureType(cleanText(match?.type || 'misc_feature', 120)),
         strand: Number(match?.strand) === -1 ? -1 : 1,
         source: FEATURE_SOURCE_SQL_ANNOTATION_DNA,
         identity: 100,
@@ -140,7 +141,7 @@ function buildProteinAnnotationFeatures(matches, sequenceLength) {
       return {
         id: buildFeatureId(FEATURE_SOURCE_SQL_ANNOTATION_PROTEIN, match, segments),
         name: normalizeRecordName(match?.name || 'cds', 'cds'),
-        type: cleanText(match?.type || 'cds', 120).toLowerCase() || 'cds',
+        type: normalizeFeatureType(cleanText(match?.type || 'cds', 120), 'cds'),
         strand: Number(match?.strand) === -1 ? -1 : 1,
         source: FEATURE_SOURCE_SQL_ANNOTATION_PROTEIN,
         identity: 100,

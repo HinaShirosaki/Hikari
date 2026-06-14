@@ -47,6 +47,36 @@ test('[EDGE] sequence-viewer feature detail formatter shows ORF metadata when pr
   assert.match(html, /Start ATG/);
   assert.match(html, /Stop TAA/);
 });
+test('[EDGE] sequence-viewer feature detail formatter calculates CDS protein properties from translation qualifiers', () => {
+  const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
+    name: 'tiny_cds',
+    type: 'cds',
+    strand: 1,
+    translation: 'M*',
+    segments: [{ start: 0, end: 6 }]
+  }, 6);
+
+  assert.match(html, /<strong>Protein:<\/strong>/);
+  assert.match(html, /1 aa/);
+  assert.match(html, /Monoisotopic MW 149\.05 Da/);
+  assert.match(html, /pI \d+\.\d{2}/);
+  assert.match(html, /from translation/);
+});
+test('[EDGE] sequence-viewer feature detail formatter derives CDS protein properties from DNA when translation is absent', () => {
+  const html = sequenceViewerInternals.formatSelectedFeatureDetailHtml({
+    name: 'derived_cds',
+    type: 'cds',
+    strand: 1,
+    segments: [{ start: 0, end: 9 }]
+  }, 9, {
+    sequence: 'ATGAAATAA'
+  });
+
+  assert.match(html, /<strong>Protein:<\/strong>/);
+  assert.match(html, /2 aa/);
+  assert.match(html, /Monoisotopic MW 277\.15 Da/);
+  assert.match(html, /derived from CDS DNA/);
+});
 test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument emits standalone DNAfeatureviewer-style circular HTML', () => {
   const html = sequenceViewerInternals.buildCircularPreviewHtmlDocument({
     name: 'pPreview',

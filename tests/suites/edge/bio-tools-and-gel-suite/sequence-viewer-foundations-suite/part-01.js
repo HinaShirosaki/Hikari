@@ -16,6 +16,8 @@ test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () 
     'parseInputRecords',
     'normalizeExternalPayload',
     'parseGenBankLocationSegments',
+    'normalizeFeatureType',
+    'getFeatureTypeGenbankKey',
     'complementBase',
     'complementSequence',
     'alignSequenceToReference',

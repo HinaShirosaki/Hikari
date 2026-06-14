@@ -338,9 +338,10 @@
 .biology-notebook-tool-workspace {
   display: grid;
   gap: 12px;
-  padding: 14px 0 18px;
-  border-top: 1px solid var(--line-soft);
-  border-bottom: 1px solid var(--line-soft);
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 92%, var(--palette-white));
 }
 
 .biology-notebook-tool-workspace[hidden] {

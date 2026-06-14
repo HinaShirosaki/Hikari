@@ -1,4 +1,5 @@
 import { DEFAULT_MAX_RECORDS } from './constants.js';
+import { normalizeFeatureType } from './feature-types.js';
 import {
   clamp,
   detectSequenceFormat,
@@ -723,7 +724,7 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
       return {
         id: `gbk_feature_${index + 1}`,
         name,
-        type: String(entry.type || 'misc_feature').toLowerCase(),
+        type: normalizeFeatureType(entry.type || 'misc_feature'),
         strand,
         description,
         ...(translation ? { translation } : {}),
@@ -869,7 +870,7 @@ function normalizeExternalFeature(feature, sequenceLength, index = 0) {
   return {
     id: String(feature.id || `external_feature_${index + 1}`),
     name: normalizeRecordName(feature.name || feature.label || `feature_${index + 1}`, `feature_${index + 1}`),
-    type: normalizeRecordName(feature.type || 'misc_feature', 'misc_feature').toLowerCase(),
+    type: normalizeFeatureType(feature.type || 'misc_feature'),
     strand,
     description: String(feature.description || ''),
     source: String(feature.source || 'external'),

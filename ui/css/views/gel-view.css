@@ -86,6 +86,16 @@
   width: 100%;
 }
 
+.gel-ladder-mw-control {
+  display: grid;
+  gap: 6px;
+  min-width: min(100%, 180px);
+}
+
+.gel-ladder-mw-control input {
+  width: 100%;
+}
+
 .gel-lane-profile-chart-shell {
   padding: 0;
   border: 0;
@@ -280,10 +290,96 @@
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
-.gel-viewer-toolbar .ghost-btn.is-active {
+.gel-viewer-toolbar .ghost-btn.is-active,
+.gel-tool-actions .ghost-btn.is-active {
   border-color: var(--palette-rgba-22-163-74-a42);
   background: var(--palette-rgba-187-247-208-a48);
   color: var(--palette-green-900);
+}
+
+.gel-tool-panel {
+  min-width: 0;
+}
+
+.gel-tool-panel h3 {
+  margin: 0;
+}
+
+.gel-tool-groups {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.gel-tool-group {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.gel-tool-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 36px;
+  padding: 8px 0;
+  color: var(--strong);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.gel-tool-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.gel-tool-group summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.gel-tool-group[open] summary::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.gel-tool-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+  padding: 0 0 12px;
+}
+
+.gel-tool-actions .ghost-btn {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--palette-rgba-53-99-153-a22);
+  background: var(--palette-rgba-255-255-255-a56);
+  line-height: 1.15;
+  white-space: normal;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.gel-tool-actions #gel-add-table-btn[hidden] {
+  display: block !important;
+}
+
+.gel-lane-count-control {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 38px;
+}
+
+.gel-lane-count-control input {
+  width: 76px;
+  min-width: 0;
 }
 
 .gel-viewer-stage {
@@ -437,36 +533,6 @@
   height: auto;
 }
 
-.gel-manual-progress {
-  display: grid;
-  gap: 12px;
-  border: 1px solid var(--palette-rgba-53-99-153-a24);
-  border-radius: 10px;
-  padding: 14px;
-  background: var(--palette-rgba-247-251-255-a9);
-}
-
-.gel-step-list {
-  margin: 0 0 8px;
-  padding-left: 18px;
-  display: grid;
-  gap: 6px;
-  font-size: 0.86rem;
-}
-
-.gel-step-list li {
-  color: var(--palette-lab-blue-muted);
-}
-
-.gel-step-list li.is-active {
-  color: var(--palette-slate-950);
-  font-weight: 700;
-}
-
-.gel-step-list li.is-done {
-  color: var(--palette-green-800);
-}
-
 #gel-canvas {
   display: block;
   width: 100%;
@@ -504,11 +570,6 @@
 body.theme-night .gel-canvas-shell {
   border-color: var(--palette-rgba-145-174-214-a32);
   background: var(--palette-rgba-20-33-57-a72);
-}
-
-body.theme-night .gel-manual-progress {
-  border-color: var(--palette-rgba-145-174-214-a3);
-  background: var(--palette-rgba-22-36-62-a9);
 }
 
 body.theme-night .gel-lane-profile-picker {
@@ -553,12 +614,19 @@ body.theme-night .gel-lane-profile-meta {
   color: var(--palette-hex-9db2d5);
 }
 
-body.theme-night .gel-viewer-toolbar .ghost-btn {
+body.theme-night .gel-tool-groups,
+body.theme-night .gel-tool-group {
+  border-color: var(--palette-rgba-145-174-214-a2);
+}
+
+body.theme-night .gel-viewer-toolbar .ghost-btn,
+body.theme-night .gel-tool-actions .ghost-btn {
   border-color: var(--palette-rgba-145-174-214-a28);
   background: var(--palette-rgba-22-36-62-a68);
 }
 
-body.theme-night .gel-viewer-toolbar .ghost-btn.is-active {
+body.theme-night .gel-viewer-toolbar .ghost-btn.is-active,
+body.theme-night .gel-tool-actions .ghost-btn.is-active {
   border-color: var(--palette-rgba-74-222-128-a42);
   background: var(--palette-rgba-20-83-45-a46);
   color: var(--palette-hex-bbf7d0);
@@ -670,7 +738,6 @@ body.theme-night .gel-report-json {
 #gel-view .panel,
 #gel-view .card,
 .gel-canvas-shell,
-.gel-manual-progress,
 .gel-report-json {
   border: 0;
   border-radius: 0;

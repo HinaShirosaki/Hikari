@@ -239,3 +239,8 @@ body.theme-night {
 .left-rail-template__rail .biology-notebook-page-badge {
   font-size: 0.7rem !important;
 }
+
+/* Protocol rows use full-width dividers; keep their active fill square. */
+#protocol-management-view .left-rail-template__rail .protocol-list-row {
+  border-radius: 0 !important;
+}

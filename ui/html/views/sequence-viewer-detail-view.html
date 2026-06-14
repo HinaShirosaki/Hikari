@@ -35,6 +35,9 @@
 
           <div class="sequence-viewer-detail-main left-rail-template__main">
         <div class="sequence-viewer-detail-topbar">
+          <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
+          <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
+          <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
           <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
           <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
           <label class="sequence-viewer-save-name-wrap">
@@ -178,7 +181,8 @@
               </label>
               <label>
                 Type
-                <input id="sequence-viewer-feature-editor-type" placeholder="e.g. promoter" />
+                <input id="sequence-viewer-feature-editor-type" list="sequence-viewer-feature-editor-type-options" placeholder="e.g. promoter" />
+                <datalist id="sequence-viewer-feature-editor-type-options"></datalist>
               </label>
               <label>
                 Strand

@@ -5,7 +5,7 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 ## Highlights
 
 - Local desktop app built with Electron.
-- One workspace for `Home`, `Instruments`, `Protocols`, `Projects`, `Workflows`, `Biology Notebook`, `Sample & Inventory`, `Chemicals`, `Assay`, `Gel`, `Papers`, `Agent`, `Sequence Viewer`, `Tools`, and `Settings`.
+- One workspace for `Home`, `Protocols`, `Projects`, `Workflows`, `Biology Notebook`, `Sample & Inventory`, `Chemicals`, `Assay`, `Gel`, `Papers`, `Agent`, `Sequence Viewer`, `Tools`, and `Settings`.
 - Snapshot save/load support for `.json` and `.ena` data files.
 - Storage-root-backed files for notebooks, projects, papers, and sequence assets.
 - Optional LLM-backed features for `Papers` and `Agent`.
@@ -16,7 +16,6 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 ### Planning and operations
 
 - `Home`: dashboard with quick navigation, workflow progress, lab timer, and cell-passage reminders.
-- `Instruments`: instrument calendar and reservation management.
 - `Protocols`: protocol authoring, import/export, share flows, and notebook placeholders.
 - `Projects`: project registry with linked notebook, assay, gel, and paper context.
 - `Workflows`: graph-based workflow builder with templates and project linkage.
@@ -116,6 +115,15 @@ Common commands:
 - `/assay <query>`
 - `/gel <query>`
 - `/status`
+
+The bot supports many more commands, including:
+
+- quick logging: `/log`, `/note`, `/use`
+- protocol-run control: `/start_protocol`, `/next`, `/done`, `/timer`
+- draft generation: `/draft_notebook`, `/draft_summary`, `/draft_assay`
+- inventory queries: `/expiring`, `/lowstock`
+
+The canonical command, search-scope, and alias maps live in [`src/main/lib/telegram-bot/config.js`](./src/main/lib/telegram-bot/config.js).
 
 ## Data and Storage
 

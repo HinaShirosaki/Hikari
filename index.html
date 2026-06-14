@@ -607,8 +607,6 @@
               </div>
             </div>
 
-            <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
-
             <details class="biology-notebook-viewer-section" open>
               <summary class="biology-notebook-viewer-section-summary">
                 <span>Protocol</span>
@@ -651,6 +649,7 @@
                 <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations">
                   <p class="small-note biology-notebook-tool-calculation-empty">Recorded bench calculations will appear here.</p>
                 </div>
+                <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
                 <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
                   <div class="biology-notebook-result-table-head">
                     <p id="biology-notebook-result-table-status" class="small-note">Add a table to capture structured notebook results.</p>
@@ -1512,10 +1511,6 @@
               <input id="gel-ladder-lane" type="number" min="1" step="1" value="1" />
             </label>
             <label>
-              Ladder Band MW (kDa)
-              <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="Use in Step 5, e.g. 50" />
-            </label>
-            <label>
               Normalization
               <select id="gel-normalization">
                 <option value="none">None</option>
@@ -1560,13 +1555,6 @@
                   <button type="button" id="gel-rotate-right-btn" class="ghost-btn" disabled title="Rotate 90° clockwise">Rotate ↻</button>
                   <button type="button" id="gel-process-image-btn" class="ghost-btn">Process Image</button>
                   <button type="button" id="gel-view-original-btn" class="ghost-btn" aria-pressed="true">View Original</button>
-                  <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
-                  <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
-                  <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
-                  <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
-                  <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Adjust lane vertices</button>
-                  <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false">Lane-by-lane band</button>
-                  <button type="button" id="gel-add-table-btn" class="ghost-btn" hidden>Add table</button>
                 </div>
                 <div id="gel-viewer-stage" class="gel-viewer-stage">
                   <div id="gel-lane-table-shell" class="gel-lane-table-shell" hidden></div>
@@ -1581,6 +1569,50 @@
               </div>
 
               <div class="gel-side-rail">
+                <section class="panel gel-manual-panel gel-tool-panel" aria-label="Gel tools">
+                  <h3>Gel Tools</h3>
+                  <div class="gel-tool-groups">
+                    <details class="gel-tool-group" open>
+                      <summary>Lane</summary>
+                      <div class="gel-tool-actions">
+                        <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
+                        <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
+                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
+                        <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
+                        <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Adjust lane vertices</button>
+                        <label class="small-note gel-lane-count-control">
+                          Lanes:
+                          <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" />
+                        </label>
+                        <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect lanes</button>
+                      </div>
+                    </details>
+
+                    <details class="gel-tool-group" open>
+                      <summary>Band</summary>
+                      <div class="gel-tool-actions">
+                        <button type="button" id="gel-tool-band-top-btn" class="ghost-btn">Set band top line</button>
+                        <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn">Set band bottom line</button>
+                        <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false">Lane-by-lane band</button>
+                      </div>
+                    </details>
+
+                    <details class="gel-tool-group" open>
+                      <summary>Analysis</summary>
+                      <div class="gel-tool-actions">
+                        <label class="small-note gel-ladder-mw-control">
+                          Ladder MW (kDa)
+                          <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="e.g. 50" />
+                        </label>
+                        <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
+                        <button type="button" id="gel-measure-intensity-btn" class="ghost-btn">Measure intensity</button>
+                        <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
+                        <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Tools</button>
+                      </div>
+                    </details>
+                  </div>
+                </section>
+
                 <section id="gel-lane-profile-panel" class="panel gel-manual-panel gel-lane-profile-panel" hidden>
                   <div class="gel-lane-profile-head">
                     <div>
@@ -1600,30 +1632,6 @@
                   <div id="gel-lane-profile-meta" class="gel-lane-profile-meta small-note"></div>
                 </section>
 
-                <aside id="gel-manual-progress" class="panel gel-manual-progress gel-manual-panel" hidden>
-                  <h3>Manual Steps</h3>
-                  <ol class="gel-step-list">
-                    <li id="gel-step-left">1. Click left gel border</li>
-                    <li id="gel-step-right">2. Click right gel border</li>
-                    <li id="gel-step-dividers">3. Click lane dividers</li>
-                    <li id="gel-step-ladder">4. Click ladder lane</li>
-                    <li id="gel-step-ladder-mw">5. Click ladder band (uses MW input) or right-click to type MW</li>
-                    <li id="gel-step-band-top">6. Click top line of target band</li>
-                    <li id="gel-step-band-bottom">7. Click bottom line of target band</li>
-                    <li id="gel-step-quantify">8. Review per-cell intensities</li>
-                    <li id="gel-step-bands">9. (Optional) Click bands to add</li>
-                  </ol>
-                  <div class="form-actions">
-                    <button type="button" id="gel-manual-prev-btn" class="ghost-btn">Previous Step</button>
-                    <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
-                    <label class="small-note" style="display: inline-flex; align-items: center; gap: 4px;">
-                      Lanes:
-                      <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" style="width: 60px;" />
-                    </label>
-                    <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-Detect Lanes</button>
-                    <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Steps</button>
-                  </div>
-                </aside>
               </div>
             </div>
 
@@ -2275,13 +2283,28 @@
                         <span aria-hidden="true">&gt;</span>
                       </button>
                     </div>
-                    <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn">-</button>
+                    <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom out" title="Zoom out">-</button>
                     <span id="paper-viewer-zoom-label" class="small-note">100%</span>
-                    <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
+                    <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom in" title="Zoom in">+</button>
                     <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
-                    <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
-                    <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
-                    <button type="button" id="paper-viewer-print-btn" class="ghost-btn">Print</button>
+                    <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Fit width" title="Fit width">
+                      <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <rect x="4.5" y="6" width="15" height="12" rx="1.5"></rect>
+                        <path d="M8 12h8"></path>
+                        <path d="m10 9-3 3 3 3"></path>
+                        <path d="m14 9 3 3-3 3"></path>
+                      </svg>
+                      <span class="sr-only">Fit width</span>
+                    </button>
+                    <button type="button" id="paper-viewer-print-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Print" title="Print">
+                      <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M7 8V4.75h10V8"></path>
+                        <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
+                        <path d="M6.5 17H5.25A2.25 2.25 0 0 1 3 14.75v-4A2.25 2.25 0 0 1 5.25 8.5h13.5A2.25 2.25 0 0 1 21 10.75v4A2.25 2.25 0 0 1 18.75 17H17.5"></path>
+                        <path d="M8.25 16.5h7.5"></path>
+                      </svg>
+                      <span class="sr-only">Print</span>
+                    </button>
                   </div>
                   <div class="papers-viewer-summary" hidden>
                     <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
@@ -3086,7 +3109,7 @@
       </div>
 
       <div id="tool-colony-counter-view" class="panel tool-subview" hidden>
-        <h3>Colony Counter (Manual Click)</h3>
+        <h3>Colony Counter</h3>
 
         <div class="colony-counter-shell">
           <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
@@ -3107,18 +3130,36 @@
                 Display Max Size (px)
                 <input id="colony-max-size" type="number" min="300" max="5000" step="50" value="1600" />
               </label>
+              <label>
+                Model Threshold
+                <input id="colony-model-threshold" type="number" min="0.01" max="0.99" step="0.05" value="0.50" />
+              </label>
+              <label>
+                Peak Min Distance (px)
+                <input id="colony-model-min-distance" type="number" min="1" max="50" step="1" value="3" />
+              </label>
+              <label>
+                Mask Shape
+                <select id="colony-mask-mode">
+                  <option value="rectangle">Rectangle</option>
+                  <option value="circle">Circle</option>
+                </select>
+              </label>
             </div>
 
             <div class="form-actions">
+              <button id="colony-auto-count-btn" type="button" class="primary-btn">Auto Count</button>
+              <button id="colony-start-mask-btn" type="button" class="ghost-btn">Draw Mask</button>
+              <button id="colony-clear-mask-btn" type="button" class="ghost-btn">Clear Mask</button>
               <button id="colony-clear-markers-btn" type="button" class="ghost-btn">Clear Markers</button>
-              <button id="colony-run-btn" type="submit" class="primary-btn">Save Manual Count</button>
+              <button id="colony-run-btn" type="submit" class="ghost-btn">Save Count</button>
               <button id="colony-reset-btn" type="button" class="ghost-btn">Reset</button>
               <span id="colony-status" class="small-note"></span>
             </div>
           </form>
 
           <div id="colony-summary" class="calc-output">
-            <p class="small-note">Choose or drop a plate image, then click each colony to count manually.</p>
+            <p class="small-note">Choose or drop a plate image, then run auto count or click colonies manually.</p>
           </div>
 
           <div id="colony-cropper-shell" class="colony-cropper-shell" hidden>
@@ -3134,7 +3175,7 @@
             </section>
             <section class="result-card colony-preview-card">
               <div class="result-card-head">
-                <h4>Marker Map</h4>
+                <h4>Mask / Marker Map</h4>
               </div>
               <canvas id="colony-mask-canvas" class="colony-preview-canvas"></canvas>
             </section>
@@ -3403,6 +3444,9 @@
 
           <div class="sequence-viewer-detail-main left-rail-template__main">
         <div class="sequence-viewer-detail-topbar">
+          <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
+          <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
+          <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
           <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
           <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
           <label class="sequence-viewer-save-name-wrap">
@@ -3546,7 +3590,8 @@
               </label>
               <label>
                 Type
-                <input id="sequence-viewer-feature-editor-type" placeholder="e.g. promoter" />
+                <input id="sequence-viewer-feature-editor-type" list="sequence-viewer-feature-editor-type-options" placeholder="e.g. promoter" />
+                <datalist id="sequence-viewer-feature-editor-type-options"></datalist>
               </label>
               <label>
                 Strand

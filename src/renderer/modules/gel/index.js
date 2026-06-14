@@ -153,14 +153,16 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   elements.gelToolDividersBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('dividers'));
   elements.gelToolLadderLaneBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('ladder'));
   elements.gelToolLaneVerticesBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('lane-vertices'));
+  elements.gelToolBandTopBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('band-top'));
+  elements.gelToolBandBottomBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('band-bottom'));
   elements.gelLaneBandModeBtn?.addEventListener('click', manualWorkflow.onLaneBandModeToggle);
   elements.gelAddTableBtn?.addEventListener('click', laneTable.onAddTableClick);
+  elements.gelMeasureIntensityBtn?.addEventListener('click', onRunAnalysis);
   elements.gelLaneTableShell?.addEventListener('click', laneTable.onShellClick);
   elements.gelLaneTableShell?.addEventListener('input', laneTable.onShellInput);
   elements.gelForm?.addEventListener('submit', recordsManager.onSaveAnalysis);
   elements.gelSearchInput?.addEventListener('input', recordsManager.renderList);
   elements.gelList?.addEventListener('click', recordsManager.onListClick);
-  elements.gelManualPrevBtn?.addEventListener('click', manualWorkflow.onManualPrevStep);
   elements.gelManualNextBtn?.addEventListener('click', manualWorkflow.onManualNextStep);
   elements.gelManualResetBtn?.addEventListener('click', manualWorkflow.onManualResetSteps);
   elements.gelAutoDetectLanesBtn?.addEventListener('click', manualWorkflow.onAutoDetectLanes);

@@ -122,7 +122,6 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     'paper-viewer-highlight-btn',
     'paper-viewer-summarize-btn',
     'paper-viewer-zoom-label',
-    'paper-viewer-open-btn',
     'paper-selection-menu',
     'paper-selection-comment-btn',
     'paper-selection-highlight-btn',

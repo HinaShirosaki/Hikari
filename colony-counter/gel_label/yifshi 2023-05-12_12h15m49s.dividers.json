@@ -1,0 +1,48 @@
+{
+  "image": "/Users/shiyifan/Projects/colony-counter/gel_image/yifshi 2023-05-12_12h15m49s.tif",
+  "image_name": "yifshi 2023-05-12_12h15m49s.tif",
+  "image_width": 775,
+  "image_height": 543,
+  "rotation": 0.0,
+  "corrected_width": 775,
+  "corrected_height": 543,
+  "dividers": [
+    {
+      "x_top": 131.689453125,
+      "x_bottom": 131.689453125
+    },
+    {
+      "x_top": 202.83203125,
+      "x_bottom": 202.83203125
+    },
+    {
+      "x_top": 267.919921875,
+      "x_bottom": 267.919921875
+    },
+    {
+      "x_top": 336.03515625,
+      "x_bottom": 336.03515625
+    },
+    {
+      "x_top": 398.095703125,
+      "x_bottom": 398.095703125
+    },
+    {
+      "x_top": 469.23828125,
+      "x_bottom": 469.23828125
+    },
+    {
+      "x_top": 541.89453125,
+      "x_bottom": 541.89453125
+    },
+    {
+      "x_top": 617.578125,
+      "x_bottom": 617.578125
+    },
+    {
+      "x_top": 666.015625,
+      "x_bottom": 666.015625
+    }
+  ],
+  "divider_count": 9
+}

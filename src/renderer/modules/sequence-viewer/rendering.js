@@ -17,6 +17,7 @@ import {
   hashTypeToColor
 } from './feature-model.js';
 import { isOrfFeature } from './orf-analysis.js';
+import { getCdsProteinProperties } from './protein-properties.js';
 import {
   buildRestrictionCutPolylinePoints,
   computeRestrictionAnnotationGeometry,
@@ -37,6 +38,40 @@ import {
 const RESTRICTION_STACK_LANE_STEP_PX = 16;
 const RESTRICTION_LABEL_COLLISION_GAP_PX = 6;
 const RESTRICTION_LABEL_HORIZONTAL_PADDING_PX = 8;
+
+function formatDaltons(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return 'n/a';
+  }
+  if (number >= 1000) {
+    return `${(number / 1000).toFixed(3)} kDa (${number.toFixed(2)} Da)`;
+  }
+  return `${number.toFixed(2)} Da`;
+}
+
+function formatProteinPropertySummary(properties) {
+  if (!properties) {
+    return '';
+  }
+
+  const parts = [
+    `${Math.max(0, Number(properties.length) || 0).toLocaleString()} aa`,
+    `Monoisotopic MW ${formatDaltons(properties.monoisotopicMass)}`,
+    `pI ${Number.isFinite(Number(properties.pI)) ? Number(properties.pI).toFixed(2) : 'n/a'}`
+  ];
+  const source = String(properties.source || '') === 'derived'
+    ? 'derived from CDS DNA'
+    : 'from translation';
+  const invalidResidues = Array.isArray(properties.invalidResidues) ? properties.invalidResidues : [];
+
+  return [
+    `<p><strong>Protein:</strong> ${escapeHtml(parts.join(' · '))} <span class="small-note">(${escapeHtml(source)})</span></p>`,
+    invalidResidues.length
+      ? `<p class="small-note">Protein properties require known residues only; unknown residue(s) ${escapeHtml(invalidResidues.join(', '))} prevent exact MW/pI calculation.</p>`
+      : ''
+  ].join('');
+}
 
 function getSequenceRunClass(kind) {
   const normalizedKind = String(kind || '').toLowerCase();
@@ -547,7 +582,7 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
   return lines.join('');
 }
 
-export function formatSelectedFeatureDetailHtml(feature, sequenceLength) {
+export function formatSelectedFeatureDetailHtml(feature, sequenceLength, options = {}) {
   if (!feature) {
     return '<p class="small-note">Select a feature in the bottom track to view details.</p>';
   }
@@ -572,6 +607,7 @@ export function formatSelectedFeatureDetailHtml(feature, sequenceLength) {
   const orfLengthAa = Math.max(0, Number(feature.orfLengthAa) || 0);
   const startCodon = String(feature.startCodon || '').trim();
   const stopCodon = String(feature.stopCodon || '').trim();
+  const proteinProperties = getCdsProteinProperties(feature, options?.sequence || '');
   const orfSummaryParts = [];
   if (orfFrame) {
     orfSummaryParts.push(`Frame ${escapeHtml(orfFrame)}`);
@@ -594,6 +630,7 @@ export function formatSelectedFeatureDetailHtml(feature, sequenceLength) {
     <p><strong>Type:</strong> ${escapeHtml(feature.type || '-')} · <strong>Strand:</strong> ${strand}</p>
     <p><strong>Location:</strong> ${escapeHtml(location)}</p>
     ${isOrf && orfSummaryParts.length ? `<p><strong>ORF:</strong> ${orfSummaryParts.join(' · ')}</p>` : ''}
+    ${formatProteinPropertySummary(proteinProperties)}
     ${recognitionSite ? `<p><strong>Recognition Site:</strong> ${escapeHtml(recognitionSite)}</p>` : ''}
     ${cutSummary ? `<p><strong>${escapeHtml(cutSummary.label)}:</strong> ${escapeHtml(cutSummary.text)}</p>` : ''}
     ${enzymeNames.length ? `<p><strong>Enzymes:</strong> ${escapeHtml(enzymeNames.join(', '))}</p>` : ''}

@@ -111,7 +111,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     const hasTable = Boolean(layout && rows.length && !runtime.cropperActive);
     const canAddTable = dividerReady && Boolean(layout) && !runtime.cropperActive;
 
-    elements.gelAddTableBtn.hidden = !canAddTable || hasTable;
+    elements.gelAddTableBtn.hidden = false;
     elements.gelAddTableBtn.disabled = !canAddTable || hasTable;
     elements.gelViewerStage.style.setProperty('--gel-lane-label-width', `${LABEL_COLUMN_WIDTH_PX}px`);
     elements.gelViewerStage.classList.toggle('has-lane-table', hasTable);

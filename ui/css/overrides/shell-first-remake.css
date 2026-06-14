@@ -147,8 +147,7 @@
   background: var(--surface-elevated);
 }
 
-#assay-view .assay-well-meta,
-#gel-view .gel-step-list li {
+#assay-view .assay-well-meta {
   color: var(--muted);
 }
 
@@ -168,14 +167,6 @@
 
 #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__text {
   fill: var(--muted);
-}
-
-#gel-view .gel-step-list li.is-active {
-  color: var(--strong);
-}
-
-#gel-view .gel-step-list li.is-done {
-  color: var(--accent);
 }
 
 #workflow-management-view .workflow-graph-canvas {

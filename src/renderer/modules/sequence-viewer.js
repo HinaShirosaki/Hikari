@@ -1,6 +1,7 @@
 import * as indexModule from './sequence-viewer/index.js';
 import * as alignmentModule from './sequence-viewer/alignment.js';
 import * as detailAlignmentModule from './sequence-viewer/detail-alignment.js';
+import * as featureTypesModule from './sequence-viewer/feature-types.js';
 import * as orfAnalysisModule from './sequence-viewer/orf-analysis.js';
 import * as parsingModule from './sequence-viewer/parsing.js';
 import * as renderingModule from './sequence-viewer/rendering.js';
@@ -76,6 +77,14 @@ export function parseGenBankLocationSegments(rawExpression, sequenceLength, stra
   return parsingModule.parseGenBankLocationSegments(rawExpression, sequenceLength, strand);
 }
 
+export function normalizeFeatureType(type, fallback = 'misc_feature') {
+  return featureTypesModule.normalizeFeatureType(type, fallback);
+}
+
+export function getFeatureTypeGenbankKey(type) {
+  return featureTypesModule.getFeatureTypeGenbankKey(type);
+}
+
 export function complementBase(base) {
   return sharedModule.complementBase(base);
 }
@@ -124,8 +133,8 @@ export function buildRestrictionCutPolylinePoints(
   );
 }
 
-export function formatSelectedFeatureDetailHtml(feature, sequenceLength) {
-  return renderingModule.formatSelectedFeatureDetailHtml(feature, sequenceLength);
+export function formatSelectedFeatureDetailHtml(feature, sequenceLength, options = {}) {
+  return renderingModule.formatSelectedFeatureDetailHtml(feature, sequenceLength, options);
 }
 
 export function computeGcPercent(sequence) {

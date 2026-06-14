@@ -66,6 +66,18 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(registry.apps.some((app) => app.viewId === 'personal-inventory-view'), false);
     });
 
+    test('gel tools omit manual steps and keep ladder MW in analysis controls', () => {
+      const gelView = readLocalSource('ui', 'html', 'views', 'gel-view.html');
+      const analysisStart = gelView.indexOf('<summary>Analysis</summary>');
+      const ladderMwInput = gelView.indexOf('id="gel-ladder-band-mw"');
+
+      assert.equal(gelView.includes('Manual Steps'), false);
+      assert.equal(gelView.includes('gel-step-list'), false);
+      assert.equal(gelView.includes('gel-manual-progress'), false);
+      assert.ok(analysisStart >= 0);
+      assert.ok(ladderMwInput > analysisStart);
+    });
+
     test('project management stays registered but hidden from top navigation', () => {
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const generatedRegistry = readLocalSource('src', 'renderer', 'modules', 'app-registry.generated.js');

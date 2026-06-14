@@ -76,6 +76,9 @@ test('[EDGE] sequence-viewer loadFromExternal switches to detail workspace', () 
     'sequence-viewer-home-import-input',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
+    'sequence-viewer-detail-new-btn',
+    'sequence-viewer-detail-open-btn',
+    'sequence-viewer-detail-open-input',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -120,8 +123,22 @@ test('[EDGE] sequence-viewer loadFromExternal switches to detail workspace', () 
 
   const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
   const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
+  const detailNewBtn = document.getElementById('sequence-viewer-detail-new-btn');
+  const detailOpenBtn = document.getElementById('sequence-viewer-detail-open-btn');
+  const loadBtn = document.getElementById('sequence-viewer-load-btn');
+  const pastePanel = document.getElementById('sequence-viewer-paste-panel');
+
   assert.equal(Boolean(homeWorkspace.hidden), true);
   assert.equal(Boolean(detailWorkspace.hidden), false);
+  assert.equal(Boolean(detailNewBtn.hidden), false);
+  assert.equal(Boolean(detailOpenBtn.hidden), false);
+  assert.equal(Boolean(loadBtn.hidden), true);
+
+  trigger(detailNewBtn, 'click');
+  assert.equal(Boolean(homeWorkspace.hidden), true);
+  assert.equal(Boolean(detailWorkspace.hidden), false);
+  assert.equal(Boolean(loadBtn.hidden), false);
+  assert.equal(Boolean(pastePanel.hidden), false);
 });
 test('[EDGE] sequence-viewer render sync returns to the home workspace when the home shell is reopened from detail', () => {
   const ids = [

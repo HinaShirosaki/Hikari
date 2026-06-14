@@ -1,5 +1,9 @@
 import { buildDnaFeatureViewerCircularPreviewHtmlDocument } from './dna-feature-viewer-preview.js';
 import {
+  getFeatureTypeGenbankKey,
+  normalizeFeatureType
+} from './feature-types.js';
+import {
   clamp,
   normalizeRecordName,
   normalizeSequenceText,
@@ -70,12 +74,17 @@ function sanitizeGenbankToken(value, fallback = 'sequence', maxLength = 16) {
 }
 
 function sanitizeGenbankFeatureType(type) {
+  const knownKey = getFeatureTypeGenbankKey(type);
+  if (knownKey) {
+    return knownKey;
+  }
+
   const cleaned = String(type || 'misc_feature')
     .trim()
     .replace(/\s+/g, '_')
     .replace(/[^A-Za-z0-9_]/g, '')
     .toLowerCase();
-  return cleaned || 'misc_feature';
+  return normalizeFeatureType(cleaned || 'misc_feature');
 }
 
 function sanitizeGenbankQualifierValue(value) {

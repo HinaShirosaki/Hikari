@@ -1,18 +1,15 @@
 import { escapeHtml } from '../tool-box/common.js';
 import { designPcrPrimerPair } from '../tool-box/cloning-assembly.js';
+import {
+  COMMON_SEQUENCE_FEATURE_TYPES,
+  normalizeFeatureType
+} from './feature-types.js';
 import { cleanText, clamp, normalizeRecordName, normalizeSequenceText } from './shared.js';
 import { isOrfFeature } from './orf-analysis.js';
 import { renderPrimerCopyButton } from './primer-copy.js';
 
 function sanitizeFeatureType(type) {
-  const cleaned = String(type || 'misc_feature')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, '_')
-    .replace(/[^a-z0-9_]/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_+|_+$/g, '');
-  return cleaned || 'misc_feature';
+  return normalizeFeatureType(type, 'misc_feature');
 }
 
 function buildManualFeatureId(type) {
@@ -134,6 +131,17 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
 
   let featureContextMenuState = null;
   let featureEditorState = null;
+
+  function populateFeatureTypeOptions() {
+    if (!elements.featureEditorTypeOptions) {
+      return;
+    }
+    elements.featureEditorTypeOptions.innerHTML = COMMON_SEQUENCE_FEATURE_TYPES
+      .map((entry) => `<option value="${escapeHtml(entry.value)}" label="${escapeHtml(entry.label)}"></option>`)
+      .join('');
+  }
+
+  populateFeatureTypeOptions();
 
   function hideFeatureContextMenu() {
     featureContextMenuState = null;

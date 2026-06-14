@@ -1,5 +1,6 @@
 import { getOrfFeaturesForRecord } from './orf-analysis.js';
 import { getCommercialRestrictionFeaturesForRecord } from './restriction-analysis.js';
+import { getFeatureTypeColor } from './feature-types.js';
 import { clamp } from './shared.js';
 
 export function buildFeatureLocationText(feature, sequenceLength) {
@@ -22,6 +23,11 @@ export function buildFeatureLocationText(feature, sequenceLength) {
 }
 
 export function hashTypeToColor(type) {
+  const fixedColor = getFeatureTypeColor(type);
+  if (fixedColor) {
+    return fixedColor;
+  }
+
   const colors = ['#4e7fff', '#f6a35e', '#479f71', '#c97064', '#808080', '#2f8f9d', '#8b5cf6', '#a16207'];
   const key = String(type || 'misc_feature');
   let hash = 0;

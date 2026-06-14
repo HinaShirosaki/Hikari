@@ -92,7 +92,9 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
     }
 
     const selected = features[state.selectedFeatureIndex] || null;
-    elements.featureDetail.innerHTML = formatSelectedFeatureDetailHtml(selected, record.sequence.length);
+    elements.featureDetail.innerHTML = formatSelectedFeatureDetailHtml(selected, record.sequence.length, {
+      sequence: record.sequence
+    });
   }
 
   function renderSequence(record, options = {}) {

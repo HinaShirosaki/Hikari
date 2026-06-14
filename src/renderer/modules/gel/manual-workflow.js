@@ -1,6 +1,6 @@
 import { buildLanesFromManualSegmentation } from './analysis-core.js';
 import { detectLanes } from './auto-lanes.js';
-import { getViewerToolLabel, renderViewerToolbar, updateStepClass } from './manual-ui.js';
+import { getViewerToolLabel, renderViewerToolbar } from './manual-ui.js';
 import {
   clamp,
   countCompleteLaneBandWindows,
@@ -44,7 +44,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       deps.setStatus(`${label} selected. Click the gel image to apply it.`);
       return;
     }
-    deps.setStatus('Viewer tool cleared. Manual workflow will follow the current step.');
+    deps.setStatus('Viewer tool cleared. Gel tools will follow the current selection.');
   }
 
   function getManualStep(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
@@ -97,52 +97,20 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   }
 
   function renderManualProgress() {
-    if (elements.gelManualProgress) {
-      elements.gelManualProgress.hidden = false;
-    }
-
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
     const activeStep = getManualStep(overrides);
-    const dividerDone = Boolean(overrides.laneSegmentation?.dividerDone) || runtime.manualDividerConfirmed;
     const laneBandMode = isPerLaneBandMode(overrides.laneSegmentation);
-    const laneBandProgress = getLaneBandProgress(overrides);
-    const laneBandComplete = laneBandMode && laneBandProgress.totalLanes > 0 && laneBandProgress.completeCount >= laneBandProgress.totalLanes;
 
-    if (elements.gelStepBandTop) {
-      elements.gelStepBandTop.textContent = laneBandMode
-        ? `6. Click top line of target band (${laneBandProgress.completeCount}/${laneBandProgress.totalLanes || '-'} lanes)`
-        : '6. Click top line of target band';
-    }
-    if (elements.gelStepBandBottom) {
-      const laneLabel = laneBandProgress.pendingBottomLaneIndex
-        ? ` lane ${laneBandProgress.pendingBottomLaneIndex}`
-        : '';
-      elements.gelStepBandBottom.textContent = laneBandMode
-        ? `7. Click bottom line of target band${laneLabel}`
-        : '7. Click bottom line of target band';
-    }
-
-    updateStepClass(elements.gelStepLeft, activeStep === 'left' ? 'active' : (Number.isFinite(overrides.laneSegmentation?.gelLeft) ? 'done' : 'todo'));
-    updateStepClass(elements.gelStepRight, activeStep === 'right' ? 'active' : (Number.isFinite(overrides.laneSegmentation?.gelRight) ? 'done' : 'todo'));
-    updateStepClass(elements.gelStepDividers, activeStep === 'dividers' ? 'active' : (dividerDone ? 'done' : 'todo'));
-    updateStepClass(elements.gelStepLadder, activeStep === 'ladder' ? 'active' : (Number.isFinite(overrides.ladderLane) ? 'done' : 'todo'));
-    updateStepClass(elements.gelStepLadderMw, activeStep === 'ladder-mw' ? 'active' : (Boolean(overrides.ladderBandsDone) ? 'done' : 'todo'));
-    updateStepClass(elements.gelStepBandTop, activeStep === 'band-top' ? 'active' : (laneBandMode ? (laneBandComplete ? 'done' : 'todo') : (Number.isFinite(overrides.laneSegmentation?.bandTop) ? 'done' : 'todo')));
-    updateStepClass(elements.gelStepBandBottom, activeStep === 'band-bottom' ? 'active' : (laneBandMode ? (laneBandComplete ? 'done' : 'todo') : (Number.isFinite(overrides.laneSegmentation?.bandBottom) ? 'done' : 'todo')));
-    updateStepClass(elements.gelStepQuantify, activeStep === 'quantify' ? 'active' : (Boolean(overrides.laneSegmentation?.quantifyConfirmed) ? 'done' : 'todo'));
-    updateStepClass(elements.gelStepBands, activeStep === 'bands' ? 'active' : ((overrides.addedBands?.length || 0) > 0 ? 'done' : 'todo'));
-
-    if (elements.gelManualPrevBtn) {
-      elements.gelManualPrevBtn.disabled = activeStep === 'left';
-    }
     if (elements.gelManualNextBtn) {
       elements.gelManualNextBtn.disabled = !(activeStep === 'dividers' || activeStep === 'ladder-mw' || activeStep === 'quantify');
-      if (activeStep === 'ladder-mw') {
+      if (activeStep === 'dividers') {
+        elements.gelManualNextBtn.textContent = 'Done Dividers';
+      } else if (activeStep === 'ladder-mw') {
         elements.gelManualNextBtn.textContent = 'Done Ladder MW';
       } else if (activeStep === 'quantify') {
         elements.gelManualNextBtn.textContent = 'Done Quantify';
       } else {
-        elements.gelManualNextBtn.textContent = 'Done Dividers';
+        elements.gelManualNextBtn.textContent = 'Done';
       }
     }
     renderViewerToolbar(elements, runtime.selectedViewerTool, laneBandMode);
@@ -502,7 +470,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       runtime.manualDividerConfirmed = true;
       updateLaneSegmentation({ dividerDone: true });
       renderOverrideStatus();
-      deps.setStatus('Divider step completed. Click a lane to set ladder lane.');
+      deps.setStatus('Dividers confirmed. Click a lane to set ladder lane.');
       return;
     }
 
@@ -515,11 +483,11 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       };
       renderOverrideStatus();
       if (ladderCount < 2) {
-        deps.setStatus(`Ladder MW step skipped (${ladderCount} point${ladderCount === 1 ? '' : 's'}). MW calibration disabled. ${isPerLaneBandMode(normalized.laneSegmentation) ? 'Click the top line of the target band in each lane.' : 'Click the top line of target band.'}`);
+        deps.setStatus(`Ladder MW skipped (${ladderCount} point${ladderCount === 1 ? '' : 's'}). MW calibration disabled. ${isPerLaneBandMode(normalized.laneSegmentation) ? 'Click the top line of the target band in each lane.' : 'Click the top line of target band.'}`);
       } else {
         deps.setStatus(isPerLaneBandMode(normalized.laneSegmentation)
-          ? 'Ladder MW step completed. Click the top line of the target band in each lane.'
-          : 'Ladder MW step completed. Click the top line of target band.');
+          ? 'Ladder MW completed. Click the top line of the target band in each lane.'
+          : 'Ladder MW completed. Click the top line of target band.');
       }
       deps.onRunAnalysis();
       return;
@@ -684,7 +652,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     renderManualProgress();
     deps.renderCanvas();
     deps.renderReport();
-    deps.setStatus('Manual workflow reset.');
+    deps.setStatus('Gel tool selections reset.');
   }
 
   function addLaneDivider(x) {
@@ -885,7 +853,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       resetDownstreamManualSelections();
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Manual step 1 complete: left border set at x=${point.x}.`);
+      deps.setStatus(`Left border set at x=${point.x}.`);
       return;
     }
     if (step === 'right') {
@@ -899,7 +867,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       resetDownstreamManualSelections();
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Manual step 2 complete: right border set at x=${point.x}.`);
+      deps.setStatus(`Right border set at x=${point.x}.`);
       return;
     }
     if (step === 'dividers') {
@@ -928,7 +896,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       };
       renderOverrideStatus();
       deps.renderCanvas();
-      deps.setStatus(`Manual step 4 complete: ladder lane set to ${laneIndex}.`);
+      deps.setStatus(`Ladder lane set to ${laneIndex}.`);
       deps.onRunAnalysis();
       return;
     }
@@ -965,6 +933,9 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
           ...normalizeManualOverrides(runtime.manualOverrides),
           addedBands: []
         };
+        if (runtime.selectedViewerTool === 'band-top') {
+          runtime.selectedViewerTool = '';
+        }
         renderOverrideStatus();
         deps.renderCanvas();
         deps.setStatus(`Lane ${laneIndex} top line set at row=${rowY}. Click the bottom line in lane ${laneIndex}.`);
@@ -976,6 +947,9 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         ...normalizeManualOverrides(runtime.manualOverrides),
         addedBands: []
       };
+      if (runtime.selectedViewerTool === 'band-top') {
+        runtime.selectedViewerTool = '';
+      }
       renderOverrideStatus();
       deps.renderCanvas();
       deps.setStatus(`Band top line set at row=${rowY}.`);
@@ -1007,6 +981,9 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
           ...normalizeManualOverrides(runtime.manualOverrides),
           addedBands: []
         };
+        if (runtime.selectedViewerTool === 'band-bottom') {
+          runtime.selectedViewerTool = '';
+        }
         renderOverrideStatus();
         deps.renderCanvas();
         const nextProgress = getLaneBandProgress();
@@ -1025,6 +1002,9 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         return;
       }
       updateLaneSegmentation({ bandBottom: rowY, quantifyConfirmed: false });
+      if (runtime.selectedViewerTool === 'band-bottom') {
+        runtime.selectedViewerTool = '';
+      }
       renderOverrideStatus();
       deps.renderCanvas();
       deps.setStatus(`Band bottom line set at row=${rowY}. Per-lane intensities ready in the Quantify panel.`);

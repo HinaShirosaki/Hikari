@@ -110,9 +110,16 @@ export function assembleCloningPlan(payload = {}) {
     orderedFragmentMap
   );
   const warnings = buildGlobalWarnings(routeEvaluations, primerOligoPlan, recommendedStrategy?.name);
+  // A plan is only executable if a strategy was selected AND a primer/oligo set
+  // could be designed for it under some threshold level. Reporting strategy
+  // feasibility alone would surface unbuildable plans (e.g. a sized-ok edit whose
+  // mutagenesis primers fail every threshold) as feasible.
+  const strategyFeasible = Boolean(recommendedStrategy?.feasible);
+  const primersFeasible = Boolean(primerOligoPlan?.feasible);
 
   return {
-    feasible: Boolean(recommendedStrategy?.feasible),
+    feasible: strategyFeasible && primersFeasible,
+    primersFeasible,
     recommendedAssemblyStrategy: recommendedStrategy?.name || null,
     selectedHost: selectedHost
       ? {

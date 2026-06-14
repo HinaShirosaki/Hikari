@@ -18,8 +18,10 @@ export function normalizeEditRequest(editRequest, templateSequence = '') {
   let start = Number.isFinite(Number(editRequest.start)) ? Math.round(Number(editRequest.start)) : null;
   let end = Number.isFinite(Number(editRequest.end)) ? Math.round(Number(editRequest.end)) : null;
 
+  // `position` and `start` are both 1-based here; downstream converts to a
+  // 0-based index via `start - 1` (see startIndex below).
   if (!Number.isFinite(start) && Number.isFinite(position)) {
-    start = type === 'insertion' ? position : position;
+    start = position;
   }
   if (!Number.isFinite(end) && Number.isFinite(start)) {
     if (type === 'insertion') {

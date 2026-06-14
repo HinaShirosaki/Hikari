@@ -688,6 +688,28 @@ export function createSequenceViewerHomeController(config = {}) {
     }
   }
 
+  function openNewSequenceDetail() {
+    onClearAll();
+    navigateToDetail();
+    setMode('paste');
+    setInputComposerVisible(true);
+    setStatus('Paste sequence text, then click Load.');
+    elements.inputTextarea?.focus?.();
+    setHomeStatus('Opened a new sequence detail page.');
+  }
+
+  function openSequenceFilePicker(input = elements.homeOpenInput) {
+    input?.click?.();
+  }
+
+  async function openSelectedSequenceFile(input) {
+    const file = input?.files?.[0];
+    await openSequenceFileInDetail(file);
+    if (input) {
+      input.value = '';
+    }
+  }
+
   function bindEvents() {
     const ResizeObserverCtor = rootDocument?.defaultView?.ResizeObserver || globalThis?.ResizeObserver;
     if (elements.previewHost && typeof ResizeObserverCtor === 'function') {
@@ -703,25 +725,32 @@ export function createSequenceViewerHomeController(config = {}) {
     if (elements.homeOpenInput && typeof elements.homeOpenInput.setAttribute === 'function') {
       elements.homeOpenInput.setAttribute('accept', fileAccept);
     }
+    if (elements.detailOpenInput && typeof elements.detailOpenInput.setAttribute === 'function') {
+      elements.detailOpenInput.setAttribute('accept', fileAccept);
+    }
 
     elements.homePasteBtn?.addEventListener('click', () => {
-      onClearAll();
-      navigateToDetail();
-      setMode('paste');
-      setInputComposerVisible(true);
-      setStatus('Paste sequence text, then click Load.');
-      elements.inputTextarea?.focus?.();
-      setHomeStatus('Opened a new sequence detail page.');
+      openNewSequenceDetail();
     });
 
     elements.homeOpenBtn?.addEventListener('click', () => {
-      elements.homeOpenInput?.click();
+      openSequenceFilePicker(elements.homeOpenInput);
     });
 
     elements.homeOpenInput?.addEventListener('change', async () => {
-      const file = elements.homeOpenInput.files?.[0];
-      await openSequenceFileInDetail(file);
-      elements.homeOpenInput.value = '';
+      await openSelectedSequenceFile(elements.homeOpenInput);
+    });
+
+    elements.detailNewBtn?.addEventListener('click', () => {
+      openNewSequenceDetail();
+    });
+
+    elements.detailOpenBtn?.addEventListener('click', () => {
+      openSequenceFilePicker(elements.detailOpenInput || elements.homeOpenInput);
+    });
+
+    elements.detailOpenInput?.addEventListener('change', async () => {
+      await openSelectedSequenceFile(elements.detailOpenInput);
     });
 
     bindFileDropTarget({
@@ -809,6 +838,7 @@ export function createSequenceViewerHomeController(config = {}) {
     bindEvents,
     navigateToHome,
     navigateToDetail,
+    openNewSequenceDetail,
     openSequenceFileInDetail,
     openLibraryEntryInDetail,
     openParsedRecordsInDetail,
