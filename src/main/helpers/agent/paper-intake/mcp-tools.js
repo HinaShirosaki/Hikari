@@ -12,13 +12,7 @@
  *      experiment entries.
  *
  * These mirror the `definition` + `handler` shape used by the other entries in
- * `mcp-contract/direct-tools/` but are NOT registered in that index yet. To
- * wire them up later:
- *   - require this module from `mcp-contract/direct-tools/index.js` and push
- *     the entries into DIRECT_MCP_TOOLS;
- *   - add the three tool names to HIKARI_MCP_TOOL_NAMES in
- *     `mcp-contract/instructions.js`;
- *   - pass the intake store through the deps used by `createDirectMcpToolRouter`.
+ * `mcp-contract/direct-tools/` and are registered by that index.
  */
 
 const { createIntakeStore, DOC_TYPES } = require('./intake-store.js');
@@ -159,7 +153,7 @@ const LIST_PROJECT_SUMMARIES_DEFINITION = Object.freeze({
   description: [
     'List one-sentence summaries for every paper currently attached to a Hikari project.',
     'Uses the paper-intake summary knowledge base produced by the `hikari-paper-intake` skill',
-    'after each PDF is transferred into `knowledgebase/papers.md/<paper_id>/paper.md`.',
+    'after each PDF is transferred into `KnowledgeBase/papers.md/<paper_id>/paper.md`.',
     'Returns title, DOI, document type, and the count of recorded experiments for each paper.',
     'Use this when the user asks what papers a project contains or wants a roll-up of recent reading.'
   ].join(' '),

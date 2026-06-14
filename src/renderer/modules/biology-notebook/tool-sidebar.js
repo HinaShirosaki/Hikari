@@ -76,6 +76,10 @@ export function createNotebookToolSidebarController({
   const collapseBtn = getElement(doc, 'biology-notebook-tool-collapse-btn');
   const foldToggle = getElement(doc, 'biology-notebook-tool-fold-toggle');
   const mobileToggle = getElement(doc, 'biology-notebook-tool-mobile-toggle');
+  const toolWorkspace = getElement(doc, 'biology-notebook-tool-workspace');
+  const toolBody = typeof sidebar.querySelector === 'function' ? sidebar.querySelector('.biology-notebook-tool-body') : null;
+  const toolOutput = typeof sidebar.querySelector === 'function' ? sidebar.querySelector('.biology-notebook-tool-output') : null;
+  const toolActions = typeof sidebar.querySelector === 'function' ? sidebar.querySelector('.biology-notebook-tool-actions') : null;
   const outputEl = getElement(doc, 'biology-notebook-tool-output');
   const formulaEl = getElement(doc, 'biology-notebook-tool-formula');
   const statusEl = getElement(doc, 'biology-notebook-tool-status');
@@ -87,6 +91,22 @@ export function createNotebookToolSidebarController({
   let activePlaceholderKey = '';
   let currentResult = null;
   let toolCalculations = [];
+
+  function mountToolWorkspace() {
+    if (!toolWorkspace || !toolBody || toolBody.parentElement === toolWorkspace) {
+      return;
+    }
+    [toolBody, toolOutput, toolActions, statusEl].filter(Boolean).forEach((element) => {
+      toolWorkspace.appendChild(element);
+    });
+  }
+
+  function showToolWorkspace() {
+    mountToolWorkspace();
+    if (toolWorkspace) {
+      toolWorkspace.hidden = false;
+    }
+  }
 
   function setStatus(message) {
     setText(statusEl, message);
@@ -112,6 +132,7 @@ export function createNotebookToolSidebarController({
 
   function togglePanel(toolId) {
     activeTool = toolId || 'molarity';
+    showToolWorkspace();
     ['molarity', 'buffer', 'reaction'].forEach((id) => {
       const tab = getElement(doc, `biology-notebook-tool-tab-${id}`);
       const panel = getElement(doc, `biology-notebook-tool-panel-${id}`);

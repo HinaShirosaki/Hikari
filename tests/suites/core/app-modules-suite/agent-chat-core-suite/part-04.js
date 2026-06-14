@@ -53,7 +53,7 @@ test('agent-chat replaces the live placeholder with a persisted error response o
       },
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentChat: async (payload) => {
         payloadSeen = payload;

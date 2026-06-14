@@ -73,7 +73,7 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
     hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentChat: async () => ({
         ok: true,
@@ -345,7 +345,7 @@ test('agent-chat toggles deep research mode and sends it in the chat payload', a
     hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentChat: async (payload) => {
         payloadSeen = payload;

@@ -11,6 +11,9 @@ const CODEX_SKILLS_FOLDER_NAME = 'skills';
 const OFFICIAL_MCP_SKILL_MARKER = 'HIKARI_OFFICIAL_MCP_SKILL';
 const PROTOCOL_GENERATION_TOOL_NAME = buildHikariCodexMcpToolName('protocol_generation');
 const NOTEBOOK_DRAFT_TOOL_NAME = buildHikariCodexMcpToolName('notebook_draft');
+const PAPER_INTAKE_SEARCH_SUMMARIES_TOOL_NAME = buildHikariCodexMcpToolName('paper_intake_search_summaries');
+const PAPER_INTAKE_SEARCH_EXPERIMENTS_TOOL_NAME = buildHikariCodexMcpToolName('paper_intake_search_experiments');
+const PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME = buildHikariCodexMcpToolName('paper_intake_list_project_summaries');
 
 function buildSkillMarkdown({ id = '', name = '', description = '', body = '' } = {}) {
   return [
@@ -100,6 +103,57 @@ Stay in \`paper.md\` by default. Escalate only when you have a concrete question
 - Use the paper's own terminology for assay/technique names; do not paraphrase domain terms.
 - If a section is missing from \`paper.md\` and you did not escalate to the PDF, say so rather than guessing.
 - Do not invoke this skill again for the same \`<paper_id>\` unless the markdown was regenerated.
+`
+    })
+  }),
+  Object.freeze({
+    id: 'paper-retrieval',
+    directory: 'hikari-paper-retrieval',
+    content: buildSkillMarkdown({
+      id: 'paper-retrieval',
+      name: 'hikari-paper-retrieval',
+      description: `Use Hikari MCP paper-intake retrieval tools to find already-ingested papers, summaries, and experiment entries from the local paper-intake knowledge base before reading full paper markdown.`,
+      body: `
+# Hikari Paper Retrieval MCP
+
+Use this skill when the user asks about papers that are already in Hikari, asks which ingested paper covers a topic, asks what experiments an ingested paper ran, or asks for a project-level roll-up of previously ingested papers.
+
+Do not use this skill to download new papers. For new external literature search or PDF download, use the literature or paper-download flow first. This skill is for the local paper-intake knowledge base produced after \`KnowledgeBase/papers.md/<paper_id>/paper.md\` exists and the paper-intake summary has been saved.
+
+Direct tools:
+
+- \`${PAPER_INTAKE_SEARCH_SUMMARIES_TOOL_NAME}\` — search ingested paper titles and one-sentence summaries by topic, finding, organism, method, molecule, or concept.
+- \`${PAPER_INTAKE_SEARCH_EXPERIMENTS_TOOL_NAME}\` — search structured experiment entries by assay, technique, condition, variable, figure/table reference, or outcome.
+- \`${PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME}\` — list ingested paper summaries attached to a known Hikari project.
+
+Retrieval workflow:
+
+1. Decide the narrowest retrieval mode:
+   - Use \`${PAPER_INTAKE_SEARCH_SUMMARIES_TOOL_NAME}\` for "find papers about...", title/topic/finding questions, or when the user wants candidate papers.
+   - Use \`${PAPER_INTAKE_SEARCH_EXPERIMENTS_TOOL_NAME}\` for "which paper did assay X?", "find experiments using technique Y", condition/outcome questions, or figure-level experiment lookup.
+   - Use \`${PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME}\` when the user gives a project id/name and wants papers attached to that project.
+2. Call the chosen MCP tool with a short keyword query. Preserve technical terms such as assay names, proteins, cell lines, compounds, figure labels, and paper-specific tags.
+3. Inspect \`status\`, \`items\`, \`matched_terms\`, \`score\`, \`doc_type\`, \`paper_id\`, \`title\`, \`one_sentence_summary\`, \`experiment\`, and \`source_paths\`.
+4. If the returned fields answer the question, answer from the tool result and cite the returned \`paper_id\`, \`title\`, and \`source_paths.paper_md\`.
+5. If the user asks for details that are not in the summary or experiment entry, read the returned \`source_paths.paper_md\` from the current workspace before answering. Use \`extracted.txt\`, figures, or the original PDF only when \`paper.md\` leaves a concrete question unanswered.
+6. If no intake item matches, say that the local paper-intake KB had no match. Then ask whether to search external literature or download/ingest a new paper if that would help.
+
+Argument patterns:
+
+- Topic search:
+  \`{ "query": "MG-PACE compact degron molecular glue", "limit": 5 }\`
+- Experiment search:
+  \`{ "query": "phage-assisted continuous evolution SD40", "technique": "phage-assisted continuous evolution", "limit": 5 }\`
+- Project roll-up:
+  \`{ "project_name": "Atlas", "doc_types": ["research_paper"], "limit": 20 }\`
+
+Answering rules:
+
+- Prefer the paper-intake MCP result over memory or guesses for local paper availability.
+- Do not imply a paper is attached to a project unless \`${PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME}\` or the returned \`project_ids\` supports it.
+- Do not claim the full paper supports a detail unless you read \`paper.md\` or the detail appears in the returned \`experiment\` or \`one_sentence_summary\`.
+- For reviews, books, or non-research documents, do not invent experiments; use \`doc_type\`, \`structure_outline\`, or \`notable_claims\` only when the returned record provides them.
+- Keep citations local and concrete: use \`paper_id\`, title, and \`source_paths.paper_md\` rather than invented source labels.
 `
     })
   }),

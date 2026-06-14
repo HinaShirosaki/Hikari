@@ -593,12 +593,8 @@
           <div id="biology-notebook-protocol-area" class="panel biology-notebook-viewer" hidden>
             <div class="biology-notebook-viewer-head">
               <div class="biology-notebook-viewer-copy">
-                <p class="small-note biology-notebook-viewer-kicker">Filled protocol and results</p>
-                <label>
-                  Experiment Name
-                  <input id="biology-notebook-experiment-name" type="text" placeholder="Name this specific experiment" />
-                </label>
-                <h3 id="biology-notebook-protocol-title"></h3>
+                <input id="biology-notebook-experiment-name" class="biology-notebook-title-editor" type="text" placeholder="Name this specific experiment" aria-label="Experiment Name" hidden />
+                <h3 id="biology-notebook-protocol-title" class="biology-notebook-title-display" title="Double-click to rename"></h3>
                 <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
               </div>
               <div class="biology-notebook-viewer-actions">
@@ -610,6 +606,8 @@
                 <button id="biology-notebook-print-btn" class="ghost-btn" type="button" hidden>Print</button>
               </div>
             </div>
+
+            <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
 
             <details class="biology-notebook-viewer-section" open>
               <summary class="biology-notebook-viewer-section-summary">
@@ -678,20 +676,17 @@
         </div>
 
         <aside id="biology-notebook-tool-sidebar" class="biology-notebook-tool-sidebar" data-notebook-tool-sidebar aria-label="Biology notebook bench tools">
-          <button id="biology-notebook-tool-fold-toggle" class="ghost-btn biology-notebook-tool-fold-toggle" type="button" aria-controls="biology-notebook-tool-sidebar" aria-expanded="false">Tool Box</button>
           <div class="biology-notebook-tool-content">
-            <div class="biology-notebook-tool-head">
-              <div>
-                <p class="small-note biology-notebook-viewer-kicker">Bench Tools</p>
-                <h3>Tool Box</h3>
-              </div>
-              <button id="biology-notebook-tool-collapse-btn" class="ghost-btn" type="button" aria-controls="biology-notebook-tool-sidebar" aria-expanded="true">Fold</button>
-            </div>
-
             <div class="biology-notebook-tool-tabs" role="tablist" aria-label="Notebook bench tools">
-              <button id="biology-notebook-tool-tab-molarity" class="biology-notebook-tool-tab is-active" type="button" data-notebook-tool-tab="molarity" role="tab" aria-selected="true">Molarity</button>
-              <button id="biology-notebook-tool-tab-buffer" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="buffer" role="tab" aria-selected="false">Buffer</button>
-              <button id="biology-notebook-tool-tab-reaction" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="reaction" role="tab" aria-selected="false">Reaction</button>
+              <button id="biology-notebook-tool-tab-molarity" class="biology-notebook-tool-tab is-active" type="button" data-notebook-tool-tab="molarity" role="tab" aria-selected="true" aria-label="Open molarity calculator" title="Molarity calculator">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M8 4h8M10 4v5l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V4" /><path d="M8 15h8" /></svg>
+              </button>
+              <button id="biology-notebook-tool-tab-buffer" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="buffer" role="tab" aria-selected="false" aria-label="Open buffer preparer" title="Buffer preparer">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M7 4h10M9 4v6l-3.5 7A3 3 0 0 0 8.2 21h7.6a3 3 0 0 0 2.7-4L15 10V4" /><path d="M7.2 16h9.6" /><path d="M10 12h4" /></svg>
+              </button>
+              <button id="biology-notebook-tool-tab-reaction" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="reaction" role="tab" aria-selected="false" aria-label="Open fixed volume reaction" title="Fixed volume reaction">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M5 12h8" /><path d="M10 8l4 4-4 4" /><path d="M16 6h3v3" /><path d="M19 6l-5 5" /><path d="M16 18h3v-3" /><path d="M19 18l-5-5" /></svg>
+              </button>
             </div>
 
             <div class="biology-notebook-tool-body">

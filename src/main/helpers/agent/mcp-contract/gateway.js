@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('node:fs/promises');
 const { createDirectMcpToolRouter } = require('./direct-tools/index.js');
 
 function cleanText(value, maxLength = 2000) {
@@ -12,17 +13,39 @@ function cleanText(value, maxLength = 2000) {
 }
 
 function createAgentMcpGateway(deps = {}) {
+  const env = deps.env && typeof deps.env === 'object' ? deps.env : process.env;
   const runTool = typeof deps.runTool === 'function'
     ? deps.runTool
     : null;
-  const directToolRouter = createDirectMcpToolRouter({
-    runTool
-  });
+
+  function buildDirectRouterDeps(context = {}) {
+    const safeContext = context && typeof context === 'object' && !Array.isArray(context)
+      ? context
+      : {};
+    const workspacePath = cleanText(
+      deps.workspacePath
+        || deps.workspace_path
+        || env.HIKARI_AGENT_MCP_WORKSPACE
+        || env.HIKARI_CODEX_WORKSPACE
+        || safeContext.cwd
+        || safeContext.workspacePath
+        || safeContext.workspace_path,
+      2400
+    );
+    return {
+      ...deps,
+      runTool,
+      fs: deps.fs || fs,
+      workspacePath
+    };
+  }
+
+  const directToolRouter = createDirectMcpToolRouter(buildDirectRouterDeps());
 
   async function callGatewayTool(name = '', args = {}, context = {}) {
     const toolName = cleanText(name, 120);
     if (directToolRouter.hasTool(toolName)) {
-      return directToolRouter.callTool(toolName, args, context);
+      return createDirectMcpToolRouter(buildDirectRouterDeps(context)).callTool(toolName, args, context);
     }
     return {
       ok: false,

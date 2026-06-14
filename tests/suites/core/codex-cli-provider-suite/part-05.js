@@ -43,26 +43,26 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
       configToml = 'model = "gpt-5.4"\nmodel_reasoning_effort = "xhigh"\n',
       authFile = null
     } = {}, callback) {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-home-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-home-'));
       const previousCodexHome = process.env.CODEX_HOME;
-      const previousEnanaCodexHome = process.env.ENANA_CODEX_HOME;
+      const previousHikariCodexHome = process.env.HIKARI_CODEX_HOME;
       fs.writeFileSync(path.join(tmpDir, 'models_cache.json'), JSON.stringify(modelsCache, null, 2), 'utf8');
       fs.writeFileSync(path.join(tmpDir, 'config.toml'), configToml, 'utf8');
       if (authFile && typeof authFile === 'object') {
         fs.writeFileSync(path.join(tmpDir, 'auth.json'), JSON.stringify(authFile, null, 2), 'utf8');
       }
       process.env.CODEX_HOME = tmpDir;
-      delete process.env.ENANA_CODEX_HOME;
+      delete process.env.HIKARI_CODEX_HOME;
       const cleanup = () => {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;
         } else {
           delete process.env.CODEX_HOME;
         }
-        if (typeof previousEnanaCodexHome === 'string') {
-          process.env.ENANA_CODEX_HOME = previousEnanaCodexHome;
+        if (typeof previousHikariCodexHome === 'string') {
+          process.env.HIKARI_CODEX_HOME = previousHikariCodexHome;
         } else {
-          delete process.env.ENANA_CODEX_HOME;
+          delete process.env.HIKARI_CODEX_HOME;
         }
         fs.rmSync(tmpDir, { recursive: true, force: true });
       };
@@ -93,10 +93,10 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         "process.stdin.on('end', () => {",
         "  const outputIndex = args.indexOf('--output-last-message');",
         "  const outputFile = outputIndex >= 0 ? args[outputIndex + 1] : '';",
-        '  fs.writeFileSync(process.env.ENANA_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
-        "  if (process.env.ENANA_FAKE_CODEX_STDOUT) { process.stdout.write(process.env.ENANA_FAKE_CODEX_STDOUT); }",
-        "  if (process.env.ENANA_FAKE_CODEX_STDERR) { process.stderr.write(process.env.ENANA_FAKE_CODEX_STDERR); }",
-        "  const exitCode = Number(process.env.ENANA_FAKE_CODEX_EXIT_CODE || 0);",
+        '  fs.writeFileSync(process.env.HIKARI_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
+        "  if (process.env.HIKARI_FAKE_CODEX_STDOUT) { process.stdout.write(process.env.HIKARI_FAKE_CODEX_STDOUT); }",
+        "  if (process.env.HIKARI_FAKE_CODEX_STDERR) { process.stderr.write(process.env.HIKARI_FAKE_CODEX_STDERR); }",
+        "  const exitCode = Number(process.env.HIKARI_FAKE_CODEX_EXIT_CODE || 0);",
         "  if (exitCode) { process.exit(exitCode); }",
         "  if (outputFile) { fs.writeFileSync(outputFile, 'OK from fake codex'); }",
         '});'
@@ -120,7 +120,7 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         "process.stdin.on('end', () => {",
         "  const outputIndex = args.indexOf('--output-last-message');",
         "  const outputFile = outputIndex >= 0 ? args[outputIndex + 1] : '';",
-        '  fs.writeFileSync(process.env.ENANA_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
+        '  fs.writeFileSync(process.env.HIKARI_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
         `  process.stdout.write(${JSON.stringify(`${JSON.stringify({ type: 'session_meta', payload: { id: sessionId } })}\n`)});`,
         '  setTimeout(() => {',
         `    fs.mkdirSync(${JSON.stringify(path.dirname(transcriptPath))}, { recursive: true });`,
@@ -154,12 +154,12 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         }
       }, async () => {
         const provider = loadProvider();
-        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-request-'));
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-request-'));
         const fakeCodex = createFakeCodexBinary(workspaceDir);
-        const previousCodexCli = process.env.ENANA_CODEX_CLI;
-        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
-        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
-        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        const previousCodexCli = process.env.HIKARI_CODEX_CLI;
+        const previousCapture = process.env.HIKARI_FAKE_CODEX_CAPTURE;
+        process.env.HIKARI_CODEX_CLI = fakeCodex.fakePath;
+        process.env.HIKARI_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
 
         try {
           const requestContext = JSON.stringify({
@@ -173,9 +173,9 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
             enableWebSearch: true,
             envOverrides: {
               HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
-              ENANA_AGENT_MCP_REQUEST_CONTEXT: requestContext,
+              HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
               HIKARI_CODEX_REQUEST_CONTEXT: requestContext,
-              ENANA_CODEX_REQUEST_CONTEXT: requestContext
+              HIKARI_CODEX_REQUEST_CONTEXT: requestContext
             }
           });
           const captured = JSON.parse(fs.readFileSync(fakeCodex.capturePath, 'utf8'));
@@ -198,14 +198,14 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.match(runtimeConfig, /req-request-env/);
         } finally {
           if (typeof previousCodexCli === 'string') {
-            process.env.ENANA_CODEX_CLI = previousCodexCli;
+            process.env.HIKARI_CODEX_CLI = previousCodexCli;
           } else {
-            delete process.env.ENANA_CODEX_CLI;
+            delete process.env.HIKARI_CODEX_CLI;
           }
           if (typeof previousCapture === 'string') {
-            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+            process.env.HIKARI_FAKE_CODEX_CAPTURE = previousCapture;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+            delete process.env.HIKARI_FAKE_CODEX_CAPTURE;
           }
           fs.rmSync(workspaceDir, { recursive: true, force: true });
         }
@@ -227,7 +227,7 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         }
       }, async () => {
         const provider = loadProvider();
-        const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-memory-storage-'));
+        const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-memory-storage-'));
         const projectDir = path.join(storageRoot, 'Project', 'Atlas');
         fs.mkdirSync(projectDir, { recursive: true });
         fs.writeFileSync(path.join(projectDir, 'MEMORY.md'), '# Project Memory\n\nName: Atlas\n', 'utf8');
@@ -235,10 +235,10 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         assert.equal(fs.existsSync(path.join(projectDir, 'AGENTS.md')), true);
 
         const fakeCodex = createFakeCodexBinary(storageRoot);
-        const previousCodexCli = process.env.ENANA_CODEX_CLI;
-        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
-        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
-        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        const previousCodexCli = process.env.HIKARI_CODEX_CLI;
+        const previousCapture = process.env.HIKARI_FAKE_CODEX_CAPTURE;
+        process.env.HIKARI_CODEX_CLI = fakeCodex.fakePath;
+        process.env.HIKARI_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
 
         try {
           const result = await provider.requestCodexCliText({
@@ -253,24 +253,29 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           const protocolSkillPath = path.join(projectDir, '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
           assert.equal(fs.existsSync(protocolSkillPath), true);
           assert.equal(fs.existsSync(path.join(projectDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md')), true);
+          const paperRetrievalSkillPath = path.join(projectDir, '.agents', 'skills', 'hikari-paper-retrieval', 'SKILL.md');
+          assert.equal(fs.existsSync(paperRetrievalSkillPath), true);
           const protocolSkillText = fs.readFileSync(protocolSkillPath, 'utf8');
           assert.match(protocolSkillText, /Placeholder usage:/);
           assert.match(protocolSkillText, /Use bracket placeholders/);
           assert.match(protocolSkillText, /\[volume\]/);
+          const paperRetrievalSkillText = fs.readFileSync(paperRetrievalSkillPath, 'utf8');
+          assert.match(paperRetrievalSkillText, /mcp__hikari__paper_intake_search_experiments/);
+          assert.match(paperRetrievalSkillText, /source_paths\.paper_md/);
           assert.equal(fs.existsSync(path.join(projectDir, 'AGENTS.md')), false);
           assert.equal(fs.existsSync(path.join(captured.codexHome, 'AGENTS.md')), true);
           assert.equal(captured.args.includes('project_doc_fallback_filenames=["MEMORY.md"]'), true);
           assert.equal(captured.args.includes('project_doc_max_bytes=65536'), true);
         } finally {
           if (typeof previousCodexCli === 'string') {
-            process.env.ENANA_CODEX_CLI = previousCodexCli;
+            process.env.HIKARI_CODEX_CLI = previousCodexCli;
           } else {
-            delete process.env.ENANA_CODEX_CLI;
+            delete process.env.HIKARI_CODEX_CLI;
           }
           if (typeof previousCapture === 'string') {
-            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+            process.env.HIKARI_FAKE_CODEX_CAPTURE = previousCapture;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+            delete process.env.HIKARI_FAKE_CODEX_CAPTURE;
           }
           fs.rmSync(storageRoot, { recursive: true, force: true });
         }
@@ -292,15 +297,15 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         }
       }, async () => {
         const provider = loadProvider();
-        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-stream-'));
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-stream-'));
         const fakeCodex = createFakeCodexBinary(workspaceDir);
-        const previousCodexCli = process.env.ENANA_CODEX_CLI;
-        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
-        const previousStdout = process.env.ENANA_FAKE_CODEX_STDOUT;
-        const previousStderr = process.env.ENANA_FAKE_CODEX_STDERR;
-        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
-        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
-        process.env.ENANA_FAKE_CODEX_STDOUT = [
+        const previousCodexCli = process.env.HIKARI_CODEX_CLI;
+        const previousCapture = process.env.HIKARI_FAKE_CODEX_CAPTURE;
+        const previousStdout = process.env.HIKARI_FAKE_CODEX_STDOUT;
+        const previousStderr = process.env.HIKARI_FAKE_CODEX_STDERR;
+        process.env.HIKARI_CODEX_CLI = fakeCodex.fakePath;
+        process.env.HIKARI_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        process.env.HIKARI_FAKE_CODEX_STDOUT = [
           'Plain Codex status line',
           JSON.stringify({ type: 'event_msg', payload: { type: 'agent_reasoning', text: 'Checking project context.' } }),
           JSON.stringify({ type: 'event_msg', payload: { type: 'agent_message', phase: 'commentary', message: 'I am checking inventory.' } }),
@@ -327,7 +332,7 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           JSON.stringify({ type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Final response from Codex.' }], phase: 'final_answer' } }),
           ''
         ].join('\n');
-        process.env.ENANA_FAKE_CODEX_STDERR = [
+        process.env.HIKARI_FAKE_CODEX_STDERR = [
           'Codex stderr warning',
           '2026-06-04T14:45:32.625950Z ERROR codex_memories_write::phase2: Phase 2 no changes',
           ''
@@ -368,24 +373,24 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.equal(displayEvents.some((event) => /^\s*\{/.test(event.display_text || '')), false);
         } finally {
           if (typeof previousCodexCli === 'string') {
-            process.env.ENANA_CODEX_CLI = previousCodexCli;
+            process.env.HIKARI_CODEX_CLI = previousCodexCli;
           } else {
-            delete process.env.ENANA_CODEX_CLI;
+            delete process.env.HIKARI_CODEX_CLI;
           }
           if (typeof previousCapture === 'string') {
-            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+            process.env.HIKARI_FAKE_CODEX_CAPTURE = previousCapture;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+            delete process.env.HIKARI_FAKE_CODEX_CAPTURE;
           }
           if (typeof previousStdout === 'string') {
-            process.env.ENANA_FAKE_CODEX_STDOUT = previousStdout;
+            process.env.HIKARI_FAKE_CODEX_STDOUT = previousStdout;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_STDOUT;
+            delete process.env.HIKARI_FAKE_CODEX_STDOUT;
           }
           if (typeof previousStderr === 'string') {
-            process.env.ENANA_FAKE_CODEX_STDERR = previousStderr;
+            process.env.HIKARI_FAKE_CODEX_STDERR = previousStderr;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_STDERR;
+            delete process.env.HIKARI_FAKE_CODEX_STDERR;
           }
           fs.rmSync(workspaceDir, { recursive: true, force: true });
         }
@@ -407,7 +412,7 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         }
       }, async () => {
         const provider = loadProvider();
-        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-live-transcript-'));
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-live-transcript-'));
         const sessionId = 'codex-live-transcript-session-1';
         const transcriptPath = path.join(
           process.env.CODEX_HOME,
@@ -418,12 +423,12 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           `rollout-${sessionId}.jsonl`
         );
         const fakeCodex = createFakeCodexTranscriptWriterBinary(workspaceDir, sessionId, transcriptPath);
-        const previousCodexCli = process.env.ENANA_CODEX_CLI;
-        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
-        const previousFollowInterval = process.env.ENANA_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS;
-        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
-        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
-        process.env.ENANA_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS = '50';
+        const previousCodexCli = process.env.HIKARI_CODEX_CLI;
+        const previousCapture = process.env.HIKARI_FAKE_CODEX_CAPTURE;
+        const previousFollowInterval = process.env.HIKARI_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS;
+        process.env.HIKARI_CODEX_CLI = fakeCodex.fakePath;
+        process.env.HIKARI_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        process.env.HIKARI_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS = '50';
 
         try {
           let requestResolved = false;
@@ -454,19 +459,19 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           )), true);
         } finally {
           if (typeof previousCodexCli === 'string') {
-            process.env.ENANA_CODEX_CLI = previousCodexCli;
+            process.env.HIKARI_CODEX_CLI = previousCodexCli;
           } else {
-            delete process.env.ENANA_CODEX_CLI;
+            delete process.env.HIKARI_CODEX_CLI;
           }
           if (typeof previousCapture === 'string') {
-            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+            process.env.HIKARI_FAKE_CODEX_CAPTURE = previousCapture;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+            delete process.env.HIKARI_FAKE_CODEX_CAPTURE;
           }
           if (typeof previousFollowInterval === 'string') {
-            process.env.ENANA_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS = previousFollowInterval;
+            process.env.HIKARI_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS = previousFollowInterval;
           } else {
-            delete process.env.ENANA_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS;
+            delete process.env.HIKARI_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS;
           }
           fs.rmSync(workspaceDir, { recursive: true, force: true });
         }
@@ -488,7 +493,7 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         }
       }, async () => {
         const provider = loadProvider();
-        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-replay-'));
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-replay-'));
         const fakeCodex = createFakeCodexBinary(workspaceDir);
         const sessionId = 'codex-replay-session-1';
         const transcriptDir = path.join(process.env.CODEX_HOME, 'sessions', '2026', '05', '21');
@@ -500,12 +505,12 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           JSON.stringify({ type: 'response_item', payload: { type: 'message', role: 'assistant', content: [{ type: 'output_text', text: 'Replay final answer.' }], phase: 'final_answer' } }),
           ''
         ].join('\n'), 'utf8');
-        const previousCodexCli = process.env.ENANA_CODEX_CLI;
-        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
-        const previousStdout = process.env.ENANA_FAKE_CODEX_STDOUT;
-        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
-        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
-        process.env.ENANA_FAKE_CODEX_STDOUT = `${JSON.stringify({ type: 'session_meta', payload: { id: sessionId } })}\n`;
+        const previousCodexCli = process.env.HIKARI_CODEX_CLI;
+        const previousCapture = process.env.HIKARI_FAKE_CODEX_CAPTURE;
+        const previousStdout = process.env.HIKARI_FAKE_CODEX_STDOUT;
+        process.env.HIKARI_CODEX_CLI = fakeCodex.fakePath;
+        process.env.HIKARI_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        process.env.HIKARI_FAKE_CODEX_STDOUT = `${JSON.stringify({ type: 'session_meta', payload: { id: sessionId } })}\n`;
 
         try {
           const streamEvents = [];
@@ -525,19 +530,19 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.equal(displayEvents.some((event) => /^\s*\{/.test(event.display_text || '')), false);
         } finally {
           if (typeof previousCodexCli === 'string') {
-            process.env.ENANA_CODEX_CLI = previousCodexCli;
+            process.env.HIKARI_CODEX_CLI = previousCodexCli;
           } else {
-            delete process.env.ENANA_CODEX_CLI;
+            delete process.env.HIKARI_CODEX_CLI;
           }
           if (typeof previousCapture === 'string') {
-            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+            process.env.HIKARI_FAKE_CODEX_CAPTURE = previousCapture;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+            delete process.env.HIKARI_FAKE_CODEX_CAPTURE;
           }
           if (typeof previousStdout === 'string') {
-            process.env.ENANA_FAKE_CODEX_STDOUT = previousStdout;
+            process.env.HIKARI_FAKE_CODEX_STDOUT = previousStdout;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_STDOUT;
+            delete process.env.HIKARI_FAKE_CODEX_STDOUT;
           }
           fs.rmSync(workspaceDir, { recursive: true, force: true });
         }
@@ -559,16 +564,16 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         }
       }, async () => {
         const provider = loadProvider();
-        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-no-credits-'));
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-no-credits-'));
         const fakeCodex = createFakeCodexBinary(workspaceDir);
-        const previousCodexCli = process.env.ENANA_CODEX_CLI;
-        const previousCapture = process.env.ENANA_FAKE_CODEX_CAPTURE;
-        const previousStdout = process.env.ENANA_FAKE_CODEX_STDOUT;
-        const previousStderr = process.env.ENANA_FAKE_CODEX_STDERR;
-        const previousExitCode = process.env.ENANA_FAKE_CODEX_EXIT_CODE;
-        process.env.ENANA_CODEX_CLI = fakeCodex.fakePath;
-        process.env.ENANA_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
-        process.env.ENANA_FAKE_CODEX_STDOUT = [
+        const previousCodexCli = process.env.HIKARI_CODEX_CLI;
+        const previousCapture = process.env.HIKARI_FAKE_CODEX_CAPTURE;
+        const previousStdout = process.env.HIKARI_FAKE_CODEX_STDOUT;
+        const previousStderr = process.env.HIKARI_FAKE_CODEX_STDERR;
+        const previousExitCode = process.env.HIKARI_FAKE_CODEX_EXIT_CODE;
+        process.env.HIKARI_CODEX_CLI = fakeCodex.fakePath;
+        process.env.HIKARI_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        process.env.HIKARI_FAKE_CODEX_STDOUT = [
           JSON.stringify({
             type: 'event_msg',
             payload: {
@@ -591,11 +596,11 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           }),
           ''
         ].join('\n');
-        process.env.ENANA_FAKE_CODEX_STDERR = [
+        process.env.HIKARI_FAKE_CODEX_STDERR = [
           '2026-05-15T00:26:05Z  WARN codex_core_plugins::loader: failed to load plugin: plugin is not installed',
           ''
         ].join('\n');
-        process.env.ENANA_FAKE_CODEX_EXIT_CODE = '1';
+        process.env.HIKARI_FAKE_CODEX_EXIT_CODE = '1';
 
         try {
           let caughtError = null;
@@ -616,29 +621,29 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.match(caughtError.stderr, /codex_core_plugins/);
         } finally {
           if (typeof previousCodexCli === 'string') {
-            process.env.ENANA_CODEX_CLI = previousCodexCli;
+            process.env.HIKARI_CODEX_CLI = previousCodexCli;
           } else {
-            delete process.env.ENANA_CODEX_CLI;
+            delete process.env.HIKARI_CODEX_CLI;
           }
           if (typeof previousCapture === 'string') {
-            process.env.ENANA_FAKE_CODEX_CAPTURE = previousCapture;
+            process.env.HIKARI_FAKE_CODEX_CAPTURE = previousCapture;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_CAPTURE;
+            delete process.env.HIKARI_FAKE_CODEX_CAPTURE;
           }
           if (typeof previousStdout === 'string') {
-            process.env.ENANA_FAKE_CODEX_STDOUT = previousStdout;
+            process.env.HIKARI_FAKE_CODEX_STDOUT = previousStdout;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_STDOUT;
+            delete process.env.HIKARI_FAKE_CODEX_STDOUT;
           }
           if (typeof previousStderr === 'string') {
-            process.env.ENANA_FAKE_CODEX_STDERR = previousStderr;
+            process.env.HIKARI_FAKE_CODEX_STDERR = previousStderr;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_STDERR;
+            delete process.env.HIKARI_FAKE_CODEX_STDERR;
           }
           if (typeof previousExitCode === 'string') {
-            process.env.ENANA_FAKE_CODEX_EXIT_CODE = previousExitCode;
+            process.env.HIKARI_FAKE_CODEX_EXIT_CODE = previousExitCode;
           } else {
-            delete process.env.ENANA_FAKE_CODEX_EXIT_CODE;
+            delete process.env.HIKARI_FAKE_CODEX_EXIT_CODE;
           }
           fs.rmSync(workspaceDir, { recursive: true, force: true });
         }

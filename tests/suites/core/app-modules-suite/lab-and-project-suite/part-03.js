@@ -7,8 +7,10 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
     'biology-notebook-project-select',
     'biology-notebook-protocol-search',
     'biology-notebook-protocol-select',
+    'biology-notebook-page-starter',
     'biology-notebook-empty-state',
     'biology-notebook-protocol-area',
+    'biology-notebook-experiment-name',
     'biology-notebook-protocol-title',
     'biology-notebook-protocol-meta',
     'biology-notebook-edit-protocol-btn',
@@ -102,10 +104,21 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
   notebook.openEntry('saved-page-1');
 
   assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Stored Snapshot Name');
+  assert.equal(document.getElementById('biology-notebook-experiment-name').hidden, true);
   assert.match(document.getElementById('biology-notebook-steps').innerHTML, /Stored notebook step with/);
   assert.match(document.getElementById('biology-notebook-steps').innerHTML, /data-nb-key-ref="step-saved:volume"/);
   assert.match(document.getElementById('biology-notebook-steps').innerHTML, />15 mL</);
   assert.doesNotMatch(document.getElementById('biology-notebook-steps').innerHTML, /Live library step/);
+  assert.equal(document.getElementById('biology-notebook-page-starter').hidden, true);
+
+  trigger(document.getElementById('biology-notebook-protocol-title'), 'dblclick');
+  assert.equal(document.getElementById('biology-notebook-protocol-title').hidden, true);
+  assert.equal(document.getElementById('biology-notebook-experiment-name').hidden, false);
+  document.getElementById('biology-notebook-experiment-name').value = 'Renamed transformation page';
+  trigger(document.getElementById('biology-notebook-experiment-name'), 'keydown', { key: 'Enter' });
+  assert.equal(document.getElementById('biology-notebook-experiment-name').hidden, true);
+  assert.equal(document.getElementById('biology-notebook-protocol-title').hidden, false);
+  assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Renamed transformation page');
 });
 test('biology-notebook edits only the saved page protocol copy and keeps the original protocol unchanged', () => {
   const document = createMockDocument([
@@ -418,9 +431,8 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
     'biology-notebook-result-file',
     'biology-notebook-layout',
     'biology-notebook-tool-sidebar',
-    'biology-notebook-tool-collapse-btn',
-    'biology-notebook-tool-fold-toggle',
     'biology-notebook-tool-mobile-toggle',
+    'biology-notebook-tool-workspace',
     'biology-notebook-tool-calculations',
     'save-biology-notebook-btn',
     'cancel-biology-notebook-edit-btn',
@@ -470,13 +482,6 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   notebook.renderProjectOptions();
   notebook.renderProtocolOptions('pr1');
 
-  const layout = document.getElementById('biology-notebook-layout');
-  trigger(document.getElementById('biology-notebook-tool-collapse-btn'), 'click');
-  assert.ok(layout.classList.contains('is-tool-sidebar-collapsed'));
-  trigger(document.getElementById('biology-notebook-tool-fold-toggle'), 'click');
-  assert.ok(layout.classList.contains('is-tool-sidebar-open'));
-  assert.equal(layout.classList.contains('is-tool-sidebar-collapsed'), false);
-
   document.getElementById('biology-notebook-tool-mass-concentration').value = '10';
   document.getElementById('biology-notebook-tool-mass-concentration-unit').value = 'mM';
   document.getElementById('biology-notebook-tool-mass-mw').value = '58.44';
@@ -487,6 +492,7 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
 
   trigger(document.getElementById('biology-notebook-tool-tab-buffer'), 'click');
+  assert.equal(document.getElementById('biology-notebook-tool-workspace').hidden, false);
   document.getElementById('biology-notebook-tool-buffer-volume').value = '1000';
   document.getElementById('biology-notebook-tool-buffer-name-1').value = 'NaCl';
   document.getElementById('biology-notebook-tool-buffer-form-1').value = 'solid';

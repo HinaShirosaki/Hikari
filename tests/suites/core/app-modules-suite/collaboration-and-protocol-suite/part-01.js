@@ -94,7 +94,7 @@ test('collaboration-management sends messages and imports protocol share links',
     }
   };
   const token = encodeBase64Url(JSON.stringify(payload));
-  protocolLinkInput.value = `enana://protocol-share/${token}`;
+  protocolLinkInput.value = `hikari://protocol-share/${token}`;
   trigger(importProtocolLinkBtn, 'click');
 
   assert.equal(state.protocols.length, 1);
@@ -104,7 +104,7 @@ test('collaboration-management sends messages and imports protocol share links',
   assert.equal(importedCalls, 1);
   assert.equal(tracked[0].name, 'protocol_share_link_imported');
 
-  protocolLinkInput.value = `enana://protocol-share/${token}`;
+  protocolLinkInput.value = `hikari://protocol-share/${token}`;
   trigger(importProtocolLinkBtn, 'click');
   assert.equal(state.protocols.length, 2);
   assert.match(state.protocols[1].name, /^PCR Protocol \(Shared Copy\)/);

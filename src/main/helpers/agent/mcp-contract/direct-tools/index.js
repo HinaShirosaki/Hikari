@@ -56,6 +56,10 @@ const {
   PAPER_ANALYSIS_MCP_TOOL,
   callPaperAnalysis
 } = require('./paper-analysis.js');
+const {
+  PAPER_INTAKE_DIRECT_MCP_TOOLS,
+  PAPER_INTAKE_DIRECT_MCP_TOOL_NAMES
+} = require('../../paper-intake/mcp-tools.js');
 
 const DIRECT_MCP_TOOLS = Object.freeze([
   {
@@ -113,7 +117,8 @@ const DIRECT_MCP_TOOLS = Object.freeze([
   {
     definition: PAPER_ANALYSIS_MCP_TOOL,
     handler: callPaperAnalysis
-  }
+  },
+  ...PAPER_INTAKE_DIRECT_MCP_TOOLS
 ]);
 
 const DIRECT_MCP_TOOL_NAMES = Object.freeze(
@@ -159,6 +164,7 @@ const createMcpLookupToolRouter = createDirectMcpToolRouter;
 module.exports = {
   DIRECT_MCP_TOOLS,
   DIRECT_MCP_TOOL_NAMES,
+  PAPER_INTAKE_DIRECT_MCP_TOOL_NAMES,
   getDirectMcpToolDefinitions,
   createDirectMcpToolRouter,
   MCP_LOOKUP_TOOLS,

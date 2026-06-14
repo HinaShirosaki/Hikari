@@ -5,6 +5,7 @@ const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { createIntakePipeline } = require('../paper-intake/intake-pipeline.js');
 const {
   buildExtractedTextFile,
   buildPdfMarkdownFromExtraction
@@ -178,6 +179,14 @@ function normalizeYear(value) {
   }
   const match = direct.match(/\b(19|20)\d{2}\b/);
   return match?.[0] || '';
+}
+
+function isExplicitFalse(value) {
+  if (value === false) {
+    return true;
+  }
+  const normalized = String(value == null ? '' : value).trim().toLowerCase();
+  return normalized === 'false' || normalized === '0' || normalized === 'no';
 }
 
 function guessTitleFromText(text = '') {
@@ -506,6 +515,38 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
   const paperWikiChunkerRuntime = deps.paperWikiChunkerRuntime && typeof deps.paperWikiChunkerRuntime === 'object'
     ? deps.paperWikiChunkerRuntime
     : null;
+  const injectedPaperIntakePipeline = deps.paperIntakePipeline
+    && typeof deps.paperIntakePipeline.runIntakeForPaper === 'function'
+    ? deps.paperIntakePipeline
+    : null;
+
+  async function runPaperIntake({ source = {}, storagePath = '', paperFolderName = '', metadata = {} } = {}) {
+    if (!paperFolderName || isExplicitFalse(source.paper_intake) || isExplicitFalse(source.paperIntake)) {
+      return null;
+    }
+    const pipeline = injectedPaperIntakePipeline || createIntakePipeline({
+      ...deps,
+      workspacePath: storagePath,
+      fs: fsPromises
+    });
+    if (!pipeline || typeof pipeline.runIntakeForPaper !== 'function') {
+      return {
+        ok: false,
+        status: 'executor_unavailable',
+        error: 'Paper intake pipeline is unavailable.'
+      };
+    }
+    return pipeline.runIntakeForPaper({
+      paperId: paperFolderName,
+      title: metadata.title,
+      doi: metadata.doi,
+      traceContext: source.traceContext || null
+    }).catch((error) => ({
+      ok: false,
+      status: 'failed',
+      error: cleanText(error?.message || error, 1200) || 'Paper intake pipeline failed.'
+    }));
+  }
 
   async function reconcileFiguresDir({ provisionalDir, canonicalDir, paperFolderPath, figures } = {}) {
     const descriptors = Array.isArray(figures) ? figures : [];
@@ -954,6 +995,15 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     };
     await writeJsonFile(paths.meta_path, meta);
 
+    const paperIntake = wikiStatus === 'ready'
+      ? await runPaperIntake({
+        source,
+        storagePath: resolvedStoragePath,
+        paperFolderName: paths.paper_folder_name,
+        metadata
+      })
+      : null;
+
     let chunkResult = null;
     if (wikiStatus === 'ready' && paperWikiChunkerRuntime && typeof paperWikiChunkerRuntime.chunkPaperMarkdown === 'function') {
       chunkResult = await paperWikiChunkerRuntime.chunkPaperMarkdown({
@@ -993,6 +1043,9 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       wiki_chunk_status: chunkResult?.ok === true ? 'ready' : (chunkResult ? 'failed' : 'skipped'),
       wiki_chunk_count: Number.isFinite(chunkResult?.chunk_count) ? chunkResult.chunk_count : 0,
       wiki_chunk_error: cleanText(chunkResult?.error, 1200),
+      paper_intake: paperIntake,
+      paper_intake_status: paperIntake?.status || (wikiStatus === 'ready' ? 'skipped' : ''),
+      paper_intake_error: cleanText(paperIntake?.error, 1200),
       error: cleanText(markdownResult?.error || extraction?.error, 1200),
       warning: cleanText(markdownResult?.warning, 1200),
       summary: wikiStatus === 'ready'

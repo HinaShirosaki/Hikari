@@ -56,7 +56,7 @@
 }
 
 .left-rail-template.biology-notebook-layout {
-  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr) minmax(280px, 320px);
+  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr) 56px;
   gap: 24px;
 }
 

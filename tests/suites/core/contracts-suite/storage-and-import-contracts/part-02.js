@@ -194,7 +194,7 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       assert.match(mainSource, /const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log';/);
       assert.match(mainSource, /agentLogRuntime\.ensureAgentChatLogFile\([^)]*getAgentChatLogPath\(\)\)/);
       assert.match(mainSource, /createMainAppPaths/);
-      assert.match(appPathsSource, /ENANA_AGENT_CHAT_LOG_PATH/);
+      assert.match(appPathsSource, /HIKARI_AGENT_CHAT_LOG_PATH/);
       assert.match(controllerUtilsSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);
       assert.equal(controllerUtilsSource.includes('apiKey: cleanText(source.apiKey'), false);
       assert.match(agentChatHandlerSource, /type: 'agent-chat-request'/);

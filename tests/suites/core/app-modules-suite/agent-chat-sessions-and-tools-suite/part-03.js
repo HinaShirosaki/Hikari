@@ -43,7 +43,7 @@ test('agent-chat prioritizes inventory lookup summary text and renders lookup me
     hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentChat: async () => ({
         ok: true,
@@ -177,7 +177,7 @@ test('agent-chat uses record lookup summary when inventory lookup payload is abs
     hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentChat: async () => ({
         ok: true,
@@ -279,7 +279,7 @@ test('agent-chat prioritizes purchase recommendation summary, renders shopping t
     hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       openExternalUrl: async (url) => {
         openedUrls.push(url);

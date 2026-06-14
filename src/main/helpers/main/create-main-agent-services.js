@@ -73,6 +73,7 @@ const { createAgentRecordLookupRuntime } = require('../agent/tools/agent-record-
 const { createAgentRuntimeSupport } = require('../agent/runtime/agent-runtime-support.js');
 const { createAgentSubAppApi } = require('../agent/runtime/agent-sub-app-api.js');
 const { createAgentMcpHost } = require('../agent/mcp-contract/host.js');
+const { createAgentMcpInitializer } = require('./agent-mcp-initializer.js');
 const {
   buildCodexMcpContext,
   createCodexAgentRuntime
@@ -167,10 +168,26 @@ function createMainAgentServices(deps = {}) {
     : (async () => ({ bundlePaths: {}, sidecarPaths: {} }));
   const uniqueStrings = createUniqueStrings(cleanText);
   let codexAgentMcpHost = null;
-  async function requestCodexAgentText(input = {}) {
-    if (codexAgentMcpHost && typeof codexAgentMcpHost.ensureStarted === 'function') {
-      await codexAgentMcpHost.ensureStarted();
+  let agentMcpInitializer = null;
+  async function initializeAgentMcp(input = {}) {
+    if (agentMcpInitializer && typeof agentMcpInitializer.initialize === 'function') {
+      return agentMcpInitializer.initialize(input);
     }
+    if (codexAgentMcpHost && typeof codexAgentMcpHost.ensureStarted === 'function') {
+      return codexAgentMcpHost.ensureStarted();
+    }
+    return {
+      ok: false,
+      status: 'unavailable',
+      error: 'Hikari MCP initializer is not configured.'
+    };
+  }
+
+  async function requestCodexAgentText(input = {}) {
+    await initializeAgentMcp({
+      cwd: input.cwd,
+      envOverrides: input.envOverrides
+    });
     return requestCodexCliText(input);
   }
 
@@ -563,9 +580,6 @@ function createMainAgentServices(deps = {}) {
           || agentMetadata.reasoningEffort,
         40
       );
-      if (codexAgentMcpHost && typeof codexAgentMcpHost.ensureStarted === 'function') {
-        await codexAgentMcpHost.ensureStarted();
-      }
       const project = turnMetadata.project && typeof turnMetadata.project === 'object'
         ? turnMetadata.project
         : (agentMetadata.project && typeof agentMetadata.project === 'object' ? agentMetadata.project : {});
@@ -611,6 +625,13 @@ function createMainAgentServices(deps = {}) {
         },
         traceContext
       }, { cleanText }));
+      await initializeAgentMcp({
+        cwd,
+        envOverrides: {
+          HIKARI_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
+          HIKARI_CODEX_REQUEST_CONTEXT: mcpContextJson
+        }
+      });
       const result = await requestCodexCliText({
         prompt: buildCodexSubAgentPrompt(turnInput),
         cwd,
@@ -759,6 +780,13 @@ function createMainAgentServices(deps = {}) {
       fallbackDataFilePath: cleanText(getDefaultDataFilePath(), 2000)
     })
   });
+  agentMcpInitializer = createAgentMcpInitializer({
+    cleanText,
+    mcpHost: codexAgentMcpHost,
+    getCodexCliWorkingDirectory,
+    getDefaultDataFilePath,
+    getBundlePaths
+  });
 
   const codexAgentRuntime = createCodexAgentRuntime({
     cleanText,
@@ -813,6 +841,7 @@ function createMainAgentServices(deps = {}) {
     agentToolRuntime,
     codexAgentRuntime,
     codexAgentMcpHost,
+    initializeAgentMcp,
     requestCodexAgentText,
     agentSkillRuntime,
     agentChatLogRuntime,

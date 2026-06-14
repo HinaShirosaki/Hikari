@@ -274,6 +274,18 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       );
       assert.match(
         forgeConfig.packagerConfig.asar?.unpackDir || '',
+        /src\/main\/helpers\/main/
+      );
+      assert.match(
+        forgeConfig.packagerConfig.asar?.unpackDir || '',
+        /src\/main\/lib/
+      );
+      assert.match(
+        forgeConfig.packagerConfig.asar?.unpackDir || '',
+        /vendor\/sqljs/
+      );
+      assert.match(
+        forgeConfig.packagerConfig.asar?.unpackDir || '',
         /node_modules\/@modelcontextprotocol\/sdk/
       );
       assert.equal(forgeConfig.packagerConfig.prune, true);

@@ -80,7 +80,11 @@ async function syncCodexCliRuntimePluginCache(sourceHome = '', runtimeHome = '')
 async function writeRuntimeGuidance(runtimeHome = '', cwd = '', options = {}) {
   await ensureHikariCodexMcpConfig(path.join(runtimeHome, CODEX_CONFIG_FILE), {
     workspace: resolveWorkingDirectory(cwd),
-    envOverrides: options.envOverrides
+    envOverrides: options.envOverrides,
+    dataFilePath: options.dataFilePath,
+    storagePath: options.storagePath,
+    mcpHostUrl: options.mcpHostUrl,
+    mcpToken: options.mcpToken
   });
   await ensureHikariCodexAgentsFile(runtimeHome).catch(() => '');
 }

@@ -33,7 +33,7 @@ if (process.platform === 'linux') {
 module.exports = {
   packagerConfig: {
     asar: {
-      unpackDir: '{src/main/helpers/agent,node_modules/@modelcontextprotocol/sdk,node_modules/zod,node_modules/ajv,node_modules/ajv-formats,node_modules/json-schema-typed,node_modules/zod-to-json-schema}'
+      unpackDir: '{src/main/helpers/agent,src/main/helpers/main,src/main/lib,vendor/sqljs,node_modules/@modelcontextprotocol/sdk,node_modules/zod,node_modules/ajv,node_modules/ajv-formats,node_modules/json-schema-typed,node_modules/zod-to-json-schema}'
     },
     prune: true,
     ignore: [

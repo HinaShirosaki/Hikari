@@ -1,8 +1,8 @@
 {
-  "schema_name": "enana_storage_manifest",
+  "schema_name": "hikari_storage_manifest",
   "schema_version": "1.0.0",
   "generated_at": "2026-06-01T21:01:49.044Z",
-  "root_path": "/Users/shiyifan/Projects/Enana/TestData5",
+  "root_path": "/Users/shiyifan/Projects/Hikari/TestData5",
   "discovered_files": [
     {
       "relative_path": ".agents",

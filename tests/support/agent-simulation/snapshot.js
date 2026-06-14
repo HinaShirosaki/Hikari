@@ -114,7 +114,7 @@ function buildAgentSimulationSnapshot() {
       ]
     },
     settings: {
-      storagePath: '/tmp/enana-storage'
+      storagePath: '/tmp/hikari-storage'
     }
   };
 }

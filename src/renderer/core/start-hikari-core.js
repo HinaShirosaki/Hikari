@@ -37,6 +37,60 @@ function createAppReadyEvent(windowObject, init) {
     : { type: APP_READY_EVENT, ...(init || {}) };
 }
 
+// Facade for view-routing surface exposed to modules, openItemHandlers, and the
+// topbar search controller. Until `bind(navigationShell)` runs, the methods are
+// safe no-ops; after binding they delegate. This replaces three `let` forward
+// references and three `?.`-guarded inline closures.
+function createViewController() {
+  let target = null;
+  return {
+    bind(navigationShell) {
+      target = navigationShell;
+    },
+    showView: (viewId) => {
+      if (!target) {
+        return;
+      }
+      target.showView(viewId);
+    },
+    setSearchInputValue: (inputId, value) => {
+      if (!target) {
+        return false;
+      }
+      return target.setSearchInputValue(inputId, value);
+    },
+    getActiveViewId: () => (target ? target.getActiveViewId() : null),
+    getTopbarSearchInput: () => (target ? target.topbarSearchInput : null)
+  };
+}
+
+// Facade for the search-routing callbacks consumed by the navigation shell's
+// keyboard/suggestion handlers. The shell installs handlers at construction
+// time; this facade lets us wire those handlers before the topbar search
+// controller exists, then `bind(topbarSearchController)` once it does. Until
+// then, calls return empty/false (no input can reach the shell synchronously
+// during boot).
+function createSearchController() {
+  let target = null;
+  return {
+    bind(topbarSearchController) {
+      target = topbarSearchController;
+    },
+    executeTopbarSearch: (query) => {
+      if (!target) {
+        return;
+      }
+      target.executeTopbarSearch(query);
+    },
+    getSearchSuggestions: (query, options) => (
+      target ? (target.getSearchSuggestions(query, options) || []) : []
+    ),
+    applySuggestion: (suggestion) => (
+      target ? (target.applySuggestion(suggestion) || false) : false
+    )
+  };
+}
+
 export function startHikariCore({
   documentObject = document,
   windowObject = window,
@@ -60,17 +114,18 @@ export function startHikariCore({
     windowObject
   });
 
+  // viewController and searchController are unbound facades at this point.
+  // viewController is bound right after navigationShell is constructed.
+  // searchController is bound right after topbarSearchController is constructed.
+  // Until each is bound, its methods are safe no-ops — no user input can reach
+  // their consumers synchronously during this constructor.
+  const viewController = createViewController();
+  const searchController = createSearchController();
+
+  // moduleRuntime stays declared up-front because `renderAll` (defined here for
+  // use in `onStoragePathSaved` below) and `moduleRuntime` mutually reference
+  // each other; this is unrelated to the navigation/search wiring.
   let moduleRuntime = null;
-  let navigationShell = null;
-  let topbarSearchController = null;
-
-  function showView(viewId) {
-    navigationShell?.showView(viewId);
-  }
-
-  function setSearchInputValue(inputId, value) {
-    return navigationShell?.setSearchInputValue(inputId, value) || false;
-  }
 
   function persist() {
     normalizeStateStoragePaths(state);
@@ -85,12 +140,12 @@ export function startHikariCore({
 
   function renderAll() {
     state.objectGraph = rebuildObjectGraph(state);
-    moduleRuntime.renderAll();
+    moduleRuntime?.renderAll();
   }
 
   const moduleRegistry = createModuleRegistry({
-    showView,
-    setSearchInputValue,
+    showView: viewController.showView,
+    setSearchInputValue: viewController.setSearchInputValue,
     VIEWS
   });
   const rendererServices = createRendererServices(moduleRegistry, {
@@ -118,7 +173,7 @@ export function startHikariCore({
     rendererServices,
     moduleRegistry,
     trackGrowthEvent,
-    showView,
+    showView: viewController.showView,
     views: VIEWS,
     apiBridge: windowObject.hikariApi || null,
     getApiBridge: () => windowObject.hikariApi || null,
@@ -133,7 +188,7 @@ export function startHikariCore({
     }
   });
 
-  navigationShell = createNavigationShell({
+  const navigationShell = createNavigationShell({
     VIEWS,
     TITLES,
     APP_DOCK_ORDER,
@@ -141,38 +196,40 @@ export function startHikariCore({
     navigationViewAliases: moduleRuntime.navigationViewAliases,
     moduleRuntime,
     sharedLeftRailRuntime,
-    executeTopbarSearch: (query) => topbarSearchController?.executeTopbarSearch(query),
-    getSearchSuggestions: (query, options) => topbarSearchController?.getSearchSuggestions(query, options) || [],
-    applySearchSuggestion: (suggestion) => topbarSearchController?.applySuggestion(suggestion) || false,
+    executeTopbarSearch: searchController.executeTopbarSearch,
+    getSearchSuggestions: searchController.getSearchSuggestions,
+    applySearchSuggestion: searchController.applySuggestion,
     documentObject,
     windowObject
   });
+  viewController.bind(navigationShell);
 
   const openItemHandlers = createTopbarOpenItemHandlers({
     views: VIEWS,
     moduleRegistry,
     rendererServices,
-    showView,
+    showView: viewController.showView,
     documentObject,
     windowObject,
     cssEscape
   });
 
-  topbarSearchController = createTopbarSearchController({
+  const topbarSearchController = createTopbarSearchController({
     state,
     VIEWS,
     TITLES,
     globalViewAliases,
     searchScopeTargets,
-    showView,
-    getActiveViewId: navigationShell.getActiveViewId,
-    setSearchInputValue,
-    topbarSearchInput: navigationShell.topbarSearchInput,
+    showView: viewController.showView,
+    getActiveViewId: viewController.getActiveViewId,
+    setSearchInputValue: viewController.setSearchInputValue,
+    topbarSearchInput: viewController.getTopbarSearchInput(),
     apps: APP_REGISTRY,
     normalizeViewId: normalizeAppViewId,
     openItemHandlers,
     windowObject
   });
+  searchController.bind(topbarSearchController);
 
   let hydrationComplete = false;
   const pendingProtocolRecordEvents = [];

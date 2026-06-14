@@ -49,7 +49,7 @@ Given a base data file, it derives:
 
 `getBundlePaths(...)` is the shared path builder used throughout the rest of the file.
 
-For the standalone Chemicals workspace, the app now also supports a SQLite-only bundle at `hikari-chemicals.index.sqlite` without requiring a sibling `hikari-chemicals.ena.json`. Legacy `enana-chemicals.index.sqlite` bundles are still recognized on import.
+For the standalone Chemicals workspace, the app now also supports a SQLite-only bundle at `hikari-chemicals.index.sqlite` without requiring a sibling `hikari-chemicals.ena.json`. 
 
 ## Write path
 

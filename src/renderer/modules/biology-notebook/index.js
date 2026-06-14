@@ -262,6 +262,12 @@ export function initLabNotebook({
     }
   }
 
+  function setPageStarterVisible(isVisible) {
+    if (notebookPageStarter) {
+      notebookPageStarter.hidden = !isVisible;
+    }
+  }
+
   function findDashboardProject(projectId, projectName = '') {
     const cleanProjectId = String(projectId || '').trim();
     if (cleanProjectId) {
@@ -393,6 +399,40 @@ export function initLabNotebook({
     notebookResult.value = current ? `${current}\n${cleanLine}` : cleanLine;
   }
 
+  function syncNotebookTitle(protocol = null) {
+    if (!notebookProtocolTitle) {
+      return;
+    }
+    const fallbackName = String(protocol?.name || '').trim() || 'Notebook Page';
+    const experimentName = String(notebookExperimentName?.value || '').trim();
+    notebookProtocolTitle.textContent = experimentName || fallbackName;
+  }
+
+  function beginNotebookTitleRename() {
+    if (!notebookExperimentName || !notebookProtocolTitle || notebookProtocolArea?.hidden) {
+      return;
+    }
+    notebookProtocolTitle.hidden = true;
+    notebookExperimentName.hidden = false;
+    notebookExperimentName.focus?.();
+    const valueLength = String(notebookExperimentName.value || '').length;
+    notebookExperimentName.setSelectionRange?.(0, valueLength);
+  }
+
+  function finishNotebookTitleRename({ cancel = false } = {}) {
+    if (!notebookExperimentName || !notebookProtocolTitle) {
+      return;
+    }
+    const activeProtocol = resolveViewerProtocol(getActiveEntry());
+    if (!cancel) {
+      const cleanName = String(notebookExperimentName.value || '').trim();
+      notebookExperimentName.value = cleanName || String(activeProtocol?.name || '').trim();
+    }
+    syncNotebookTitle(activeProtocol);
+    notebookExperimentName.hidden = true;
+    notebookProtocolTitle.hidden = false;
+  }
+
   function collectNotebookValues() {
     const values = {};
     notebookSteps.querySelectorAll('[data-nb-key]').forEach((input) => {
@@ -435,6 +475,7 @@ export function initLabNotebook({
 
     if (notebookExperimentName && shouldSyncExperimentName) {
       notebookExperimentName.value = nextProtocol.name;
+      syncNotebookTitle(nextProtocol);
     }
 
     protocolEditor.setEditing(false);
@@ -508,6 +549,7 @@ export function initLabNotebook({
 
   function onProjectChange() {
     hideProjectDashboard();
+    setPageStarterVisible(true);
     editingEntryId = null;
     sampleLinkDrafts = new Map();
     sampleLinkMenu.close();
@@ -873,6 +915,7 @@ export function initLabNotebook({
     preserveToolCalculations = false
   }) {
     hideProjectDashboard();
+    setPageStarterVisible(!entry && !isSavedEntry);
     notebookProtocolArea.hidden = false;
     if (notebookEmptyState) {
       notebookEmptyState.hidden = true;
@@ -880,8 +923,12 @@ export function initLabNotebook({
 
     if (notebookExperimentName) {
       notebookExperimentName.value = String(experimentNameOverride || '').trim() || resolveEntryExperimentName(entry, protocol);
+      notebookExperimentName.hidden = true;
     }
-    notebookProtocolTitle.textContent = protocol.name;
+    if (notebookProtocolTitle) {
+      notebookProtocolTitle.hidden = false;
+    }
+    syncNotebookTitle(protocol);
     notebookProtocolMeta.textContent = buildViewerMeta({
       project,
       entry,
@@ -990,6 +1037,7 @@ export function initLabNotebook({
     if (!preserveProjectDashboard) {
       hideProjectDashboard();
     }
+    setPageStarterVisible(true);
     notebookProtocolArea.hidden = true;
     protocolEditor.clearDraft();
     sampleLinkDrafts = new Map();
@@ -1002,8 +1050,12 @@ export function initLabNotebook({
     toolSidebarController.setCalculations([]);
     if (notebookExperimentName) {
       notebookExperimentName.value = '';
+      notebookExperimentName.hidden = true;
     }
-    notebookProtocolTitle.textContent = '';
+    if (notebookProtocolTitle) {
+      notebookProtocolTitle.textContent = '';
+      notebookProtocolTitle.hidden = false;
+    }
     notebookProtocolMeta.textContent = 'Select a notebook page or start a new one.';
     editingEntryId = null;
     protocolEditor.syncControls(null, null);
@@ -1187,6 +1239,17 @@ export function initLabNotebook({
   notebookCancelProtocolEditBtn?.addEventListener('click', cancelProtocolEdit);
   saveNotebookBtn.addEventListener('click', () => { void saveEntry(); });
   clarifySaveNotebookBtn?.addEventListener('click', () => { void clarifyAndSaveEntry(); });
+  notebookProtocolTitle?.addEventListener('dblclick', beginNotebookTitleRename);
+  notebookExperimentName?.addEventListener('blur', () => finishNotebookTitleRename());
+  notebookExperimentName?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault?.();
+      finishNotebookTitleRename();
+    } else if (event.key === 'Escape') {
+      event.preventDefault?.();
+      finishNotebookTitleRename({ cancel: true });
+    }
+  });
   notebookAddTableBtn?.addEventListener('click', resultTableController.onAdd);
   notebookAddTableRowBtn?.addEventListener('click', resultTableController.onAddRow);
   notebookAddTableColumnBtn?.addEventListener('click', resultTableController.onAddColumn);

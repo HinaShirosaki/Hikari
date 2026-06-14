@@ -15,7 +15,7 @@ This doc set explains how `src/main/helpers/agent` is assembled, how requests mo
 
 ## What this package owns
 
-`src/main/helpers/agent` is the main-process agent backend for Enana. It is responsible for:
+`src/main/helpers/agent` is the main-process agent backend for Hikari. It is responsible for:
 
 - intent parsing
 - runtime dispatch

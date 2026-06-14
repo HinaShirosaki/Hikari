@@ -1,6 +1,6 @@
-# Enana
+# Hikari
 
-Enana is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay and gel analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace without requiring a hosted backend.
+Hikari is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay and gel analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace without requiring a hosted backend.
 
 ## Highlights
 
@@ -77,7 +77,7 @@ Supported providers:
 
 Environment variable fallbacks:
 
-- `ENANA_LLM_API_KEY`
+- `HIKARI_LLM_API_KEY`
 - `LLM_API_KEY`
 
 Notes:
@@ -85,7 +85,7 @@ Notes:
 - `Papers` and `Agent` require valid LLM settings.
 - Provider defaults come from [`config/llm-providers.json`](./config/llm-providers.json).
 - DeepSeek uses the OpenAI-compatible Chat Completions API at `https://api.deepseek.com`.
-- Codex Agent mode does not use an API endpoint or API key; it uses the signed-in `codex` CLI plus Enana MCP tools.
+- Codex Agent mode does not use an API endpoint or API key; it uses the signed-in `codex` CLI plus Hikari MCP tools.
 
 ### Codex Agent Setup
 
@@ -119,16 +119,16 @@ Common commands:
 
 ## Data and Storage
 
-Enana keeps state in a few layers:
+Hikari keeps state in a few layers:
 
-- Fast local UI state in browser storage under `localStorage` key `enana_state_v1`
+- Fast local UI state in browser storage under `localStorage` key `hikari_state_v1`
 - Snapshot save/load through `Settings > Data File`
 - Storage-root-backed files for notebook attachments, project assets, paper uploads, and sequence-library data
 
 Data file notes:
 
 - Supported save/load extensions include `.json` and `.ena`
-- The default filename is `enana-data.json`
+- The default filename is `hikari-data.json`
 - Auto-save can be enabled for the current data file from `Settings`
 
 Backup suggestions:
@@ -198,7 +198,7 @@ If you are onboarding to the codebase, these are the best starting points:
 
 - For OpenAI, Gemini, Claude, or DeepSeek, set the provider, model, endpoint, and key in `Settings > LLM Model & Access`.
 - For Codex Agent, sign in with `codex login`; no endpoint or API key is used.
-- Or export `ENANA_LLM_API_KEY` / `LLM_API_KEY` before launching the app.
+- Or export `HIKARI_LLM_API_KEY` / `LLM_API_KEY` before launching the app.
 
 ### Codex mode is selected but nothing responds
 

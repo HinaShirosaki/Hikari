@@ -43,26 +43,26 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       configToml = 'model = "gpt-5.4"\nmodel_reasoning_effort = "xhigh"\n',
       authFile = null
     } = {}, callback) {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-home-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-home-'));
       const previousCodexHome = process.env.CODEX_HOME;
-      const previousEnanaCodexHome = process.env.ENANA_CODEX_HOME;
+      const previousHikariCodexHome = process.env.HIKARI_CODEX_HOME;
       fs.writeFileSync(path.join(tmpDir, 'models_cache.json'), JSON.stringify(modelsCache, null, 2), 'utf8');
       fs.writeFileSync(path.join(tmpDir, 'config.toml'), configToml, 'utf8');
       if (authFile && typeof authFile === 'object') {
         fs.writeFileSync(path.join(tmpDir, 'auth.json'), JSON.stringify(authFile, null, 2), 'utf8');
       }
       process.env.CODEX_HOME = tmpDir;
-      delete process.env.ENANA_CODEX_HOME;
+      delete process.env.HIKARI_CODEX_HOME;
       const cleanup = () => {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;
         } else {
           delete process.env.CODEX_HOME;
         }
-        if (typeof previousEnanaCodexHome === 'string') {
-          process.env.ENANA_CODEX_HOME = previousEnanaCodexHome;
+        if (typeof previousHikariCodexHome === 'string') {
+          process.env.HIKARI_CODEX_HOME = previousHikariCodexHome;
         } else {
-          delete process.env.ENANA_CODEX_HOME;
+          delete process.env.HIKARI_CODEX_HOME;
         }
         fs.rmSync(tmpDir, { recursive: true, force: true });
       };
@@ -93,10 +93,10 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         "process.stdin.on('end', () => {",
         "  const outputIndex = args.indexOf('--output-last-message');",
         "  const outputFile = outputIndex >= 0 ? args[outputIndex + 1] : '';",
-        '  fs.writeFileSync(process.env.ENANA_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
-        "  if (process.env.ENANA_FAKE_CODEX_STDOUT) { process.stdout.write(process.env.ENANA_FAKE_CODEX_STDOUT); }",
-        "  if (process.env.ENANA_FAKE_CODEX_STDERR) { process.stderr.write(process.env.ENANA_FAKE_CODEX_STDERR); }",
-        "  const exitCode = Number(process.env.ENANA_FAKE_CODEX_EXIT_CODE || 0);",
+        '  fs.writeFileSync(process.env.HIKARI_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
+        "  if (process.env.HIKARI_FAKE_CODEX_STDOUT) { process.stdout.write(process.env.HIKARI_FAKE_CODEX_STDOUT); }",
+        "  if (process.env.HIKARI_FAKE_CODEX_STDERR) { process.stderr.write(process.env.HIKARI_FAKE_CODEX_STDERR); }",
+        "  const exitCode = Number(process.env.HIKARI_FAKE_CODEX_EXIT_CODE || 0);",
         "  if (exitCode) { process.exit(exitCode); }",
         "  if (outputFile) { fs.writeFileSync(outputFile, 'OK from fake codex'); }",
         '});'
@@ -171,7 +171,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       const result = await runtime.run({
         message: 'Summarize the latest notes.',
         model: 'gpt-5.4',
-        cwd: '/tmp/enana-workspace'
+        cwd: '/tmp/hikari-workspace'
       });
 
       assert.equal(result.ok, true);
@@ -220,7 +220,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       const result = await runtime.run({
         message: 'Ask for project scope first.',
         model: 'gpt-5.4',
-        cwd: '/tmp/enana-workspace'
+        cwd: '/tmp/hikari-workspace'
       });
 
       assert.equal(result.ok, true);
@@ -346,7 +346,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       const result = await runtime.run({
         message: 'Generate a step-by-step experimental protocol from this paper. Include materials, timing, controls, and key caveats.',
         model: 'gpt-5.4',
-        cwd: '/tmp/enana-workspace',
+        cwd: '/tmp/hikari-workspace',
         snapshot: {
           activePaper: {
             id: 'paper-1',
@@ -416,7 +416,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       const result = await runtime.run({
         message: 'Continue from there.',
         model: 'gpt-5.4',
-        cwd: '/tmp/enana-workspace',
+        cwd: '/tmp/hikari-workspace',
         chatSessionId: 'hikari-chat-1',
         codexSessionId: 'codex-chat-session-1'
       });
@@ -497,8 +497,98 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         await server.close();
       }
     });
+    test('agent MCP stdio server registers paper-intake direct tools', async () => {
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-paper-intake-'));
+      const paperId = 'continuous_evolution_glue_tags';
+      const paperDir = path.join(workspaceDir, 'KnowledgeBase', 'papers.md', paperId);
+      fs.mkdirSync(paperDir, { recursive: true });
+      fs.writeFileSync(path.join(paperDir, 'intake.json'), JSON.stringify({
+        schema_version: 1,
+        paper_id: paperId,
+        doc_type: 'research_paper',
+        title: 'Continuous evolution of compact protein degradation tags',
+        doi: '10.0000/test',
+        one_sentence_summary: 'MG-PACE selected compact degron tags regulated by selective molecular glues.',
+        project_ids: ['project-1'],
+        experiments: [{
+          id: 'e1',
+          title: 'Phage-assisted continuous evolution selects SD40 variants',
+          technique: 'phage-assisted continuous evolution',
+          variables: 'SD40 peptide library and molecular glue concentration',
+          figure_ref: 'Fig. 2',
+          outcome: 'Compact degron tags were enriched.'
+        }]
+      }, null, 2), 'utf8');
+
+      const { createAgentMcpStdioServer } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'mcp-contract',
+        'stdio-server.js'
+      ));
+      const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+      const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+
+      const { server, connect } = createAgentMcpStdioServer({
+        env: {
+          HIKARI_AGENT_MCP_WORKSPACE: workspaceDir
+        }
+      });
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await connect(serverTransport);
+      const client = new Client(
+        { name: 'hikari-test-client', version: '0.0.1' },
+        { capabilities: {} }
+      );
+      await client.connect(clientTransport);
+
+      try {
+        const listed = await client.listTools();
+        const toolNames = listed.tools.map((tool) => tool.name);
+        assert.equal(toolNames.includes('paper_intake_search_summaries'), true);
+        assert.equal(toolNames.includes('paper_intake_search_experiments'), true);
+        assert.equal(toolNames.includes('paper_intake_list_project_summaries'), true);
+
+        const summaryResponse = await client.callTool({
+          name: 'paper_intake_search_summaries',
+          arguments: { query: 'MG-PACE molecular glue', limit: 3 }
+        });
+        const summaryResult = JSON.parse(summaryResponse.content[0].text);
+        assert.equal(summaryResponse.isError, false);
+        assert.equal(summaryResult.ok, true);
+        assert.equal(summaryResult.status, 'matched');
+        assert.equal(summaryResult.items[0].paper_id, paperId);
+
+        const experimentResponse = await client.callTool({
+          name: 'paper_intake_search_experiments',
+          arguments: { query: 'phage assisted continuous evolution SD40', limit: 3 }
+        });
+        const experimentResult = JSON.parse(experimentResponse.content[0].text);
+        assert.equal(experimentResponse.isError, false);
+        assert.equal(experimentResult.ok, true);
+        assert.equal(experimentResult.status, 'matched');
+        assert.equal(experimentResult.items[0].experiment.technique, 'phage-assisted continuous evolution');
+
+        const projectResponse = await client.callTool({
+          name: 'paper_intake_list_project_summaries',
+          arguments: { project_id: 'project-1', limit: 3 }
+        });
+        const projectResult = JSON.parse(projectResponse.content[0].text);
+        assert.equal(projectResponse.isError, false);
+        assert.equal(projectResult.ok, true);
+        assert.equal(projectResult.status, 'matched');
+        assert.equal(projectResult.items[0].paper_id, paperId);
+      } finally {
+        await client.close();
+        await server.close();
+        fs.rmSync(workspaceDir, { recursive: true, force: true });
+      }
+    });
     test('codex agent MCP config includes the app host callback when available', async () => {
-      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-mcp-config-'));
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-mcp-config-'));
       const previousAgentHost = process.env.HIKARI_AGENT_MCP_HOST;
       const previousAgentToken = process.env.HIKARI_AGENT_MCP_TOKEN;
       const previousHikariHost = process.env.HIKARI_CODEX_MCP_HOST;
@@ -511,14 +601,14 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         const configText = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
         assert.match(configText, /\[mcp_servers\.hikari\]/);
         assert.match(configText, /HIKARI_AGENT_MCP_HOST/);
-        assert.match(configText, /ENANA_AGENT_MCP_HOST/);
+        assert.match(configText, /HIKARI_AGENT_MCP_HOST/);
         assert.match(configText, /HIKARI_CODEX_MCP_HOST/);
-        assert.match(configText, /ENANA_CODEX_MCP_HOST/);
+        assert.match(configText, /HIKARI_CODEX_MCP_HOST/);
         assert.match(configText, /http:\/\/127\.0\.0\.1:43123/);
         assert.match(configText, /HIKARI_AGENT_MCP_TOKEN/);
-        assert.match(configText, /ENANA_AGENT_MCP_TOKEN/);
+        assert.match(configText, /HIKARI_AGENT_MCP_TOKEN/);
         assert.match(configText, /HIKARI_CODEX_MCP_TOKEN/);
-        assert.match(configText, /ENANA_CODEX_MCP_TOKEN/);
+        assert.match(configText, /HIKARI_CODEX_MCP_TOKEN/);
       } finally {
         if (typeof previousAgentHost === 'string') {
           process.env.HIKARI_AGENT_MCP_HOST = previousAgentHost;
@@ -544,7 +634,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       }
     });
     test('codex agent MCP config carries per-request context into the stdio server env', async () => {
-      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-mcp-request-env-'));
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-mcp-request-env-'));
       try {
         const provider = loadProvider();
         const requestContext = JSON.stringify({
@@ -557,9 +647,9 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         const runtimeHome = await provider.ensureCodexCliRuntimeHome(workspaceDir, {
           envOverrides: {
             HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
-            ENANA_AGENT_MCP_REQUEST_CONTEXT: requestContext,
+            HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
             HIKARI_CODEX_REQUEST_CONTEXT: requestContext,
-            ENANA_CODEX_REQUEST_CONTEXT: requestContext
+            HIKARI_CODEX_REQUEST_CONTEXT: requestContext
           }
         });
         const configText = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
@@ -569,13 +659,102 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         assert.match(configText, /default_tools_approval_mode = "approve"/);
         assert.match(configText, /\[mcp_servers\.hikari\.tools\.protocol_generation\]/);
         assert.match(configText, /HIKARI_AGENT_MCP_REQUEST_CONTEXT/);
-        assert.match(configText, /ENANA_AGENT_MCP_REQUEST_CONTEXT/);
+        assert.match(configText, /HIKARI_AGENT_MCP_REQUEST_CONTEXT/);
         assert.match(configText, /HIKARI_CODEX_REQUEST_CONTEXT/);
-        assert.match(configText, /ENANA_CODEX_REQUEST_CONTEXT/);
+        assert.match(configText, /HIKARI_CODEX_REQUEST_CONTEXT/);
         assert.match(configText, /chat-mq0exc0j-palwrhxm/);
         assert.match(configText, /1780633035654-8d479f65/);
       } finally {
         fs.rmSync(workspaceDir, { recursive: true, force: true });
+      }
+    });
+    test('agent MCP initializer starts host, writes runtime config options, and releases official skills', async () => {
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-init-workspace-'));
+      const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-init-storage-'));
+      const dataFilePath = path.join(workspaceDir, 'hikari-data.json');
+      const runtimeHome = path.join(workspaceDir, 'Config', 'codex-cli-home');
+      let hostStartCount = 0;
+      let runtimeWrite = null;
+      fs.writeFileSync(dataFilePath, JSON.stringify({
+        settings: {
+          storagePath: storageRoot
+        },
+        projects: [{
+          id: 'project-1',
+          name: 'Atlas Project'
+        }]
+      }, null, 2), 'utf8');
+
+      try {
+        const { createAgentMcpInitializer } = require(path.join(
+          __dirname,
+          'src',
+          'main',
+          'helpers',
+          'main',
+          'agent-mcp-initializer.js'
+        ));
+        const initializer = createAgentMcpInitializer({
+          cleanText: (value, maxLength = 2000) => {
+            const text = String(value || '').trim();
+            return maxLength > 0 ? text.slice(0, maxLength) : text;
+          },
+          mcpHost: {
+            ensureStarted: async () => {
+              hostStartCount += 1;
+              return {
+                url: 'http://127.0.0.1:49876',
+                token: 'initializer-token'
+              };
+            }
+          },
+          getCodexCliWorkingDirectory: () => workspaceDir,
+          getDefaultDataFilePath: () => dataFilePath,
+          getBundlePaths: ({ dataFilePath: bundleDataFilePath, storagePath }) => ({
+            dataFilePath: bundleDataFilePath,
+            storageRootPath: storagePath || path.dirname(bundleDataFilePath)
+          }),
+          ensureCodexCliRuntimeHome: async (cwd, options = {}) => {
+            runtimeWrite = {
+              cwd,
+              options
+            };
+            fs.mkdirSync(runtimeHome, { recursive: true });
+            return runtimeHome;
+          }
+        });
+
+        const result = await initializer.initialize({
+          envOverrides: {
+            HIKARI_AGENT_MCP_REQUEST_CONTEXT: '{"traceRequestId":"req-init"}'
+          }
+        });
+        const rootSkillPath = path.join(workspaceDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
+        const storageSkillPath = path.join(storageRoot, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
+        const projectSkillPath = path.join(storageRoot, 'Project', 'Atlas_Project', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
+
+        assert.equal(result.ok, true);
+        assert.equal(hostStartCount, 1);
+        assert.equal(result.host_url, 'http://127.0.0.1:49876');
+        assert.equal(result.has_token, true);
+        assert.equal(result.runtime_home, runtimeHome);
+        assert.equal(runtimeWrite.cwd, workspaceDir);
+        assert.equal(runtimeWrite.options.mcpHostUrl, 'http://127.0.0.1:49876');
+        assert.equal(runtimeWrite.options.mcpToken, 'initializer-token');
+        assert.equal(runtimeWrite.options.dataFilePath, dataFilePath);
+        assert.equal(runtimeWrite.options.storagePath, storageRoot);
+        assert.equal(runtimeWrite.options.envOverrides.HIKARI_AGENT_MCP_HOST, 'http://127.0.0.1:49876');
+        assert.equal(runtimeWrite.options.envOverrides.HIKARI_CODEX_MCP_TOKEN, 'initializer-token');
+        assert.equal(runtimeWrite.options.envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT, '{"traceRequestId":"req-init"}');
+        assert.equal(fs.existsSync(rootSkillPath), true);
+        assert.equal(fs.existsSync(storageSkillPath), true);
+        assert.equal(fs.existsSync(projectSkillPath), true);
+        assert.equal(result.workspace_paths.includes(workspaceDir), true);
+        assert.equal(result.workspace_paths.includes(storageRoot), true);
+        assert.equal(result.workspace_paths.includes(path.join(storageRoot, 'Project', 'Atlas_Project')), true);
+      } finally {
+        fs.rmSync(workspaceDir, { recursive: true, force: true });
+        fs.rmSync(storageRoot, { recursive: true, force: true });
       }
     });
   }

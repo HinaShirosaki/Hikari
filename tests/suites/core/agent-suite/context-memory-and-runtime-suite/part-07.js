@@ -233,7 +233,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart07(contex
         context: {
           provider: 'codex',
           model: 'gpt-5.4-mini',
-          cwd: '/Users/shiyifan/Projects/Enana',
+          cwd: '/Users/shiyifan/Projects/Hikari',
           message: 'Find ncAA papers.',
           project: {
             id: 'project-1',
@@ -241,7 +241,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart07(contex
           },
           snapshot: {
             settings: {
-              storagePath: '/tmp/enana-storage'
+              storagePath: '/tmp/hikari-storage'
             },
             projects: [
               {
@@ -260,11 +260,11 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart07(contex
       assert.equal(calls.length, 1);
       assert.equal(calls[0].provider, 'codex');
       assert.equal(calls[0].model, 'gpt-5.4-mini');
-      assert.equal(calls[0].cwd, '/Users/shiyifan/Projects/Enana');
+      assert.equal(calls[0].cwd, '/Users/shiyifan/Projects/Hikari');
       assert.equal(calls[0].project.name, 'Atlas');
-      assert.equal(calls[0].storage_path, '/tmp/enana-storage');
-      assert.equal(calls[0].storagePath, '/tmp/enana-storage');
-      assert.equal(calls[0].snapshot.settings.storagePath, '/tmp/enana-storage');
+      assert.equal(calls[0].storage_path, '/tmp/hikari-storage');
+      assert.equal(calls[0].storagePath, '/tmp/hikari-storage');
+      assert.equal(calls[0].snapshot.settings.storagePath, '/tmp/hikari-storage');
       assert.equal(calls[0].parser_payload.primary_intent, 'literature_search');
     });
     test('session runtime runs the tool loop through the unified requestText API', async () => {

@@ -261,6 +261,13 @@ function createHikariMainCore({
   async function onAppReady() {
     await telegramRuntime.hydrateSavedTelegramToken();
     telegramRuntime.restartTelegramBot();
+    if (typeof agentServices.initializeAgentMcp === 'function') {
+      try {
+        await agentServices.initializeAgentMcp({ reason: 'app_ready' });
+      } catch {
+        // MCP is recovered again before each Codex request, so startup stays usable.
+      }
+    }
     void agentLogRuntime.ensureAgentChatLogFile(appPaths.getAgentChatLogPath());
     void llmPromptsRuntime.loadLlmPrompts();
     startChatLogTransformMonitor();

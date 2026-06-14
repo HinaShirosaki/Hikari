@@ -5,21 +5,27 @@
  *
  * Holds the per-paper one-sentence summary and structured experiment list that the
  * `hikari-paper-intake` skill produces after a PDF is transferred into
- * `knowledgebase/papers.md/<paper_id>/paper.md`. This is a separate KB from the
+ * `KnowledgeBase/papers.md/<paper_id>/paper.md`. This is a separate KB from the
  * existing LLM-wiki chunk store: the intake KB is *one record per paper*, schema
  * is fixed, and queries operate on whole summaries and experiment entries — not
  * on free-form chunks.
  *
- * NOT wired into the live runtime yet. All filesystem access is injected so the
- * eventual wire-up can plug in the workspace storage helpers, and tests can plug
- * in an in-memory map.
+ * All filesystem access is injected so live code can plug in workspace storage
+ * helpers, and tests can plug in an in-memory map.
  */
 
 const path = require('node:path');
+const {
+  KNOWLEDGE_BASE_ROOT_FOLDER_NAME,
+  PAPER_MARKDOWN_ROOT_FOLDER_NAME
+} = require('../../main/storage-bundle/storage-paths.js');
 
 const INTAKE_SCHEMA_VERSION = 1;
 const INTAKE_FILE_NAME = 'intake.json';
-const PAPERS_ROOT_REL = path.posix.join('knowledgebase', 'papers.md');
+const PAPERS_ROOT_REL = path.posix.join(
+  KNOWLEDGE_BASE_ROOT_FOLDER_NAME,
+  PAPER_MARKDOWN_ROOT_FOLDER_NAME
+);
 
 const DOC_TYPES = Object.freeze([
   'research_paper',
@@ -165,7 +171,7 @@ function defaultSourcePaths(paperId = '') {
  *     project↔paper linkage table.
  *   - listKnownPaperIds(): Promise<string[]> — return all paper ids the workspace
  *     knows about. If omitted, the store falls back to listing immediate
- *     subdirectories of `knowledgebase/papers.md/`.
+ *     subdirectories of `KnowledgeBase/papers.md/`.
  */
 function createIntakeStore(deps = {}) {
   const workspacePath = cleanText(deps.workspacePath, 1024);
@@ -205,6 +211,86 @@ function createIntakeStore(deps = {}) {
 
   function papersRootAbsolute() {
     return path.join(workspacePath, PAPERS_ROOT_REL);
+  }
+
+  function paperFolderAbsolute(paperId) {
+    const id = cleanText(paperId, 200);
+    if (!id) {
+      return '';
+    }
+    return path.join(workspacePath, PAPERS_ROOT_REL, id);
+  }
+
+  /**
+   * Read the transferred `paper.md` for a paper. This is the primary source the
+   * intake pipeline classifies and summarizes. Returns `{ ok, status, markdown }`.
+   */
+  async function readPaperMarkdown(paperId) {
+    const guard = ensureReady();
+    if (guard) {
+      return guard;
+    }
+    const id = cleanText(paperId, 200);
+    if (!id) {
+      return { ok: false, status: 'invalid_arguments', error: 'paper_id is required.' };
+    }
+    const absPath = path.join(paperFolderAbsolute(id), 'paper.md');
+    try {
+      const markdown = await fs.readFile(absPath, 'utf8');
+      return { ok: true, status: 'loaded', paper_id: id, markdown: String(markdown || '') };
+    } catch (error) {
+      if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+        return { ok: false, status: 'not_found', paper_id: id };
+      }
+      return {
+        ok: false,
+        status: 'read_failed',
+        paper_id: id,
+        error: cleanText(error?.message || error, 600)
+      };
+    }
+  }
+
+  /**
+   * Read `meta.json` (title, authors, doi, pdf_path, page_count) for a paper.
+   * Missing or corrupt metadata collapses to an empty object rather than an error
+   * so the pipeline can still classify from the markdown alone.
+   */
+  async function readPaperMeta(paperId) {
+    const guard = ensureReady();
+    if (guard) {
+      return guard;
+    }
+    const id = cleanText(paperId, 200);
+    if (!id) {
+      return { ok: false, status: 'invalid_arguments', error: 'paper_id is required.' };
+    }
+    const absPath = path.join(paperFolderAbsolute(id), 'meta.json');
+    let raw = '';
+    try {
+      raw = await fs.readFile(absPath, 'utf8');
+    } catch (error) {
+      if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+        return { ok: true, status: 'not_found', paper_id: id, meta: {} };
+      }
+      return {
+        ok: false,
+        status: 'read_failed',
+        paper_id: id,
+        error: cleanText(error?.message || error, 600)
+      };
+    }
+    try {
+      const meta = JSON.parse(raw);
+      return {
+        ok: true,
+        status: 'loaded',
+        paper_id: id,
+        meta: meta && typeof meta === 'object' && !Array.isArray(meta) ? meta : {}
+      };
+    } catch {
+      return { ok: true, status: 'corrupt', paper_id: id, meta: {} };
+    }
   }
 
   async function listPaperIds() {
@@ -380,6 +466,8 @@ function createIntakeStore(deps = {}) {
     writeIntake,
     loadAll,
     listPaperIds,
+    readPaperMarkdown,
+    readPaperMeta,
     effectiveProjectIds,
     filterByProject,
     intakeRelativePath,

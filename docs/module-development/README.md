@@ -1,6 +1,6 @@
 # Module Development Guide
 
-This guide explains how to build a new feature module for the Hikari (Enana) renderer. The renderer is an Electron-hosted single-page app whose UI is composed from per-view HTML fragments and per-view CSS files, glued together by a shared shell, a generated app registry, the renderer core, module manifests, and a thin module runtime.
+This guide explains how to build a new feature module for the Hikari renderer. The renderer is an Electron-hosted single-page app whose UI is composed from per-view HTML fragments and per-view CSS files, glued together by a shared shell, a generated app registry, the renderer core, module manifests, and a thin module runtime.
 
 There is **no plugin discovery**. Adding a module means editing a small, well-defined set of files. Once you understand the contract, the work is mechanical.
 

@@ -156,7 +156,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
     inventory: {},
     labInventory: { chemicals: [] },
     settings: {
-      storagePath: '/tmp/enana-storage',
+      storagePath: '/tmp/hikari-storage',
       llm: {
         model: 'gpt-5',
         apiEndpoint: 'https://api.openai.com/v1/responses',
@@ -175,16 +175,16 @@ test('agent-chat sends settings API key to main process and stores assistant res
         autoSaveCalls.push({ data, filePath });
         return {
           ok: true,
-          filePath: '/tmp/enana-data.ena.json',
+          filePath: '/tmp/hikari-data.ena.json',
           sidecarPaths: {
             protocolsPath: '/tmp/Protocol',
-            notebookPagesPath: '/tmp/enana-data.notebook-pages.json',
+            notebookPagesPath: '/tmp/hikari-data.notebook-pages.json',
             sqlitePath: '/tmp/Protocol/protocol.index.sqlite'
           },
           bundlePaths: {
-            dataFilePath: '/tmp/enana-data.ena.json',
+            dataFilePath: '/tmp/hikari-data.ena.json',
             protocolsPath: '/tmp/Protocol',
-            notebookPagesPath: '/tmp/enana-data.notebook-pages.json',
+            notebookPagesPath: '/tmp/hikari-data.notebook-pages.json',
             sqlitePath: '/tmp/Protocol/protocol.index.sqlite'
           }
         };
@@ -322,7 +322,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.agent.deepResearchEnabled, false);
   assert.equal(payloadSeen.projectId, 'p1');
   assert.equal(payloadSeen.stateSnapshot.snapshot_mode, 'thin');
-  assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/enana-data.ena.json');
+  assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/hikari-data.ena.json');
   assert.equal(payloadSeen.stateSnapshot.protocols.length, 1);
   assert.equal(payloadSeen.stateSnapshot.protocols[0].name, 'Cell Prep');
   assert.equal(payloadSeen.stateSnapshot.protocols[0].steps.length, 2);
@@ -414,7 +414,7 @@ test('paper-scoped agent chat snapshot includes the active transformed markdown 
     gelAnalyses: [],
     inventory: {},
     labInventory: { chemicals: [] },
-    settings: { storagePath: '/tmp/enana-storage' },
+    settings: { storagePath: '/tmp/hikari-storage' },
     papers: [{
       id: 'paper-1',
       title: 'Atlas Uploaded Paper',

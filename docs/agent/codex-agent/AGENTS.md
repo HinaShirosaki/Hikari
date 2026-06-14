@@ -29,6 +29,9 @@ Direct Hikari MCP tools:
 - `mcp__hikari__literature_search`: find papers, download selected PDFs when possible, write paper markdown, and load bounded paper context blocks.
 - `mcp__hikari__paper_download`: download a paper PDF into Hikari storage.
 - `mcp__hikari__paper_analysis`: summarize or extract methods from a specific paper.
+- `mcp__hikari__paper_intake_search_summaries`: search one-sentence summaries in the paper-intake knowledge base.
+- `mcp__hikari__paper_intake_search_experiments`: search structured experiment entries extracted during paper intake.
+- `mcp__hikari__paper_intake_list_project_summaries`: list paper-intake summaries for papers attached to a project.
 - `mcp__hikari__purchase_recommendation`: search and rank purchasable products.
 - `mcp__hikari__memory`: recall, remember, forget, and list sparse long-term memory records.
 - `mcp__hikari__ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.
@@ -39,6 +42,8 @@ Tool-use rules:
 - Use `mcp__hikari__literature_search` for finding papers, references, recent literature, or external scientific evidence.
 - Use `mcp__hikari__paper_download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.
 - Use `mcp__hikari__paper_analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.
+- Use `mcp__hikari__paper_intake_search_summaries` or `mcp__hikari__paper_intake_search_experiments` when already-ingested papers are enough and a full paper read is unnecessary.
+- Use `mcp__hikari__paper_intake_list_project_summaries` for a project-scoped roll-up of ingested paper summaries.
 - Use direct `mcp__hikari__protocol_generation` only after complete protocol JSON already exists.
 - When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first, then call `mcp__hikari__protocol_generation` with `save: true`, then summarize the review-ready protocol.
 - When the user asks to save or add a generated protocol, call `mcp__hikari__protocol_generation` once with `save: true`; Hikari will ask the user to approve or reject the generated protocol.

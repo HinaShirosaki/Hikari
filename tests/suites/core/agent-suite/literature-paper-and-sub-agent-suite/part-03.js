@@ -273,12 +273,12 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart03(con
     });
     test('paper download runtime maps literature-search downloads into top-level Papers folders', async () => {
       const folder = agentPaperDownload.buildPaperStorageFolder({
-        rootPath: '/tmp/enana-storage',
+        rootPath: '/tmp/hikari-storage',
         linkedType: 'literature_search',
         linkedName: 'Atlas'
       });
 
-      assert.equal(folder, path.join('/tmp/enana-storage', 'Papers', 'Atlas'));
+      assert.equal(folder, path.join('/tmp/hikari-storage', 'Papers', 'Atlas'));
     });
   }
 };

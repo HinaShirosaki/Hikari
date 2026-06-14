@@ -379,7 +379,7 @@ test('chemical structure clipboard helper extracts ChemDraw CDXML and MOL text',
   const clipboardModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'chemical-structure-clipboard.js'));
   const molfile = [
     'ethanol',
-    '  Enana',
+    '  Hikari',
     '',
     '  3  2  0  0  0  0            999 V2000',
     '    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0',

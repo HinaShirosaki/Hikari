@@ -172,7 +172,7 @@ Three custom events broadcast from the renderer app shell:
 | --- | --- | --- |
 | `hikari:app-ready` | after `initApp()` finishes (or fails) | `bootstrap/index-shell.js` (drops the loading cover), tests |
 | `hikari:appearance-changed` | when `Settings` writes new appearance | `navigation-shell.js` (re-renders active view to pick up theme) |
-| `enana:storage-path-changed` | when storage path is saved | `app/storage-import.js` |
+| `hikari:storage-path-changed` | when storage path is saved | `app/storage-import.js` |
 
 If your module needs to listen, attach to `window` and remember to remove the listener if you ever support hot-reload.
 

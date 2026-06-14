@@ -183,7 +183,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
           }
         },
         stateSnapshot: {
-          data_file_path: '/tmp/enana-data.json',
+          data_file_path: '/tmp/hikari-data.json',
           settings: {
             agent: {
               developerMode: true

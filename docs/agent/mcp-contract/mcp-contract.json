@@ -7,13 +7,14 @@
     "mcp_host": "src/main/helpers/agent/mcp-contract/host.js",
     "mcp_host_client": "src/main/helpers/agent/mcp-contract/host-client.js",
     "direct_tools": "src/main/helpers/agent/mcp-contract/direct-tools/",
-    "codex_runtime_files": "src/main/helpers/agent/codex-agent/runtime-files.js"
+    "codex_runtime_files": "src/main/helpers/agent/codex-agent/runtime-files.js",
+    "paper_intake_direct_tools": "src/main/helpers/agent/paper-intake/mcp-tools.js"
   },
-  "agent_mcp_instructions": "# Hikari Agent MCP Instructions\n\nThis MCP server is the Hikari app contract. Codex exposes this server's tools with the `mcp__hikari__` prefix. Use the prefixed Codex tool names for local Hikari data, protocols, notebooks, inventory, papers, memory, and structured app actions.\n\nUse the first-class prefixed MCP tools below as the complete Hikari app tool surface for this server.\n\nDirect Hikari MCP tools:\n- `mcp__hikari__inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.\n- `mcp__hikari__chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.\n- `mcp__hikari__record_lookup`: search local projects, protocols, notebooks, workflows, assays, gels, and related records.\n- `mcp__hikari__protocol_lookup`: search local protocols through Hikari protocol matching.\n- `mcp__hikari__protocol_generation`: normalize a complete protocol JSON object into the app import format; set `save: true` in the same call to queue Hikari user approval for adding it to the Protocols module.\n- `mcp__hikari__notebook_draft`: prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.\n- `mcp__hikari__notebook_generation`: generate a protocol-based notebook draft from selected protocol and project context.\n- `mcp__hikari__notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.\n- `mcp__hikari__literature_search`: find papers, download selected PDFs when possible, write paper markdown, and load bounded paper context blocks.\n- `mcp__hikari__paper_download`: download a paper PDF into Hikari storage.\n- `mcp__hikari__paper_analysis`: summarize or extract methods from a specific paper.\n- `mcp__hikari__purchase_recommendation`: search and rank purchasable products.\n- `mcp__hikari__memory`: recall, remember, forget, and list sparse long-term memory records.\n- `mcp__hikari__ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.\n\nTool-use rules:\n- Prefer local Hikari records through direct MCP tools before guessing from conversation context.\n- For Hikari tool-exposure questions, report the prefixed tool names listed in this contract; a direct tool-call result is the source of truth for per-tool availability.\n- Use `mcp__hikari__record_lookup` when local lookup needs records beyond the specialized inventory, protocol, or notebook lookup tools.\n- Use `mcp__hikari__literature_search` for finding papers, references, recent literature, or external scientific evidence.\n- Use `mcp__hikari__paper_download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.\n- Use `mcp__hikari__paper_analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use direct `mcp__hikari__protocol_generation` only after complete protocol JSON already exists.\n- When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first, then call `mcp__hikari__protocol_generation` with `save: true`, then summarize the review-ready protocol.\n- When the user asks to save or add a generated protocol, call `mcp__hikari__protocol_generation` once with `save: true`; Hikari will ask the user to approve or reject the generated protocol.\n- Use direct `mcp__hikari__notebook_draft` for planned next-experiment notebook drafts.\n\nClarification rule:\nWhen one blocking user answer is required, call `mcp__hikari__ask_user`. It returns a renderable `final_response` payload. Do not wait inside MCP for the human answer; the host app renders the options and sends the user answer as the next turn.\n\nVerification rule:\nSeparate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.",
+  "agent_mcp_instructions": "# Hikari Agent MCP Instructions\n\nThis MCP server is the Hikari app contract. Codex exposes this server's tools with the `mcp__hikari__` prefix. Use the prefixed Codex tool names for local Hikari data, protocols, notebooks, inventory, papers, memory, and structured app actions.\n\nUse the first-class prefixed MCP tools below as the complete Hikari app tool surface for this server.\n\nDirect Hikari MCP tools:\n- `mcp__hikari__inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.\n- `mcp__hikari__chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.\n- `mcp__hikari__record_lookup`: search local projects, protocols, notebooks, workflows, assays, gels, and related records.\n- `mcp__hikari__protocol_lookup`: search local protocols through Hikari protocol matching.\n- `mcp__hikari__protocol_generation`: normalize a complete protocol JSON object into the app import format; set `save: true` in the same call to queue Hikari user approval for adding it to the Protocols module.\n- `mcp__hikari__notebook_draft`: prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.\n- `mcp__hikari__notebook_generation`: generate a protocol-based notebook draft from selected protocol and project context.\n- `mcp__hikari__notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.\n- `mcp__hikari__literature_search`: find papers, download selected PDFs when possible, write paper markdown, and load bounded paper context blocks.\n- `mcp__hikari__paper_download`: download a paper PDF into Hikari storage.\n- `mcp__hikari__paper_analysis`: summarize or extract methods from a specific paper.\n- `mcp__hikari__paper_intake_search_summaries`: search one-sentence summaries in the paper-intake knowledge base.\n- `mcp__hikari__paper_intake_search_experiments`: search structured experiment entries extracted during paper intake.\n- `mcp__hikari__paper_intake_list_project_summaries`: list paper-intake summaries for papers attached to a project.\n- `mcp__hikari__purchase_recommendation`: search and rank purchasable products.\n- `mcp__hikari__memory`: recall, remember, forget, and list sparse long-term memory records.\n- `mcp__hikari__ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.\n\nTool-use rules:\n- Prefer local Hikari records through direct MCP tools before guessing from conversation context.\n- Use `mcp__hikari__record_lookup` when local lookup needs records beyond the specialized inventory, protocol, or notebook lookup tools.\n- Use `mcp__hikari__literature_search` for finding papers, references, recent literature, or external scientific evidence.\n- Use `mcp__hikari__paper_download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.\n- Use `mcp__hikari__paper_analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use `mcp__hikari__paper_intake_search_summaries` or `mcp__hikari__paper_intake_search_experiments` when already-ingested papers are enough and a full paper read is unnecessary.\n- Use `mcp__hikari__paper_intake_list_project_summaries` for a project-scoped roll-up of ingested paper summaries.\n- Use direct `mcp__hikari__protocol_generation` only after complete protocol JSON already exists.\n- When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first, then call `mcp__hikari__protocol_generation` with `save: true`, then summarize the review-ready protocol.\n- When the user asks to save or add a generated protocol, call `mcp__hikari__protocol_generation` once with `save: true`; Hikari will ask the user to approve or reject the generated protocol.\n- Use direct `mcp__hikari__notebook_draft` for planned next-experiment notebook drafts.\n\nClarification rule:\nWhen one blocking user answer is required, call `mcp__hikari__ask_user`. It returns a renderable `final_response` payload. Do not wait inside MCP for the human answer; the host app renders the options and sends the user answer as the next turn.\n\nVerification rule:\nSeparate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.",
   "provider_examples": {
     "codex_cli": {
-      "config_template": "# HIKARI_MCP_CONFIG_START\n[mcp_servers.hikari]\nenabled = true\nrequired = true\ncommand = \"/absolute/path/to/node\"\nargs = [\"/Users/shiyifan/Projects/Enana/src/main/helpers/agent/mcp-contract/stdio-server.js\"]\nenabled_tools = [\"inventory_lookup\", \"chemical_lookup\", \"record_lookup\", \"protocol_lookup\", \"protocol_generation\", \"notebook_draft\", \"notebook_generation\", \"notebook_lookup\", \"literature_search\", \"paper_download\", \"paper_analysis\", \"purchase_recommendation\", \"memory\", \"ask_user\"]\ndefault_tools_approval_mode = \"approve\"\nstartup_timeout_sec = 30\ntool_timeout_sec = 120\nenv = { HIKARI_AGENT_MCP = \"1\", ENANA_AGENT_MCP = \"1\", HIKARI_CODEX_MCP = \"1\", ENANA_CODEX_MCP = \"1\", HIKARI_AGENT_MCP_WORKSPACE = \"/runtime/workspace\", ENANA_AGENT_MCP_WORKSPACE = \"/runtime/workspace\", HIKARI_CODEX_WORKSPACE = \"/runtime/workspace\", ENANA_CODEX_WORKSPACE = \"/runtime/workspace\", HIKARI_AGENT_DATA_FILE = \"/path/to/hikari-data.json\", ENANA_AGENT_DATA_FILE = \"/path/to/hikari-data.json\", HIKARI_AGENT_STORAGE_PATH = \"/path/to/storage\", ENANA_AGENT_STORAGE_PATH = \"/path/to/storage\", HIKARI_AGENT_MCP_HOST = \"http://127.0.0.1:<port>\", ENANA_AGENT_MCP_HOST = \"http://127.0.0.1:<port>\", HIKARI_AGENT_MCP_TOKEN = \"<opaque bearer token>\", ENANA_AGENT_MCP_TOKEN = \"<opaque bearer token>\", HIKARI_CODEX_MCP_HOST = \"http://127.0.0.1:<port>\", ENANA_CODEX_MCP_HOST = \"http://127.0.0.1:<port>\", HIKARI_CODEX_MCP_TOKEN = \"<opaque bearer token>\", ENANA_CODEX_MCP_TOKEN = \"<opaque bearer token>\", HIKARI_AGENT_MCP_REQUEST_CONTEXT = \"<per-turn JSON>\", ENANA_AGENT_MCP_REQUEST_CONTEXT = \"<per-turn JSON>\", HIKARI_CODEX_REQUEST_CONTEXT = \"<per-turn JSON>\", ENANA_CODEX_REQUEST_CONTEXT = \"<per-turn JSON>\" }\n\n[mcp_servers.hikari.tools.protocol_generation]\napproval_mode = \"approve\"\n# HIKARI_MCP_CONFIG_END",
-      "stdio_server_path": "/Users/shiyifan/Projects/Enana/src/main/helpers/agent/mcp-contract/stdio-server.js"
+      "config_template": "# HIKARI_MCP_CONFIG_START\n[mcp_servers.hikari]\nenabled = true\nrequired = true\ncommand = \"/absolute/path/to/node\"\nargs = [\"/absolute/path/to/Hikari/src/main/helpers/agent/mcp-contract/stdio-server.js\"]\nenabled_tools = [\"inventory_lookup\", \"chemical_lookup\", \"record_lookup\", \"protocol_lookup\", \"protocol_generation\", \"notebook_draft\", \"notebook_generation\", \"notebook_lookup\", \"literature_search\", \"paper_download\", \"paper_analysis\", \"paper_intake_search_summaries\", \"paper_intake_search_experiments\", \"paper_intake_list_project_summaries\", \"purchase_recommendation\", \"memory\", \"ask_user\"]\ndefault_tools_approval_mode = \"approve\"\nstartup_timeout_sec = 30\ntool_timeout_sec = 120\nenv = { HIKARI_AGENT_MCP = \"1\", HIKARI_CODEX_MCP = \"1\", HIKARI_AGENT_MCP_WORKSPACE = \"/runtime/workspace\", HIKARI_CODEX_WORKSPACE = \"/runtime/workspace\", HIKARI_AGENT_DATA_FILE = \"/path/to/hikari-data.json\", HIKARI_AGENT_STORAGE_PATH = \"/path/to/storage\", HIKARI_AGENT_MCP_HOST = \"http://127.0.0.1:<port>\", HIKARI_AGENT_MCP_TOKEN = \"<opaque bearer token>\", HIKARI_CODEX_MCP_HOST = \"http://127.0.0.1:<port>\", HIKARI_CODEX_MCP_TOKEN = \"<opaque bearer token>\", HIKARI_AGENT_MCP_REQUEST_CONTEXT = \"<per-turn JSON>\", HIKARI_CODEX_REQUEST_CONTEXT = \"<per-turn JSON>\" }\n\n[mcp_servers.hikari.tools.protocol_generation]\napproval_mode = \"approve\"\n# HIKARI_MCP_CONFIG_END",
+      "stdio_server_path": "/absolute/path/to/Hikari/src/main/helpers/agent/mcp-contract/stdio-server.js"
     }
   },
   "mcp": {
@@ -1340,13 +1341,168 @@
             }
           }
         }
+      },
+      {
+        "name": "paper_intake_list_project_summaries",
+        "description": "List one-sentence summaries for every paper currently attached to a Hikari project. Uses the paper-intake summary knowledge base produced by the `hikari-paper-intake` skill after each PDF is transferred into `KnowledgeBase/papers.md/<paper_id>/paper.md`. Returns title, DOI, document type, and the count of recorded experiments for each paper. Use this when the user asks what papers a project contains or wants a roll-up of recent reading.",
+        "annotations": {
+          "title": "Paper Intake — List Project Summaries",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "project_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            },
+            "doc_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "research_paper",
+                  "review",
+                  "book",
+                  "book_chapter",
+                  "other"
+                ]
+              },
+              "maxItems": 5
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "anyOf": [
+            {
+              "required": [
+                "project_id"
+              ]
+            },
+            {
+              "required": [
+                "project_name"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "paper_intake_search_summaries",
+        "description": "Keyword search across one-sentence paper summaries (and titles) in the paper-intake KB. Scores titles slightly higher than summaries and rewards verbatim phrase matches. Use this when the user wants to find a paper by topic, finding, or concept without reading every summary. Optionally constrain to a single project or to specific document types (research_paper, review, book, ...).",
+        "annotations": {
+          "title": "Paper Intake — Search Summaries",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "project_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "project_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            },
+            "doc_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "research_paper",
+                  "review",
+                  "book",
+                  "book_chapter",
+                  "other"
+                ]
+              },
+              "maxItems": 5
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        }
+      },
+      {
+        "name": "paper_intake_search_experiments",
+        "description": "Keyword search across structured experiment entries in the paper-intake KB. Each result is a single experiment (title, technique, variables, figure_ref, outcome) attached to a paper, scored against title, technique, and variable fields. Use this when the user is hunting for a specific assay, condition, or outcome (\"who did western blot on knockouts in HEK293?\"). Only papers with doc_type=research_paper carry experiments; reviews and books return no entries.",
+        "annotations": {
+          "title": "Paper Intake — Search Experiments",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "project_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "project_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            },
+            "technique": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        }
       }
     ],
     "request_context_env": "HIKARI_AGENT_MCP_REQUEST_CONTEXT",
     "request_context_env_aliases": [
-      "ENANA_AGENT_MCP_REQUEST_CONTEXT",
-      "HIKARI_CODEX_REQUEST_CONTEXT",
-      "ENANA_CODEX_REQUEST_CONTEXT"
+      "HIKARI_CODEX_REQUEST_CONTEXT"
     ],
     "request_context_schema": {
       "provider": "agent-provider-id",
@@ -1378,9 +1534,7 @@
         "auth": [
           "Authorization: Bearer <token>",
           "x-hikari-agent-mcp-token: <token>",
-          "x-enana-agent-mcp-token: <token>",
-          "x-hikari-codex-mcp-token: <token>",
-          "x-enana-codex-mcp-token: <token>"
+          "x-hikari-codex-mcp-token: <token>"
         ],
         "body": {
           "tool_id": "record-lookup",

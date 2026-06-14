@@ -43,26 +43,26 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       configToml = 'model = "gpt-5.4"\nmodel_reasoning_effort = "xhigh"\n',
       authFile = null
     } = {}, callback) {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'enana-codex-home-'));
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-home-'));
       const previousCodexHome = process.env.CODEX_HOME;
-      const previousEnanaCodexHome = process.env.ENANA_CODEX_HOME;
+      const previousHikariCodexHome = process.env.HIKARI_CODEX_HOME;
       fs.writeFileSync(path.join(tmpDir, 'models_cache.json'), JSON.stringify(modelsCache, null, 2), 'utf8');
       fs.writeFileSync(path.join(tmpDir, 'config.toml'), configToml, 'utf8');
       if (authFile && typeof authFile === 'object') {
         fs.writeFileSync(path.join(tmpDir, 'auth.json'), JSON.stringify(authFile, null, 2), 'utf8');
       }
       process.env.CODEX_HOME = tmpDir;
-      delete process.env.ENANA_CODEX_HOME;
+      delete process.env.HIKARI_CODEX_HOME;
       const cleanup = () => {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;
         } else {
           delete process.env.CODEX_HOME;
         }
-        if (typeof previousEnanaCodexHome === 'string') {
-          process.env.ENANA_CODEX_HOME = previousEnanaCodexHome;
+        if (typeof previousHikariCodexHome === 'string') {
+          process.env.HIKARI_CODEX_HOME = previousHikariCodexHome;
         } else {
-          delete process.env.ENANA_CODEX_HOME;
+          delete process.env.HIKARI_CODEX_HOME;
         }
         fs.rmSync(tmpDir, { recursive: true, force: true });
       };
@@ -93,10 +93,10 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         "process.stdin.on('end', () => {",
         "  const outputIndex = args.indexOf('--output-last-message');",
         "  const outputFile = outputIndex >= 0 ? args[outputIndex + 1] : '';",
-        '  fs.writeFileSync(process.env.ENANA_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
-        "  if (process.env.ENANA_FAKE_CODEX_STDOUT) { process.stdout.write(process.env.ENANA_FAKE_CODEX_STDOUT); }",
-        "  if (process.env.ENANA_FAKE_CODEX_STDERR) { process.stderr.write(process.env.ENANA_FAKE_CODEX_STDERR); }",
-        "  const exitCode = Number(process.env.ENANA_FAKE_CODEX_EXIT_CODE || 0);",
+        '  fs.writeFileSync(process.env.HIKARI_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
+        "  if (process.env.HIKARI_FAKE_CODEX_STDOUT) { process.stdout.write(process.env.HIKARI_FAKE_CODEX_STDOUT); }",
+        "  if (process.env.HIKARI_FAKE_CODEX_STDERR) { process.stderr.write(process.env.HIKARI_FAKE_CODEX_STDERR); }",
+        "  const exitCode = Number(process.env.HIKARI_FAKE_CODEX_EXIT_CODE || 0);",
         "  if (exitCode) { process.exit(exitCode); }",
         "  if (outputFile) { fs.writeFileSync(outputFile, 'OK from fake codex'); }",
         '});'
@@ -177,7 +177,7 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
             notebookEntries: []
           }
         }),
-        getDefaultDataFilePath: () => '/tmp/enana-data.json'
+        getDefaultDataFilePath: () => '/tmp/hikari-data.json'
       });
 
       const protocolResult = await executors.get('protocol-matching')({
@@ -185,8 +185,8 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
           protocol_candidates: ['TEV Protease Cleavage of Fusion Protein']
         },
         context: {
-          snapshot: { data_file_path: '/tmp/enana-data.json', protocols: [staleProtocol] },
-          dataFilePath: '/tmp/enana-data.json'
+          snapshot: { data_file_path: '/tmp/hikari-data.json', protocols: [staleProtocol] },
+          dataFilePath: '/tmp/hikari-data.json'
         },
         state: {}
       });
@@ -199,8 +199,8 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
           protocol_candidates: ['TEV Protease Cleavage of Fusion Protein']
         },
         context: {
-          snapshot: { data_file_path: '/tmp/enana-data.json', protocols: [staleProtocol] },
-          dataFilePath: '/tmp/enana-data.json',
+          snapshot: { data_file_path: '/tmp/hikari-data.json', protocols: [staleProtocol] },
+          dataFilePath: '/tmp/hikari-data.json',
           parserPayload: { primary_intent: 'notebook_draft' }
         }
       });
@@ -236,15 +236,15 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
             notebookEntries: []
           }
         }),
-        getDefaultDataFilePath: () => '/tmp/enana-data.json'
+        getDefaultDataFilePath: () => '/tmp/hikari-data.json'
       });
       const fallbackResult = await fallbackExecutors.get('protocol-matching')({
         args: {
           protocol_candidates: ['TEV Protease Cleavage of Fusion Protein']
         },
         context: {
-          snapshot: { data_file_path: '/tmp/enana-data.json', protocols: [staleProtocol] },
-          dataFilePath: '/tmp/enana-data.json'
+          snapshot: { data_file_path: '/tmp/hikari-data.json', protocols: [staleProtocol] },
+          dataFilePath: '/tmp/hikari-data.json'
         },
         state: {}
       });
@@ -321,7 +321,7 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         recordLifecycleEvent: (_recorder, event = {}) => {
           lifecycleEvents.push(event);
         },
-        getWorkingDirectory: () => '/tmp/enana-workspace'
+        getWorkingDirectory: () => '/tmp/hikari-workspace'
       });
 
       const result = await runtime.run({
@@ -346,9 +346,9 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
           selectedText: 'weak conjugation'
         },
         snapshot: {
-          data_file_path: '/tmp/enana-data.json',
+          data_file_path: '/tmp/hikari-data.json',
           settings: {
-            storagePath: '/tmp/enana-storage'
+            storagePath: '/tmp/hikari-storage'
           },
           activePaper: {
             id: 'paper-1',
@@ -364,7 +364,7 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
             has_transformed_markdown: true
           }
         },
-        cwd: path.parse('/tmp/enana-workspace').root,
+        cwd: path.parse('/tmp/hikari-workspace').root,
         model: 'gpt-5.4',
         reasoningEffort: 'high',
         traceContext: { requestId: 'req-codex-runtime', rows: [], entries: [] },
@@ -377,7 +377,7 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.equal(calls.length, 1);
       assert.equal(calls[0].model, 'gpt-5.4');
       assert.equal(calls[0].reasoningEffort, 'high');
-      assert.equal(calls[0].cwd, '/tmp/enana-workspace');
+      assert.equal(calls[0].cwd, '/tmp/hikari-workspace');
       assert.equal(calls[0].stream, true);
       assert.equal(typeof calls[0].onStream, 'function');
       assert.equal(calls[0].enableWebSearch, true);
@@ -395,23 +395,23 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.match(calls[0].prompt, /Selection insight context:/);
       assert.match(calls[0].prompt, /Paper agent session:/);
       assert.match(calls[0].prompt, /Read the transformed markdown before answering paper-specific questions/);
-      assert.match(calls[0].prompt, /\/tmp\/enana-storage\/KnowledgeBase\/papers\.md\/atlas-sumo1\/paper\.md/);
+      assert.match(calls[0].prompt, /\/tmp\/hikari-storage\/KnowledgeBase\/papers\.md\/atlas-sumo1\/paper\.md/);
       assert.match(calls[0].prompt, /pilot\.pdf/);
       assert.doesNotMatch(calls[0].prompt, /"assistant_text"/);
       const mcpContext = JSON.parse(calls[0].envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT);
       assert.equal(mcpContext.provider, 'codex');
       assert.equal(mcpContext.model, 'gpt-5.4');
-      assert.equal(mcpContext.cwd, '/tmp/enana-workspace');
+      assert.equal(mcpContext.cwd, '/tmp/hikari-workspace');
       assert.equal(mcpContext.chatSessionId, '');
       assert.equal(mcpContext.codexSessionId, '');
       assert.deepEqual(mcpContext.conversation, []);
       assert.equal(mcpContext.project.name, 'Atlas SUMO1');
       assert.equal(mcpContext.activePaper.title, 'Atlas SUMO1 pilot paper');
       assert.equal(mcpContext.paperAgent.transformed_markdown_relative_path, 'KnowledgeBase/papers.md/atlas-sumo1/paper.md');
-      assert.equal(mcpContext.paperAgent.transformed_markdown_path, '/tmp/enana-storage/KnowledgeBase/papers.md/atlas-sumo1/paper.md');
-      assert.equal(mcpContext.dataFilePath, '/tmp/enana-data.json');
+      assert.equal(mcpContext.paperAgent.transformed_markdown_path, '/tmp/hikari-storage/KnowledgeBase/papers.md/atlas-sumo1/paper.md');
+      assert.equal(mcpContext.dataFilePath, '/tmp/hikari-data.json');
       assert.deepEqual(
-        JSON.parse(calls[0].envOverrides.ENANA_AGENT_MCP_REQUEST_CONTEXT),
+        JSON.parse(calls[0].envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT),
         mcpContext
       );
       assert.deepEqual(
@@ -419,7 +419,7 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         mcpContext
       );
       assert.deepEqual(
-        JSON.parse(calls[0].envOverrides.ENANA_CODEX_REQUEST_CONTEXT),
+        JSON.parse(calls[0].envOverrides.HIKARI_CODEX_REQUEST_CONTEXT),
         mcpContext
       );
       assert.equal(result.ok, true);
@@ -451,7 +451,7 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         'runtime.js'
       ));
       const calls = [];
-      const projectWorkspace = path.join(os.tmpdir(), 'enana-storage', 'Project', 'Atlas');
+      const projectWorkspace = path.join(os.tmpdir(), 'hikari-storage', 'Project', 'Atlas');
       const runtime = createCodexAgentRuntime({
         cleanText: (value, maxLength = 2000) => {
           const text = String(value || '').trim();
@@ -470,7 +470,7 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
             }
           };
         },
-        getWorkingDirectory: () => '/tmp/enana-workspace'
+        getWorkingDirectory: () => '/tmp/hikari-workspace'
       });
 
       const result = await runtime.run({
@@ -528,7 +528,7 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       const result = await runtime.run({
         message: 'Summarize the latest notes.',
         model: 'gpt-5.4',
-        cwd: '/tmp/enana-workspace'
+        cwd: '/tmp/hikari-workspace'
       });
 
       assert.equal(result.ok, true);

@@ -25,6 +25,9 @@ enabled_tools = [
   "literature_search",
   "paper_download",
   "paper_analysis",
+  "paper_intake_search_summaries",
+  "paper_intake_search_experiments",
+  "paper_intake_list_project_summaries",
   "purchase_recommendation",
   "memory",
   "ask_user"
@@ -45,18 +48,6 @@ env = {
   HIKARI_CODEX_REQUEST_CONTEXT = "<per-turn JSON>",
   HIKARI_AGENT_DATA_FILE = "/path/to/hikari-data.json",
   HIKARI_AGENT_STORAGE_PATH = "/path/to/storage",
-  ENANA_AGENT_MCP = "1",
-  ENANA_AGENT_MCP_WORKSPACE = "/runtime/workspace",
-  ENANA_AGENT_MCP_HOST = "http://127.0.0.1:<port>",
-  ENANA_AGENT_MCP_TOKEN = "<opaque bearer token>",
-  ENANA_AGENT_MCP_REQUEST_CONTEXT = "<per-turn JSON>",
-  ENANA_CODEX_MCP = "1",
-  ENANA_CODEX_WORKSPACE = "/runtime/workspace",
-  ENANA_CODEX_MCP_HOST = "http://127.0.0.1:<port>",
-  ENANA_CODEX_MCP_TOKEN = "<opaque bearer token>",
-  ENANA_CODEX_REQUEST_CONTEXT = "<per-turn JSON>",
-  ENANA_AGENT_DATA_FILE = "/path/to/hikari-data.json",
-  ENANA_AGENT_STORAGE_PATH = "/path/to/storage"
 }
 
 [mcp_servers.hikari.tools.protocol_generation]
@@ -64,11 +55,11 @@ approval_mode = "approve"
 # HIKARI_MCP_CONFIG_END
 ```
 
-`HIKARI_AGENT_MCP_HOST` and `HIKARI_AGENT_MCP_TOKEN` are present when the app-side callback host is running. The `HIKARI_CODEX_*` values are compatibility aliases for the Codex CLI integration, and the legacy `ENANA_*` aliases are still emitted for compatibility. The stdio MCP server uses these values to relay direct tool execution requests into the live Hikari process. In packaged Electron builds, `command` is resolved to an absolute Node executable path, such as `/opt/homebrew/bin/node`, so Codex does not depend on the Finder-launched app inheriting a shell `PATH`.
+`HIKARI_AGENT_MCP_HOST` and `HIKARI_AGENT_MCP_TOKEN` are present when the app-side callback host is running. The `HIKARI_CODEX_*` values are compatibility aliases for the Codex CLI integration. The stdio MCP server uses these values to relay direct tool execution requests into the live Hikari process. In packaged Electron builds, `command` is resolved to an absolute Node executable path, such as `/opt/homebrew/bin/node`, so Codex does not depend on the Finder-launched app inheriting a shell `PATH`.
 
 ## Per-request context
 
-Each provider run can receive `HIKARI_AGENT_MCP_REQUEST_CONTEXT` as JSON. Codex runs also receive `HIKARI_CODEX_REQUEST_CONTEXT`; `ENANA_AGENT_MCP_REQUEST_CONTEXT` and `ENANA_CODEX_REQUEST_CONTEXT` are compatibility aliases. The stdio server merges this object into every gateway call context.
+Each provider run can receive `HIKARI_AGENT_MCP_REQUEST_CONTEXT` as JSON. Codex runs also receive `HIKARI_CODEX_REQUEST_CONTEXT`. The stdio server merges this object into every gateway call context.
 
 ```json
 {
@@ -137,6 +128,9 @@ The Hikari MCP surface is direct-tool-only. Agent providers call the named tools
 - `literature_search`
 - `paper_download`
 - `paper_analysis`
+- `paper_intake_search_summaries`
+- `paper_intake_search_experiments`
+- `paper_intake_list_project_summaries`
 - `purchase_recommendation`
 - `memory`
 - `ask_user`
@@ -154,6 +148,9 @@ Codex exposes the same server tools to the model with the server namespace prefi
 - `mcp__hikari__literature_search`
 - `mcp__hikari__paper_download`
 - `mcp__hikari__paper_analysis`
+- `mcp__hikari__paper_intake_search_summaries`
+- `mcp__hikari__paper_intake_search_experiments`
+- `mcp__hikari__paper_intake_list_project_summaries`
 - `mcp__hikari__purchase_recommendation`
 - `mcp__hikari__memory`
 - `mcp__hikari__ask_user`
@@ -489,6 +486,6 @@ Unauthorized calls return HTTP 401 with `status: "unauthorized"`. Missing execut
 
 ## Direct tool files
 
-The MCP surface is allow-listed by files under `src/main/helpers/agent/mcp-contract/direct-tools/`. Hyphenated app tool ids are available only when a direct tool wrapper exists there, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `record-lookup` as `record_lookup`.
+The MCP surface is allow-listed by `src/main/helpers/agent/mcp-contract/direct-tools/index.js`. Most direct wrappers live under `direct-tools/`; the paper-intake tools are grouped in `src/main/helpers/agent/paper-intake/mcp-tools.js` and folded into the same allow-list. Hyphenated app tool ids are available only when a direct tool wrapper exists, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `record-lookup` as `record_lookup`.
 
 See `mcp-contract.json` next to this file for the exact generated MCP tool definitions and input schemas.

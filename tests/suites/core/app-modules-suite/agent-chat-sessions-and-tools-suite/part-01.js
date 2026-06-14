@@ -29,7 +29,7 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
     inventory: {},
     labInventory: { chemicals: [] },
     settings: {
-      storagePath: '/tmp/enana-storage',
+      storagePath: '/tmp/hikari-storage',
       llm: {
         provider: 'openai',
         model: 'gpt-5',
@@ -220,7 +220,7 @@ test('agent-chat session switching honors nested click targets and replays the l
     inventory: {},
     labInventory: { chemicals: [] },
     settings: {
-      storagePath: '/tmp/enana-storage',
+      storagePath: '/tmp/hikari-storage',
       llm: {
         provider: 'openai',
         model: 'gpt-5',

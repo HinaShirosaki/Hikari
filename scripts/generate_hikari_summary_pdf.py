@@ -149,13 +149,13 @@ def build_pdf(page_stream: bytes) -> bytes:
 
 
 def main():
-    output_path = Path("output/pdf/enana-app-summary.pdf")
+    output_path = Path("output/pdf/hikari-app-summary.pdf")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     page = PDFTextPage()
-    page.title("Enana App Summary")
+    page.title("Hikari App Summary")
     page.paragraph(
-        "Enana is an Electron desktop app for lab workflow management that combines records, notebooks, "
+        "Hikari is an Electron desktop app for lab workflow management that combines records, notebooks, "
         "inventory, assay and gel analysis, papers, and an agent chat surface in one interface."
     )
     page.paragraph(

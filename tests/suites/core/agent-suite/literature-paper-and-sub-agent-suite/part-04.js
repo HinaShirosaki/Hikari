@@ -190,6 +190,108 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
+    test('paper knowledge database runs intake pipeline after writing markdown', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-knowledge-intake-'));
+      const pdfPath = path.join(storageRoot, 'Papers', 'Atlas', 'intake.pdf');
+      const stages = [];
+      try {
+        await fsPromises.mkdir(path.dirname(pdfPath), { recursive: true });
+        await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nfake pdf bytes for intake\n'));
+        const runtime = agentPaperKnowledgeDatabase.createPaperKnowledgeDatabaseRuntime({
+          now: () => '2026-03-22T12:00:00.000Z',
+          pdfTextExtractionRuntime: {
+            extractText: async () => ({
+              ok: true,
+              status: 'completed',
+              page_count: 2,
+              text: 'Intake MAPK Study\nMethods\nCells were treated with inhibitor.\nResults\nWestern blot signal changed.',
+              pages: [
+                {
+                  page_number: 1,
+                  text: 'Intake MAPK Study\nMethods\nCells were treated with inhibitor.'
+                },
+                {
+                  page_number: 2,
+                  text: 'Results\nWestern blot signal changed.'
+                }
+              ],
+              sections: [
+                {
+                  label: 'Methods',
+                  normalized_label: 'methods',
+                  start_page: 1,
+                  end_page: 1,
+                  text: 'Cells were treated with inhibitor.'
+                },
+                {
+                  label: 'Results',
+                  normalized_label: 'results',
+                  start_page: 2,
+                  end_page: 2,
+                  text: 'Western blot signal changed.'
+                }
+              ]
+            })
+          },
+          requestStructuredJsonPayload: async (options = {}) => {
+            stages.push(options.stage);
+            if (options.stage === 'paper_intake_classification') {
+              assert.match(options.userPrompt, /Intake MAPK Study/);
+              return {
+                ok: true,
+                payload: {
+                  doc_type: 'research_paper',
+                  confidence: 0.96,
+                  reason: 'Methods and results describe a new experiment.'
+                }
+              };
+            }
+            if (options.stage === 'paper_intake_research_summary') {
+              return {
+                ok: true,
+                payload: {
+                  one_sentence_summary: 'This study tests inhibitor treatment in cells and finds altered western blot signal.',
+                  experiments: [
+                    {
+                      title: 'Inhibitor treatment western blot',
+                      technique: 'western blot',
+                      variables: 'treated versus untreated cells',
+                      figure_ref: 'Fig. 1',
+                      outcome: 'The target signal changed after inhibitor treatment.'
+                    }
+                  ]
+                }
+              };
+            }
+            return { ok: false, error: `Unexpected stage ${options.stage}` };
+          }
+        });
+
+        const result = await runtime.ingestPaperPdf({
+          storage_path: storageRoot,
+          file_path: pdfPath,
+          paper_title: 'Intake MAPK Study',
+          doi: '10.1000/intake.test',
+          linked_type: 'literature-search',
+          linked_name: 'Atlas',
+          use_llm_rewrite: false
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.paper_intake.ok, true);
+        assert.equal(result.paper_intake.status, 'saved');
+        assert.deepEqual(stages, ['paper_intake_classification', 'paper_intake_research_summary']);
+        assert.equal(result.markdown_relative_path, 'KnowledgeBase/papers.md/10.1000_intake.test/paper.md');
+        const intakePath = path.join(storageRoot, 'KnowledgeBase', 'papers.md', '10.1000_intake.test', 'intake.json');
+        const intake = JSON.parse(await fsPromises.readFile(intakePath, 'utf8'));
+        assert.equal(intake.paper_id, '10.1000_intake.test');
+        assert.equal(intake.doc_type, 'research_paper');
+        assert.equal(intake.source_paths.paper_md, 'KnowledgeBase/papers.md/10.1000_intake.test/paper.md');
+        assert.equal(intake.experiments[0].technique, 'western blot');
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
     test('pdf-to-md helper renders extracted PDF pages as markdown and the pdf text tool can include it', async () => {
       const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
       const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-pdf-text-extraction.js'));
