@@ -1,12 +1,5 @@
 import * as responseModule from './agent-chat/response.js';
 
-/*
-Response contract anchors retained for tests:
-const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
-  || summarizeScienceResult(projectScienceQuestion)
-  || summarizeScienceResult(resultAnalysis);
-*/
-
 export function collectAgentActivityRows(meta) {
   return responseModule.collectAgentActivityRows(meta);
 }

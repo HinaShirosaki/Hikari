@@ -42,6 +42,24 @@
     </div>
   </main>
 
+  <div id="unsaved-changes-overlay" class="unsaved-changes-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+    <section class="unsaved-changes-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="unsaved-changes-title" aria-describedby="unsaved-changes-description">
+      <div class="app-dialog-head">
+        <div>
+          <h3 id="unsaved-changes-title">Save changes before quitting?</h3>
+          <p id="unsaved-changes-description" class="small-note">The following work has not been saved.</p>
+        </div>
+      </div>
+      <ul id="unsaved-changes-list" class="unsaved-changes-list"></ul>
+      <p id="unsaved-changes-status" class="small-note" role="status" aria-live="polite"></p>
+      <div class="form-actions unsaved-changes-actions">
+        <button type="button" id="unsaved-changes-cancel-btn" class="ghost-btn">Cancel</button>
+        <button type="button" id="unsaved-changes-discard-btn" class="danger-btn">Quit Without Saving</button>
+        <button type="button" id="unsaved-changes-save-btn" class="primary-btn">Save and Quit</button>
+      </div>
+    </section>
+  </div>
+
   <script src="./vendor/cropperjs/cropper.min.js"></script>
   <script src="./vendor/tabulator/tabulator.min.js"></script>
   <script src="./vendor/jspdf.umd.min.js"></script>

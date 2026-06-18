@@ -100,7 +100,7 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   const appState = { projects: [], protocols: [], notebookEntries: [] };
@@ -242,7 +242,7 @@ test('[EDGE] sequence-viewer protein builder confirm uses edited final sequence 
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const appState = { projects: [], protocols: [], notebookEntries: [] };

@@ -4,15 +4,7 @@ Every module is a JavaScript factory that takes an options bag, performs DOM loo
 
 ## File location and shape
 
-Two acceptable layouts:
-
-**Single file (small modules):**
-
-```
-src/renderer/modules/my-feature.js
-```
-
-**Folder (when the controller grows past ~400 lines):**
+New user-facing features use a folder entry:
 
 ```
 src/renderer/modules/my-feature/
@@ -24,21 +16,16 @@ src/renderer/modules/my-feature/
   Readme.md         # short maintenance note
 ```
 
-[src/renderer/modules/personal-inventory/](../../src/renderer/modules/personal-inventory/) and [src/renderer/modules/home-dashboard/](../../src/renderer/modules/home-dashboard/) are good references for the folder layout. [src/renderer/modules/tool-box.js](../../src/renderer/modules/tool-box.js) plus [src/renderer/modules/tool-box/](../../src/renderer/modules/tool-box/) shows a barrel + sub-tools pattern.
+[src/renderer/modules/personal-inventory/](../../src/renderer/modules/personal-inventory/) and [src/renderer/modules/home-dashboard/](../../src/renderer/modules/home-dashboard/) are good references. [src/renderer/modules/tool-box.js](../../src/renderer/modules/tool-box.js) plus [src/renderer/modules/tool-box/](../../src/renderer/modules/tool-box/) is a legacy composition-root pattern, not the default for new views.
 
-In all cases, the **public** export is a single function named `init<Name>` (camel-cased, capitalized after `init`). Use a re-export from a barrel file when you split the implementation:
+The feature entry exports a single function named `init<Name>` (camel-cased, capitalized after `init`):
 
 ```js
 // src/renderer/modules/my-feature/index.js
 export function initMyFeature(options) { ... }
 ```
 
-```js
-// src/renderer/modules/my-feature.js (barrel — only if you keep the flat path)
-export { initMyFeature } from './my-feature/index.js';
-```
-
-The flat barrel exists in some cases for historical reasons. New manifests should import their `init*` directly from `./modules/my-feature/index.js`.
+Manifests import `init*` directly from `modules/my-feature/index.js`. Add a secondary `public-api.js` only when pure helpers intentionally have consumers beyond the view entry.
 
 ## The `init*` function: inputs
 
@@ -140,13 +127,13 @@ This keeps `renderAll()` safe.
 
 ## State contract
 
-There is one state object. It is loaded from localStorage by `loadState()`, normalized by `normalizeState()` in [src/renderer/modules/app-state.js](../../src/renderer/modules/app-state.js), and reused for the entire app lifetime. Every module receives **the same reference**.
+There is one state object. It is loaded through the stable [app-state.js](../../src/renderer/modules/app-state.js) facade, normalized in [app-state/state-normalizer.js](../../src/renderer/modules/app-state/state-normalizer.js), and reused for the entire app lifetime. Every module receives **the same reference**.
 
 Rules:
 
 1. **Mutate in place.** `state.myFeatureItems.push(item)`, not `state = { ...state, myFeatureItems: [...] }`.
 2. **Call `persist()` after every user-visible change.** It writes localStorage and triggers `autoSaveDataFile` if a storage path is configured. Do not throttle it inside a module — the renderer core already swallows the auto-save promise.
-3. **Add new top-level keys to `defaultState`.** Otherwise users who upgrade have `undefined` until they touch your view. Defaults live in [src/renderer/modules/app-state.js](../../src/renderer/modules/app-state.js) (search for `export const defaultState`).
+3. **Add new top-level keys to `defaultState`.** Otherwise users who upgrade have `undefined` until they touch your view. Defaults live in [src/renderer/modules/app-state/defaults.js](../../src/renderer/modules/app-state/defaults.js).
 4. **Keep transient UI state in module locals**, not on `state`. The `selectedRowId`, "is dialog open", "draft text", etc. should never leave the module. The persisted `state` is for data the user expects back next session.
 5. **Never write to `state.objectGraph`.** It is rebuilt on every `persist()` from the rest of the state by [src/renderer/modules/object-graph.js](../../src/renderer/modules/object-graph.js).
 
@@ -250,7 +237,7 @@ The runtime stores whatever you return under `modules.<key>` and registers it un
 
 If your feature introduces a brand new top-level state slice (say `state.experiments`), make sure to:
 
-1. Add the default to `defaultState` in `app-state.js`.
+1. Add the default to `defaultState` in `app-state/defaults.js`.
 2. Extend `normalizeState()` to coerce missing/legacy values.
 3. Add the slice to the object graph if it has cross-references — see [src/renderer/modules/object-graph.js](../../src/renderer/modules/object-graph.js).
 4. If the slice should round-trip to the on-disk `.ena` storage bundle, hook the writer in [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and the matching main-process bundler in [src/main/helpers/main/storage-bundle/](../../src/main/helpers/main/storage-bundle/).

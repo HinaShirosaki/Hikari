@@ -60,6 +60,7 @@ import {
 } from './page-log.js';
 import { bindFileDropTarget, mergeFilesIntoInput } from '../file-drop.js';
 import { printElement } from '../print/index.js';
+import { serializeDraftSnapshot } from '../unsaved-draft.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({
@@ -124,6 +125,7 @@ export function initLabNotebook({
   let linkedPreviewRenderToken = 0;
   let sampleLinkDrafts = new Map();
   let pendingDroppedResultFiles = [];
+  let savedDraftSnapshot = '';
 
   notebookOpenProjectsBtn?.addEventListener('click', () => onOpenProjects?.());
 
@@ -450,6 +452,36 @@ export function initLabNotebook({
     return values;
   }
 
+  function getCurrentDraftSnapshot() {
+    if (!notebookProtocolArea || notebookProtocolArea.hidden) {
+      return '';
+    }
+    return serializeDraftSnapshot({
+      editingEntryId: editingEntryId || '',
+      projectId: notebookProjectSelect?.value || '',
+      protocolId: notebookProtocolSelect?.value || '',
+      experimentName: notebookExperimentName?.value || '',
+      protocolEditing: protocolEditor.isEditing(),
+      protocolDraft: protocolEditor.getDraft(),
+      protocolDraftName: notebookProtocolDraftName?.value || '',
+      protocolDraftSteps: notebookProtocolDraftSteps?.value || '',
+      values: collectNotebookValues(),
+      result: notebookResult?.value || '',
+      resultTables: resultTableController.getCurrentTables(),
+      toolCalculations: toolSidebarController.getCalculations(),
+      sampleLinks: sampleLinkDrafts,
+      resultFiles: getSelectedNotebookResultFiles().map((file) => ({
+        name: String(file?.name || ''),
+        size: Number(file?.size) || 0,
+        lastModified: Number(file?.lastModified) || 0
+      }))
+    });
+  }
+
+  function markDraftSaved() {
+    savedDraftSnapshot = getCurrentDraftSnapshot();
+  }
+
   function beginProtocolEdit() {
     const entry = getActiveEntry();
     const protocol = cloneProtocolSnapshot(resolveViewerProtocol(entry));
@@ -500,7 +532,8 @@ export function initLabNotebook({
         experimentNameOverride: nextExperimentName,
         resultTablesOverride: resultTables,
         preserveSelectedFiles: true,
-        preserveToolCalculations: true
+        preserveToolCalculations: true,
+        markSavedBaseline: false
       });
       return;
     }
@@ -554,6 +587,7 @@ export function initLabNotebook({
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();
     }
+    markDraftSaved();
   }
 
   function onProjectChange() {
@@ -921,7 +955,8 @@ export function initLabNotebook({
     resultTableOverride = null,
     resultTablesOverride = null,
     preserveSelectedFiles = false,
-    preserveToolCalculations = false
+    preserveToolCalculations = false,
+    markSavedBaseline = true
   }) {
     hideProjectDashboard();
     setPageStarterVisible(!entry && !isSavedEntry);
@@ -974,6 +1009,9 @@ export function initLabNotebook({
     protocolEditor.syncControls(protocol, entry);
     syncViewerVisibility();
     selectionInsightsController?.refreshHost?.('biology-notebook-protocol');
+    if (markSavedBaseline) {
+      markDraftSaved();
+    }
   }
 
   function hideProjectDashboard() {
@@ -1072,6 +1110,7 @@ export function initLabNotebook({
     renderLinkedPreviews(null);
     updateSaveButtonLabel();
     syncViewerVisibility();
+    savedDraftSnapshot = '';
   }
 
   function syncViewerVisibility() {
@@ -1159,6 +1198,7 @@ export function initLabNotebook({
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();
     }
+    markDraftSaved();
   }
 
   function persistActiveEntrySampleLinks() {
@@ -1223,6 +1263,7 @@ export function initLabNotebook({
     if (typeof onNotebookEntriesChanged === 'function') {
       onNotebookEntriesChanged();
     }
+    markDraftSaved();
   }
 
   function onDocumentClickForSampleLinkMenu(event) {
@@ -1312,12 +1353,20 @@ export function initLabNotebook({
   });
 
   return {
+    hasUnsavedChanges: () => Boolean(
+      savedDraftSnapshot
+      && getCurrentDraftSnapshot() !== savedDraftSnapshot
+    ),
     openEntry: editEntry,
     openProjectDashboard: showProjectDashboard,
     renderProjectOptions: dropdownRenderer.renderProjectOptions,
     renderProtocolOptions: dropdownRenderer.renderProtocolOptions,
     renderEntries: entryListRenderer.renderEntries,
     renderLinkedPreviews,
-    onProtocolChange
+    onProtocolChange,
+    saveUnsavedChanges: async () => {
+      const entry = await saveEntry();
+      return Boolean(entry) && getCurrentDraftSnapshot() === savedDraftSnapshot;
+    }
   };
 }

@@ -274,7 +274,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     const name = elements.gelNameInput?.value.trim() || '';
     if (!name) {
       deps.setStatus('Gel name is required.');
-      return;
+      return null;
     }
 
     const editingId = elements.gelIdInput?.value || '';
@@ -300,6 +300,8 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.setStatus(record.report
       ? `Saved gel analysis: ${record.name}.`
       : `Saved gel draft: ${record.name}. You can finish the analysis later.`);
+    runtime.markDraftSaved?.();
+    return record;
   }
 
   function onExportJson() {
@@ -361,6 +363,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.renderCanvas();
     deps.renderReport();
     deps.setStatus('');
+    runtime.markDraftSaved?.();
   }
 
   function fillFromRecord(record) {
@@ -399,6 +402,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.renderCanvas();
     deps.renderReport();
     deps.setStatus('Loaded saved report. Upload original image to view overlay.');
+    runtime.markDraftSaved?.();
   }
 
   function deleteRecord(recordId) {

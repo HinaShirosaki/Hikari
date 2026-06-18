@@ -2,7 +2,7 @@
 
 This is a quick lookup map for `src/renderer`.
 
-Most user-facing features are now **folder modules** (`modules/<feature>/index.js`) registered through `module-manifests/`. A handful of top-level `.js` files remain as thin wrappers, cross-cutting helpers, or bundled datasets.
+Most user-facing features are **folder modules** (`modules/<feature>/index.js`) registered through `module-manifests/`. Top-level `.js` files are reserved for cross-cutting helpers, generated configuration, or composition roots that do not have a folder entry.
 
 ## Legend
 
@@ -42,36 +42,33 @@ These are the workspaces wired in `module-manifests/index.js`, grouped by manife
 | Manifest key | View | Entry file | Implementation |
 | --- | --- | --- | --- |
 | `biologyNotebook` | `BIOLOGY_NOTEBOOK` | `modules/biology-notebook/index.js` | biology / wet-lab notebook (entry export is still named `initLabNotebook`) |
-| `protocol` | `PROTOCOL_MANAGEMENT` | `modules/protocol-management.js` (wrapper) | `modules/protocol/` — protocol CRUD, viewing, sharing, import |
+| `protocol` | `PROTOCOL_MANAGEMENT` | `modules/protocol/index.js` | protocol CRUD, viewing, sharing, import |
 | `projectManagement` | `PROJECT_MANAGEMENT` | `modules/project-management/index.js` | projects plus linked notebook/paper rollups |
-| `agentChat` | `AGENT` | `modules/agent-chat.js` (wrapper) | `modules/agent-chat/` — chat UI, sessions, context |
-| `agentChatRail` | (rail, no view) | `modules/agent-chat.js` + `agent-chat/scoped-state.js` | paper-scoped agent chat embedded as a side rail |
+| `agentChat` | `AGENT` | `modules/agent-chat/index.js` | chat UI, sessions, context |
+| `agentChatRail` | (rail, no view) | `modules/agent-chat/index.js` + `agent-chat/scoped-state.js` | paper-scoped agent chat embedded as a side rail |
 | `workflowManagement` | `WORKFLOW_MANAGEMENT` | `modules/workflow/index.js` | workflow model, graph editor, list rendering, actions |
-| `papers` | `PAPERS` | `modules/papers-management.js` (wrapper) | `modules/papers/` — library rail, PDF viewer, comments, LLM helpers |
+| `papers` | `PAPERS` | `modules/papers/index.js` | library rail, PDF viewer, comments, LLM helpers |
 | `labCommonInventory` | `LAB_COMMON_INVENTORY` | `modules/lab-common-inventory/index.js` | shared chemical inventory ("Chemicals") |
 | `personalInventory` | `PERSONAL_INVENTORY` | `modules/personal-inventory/index.js` | container-centric storage workspace |
 | `sampleRegistry` | `SAMPLE_REGISTRY` | `modules/sample-registry/index.js` | sample-centric registry workspace |
 | `assay` | `ASSAY` | `modules/assay/index.js` | plate layout, result grid, charts, analysis math |
-| `gel` | `GEL` | `modules/gel-analysis.js` (wrapper) | `modules/gel/` — image pipeline, manual segmentation, analysis, export |
-| `sequenceViewer` | `SEQUENCE_VIEWER` | `modules/sequence-viewer.js` (wrapper) | `modules/sequence-viewer/` — import, library, detail, alignment, annotation, analysis |
+| `gel` | `GEL` | `modules/gel/index.js` | image pipeline, manual segmentation, analysis, export |
+| `sequenceViewer` | `SEQUENCE_VIEWER` | `modules/sequence-viewer/index.js` | import, library, detail, alignment, annotation, analysis |
 | `toolBox` | `TOOL_BOX` | `modules/tool-box.js` | `modules/tool-box/` — calculator and analysis mini-tools |
 | `settings` | `SETTING` | `modules/settings/index.js` | renderer-config UI and storage/LLM settings |
 | `homeDashboard` | `HOME` | `modules/home-dashboard.js` (wrapper) | `modules/home-dashboard/` — dashboard widgets and timer |
 
 See [heavyweight-subsystems.md](../features/heavyweight-subsystems.md) for the internal structure of the largest folder modules (`agent-chat/`, `assay/`, `gel/`, `papers/`, `sequence-viewer/`, `workflow/`, `tool-box/`).
 
-## Wrapper / adapter files
+## Public API and composition files
 
-Thin top-level files that exist so manifests and tests have stable import anchors into a folder module. They forward to `index.js` and often re-export pure helpers.
+These files expose a deliberate secondary API or compose features that do not use a conventional folder entry.
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `modules/agent-chat.js` | Support | wrapper into `agent-chat/index.js`; preserves test/downstream anchors |
 | `modules/agent-chat-response.js` | Support | stable re-export surface for agent response helpers |
-| `modules/protocol-management.js` | Support | wrapper into `protocol/index.js` |
-| `modules/papers-management.js` | Support | wrapper into `papers/index.js` |
-| `modules/gel-analysis.js` | Support | wrapper into `gel/index.js` plus pure gel-analysis helper re-exports |
-| `modules/sequence-viewer.js` | Support | wrapper plus pure sequence helper re-exports and `window.hikariApi` bridge injection |
+| `modules/gel/public-api.js` | Support | explicit pure gel-analysis API used by contracts and non-view consumers |
+| `modules/sequence-viewer/public-api.js` | Support | explicit parsing, rendering, ORF, restriction, alignment, and embedding API |
 | `modules/tool-box.js` | Support | toolbox composition root over many mini-tools (the `tool-box/` folder has no `index.js`) |
 | `modules/home-dashboard.js` | Support | orchestrator that wires the `home-dashboard/` widgets (the folder has no `index.js`) |
 
@@ -79,8 +76,8 @@ Thin top-level files that exist so manifests and tests have stable import anchor
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `modules/views.js` | Cross-cutting | canonical `VIEWS` and `TITLES` constants (the source of truth for which workspaces exist) |
-| `modules/app-state.js` | Cross-cutting | canonical renderer state contract, normalization, local-storage helpers |
+| `modules/views.js` | Cross-cutting | generated `VIEWS` and `TITLES` constants sourced from `ui/config/app-registry.json` |
+| `modules/app-state.js` | Cross-cutting | small public facade over the normalization modules in `modules/app-state/` |
 | `modules/utils.js` | Cross-cutting | shared renderer helpers such as `createId`, `safeText`, and `cssEscape` |
 | `modules/object-graph.js` | Cross-cutting | derived graph builder over protocols, notebooks, inventory, workflows, assays, gels, papers |
 | `modules/storage-path-normalizer.js` | Cross-cutting | normalizes storage paths across state on load |

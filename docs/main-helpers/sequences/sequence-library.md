@@ -71,7 +71,7 @@ It returns features plus their host-vector occurrences, which makes it a richer 
 
 ## Backbone recognition
 
-`recognizeSequenceBackbone(...)` is orchestrated by `sequence-library/backbone-service.js`. The heuristic matcher itself lives in `sequence/sequence-backbone-recognition.js`, which re-exports the algorithm shared with the renderer at `renderer/modules/sequence-viewer/algorithms/sequence-backbone-recognition.js` — so the same recognition logic runs in both processes.
+`recognizeSequenceBackbone(...)` is orchestrated by `sequence-library/backbone-service.js`. The process-neutral matcher lives in `src/shared/sequence/sequence-backbone-recognition/`, alongside its circular-annotation, ORF, and restriction-feature dependencies.
 
 At a high level it:
 

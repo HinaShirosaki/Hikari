@@ -415,5 +415,97 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       assert.deepEqual(openDetailView.calls, [[]]);
       assert.deepEqual(showView.calls, []);
     });
+
+    test('unsaved changes service immediately approves close when editors are clean', () => {
+      const servicesModule = loadServicesModule();
+      const responses = [];
+      const service = servicesModule.createUnsavedChangesService({
+        moduleRegistry: {
+          get: () => ({ hasUnsavedChanges: () => false })
+        },
+        api: {
+          onAppCloseRequested: () => () => {},
+          respondToAppClose: (action) => responses.push(action)
+        },
+        documentObject: null,
+        windowObject: null
+      });
+
+      service.handleCloseRequested();
+
+      assert.deepEqual(responses, ['quit']);
+      assert.equal(service.getUnsavedSources().length, 0);
+    });
+
+    test('unsaved changes service saves every dirty editor before approving close', async () => {
+      const servicesModule = loadServicesModule();
+      const elements = new Map();
+      const makeElement = (id = '') => {
+        const element = new MockElement(id);
+        element.children = [];
+        element.replaceChildren = (...children) => {
+          element.children = children;
+        };
+        return element;
+      };
+      [
+        'unsaved-changes-overlay',
+        'unsaved-changes-list',
+        'unsaved-changes-status',
+        'unsaved-changes-cancel-btn',
+        'unsaved-changes-discard-btn',
+        'unsaved-changes-save-btn'
+      ].forEach((id) => elements.set(id, makeElement(id)));
+      elements.get('unsaved-changes-overlay').hidden = true;
+
+      const documentObject = {
+        getElementById: (id) => elements.get(id) || null,
+        createElement: () => makeElement(),
+        addEventListener() {}
+      };
+      const windowObject = {
+        addEventListener() {}
+      };
+      const savedKeys = [];
+      const dirty = new Map([
+        ['sampleRegistry', true],
+        ['protocol', true]
+      ]);
+      const moduleRegistry = {
+        get(key) {
+          return {
+            hasUnsavedChanges: () => dirty.get(key) === true,
+            async saveUnsavedChanges() {
+              savedKeys.push(key);
+              dirty.set(key, false);
+              return true;
+            }
+          };
+        }
+      };
+      const responses = [];
+      const service = servicesModule.createUnsavedChangesService({
+        moduleRegistry,
+        api: {
+          onAppCloseRequested: () => () => {},
+          respondToAppClose: (action) => responses.push(action)
+        },
+        documentObject,
+        windowObject
+      });
+
+      service.handleCloseRequested();
+      assert.equal(elements.get('unsaved-changes-overlay').hidden, false);
+      assert.deepEqual(
+        elements.get('unsaved-changes-list').children.map((item) => item.textContent),
+        ['Sample', 'Protocol']
+      );
+
+      await service.saveAndQuit();
+
+      assert.deepEqual(savedKeys, ['sampleRegistry', 'protocol']);
+      assert.deepEqual(responses, ['quit']);
+      assert.equal(elements.get('unsaved-changes-overlay').hidden, true);
+    });
   }
 };

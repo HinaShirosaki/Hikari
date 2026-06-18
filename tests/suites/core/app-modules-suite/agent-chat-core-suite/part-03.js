@@ -285,7 +285,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });
@@ -514,7 +514,7 @@ test('paper rail quick prompts load a common prompt into the composer', () => {
   const prompt = 'Generate a step-by-step experimental protocol from this paper.';
   const quickPrompts = document.getElementById('agent-rail-quick-prompts');
   const messageInput = document.getElementById('agent-rail-message-input');
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window: {}
   });

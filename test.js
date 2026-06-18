@@ -130,7 +130,7 @@ const toolBox = loadEsmStyleModule(
   ]
 );
 const sequenceViewerInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+  path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
   {},
   [
     'normalizeSequenceText',
@@ -156,7 +156,7 @@ const sequenceViewerInternals = loadEsmStyleModule(
   ]
 );
 const gelAnalysisInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'gel-analysis.js'),
+  path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'public-api.js'),
   {},
   [
     'clamp',
@@ -195,7 +195,7 @@ const gelLaneTableInternals = loadEsmStyleModule(
   path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'lane-table.js')
 );
 const papersManagementInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'papers-management.js'),
+  path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'normalizers.js'),
   {},
   ['normalizePaperSummary']
 );

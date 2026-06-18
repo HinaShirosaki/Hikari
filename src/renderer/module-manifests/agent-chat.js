@@ -1,4 +1,4 @@
-import { initAgentChat } from '../modules/agent-chat.js';
+import { initAgentChat } from '../modules/agent-chat/index.js';
 
 function createAgentChatOptions({
   state,
@@ -8,13 +8,17 @@ function createAgentChatOptions({
   rendererServices,
   showView,
   views,
-  modules
+  modules,
+  rootDocument,
+  windowObject
 }) {
   return {
     state,
     persist,
     createId,
     safeText,
+    document: rootDocument,
+    windowObject,
     onNotebookEntriesChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged,
     onProtocolsChanged: () => {
       rendererServices.protocol.handleProtocolsChanged();

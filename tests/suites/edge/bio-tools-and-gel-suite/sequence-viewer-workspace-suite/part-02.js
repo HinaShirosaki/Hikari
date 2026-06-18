@@ -37,7 +37,7 @@ test('[EDGE] sequence-viewer library rows render only sequence names in the left
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   moduleWithDom.initSequenceViewer();
@@ -92,7 +92,7 @@ test('[EDGE] sequence-viewer hides input composer after successful load', () => 
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   moduleWithDom.initSequenceViewer();
@@ -194,7 +194,7 @@ test('[EDGE] sequence-viewer importing GenBank with features stores a temporary 
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   moduleWithDom.initSequenceViewer();
@@ -307,7 +307,7 @@ test('[EDGE] sequence-viewer importing a single GenBank record keeps it visible 
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   moduleWithDom.initSequenceViewer();

@@ -211,7 +211,7 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
     }
   };
 
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
     document,
     TextEncoder,
     btoa: btoaPolyfill,
@@ -422,7 +422,7 @@ test('protocol-management shows JSON import on create and hides it on edit', asy
   };
 
   let nextId = 0;
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
     document,
     TextEncoder,
     btoa: btoaPolyfill,

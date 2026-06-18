@@ -212,6 +212,19 @@
   font-size: 0.9rem;
 }
 
+.assay-conc-unit-input[type="text"] {
+  width: 88px;
+}
+
+.assay-fill-mode-select {
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-elevated);
+  color: var(--strong);
+  font-size: 0.9rem;
+}
+
 .assay-display-value {
   min-height: 41px;
   display: flex;

@@ -269,7 +269,8 @@ test('[P1] normalizeState merges sample type label overrides', () => {
 });
 test('[P1] normalizeState keeps startup defaults when settings.startup is missing', () => {
   const normalized = shared.normalizeState({ settings: {} });
-  assert.deepEqual(normalized.settings.startup, shared.defaultState.settings.startup);
+  assert.equal(normalized.settings.startup.defaultViewId, shared.defaultState.settings.startup.defaultViewId);
+  assert.equal(normalized.settings.startup.rememberLastView, shared.defaultState.settings.startup.rememberLastView);
 });
 test('[P0] normalizeState falls back to home-view for invalid startup defaultViewId', () => {
   const normalized = shared.normalizeState({

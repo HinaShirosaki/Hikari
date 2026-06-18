@@ -10,7 +10,8 @@ const conc = loadEsmStyleModule(path.join(root, 'src/renderer/modules/assay/conc
 const dilution = loadEsmStyleModule(path.join(root, 'src/renderer/modules/assay/serial-dilution-model.js'));
 
 const {
-  parseConcentrationMagnitude, formatConcentrationLabel, hasExplicitUnit, buildDilutionSeries
+  parseConcentrationMagnitude, formatConcentrationLabel, hasExplicitUnit,
+  buildDilutionSeries, buildInterpolatedSeries
 } = conc;
 
 // --- default unit fallback for bare numbers; inline unit always wins ---
@@ -38,6 +39,30 @@ assert.equal(
 );
 assert.equal(buildDilutionSeries('', 10, 4), null, 'no start value -> null');
 assert.equal(buildDilutionSeries('100 nM', 0, 4), null, 'non-positive factor -> null');
+
+// --- start/end interpolation, linear vs log ---
+assert.equal(
+  JSON.stringify(buildInterpolatedSeries({ startValue: '0', endValue: '100', count: 5, mode: 'linear' })),
+  JSON.stringify(['0', '25', '50', '75', '100']),
+  'linear range is evenly spaced (0 allowed)'
+);
+assert.equal(
+  JSON.stringify(buildInterpolatedSeries({ startValue: '1000', endValue: '10', count: 3, mode: 'log', axisUnit: 'nM' })),
+  JSON.stringify(['1000 nM', '100 nM', '10 nM']),
+  'log range is geometric and inherits the axis unit'
+);
+assert.equal(
+  buildInterpolatedSeries({ startValue: '1000', endValue: '0', count: 4, mode: 'log' }),
+  null,
+  'log range cannot include 0'
+);
+// mixed end units convert through magnitude; output is uniform in the start unit
+// (10 nM = 0.01 µM), midpoint 0.1 µM = 100 nM.
+assert.equal(
+  JSON.stringify(buildInterpolatedSeries({ startValue: '1 µM', endValue: '10 nM', count: 3, mode: 'log' })),
+  JSON.stringify(['1 µM', '0.1 µM', '0.01 µM']),
+  'log range across mixed units converts and uses one display unit'
+);
 
 // --- serial dilution converts a mixed stock unit against unit-less axis values ---
 const layout = [

@@ -94,7 +94,7 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   const viewer = moduleWithDom.initSequenceViewer({
@@ -152,7 +152,7 @@ test('[EDGE] sequence-viewer shows the AB1 chromatogram panel for an active sequ
     'sequence-viewer-alignment-trace-host'
   ]);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer({ document });

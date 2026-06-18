@@ -222,7 +222,7 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
       return confirmResult;
     }
   };
-  const papersModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'papers-management.js'), {
+  const papersModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'index.js'), {
     document,
     window
   });

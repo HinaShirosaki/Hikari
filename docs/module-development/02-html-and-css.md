@@ -38,7 +38,7 @@ So a module's HTML lives entirely inside `<section class="workspace-main">` as a
 
 Every view fragment in `ui/html/views/<id>-view.html` must:
 
-- be a single top-level `<section>` whose `id` matches the entry in `ui/config/html-order.json`,
+- be a single top-level `<section>` whose `id` matches the `viewId` in `ui/config/app-registry.json`,
 - carry `class="view"` (the `is-active` class is toggled by the navigation shell),
 - contain only that view's markup.
 
@@ -90,7 +90,7 @@ If your view is a single column (e.g. Home or a dashboard), drop the wrapper and
 
 ## Universal CSS layers
 
-`ui/config/css-order.json` builds `styles.css` in this order. Higher-numbered layers can override lower ones.
+`ui/config/css-order.json` supplies the shared prefix and suffix around view styles discovered from `app-registry.json`. Higher-numbered layers can override lower ones.
 
 | # | Layer | Purpose |
 | --- | --- | --- |
@@ -147,30 +147,18 @@ Exception: if your styles are general enough to belong everywhere (rare), put th
 
 ## Hooking into the build
 
-Once your two files exist:
+Once your two files exist, add the app entry and its `viewKey` to `ui/config/app-registry.json`, then place the key in `viewOrder`. The build resolves:
 
-1. Add the view to `ui/config/html-order.json` (preserve the rendering order; the order in the file is the order in `index.html`).
+- `ui/html/views/<viewId>.html`
+- `ui/css/views/<viewId>.css`
 
-   ```json
-   {
-     "id": "my-feature-view",
-     "file": "ui/html/views/my-feature-view.html"
-   }
-   ```
-
-2. Add the stylesheet to `ui/config/css-order.json` under `inputs`:
-
-   ```json
-   "ui/css/views/my-feature-view.css"
-   ```
-
-3. Run `npm run build:ui`. The script will regenerate `index.html`, `styles.css`, and the auto-generated JS. Confirm the output mentions all three.
+Run `npm run build:ui`. The script regenerates `index.html`, `styles.css`, `views.js`, and the generated config modules.
 
 If the build fails:
 
 - *"View file ... does not contain expected section id"* — your `<section>` id doesn't match the config entry.
 - *"Duplicate HTML id attributes detected"* — two elements (your view or another) share an `id`. Namespace.
-- *"Duplicate CSS input entry"* — you listed your CSS twice in `css-order.json`.
+- *"Duplicate CSS input entry"* — a shared prefix/suffix path or generated view stylesheet appears twice.
 
 `npm test` additionally runs `scripts/check-dom-ids.mjs`, which catches IDs that the renderer code references but the DOM never emits, and vice versa. Treat its output as part of the build.
 

@@ -8,11 +8,19 @@ import { createRecordsManager } from './records-manager.js';
 import { createRenderingController, selectViewerBaseImageData } from './rendering.js';
 import { createEmptyManualOverrides } from './shared.js';
 import { bindFileDropTarget } from '../file-drop.js';
+import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
 
 export { selectViewerBaseImageData };
 
-export function initGelAnalysis({ state, persist, createId, safeText, onGelAnalysesChanged }) {
-  const elements = getGelElements(document);
+export function initGelAnalysis({
+  state,
+  persist,
+  createId,
+  safeText,
+  onGelAnalysesChanged,
+  document: rootDocument = globalThis?.document || null
+}) {
+  const elements = getGelElements(rootDocument);
   const runtime = {
     createId,
     cropApplied: false,
@@ -36,8 +44,34 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     selectedLaneProfileLane: null,
     selectedViewerTool: '',
     state,
-    viewerMode: 'original'
+    viewerMode: 'original',
+    markDraftSaved: null
   };
+  let savedDraftSnapshot = '';
+
+  function getCurrentDraftSnapshot() {
+    return serializeDraftSnapshot({
+      controls: snapshotFormControls(elements.gelForm),
+      currentImage: runtime.currentImage
+        ? {
+          name: runtime.currentImage.name || '',
+          width: runtime.currentImage.width || 0,
+          height: runtime.currentImage.height || 0,
+          revision: runtime.imageRevision
+        }
+        : null,
+      currentReport: runtime.currentReport,
+      manualOverrides: runtime.manualOverrides,
+      cropApplied: runtime.cropApplied,
+      pendingNotebookLink: runtime.pendingNotebookLink
+    });
+  }
+
+  function markDraftSaved() {
+    savedDraftSnapshot = getCurrentDraftSnapshot();
+  }
+
+  runtime.markDraftSaved = markDraftSaved;
 
   function setStatus(message) {
     if (elements.gelStatus) {
@@ -235,6 +269,9 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     if (!runtime.currentImage) {
       rendering.renderCanvas();
     }
+    if (!savedDraftSnapshot) {
+      markDraftSaved();
+    }
   }
 
   function onRunAnalysis() {
@@ -266,8 +303,13 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   }
 
   return {
+    hasUnsavedChanges: () => Boolean(savedDraftSnapshot && getCurrentDraftSnapshot() !== savedDraftSnapshot),
     render,
     renderList: recordsManager.renderList,
+    saveUnsavedChanges: async () => {
+      const record = await recordsManager.onSaveAnalysis({ preventDefault() {} });
+      return Boolean(record) && getCurrentDraftSnapshot() === savedDraftSnapshot;
+    },
     startLinkedGel: recordsManager.startLinkedGel
   };
 }

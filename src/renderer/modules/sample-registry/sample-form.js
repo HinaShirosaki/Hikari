@@ -33,14 +33,14 @@ export async function onSubmit(ctx, event) {
   const name = sampleNameInput.value.trim();
   const code = normalizeCode(sampleCodeInput.value) || makeDefaultCode();
   if (!name) {
-    return;
+    return null;
   }
 
   const editingId = sampleIdInput.value;
   const existing = ctx.state.samples.find((item) => item.id === editingId);
   const duplicateCode = ctx.state.samples.find((item) => item.code === code && item.id !== editingId);
   if (duplicateCode) {
-    return;
+    return null;
   }
 
   const linkedContainer = findLinkedContainer(ctx, sampleLinkContainerInput?.value);
@@ -104,6 +104,7 @@ export async function onSubmit(ctx, event) {
   }
   resetForm(ctx);
   renderList(ctx);
+  return record;
 }
 
 export function resetForm(ctx) {
@@ -128,6 +129,7 @@ export function resetForm(ctx) {
   if (sampleSearchInput && ctx.clearSearchOnReset) {
     sampleSearchInput.value = '';
   }
+  ctx.markDraftSaved?.();
 }
 
 export function editSample(ctx, sampleId) {
@@ -164,6 +166,7 @@ export function editSample(ctx, sampleId) {
   renderCellPassageFields(ctx);
   renderCompoundFields(ctx);
   renderList(ctx);
+  ctx.markDraftSaved?.();
 }
 
 export function deleteSample(ctx, sampleId) {

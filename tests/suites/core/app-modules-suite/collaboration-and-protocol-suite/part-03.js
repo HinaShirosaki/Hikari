@@ -64,7 +64,7 @@ test('protocol-management keeps legacy string steps editable and viewable', () =
     settings: { personalInfo: { hikariEmail: '' } }
   };
 
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
     document,
     TextEncoder,
     btoa: btoaPolyfill

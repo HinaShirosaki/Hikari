@@ -11,7 +11,12 @@ import {
 } from '../modules/object-graph.js';
 import { APP_DOCK_ORDER, APP_REGISTRY } from '../modules/app-registry.generated.js';
 import { createRendererModuleRuntime } from '../module-runtime.js';
-import { createModuleRegistry, createRendererServices, createUndoService } from '../services/index.js';
+import {
+  createModuleRegistry,
+  createRendererServices,
+  createUndoService,
+  createUnsavedChangesService
+} from '../services/index.js';
 import { initSharedLeftRailResizers } from '../shared-left-rail.js';
 import { normalizeStateStoragePaths } from '../modules/storage-path-normalizer.js';
 import {
@@ -196,6 +201,7 @@ export function startHikariCore({
     apiBridge: windowObject.hikariApi || null,
     getApiBridge: () => windowObject.hikariApi || null,
     rootDocument: documentObject,
+    windowObject,
     onStoragePathSaved: async (storagePath, options = {}) => {
       const result = await storageImportController.runStorageRootImport(storagePath, {
         persistMergedState: true,
@@ -204,6 +210,13 @@ export function startHikariCore({
       renderAll();
       return result;
     }
+  });
+
+  createUnsavedChangesService({
+    moduleRegistry,
+    api: windowObject.hikariApi || null,
+    documentObject,
+    windowObject
   });
 
   navigationShell = createNavigationShell({

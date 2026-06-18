@@ -48,7 +48,7 @@ test('protocol-management keeps saved protocols unselected until the user opens 
     settings: { personalInfo: { hikariEmail: '' } }
   };
 
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
     document,
     TextEncoder,
     btoa: btoaPolyfill
@@ -173,7 +173,7 @@ test('protocol-management generates a protocol from the create editor overlay', 
     }
   }
 
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
     document,
     TextEncoder,
     FileReader: MockFileReader,
@@ -346,7 +346,7 @@ test('protocol-management import accepts external title/action schema without id
   };
 
   let nextId = 0;
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
     document,
     TextEncoder,
     btoa: btoaPolyfill,

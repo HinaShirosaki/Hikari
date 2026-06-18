@@ -102,7 +102,7 @@ export const myFeatureManifest = {
 ```
 
 ```js
-// inside protocol-management.js
+// inside protocol/index.js
 function saveProtocol(...) {
   // mutate state.protocols
   persist();

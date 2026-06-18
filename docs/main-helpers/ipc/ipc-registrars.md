@@ -2,14 +2,15 @@
 
 IPC registration lives in `src/main/ipc/` (it moved out of `src/main/helpers/main`). The goal is the same: keep `ipcMain.handle(...)` calls out of the boot file and group them by capability family.
 
-`src/main/core/start-hikari-main-core.js` calls one aggregator:
+The three registrar functions remain independently callable. The main service catalog invokes them from dependency-specific IPC adapter services:
 
 ```js
-const { registerMainIpc } = require('../ipc');
-registerMainIpc({ data, agent, system });
+registerDataIpc(dataDependencies);
+registerAgentIpc(agentDependencies);
+registerSystemIpc(systemDependencies);
 ```
 
-`ipc/index.js` fans that out to `registerDataIpc(data)`, `registerAgentIpc(agent)`, and `registerSystemIpc(system)`.
+`ipc/index.js` retains `registerMainIpc({ data, agent, system })` as a compatibility aggregator.
 
 ## Channel source of truth
 
@@ -75,7 +76,7 @@ Now a folder (`src/main/ipc/register-agent-ipc/`), not a single file. It is the 
 - `agent:logs:list-requests`, `agent:logs:replay`
 - plus the `agent-progress` one-way broadcast (main → renderer)
 
-`index.js` composes the handlers from `agent-lifecycle-service.js`, `agent-controller-core.js`, `agent-chat-handler.js`, and `agent-log-handlers.js`. Use the dedicated walkthrough at [doc/agent/architecture/request-lifecycle.md](../../agent/architecture/request-lifecycle.md) for the request flow.
+`index.js` composes the handlers from `agent-lifecycle-service.js`, `agent-controller-core.js`, `agent-chat-handler.js`, and `agent-log-handlers.js`. Use the dedicated walkthrough at [agent/architecture/request-lifecycle.md](../../agent/architecture/request-lifecycle.md) for the request flow.
 
 ## Practical takeaway
 

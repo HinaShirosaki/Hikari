@@ -3,7 +3,7 @@ module.exports = function registerAppAgentChatCoreSuitePart01(context = {}) {
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
 test('agent-chat maps assay experiment data with numeric summaries and preview caps', () => {
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'));
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'));
   const mapped = agentModule.mapExperimentDataToLlmJson({
     notebookEntries: [
       { id: 'n1', projectId: 'p1', protocolId: 'pr1', protocolName: 'Cell Prep', result: 'Done', updatedAt: '2026-01-01T00:00:00.000Z' }
@@ -80,7 +80,7 @@ test('agent-chat maps assay experiment data with numeric summaries and preview c
   assert.equal(assayRun.result_summary.preview.length, 12);
 });
 test('agent-chat maps gel experiment data with confidence, calibration, and warning caps', () => {
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'));
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'));
   const mapped = agentModule.mapExperimentDataToLlmJson({
     notebookEntries: [],
     assays: [],
@@ -333,7 +333,7 @@ test('agent-chat renders Codex user questions and returns option answers', async
       }
     }
   };
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });

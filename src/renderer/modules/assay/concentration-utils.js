@@ -98,6 +98,44 @@ export function formatConcentrationNumber(value) {
   return String(Number(value.toPrecision(4)));
 }
 
+// Scale of a unit relative to base units (e.g. 'nM' -> 1e-9); unknown/empty -> 1.
+export function unitScale(unit) {
+  return SCALE_MAP[normalizeUnit(unit)] || 1;
+}
+
+// Interpolated series of length `count` from `startValue` to `endValue` inclusive.
+// mode 'log' spaces geometrically (constant ratio, both ends must be > 0); 'linear'
+// spaces arithmetically. Values are converted through magnitudes so a different unit
+// on each end still interpolates correctly. Returns null on bad input.
+export function buildInterpolatedSeries({ startValue, endValue, count, mode, axisUnit = '' }) {
+  const startParts = splitConcentrationValue(startValue);
+  const endParts = splitConcentrationValue(endValue);
+  if (!startParts || !endParts || !(Number.isInteger(count) && count >= 2)) {
+    return null;
+  }
+  const startMagnitude = parseConcentrationMagnitude(startValue, axisUnit);
+  const endMagnitude = parseConcentrationMagnitude(endValue, axisUnit);
+  if (!Number.isFinite(startMagnitude) || !Number.isFinite(endMagnitude)) {
+    return null;
+  }
+  const isLog = mode === 'log';
+  if (isLog && !(startMagnitude > 0 && endMagnitude > 0)) {
+    return null;
+  }
+  const displayUnit = startParts.unit || endParts.unit || String(axisUnit || '').trim();
+  const suffix = displayUnit ? ` ${displayUnit}` : '';
+  const scale = unitScale(displayUnit);
+  const series = [];
+  for (let step = 0; step < count; step += 1) {
+    const t = step / (count - 1);
+    const magnitude = isLog
+      ? startMagnitude * ((endMagnitude / startMagnitude) ** t)
+      : startMagnitude + (endMagnitude - startMagnitude) * t;
+    series.push(`${formatConcentrationNumber(magnitude / scale)}${suffix}`);
+  }
+  return series;
+}
+
 // Serial-dilution series of length `count` starting at `startValue`, dividing by
 // `factor` each step. Keeps the start cell's unit suffix. Returns null on bad input.
 export function buildDilutionSeries(startValue, factor, count) {

@@ -25,7 +25,7 @@ This doc set explains how `src/main/helpers/agent` is assembled, how requests mo
 - chat-log persistence and lifecycle logging
 - reusable tool/runtime helpers
 
-The package is heavily dependency-injected. `src/main/core/start-hikari-main-core.js` builds the agent service bundle via `createMainAgentServices(...)` (`src/main/helpers/main/create-main-agent-services.js`), wires in provider adapters, and passes the finished objects as the `agent` argument of `registerMainIpc({ data, agent, system })`. The agent registrar itself lives in `src/main/ipc/register-agent-ipc/`.
+The package is heavily dependency-injected. `src/main/core/main-service-catalog.js` builds the provider-neutral agent foundation via `createMainAgentServices(...)`, then constructs MCP and Codex as separate services before exposing a completed controller facade to the agent IPC adapter. The agent registrar itself lives in `src/main/ipc/register-agent-ipc/`.
 
 ## High-level flow
 

@@ -1,4 +1,4 @@
-import { initSequenceViewer } from '../modules/sequence-viewer.js';
+import { initSequenceViewer } from '../modules/sequence-viewer/index.js';
 
 const SEQUENCE_VIEWER_DETAIL_VIEW_ID = 'sequence-viewer-detail-view';
 
@@ -34,7 +34,8 @@ export const sequenceViewerManifest = {
     showView,
     views,
     apiBridge,
-    getApiBridge
+    getApiBridge,
+    rootDocument
   }) => ({
     homeViewId: views.SEQUENCE_VIEWER,
     detailViewId: SEQUENCE_VIEWER_DETAIL_VIEW_ID,
@@ -47,8 +48,10 @@ export const sequenceViewerManifest = {
     state,
     persist,
     createId,
+    document: rootDocument,
     apiBridge,
     getApiBridge,
+    storagePath: String(state.settings?.storagePath || '').trim(),
     onNotebookEntriesChanged: () => {
       rendererServices.project.handleProjectsChanged();
       rendererServices.protocol.handleProtocolsChanged();

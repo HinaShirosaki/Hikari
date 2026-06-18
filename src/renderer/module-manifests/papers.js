@@ -1,4 +1,4 @@
-import { initPapersManagement } from '../modules/papers-management.js';
+import { initPapersManagement } from '../modules/papers/index.js';
 
 function openPaperAgentChatWithSelection({
   modules,
@@ -39,12 +39,15 @@ export const papersManifest = {
     safeText,
     rendererServices,
     modules,
-    rootDocument
+    rootDocument,
+    windowObject
   }) => ({
     state,
     persist,
     createId,
     safeText,
+    document: rootDocument,
+    window: windowObject,
     onCreateProtocolDraft: rendererServices.protocol.createDraftFromPaper,
     onActivePaperChanged: () => {
       modules?.agentChatRail?.render?.();

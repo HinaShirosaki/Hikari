@@ -20,6 +20,7 @@ export function createRendererModuleRuntime(config = {}) {
   const views = config?.views || {};
   const onStoragePathSaved = config?.onStoragePathSaved || (async () => {});
   const rootDocument = config?.rootDocument || globalThis?.document || null;
+  const windowObject = config?.windowObject || globalThis?.window || null;
   const apiBridge = config?.apiBridge || globalThis?.window?.hikariApi || globalThis?.hikariApi || null;
   const getApiBridge = typeof config?.getApiBridge === 'function'
     ? config.getApiBridge
@@ -31,7 +32,7 @@ export function createRendererModuleRuntime(config = {}) {
     createId,
     safeText,
     rootDocument,
-    windowObject: globalThis?.window || null
+    windowObject
   });
   const manifestContext = {
     state,
@@ -46,6 +47,7 @@ export function createRendererModuleRuntime(config = {}) {
     views,
     onStoragePathSaved,
     rootDocument,
+    windowObject,
     apiBridge,
     getApiBridge,
     modules,

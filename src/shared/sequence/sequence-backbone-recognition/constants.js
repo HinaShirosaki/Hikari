@@ -2,22 +2,20 @@
 
 const path = require('path');
 
-const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..', '..', '..');
+const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..', '..');
 const ORF_ANALYSIS_PATH = path.join(
   PROJECT_ROOT,
   'src',
-  'renderer',
-  'modules',
-  'sequence-viewer',
-  'orf-analysis.js'
+  'shared',
+  'sequence',
+  'orf-features.js'
 );
 const RESTRICTION_ANALYSIS_PATH = path.join(
   PROJECT_ROOT,
   'src',
-  'renderer',
-  'modules',
-  'sequence-viewer',
-  'restriction-analysis.js'
+  'shared',
+  'sequence',
+  'restriction-features.js'
 );
 const EXPORTED_STANDARD_FEATURES_PATH = path.join(
   PROJECT_ROOT,

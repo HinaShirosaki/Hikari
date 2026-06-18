@@ -23,6 +23,7 @@ function createMemoryStorage() {
 function loadEsmStyleModule(filePath, extraGlobals = {}, additionalExports = []) {
   const source = fs.readFileSync(filePath, 'utf8');
   const exportNames = new Set();
+  const declaredNames = new Set();
   const importGlobals = {};
   let importCounter = 0;
 
@@ -56,18 +57,56 @@ function loadEsmStyleModule(filePath, extraGlobals = {}, additionalExports = [])
   };
 
   let transformed = source
-    .replace(/^\s*import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]\s*;?\s*$/gm, (_match, names, specifier) => (
-      `const { ${names.trim()} } = ${buildImportExpression(specifier)};`
-    ))
-    .replace(/^\s*import\s+\*\s+as\s+([A-Za-z0-9_$]+)\s+from\s+['"]([^'"]+)['"]\s*;?\s*$/gm, (_match, name, specifier) => (
-      `const ${name} = ${buildImportExpression(specifier)};`
-    ))
-    .replace(/^\s*import\s+([A-Za-z0-9_$]+)\s+from\s+['"]([^'"]+)['"]\s*;?\s*$/gm, (_match, name, specifier) => (
-      `const ${name} = ${buildImportExpression(specifier)};`
-    ))
+    .replace(/^\s*import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"]\s*;?\s*$/gm, (_match, names, specifier) => {
+      const importedNames = names
+        .split(',')
+        .map((name) => name.trim())
+        .filter(Boolean);
+      importedNames.forEach((name) => {
+        const [sourceName, localName = sourceName] = name.split(/\s+as\s+/).map((value) => value.trim());
+        declaredNames.add(localName);
+      });
+      const destructuredNames = importedNames
+        .map((name) => name.replace(/\s+as\s+/, ': '))
+        .join(', ');
+      return `const { ${destructuredNames} } = ${buildImportExpression(specifier)};`;
+    })
+    .replace(/^\s*import\s+\*\s+as\s+([A-Za-z0-9_$]+)\s+from\s+['"]([^'"]+)['"]\s*;?\s*$/gm, (_match, name, specifier) => {
+      declaredNames.add(name);
+      return `const ${name} = ${buildImportExpression(specifier)};`;
+    })
+    .replace(/^\s*import\s+([A-Za-z0-9_$]+)\s+from\s+['"]([^'"]+)['"]\s*;?\s*$/gm, (_match, name, specifier) => {
+      declaredNames.add(name);
+      return `const ${name} = ${buildImportExpression(specifier)};`;
+    })
     .replace(/^\s*import\s+['"]([^'"]+)['"]\s*;?\s*$/gm, (_match, specifier) => (
       `${buildImportExpression(specifier)};`
     ))
+    .replace(/^\s*export\s*\{([^}]+)\}\s*from\s+['"]([^'"]+)['"]\s*;?\s*$/gm, (_match, names, specifier) => {
+      const importedBindings = [];
+      const aliases = [];
+      names
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .forEach((part) => {
+          const [sourceName, exportName = sourceName] = part.split(/\s+as\s+/).map((value) => value.trim());
+          exportNames.add(exportName);
+          if (declaredNames.has(sourceName)) {
+            if (sourceName !== exportName) {
+              declaredNames.add(exportName);
+              aliases.push(`const ${exportName} = ${sourceName};`);
+            }
+            return;
+          }
+          declaredNames.add(exportName);
+          importedBindings.push(sourceName === exportName ? sourceName : `${sourceName}: ${exportName}`);
+        });
+      const importStatement = importedBindings.length > 0
+        ? `const { ${importedBindings.join(', ')} } = ${buildImportExpression(specifier)};`
+        : '';
+      return [importStatement, ...aliases].filter(Boolean).join('\n');
+    })
     .replace(/^\s*export\s+(const|let|var)\s+([A-Za-z0-9_$]+)\s*=/gm, (match, _kind, name) => {
       exportNames.add(name);
       return match.replace('export ', '');
@@ -85,15 +124,21 @@ function loadEsmStyleModule(filePath, extraGlobals = {}, additionalExports = [])
       return match.replace('export ', '');
     })
     .replace(/^\s*export\s*\{([^}]+)\}\s*;?\s*$/gm, (_match, names) => {
+      const aliases = [];
       names
         .split(',')
         .map((part) => part.trim())
         .filter(Boolean)
         .forEach((part) => {
           const [left, right] = part.split(/\s+as\s+/);
-          exportNames.add((right || left).trim());
+          const sourceName = left.trim();
+          const exportName = (right || left).trim();
+          exportNames.add(exportName);
+          if (sourceName !== exportName) {
+            aliases.push(`const ${exportName} = ${sourceName};`);
+          }
         });
-      return '';
+      return aliases.join('\n');
     });
 
   additionalExports.forEach((name) => exportNames.add(name));

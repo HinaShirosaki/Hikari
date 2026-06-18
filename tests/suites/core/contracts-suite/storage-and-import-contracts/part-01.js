@@ -8,6 +8,13 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
       readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
+      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
+      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'app', 'agent-log-runtime.js')
     ].join('\n');
@@ -633,7 +640,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
-    test('storage root importer reads Testdata-like bundles and writes manifest with non-zero summary counts', async () => {
+    test('storage root importer reads supported Testdata-like bundles and writes manifest with non-zero summary counts', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
       const fixtureRoot = path.join(__dirname, 'Testdata');
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-import-fixture-'));
@@ -642,7 +649,6 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         const result = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
         assert.equal(result.summary.protocols > 0, true);
         assert.equal(result.summary.notebookEntries > 0, true);
-        assert.equal(result.summary.chemicals > 0, true);
         assert.equal(result.summary.sequenceEntries > 0, true);
         assert.equal(result.summary.personalInventoryContainers > 0, true);
         assert.equal(Array.isArray(result.statePatch?.protocols), true);

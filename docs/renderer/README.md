@@ -44,5 +44,5 @@ If `doc/main-helpers/` explains the main-process bridge, this folder explains th
 ## Important boundaries
 
 - `window.hikariApi` is the renderer-to-main bridge. For the main-process side of those calls, use [doc/main-helpers/README.md](../main-helpers/README.md).
-- The renderer-side Agent UI lives in `src/renderer/modules/agent-chat*`, but the actual agent backend is documented separately in [doc/agent/README.md](../agent/README.md).
+- The renderer-side Agent UI lives in `src/renderer/modules/agent-chat/`, but the actual agent backend is documented separately in [agent/README.md](../agent/README.md).
 - `src/renderer/modules/app-registry.generated.js` is generated from `ui/config/app-registry.json`, so dock layout, labels, aliases, and search-scope wiring start from config, not handwritten renderer code.

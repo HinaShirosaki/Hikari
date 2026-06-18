@@ -7,7 +7,7 @@ These are the internal architecture docs for Hikari, the local-first Electron la
 Hikari is an Electron app with two processes plus an agent backend:
 
 - **Renderer** (`src/renderer/`) — the browser-side single-page app. Feature workspaces are **folder modules** (`modules/<feature>/index.js`) registered through `module-manifests/`, glued together by a generated app registry, the renderer core, and a thin module runtime. Renderer state lives in `localStorage`; saves and storage-root hydration go through the `window.hikariApi` bridge.
-- **Main process** (`src/main/`) — `main.js` is a thin entry that defers to `core/start-hikari-main-core.js`. It owns persistence (compact snapshot + storage bundle + SQLite), the sequence library, the LLM runtime, paper/PDF/chemical import, and the Telegram bot. IPC registrars live in `src/main/ipc/` and are aggregated by `registerMainIpc({ data, agent, system })`. Channel names are centralized in `src/shared/ipc/channels.js`.
+- **Main process** (`src/main/`) — `main.js` is a thin entry that defers to the generic lifecycle in `core/start-hikari-main-core.js`; dependency composition lives in `core/main-service-catalog.js`. It owns persistence (compact snapshot + storage bundle + SQLite), the sequence library, the LLM runtime, paper/PDF/chemical import, and the Telegram bot. IPC registrars live in `src/main/ipc/` and are invoked by catalog IPC-adapter services. Channel names are centralized in `src/shared/ipc/channels.js`.
 - **Agent backend** (`src/main/helpers/agent/`) — the main-process assistant. Assembled by `createMainAgentServices(...)` and exposed through `src/main/ipc/register-agent-ipc/`. It is parser-first for most providers, with a dedicated Codex provider path, and a full tool suite registered on a shared executor.
 
 ## Doc sets
@@ -28,4 +28,4 @@ Hikari is an Electron app with two processes plus an agent backend:
 
 ## A note on generated files
 
-Some files under these docs are large generated exports, not hand-written — `agent/reference/agent-prompts.md` (`npm run export:agent-prompts`) and `agent/reference/agent-context-debug.md` (`npm run export:agent-context-debug`), plus the `agent/reference/json-schemas.md` schema dump. Treat them as build artifacts rather than editing by hand. Likewise, `index.html`, `styles.css`, and the `*.generated.js` modules come from `npm run build:ui`; edit their sources under `ui/` and `config/` instead.
+Some files under these docs are large generated exports, not hand-written — `agent/reference/agent-prompts.md` (`npm run export:agent-prompts`) and `agent/reference/agent-context-debug.md` (`npm run export:agent-context-debug`), plus the `agent/reference/json-schemas.md` schema dump. Treat them as build artifacts rather than editing by hand. Likewise, `index.html`, `styles.css`, `src/renderer/modules/views.js`, and the `*.generated.js` modules come from `npm run build:ui`; edit their sources under `ui/` and `config/` instead.

@@ -12,6 +12,6 @@ Current flow:
 
 1. `src/renderer/renderer.js` calls `startRendererApp()`.
 2. `src/renderer/app/start-renderer-app.js` remains a compatibility wrapper.
-3. `startHikariCore()` in `start-hikari-core.js` boots state, services, modules, storage, navigation, and search.
+3. `startHikariCore()` in `start-hikari-core.js` boots state, services, manifest-declared modules, storage, navigation, and search.
 
-The next natural step is to move the static entries in `src/renderer/module-runtime.js` into module declarations so core can register modules from a catalog instead of a handwritten switchboard.
+Module registration and route metadata live in `src/renderer/module-manifests/`; the core does not maintain a second feature switchboard.

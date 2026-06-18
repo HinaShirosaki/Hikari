@@ -9,9 +9,9 @@ Source-of-truth layout under the project root:
 ```
 ui/
   config/
-    html-order.json        # which view fragments compose index.html
-    css-order.json         # which stylesheets compose styles.css
-    app-registry.json      # dock entries (label, icon, viewId, aliases)
+    html-order.json        # shell fragments around generated views
+    css-order.json         # shared styles before/after generated view styles
+    app-registry.json      # canonical view order, ids, labels, icons, aliases
   html/
     shell/start.html       # everything before the first view
     shell/end.html         # everything after the last view
@@ -44,10 +44,10 @@ scripts/
 `npm run build:ui` runs `scripts/build-ui.mjs`, which:
 
 1. Reads `config/llm-providers.json` and writes `src/main/generated/llm-provider-config.generated.js` and `src/renderer/modules/llm-provider-config.generated.js`.
-2. Reads `ui/config/app-registry.json` and writes `src/renderer/modules/app-registry.generated.js`.
-3. Reads `ui/config/html-order.json`, concatenates `shell/start.html` + every view fragment + `shell/end.html`, and writes `index.html`.
-4. Reads `ui/config/css-order.json` and writes `styles.css` as a stack of `@import url(...)` lines pointing at `ui/css/...`.
-5. Validates: every view fragment contains a `<section id="<id>">` matching its config entry, no duplicate HTML `id=` attributes anywhere, no duplicate CSS input paths.
+2. Reads `ui/config/app-registry.json` and writes both `src/renderer/modules/app-registry.generated.js` and `src/renderer/modules/views.js`.
+3. Uses `app-registry.json.viewOrder` to place each declared view between the shell fragments from `ui/config/html-order.json`, then writes `index.html`.
+4. Inserts each declared view stylesheet between `prefixInputs` and `suffixInputs` from `ui/config/css-order.json`, then writes `styles.css`.
+5. Validates registry keys/order, view files and section IDs, duplicate HTML IDs, duplicate CSS paths, dock ordering, and icons.
 
 If any check fails the build aborts. There is no fallback to "best effort." This means a broken module will not silently ship.
 
@@ -103,7 +103,7 @@ You write only the markup specific to your view. The next page covers exactly wh
 
 There is one mutable state object created by `loadState()` and passed to every module by reference. Mutations happen in-place; persistence is explicit via the `persist()` callback (writes localStorage and, if `state.settings.storagePath` is set, autosaves to disk through `window.hikariApi.autoSaveDataFile`).
 
-`defaultState` in [src/renderer/modules/app-state.js](../../src/renderer/modules/app-state.js) defines every top-level key. If your module needs a new top-level field, add it there with a sensible default — every consumer derefs `state.<field>` directly with `?.` or `||` fallbacks, so missing keys leak silently.
+`defaultState` in [src/renderer/modules/app-state/defaults.js](../../src/renderer/modules/app-state/defaults.js) defines every top-level key; [state-normalizer.js](../../src/renderer/modules/app-state/state-normalizer.js) assembles loaded state. If your module needs a new top-level field, update both with a sensible default.
 
 `state.objectGraph` is rebuilt from the rest of the state on every `persist()` in the renderer core. Don't write to it manually.
 

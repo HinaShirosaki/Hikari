@@ -46,7 +46,9 @@ const STORAGE = Object.freeze({
 });
 
 const SYSTEM = Object.freeze({
-  OPEN_EXTERNAL_URL: 'system:open-external-url'
+  OPEN_EXTERNAL_URL: 'system:open-external-url',
+  APP_CLOSE_REQUESTED: 'system:app-close-requested',
+  APP_CLOSE_RESPONSE: 'system:app-close-response'
 });
 
 const INVENTORY = Object.freeze({

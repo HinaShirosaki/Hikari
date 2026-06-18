@@ -1,4 +1,4 @@
-import { initGelAnalysis } from '../modules/gel-analysis.js';
+import { initGelAnalysis } from '../modules/gel/index.js';
 
 export const gelManifest = {
   key: 'gel',
@@ -10,12 +10,14 @@ export const gelManifest = {
     persist,
     createId,
     safeText,
-    rendererServices
+    rendererServices,
+    rootDocument
   }) => ({
     state,
     persist,
     createId,
     safeText,
+    document: rootDocument,
     onGelAnalysesChanged: rendererServices.analysis.handleGelAnalysesChanged
   }),
   render: ({ modules }) => modules.gel.render()

@@ -1,4 +1,4 @@
-import { initProtocolManagement } from '../modules/protocol-management.js';
+import { initProtocolManagement } from '../modules/protocol/index.js';
 
 export const protocolManifest = {
   key: 'protocol',
@@ -12,7 +12,10 @@ export const protocolManifest = {
     safeText,
     rendererServices,
     trackGrowthEvent,
-    selectionInsightsController
+    selectionInsightsController,
+    rootDocument,
+    windowObject,
+    apiBridge
   }) => ({
     state,
     persist,
@@ -20,7 +23,16 @@ export const protocolManifest = {
     safeText,
     onProtocolsChanged: rendererServices.protocol.handleProtocolsChanged,
     trackGrowthEvent,
-    selectionInsightsController
+    selectionInsightsController,
+    __globals: {
+      document: rootDocument,
+      windowObject,
+      hikariApi: apiBridge,
+      navigator: windowObject?.navigator || globalThis?.navigator || null,
+      FileReader: windowObject?.FileReader || globalThis?.FileReader || null,
+      TextEncoder: windowObject?.TextEncoder || globalThis?.TextEncoder || null,
+      btoa: windowObject?.btoa || globalThis?.btoa || null
+    }
   }),
   render: ({ modules }) => {
     modules.protocol.renderShareTargets();

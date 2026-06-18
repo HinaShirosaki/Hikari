@@ -6,11 +6,11 @@ These are the renderer areas where the code is split into dedicated folders beca
 
 | Subsystem | Entry point | Approx. size | Mental model |
 | --- | --- | --- | --- |
-| `agent-chat/` | `modules/agent-chat.js` -> `agent-chat/index.js` | about 6.4k lines | chat UI plus session/context orchestration on top of main-process agent IPC |
+| `agent-chat/` | `modules/agent-chat/index.js` | about 6.4k lines | chat UI plus session/context orchestration on top of main-process agent IPC |
 | `assay/` | `modules/assay/index.js` | about 9.0k lines | plate-definition editor, result grid, and analysis views (incl. `analysis/`) |
-| `gel/` | `modules/gel-analysis.js` -> `gel/index.js` | about 6.4k lines | controller-orchestrated image pipeline: ingestion, preprocessing, guided manual lane/band segmentation, auto-detection, quantification, and export |
-| `papers/` | `modules/papers-management.js` -> `papers/index.js` | about 7.5k lines | library rail, PDF viewer, comments, paper actions, and LLM helpers |
-| `sequence-viewer/` | `modules/sequence-viewer.js` -> `sequence-viewer/index.js` | about 18.7k lines | file parsing, library storage, detailed sequence inspection, alignment, annotation, and analysis (incl. `algorithms/`) |
+| `gel/` | `modules/gel/index.js` | about 6.4k lines | controller-orchestrated image pipeline: ingestion, preprocessing, guided manual lane/band segmentation, auto-detection, quantification, and export |
+| `papers/` | `modules/papers/index.js` | about 7.5k lines | library rail, PDF viewer, comments, paper actions, and LLM helpers |
+| `sequence-viewer/` | `modules/sequence-viewer/index.js` | about 18.7k lines | file parsing, library storage, detailed sequence inspection, alignment, annotation, and analysis |
 | `workflow/` | `modules/workflow/index.js` | about 3.9k lines | workflow data model, graph editor, list rendering, and actions |
 | `tool-box/` | `modules/tool-box.js` | about 7.2k lines | many small calculator/analysis tools sharing one workspace shell |
 
@@ -38,7 +38,7 @@ Subfiles are split cleanly:
 - `notebook-drafts.js`: notebook-draft extraction, autosave, and proposal reconciliation
 - `developer-tools.js`: the developer-mode tool picker/hints
 
-This folder is the best example of a renderer module that is mostly orchestration around another subsystem documented elsewhere in [doc/agent/README.md](../../agent/README.md).
+This folder is the best example of a renderer module that is mostly orchestration around the agent subsystem documented elsewhere in [agent/README.md](../../agent/README.md).
 
 ## `assay/`
 
@@ -116,7 +116,7 @@ Additional viewer tools include **lane-vertices** (drag the four corners of a la
 5. Inspect the report, lane table, and per-lane intensity profiles.
 6. Save the normalized gel-analysis record and/or export JSON/CSV; optionally link it to a notebook page.
 
-`modules/gel-analysis.js` wraps the folder with both `initGelAnalysis(...)` and many pure helper re-exports, which is a hint that parts of the gel pipeline (calibration, clustering, interpretation) are used outside the view itself — for example by experiment-to-LLM mapping.
+Consumers that need gel calculations import the specific pure module (`analysis-core.js`, `image-processing.js`, or `shared.js`) instead of routing through the view entry.
 
 ## `papers/`
 
@@ -172,7 +172,9 @@ This is the largest renderer subsystem by a wide margin. Read it as several coop
 - align sequences
 - build proteins
 
-`modules/sequence-viewer.js` is also a wrapper layer. It injects the `window.hikariApi` bridge and re-exports many pure helpers for parsing, rendering, ORF generation, restriction analysis, and alignment.
+`modules/sequence-viewer/public-api.js` is the explicit secondary surface for parsing, rendering, ORF generation, restriction analysis, and alignment. The manifest imports `index.js` directly and supplies the API bridge and storage path as dependencies.
+
+Reusable plasmid annotation, ORF, restriction-site, and backbone-recognition algorithms live in `src/shared/sequence/` so main and renderer code depend on the same implementation.
 
 ## `workflow/`
 

@@ -1,4 +1,4 @@
-import { initAgentChat } from '../modules/agent-chat.js';
+import { initAgentChat } from '../modules/agent-chat/index.js';
 import { createPaperScopedAgentChatState } from '../modules/agent-chat/scoped-state.js';
 
 function createPaperContextGetter(state, modules) {
@@ -33,7 +33,9 @@ export const agentChatRailManifest = {
     rendererServices,
     showView,
     views,
-    modules
+    modules,
+    rootDocument,
+    windowObject
   }) => ({
     idPrefix: 'agent-rail',
     loadPersistentSessions: false,
@@ -43,6 +45,8 @@ export const agentChatRailManifest = {
     persist,
     createId,
     safeText,
+    document: rootDocument,
+    windowObject,
     onNotebookEntriesChanged: rendererServices.notebook.handleAgentNotebookEntriesChanged,
     onProtocolsChanged: () => {
       rendererServices.protocol.handleProtocolsChanged();

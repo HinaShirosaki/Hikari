@@ -1,15 +1,17 @@
 # Request Lifecycle
 
-This is the shortest path to understanding the agent package: start at `src/main/core/start-hikari-main-core.js`, then follow the call into `src/main/ipc/register-agent-ipc/`.
+This is the shortest path to understanding the agent package: start at `src/main/core/main-service-catalog.js`, then follow the `agent-foundation`, `mcp`, `codex`, `agent-controllers`, and `agent-ipc` definitions.
 
-## Assembly in the boot core
+## Assembly in the service catalog
 
-`main.js` is a thin 5-line entry. `src/main/core/start-hikari-main-core.js` assembles the agent backend by:
+`main.js` is a thin 5-line entry. The main service catalog assembles the agent backend by:
 
-- calling `createMainAgentServices(...)` (`src/main/helpers/main/create-main-agent-services.js`), which builds shared helpers such as `controllerUtils`, `observability`, `agentRuntimeRegistry`, and `agentRuntimeSupport`
+- calling `createMainAgentServices(...)` (`src/main/helpers/main/create-main-agent-services.js`), which builds provider-neutral helpers such as `controllerUtils`, `observability`, `agentRuntimeRegistry`, and `agentRuntimeSupport`
 - creating intent-specific runtimes such as lookup, protocol-notebook, notebook-draft, science-loop, and deep-research
 - creating the generic tool-call runtime and exposing it as `agentToolRuntime`
-- passing all of those objects as the `agent` argument of `registerMainIpc({ data, agent, system })`
+- constructing MCP from the shared tool executor
+- constructing Codex from the MCP service and shared agent foundation
+- passing the completed dependency bag directly to `registerAgentIpc(...)` from the `agent-ipc` adapter service
 
 That means `src/main/helpers/agent` is best read as a set of factories plus helper modules, not as a single monolithic controller.
 

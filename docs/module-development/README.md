@@ -21,16 +21,16 @@ A "module" in this codebase is the triple:
 | --- | --- |
 | **Markup** | one HTML fragment in `ui/html/views/<id>-view.html` |
 | **Styles** | one CSS file in `ui/css/views/<id>-view.css` |
-| **Logic** | one ES module in `src/renderer/modules/<name>.js` (or `<name>/index.js` when split) exporting `init<Name>(options)` |
+| **Logic** | one folder entry at `src/renderer/modules/<name>/index.js` exporting `init<Name>(options)` |
 
-Plus six small wiring edits:
+Plus three small wiring edits and one icon:
 
-1. `ui/config/html-order.json` — add the view fragment.
-2. `ui/config/css-order.json` — add the stylesheet.
-3. `ui/config/app-registry.json` — declare the dock entry (label, icon, viewId, aliases).
-4. `src/renderer/modules/views.js` — add the view ID constant and a subtitle in `VIEWS` / `TITLES`.
-5. `src/renderer/module-manifests/<name>.js` — declare your `init<Name>`, registry key, options factory, and optional render hooks.
-6. `assets/icons/<icon>.svg` — drop in the dock icon SVG referenced by the registry entry.
+1. `ui/config/app-registry.json` — declare the view key/id, order, dock entry, subtitle, icon, and aliases.
+2. `src/renderer/module-manifests/<name>.js` — declare your `init<Name>`, registry key, options factory, and optional render hooks.
+3. `src/renderer/module-manifests/index.js` — export the manifest in the appropriate family.
+4. `assets/icons/<icon>.svg` — add the SVG referenced by the registry entry.
+
+The UI build discovers the matching HTML and CSS from the registry and generates `modules/views.js`; neither generated output is edited by hand.
 
 Then run `npm run build:ui` and start the app. The full recipe with snippets is in [04-adding-a-new-module.md](./04-adding-a-new-module.md).
 

@@ -67,8 +67,8 @@ The biology-specific local library: SQLite/file storage, entry CRUD, feature sea
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `create-main-agent-services.js` | Main path | builds the main-process agent service bundle (LLM bridge, providers) |
-| `agent-mcp-initializer.js` | Support | initializes Codex/official MCP skills for the agent |
+| `create-main-agent-services.js` | Main path | builds the provider-neutral agent foundation (LLM bridge, tools, controllers) |
+| `agent-mcp-initializer.js` | Support | initializes runtime configuration and official skills for the separate MCP service |
 
 ## PDF, paper, and chemical import
 
@@ -94,18 +94,19 @@ IPC registration no longer lives in this folder. See [ipc-registrars.md](../ipc/
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `ipc/index.js` | Main path | `registerMainIpc({ data, agent, system })` aggregates the three registrars |
+| `ipc/index.js` | Compatibility | retains the three-registrar aggregator; the main service catalog invokes each registrar directly |
 | `ipc/register-data-ipc.js` | Main path | renderer data/storage/sequence endpoints |
 | `ipc/register-system-ipc.js` | Main path | Codex CLI and Telegram configuration endpoints |
-| `ipc/register-agent-ipc/` | Main path | agent IPC subsystem (chat handler, session/lifecycle services, intent dispatcher); runtime documented in [doc/agent/](../../agent/README.md) |
+| `ipc/register-agent-ipc/` | Main path | agent IPC subsystem (chat handler, session/lifecycle services, intent dispatcher); runtime documented in [agent/](../../agent/README.md) |
 
 ## Good entry points
 
 If you want to read the code after this doc set, start here:
 
-1. `src/main/core/start-hikari-main-core.js` (boot + `registerMainIpc(...)`)
-2. `src/main/ipc/register-data-ipc.js`
-3. `src/main/helpers/main/data/data-helpers.js`
-4. `src/main/helpers/main/storage-bundle/index.js`
+1. `src/main/core/start-hikari-main-core.js` (generic lifecycle)
+2. `src/main/core/main-service-catalog.js` (service and IPC composition)
+3. `src/main/ipc/register-data-ipc.js`
+4. `src/main/helpers/main/data/data-helpers.js`
+5. `src/main/helpers/main/storage-bundle/index.js`
 
 Then move to `sequence-library/` only if you need the biology-specific library behavior.

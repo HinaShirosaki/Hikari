@@ -12,6 +12,7 @@ import { createProtocolListController } from './list.js';
 import { createProtocolPolishController } from './polish.js';
 import { createProtocolGenerationController } from './generation.js';
 import { createProtocolEditorHelpers } from './editor-utils.js';
+import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
 
 export function initProtocolManagement({
   state,
@@ -65,6 +66,24 @@ export function initProtocolManagement({
   let importController = null;
   let polishController = null;
   let generationController = null;
+  let savedDraftSnapshot = '';
+  let draftRequiresSave = false;
+
+  function getCurrentDraftSnapshot() {
+    if (localState.protocolDetailMode !== 'edit') {
+      return '';
+    }
+    return serializeDraftSnapshot({
+      draftId: localState.currentProtocolDraft.id || '',
+      isCreateMode: localState.isCreateEditorMode,
+      controls: snapshotFormControls(ui.protocolForm)
+    });
+  }
+
+  function markDraftSaved() {
+    savedDraftSnapshot = getCurrentDraftSnapshot();
+    draftRequiresSave = false;
+  }
 
   function cloneSelectionInsights(insights) {
     try {
@@ -199,6 +218,8 @@ export function initProtocolManagement({
     previewHelpers.populateEditorFormFromDraft(ui, localState.currentProtocolDraft);
     generationController?.syncProtocolGenerateButtonVisibility();
     showEditorPanel();
+    markDraftSaved();
+    draftRequiresSave = options.requiresSave === true;
     ui.protocolNameInput?.focus();
   }
 
@@ -336,7 +357,7 @@ export function initProtocolManagement({
 
     const editorDraft = editorHelpers.buildDraftFromEditorInputs();
     if (!editorDraft.name || !editorDraft.steps.length) {
-      return;
+      return null;
     }
 
     const nowIso = new Date().toISOString();
@@ -368,6 +389,8 @@ export function initProtocolManagement({
     onProtocolsChanged?.();
     resetEditorDraft();
     showViewPanel();
+    markDraftSaved();
+    return protocol;
   }
 
   function addDraftFromExtractedMethod(method, source) {
@@ -395,7 +418,7 @@ export function initProtocolManagement({
       materials,
       steps: convertedSteps,
       troubleshooting
-    }, 'Create Protocol', { isCreateMode: true });
+    }, 'Create Protocol', { isCreateMode: true, requiresSave: true });
     return true;
   }
 
@@ -637,10 +660,19 @@ export function initProtocolManagement({
   });
 
   return {
-    renderShareTargets: sharingController.renderShareTargets,
-    renderList: listController.renderList,
-    editProtocol,
     addDraftFromExtractedMethod,
-    importProtocolsFromJson: importController.importProtocolsFromJson
+    editProtocol,
+    hasUnsavedChanges: () => Boolean(
+      localState.protocolDetailMode === 'edit'
+      && savedDraftSnapshot
+      && (draftRequiresSave || getCurrentDraftSnapshot() !== savedDraftSnapshot)
+    ),
+    importProtocolsFromJson: importController.importProtocolsFromJson,
+    renderList: listController.renderList,
+    renderShareTargets: sharingController.renderShareTargets,
+    saveUnsavedChanges: async () => {
+      const protocol = onProtocolSubmit({ preventDefault() {} });
+      return Boolean(protocol) && localState.protocolDetailMode !== 'edit';
+    }
   };
 }

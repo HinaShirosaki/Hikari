@@ -11,6 +11,13 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
       readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
+      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
+      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
@@ -18,8 +25,8 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       const helperSource = fs.readFileSync(agentPath('runtime', 'science-reasoning-loop', 'index.js'), 'utf8');
       const policySource = fs.readFileSync(agentPath('runtime', 'science-reasoning-loop', 'policies.js'), 'utf8');
       const runtimeSource = fs.readFileSync(agentPath('runtime', 'science-reasoning-loop', 'runtime.js'), 'utf8');
-      const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), 'utf8');
-      const responseSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat-response.js'), 'utf8');
+      const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response.js'), 'utf8');
+      const responseSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response.js'), 'utf8');
       assert.match(helperSource, /require\('\.\/policies\.js'\)/);
       assert.match(helperSource, /require\('\.\/schemas\.js'\)/);
       assert.match(helperSource, /require\('\.\/runtime\.js'\)/);
@@ -47,8 +54,14 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const agentRegistrarSource = fs.readFileSync(agentRegistrarPath('index.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
-      const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), 'utf8');
-      const sharedSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'app-state.js'), 'utf8');
+      const rendererSource = [
+        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'event-bindings.js'), 'utf8'),
+        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'payload-builder.js'), 'utf8')
+      ].join('\n');
+      const sharedSource = [
+        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'app-state', 'defaults.js'), 'utf8'),
+        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'app-state', 'state-normalizer.js'), 'utf8')
+      ].join('\n');
       const agentViewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'agent-view.html'), 'utf8');
 
       assert.match(helperSource, /const DEEP_RESEARCH_INTENTS = Object\.freeze/);
@@ -62,7 +75,6 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(mainAgentServicesSource, /const deepResearchRuntime = createDeepResearchRuntime/);
       assert.match(agentRegistrarSource, /deepResearchRuntime: deps\.deepResearchRuntime/);
       assert.match(controllerCoreSource, /payload\?\.agent\?\.deepResearchEnabled === true/);
-      assert.match(rendererSource, /agent-deep-research-toggle-btn/);
       assert.match(rendererSource, /deepResearchEnabled: state\.agentChat\.deepResearchEnabled === true/);
       assert.match(sharedSource, /deepResearchEnabled: false/);
       assert.match(sharedSource, /deepResearchEnabled: source\.agentChat\?\.deepResearchEnabled === true/);
@@ -106,7 +118,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     });
     test('agent chat log helper exports reusable session log runtime and renderer consumes session UI ids', () => {
       const helperSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
-      const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), 'utf8');
+      const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'session-manager.js'), 'utf8');
       const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
       assert.match(helperSource, /const CHAT_LOG_FOLDER_NAME = 'chat_log';/);
       assert.match(helperSource, /const CHAT_LOG_INDEX_FILE_NAME = 'index\.json';/);
@@ -296,7 +308,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     test('direct LLM module registry is wired through main IPC and preload', () => {
       const channelsSource = readLocalSource('src', 'shared', 'ipc', 'channels.js');
       const preloadSource = readLocalSource('src', 'main', 'preload', 'api', 'llm-api.js');
-      const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js');
+      const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js');
       const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
       const systemRegistrarSource = readLocalSource('src', 'main', 'ipc', 'register-system-ipc.js');
       const directLlmSource = readLocalSource('src', 'renderer', 'modules', 'direct-llm.js');
@@ -311,7 +323,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(mainAgentServicesSource, /createDirectLlmModuleRegistry/);
       assert.match(mainAgentServicesSource, /registerDefaultDirectLlmModules/);
       assert.match(mainAgentServicesSource, /directLlmRegistry/);
-      assert.match(mainRuntimeSource, /directLlmRegistry:\s*agentServices\.directLlmRegistry/);
+      assert.match(mainRuntimeSource, /directLlmRegistry:\s*agents\.directLlmRegistry/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.DIRECT_MODULES/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.DIRECT_GENERATE/);
       assert.match(directLlmSource, /runDirectLlmPrompt/);

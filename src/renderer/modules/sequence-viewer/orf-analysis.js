@@ -1,4 +1,5 @@
 import { translateDnaCodon } from '../tool-box/sequence.js';
+import * as sharedOrfFeatures from '../../../shared/sequence/orf-features.js';
 import {
   DEFAULT_MIN_ORF_AA_LENGTH,
   ORF_START_CODONS,
@@ -177,87 +178,7 @@ function detectOrfHitsForSequence(sequence, topology, minNtLength, stopCodons = 
 }
 
 export function buildOrfFeatures(sequence, topology = 'linear', options = {}) {
-  const text = normalizeSequenceText(sequence).replace(/[^ACGT]/g, 'N');
-  const sequenceLength = text.length;
-  if (!sequenceLength) {
-    return [];
-  }
-
-  const minAaLength = Math.max(1, Math.floor(Number(options?.minAaLength) || DEFAULT_MIN_ORF_AA_LENGTH));
-  const minNtLength = Math.max(6, (minAaLength + 1) * 3);
-  const normalizedTopology = normalizeTopology(topology);
-  const stopCodonSelection = normalizeOrfStopCodonSelection(options?.stopCodons);
-  const activeStopCodons = buildStopCodonSet(stopCodonSelection);
-  const forwardHits = detectOrfHitsForSequence(text, normalizedTopology, minNtLength, activeStopCodons);
-  const reverseSequence = reverseComplementIupac(text).replace(/[^ACGT]/g, 'N');
-  const reverseHits = detectOrfHitsForSequence(reverseSequence, normalizedTopology, minNtLength, activeStopCodons);
-  const dedupe = new Set();
-  const features = [];
-
-  const pushFeature = (hit, strand) => {
-    const hitLength = Math.max(0, Number(hit?.length) || 0);
-    if (hitLength <= 0) {
-      return;
-    }
-
-    let genomicStart = 0;
-    if (strand === 1) {
-      genomicStart = Number(hit?.start) || 0;
-    } else {
-      genomicStart = positiveModulo(sequenceLength - ((Number(hit?.start) || 0) + hitLength), sequenceLength);
-    }
-
-    const segments = buildSegmentsFromStartAndLength(genomicStart, hitLength, sequenceLength, normalizedTopology);
-    if (!segments.length) {
-      return;
-    }
-
-    const frameIndex = Math.max(0, Math.min(2, Number(hit?.frame) || 0));
-    const frameLabel = `${strand === -1 ? '-' : '+'}${frameIndex + 1}`;
-    const stopCodon = String(hit?.stopCodon || '').toUpperCase();
-    const aaLength = Math.max(0, Math.floor(hitLength / 3) - 1);
-    const segmentKey = segments.map((segment) => `${segment.start}-${segment.end}`).join(',');
-    const dedupeKey = `${strand}|${frameLabel}|${segmentKey}|${stopCodon}`;
-    if (dedupe.has(dedupeKey)) {
-      return;
-    }
-    dedupe.add(dedupeKey);
-
-    features.push({
-      id: `orf_${strand === -1 ? 'minus' : 'plus'}_${frameIndex + 1}_${segments[0].start}_${hitLength}`,
-      name: `ORF ${frameLabel}`,
-      type: 'open_reading_frame',
-      strand,
-      description: `Predicted ORF (${aaLength} aa, ${hitLength} nt, frame ${frameLabel}, start ATG${stopCodon ? `, stop ${stopCodon}` : ''}).`,
-      source: 'orf',
-      mode: 'ORF',
-      orfFrame: frameLabel,
-      orfLengthNt: hitLength,
-      orfLengthAa: aaLength,
-      startCodon: 'ATG',
-      stopCodon,
-      segments
-    });
-  };
-
-  forwardHits.forEach((hit) => pushFeature(hit, 1));
-  reverseHits.forEach((hit) => pushFeature(hit, -1));
-
-  const sorted = features.sort((left, right) => {
-    const leftStart = left.segments?.[0]?.start ?? 0;
-    const rightStart = right.segments?.[0]?.start ?? 0;
-    if (leftStart !== rightStart) {
-      return leftStart - rightStart;
-    }
-    const leftLength = Math.max(0, Number(left.orfLengthNt) || 0);
-    const rightLength = Math.max(0, Number(right.orfLengthNt) || 0);
-    if (leftLength !== rightLength) {
-      return rightLength - leftLength;
-    }
-    return String(left.name || '').localeCompare(String(right.name || ''));
-  });
-
-  return collapseNestedOrfFeatures(sorted, sequenceLength);
+  return sharedOrfFeatures.buildOrfFeatures(sequence, topology, options);
 }
 
 function collapseNestedOrfFeatures(features, sequenceLength) {

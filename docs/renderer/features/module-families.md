@@ -7,7 +7,7 @@ This doc explains how renderer feature modules are grouped and what shape they s
 The renderer has largely finished migrating from single-file controllers to **folder modules**. Today almost every workspace lives in `modules/<feature>/` with an `index.js` entry, and only a handful of thin top-level files remain.
 
 - **Folder module** (`modules/<feature>/index.js`): the entry is usually an orchestrator that captures DOM nodes, builds sub-controllers, wires events, and exposes a compact API (`render()`, `renderList()`, ...). `gel/`, `assay/`, `papers/`, `sequence-viewer/`, `workflow/`, and the inventory/notebook folders all follow this.
-- **Thin top-level orchestrator** that delegates to a folder: e.g. `home-dashboard.js` (179 lines) wires the widgets under `home-dashboard/`; `tool-box.js` composes the mini-tools under `tool-box/`. Some folder modules also keep a top-level **wrapper** (`agent-chat.js`, `papers-management.js`, `gel-analysis.js`, `protocol-management.js`, `sequence-viewer.js`) that exists only to give manifests and tests a stable import anchor.
+- **Thin top-level orchestrator** that delegates to a folder: e.g. `home-dashboard.js` wires the widgets under `home-dashboard/`; `tool-box.js` composes the mini-tools under `tool-box/`. Conventional folder features are imported directly from their `index.js`; only deliberate secondary APIs, such as `sequence-viewer/public-api.js`, get another entry point.
 
 ## The shared module contract
 
@@ -23,7 +23,7 @@ Modules do **not** own their own persistence; `persist()` rebuilds the object gr
 
 ## Manifest families
 
-`module-manifests/index.js` is the source of truth for which workspaces exist and how they are grouped. The manifests are organized into six families and merged into `rendererModuleManifests`:
+`app-registry.json` is the source of truth for user-facing views and order. `module-manifests/index.js` is the source of truth for how feature controllers initialize and render; its declarations are organized into six families and merged into `rendererModuleManifests`:
 
 | Family | Manifests | Theme |
 | --- | --- | --- |
@@ -60,7 +60,7 @@ Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), a
 | `buffer-compounds.js`, `common-promoters.js` | reference datasets for toolbox and sequence features |
 | `app-registry.generated.js`, `llm-provider-config.generated.js` | generated shell configuration and LLM provider catalog |
 
-> The standalone `commercial-restriction-enzymes.js` catalog is gone; restriction-enzyme data now lives in `modules/sequence-viewer/restriction-analysis.js`.
+The generated commercial restriction-enzyme catalog lives in `src/shared/data/commercial-restriction-enzymes.js`; process-neutral restriction detection lives in `src/shared/sequence/restriction-features.js`.
 
 ## Reading advice
 

@@ -120,6 +120,36 @@
   width: min(var(--app-dialog-width), 100%);
 }
 
+.unsaved-changes-dialog.app-dialog-surface {
+  --app-dialog-width: 520px;
+  --app-dialog-padding: 20px;
+  --app-dialog-gap: 14px;
+}
+
+.unsaved-changes-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unsaved-changes-list li {
+  padding: 9px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--surface-subtle);
+  color: var(--strong);
+}
+
+.unsaved-changes-actions {
+  justify-content: flex-end;
+}
+
+.unsaved-changes-dialog [role="status"].is-error {
+  color: var(--danger);
+}
+
 body.theme-night .app-dialog-overlay {
   background: var(--night-overlay);
 }

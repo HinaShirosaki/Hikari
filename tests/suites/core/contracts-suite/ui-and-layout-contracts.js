@@ -8,6 +8,13 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
       readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
+      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
+      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
@@ -176,7 +183,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
     test('sequence viewer uses bottom feature track without table dependency', () => {
       const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-      const viewerSource = readSource('src/renderer/modules/sequence-viewer.js');
+      const viewerSource = readSource('src/renderer/modules/sequence-viewer/public-api.js');
       assert.match(html, /id="sequence-viewer-feature-rail-host"/);
       assert.match(html, /id="sequence-viewer-feature-detail"/);
       assert.equal(html.includes('sequence-viewer-feature-table-body'), false);
@@ -230,7 +237,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('sequence viewer map preview renderer omits metadata text overlays', () => {
-      const source = readSource('src/renderer/modules/sequence-viewer.js');
+      const source = readSource('src/renderer/modules/sequence-viewer/public-api.js');
       assert.equal(source.includes('sequence-viewer-preview-meta'), false);
       assert.equal(source.includes('toLocaleString()} bp</text>'), false);
       assert.equal(source.includes("normalizeTopology(record?.topology || 'linear'))}</text>"), false);

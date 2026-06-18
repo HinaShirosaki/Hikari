@@ -107,17 +107,38 @@
               </datalist>
             </label>
             <label class="assay-conc-unit-field">
-              Dilution ÷
-              <input
-                type="number"
-                id="assay-dilution-factor"
-                class="assay-conc-unit-input"
-                min="0"
-                step="any"
-                placeholder="e.g. 10"
-              />
+              Fill
+              <select id="assay-fill-mode" class="assay-fill-mode-select">
+                <option value="factor">Dilution &divide;</option>
+                <option value="linear">Linear</option>
+                <option value="log">Log</option>
+              </select>
             </label>
-            <button type="button" id="assay-dilution-fill-btn" class="ghost-btn">Fill Series</button>
+            <input
+              type="number"
+              id="assay-dilution-factor"
+              class="assay-conc-unit-input"
+              min="0"
+              step="any"
+              placeholder="factor e.g. 10"
+            />
+            <input
+              type="text"
+              id="assay-fill-start"
+              class="assay-conc-unit-input"
+              placeholder="start"
+              autocomplete="off"
+              hidden
+            />
+            <input
+              type="text"
+              id="assay-fill-end"
+              class="assay-conc-unit-input"
+              placeholder="end"
+              autocomplete="off"
+              hidden
+            />
+            <button type="button" id="assay-dilution-fill-btn" class="ghost-btn">Fill</button>
             <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
             <button type="button" id="assay-serial-dilution-btn" class="ghost-btn">Serial Dilution</button>
           </div>

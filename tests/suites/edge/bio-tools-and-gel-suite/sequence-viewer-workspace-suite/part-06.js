@@ -150,7 +150,7 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   const viewer = moduleWithDom.initSequenceViewer();
@@ -273,7 +273,7 @@ test('[EDGE] sequence-viewer annotate button adds SQL DNA and CDS features to th
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   const viewer = moduleWithDom.initSequenceViewer();
@@ -313,7 +313,7 @@ test('[EDGE] sequence-viewer keeps the sequencing alignment workspace hidden unt
     'sequence-viewer-alignment-status'
   ]);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer();
@@ -356,7 +356,7 @@ test('[EDGE] sequence-viewer sequencing alignment workspace loads multi-record i
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer();

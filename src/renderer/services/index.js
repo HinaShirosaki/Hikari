@@ -6,6 +6,7 @@ import { createInventoryService } from './inventoryService.js';
 import { createAnalysisService } from './analysisService.js';
 import { createSequenceService } from './sequenceService.js';
 import { createUndoService } from './undoService.js';
+import { createUnsavedChangesService } from './unsavedChangesService.js';
 
 export {
   createModuleRegistry,
@@ -15,7 +16,8 @@ export {
   createInventoryService,
   createAnalysisService,
   createSequenceService,
-  createUndoService
+  createUndoService,
+  createUnsavedChangesService
 };
 
 export function createRendererServices(registry, options = {}) {
