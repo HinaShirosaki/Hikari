@@ -122,7 +122,7 @@
 
 .chem-mw-table th,
 .chem-mw-table td {
-  border: 1px solid var(--palette-rgba-255-255-255-a72);
+  border: 1px solid var(--palette-rgba-255-255-255-a7);
   padding: 6px 8px;
   text-align: left;
 }
@@ -167,15 +167,15 @@ body.ui-neutral-compact .chem-mw-table tr:last-child td {
 
 body.ui-neutral-compact .reaction-number,
 body.ui-neutral-compact .inline-placeholder-token {
-  background: var(--palette-slate-50);
-  border-color: var(--palette-slate-300);
+  background: var(--surface-subtle);
+  border-color: var(--line);
   color: var(--palette-slate-850);
 }
 
 body.ui-neutral-compact.theme-night .reaction-number,
 body.ui-neutral-compact.theme-night .inline-placeholder-token {
   background: var(--palette-slate-850);
-  border-color: var(--palette-slate-600);
+  border-color: var(--line);
   color: var(--text);
 }
 

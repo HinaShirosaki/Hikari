@@ -25,7 +25,8 @@ export const installPdfViewerEventsController = (ctx) => {
     selectionSearchNextBtn,
     selectionCommentSaveBtn,
     selectionCommentCancelBtn,
-    selectionCommentText
+    selectionCommentText,
+    highlightCommentPopover
   } = elements;
 
   function bindEvents() {
@@ -107,7 +108,12 @@ export const installPdfViewerEventsController = (ctx) => {
     pageLayer?.addEventListener('click', ctx.handleOverlayClick);
     pageLayer?.addEventListener('pointerdown', ctx.handleTextSelectionPointerDown);
     pageLayer?.addEventListener('pointermove', ctx.handleHighlightHover, { passive: true });
-    pageLayer?.addEventListener('pointerleave', ctx.hideHighlightCommentPopover);
+    pageLayer?.addEventListener('pointerleave', ctx.handleHighlightPageLeave);
+    highlightCommentPopover?.addEventListener('pointerenter', ctx.handleHighlightPopoverEnter);
+    highlightCommentPopover?.addEventListener('pointerleave', ctx.handleHighlightPopoverLeave);
+    highlightCommentPopover?.addEventListener('click', (event) => {
+      void ctx.handleHighlightPopoverClick(event);
+    });
 
     const win = ctx.getWindowRef();
     const doc = ctx.getDocumentRef();

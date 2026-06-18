@@ -28,6 +28,7 @@ import {
 import { createInventorySamplePicker } from './inventory-sample-picker.js';
 import { createSerialDilutionController } from './serial-dilution.js';
 import { buildPlatePreviewHtml } from './plate-preview-renderer.js';
+import { buildDilutionSeries } from './concentration-utils.js';
 
 export function createAssayLayoutManager({
   runtime,
@@ -43,6 +44,9 @@ export function createAssayLayoutManager({
     assayConcentrationAxisColumnBtn,
     assayConcentrationAxisInput,
     assayConcentrationAxisRowBtn,
+    assayConcentrationUnitInput,
+    assayDilutionFactorInput,
+    assayDilutionFillBtn,
     assayImportFile,
     assayNumberDisplay,
     assayPlateDefinition,
@@ -62,6 +66,57 @@ export function createAssayLayoutManager({
 
   function getCurrentDefinition() {
     return getPlateDefinition(assayPlateTypeInput?.value);
+  }
+
+  function getConcentrationUnit() {
+    return String(runtime.concentrationUnit || '').trim();
+  }
+
+  function setConcentrationUnit(value) {
+    runtime.concentrationUnit = String(value || '').trim();
+    if (assayConcentrationUnitInput) {
+      assayConcentrationUnitInput.value = runtime.concentrationUnit;
+    }
+  }
+
+  function onConcentrationUnitInput() {
+    runtime.concentrationUnit = String(assayConcentrationUnitInput?.value || '').trim();
+    renderPlatePreview();
+    if (serialDilution.isOpen()) {
+      serialDilution.render();
+    }
+  }
+
+  // Fill the concentration axis as a serial dilution: first cell is the start, each
+  // following column/row = previous / factor.
+  function autoFillConcentrationSeries() {
+    const factor = Number(assayDilutionFactorInput?.value);
+    if (!(Number.isFinite(factor) && factor > 0)) {
+      setLayoutStatus('Enter a positive dilution factor to auto-fill concentrations.');
+      return;
+    }
+    const values = getAxisTemplateValues();
+    const concentrationValues = values.concentrationValues.slice();
+    if (concentrationValues.length < 2) {
+      setLayoutStatus('The concentration axis needs at least two positions to fill a dilution series.');
+      return;
+    }
+    const series = buildDilutionSeries(concentrationValues[0], factor, concentrationValues.length);
+    if (!series) {
+      setLayoutStatus('Enter a starting concentration in the first concentration cell before auto-filling.');
+      return;
+    }
+    for (let index = 1; index < concentrationValues.length; index += 1) {
+      concentrationValues[index] = series[index];
+    }
+    syncAxisTemplateValues({ sampleValues: values.sampleValues, concentrationValues });
+    setLayoutFromAxisAndOverrides();
+    renderPlatePreview();
+    renderResultTable();
+    if (serialDilution.isOpen()) {
+      serialDilution.render();
+    }
+    setLayoutStatus(`Auto-filled ${concentrationValues.length - 1} concentration step${concentrationValues.length - 1 === 1 ? '' : 's'} at a 1:${factor} dilution.`);
   }
 
   function getSampleAxis() {
@@ -258,6 +313,7 @@ export function createAssayLayoutManager({
     safeText,
     getSampleAxis,
     getCurrentLayout: () => runtime.currentLayout,
+    getConcentrationUnit,
     findInventorySampleRecordBySampleId: inventorySamplePicker.findInventorySampleRecordBySampleId,
     hideInventorySamplePicker: inventorySamplePicker.hide
   });
@@ -421,6 +477,7 @@ export function createAssayLayoutManager({
     const sampleAxis = assay?.sampleAxis === 'column' ? 'column' : 'row';
     const axisValues = getAssayAxisTemplateValues(assay, def);
     setAxisTemplateValues(axisValues, def, sampleAxis);
+    setConcentrationUnit(assay?.concentrationUnit);
     runtime.suppressedWells = new Set(Array.isArray(assay?.suppressedWells) ? assay.suppressedWells : []);
     runtime.activeWellEditorId = '';
 
@@ -473,6 +530,7 @@ export function createAssayLayoutManager({
       layout: runtime.currentLayout,
       sampleValues,
       concentrationValues,
+      concentrationUnit: getConcentrationUnit(),
       plateEditField: runtime.plateEditField,
       activeWellEditorId: runtime.activeWellEditorId,
       safeText
@@ -861,6 +919,10 @@ export function createAssayLayoutManager({
     renderPlateEditFieldButtons,
     setSampleAxis,
     setConcentrationAxis,
+    getConcentrationUnit,
+    setConcentrationUnit,
+    onConcentrationUnitInput,
+    autoFillConcentrationSeries,
     setPlateEditField,
     syncAxisDisplay,
     onSwapAxes,

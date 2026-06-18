@@ -10,27 +10,14 @@ import {
   isPerLaneBandMode,
   mean,
   normalizeManualOverrides,
-  round
+  round,
+  sampleArrayValue
 } from './shared.js';
 import {
   buildQuantificationSignal,
   normalizeEnhancementSettings,
   preprocessWithJs
 } from './image-processing.js';
-
-function sampleArrayValue(data, width, height, x, y) {
-  const safeX = clamp(Number(x) || 0, 0, width - 1);
-  const safeY = clamp(Number(y) || 0, 0, height - 1);
-  const x0 = Math.floor(safeX);
-  const y0 = Math.floor(safeY);
-  const x1 = Math.min(width - 1, x0 + 1);
-  const y1 = Math.min(height - 1, y0 + 1);
-  const tx = safeX - x0;
-  const ty = safeY - y0;
-  const top = (data[(y0 * width) + x0] * (1 - tx)) + (data[(y0 * width) + x1] * tx);
-  const bottom = (data[(y1 * width) + x0] * (1 - tx)) + (data[(y1 * width) + x1] * tx);
-  return (top * (1 - ty)) + (bottom * ty);
-}
 
 function forEachRectifiedLaneSample({ lane, width, height, rowY }, callback) {
   const laneWidth = getLaneRectifiedWidth(lane);
@@ -1005,7 +992,8 @@ export function analyzeGelImage({
         addedBands: manualOverrides.addedBands.length,
         ladderLaneOverride: manualOverrides.ladderLane || null,
         ladderBands: manualOverrides.ladderBands.length,
-        ladderBandsDone: Boolean(manualOverrides.ladderBandsDone)
+        ladderBandsDone: Boolean(manualOverrides.ladderBandsDone),
+        peakIntegrations: manualOverrides.peakIntegrations.length
       }
     },
     laneDetection: {

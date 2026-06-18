@@ -76,6 +76,10 @@ function loadEsmStyleModule(filePath, extraGlobals = {}, additionalExports = [])
       exportNames.add(name);
       return match.replace('export ', '');
     })
+    .replace(/^\s*export\s+async\s+function\s+([A-Za-z0-9_$]+)\s*\(/gm, (match, name) => {
+      exportNames.add(name);
+      return match.replace('export ', '');
+    })
     .replace(/^\s*export\s+class\s+([A-Za-z0-9_$]+)\s*/gm, (match, name) => {
       exportNames.add(name);
       return match.replace('export ', '');

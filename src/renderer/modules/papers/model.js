@@ -30,11 +30,6 @@ export function getLibraryFolders(state) {
   return [...projectFolders, ...journalClubFolders];
 }
 
-export function getFolderForPaper(state, paper) {
-  const folderKey = buildFolderKey(paper?.linkedType, paper?.linkedId);
-  return getLibraryFolders(state).find((folder) => folder.key === folderKey) || null;
-}
-
 export function ensurePaperComments(paper) {
   if (!paper || typeof paper !== 'object') {
     return [];
@@ -55,24 +50,6 @@ export function ensurePaperHighlights(paper) {
   return paper.highlights;
 }
 
-export function getPaperCommentCount(paper) {
-  return ensurePaperComments(paper).length;
-}
-
-export function getHighlightsForPage(paper, pageNumber) {
-  return ensurePaperHighlights(paper)
-    .filter((highlight) => highlight.pageNumber === pageNumber)
-    .slice()
-    .sort((left, right) => {
-      const updatedLeft = Date.parse(left.updatedAt || left.createdAt || '');
-      const updatedRight = Date.parse(right.updatedAt || right.createdAt || '');
-      if (Number.isFinite(updatedLeft) && Number.isFinite(updatedRight) && updatedLeft !== updatedRight) {
-        return updatedLeft - updatedRight;
-      }
-      return String(left.id || '').localeCompare(String(right.id || ''));
-    });
-}
-
 export function getFolderPaperCount(state, folder) {
   if (!folder) {
     return 0;
@@ -90,28 +67,6 @@ export function getVisiblePapersForFolder(state, selectedFolder) {
     })
     .slice()
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-}
-
-export function getCommentsForPage(paper, pageNumber) {
-  return ensurePaperComments(paper)
-    .filter((comment) => comment.pageNumber === pageNumber)
-    .slice()
-    .sort((left, right) => {
-      const updatedLeft = Date.parse(left.updatedAt || left.createdAt || '');
-      const updatedRight = Date.parse(right.updatedAt || right.createdAt || '');
-      if (Number.isFinite(updatedLeft) && Number.isFinite(updatedRight) && updatedLeft !== updatedRight) {
-        return updatedRight - updatedLeft;
-      }
-      return String(left.id || '').localeCompare(String(right.id || ''));
-    });
-}
-
-export function getCommentAuthorLabel(state) {
-  return String(
-    state.settings?.personalInfo?.name
-    || state.settings?.personalInfo?.hikariEmail
-    || 'Local user'
-  ).trim() || 'Local user';
 }
 
 export function normalizeKeyFigures(paper) {
@@ -199,23 +154,4 @@ export function formatRelativePaperTime(timestamp) {
     return `${Math.max(1, Math.round(elapsedMs / day))}d`;
   }
   return `${Math.max(1, Math.round(elapsedMs / week))}w`;
-}
-
-export function statusLabel(status) {
-  if (status === 'queued') {
-    return 'Queued';
-  }
-  if (status === 'running') {
-    return 'Running';
-  }
-  if (status === 'error') {
-    return 'Error';
-  }
-  if (status === 'ready') {
-    return 'Ready';
-  }
-  if (status === 'uploaded') {
-    return 'Uploaded';
-  }
-  return 'Idle';
 }

@@ -175,7 +175,7 @@
   flex-wrap: wrap;
   gap: 8px;
   padding-top: 8px;
-  border-top: 1px solid var(--palette-rgba-255-255-255-a65);
+  border-top: 1px solid var(--palette-rgba-255-255-255-a7);
 }
 
 .protocol-share-inline select {

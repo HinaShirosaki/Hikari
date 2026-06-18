@@ -9,11 +9,22 @@ import {
   normalizeLlmProvider,
   normalizeReasoningEffort
 } from '../llm-provider-config.generated.js';
+import {
+  getEditableSampleTypeEntries,
+  getSampleInventoryLocationNames,
+  normalizeSampleInventoryLocations,
+  normalizeSampleTypeLabels
+} from '../sample-inventory-settings.js';
 
 const FIXED_ACCENT = '#647255';
 const FIXED_FOCUS = '#7a8a69';
 
-export function initSettings({ state, persist, onStoragePathSaved }) {
+export function initSettings({
+  state,
+  persist,
+  onStoragePathSaved,
+  onSampleInventorySettingsChanged
+}) {
   const settingsNavItems = [...document.querySelectorAll('#setting-view [data-settings-target]')];
   const settingsPanels = [...document.querySelectorAll('#setting-view [data-settings-panel]')];
 
@@ -52,6 +63,11 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   const locationInput = document.getElementById('setting-location-input');
   const locationAddBtn = document.getElementById('setting-location-add-btn');
   const locationList = document.getElementById('setting-location-list');
+  const sampleInventoryLocationInput = document.getElementById('setting-sample-inventory-location-input');
+  const sampleInventoryLocationAddBtn = document.getElementById('setting-sample-inventory-location-add-btn');
+  const sampleInventoryLocationList = document.getElementById('setting-sample-inventory-location-list');
+  const sampleTypeLabelsForm = document.getElementById('sample-type-labels-form');
+  const sampleTypeLabelList = document.getElementById('setting-sample-type-label-list');
   const preferredJournalForm = document.getElementById('preferred-journal-form');
   const settingPreferredJournal = document.getElementById('setting-preferred-journal');
   const clearPreferredJournalBtn = document.getElementById('clear-preferred-journal-btn');
@@ -127,6 +143,8 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   telegramForm?.addEventListener('submit', onSaveTelegramToken);
   clearTelegramTokenBtn?.addEventListener('click', onClearTelegramToken);
   locationAddBtn.addEventListener('click', onAddLocation);
+  sampleInventoryLocationAddBtn?.addEventListener('click', onAddSampleInventoryLocation);
+  sampleTypeLabelsForm?.addEventListener('submit', onSaveSampleTypeLabels);
   preferredJournalForm?.addEventListener('submit', onSavePreferredJournal);
   clearPreferredJournalBtn?.addEventListener('click', onClearPreferredJournal);
   window.addEventListener('focus', () => {
@@ -371,6 +389,8 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     renderExternalSkills();
     renderTelegramStatus();
     renderLocationList();
+    renderSampleInventoryLocationList();
+    renderSampleTypeLabelList();
     renderPreferredJournal();
     renderStorageImportStatus();
     if (didSyncCodexSettings) {
@@ -400,6 +420,151 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
         renderForms();
       });
     });
+  }
+
+  function getSampleInventoryLocations() {
+    state.settings.sampleInventoryLocations = getSampleInventoryLocationNames(state.settings, state.inventory);
+    return state.settings.sampleInventoryLocations;
+  }
+
+  function notifySampleInventorySettingsChanged() {
+    if (typeof onSampleInventorySettingsChanged === 'function') {
+      onSampleInventorySettingsChanged();
+    }
+  }
+
+  function getSampleInventoryContainerCount(locationName) {
+    const section = String(locationName || '').trim();
+    return Array.isArray(state.inventory?.[section]) ? state.inventory[section].length : 0;
+  }
+
+  function migrateSampleInventoryLocation(oldLocation, nextLocation) {
+    const source = String(oldLocation || '').trim();
+    const target = String(nextLocation || '').trim();
+    if (!source || !target || source === target) {
+      return;
+    }
+    state.inventory = state.inventory && typeof state.inventory === 'object' ? state.inventory : {};
+    const sourceContainers = Array.isArray(state.inventory[source]) ? state.inventory[source] : [];
+    if (sourceContainers.length) {
+      const targetContainers = Array.isArray(state.inventory[target]) ? state.inventory[target] : [];
+      state.inventory[target] = targetContainers.concat(sourceContainers);
+      delete state.inventory[source];
+    }
+    (state.samples || []).forEach((sample) => {
+      if (sample?.inventoryLink?.section === source) {
+        sample.inventoryLink = {
+          ...sample.inventoryLink,
+          section: target
+        };
+      }
+    });
+  }
+
+  function renderSampleInventoryLocationList() {
+    if (!sampleInventoryLocationList) {
+      return;
+    }
+    const locations = getSampleInventoryLocations();
+    if (!locations.length) {
+      sampleInventoryLocationList.innerHTML = '<p class="small-note">No sample inventory locations configured.</p>';
+      return;
+    }
+
+    sampleInventoryLocationList.innerHTML = locations.map((location, index) => {
+      const containerCount = getSampleInventoryContainerCount(location);
+      const deleteDisabled = containerCount > 0 ? ' disabled' : '';
+      const deleteTitle = containerCount > 0 ? ' title="Move or rename containers before deleting this location."' : '';
+      return `
+        <div class="settings-edit-row">
+          <input value="${escapeHtml(location)}" data-sample-inventory-location-input="${index}" aria-label="Sample inventory location ${index + 1}" />
+          <span class="small-note">${escapeHtml(`${containerCount} container${containerCount === 1 ? '' : 's'}`)}</span>
+          <button type="button" class="ghost-btn" data-sample-inventory-location-save="${index}">Save</button>
+          <button type="button" class="danger-btn" data-sample-inventory-location-delete="${index}"${deleteDisabled}${deleteTitle}>Delete</button>
+        </div>
+      `;
+    }).join('');
+
+    sampleInventoryLocationList.querySelectorAll('[data-sample-inventory-location-save]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const index = Number(button.dataset.sampleInventoryLocationSave);
+        const input = sampleInventoryLocationList.querySelector(`[data-sample-inventory-location-input="${index}"]`);
+        saveSampleInventoryLocation(index, input?.value);
+      });
+    });
+
+    sampleInventoryLocationList.querySelectorAll('[data-sample-inventory-location-delete]').forEach((button) => {
+      button.addEventListener('click', () => {
+        deleteSampleInventoryLocation(Number(button.dataset.sampleInventoryLocationDelete));
+      });
+    });
+  }
+
+  function saveSampleInventoryLocation(index, rawValue) {
+    const locations = getSampleInventoryLocations();
+    const nextValue = String(rawValue || '').trim().replace(/\s+/g, ' ');
+    if (!nextValue || !Number.isInteger(index) || index < 0 || index >= locations.length) {
+      return;
+    }
+    const duplicate = locations.some((location, locationIndex) => (
+      locationIndex !== index && String(location || '').trim().toLowerCase() === nextValue.toLowerCase()
+    ));
+    if (duplicate) {
+      renderSampleInventoryLocationList();
+      return;
+    }
+    const oldValue = locations[index];
+    locations[index] = nextValue;
+    state.settings.sampleInventoryLocations = normalizeSampleInventoryLocations(locations);
+    migrateSampleInventoryLocation(oldValue, nextValue);
+    persist();
+    renderForms();
+    notifySampleInventorySettingsChanged();
+  }
+
+  function deleteSampleInventoryLocation(index) {
+    const locations = getSampleInventoryLocations();
+    if (!Number.isInteger(index) || index < 0 || index >= locations.length) {
+      return;
+    }
+    if (getSampleInventoryContainerCount(locations[index]) > 0 || locations.length <= 1) {
+      renderSampleInventoryLocationList();
+      return;
+    }
+    locations.splice(index, 1);
+    state.settings.sampleInventoryLocations = normalizeSampleInventoryLocations(locations);
+    persist();
+    renderForms();
+    notifySampleInventorySettingsChanged();
+  }
+
+  function renderSampleTypeLabelList() {
+    if (!sampleTypeLabelList) {
+      return;
+    }
+    const entries = getEditableSampleTypeEntries(state.settings);
+    sampleTypeLabelList.innerHTML = entries.map((entry) => `
+      <label class="settings-sample-type-label-row">
+        <span>${escapeHtml(entry.defaultLabel)}</span>
+        <input data-sample-type-label="${escapeHtml(entry.type)}" value="${escapeHtml(entry.label)}" placeholder="${escapeHtml(entry.defaultLabel)}" />
+      </label>
+    `).join('');
+  }
+
+  function onSaveSampleTypeLabels(event) {
+    event.preventDefault();
+    const nextLabels = normalizeSampleTypeLabels(state.settings.sampleTypeLabels);
+    sampleTypeLabelList?.querySelectorAll('[data-sample-type-label]').forEach((input) => {
+      const type = String(input.dataset.sampleTypeLabel || '').trim();
+      if (!type) {
+        return;
+      }
+      nextLabels[type] = String(input.value || '').trim().replace(/\s+/g, ' ');
+    });
+    state.settings.sampleTypeLabels = normalizeSampleTypeLabels(nextLabels);
+    persist();
+    renderForms();
+    notifySampleInventorySettingsChanged();
   }
 
   function normalizeDisabledExternalSkillNames(value = []) {
@@ -985,6 +1150,25 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
       renderForms();
     }
     locationInput.value = '';
+  }
+
+  function onAddSampleInventoryLocation() {
+    const value = String(sampleInventoryLocationInput?.value || '').trim().replace(/\s+/g, ' ');
+    if (!value) {
+      return;
+    }
+    const locations = getSampleInventoryLocations();
+    const duplicate = locations.some((location) => String(location || '').trim().toLowerCase() === value.toLowerCase());
+    if (!duplicate) {
+      locations.push(value);
+      state.settings.sampleInventoryLocations = normalizeSampleInventoryLocations(locations);
+      persist();
+      renderForms();
+      notifySampleInventorySettingsChanged();
+    }
+    if (sampleInventoryLocationInput) {
+      sampleInventoryLocationInput.value = '';
+    }
   }
 
   async function refreshTelegramBotStatus() {

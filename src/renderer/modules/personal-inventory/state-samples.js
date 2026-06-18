@@ -1,7 +1,10 @@
 import {
-  SAMPLE_TYPE_COLORS,
-  SAMPLE_TYPE_LABELS
+  SAMPLE_TYPE_COLORS
 } from './constants.js';
+import {
+  getSampleTypeLabels,
+  normalizeConfiguredSampleType
+} from '../sample-inventory-settings.js';
 
 export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
   function ensureSamples() {
@@ -23,6 +26,20 @@ export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
 
   function getSampleById(sampleId) {
     return (state.samples || []).find((sample) => sample.id === sampleId) || null;
+  }
+
+  function getSavedSamplesForWellFill({ section = '', containerId = '', wellIndex = null } = {}) {
+    ensureSamples();
+    return state.samples
+      .filter((sample) => sample && sample.id)
+      .filter((sample) => {
+        const link = sample.inventoryLink;
+        if (!link || link.section !== section || link.containerId !== containerId) {
+          return true;
+        }
+        return Number(link.wellIndex) !== Number(wellIndex);
+      })
+      .sort((a, b) => String(a.code || a.name || a.id).localeCompare(String(b.code || b.name || b.id)));
   }
 
   function isLocationEmpty(location) {
@@ -51,14 +68,7 @@ export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
   }
 
   function normalizeSampleType(type) {
-    const key = String(type || '').trim().toLowerCase();
-    if (!key) {
-      return 'other';
-    }
-    if (key === 'compound') {
-      return 'chemical';
-    }
-    return Object.prototype.hasOwnProperty.call(SAMPLE_TYPE_COLORS, key) ? key : 'other';
+    return normalizeConfiguredSampleType(type);
   }
 
   function getSampleTypeColor(type) {
@@ -66,12 +76,13 @@ export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
   }
 
   function getSampleTypeLabel(type) {
-    return SAMPLE_TYPE_LABELS[normalizeSampleType(type)] || SAMPLE_TYPE_LABELS.other;
+    const labels = getSampleTypeLabels(state.settings);
+    return labels[normalizeSampleType(type)] || labels.other;
   }
 
   function renderSampleTypeOptions(selectedType = 'plasmid') {
     const selected = normalizeSampleType(selectedType);
-    return Object.entries(SAMPLE_TYPE_LABELS)
+    return Object.entries(getSampleTypeLabels(state.settings))
       .filter(([value]) => value !== 'other')
       .map(([value, label]) => `<option value="${safeText(value)}"${selected === value ? ' selected' : ''}>${safeText(label)}</option>`)
       .join('');
@@ -93,6 +104,7 @@ export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
     makeDefaultSampleCode,
     normalizeSampleCode,
     getSampleById,
+    getSavedSamplesForWellFill,
     isLocationEmpty,
     buildAutoLocationFromLink,
     normalizeSampleType,

@@ -41,6 +41,78 @@ export function buildHighlightCommentPopoverMarkup(comment = {}) {
     `;
 }
 
+export function normalizePdfHighlightText(value = '') {
+  const normalizedBreaks = String(value || '')
+    .replace(/\r\n?/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\u00ad/g, '');
+  const dehyphenated = normalizedBreaks.replace(/(\p{L})-\s*\n\s*(?=\p{Ll})/gu, '$1');
+  return dehyphenated
+    .split(/\n\s*\n+/)
+    .map((block) => block
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .join(' ')
+      .replace(/[ \t]+/g, ' ')
+      .trim())
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+export async function copyPdfHighlightText(value = '', navigatorRef = globalThis.navigator) {
+  const text = normalizePdfHighlightText(value);
+  const clipboard = navigatorRef?.clipboard;
+  if (!text || typeof clipboard?.writeText !== 'function') {
+    return false;
+  }
+  try {
+    await clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function buildHighlightPopoverMarkup(highlight = {}, comment = null) {
+  const text = normalizePdfHighlightText(highlight?.text);
+  if (!text) {
+    return '';
+  }
+  const preview = text.length > 1400
+    ? `${text.slice(0, 1397).trimEnd()}...`
+    : text;
+  const paragraphs = preview
+    .split(/\n{2,}/)
+    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
+    .join('');
+  const commentMarkup = comment
+    ? `<div class="papers-highlight-popover-comment">${buildHighlightCommentPopoverMarkup(comment)}</div>`
+    : '';
+  return `
+      <div class="papers-highlight-popover-head">
+        <strong>Highlighted text</strong>
+        <div class="papers-highlight-popover-copy-wrap">
+          <span class="papers-highlight-popover-copy-status" data-paper-highlight-copy-status aria-live="polite"></span>
+          <button
+            type="button"
+            class="papers-highlight-popover-copy-btn"
+            data-paper-highlight-copy
+            aria-label="Copy highlighted text"
+            title="Copy highlighted text"
+          >
+            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+              <rect x="8" y="8" width="11" height="11" rx="1.75"></rect>
+              <path d="M5 16V6.75A1.75 1.75 0 0 1 6.75 5H16"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="papers-highlight-popover-text">${paragraphs}</div>
+      ${commentMarkup}
+    `;
+}
+
 export function normalizePdfSelectionSearchText(value = '') {
   return String(value || '')
     .replace(/\s+/g, ' ')

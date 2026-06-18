@@ -373,7 +373,7 @@ function parseReactionConcentration(value, unit) {
   };
 }
 
-function roundNearZero(value) {
+export function roundNearZero(value) {
   return Math.abs(value) < VOLUME_EPSILON_L ? 0 : value;
 }
 

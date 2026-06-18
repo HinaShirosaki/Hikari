@@ -1,0 +1,82 @@
+#!/usr/bin/env node
+// Self-check: concentration axis unit + serial-dilution unit conversion.
+// Run: node tests/assay-concentration-unit-selfcheck.js
+const assert = require('node:assert/strict');
+const path = require('node:path');
+const { loadEsmStyleModule } = require('./support/runtime.js');
+
+const root = path.resolve(__dirname, '..');
+const conc = loadEsmStyleModule(path.join(root, 'src/renderer/modules/assay/concentration-utils.js'));
+const dilution = loadEsmStyleModule(path.join(root, 'src/renderer/modules/assay/serial-dilution-model.js'));
+
+const {
+  parseConcentrationMagnitude, formatConcentrationLabel, hasExplicitUnit, buildDilutionSeries
+} = conc;
+
+// --- default unit fallback for bare numbers; inline unit always wins ---
+assert.equal(parseConcentrationMagnitude('100'), 100, 'bare number = Molar when no axis unit');
+assert.ok(Math.abs(parseConcentrationMagnitude('100', 'nM') - 1e-7) < 1e-18, 'bare number takes axis unit');
+assert.ok(Math.abs(parseConcentrationMagnitude('1 mM', 'nM') - 1e-3) < 1e-15, 'inline unit overrides axis unit');
+assert.equal(parseConcentrationMagnitude('1e3', 'nM'), 1e3 * 1e-9, 'scientific notation not mistaken for a unit');
+
+// --- display labels ---
+assert.equal(formatConcentrationLabel('100', 'nM'), '100 nM', 'appends axis unit to bare number');
+assert.equal(formatConcentrationLabel('1 µM', 'nM'), '1 µM', 'keeps an explicit unit as-is');
+assert.equal(hasExplicitUnit('1e3'), false, 'exponent is not a unit');
+assert.equal(hasExplicitUnit('5 pM'), true, 'pM detected as a unit');
+
+// --- dilution-factor auto-fill series (keeps the start cell's unit) ---
+assert.equal(
+  JSON.stringify(buildDilutionSeries('1000 nM', 10, 4)),
+  JSON.stringify(['1000 nM', '100 nM', '10 nM', '1 nM']),
+  '10x series keeps unit'
+);
+assert.equal(
+  JSON.stringify(buildDilutionSeries('300', 3, 3)),
+  JSON.stringify(['300', '100', '33.33']),
+  'bare 3x series, compact rounding'
+);
+assert.equal(buildDilutionSeries('', 10, 4), null, 'no start value -> null');
+assert.equal(buildDilutionSeries('100 nM', 0, 4), null, 'non-positive factor -> null');
+
+// --- serial dilution converts a mixed stock unit against unit-less axis values ---
+const layout = [
+  { well: 'A1', sampleId: 'S1', concentration: '1000' },
+  { well: 'A2', sampleId: 'S1', concentration: '100' },
+  { well: 'A3', sampleId: 'S1', concentration: '10' }
+];
+const groups = dilution.buildSerialDilutionGroups({
+  layout,
+  sampleAxis: 'row',
+  concentrationUnit: 'nM',
+  findInventorySampleRecordBySampleId: () => null
+});
+assert.equal(groups.length, 1, 'one sample group');
+// JSON-compare: loadEsmStyleModule runs the module in a vm realm, so its arrays
+// fail assert/strict's cross-realm deepEqual even when contents match.
+assert.equal(
+  JSON.stringify(groups[0].entries.map((e) => e.concentrationDisplay)),
+  JSON.stringify(['1000 nM', '100 nM', '10 nM']),
+  'entry display labels carry the axis unit'
+);
+
+const plan = dilution.calculateSerialDilutionPlan({
+  group: groups[0],
+  volumePerWellUl: 100,
+  stockConcentrationText: '10 µM', // 10 µM = 1e-5 M > 1000 nM = 1e-6 M
+  concentrationUnit: 'nM'
+});
+assert.equal(plan.error, '', `plan should compute (got: ${plan.error})`);
+assert.equal(plan.rows.length, 3, 'three dilution rows');
+assert.ok(plan.rows[0].inputVolume > 0, 'stock transfer volume computed');
+
+// Same numbers but a too-low stock unit must be rejected (proves unit is honoured).
+const badPlan = dilution.calculateSerialDilutionPlan({
+  group: groups[0],
+  volumePerWellUl: 100,
+  stockConcentrationText: '100 nM', // below the 1000 nM first target
+  concentrationUnit: 'nM'
+});
+assert.notEqual(badPlan.error, '', 'stock below first target is rejected');
+
+console.log('assay concentration-unit self-check passed');

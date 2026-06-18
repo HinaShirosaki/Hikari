@@ -1,91 +1,88 @@
 # IPC Registrars
 
-The main purpose of `src/main/helpers/main` is to keep IPC registration out of `main.js`.
+IPC registration lives in `src/main/ipc/` (it moved out of `src/main/helpers/main`). The goal is the same: keep `ipcMain.handle(...)` calls out of the boot file and group them by capability family.
+
+`src/main/core/start-hikari-main-core.js` calls one aggregator:
+
+```js
+const { registerMainIpc } = require('../ipc');
+registerMainIpc({ data, agent, system });
+```
+
+`ipc/index.js` fans that out to `registerDataIpc(data)`, `registerAgentIpc(agent)`, and `registerSystemIpc(system)`.
+
+## Channel source of truth
+
+Channel strings are defined once in [`src/shared/ipc/channels.js`](../../../src/shared/ipc/channels.js) and shared between the main and preload processes. Renderer code does **not** import that module directly — it goes through the typed surface in `src/main/preload/api/*`. A couple of channel names keep legacy prefixes (e.g. `STORAGE.AUTO_SAVE` is the string `data:auto-save`, not `storage:...`); those quirks are flagged inline in `channels.js`.
 
 ## `register-data-ipc.js`
 
-This file exposes the non-agent application data API.
+The non-agent application data API. Channels come from the `STORAGE`, `SEQUENCE_LIBRARY`, `INVENTORY`, and `ASSAY` groups.
 
-The endpoints fall into four groups.
+**Data file + storage helpers (`STORAGE.*`):**
 
-## Data file endpoints
+- `data:auto-save` (legacy prefix), `storage:sync-sqlite-bundle`
+- `storage:pick-directory`, `storage:ensure-directory`, `storage:import-root`
+- `storage:store-imported-file`, `storage:write-json-file`, `storage:open-file`
+- `storage:read-file-bytes`, `storage:read-file-base64`
+- `storage:append-notebook-page-log`, `storage:discover-papers`
+- `storage:protocol-record-saved` (main → renderer notification)
 
-These are the top-level app snapshot operations:
+`storage:import-root` calls `importStorageRoot(...)` from `helpers/main/storage-bundle/`, producing a merged summary plus a `hikari-storage-manifest.json` for an existing storage directory.
 
-- `ena:save`
-- `ena:load`
-- `data:auto-save`
-- `data:auto-load`
+**Import parsers:**
 
-All four delegate into `mainDataHelpers`, which means they share the same compact-snapshot plus sidecar-sync behavior.
+- `inventory:parse-chemical-import` → `chemical-import-parser.js`
+- `assay:parse-result-import` → assay result-import detection
 
-## Storage helper endpoints
+**Sequence library (`SEQUENCE_LIBRARY.*`):**
 
-These endpoints operate on arbitrary storage paths:
+- `sequence-library:list`, `:get`, `:upsert`, `:promote`, `:delete`
+- `sequence-library:search-features`, `:annotate`
+- `sequence-library:list-backbones`, `:upsert-backbone`, `:recognize-backbone`
 
-- `storage:pick-directory`
-- `storage:ensure-directory`
-- `storage:store-imported-file`
-- `storage:open-file`
-- `storage:read-file-base64`
-- `storage:import-root`
-
-The interesting one is `storage:import-root`, which calls `importStorageRoot(...)` from `storage-bundle.js` and produces a merged summary plus a manifest file for an existing storage directory.
-
-## Sequence library endpoints
-
-These are the `SequenceViewer`-specific APIs:
-
-- `sequence-library:list`
-- `sequence-library:get`
-- `sequence-library:upsert`
-- `sequence-library:promote`
-- `sequence-library:delete`
-- `sequence-library:search-features`
-- `sequence-library:recognize-backbone`
-
-This is a clean example of the registrar pattern: the IPC file itself mostly validates payloads, while the real domain logic lives in `sequence-library.js` and `sequence-backbone-recognition.js`.
+This is a clean example of the registrar pattern: the IPC file mostly validates payloads, while the domain logic lives in `helpers/main/sequence-library/`.
 
 ## `register-system-ipc.js`
 
-This file is much smaller and is split between two concerns.
+Settings/system endpoints from the `LLM`, `TELEGRAM`, and `SYSTEM` groups.
 
-## Codex CLI endpoints
+**Codex CLI + direct LLM (`LLM.*`):**
 
-- `llm:codex-status`
-- `llm:codex-set-model`
-- `llm:codex-generate`
-- `llm:direct-modules`
-- `llm:direct-generate`
+- `llm:codex-status`, `llm:codex-catalog`, `llm:codex-login`, `llm:codex-clear-login`
+- `llm:codex-set-model`, `llm:codex-set-reasoning-effort`, `llm:codex-generate`
+- `llm:direct-modules`, `llm:direct-generate`
 
-The Codex endpoints are thin wrappers around the Codex CLI provider helpers from `main.js`. The direct endpoints expose the registered module-level LLM surface for app modules that need provider-backed text/file generation without entering the agent chat controller.
+The Codex endpoints wrap the Codex CLI provider helpers. The direct endpoints expose the registered module-level LLM surface (`helpers/main/llm/direct-llm-module-registry.js`) for app modules that need provider-backed text/file generation without entering the agent chat controller.
 
-## Telegram endpoints
+**Telegram (`TELEGRAM.*`):**
 
-- `telegram:get-config`
-- `telegram:set-token`
-- `telegram:clear-token`
+- `telegram:get-config`, `telegram:set-token`, `telegram:clear-token`
 
-These are configuration/state endpoints. They do not implement the Telegram bot directly; they coordinate saved token state plus `restartTelegramBot()`.
+These coordinate saved token state plus `restartTelegramBot()`; they do not implement the bot.
 
-## `register-agent-ipc.js`
+**System (`SYSTEM.*`):**
 
-This file also lives in `src/main/helpers/main` because it is an IPC registrar, but its internal logic belongs to the agent subsystem.
+- `system:open-external-url`
 
-Use the dedicated walkthrough at [doc/agent/architecture/request-lifecycle.md](../agent/architecture/request-lifecycle.md) for the detailed request flow.
+## `register-agent-ipc/`
 
-From the perspective of this folder, the important point is architectural:
+Now a folder (`src/main/ipc/register-agent-ipc/`), not a single file. It is the third registrar, but its internal logic belongs to the agent subsystem. Channels come from the `AGENT` group:
 
-- `register-agent-ipc.js` is the third registrar alongside the data and system registrars
-- it is where `main.js` hands off the fully assembled agent runtimes
-- it keeps the agent controller out of `main.js`, just like the other two registrars keep their own endpoint families out of `main.js`
+- `agent:chat`, `agent:chat:cancel`, `agent:list-skills`, `agent:generate-protocol`
+- `agent:chat-log:create-session`, `:list-sessions`, `:get-session`
+- `agent:developer:test-tools`, `agent:developer:context-preview`
+- `agent:logs:list-requests`, `agent:logs:replay`
+- plus the `agent-progress` one-way broadcast (main → renderer)
+
+`index.js` composes the handlers from `agent-lifecycle-service.js`, `agent-controller-core.js`, `agent-chat-handler.js`, and `agent-log-handlers.js`. Use the dedicated walkthrough at [doc/agent/architecture/request-lifecycle.md](../../agent/architecture/request-lifecycle.md) for the request flow.
 
 ## Practical takeaway
 
-When adding a new renderer-facing capability in this area of the app, the first question is usually not “which helper file should I edit?” It is “which registrar owns this capability family?”
+When adding a renderer-facing capability, the first question is “which registrar owns this family?”:
 
-That usually narrows the search quickly:
+- data / storage / sequence / import parsers → `register-data-ipc.js`
+- chat / assistant / log replay → `register-agent-ipc/`
+- Codex CLI, direct LLM, Telegram, or open-external-url → `register-system-ipc.js`
 
-- data/storage/sequence -> `register-data-ipc.js`
-- chat/assistant/log replay -> `register-agent-ipc.js`
-- Codex CLI or Telegram settings -> `register-system-ipc.js`
+Then add the channel to `src/shared/ipc/channels.js` and wire the typed preload surface.

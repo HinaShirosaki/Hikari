@@ -87,6 +87,37 @@
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
               <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Edit Conc.</button>
             </div>
+            <label class="assay-conc-unit-field">
+              Conc. unit
+              <input
+                type="text"
+                id="assay-concentration-unit"
+                class="assay-conc-unit-input"
+                list="assay-concentration-unit-options"
+                placeholder="e.g. nM"
+                autocomplete="off"
+              />
+              <datalist id="assay-concentration-unit-options">
+                <option value="fM"></option>
+                <option value="pM"></option>
+                <option value="nM"></option>
+                <option value="µM"></option>
+                <option value="mM"></option>
+                <option value="M"></option>
+              </datalist>
+            </label>
+            <label class="assay-conc-unit-field">
+              Dilution ÷
+              <input
+                type="number"
+                id="assay-dilution-factor"
+                class="assay-conc-unit-input"
+                min="0"
+                step="any"
+                placeholder="e.g. 10"
+              />
+            </label>
+            <button type="button" id="assay-dilution-fill-btn" class="ghost-btn">Fill Series</button>
             <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
             <button type="button" id="assay-serial-dilution-btn" class="ghost-btn">Serial Dilution</button>
           </div>
@@ -170,180 +201,7 @@
             <div id="assay-analysis-summary" class="small-note"></div>
           </div>
 
-          <details id="assay-chart-style-panel" class="assay-results-control-section assay-chart-style">
-            <summary class="assay-chart-style-summary">Chart Style</summary>
-            <div class="assay-chart-style-body">
-              <fieldset class="assay-chart-style-group">
-                <legend>Axes</legend>
-                <label>
-                  X column
-                  <select id="assay-chart-x-column"><option value="auto">Auto</option></select>
-                </label>
-                <label>
-                  Y column
-                  <select id="assay-chart-y-column"><option value="auto">Auto</option></select>
-                </label>
-                <label>
-                  Series column
-                  <select id="assay-chart-series-column"><option value="auto">Auto</option></select>
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Scale &amp; range</legend>
-                <label>
-                  X scale
-                  <select id="assay-chart-x-scale">
-                    <option value="auto">Auto</option>
-                    <option value="linear">Linear</option>
-                    <option value="log">Log</option>
-                    <option value="ordinal">Ordinal</option>
-                  </select>
-                </label>
-                <label>
-                  Y scale
-                  <select id="assay-chart-y-scale">
-                    <option value="linear">Linear</option>
-                    <option value="log">Log</option>
-                  </select>
-                </label>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-x-range-auto" checked />
-                  X auto range
-                </label>
-                <div class="assay-chart-style-row">
-                  <label>
-                    X min
-                    <input type="number" step="any" id="assay-chart-x-min" />
-                  </label>
-                  <label>
-                    X max
-                    <input type="number" step="any" id="assay-chart-x-max" />
-                  </label>
-                </div>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-y-range-auto" checked />
-                  Y auto range
-                </label>
-                <div class="assay-chart-style-row">
-                  <label>
-                    Y min
-                    <input type="number" step="any" id="assay-chart-y-min" />
-                  </label>
-                  <label>
-                    Y max
-                    <input type="number" step="any" id="assay-chart-y-max" />
-                  </label>
-                </div>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Points</legend>
-                <label>
-                  Shape
-                  <div id="assay-chart-point-shape" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Size
-                  <div id="assay-chart-point-size" class="assay-chart-picker-mount"></div>
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Lines</legend>
-                <label>
-                  Style
-                  <div id="assay-chart-line-style" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Curve
-                  <select id="assay-chart-curve">
-                    <option value="curveMonotoneX">Monotone</option>
-                    <option value="curveLinear">Linear</option>
-                    <option value="curveStep">Step</option>
-                  </select>
-                </label>
-                <label>
-                  Width
-                  <div id="assay-chart-line-width" class="assay-chart-picker-mount"></div>
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Frame</legend>
-                <label>
-                  Style
-                  <div id="assay-chart-frame-style" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Stroke
-                  <input type="color" id="assay-chart-frame-stroke" />
-                </label>
-                <label>
-                  Stroke width
-                  <div id="assay-chart-frame-stroke-width" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Corner radius
-                  <div id="assay-chart-frame-corner-radius" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Background
-                  <input type="color" id="assay-chart-background-color" />
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Size</legend>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-size-auto" checked />
-                  Auto size
-                </label>
-                <label>
-                  Width (px)
-                  <div id="assay-chart-frame-width" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Height (px)
-                  <div id="assay-chart-frame-height" class="assay-chart-picker-mount"></div>
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Grid lines</legend>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-grid-vertical" checked />
-                  Vertical lines
-                </label>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-grid-horizontal" checked />
-                  Horizontal lines
-                </label>
-                <label>
-                  Color
-                  <input type="color" id="assay-chart-grid-color" />
-                </label>
-                <label>
-                  Width
-                  <div id="assay-chart-grid-stroke-width" class="assay-chart-picker-mount"></div>
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Text</legend>
-                <div id="assay-chart-text-bar"></div>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Series colors</legend>
-                <div id="assay-chart-series-colors" class="assay-chart-style-series"></div>
-              </fieldset>
-
-              <div class="form-actions assay-chart-style-actions">
-                <button type="button" id="assay-chart-style-reset-btn" class="ghost-btn">Reset to defaults</button>
-              </div>
-            </div>
-          </details>
+          <div id="assay-chart-style-panel" class="assay-results-control-section" data-assay-chart-style-mount></div>
         </div>
 
         <div class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main">

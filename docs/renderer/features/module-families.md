@@ -1,67 +1,75 @@
 # Module Families
 
-Not every renderer module is built the same way. A useful first cut is to separate the root-level single-file controllers from the larger folder-based subsystems.
+This doc explains how renderer feature modules are grouped and what shape they share. For a file-by-file lookup see [module-map.md](../reference/module-map.md); for the internals of the largest folders see [heavyweight-subsystems.md](heavyweight-subsystems.md).
 
-## The common single-file controller pattern
+## Two structural patterns
 
-Many root-level files under `src/renderer/modules/` follow the same shape:
+The renderer has largely finished migrating from single-file controllers to **folder modules**. Today almost every workspace lives in `modules/<feature>/` with an `index.js` entry, and only a handful of thin top-level files remain.
+
+- **Folder module** (`modules/<feature>/index.js`): the entry is usually an orchestrator that captures DOM nodes, builds sub-controllers, wires events, and exposes a compact API (`render()`, `renderList()`, ...). `gel/`, `assay/`, `papers/`, `sequence-viewer/`, `workflow/`, and the inventory/notebook folders all follow this.
+- **Thin top-level orchestrator** that delegates to a folder: e.g. `home-dashboard.js` (179 lines) wires the widgets under `home-dashboard/`; `tool-box.js` composes the mini-tools under `tool-box/`. Some folder modules also keep a top-level **wrapper** (`agent-chat.js`, `papers-management.js`, `gel-analysis.js`, `protocol-management.js`, `sequence-viewer.js`) that exists only to give manifests and tests a stable import anchor.
+
+## The shared module contract
+
+Whatever the shape, feature modules follow the same house style:
 
 1. capture DOM nodes once
 2. bind event listeners once
-3. read and mutate shared `state`
-4. call the shared `persist()` callback after mutations
-5. expose a compact API such as `render()`, `renderList()`, or `renderProjectOptions()`
+3. read and mutate the shared `state` object directly
+4. call the shared `persist()` callback after mutations (the renderer core owns storage — see [boot-and-shell.md](../architecture/boot-and-shell.md))
+5. expose a compact API such as `render()` / `renderList()`
 
-These files are usually easier to refactor than the folder-based subsystems because orchestration, view rendering, and state mutation all live together.
+Modules do **not** own their own persistence; `persist()` rebuilds the object graph, writes local storage, and optionally auto-saves the `.ena` file.
 
-## Root-level feature controllers
+## Manifest families
 
-| File | Main role | Notes |
+`module-manifests/index.js` is the source of truth for which workspaces exist and how they are grouped. The manifests are organized into six families and merged into `rendererModuleManifests`:
+
+| Family | Manifests | Theme |
 | --- | --- | --- |
-| `lab-management.js` | members directory CRUD | one of the simplest modules; good for learning the house style |
-| `instrument-management.js` | instrument list plus reservation calendar | single file, but richer than most because it owns month/week calendar behavior |
-| `protocol-management.js` | protocol editor, viewer, sharing, and JSON import | large single-file controller with multiple panels |
-| `lab-notebook.js` | synthesis notebook pages | includes chemistry-specific draft state, file import, and Ketcher-oriented flow |
-| `biology-notebook.js` | biology notebook pages | protocol-backed notebook flow with planned/executed page handling |
-| `lab-common-inventory.js` | shared chemical inventory | also owns inbox-driven import and location-code bookkeeping |
-| `personal-inventory.js` | storage containers and well-level sample placement | container-centric UI; shares workspace with `sample-registry.js` |
-| `sample-registry.js` | sample records and search | sample-centric UI; links to personal inventory containers and chemicals |
-| `project-management.js` | project CRUD and linked notebook rollups | also summarizes linked assays and gels per project |
-| `collaboration-management.js` | internal messaging and protocol sharing/import | good example of a feature that mostly manipulates existing protocols rather than owning a new domain |
-| `home-dashboard.js` | dashboard summaries, workflow progress, and timer | read-mostly view over other state branches |
-| `settings.js` | appearance, storage, startup, LLM, Telegram, and `.ena` settings | main entry point for renderer-to-main storage configuration |
+| `foundation` | `biologyNotebook`, `protocol`, `projectManagement` | core record-keeping that other features link into |
+| `collaboration` | `agentChat`, `agentChatRail`, `workflowManagement`, `papers` | assistant, workflows, and shared research surfaces |
+| `inventory` | `labCommonInventory`, `personalInventory`, `sampleRegistry` | chemicals, storage containers, and samples |
+| `analysis` | `assay`, `gel` | plate/gel data capture and analysis |
+| `sequence` | `sequenceViewer` | sequence import, library, inspection, and analysis |
+| `utility` | `toolBox`, `settings`, `homeDashboard` | calculators, configuration, and the dashboard |
 
-## A few important one-file wrinkles
+Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), and a `bootOrder`. `module-runtime.js` initializes modules in `bootOrder`, which roughly runs `protocol` (10) → `projectManagement` (20) → `workflowManagement` (30) → `labCommonInventory` (40) → `biologyNotebook` (50) → `sampleRegistry` (60) → `assay` (70) → `gel` (80) → `settings` (90) → `homeDashboard` (100) → `papers` (110) → `agentChat` (120). Boot order is independent of the family grouping above.
 
-- `lab-notebook.js` and `biology-notebook.js` look similar, but they are not wrappers around the same implementation. They have diverged enough that each deserves separate reading.
-- `personal-inventory.js` and `sample-registry.js` intentionally share one workspace. The shell treats `sample-registry-view` as a composite view.
-- `protocol-management.js` and `settings.js` are still single files, but they are big enough to behave like mini-subsystems.
+`agentChatRail` is special: it has no view of its own and mounts a paper-scoped agent chat as a side rail inside the Papers workspace.
+
+## A few wrinkles worth knowing
+
+- `personalInventory` and `sampleRegistry` intentionally share one workspace. The shell treats `sample-registry-view` as a composite view and renders both on open (see [boot-and-shell.md](../architecture/boot-and-shell.md)).
+- The wet-lab notebook entry export is still named `initLabNotebook` even though it now lives in `modules/biology-notebook/`. There is no separate synthesis notebook anymore.
+- `Projects` is registered but hidden from primary navigation; it is reached through links from other records.
+- `modules/collaboration-management/` and `modules/lab-management.js` exist in the tree but are not registered in any manifest and have no static importers — treat them as legacy/unwired.
 
 ## Root-level support and adapter files
 
-Some top-level module files are not primary views. They are wrappers, adapters, or data helpers.
-
-| File | Purpose |
+| File / folder | Purpose |
 | --- | --- |
 | `views.js`, `app-state.js`, `utils.js` | renderer-wide constants, default state, normalization, persistence helpers, and small shared utilities |
 | `object-graph.js` | derived relationship graph builder and query helpers |
-| `pdf-export.js` | shared PDF export helpers used by protocols and notebook-like views |
-| `agent-chat-response.js` | stable re-export layer for agent response formatting helpers |
-| `assay-analysis.js` | stable re-export layer for assay analysis functions |
-| `papers-pdf-viewer.js` | stable re-export layer for the papers PDF viewer helpers |
+| `storage-path-normalizer.js` | normalizes storage paths across state on load |
+| `file-drop.js` | reusable drag-and-drop file-target binding |
+| `direct-llm.js` | direct (non-agent) LLM request helper |
+| `notebook-result-table.js`, `notebook-linked-previews.js`, `notebook-note-tools.js` | shared notebook table / preview / note helpers |
 | `experiment-llm-mapper.js` | compact LLM-facing mapper for notebook, assay, and gel data |
-| `buffer-compounds.js` | reference list for buffer calculations |
-| `commercial-restriction-enzymes.js` | generated restriction-enzyme catalog for sequence analysis |
-| `app-registry.generated.js` | generated shell configuration for labels, aliases, and dock placement |
+| `pdf-export/`, `print/`, `selection-insights/` | shared export, print, and selection-insight helpers |
+| `buffer-compounds.js`, `common-promoters.js` | reference datasets for toolbox and sequence features |
+| `app-registry.generated.js`, `llm-provider-config.generated.js` | generated shell configuration and LLM provider catalog |
+
+> The standalone `commercial-restriction-enzymes.js` catalog is gone; restriction-enzyme data now lives in `modules/sequence-viewer/restriction-analysis.js`.
 
 ## Reading advice
 
-If you are new to the renderer codebase, read one simple controller first before jumping into a large subsystem.
+If you are new to the renderer, read one small module before a large subsystem.
 
 Good starter files:
 
-1. `lab-management.js`
-2. `project-management.js`
-3. `home-dashboard.js`
+1. `modules/home-dashboard.js` — a ~180-line orchestrator that hands typed element bundles to independent widgets
+2. `modules/workflow/index.js` — one of the cleanest folder separations (model / renderer / graph-controller / actions / state)
+3. `modules/project-management/index.js` — a readable folder module that links into notebooks, assays, and gels
 
-Those three show the usual renderer style without the complexity of image processing, PDF rendering, or sequence analysis.
+Those show the usual renderer style without the complexity of image processing, PDF rendering, or sequence analysis.

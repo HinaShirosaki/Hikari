@@ -4,21 +4,9 @@ const fs = require('fs/promises');
 const path = require('path');
 const { transformPaperRecordsToMarkdown } = require('../paper-markdown-import');
 const { resolveStorageRootLayout } = require('./storage-paths');
-const { asArray, cleanText, ensureObject, normalizeFileTimestamp } = require('./storage-utils');
-
-function sanitizeFolderName(value, fallback = 'item') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
-  return cleaned || fallback;
-}
-
-function toPosixRelative(rootPath, targetPath) {
-  return path.relative(rootPath, targetPath).split(path.sep).join('/');
-}
+const {
+  asArray, cleanText, ensureObject, normalizeFileTimestamp, sanitizeFolderName, toPosixRelative
+} = require('./storage-utils');
 
 function simpleHash(value) {
   const source = String(value || '');

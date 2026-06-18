@@ -1,5 +1,6 @@
 import {
   emptyCompoundStructureDraft,
+  formatCompoundStructureSummary,
   isChemicalStructureSampleType
 } from './compound-model.js';
 
@@ -12,37 +13,9 @@ export function setCompoundStatus(ctx, message, isError) {
   sampleCompoundStatus.style.color = isError ? '#982a38' : '';
 }
 
-export function openCompoundDialog(ctx) {
-  ctx.compoundEditorOpen = true;
-  if (ctx.dom.sampleCompoundDialogOverlay) {
-    ctx.dom.sampleCompoundDialogOverlay.hidden = false;
-  }
-}
-
-export function closeCompoundDialog(ctx) {
-  ctx.compoundEditorOpen = false;
-  if (ctx.dom.sampleCompoundDialogOverlay) {
-    ctx.dom.sampleCompoundDialogOverlay.hidden = true;
-  }
-}
-
-export function onCompoundDialogOverlayClick(ctx, event) {
-  if (event.target === ctx.dom.sampleCompoundDialogOverlay) {
-    closeCompoundDialog(ctx);
-  }
-}
-
-export function onCompoundDialogKeydown(ctx, event) {
-  if (event.key === 'Escape' && ctx.compoundEditorOpen) {
-    event.preventDefault();
-    closeCompoundDialog(ctx);
-  }
-}
-
 export function renderCompoundFields(ctx) {
   const {
     sampleCompoundFields,
-    sampleCompoundOpenBtn,
     sampleCompoundPreview,
     sampleCompoundPreviewImage,
     sampleCompoundSmilesInput,
@@ -52,9 +25,6 @@ export function renderCompoundFields(ctx) {
     return;
   }
   const isChemicalStructureSample = isChemicalStructureSampleType(sampleTypeInput?.value);
-  if (sampleCompoundOpenBtn) {
-    sampleCompoundOpenBtn.hidden = !isChemicalStructureSample;
-  }
   sampleCompoundFields.hidden = !isChemicalStructureSample;
   if (!isChemicalStructureSample) {
     setCompoundStatus(ctx, '', false);
@@ -65,10 +35,8 @@ export function renderCompoundFields(ctx) {
   }
 
   if (sampleCompoundSmilesInput) {
-    sampleCompoundSmilesInput.value = ctx.compoundStructureDraft.smiles || '';
-  }
-  if (sampleCompoundOpenBtn) {
-    sampleCompoundOpenBtn.textContent = ctx.compoundStructureDraft.smiles ? 'Edit Structure' : 'Add Structure';
+    const summary = formatCompoundStructureSummary(ctx.compoundStructureDraft);
+    sampleCompoundSmilesInput.value = summary === '-' ? '' : summary;
   }
   if (sampleCompoundPreview && sampleCompoundPreviewImage) {
     const hasPreview = Boolean(ctx.compoundStructureDraft.imageDataUrl);
@@ -81,10 +49,9 @@ export function onSampleTypeChange(ctx) {
   ctx.renderCellPassageFields();
   if (!isChemicalStructureSampleType(ctx.dom.sampleTypeInput?.value)) {
     ctx.compoundStructureDraft = emptyCompoundStructureDraft();
-    closeCompoundDialog(ctx);
     renderCompoundFields(ctx);
     return;
   }
-  setCompoundStatus(ctx, 'Chemical structure mode enabled. Paste from ChemDraw or open Ketcher.', false);
+  setCompoundStatus(ctx, 'Chemical structure mode enabled. Paste SMILES, MOL/SDF, or a copied structure image.', false);
   renderCompoundFields(ctx);
 }

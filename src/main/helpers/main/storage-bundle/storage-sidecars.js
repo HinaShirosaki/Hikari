@@ -17,7 +17,7 @@ const {
   writeChemicalSqliteBundleIndex,
   writeSqliteBundleIndex
 } = require('./storage-sql-write');
-const { asArray, cleanText, ensureObject } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, sanitizeFolderName } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 
 const PROTOCOL_SIDECAR_SCHEMA = 'hikari_protocols';
@@ -25,16 +25,6 @@ const NOTEBOOK_SIDECAR_SCHEMA = 'hikari_notebook_pages';
 const SAMPLE_SIDECAR_SCHEMA = 'hikari_samples';
 const SIDECAR_SCHEMA_VERSION = '1.0.0';
 const PROTOCOL_FILE_NAME = 'protocol.json';
-
-function sanitizeFolderName(value, fallback = 'item') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
-  return cleaned || fallback;
-}
 
 function buildProtocolFolderName(protocol, index = 0) {
   const source = ensureObject(protocol);

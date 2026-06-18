@@ -209,6 +209,16 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   });
   elements.gelLaneProfileChart?.addEventListener('mousemove', rendering.onLaneProfileChartMouseMove);
   elements.gelLaneProfileChart?.addEventListener('mouseleave', rendering.onLaneProfileChartMouseLeave);
+  elements.gelOpenPeakEditorBtn?.addEventListener('click', rendering.onPeakEditorOpen);
+  elements.gelPeakEditorCloseBtn?.addEventListener('click', rendering.onPeakEditorClose);
+  elements.gelPeakEditorLaneSelect?.addEventListener('change', rendering.onPeakEditorLaneChange);
+  elements.gelPeakEditorBaselineModeBtn?.addEventListener('click', () => rendering.onPeakEditorModeSelected('baseline'));
+  elements.gelPeakEditorDividerModeBtn?.addEventListener('click', () => rendering.onPeakEditorModeSelected('divider'));
+  elements.gelPeakEditorClearLaneBtn?.addEventListener('click', rendering.onPeakEditorClearLane);
+  elements.gelPeakEditorClearAllBtn?.addEventListener('click', rendering.onPeakEditorClearAll);
+  elements.gelPeakEditorChart?.addEventListener('click', rendering.onPeakEditorChartClick);
+  elements.gelPeakEditorChart?.addEventListener('mousemove', rendering.onPeakEditorChartMouseMove);
+  elements.gelPeakEditorChart?.addEventListener('mouseleave', rendering.onPeakEditorChartMouseLeave);
   elements.gelCanvas?.addEventListener('mousemove', rendering.onCanvasHoverMove);
   elements.gelCanvas?.addEventListener('mouseleave', rendering.onCanvasHoverLeave);
 

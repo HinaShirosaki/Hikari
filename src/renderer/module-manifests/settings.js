@@ -7,11 +7,13 @@ export const settingsManifest = {
   createOptions: ({
     state,
     persist,
-    onStoragePathSaved
+    onStoragePathSaved,
+    rendererServices
   }) => ({
     state,
     persist,
-    onStoragePathSaved
+    onStoragePathSaved,
+    onSampleInventorySettingsChanged: rendererServices.inventory.handleSampleInventorySettingsChanged
   }),
   renderAll: ({ modules }) => {
     modules.settings.renderForms();

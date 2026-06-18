@@ -1,4 +1,9 @@
-import { SAMPLE_TYPE_LABELS, getWellName } from '../personal-inventory/constants.js';
+import { getWellName } from '../personal-inventory/constants.js';
+import {
+  getConfiguredSampleTypeLabel,
+  getSampleTypeLabels,
+  normalizeConfiguredSampleType
+} from '../sample-inventory-settings.js';
 import { formatEntryTimestamp } from './entry-helpers.js';
 
 export function normalizeSampleLookupText(value) {
@@ -19,8 +24,9 @@ function addSamplePlaceholderAlias(aliases, alias, type) {
   }
 }
 
-export function buildSamplePlaceholderTypeAliases() {
+export function buildSamplePlaceholderTypeAliases(settings = {}) {
   const aliases = new Map();
+  const sampleTypeLabels = getSampleTypeLabels(settings);
   const extraAliases = {
     plasmid: ['plasmids', 'vector', 'vectors'],
     cell_line: ['cell', 'cells', 'cell line', 'cell lines'],
@@ -32,7 +38,7 @@ export function buildSamplePlaceholderTypeAliases() {
     primer: ['primers', 'oligo', 'oligos']
   };
 
-  Object.entries(SAMPLE_TYPE_LABELS).forEach(([type, label]) => {
+  Object.entries(sampleTypeLabels).forEach(([type, label]) => {
     if (type === 'other') {
       return;
     }
@@ -46,16 +52,11 @@ export function buildSamplePlaceholderTypeAliases() {
 }
 
 export function normalizeSampleType(type) {
-  const key = String(type || '').trim().toLowerCase();
-  if (Object.prototype.hasOwnProperty.call(SAMPLE_TYPE_LABELS, key)) {
-    return key;
-  }
-  return 'other';
+  return normalizeConfiguredSampleType(type);
 }
 
-export function getSampleTypeLabel(type) {
-  const normalized = normalizeSampleType(type);
-  return SAMPLE_TYPE_LABELS[normalized] || SAMPLE_TYPE_LABELS.other || 'Sample';
+export function getSampleTypeLabel(type, settings = {}) {
+  return getConfiguredSampleTypeLabel(settings, type);
 }
 
 export function resolveSampleTypeForPlaceholder(name, aliases) {
@@ -220,10 +221,10 @@ export function buildNotebookSampleLinkMetadata({
   };
 }
 
-export function buildNotebookSampleNote(link, action = 'Linked') {
+export function buildNotebookSampleNote(link, action = 'Linked', settings = {}) {
   const timeLabel = formatEntryTimestamp(link?.linkedAt || new Date().toISOString());
   const sampleLabel = formatSampleLinkValue(link);
-  const typeLabel = getSampleTypeLabel(link?.sampleType);
+  const typeLabel = getSampleTypeLabel(link?.sampleType, settings);
   const placeholderLabel = String(link?.placeholderName || '').trim();
   const targetText = placeholderLabel ? ` to ${placeholderLabel}` : '';
   const storageLabel = String(link?.storageLabel || '').trim() || 'No storage location recorded';

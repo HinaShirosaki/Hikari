@@ -69,11 +69,16 @@ module.exports = {
 
       // Local scratch / personal / test material
       /^\/Book3\.xlsx$/,
-      /^\/hikari-data(?:\.ena)?\.json$/,
+      /^\/(?:hikari|enana)-data(?:\.ena)?\.json$/,
       /^\/Exported Standard Features($|\/)/,
       /^\/Testdata($|\/)/,
       /^\/TestData2($|\/)/,
       /^\/TestData3($|\/)/,
+      /^\/TestData5($|\/)/,
+      /^\/idea($|\/)/,
+
+      // ML training workspace (runtime uses vendor/colony-counter instead)
+      /^\/colony-counter($|\/)/,
 
       // Runtime / secret material that shouldn't ship
       /^\/data\/.*\.log$/,

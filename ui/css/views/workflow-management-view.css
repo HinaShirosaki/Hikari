@@ -206,7 +206,7 @@
   height: 22px;
   border: 0;
   border-radius: 999px;
-  background: var(--palette-hex-c7362f);
+  background: var(--danger);
   color: var(--palette-white);
   font-size: 0.95rem;
   font-weight: 700;
@@ -228,7 +228,7 @@
 
 .workflow-node-remove:hover,
 .workflow-node-remove:focus-visible {
-  background: var(--palette-hex-aa231d);
+  background: color-mix(in srgb, var(--danger) 82%, var(--palette-black));
   transform: scale(1);
 }
 
@@ -478,31 +478,31 @@
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  border: 2px solid var(--palette-hex-c6c6c6);
+  border: 2px solid var(--line);
   background: var(--palette-white);
 }
 
 .workflow-progress-node.is-finished .workflow-progress-dot,
 .workflow-step-status-dot.is-finished {
-  border-color: var(--palette-hex-2da562);
-  background: var(--palette-hex-2da562);
+  border-color: var(--success);
+  background: var(--success);
 }
 
 .workflow-progress-node.is-failed .workflow-progress-dot,
 .workflow-step-status-dot.is-failed {
-  border-color: var(--palette-hex-d94d4d);
-  background: var(--palette-hex-d94d4d);
+  border-color: var(--danger);
+  background: var(--danger);
 }
 
 .workflow-progress-node.is-pending .workflow-progress-dot,
 .workflow-step-status-dot.is-pending {
-  border-color: var(--palette-hex-d1a11e);
-  background: var(--palette-hex-f0c64a);
+  border-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 66%, var(--palette-white));
 }
 
 .workflow-progress-node.is-empty .workflow-progress-dot,
 .workflow-step-status-dot.is-empty {
-  border-color: var(--palette-hex-c6c6c6);
+  border-color: var(--line);
   background: var(--palette-white);
 }
 
@@ -656,7 +656,7 @@
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  border: 2px solid var(--palette-hex-c6c6c6);
+  border: 2px solid var(--line);
   background: var(--palette-white);
 }
 

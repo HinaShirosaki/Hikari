@@ -1,20 +1,10 @@
 'use strict';
 
-const { asArray, cleanText, ensureObject } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, sanitizeFolderName } = require('./storage-utils');
 
 const MEMORY_FILE_NAME = 'MEMORY.md';
 const CODEX_AGENTS_FOLDER_NAME = '.agents';
 const CODEX_SKILLS_FOLDER_NAME = 'skills';
-
-function sanitizeFolderName(value, fallback = 'item') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
-  return cleaned || fallback;
-}
 
 function sanitizeProjectMemoryFolderName(value, fallback = 'Untitled_Project') {
   return sanitizeFolderName(value, fallback);

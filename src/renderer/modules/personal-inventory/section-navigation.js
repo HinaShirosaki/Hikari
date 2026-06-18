@@ -87,6 +87,9 @@ function renderSummaryCard(activeSection) {
   }
   const summary = helpers.getInventorySummaryCounts();
   const activeDisplay = helpers.getSectionDisplay(activeSection);
+  const plasmidLabel = helpers.getSampleTypeLabel('plasmid');
+  const cellLineLabel = helpers.getSampleTypeLabel('cell_line');
+  const proteinLabel = helpers.getSampleTypeLabel('protein');
   inventorySummaryCard.innerHTML = `
     <div class="inventory-summary-head">
       <h3>Inventory Summary</h3>
@@ -94,9 +97,9 @@ function renderSummaryCard(activeSection) {
     </div>
     <div class="inventory-summary-stats">
       <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-total"></span>Total Samples</span><strong>${safeText(String(summary.total))}</strong></div>
-      <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-plasmid"></span>Plasmids</span><strong>${safeText(String(summary.plasmid))}</strong></div>
-      <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-cell"></span>Cells</span><strong>${safeText(String(summary.cell_line))}</strong></div>
-      <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-protein"></span>Proteins</span><strong>${safeText(String(summary.protein))}</strong></div>
+      <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-plasmid"></span>${safeText(plasmidLabel)}</span><strong>${safeText(String(summary.plasmid))}</strong></div>
+      <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-cell"></span>${safeText(cellLineLabel)}</span><strong>${safeText(String(summary.cell_line))}</strong></div>
+      <div class="inventory-summary-row"><span class="inventory-summary-label"><span class="inventory-summary-dot inventory-summary-dot-protein"></span>${safeText(proteinLabel)}</span><strong>${safeText(String(summary.protein))}</strong></div>
     </div>
   `;
 }

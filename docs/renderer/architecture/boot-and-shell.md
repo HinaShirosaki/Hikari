@@ -90,15 +90,13 @@ The renderer shell talks to the main process through `window.hikariApi`.
 
 Key boot-time or shell-level calls include:
 
-- `autoLoadDataFile(...)`
-- `importStorageRoot(...)`
-- `saveEnaFile(...)`
-- `loadEnaFile()`
-- `pickStorageDirectory(...)`
-- `onProtocolRecordSaved(...)` (delegated immediately to `protocolService.handleExternalProtocolRecordSaved(...)`)
-- `onTelegramCommand(...)`
+- `autoSaveDataFile(data, filePath)` — writes the compact snapshot and syncs the storage bundle
+- `importStorageRoot(storagePath)` — hydrates from an external storage directory
+- `ensureStorageDirectory(path)` / `pickStorageDirectory(currentPath)` — storage path setup
+- `onProtocolRecordSaved(handler)` — subscribes to externally saved protocols (delegated to the protocol service)
+- `onTelegramCommand(handler)` — subscribes to Telegram command events
 
-For the main-process implementation of those calls, use [doc/main-helpers/README.md](../../main-helpers/README.md).
+Renderer state itself is loaded from `localStorage` (`loadState()` in `modules/app-state.js`), not from a bridge call — there is no `loadEnaFile`/`autoLoadDataFile` on `window.hikariApi`. The full bridge surface is assembled in `src/main/preload/create-preload-api.js` from the per-domain `api/*.js` modules. For the main-process side of those calls, use [doc/main-helpers/README.md](../../main-helpers/README.md).
 
 ## Renderer-global hooks
 

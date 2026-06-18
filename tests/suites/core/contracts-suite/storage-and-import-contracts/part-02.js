@@ -179,9 +179,9 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       assert.equal(settingsSource.includes('state.settings.storagePath = nextPath;\n    persist();\n    if (!nextPath)'), false);
     });
     test('telegram bot writes events to data/telegram-events.log by default', () => {
-      const telegramBotSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'), 'utf8');
-      assert.match(telegramBotSource, /data', 'telegram-events\.log'/);
-      assert.equal(telegramBotSource.includes('telegram-messages.log'), false);
+      const telegramLoggingSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'telegram-bot', 'logging.js'), 'utf8');
+      assert.match(telegramLoggingSource, /data', 'telegram-events\.log'/);
+      assert.equal(telegramLoggingSource.includes('telegram-messages.log'), false);
     });
     test('main agent chat logging records request/result/error with redacted API key metadata', () => {
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');

@@ -55,10 +55,6 @@
   align-items: center;
 }
 
-.sample-structure-open-btn[hidden] {
-  display: none !important;
-}
-
 .sample-detail-panel {
   padding-top: 18px;
   border-top: 1px solid var(--line);
@@ -93,7 +89,7 @@
   overflow-wrap: anywhere;
 }
 
-.sample-structure-card {
+.sample-compound-structure-card {
   display: grid;
   gap: 10px;
   padding: 14px;
@@ -102,12 +98,12 @@
   background: color-mix(in srgb, var(--surface) 92%, var(--palette-white) 8%);
 }
 
-.sample-structure-card h4,
-.sample-structure-card p {
+.sample-compound-structure-card h4,
+.sample-compound-structure-card p {
   margin: 0;
 }
 
-.sample-structure-preview {
+.sample-compound-structure-preview {
   display: grid;
   place-items: center;
   min-height: 220px;
@@ -117,7 +113,7 @@
   background: color-mix(in srgb, var(--palette-white) 94%, var(--surface));
 }
 
-.sample-structure-preview img {
+.sample-compound-structure-preview img {
   max-width: 100%;
   max-height: 240px;
   object-fit: contain;
@@ -155,54 +151,6 @@
   object-fit: contain;
 }
 
-.sample-compound-dialog-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 2550;
-  background: var(--palette-rgba-18-34-55-a24);
-  display: grid;
-  place-items: center;
-  padding: 18px;
-}
-
-.sample-compound-dialog-overlay[hidden] {
-  display: none !important;
-}
-
-.sample-compound-dialog {
-  width: min(1180px, calc(100vw - 32px));
-  max-height: calc(100vh - 36px);
-  overflow: auto;
-  display: grid;
-  gap: 16px;
-  padding: 18px;
-  border: 1px solid var(--palette-rgba-53-99-153-a22);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--surface-elevated, var(--palette-white)) 95%, var(--palette-cream-125) 5%);
-  box-shadow: 0 22px 54px var(--palette-rgba-27-20-14-a18);
-}
-
-.sample-compound-dialog-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: start;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.sample-compound-dialog-head h3,
-.sample-compound-dialog-head p {
-  margin: 0;
-}
-
-.sample-compound-dialog-actions {
-  justify-content: flex-end;
-}
-
-.sample-ketcher-frame {
-  min-height: min(72vh, 760px);
-}
-
 .sample-cell-passage-fields {
   grid-column: 1 / -1;
   margin-top: 4px;
@@ -237,10 +185,5 @@
 @media (max-width: 960px) {
   .sample-layout {
     grid-template-columns: 1fr;
-  }
-
-  .sample-compound-dialog {
-    width: min(100vw - 24px, 1180px);
-    padding: 16px;
   }
 }

@@ -1,8 +1,7 @@
 import { getAssayElements } from './dom.js';
 import { createAssayLayoutManager } from './layout-manager.js';
 import { createAssayResultsManager } from './results-manager.js';
-import { createAssayAnalysisView, normalizeChartStyle } from './analysis-view.js';
-import { createAssayChartStyleControls } from './chart-style-controls.js';
+import { createAssayAnalysisView } from './analysis-view.js';
 import { createAssayArtifactStorage } from './artifact-storage.js';
 import {
   ensureAssayNumbers,
@@ -35,6 +34,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     activeWellEditorId: '',
     axisTemplateValues: { sampleValues: [], concentrationValues: [] },
     plateEditField: 'sampleId',
+    concentrationUnit: '',
     manualWellOverrides: {},
     suppressedWells: new Set(),
     resultPasteAnchor: { rowIndex: 0, columnIndex: 0 }
@@ -308,8 +308,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     onResultImportApplied: onAssayResultImportApplied
   });
 
-  let chartStyleControls = null;
-
   analysisView = createAssayAnalysisView({
     runtime,
     elements,
@@ -322,22 +320,14 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     getResultValueCount: resultsManager.getResultValueCount,
     onAnalysisRendered: (info) => {
       saveAssayAnalysisPreview(info);
-      chartStyleControls?.refresh();
-    }
-  });
-
-  chartStyleControls = createAssayChartStyleControls({
-    elements,
-    analysisView,
-    safeText,
-    onStyleChanged: (style) => {
+    },
+    onChartStyleChanged: (style) => {
       const activeAssay = getAssayById(runtime.activeResultsAssayId);
       if (activeAssay) {
         activeAssay.chartStyle = style;
         activeAssay.updatedAt = new Date().toISOString();
         persist();
       }
-      analysisView.onAnalysisConfigChange();
     }
   });
 
@@ -453,8 +443,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     layoutManager.renderPlateDefinition();
     resultsManager.renderResultTable();
     renderActiveAssayInfo(assay);
-    runtime.chartStyle = normalizeChartStyle(assay.chartStyle);
-    chartStyleControls?.refresh();
+    analysisView.loadChartStyle(assay.chartStyle);
     analysisView.clearOutput();
   }
 
@@ -565,6 +554,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
       wellCount: plateDef.rows * plateDef.columns,
       sampleAxis,
       concentrationAxis,
+      concentrationUnit: layoutManager.getConcentrationUnit(),
       sampleAxisValues: axisValues.sampleValues,
       concentrationAxisValues: axisValues.concentrationValues,
       manualWellOverrides: normalizeManualWellOverrideMap(runtime.manualWellOverrides, plateDef),
@@ -615,6 +605,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
     runtime.currentResults = {};
     runtime.resultPasteAnchor = { rowIndex: 0, columnIndex: 0 };
     runtime.axisTemplateValues = { sampleValues: [], concentrationValues: [] };
+    layoutManager.setConcentrationUnit('');
     layoutManager.resetSerialDilutionState();
     if (elements.assayAnalysisMethodInput) {
       elements.assayAnalysisMethodInput.value = 'grouped_summary';
@@ -796,6 +787,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   elements.assayConcentrationAxisColumnBtn?.addEventListener('click', () => layoutManager.setConcentrationAxis('column'));
   elements.assayPlateFieldSampleBtn?.addEventListener('click', () => layoutManager.setPlateEditField('sampleId'));
   elements.assayPlateFieldConcentrationBtn?.addEventListener('click', () => layoutManager.setPlateEditField('concentration'));
+  elements.assayConcentrationUnitInput?.addEventListener('input', layoutManager.onConcentrationUnitInput);
+  elements.assayDilutionFillBtn?.addEventListener('click', layoutManager.autoFillConcentrationSeries);
   elements.assayClearMappingsBtn?.addEventListener('click', layoutManager.onClearWellMappings);
   elements.assaySerialDilutionBtn?.addEventListener('click', layoutManager.openSerialDilutionDialog);
   elements.assaySerialDilutionCloseBtn?.addEventListener('click', layoutManager.closeSerialDilutionDialog);

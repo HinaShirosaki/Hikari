@@ -43,6 +43,10 @@ export function normalizeLaneVertices(raw) {
   return gelSharedModule.normalizeLaneVertices(raw);
 }
 
+export function normalizePeakIntegrations(raw) {
+  return gelSharedModule.normalizePeakIntegrations(raw);
+}
+
 export function getLaneRowBounds(lane, rowY, width = Number.POSITIVE_INFINITY) {
   return gelSharedModule.getLaneRowBounds(lane, rowY, width);
 }

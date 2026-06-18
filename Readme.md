@@ -188,11 +188,13 @@ Packaging notes:
 
 ## Internal Docs
 
-If you are onboarding to the codebase, these are the best starting points:
+If you are onboarding to the codebase, start with the docs index and then the area you need:
 
+- [`docs/README.md`](./docs/README.md) — internal docs index and architecture overview
 - [`docs/renderer/README.md`](./docs/renderer/README.md)
 - [`docs/main-helpers/README.md`](./docs/main-helpers/README.md)
 - [`docs/agent/README.md`](./docs/agent/README.md)
+- [`docs/module-development/README.md`](./docs/module-development/README.md) — how to add a new module
 - [`tests/README.md`](./tests/README.md)
 
 ## Troubleshooting

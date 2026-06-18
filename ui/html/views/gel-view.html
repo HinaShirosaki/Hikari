@@ -133,6 +133,7 @@
                         </label>
                         <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
                         <button type="button" id="gel-measure-intensity-btn" class="ghost-btn">Measure intensity</button>
+                        <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn">Peak editor</button>
                         <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
                         <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Tools</button>
                       </div>
@@ -180,6 +181,34 @@
                 <pre id="gel-report-json" class="gel-report-json"></pre>
               </div>
             </div>
+          </div>
+
+          <div id="gel-peak-editor-overlay" class="gel-peak-editor-overlay" hidden>
+            <section class="gel-peak-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="gel-peak-editor-title">
+              <header class="gel-peak-editor-header">
+                <div>
+                  <h3 id="gel-peak-editor-title">Lane Peak Area</h3>
+                  <div id="gel-peak-editor-summary" class="small-note"></div>
+                </div>
+                <button type="button" id="gel-peak-editor-close-btn" class="ghost-btn">Close</button>
+              </header>
+              <div class="gel-peak-editor-toolbar" role="toolbar" aria-label="Peak area tools">
+                <label class="gel-peak-editor-lane-picker small-note">
+                  Lane
+                  <select id="gel-peak-editor-lane-select"></select>
+                </label>
+                <div class="gel-peak-editor-modes">
+                  <button type="button" id="gel-peak-editor-baseline-mode-btn" class="ghost-btn is-active" aria-pressed="true">Baseline</button>
+                  <button type="button" id="gel-peak-editor-divider-mode-btn" class="ghost-btn" aria-pressed="false">Divider</button>
+                </div>
+                <button type="button" id="gel-peak-editor-clear-lane-btn" class="ghost-btn">Clear lane</button>
+                <button type="button" id="gel-peak-editor-clear-all-btn" class="ghost-btn">Clear all</button>
+              </div>
+              <div class="gel-peak-editor-chart-shell">
+                <svg id="gel-peak-editor-chart" class="gel-peak-editor-chart" viewBox="0 0 920 440" preserveAspectRatio="none" role="img" aria-label="Manual peak area editor"></svg>
+              </div>
+              <div id="gel-peak-editor-table" class="gel-peak-editor-table"></div>
+            </section>
           </div>
         </div>
       </div>

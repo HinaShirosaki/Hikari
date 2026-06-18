@@ -1,5 +1,5 @@
 import { renderCellPassageFields } from './cell-passage.js';
-import { closeCompoundDialog, renderCompoundFields, setCompoundStatus } from './compound-dialog.js';
+import { renderCompoundFields, setCompoundStatus } from './compound-dialog.js';
 import { emptyCompoundStructureDraft } from './compound-model.js';
 import { getSampleRegistryDom } from './dom.js';
 import { bindSampleRegistryEvents } from './events.js';
@@ -8,9 +8,9 @@ import {
   renderLinkedContainerOptions
 } from './inventory-links.js';
 import { renderLocationFields } from './location-fields.js';
-import { startNotebookSampleCapture as startNotebookCapture } from './notebook-workflow.js';
+import { startNotebookSampleCapture } from './notebook-workflow.js';
 import { renderList } from './sample-list.js';
-import { ensureSampleState } from './sample-utils.js';
+import { ensureSampleState, renderSampleTypeOptions } from './sample-utils.js';
 
 export function initSampleRegistry({ state, persist, safeText, onNotebookSampleCaptured }) {
   const ctx = {
@@ -20,15 +20,12 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
     onNotebookSampleCaptured,
     dom: getSampleRegistryDom(),
     selectedSampleId: '',
-    compoundEditorOpen: false,
     compoundStructureDraft: emptyCompoundStructureDraft(),
     clearSearchOnReset: false,
-    closeCompoundDialog: null,
     renderCellPassageFields: null,
     setCompoundStatus: null
   };
 
-  ctx.closeCompoundDialog = () => closeCompoundDialog(ctx);
   ctx.renderCellPassageFields = () => renderCellPassageFields(ctx);
   ctx.setCompoundStatus = (message, isError) => setCompoundStatus(ctx, message, isError);
 
@@ -36,6 +33,7 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
 
   function render() {
     ensureSampleState(ctx);
+    renderSampleTypeOptions(ctx);
     renderLinkedContainerOptions(ctx);
     renderChemicalLinkOptions(ctx);
     if (!ctx.dom.sampleLocationFields.innerHTML.trim()) {
@@ -49,6 +47,6 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
   return {
     render,
     renderList: () => renderList(ctx),
-    startNotebookSampleCapture: (context) => startNotebookCapture(ctx, context)
+    startNotebookSampleCapture: (context) => startNotebookSampleCapture(ctx, context)
   };
 }

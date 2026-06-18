@@ -87,7 +87,7 @@ module.exports = function registerTelegramAndManifestContracts(context = {}) {
       };
 
       const sourceFiles = collectReachableSourceFiles(path.join(__dirname, 'src', 'renderer', 'renderer.js'));
-      const htmlFiles = [path.join(__dirname, 'index.html'), path.join(__dirname, 'ketcher-embedded.html')];
+      const htmlFiles = [path.join(__dirname, 'index.html')];
 
       const referencedIds = new Set();
       sourceFiles.forEach((filePath) => {

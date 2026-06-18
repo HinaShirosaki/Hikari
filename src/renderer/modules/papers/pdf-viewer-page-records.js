@@ -170,21 +170,6 @@ export function attachPageRecords({ pageLayer, pageRecords = [] } = {}) {
   pageLayer.replaceChildren(fragment);
 }
 
-export function ensurePageRecords({ pageLayer, pageMetrics = [] } = {}) {
-  if (!pageLayer) {
-    return [];
-  }
-
-  const doc = pageLayer.ownerDocument || (typeof document !== 'undefined' ? document : null);
-  if (!doc?.createElement) {
-    return [];
-  }
-
-  const records = buildPageRecords({ doc, pageMetrics });
-  attachPageRecords({ pageLayer, pageRecords: records });
-  return records;
-}
-
 export function applyPageSizing({ pageRecords = [], scale } = {}) {
   pageRecords.forEach((record) => {
     const width = Math.max(Math.ceil((record.metric?.width || 1) * scale), 1);

@@ -5,6 +5,7 @@ import {
   normalizePageDimension,
   pdfQuadPointsToBoxes
 } from './pdf-viewer-geometry.js';
+import { normalizePdfHighlightText } from './pdf-viewer-search.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -39,7 +40,7 @@ function renderHighlightDivFallback({ doc, layer, highlight, boxes }) {
       : `${(box.y * 100).toFixed(3)}%`;
     mark.style.width = `${(box.width * 100).toFixed(3)}%`;
     mark.style.height = `${(box.height * 100).toFixed(3)}%`;
-    mark.title = highlight.text;
+    mark.title = normalizePdfHighlightText(highlight.text);
     layer.appendChild(mark);
   });
 }
@@ -109,7 +110,7 @@ export function renderHighlights({ pageRecords = [], highlights = [] } = {}) {
       path.dataset.highlightId = highlight.id;
       path.setAttribute('d', pathData);
       const title = doc.createElementNS(SVG_NS, 'title');
-      title.textContent = highlight.text;
+      title.textContent = normalizePdfHighlightText(highlight.text);
       path.appendChild(title);
       svg.appendChild(path);
     });

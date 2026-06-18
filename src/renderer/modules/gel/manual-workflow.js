@@ -32,7 +32,22 @@ const GLUED_LANE_VERTEX = Object.freeze({
 });
 
 export function createManualWorkflowController({ runtime, elements, deps }) {
+  function clearCanvasInteractionState({ clearTool = true } = {}) {
+    if (clearTool) {
+      runtime.selectedViewerTool = '';
+    }
+    runtime.laneVertexDrag = null;
+    runtime.suppressNextLaneVertexClick = false;
+  }
+
+  function clearCanvasTool(tool) {
+    if (runtime.selectedViewerTool === tool) {
+      clearCanvasInteractionState();
+    }
+  }
+
   function onViewerToolSelected(tool) {
+    clearCanvasInteractionState({ clearTool: false });
     runtime.selectedViewerTool = runtime.selectedViewerTool === tool ? '' : tool;
     renderViewerToolbar(elements, runtime.selectedViewerTool, isPerLaneBandMode(runtime.manualOverrides?.laneSegmentation));
     const label = getViewerToolLabel(runtime.selectedViewerTool);
@@ -51,14 +66,13 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     const segmentation = overrides.laneSegmentation || {};
     const hasLeft = Number.isFinite(segmentation.gelLeft);
     const hasRight = Number.isFinite(segmentation.gelRight);
-    const dividerDone = Boolean(segmentation.dividerDone) || runtime.manualDividerConfirmed;
     if (!hasLeft) {
       return 'left';
     }
     if (!hasRight) {
       return 'right';
     }
-    if (!dividerDone) {
+    if (!hasEffectiveDividerLayout(overrides)) {
       return 'dividers';
     }
     if (!Number.isFinite(overrides.ladderLane) || overrides.ladderLane < 1) {
@@ -93,7 +107,36 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   }
 
   function getCanvasInteractionStep() {
-    return runtime.selectedViewerTool || getManualStep();
+    if (runtime.selectedViewerTool) {
+      return runtime.selectedViewerTool;
+    }
+    const laneBandStep = getLaneBandInteractionStep();
+    return laneBandStep || getManualStep();
+  }
+
+  function getLaneBandInteractionStep(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
+    if (!isPerLaneBandMode(overrides.laneSegmentation)) {
+      return null;
+    }
+    const progress = getLaneBandProgress(overrides);
+    if (!progress.totalLanes) {
+      return null;
+    }
+    if (progress.pendingBottomLaneIndex) {
+      return 'band-bottom';
+    }
+    if (progress.completeCount < progress.totalLanes) {
+      return 'band-top';
+    }
+    return null;
+  }
+
+  function hasEffectiveDividerLayout(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
+    const segmentation = overrides.laneSegmentation || {};
+    if (Boolean(segmentation.dividerDone) || runtime.manualDividerConfirmed) {
+      return true;
+    }
+    return isPerLaneBandMode(segmentation) && getSegmentationLanes(overrides).length > 0;
   }
 
   function renderManualProgress() {
@@ -342,10 +385,18 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       return false;
     }
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
+    const maxVertexY = Math.max(0, runtime.currentImage.height - 1);
+    const getLockedVertexY = (targetVertexKey) => targetVertexKey.startsWith('bottom') ? maxVertexY : 0;
     const pointOnImage = {
       x: clamp(Math.round(point.x), 0, runtime.currentImage.width - 1),
-      y: clamp(Math.round(point.y), 0, runtime.currentImage.height - 1)
+      y: getLockedVertexY(vertexKey)
     };
+    const lockVertexRows = (vertices) => ({
+      topLeft: { ...vertices.topLeft, y: getLockedVertexY('topLeft') },
+      topRight: { ...vertices.topRight, y: getLockedVertexY('topRight') },
+      bottomRight: { ...vertices.bottomRight, y: getLockedVertexY('bottomRight') },
+      bottomLeft: { ...vertices.bottomLeft, y: getLockedVertexY('bottomLeft') }
+    });
     const verticesByLane = new Map(
       normalizeLaneVertices(normalized.laneSegmentation?.laneVertices)
         .map((item) => [item.laneIndex, item])
@@ -362,13 +413,14 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         runtime.currentImage.width,
         runtime.currentImage.height
       );
+      const rowLockedVertices = lockVertexRows(currentVertices);
       verticesByLane.set(targetLaneIndex, {
         laneIndex: targetLaneIndex,
-        topLeft: currentVertices.topLeft,
-        topRight: currentVertices.topRight,
-        bottomRight: currentVertices.bottomRight,
-        bottomLeft: currentVertices.bottomLeft,
-        [targetVertexKey]: targetPoint
+        ...rowLockedVertices,
+        [targetVertexKey]: {
+          x: targetPoint.x,
+          y: getLockedVertexY(targetVertexKey)
+        }
       });
       return true;
     };
@@ -425,8 +477,14 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
 
   function setLaneBandMode(enabled) {
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
+    clearCanvasInteractionState();
+    const lanesReady = Boolean(enabled) && getSegmentationLanes(normalized).length > 0;
+    if (lanesReady) {
+      runtime.manualDividerConfirmed = true;
+    }
     updateLaneSegmentation({
       perLaneBandEnabled: Boolean(enabled),
+      dividerDone: lanesReady ? true : normalized.laneSegmentation?.dividerDone,
       quantifyConfirmed: false
     });
     runtime.manualOverrides = {
@@ -563,7 +621,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         addedBands: []
       };
     }
-    runtime.selectedViewerTool = '';
+    clearCanvasInteractionState();
     runtime.currentReport = null;
     renderOverrideStatus();
     deps.renderCanvas();
@@ -644,9 +702,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   function onManualResetSteps() {
     runtime.manualOverrides = createEmptyManualOverrides();
     runtime.manualDividerConfirmed = false;
-    runtime.selectedViewerTool = '';
-    runtime.laneVertexDrag = null;
-    runtime.suppressNextLaneVertexClick = false;
+    clearCanvasInteractionState();
     runtime.currentReport = null;
     renderOverrideStatus();
     renderManualProgress();
@@ -694,12 +750,28 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     };
   }
 
+  function promptForLadderBandMw(rowY, normalized) {
+    const promptHost = typeof window !== 'undefined' ? window : null;
+    if (!promptHost?.prompt) {
+      deps.setStatus('Ladder MW prompt is unavailable in this environment.');
+      return null;
+    }
+    const existing = normalized.ladderBands.find((item) => Math.abs(item.pixelY - rowY) <= 8);
+    const promptDefault = existing ? String(existing.mw) : (elements.gelLadderBandMwInput?.value || '');
+    const raw = promptHost.prompt(`MW for ladder band at row=${rowY} (kDa):`, promptDefault);
+    if (raw === null) {
+      return null;
+    }
+    const mw = Number(String(raw).trim());
+    if (!Number.isFinite(mw) || mw <= 0) {
+      deps.setStatus('Invalid MW value. Right-click again and enter a positive number (kDa).');
+      return null;
+    }
+    return mw;
+  }
+
   function onCanvasContextMenu(event) {
     if (!runtime.currentImage || runtime.cropperActive) {
-      return;
-    }
-    const step = getCanvasInteractionStep();
-    if (step !== 'ladder-mw') {
       return;
     }
     const point = getCanvasPoint(event);
@@ -707,23 +779,21 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       return;
     }
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
+    if (!Number.isFinite(normalized.ladderLane) || normalized.ladderLane < 1) {
+      event.preventDefault?.();
+      deps.setStatus('Set the ladder lane before assigning ladder MW.');
+      return;
+    }
     const laneIndex = inferLaneIndexFromSegmentationPoint(point);
+    event.preventDefault?.();
     if (!laneIndex || laneIndex !== normalized.ladderLane) {
       deps.setStatus(`Right-click inside the ladder lane (${normalized.ladderLane || '-'}) to set ladder MW.`);
       return;
     }
 
-    event.preventDefault();
     const rowY = getRectifiedLaneRowFromPoint(point, laneIndex);
-    const existing = normalized.ladderBands.find((item) => Math.abs(item.pixelY - rowY) <= 8);
-    const promptDefault = existing ? String(existing.mw) : (elements.gelLadderBandMwInput?.value || '');
-    const raw = window.prompt(`MW for ladder band at row=${rowY} (kDa):`, promptDefault);
-    if (raw === null) {
-      return;
-    }
-    const mw = Number(String(raw).trim());
-    if (!Number.isFinite(mw) || mw <= 0) {
-      deps.setStatus('Invalid MW value. Right-click again and enter a positive number (kDa).');
+    const mw = promptForLadderBandMw(rowY, normalized);
+    if (!Number.isFinite(mw)) {
       return;
     }
     upsertLadderBandMw(rowY, mw);
@@ -933,9 +1003,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
           ...normalizeManualOverrides(runtime.manualOverrides),
           addedBands: []
         };
-        if (runtime.selectedViewerTool === 'band-top') {
-          runtime.selectedViewerTool = '';
-        }
+        clearCanvasTool('band-top');
         renderOverrideStatus();
         deps.renderCanvas();
         deps.setStatus(`Lane ${laneIndex} top line set at row=${rowY}. Click the bottom line in lane ${laneIndex}.`);
@@ -947,9 +1015,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         ...normalizeManualOverrides(runtime.manualOverrides),
         addedBands: []
       };
-      if (runtime.selectedViewerTool === 'band-top') {
-        runtime.selectedViewerTool = '';
-      }
+      clearCanvasTool('band-top');
       renderOverrideStatus();
       deps.renderCanvas();
       deps.setStatus(`Band top line set at row=${rowY}.`);
@@ -981,9 +1047,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
           ...normalizeManualOverrides(runtime.manualOverrides),
           addedBands: []
         };
-        if (runtime.selectedViewerTool === 'band-bottom') {
-          runtime.selectedViewerTool = '';
-        }
+        clearCanvasTool('band-bottom');
         renderOverrideStatus();
         deps.renderCanvas();
         const nextProgress = getLaneBandProgress();
@@ -1002,9 +1066,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
         return;
       }
       updateLaneSegmentation({ bandBottom: rowY, quantifyConfirmed: false });
-      if (runtime.selectedViewerTool === 'band-bottom') {
-        runtime.selectedViewerTool = '';
-      }
+      clearCanvasTool('band-bottom');
       renderOverrideStatus();
       deps.renderCanvas();
       deps.setStatus(`Band bottom line set at row=${rowY}. Per-lane intensities ready in the Quantify panel.`);
@@ -1061,6 +1123,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     });
     resetDownstreamManualSelections();
     runtime.manualDividerConfirmed = false;
+    clearCanvasInteractionState();
     renderOverrideStatus();
     deps.renderCanvas();
     deps.setStatus(`Auto-detected ${peakCount} lane(s). Review dividers and add any missing ones, then click Done Dividers.`);
@@ -1069,9 +1132,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   function onResetManualOverrides() {
     runtime.manualOverrides = createEmptyManualOverrides();
     runtime.manualDividerConfirmed = false;
-    runtime.selectedViewerTool = '';
-    runtime.laneVertexDrag = null;
-    runtime.suppressNextLaneVertexClick = false;
+    clearCanvasInteractionState();
     runtime.currentReport = null;
     renderOverrideStatus();
     deps.renderReport();

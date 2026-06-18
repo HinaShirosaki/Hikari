@@ -1,6 +1,6 @@
 import { formatSigFig } from './common.js';
 import { volumeFromL, volumeToL } from './molarity.js';
-import { calculateFixedReactionReagent } from './bench-calculations.js';
+import { calculateFixedReactionReagent, roundNearZero } from './bench-calculations.js';
 
 const CONCENTRATION_OPTIONS = ['fM', 'pM', 'nM', 'uM', 'mM', 'M', 'x'];
 const VOLUME_OPTIONS = ['uL', 'mL', 'L'];
@@ -11,10 +11,6 @@ function selectMarkup(options, selectedValue) {
     const selected = option === selectedValue ? ' selected' : '';
     return `<option value="${option}"${selected}>${option}</option>`;
   }).join('');
-}
-
-function roundNearZero(value) {
-  return Math.abs(value) < VOLUME_EPSILON_L ? 0 : value;
 }
 
 function describeVolume(valueL, unit) {

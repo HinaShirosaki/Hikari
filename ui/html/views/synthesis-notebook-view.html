@@ -22,7 +22,7 @@
         <section class="notebook-chemistry">
           <div class="inline-row notebook-chemistry-head">
             <h4>Synthesis Chemistry (Optional)</h4>
-            <span class="small-note">Integrated local editor</span>
+            <span class="small-note">Manual chemistry notes</span>
           </div>
           <label class="inline-row">
             <input id="synthesis-chem-enabled" type="checkbox" />
@@ -30,7 +30,7 @@
           </label>
           <div id="synthesis-chem-workflow" hidden>
             <p class="small-note">
-              Draw a structure or type an abbreviation, then press Next. Use Product mode when ready for product.
+              Type an abbreviation, then press Next. Use Product mode when ready for product.
             </p>
             <div class="inline-row">
               <input id="synthesis-chem-input" placeholder="Abbreviation (optional, e.g. NaBH4)" />
@@ -40,17 +40,6 @@
               <button id="synthesis-chem-reset-btn" class="ghost-btn" type="button">Reset</button>
             </div>
             <div id="synthesis-chem-status" class="small-note"></div>
-            <p class="small-note">
-              Use Ketcher canvas for drawing. PNG and hidden SMILES are captured when you press Next.
-            </p>
-            <iframe
-              id="synthesis-notebook-ketcher-frame"
-              class="ketcher-frame"
-              title="Ketcher chemical editor"
-              src="./ketcher-embedded.html"
-              loading="lazy"
-              referrerpolicy="no-referrer"
-            ></iframe>
             <div class="synthesis-reaction-panel">
               <h4>Reaction Scheme</h4>
               <div id="synthesis-reaction-scheme" class="reaction-scheme"></div>

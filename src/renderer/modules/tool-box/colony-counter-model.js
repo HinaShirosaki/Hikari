@@ -1,12 +1,15 @@
 const ORT_RUNTIME_URL = '../../../../vendor/onnxruntime/ort.wasm.min.mjs';
 const ORT_WASM_URL = '../../../../vendor/onnxruntime/ort-wasm-simd-threaded.wasm';
-const MODEL_URL = '../../../../vendor/colony-counter/colony_heatmap_unet.onnx';
-const METADATA_URL = '../../../../vendor/colony-counter/colony_heatmap_unet.json';
+const COLONY_MODEL_URL = '../../../../vendor/colony-counter/colony_heatmap_unet.onnx';
+const COLONY_METADATA_URL = '../../../../vendor/colony-counter/colony_heatmap_unet.json';
+const PLATE_MODEL_URL = '../../../../vendor/colony-counter/plate_unet.onnx';
+const PLATE_METADATA_URL = '../../../../vendor/colony-counter/plate_unet.json';
 
 const FALLBACK_METADATA = {
   img_size: 1024,
   default_threshold: 0.5,
-  default_min_distance: 3
+  default_min_distance: 3,
+  default_plate_threshold: 0.5
 };
 
 let modelRuntimePromise = null;
@@ -49,9 +52,9 @@ async function fetchLocalArrayBuffer(relativePath) {
   }
 }
 
-async function fetchModelMetadata() {
+async function fetchModelMetadata(relativePath) {
   try {
-    const response = await fetch(assetUrl(METADATA_URL));
+    const response = await fetch(assetUrl(relativePath));
     if (!response.ok && response.status !== 0) {
       return FALLBACK_METADATA;
     }
@@ -61,7 +64,7 @@ async function fetchModelMetadata() {
     };
   } catch (error) {
     try {
-      const bytes = await readAssetBytes(METADATA_URL);
+      const bytes = await readAssetBytes(relativePath);
       const text = new TextDecoder('utf-8').decode(bytes);
       return {
         ...FALLBACK_METADATA,
@@ -76,11 +79,13 @@ async function fetchModelMetadata() {
 async function loadModelRuntime() {
   if (!modelRuntimePromise) {
     modelRuntimePromise = (async () => {
-      const [ort, metadata, wasmBuffer, modelBuffer] = await Promise.all([
+      const [ort, colonyMetadata, plateMetadata, wasmBuffer, colonyModelBuffer, plateModelBuffer] = await Promise.all([
         import(assetUrl(ORT_RUNTIME_URL)),
-        fetchModelMetadata(),
+        fetchModelMetadata(COLONY_METADATA_URL),
+        fetchModelMetadata(PLATE_METADATA_URL),
         fetchLocalArrayBuffer(ORT_WASM_URL),
-        fetchLocalArrayBuffer(MODEL_URL)
+        fetchLocalArrayBuffer(COLONY_MODEL_URL),
+        fetchLocalArrayBuffer(PLATE_MODEL_URL)
       ]);
 
       // Keep this single-threaded so it works from a file:// Electron renderer
@@ -89,12 +94,16 @@ async function loadModelRuntime() {
       ort.env.wasm.proxy = false;
       ort.env.wasm.wasmBinary = new Uint8Array(wasmBuffer);
 
-      const session = await ort.InferenceSession.create(new Uint8Array(modelBuffer), {
+      const colonySession = await ort.InferenceSession.create(new Uint8Array(colonyModelBuffer), {
+        executionProviders: ['wasm'],
+        graphOptimizationLevel: 'all'
+      });
+      const plateSession = await ort.InferenceSession.create(new Uint8Array(plateModelBuffer), {
         executionProviders: ['wasm'],
         graphOptimizationLevel: 'all'
       });
 
-      return { ort, session, metadata };
+      return { ort, colonySession, plateSession, colonyMetadata, plateMetadata };
     })();
   }
   return modelRuntimePromise;
@@ -270,13 +279,123 @@ function findHeatmapPeaks(heatmap, width, height, threshold, minDistance) {
   return peaks;
 }
 
-function getOutputTensor(result, outputNames) {
+function findLargestMaskBox(probabilities, width, height, threshold) {
+  const total = width * height;
+  const visited = new Uint8Array(total);
+  const stack = new Int32Array(total);
+  let best = null;
+
+  for (let offset = 0; offset < total; offset += 1) {
+    if (visited[offset] || probabilities[offset] < threshold) {
+      continue;
+    }
+
+    let stackSize = 0;
+    let area = 0;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+
+    stack[stackSize] = offset;
+    stackSize += 1;
+    visited[offset] = 1;
+
+    while (stackSize > 0) {
+      stackSize -= 1;
+      const current = stack[stackSize];
+      const y = Math.floor(current / width);
+      const x = current - (y * width);
+
+      area += 1;
+      minX = Math.min(minX, x);
+      minY = Math.min(minY, y);
+      maxX = Math.max(maxX, x);
+      maxY = Math.max(maxY, y);
+
+      for (let yy = Math.max(0, y - 1); yy <= Math.min(height - 1, y + 1); yy += 1) {
+        const neighborRowOffset = yy * width;
+        for (let xx = Math.max(0, x - 1); xx <= Math.min(width - 1, x + 1); xx += 1) {
+          const neighbor = neighborRowOffset + xx;
+          if (visited[neighbor] || probabilities[neighbor] < threshold) {
+            continue;
+          }
+          visited[neighbor] = 1;
+          stack[stackSize] = neighbor;
+          stackSize += 1;
+        }
+      }
+    }
+
+    if (!best || area > best.area) {
+      best = { area, minX, minY, maxX, maxY };
+    }
+  }
+
+  return best;
+}
+
+function scalePlateBoxToMask(box, heatmapWidth, heatmapHeight, sourceWidth, sourceHeight) {
+  if (!box || box.area <= 0) {
+    return null;
+  }
+
+  const scaleX = sourceWidth / heatmapWidth;
+  const scaleY = sourceHeight / heatmapHeight;
+  const x0 = Math.max(0, box.minX * scaleX);
+  const y0 = Math.max(0, box.minY * scaleY);
+  const x1 = Math.min(sourceWidth, (box.maxX + 1) * scaleX);
+  const y1 = Math.min(sourceHeight, (box.maxY + 1) * scaleY);
+  if ((x1 - x0) < 1 || (y1 - y0) < 1) {
+    return null;
+  }
+
+  return {
+    kind: 'circle',
+    x: x0,
+    y: y0,
+    width: x1 - x0,
+    height: y1 - y0,
+    source: 'plate-model'
+  };
+}
+
+function hasUsableMask(mask) {
+  return Boolean(mask && mask.kind && mask.kind !== 'none' && Math.abs(mask.width) > 1 && Math.abs(mask.height) > 1);
+}
+
+function getOutputTensor(result, outputNames, modelName = 'model') {
   const outputName = outputNames?.[0] || 'heatmap';
   const output = result[outputName] || result.heatmap || Object.values(result)[0];
   if (!output) {
-    throw new Error('The colony model did not return a heatmap output.');
+    throw new Error(`The ${modelName} did not return a heatmap output.`);
   }
   return output;
+}
+
+async function detectPlateMask(sourceCanvas, threshold) {
+  const { ort, plateSession, plateMetadata } = await loadModelRuntime();
+  const imgSize = Math.max(1, Math.round(Number(plateMetadata.img_size) || FALLBACK_METADATA.img_size));
+  const plateThreshold = normalizeThreshold(
+    threshold,
+    Number(plateMetadata.default_plate_threshold || plateMetadata.default_threshold) || FALLBACK_METADATA.default_plate_threshold
+  );
+
+  const input = buildInputTensor(ort, sourceCanvas, imgSize);
+  const result = await plateSession.run({ image: input });
+  const output = getOutputTensor(result, plateSession.outputNames, 'plate model');
+  const data = output.data || await output.getData();
+  const dims = Array.isArray(output.dims) ? output.dims : [];
+  const heatmapWidth = Math.max(1, Math.round(dims[dims.length - 1] || imgSize));
+  const heatmapHeight = Math.max(1, Math.round(dims[dims.length - 2] || imgSize));
+  const box = findLargestMaskBox(data, heatmapWidth, heatmapHeight, plateThreshold);
+  const mask = scalePlateBoxToMask(box, heatmapWidth, heatmapHeight, sourceCanvas.width, sourceCanvas.height);
+
+  return {
+    mask,
+    threshold: plateThreshold,
+    area: box?.area || 0
+  };
 }
 
 export async function countColoniesWithModel(sourceCanvas, options = {}) {
@@ -285,14 +404,19 @@ export async function countColoniesWithModel(sourceCanvas, options = {}) {
   }
 
   const startedAt = performance.now();
-  const { ort, session, metadata } = await loadModelRuntime();
-  const imgSize = Math.max(1, Math.round(Number(metadata.img_size) || FALLBACK_METADATA.img_size));
-  const threshold = normalizeThreshold(options.threshold, Number(metadata.default_threshold) || 0.5);
-  const minDistance = normalizeMinDistance(options.minDistance, Number(metadata.default_min_distance) || 3);
+  const { ort, colonySession, colonyMetadata } = await loadModelRuntime();
+  const imgSize = Math.max(1, Math.round(Number(colonyMetadata.img_size) || FALLBACK_METADATA.img_size));
+  const threshold = normalizeThreshold(options.threshold, Number(colonyMetadata.default_threshold) || 0.5);
+  const minDistance = normalizeMinDistance(options.minDistance, Number(colonyMetadata.default_min_distance) || 3);
+  const userMask = hasUsableMask(options.mask) ? options.mask : null;
+  const plateDetection = userMask
+    ? { mask: null, threshold: null, area: 0 }
+    : await detectPlateMask(sourceCanvas, options.plateThreshold);
+  const effectiveMask = userMask || plateDetection.mask || null;
 
   const input = buildInputTensor(ort, sourceCanvas, imgSize);
-  const result = await session.run({ image: input });
-  const output = getOutputTensor(result, session.outputNames);
+  const result = await colonySession.run({ image: input });
+  const output = getOutputTensor(result, colonySession.outputNames, 'colony model');
   const data = output.data || await output.getData();
   const dims = Array.isArray(output.dims) ? output.dims : [];
   const heatmapWidth = Math.max(1, Math.round(dims[dims.length - 1] || imgSize));
@@ -307,7 +431,7 @@ export async function countColoniesWithModel(sourceCanvas, options = {}) {
       y: peak.y * scaleY,
       score: peak.score
     }))
-    .filter((point) => isPointInsideMask(point, options.mask));
+    .filter((point) => isPointInsideMask(point, effectiveMask));
 
   return {
     colonies,
@@ -315,6 +439,11 @@ export async function countColoniesWithModel(sourceCanvas, options = {}) {
     imgSize,
     threshold,
     minDistance,
-    totalPeaks: peaks.length
+    totalPeaks: peaks.length,
+    effectiveMask,
+    maskSource: userMask ? 'user' : (plateDetection.mask ? 'plate-model' : 'none'),
+    detectedPlateMask: plateDetection.mask,
+    plateThreshold: plateDetection.threshold,
+    plateArea: plateDetection.area
   };
 }

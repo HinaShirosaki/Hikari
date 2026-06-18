@@ -21,23 +21,23 @@ export const CLONING_PRIMER_TM_THRESHOLDS = Object.freeze({
   strict: Object.freeze({
     primerLength: Object.freeze({ min: 18, max: 32 }),
     primerTm: Object.freeze({ min: 58, max: 64 }),
-    maxPrimerTmDifference: 2,
+    maxPrimerTmDifference: 3,
     overlapTm: Object.freeze({ min: 60, max: 68 }),
-    maxOverlapTmDifference: 2
+    maxOverlapTmDifference: 3
   }),
   moderate: Object.freeze({
     primerLength: Object.freeze({ min: 16, max: 36 }),
     primerTm: Object.freeze({ min: 56, max: 66 }),
-    maxPrimerTmDifference: 4,
+    maxPrimerTmDifference: 6,
     overlapTm: Object.freeze({ min: 58, max: 70 }),
-    maxOverlapTmDifference: 4
+    maxOverlapTmDifference: 6
   }),
   relaxed: Object.freeze({
     primerLength: Object.freeze({ min: 15, max: 40 }),
     primerTm: Object.freeze({ min: 54, max: 68 }),
-    maxPrimerTmDifference: 6,
+    maxPrimerTmDifference: 10,
     overlapTm: Object.freeze({ min: 56, max: 72 }),
-    maxOverlapTmDifference: 6
+    maxOverlapTmDifference: 10
   })
 });
 
@@ -48,7 +48,6 @@ export const DEFAULT_CLONING_PREFERENCES = Object.freeze({
   maxPrimerEncodedInsertionAA: 30,
   maxPrimerLength: 60,
   minMutagenesisFlankLength: 8,
-  requireUniqueRestrictionSites: true,
   topology: 'circular',
   vendorFilter: DEFAULT_VENDOR_FILTER,
   primerClampSequence: 'GCGC',

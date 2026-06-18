@@ -15,6 +15,7 @@ They define:
 The important thing is that `defaultState` is broad. It is not only UI preferences. It also contains the app's core working data:
 
 - members, instruments, protocols, projects
+  - `members` and `instruments` are retained for back-compat; their dedicated workspaces are no longer surfaced in navigation, but the state branches still load and normalize
 - workflows and workflow templates
 - notebook entries
 - assays and gel analyses

@@ -48,7 +48,43 @@ export function normalizeVendorFilter(filter) {
   };
 }
 
-export function buildRestrictionCandidatePairs(features, hostLength, inserts, config) {
+// Classify a REBASE-style cut pattern as producing a sticky or blunt end. Two
+// notations appear in the catalog:
+//   - symmetric Type II cutters carry a single '^' inside the site
+//     ('G^AATTC' = 4 nt 5' overhang, 'GAT^ATC' = blunt, 'GGTAC^C' = 4 nt 3' overhang)
+//   - shifted/Type IIS cutters use 'SITE(top/bottom)' offsets ('CACCTGC(4/8)' = 4 nt overhang)
+// An overhang length of 0 is blunt; anything else leaves a sticky overhang.
+export function restrictionCutOverhang(cutPattern) {
+  const pattern = String(cutPattern || '').toUpperCase().trim();
+  if (!pattern) {
+    return { type: 'unknown', length: 0 };
+  }
+
+  const offsetMatch = pattern.match(/\((-?\d+)\/(-?\d+)\)/);
+  if (offsetMatch) {
+    const overhang = Number(offsetMatch[2]) - Number(offsetMatch[1]);
+    return { type: overhang === 0 ? 'blunt' : 'sticky', length: Math.abs(overhang) };
+  }
+
+  const caretIndex = pattern.indexOf('^');
+  if (caretIndex >= 0) {
+    const siteLength = pattern.replace(/\^/g, '').length;
+    const overhang = siteLength - (2 * caretIndex);
+    return { type: overhang === 0 ? 'blunt' : 'sticky', length: Math.abs(overhang) };
+  }
+
+  return { type: 'unknown', length: 0 };
+}
+
+function featureCutPattern(feature) {
+  if (feature?.cut) {
+    return feature.cut;
+  }
+  const patterns = asArray(feature?.cutPatterns);
+  return patterns.length ? patterns[0] : '';
+}
+
+export function buildRestrictionCandidatePairs(features, hostLength, inserts) {
   const candidates = [];
   for (let leftIndex = 0; leftIndex < features.length; leftIndex += 1) {
     for (let rightIndex = leftIndex + 1; rightIndex < features.length; rightIndex += 1) {
@@ -80,8 +116,10 @@ export function buildRestrictionCandidatePairs(features, hostLength, inserts, co
       }
 
       const distance = circularDistance(hostLength, left?.segments?.[0]?.start, right?.segments?.[0]?.start);
-      const stickyBonus = String(left?.cut || '').includes('^') ? 1 : 0;
-      const rightStickyBonus = String(right?.cut || '').includes('^') ? 1 : 0;
+      // Sticky-overhang cutters ligate directionally and far more efficiently than
+      // blunt ones, so reward them heavily over the proximity tie-breaker.
+      const stickyBonus = restrictionCutOverhang(featureCutPattern(left)).type === 'sticky' ? 1 : 0;
+      const rightStickyBonus = restrictionCutOverhang(featureCutPattern(right)).type === 'sticky' ? 1 : 0;
       const score = (stickyBonus + rightStickyBonus) * 1000 - distance;
 
       candidates.push({
@@ -90,8 +128,7 @@ export function buildRestrictionCandidatePairs(features, hostLength, inserts, co
         right,
         score,
         distance,
-        insertWarnings: [],
-        requiresUniqueRestrictionSites: Boolean(config?.requireUniqueRestrictionSites)
+        insertWarnings: []
       });
     }
   }
@@ -129,6 +166,8 @@ export function evaluateRestrictionLigation(args = {}) {
     };
   }
 
+  // buildCommercialRestrictionFeatures only emits enzymes that cut the backbone
+  // exactly once, so every candidate site here is already a guaranteed unique cutter.
   const hostFeatures = buildCommercialRestrictionFeatures(host.sequence, host.topology, {
     vendorFilter: normalizeVendorFilter(config.vendorFilter)
   }).filter((feature) => String(feature?.type || '').toLowerCase() === 'restriction_site');
@@ -143,7 +182,7 @@ export function evaluateRestrictionLigation(args = {}) {
     };
   }
 
-  const candidates = buildRestrictionCandidatePairs(hostFeatures, host.sequence.length, inserts, config);
+  const candidates = buildRestrictionCandidatePairs(hostFeatures, host.sequence.length, inserts);
   const candidatePairs = candidates.slice(0, 5).map((candidate) => ({
     enzymes: [
       candidate.left?.name || candidate.left?.site,

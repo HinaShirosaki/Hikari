@@ -278,8 +278,6 @@ const removedCodeGuards = [
   ['src/renderer/modules/views.js', /LAB_NOTEBOOK/, false],
   ['src/main/lib/telegramBot.js', /telegram-message/, false],
   ['src/main/preload.js', /onTelegramMessage/, false],
-  ['ketcher-embedded.html', /\/Users\//, false],
-  ['ketcher-embedded.html', /file:\/\//, false],
   ['index.html', /lab-notebook-view/, false],
   ['src/renderer/renderer.js', /VIEWS\.LAB_NOTEBOOK/, false],
   ['forge.config.js', /hikari-data/, true],

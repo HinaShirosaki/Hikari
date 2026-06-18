@@ -7,6 +7,7 @@
   "label_format": "center_heatmap",
   "default_threshold": 0.5,
   "default_min_distance": 3,
+  "default_plate_threshold": 0.5,
   "input": "RGB float32 NCHW scaled 0..1",
   "output": "single-channel sigmoid heatmap"
 }

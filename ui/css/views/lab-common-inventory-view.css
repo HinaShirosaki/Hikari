@@ -54,15 +54,15 @@
 }
 
 .chemical-import-status[data-status="success"] {
-  color: color-mix(in srgb, var(--success, var(--palette-hex-1f8f5f)) 82%, var(--text) 18%);
+  color: color-mix(in srgb, var(--success) 82%, var(--text) 18%);
 }
 
 .chemical-import-status[data-status="warning"] {
-  color: color-mix(in srgb, var(--warning, var(--palette-hex-b26a00)) 82%, var(--text) 18%);
+  color: color-mix(in srgb, var(--warning) 82%, var(--text) 18%);
 }
 
 .chemical-import-status[data-status="error"] {
-  color: color-mix(in srgb, var(--danger, var(--palette-hex-b42318)) 82%, var(--text) 18%);
+  color: color-mix(in srgb, var(--danger) 82%, var(--text) 18%);
 }
 
 .chemical-search-field {
@@ -134,7 +134,7 @@
   position: fixed;
   inset: 0;
   z-index: 2550;
-  background: var(--palette-rgba-18-34-55-a22);
+  background: var(--palette-rgba-18-34-55-a2);
   display: grid;
   place-items: center;
   padding: 18px;
@@ -151,9 +151,9 @@
   display: grid;
   gap: 16px;
   padding: 18px;
-  border: 1px solid var(--palette-rgba-53-99-153-a22);
+  border: 1px solid var(--palette-rgba-53-99-153-a2);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--surface-elevated, var(--palette-white)) 95%, var(--palette-cream-125) 5%);
+  background: color-mix(in srgb, var(--surface-elevated) 95%, var(--surface-subtle) 5%);
   box-shadow: 0 22px 54px var(--palette-rgba-27-20-14-a18);
 }
 

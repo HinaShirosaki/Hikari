@@ -33,24 +33,6 @@ export const BASE_COMPLEMENT = Object.freeze({
   '*': '*'
 });
 
-export const IUPAC_DNA_CLASS = Object.freeze({
-  A: 'A',
-  C: 'C',
-  G: 'G',
-  T: 'T',
-  R: '[AG]',
-  Y: '[CT]',
-  S: '[GC]',
-  W: '[AT]',
-  K: '[GT]',
-  M: '[AC]',
-  B: '[CGT]',
-  D: '[AGT]',
-  H: '[ACT]',
-  V: '[ACG]',
-  N: '[ACGT]'
-});
-
 export const ORF_START_CODONS = new Set(['ATG']);
 export const ORF_STOP_CODONS = new Set(['TAA', 'TAG', 'TGA']);
 export const DEFAULT_MIN_ORF_AA_LENGTH = 75;

@@ -4,6 +4,8 @@
     "ui/css/base/palette.css",
     "ui/css/base/core.css",
     "ui/css/themes/modes.css",
+    "ui/css/views/assay-plate-palette.css",
+    "ui/css/views/sequence-viewer-palette.css",
     "ui/css/views/home-view.css",
     "ui/css/views/protocol-management-view.css",
     "ui/css/views/biology-notebook-view.css",

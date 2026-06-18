@@ -4,11 +4,7 @@ export function bindPersonalInventoryEvents(ctx) {
     addContainerNameInput,
     addContainerTypeSelect,
     addContainerForm,
-    addContainerCancelBtn,
-    sampleCompoundDialogApplyBtn,
-    sampleCompoundDialogCloseBtn,
-    sampleCompoundDialogCancelBtn,
-    sampleCompoundDialogOverlay
+    addContainerCancelBtn
   } = ctx.elements;
 
   addContainerBtn?.addEventListener('click', () => {
@@ -27,11 +23,4 @@ export function bindPersonalInventoryEvents(ctx) {
     ctx.resetAddContainerForm();
     ctx.setAddContainerFormOpen(false);
   });
-  sampleCompoundDialogApplyBtn?.addEventListener('click', ctx.onInventoryStructureApplyClick);
-  sampleCompoundDialogCloseBtn?.addEventListener('click', ctx.onInventoryStructureCloseClick);
-  sampleCompoundDialogCancelBtn?.addEventListener('click', ctx.onInventoryStructureCloseClick);
-  sampleCompoundDialogOverlay?.addEventListener('click', ctx.onInventoryStructureOverlayClick);
-  if (typeof document.addEventListener === 'function') {
-    document.addEventListener('keydown', ctx.onInventoryStructureKeydown);
-  }
 }

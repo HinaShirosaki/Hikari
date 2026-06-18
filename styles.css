@@ -4,6 +4,8 @@
 @import url("./ui/css/base/palette.css");
 @import url("./ui/css/base/core.css");
 @import url("./ui/css/themes/modes.css");
+@import url("./ui/css/views/assay-plate-palette.css");
+@import url("./ui/css/views/sequence-viewer-palette.css");
 @import url("./ui/css/views/home-view.css");
 @import url("./ui/css/views/protocol-management-view.css");
 @import url("./ui/css/views/biology-notebook-view.css");

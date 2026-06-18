@@ -11,7 +11,7 @@ import {
 } from '../modules/object-graph.js';
 import { APP_DOCK_ORDER, APP_REGISTRY } from '../modules/app-registry.generated.js';
 import { createRendererModuleRuntime } from '../module-runtime.js';
-import { createModuleRegistry, createRendererServices } from '../services/index.js';
+import { createModuleRegistry, createRendererServices, createUndoService } from '../services/index.js';
 import { initSharedLeftRailResizers } from '../shared-left-rail.js';
 import { normalizeStateStoragePaths } from '../modules/storage-path-normalizer.js';
 import {
@@ -126,8 +126,10 @@ export function startHikariCore({
   // use in `onStoragePathSaved` below) and `moduleRuntime` mutually reference
   // each other; this is unrelated to the navigation/search wiring.
   let moduleRuntime = null;
+  let undoService = null;
+  let navigationShell = null;
 
-  function persist() {
+  function persistStateNow() {
     normalizeStateStoragePaths(state);
     state.objectGraph = rebuildObjectGraph(state);
     persistState(state);
@@ -138,10 +140,26 @@ export function startHikariCore({
     }
   }
 
+  function persist(options = {}) {
+    return undoService ? undoService.persist(options) : persistStateNow();
+  }
+
   function renderAll() {
     state.objectGraph = rebuildObjectGraph(state);
     moduleRuntime?.renderAll();
   }
+
+  function renderRestoredState() {
+    navigationShell?.applyAppearanceSnapshot(state.settings?.appearance);
+    renderAll();
+  }
+
+  undoService = createUndoService({
+    state,
+    persistState: persistStateNow,
+    renderAll: renderRestoredState,
+    documentObject
+  });
 
   const moduleRegistry = createModuleRegistry({
     showView: viewController.showView,
@@ -188,7 +206,7 @@ export function startHikariCore({
     }
   });
 
-  const navigationShell = createNavigationShell({
+  navigationShell = createNavigationShell({
     VIEWS,
     TITLES,
     APP_DOCK_ORDER,
@@ -268,6 +286,7 @@ export function startHikariCore({
         console.error('Failed to apply queued protocol record:', error);
       }
     }
+    undoService.reset();
     navigationShell.applyAppearanceSnapshot(state.settings?.appearance);
     navigationShell.renderAppNavigation();
     navigationShell.initNavigation();

@@ -71,10 +71,11 @@ export function initLabNotebook({
   onCreateLinkedAssay,
   onCreateLinkedGel,
   onOpenSampleRecorder,
+  onOpenProjects,
   selectionInsightsController = null,
   notebookType = 'biology'
 }) {
-  const SAMPLE_PLACEHOLDER_TYPE_ALIASES = buildSamplePlaceholderTypeAliases();
+  const SAMPLE_PLACEHOLDER_TYPE_ALIASES = buildSamplePlaceholderTypeAliases(state.settings);
   const TabulatorLib = window.Tabulator || null;
 
   const notebookProjectSelect = document.getElementById('biology-notebook-project-select');
@@ -82,6 +83,7 @@ export function initLabNotebook({
   const notebookProtocolSelect = document.getElementById('biology-notebook-protocol-select');
   const notebookPageStarter = document.getElementById('biology-notebook-page-starter');
   const notebookPageStarterProject = document.getElementById('biology-notebook-page-starter-project');
+  const notebookOpenProjectsBtn = document.getElementById('biology-notebook-open-projects-btn');
   const notebookEmptyState = document.getElementById('biology-notebook-empty-state');
   const notebookProjectDashboard = document.getElementById('biology-notebook-project-dashboard');
   const notebookProtocolArea = document.getElementById('biology-notebook-protocol-area');
@@ -123,6 +125,8 @@ export function initLabNotebook({
   let sampleLinkDrafts = new Map();
   let pendingDroppedResultFiles = [];
 
+  notebookOpenProjectsBtn?.addEventListener('click', () => onOpenProjects?.());
+
   if (notebookProjectDashboard) {
     notebookProjectDashboard.hidden = true;
   }
@@ -163,6 +167,7 @@ export function initLabNotebook({
     win: typeof window !== 'undefined' ? window : null,
     getSamples: () => (Array.isArray(state.samples) ? state.samples : []),
     getInventory: () => (state.inventory || {}),
+    getSettings: () => state.settings || {},
     safeText,
     onSelect: (sample, menuState) => inlinePlaceholders.linkSample({ menuState, sample })
   });
@@ -173,6 +178,7 @@ export function initLabNotebook({
     setSampleLink: (key, link) => sampleLinkDrafts.set(key, link),
     deleteSampleLink: (key) => sampleLinkDrafts.delete(key),
     getInventory: () => state.inventory || {},
+    getSettings: () => state.settings || {},
     onOpenSampleLinkMenu: (params) => sampleLinkMenu.open(params),
     onCloseSampleLinkMenu: () => sampleLinkMenu.close(),
     onAppendResultLine: appendNotebookResultLine,
@@ -256,6 +262,9 @@ export function initLabNotebook({
     }
     if (notebookPageStarter) {
       notebookPageStarter.dataset.projectId = project?.id || '';
+    }
+    if (notebookOpenProjectsBtn) {
+      notebookOpenProjectsBtn.textContent = project ? 'Manage Projects' : 'Create Project';
     }
     if (notebookProtocolSearchInput) {
       notebookProtocolSearchInput.disabled = !project;
@@ -943,6 +952,7 @@ export function initLabNotebook({
       protocol,
       values: entry?.values || {},
       safeText,
+      settings: state.settings || {},
       samplePlaceholderTypeAliases: SAMPLE_PLACEHOLDER_TYPE_ALIASES,
       getSampleLink: (key) => sampleLinkDrafts.get(key)
     });

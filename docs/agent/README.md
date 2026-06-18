@@ -25,13 +25,13 @@ This doc set explains how `src/main/helpers/agent` is assembled, how requests mo
 - chat-log persistence and lifecycle logging
 - reusable tool/runtime helpers
 
-The package is heavily dependency-injected. `src/main/main.js` creates the concrete runtimes, wires in provider adapters, and passes the finished objects into `registerAgentIpc`.
+The package is heavily dependency-injected. `src/main/core/start-hikari-main-core.js` builds the agent service bundle via `createMainAgentServices(...)` (`src/main/helpers/main/create-main-agent-services.js`), wires in provider adapters, and passes the finished objects as the `agent` argument of `registerMainIpc({ data, agent, system })`. The agent registrar itself lives in `src/main/ipc/register-agent-ipc/`.
 
 ## High-level flow
 
 1. The renderer calls `agent:chat`.
-2. `src/main/helpers/main/register-agent-ipc.js` creates request/session logging state.
-3. `agent-controller-utils.js` resolves provider, endpoint, model, API key, and runs the parser-first intent classifier.
+2. `src/main/ipc/register-agent-ipc/agent-chat-handler.js` creates request/session logging state.
+3. `shared/agent-controller-utils.js` resolves provider, endpoint, model, API key, and runs the parser-first intent classifier.
 4. The controller dispatches to one of the intent-specific paths:
    - protocol-to-notebook
    - inventory lookup
@@ -53,14 +53,19 @@ The package is heavily dependency-injected. `src/main/main.js` creates the concr
 | `context/` | chat-log persistence, layered in-memory context, and sparse long-term memory |
 | `shared/` | provider adapters, observability, runtime registry, and controller glue |
 | `deep-research/` | multi-step research pipeline for science intents |
+| `literature-search/` | literature-search and Codex paper-context workflows |
+| `paper-intake/` | paper intake pipeline, search, store, and MCP tools |
+| `skills/` | agent skill runtime |
+
+The agent IPC registrar (`agent:chat` and the chat-log/log endpoints) lives separately in `src/main/ipc/register-agent-ipc/`.
 
 ## Current integration notes
 
 These are worth knowing before reading the file-by-file map:
 
-- The controller is parser-first. Every `agent:chat` request runs through `agent-intent-parser.js` before it hits a specialized runtime.
-- `inventory_lookup` and `record_lookup` use direct runtime calls from the controller instead of going through the generic tool executor.
-- `notebook_draft` is the only tool explicitly registered on the shared `createAgentToolCallRuntime()` instance in `main.js`.
-- `createCodexAgentRuntime()` owns the Codex-only whole-turn lifecycle, while `mcp-contract/` is shared by any provider integration that can use Hikari MCP tools.
-- `agent-context-management.js` and `agent-memory.js` are real runtimes, but they are not currently connected to the main `agent:chat` flow. They are closer to scaffolding or future integration points today.
-- `agent-tool-smoke-test.js` is important because it instantiates many tool runtimes directly, even when those tools are not yet attached to the shared executor used by the controller.
+- There are two top-level controller paths. When the provider resolves to Codex (`LLM_PROVIDERS.CODEX`), `agent-controller-core.js` selects the Codex-owned path and runs `codexAgentRuntime.run(...)`. Otherwise it uses the parser-first intent path, where every request runs through `agent-intent-parser.js` before hitting a specialized runtime.
+- The `inventory_lookup` and `record_lookup` *intents* call the lookup runtime directly from the controller, but `inventory-lookup` and `record-lookup` are also registered as tools for the science/deep-research loops.
+- The shared `createAgentToolCallRuntime()` instance now has the full tool suite registered via `register-agent-tool-executors.js` (lookups, protocol matching, notebook generation/draft, web search, sub-agent, memory, literature search, paper download/search/analysis, purchase recommendation, protocol generation, python sandbox, command line) — not just `notebook-draft`.
+- `createCodexAgentRuntime()` owns the Codex whole-turn lifecycle and is dispatched on the Codex provider path, while `mcp-contract/` is shared by any provider integration that can use Hikari MCP tools.
+- `agent-memory.js` is now wired into the chat flow as the `memory` tool. `agent-context-management.js` is still a real runtime that is not connected to the main `agent:chat` flow — closer to scaffolding or a future integration point today.
+- `agent-tool-smoke-test.js` exercises tool runtimes in isolation with lightweight fixtures, independent of the live executor used by `agent:chat`.

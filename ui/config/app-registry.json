@@ -79,7 +79,6 @@
       "viewId": "project-management-view",
       "icon": "projects.svg",
       "placement": "more",
-      "hiddenFromNavigation": true,
       "aliases": ["project"],
       "searchInputId": ""
     },

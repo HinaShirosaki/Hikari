@@ -13,10 +13,7 @@ import {
 } from './sample-helpers.js';
 import { renderStepSentence } from './step-renderer.js';
 import { summarizeNotebookResultTables } from '../notebook-result-table.js';
-import {
-  buildNotebookToolCalculationsHtml,
-  summarizeNotebookToolCalculations
-} from './tool-calculations.js';
+import { summarizeNotebookToolCalculations } from './tool-calculations.js';
 
 export function buildViewerMeta({
   project,
@@ -56,17 +53,11 @@ export function buildViewerMeta({
   return `${contextLabel} protocol draft. Fill placeholders and results, then save this notebook page.`;
 }
 
-export function buildToolCalculationsHtml({
-  calculations,
-  safeText
-} = {}) {
-  return buildNotebookToolCalculationsHtml({ calculations, safeText });
-}
-
 export function buildProtocolStepsHtml({
   protocol,
   values,
   safeText,
+  settings = {},
   samplePlaceholderTypeAliases,
   getSampleLink
 }) {
@@ -74,7 +65,7 @@ export function buildProtocolStepsHtml({
     safeText,
     getSampleLink,
     resolveType: (name) => resolveSampleTypeForPlaceholder(name, samplePlaceholderTypeAliases),
-    getSampleLabel: getSampleTypeLabel,
+    getSampleLabel: (type) => getSampleTypeLabel(type, settings),
     formatLinkValue: formatSampleLinkValue
   };
   return (Array.isArray(protocol?.steps) ? protocol.steps : []).map((step, index) => {

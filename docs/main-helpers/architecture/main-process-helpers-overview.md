@@ -1,68 +1,67 @@
 # Main-Process Helper Overview
 
-The easiest way to understand `src/main/helpers/main` is to read it as the “supporting infrastructure” side of `src/main/main.js`.
+`src/main/helpers/main` is the persistence, runtime, and import layer of the main process. The IPC registrars that expose it to the renderer live one level up in `src/main/ipc/`.
 
-## Assembly pattern in `main.js`
+## Assembly pattern
 
-`main.js` does three things with this folder:
+`main.js` is a 5-line entry. The real boot lives in `src/main/core/start-hikari-main-core.js`, which:
 
-- it creates a small data persistence facade with `createMainDataHelpers(...)`
-- it imports concrete storage and sequence operations
-- it hands those operations into IPC registrar functions
+- creates the data persistence facade with `createMainDataHelpers(...)` and paths with `createMainAppPaths(...)`
+- imports concrete storage, sequence-library, and LLM operations
+- builds the agent service bundle with `create-main-agent-services.js`
+- hands those into `registerMainIpc({ data, agent, system })` from `src/main/ipc/`
 
-That gives the folder a very consistent shape:
+That gives the folder a consistent shape:
 
-| Concern | Main file |
+| Concern | Location |
 | --- | --- |
-| persistence facade | `data-helpers.js` |
-| compact snapshot serialization | `data-snapshot-utils.js` |
-| bundle sidecars and storage import | `storage-bundle.js` |
-| sequence storage and search | `sequence-library.js` |
-| sequence inference | `sequence-backbone-recognition.js` |
-| renderer-facing data IPC | `register-data-ipc.js` |
-| renderer-facing system IPC | `register-system-ipc.js` |
-| renderer-facing agent IPC | `register-agent-ipc.js` |
+| persistence facade | `data/data-helpers.js` |
+| compact snapshot serialization | `data/data-snapshot-utils.js` |
+| bundle sidecars, SQLite, storage import | `storage-bundle/` (folder) |
+| sequence storage, search, annotation | `sequence-library/` (folder) |
+| sequence inference (shared algorithm) | `sequence/` (folder) |
+| LLM provider runtime + chat-log transform | `llm/` (folder) |
+| agent service wiring | `create-main-agent-services.js`, `agent-mcp-initializer.js` |
+| PDF/paper/chemical import | `pdf-to-md.js`, `paper-markdown-import.js`, `chemical-import-parser.js`, ... |
+| renderer-facing IPC | `src/main/ipc/` (data / system / agent registrars) |
 
-## Three registrar model
+## Three-registrar model
 
-The folder's public shape is dominated by three registrar files:
+The renderer-facing surface is still dominated by three registrars, now under `src/main/ipc/` and aggregated by `registerMainIpc(...)`:
 
 | Registrar | Primary audience | What it exposes |
 | --- | --- | --- |
-| `register-data-ipc.js` | renderer data and storage flows | save/load, storage root helpers, sequence library, Plannotate |
-| `register-agent-ipc.js` | renderer chat/assistant flows | `agent:chat`, chat-log helpers, tool smoke tests, lifecycle replay |
-| `register-system-ipc.js` | renderer settings/system panels | Codex CLI status/generation, Telegram bot config |
+| `register-data-ipc.js` | renderer data and storage flows | save/load, storage-root helpers, sequence library, import parsers |
+| `register-agent-ipc/` | renderer chat/assistant flows | `agent:chat`, chat-log session helpers, developer tool tests, log replay |
+| `register-system-ipc.js` | renderer settings/system panels | Codex CLI + direct LLM, Telegram config, open-external-url |
 
-This split is useful because it keeps `main.js` from turning into a long sequence of `ipcMain.handle(...)` calls.
+Channel names are centralized in `src/shared/ipc/channels.js`. See [ipc-registrars.md](../ipc/ipc-registrars.md).
 
 ## Persistence model
 
-The persistence path in this folder is layered:
+The persistence path is layered:
 
-1. `data-snapshot-utils.js` creates a compact JSON snapshot.
-2. `data-helpers.js` provides high-level save/load operations.
-3. `storage-bundle.js` writes or reads the heavier sidecars and SQLite index.
+1. `data/data-snapshot-utils.js` builds a compact JSON snapshot (`buildCompactIndexedSnapshot`).
+2. `data/data-helpers.js` provides high-level save/load (`saveSelectedDataFile`, `autoSaveDataFile`, `loadSelectedDataFile`, `autoLoadDataFile`).
+3. `storage-bundle/` writes/reads the heavier sidecars and the SQLite index.
 
-That means the primary JSON file is intentionally not the whole truth anymore. It is the small top-level snapshot, while protocols, notebook pages, and searchable inventory/record indexes live in companion files.
+The primary JSON file is intentionally not the whole truth: it is the small top-level snapshot, while protocols, notebook pages, and searchable inventory/record indexes live in companion files. See [storage-and-bundles.md](../data/storage-and-bundles.md).
 
 ## Sequence-library model
 
-The sequence feature set is its own subdomain. It is not mixed into the general snapshot helpers.
+The sequence feature set is its own subdomain under the storage root, not mixed into the general snapshot:
 
-Instead:
-
-- `sequence-library.js` manages a dedicated SQLite database plus per-entry files
-- `sequence-backbone-recognition.js` runs a separate heuristic matching algorithm against that library
+- `sequence-library/` manages a dedicated SQLite database (`SequenceViewer/sequence-library.sqlite`) plus per-entry files
+- `sequence/sequence-backbone-recognition.js` re-exports the recognition algorithm shared with the renderer (`renderer/modules/sequence-viewer/algorithms/`), and `sequence-library/backbone-service.js` runs it against the library
 - `register-data-ipc.js` exposes both through `sequence-library:*` endpoints
 
-This separation is a good clue that sequence data is operationally different from the rest of the app's data snapshot.
+See [sequence-library.md](../sequences/sequence-library.md).
 
 ## How to navigate the code
 
-If you want the shortest reading path:
+Shortest reading path:
 
-1. read `register-data-ipc.js` to see the external API surface
-2. read `data-helpers.js` and `storage-bundle.js` to understand save/load semantics
-3. read `sequence-library.js` only after that, because it is effectively its own storage subsystem
-
-That sequence matches how a renderer request moves through the folder.
+1. `src/main/core/start-hikari-main-core.js` — boot and IPC wiring
+2. `src/main/ipc/register-data-ipc.js` — the external API surface
+3. `data/data-helpers.js` and `storage-bundle/index.js` — save/load semantics
+4. `sequence-library/index.js` — only after that; it is effectively its own storage subsystem

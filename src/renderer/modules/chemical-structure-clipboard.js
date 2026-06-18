@@ -38,6 +38,35 @@ export function readChemicalStructureCandidatesFromClipboard(options = {}) {
   return readChemicalStructureClipboard(options).then((result) => result.candidates);
 }
 
+export function toChemicalStructureDraftFromCandidate(candidate) {
+  const imageDataUrl = normalizeImageDataUrl(candidate?.imageDataUrl || candidate?.source);
+  if (imageDataUrl) {
+    return { smiles: '', molfile: '', imageDataUrl };
+  }
+
+  const source = String(candidate?.source || '').trim();
+  if (!source) {
+    return null;
+  }
+
+  const sourceFormat = String(candidate?.sourceFormat || '').trim().toLowerCase();
+  if (sourceFormat === 'smiles') {
+    return { smiles: source, molfile: '', imageDataUrl: '' };
+  }
+  if (sourceFormat === 'molfile' || sourceFormat === 'sdf') {
+    return { smiles: '', molfile: source, imageDataUrl: '' };
+  }
+
+  const parsed = extractChemicalStructureFromText(source)
+    .find((item) => item.sourceFormat === 'smiles' || item.sourceFormat === 'molfile' || item.sourceFormat === 'sdf');
+  if (!parsed) {
+    return null;
+  }
+  return parsed.sourceFormat === 'smiles'
+    ? { smiles: parsed.source, molfile: '', imageDataUrl: '' }
+    : { smiles: '', molfile: parsed.source, imageDataUrl: '' };
+}
+
 async function readChemicalStructureClipboardInternal({
   clipboardData = null,
   hikariApi = globalThis.window?.hikariApi,

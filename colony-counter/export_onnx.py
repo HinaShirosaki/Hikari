@@ -1,8 +1,8 @@
-"""Export the trained colony heatmap U-Net checkpoint to ONNX.
+"""Export trained colony-counter U-Net checkpoints to ONNX.
 
-The Electron colony-counter UI loads the generated ONNX model through
-ONNX Runtime Web. Keep this script next to training.py so it can reuse the
-exact SmallUNet definition that produced colony_heatmap_unet.pt.
+The Electron colony-counter UI loads generated ONNX models through ONNX Runtime
+Web. Keep this script next to training.py so it can reuse the exact SmallUNet
+definition that produced colony_heatmap_unet.pt and plate_unet.pt.
 
 Run from colony-counter/:
     python3 export_onnx.py
@@ -59,6 +59,7 @@ def export_checkpoint(checkpoint_path: Path, output_path: Path, opset: int) -> P
         "label_format": str(checkpoint.get("label_format", "center_heatmap")),
         "default_threshold": 0.5,
         "default_min_distance": 3,
+        "default_plate_threshold": 0.5,
         "input": "RGB float32 NCHW scaled 0..1",
         "output": "single-channel sigmoid heatmap",
     }

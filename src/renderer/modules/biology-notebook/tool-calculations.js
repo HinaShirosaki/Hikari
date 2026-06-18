@@ -36,10 +36,6 @@ export function normalizeNotebookToolCalculations(rawCalculations) {
     .filter(Boolean);
 }
 
-export function cloneNotebookToolCalculations(rawCalculations) {
-  return normalizeNotebookToolCalculations(rawCalculations);
-}
-
 export function formatNotebookToolCalculationLine(rawCalculation) {
   const calculation = normalizeNotebookToolCalculation(rawCalculation);
   if (!calculation) {

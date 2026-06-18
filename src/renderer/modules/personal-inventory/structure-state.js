@@ -1,6 +1,6 @@
 export function installStructureState(ctx) {
   const { helpers, pendingStructureDrafts, uiState } = ctx;
-  const { inventorySections, sampleCompoundDialogOverlay } = ctx.elements;
+  const { inventorySections } = ctx.elements;
 
 function isChemicalSampleType(type) {
   return helpers.normalizeSampleType(type) === 'chemical';
@@ -50,7 +50,7 @@ function setStructureStatus(message) {
 }
 
 function buildStructureClipboardNotFoundMessage(formats = []) {
-  const base = 'No CDXML, MOL, SDF, SMILES, InChI, or ChemDraw image found on the clipboard.';
+  const base = 'No MOL, SDF, SMILES, or copied structure image found on the clipboard.';
   const visibleFormats = Array.from(new Set((Array.isArray(formats) ? formats : [])
     .map((format) => String(format || '').trim())
     .filter(Boolean)));
@@ -61,8 +61,8 @@ function buildStructureClipboardNotFoundMessage(formats = []) {
 }
 
 function syncStructureButtons() {
-  inventorySections?.querySelectorAll('[data-inventory-sample-structure-open]').forEach((button) => {
-    const mode = String(button.dataset.inventorySampleStructureOpen || '');
+  inventorySections?.querySelectorAll('[data-inventory-sample-structure-paste]').forEach((button) => {
+    const mode = String(button.dataset.inventorySampleStructurePaste || '');
     const typeInput = getStructureTypeInput(mode);
     const isChemical = isChemicalSampleType(typeInput?.value);
     button.hidden = !isChemical;
@@ -71,13 +71,8 @@ function syncStructureButtons() {
       const draft = sample
         ? normalizeStructureData(sample.compoundStructure)
         : normalizeStructureData(pendingStructureDrafts.get(getPendingStructureKey(mode)));
-      button.textContent = draft ? 'Edit Structure' : 'Add Structure';
+      button.textContent = draft ? 'Replace Structure' : 'Paste Structure';
     }
-  });
-  inventorySections?.querySelectorAll('[data-inventory-sample-structure-paste]').forEach((button) => {
-    const mode = String(button.dataset.inventorySampleStructurePaste || '');
-    const typeInput = getStructureTypeInput(mode);
-    button.hidden = !isChemicalSampleType(typeInput?.value);
   });
   inventorySections?.querySelectorAll('[data-inventory-sample-structure-preview]').forEach((preview) => {
     const mode = String(preview.dataset.inventorySampleStructurePreview || '');
@@ -99,19 +94,6 @@ function syncStructureButtons() {
   });
 }
 
-function openStructureDialog() {
-  if (sampleCompoundDialogOverlay) {
-    sampleCompoundDialogOverlay.hidden = false;
-  }
-}
-
-function closeStructureDialog() {
-  ctx.structureEditorContext = null;
-  if (sampleCompoundDialogOverlay) {
-    sampleCompoundDialogOverlay.hidden = true;
-  }
-}
-
   Object.assign(ctx, {
     isChemicalSampleType,
     normalizeStructureData,
@@ -120,8 +102,6 @@ function closeStructureDialog() {
     getStructureTypeInput,
     setStructureStatus,
     buildStructureClipboardNotFoundMessage,
-    syncStructureButtons,
-    openStructureDialog,
-    closeStructureDialog
+    syncStructureButtons
   });
 }

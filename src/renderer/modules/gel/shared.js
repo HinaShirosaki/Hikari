@@ -2,6 +2,20 @@ export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
 
+export function sampleArrayValue(data, width, height, x, y) {
+  const safeX = clamp(Number(x) || 0, 0, width - 1);
+  const safeY = clamp(Number(y) || 0, 0, height - 1);
+  const x0 = Math.floor(safeX);
+  const y0 = Math.floor(safeY);
+  const x1 = Math.min(width - 1, x0 + 1);
+  const y1 = Math.min(height - 1, y0 + 1);
+  const tx = safeX - x0;
+  const ty = safeY - y0;
+  const top = (data[(y0 * width) + x0] * (1 - tx)) + (data[(y0 * width) + x1] * tx);
+  const bottom = (data[(y1 * width) + x0] * (1 - tx)) + (data[(y1 * width) + x1] * tx);
+  return (top * (1 - ty)) + (bottom * ty);
+}
+
 export function round(value, digits = 4) {
   if (!Number.isFinite(value)) {
     return null;
@@ -45,6 +59,7 @@ export function createEmptyManualOverrides() {
     ladderLane: null,
     ladderBands: [],
     ladderBandsDone: false,
+    peakIntegrations: [],
     laneTable: {
       rows: []
     }
@@ -140,6 +155,62 @@ export function normalizeLaneVertices(raw) {
   });
 
   return [...byLane.values()].sort((a, b) => a.laneIndex - b.laneIndex);
+}
+
+function normalizePeakPoint(raw) {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const row = normalizeOptionalPixel(raw.row ?? raw.pixelY ?? raw.y);
+  if (!Number.isFinite(row)) {
+    return null;
+  }
+  const value = Number(raw.value ?? raw.intensity);
+  return {
+    row,
+    value: Number.isFinite(value) ? value : null
+  };
+}
+
+export function normalizePeakIntegrations(raw) {
+  return (Array.isArray(raw) ? raw : [])
+    .map((item) => {
+      const laneValue = Number(item?.laneIndex ?? item?.lane ?? item?.index);
+      const laneIndex = Number.isFinite(laneValue) && laneValue >= 1
+        ? Math.floor(laneValue)
+        : null;
+      if (!laneIndex) {
+        return null;
+      }
+
+      const left = normalizePeakPoint(item?.left ?? item?.baselineLeft ?? item?.start);
+      const right = normalizePeakPoint(item?.right ?? item?.baselineRight ?? item?.end);
+      if (!left && !right) {
+        return null;
+      }
+
+      const dividers = (Array.isArray(item?.dividers) ? item.dividers : [])
+        .map((value) => Math.floor(Number(value?.row ?? value?.pixelY ?? value)))
+        .filter((value) => Number.isFinite(value) && value >= 0)
+        .sort((a, b) => a - b)
+        .filter((value, index, all) => index === 0 || value !== all[index - 1]);
+
+      return {
+        laneIndex,
+        left,
+        right,
+        dividers
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => {
+      if (a.laneIndex !== b.laneIndex) {
+        return a.laneIndex - b.laneIndex;
+      }
+      const aRow = Math.min(a.left?.row ?? Number.POSITIVE_INFINITY, a.right?.row ?? Number.POSITIVE_INFINITY);
+      const bRow = Math.min(b.left?.row ?? Number.POSITIVE_INFINITY, b.right?.row ?? Number.POSITIVE_INFINITY);
+      return aRow - bRow;
+    });
 }
 
 export function buildDefaultLaneVertices(lane, height = 1) {
@@ -609,6 +680,7 @@ export function normalizeManualOverrides(raw) {
     .filter((item) => Number.isFinite(item.mw) && item.mw > 0)
     .sort((a, b) => a.pixelY - b.pixelY);
   normalized.ladderBandsDone = Boolean(input.ladderBandsDone);
+  normalized.peakIntegrations = normalizePeakIntegrations(input.peakIntegrations);
   const rawLaneTable = input.laneTable && typeof input.laneTable === 'object'
     ? input.laneTable
     : {};

@@ -166,6 +166,7 @@ const gelAnalysisInternals = loadEsmStyleModule(
     'createEmptyManualOverrides',
     'normalizeLaneBandWindows',
     'normalizeLaneVertices',
+    'normalizePeakIntegrations',
     'getLaneRowBounds',
     'getLaneRowSegment',
     'getLaneRectifiedWidth',

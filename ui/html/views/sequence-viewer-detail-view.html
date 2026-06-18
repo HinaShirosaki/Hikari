@@ -17,9 +17,20 @@
         <div class="sequence-viewer-detail-layout left-rail-template">
           <aside class="sequence-viewer-detail-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
             <div class="left-rail-template__stack">
+              <section class="sequence-viewer-rail-actions-section left-rail-template__section">
+                <div class="sequence-viewer-rail-nav-copy">
+                  <h2>Open Sequence</h2>
+                </div>
+                <div class="form-actions sequence-viewer-rail-nav-actions">
+                  <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
+                  <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
+                  <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
+                  <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+                </div>
+              </section>
               <section class="sequence-viewer-library-card left-rail-template__section">
                 <div class="result-card-head">
-                  <h4>Sequences</h4>
+                  <h4>Sequence Library</h4>
                 </div>
                 <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
                   <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
@@ -35,10 +46,6 @@
 
           <div class="sequence-viewer-detail-main left-rail-template__main">
         <div class="sequence-viewer-detail-topbar">
-          <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
-          <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
-          <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
-          <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
           <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
           <label class="sequence-viewer-save-name-wrap">
             Save Name

@@ -333,6 +333,36 @@ test('papers highlight normalizer derives boxes from stored quad points', () => 
     { x: 0.1, y: 0.2, width: 0.3, height: 0.04 }
   ]);
 });
+test('papers highlighted text copy helper merges PDF line wraps and preserves paragraphs', async () => {
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+  );
+  const source = 'The highlighted\\ntext is organ-\\nized across PDF lines.\\n\\nSecond paragraph.';
+  const expected = 'The highlighted text is organized across PDF lines.\n\nSecond paragraph.';
+  const writes = [];
+
+  assert.equal(viewerModule.normalizePdfHighlightText(source), expected);
+  assert.equal(await viewerModule.copyPdfHighlightText(source, {
+    clipboard: {
+      async writeText(value) {
+        writes.push(value);
+      }
+    }
+  }), true);
+  assert.deepEqual(writes, [expected]);
+});
+test('papers highlighted text hover markup includes an accessible copy action', () => {
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+  );
+  const markup = viewerModule.buildHighlightPopoverMarkup({
+    text: 'First PDF line\\nsecond PDF line'
+  });
+
+  assert.match(markup, /data-paper-highlight-copy/);
+  assert.match(markup, /aria-label="Copy highlighted text"/);
+  assert.match(markup, /First PDF line second PDF line/);
+});
 test('papers PDF selection search helper finds matching pages and next target', () => {
   const viewerModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')

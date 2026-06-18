@@ -16,9 +16,12 @@ import { installPdfViewerRenderController } from './pdf-viewer-render-controller
 import {
   buildCurrentPdfSelectionSearchResult,
   buildHighlightCommentPopoverMarkup,
+  buildHighlightPopoverMarkup,
   buildPdfSelectionSearchResultFromMatches,
+  copyPdfHighlightText,
   countPdfSelectionSearchMatches,
   getPdfSelectionSearchTerms,
+  normalizePdfHighlightText,
   normalizePdfSelectionSearchText
 } from './pdf-viewer-search.js';
 import { installPdfViewerSearchExecutionController } from './pdf-viewer-search-execution-controller.js';
@@ -30,12 +33,15 @@ import { installPdfViewerToolbarController } from './pdf-viewer-toolbar-controll
 export {
   buildCurrentPdfSelectionSearchResult,
   buildHighlightCommentPopoverMarkup,
+  buildHighlightPopoverMarkup,
   buildPdfSelectionSearchResultFromMatches,
   clampCommentAnchor,
   computePdfAnchorFromClientPoint,
+  copyPdfHighlightText,
   countPdfSelectionSearchMatches,
   getPdfCommentPinPosition,
   getPdfSelectionSearchTerms,
+  normalizePdfHighlightText,
   normalizePdfSelectionSearchText
 };
 

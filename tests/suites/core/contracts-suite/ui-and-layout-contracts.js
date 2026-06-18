@@ -78,19 +78,23 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.ok(ladderMwInput > analysisStart);
     });
 
-    test('project management stays registered but hidden from top navigation', () => {
+    test('project management stays registered and remains reachable from navigation and biology notebook', () => {
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const generatedRegistry = readLocalSource('src', 'renderer', 'modules', 'app-registry.generated.js');
       const rendererShellSource = readRendererShellSource();
       const topbarSearchSource = readLocalSource('src', 'renderer', 'app', 'topbar-search.js');
+      const biologyNotebookView = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
+      const biologyNotebookManifest = readLocalSource('src', 'renderer', 'module-manifests', 'biology-notebook.js');
       const projectEntry = registry.apps.find((app) => app.id === 'projects');
 
       assert.ok(projectEntry);
       assert.equal(projectEntry.viewId, 'project-management-view');
-      assert.equal(projectEntry.hiddenFromNavigation, true);
-      assert.match(generatedRegistry, /"id": "projects"[\s\S]*"hiddenFromNavigation": true/);
+      assert.notEqual(projectEntry.hiddenFromNavigation, true);
+      assert.doesNotMatch(generatedRegistry, /"id": "projects"[\s\S]*"hiddenFromNavigation": true/);
       assert.match(rendererShellSource, /const navigationApps = APP_REGISTRY\.filter\(\(app\) => app\.hiddenFromNavigation !== true\);/);
       assert.match(topbarSearchSource, /hiddenFromNavigation === true/);
+      assert.match(biologyNotebookView, /id="biology-notebook-open-projects-btn"[\s\S]*Create Project/);
+      assert.match(biologyNotebookManifest, /onOpenProjects: \(\) => showView\(views\.PROJECT_MANAGEMENT\)/);
     });
 
     test('universal agent chat rail is shell-scoped and registry gated', () => {
@@ -194,6 +198,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(homeBlock, /id="sequence-viewer-home-paste-btn"/);
       assert.match(homeBlock, /id="sequence-viewer-home-open-btn"/);
       assert.match(homeBlock, /id="sequence-viewer-home-protein-builder-btn"/);
+      assert.match(homeBlock, /class="sequence-viewer-rail-actions-section left-rail-template__section"/);
       assert.equal(homeBlock.includes('id="sequence-viewer-home-import-btn"'), false);
       assert.match(homeBlock, /id="sequence-viewer-library-filter-saved"/);
       assert.match(homeBlock, /id="sequence-viewer-library-filter-temporary"/);
@@ -206,6 +211,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(detailBlock, /id="sequence-viewer-detail-workspace"/);
       assert.equal(detailBlock.includes('id="sequence-viewer-back-btn"'), false);
       assert.equal(detailBlock.includes('Back to Library'), false);
+      assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*<h2>Open Sequence<\/h2>[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-detail-protein-builder-btn"[\s\S]*<h4>Sequence Library<\/h4>/);
       assert.match(detailBlock, /id="sequence-viewer-detail-protein-builder-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-save-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-annotate-btn"/);
@@ -269,13 +275,6 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(domSource, /function getElementLayoutWidth\(element\)/);
       assert.match(navigationSource, /const layoutWidth = \[\s*stage,\s*workspace,\s*shell\s*\]/);
       assert.match(navigationSource, /Math\.max\(layoutWidth - horizontalPadding, 320\)/);
-    });
-
-    test('ketcher embedded page uses portable static path resolution', () => {
-      const html = fs.readFileSync(path.join(__dirname, 'ketcher-embedded.html'), 'utf8');
-      assert.equal(html.includes('/Users/'), false);
-      assert.equal(html.includes('C:\\\\Users'), false);
-      assert.match(html, /new URL\('\.\/vendor\/ketcher-src\/packages\/release\/index\.html', window\.location\.href\)/);
     });
 
     test('forge config prunes dev deps and ignores build artifacts', () => {

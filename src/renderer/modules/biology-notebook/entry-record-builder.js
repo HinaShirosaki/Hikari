@@ -5,7 +5,7 @@ import {
   resolveEntryNotebookState,
   shouldSyncExperimentNameWithProtocol
 } from './entry-helpers.js';
-import { cloneNotebookToolCalculations } from './tool-calculations.js';
+import { normalizeNotebookToolCalculations } from './tool-calculations.js';
 
 export function buildSaveableNotebookEntry({
   editingEntry,
@@ -44,7 +44,7 @@ export function buildSaveableNotebookEntry({
     result: resultText,
     resultTable: tables[0] || null,
     resultTables: tables,
-    toolCalculations: cloneNotebookToolCalculations(toolCalculations),
+    toolCalculations: normalizeNotebookToolCalculations(toolCalculations),
     sampleLinks,
     resultFiles,
     resultFileRecords,

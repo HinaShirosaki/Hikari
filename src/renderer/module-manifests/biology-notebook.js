@@ -28,6 +28,7 @@ export const biologyNotebookManifest = {
       showView(views.SAMPLE_REGISTRY);
       modules.sampleRegistry?.startNotebookSampleCapture?.(context);
     },
+    onOpenProjects: () => showView(views.PROJECT_MANAGEMENT),
     onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged,
     selectionInsightsController
   }),

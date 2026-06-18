@@ -1,4 +1,5 @@
-import { getSectionNames, getWellName } from './constants.js';
+import { getWellName } from './constants.js';
+import { getSampleInventoryLocationNames } from '../sample-inventory-settings.js';
 
 export function createContainerStateHelpers({ state, uiState }) {
   function getWellLabel(container, index) {
@@ -63,6 +64,10 @@ export function createContainerStateHelpers({ state, uiState }) {
     }
     const firstWithContainers = sections.find((section) => getSectionContainerCount(section) > 0);
     return firstWithContainers || sections[0];
+  }
+
+  function getSectionNames() {
+    return getSampleInventoryLocationNames(state.settings, state.inventory);
   }
 
   return {

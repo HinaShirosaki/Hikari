@@ -11,6 +11,12 @@ import {
 import { VIEWS } from './views.js';
 import { createId } from './utils.js';
 import { normalizePaperAgentChatSessions } from './agent-chat/scoped-state.js';
+import {
+  DEFAULT_SAMPLE_INVENTORY_LOCATIONS,
+  DEFAULT_SAMPLE_TYPE_LABELS,
+  normalizeSampleInventoryLocations,
+  normalizeSampleTypeLabels
+} from './sample-inventory-settings.js';
 
 export const STORAGE_KEY = 'hikari_state_v1';
 
@@ -124,6 +130,8 @@ export const defaultState = {
       disabledExternalSkillNames: []
     },
     inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood'],
+    sampleInventoryLocations: [...DEFAULT_SAMPLE_INVENTORY_LOCATIONS],
+    sampleTypeLabels: { ...DEFAULT_SAMPLE_TYPE_LABELS },
     preferredJournal: '',
     dashboard: {
       currentWorkflowId: '',
@@ -618,6 +626,8 @@ export function normalizeState(parsed) {
       inventoryLocations: Array.isArray(rawSettings.inventoryLocations)
         ? rawSettings.inventoryLocations
         : defaultState.settings.inventoryLocations,
+      sampleInventoryLocations: normalizeSampleInventoryLocations(rawSettings.sampleInventoryLocations),
+      sampleTypeLabels: normalizeSampleTypeLabels(rawSettings.sampleTypeLabels),
       preferredJournal: String(rawSettings.preferredJournal || '').trim()
     },
     inventory: {

@@ -125,7 +125,7 @@ export const APP_REGISTRY = [
     ],
     "searchInputId": "",
     "agentChatRail": false,
-    "hiddenFromNavigation": true
+    "hiddenFromNavigation": false
   },
   {
     "id": "workflows",

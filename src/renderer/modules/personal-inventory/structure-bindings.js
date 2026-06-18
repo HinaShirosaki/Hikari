@@ -1,7 +1,6 @@
 export function bindStructureButtons(ctx) {
   const { inventorySections } = ctx.elements;
   const syncStructureButtons = (...args) => ctx.syncStructureButtons(...args);
-  const openInventoryStructureEditor = (...args) => ctx.openInventoryStructureEditor(...args);
   const pasteInventoryStructure = (...args) => ctx.pasteInventoryStructure(...args);
   const setStructureStatus = (...args) => ctx.setStructureStatus(...args);
 
@@ -16,18 +15,10 @@ export function bindStructureButtons(ctx) {
     });
   });
 
-  inventorySections.querySelectorAll('[data-inventory-sample-structure-open]').forEach((button) => {
-    button.addEventListener('click', () => {
-      openInventoryStructureEditor(button).catch(() => {
-        setStructureStatus('Cannot open Ketcher yet. Wait a second and try again.');
-      });
-    });
-  });
-
   inventorySections.querySelectorAll('[data-inventory-sample-structure-paste]').forEach((button) => {
     button.addEventListener('click', () => {
       pasteInventoryStructure(button).catch(() => {
-        setStructureStatus('Cannot read ChemDraw structure from the clipboard yet.');
+        setStructureStatus('Cannot read a chemical structure from the clipboard yet.');
       });
     });
   });

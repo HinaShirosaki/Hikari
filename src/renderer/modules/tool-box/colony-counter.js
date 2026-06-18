@@ -4,7 +4,7 @@
 // - load and display colony plate images on layered canvases
 // - support crop, mask, zoom, and pan interactions before counting
 // - run the trained colony heatmap model and allow marker adjustments
-// - keep a synchronized marker/mask canvas and count summary
+// - present the annotated plate and count summary in a two-column workspace
 import {
   clampNumber,
   escapeHtml
@@ -166,7 +166,6 @@ export function initColonyCounterTool() {
   const colonyStatus = document.getElementById('colony-status');
   const colonySummary = document.getElementById('colony-summary');
   const colonyPreviewCanvas = document.getElementById('colony-preview-canvas');
-  const colonyMaskCanvas = document.getElementById('colony-mask-canvas');
   const colonyCropperShell = document.getElementById('colony-cropper-shell');
   const colonyCropperImage = document.getElementById('colony-cropper-image');
   const colonySourceCanvas = document.getElementById('colony-source-canvas');
@@ -281,7 +280,7 @@ export function initColonyCounterTool() {
       ? `<p class="small-note">${count} of ${total} marker${total === 1 ? '' : 's'} are inside the active mask.</p>`
       : '';
     const modelNote = colonyState.lastModelStats
-      ? `<p class="small-note">Model threshold ${colonyState.lastModelStats.threshold.toFixed(2)}, min distance ${colonyState.lastModelStats.minDistance}px, ${Math.round(colonyState.lastModelStats.elapsedMs).toLocaleString()} ms.</p>`
+      ? `<p class="small-note">Model threshold ${colonyState.lastModelStats.threshold.toFixed(2)}, min distance ${colonyState.lastModelStats.minDistance}px, ${Math.round(colonyState.lastModelStats.elapsedMs).toLocaleString()} ms.${colonyState.lastModelStats.maskSource === 'plate-model' ? ' Plate detected automatically.' : ''}</p>`
       : '';
     colonySummary.innerHTML = `
       <p><strong>${label}:</strong> ${count}</p>
@@ -535,63 +534,6 @@ export function initColonyCounterTool() {
     ctx.restore();
   }
 
-  // Render the simplified marker-only mask canvas used alongside the preview.
-  function renderMarkerCanvas() {
-    if (!colonyMaskCanvas) {
-      return;
-    }
-
-    const previewWidth = colonyPreviewCanvas?.width || 0;
-    const previewHeight = colonyPreviewCanvas?.height || 0;
-    if (!previewWidth || !previewHeight) {
-      clearCanvas(colonyMaskCanvas);
-      return;
-    }
-
-    colonyMaskCanvas.width = previewWidth;
-    colonyMaskCanvas.height = previewHeight;
-    const ctx = colonyMaskCanvas.getContext('2d');
-    if (!ctx) {
-      return;
-    }
-
-    ctx.clearRect(0, 0, previewWidth, previewHeight);
-    ctx.fillStyle = '#101827';
-    ctx.fillRect(0, 0, previewWidth, previewHeight);
-
-    const previewMask = sourceMaskToPreviewBox(colonyState.maskDraft || colonyState.mask);
-    if (previewMask) {
-      ctx.save();
-      ctx.beginPath();
-      drawMaskShapePath(ctx, previewMask);
-      ctx.fillStyle = 'rgba(47, 128, 237, 0.22)';
-      ctx.strokeStyle = 'rgba(125, 184, 255, 0.9)';
-      ctx.lineWidth = 2;
-      ctx.fill();
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    ctx.save();
-    colonyState.markers.forEach((marker) => {
-      const previewPoint = sourceToPreviewPoint(marker);
-      if (!previewPoint) {
-        return;
-      }
-      const x = previewPoint.x;
-      const y = previewPoint.y;
-      const radius = 5;
-      if (x < -radius || y < -radius || x > (previewWidth + radius) || y > (previewHeight + radius)) {
-        return;
-      }
-      ctx.fillStyle = isSourcePointInsideMask(marker) ? 'rgba(90, 230, 140, 0.95)' : 'rgba(140, 150, 165, 0.55)';
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-
   // Render the currently visible image region, then overlay mask and markers.
   function renderPreviewCanvas() {
     if (!colonyPreviewCanvas || !colonySourceCanvas) {
@@ -602,7 +544,6 @@ export function initColonyCounterTool() {
     const { width, height } = setCanvasFromSource(colonyPreviewCanvas, colonySourceCanvas, settings.maxProcessSize);
 
     if (!width || !height) {
-      clearCanvas(colonyMaskCanvas);
       return;
     }
 
@@ -625,7 +566,6 @@ export function initColonyCounterTool() {
     );
     drawMaskOverlay(previewCtx);
     drawMarkers(previewCtx);
-    renderMarkerCanvas();
   }
 
   // Enable or disable buttons and cursors based on image availability, crop mode, and marker state.
@@ -907,7 +847,7 @@ export function initColonyCounterTool() {
     colonyState.maskStartPoint = null;
     renderPreviewCanvas();
     renderColonySummary();
-    setColonyStatus('Mask cleared. Counts now include the full plate image.');
+    setColonyStatus('Mask cleared. Auto Count will detect the plate automatically when no hand mask is drawn.');
     updateControlState();
   }
 
@@ -951,6 +891,10 @@ export function initColonyCounterTool() {
         mask: colonyState.mask
       });
 
+      if (result.maskSource === 'plate-model' && result.detectedPlateMask) {
+        colonyState.mask = normalizeMask(result.detectedPlateMask);
+      }
+
       colonyState.markers = result.colonies.map((colony) => ({
         x: colony.x,
         y: colony.y,
@@ -962,13 +906,20 @@ export function initColonyCounterTool() {
         threshold: result.threshold,
         minDistance: result.minDistance,
         elapsedMs: result.elapsedMs,
-        totalPeaks: result.totalPeaks
+        totalPeaks: result.totalPeaks,
+        maskSource: result.maskSource,
+        plateThreshold: result.plateThreshold,
+        plateArea: result.plateArea
       };
 
       renderPreviewCanvas();
       renderColonySummary();
-      const maskText = hasActiveMask() ? ` inside mask (${result.totalPeaks} total plate peak${result.totalPeaks === 1 ? '' : 's'})` : '';
-      setColonyStatus(`Auto count: ${colonyState.markers.length} colon${colonyState.markers.length === 1 ? 'y' : 'ies'}${maskText}.`);
+      const maskText = result.maskSource === 'plate-model'
+        ? ` inside detected plate (${result.totalPeaks} total colony peak${result.totalPeaks === 1 ? '' : 's'})`
+        : (hasActiveMask() ? ` inside mask (${result.totalPeaks} total colony peak${result.totalPeaks === 1 ? '' : 's'})` : '');
+      const fallbackText = result.maskSource === 'none' ? ' Plate was not detected; counted the full image.' : '';
+      const countText = `Auto count: ${colonyState.markers.length} colon${colonyState.markers.length === 1 ? 'y' : 'ies'}${maskText}.`;
+      setColonyStatus(`${countText}${fallbackText}`);
     } catch (error) {
       setColonyStatus(error?.message || 'Auto count failed.', true);
       console.error('Colony auto count failed:', error);
@@ -1170,7 +1121,6 @@ export function initColonyCounterTool() {
     }
 
     clearCanvas(colonyPreviewCanvas);
-    clearCanvas(colonyMaskCanvas);
     resetColonySummary();
     setColonyStatus('Choose or drop an image, then run auto count or click colonies manually.');
     updateControlState();

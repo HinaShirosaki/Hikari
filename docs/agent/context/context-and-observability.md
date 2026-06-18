@@ -4,7 +4,7 @@ The `context/` and `shared/agent-observability.js` files are the package's memor
 
 ## `agent-chat-log.js`
 
-This is the only context file that is fully on the main `agent:chat` path today.
+This is the primary context file on the main `agent:chat` path (alongside `agent-memory.js`, which is now reachable as the `memory` tool — see below).
 
 It manages:
 
@@ -40,7 +40,7 @@ It can:
 - derive candidate long-term memories from the session state
 - prune expired sessions
 
-It is well-commented and structurally ready for use, but it is not currently wired into `agent:chat` in `register-agent-ipc.js`.
+It is well-commented and structurally ready for use, but it is not currently wired into the `agent:chat` flow in `src/main/ipc/register-agent-ipc/`. (This is distinct from `agent-memory.js`, which *is* wired.)
 
 ## `agent-memory.js`
 
@@ -58,7 +58,7 @@ Important behaviors:
 - values can be scalar or JSON
 - the file store is optional; the runtime can also work off an injected in-memory `Map`
 
-Like `agent-context-management.js`, it exists as a real runtime but is not yet attached to the main controller path.
+Unlike `agent-context-management.js`, this runtime *is* attached to the main controller path: `register-agent-tool-executors.js` registers a `memory` tool that calls `memoryRuntime.execute({...})`, so the assistant can `remember`/`recall`/`forget`/`list` during a chat.
 
 ## `agent-observability.js`
 
@@ -84,7 +84,7 @@ The lifecycle log is still the better source when debugging routing or tool fail
 
 For a normal request:
 
-1. `register-agent-ipc.js` creates a lifecycle recorder.
+1. `src/main/ipc/register-agent-ipc/` creates a lifecycle recorder.
 2. It writes the user request into the main log and session log.
 3. Each stage of parsing, routing, tool execution, and synthesis records lifecycle rows.
 4. At the end, the lifecycle rows are flushed to disk.

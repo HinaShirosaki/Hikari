@@ -78,7 +78,7 @@ body {
   z-index: 1000;
   display: grid;
   place-items: center;
-  background: var(--palette-loading-bg);
+  background: var(--palette-night-bg);
   pointer-events: all;
   opacity: 1;
   transition: opacity 260ms ease, visibility 260ms ease;
@@ -123,7 +123,7 @@ body {
   50% {
     transform: scale(1);
     opacity: 1;
-    filter: brightness(0) invert(1) drop-shadow(0 0 24px var(--palette-rgba-255-255-255-a18));
+    filter: brightness(0) invert(1) drop-shadow(0 0 24px var(--palette-rgba-255-255-255-a12));
   }
 
   100% {
@@ -247,11 +247,56 @@ div {
 }
 
 .topbar-tools {
-  width: clamp(180px, 19vw, 260px);
+  width: clamp(250px, 26vw, 360px);
   min-width: 0;
   justify-self: end;
   position: relative;
-  z-index: 1;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.topbar-history-controls {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.topbar-history-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+
+.topbar-history-btn:hover:not(:disabled),
+.topbar-history-btn:focus-visible:not(:disabled) {
+  background: var(--surface-subtle);
+  border-color: var(--line);
+  color: var(--strong);
+}
+
+.topbar-history-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.topbar-search-shell {
+  position: relative;
+  flex: 1 1 180px;
+  min-width: 0;
 }
 
 #topbar-search {
@@ -267,8 +312,8 @@ div {
   margin: 0;
   padding: 4px;
   list-style: none;
-  background: var(--surface, var(--palette-white));
-  border: 1px solid var(--border, var(--palette-rgba-0-0-0-a12));
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: 8px;
   box-shadow: 0 12px 28px var(--palette-rgba-0-0-0-a18);
   max-height: min(420px, 60vh);
@@ -288,7 +333,7 @@ div {
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.88rem;
-  color: var(--text, var(--palette-hex-1f2533));
+  color: var(--text);
   user-select: none;
 }
 
@@ -298,7 +343,7 @@ div {
 
 .topbar-search-suggestion.is-active,
 .topbar-search-suggestion:hover {
-  background: var(--accent-soft, var(--palette-rgba-100-114-85-a12));
+  background: var(--accent-soft);
 }
 
 .topbar-search-suggestion-body {
@@ -317,7 +362,7 @@ div {
 }
 
 .topbar-search-suggestion-sublabel {
-  color: var(--muted, var(--palette-hex-6b7280));
+  color: var(--muted);
   font-size: 0.78rem;
   white-space: nowrap;
   overflow: hidden;
@@ -329,17 +374,17 @@ div {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--muted, var(--palette-hex-6b7280));
-  background: var(--surface-muted, var(--palette-rgba-0-0-0-a05));
+  color: var(--muted);
+  background: var(--surface-muted);
   padding: 2px 6px;
   border-radius: 999px;
   white-space: nowrap;
 }
 
 body.theme-night .topbar-search-suggestions {
-  background: var(--surface, var(--palette-hex-1d2230));
-  border-color: var(--border, var(--palette-rgba-255-255-255-a12));
-  box-shadow: 0 16px 32px var(--palette-rgba-0-0-0-a55);
+  background: var(--surface);
+  border-color: var(--border);
+  box-shadow: 0 16px 32px var(--palette-rgba-0-0-0-a46);
 }
 
 .workspace-shell {
@@ -1094,17 +1139,6 @@ button:disabled {
   line-height: 1.7;
 }
 
-.ketcher-frame,
-.sample-ketcher-frame {
-  width: 100%;
-  min-height: 640px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-}
-
-
-
-
 .synthesis-reaction-panel,
 .synthesis-mw-panel {
   margin-top: 12px;
@@ -1256,6 +1290,10 @@ button:disabled {
   .topbar-tools {
     width: 100%;
     justify-self: stretch;
+  }
+
+  .topbar-search-shell {
+    flex: 1 1 auto;
   }
 
   .topbar-heading-row {

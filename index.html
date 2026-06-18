@@ -54,8 +54,24 @@
         <div id="app-more-menu" class="app-more-menu" role="menu" hidden></div>
       </nav>
       <div class="topbar-tools">
-        <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
-        <ul id="topbar-search-suggestions" class="topbar-search-suggestions" role="listbox" aria-label="Search suggestions" hidden></ul>
+        <div class="topbar-history-controls" role="group" aria-label="Undo and redo">
+          <button id="global-undo-btn" class="topbar-history-btn" type="button" aria-label="Undo" title="Nothing to undo" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 14 4 9l5-5" />
+              <path d="M4 9h11a5 5 0 1 1 0 10h-4" />
+            </svg>
+          </button>
+          <button id="global-redo-btn" class="topbar-history-btn" type="button" aria-label="Redo" title="Nothing to redo" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="m15 14 5-5-5-5" />
+              <path d="M20 9H9a5 5 0 1 0 0 10h4" />
+            </svg>
+          </button>
+        </div>
+        <div class="topbar-search-shell">
+          <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
+          <ul id="topbar-search-suggestions" class="topbar-search-suggestions" role="listbox" aria-label="Search suggestions" hidden></ul>
+        </div>
       </div>
     </header>
     <div class="workspace-shell">
@@ -568,6 +584,7 @@
                 <p class="small-note biology-notebook-viewer-kicker">Add Notebook Page</p>
                 <h3 id="biology-notebook-page-starter-project">Choose a project folder</h3>
               </div>
+              <button id="biology-notebook-open-projects-btn" class="ghost-btn" type="button">Create Project</button>
             </div>
             <div class="stack-form biology-notebook-select-stack biology-notebook-page-starter-controls">
               <label>
@@ -940,7 +957,6 @@
                   <option value="chemical">Chemical</option>
                   <option value="primer">Primer</option>
                 </select>
-                <button id="sample-compound-open-btn" type="button" class="ghost-btn sample-structure-open-btn">Add Structure</button>
               </span>
             </label>
             <section id="sample-cell-passage-fields" class="sample-cell-passage-fields" hidden>
@@ -962,15 +978,14 @@
             <section id="sample-compound-fields" class="sample-compound-fields">
               <div class="inline-row sample-compound-head">
                 <strong>Chemical Structure</strong>
-                <span class="small-note">Paste CDXML or MOL from ChemDraw, or open Ketcher to draw</span>
+                <span class="small-note">Paste SMILES, MOL/SDF, or a copied structure image</span>
               </div>
               <div class="form-actions">
                 <button id="sample-compound-paste-btn" type="button" class="ghost-btn">Paste Structure</button>
-                <button id="sample-compound-capture-btn" type="button" class="ghost-btn">Refresh Snapshot</button>
                 <button id="sample-compound-clear-btn" type="button" class="ghost-btn">Clear Structure</button>
               </div>
               <label>
-                Captured SMILES
+                Captured Structure
                 <input id="sample-compound-smiles" readonly placeholder="No structure captured yet" />
               </label>
               <div id="sample-compound-status" class="small-note"></div>
@@ -1047,29 +1062,6 @@
         </div>
       </div>
 
-      <div id="sample-compound-dialog-overlay" class="sample-compound-dialog-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
-        <div class="sample-compound-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sample-compound-dialog-title">
-          <div class="sample-compound-dialog-head app-dialog-head">
-            <div>
-              <h3 id="sample-compound-dialog-title">Draw Chemical Structure</h3>
-              <p class="small-note">Use Ketcher to draw or edit the chemical, then apply the snapshot to the current sample.</p>
-            </div>
-            <button type="button" id="sample-compound-dialog-close-btn" class="ghost-btn" aria-label="Close Ketcher dialog">Close</button>
-          </div>
-          <iframe
-            id="sample-compound-ketcher-frame"
-            class="ketcher-frame sample-ketcher-frame"
-            title="Sample chemical Ketcher editor"
-            src="./ketcher-embedded.html"
-            loading="eager"
-            referrerpolicy="no-referrer"
-          ></iframe>
-          <div class="form-actions sample-compound-dialog-actions">
-            <button id="sample-compound-dialog-apply-btn" type="button" class="primary-btn">Use Structure</button>
-            <button id="sample-compound-dialog-cancel-btn" type="button" class="ghost-btn">Close</button>
-          </div>
-        </div>
-      </div>
     </section>
 
 <!-- SOURCE: ui/html/views/assay-view.html -->
@@ -1162,6 +1154,25 @@
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
               <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Edit Conc.</button>
             </div>
+            <label class="assay-conc-unit-field">
+              Conc. unit
+              <input
+                type="text"
+                id="assay-concentration-unit"
+                class="assay-conc-unit-input"
+                list="assay-concentration-unit-options"
+                placeholder="e.g. nM"
+                autocomplete="off"
+              />
+              <datalist id="assay-concentration-unit-options">
+                <option value="fM"></option>
+                <option value="pM"></option>
+                <option value="nM"></option>
+                <option value="µM"></option>
+                <option value="mM"></option>
+                <option value="M"></option>
+              </datalist>
+            </label>
             <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
             <button type="button" id="assay-serial-dilution-btn" class="ghost-btn">Serial Dilution</button>
           </div>
@@ -1245,180 +1256,7 @@
             <div id="assay-analysis-summary" class="small-note"></div>
           </div>
 
-          <details id="assay-chart-style-panel" class="assay-results-control-section assay-chart-style">
-            <summary class="assay-chart-style-summary">Chart Style</summary>
-            <div class="assay-chart-style-body">
-              <fieldset class="assay-chart-style-group">
-                <legend>Axes</legend>
-                <label>
-                  X column
-                  <select id="assay-chart-x-column"><option value="auto">Auto</option></select>
-                </label>
-                <label>
-                  Y column
-                  <select id="assay-chart-y-column"><option value="auto">Auto</option></select>
-                </label>
-                <label>
-                  Series column
-                  <select id="assay-chart-series-column"><option value="auto">Auto</option></select>
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Scale &amp; range</legend>
-                <label>
-                  X scale
-                  <select id="assay-chart-x-scale">
-                    <option value="auto">Auto</option>
-                    <option value="linear">Linear</option>
-                    <option value="log">Log</option>
-                    <option value="ordinal">Ordinal</option>
-                  </select>
-                </label>
-                <label>
-                  Y scale
-                  <select id="assay-chart-y-scale">
-                    <option value="linear">Linear</option>
-                    <option value="log">Log</option>
-                  </select>
-                </label>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-x-range-auto" checked />
-                  X auto range
-                </label>
-                <div class="assay-chart-style-row">
-                  <label>
-                    X min
-                    <input type="number" step="any" id="assay-chart-x-min" />
-                  </label>
-                  <label>
-                    X max
-                    <input type="number" step="any" id="assay-chart-x-max" />
-                  </label>
-                </div>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-y-range-auto" checked />
-                  Y auto range
-                </label>
-                <div class="assay-chart-style-row">
-                  <label>
-                    Y min
-                    <input type="number" step="any" id="assay-chart-y-min" />
-                  </label>
-                  <label>
-                    Y max
-                    <input type="number" step="any" id="assay-chart-y-max" />
-                  </label>
-                </div>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Points</legend>
-                <label>
-                  Shape
-                  <div id="assay-chart-point-shape" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Size
-                  <div id="assay-chart-point-size" class="assay-chart-picker-mount"></div>
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Lines</legend>
-                <label>
-                  Style
-                  <div id="assay-chart-line-style" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Curve
-                  <select id="assay-chart-curve">
-                    <option value="curveMonotoneX">Monotone</option>
-                    <option value="curveLinear">Linear</option>
-                    <option value="curveStep">Step</option>
-                  </select>
-                </label>
-                <label>
-                  Width
-                  <div id="assay-chart-line-width" class="assay-chart-picker-mount"></div>
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Frame</legend>
-                <label>
-                  Style
-                  <div id="assay-chart-frame-style" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Stroke
-                  <input type="color" id="assay-chart-frame-stroke" />
-                </label>
-                <label>
-                  Stroke width
-                  <div id="assay-chart-frame-stroke-width" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Corner radius
-                  <div id="assay-chart-frame-corner-radius" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Background
-                  <input type="color" id="assay-chart-background-color" />
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Size</legend>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-size-auto" checked />
-                  Auto size
-                </label>
-                <label>
-                  Width (px)
-                  <div id="assay-chart-frame-width" class="assay-chart-picker-mount"></div>
-                </label>
-                <label>
-                  Height (px)
-                  <div id="assay-chart-frame-height" class="assay-chart-picker-mount"></div>
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Grid lines</legend>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-grid-vertical" checked />
-                  Vertical lines
-                </label>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-grid-horizontal" checked />
-                  Horizontal lines
-                </label>
-                <label>
-                  Color
-                  <input type="color" id="assay-chart-grid-color" />
-                </label>
-                <label>
-                  Width
-                  <div id="assay-chart-grid-stroke-width" class="assay-chart-picker-mount"></div>
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Text</legend>
-                <div id="assay-chart-text-bar"></div>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Series colors</legend>
-                <div id="assay-chart-series-colors" class="assay-chart-style-series"></div>
-              </fieldset>
-
-              <div class="form-actions assay-chart-style-actions">
-                <button type="button" id="assay-chart-style-reset-btn" class="ghost-btn">Reset to defaults</button>
-              </div>
-            </div>
-          </details>
+          <div id="assay-chart-style-panel" class="assay-results-control-section" data-assay-chart-style-mount></div>
         </div>
 
         <div class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main">
@@ -1606,6 +1444,7 @@
                         </label>
                         <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
                         <button type="button" id="gel-measure-intensity-btn" class="ghost-btn">Measure intensity</button>
+                        <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn">Peak editor</button>
                         <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
                         <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Tools</button>
                       </div>
@@ -1653,6 +1492,34 @@
                 <pre id="gel-report-json" class="gel-report-json"></pre>
               </div>
             </div>
+          </div>
+
+          <div id="gel-peak-editor-overlay" class="gel-peak-editor-overlay" hidden>
+            <section class="gel-peak-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="gel-peak-editor-title">
+              <header class="gel-peak-editor-header">
+                <div>
+                  <h3 id="gel-peak-editor-title">Lane Peak Area</h3>
+                  <div id="gel-peak-editor-summary" class="small-note"></div>
+                </div>
+                <button type="button" id="gel-peak-editor-close-btn" class="ghost-btn">Close</button>
+              </header>
+              <div class="gel-peak-editor-toolbar" role="toolbar" aria-label="Peak area tools">
+                <label class="gel-peak-editor-lane-picker small-note">
+                  Lane
+                  <select id="gel-peak-editor-lane-select"></select>
+                </label>
+                <div class="gel-peak-editor-modes">
+                  <button type="button" id="gel-peak-editor-baseline-mode-btn" class="ghost-btn is-active" aria-pressed="true">Baseline</button>
+                  <button type="button" id="gel-peak-editor-divider-mode-btn" class="ghost-btn" aria-pressed="false">Divider</button>
+                </div>
+                <button type="button" id="gel-peak-editor-clear-lane-btn" class="ghost-btn">Clear lane</button>
+                <button type="button" id="gel-peak-editor-clear-all-btn" class="ghost-btn">Clear all</button>
+              </div>
+              <div class="gel-peak-editor-chart-shell">
+                <svg id="gel-peak-editor-chart" class="gel-peak-editor-chart" viewBox="0 0 920 440" preserveAspectRatio="none" role="img" aria-label="Manual peak area editor"></svg>
+              </div>
+              <div id="gel-peak-editor-table" class="gel-peak-editor-table"></div>
+            </section>
           </div>
         </div>
       </div>
@@ -1816,6 +1683,10 @@
               <span>Inventory Locations</span>
               <small>Shared location vocabulary</small>
             </button>
+            <button type="button" class="settings-nav-item" data-settings-target="sample-inventory">
+              <span>Sample &amp; Inventory</span>
+              <small>Storage locations and type names</small>
+            </button>
             <button type="button" class="settings-nav-item" data-settings-target="preferred-journal">
               <span>Preferred Journal</span>
               <small>Default journal name or URL</small>
@@ -1930,6 +1801,30 @@
                   <button type="button" id="setting-location-add-btn" class="ghost-btn">Add Location</button>
                 </div>
                 <div id="setting-location-list" class="stack-form"></div>
+              </div>
+            </section>
+
+            <section class="settings-section" data-settings-panel="sample-inventory" hidden>
+              <div class="settings-section-head">
+                <h3>Sample &amp; Inventory</h3>
+                <p class="small-note">Configure sample storage sections and the visible names for sample types.</p>
+              </div>
+              <div class="stack-form">
+                <div class="settings-subsection">
+                  <h4>Storage Locations</h4>
+                  <div class="inline-row settings-location-entry">
+                    <input id="setting-sample-inventory-location-input" placeholder="Add sample storage location" />
+                    <button type="button" id="setting-sample-inventory-location-add-btn" class="ghost-btn">Add Location</button>
+                  </div>
+                  <div id="setting-sample-inventory-location-list" class="stack-form"></div>
+                </div>
+                <form id="sample-type-labels-form" class="stack-form settings-subsection">
+                  <h4>Sample Type Names</h4>
+                  <div id="setting-sample-type-label-list" class="settings-sample-type-label-list"></div>
+                  <div class="form-actions">
+                    <button type="submit" class="primary-btn">Save Type Names</button>
+                  </div>
+                </form>
               </div>
             </section>
 
@@ -3112,73 +3007,69 @@
         <h3>Colony Counter</h3>
 
         <div class="colony-counter-shell">
-          <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
-            <label>
-              Plate Image
-              <input id="colony-image-file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif" />
-            </label>
-
-            <div class="form-actions">
-              <button id="colony-start-crop-btn" type="button" class="ghost-btn">Start Crop</button>
-              <button id="colony-apply-crop-btn" type="button" class="ghost-btn" disabled>Apply Crop</button>
-              <button id="colony-cancel-crop-btn" type="button" class="ghost-btn" disabled>Cancel Crop</button>
-              <button id="colony-reset-crop-btn" type="button" class="ghost-btn">Reset to Full Image</button>
+          <div class="colony-workspace-plate">
+            <div id="colony-cropper-shell" class="colony-cropper-shell" hidden>
+              <img id="colony-cropper-image" class="colony-cropper-image" alt="Colony cropper preview" />
             </div>
 
-            <div class="form-grid">
-              <label>
-                Display Max Size (px)
-                <input id="colony-max-size" type="number" min="300" max="5000" step="50" value="1600" />
-              </label>
-              <label>
-                Model Threshold
-                <input id="colony-model-threshold" type="number" min="0.01" max="0.99" step="0.05" value="0.50" />
-              </label>
-              <label>
-                Peak Min Distance (px)
-                <input id="colony-model-min-distance" type="number" min="1" max="50" step="1" value="3" />
-              </label>
-              <label>
-                Mask Shape
-                <select id="colony-mask-mode">
-                  <option value="rectangle">Rectangle</option>
-                  <option value="circle">Circle</option>
-                </select>
-              </label>
-            </div>
-
-            <div class="form-actions">
-              <button id="colony-auto-count-btn" type="button" class="primary-btn">Auto Count</button>
-              <button id="colony-start-mask-btn" type="button" class="ghost-btn">Draw Mask</button>
-              <button id="colony-clear-mask-btn" type="button" class="ghost-btn">Clear Mask</button>
-              <button id="colony-clear-markers-btn" type="button" class="ghost-btn">Clear Markers</button>
-              <button id="colony-run-btn" type="submit" class="ghost-btn">Save Count</button>
-              <button id="colony-reset-btn" type="button" class="ghost-btn">Reset</button>
-              <span id="colony-status" class="small-note"></span>
-            </div>
-          </form>
-
-          <div id="colony-summary" class="calc-output">
-            <p class="small-note">Choose or drop a plate image, then run auto count or click colonies manually.</p>
-          </div>
-
-          <div id="colony-cropper-shell" class="colony-cropper-shell" hidden>
-            <img id="colony-cropper-image" class="colony-cropper-image" alt="Colony cropper preview" />
-          </div>
-
-          <div class="colony-preview-grid">
             <section class="result-card colony-preview-card">
               <div class="result-card-head">
                 <h4>Annotated Colonies</h4>
               </div>
               <canvas id="colony-preview-canvas" class="colony-preview-canvas"></canvas>
             </section>
-            <section class="result-card colony-preview-card">
-              <div class="result-card-head">
-                <h4>Mask / Marker Map</h4>
+          </div>
+
+          <div class="colony-workspace-settings">
+            <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
+              <label>
+                Plate Image
+                <input id="colony-image-file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif" />
+              </label>
+
+              <div class="form-actions">
+                <button id="colony-start-crop-btn" type="button" class="ghost-btn">Start Crop</button>
+                <button id="colony-apply-crop-btn" type="button" class="ghost-btn" disabled>Apply Crop</button>
+                <button id="colony-cancel-crop-btn" type="button" class="ghost-btn" disabled>Cancel Crop</button>
+                <button id="colony-reset-crop-btn" type="button" class="ghost-btn">Reset to Full Image</button>
               </div>
-              <canvas id="colony-mask-canvas" class="colony-preview-canvas"></canvas>
-            </section>
+
+              <div class="form-grid">
+                <label>
+                  Display Max Size (px)
+                  <input id="colony-max-size" type="number" min="300" max="5000" step="50" value="1600" />
+                </label>
+                <label>
+                  Model Threshold
+                  <input id="colony-model-threshold" type="number" min="0.01" max="0.99" step="0.05" value="0.50" />
+                </label>
+                <label>
+                  Peak Min Distance (px)
+                  <input id="colony-model-min-distance" type="number" min="1" max="50" step="1" value="3" />
+                </label>
+                <label>
+                  Mask Shape
+                  <select id="colony-mask-mode">
+                    <option value="rectangle">Rectangle</option>
+                    <option value="circle">Circle</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="form-actions">
+                <button id="colony-auto-count-btn" type="button" class="primary-btn">Auto Count</button>
+                <button id="colony-start-mask-btn" type="button" class="ghost-btn">Draw Mask</button>
+                <button id="colony-clear-mask-btn" type="button" class="ghost-btn">Clear Mask</button>
+                <button id="colony-clear-markers-btn" type="button" class="ghost-btn">Clear Markers</button>
+                <button id="colony-run-btn" type="submit" class="ghost-btn">Save Count</button>
+                <button id="colony-reset-btn" type="button" class="ghost-btn">Reset</button>
+                <span id="colony-status" class="small-note"></span>
+              </div>
+            </form>
+
+            <div id="colony-summary" class="calc-output">
+              <p class="small-note">Choose or drop a plate image, then run auto count or click colonies manually.</p>
+            </div>
           </div>
         </div>
 
@@ -3195,11 +3086,11 @@
           <div class="sequence-viewer-home-layout left-rail-template">
             <aside class="sequence-viewer-home-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
               <div class="left-rail-template__stack">
-                <section class="left-rail-template__section">
-                  <div class="sequence-viewer-home-nav-copy">
+                <section class="sequence-viewer-rail-actions-section left-rail-template__section">
+                  <div class="sequence-viewer-rail-nav-copy">
                     <h2>Open Sequence</h2>
                   </div>
-                  <div class="form-actions sequence-viewer-home-nav-actions">
+                  <div class="form-actions sequence-viewer-rail-nav-actions">
                     <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
                     <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
                     <button id="sequence-viewer-home-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
@@ -3426,9 +3317,20 @@
         <div class="sequence-viewer-detail-layout left-rail-template">
           <aside class="sequence-viewer-detail-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
             <div class="left-rail-template__stack">
+              <section class="sequence-viewer-rail-actions-section left-rail-template__section">
+                <div class="sequence-viewer-rail-nav-copy">
+                  <h2>Open Sequence</h2>
+                </div>
+                <div class="form-actions sequence-viewer-rail-nav-actions">
+                  <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
+                  <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
+                  <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
+                  <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+                </div>
+              </section>
               <section class="sequence-viewer-library-card left-rail-template__section">
                 <div class="result-card-head">
-                  <h4>Sequences</h4>
+                  <h4>Sequence Library</h4>
                 </div>
                 <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
                   <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
@@ -3444,10 +3346,6 @@
 
           <div class="sequence-viewer-detail-main left-rail-template__main">
         <div class="sequence-viewer-detail-topbar">
-          <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
-          <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
-          <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
-          <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
           <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
           <label class="sequence-viewer-save-name-wrap">
             Save Name

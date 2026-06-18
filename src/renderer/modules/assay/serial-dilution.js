@@ -8,6 +8,7 @@ export function createSerialDilutionController({
   safeText,
   getSampleAxis,
   getCurrentLayout,
+  getConcentrationUnit = () => '',
   findInventorySampleRecordBySampleId,
   hideInventorySamplePicker
 }) {
@@ -36,6 +37,7 @@ export function createSerialDilutionController({
     return buildSerialDilutionGroupsModel({
       layout: getCurrentLayout(),
       sampleAxis: getSampleAxis(),
+      concentrationUnit: getConcentrationUnit(),
       findInventorySampleRecordBySampleId
     });
   }
@@ -47,6 +49,7 @@ export function createSerialDilutionController({
       groups,
       sampleAxis: getSampleAxis(),
       volumePerWellUl,
+      concentrationUnit: getConcentrationUnit(),
       getSerialDilutionStockValue
     });
   }

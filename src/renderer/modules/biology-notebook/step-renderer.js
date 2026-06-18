@@ -21,39 +21,6 @@ export function replaceBracketPlaceholders(source, placeholders, renderPlacehold
   return `${safeText(source)} ${trailing}`.trim();
 }
 
-export function renderFilledStepText(step, values, { safeText } = {}) {
-  const source = String(step?.text || '');
-  const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
-  const matches = [...source.matchAll(PLACEHOLDER_TOKEN_REGEX)];
-
-  if (!matches.length) {
-    if (!placeholders.length) {
-      return safeText(source);
-    }
-    return replaceBracketPlaceholders(source, placeholders, (placeholder) => {
-      const key = `${step.id}:${placeholder.id}`;
-      const rawValue = String(values[key] || '').trim();
-      return safeText(rawValue || `[${placeholder.name}]`);
-    }, safeText);
-  }
-
-  let cursor = 0;
-  let text = '';
-  matches.forEach((match) => {
-    const index = Number(match.index || 0);
-    const placeholderId = match[1];
-    const key = `${step.id}:${placeholderId}`;
-    const placeholder = placeholders.find((item) => item.id === placeholderId);
-    const rawValue = String(values[key] || '').trim();
-    text += safeText(source.slice(cursor, index));
-    text += safeText(rawValue || `[${placeholder?.name || 'value'}]`);
-    cursor = index + match[0].length;
-  });
-
-  text += safeText(source.slice(cursor));
-  return text;
-}
-
 export function buildInlinePlaceholderHtml({
   key,
   name,

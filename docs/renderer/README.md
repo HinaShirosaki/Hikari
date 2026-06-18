@@ -29,7 +29,7 @@ If `doc/main-helpers/` explains the main-process bridge, this folder explains th
 2. The renderer core loads state from `modules/app-state.js`.
 3. It creates a module registry plus a small set of cross-feature services.
 4. It initializes feature modules through manifests, with the same mutable `state`, a shared `persist()` callback, and targeted change hooks.
-5. During `initApp()`, it optionally hydrates from an `.ena` file and an external storage root through `window.hikariApi`.
+5. It loads renderer state from `localStorage`, and during `initApp()` optionally hydrates from an external storage root through `window.hikariApi.importStorageRoot(...)`. Saves go back through `window.hikariApi.autoSaveDataFile(...)`.
 6. It renders everything once, then activates the configured startup view.
 7. After boot, most user actions stay inside a feature module, but navigation, persistence, search routing, and cross-module refreshes still flow back through the renderer core, the registry, and the service layer.
 

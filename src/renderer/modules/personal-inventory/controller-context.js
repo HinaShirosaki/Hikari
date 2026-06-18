@@ -21,12 +21,7 @@ export function createPersonalInventoryContext({
     addContainerGridFields: document.getElementById('inventory-add-container-grid-fields'),
     addContainerRowsInput: document.getElementById('inventory-add-container-rows'),
     addContainerColsInput: document.getElementById('inventory-add-container-cols'),
-    addContainerCancelBtn: document.getElementById('inventory-add-container-cancel'),
-    sampleCompoundDialogOverlay: document.getElementById('sample-compound-dialog-overlay'),
-    sampleCompoundDialogCloseBtn: document.getElementById('sample-compound-dialog-close-btn'),
-    sampleCompoundDialogCancelBtn: document.getElementById('sample-compound-dialog-cancel-btn'),
-    sampleCompoundDialogApplyBtn: document.getElementById('sample-compound-dialog-apply-btn'),
-    sampleCompoundKetcherFrame: document.getElementById('sample-compound-ketcher-frame')
+    addContainerCancelBtn: document.getElementById('inventory-add-container-cancel')
   };
   const uiState = {
     selectedContainer: null,
@@ -48,7 +43,7 @@ export function createPersonalInventoryContext({
     uiState,
     pendingStructureDrafts,
     helpers,
-    structureEditorContext: null,
+    structurePasteContext: null,
     notifySamplesChanged() {
       if (typeof onSamplesChanged === 'function') {
         onSamplesChanged();

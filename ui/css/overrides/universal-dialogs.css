@@ -8,7 +8,7 @@
   align-items: center;
   overflow: auto;
   padding: 18px;
-  background: var(--palette-rgba-18-34-55-a24);
+  background: var(--palette-rgba-18-34-55-a2);
 }
 
 .app-dialog-overlay--top {
@@ -60,7 +60,7 @@
   position: absolute;
   z-index: 20;
   padding: 84px 24px 24px;
-  background: var(--palette-rgba-18-34-55-a22);
+  background: var(--palette-rgba-18-34-55-a2);
 }
 
 #home-view .home-dialog.app-dialog-surface {
@@ -76,10 +76,6 @@
 
 .chemical-dialog.app-dialog-surface {
   --app-dialog-width: 920px;
-}
-
-.sample-compound-dialog.app-dialog-surface {
-  --app-dialog-width: 1180px;
 }
 
 .assay-serial-dilution-dialog.app-dialog-surface,

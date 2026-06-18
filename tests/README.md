@@ -8,6 +8,8 @@ Suites are organized by domain under `tests/suites/`:
 - `core/agent-suite/*.js`: intent parsing, notebook flows, tool calls, science loops, paper flows, runtime state, and deep-research coverage
 - `core/app-modules-suite.js`: loader for renderer module suites under `core/app-modules-suite/`
 - `core/app-modules-suite/*.js`: renderer module behavior tests for lab/project/protocol/inventory/assay/gel/chat workflows
+- `core/module-services-suite.js`: renderer cross-module service-layer behavior
+- `core/codex-cli-provider-suite.js`: loader for Codex CLI provider suites under `core/codex-cli-provider-suite/`
 - `core/contracts-suite.js`: UI/IPC contract checks, wiring checks, and packaging/config assertions
 - `edge/platform-and-regression-suite.js`: state normalization, object-graph regressions, export contracts, and static guards
 - `edge/bio-tools-and-gel-suite.js`: loader for edge suites under `edge/bio-tools-and-gel-suite/`

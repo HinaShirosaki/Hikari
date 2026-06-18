@@ -2,6 +2,61 @@ import { CLONING_PRIMER_TM_THRESHOLDS } from './constants.js';
 import { asArray } from './sequence-utils.js';
 import { buildRouteWarnings } from './primer-records.js';
 
+// Largest Tm gap between any forward/reverse primer pair (grouped by the shared
+// `<name>_F` / `<name>_R` base). Multi-oligo tile primers carry no `_F`/`_R`
+// suffix and are intentionally excluded here — their compatibility is governed by
+// the overlap Tm cap, not by a forward/reverse pairing.
+function maxForwardReverseTmDifference(primers) {
+  const pairs = new Map();
+  asArray(primers).forEach((primer) => {
+    const match = String(primer?.name || '').match(/^(.*)_([FR])$/);
+    if (!match) {
+      return;
+    }
+    const group = pairs.get(match[1]) || {};
+    group[match[2]] = Number(primer?.tm) || 0;
+    pairs.set(match[1], group);
+  });
+
+  let maxDifference = 0;
+  pairs.forEach((group) => {
+    if (Number.isFinite(group.F) && Number.isFinite(group.R)) {
+      maxDifference = Math.max(maxDifference, Math.abs(group.F - group.R));
+    }
+  });
+  return maxDifference;
+}
+
+function overlapTmSpread(overlapSummary) {
+  const tms = asArray(overlapSummary)
+    .map((item) => Number(item?.overlapTm))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  if (tms.length < 2) {
+    return 0;
+  }
+  return Math.max(...tms) - Math.min(...tms);
+}
+
+// A feasible design from a callback still has to clear the active level's
+// Tm-difference caps; otherwise the ladder falls through to a looser level.
+function findTmDifferenceViolation(result, thresholds) {
+  const maxPrimerDifference = Number(thresholds?.maxPrimerTmDifference);
+  if (Number.isFinite(maxPrimerDifference)) {
+    const primerDifference = maxForwardReverseTmDifference(result?.primers);
+    if (primerDifference > maxPrimerDifference) {
+      return { kind: 'primer-pair', spread: primerDifference, cap: maxPrimerDifference };
+    }
+  }
+  const maxOverlapDifference = Number(thresholds?.maxOverlapTmDifference);
+  if (Number.isFinite(maxOverlapDifference)) {
+    const overlapDifference = overlapTmSpread(result?.overlapSummary);
+    if (overlapDifference > maxOverlapDifference) {
+      return { kind: 'overlap', spread: overlapDifference, cap: maxOverlapDifference };
+    }
+  }
+  return null;
+}
+
 export function designWithThresholdFallback(designCallback) {
   const levels = [
     ['strict', CLONING_PRIMER_TM_THRESHOLDS.strict],
@@ -9,15 +64,22 @@ export function designWithThresholdFallback(designCallback) {
     ['relaxed', CLONING_PRIMER_TM_THRESHOLDS.relaxed]
   ];
   const attempts = [];
+  let lastTmViolation = null;
 
   for (const [levelName, thresholds] of levels) {
     const result = designCallback(thresholds, levelName);
+    const tmViolation = result?.feasible ? findTmDifferenceViolation(result, thresholds) : null;
+    const levelFeasible = Boolean(result?.feasible) && !tmViolation;
     attempts.push({
       level: levelName,
-      feasible: Boolean(result?.feasible),
-      warningCount: asArray(result?.warnings).length
+      feasible: levelFeasible,
+      warningCount: asArray(result?.warnings).length,
+      ...(tmViolation ? { rejectedForTmDifference: true } : {})
     });
-    if (result?.feasible) {
+    if (tmViolation) {
+      lastTmViolation = { level: levelName, ...tmViolation };
+    }
+    if (levelFeasible) {
       return {
         ...result,
         feasible: true,
@@ -32,7 +94,9 @@ export function designWithThresholdFallback(designCallback) {
     selectedThresholdLevel: null,
     attempts,
     warnings: [
-      'Primer design failed under strict, moderate, and relaxed thresholds. Consider Gibson assembly, overlap PCR, or synthesis.'
+      lastTmViolation
+        ? `Designed oligos exceeded the ${lastTmViolation.level} ${lastTmViolation.kind} Tm-difference cap (${lastTmViolation.spread.toFixed(1)} °C vs ${lastTmViolation.cap} °C limit) and no looser threshold level produced a balanced set. Consider redesigning fragment boundaries, Gibson assembly, overlap PCR, or synthesis.`
+        : 'Primer design failed under strict, moderate, and relaxed thresholds. Consider Gibson assembly, overlap PCR, or synthesis.'
     ]
   };
 }
