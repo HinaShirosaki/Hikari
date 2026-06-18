@@ -14,6 +14,7 @@
 const AGENT = Object.freeze({
   CHAT: 'agent:chat',
   CHAT_CANCEL: 'agent:chat:cancel',
+  LIST_SKILLS: 'agent:list-skills',
   GENERATE_PROTOCOL: 'agent:generate-protocol',
   CHAT_LOG_CREATE_SESSION: 'agent:chat-log:create-session',
   CHAT_LOG_LIST_SESSIONS: 'agent:chat-log:list-sessions',
@@ -38,13 +39,16 @@ const STORAGE = Object.freeze({
   WRITE_JSON_FILE: 'storage:write-json-file',
   DISCOVER_PAPERS: 'storage:discover-papers',
   OPEN_FILE: 'storage:open-file',
+  READ_FILE_BYTES: 'storage:read-file-bytes',
   READ_FILE_BASE64: 'storage:read-file-base64',
   APPEND_NOTEBOOK_PAGE_LOG: 'storage:append-notebook-page-log',
   PROTOCOL_RECORD_SAVED: 'storage:protocol-record-saved'
 });
 
 const SYSTEM = Object.freeze({
-  OPEN_EXTERNAL_URL: 'system:open-external-url'
+  OPEN_EXTERNAL_URL: 'system:open-external-url',
+  APP_CLOSE_REQUESTED: 'system:app-close-requested',
+  APP_CLOSE_RESPONSE: 'system:app-close-response'
 });
 
 const INVENTORY = Object.freeze({

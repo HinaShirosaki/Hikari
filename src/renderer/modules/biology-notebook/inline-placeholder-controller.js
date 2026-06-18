@@ -12,6 +12,7 @@ export function createInlinePlaceholderController({
   setSampleLink,
   deleteSampleLink,
   getInventory,
+  getSettings,
   onOpenSampleLinkMenu,
   onCloseSampleLinkMenu,
   onAppendResultLine,
@@ -34,7 +35,7 @@ export function createInlinePlaceholderController({
     token.title = sampleLink?.sampleId
       ? `Linked sample: ${formatSampleLinkValue(sampleLink)}. Right-click to replace.`
       : (wrap.dataset.samplePlaceholderType
-        ? `Right-click to link a ${getSampleTypeLabel(wrap.dataset.samplePlaceholderType)} sample.`
+        ? `Right-click to link a ${getSampleTypeLabel(wrap.dataset.samplePlaceholderType, typeof getSettings === 'function' ? getSettings() : {})} sample.`
         : '');
     if (sampleLink?.sampleId) {
       wrap.dataset.linkedSampleId = sampleLink.sampleId;
@@ -71,7 +72,7 @@ export function createInlinePlaceholderController({
       editor.value = hiddenValue.value;
     }
     refreshTokenFromValue(wrap);
-    onAppendResultLine?.(buildNotebookSampleNote(link, 'Linked'));
+    onAppendResultLine?.(buildNotebookSampleNote(link, 'Linked', typeof getSettings === 'function' ? getSettings() : {}));
     onPersistSampleLinks?.();
     onCloseSampleLinkMenu?.();
   }

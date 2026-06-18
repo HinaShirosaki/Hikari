@@ -51,6 +51,63 @@ test('[EDGE] tool-box designCloningPrimers supports multi-primer tiling for long
   assert.equal(primerPlan.primerCount > 2, true);
   assert.equal(primerPlan.primerOrder.includes('tile_outer_left'), true);
 });
+test('[EDGE] tool-box designCloningPrimers enforces the per-level overlap Tm-difference cap', () => {
+  const fragmentMap = {
+    fragments: [
+      { id: 'frag-1', name: 'Frag1', role: 'insert', sequence: 'ATGGCAGCAGCAGGTGCAGCAGCAGGTGCAGCAGCAGGT' },
+      { id: 'frag-2', name: 'Frag2', role: 'insert', sequence: 'GCAGCAGCAGGTGCAGCAGCAGGTATGGCAGCAGCAGGT' }
+    ]
+  };
+  const planWithOverlapTms = (leftTm, rightTm) => toolBox.designCloningPrimers({
+    strategy: 'overlap-pcr',
+    fragmentMap,
+    routeEvaluations: {
+      overlapPCR: {
+        junctions: [
+          { leftFragmentId: 'frag-1', rightFragmentId: 'frag-2', rightFragmentName: 'Frag2', mode: 'primer-introduced', overlapSequence: 'GCAGCAGCAGGTGCAG', overlapLength: 16, overlapTm: leftTm, wrapAround: false },
+          { leftFragmentId: 'frag-2', rightFragmentId: 'frag-1', rightFragmentName: 'Frag1', mode: 'primer-introduced', overlapSequence: 'GCAGCAGCAGGTGCAG', overlapLength: 16, overlapTm: rightTm, wrapAround: false }
+        ]
+      }
+    }
+  });
+
+  // Spread of 2 degC clears the strict cap (3).
+  const balanced = planWithOverlapTms(64, 66);
+  assert.equal(balanced.feasible, true);
+  assert.equal(balanced.selectedThresholdLevel, 'strict');
+
+  // Spread of 8 degC clears only the relaxed cap (10), so the ladder falls through.
+  const relaxedOnly = planWithOverlapTms(60, 68);
+  assert.equal(relaxedOnly.feasible, true);
+  assert.equal(relaxedOnly.selectedThresholdLevel, 'relaxed');
+
+  // Spread of 14 degC exceeds even the relaxed cap and is rejected at every level.
+  const rejected = planWithOverlapTms(60, 74);
+  assert.equal(rejected.feasible, false);
+  assert.equal(rejected.selectedThresholdLevel, null);
+  assert.equal(rejected.attempts.every((attempt) => attempt.rejectedForTmDifference === true), true);
+  assert.match(rejected.warnings[0], /Tm-difference cap/);
+});
+test('[EDGE] tool-box restrictionCutOverhang distinguishes sticky from blunt cutters', () => {
+  const restrictionLigation = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box', 'cloning-assembly', 'restriction-ligation.js')
+  );
+  const overhang = restrictionLigation.restrictionCutOverhang;
+
+  // Symmetric Type II cutters: '^' position determines the overhang.
+  assert.equal(overhang('G^AATTC').type, 'sticky'); // EcoRI, 4 nt 5' overhang
+  assert.equal(overhang('G^AATTC').length, 4);
+  assert.equal(overhang('GGTAC^C').type, 'sticky'); // KpnI, 4 nt 3' overhang
+  assert.equal(overhang('GAT^ATC').type, 'blunt'); // EcoRV, centred cut
+  assert.equal(overhang('TTA^TAA').type, 'blunt'); // AanI/PsiI, centred cut
+
+  // Shifted/Type IIS cutters: '(top/bottom)' offsets determine the overhang.
+  assert.equal(overhang('CACCTGC(4/8)').type, 'sticky');
+  assert.equal(overhang('CACCTGC(4/8)').length, 4);
+  assert.equal(overhang('GATC(3/3)').type, 'blunt'); // equal offsets => blunt
+
+  assert.equal(overhang('').type, 'unknown');
+});
 test('[EDGE] tool-box designPcrPrimerPair designs a forward and reverse primer for a selected sequence', () => {
   const primerPlan = toolBox.designPcrPrimerPair(
     'GCGCGCGCGCGCGATATATATATATATATATATAGCGCGCGCGCGCGAT',
@@ -63,6 +120,48 @@ test('[EDGE] tool-box designPcrPrimerPair designs a forward and reverse primer f
   assert.equal(primerPlan.primers[1].name, 'selected_region_R');
   assert.equal(primerPlan.primers[0].role, 'pcr-forward');
   assert.equal(primerPlan.primers[1].role, 'pcr-reverse');
+});
+test('[EDGE] bench tool calculations return instant results and substituted formulas', () => {
+  const massResult = toolBox.calculateMolarityMass({
+    concentrationValue: 10,
+    concentrationUnit: 'mM',
+    molecularWeight: 58.44,
+    volumeValue: 1,
+    volumeUnit: 'L',
+    outputUnit: 'mg'
+  });
+  assert.match(massResult.resultText, /584\.4 mg/i);
+  assert.match(massResult.formulaText, /10 mM x 1 L x 58\.44 g\/mol/i);
+
+  const missingDilution = toolBox.calculateMolarityDilution({
+    stockConcentrationValue: 100,
+    stockConcentrationUnit: 'mM',
+    finalVolumeValue: 1,
+    finalVolumeUnit: 'mL'
+  });
+  assert.equal(missingDilution.resultText, '');
+  assert.match(missingDilution.formulaText, /\[desired concentration\]/i);
+
+  const bufferResult = toolBox.calculateBufferRecipe({
+    volumeMl: 1000,
+    rows: [
+      { name: 'NaCl', form: 'solid', molecularWeight: 58.44, concentrationValue: 150 }
+    ]
+  });
+  assert.match(bufferResult.resultText, /NaCl: 8766 mg/i);
+  assert.match(bufferResult.formulaText, /150 mM x 1 L x 58\.44 g\/mol/i);
+
+  const reactionResult = toolBox.calculateFixedReaction({
+    totalVolumeValue: 100,
+    totalVolumeUnit: 'uL',
+    fillName: 'Water',
+    reagents: [
+      { name: 'ATP', stockValue: 10, stockUnit: 'mM', finalValue: 1, finalUnit: 'mM' }
+    ]
+  });
+  assert.match(reactionResult.resultText, /ATP: 10 uL/i);
+  assert.match(reactionResult.resultText, /Water: 90 uL/i);
+  assert.match(reactionResult.formulaText, /ATP volume = 1 mM x 100 uL \/ 10 mM/i);
 });
 test('[EDGE] tool-box assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {
   const plan = toolBox.assembleCloningPlan({
@@ -380,11 +479,6 @@ test('[EDGE] protein-builder Gibson insert primers bind the linked source CDS an
     assert.equal(typeof stats.mass, 'number');
     assert.equal(Array.isArray(stats.invalidResidues), true);
   });
-});
-test('[EDGE] tool-box renderChemicalOptions includes Custom option', () => {
-  const html = toolBox.renderChemicalOptions();
-  assert.match(html, /Custom<\/option>/);
-  assert.match(html, /<option value="[^"]+">/);
 });
 test('[EDGE] tool-box parseCrisprTargetsInput parses FASTA entries and normalizes sequence', () => {
   const parsed = toolBox.parseCrisprTargetsInput(`

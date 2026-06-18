@@ -7,6 +7,25 @@ export function fileToDataUrl(file) {
   });
 }
 
+export function fileToBytes(file) {
+  if (file && typeof file.arrayBuffer === 'function') {
+    return file.arrayBuffer().then((buffer) => new Uint8Array(buffer));
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const bytes = normalizePdfBytePayload(reader.result);
+      if (bytes?.byteLength) {
+        resolve(bytes);
+      } else {
+        reject(new Error('Failed to read PDF file.'));
+      }
+    };
+    reader.onerror = () => reject(new Error('Failed to read PDF file.'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
 export function extractBase64Payload(dataUrl) {
   const source = String(dataUrl || '');
   const commaIndex = source.indexOf(',');
@@ -98,4 +117,28 @@ export function decodeBase64Pdf(base64) {
     bytes[index] = binary.charCodeAt(index);
   }
   return bytes;
+}
+
+export function normalizePdfBytePayload(value) {
+  if (!value) {
+    return null;
+  }
+  if (value instanceof Uint8Array) {
+    return value;
+  }
+  if (value instanceof ArrayBuffer) {
+    return new Uint8Array(value);
+  }
+  if (ArrayBuffer.isView(value)) {
+    return new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
+  }
+  if (Array.isArray(value?.data)) {
+    return Uint8Array.from(value.data);
+  }
+  return null;
+}
+
+export function buildPdfDataUrlFromBase64(base64) {
+  const payload = String(base64 || '').trim();
+  return payload ? `data:application/pdf;base64,${payload}` : '';
 }

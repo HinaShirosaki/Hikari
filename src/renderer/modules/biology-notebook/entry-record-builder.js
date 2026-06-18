@@ -5,6 +5,7 @@ import {
   resolveEntryNotebookState,
   shouldSyncExperimentNameWithProtocol
 } from './entry-helpers.js';
+import { normalizeNotebookToolCalculations } from './tool-calculations.js';
 
 export function buildSaveableNotebookEntry({
   editingEntry,
@@ -15,7 +16,8 @@ export function buildSaveableNotebookEntry({
   entryId,
   values,
   resultText,
-  resultTable,
+  resultTables,
+  toolCalculations,
   sampleLinks,
   resultFiles,
   resultFileRecords,
@@ -27,6 +29,7 @@ export function buildSaveableNotebookEntry({
   const experimentName = shouldSyncExperimentNameWithProtocol(currentExperimentName, baseProtocolName)
     ? protocol.name
     : (String(currentExperimentName || '').trim() || protocol.name);
+  const tables = Array.isArray(resultTables) ? resultTables : [];
 
   return {
     id: entryId,
@@ -39,7 +42,9 @@ export function buildSaveableNotebookEntry({
     protocolSnapshot: cloneProtocolSnapshot(protocol) || cloneProtocolSnapshot(editingEntry?.protocolSnapshot),
     values,
     result: resultText,
-    resultTable,
+    resultTable: tables[0] || null,
+    resultTables: tables,
+    toolCalculations: normalizeNotebookToolCalculations(toolCalculations),
     sampleLinks,
     resultFiles,
     resultFileRecords,

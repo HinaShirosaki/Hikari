@@ -12,6 +12,7 @@ export function createProtocolSnapshotEditor({
   applyBtn,
   cancelBtn,
   exportBtn,
+  printBtn,
   markExecutedBtn,
   draftNameInput,
   draftStepsInput,
@@ -69,6 +70,9 @@ export function createProtocolSnapshotEditor({
     }
     if (exportBtn) {
       exportBtn.hidden = !entry || isEditing;
+    }
+    if (printBtn) {
+      printBtn.hidden = !entry || isEditing;
     }
     if (markExecutedBtn) {
       markExecutedBtn.hidden = !entry

@@ -6,6 +6,7 @@ function createAgentApi(ipcRenderer) {
   return {
     agentChat: (payload) => ipcRenderer.invoke(AGENT.CHAT, payload),
     agentChatCancel: (payload) => ipcRenderer.invoke(AGENT.CHAT_CANCEL, payload),
+    listAgentSkills: (payload) => ipcRenderer.invoke(AGENT.LIST_SKILLS, payload),
     agentGenerateProtocol: (payload) => ipcRenderer.invoke(AGENT.GENERATE_PROTOCOL, payload),
     agentChatLogCreateSession: (payload) => ipcRenderer.invoke(AGENT.CHAT_LOG_CREATE_SESSION, payload),
     agentChatLogListSessions: (payload) => ipcRenderer.invoke(AGENT.CHAT_LOG_LIST_SESSIONS, payload),

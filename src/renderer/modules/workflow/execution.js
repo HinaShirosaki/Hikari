@@ -279,33 +279,3 @@ export function computeEntryProgress(entry, layout) {
   };
 }
 
-export function computeWorkflowExecutionSummary(workflow, layout) {
-  const entries = Array.isArray(workflow?.entries) ? workflow.entries : [];
-  if (!entries.length) {
-    return {
-      entryCount: 0,
-      completedEntryCount: 0,
-      percentComplete: 0,
-      nextBlockId: '',
-      activeEntryId: ''
-    };
-  }
-
-  const entryProgress = entries.map((entry) => ({
-    entry,
-    progress: computeEntryProgress(entry, layout)
-  }));
-  const completedEntryCount = entryProgress.filter((item) => item.progress.complete).length;
-  const percentComplete = Math.round(
-    entryProgress.reduce((sum, item) => sum + item.progress.percentComplete, 0) / Math.max(1, entryProgress.length)
-  );
-  const nextEntry = entryProgress.find((item) => item.progress.nextBlockId) || entryProgress[0];
-
-  return {
-    entryCount: entries.length,
-    completedEntryCount,
-    percentComplete,
-    nextBlockId: nextEntry?.progress?.nextBlockId || '',
-    activeEntryId: nextEntry?.entry?.id || ''
-  };
-}

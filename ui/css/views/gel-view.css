@@ -86,6 +86,16 @@
   width: 100%;
 }
 
+.gel-ladder-mw-control {
+  display: grid;
+  gap: 6px;
+  min-width: min(100%, 180px);
+}
+
+.gel-ladder-mw-control input {
+  width: 100%;
+}
+
 .gel-lane-profile-chart-shell {
   padding: 0;
   border: 0;
@@ -110,7 +120,7 @@
 
 .gel-lane-profile-chart .lane-profile-hover-dot {
   fill: var(--palette-rgb-250-204-21);
-  stroke: var(--palette-rgba-255-255-255-a92);
+  stroke: var(--palette-rgba-255-255-255-a9);
   stroke-width: 1.5;
   pointer-events: none;
 }
@@ -124,8 +134,8 @@
 }
 
 .gel-lane-profile-chart .lane-profile-frame {
-  fill: var(--palette-rgba-255-255-255-a58);
-  stroke: var(--palette-rgba-53-99-153-a16);
+  fill: var(--palette-rgba-255-255-255-a5);
+  stroke: var(--palette-rgba-53-99-153-a2);
 }
 
 .gel-lane-profile-chart .lane-profile-window {
@@ -156,7 +166,7 @@
 
 .gel-lane-profile-chart .lane-profile-peak {
   fill: var(--palette-teal-700);
-  stroke: var(--palette-rgba-255-255-255-a92);
+  stroke: var(--palette-rgba-255-255-255-a9);
   stroke-width: 2;
 }
 
@@ -177,6 +187,196 @@
 
 .gel-lane-profile-meta span {
   white-space: nowrap;
+}
+
+.gel-peak-editor-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  padding: 22px;
+  background: rgba(15, 23, 42, 0.38);
+}
+
+.gel-peak-editor-overlay[hidden] {
+  display: none;
+}
+
+.gel-peak-editor-dialog {
+  display: grid;
+  grid-template-rows: auto auto minmax(260px, 1fr) auto;
+  gap: 12px;
+  width: min(1180px, 100%);
+  max-height: min(920px, calc(100vh - 44px));
+  padding: 16px;
+  border: 1px solid var(--palette-rgba-53-99-153-a24);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 18px 44px var(--palette-rgba-15-23-42-a18);
+  overflow: hidden;
+}
+
+.gel-peak-editor-header,
+.gel-peak-editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.gel-peak-editor-header h3 {
+  margin: 0 0 4px;
+}
+
+.gel-peak-editor-toolbar {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.gel-peak-editor-lane-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.gel-peak-editor-lane-picker select {
+  min-width: 112px;
+}
+
+.gel-peak-editor-modes {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.gel-peak-editor-toolbar .ghost-btn,
+.gel-peak-editor-header .ghost-btn {
+  min-height: 36px;
+  padding: 8px 12px;
+}
+
+.gel-peak-editor-toolbar .ghost-btn.is-active {
+  border-color: var(--palette-rgba-22-163-74-a42);
+  background: var(--palette-rgba-187-247-208-a48);
+  color: var(--palette-green-900);
+}
+
+.gel-peak-editor-chart-shell {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.gel-peak-editor-chart {
+  display: block;
+  width: 100%;
+  height: min(52vh, 440px);
+  min-height: 300px;
+  cursor: crosshair;
+}
+
+.gel-peak-editor-chart .peak-editor-frame {
+  fill: var(--palette-rgba-255-255-255-a5);
+  stroke: var(--palette-rgba-53-99-153-a22);
+}
+
+.gel-peak-editor-chart .peak-editor-grid {
+  stroke: var(--palette-rgba-91-111-137-a18);
+  stroke-width: 1;
+  stroke-dasharray: 4 5;
+}
+
+.gel-peak-editor-chart .peak-editor-path-shadow {
+  fill: none;
+  stroke: var(--palette-rgba-34-197-94-a16);
+  stroke-width: 12;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gel-peak-editor-chart .peak-editor-path {
+  fill: none;
+  stroke: var(--palette-teal-700);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.gel-peak-editor-chart .peak-editor-area {
+  fill: var(--palette-rgba-56-189-248-a14);
+  stroke: none;
+}
+
+.gel-peak-editor-chart .peak-editor-baseline {
+  stroke: var(--palette-rgba-250-204-21-a95);
+  stroke-width: 2.2;
+}
+
+.gel-peak-editor-chart .peak-editor-baseline-dot,
+.gel-peak-editor-chart .peak-editor-apex,
+.gel-peak-editor-chart .peak-editor-hover-dot {
+  fill: var(--palette-rgb-250-204-21);
+  stroke: var(--palette-rgba-255-255-255-a9);
+  stroke-width: 2;
+}
+
+.gel-peak-editor-chart .peak-editor-hover-dot {
+  fill: var(--palette-rgba-255-255-255-a9);
+  stroke: var(--palette-rgba-250-204-21-a95);
+  stroke-width: 3;
+  pointer-events: none;
+}
+
+.gel-peak-editor-chart .peak-editor-apex {
+  fill: var(--palette-teal-700);
+}
+
+.gel-peak-editor-chart .peak-editor-divider {
+  stroke: rgba(244, 63, 94, 0.88);
+  stroke-width: 1.7;
+  stroke-dasharray: 5 4;
+}
+
+.gel-peak-editor-chart .peak-editor-axis-label,
+.gel-peak-editor-chart .peak-editor-baseline-label,
+.gel-peak-editor-chart .peak-editor-divider-label,
+.gel-peak-editor-chart .peak-editor-hover-label,
+.gel-peak-editor-chart .peak-editor-empty {
+  fill: var(--palette-lab-blue-muted);
+  font-size: 12px;
+  font-family: var(--font-app);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.gel-peak-editor-table {
+  min-height: 180px;
+  overflow: auto;
+}
+
+.gel-peak-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.gel-peak-table th,
+.gel-peak-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--palette-rgba-148-163-184-a25);
+  text-align: left;
+}
+
+.gel-peak-table th {
+  color: var(--strong);
+}
+
+.gel-peak-table th.num,
+.gel-peak-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .gel-setup-panel > p,
@@ -275,15 +475,101 @@
 }
 
 .gel-viewer-toolbar .ghost-btn {
-  border: 1px solid var(--palette-rgba-53-99-153-a22);
-  background: var(--palette-rgba-255-255-255-a56);
+  border: 1px solid var(--palette-rgba-53-99-153-a2);
+  background: var(--palette-rgba-255-255-255-a5);
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
-.gel-viewer-toolbar .ghost-btn.is-active {
+.gel-viewer-toolbar .ghost-btn.is-active,
+.gel-tool-actions .ghost-btn.is-active {
   border-color: var(--palette-rgba-22-163-74-a42);
   background: var(--palette-rgba-187-247-208-a48);
   color: var(--palette-green-900);
+}
+
+.gel-tool-panel {
+  min-width: 0;
+}
+
+.gel-tool-panel h3 {
+  margin: 0;
+}
+
+.gel-tool-groups {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.gel-tool-group {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.gel-tool-group summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 36px;
+  padding: 8px 0;
+  color: var(--strong);
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+
+.gel-tool-group summary::-webkit-details-marker {
+  display: none;
+}
+
+.gel-tool-group summary::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform 140ms ease;
+}
+
+.gel-tool-group[open] summary::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.gel-tool-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  gap: 8px;
+  padding: 0 0 12px;
+}
+
+.gel-tool-actions .ghost-btn {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid var(--palette-rgba-53-99-153-a2);
+  background: var(--palette-rgba-255-255-255-a5);
+  line-height: 1.15;
+  white-space: normal;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.gel-tool-actions #gel-add-table-btn[hidden] {
+  display: block !important;
+}
+
+.gel-lane-count-control {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 38px;
+}
+
+.gel-lane-count-control input {
+  width: 76px;
+  min-width: 0;
 }
 
 .gel-viewer-stage {
@@ -341,7 +627,7 @@
 
 .gel-lane-table-label-head,
 .gel-lane-table-label-cell {
-  border: 1px solid var(--palette-rgba-53-99-153-a24);
+  border: 1px solid var(--palette-rgba-53-99-153-a2);
   padding: 0;
   text-align: center;
   background: var(--palette-rgba-255-255-255-a7);
@@ -378,7 +664,7 @@
 
 .gel-lane-table th,
 .gel-lane-table td {
-  border: 1px solid var(--palette-rgba-53-99-153-a24);
+  border: 1px solid var(--palette-rgba-53-99-153-a2);
   padding: 0;
   height: 40px;
   text-align: center;
@@ -423,48 +709,18 @@
 .gel-lane-table-input:focus {
   outline: 2px solid color-mix(in srgb, var(--accent) 34%, transparent);
   outline-offset: -2px;
-  background: var(--palette-rgba-255-255-255-a92);
+  background: var(--palette-rgba-255-255-255-a9);
 }
 
 /* Extracted from ui/css/themes/modes.css */
 .gel-canvas-shell {
-  border: 1px solid var(--palette-rgba-53-99-153-a24);
+  border: 1px solid var(--palette-rgba-53-99-153-a2);
   border-radius: 10px;
-  background: var(--palette-rgba-255-255-255-a74);
+  background: var(--palette-rgba-255-255-255-a7);
   overflow: visible;
   min-height: 0;
   max-height: none;
   height: auto;
-}
-
-.gel-manual-progress {
-  display: grid;
-  gap: 12px;
-  border: 1px solid var(--palette-rgba-53-99-153-a24);
-  border-radius: 10px;
-  padding: 14px;
-  background: var(--palette-rgba-247-251-255-a9);
-}
-
-.gel-step-list {
-  margin: 0 0 8px;
-  padding-left: 18px;
-  display: grid;
-  gap: 6px;
-  font-size: 0.86rem;
-}
-
-.gel-step-list li {
-  color: var(--palette-lab-blue-muted);
-}
-
-.gel-step-list li.is-active {
-  color: var(--palette-slate-950);
-  font-weight: 700;
-}
-
-.gel-step-list li.is-done {
-  color: var(--palette-green-800);
 }
 
 #gel-canvas {
@@ -504,11 +760,6 @@
 body.theme-night .gel-canvas-shell {
   border-color: var(--palette-rgba-145-174-214-a32);
   background: var(--palette-rgba-20-33-57-a72);
-}
-
-body.theme-night .gel-manual-progress {
-  border-color: var(--palette-rgba-145-174-214-a3);
-  background: var(--palette-rgba-22-36-62-a9);
 }
 
 body.theme-night .gel-lane-profile-picker {
@@ -553,12 +804,59 @@ body.theme-night .gel-lane-profile-meta {
   color: var(--palette-hex-9db2d5);
 }
 
-body.theme-night .gel-viewer-toolbar .ghost-btn {
+body.theme-night .gel-peak-editor-overlay {
+  background: rgba(2, 6, 23, 0.72);
+}
+
+body.theme-night .gel-peak-editor-dialog {
+  border-color: var(--palette-rgba-145-174-214-a3);
+  background: rgba(15, 23, 42, 0.98);
+}
+
+body.theme-night .gel-peak-editor-chart .peak-editor-frame {
+  fill: var(--palette-rgba-11-19-35-a4);
+  stroke: var(--palette-rgba-145-174-214-a2);
+}
+
+body.theme-night .gel-peak-editor-chart .peak-editor-grid {
+  stroke: var(--palette-rgba-157-178-213-a2);
+}
+
+body.theme-night .gel-peak-editor-chart .peak-editor-path-shadow {
+  stroke: var(--palette-rgba-45-212-191-a18);
+}
+
+body.theme-night .gel-peak-editor-chart .peak-editor-path,
+body.theme-night .gel-peak-editor-chart .peak-editor-apex {
+  stroke: var(--palette-teal-300);
+}
+
+body.theme-night .gel-peak-editor-chart .peak-editor-axis-label,
+body.theme-night .gel-peak-editor-chart .peak-editor-baseline-label,
+body.theme-night .gel-peak-editor-chart .peak-editor-divider-label,
+body.theme-night .gel-peak-editor-chart .peak-editor-hover-label,
+body.theme-night .gel-peak-editor-chart .peak-editor-empty {
+  fill: var(--palette-hex-9db2d5);
+}
+
+body.theme-night .gel-peak-table th,
+body.theme-night .gel-peak-table td {
+  border-color: var(--palette-rgba-145-174-214-a32);
+}
+
+body.theme-night .gel-tool-groups,
+body.theme-night .gel-tool-group {
+  border-color: var(--palette-rgba-145-174-214-a2);
+}
+
+body.theme-night .gel-viewer-toolbar .ghost-btn,
+body.theme-night .gel-tool-actions .ghost-btn {
   border-color: var(--palette-rgba-145-174-214-a28);
   background: var(--palette-rgba-22-36-62-a68);
 }
 
-body.theme-night .gel-viewer-toolbar .ghost-btn.is-active {
+body.theme-night .gel-viewer-toolbar .ghost-btn.is-active,
+body.theme-night .gel-tool-actions .ghost-btn.is-active {
   border-color: var(--palette-rgba-74-222-128-a42);
   background: var(--palette-rgba-20-83-45-a46);
   color: var(--palette-hex-bbf7d0);
@@ -645,6 +943,23 @@ body.theme-night .gel-report-json {
     min-width: 0;
   }
 
+  .gel-peak-editor-overlay {
+    padding: 10px;
+  }
+
+  .gel-peak-editor-dialog {
+    max-height: calc(100vh - 20px);
+    padding: 12px;
+  }
+
+  .gel-peak-editor-header {
+    align-items: flex-start;
+  }
+
+  .gel-peak-editor-chart {
+    height: 340px;
+  }
+
   .gel-lane-table-toolbar {
     flex-direction: column;
     align-items: stretch;
@@ -670,7 +985,6 @@ body.theme-night .gel-report-json {
 #gel-view .panel,
 #gel-view .card,
 .gel-canvas-shell,
-.gel-manual-progress,
 .gel-report-json {
   border: 0;
   border-radius: 0;

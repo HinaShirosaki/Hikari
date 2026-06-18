@@ -9,7 +9,9 @@ const {
   ensureObject,
   loadSqlJs,
   parseJsonObject,
-  readJsonFile
+  readJsonFile,
+  sanitizeFolderName,
+  toPosixRelative
 } = require('./storage-utils');
 
 const WORKFLOW_ROOT_FOLDER_NAME = 'Workflow';
@@ -19,18 +21,8 @@ const WORKFLOW_METADATA_FILE_NAME = 'workflow.json';
 const RELATED_PAPERS_FILE_NAME = 'related-papers.json';
 const NOTEBOOK_PAGE_FILE_NAME = 'page.json';
 
-function sanitizeFolderName(value, fallback = 'item') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
-  return cleaned || fallback;
-}
-
-function toPosixRelative(rootPath, targetPath) {
-  return path.relative(rootPath, targetPath).split(path.sep).join('/');
+function isPermissionDeniedError(error) {
+  return error?.code === 'EPERM' || error?.code === 'EACCES';
 }
 
 function resolveWorkflowStoragePaths(storagePath = '') {
@@ -707,7 +699,16 @@ async function readWorkflowStatusIndex(sqlitePath) {
       return {
         exists: false,
         templateRows: [],
-        workflowRows: []
+        workflowRows: [],
+        warnings: []
+      };
+    }
+    if (isPermissionDeniedError(error)) {
+      return {
+        exists: false,
+        templateRows: [],
+        workflowRows: [],
+        warnings: [`Permission denied reading workflow status index ${sqlitePath}: ${String(error?.message || error)}`]
       };
     }
     throw error;
@@ -780,7 +781,7 @@ async function hydrateWorkflowRootFromStoragePath({
       notebookEntries: [],
       papers: [],
       paperExperimentLinks: [],
-      warnings: []
+      warnings: asArray(sqlData.warnings)
     };
   }
 

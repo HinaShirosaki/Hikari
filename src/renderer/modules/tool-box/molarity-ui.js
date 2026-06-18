@@ -1,12 +1,9 @@
-import { toNumber } from './common.js';
 import {
-  concentrationToM,
-  concentrationFromM,
-  volumeToL,
-  volumeFromL,
-  massToG,
-  massFromG
-} from './molarity.js';
+  calculateMolarityMass,
+  calculateMolarityVolume,
+  calculateMolarityConcentration,
+  calculateMolarityDilution
+} from './bench-calculations.js';
 
 export function initMolarityTool(options = {}) {
   const rootDocument = options?.document || globalThis?.document || null;
@@ -34,86 +31,75 @@ export function initMolarityTool(options = {}) {
   }
 
   function renderMolarity() {
-    const massConcValue = toNumber(rootDocument.getElementById('mass-calc-concentration')?.value);
+    const massConcValue = rootDocument.getElementById('mass-calc-concentration')?.value;
     const massConcUnit = rootDocument.getElementById('mass-calc-concentration-unit')?.value;
-    const massMw = toNumber(rootDocument.getElementById('mass-calc-mw')?.value);
-    const massVolumeValue = toNumber(rootDocument.getElementById('mass-calc-volume')?.value);
+    const massMw = rootDocument.getElementById('mass-calc-mw')?.value;
+    const massVolumeValue = rootDocument.getElementById('mass-calc-volume')?.value;
     const massVolumeUnit = rootDocument.getElementById('mass-calc-volume-unit')?.value;
     const massOutputUnit = rootDocument.getElementById('mass-calc-output-unit')?.value;
 
-    const massM = concentrationToM(massConcValue, massConcUnit);
-    const massL = volumeToL(massVolumeValue, massVolumeUnit);
-    const massMoles = massM * massL;
-    const massG = massMoles * massMw;
-    const massOutput = massFromG(massG, massOutputUnit);
+    const massResult = calculateMolarityMass({
+      concentrationValue: massConcValue,
+      concentrationUnit: massConcUnit,
+      molecularWeight: massMw,
+      volumeValue: massVolumeValue,
+      volumeUnit: massVolumeUnit,
+      outputUnit: massOutputUnit
+    });
+    massCalcResult.textContent = massResult.resultText || massResult.formulaText;
 
-    if (massM > 0 && massL > 0 && massMw > 0) {
-      massCalcResult.textContent = `Mass needed: ${massOutput.toFixed(6)} ${massOutputUnit}.`;
-    } else {
-      massCalcResult.textContent = 'Enter concentration, formula weight, and volume to calculate mass.';
-    }
-
-    const volumeMassValue = toNumber(rootDocument.getElementById('volume-calc-mass')?.value);
+    const volumeMassValue = rootDocument.getElementById('volume-calc-mass')?.value;
     const volumeMassUnit = rootDocument.getElementById('volume-calc-mass-unit')?.value;
-    const volumeMw = toNumber(rootDocument.getElementById('volume-calc-mw')?.value);
-    const volumeConcValue = toNumber(rootDocument.getElementById('volume-calc-concentration')?.value);
+    const volumeMw = rootDocument.getElementById('volume-calc-mw')?.value;
+    const volumeConcValue = rootDocument.getElementById('volume-calc-concentration')?.value;
     const volumeConcUnit = rootDocument.getElementById('volume-calc-concentration-unit')?.value;
     const volumeOutputUnit = rootDocument.getElementById('volume-calc-output-unit')?.value;
 
-    const volumeG = massToG(volumeMassValue, volumeMassUnit);
-    const volumeM = concentrationToM(volumeConcValue, volumeConcUnit);
-    const volumeMoles = volumeMw > 0 ? volumeG / volumeMw : 0;
-    const volumeL = volumeM > 0 ? volumeMoles / volumeM : 0;
-    const volumeOutput = volumeFromL(volumeL, volumeOutputUnit);
+    const volumeResult = calculateMolarityVolume({
+      massValue: volumeMassValue,
+      massUnit: volumeMassUnit,
+      molecularWeight: volumeMw,
+      concentrationValue: volumeConcValue,
+      concentrationUnit: volumeConcUnit,
+      outputUnit: volumeOutputUnit
+    });
+    volumeCalcResult.textContent = volumeResult.resultText || volumeResult.formulaText;
 
-    if (volumeG > 0 && volumeMw > 0 && volumeM > 0) {
-      volumeCalcResult.textContent = `Final volume: ${volumeOutput.toFixed(6)} ${volumeOutputUnit}.`;
-    } else {
-      volumeCalcResult.textContent = 'Enter mass, formula weight, and concentration to calculate volume.';
-    }
-
-    const concMassValue = toNumber(rootDocument.getElementById('conc-calc-mass')?.value);
+    const concMassValue = rootDocument.getElementById('conc-calc-mass')?.value;
     const concMassUnit = rootDocument.getElementById('conc-calc-mass-unit')?.value;
-    const concMw = toNumber(rootDocument.getElementById('conc-calc-mw')?.value);
-    const concVolumeValue = toNumber(rootDocument.getElementById('conc-calc-volume')?.value);
+    const concMw = rootDocument.getElementById('conc-calc-mw')?.value;
+    const concVolumeValue = rootDocument.getElementById('conc-calc-volume')?.value;
     const concVolumeUnit = rootDocument.getElementById('conc-calc-volume-unit')?.value;
     const concOutputUnit = rootDocument.getElementById('conc-calc-output-unit')?.value;
 
-    const concMassG = massToG(concMassValue, concMassUnit);
-    const concVolumeL = volumeToL(concVolumeValue, concVolumeUnit);
-    const concMoles = concMw > 0 ? concMassG / concMw : 0;
-    const concM = concVolumeL > 0 ? concMoles / concVolumeL : 0;
-    const concOutput = concentrationFromM(concM, concOutputUnit);
+    const concentrationResult = calculateMolarityConcentration({
+      massValue: concMassValue,
+      massUnit: concMassUnit,
+      molecularWeight: concMw,
+      volumeValue: concVolumeValue,
+      volumeUnit: concVolumeUnit,
+      outputUnit: concOutputUnit
+    });
+    concCalcResult.textContent = concentrationResult.resultText || concentrationResult.formulaText;
 
-    if (concMassG > 0 && concMw > 0 && concVolumeL > 0) {
-      concCalcResult.textContent = `Concentration: ${concOutput.toFixed(6)} ${concOutputUnit}.`;
-    } else {
-      concCalcResult.textContent = 'Enter mass, formula weight, and volume to calculate concentration.';
-    }
-
-    const stockConcValue = toNumber(rootDocument.getElementById('dilution-stock-conc')?.value);
+    const stockConcValue = rootDocument.getElementById('dilution-stock-conc')?.value;
     const stockConcUnit = rootDocument.getElementById('dilution-stock-conc-unit')?.value;
-    const targetConcValue = toNumber(rootDocument.getElementById('dilution-target-conc')?.value);
+    const targetConcValue = rootDocument.getElementById('dilution-target-conc')?.value;
     const targetConcUnit = rootDocument.getElementById('dilution-target-conc-unit')?.value;
-    const targetVolumeValue = toNumber(rootDocument.getElementById('dilution-target-volume')?.value);
+    const targetVolumeValue = rootDocument.getElementById('dilution-target-volume')?.value;
     const targetVolumeUnit = rootDocument.getElementById('dilution-target-volume-unit')?.value;
     const dilutionOutputUnit = rootDocument.getElementById('dilution-output-unit')?.value;
 
-    const stockM = concentrationToM(stockConcValue, stockConcUnit);
-    const targetM = concentrationToM(targetConcValue, targetConcUnit);
-    const targetVL = volumeToL(targetVolumeValue, targetVolumeUnit);
-    const stockVL = stockM > 0 ? (targetM * targetVL) / stockM : 0;
-    const diluentVL = targetVL - stockVL;
-    const stockOutput = volumeFromL(stockVL, dilutionOutputUnit);
-    const diluentOutput = volumeFromL(diluentVL, dilutionOutputUnit);
-
-    if (stockM > 0 && targetM > 0 && targetVL > 0 && stockM >= targetM && diluentVL >= 0) {
-      dilutionCalcResult.textContent = `Use ${stockOutput.toFixed(6)} ${dilutionOutputUnit} stock + ${diluentOutput.toFixed(6)} ${dilutionOutputUnit} diluent.`;
-    } else if (stockM > 0 && targetM > stockM) {
-      dilutionCalcResult.textContent = 'Desired concentration cannot be higher than stock concentration.';
-    } else {
-      dilutionCalcResult.textContent = 'Enter stock concentration, desired concentration, and final volume to calculate dilution.';
-    }
+    const dilutionResult = calculateMolarityDilution({
+      stockConcentrationValue: stockConcValue,
+      stockConcentrationUnit: stockConcUnit,
+      targetConcentrationValue: targetConcValue,
+      targetConcentrationUnit: targetConcUnit,
+      finalVolumeValue: targetVolumeValue,
+      finalVolumeUnit: targetVolumeUnit,
+      outputUnit: dilutionOutputUnit
+    });
+    dilutionCalcResult.textContent = dilutionResult.resultText || dilutionResult.formulaText;
   }
 
   forms.forEach((form) => {

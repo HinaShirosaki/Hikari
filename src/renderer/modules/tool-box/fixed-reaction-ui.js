@@ -1,15 +1,6 @@
-import { formatSigFig, toNumber } from './common.js';
+import { formatSigFig } from './common.js';
 import { volumeFromL, volumeToL } from './molarity.js';
-
-const CONCENTRATION_FACTORS = {
-  fM: 1e-15,
-  pM: 1e-12,
-  nM: 1e-9,
-  uM: 1e-6,
-  mM: 1e-3,
-  M: 1,
-  x: 1
-};
+import { calculateFixedReactionReagent, roundNearZero } from './bench-calculations.js';
 
 const CONCENTRATION_OPTIONS = ['fM', 'pM', 'nM', 'uM', 'mM', 'M', 'x'];
 const VOLUME_OPTIONS = ['uL', 'mL', 'L'];
@@ -20,34 +11,6 @@ function selectMarkup(options, selectedValue) {
     const selected = option === selectedValue ? ' selected' : '';
     return `<option value="${option}"${selected}>${option}</option>`;
   }).join('');
-}
-
-function parseConcentration(value, unit) {
-  const numericValue = toNumber(value);
-  if (!(numericValue > 0)) {
-    return null;
-  }
-
-  if (unit === 'x') {
-    return {
-      kind: 'fold',
-      value: numericValue
-    };
-  }
-
-  const factor = CONCENTRATION_FACTORS[unit];
-  if (!(factor > 0)) {
-    return null;
-  }
-
-  return {
-    kind: 'molar',
-    value: numericValue * factor
-  };
-}
-
-function roundNearZero(value) {
-  return Math.abs(value) < VOLUME_EPSILON_L ? 0 : value;
 }
 
 function describeVolume(valueL, unit) {
@@ -125,60 +88,25 @@ export function initFixedReactionTool(options = {}) {
     const stockUnit = row.querySelector('.reaction-mix-stock-unit')?.value || 'mM';
     const finalValue = row.querySelector('.reaction-mix-final-value')?.value;
     const finalUnit = row.querySelector('.reaction-mix-final-unit')?.value || 'uM';
-
-    const manualVolume = toNumber(volumeInput?.value);
-    if (manualVolume > 0) {
-      const manualVolumeL = volumeToL(manualVolume, volumeUnit);
-      const hasConcentrationInputs = toNumber(stockValue) > 0 || toNumber(finalValue) > 0;
-      return {
-        liters: manualVolumeL,
-        note: hasConcentrationInputs
-          ? `Manual: ${formatSigFig(manualVolume)} ${volumeUnit} (overrides stock/final).`
-          : `Manual: ${formatSigFig(manualVolume)} ${volumeUnit}.`,
-        status: 'ok'
-      };
-    }
-
-    if (!(totalVolumeL > 0)) {
-      return {
-        liters: 0,
-        note: 'Enter the total volume first.',
-        status: 'muted'
-      };
-    }
-
-    const stock = parseConcentration(stockValue, stockUnit);
-    const finalConcentration = parseConcentration(finalValue, finalUnit);
-    if (!stock || !finalConcentration) {
-      return {
-        liters: 0,
-        note: 'Enter stock/final concentration or type a volume directly.',
-        status: 'muted'
-      };
-    }
-
-    if (stock.kind !== finalConcentration.kind) {
-      return {
-        liters: 0,
-        note: 'Stock and final concentration must use matching unit types.',
-        status: 'warning'
-      };
-    }
-
-    if (finalConcentration.value > stock.value) {
-      return {
-        liters: 0,
-        note: `${name}: final concentration cannot be higher than stock.`,
-        status: 'warning'
-      };
-    }
-
-    const ratio = finalConcentration.value / stock.value;
-    const calculatedVolumeL = roundNearZero(totalVolumeL * ratio);
+    const totalVolumeInputValue = volumeFromL(totalVolumeL, totalUnitSelect.value || 'uL');
+    const result = calculateFixedReactionReagent({
+      name,
+      stockValue,
+      stockUnit,
+      finalValue,
+      finalUnit,
+      manualVolumeValue: volumeInput?.value,
+      manualVolumeUnit: volumeUnit,
+      totalVolumeValue: totalVolumeInputValue,
+      totalVolumeUnit: totalUnitSelect.value || 'uL'
+    });
+    const detail = result.details?.[0] || {};
+    const calculatedVolumeL = detail.knownVolume ? detail.volumeL : 0;
+    const note = result.resultText || result.formulaText || 'Enter stock/final concentration or type a volume directly.';
     return {
       liters: calculatedVolumeL,
-      note: `Calculated: ${describeVolume(calculatedVolumeL, volumeUnit)}.`,
-      status: 'ok'
+      note,
+      status: result.status === 'warning' ? 'warning' : (result.resultText ? 'ok' : 'muted')
     };
   }
 

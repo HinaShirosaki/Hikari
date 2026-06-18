@@ -22,6 +22,8 @@ export { mapExperimentDataToLlmJson };
 export function initAgentChat({
   document: rootDocument = globalThis?.document || (typeof document !== 'undefined' ? document : null),
   windowObject = globalThis?.window || (typeof window !== 'undefined' ? window : null),
+  idPrefix = 'agent',
+  loadPersistentSessions = true,
   state,
   persist,
   createId,
@@ -30,8 +32,8 @@ export function initAgentChat({
   onOpenNotebookEntry = () => {},
   onProtocolsChanged = () => {}
 }) {
-  const api = windowObject?.enanaApi || null;
-  const dom = collectAgentChatDom(rootDocument);
+  const api = windowObject?.hikariApi || null;
+  const dom = collectAgentChatDom(rootDocument, { idPrefix });
   if (!hasRequiredAgentChatDom(dom)) {
     return { render: () => {} };
   }
@@ -189,8 +191,23 @@ export function initAgentChat({
     sessionManager,
     developerToolUi,
     developerContextController,
-    attachmentsController
+    attachmentsController,
+    loadPersistentSessions
   });
+
+  function focusComposer() {
+    dom.input?.focus?.();
+    shell.syncComposerHeight();
+  }
+
+  function primeHiddenContext(context = {}) {
+    const didPrime = payloadBuilder.primeHiddenContext?.(context);
+    if (!didPrime) {
+      return false;
+    }
+    focusComposer();
+    return true;
+  }
 
   bindAgentChatEvents({
     dom,
@@ -211,6 +228,8 @@ export function initAgentChat({
   });
 
   return {
+    focusComposer,
+    primeHiddenContext,
     render
   };
 }

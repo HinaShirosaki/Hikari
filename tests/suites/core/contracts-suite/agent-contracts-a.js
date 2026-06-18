@@ -10,6 +10,14 @@ module.exports = function registerAgentContractsA(context = {}) {
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
+      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
+      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
@@ -148,8 +156,9 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('codex-owned lifecycle stays scoped to agent chat while utility calls use the CLI adapter', () => {
-      const mainRuntimeSource = readLocalSource('src', 'main', 'app', 'main-runtime.js');
+      const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js');
       const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
+      const codexServiceSource = readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
       const systemRegistrarSource = readLocalSource('src', 'main', 'ipc', 'register-system-ipc.js');
       const protocolPolishSource = readLocalSource('src', 'renderer', 'modules', 'protocol', 'polish.js');
@@ -157,10 +166,10 @@ module.exports = function registerAgentContractsA(context = {}) {
       const papersLlmSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'llm.js');
 
       assert.match(controllerCoreSource, /codexAgentRuntime\.run\(/);
-      assert.match(mainAgentServicesSource, /const codexAgentRuntime = createCodexAgentRuntime\(\{[\s\S]*requestCodexAgentText,/);
+      assert.match(codexServiceSource, /const codexAgentRuntime = createCodexAgentRuntime\(\{[\s\S]*requestCodexAgentText,/);
       assert.match(mainAgentServicesSource, /const sharedLlmTransportDeps = \{[\s\S]*requestCodexCliText,[\s\S]*getCodexCliWorkingDirectory/);
       assert.equal(/requestCodexCliText:\s*requestCodexAgentText/.test(mainAgentServicesSource), false);
-      assert.match(mainRuntimeSource, /system:\s*\{[\s\S]*requestCodexCliText,[\s\S]*getCodexCliWorkingDirectory/);
+      assert.match(mainRuntimeSource, /registerSystemIpc\(\{[\s\S]*requestCodexCliText,[\s\S]*getCodexCliWorkingDirectory/);
       assert.equal(mainRuntimeSource.includes('agentServices.requestCodexAgentText || requestCodexCliText'), false);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_GENERATE/);
       assert.match(protocolPolishSource, /requestLlmText/);
@@ -253,8 +262,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(preloadSource, /openExternalUrl:\s*\(url\)\s*=>\s*ipcRenderer\.invoke\(SYSTEM\.OPEN_EXTERNAL_URL, \{ url \}\)/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(SYSTEM\.OPEN_EXTERNAL_URL/);
       assert.match(systemRegistrarSource, /shell\.openExternal\(url\)/);
-      assert.match(mainSource, /registerSystemIpc\(system\)/);
-      assert.match(mainSource, /system:\s*\{[\s\S]*shell,/);
+      assert.match(mainSource, /registerSystemIpc\(\{/);
+      assert.match(mainSource, /registerSystemIpc\(\{[\s\S]*shell,/);
     });
 
     test('agent tool loading and execution helpers expose catalogs and generic executor registry', () => {

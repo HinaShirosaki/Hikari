@@ -50,6 +50,59 @@ function createAgentControllerCore({
     }).filter((attachment) => attachment.name && attachment.dataUrl);
   }
 
+  function normalizeHiddenContexts(rawContexts = []) {
+    return asArray(rawContexts).map((context) => {
+      const source = context && typeof context === 'object' ? context : {};
+      const text = cleanText(source.text, 4000);
+      if (!text) {
+        return null;
+      }
+      return {
+        kind: cleanText(source.kind || 'selection', 80),
+        label: cleanText(source.label || 'Hidden context', 120),
+        text,
+        paperId: cleanText(source.paperId, 220),
+        paperTitle: cleanText(source.paperTitle, 320),
+        pageNumber: Number.isFinite(Number(source.pageNumber))
+          ? Math.max(1, Math.round(Number(source.pageNumber)))
+          : 0
+      };
+    }).filter(Boolean).slice(0, 3);
+  }
+
+  function buildHiddenContextPrompt(hiddenContexts = []) {
+    const rows = normalizeHiddenContexts(hiddenContexts).map((context, index) => {
+      const sourceRows = [
+        `Hidden context ${index + 1}: ${context.label}`,
+        context.paperTitle ? `Paper: ${context.paperTitle}` : '',
+        context.pageNumber ? `Page: ${context.pageNumber}` : '',
+        context.paperId ? `Paper ID: ${context.paperId}` : '',
+        'Selected text:',
+        context.text
+      ].filter(Boolean);
+      return sourceRows.join('\n');
+    });
+    if (!rows.length) {
+      return '';
+    }
+    return [
+      'The following context was supplied by the UI and is not visible in the user composer. Use it as context for the next answer.',
+      rows.join('\n\n')
+    ].join('\n\n');
+  }
+
+  function composeAgentMessageWithHiddenContext(visibleMessage = '', hiddenContextText = '') {
+    const visible = cleanText(visibleMessage, 3000);
+    const hidden = cleanText(hiddenContextText, 12000);
+    if (!hidden) {
+      return visible;
+    }
+    return [
+      hidden,
+      visible ? `User question:\n${visible}` : ''
+    ].filter(Boolean).join('\n\n');
+  }
+
   function clarificationNeedsProjectScope(parserPayload = {}) {
     const clarificationText = cleanText(
       parserPayload?.clarification_reason || parserPayload?.clarification_question,
@@ -266,11 +319,18 @@ function createAgentControllerCore({
     };
     const snapshot = agentToolRuntime.normalizeAgentSnapshot(snapshotInput);
     const workspaceDir = process.cwd();
+    const skillRuntimeInput = {
+      workspaceDir,
+      settings: rawSnapshot?.settings || {},
+      snapshot: rawSnapshot,
+      agent: payload?.agent && typeof payload.agent === 'object' ? payload.agent : {}
+    };
     const listedSkills = typeof agentToolRuntime.listSkills === 'function'
-      ? agentToolRuntime.listSkills({ workspaceDir })
+      ? agentToolRuntime.listSkills(skillRuntimeInput)
       : [];
     const skillInvocation = typeof agentToolRuntime.parseSkillInvocation === 'function'
       ? agentToolRuntime.parseSkillInvocation(message, {
+        ...skillRuntimeInput,
         workspaceDir
       })
       : {
@@ -363,14 +423,17 @@ function createAgentControllerCore({
         availableSkills: listedSkills
       });
     }
-    const effectiveMessage = cleanText(
+    const visibleEffectiveMessage = cleanText(
       skillInvocation.type === 'skill_prompt'
         ? skillInvocation.cleaned_message
         : message,
       3000
     ) || message;
+    const hiddenContextText = buildHiddenContextPrompt(payload?.agent?.hiddenContexts);
+    const effectiveMessage = composeAgentMessageWithHiddenContext(visibleEffectiveMessage, hiddenContextText) || message;
     const skillPromptPayload = typeof agentToolRuntime.buildSkillsPromptPayload === 'function'
       ? agentToolRuntime.buildSkillsPromptPayload({
+        ...skillRuntimeInput,
         workspaceDir,
         activeSkillNames: skillInvocation.active_skill_names
       })
@@ -393,17 +456,21 @@ function createAgentControllerCore({
     const model = cleanText(llmSource?.model, 120);
     const reasoningEffort = cleanText(payload?.llm?.reasoningEffort, 40).toLowerCase();
     if (provider !== deps.LLM_PROVIDERS.CODEX && !apiKey) {
-      throw new Error('Missing LLM API key. Set it in Settings > LLM Model & Access, or use LLM_API_KEY / ENANA_LLM_API_KEY.');
+      throw new Error('Missing LLM API key. Set it in Settings > LLM Model & Access, or use LLM_API_KEY / HIKARI_LLM_API_KEY.');
     }
     if (provider === deps.LLM_PROVIDERS.CODEX) {
       setCodexCliModel(model);
       setCodexCliReasoningEffort(reasoningEffort);
     }
     const conversation = controllerUtils.extractConversation(payload?.conversation);
+    const latestConversationMessage = conversation[conversation.length - 1] || null;
     const hasLatestUserInConversation = Boolean(
       conversation.length > 0
-      && conversation[conversation.length - 1].role === 'user'
-      && conversation[conversation.length - 1].text === effectiveMessage
+      && latestConversationMessage.role === 'user'
+      && (
+        latestConversationMessage.text === effectiveMessage
+        || latestConversationMessage.text === visibleEffectiveMessage
+      )
     );
     const executionFlags = controllerUtils.resolveAgentExecutionFlags(payload, { settings: rawSnapshot?.settings || {} });
     const deepResearchEnabled = payload?.agent?.deepResearchEnabled === true;
@@ -421,7 +488,7 @@ function createAgentControllerCore({
     const projectName = cleanText(payload?.projectName, 180);
     const attachments = normalizeAttachments(payload?.attachments);
     const promptConversation = hasLatestUserInConversation
-      ? conversation
+      ? [...conversation.slice(0, -1), { role: 'user', text: effectiveMessage }]
       : [...conversation, { role: 'user', text: effectiveMessage }];
 
     if (provider === deps.LLM_PROVIDERS.CODEX) {
@@ -458,6 +525,7 @@ function createAgentControllerCore({
         projectName,
         skillPromptPayload,
         selectionInsight: payload?.agent?.selectionInsight || payload?.selectionInsight || null,
+        agent: payload?.agent && typeof payload.agent === 'object' ? payload.agent : {},
         chatSessionId: cleanText(runtime?.chatSessionId, 120),
         codexSessionId: cleanText(runtime?.codexSessionId || runtime?.codex_session_id, 240),
         lifecycleRecorder,

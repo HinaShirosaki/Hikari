@@ -7,6 +7,14 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
+      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
+      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
@@ -22,8 +30,17 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     ].join('\n');
     const readRendererShellSource = () => [
       readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
       readLocalSource('src', 'renderer', 'app', 'navigation-shell.js'),
+      readLocalSource('src', 'renderer', 'app', 'topbar-open-handlers.js'),
       readLocalSource('src', 'renderer', 'app', 'topbar-search.js')
+    ].join('\n');
+    const readRendererModuleRuntimeSource = () => [
+      readLocalSource('src', 'renderer', 'module-runtime.js'),
+      ...fs.readdirSync(path.join(__dirname, 'src', 'renderer', 'module-manifests'))
+        .filter((fileName) => fileName.endsWith('.js'))
+        .sort()
+        .map((fileName) => readLocalSource('src', 'renderer', 'module-manifests', fileName))
     ].join('\n');
 
     test('view constants, index sections, and app registry stay in sync', () => {
@@ -56,9 +73,80 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(registry.apps.some((app) => app.viewId === 'personal-inventory-view'), false);
     });
 
+    test('gel tools omit manual steps and keep ladder MW in analysis controls', () => {
+      const gelView = readLocalSource('ui', 'html', 'views', 'gel-view.html');
+      const analysisStart = gelView.indexOf('<summary>Analysis</summary>');
+      const ladderMwInput = gelView.indexOf('id="gel-ladder-band-mw"');
+
+      assert.equal(gelView.includes('Manual Steps'), false);
+      assert.equal(gelView.includes('gel-step-list'), false);
+      assert.equal(gelView.includes('gel-manual-progress'), false);
+      assert.ok(analysisStart >= 0);
+      assert.ok(ladderMwInput > analysisStart);
+    });
+
+    test('project management stays registered and remains reachable from navigation and biology notebook', () => {
+      const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
+      const generatedRegistry = readLocalSource('src', 'renderer', 'modules', 'app-registry.generated.js');
+      const rendererShellSource = readRendererShellSource();
+      const topbarSearchSource = readLocalSource('src', 'renderer', 'app', 'topbar-search.js');
+      const biologyNotebookView = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
+      const biologyNotebookManifest = readLocalSource('src', 'renderer', 'module-manifests', 'biology-notebook.js');
+      const projectEntry = registry.apps.find((app) => app.id === 'projects');
+
+      assert.ok(projectEntry);
+      assert.equal(projectEntry.viewId, 'project-management-view');
+      assert.notEqual(projectEntry.hiddenFromNavigation, true);
+      assert.doesNotMatch(generatedRegistry, /"id": "projects"[\s\S]*"hiddenFromNavigation": true/);
+      assert.match(rendererShellSource, /const navigationApps = APP_REGISTRY\.filter\(\(app\) => app\.hiddenFromNavigation !== true\);/);
+      assert.match(topbarSearchSource, /hiddenFromNavigation === true/);
+      assert.match(biologyNotebookView, /id="biology-notebook-open-projects-btn"[\s\S]*Create Project/);
+      assert.match(biologyNotebookManifest, /onOpenProjects: \(\) => showView\(views\.PROJECT_MANAGEMENT\)/);
+    });
+
+    test('universal agent chat rail is shell-scoped and registry gated', () => {
+      const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
+      const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
+      const generatedRegistry = readLocalSource('src', 'renderer', 'modules', 'app-registry.generated.js');
+      const rendererShellSource = readRendererShellSource();
+      const moduleRuntimeSource = readRendererModuleRuntimeSource();
+      const domBindingsSource = readLocalSource('src', 'renderer', 'modules', 'agent-chat', 'dom-bindings.js');
+      const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
+
+      assert.match(html, /id="universal-agent-chat-rail"/);
+      assert.match(html, /id="agent-chat-rail-toggle-btn"/);
+      assert.match(html, /id="agent-rail-chat-history"/);
+      assert.match(html, /id="agent-rail-quick-prompts"/);
+      assert.match(html, /Generate protocol/);
+      assert.match(html, /id="paper-selection-ask-btn"/);
+      assert.doesNotMatch(html, /id="agent-rail-status"/);
+      assert.doesNotMatch(html, /universal-agent-chat-rail__kicker/);
+      assert.doesNotMatch(html, /id="agent-rail-clear-btn"/);
+      assert.doesNotMatch(html, /id="agent-rail-project-select"/);
+      assert.equal((registry.apps || []).filter((app) => app.agentChatRail === true).map((app) => app.id).join(','), 'papers');
+      assert.match(generatedRegistry, /"id": "papers"[\s\S]*"agentChatRail": true/);
+      assert.match(rendererShellSource, /app\?\.agentChatRail === true/);
+      assert.match(rendererShellSource, /agentChatRail\.hidden = !enabled/);
+      assert.match(rendererShellSource, /has-agent-chat-rail-expanded/);
+      assert.match(rendererShellSource, /hikari:open-agent-chat-rail/);
+      assert.match(rendererShellSource, /moduleRuntime\.renderAgentChatRail\?\.\(\)/);
+      assert.match(moduleRuntimeSource, /idPrefix:\s*'agent-rail'/);
+      assert.match(moduleRuntimeSource, /loadPersistentSessions:\s*false/);
+      assert.match(moduleRuntimeSource, /createPaperScopedAgentChatState/);
+      assert.match(moduleRuntimeSource, /getActivePaperId/);
+      assert.match(moduleRuntimeSource, /onAskSelectedText:[\s\S]*openPaperAgentChatWithSelection/);
+      assert.match(moduleRuntimeSource, /primeHiddenContext/);
+      assert.match(domBindingsSource, /const id = \(suffix\) => `\$\{idPrefix\}-\$\{suffix\}`;/);
+      assert.match(domBindingsSource, /quickPrompts:\s*byId\(id\('quick-prompts'\)\)/);
+      assert.match(coreCss, /--agent-chat-rail-collapsed-width/);
+      assert.match(coreCss, /--agent-composer-min-height:\s*54px/);
+      assert.match(coreCss, /\.agent-rail-quick-prompt/);
+      assert.match(coreCss, /body\.has-agent-chat-rail\.has-agent-chat-rail-expanded \.workspace-shell/);
+    });
+
     test('renderer routes personal inventory aliases to merged sample workspace', () => {
       const source = readRendererShellSource();
-      const moduleRuntimeSource = readSource('src/renderer/module-runtime.js');
+      const moduleRuntimeSource = readRendererModuleRuntimeSource();
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const sampleEntry = registry.apps.find((app) => app.id === 'sample-inventory');
       assert.match(source, /function normalizeViewId\(VIEWS, viewId\)\s*\{\s*return viewId === VIEWS\.PERSONAL_INVENTORY \? VIEWS\.SAMPLE_REGISTRY : viewId;\s*\}/);
@@ -68,28 +156,34 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(source, /const searchScopeTargets = buildSearchScopeMap\(\{\s*apps: APP_REGISTRY,/);
       assert.match(source, /const showSampleInventoryWorkspace = nextView === VIEWS\.SAMPLE_REGISTRY;/);
       assert.match(source, /moduleRuntime\.renderView\(nextView\);/);
-      assert.match(moduleRuntimeSource, /function renderSampleRegistryWorkspace\(modules\) \{\s*modules\.personalInventory\.renderSections\(\);\s*modules\.sampleRegistry\.render\(\);\s*\}/);
-      assert.match(moduleRuntimeSource, /\[views\.SAMPLE_REGISTRY,\s*\(\)\s*=>\s*renderSampleRegistryWorkspace\(modules\)\]/);
+      assert.match(moduleRuntimeSource, /key:\s*'sampleRegistry'[\s\S]*viewKey:\s*'SAMPLE_REGISTRY'[\s\S]*modules\.personalInventory\.renderSections\(\);[\s\S]*modules\.sampleRegistry\.render\(\);/);
+      assert.doesNotMatch(moduleRuntimeSource, /\[views\.SAMPLE_REGISTRY,\s*\(\)\s*=>/);
     });
 
     test('renderer defines sequence viewer aliases and showView render hook', () => {
       const source = readRendererShellSource();
-      const moduleRuntimeSource = readSource('src/renderer/module-runtime.js');
+      const moduleRuntimeSource = readRendererModuleRuntimeSource();
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const sequenceEntry = registry.apps.find((app) => app.id === 'sequence-viewer');
       assert.ok(sequenceEntry);
       assert.ok(sequenceEntry.aliases.includes('sequence'));
       assert.ok(sequenceEntry.aliases.includes('seqviewer'));
-      assert.match(source, /const SEQUENCE_VIEWER_DETAIL_VIEW_ID = 'sequence-viewer-detail-view';/);
+      assert.doesNotMatch(source, /SEQUENCE_VIEWER_DETAIL_VIEW_ID/);
+      assert.doesNotMatch(source, /sequenceViewerDetailViewId/);
+      assert.match(source, /navigationViewAliases:\s*moduleRuntime\.navigationViewAliases/);
       assert.match(source, /moduleRuntime\.renderView\(nextView\);/);
-      assert.match(moduleRuntimeSource, /if \(viewId === views\.SEQUENCE_VIEWER \|\| viewId === sequenceViewerDetailViewId\) \{\s*modules\.sequenceViewer\?\.\s*render\?\.\(\{\s*activeViewId:\s*viewId\s*\}\);\s*return;\s*\}/);
-      assert.match(moduleRuntimeSource, /sequenceViewer:\s*initAndRegisterModule\(moduleRegistry,\s*'sequenceViewer',\s*initSequenceViewer,\s*\{\s*homeViewId:\s*views\.SEQUENCE_VIEWER,\s*detailViewId:\s*sequenceViewerDetailViewId,\s*onNavigateHome:\s*\(\)\s*=>\s*\{\s*showView\(views\.SEQUENCE_VIEWER\);/);
-      assert.match(moduleRuntimeSource, /onNavigateDetail:\s*\(\)\s*=>\s*\{\s*showView\(sequenceViewerDetailViewId\);/);
+      assert.doesNotMatch(moduleRuntimeSource, /if \(viewId === views\.SEQUENCE_VIEWER \|\| viewId === sequenceViewerDetailViewId\)/);
+      assert.match(moduleRuntimeSource, /const SEQUENCE_VIEWER_DETAIL_VIEW_ID = 'sequence-viewer-detail-view';/);
+      assert.match(moduleRuntimeSource, /navigationAliases:\s*\[[\s\S]*viewId:\s*SEQUENCE_VIEWER_DETAIL_VIEW_ID,[\s\S]*navigationViewKey:\s*'SEQUENCE_VIEWER'/);
+      assert.match(moduleRuntimeSource, /key:\s*'sequenceViewer'[\s\S]*init:\s*initSequenceViewerWithRoutes[\s\S]*viewKey:\s*'SEQUENCE_VIEWER'[\s\S]*viewIds:\s*\[[\s\S]*SEQUENCE_VIEWER_DETAIL_VIEW_ID/);
+      assert.match(moduleRuntimeSource, /homeViewId:\s*views\.SEQUENCE_VIEWER[\s\S]*detailViewId:\s*SEQUENCE_VIEWER_DETAIL_VIEW_ID[\s\S]*onNavigateHome:\s*\(\)\s*=>\s*\{\s*showView\(views\.SEQUENCE_VIEWER\);/);
+      assert.match(moduleRuntimeSource, /onNavigateDetail:\s*\(\)\s*=>\s*\{\s*showView\(SEQUENCE_VIEWER_DETAIL_VIEW_ID\);/);
+      assert.match(moduleRuntimeSource, /render:\s*\(\{ modules \},\s*\{ viewId \}\s*=\s*\{\}\)\s*=>\s*\{\s*modules\.sequenceViewer\?\.\s*render\?\.\(\{\s*activeViewId:\s*viewId\s*\}\);/);
     });
 
     test('sequence viewer uses bottom feature track without table dependency', () => {
       const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
-      const viewerSource = readSource('src/renderer/modules/sequence-viewer.js');
+      const viewerSource = readSource('src/renderer/modules/sequence-viewer/public-api.js');
       assert.match(html, /id="sequence-viewer-feature-rail-host"/);
       assert.match(html, /id="sequence-viewer-feature-detail"/);
       assert.equal(html.includes('sequence-viewer-feature-table-body'), false);
@@ -111,6 +205,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(homeBlock, /id="sequence-viewer-home-paste-btn"/);
       assert.match(homeBlock, /id="sequence-viewer-home-open-btn"/);
       assert.match(homeBlock, /id="sequence-viewer-home-protein-builder-btn"/);
+      assert.match(homeBlock, /class="sequence-viewer-rail-actions-section left-rail-template__section"/);
       assert.equal(homeBlock.includes('id="sequence-viewer-home-import-btn"'), false);
       assert.match(homeBlock, /id="sequence-viewer-library-filter-saved"/);
       assert.match(homeBlock, /id="sequence-viewer-library-filter-temporary"/);
@@ -123,6 +218,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(detailBlock, /id="sequence-viewer-detail-workspace"/);
       assert.equal(detailBlock.includes('id="sequence-viewer-back-btn"'), false);
       assert.equal(detailBlock.includes('Back to Library'), false);
+      assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*<h2>Open Sequence<\/h2>[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-detail-protein-builder-btn"[\s\S]*<h4>Sequence Library<\/h4>/);
       assert.match(detailBlock, /id="sequence-viewer-detail-protein-builder-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-save-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-annotate-btn"/);
@@ -141,7 +237,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('sequence viewer map preview renderer omits metadata text overlays', () => {
-      const source = readSource('src/renderer/modules/sequence-viewer.js');
+      const source = readSource('src/renderer/modules/sequence-viewer/public-api.js');
       assert.equal(source.includes('sequence-viewer-preview-meta'), false);
       assert.equal(source.includes('toLocaleString()} bp</text>'), false);
       assert.equal(source.includes("normalizeTopology(record?.topology || 'linear'))}</text>"), false);
@@ -152,20 +248,12 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, /\.sequence-viewer-input-panel\[hidden\]\s*\{\s*display:\s*none !important;/);
     });
 
-    test('sequence viewer home sidebar owns scrolling instead of nesting it inside the library list', () => {
-      const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sequence-viewer-view.css'), 'utf8');
-      assert.match(css, /\.sequence-viewer-home-sidebar,\s*\.sequence-viewer-home-main\s*\{[\s\S]*min-height:\s*0;/);
-      assert.match(css, /\.sequence-viewer-home-sidebar\s*\{[\s\S]*scrollbar-width:\s*thin;/);
-      assert.match(css, /\.sequence-viewer-home-sidebar::-webkit-scrollbar/);
-      assert.match(css, /\.sequence-viewer-library-list\s*\{[\s\S]*max-height:\s*none;/);
-      assert.match(css, /\.sequence-viewer-library-list\s*\{[\s\S]*overflow:\s*visible;/);
-    });
-
     test('papers PDF text layer keeps native browser selection stable during drag', () => {
       const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
       const pageRecordsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-records.js');
       const renderingSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-rendering.js');
-      const viewerSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer.js');
+      const selectionMenuSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-selection-menu-controller.js');
+      const eventsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-events-controller.js');
       const selectionSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-text-selection.js');
       assert.match(pageRecordsSource, /className\s*=\s*'papers-viewer-text-layer textLayer'/);
       assert.match(pageRecordsSource, /textSelectionCleanup/);
@@ -173,8 +261,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(selectionSource, /endOfContent/);
       assert.match(selectionSource, /range\.compareBoundaryPoints/);
       assert.match(selectionSource, /endDiv\.style\.userSelect\s*=\s*'text'/);
-      assert.match(viewerSource, /selectionPointerDown/);
-      assert.match(viewerSource, /doc\.addEventListener\('selectionchange', schedulePendingSelectionUpdate\)/);
+      assert.match(selectionMenuSource, /selectionPointerDown/);
+      assert.match(eventsSource, /doc\.addEventListener\('selectionchange', ctx\.schedulePendingSelectionUpdate\)/);
       assert.match(css, /\.papers-viewer-text-layer\s*\{[\s\S]*overflow:\s*clip;/);
       assert.match(css, /\.papers-viewer-text-layer\s*\{[\s\S]*--text-scale-factor:/);
       assert.match(css, /\.papers-viewer-text-layer br::selection\s*\{[\s\S]*background:\s*transparent;/);
@@ -186,20 +274,14 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('papers PDF first-load sizing stays inside the app shell', () => {
       const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
       const papersCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
-      const viewerSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer.js');
+      const domSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-dom-controller.js');
+      const navigationSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-navigation-controller.js');
       assert.match(coreCss, /html\s*\{[\s\S]*height:\s*100%;[\s\S]*overflow:\s*hidden;/);
       assert.match(coreCss, /body\s*\{[\s\S]*height:\s*100%;[\s\S]*overflow:\s*hidden;/);
       assert.match(papersCss, /\.papers-viewer-workspace\s*\{[\s\S]*overflow:\s*hidden;/);
-      assert.match(viewerSource, /function getElementLayoutWidth\(element\)/);
-      assert.match(viewerSource, /const layoutWidth = \[\s*stage,\s*workspace,\s*shell\s*\]/);
-      assert.match(viewerSource, /Math\.max\(layoutWidth - horizontalPadding, 320\)/);
-    });
-
-    test('ketcher embedded page uses portable static path resolution', () => {
-      const html = fs.readFileSync(path.join(__dirname, 'ketcher-embedded.html'), 'utf8');
-      assert.equal(html.includes('/Users/'), false);
-      assert.equal(html.includes('C:\\\\Users'), false);
-      assert.match(html, /new URL\('\.\/vendor\/ketcher-src\/packages\/release\/index\.html', window\.location\.href\)/);
+      assert.match(domSource, /function getElementLayoutWidth\(element\)/);
+      assert.match(navigationSource, /const layoutWidth = \[\s*stage,\s*workspace,\s*shell\s*\]/);
+      assert.match(navigationSource, /Math\.max\(layoutWidth - horizontalPadding, 320\)/);
     });
 
     test('forge config prunes dev deps and ignores build artifacts', () => {
@@ -207,6 +289,18 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(
         forgeConfig.packagerConfig.asar?.unpackDir || '',
         /src\/main\/helpers\/agent/
+      );
+      assert.match(
+        forgeConfig.packagerConfig.asar?.unpackDir || '',
+        /src\/main\/helpers\/main/
+      );
+      assert.match(
+        forgeConfig.packagerConfig.asar?.unpackDir || '',
+        /src\/main\/lib/
+      );
+      assert.match(
+        forgeConfig.packagerConfig.asar?.unpackDir || '',
+        /vendor\/sqljs/
       );
       assert.match(
         forgeConfig.packagerConfig.asar?.unpackDir || '',
@@ -309,8 +403,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(preloadSource, /clearCodexLlmLogin:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(LLM\.CODEX_CLEAR_LOGIN\)/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_LOGIN/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_CLEAR_LOGIN/);
-      assert.match(settingsSource, /window\.enanaApi\?\.loginCodexLlm/);
-      assert.match(settingsSource, /window\.enanaApi\?\.clearCodexLlmLogin/);
+      assert.match(settingsSource, /window\.hikariApi\?\.loginCodexLlm/);
+      assert.match(settingsSource, /window\.hikariApi\?\.clearCodexLlmLogin/);
       assert.match(settingsHtml, /id="setting-codex-status"/);
       assert.match(settingsHtml, /id="start-codex-login-btn"/);
       assert.match(settingsHtml, /id="clear-codex-login-btn"/);

@@ -1,54 +1,55 @@
-export function collectAgentChatDom(rootDocument) {
+export function collectAgentChatDom(rootDocument, options = {}) {
+  const rawPrefix = String(options.idPrefix || 'agent').trim();
+  const idPrefix = rawPrefix ? rawPrefix.replace(/-+$/, '') : 'agent';
   const byId = (id) => rootDocument?.getElementById?.(id) || null;
-  const historyNode = byId('agent-chat-history');
+  const id = (suffix) => `${idPrefix}-${suffix}`;
+  const historyNode = byId(id('chat-history'));
   return {
-    projectSelect: byId('agent-project-select'),
-    sessionStatus: byId('agent-session-status'),
-    sessionList: byId('agent-session-list'),
-    newChatBtn: byId('agent-new-chat-btn'),
-    developerTools: byId('agent-developer-tools'),
-    developerTestToolsBtn: byId('agent-dev-test-tools-btn'),
-    developerToolSelect: byId('agent-dev-tool-select'),
-    developerToolMessageInput: byId('agent-dev-tool-message'),
-    developerRunToolBtn: byId('agent-dev-run-tool-btn'),
-    developerToolHint: byId('agent-dev-tool-hint'),
-    developerResponseSimulator: byId('agent-dev-response-simulator'),
-    developerResponseSummary: byId('agent-dev-response-summary'),
-    developerResponseFoldBtn: byId('agent-dev-response-fold-btn'),
-    developerResponseBody: byId('agent-dev-response-body'),
-    developerVisibleContext: byId('agent-dev-visible-context'),
-    developerMockResponseInput: byId('agent-dev-mock-response'),
-    developerRefreshContextBtn: byId('agent-dev-refresh-context-btn'),
-    developerUseMockResponseBtn: byId('agent-dev-use-mock-response-btn'),
-    developerResponseHint: byId('agent-dev-response-hint'),
+    projectSelect: byId(id('project-select')),
+    sessionStatus: byId(id('session-status')),
+    sessionList: byId(id('session-list')),
+    newChatBtn: byId(id('new-chat-btn')),
+    developerTools: byId(id('developer-tools')),
+    developerTestToolsBtn: byId(id('dev-test-tools-btn')),
+    developerToolSelect: byId(id('dev-tool-select')),
+    developerToolMessageInput: byId(id('dev-tool-message')),
+    developerRunToolBtn: byId(id('dev-run-tool-btn')),
+    developerToolHint: byId(id('dev-tool-hint')),
+    developerResponseSimulator: byId(id('dev-response-simulator')),
+    developerResponseSummary: byId(id('dev-response-summary')),
+    developerResponseFoldBtn: byId(id('dev-response-fold-btn')),
+    developerResponseBody: byId(id('dev-response-body')),
+    developerVisibleContext: byId(id('dev-visible-context')),
+    developerMockResponseInput: byId(id('dev-mock-response')),
+    developerRefreshContextBtn: byId(id('dev-refresh-context-btn')),
+    developerUseMockResponseBtn: byId(id('dev-use-mock-response-btn')),
+    developerResponseHint: byId(id('dev-response-hint')),
     historyNode,
     conversationShell: historyNode?.closest?.('.agent-conversation-shell') || null,
-    scrollToBottomBtn: byId('agent-scroll-to-bottom-btn'),
-    reviewOverlay: byId('agent-review-overlay'),
-    reviewTrack: byId('agent-review-track'),
-    reviewCloseBtn: byId('agent-review-close-btn'),
-    reviewPrevBtn: byId('agent-review-prev-btn'),
-    reviewNextBtn: byId('agent-review-next-btn'),
-    reviewPageLabel: byId('agent-review-page-label'),
-    input: byId('agent-message-input'),
-    attachmentInput: byId('agent-attachment-input'),
-    attachmentList: byId('agent-attachment-list'),
-    attachBtn: byId('agent-attach-btn'),
-    deepResearchToggleBtn: byId('agent-deep-research-toggle-btn'),
-    sendBtn: byId('agent-send-btn'),
-    stopBtn: byId('agent-stop-btn'),
-    clearBtn: byId('agent-clear-btn'),
-    status: byId('agent-status')
+    scrollToBottomBtn: byId(id('scroll-to-bottom-btn')),
+    reviewOverlay: byId(id('review-overlay')),
+    reviewTrack: byId(id('review-track')),
+    reviewCloseBtn: byId(id('review-close-btn')),
+    reviewPrevBtn: byId(id('review-prev-btn')),
+    reviewNextBtn: byId(id('review-next-btn')),
+    reviewPageLabel: byId(id('review-page-label')),
+    input: byId(id('message-input')),
+    quickPrompts: byId(id('quick-prompts')),
+    attachmentInput: byId(id('attachment-input')),
+    attachmentList: byId(id('attachment-list')),
+    attachBtn: byId(id('attach-btn')),
+    deepResearchToggleBtn: byId(id('deep-research-toggle-btn')),
+    sendBtn: byId(id('send-btn')),
+    stopBtn: byId(id('stop-btn')),
+    clearBtn: byId(id('clear-btn')),
+    status: byId(id('status'))
   };
 }
 
 export function hasRequiredAgentChatDom(dom = {}) {
   return Boolean(
-    dom.projectSelect
-    && dom.historyNode
+    dom.historyNode
     && dom.input
     && dom.sendBtn
-    && dom.clearBtn
-    && dom.status
   );
 }

@@ -28,6 +28,7 @@ import {
 import { createInventorySamplePicker } from './inventory-sample-picker.js';
 import { createSerialDilutionController } from './serial-dilution.js';
 import { buildPlatePreviewHtml } from './plate-preview-renderer.js';
+import { buildDilutionSeries, buildInterpolatedSeries } from './concentration-utils.js';
 
 export function createAssayLayoutManager({
   runtime,
@@ -43,6 +44,12 @@ export function createAssayLayoutManager({
     assayConcentrationAxisColumnBtn,
     assayConcentrationAxisInput,
     assayConcentrationAxisRowBtn,
+    assayConcentrationUnitInput,
+    assayDilutionFactorInput,
+    assayDilutionFillBtn,
+    assayFillModeInput,
+    assayFillStartInput,
+    assayFillEndInput,
     assayImportFile,
     assayNumberDisplay,
     assayPlateDefinition,
@@ -62,6 +69,115 @@ export function createAssayLayoutManager({
 
   function getCurrentDefinition() {
     return getPlateDefinition(assayPlateTypeInput?.value);
+  }
+
+  function getConcentrationUnit() {
+    return String(runtime.concentrationUnit || '').trim();
+  }
+
+  function setConcentrationUnit(value) {
+    runtime.concentrationUnit = String(value || '').trim();
+    if (assayConcentrationUnitInput) {
+      assayConcentrationUnitInput.value = runtime.concentrationUnit;
+    }
+  }
+
+  function onConcentrationUnitInput() {
+    runtime.concentrationUnit = String(assayConcentrationUnitInput?.value || '').trim();
+    renderPlatePreview();
+    if (serialDilution.isOpen()) {
+      serialDilution.render();
+    }
+  }
+
+  function getFillMode() {
+    const mode = String(assayFillModeInput?.value || 'factor');
+    return mode === 'linear' || mode === 'log' ? mode : 'factor';
+  }
+
+  // Show the factor input for 'factor' mode and the start/end inputs for range modes.
+  function syncFillModeInputs() {
+    const isRange = getFillMode() !== 'factor';
+    if (assayDilutionFactorInput) assayDilutionFactorInput.hidden = isRange;
+    if (assayFillStartInput) assayFillStartInput.hidden = !isRange;
+    if (assayFillEndInput) assayFillEndInput.hidden = !isRange;
+  }
+
+  function commitConcentrationValues(sampleValues, concentrationValues, statusMessage) {
+    syncAxisTemplateValues({ sampleValues, concentrationValues });
+    setLayoutFromAxisAndOverrides();
+    renderPlatePreview();
+    renderResultTable();
+    if (serialDilution.isOpen()) {
+      serialDilution.render();
+    }
+    setLayoutStatus(statusMessage);
+  }
+
+  // Serial dilution: first cell is the start, each following column/row = previous / factor.
+  function autoFillConcentrationSeries() {
+    const factor = Number(assayDilutionFactorInput?.value);
+    if (!(Number.isFinite(factor) && factor > 0)) {
+      setLayoutStatus('Enter a positive dilution factor to auto-fill concentrations.');
+      return;
+    }
+    const values = getAxisTemplateValues();
+    const concentrationValues = values.concentrationValues.slice();
+    if (concentrationValues.length < 2) {
+      setLayoutStatus('The concentration axis needs at least two positions to fill a dilution series.');
+      return;
+    }
+    const series = buildDilutionSeries(concentrationValues[0], factor, concentrationValues.length);
+    if (!series) {
+      setLayoutStatus('Enter a starting concentration in the first concentration cell before auto-filling.');
+      return;
+    }
+    for (let index = 1; index < concentrationValues.length; index += 1) {
+      concentrationValues[index] = series[index];
+    }
+    const steps = concentrationValues.length - 1;
+    commitConcentrationValues(
+      values.sampleValues,
+      concentrationValues,
+      `Auto-filled ${steps} concentration step${steps === 1 ? '' : 's'} at a 1:${factor} dilution.`
+    );
+  }
+
+  // Interpolate every concentration position between the start and end inputs.
+  function autoFillConcentrationRange(mode) {
+    const values = getAxisTemplateValues();
+    const concentrationValues = values.concentrationValues.slice();
+    if (concentrationValues.length < 2) {
+      setLayoutStatus('The concentration axis needs at least two positions to fill a range.');
+      return;
+    }
+    const series = buildInterpolatedSeries({
+      startValue: assayFillStartInput?.value,
+      endValue: assayFillEndInput?.value,
+      count: concentrationValues.length,
+      mode,
+      axisUnit: getConcentrationUnit()
+    });
+    if (!series) {
+      setLayoutStatus(mode === 'log'
+        ? 'Enter positive start and end concentrations (log spacing cannot include 0).'
+        : 'Enter a start and end concentration to fill the range.');
+      return;
+    }
+    commitConcentrationValues(
+      values.sampleValues,
+      series,
+      `Auto-filled ${series.length} concentrations from ${series[0]} to ${series[series.length - 1]} (${mode}).`
+    );
+  }
+
+  function onFillConcentrations() {
+    const mode = getFillMode();
+    if (mode === 'factor') {
+      autoFillConcentrationSeries();
+    } else {
+      autoFillConcentrationRange(mode);
+    }
   }
 
   function getSampleAxis() {
@@ -258,6 +374,7 @@ export function createAssayLayoutManager({
     safeText,
     getSampleAxis,
     getCurrentLayout: () => runtime.currentLayout,
+    getConcentrationUnit,
     findInventorySampleRecordBySampleId: inventorySamplePicker.findInventorySampleRecordBySampleId,
     hideInventorySamplePicker: inventorySamplePicker.hide
   });
@@ -421,6 +538,7 @@ export function createAssayLayoutManager({
     const sampleAxis = assay?.sampleAxis === 'column' ? 'column' : 'row';
     const axisValues = getAssayAxisTemplateValues(assay, def);
     setAxisTemplateValues(axisValues, def, sampleAxis);
+    setConcentrationUnit(assay?.concentrationUnit);
     runtime.suppressedWells = new Set(Array.isArray(assay?.suppressedWells) ? assay.suppressedWells : []);
     runtime.activeWellEditorId = '';
 
@@ -473,6 +591,7 @@ export function createAssayLayoutManager({
       layout: runtime.currentLayout,
       sampleValues,
       concentrationValues,
+      concentrationUnit: getConcentrationUnit(),
       plateEditField: runtime.plateEditField,
       activeWellEditorId: runtime.activeWellEditorId,
       safeText
@@ -861,6 +980,11 @@ export function createAssayLayoutManager({
     renderPlateEditFieldButtons,
     setSampleAxis,
     setConcentrationAxis,
+    getConcentrationUnit,
+    setConcentrationUnit,
+    onConcentrationUnitInput,
+    onFillConcentrations,
+    syncFillModeInputs,
     setPlateEditField,
     syncAxisDisplay,
     onSwapAxes,

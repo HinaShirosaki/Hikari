@@ -4,15 +4,7 @@ Every module is a JavaScript factory that takes an options bag, performs DOM loo
 
 ## File location and shape
 
-Two acceptable layouts:
-
-**Single file (small modules):**
-
-```
-src/renderer/modules/my-feature.js
-```
-
-**Folder (when the controller grows past ~400 lines):**
+New user-facing features use a folder entry:
 
 ```
 src/renderer/modules/my-feature/
@@ -24,43 +16,38 @@ src/renderer/modules/my-feature/
   Readme.md         # short maintenance note
 ```
 
-[src/renderer/modules/personal-inventory/](../../src/renderer/modules/personal-inventory/) and [src/renderer/modules/home-dashboard/](../../src/renderer/modules/home-dashboard/) are good references for the folder layout. [src/renderer/modules/tool-box.js](../../src/renderer/modules/tool-box.js) plus [src/renderer/modules/tool-box/](../../src/renderer/modules/tool-box/) shows a barrel + sub-tools pattern.
+[src/renderer/modules/personal-inventory/](../../src/renderer/modules/personal-inventory/) and [src/renderer/modules/home-dashboard/](../../src/renderer/modules/home-dashboard/) are good references. [src/renderer/modules/tool-box.js](../../src/renderer/modules/tool-box.js) plus [src/renderer/modules/tool-box/](../../src/renderer/modules/tool-box/) is a legacy composition-root pattern, not the default for new views.
 
-In all cases, the **public** export is a single function named `init<Name>` (camel-cased, capitalized after `init`). Use a re-export from a barrel file when you split the implementation:
+The feature entry exports a single function named `init<Name>` (camel-cased, capitalized after `init`):
 
 ```js
 // src/renderer/modules/my-feature/index.js
 export function initMyFeature(options) { ... }
 ```
 
-```js
-// src/renderer/modules/my-feature.js (barrel — only if you keep the flat path)
-export { initMyFeature } from './my-feature/index.js';
-```
-
-The flat barrel exists in some cases for historical reasons — `module-runtime.js` imports from the flat path. New modules should import their `init*` directly from `./modules/my-feature/index.js`.
+Manifests import `init*` directly from `modules/my-feature/index.js`. Add a secondary `public-api.js` only when pure helpers intentionally have consumers beyond the view entry.
 
 ## The `init*` function: inputs
 
-`module-runtime.js` builds a single options bag for each module from a few ambient inputs and module-specific callbacks. The full set of available inputs (you destructure what you need):
+Modules get their options bag from a manifest in `src/renderer/module-manifests/`. `module-runtime.js` composes those manifests and supplies the same context to every declaration. The full set of common inputs (you destructure what you need):
 
 | Option | Type | Source | Meaning |
 | --- | --- | --- | --- |
 | `state` | object | `loadState()` | the single mutable state object — mutate in place, then call `persist()` |
-| `persist` | `() => void` | `start-renderer-app.js` | flushes state to localStorage and disk; rebuilds `state.objectGraph` |
-| `createId` | `() => string` | `shared.js` | timestamp+random ID generator for new entities |
-| `safeText` | `(value) => string` | `shared.js` | HTML-escape helper, use whenever you build innerHTML |
-| `cssEscape` | `(value) => string` | `shared.js` | escapes a value for use inside a CSS attribute selector |
+| `persist` | `() => void` | renderer core | flushes state to localStorage and disk; rebuilds `state.objectGraph` |
+| `createId` | `() => string` | `utils.js` | timestamp+random ID generator for new entities |
+| `safeText` | `(value) => string` | `utils.js` | HTML-escape helper, use whenever you build innerHTML |
+| `cssEscape` | `(value) => string` | `utils.js` | escapes a value for use inside a CSS attribute selector |
 | `notebookType` | string | constant per call site | e.g. `'biology'` for the notebook module |
-| `apiBridge` | object \| null | `window.enanaApi` | IPC bridge exposed by the preload script |
+| `apiBridge` | object \| null | `window.hikariApi` | IPC bridge exposed by the preload script |
 | `getApiBridge` | `() => object \| null` | factory | use this if you may need the bridge after lazy initialization |
 | `rootDocument` | Document | `globalThis.document` | useful when supporting iframes or off-screen render in tests |
 | `selectionInsightsController` | object | `selection-insights.js` | optional: text selection insights service |
-| `trackGrowthEvent` | function | `shared.js` | append a growth event to `state.growthMetrics` |
+| `trackGrowthEvent` | function | `app-state.js` | append a growth event to `state.growthMetrics` |
 | `onXxxChanged` | function | `rendererServices.<area>` | the **important** one: cross-module fan-out callbacks (see below) |
-| `onOpen<Other>` | function | `start-renderer-app.js` | navigation/launch callbacks (e.g. `onOpenNotebookEntry`) |
+| `onOpen<Other>` | function | renderer core | navigation/launch callbacks (e.g. `onOpenNotebookEntry`) |
 
-Look at [src/renderer/module-runtime.js](../../src/renderer/module-runtime.js) lines 67–219 for the exact wiring per module. When you add a new one, add a similar block.
+Look at [src/renderer/module-manifests/assay.js](../../src/renderer/module-manifests/assay.js) or [src/renderer/module-manifests/project-management.js](../../src/renderer/module-manifests/project-management.js) for the preferred wiring shape. If your module needs several other modules to already exist, put that dependency in the manifest `createOptions` callback; the runtime passes the shared `modules` object after each group is initialized.
 
 A typical module signature:
 
@@ -140,13 +127,13 @@ This keeps `renderAll()` safe.
 
 ## State contract
 
-There is one state object. It is loaded from localStorage by `loadState()`, normalized by `normalizeState()` in [src/renderer/modules/shared.js](../../src/renderer/modules/shared.js), and reused for the entire app lifetime. Every module receives **the same reference**.
+There is one state object. It is loaded through the stable [app-state.js](../../src/renderer/modules/app-state.js) facade, normalized in [app-state/state-normalizer.js](../../src/renderer/modules/app-state/state-normalizer.js), and reused for the entire app lifetime. Every module receives **the same reference**.
 
 Rules:
 
 1. **Mutate in place.** `state.myFeatureItems.push(item)`, not `state = { ...state, myFeatureItems: [...] }`.
-2. **Call `persist()` after every user-visible change.** It writes localStorage and triggers `autoSaveDataFile` if a storage path is configured. Do not throttle it inside a module — `start-renderer-app.js` already swallows the auto-save promise.
-3. **Add new top-level keys to `defaultState`.** Otherwise users who upgrade have `undefined` until they touch your view. Defaults live in [src/renderer/modules/shared.js](../../src/renderer/modules/shared.js) (search for `export const defaultState`).
+2. **Call `persist()` after every user-visible change.** It writes localStorage and triggers `autoSaveDataFile` if a storage path is configured. Do not throttle it inside a module — the renderer core already swallows the auto-save promise.
+3. **Add new top-level keys to `defaultState`.** Otherwise users who upgrade have `undefined` until they touch your view. Defaults live in [src/renderer/modules/app-state/defaults.js](../../src/renderer/modules/app-state/defaults.js).
 4. **Keep transient UI state in module locals**, not on `state`. The `selectedRowId`, "is dialog open", "draft text", etc. should never leave the module. The persisted `state` is for data the user expects back next session.
 5. **Never write to `state.objectGraph`.** It is rebuilt on every `persist()` from the rest of the state by [src/renderer/modules/object-graph.js](../../src/renderer/modules/object-graph.js).
 
@@ -158,10 +145,10 @@ Three mechanisms, used in this order of preference.
 
 ### 3.1 Service fan-out (recommended)
 
-When data your module changes is also displayed elsewhere (e.g. a sample edit must refresh the notebook entry list), call into the appropriate **service** at `start-renderer-app.js` injection time:
+When data your module changes is also displayed elsewhere (e.g. a sample edit must refresh the notebook entry list), call into the appropriate **service** at renderer-core injection time:
 
 ```js
-// in module-runtime.js when initializing your module:
+// in your module manifest:
 initMyFeature({
   state,
   persist,
@@ -174,7 +161,7 @@ Inside the module you only call `onMyFeatureChanged()`. You don't know (or care)
 
 The services are defined in [src/renderer/services/](../../src/renderer/services/):
 
-- `protocolService.js` — `handleProtocolsChanged`, `importProtocolsFromJson`, `createDraftFromPaper`
+- `protocolService.js` — `handleProtocolsChanged`, `handleProtocolsImported`, `handleExternalProtocolRecordSaved`, `openProtocol`, `importProtocolsFromJson`, `createDraftFromPaper`
 - `notebookService.js` — `handleNotebookEntriesChanged`, `handleAgentNotebookEntriesChanged`
 - `projectService.js` — `handleProjectsChanged`
 - `inventoryService.js` — `handleSamplesChanged`, `openSampleSearch`
@@ -206,7 +193,7 @@ const protocol = registry.get('protocol');
 protocol.renderList?.();
 ```
 
-`registry.get` always returns an object (the empty frozen sentinel `{}` if missing), so optional chaining is enough. The keys are the second argument to `initAndRegisterModule(...)` in `module-runtime.js`. Current keys:
+`registry.get` always returns an object (the empty frozen sentinel `{}` if missing), so optional chaining is enough. The keys come from `manifest.key`. Current keys:
 
 ```
 biologyNotebook, protocol, projectManagement, agentChat, workflowManagement,
@@ -216,7 +203,7 @@ sequenceViewer, toolBox, settings, homeDashboard
 
 You usually only reach for the registry inside service files. From inside your module, prefer the injected callback (see 3.1).
 
-### 3.3 IPC bridge (`window.enanaApi`)
+### 3.3 IPC bridge (`window.hikariApi`)
 
 For anything that crosses the renderer/main boundary — file system, agent calls, scripts, autosave, native dialogs — use the `apiBridge`/`getApiBridge` option:
 
@@ -229,14 +216,14 @@ The full surface is documented in [docs/main-helpers/](../main-helpers/). Don't 
 
 ## Lifecycle and rendering
 
-`module-runtime.js` calls into your module twice on boot:
+The renderer runtime always initializes your module on boot, and renders it during `renderAll()` when its manifest declares a `bootOrder`:
 
 1. `initMyFeature(options)` — synchronous, registers DOM listeners.
-2. `modules.myFeature.render()` (or your specific render dispatcher) inside `renderAll()` after the state is fully hydrated.
+2. `modules.myFeature.render()` or `renderAll()` — your manifest's boot render dispatcher after the state is fully hydrated.
 
 After boot, your module re-renders in response to:
 
-- the user navigating to your view: `renderView(viewId)` looks you up in `renderByViewId` and calls the appropriate render function.
+- the user navigating to your view: `renderView(viewId)` looks up the manifest-declared route and calls the appropriate render function.
 - a service callback firing, e.g. another module calls `onSamplesChanged()` and `inventoryService.handleSamplesChanged` ends up calling your `renderList?.()`.
 - direct user interaction: your own listeners call `render()` after mutating state and `persist()`.
 
@@ -250,7 +237,7 @@ The runtime stores whatever you return under `modules.<key>` and registers it un
 
 If your feature introduces a brand new top-level state slice (say `state.experiments`), make sure to:
 
-1. Add the default to `defaultState` in `shared.js`.
+1. Add the default to `defaultState` in `app-state/defaults.js`.
 2. Extend `normalizeState()` to coerce missing/legacy values.
 3. Add the slice to the object graph if it has cross-references — see [src/renderer/modules/object-graph.js](../../src/renderer/modules/object-graph.js).
 4. If the slice should round-trip to the on-disk `.ena` storage bundle, hook the writer in [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and the matching main-process bundler in [src/main/helpers/main/storage-bundle/](../../src/main/helpers/main/storage-bundle/).

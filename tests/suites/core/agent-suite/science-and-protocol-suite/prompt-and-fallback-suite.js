@@ -3,6 +3,29 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
   const __dirname = context.__dirname || process.cwd();
 
   with (scope) {
+    test('agent system prompt can include a paper rail session prompt', () => {
+      const { createAgentRuntimeSupport } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-runtime-support.js'
+      ));
+      const runtime = createAgentRuntimeSupport({
+        renderPromptTemplate: (template, vars = {}) => String(template || '').replace('{{projectScope}}', vars.projectScope || '')
+      });
+      const systemPrompt = runtime.buildAgentSystemPrompt('Atlas', {
+        agent: {
+          sessionPrompt: 'Paper agent session: read the transformed markdown paper.md before answering.'
+        }
+      });
+      assert.match(systemPrompt, /Scoped project: Atlas/);
+      assert.match(systemPrompt, /Paper agent session/);
+      assert.match(systemPrompt, /transformed markdown paper\.md/);
+    });
+
     test('science prompt builders render compact summaries instead of JSON payload blocks', () => {
       const { createScienceLoopSupport } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'support.js'));
       const { createScienceInputClarificationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'input-clarification.js'));

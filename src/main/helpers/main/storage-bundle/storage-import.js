@@ -8,7 +8,7 @@ const {
   hydrateSnapshotFromBundle
 } = require('./storage-hydration');
 const { transformPaperRecordsToMarkdown } = require('../paper-markdown-import');
-const { collectManifestEntries, isBundleCandidateName, isSqliteBundleCandidateName, looksLikeEnanaSnapshot, normalizeBundleSummary, STORAGE_MANIFEST_FILE_NAME, toPosixRelative } = require('./storage-manifest');
+const { collectManifestEntries, isBundleCandidateName, isSqliteBundleCandidateName, looksLikeHikariSnapshot, normalizeBundleSummary, STORAGE_MANIFEST_FILE_NAME, toPosixRelative } = require('./storage-manifest');
 const { getBundlePaths, getBundlePathsFromSqlitePath, resolveProtocolBundlePaths, resolveStorageRootLayout, SAMPLES_FILE_NAME, SAMPLES_ROOT_FOLDER_NAME } = require('./storage-paths');
 const { summarizeSequenceLibrary } = require('./sequence-library-summary');
 const { importWorkflowRoot, resolveWorkflowStoragePaths } = require('./workflow-storage');
@@ -273,7 +273,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
     ]);
     const hasAnySqlite = sqliteExists || legacySqliteExists;
 
-    if (candidate.kind === 'data_bundle' && !looksLikeEnanaSnapshot(parsed) && !notebookSidecarExists && !hasAnySqlite) {
+    if (candidate.kind === 'data_bundle' && !looksLikeHikariSnapshot(parsed) && !notebookSidecarExists && !hasAnySqlite) {
       continue;
     }
     if (candidate.kind !== 'data_bundle' && !notebookSidecarExists && !hasAnySqlite) {
@@ -401,7 +401,7 @@ async function importStorageRoot({ storagePath = '' } = {}) {
 
   const discoveredFiles = await collectManifestEntries(resolvedStoragePath, 3);
   const manifest = {
-    schema_name: 'enana_storage_manifest',
+    schema_name: 'hikari_storage_manifest',
     schema_version: '1.0.0',
     generated_at: new Date().toISOString(),
     root_path: resolvedStoragePath,

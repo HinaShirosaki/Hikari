@@ -9,7 +9,7 @@ import { clamp, normalizeRecordName, normalizeSequenceText } from './shared.js';
 
 // Minimal circular preview port inspired by:
 // https://github.com/Edinburgh-Genome-Foundry/DnaFeaturesViewer (MIT)
-// Enana only keeps the standalone HTML/SVG plasmid-preview path.
+// Hikari only keeps the standalone HTML/SVG plasmid-preview path.
 
 const BACKBONE_RADIUS = 290;
 const BACKBONE_WIDTH = 16;

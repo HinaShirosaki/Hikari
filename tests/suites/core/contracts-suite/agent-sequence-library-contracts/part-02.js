@@ -7,7 +7,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart02(context = 
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-backbone-store-'));
       try {
         const backbonePayload = {
-          schema_name: 'enana_recognized_backbone',
+          schema_name: 'hikari_recognized_backbone',
           schema_version: '1.0.0',
           updated_at: '2026-04-25T12:00:00.000Z',
           source_record: {
@@ -49,7 +49,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart02(context = 
 
         const storePath = path.join(storageRoot, 'SequenceViewer', 'protein-builder-backbones.json');
         const store = JSON.parse(await fsPromises.readFile(storePath, 'utf8'));
-        assert.equal(store.schema_name, 'enana_recognized_backbone_store');
+        assert.equal(store.schema_name, 'hikari_recognized_backbone_store');
         assert.equal(store.backbones.length, 1);
 
         await sequenceLibrary.upsertRecognizedBackbone({

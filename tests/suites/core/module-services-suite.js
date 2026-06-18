@@ -23,8 +23,7 @@ module.exports = function registerModuleServicesSuite(context = {}) {
         VIEWS: overrides.VIEWS || {
           PROTOCOL_MANAGEMENT: 'protocol-management-view',
           SAMPLE_REGISTRY: 'sample-registry-view'
-        },
-        sequenceViewerDetailViewId: overrides.sequenceViewerDetailViewId || 'sequence-viewer-detail-view'
+        }
       });
     }
 
@@ -128,6 +127,82 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       assert.deepEqual(importCalls, [['{"name":"B"}', { source: 'test' }]]);
     });
 
+    test('protocol service owns external protocol record normalization and merge', () => {
+      const servicesModule = loadServicesModule();
+      const registry = createRegistryWithUi(servicesModule);
+      const state = {
+        protocols: [{
+          id: 'protocol-existing',
+          name: 'Old Protocol',
+          steps: [{ id: 'step-1', text: 'Old step', placeholders: [] }]
+        }]
+      };
+      const persist = createSpy('persist');
+      const clone = (value) => JSON.parse(JSON.stringify(value));
+      const services = servicesModule.createRendererServices(registry, {
+        protocol: {
+          state,
+          persist,
+          createId: () => 'protocol-generated'
+        }
+      });
+      const protocolList = createSpy('protocolList');
+      const biologyProtocolOptions = createSpy('biologyProtocolOptions');
+      registry.register('protocol', { renderList: protocolList });
+      registry.register('biologyNotebook', { renderProtocolOptions: biologyProtocolOptions });
+
+      const updated = services.protocol.handleExternalProtocolRecordSaved({
+        protocol: {
+          id: 'protocol-existing',
+          title: 'Updated Protocol',
+          description: 'Imported from agent save.',
+          materials: '- Buffer\n2. Enzyme',
+          steps: ['Mix gently'],
+          aliases: [' quick save ', ''],
+          project_id: 'project-1',
+          project_name: 'Project One'
+        }
+      });
+
+      assert.equal(updated, true);
+      assert.equal(state.protocols.length, 1);
+      assert.equal(state.protocols[0].name, 'Updated Protocol');
+      assert.deepEqual(Array.from(state.protocols[0].materials), ['Buffer', 'Enzyme']);
+      assert.deepEqual(clone(state.protocols[0].steps), [{ id: 'step-1', text: 'Mix gently', placeholders: [] }]);
+      assert.deepEqual(Array.from(state.protocols[0].aliases), ['quick save']);
+      assert.equal(state.protocols[0].projectId, 'project-1');
+      assert.equal(state.protocols[0].projectName, 'Project One');
+      assert.equal(persist.calls.length, 1);
+      assert.equal(protocolList.calls.length, 1);
+      assert.equal(biologyProtocolOptions.calls.length, 1);
+
+      const inserted = services.protocol.handleExternalProtocolRecordSaved({
+        protocol: {
+          name: 'Generated Protocol',
+          steps: [{
+            instruction: 'Incubate',
+            placeholders: [{ name: 'temperature' }, { name: '' }]
+          }]
+        }
+      });
+
+      assert.equal(inserted, true);
+      assert.equal(state.protocols.length, 2);
+      assert.equal(state.protocols[1].id, 'protocol-generated');
+      assert.deepEqual(clone(state.protocols[1].steps[0].placeholders), [{ id: 'ph-1-1', name: 'temperature' }]);
+      assert.equal(persist.calls.length, 2);
+
+      const ignored = services.protocol.handleExternalProtocolRecordSaved({
+        protocol: {
+          name: 'Missing Steps',
+          steps: []
+        }
+      });
+      assert.equal(ignored, false);
+      assert.equal(state.protocols.length, 2);
+      assert.equal(persist.calls.length, 2);
+    });
+
     test('protocol service opens protocol view only when paper draft creation succeeds', () => {
       const servicesModule = loadServicesModule();
       const showView = createSpy('showView');
@@ -158,6 +233,23 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       const notOk = services.protocol.createDraftFromPaper(paperPayload);
       assert.equal(notOk, false);
       assert.equal(showView.calls.length, 0);
+    });
+
+    test('protocol service opens protocol records for shell search routing', () => {
+      const servicesModule = loadServicesModule();
+      const showView = createSpy('showView');
+      const registry = createRegistryWithUi(servicesModule, { showView });
+      const services = servicesModule.createRendererServices(registry);
+      const editProtocol = createSpy('editProtocol');
+      registry.register('protocol', { editProtocol });
+
+      assert.equal(services.protocol.openProtocol('protocol-1'), true);
+      assert.deepEqual(showView.calls, [['protocol-management-view']]);
+      assert.deepEqual(editProtocol.calls, [['protocol-1']]);
+
+      assert.equal(services.protocol.openProtocol(''), false);
+      assert.equal(showView.calls.length, 1);
+      assert.equal(editProtocol.calls.length, 1);
     });
 
     test('notebook services refresh dependents for notebook and agent chat updates', () => {
@@ -313,13 +405,107 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       const services = servicesModule.createRendererServices(registry);
 
       const loadFromExternal = createSpy('loadFromExternal');
+      const openDetailView = createSpy('openDetailView');
       const payload = { sequence: 'ATGC', name: 'Example' };
-      registry.register('sequenceViewer', { loadFromExternal });
+      registry.register('sequenceViewer', { loadFromExternal, openDetailView });
 
       services.sequence.openFromToolBox(payload);
 
       assert.deepEqual(loadFromExternal.calls, [[payload]]);
-      assert.deepEqual(showView.calls, [['sequence-viewer-detail-view']]);
+      assert.deepEqual(openDetailView.calls, [[]]);
+      assert.deepEqual(showView.calls, []);
+    });
+
+    test('unsaved changes service immediately approves close when editors are clean', () => {
+      const servicesModule = loadServicesModule();
+      const responses = [];
+      const service = servicesModule.createUnsavedChangesService({
+        moduleRegistry: {
+          get: () => ({ hasUnsavedChanges: () => false })
+        },
+        api: {
+          onAppCloseRequested: () => () => {},
+          respondToAppClose: (action) => responses.push(action)
+        },
+        documentObject: null,
+        windowObject: null
+      });
+
+      service.handleCloseRequested();
+
+      assert.deepEqual(responses, ['quit']);
+      assert.equal(service.getUnsavedSources().length, 0);
+    });
+
+    test('unsaved changes service saves every dirty editor before approving close', async () => {
+      const servicesModule = loadServicesModule();
+      const elements = new Map();
+      const makeElement = (id = '') => {
+        const element = new MockElement(id);
+        element.children = [];
+        element.replaceChildren = (...children) => {
+          element.children = children;
+        };
+        return element;
+      };
+      [
+        'unsaved-changes-overlay',
+        'unsaved-changes-list',
+        'unsaved-changes-status',
+        'unsaved-changes-cancel-btn',
+        'unsaved-changes-discard-btn',
+        'unsaved-changes-save-btn'
+      ].forEach((id) => elements.set(id, makeElement(id)));
+      elements.get('unsaved-changes-overlay').hidden = true;
+
+      const documentObject = {
+        getElementById: (id) => elements.get(id) || null,
+        createElement: () => makeElement(),
+        addEventListener() {}
+      };
+      const windowObject = {
+        addEventListener() {}
+      };
+      const savedKeys = [];
+      const dirty = new Map([
+        ['sampleRegistry', true],
+        ['protocol', true]
+      ]);
+      const moduleRegistry = {
+        get(key) {
+          return {
+            hasUnsavedChanges: () => dirty.get(key) === true,
+            async saveUnsavedChanges() {
+              savedKeys.push(key);
+              dirty.set(key, false);
+              return true;
+            }
+          };
+        }
+      };
+      const responses = [];
+      const service = servicesModule.createUnsavedChangesService({
+        moduleRegistry,
+        api: {
+          onAppCloseRequested: () => () => {},
+          respondToAppClose: (action) => responses.push(action)
+        },
+        documentObject,
+        windowObject
+      });
+
+      service.handleCloseRequested();
+      assert.equal(elements.get('unsaved-changes-overlay').hidden, false);
+      assert.deepEqual(
+        elements.get('unsaved-changes-list').children.map((item) => item.textContent),
+        ['Sample', 'Protocol']
+      );
+
+      await service.saveAndQuit();
+
+      assert.deepEqual(savedKeys, ['sampleRegistry', 'protocol']);
+      assert.deepEqual(responses, ['quit']);
+      assert.equal(elements.get('unsaved-changes-overlay').hidden, true);
     });
   }
 };

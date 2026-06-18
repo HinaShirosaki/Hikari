@@ -47,7 +47,7 @@ test('[EDGE] sequence-viewer keyboard inserts at cursor and confirms selected-ba
   const listeners = {};
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     {
       document,
       addEventListener(type, listener) {
@@ -190,7 +190,7 @@ test('[EDGE] sequence-viewer opens cloning design after base edits and renders p
   const listeners = {};
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     {
       document,
       addEventListener(type, listener) {

@@ -10,7 +10,7 @@ export function buildDirectLlmSettings(llm = {}) {
 }
 
 function getDirectLlmApi() {
-  return globalThis.window?.enanaApi || globalThis.enanaApi || null;
+  return globalThis.window?.hikariApi || globalThis.hikariApi || null;
 }
 
 async function requestDirectLlm({

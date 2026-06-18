@@ -9,9 +9,9 @@ Source-of-truth layout under the project root:
 ```
 ui/
   config/
-    html-order.json        # which view fragments compose index.html
-    css-order.json         # which stylesheets compose styles.css
-    app-registry.json      # dock entries (label, icon, viewId, aliases)
+    html-order.json        # shell fragments around generated views
+    css-order.json         # shared styles before/after generated view styles
+    app-registry.json      # canonical view order, ids, labels, icons, aliases
   html/
     shell/start.html       # everything before the first view
     shell/end.html         # everything after the last view
@@ -26,10 +26,13 @@ config/
 src/renderer/
   bootstrap/index-shell.js # pre-app loading cover, theme application
   renderer.js              # entry point: imports startRendererApp()
-  app/start-renderer-app.js
+  app/start-renderer-app.js # compatibility wrapper into renderer core
+  core/start-hikari-core.js # state, services, modules, navigation, search boot
   app/navigation-shell.js  # dock, view switching, page title
+  app/topbar-open-handlers.js # search result open routing
   app/topbar-search.js
-  module-runtime.js        # static module instantiation
+  module-runtime.js        # manifest composition plus shared render dispatch
+  module-manifests/        # per-module init/render declarations
   modules/                 # per-feature controllers
   services/                # cross-module fan-out (registry + services)
 scripts/
@@ -41,10 +44,10 @@ scripts/
 `npm run build:ui` runs `scripts/build-ui.mjs`, which:
 
 1. Reads `config/llm-providers.json` and writes `src/main/generated/llm-provider-config.generated.js` and `src/renderer/modules/llm-provider-config.generated.js`.
-2. Reads `ui/config/app-registry.json` and writes `src/renderer/modules/app-registry.generated.js`.
-3. Reads `ui/config/html-order.json`, concatenates `shell/start.html` + every view fragment + `shell/end.html`, and writes `index.html`.
-4. Reads `ui/config/css-order.json` and writes `styles.css` as a stack of `@import url(...)` lines pointing at `ui/css/...`.
-5. Validates: every view fragment contains a `<section id="<id>">` matching its config entry, no duplicate HTML `id=` attributes anywhere, no duplicate CSS input paths.
+2. Reads `ui/config/app-registry.json` and writes both `src/renderer/modules/app-registry.generated.js` and `src/renderer/modules/views.js`.
+3. Uses `app-registry.json.viewOrder` to place each declared view between the shell fragments from `ui/config/html-order.json`, then writes `index.html`.
+4. Inserts each declared view stylesheet between `prefixInputs` and `suffixInputs` from `ui/config/css-order.json`, then writes `styles.css`.
+5. Validates registry keys/order, view files and section IDs, duplicate HTML IDs, duplicate CSS paths, dock ordering, and icons.
 
 If any check fails the build aborts. There is no fallback to "best effort." This means a broken module will not silently ship.
 
@@ -57,12 +60,12 @@ Once Electron loads `index.html`:
 1. `<script type="module" src="src/renderer/bootstrap/index-shell.js">` runs in `<head>`. It paints the loading cover, applies the saved appearance (font size, day/night) so first paint matches the user's last session, and listens for the `hikari:app-ready` event.
 2. The body finishes parsing. All view `<section>`s are present in the DOM, but only `home-view` has `class="view is-active"` — everything else is hidden by `core.css` (`.view { display: none } .view.is-active { display: block }`).
 3. `<script type="module" src="src/renderer/renderer.js">` runs at end of body. It calls `startRendererApp()`.
-4. `startRendererApp()` ([src/renderer/app/start-renderer-app.js](../../src/renderer/app/start-renderer-app.js)):
-   - `loadState()` from localStorage (key `enana_state_v1`).
+4. `startRendererApp()` delegates to `startHikariCore()` ([src/renderer/core/start-hikari-core.js](../../src/renderer/core/start-hikari-core.js)):
+   - `loadState()` from localStorage (key `hikari_state_v1`).
    - Creates the **module registry** (a `Map`-based bus) and the **renderer services** (cross-module fan-out helpers).
-   - Calls `createRendererModuleRuntime({...})` ([src/renderer/module-runtime.js](../../src/renderer/module-runtime.js)) which statically imports every `init*` function and registers each module with the registry.
+   - Calls `createRendererModuleRuntime({...})` ([src/renderer/module-runtime.js](../../src/renderer/module-runtime.js)) which initializes manifest-declared modules from [src/renderer/module-manifests/](../../src/renderer/module-manifests/), registers each module with the registry, and builds route/boot render dispatch from manifest metadata.
    - Creates the **navigation shell**, which renders the dock from `APP_REGISTRY` and wires `showView()`.
-   - Hydrates extra state from `window.enanaApi` if a storage path is set, runs `renderAll()`, then activates the startup view.
+   - Hydrates extra state from `window.hikariApi` if a storage path is set, runs `renderAll()`, then activates the startup view.
    - Dispatches `hikari:app-ready`. The bootstrap cover fades out.
 
 ## What "module" means here
@@ -79,7 +82,7 @@ A module owns the DOM inside its `<section>`. It must not reach into another mod
 - the **module registry** (`registry.get('protocol').renderList?.()`),
 - the **services layer** (`rendererServices.notebook.handleNotebookEntriesChanged()`),
 - callbacks injected at init time (`onSamplesChanged`, `onOpenSampleRecorder`, …),
-- the `window.enanaApi` IPC bridge (file system, scripts, agent calls).
+- the `window.hikariApi` IPC bridge (file system, scripts, agent calls).
 
 Details on each: [03-module-contract.md](./03-module-contract.md).
 
@@ -98,11 +101,11 @@ You write only the markup specific to your view. The next page covers exactly wh
 
 ## State and persistence
 
-There is one mutable state object created by `loadState()` and passed to every module by reference. Mutations happen in-place; persistence is explicit via the `persist()` callback (writes localStorage and, if `state.settings.storagePath` is set, autosaves to disk through `window.enanaApi.autoSaveDataFile`).
+There is one mutable state object created by `loadState()` and passed to every module by reference. Mutations happen in-place; persistence is explicit via the `persist()` callback (writes localStorage and, if `state.settings.storagePath` is set, autosaves to disk through `window.hikariApi.autoSaveDataFile`).
 
-`defaultState` in [src/renderer/modules/shared.js](../../src/renderer/modules/shared.js) defines every top-level key. If your module needs a new top-level field, add it there with a sensible default — every consumer derefs `state.<field>` directly with `?.` or `||` fallbacks, so missing keys leak silently.
+`defaultState` in [src/renderer/modules/app-state/defaults.js](../../src/renderer/modules/app-state/defaults.js) defines every top-level key; [state-normalizer.js](../../src/renderer/modules/app-state/state-normalizer.js) assembles loaded state. If your module needs a new top-level field, update both with a sensible default.
 
-`state.objectGraph` is rebuilt from the rest of the state on every `persist()` (in `start-renderer-app.js:persist()`). Don't write to it manually.
+`state.objectGraph` is rebuilt from the rest of the state on every `persist()` in the renderer core. Don't write to it manually.
 
 ## What the dock and navigation give you
 

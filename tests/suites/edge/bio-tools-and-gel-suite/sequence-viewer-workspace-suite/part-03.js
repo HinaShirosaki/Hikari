@@ -59,7 +59,7 @@ test('[EDGE] sequence-viewer feature search can trace a stored feature back to i
   const searchCalls = [];
   const document = createMockDocument(ids);
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryList: async () => ({ ok: true, entries: [entry] }),
       sequenceLibraryGet: async (payload) => {
         if (payload?.includeGbk) {
@@ -106,14 +106,14 @@ ORIGIN
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   moduleWithDom.initSequenceViewer();
@@ -174,7 +174,7 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   const searchCalls = [];
   const document = createMockDocument(ids);
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibrarySearchFeatures: async (payload) => {
         searchCalls.push(payload);
         return {
@@ -196,14 +196,14 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   moduleWithDom.initSequenceViewer();
@@ -303,7 +303,7 @@ test('[EDGE] sequence-viewer protein builder can build DNA and reuse POI DNA fro
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer();

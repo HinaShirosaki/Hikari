@@ -527,6 +527,7 @@ export function createProteinBuilderCloningNotebookPage({
     values: {},
     result,
     resultTable,
+    resultTables: resultTable ? [resultTable] : [],
     resultFiles: [],
     resultFileRecords: [],
     storageFolder: '',

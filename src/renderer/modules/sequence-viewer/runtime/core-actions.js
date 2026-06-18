@@ -7,8 +7,8 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
     return (typeof options?.getApiBridge === 'function' ? options.getApiBridge() : null)
       || options?.apiBridge
       || options?.bridge
-      || globalThis?.window?.enanaApi
-      || globalThis?.enanaApi
+      || globalThis?.window?.hikariApi
+      || globalThis?.hikariApi
       || null;
   }
 

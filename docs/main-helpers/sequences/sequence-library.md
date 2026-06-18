@@ -1,6 +1,6 @@
 # Sequence Library
 
-`sequence-library.js` and `sequence-backbone-recognition.js` form a self-contained sequence-storage subsystem inside `src/main/helpers/main`.
+The `sequence-library/` folder (≈22 modules behind `index.js`) and the `sequence/` folder form a self-contained sequence-storage subsystem inside `src/main/helpers/main`. The public API is `sequence-library/index.js`; storage, search, annotation, alignment, and recognition each have their own modules (`database.js`, `entry-read.js`/`entry-upsert.js`, `feature-store.js`/`feature-search.js`, `annotation-service.js`, `alignment-store.js`, `backbone-service.js`, ...).
 
 ## Storage layout
 
@@ -19,7 +19,7 @@ The SQLite database stores metadata, features, and feature occurrences for searc
 
 ## Entry lifecycle
 
-`sequence-library.js` exposes the CRUD-style API:
+`sequence-library/index.js` exposes the CRUD-style API:
 
 - `listSequenceEntries(...)`
 - `getSequenceEntry(...)`
@@ -36,7 +36,7 @@ Entries have two main statuses:
 
 ## What `upsertSequenceEntry(...)` really does
 
-This function is the heart of the file.
+This function (in `entry-upsert.js`) is the heart of the library.
 
 It:
 
@@ -71,7 +71,7 @@ It returns features plus their host-vector occurrences, which makes it a richer 
 
 ## Backbone recognition
 
-`sequence-backbone-recognition.js` is the heuristic matcher used by `recognizeSequenceBackbone(...)`.
+`recognizeSequenceBackbone(...)` is orchestrated by `sequence-library/backbone-service.js`. The process-neutral matcher lives in `src/shared/sequence/sequence-backbone-recognition/`, alongside its circular-annotation, ORF, and restriction-feature dependencies.
 
 At a high level it:
 

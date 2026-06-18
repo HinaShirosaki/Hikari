@@ -43,6 +43,10 @@ function createMainDataHelpers(deps = {}) {
     };
   }
 
+  function hasObjectKeys(value) {
+    return Boolean(value && typeof value === 'object' && Object.keys(value).length);
+  }
+
   function isPathWithinRoot(rootPath, targetPath) {
     const resolvedRoot = path.resolve(cleanText(rootPath, 2400));
     const resolvedTarget = path.resolve(cleanText(targetPath, 2400));
@@ -142,12 +146,26 @@ function createMainDataHelpers(deps = {}) {
         snapshot: parsed,
         fallbackDataFilePath: getDefaultDataFilePath()
       });
+      let loadSync = null;
+      try {
+        loadSync = await syncBundleFromSnapshot({
+          dataFilePath: targetPath,
+          snapshot: hydrated.snapshot,
+          fallbackDataFilePath: getDefaultDataFilePath()
+        });
+      } catch {
+        loadSync = null;
+      }
+      const sidecarSource = {
+        bundlePaths: hasObjectKeys(loadSync?.bundlePaths) ? loadSync.bundlePaths : hydrated.bundlePaths,
+        sidecarPaths: hasObjectKeys(loadSync?.sidecarPaths) ? loadSync.sidecarPaths : hydrated.sidecarPaths
+      };
       return {
         ok: true,
         filePath: targetPath,
         data: hydrated.snapshot,
-        sidecarPaths: withSqlitePath(hydrated),
-        bundlePaths: hydrated.bundlePaths,
+        sidecarPaths: withSqlitePath(sidecarSource),
+        bundlePaths: sidecarSource.bundlePaths || hydrated.bundlePaths,
         migration: hydrated.migration
       };
     } catch (error) {

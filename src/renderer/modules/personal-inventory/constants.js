@@ -1,3 +1,5 @@
+import { getSampleInventoryLocationDisplay } from '../sample-inventory-settings.js';
+
 export const SAMPLE_TYPE_COLORS = {
   plasmid: '#2f6fec',
   cell_line: '#e8871a',
@@ -7,25 +9,6 @@ export const SAMPLE_TYPE_COLORS = {
   chemical: '#0f8a9d',
   primer: '#be9a1a',
   other: '#718096'
-};
-
-export const SAMPLE_TYPE_LABELS = {
-  plasmid: 'Plasmid',
-  cell_line: 'Cell Line',
-  strain: 'Strain',
-  antibody: 'Antibody',
-  protein: 'Protein',
-  chemical: 'Chemical',
-  primer: 'Primer',
-  other: 'Other'
-};
-
-export const SECTION_DISPLAY = {
-  'Room Temp': { short: 'RT', title: 'Room Temp', note: 'Bench and cabinet storage' },
-  '4 Degree': { short: '4C', title: '4 C', note: 'Cold shelf storage' },
-  '-20 Degree': { short: '-20', title: '-20 C', note: 'Short-term freezer storage' },
-  '-80 Degree': { short: '-80', title: '-80 C', note: 'Long-term freezer storage' },
-  'Liquid Nitrogen': { short: 'LN2', title: 'Liquid Nitrogen', note: 'Cryogenic storage' }
 };
 
 const CUSTOM_GRID_MIN_DIMENSION = 1;
@@ -133,10 +116,6 @@ export function createDefaultWells(containerOrType) {
   }));
 }
 
-export function getSectionNames() {
-  return ['Room Temp', '4 Degree', '-20 Degree', '-80 Degree', 'Liquid Nitrogen'];
-}
-
 export function getSectionDisplay(section) {
-  return SECTION_DISPLAY[section] || { short: '--', title: section || 'Unknown', note: '' };
+  return getSampleInventoryLocationDisplay(section);
 }

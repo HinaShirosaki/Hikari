@@ -32,6 +32,16 @@ test('[EDGE] sequence-viewer normalizeExternalPayload clamps segments and keeps 
     JSON.stringify([{ start: 0, end: 4 }, { start: 6, end: 8 }])
   );
 });
+test('[EDGE] sequence-viewer normalizes common feature type aliases', () => {
+  assert.equal(sequenceViewerInternals.normalizeFeatureType('CDS'), 'cds');
+  assert.equal(sequenceViewerInternals.normalizeFeatureType('coding sequence'), 'cds');
+  assert.equal(sequenceViewerInternals.normalizeFeatureType("5' UTR"), '5_utr');
+  assert.equal(sequenceViewerInternals.normalizeFeatureType('origin of replication'), 'rep_origin');
+  assert.equal(sequenceViewerInternals.normalizeFeatureType('primer binding site'), 'primer_bind');
+  assert.equal(sequenceViewerInternals.getFeatureTypeGenbankKey('cds'), 'CDS');
+  assert.equal(sequenceViewerInternals.getFeatureTypeGenbankKey('3 utr'), "3'UTR");
+  assert.equal(sequenceViewerInternals.getFeatureTypeGenbankKey('mrna'), 'mRNA');
+});
 test('[EDGE] sequence-viewer complement mapping handles canonical and ambiguous bases', () => {
   assert.equal(sequenceViewerInternals.complementBase('A'), 'T');
   assert.equal(sequenceViewerInternals.complementBase('C'), 'G');

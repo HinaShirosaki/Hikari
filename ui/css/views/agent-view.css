@@ -788,7 +788,7 @@ body.ui-neutral-compact .agent-meta-grid details {
 
 body.ui-neutral-compact.theme-night .agent-chat-item {
   border-color: var(--palette-slate-700);
-  background: var(--palette-slate-950);
+  background: var(--bg);
 }
 
 body.ui-neutral-compact.theme-night .agent-chat-item-assistant {
@@ -915,15 +915,15 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .agent-status-pill[data-state="working"] {
-  color: color-mix(in srgb, var(--strong) 76%, var(--palette-hex-8c6d1f));
+  color: color-mix(in srgb, var(--strong) 76%, var(--warning));
   border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
   background: color-mix(in srgb, var(--accent) 10%, var(--surface));
 }
 
 .agent-status-pill[data-state="complete"] {
-  color: var(--palette-hex-35513b);
-  border-color: color-mix(in srgb, var(--palette-hex-35513b) 18%, var(--line));
-  background: color-mix(in srgb, var(--palette-hex-d8ead9) 62%, var(--palette-white) 38%);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 18%, var(--line));
+  background: color-mix(in srgb, var(--success) 10%, var(--palette-white));
 }
 
 .agent-status-pill[data-state="error"] {
@@ -952,10 +952,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   width: min(560px, calc(100% - 32px));
   max-height: calc(100% - 76px);
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, var(--palette-hex-8b7d58) 18%);
+  border: 1px solid color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 94%, var(--palette-white) 6%);
-  box-shadow: 0 18px 44px color-mix(in srgb, var(--palette-hex-1f2933) 18%, transparent);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--strong) 18%, transparent);
 }
 
 .agent-dev-response-header {
@@ -965,7 +965,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   gap: 12px;
   padding: 10px 12px;
   border-bottom: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
-  background: color-mix(in srgb, var(--surface) 86%, var(--palette-hex-f5f1df) 14%);
+  background: color-mix(in srgb, var(--surface) 86%, var(--surface-subtle) 14%);
 }
 
 .agent-dev-response-header > div {
@@ -1148,9 +1148,11 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .agent-composer-card textarea {
+  --agent-composer-min-height: 92px;
+  --agent-composer-max-height: 220px;
   width: 100%;
-  min-height: 92px;
-  max-height: 220px;
+  min-height: var(--agent-composer-min-height);
+  max-height: var(--agent-composer-max-height);
   border: 0;
   padding: 0;
   margin: 0;
@@ -1357,7 +1359,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
   border-radius: 24px;
   background: color-mix(in srgb, var(--surface) 88%, var(--palette-white) 12%);
-  box-shadow: 0 12px 32px var(--palette-rgba-15-23-42-a05);
+  box-shadow: 0 12px 32px var(--palette-rgba-27-20-14-a08);
 }
 
 .agent-chat-item-assistant {
@@ -1471,15 +1473,16 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   animation: agent-chat-pulse 1.8s ease-in-out infinite;
 }
 
-.agent-review-overlay {
+.agent-review-overlay.app-dialog-overlay {
   position: absolute;
   inset: 0;
   z-index: 18;
   display: grid;
   align-items: start;
   justify-items: center;
-  padding: 48px 24px 24px;
-  background: color-mix(in srgb, var(--surface) 74%, transparent);
+  overflow: hidden;
+  padding: clamp(20px, 3vw, 34px) 24px 24px;
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -1490,14 +1493,16 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-review-dialog {
   width: min(1120px, 100%);
-  max-height: min(760px, calc(100vh - 120px));
+  height: min(760px, calc(100svh - 132px));
+  max-height: calc(100svh - 132px);
+  min-height: min(520px, calc(100svh - 132px));
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 94%, var(--palette-white) 6%);
-  box-shadow: 0 24px 64px color-mix(in srgb, var(--palette-hex-1f2933) 22%, transparent);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .agent-review-dialog-header {
@@ -1505,8 +1510,8 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 20px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  padding: 0 10px 8px;
+  border-bottom: 0;
 }
 
 .agent-review-dialog-header > div {
@@ -1534,12 +1539,13 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   overflow-y: hidden;
   scroll-snap-type: x mandatory;
   scrollbar-gutter: stable both-edges;
-  padding: 20px;
+  padding: 8px 0 10px;
 }
 
 .agent-review-card {
-  flex: 0 0 min(720px, calc(100vw - 88px));
-  max-width: 720px;
+  flex: 0 0 min(560px, calc((100% - 18px) / 2));
+  max-width: 560px;
+  height: 100%;
   min-height: 0;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -1549,6 +1555,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
   border-radius: 8px;
   background: color-mix(in srgb, var(--surface) 88%, var(--palette-white) 12%);
+  overflow: hidden;
 }
 
 .agent-review-card-header {
@@ -1640,8 +1647,8 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-review-footer {
   justify-content: center;
-  padding: 14px 20px 18px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  padding: 8px 10px 0;
+  border-top: 0;
 }
 
 .agent-review-footer .small-note {
@@ -1774,12 +1781,15 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
     width: auto;
   }
 
-  .agent-review-overlay {
-    padding: 18px 12px;
+  .agent-review-overlay.app-dialog-overlay {
+    padding: 14px 12px;
   }
 
   .agent-review-dialog {
-    max-height: calc(100vh - 36px);
+    width: 100%;
+    height: calc(100svh - 28px);
+    max-height: calc(100svh - 28px);
+    min-height: 0;
   }
 
   .agent-review-dialog-header {
@@ -1790,11 +1800,12 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
   .agent-review-track {
     gap: 12px;
-    padding: 14px;
+    padding: 8px 0;
   }
 
   .agent-review-card {
-    flex-basis: calc(100vw - 52px);
+    flex-basis: calc(100vw - 24px);
+    max-width: none;
     padding: 14px;
   }
 

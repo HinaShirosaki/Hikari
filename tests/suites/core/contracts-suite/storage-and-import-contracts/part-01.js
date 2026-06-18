@@ -7,6 +7,14 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
+      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
+      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
+      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
+      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
       readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'app', 'agent-log-runtime.js')
     ].join('\n');
@@ -17,6 +25,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
     ].join('\n');
     const readRendererStorageSource = () => [
       readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
       readLocalSource('src', 'renderer', 'app', 'storage-import.js')
     ].join('\n');
     test('data-helpers default bundle hydrator preserves parsed snapshot settings', async () => {
@@ -38,6 +47,77 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         assert.equal(result.ok, true);
         assert.equal(result.data?.settings?.appearance?.uiStyle, 'classic');
         assert.equal(result.data?.settings?.appearance?.themeColor, '#123456');
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+    test('data-helpers auto-load repairs project codex skill sidecars after hydration', async () => {
+      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data', 'data-helpers.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'data-helpers-load-skills-'));
+      const storageRoot = path.join(tempDir, 'Workspace');
+      const dataFilePath = path.join(tempDir, 'hikari-data.json');
+      try {
+        await fsPromises.writeFile(dataFilePath, JSON.stringify({
+          projects: [{ id: 'project-1', name: 'Atlas' }],
+          settings: { storagePath: storageRoot }
+        }, null, 2), 'utf8');
+        const projectProtocolSkillPath = path.join(storageRoot, 'Project', 'Atlas', '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
+        const projectNotebookSkillPath = path.join(storageRoot, 'Project', 'Atlas', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
+        const projectPaperRetrievalSkillPath = path.join(storageRoot, 'Project', 'Atlas', '.agents', 'skills', 'hikari-paper-retrieval', 'SKILL.md');
+        await assert.rejects(fsPromises.access(projectProtocolSkillPath));
+
+        const helpers = createMainDataHelpers({
+          fs: fsPromises,
+          path,
+          hasSupportedDataExtension: mainUtils.hasSupportedDataExtension,
+          normalizeDataFilePath: mainUtils.normalizeDataFilePath,
+          hydrateSnapshotFromBundle: bundleHelpers.hydrateSnapshotFromBundle,
+          syncBundleFromSnapshot: bundleHelpers.syncBundleFromSnapshot,
+          writeSnapshot: async () => {},
+          getDefaultDataFilePath: () => dataFilePath
+        });
+        const result = await helpers.autoLoadDataFile(dataFilePath);
+        assert.equal(result.ok, true);
+        assert.equal(result.bundlePaths.storageRootPath, storageRoot);
+        assert.match(await fsPromises.readFile(projectProtocolSkillPath, 'utf8'), /name: "hikari-protocol-generation"/);
+        assert.match(await fsPromises.readFile(projectNotebookSkillPath, 'utf8'), /name: "hikari-notebook-draft"/);
+        assert.match(await fsPromises.readFile(projectPaperRetrievalSkillPath, 'utf8'), /name: "hikari-paper-retrieval"/);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+    test('data-helpers auto-load still returns hydrated data when sidecar repair fails', async () => {
+      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data', 'data-helpers.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'data-helpers-load-sync-failure-'));
+      const dataFilePath = path.join(tempDir, 'state.json');
+      try {
+        await fsPromises.writeFile(dataFilePath, JSON.stringify({
+          settings: { appearance: { uiStyle: 'classic' } }
+        }, null, 2), 'utf8');
+        const helpers = createMainDataHelpers({
+          fs: fsPromises,
+          path,
+          hasSupportedDataExtension: mainUtils.hasSupportedDataExtension,
+          normalizeDataFilePath: mainUtils.normalizeDataFilePath,
+          hydrateSnapshotFromBundle: async ({ snapshot }) => ({
+            snapshot: {
+              ...snapshot,
+              hydrated: true
+            },
+            bundlePaths: { storageRootPath: tempDir },
+            sidecarPaths: {}
+          }),
+          syncBundleFromSnapshot: async () => {
+            throw new Error('simulated sidecar repair failure');
+          },
+          writeSnapshot: async () => {},
+          getDefaultDataFilePath: () => dataFilePath
+        });
+        const result = await helpers.autoLoadDataFile(dataFilePath);
+        assert.equal(result.ok, true);
+        assert.equal(result.data.hydrated, true);
+        assert.equal(result.bundlePaths.storageRootPath, tempDir);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -84,6 +164,116 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
+    test('storage bundle writes project memory and codex skill folders for project records', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-project-skills-'));
+      const dataFilePath = path.join(tempDir, 'example.ena.json');
+      try {
+        await bundleHelpers.syncBundleFromSnapshot({
+          dataFilePath,
+          snapshot: {
+            projects: [{ id: 'project-1', name: 'Atlas', description: 'Project-specific Codex context.' }],
+            settings: { storagePath: tempDir }
+          }
+        });
+
+        const memoryPath = path.join(tempDir, 'Project', 'Atlas', 'MEMORY.md');
+        const memoryText = await fsPromises.readFile(memoryPath, 'utf8');
+        const rootProtocolSkillPath = path.join(tempDir, '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
+        const rootNotebookSkillPath = path.join(tempDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
+        const rootPaperRetrievalSkillPath = path.join(tempDir, '.agents', 'skills', 'hikari-paper-retrieval', 'SKILL.md');
+        const projectProtocolSkillPath = path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
+        const projectNotebookSkillPath = path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
+        const projectPaperRetrievalSkillPath = path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-paper-retrieval', 'SKILL.md');
+        assert.match(memoryText, /Name: Atlas/);
+        assert.match(memoryText, /ID: project-1/);
+        assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /Call the direct Hikari MCP tool `mcp__hikari__protocol_generation`/);
+        assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /expects complete protocol JSON/);
+        assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /Protocol JSON checklist:/);
+        assert.match(await fsPromises.readFile(rootNotebookSkillPath, 'utf8'), /Call the direct Hikari MCP tool `mcp__hikari__notebook_draft`/);
+        assert.match(await fsPromises.readFile(rootNotebookSkillPath, 'utf8'), /Draft context checklist:/);
+        assert.match(await fsPromises.readFile(rootPaperRetrievalSkillPath, 'utf8'), /Hikari Paper Retrieval MCP/);
+        assert.match(await fsPromises.readFile(rootPaperRetrievalSkillPath, 'utf8'), /mcp__hikari__paper_intake_search_summaries/);
+        assert.match(await fsPromises.readFile(rootPaperRetrievalSkillPath, 'utf8'), /source_paths\.paper_md/);
+        assert.match(await fsPromises.readFile(projectProtocolSkillPath, 'utf8'), /name: "hikari-protocol-generation"/);
+        assert.match(await fsPromises.readFile(projectNotebookSkillPath, 'utf8'), /name: "hikari-notebook-draft"/);
+        assert.match(await fsPromises.readFile(projectPaperRetrievalSkillPath, 'utf8'), /name: "hikari-paper-retrieval"/);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+    test('storage hydration keeps lookups alive when project root scan is permission denied', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-project-permission-'));
+      const dataFilePath = path.join(tempDir, 'hikari-data.json');
+      const projectRootPath = path.join(tempDir, 'Project');
+      const originalReaddir = fsPromises.readdir;
+      try {
+        await fsPromises.mkdir(projectRootPath, { recursive: true });
+        await fsPromises.writeFile(dataFilePath, JSON.stringify({
+          settings: { storagePath: tempDir },
+          inventory: { Freezer: [{ id: 'item-1', name: 'Electrocompetent cells' }] }
+        }, null, 2), 'utf8');
+        fsPromises.readdir = async (targetPath, ...args) => {
+          if (path.resolve(String(targetPath || '')) === path.resolve(projectRootPath)) {
+            const error = new Error(`EPERM: operation not permitted, scandir '${projectRootPath}'`);
+            error.code = 'EPERM';
+            throw error;
+          }
+          return originalReaddir.call(fsPromises, targetPath, ...args);
+        };
+
+        const hydrated = await bundleHelpers.hydrateSnapshotFromBundle({
+          dataFilePath,
+          snapshot: {
+            settings: { storagePath: tempDir },
+            inventory: {}
+          }
+        });
+
+        assert.equal(hydrated.snapshot.settings.storagePath, tempDir);
+        assert.equal(hydrated.migration.warnings.some((warning) => /Permission denied reading project root/.test(warning)), true);
+      } finally {
+        fsPromises.readdir = originalReaddir;
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+    test('storage hydration keeps lookups alive when workflow index read is permission denied', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-workflow-permission-'));
+      const dataFilePath = path.join(tempDir, 'hikari-data.json');
+      const workflowIndexPath = path.join(tempDir, 'Workflow', 'workflow-status.sqlite');
+      const originalReadFile = fsPromises.readFile;
+      try {
+        await fsPromises.mkdir(path.dirname(workflowIndexPath), { recursive: true });
+        await fsPromises.writeFile(dataFilePath, JSON.stringify({
+          settings: { storagePath: tempDir },
+          inventory: { Freezer: [{ id: 'item-1', name: 'Electrocompetent cells' }] }
+        }, null, 2), 'utf8');
+        fsPromises.readFile = async (targetPath, ...args) => {
+          if (path.resolve(String(targetPath || '')) === path.resolve(workflowIndexPath)) {
+            const error = new Error(`EPERM: operation not permitted, open '${workflowIndexPath}'`);
+            error.code = 'EPERM';
+            throw error;
+          }
+          return originalReadFile.call(fsPromises, targetPath, ...args);
+        };
+
+        const hydrated = await bundleHelpers.hydrateSnapshotFromBundle({
+          dataFilePath,
+          snapshot: {
+            settings: { storagePath: tempDir },
+            inventory: {}
+          }
+        });
+
+        assert.equal(hydrated.snapshot.settings.storagePath, tempDir);
+        assert.equal(hydrated.migration.warnings.some((warning) => /Permission denied reading workflow status index/.test(warning)), true);
+      } finally {
+        fsPromises.readFile = originalReadFile;
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
     test('storage bundle helper sync + hydrate roundtrip restores protocols notebook inventory and samples from folders/sqlite', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
@@ -94,7 +284,26 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       try {
         const sourceSnapshot = {
           protocols: [{ id: 'protocol-1', name: 'Protein Purification', purpose: 'Affinity purification flow.', steps: ['Bind sample', 'Wash', 'Elute'], materials: ['Buffer A'] }],
-          notebookEntries: [{ id: 'note-1', protocolId: 'protocol-1', protocolName: 'Protein Purification', projectId: 'proj-1', projectName: 'Atlas', result: 'Yield improved by 20%.', updatedAt: '2026-03-20T10:00:00.000Z' }],
+          notebookEntries: [{
+            id: 'note-1',
+            protocolId: 'protocol-1',
+            protocolName: 'Protein Purification',
+            projectId: 'proj-1',
+            projectName: 'Atlas',
+            result: 'Yield improved by 20%.',
+            toolCalculations: [{
+              id: 'calc-1',
+              type: 'molarity',
+              mode: 'mass',
+              title: 'Molarity - Mass',
+              result: 'Mass needed: 584.4 mg.',
+              formula: 'mass = 10 mM x 1 L x 58.44 g/mol',
+              summary: 'Mass needed: 584.4 mg.',
+              inputs: { concentrationValue: 10, concentrationUnit: 'mM' },
+              createdAt: '2026-03-20T10:05:00.000Z'
+            }],
+            updatedAt: '2026-03-20T10:00:00.000Z'
+          }],
           labInventory: {
             chemicals: [{ id: 'chem-1', name: 'Imidazole', casNumber: '288-32-4', amountInStock: '500 g', location: 'Shelf 4', vendor: 'TCI' }],
             blocks: [{ index: 1, timestamp: '2026-03-20T10:00:00.000Z', action: 'UPSERT_CHEMICAL', hash: 'hash-1' }],
@@ -120,6 +329,10 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         };
         await bundleHelpers.syncBundleFromSnapshot({ dataFilePath, snapshot: sourceSnapshot });
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', 'MEMORY.md'));
+        await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills'));
+        await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md'));
+        await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md'));
+        await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-paper-retrieval', 'SKILL.md'));
         await fsPromises.access(path.join(tempDir, 'KnowledgeBase', 'papers.md'));
         const samplesPath = path.join(tempDir, 'Samples', 'samples.json');
         const samplesPayload = JSON.parse(await fsPromises.readFile(samplesPath, 'utf8'));
@@ -142,6 +355,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         assert.equal(hydrated.snapshot.protocols.length, 1);
         assert.equal(Array.isArray(hydrated.snapshot?.notebookEntries), true);
         assert.equal(hydrated.snapshot.notebookEntries.length, 1);
+        assert.equal(hydrated.snapshot.notebookEntries[0].toolCalculations[0].result, 'Mass needed: 584.4 mg.');
         assert.equal(Array.isArray(hydrated.snapshot?.labInventory?.chemicals), true);
         assert.equal(hydrated.snapshot.labInventory.chemicals.length, 1);
         assert.equal(Array.isArray(hydrated.snapshot?.inventory?.['Room Temp']), true);
@@ -165,6 +379,10 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         assert.equal(recordSearch.usedSqlite, true);
         assert.equal(recordSearch.items.length > 0, true);
         assert.equal(recordSearch.items.some((item) => item.record_type === 'protocol'), true);
+
+        const calculationSearch = await lookupRuntime.searchRecordIndex({ dataFilePath, snapshot: compactSnapshot, query: '584.4 mg', searchTerms: ['584.4', 'mg'], limit: 6 });
+        assert.equal(calculationSearch.usedSqlite, true);
+        assert.equal(calculationSearch.items.some((item) => item.record_type === 'notebook'), true);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -281,7 +499,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
           'Updated: 2026-04-20T10:30:00.000Z'
         ].join('\n'), 'utf8');
         await fsPromises.writeFile(path.join(notebookFolder, 'page.json'), JSON.stringify({
-          schema_name: 'enana_notebook_pages',
+          schema_name: 'hikari_notebook_pages',
           schema_version: '1.0.0',
           updated_at: '2026-04-20T10:30:00.000Z',
           notebookEntry: {
@@ -300,7 +518,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         }, null, 2), 'utf8');
         await fsPromises.mkdir(path.join(tempDir, 'Samples'), { recursive: true });
         await fsPromises.writeFile(path.join(tempDir, 'Samples', 'samples.json'), JSON.stringify({
-          schema_name: 'enana_samples',
+          schema_name: 'hikari_samples',
           schema_version: '1.0.0',
           updated_at: '2026-04-20T10:30:00.000Z',
           samples: [{
@@ -422,7 +640,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
-    test('storage root importer reads Testdata-like bundles and writes manifest with non-zero summary counts', async () => {
+    test('storage root importer reads supported Testdata-like bundles and writes manifest with non-zero summary counts', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
       const fixtureRoot = path.join(__dirname, 'Testdata');
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-import-fixture-'));
@@ -431,7 +649,6 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         const result = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
         assert.equal(result.summary.protocols > 0, true);
         assert.equal(result.summary.notebookEntries > 0, true);
-        assert.equal(result.summary.chemicals > 0, true);
         assert.equal(result.summary.sequenceEntries > 0, true);
         assert.equal(result.summary.personalInventoryContainers > 0, true);
         assert.equal(Array.isArray(result.statePatch?.protocols), true);
@@ -465,12 +682,12 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
     test('chemical inventory sync uses sqlite-only bundle writes instead of a chemical json file', () => {
       const preloadSource = readPreloadStorageSource();
       const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8');
-      const chemicalInventorySource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'lab-common-inventory', 'index.js'), 'utf8');
+      const chemicalSqliteSyncSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'lab-common-inventory', 'sqlite-sync.js'), 'utf8');
       assert.match(preloadSource, /syncSqliteBundle:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(STORAGE\.SYNC_SQLITE_BUNDLE, payload\)/);
       assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.SYNC_SQLITE_BUNDLE/);
-      assert.match(chemicalInventorySource, /window\.enanaApi\?\.syncSqliteBundle/);
-      assert.match(chemicalInventorySource, /const targetPath = `\$\{normalizedRoot\}\/hikari-chemicals\.index\.sqlite`;/);
-      assert.equal(chemicalInventorySource.includes('hikari-chemicals.ena.json'), false);
+      assert.match(chemicalSqliteSyncSource, /window\.hikariApi\?\.syncSqliteBundle/);
+      assert.match(chemicalSqliteSyncSource, /const targetPath = `\$\{normalizedRoot\}\/hikari-chemicals\.index\.sqlite`;/);
+      assert.equal(chemicalSqliteSyncSource.includes('hikari-chemicals.ena.json'), false);
     });
   }
 };

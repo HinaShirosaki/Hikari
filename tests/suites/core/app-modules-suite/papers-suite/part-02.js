@@ -22,6 +22,7 @@ function buildFakePapersViewerFactory() {
         onPlacement: elements.onPlacement,
         onPinSelect: elements.onPinSelect,
         onHighlightSelection: elements.onHighlightSelection,
+        onSelectionSearch: elements.onSelectionSearch,
         onMetadataResolved: elements.onMetadataResolved,
         onClose: elements.onClose
       };
@@ -121,7 +122,25 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     'paper-viewer-highlight-btn',
     'paper-viewer-summarize-btn',
     'paper-viewer-zoom-label',
-    'paper-viewer-open-btn',
+    'paper-selection-menu',
+    'paper-selection-comment-btn',
+    'paper-selection-highlight-btn',
+    'paper-selection-underline-btn',
+    'paper-selection-search-btn',
+    'paper-selection-ask-btn',
+    'paper-selection-search-popover',
+    'paper-selection-search-pdf-btn',
+    'paper-selection-search-library-btn',
+    'paper-selection-search-nav',
+    'paper-selection-search-prev-btn',
+    'paper-selection-search-next-btn',
+    'paper-selection-search-count',
+    'paper-selection-search-results',
+    'paper-selection-comment-popover',
+    'paper-selection-comment-text',
+    'paper-selection-comment-save-btn',
+    'paper-selection-comment-cancel-btn',
+    'paper-highlight-comment-popover',
     'paper-comment-panel',
     'paper-comment-toggle-btn',
     'paper-comment-sidebar',
@@ -188,14 +207,14 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     settings: {
       personalInfo: {
         name: 'Alice Scientist',
-        enanaEmail: 'alice@enana.test'
+        hikariEmail: 'alice@hikari.test'
       },
       llm: {}
     }
   };
   const window = {
     alert() {},
-    enanaApi: {},
+    hikariApi: {},
     prompt() {
       return promptQueue.length ? promptQueue.shift() : '';
     },
@@ -203,7 +222,7 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
       return confirmResult;
     }
   };
-  const papersModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'papers-management.js'), {
+  const papersModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'index.js'), {
     document,
     window
   });
@@ -249,72 +268,6 @@ async function openPaperInHarness(harness) {
   await flushAsync();
   await flushAsync();
 }
-test('papers module deletes the selected pinned page comment', async () => {
-  const existingComment = {
-    id: 'comment-1',
-    pageNumber: 1,
-    anchorX: 0.15,
-    anchorY: 0.45,
-    text: 'Delete me.',
-    author: 'Alice Scientist',
-    createdAt: '2026-03-22T17:00:00.000Z',
-    updatedAt: '2026-03-22T17:00:00.000Z'
-  };
-  const harness = buildPapersManagementHarness({
-    comments: [existingComment]
-  });
-  const deleteBtn = harness.document.getElementById('paper-comment-delete-btn');
-
-  await openPaperInHarness(harness);
-  harness.viewerFactory.selectPin(existingComment);
-  trigger(deleteBtn, 'click');
-
-  assert.equal(harness.state.papers[0].comments.length, 0);
-  assert.equal(harness.viewerFactory.controller.comments.length, 0);
-  assert.match(harness.document.getElementById('paper-comment-list').innerHTML, /No comments on page 1 yet/);
-});
-test('papers module scopes sidebar comments to the active PDF page', async () => {
-  const harness = buildPapersManagementHarness({
-    comments: [
-      {
-        id: 'comment-1',
-        pageNumber: 1,
-        anchorX: 0.15,
-        anchorY: 0.45,
-        text: 'Page one note.',
-        author: 'Alice Scientist',
-        createdAt: '2026-03-22T17:00:00.000Z',
-        updatedAt: '2026-03-22T17:00:00.000Z'
-      },
-      {
-        id: 'comment-2',
-        pageNumber: 2,
-        anchorX: 0.55,
-        anchorY: 0.65,
-        text: 'Page two note.',
-        author: 'Alice Scientist',
-        createdAt: '2026-03-22T18:00:00.000Z',
-        updatedAt: '2026-03-22T18:00:00.000Z'
-      }
-    ]
-  });
-  const commentPage = harness.document.getElementById('paper-comment-page');
-  const commentCount = harness.document.getElementById('paper-comment-count');
-  const commentList = harness.document.getElementById('paper-comment-list');
-
-  await openPaperInHarness(harness);
-  assert.equal(commentPage.textContent, 'Page 1');
-  assert.equal(commentCount.textContent, '1 comment on this page');
-  assert.match(commentList.innerHTML, /Page one note/);
-  assert.equal(/Page two note/.test(commentList.innerHTML), false);
-
-  harness.viewerFactory.emitPageChange(2);
-
-  assert.equal(commentPage.textContent, 'Page 2');
-  assert.equal(commentCount.textContent, '1 comment on this page');
-  assert.match(commentList.innerHTML, /Page two note/);
-  assert.equal(/Page one note/.test(commentList.innerHTML), false);
-});
 test('papers module syncs stored highlights into the PDF viewer when a paper opens', async () => {
   const harness = buildPapersManagementHarness();
   harness.state.papers[0].highlights = [
@@ -379,6 +332,325 @@ test('papers highlight normalizer derives boxes from stored quad points', () => 
   assert.deepEqual(JSON.parse(JSON.stringify(highlights[0].boxes)), [
     { x: 0.1, y: 0.2, width: 0.3, height: 0.04 }
   ]);
+});
+test('papers highlighted text copy helper merges PDF line wraps and preserves paragraphs', async () => {
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+  );
+  const source = 'The highlighted\\ntext is organ-\\nized across PDF lines.\\n\\nSecond paragraph.';
+  const expected = 'The highlighted text is organized across PDF lines.\n\nSecond paragraph.';
+  const writes = [];
+
+  assert.equal(viewerModule.normalizePdfHighlightText(source), expected);
+  assert.equal(await viewerModule.copyPdfHighlightText(source, {
+    clipboard: {
+      async writeText(value) {
+        writes.push(value);
+      }
+    }
+  }), true);
+  assert.deepEqual(writes, [expected]);
+});
+test('papers highlighted text hover markup includes an accessible copy action', () => {
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+  );
+  const markup = viewerModule.buildHighlightPopoverMarkup({
+    text: 'First PDF line\\nsecond PDF line'
+  });
+
+  assert.match(markup, /data-paper-highlight-copy/);
+  assert.match(markup, /aria-label="Copy highlighted text"/);
+  assert.match(markup, /First PDF line second PDF line/);
+});
+test('papers PDF selection search helper finds matching pages and next target', () => {
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+  );
+  const result = viewerModule.buildCurrentPdfSelectionSearchResult([
+    { pageNumber: 1, text: 'Selected kinase appears here. Selected kinase appears again.' },
+    { pageNumber: 2, text: 'A different pathway appears here.' },
+    { pageNumber: 3, text: 'The selected kinase returns in the discussion.' }
+  ], 'selected kinase', 1);
+
+  assert.equal(result.totalMatches, 3);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.pages)), [
+    { pageNumber: 1, count: 2 },
+    { pageNumber: 3, count: 1 }
+  ]);
+  assert.equal(result.targetPageNumber, 3);
+});
+test('papers PDF selection search terms omit short filler words and split hyphenated terms', () => {
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+  );
+  const terms = viewerModule.getPdfSelectionSearchTerms('the β-strand of P53 macrocycles');
+
+  assert.deepEqual(Array.from(terms), ['β-strand', 'strand', 'p53', 'macrocycles']);
+});
+test('papers PDF selection search match summary supports individual matched-word navigation', () => {
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+  );
+  const result = viewerModule.buildPdfSelectionSearchResultFromMatches([
+    { id: 'm3', pageNumber: 3, boxes: [{ x: 0.3, y: 0.2, width: 0.1, height: 0.02 }] },
+    { id: 'm1', pageNumber: 1, boxes: [{ x: 0.1, y: 0.4, width: 0.1, height: 0.02 }] },
+    { id: 'm2', pageNumber: 1, boxes: [{ x: 0.1, y: 0.2, width: 0.1, height: 0.02 }] }
+  ], 1);
+
+  assert.deepEqual(JSON.parse(JSON.stringify(result.pages)), [
+    { pageNumber: 1, count: 2 },
+    { pageNumber: 3, count: 1 }
+  ]);
+  assert.deepEqual(result.matches.map((match) => match.id), ['m2', 'm1', 'm3']);
+  assert.equal(result.targetMatchIndex, 2);
+});
+test('papers selection search popover omits result lists and keeps match arrows horizontal', () => {
+  const viewerSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js'),
+    'utf8'
+  );
+  const css = fs.readFileSync(
+    path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'),
+    'utf8'
+  );
+
+  assert.equal(viewerSource.includes('papers-selection-search-result-list'), false);
+  assert.equal(css.includes('papers-selection-search-result-list'), false);
+  assert.match(css, /\.papers-selection-search-nav\s*\{[\s\S]*display:\s*inline-flex;/);
+});
+test('papers selection search popover dismisses on outside document pointer down', () => {
+  const searchUiSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-search-ui-controller.js'),
+    'utf8'
+  );
+  const eventsSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-events-controller.js'),
+    'utf8'
+  );
+
+  assert.match(searchUiSource, /function handleDocumentPointerDown\(event\)/);
+  assert.match(searchUiSource, /selectionSearchPopover\?\.hidden === false/);
+  assert.match(searchUiSource, /!isSelectionSearchPopoverEvent\(event\)/);
+  assert.match(searchUiSource, /hideSelectionSearchPopover\(\)/);
+  assert.match(eventsSource, /doc\.addEventListener\('pointerdown', ctx\.handleDocumentPointerDown\)/);
+});
+test('papers PDF loading prefers stored bytes and compacts embedded PDF state', () => {
+  const actionsSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'actions.js'),
+    'utf8'
+  );
+  const storageApiSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'preload', 'api', 'storage-api.js'),
+    'utf8'
+  );
+  const dataRegistrarSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'),
+    'utf8'
+  );
+  const appState = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'app-state.js')
+  );
+  const resolveBytesBlock = actionsSource.slice(actionsSource.indexOf('async function resolvePaperPdfBytes'));
+
+  assert.match(storageApiSource, /readFileBytes:\s*\(path\) => ipcRenderer\.invoke\(STORAGE\.READ_FILE_BYTES/);
+  assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.READ_FILE_BYTES/);
+  assert.match(dataRegistrarSource, /bytes\.buffer\.slice\(bytes\.byteOffset,\s*bytes\.byteOffset \+ bytes\.byteLength\)/);
+  assert.match(dataRegistrarSource, /normalizeImportedDataBytes/);
+  assert.match(dataRegistrarSource, /dataBytes\?\.byteLength \? dataBytes : Buffer\.from\(dataBase64, 'base64'\)/);
+  assert.match(actionsSource, /const pdfBytes = await fileToBytes\(file\)/);
+  assert.match(actionsSource, /dataBytes:\s*pdfBytes\.buffer\.slice/);
+  assert.match(actionsSource, /pdfDataUrl:\s*''/);
+  assert.equal(actionsSource.includes('fileToDataUrl'), false);
+  assert.ok(resolveBytesBlock.indexOf('readFileBytes') >= 0);
+  assert.ok(resolveBytesBlock.indexOf('readFileBytes') < resolveBytesBlock.indexOf('parsePdfDataUrl(paper?.pdfDataUrl)'));
+
+  const normalized = appState.normalizePaperRecord({
+    id: 'paper-1',
+    storedRelativePath: 'Project/Atlas/Papers/paper.pdf',
+    pdfDataUrl: 'data:application/pdf;base64,AAAA'
+  });
+  assert.equal(normalized.pdfDataUrl, '');
+});
+test('papers PDF viewer virtualizes page rendering and prunes offscreen canvases', () => {
+  const renderSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-render-controller.js'),
+    'utf8'
+  );
+  const pageRecordsSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-records.js'),
+    'utf8'
+  );
+  const searchSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-search-execution-controller.js'),
+    'utf8'
+  );
+  const renderingSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-rendering.js'),
+    'utf8'
+  );
+  const navigationSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-pdf-navigation-controller.js'),
+    'utf8'
+  );
+
+  assert.match(renderSource, /const ACTIVE_PAGE_RENDER_BUFFER = 4/);
+  assert.match(renderSource, /const RETAINED_PAGE_RENDER_BUFFER = 8/);
+  assert.match(renderSource, /clearPageRecordsOutsideRange/);
+  assert.match(renderSource, /pendingNavigationPageNumber/);
+  assert.match(renderSource, /getActiveRenderRanges/);
+  assert.match(renderSource, /getPageRecordsInRanges\(renderRanges\)/);
+  assert.match(renderSource, /scheduleVisiblePageRender/);
+  assert.equal(renderSource.includes('for (const record of state.pageRecords)'), false);
+  assert.match(pageRecordsSource, /record\.canvas\.width = 0/);
+  assert.match(pageRecordsSource, /record\.canvas\.height = 0/);
+  assert.match(searchSource, /async function ensurePdfSearchTextLayers\(\)/);
+  assert.match(searchSource, /renderPageTextLayerRecord/);
+  assert.match(searchSource, /ctx\.pruneRenderedPageRecords\?\.\(\)/);
+  assert.equal(renderingSource.includes('isStale() || isLinkActivationEnabled() === false'), false);
+  assert.match(renderingSource, /if \(isLinkActivationEnabled\(\) === false\)/);
+  assert.match(navigationSource, /state\.pendingNavigationPageNumber = pageNumber/);
+});
+test('papers PDF link buttons remain active after later virtualized render passes', async () => {
+  const renderingModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-rendering.js'),
+    { URL }
+  );
+  const createdButtons = [];
+  const doc = {
+    createDocumentFragment() {
+      return {
+        children: [],
+        appendChild(child) {
+          this.children.push(child);
+        }
+      };
+    },
+    createElement(tagName) {
+      const element = {
+        tagName,
+        style: {},
+        attributes: {},
+        listeners: {},
+        type: '',
+        className: '',
+        title: '',
+        setAttribute(name, value) {
+          this.attributes[name] = String(value);
+        },
+        addEventListener(name, listener) {
+          this.listeners[name] = listener;
+        }
+      };
+      createdButtons.push(element);
+      return element;
+    }
+  };
+  const linkLayer = {
+    ownerDocument: doc,
+    innerHTML: '',
+    style: {},
+    replaceChildren(fragment) {
+      this.children = fragment.children;
+    }
+  };
+  const page = {
+    async getAnnotations() {
+      return [{ rect: [0, 0, 40, 12], url: 'https://example.com/article' }];
+    }
+  };
+  const viewport = {
+    width: 200,
+    height: 300,
+    convertToViewportRectangle(rect) {
+      return rect;
+    }
+  };
+  let stale = false;
+  let openedUrl = '';
+
+  await renderingModule.renderPageLinkLayer({
+    page,
+    viewport,
+    record: { linkLayer },
+    onExternalLink(url) {
+      openedUrl = url;
+    },
+    isLinkActivationEnabled: () => true,
+    isStale: () => stale
+  });
+  stale = true;
+  createdButtons[0].listeners.click({
+    preventDefault() {},
+    stopPropagation() {}
+  });
+
+  assert.equal(openedUrl, 'https://example.com/article');
+});
+test('papers database search matches selected text against stored paper records', () => {
+  const papersModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'index.js')
+  );
+  const matches = papersModule.searchPaperDatabaseForSelectedText([
+    {
+      id: 'paper-1',
+      title: 'Unrelated MAPK Paper',
+      linkedName: 'Cancer Study',
+      summary: 'A control paper about a different pathway.'
+    },
+    {
+      id: 'paper-2',
+      title: 'Macrocycle Scaffolds',
+      linkedName: 'Journal Club',
+      methodsExtract: [
+        { title: 'Synthesis', summary: 'A beta strand macrocycle scaffold was optimized by NMR.' }
+      ],
+      pdfBookmarks: [
+        { title: 'Conformational ensembles', pageNumber: 4 }
+      ]
+    }
+  ], 'beta strand macrocycle scaffold');
+
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].paperId, 'paper-2');
+  assert.equal(matches[0].title, 'Macrocycle Scaffolds');
+  assert.equal(matches[0].folderLabel, 'Journal Club');
+});
+test('papers module exposes selected text paper search to the PDF viewer', async () => {
+  const harness = buildPapersManagementHarness();
+  harness.state.papers.push({
+    id: 'paper-2',
+    title: 'Macrocycle Scaffolds',
+    fileName: 'macrocycle.pdf',
+    linkedType: 'project',
+    linkedId: 'p1',
+    linkedName: 'Cancer Study',
+    summary: 'A beta strand macrocycle scaffold was optimized by NMR.',
+    summaryStatus: 'idle',
+    methodsExtract: [],
+    keyReagents: [],
+    keyFigures: [],
+    comments: [],
+    highlights: [],
+    pdfDataUrl: 'data:application/pdf;base64,BBBB',
+    updatedAt: '2026-02-02T00:00:00.000Z'
+  });
+
+  await openPaperInHarness(harness);
+  const result = await harness.viewerFactory.controller.callbacks.onSelectionSearch({
+    scope: 'library',
+    text: 'beta strand macrocycle scaffold'
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.matches[0].paperId, 'paper-2');
+
+  await harness.viewerFactory.controller.callbacks.onSelectionSearch({
+    scope: 'open-paper',
+    paperId: 'paper-2'
+  });
+
+  assert.equal(harness.viewerFactory.controller.activePaperId, 'paper-2');
 });
 test('papers module renders embedded PDF metadata in the right-rail summary section', async () => {
   const harness = buildPapersManagementHarness();

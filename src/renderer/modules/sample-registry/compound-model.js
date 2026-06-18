@@ -41,7 +41,7 @@ export function formatCompoundStructureSummary(structure) {
 }
 
 export function buildCompoundClipboardNotFoundMessage(formats = []) {
-  const base = 'No CDXML, MOL, SDF, SMILES, InChI, or ChemDraw image found on the clipboard.';
+  const base = 'No MOL, SDF, SMILES, or copied structure image found on the clipboard.';
   const visibleFormats = Array.from(new Set((Array.isArray(formats) ? formats : [])
     .map((format) => String(format || '').trim())
     .filter(Boolean)));

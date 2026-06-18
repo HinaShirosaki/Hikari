@@ -12,7 +12,7 @@ test('lab-management supports member create, edit, and delete lifecycle', () => 
     'member-name',
     'member-institution-email',
     'member-position',
-    'member-enana-email',
+    'member-hikari-email',
     'member-cancel-btn',
     'member-cards'
   ]);
@@ -21,9 +21,9 @@ test('lab-management supports member create, edit, and delete lifecycle', () => 
   const memberName = document.getElementById('member-name');
   const memberInstitutionEmail = document.getElementById('member-institution-email');
   const memberPosition = document.getElementById('member-position');
-  const memberEnanaEmail = document.getElementById('member-enana-email');
+  const memberHikariEmail = document.getElementById('member-hikari-email');
   const memberCards = document.getElementById('member-cards');
-  wireFormReset(memberForm, [memberName, memberInstitutionEmail, memberPosition, memberEnanaEmail]);
+  wireFormReset(memberForm, [memberName, memberInstitutionEmail, memberPosition, memberHikariEmail]);
 
   let persistCalls = 0;
   const state = { members: [] };
@@ -42,7 +42,7 @@ test('lab-management supports member create, edit, and delete lifecycle', () => 
   memberName.value = '  Alice <Admin>  ';
   memberInstitutionEmail.value = 'alice@example.edu';
   memberPosition.value = 'PI';
-  memberEnanaEmail.value = 'alice@enana.test';
+  memberHikariEmail.value = 'alice@hikari.test';
   trigger(memberForm, 'submit');
 
   assert.equal(state.members.length, 1);
@@ -155,15 +155,13 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
   assert.match(inventorySections.innerHTML, /value="chemical">Chemical/);
   assert.doesNotMatch(inventorySections.innerHTML, />Compound</);
 
-  const existingStructureBtn = inventorySections.querySelector('[data-inventory-sample-structure-open]');
   const existingStructurePasteBtn = inventorySections.querySelector('[data-inventory-sample-structure-paste]');
-  assert.equal(Boolean(existingStructureBtn.hidden), true);
   assert.equal(Boolean(existingStructurePasteBtn.hidden), true);
   const existingTypeInput = inventorySections.querySelector('[data-well-sample-type]');
   existingTypeInput.value = 'chemical';
   trigger(existingTypeInput, 'change');
-  assert.equal(Boolean(existingStructureBtn.hidden), false);
   assert.equal(Boolean(existingStructurePasteBtn.hidden), false);
+  assert.equal(existingStructurePasteBtn.textContent, 'Paste Structure');
 
   inventorySections.querySelector('[data-well-sample-code]').value = 'S-UPDATED-1';
   inventorySections.querySelector('[data-well-sample-name]').value = 'Updated Sample';
@@ -247,15 +245,13 @@ test('personal-inventory creates a linked sample from the side editor for an emp
   assert.match(inventorySections.innerHTML, /data-well-sample-create="0"/);
   assert.match(inventorySections.innerHTML, /value="chemical">Chemical/);
   assert.doesNotMatch(inventorySections.innerHTML, />Compound</);
-  const newStructureBtn = inventorySections.querySelector('[data-inventory-sample-structure-open]');
   const newStructurePasteBtn = inventorySections.querySelector('[data-inventory-sample-structure-paste]');
-  assert.equal(Boolean(newStructureBtn.hidden), true);
   assert.equal(Boolean(newStructurePasteBtn.hidden), true);
   const newTypeInput = inventorySections.querySelector('[data-well-sample-new-type]');
   newTypeInput.value = 'chemical';
   trigger(newTypeInput, 'change');
-  assert.equal(Boolean(newStructureBtn.hidden), false);
   assert.equal(Boolean(newStructurePasteBtn.hidden), false);
+  assert.equal(newStructurePasteBtn.textContent, 'Paste Structure');
 
   inventorySections.querySelector('[data-well-sample-new-code]').value = 'S-NEW-1';
   inventorySections.querySelector('[data-well-sample-new-name]').value = 'Created Sample';
@@ -278,7 +274,112 @@ test('personal-inventory creates a linked sample from the side editor for an emp
   assert.ok(persistCalls >= 1);
   assert.equal(sampleChangedCalls, 1);
 });
-test('personal-inventory previews a pasted ChemDraw image before saving a chemical sample', async () => {
+test('personal-inventory fills a well by dragging a saved sample', () => {
+  const document = createMockDocument([
+    'inventory-sections',
+    'container-detail',
+    'inventory-add-container-btn',
+    'inventory-add-container-form',
+    'inventory-add-container-name',
+    'inventory-add-container-location',
+    'inventory-add-container-type',
+    'inventory-add-container-cancel'
+  ]);
+  const inventorySections = document.getElementById('inventory-sections');
+  const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'index.js'), {
+    document
+  });
+
+  let persistCalls = 0;
+  let sampleChangedCalls = 0;
+  const state = {
+    samples: [
+      {
+        id: 'sample-drag',
+        code: 'S-DRAG',
+        name: 'Saved Drag Sample',
+        type: 'plasmid',
+        location: null,
+        inventoryLink: null,
+        chemicalLinks: [],
+        updatedAt: '2026-03-01T00:00:00.000Z'
+      }
+    ],
+    inventory: {
+      'Room Temp': [],
+      '4 Degree': [],
+      '-20 Degree': [
+        {
+          id: 'box-drag',
+          name: 'Box Drag',
+          type: 'box81',
+          wells: [
+            { name: 'A1', content: '' },
+            { name: 'A2', content: '' }
+          ]
+        }
+      ],
+      '-80 Degree': [],
+      'Liquid Nitrogen': []
+    }
+  };
+  const personalInventory = inventoryModule.initPersonalInventory({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    createId: () => 'container-drag',
+    safeText: shared.safeText,
+    cssEscape: shared.cssEscape,
+    onSamplesChanged: () => {
+      sampleChangedCalls += 1;
+    }
+  });
+
+  personalInventory.renderSections();
+  const openBtn = inventorySections.querySelectorAll('[data-container-open]')[0];
+  openBtn.dataset.section = '-20 Degree';
+  trigger(openBtn, 'click');
+  const firstWellBtn = inventorySections.querySelectorAll('[data-well-index]')[0];
+  firstWellBtn.dataset.section = '-20 Degree';
+  firstWellBtn.dataset.containerId = 'box-drag';
+  trigger(firstWellBtn, 'click');
+
+  assert.match(inventorySections.innerHTML, /data-saved-sample-drag="sample-drag"/);
+
+  const transferStore = new Map();
+  const dataTransfer = {
+    effectAllowed: '',
+    dropEffect: '',
+    setData(type, value) {
+      transferStore.set(type, String(value));
+    },
+    getData(type) {
+      return transferStore.get(type) || '';
+    }
+  };
+  const sampleChip = inventorySections.querySelector('[data-saved-sample-drag]');
+  const secondWellBtn = inventorySections.querySelectorAll('[data-well-index]')[1];
+  secondWellBtn.dataset.section = '-20 Degree';
+  secondWellBtn.dataset.containerId = 'box-drag';
+  trigger(sampleChip, 'dragstart', { dataTransfer });
+  trigger(secondWellBtn, 'dragover', { dataTransfer });
+  assert.equal(secondWellBtn.classList.contains('well-drag-over'), true);
+  trigger(secondWellBtn, 'drop', { dataTransfer });
+
+  assert.equal(state.samples[0].inventoryLink.section, '-20 Degree');
+  assert.equal(state.samples[0].inventoryLink.containerId, 'box-drag');
+  assert.equal(state.samples[0].inventoryLink.wellIndex, 1);
+  assert.equal(state.samples[0].location.storageType, 'freezer');
+  assert.equal(state.samples[0].location.freezer, '-20 Degree');
+  assert.equal(state.samples[0].location.rack, '');
+  assert.equal(state.samples[0].location.box, 'Box Drag');
+  assert.equal(state.samples[0].location.position, 'A2');
+  assert.equal(persistCalls, 1);
+  assert.equal(sampleChangedCalls, 1);
+  assert.match(inventorySections.innerHTML, /Filled A2 with S-DRAG/);
+});
+test('personal-inventory previews a copied structure image before saving a chemical sample', async () => {
   const document = createMockDocument([
     'inventory-sections',
     'container-detail',
@@ -293,7 +394,7 @@ test('personal-inventory previews a pasted ChemDraw image before saving a chemic
   const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'index.js'), {
     document,
     window: {
-      enanaApi: {
+      hikariApi: {
         readChemicalClipboard: async () => ({
           formats: ['public.tiff'],
           candidates: [
@@ -375,11 +476,62 @@ test('personal-inventory previews a pasted ChemDraw image before saving a chemic
   assert.ok(persistCalls >= 1);
   assert.equal(sampleChangedCalls, 1);
 });
-test('chemical structure clipboard helper extracts ChemDraw CDXML and MOL text', async () => {
+test('sample-registry applies pasted SMILES, MOL/SDF, and copied images without editor hooks', async () => {
+  const compoundActions = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sample-registry', 'compound-actions.js'));
+  const molfile = [
+    'ethanol',
+    '  Hikari',
+    '',
+    '  3  2  0  0  0  0            999 V2000',
+    '    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0',
+    '    1.2000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0',
+    '    2.4000    0.0000    0.0000 O   0  0  0  0  0  0  0  0  0  0  0  0',
+    '  1  2  1  0  0  0  0',
+    '  2  3  1  0  0  0  0',
+    'M  END'
+  ].join('\n');
+  const createCtx = () => ({
+    compoundStructureDraft: { smiles: '', molfile: '', imageDataUrl: '' },
+    dom: {
+      sampleCompoundFields: new MockElement('sample-compound-fields'),
+      sampleCompoundPreview: new MockElement('sample-compound-preview'),
+      sampleCompoundPreviewImage: new MockElement('sample-compound-preview-image'),
+      sampleCompoundSmilesInput: new MockElement('sample-compound-smiles'),
+      sampleCompoundStatus: new MockElement('sample-compound-status'),
+      sampleTypeInput: { value: 'chemical' }
+    }
+  });
+
+  const smilesCtx = createCtx();
+  assert.equal(await compoundActions.applyCompoundStructurePasteCandidates(smilesCtx, [
+    { source: 'SMILES: CCO', sourceFormat: 'text', clipboardFormat: 'text/plain' }
+  ], ['text/plain']), true);
+  assert.equal(smilesCtx.compoundStructureDraft.smiles, 'CCO');
+  assert.equal(smilesCtx.dom.sampleCompoundSmilesInput.value, 'CCO');
+  assert.match(smilesCtx.dom.sampleCompoundStatus.textContent, /SMILES pasted/);
+
+  const molCtx = createCtx();
+  assert.equal(await compoundActions.applyCompoundStructurePasteCandidates(molCtx, [
+    { source: molfile, sourceFormat: 'molfile', clipboardFormat: 'chemical/x-mdl-molfile' }
+  ], ['chemical/x-mdl-molfile']), true);
+  assert.equal(molCtx.compoundStructureDraft.molfile.includes('M  END'), true);
+  assert.equal(molCtx.dom.sampleCompoundSmilesInput.value, 'Molfile only');
+  assert.match(molCtx.dom.sampleCompoundStatus.textContent, /MOL\/SDF structure pasted/);
+
+  const imageCtx = createCtx();
+  assert.equal(await compoundActions.applyCompoundStructurePasteCandidates(imageCtx, [
+    { source: 'data:image/png;base64,PASTEPNG', sourceFormat: 'image', imageDataUrl: 'data:image/png;base64,PASTEPNG', clipboardFormat: 'image/png' }
+  ], ['image/png']), true);
+  assert.equal(imageCtx.compoundStructureDraft.imageDataUrl, 'data:image/png;base64,PASTEPNG');
+  assert.equal(imageCtx.dom.sampleCompoundPreview.hidden, false);
+  assert.equal(imageCtx.dom.sampleCompoundPreviewImage.src, 'data:image/png;base64,PASTEPNG');
+  assert.match(imageCtx.dom.sampleCompoundStatus.textContent, /Structure image pasted/);
+});
+test('chemical structure clipboard helper extracts CDXML, MOL/SDF, SMILES, and images', async () => {
   const clipboardModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'chemical-structure-clipboard.js'));
   const molfile = [
     'ethanol',
-    '  Enana',
+    '  Hikari',
     '',
     '  3  2  0  0  0  0            999 V2000',
     '    0.0000    0.0000    0.0000 C   0  0  0  0  0  0  0  0  0  0  0  0',
@@ -403,9 +555,21 @@ test('chemical structure clipboard helper extracts ChemDraw CDXML and MOL text',
   assert.equal(candidates.some((candidate) => candidate.sourceFormat === 'smiles' && candidate.source === 'CCO'), true);
   assert.equal(candidates.some((candidate) => candidate.sourceFormat === 'image' && candidate.imageDataUrl.includes('MOCKCHEMDRAW')), true);
   assert.equal(imageCandidates[0].imageDataUrl.includes('SHARPCHEMDRAW'), true);
+  const smilesDraft = clipboardModule.toChemicalStructureDraftFromCandidate(candidates.find((candidate) => candidate.sourceFormat === 'smiles'));
+  assert.equal(smilesDraft.smiles, 'CCO');
+  assert.equal(smilesDraft.molfile, '');
+  assert.equal(smilesDraft.imageDataUrl, '');
+  assert.equal(
+    clipboardModule.toChemicalStructureDraftFromCandidate(candidates.find((candidate) => candidate.sourceFormat === 'molfile')).molfile.includes('M  END'),
+    true
+  );
+  assert.equal(
+    clipboardModule.toChemicalStructureDraftFromCandidate(candidates.find((candidate) => candidate.sourceFormat === 'image')).imageDataUrl.includes('SHARPCHEMDRAW'),
+    true
+  );
 
   const bridgeClipboard = await clipboardModule.readChemicalStructureClipboard({
-    enanaApi: {
+    hikariApi: {
       readChemicalClipboard: async () => ({
         formats: ['com.cambridgesoft.chemdraw', 'public.tiff'],
         candidates: [

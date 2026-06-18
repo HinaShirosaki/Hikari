@@ -29,8 +29,37 @@ const {
   callAskUser
 } = require('./ask-user.js');
 const {
-  APP_CATALOG_DIRECT_MCP_TOOLS
-} = require('./app-catalog-tools.js');
+  RECORD_LOOKUP_MCP_TOOL,
+  callRecordLookup
+} = require('./record-lookup.js');
+const {
+  NOTEBOOK_GENERATION_MCP_TOOL,
+  callNotebookGeneration
+} = require('./notebook-generation.js');
+const {
+  MEMORY_MCP_TOOL,
+  callMemory
+} = require('./memory.js');
+const {
+  LITERATURE_SEARCH_MCP_TOOL,
+  callLiteratureSearch
+} = require('./literature-search.js');
+const {
+  PURCHASE_RECOMMENDATION_MCP_TOOL,
+  callPurchaseRecommendation
+} = require('./purchase-recommendation.js');
+const {
+  PAPER_DOWNLOAD_MCP_TOOL,
+  callPaperDownload
+} = require('./paper-download.js');
+const {
+  PAPER_ANALYSIS_MCP_TOOL,
+  callPaperAnalysis
+} = require('./paper-analysis.js');
+const {
+  PAPER_INTAKE_DIRECT_MCP_TOOLS,
+  PAPER_INTAKE_DIRECT_MCP_TOOL_NAMES
+} = require('../../paper-intake/mcp-tools.js');
 
 const DIRECT_MCP_TOOLS = Object.freeze([
   {
@@ -61,7 +90,35 @@ const DIRECT_MCP_TOOLS = Object.freeze([
     definition: ASK_USER_MCP_TOOL,
     handler: callAskUser
   },
-  ...APP_CATALOG_DIRECT_MCP_TOOLS
+  {
+    definition: RECORD_LOOKUP_MCP_TOOL,
+    handler: callRecordLookup
+  },
+  {
+    definition: NOTEBOOK_GENERATION_MCP_TOOL,
+    handler: callNotebookGeneration
+  },
+  {
+    definition: MEMORY_MCP_TOOL,
+    handler: callMemory
+  },
+  {
+    definition: LITERATURE_SEARCH_MCP_TOOL,
+    handler: callLiteratureSearch
+  },
+  {
+    definition: PURCHASE_RECOMMENDATION_MCP_TOOL,
+    handler: callPurchaseRecommendation
+  },
+  {
+    definition: PAPER_DOWNLOAD_MCP_TOOL,
+    handler: callPaperDownload
+  },
+  {
+    definition: PAPER_ANALYSIS_MCP_TOOL,
+    handler: callPaperAnalysis
+  },
+  ...PAPER_INTAKE_DIRECT_MCP_TOOLS
 ]);
 
 const DIRECT_MCP_TOOL_NAMES = Object.freeze(
@@ -107,6 +164,7 @@ const createMcpLookupToolRouter = createDirectMcpToolRouter;
 module.exports = {
   DIRECT_MCP_TOOLS,
   DIRECT_MCP_TOOL_NAMES,
+  PAPER_INTAKE_DIRECT_MCP_TOOL_NAMES,
   getDirectMcpToolDefinitions,
   createDirectMcpToolRouter,
   MCP_LOOKUP_TOOLS,

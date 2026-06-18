@@ -493,7 +493,7 @@ function createAgentControllerUtils(deps = {}) {
       return fromSettings;
     }
 
-    const explicit = cleanText(process.env.ENANA_LLM_API_KEY, 300);
+    const explicit = cleanText(process.env.HIKARI_LLM_API_KEY, 300);
     if (explicit) {
       return explicit;
     }

@@ -222,7 +222,7 @@
 .project-contribution-legend-cell {
   width: var(--project-contribution-cell-size);
   height: var(--project-contribution-cell-size);
-  border: 1px solid var(--palette-rgba-42-36-29-a08);
+  border: 1px solid var(--palette-rgba-27-20-14-a08);
   border-radius: 3px;
   background: color-mix(in srgb, var(--surface-subtle) 68%, var(--palette-white));
 }
@@ -463,7 +463,7 @@
 .project-contribution-legend-cell {
   width: var(--project-contribution-cell-size);
   height: var(--project-contribution-cell-size);
-  border: 1px solid var(--palette-rgba-42-36-29-a08);
+  border: 1px solid var(--palette-rgba-27-20-14-a08);
   border-radius: 3px;
   background: color-mix(in srgb, var(--surface-subtle) 68%, var(--palette-white));
 }
@@ -519,33 +519,44 @@
   box-shadow: none;
 }
 
-body.theme-night #project-management-view .project-stat-card {
+body.theme-night #project-management-view .project-stat-card,
+body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-stat-card {
   background: color-mix(in srgb, var(--surface-elevated) 82%, var(--surface-subtle));
 }
 
 body.theme-night #project-management-view .project-contribution-cell,
-body.theme-night #project-management-view .project-contribution-legend-cell {
-  border-color: var(--palette-rgba-250-246-239-a12);
+body.theme-night #project-management-view .project-contribution-legend-cell,
+body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell,
+body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell {
+  border-color: var(--palette-rgba-255-255-255-a12);
   background: color-mix(in srgb, var(--surface-subtle) 70%, var(--palette-black));
 }
 
 body.theme-night #project-management-view .project-contribution-cell[data-level="1"],
-body.theme-night #project-management-view .project-contribution-legend-cell[data-level="1"] {
+body.theme-night #project-management-view .project-contribution-legend-cell[data-level="1"],
+body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="1"],
+body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="1"] {
   background: color-mix(in srgb, var(--accent) 45%, var(--surface-subtle));
 }
 
 body.theme-night #project-management-view .project-contribution-cell[data-level="2"],
-body.theme-night #project-management-view .project-contribution-legend-cell[data-level="2"] {
+body.theme-night #project-management-view .project-contribution-legend-cell[data-level="2"],
+body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="2"],
+body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="2"] {
   background: color-mix(in srgb, var(--accent) 62%, var(--surface-subtle));
 }
 
 body.theme-night #project-management-view .project-contribution-cell[data-level="3"],
-body.theme-night #project-management-view .project-contribution-legend-cell[data-level="3"] {
+body.theme-night #project-management-view .project-contribution-legend-cell[data-level="3"],
+body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="3"],
+body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="3"] {
   background: color-mix(in srgb, var(--accent) 78%, var(--surface-subtle));
 }
 
 body.theme-night #project-management-view .project-contribution-cell[data-level="4"],
-body.theme-night #project-management-view .project-contribution-legend-cell[data-level="4"] {
+body.theme-night #project-management-view .project-contribution-legend-cell[data-level="4"],
+body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="4"],
+body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="4"] {
   background: color-mix(in srgb, var(--accent) 94%, var(--palette-white));
 }
 

@@ -9,6 +9,9 @@ export function normalizeSearchToken(value) {
 export function buildViewAliasMap({ apps = [], normalizeViewId }) {
   const map = new Map();
   apps.forEach((app) => {
+    if (app?.hiddenFromNavigation === true) {
+      return;
+    }
     [
       app.id,
       app.label,
@@ -27,6 +30,9 @@ export function buildViewAliasMap({ apps = [], normalizeViewId }) {
 export function buildSearchScopeMap({ apps = [], normalizeViewId }) {
   const map = new Map();
   apps.forEach((app) => {
+    if (app?.hiddenFromNavigation === true) {
+      return;
+    }
     const target = {
       viewId: normalizeViewId(app.viewId),
       inputId: String(app.searchInputId || '').trim(),
@@ -154,7 +160,7 @@ export function createTopbarSearchController({
   const itemHandlers = openItemHandlers && typeof openItemHandlers === 'object'
     ? openItemHandlers
     : {};
-  const appSuggestionEntries = asArray(apps).map((app) => {
+  const appSuggestionEntries = asArray(apps).filter((app) => app?.hiddenFromNavigation !== true).map((app) => {
     const viewId = normalizeAppViewId(app?.viewId);
     const aliases = asArray(app?.aliases);
     return {
@@ -405,10 +411,10 @@ export function createTopbarSearchController({
         member?.name,
         member?.position,
         member?.institutionEmail,
-        member?.enanaEmail
+        member?.hikariEmail
       ].join(' '), {
         label,
-        sublabel: joinSublabel([member?.position, member?.institutionEmail || member?.enanaEmail]),
+        sublabel: joinSublabel([member?.position, member?.institutionEmail || member?.hikariEmail]),
         kind: 'Member',
         applyQuery: label
       });
@@ -721,11 +727,11 @@ export function createTopbarSearchController({
   }
 
   function initTelegramCommandBridge() {
-    if (!windowObject.enanaApi?.onTelegramCommand) {
+    if (!windowObject.hikariApi?.onTelegramCommand) {
       return;
     }
 
-    windowObject.enanaApi.onTelegramCommand((payload) => {
+    windowObject.hikariApi.onTelegramCommand((payload) => {
       handleTelegramCommand(payload);
     });
   }

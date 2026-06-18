@@ -1,4 +1,4 @@
-const LAST_ACTIVE_VIEW_STORAGE_KEY = 'enana_last_active_view_v1';
+const LAST_ACTIVE_VIEW_STORAGE_KEY = 'hikari_last_active_view_v1';
 const FIXED_ACCENT = '#647255';
 const FIXED_FOCUS = '#7a8a69';
 
@@ -20,12 +20,26 @@ export function applyAppearanceSnapshot(appearance, rootDocument = document) {
   rootDocument.body.classList.add('ui-neutral-compact');
 }
 
+function createNavigationAliasMap(aliases, normalize) {
+  const entries = aliases instanceof Map
+    ? Array.from(aliases.entries())
+    : Array.isArray(aliases)
+      ? aliases
+      : Object.entries(aliases || {});
+  return new Map(entries
+    .map(([sourceViewId, navigationViewId]) => [
+      normalize(sourceViewId),
+      normalize(navigationViewId)
+    ])
+    .filter(([sourceViewId, navigationViewId]) => sourceViewId && navigationViewId));
+}
+
 export function createNavigationShell({
   VIEWS,
   TITLES,
   APP_DOCK_ORDER,
   APP_REGISTRY,
-  sequenceViewerDetailViewId,
+  navigationViewAliases,
   moduleRuntime,
   sharedLeftRailRuntime,
   executeTopbarSearch,
@@ -35,13 +49,19 @@ export function createNavigationShell({
   windowObject = window
 }) {
   const normalize = (viewId) => normalizeViewId(VIEWS, viewId);
+  const navigationAliases = createNavigationAliasMap(navigationViewAliases, normalize);
+  const resolveNavigationViewId = (viewId) => {
+    const normalizedViewId = normalize(viewId);
+    return navigationAliases.get(normalizedViewId) || normalizedViewId;
+  };
   const appsById = new Map(APP_REGISTRY.map((app) => [app.id, app]));
   const appsByViewId = new Map(APP_REGISTRY.map((app) => [normalize(app.viewId), app]));
-  const validStartupViewIds = new Set(APP_REGISTRY.map((app) => normalize(app.viewId)));
+  const navigationApps = APP_REGISTRY.filter((app) => app.hiddenFromNavigation !== true);
+  const validStartupViewIds = new Set(navigationApps.map((app) => normalize(app.viewId)));
   const dockApps = APP_DOCK_ORDER
     .map((id) => appsById.get(id))
-    .filter(Boolean);
-  const moreApps = APP_REGISTRY.filter((app) => !APP_DOCK_ORDER.includes(app.id));
+    .filter((app) => app && app.hiddenFromNavigation !== true);
+  const moreApps = navigationApps.filter((app) => !APP_DOCK_ORDER.includes(app.id));
   const expandedDockApps = [...dockApps, ...moreApps];
 
   const pageTitle = documentObject.getElementById('page-title');
@@ -54,12 +74,15 @@ export function createNavigationShell({
   const appDockDivider = documentObject.querySelector('.app-dock-divider');
   const moreBtn = documentObject.getElementById('app-more-btn');
   const moreMenu = documentObject.getElementById('app-more-menu');
+  const agentChatRail = documentObject.getElementById('universal-agent-chat-rail');
+  const agentChatRailToggleBtn = documentObject.getElementById('agent-chat-rail-toggle-btn');
   const views = [...documentObject.querySelectorAll('.view')];
 
   let appNavButtons = [];
   let renderedDockApps = dockApps;
   let renderedOverflowApps = moreApps;
   let lastViewPersistenceEnabled = false;
+  let agentChatRailExpanded = false;
 
   function isValidStartupViewId(viewId) {
     return validStartupViewIds.has(normalize(String(viewId || '').trim()));
@@ -102,7 +125,54 @@ export function createNavigationShell({
   }
 
   function getAppForView(viewId) {
-    return appsByViewId.get(normalize(viewId)) || null;
+    return appsByViewId.get(resolveNavigationViewId(viewId)) || null;
+  }
+
+  function isAgentChatRailEnabledForView(viewId) {
+    const app = getAppForView(viewId);
+    return app?.agentChatRail === true;
+  }
+
+  function syncAgentChatRailExpansion(enabled) {
+    const expanded = enabled && agentChatRailExpanded;
+    documentObject.body.classList.toggle('has-agent-chat-rail-expanded', expanded);
+    if (agentChatRail) {
+      agentChatRail.classList.toggle('is-expanded', expanded);
+      agentChatRail.classList.toggle('is-collapsed', enabled && !expanded);
+      agentChatRail.dataset.state = expanded ? 'expanded' : 'collapsed';
+    }
+    if (agentChatRailToggleBtn) {
+      agentChatRailToggleBtn.textContent = expanded ? '>' : '<';
+      agentChatRailToggleBtn.setAttribute('aria-expanded', String(expanded));
+      const label = expanded ? 'Fold agent chat rail' : 'Open agent chat rail';
+      agentChatRailToggleBtn.setAttribute('aria-label', label);
+      agentChatRailToggleBtn.title = expanded ? 'Fold chat' : 'Open chat';
+    }
+    return expanded;
+  }
+
+  function setAgentChatRailExpanded(expanded) {
+    agentChatRailExpanded = Boolean(expanded);
+    const enabled = documentObject.body.classList.contains('has-agent-chat-rail');
+    const visibleExpanded = syncAgentChatRailExpansion(enabled);
+    if (visibleExpanded) {
+      moduleRuntime.renderAgentChatRail?.();
+    }
+    sharedLeftRailRuntime.syncWidth();
+  }
+
+  function openAgentChatRail() {
+    setAgentChatRailExpanded(true);
+  }
+
+  function syncAgentChatRailState(activeViewId) {
+    const enabled = isAgentChatRailEnabledForView(activeViewId);
+    documentObject.body.classList.toggle('has-agent-chat-rail', enabled);
+    if (agentChatRail) {
+      agentChatRail.hidden = !enabled;
+      agentChatRail.setAttribute('aria-hidden', enabled ? 'false' : 'true');
+    }
+    return syncAgentChatRailExpansion(enabled);
   }
 
   function createInlineIcon(iconMarkup) {
@@ -236,9 +306,7 @@ export function createNavigationShell({
   }
 
   function syncNavigationState(activeViewId) {
-    const activeNavView = activeViewId === sequenceViewerDetailViewId
-      ? VIEWS.SEQUENCE_VIEWER
-      : activeViewId;
+    const activeNavView = resolveNavigationViewId(activeViewId);
     const activeApp = getAppForView(activeNavView);
     appNavButtons.forEach((button) => {
       const buttonView = normalize(button.dataset.view);
@@ -429,8 +497,9 @@ export function createNavigationShell({
       view.classList.toggle('is-active', active);
     });
 
-    const activeNavView = nextView === sequenceViewerDetailViewId ? VIEWS.SEQUENCE_VIEWER : nextView;
+    const activeNavView = resolveNavigationViewId(nextView);
     const activeApp = getAppForView(activeNavView);
+    const agentChatRailEnabled = syncAgentChatRailState(activeNavView);
     const dockCapacity = getDockCapacity();
     const activeVisibleInDock = Boolean(activeApp && renderedDockApps.some((app) => app.id === activeApp.id));
     if (activeApp && APP_DOCK_ORDER.includes(activeApp.id) && !activeVisibleInDock && dockCapacity < dockApps.length) {
@@ -438,7 +507,7 @@ export function createNavigationShell({
     }
     syncNavigationState(activeNavView);
 
-    const subtitleView = nextView === sequenceViewerDetailViewId ? VIEWS.SEQUENCE_VIEWER : nextView;
+    const subtitleView = activeNavView;
     if (pageTitle) {
       pageTitle.textContent = activeApp?.label || 'Home';
     }
@@ -450,6 +519,9 @@ export function createNavigationShell({
     }
     closeMoreMenu();
     moduleRuntime.renderView(nextView);
+    if (agentChatRailEnabled) {
+      moduleRuntime.renderAgentChatRail?.();
+    }
     sharedLeftRailRuntime.ensureHandles();
     sharedLeftRailRuntime.syncWidth();
     syncSharedLeftRailShellChrome();
@@ -469,6 +541,10 @@ export function createNavigationShell({
       event.stopPropagation();
       toggleMoreMenu();
     });
+    agentChatRailToggleBtn?.addEventListener('click', () => {
+      setAgentChatRailExpanded(!agentChatRailExpanded);
+    });
+    documentObject.addEventListener('hikari:open-agent-chat-rail', openAgentChatRail);
     exitBtn?.addEventListener('click', () => windowObject.close());
     if (topbarSearchInput) {
       topbarSearchInput.setAttribute('role', 'combobox');
@@ -604,7 +680,7 @@ export function createNavigationShell({
     lastViewPersistenceEnabled = true;
   }
 
-  windowObject.addEventListener('enana:appearance-changed', () => {
+  windowObject.addEventListener('hikari:appearance-changed', () => {
     showView(getActiveViewId());
   });
 
@@ -614,6 +690,7 @@ export function createNavigationShell({
     getActiveViewId,
     initNavigation,
     normalizeViewId: normalize,
+    openAgentChatRail,
     renderAppNavigation,
     resolveStartupViewId,
     setSearchInputValue,

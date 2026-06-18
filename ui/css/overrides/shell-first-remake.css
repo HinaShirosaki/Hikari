@@ -101,11 +101,11 @@
 }
 
 #tool-box-view .crispr-risk-low {
-  color: var(--palette-hex-45533a);
+  color: var(--strong);
 }
 
 #tool-box-view .crispr-risk-medium {
-  color: var(--palette-hex-72562b);
+  color: var(--muted);
 }
 
 #tool-box-view .crispr-risk-high {
@@ -135,47 +135,38 @@
 
 #assay-view .assay-plate-table th,
 #assay-view .assay-plate-table td {
-  border-color: var(--line);
+  border-color: var(--assay-plate-line-soft);
 }
 
 #assay-view .assay-plate-table th,
 #assay-view .assay-plate-editor-row th {
-  background: var(--surface-subtle);
+  background: var(--assay-plate-header);
 }
 
 #assay-view .assay-well {
-  background: var(--surface-elevated);
+  background: var(--assay-plate-surface);
 }
 
-#assay-view .assay-well-meta,
-#gel-view .gel-step-list li {
-  color: var(--muted);
+#assay-view .assay-well-meta {
+  color: var(--assay-plate-meta);
 }
 
 #assay-view .assay-result-disabled {
-  background: var(--surface-subtle);
+  background: var(--assay-plate-disabled-bg);
   color: var(--muted);
 }
 
 #assay-view .assay-analysis-chart .rv-xy-plot__grid-lines__line {
-  stroke: color-mix(in srgb, var(--line) 85%, transparent);
+  stroke: var(--assay-plate-line);
 }
 
 #assay-view .assay-analysis-chart .rv-xy-plot__axis__line,
 #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__line {
-  stroke: var(--line);
+  stroke: var(--assay-plate-line-strong);
 }
 
 #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__text {
   fill: var(--muted);
-}
-
-#gel-view .gel-step-list li.is-active {
-  color: var(--strong);
-}
-
-#gel-view .gel-step-list li.is-done {
-  color: var(--accent);
 }
 
 #workflow-management-view .workflow-graph-canvas {
@@ -351,7 +342,7 @@
 }
 
 #sequence-viewer-detail-view .sequence-viewer-feature-editor-overlay {
-  background: var(--palette-rgba-23-21-18-a22);
+  background: var(--sequence-viewer-overlay-soft);
 }
 
 #sequence-viewer-detail-view .sequence-viewer-feature-editor-grid label {

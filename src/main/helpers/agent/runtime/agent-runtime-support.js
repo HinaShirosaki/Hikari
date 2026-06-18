@@ -160,7 +160,7 @@ function createAgentRuntimeSupport(deps = {}) {
       ? asArray(snapshot.inventory.chemicals).slice(0, 220)
       : asArray(snapshot.labInventory?.chemicals).slice(0, 220);
     const normalizedExperimentData = {
-      schema_name: cleanText(experimentData.schema_name, 80) || 'enana_experiment_json',
+      schema_name: cleanText(experimentData.schema_name, 80) || 'hikari_experiment_json',
       schema_version: cleanText(experimentData.schema_version, 20) || '1.0',
       generated_utc: cleanText(experimentData.generated_utc, 80) || cleanText(snapshot.timestamp, 80),
       notebook_runs: asArray(experimentData.notebook_runs).slice(0, 120),
@@ -176,6 +176,26 @@ function createAgentRuntimeSupport(deps = {}) {
     const normalizedPapers = asArray(snapshot.papers)
       .slice(0, 80)
       .map((paper) => normalizePaperAnnotationSnapshot(paper, { asArray, cleanText }));
+    const activePaper = snapshot.activePaper && typeof snapshot.activePaper === 'object' && !Array.isArray(snapshot.activePaper)
+      ? normalizePaperAnnotationSnapshot(snapshot.activePaper, { asArray, cleanText })
+      : null;
+    const paperAgentSource = snapshot.paper_agent && typeof snapshot.paper_agent === 'object' && !Array.isArray(snapshot.paper_agent)
+      ? snapshot.paper_agent
+      : (snapshot.paperAgent && typeof snapshot.paperAgent === 'object' && !Array.isArray(snapshot.paperAgent)
+        ? snapshot.paperAgent
+        : {});
+    const transformedMarkdownRelativePath = cleanText(
+      paperAgentSource.transformed_markdown_relative_path
+        || paperAgentSource.transformedMarkdownRelativePath
+        || paperAgentSource.knowledge_markdown_relative_path
+        || paperAgentSource.knowledgeMarkdownRelativePath
+        || activePaper?.transformed_markdown_relative_path
+        || activePaper?.knowledge_markdown_relative_path
+        || activePaper?.knowledgeMarkdownRelativePath,
+      2400
+    );
+    const paperAgentSessionPrompt = cleanText(paperAgentSource.session_prompt || paperAgentSource.sessionPrompt, 2400);
+    const hasPaperAgentContext = Boolean(activePaper || paperAgentSessionPrompt || transformedMarkdownRelativePath);
     const normalizedSnapshot = {
       projects: asArray(snapshot.projects).slice(0, 40),
       protocols: asArray(snapshot.protocols).slice(0, 100),
@@ -185,6 +205,35 @@ function createAgentRuntimeSupport(deps = {}) {
       gelAnalyses,
       experimentData: normalizedExperimentData,
       papers: normalizedPapers,
+      activePaper,
+      paper_agent: hasPaperAgentContext ? {
+        active_paper_id: cleanText(
+          paperAgentSource.active_paper_id
+            || paperAgentSource.activePaperId
+            || activePaper?.id
+            || activePaper?.paper_id
+            || activePaper?.paperId,
+          220
+        ),
+        active_paper_title: cleanText(
+          paperAgentSource.active_paper_title
+            || paperAgentSource.activePaperTitle
+            || activePaper?.title
+            || activePaper?.paper_title
+            || activePaper?.paperTitle,
+          320
+        ),
+        session_prompt: paperAgentSessionPrompt,
+        transformed_markdown_relative_path: transformedMarkdownRelativePath,
+        knowledge_status: cleanText(
+          paperAgentSource.knowledge_status
+            || paperAgentSource.knowledgeStatus
+            || activePaper?.knowledge_status
+            || activePaper?.knowledgeStatus,
+          80
+        ),
+        has_transformed_markdown: Boolean(transformedMarkdownRelativePath)
+      } : null,
       inventory: snapshot.inventory && typeof snapshot.inventory === 'object'
         ? {
           personal: normalizedPersonalInventory,
@@ -240,9 +289,10 @@ function createAgentRuntimeSupport(deps = {}) {
     const projectScope = projectName ? `Scoped project: ${projectName}.` : 'Scope: all projects.';
     const template = String(prompts?.agent?.systemPromptTemplate || '').trim() || defaultSystemPrompt;
     const rendered = renderPromptTemplate(template, { projectScope });
+    const sessionPrompt = cleanText(prompts?.agent?.sessionPrompt, 2400);
     const skillsCatalogPrompt = cleanText(prompts?.agent?.skillsCatalogPrompt, 16000);
     const activeSkillsPrompt = cleanText(prompts?.agent?.activeSkillsPrompt, 24000);
-    return [rendered, skillsCatalogPrompt, activeSkillsPrompt].filter(Boolean).join('\n\n');
+    return [rendered, sessionPrompt, skillsCatalogPrompt, activeSkillsPrompt].filter(Boolean).join('\n\n');
   }
 
   function buildAgentSynthesisPrompt(_requiresApproval, prompts) {

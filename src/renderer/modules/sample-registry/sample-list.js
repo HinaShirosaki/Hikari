@@ -26,6 +26,7 @@ export function matchesSearch(ctx, sample, term) {
     sample.code,
     sample.name,
     sample.type,
+    formatSampleTypeLabel(sample.type, ctx.state.settings),
     sample.lot,
     sample.concentration,
     sample.cellPassage?.lastPassageDate,
@@ -71,7 +72,7 @@ export function renderList(ctx) {
       <button class="list-main-btn text-list-btn" data-sample-open="${escapeHtml(sample.id)}">
         ${ctx.safeText(sample.code || sample.id)} - ${ctx.safeText(sample.name)}
       </button>
-      <span>${ctx.safeText(formatSampleTypeLabel(sample.type || '-'))}</span>
+      <span>${ctx.safeText(formatSampleTypeLabel(sample.type || '-', ctx.state.settings))}</span>
       <span>${ctx.safeText(formatLocation(sample.location))}</span>
     </article>
   `).join('');
@@ -112,7 +113,7 @@ export function renderSampleDetail(ctx) {
 
   const structure = normalizeCompoundStructureData(selected.compoundStructure);
   const detailItems = [
-    { label: 'Type', value: formatSampleTypeLabel(selected.type || '-') },
+    { label: 'Type', value: formatSampleTypeLabel(selected.type || '-', ctx.state.settings) },
     { label: 'Lot / Batch', value: selected.lot || '-' },
     { label: 'Concentration', value: selected.concentration || '-' },
     { label: 'Location', value: formatLocation(selected.location) },

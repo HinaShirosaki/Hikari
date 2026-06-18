@@ -6,6 +6,7 @@ function createMainWindow({
   projectRoot,
   appIconPath,
   preloadPath,
+  onCloseRequested,
   onClosed
 }) {
   const mainWindow = new BrowserWindow({
@@ -27,6 +28,11 @@ function createMainWindow({
   });
 
   mainWindow.loadFile(path.join(projectRoot, 'index.html'));
+  mainWindow.on('close', (event) => {
+    if (typeof onCloseRequested === 'function') {
+      onCloseRequested(event, mainWindow);
+    }
+  });
   mainWindow.on('closed', () => {
     if (typeof onClosed === 'function') {
       onClosed();

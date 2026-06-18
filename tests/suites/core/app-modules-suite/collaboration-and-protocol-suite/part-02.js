@@ -45,10 +45,10 @@ test('protocol-management keeps saved protocols unselected until the user opens 
     gelAnalyses: [],
     messages: [],
     members: [],
-    settings: { personalInfo: { enanaEmail: '' } }
+    settings: { personalInfo: { hikariEmail: '' } }
   };
 
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
     document,
     TextEncoder,
     btoa: btoaPolyfill
@@ -149,7 +149,7 @@ test('protocol-management generates a protocol from the create editor overlay', 
     messages: [],
     members: [],
     settings: {
-      personalInfo: { enanaEmail: '' },
+      personalInfo: { hikariEmail: '' },
       llm: {
         provider: 'openai',
         model: 'gpt-4.1',
@@ -173,7 +173,7 @@ test('protocol-management generates a protocol from the create editor overlay', 
     }
   }
 
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
     document,
     TextEncoder,
     FileReader: MockFileReader,
@@ -184,7 +184,7 @@ test('protocol-management generates a protocol from the create editor overlay', 
       }
     },
     window: {
-      enanaApi: {
+      hikariApi: {
         runDirectLlmPrompt: async (payload) => {
           directLlmPayload = payload;
           return {
@@ -342,11 +342,11 @@ test('protocol-management import accepts external title/action schema without id
     gelAnalyses: [],
     messages: [],
     members: [],
-    settings: { personalInfo: { enanaEmail: '' } }
+    settings: { personalInfo: { hikariEmail: '' } }
   };
 
   let nextId = 0;
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
     document,
     TextEncoder,
     btoa: btoaPolyfill,

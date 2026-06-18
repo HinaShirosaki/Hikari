@@ -1,7 +1,8 @@
 import {
   normalizeNotebookResultTable,
-  summarizeNotebookResultTable
+  normalizeNotebookResultTables
 } from '../notebook-result-table.js';
+import { normalizeNotebookToolCalculations } from '../biology-notebook/tool-calculations.js';
 
 const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
 
@@ -369,6 +370,10 @@ function isWideNotebookResultTable(table) {
   return normalized.columns.length > 4 || maxCellLength > 48;
 }
 
+function hasWideNotebookResultTable(tables) {
+  return normalizeNotebookResultTables(tables).some((table) => isWideNotebookResultTable(table));
+}
+
 function finishAndSave(ctx, fileNameBase) {
   ctx.doc.save(`${sanitizeFileName(fileNameBase, 'export')}.pdf`);
 }
@@ -676,21 +681,167 @@ export function exportProtocolPdf(protocol) {
   return true;
 }
 
-export const exportNotebookEntryPdf = async ({
+async function writeNotebookEntryBody(ctx, {
   entry,
   protocol,
   linkedGel = null,
   linkedGelPreviewImage = '',
   linkedAssay = null,
   linkedAssayPlotImage = ''
-}) => {
+}) {
+  const resultTables = normalizeNotebookResultTables(entry.resultTables, entry.resultTable);
+
+  writeHeading(ctx, 'Summary');
+  writeKeyValue(ctx, 'Project', entry.projectName);
+  if (String(entry.experimentName || '').trim()) {
+    writeKeyValue(ctx, 'Experiment', entry.experimentName);
+  }
+  writeKeyValue(ctx, 'Protocol', entry.protocolName);
+  writeKeyValue(ctx, 'State', notebookStateLabel(entry));
+  writeKeyValue(ctx, 'Updated', formatTimestamp(entry.updatedAt));
+  if (String(entry.executedAt || '').trim()) {
+    writeKeyValue(ctx, 'Executed', formatTimestamp(entry.executedAt));
+  }
+
+  writeHeading(ctx, 'Protocol Steps (Filled)');
+  const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
+  if (!steps.length) {
+    writeParagraph(ctx, 'No protocol steps available for this entry.');
+  } else {
+    steps.forEach((step, index) => {
+      writeParagraph(ctx, `${index + 1}. ${renderStepText(step, entry.values || {})}`);
+    });
+  }
+
+  if (linkedGel || linkedAssay) {
+    writeHeading(ctx, 'Linked Results');
+
+    if (linkedGel) {
+      writeMinorHeading(ctx, 'Gel');
+      writeParagraph(
+        ctx,
+        `${safeValue(linkedGel.name, 'Linked Gel')} | ${formatGelAnalysisTypeLabel(linkedGel.analysisType)} | Updated ${formatTimestamp(linkedGel.updatedAt)}`
+      );
+      const gelCaption = `${formatGelAnalysisTypeLabel(linkedGel.analysisType)} preview`;
+      if (linkedGelPreviewImage) {
+        await writeImageFigure(ctx, linkedGelPreviewImage, {
+          caption: gelCaption,
+          maxHeight: 260
+        });
+      } else {
+        writeParagraph(ctx, gelCaption);
+      }
+    }
+
+    if (linkedAssay) {
+      writeMinorHeading(ctx, 'Assay');
+      writeParagraph(
+        ctx,
+        `${safeValue(linkedAssay.name, 'Linked Assay')} | ${safeValue(linkedAssay.assayNumber || linkedAssay.id)} | ${safeValue(linkedAssay.plateLabel || `${linkedAssay.wellCount || '-'} well plate`)} | Updated ${formatTimestamp(linkedAssay.updatedAt)}`
+      );
+      const latestAnalysis = linkedAssay.latestAnalysis && typeof linkedAssay.latestAnalysis === 'object'
+        ? linkedAssay.latestAnalysis
+        : null;
+      if (latestAnalysis) {
+        writeParagraph(
+          ctx,
+          `Analysis: ${formatAssayAnalysisMethodLabel(latestAnalysis.method)}${String(latestAnalysis.summary || '').trim() ? ` | ${latestAnalysis.summary}` : ''}`
+        );
+      }
+
+      writeMinorHeading(ctx, 'Plate Layout');
+      renderAssayPlot(ctx, linkedAssay, resolveAssayDefinition(linkedAssay));
+
+      const serialDilutionSummary = linkedAssay.serialDilutionSummary && typeof linkedAssay.serialDilutionSummary === 'object'
+        ? linkedAssay.serialDilutionSummary
+        : null;
+      if (hasSerialDilutionContent(serialDilutionSummary)) {
+        writeMinorHeading(ctx, 'Serial Dilution');
+        if (Number.isFinite(serialDilutionSummary?.volumePerWellUl) && serialDilutionSummary.volumePerWellUl > 0) {
+          writeParagraph(ctx, `Volume per well: ${serialDilutionSummary.volumePerWellUl} uL`);
+        }
+        (Array.isArray(serialDilutionSummary.feedbackMessages) ? serialDilutionSummary.feedbackMessages : []).forEach((item) => {
+          writeParagraph(ctx, safeValue(item?.text));
+        });
+        if (Array.isArray(serialDilutionSummary.initialDilutionRows) && serialDilutionSummary.initialDilutionRows.length) {
+          writeMinorHeading(ctx, 'Initial Dilution');
+          writeSimpleTable(
+            ctx,
+            ['Sample', 'Stock Vol.', 'Buffer Vol.'],
+            serialDilutionSummary.initialDilutionRows.map((row) => [
+              row?.sample || '',
+              row?.stockVolume || '',
+              row?.bufferVolume || ''
+            ])
+          );
+        }
+        if (Array.isArray(serialDilutionSummary.followingDilutionRows) && serialDilutionSummary.followingDilutionRows.length) {
+          writeMinorHeading(ctx, 'Following Dilution');
+          writeSimpleTable(
+            ctx,
+            ['Step', 'Target Conc.', 'From Previous Well', 'Buffer Vol.', 'Transfer / Discard', 'Final Vol.'],
+            serialDilutionSummary.followingDilutionRows.map((row) => [
+              row?.step || '',
+              row?.targetConcentration || '',
+              row?.fromPreviousWell || '',
+              row?.bufferVolume || '',
+              row?.transferOrDiscard || '',
+              row?.finalVolume || ''
+            ])
+          );
+        } else if (serialDilutionSummary?.hasValidPlans) {
+          writeParagraph(ctx, 'No downstream dilution steps are needed for this assay.');
+        }
+      }
+
+      const assayPlotImage = String(linkedAssayPlotImage || latestAnalysis?.chartDataUrl || '').trim();
+      if (assayPlotImage) {
+        writeMinorHeading(ctx, 'Analysis Plot');
+        await writeImageFigure(ctx, assayPlotImage, {
+          caption: `${formatAssayAnalysisMethodLabel(latestAnalysis?.method)}${String(latestAnalysis?.summary || '').trim() ? ` | ${latestAnalysis.summary}` : ''}`,
+          maxHeight: 220
+        });
+      }
+    }
+  }
+
+  writeHeading(ctx, 'Notes / Results');
+  writeParagraph(ctx, safeValue(entry.result));
+  const toolCalculations = normalizeNotebookToolCalculations(entry.toolCalculations);
+  if (toolCalculations.length) {
+    writeMinorHeading(ctx, toolCalculations.length === 1 ? 'Tool Calculation' : 'Tool Calculations');
+    toolCalculations.forEach((calculation) => {
+      writeParagraph(ctx, `${calculation.title}: ${safeValue(calculation.result || calculation.summary)}`);
+      if (calculation.formula) {
+        writeParagraph(ctx, `Formula: ${calculation.formula}`);
+      }
+    });
+  }
+  if (resultTables.length) {
+    writeMinorHeading(ctx, resultTables.length === 1 ? 'Result Table' : 'Result Tables');
+    resultTables.forEach((table, index) => {
+      if (resultTables.length > 1) {
+        writeMinorHeading(ctx, `Table ${index + 1}`);
+      }
+      writeNotebookResultTable(ctx, table);
+    });
+  }
+  if (Array.isArray(entry.resultFiles) && entry.resultFiles.length) {
+    writeMinorHeading(ctx, 'Result Files');
+    writeBulletLines(ctx, entry.resultFiles);
+  }
+}
+
+export const exportNotebookEntryPdf = async (params = {}) => {
   try {
+    const { entry } = params;
     if (!entry) {
       return false;
     }
 
     const title = `Notebook: ${safeValue(entry.projectName)} / ${safeValue(entry.experimentName || entry.protocolName)}`;
-    const useWideLayout = isWideNotebookResultTable(entry.resultTable);
+    const resultTables = normalizeNotebookResultTables(entry.resultTables, entry.resultTable);
+    const useWideLayout = hasWideNotebookResultTable(resultTables);
     const ctx = createContext({
       title,
       orientation: useWideLayout ? 'l' : 'p',
@@ -702,130 +853,7 @@ export const exportNotebookEntryPdf = async ({
       return false;
     }
 
-    writeHeading(ctx, 'Summary');
-    writeKeyValue(ctx, 'Project', entry.projectName);
-    if (String(entry.experimentName || '').trim()) {
-      writeKeyValue(ctx, 'Experiment', entry.experimentName);
-    }
-    writeKeyValue(ctx, 'Protocol', entry.protocolName);
-    writeKeyValue(ctx, 'State', notebookStateLabel(entry));
-    writeKeyValue(ctx, 'Updated', formatTimestamp(entry.updatedAt));
-    if (String(entry.executedAt || '').trim()) {
-      writeKeyValue(ctx, 'Executed', formatTimestamp(entry.executedAt));
-    }
-
-    writeHeading(ctx, 'Protocol Steps (Filled)');
-    const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
-    if (!steps.length) {
-      writeParagraph(ctx, 'No protocol steps available for this entry.');
-    } else {
-      steps.forEach((step, index) => {
-        writeParagraph(ctx, `${index + 1}. ${renderStepText(step, entry.values || {})}`);
-      });
-    }
-
-    if (linkedGel || linkedAssay) {
-      writeHeading(ctx, 'Linked Results');
-
-      if (linkedGel) {
-        writeMinorHeading(ctx, 'Gel');
-        writeParagraph(
-          ctx,
-          `${safeValue(linkedGel.name, 'Linked Gel')} | ${formatGelAnalysisTypeLabel(linkedGel.analysisType)} | Updated ${formatTimestamp(linkedGel.updatedAt)}`
-        );
-        const gelCaption = `${formatGelAnalysisTypeLabel(linkedGel.analysisType)} preview`;
-        if (linkedGelPreviewImage) {
-          await writeImageFigure(ctx, linkedGelPreviewImage, {
-            caption: gelCaption,
-            maxHeight: 260
-          });
-        } else {
-          writeParagraph(ctx, gelCaption);
-        }
-      }
-
-      if (linkedAssay) {
-        writeMinorHeading(ctx, 'Assay');
-        writeParagraph(
-          ctx,
-          `${safeValue(linkedAssay.name, 'Linked Assay')} | ${safeValue(linkedAssay.assayNumber || linkedAssay.id)} | ${safeValue(linkedAssay.plateLabel || `${linkedAssay.wellCount || '-'} well plate`)} | Updated ${formatTimestamp(linkedAssay.updatedAt)}`
-        );
-        const latestAnalysis = linkedAssay.latestAnalysis && typeof linkedAssay.latestAnalysis === 'object'
-          ? linkedAssay.latestAnalysis
-          : null;
-        if (latestAnalysis) {
-          writeParagraph(
-            ctx,
-            `Analysis: ${formatAssayAnalysisMethodLabel(latestAnalysis.method)}${String(latestAnalysis.summary || '').trim() ? ` | ${latestAnalysis.summary}` : ''}`
-          );
-        }
-
-        writeMinorHeading(ctx, 'Plate Layout');
-        renderAssayPlot(ctx, linkedAssay, resolveAssayDefinition(linkedAssay));
-
-        const serialDilutionSummary = linkedAssay.serialDilutionSummary && typeof linkedAssay.serialDilutionSummary === 'object'
-          ? linkedAssay.serialDilutionSummary
-          : null;
-        if (hasSerialDilutionContent(serialDilutionSummary)) {
-          writeMinorHeading(ctx, 'Serial Dilution');
-          if (Number.isFinite(serialDilutionSummary?.volumePerWellUl) && serialDilutionSummary.volumePerWellUl > 0) {
-            writeParagraph(ctx, `Volume per well: ${serialDilutionSummary.volumePerWellUl} uL`);
-          }
-          (Array.isArray(serialDilutionSummary.feedbackMessages) ? serialDilutionSummary.feedbackMessages : []).forEach((item) => {
-            writeParagraph(ctx, safeValue(item?.text));
-          });
-          if (Array.isArray(serialDilutionSummary.initialDilutionRows) && serialDilutionSummary.initialDilutionRows.length) {
-            writeMinorHeading(ctx, 'Initial Dilution');
-            writeSimpleTable(
-              ctx,
-              ['Sample', 'Stock Vol.', 'Buffer Vol.'],
-              serialDilutionSummary.initialDilutionRows.map((row) => [
-                row?.sample || '',
-                row?.stockVolume || '',
-                row?.bufferVolume || ''
-              ])
-            );
-          }
-          if (Array.isArray(serialDilutionSummary.followingDilutionRows) && serialDilutionSummary.followingDilutionRows.length) {
-            writeMinorHeading(ctx, 'Following Dilution');
-            writeSimpleTable(
-              ctx,
-              ['Step', 'Target Conc.', 'From Previous Well', 'Buffer Vol.', 'Transfer / Discard', 'Final Vol.'],
-              serialDilutionSummary.followingDilutionRows.map((row) => [
-                row?.step || '',
-                row?.targetConcentration || '',
-                row?.fromPreviousWell || '',
-                row?.bufferVolume || '',
-                row?.transferOrDiscard || '',
-                row?.finalVolume || ''
-              ])
-            );
-          } else if (serialDilutionSummary?.hasValidPlans) {
-            writeParagraph(ctx, 'No downstream dilution steps are needed for this assay.');
-          }
-        }
-
-        const assayPlotImage = String(linkedAssayPlotImage || latestAnalysis?.chartDataUrl || '').trim();
-        if (assayPlotImage) {
-          writeMinorHeading(ctx, 'Analysis Plot');
-          await writeImageFigure(ctx, assayPlotImage, {
-            caption: `${formatAssayAnalysisMethodLabel(latestAnalysis?.method)}${String(latestAnalysis?.summary || '').trim() ? ` | ${latestAnalysis.summary}` : ''}`,
-            maxHeight: 220
-          });
-        }
-      }
-    }
-
-    writeHeading(ctx, 'Notes / Results');
-    writeParagraph(ctx, safeValue(entry.result));
-    if (summarizeNotebookResultTable(entry.resultTable)) {
-      writeMinorHeading(ctx, 'Result Table');
-      writeNotebookResultTable(ctx, entry.resultTable);
-    }
-    if (Array.isArray(entry.resultFiles) && entry.resultFiles.length) {
-      writeMinorHeading(ctx, 'Result Files');
-      writeBulletLines(ctx, entry.resultFiles);
-    }
+    await writeNotebookEntryBody(ctx, params);
 
     finishAndSave(ctx, `notebook-${entry.projectName || 'project'}-${entry.experimentName || entry.protocolName || entry.id || 'entry'}`);
     return true;
@@ -833,6 +861,84 @@ export const exportNotebookEntryPdf = async ({
     console.error('Failed to export notebook PDF:', error);
     if (typeof window !== 'undefined' && typeof window.alert === 'function') {
       window.alert(String(error?.message || error || 'Failed to export notebook PDF.'));
+    }
+    return false;
+  }
+};
+
+export const exportProjectNotebookEntriesPdf = async ({
+  project,
+  entries = [],
+  protocolsByEntryId = new Map(),
+  linkedGelByEntryId = new Map(),
+  linkedGelPreviewImagesByEntryId = new Map(),
+  linkedAssayByEntryId = new Map(),
+  linkedAssayPlotImagesByEntryId = new Map()
+} = {}) => {
+  try {
+    if (!project) {
+      return false;
+    }
+    const pages = Array.isArray(entries) ? entries.filter(Boolean) : [];
+    if (!pages.length) {
+      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+        window.alert('No notebook pages to export for this project.');
+      }
+      return false;
+    }
+
+    const title = `Project Notebook: ${safeValue(project.name, 'Untitled Project')}`;
+    const ctx = createContext({
+      title,
+      orientation: 'p',
+      format: 'letter',
+      margin: 72,
+      serif: true
+    });
+    if (!ctx) {
+      return false;
+    }
+
+    writeHeading(ctx, 'Project');
+    writeKeyValue(ctx, 'Name', project.name);
+    if (String(project.description || '').trim()) {
+      writeKeyValue(ctx, 'Description', project.description);
+    }
+    writeKeyValue(ctx, 'Pages', String(pages.length));
+
+    for (let index = 0; index < pages.length; index += 1) {
+      const entry = pages[index];
+      addPage(ctx);
+      ctx.sectionCount = 0;
+      ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'bold');
+      ctx.doc.setFontSize(TITLE_FONT_SIZE);
+      ctx.y = writeWrappedLines(
+        ctx.doc,
+        `Page ${index + 1}: ${safeValue(entry.experimentName || entry.protocolName, 'Untitled Page')}`,
+        ctx.margin,
+        ctx.y,
+        ctx.maxWidth,
+        TITLE_FONT_SIZE + 8
+      );
+      ctx.y += 4;
+
+      // eslint-disable-next-line no-await-in-loop
+      await writeNotebookEntryBody(ctx, {
+        entry,
+        protocol: protocolsByEntryId.get(entry.id) || entry.protocolSnapshot || null,
+        linkedGel: linkedGelByEntryId.get(entry.id) || null,
+        linkedGelPreviewImage: linkedGelPreviewImagesByEntryId.get(entry.id) || '',
+        linkedAssay: linkedAssayByEntryId.get(entry.id) || null,
+        linkedAssayPlotImage: linkedAssayPlotImagesByEntryId.get(entry.id) || ''
+      });
+    }
+
+    finishAndSave(ctx, `project-notebook-${project.name || project.id || 'export'}`);
+    return true;
+  } catch (error) {
+    console.error('Failed to export project notebook PDF:', error);
+    if (typeof window !== 'undefined' && typeof window.alert === 'function') {
+      window.alert(String(error?.message || error || 'Failed to export project notebook PDF.'));
     }
     return false;
   }

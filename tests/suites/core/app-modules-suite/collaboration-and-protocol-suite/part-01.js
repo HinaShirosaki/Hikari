@@ -32,8 +32,8 @@ test('collaboration-management sends messages and imports protocol share links',
   const tracked = [];
   const state = {
     members: [
-      { id: 'm1', enanaEmail: 'alice@enana.test' },
-      { id: 'm2', enanaEmail: 'bob@enana.test' }
+      { id: 'm1', hikariEmail: 'alice@hikari.test' },
+      { id: 'm2', hikariEmail: 'bob@hikari.test' }
     ],
     messages: [],
     protocols: []
@@ -65,25 +65,25 @@ test('collaboration-management sends messages and imports protocol share links',
 
   collaboration.renderEmailSelectors();
 
-  messageFrom.value = 'alice@enana.test';
-  messageTo.value = 'bob@enana.test';
+  messageFrom.value = 'alice@hikari.test';
+  messageTo.value = 'bob@hikari.test';
   messageSubject.value = 'Status Update';
   messageBody.value = 'Workflow complete.';
   trigger(messageForm, 'submit');
 
   assert.equal(state.messages.length, 1);
   assert.equal(state.messages[0].subject, 'Status Update');
-  assert.equal(messageFrom.value, 'alice@enana.test');
-  assert.equal(messageTo.value, 'bob@enana.test');
+  assert.equal(messageFrom.value, 'alice@hikari.test');
+  assert.equal(messageTo.value, 'bob@hikari.test');
 
-  inboxEmail.value = 'bob@enana.test';
+  inboxEmail.value = 'bob@hikari.test';
   trigger(inboxEmail, 'change');
   assert.match(inboxList.innerHTML, /Status Update/);
 
   const payload = {
     version: 1,
     type: 'protocol_share_link',
-    from: 'alice@enana.test',
+    from: 'alice@hikari.test',
     protocol: {
       id: 'proto-source',
       name: 'PCR Protocol',
@@ -94,7 +94,7 @@ test('collaboration-management sends messages and imports protocol share links',
     }
   };
   const token = encodeBase64Url(JSON.stringify(payload));
-  protocolLinkInput.value = `enana://protocol-share/${token}`;
+  protocolLinkInput.value = `hikari://protocol-share/${token}`;
   trigger(importProtocolLinkBtn, 'click');
 
   assert.equal(state.protocols.length, 1);
@@ -104,7 +104,7 @@ test('collaboration-management sends messages and imports protocol share links',
   assert.equal(importedCalls, 1);
   assert.equal(tracked[0].name, 'protocol_share_link_imported');
 
-  protocolLinkInput.value = `enana://protocol-share/${token}`;
+  protocolLinkInput.value = `hikari://protocol-share/${token}`;
   trigger(importProtocolLinkBtn, 'click');
   assert.equal(state.protocols.length, 2);
   assert.match(state.protocols[1].name, /^PCR Protocol \(Shared Copy\)/);
@@ -201,17 +201,17 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
     gelAnalyses: [],
     messages: [],
     members: [
-      { id: 'm1', enanaEmail: 'owner@enana.test' },
-      { id: 'm2', enanaEmail: 'teammate@enana.test' }
+      { id: 'm1', hikariEmail: 'owner@hikari.test' },
+      { id: 'm2', hikariEmail: 'teammate@hikari.test' }
     ],
     settings: {
       personalInfo: {
-        enanaEmail: 'owner@enana.test'
+        hikariEmail: 'owner@hikari.test'
       }
     }
   };
 
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
     document,
     TextEncoder,
     btoa: btoaPolyfill,
@@ -299,7 +299,7 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
   trigger(shareBtn, 'click');
 
   const shareSelect = protocolList.querySelectorAll('[data-protocol-share-select]')[0];
-  shareSelect.value = 'teammate@enana.test';
+  shareSelect.value = 'teammate@hikari.test';
   trigger(shareSelect, 'change');
 
   const confirmShareBtn = protocolList.querySelectorAll('[data-protocol-share-confirm]')[0];
@@ -418,11 +418,11 @@ test('protocol-management shows JSON import on create and hides it on edit', asy
     gelAnalyses: [],
     messages: [],
     members: [],
-    settings: { personalInfo: { enanaEmail: '' } }
+    settings: { personalInfo: { hikariEmail: '' } }
   };
 
   let nextId = 0;
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol-management.js'), {
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
     document,
     TextEncoder,
     btoa: btoaPolyfill,

@@ -40,11 +40,16 @@ export function initContributionWidget({ state, safeText, elements }) {
     dayMap.set(dayKey, bucket);
   }
 
-  function resultTableHasContent(table) {
-    const rows = Array.isArray(table?.rows) ? table.rows : [];
-    return rows.some((row) => Object.entries(row || {}).some(([key, value]) => (
-      key !== 'id' && String(value || '').trim()
-    )));
+  function resultTableHasContent(entry) {
+    const tables = Array.isArray(entry?.resultTables) && entry.resultTables.length
+      ? entry.resultTables
+      : [entry?.resultTable].filter(Boolean);
+    return tables.some((table) => {
+      const rows = Array.isArray(table?.rows) ? table.rows : [];
+      return rows.some((row) => Object.entries(row || {}).some(([key, value]) => (
+        key !== 'id' && String(value || '').trim()
+      )));
+    });
   }
 
   function collectFileRecordActivity(dayMap, records, fallbackTimestamp) {
@@ -77,7 +82,7 @@ export function initContributionWidget({ state, safeText, elements }) {
       if (String(entry?.result || '').trim()) {
         addContributionActivity(dayMap, entryTimestamp, 'analysisNotes');
       }
-      if (resultTableHasContent(entry?.resultTable)) {
+      if (resultTableHasContent(entry)) {
         addContributionActivity(dayMap, entryTimestamp, 'analysisNotes');
       }
       if (Array.isArray(entry?.selectionInsights) && entry.selectionInsights.length) {

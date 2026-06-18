@@ -42,6 +42,11 @@
   align-content: start;
 }
 
+#workflow-management-view .workflow-editor-main:has(> .workflow-list-panel:not([hidden])) {
+  grid-template-rows: minmax(0, 1fr);
+  align-content: stretch;
+}
+
 #workflow-management-view .workflow-editor-main > .workflow-list-panel:not([hidden]) {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -201,7 +206,7 @@
   height: 22px;
   border: 0;
   border-radius: 999px;
-  background: var(--palette-hex-c7362f);
+  background: var(--danger);
   color: var(--palette-white);
   font-size: 0.95rem;
   font-weight: 700;
@@ -223,7 +228,7 @@
 
 .workflow-node-remove:hover,
 .workflow-node-remove:focus-visible {
-  background: var(--palette-hex-aa231d);
+  background: color-mix(in srgb, var(--danger) 82%, var(--palette-black));
   transform: scale(1);
 }
 
@@ -369,7 +374,6 @@
   display: grid;
   grid-template-rows: minmax(0, 1fr);
   align-content: stretch;
-  min-height: clamp(420px, 68vh, 860px);
   height: 100%;
   padding: 0;
   border: 0;
@@ -380,10 +384,9 @@
   position: relative;
   isolation: isolate;
   overflow: auto;
-  min-height: inherit;
   height: 100%;
-  border: 1px solid var(--line-soft);
-  background: var(--surface);
+  border: 0;
+  background: transparent;
 }
 
 .workflow-execution-table {
@@ -475,31 +478,31 @@
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  border: 2px solid var(--palette-hex-c6c6c6);
+  border: 2px solid var(--line);
   background: var(--palette-white);
 }
 
 .workflow-progress-node.is-finished .workflow-progress-dot,
 .workflow-step-status-dot.is-finished {
-  border-color: var(--palette-hex-2da562);
-  background: var(--palette-hex-2da562);
+  border-color: var(--success);
+  background: var(--success);
 }
 
 .workflow-progress-node.is-failed .workflow-progress-dot,
 .workflow-step-status-dot.is-failed {
-  border-color: var(--palette-hex-d94d4d);
-  background: var(--palette-hex-d94d4d);
+  border-color: var(--danger);
+  background: var(--danger);
 }
 
 .workflow-progress-node.is-pending .workflow-progress-dot,
 .workflow-step-status-dot.is-pending {
-  border-color: var(--palette-hex-d1a11e);
-  background: var(--palette-hex-f0c64a);
+  border-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 66%, var(--palette-white));
 }
 
 .workflow-progress-node.is-empty .workflow-progress-dot,
 .workflow-step-status-dot.is-empty {
-  border-color: var(--palette-hex-c6c6c6);
+  border-color: var(--line);
   background: var(--palette-white);
 }
 
@@ -510,19 +513,26 @@
 .workflow-progress-connector {
   position: absolute;
   top: 50%;
+  z-index: 0;
   border-top: 2px dashed color-mix(in srgb, var(--line) 92%, var(--text));
   transform: translateY(-50%);
   pointer-events: none;
 }
 
+/*
+ * The two halves run all the way to the node center so the line is continuous
+ * underneath the dot. The dot (z-index 1, opaque fill) is painted on top, so it
+ * reads as one drawn line with the dots placed on it — not line stubs assembled
+ * around each dot.
+ */
 .workflow-progress-connector-start {
   left: 0;
-  width: calc(50% - 7px);
+  width: 50%;
 }
 
 .workflow-progress-connector-end {
   right: 0;
-  width: calc(50% - 7px);
+  width: 50%;
 }
 
 .workflow-progress-connector.is-complete {
@@ -646,7 +656,7 @@
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  border: 2px solid var(--palette-hex-c6c6c6);
+  border: 2px solid var(--line);
   background: var(--palette-white);
 }
 

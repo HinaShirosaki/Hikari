@@ -15,25 +15,26 @@ Before you call your module done, verify all of the following.
 
 ### Configuration
 
-- [ ] `ui/config/html-order.json` lists the new view.
-- [ ] `ui/config/css-order.json` lists the new stylesheet.
-- [ ] `ui/config/app-registry.json` lists the new app entry.
+- [ ] `ui/config/app-registry.json` lists the new app entry and its `viewKey` in `viewOrder`.
 - [ ] If `placement: "dock"`, the id is also added to `dockOrder[]` in the same file.
 
 ### Renderer wiring
 
-- [ ] `src/renderer/modules/shared.js` — new entry in `VIEWS` and `TITLES`. Optional: in `STARTUP_DEFAULT_VIEW_IDS`.
-- [ ] `src/renderer/modules/shared.js` — new top-level field added to `defaultState` (and normalized in `normalizeState`) if your module owns persisted data.
-- [ ] `src/renderer/modules/<id>.js` (or folder) exists and exports `init<Name>`.
-- [ ] `src/renderer/module-runtime.js`:
+- [ ] `src/renderer/modules/views.js` contains the generated `VIEWS` and `TITLES` entry after `build:ui`.
+- [ ] `src/renderer/modules/app-state/defaults.js` — optional entry in `STARTUP_DEFAULT_VIEW_IDS`, plus a top-level default; update `state-normalizer.js` if your module owns persisted data.
+- [ ] `src/renderer/modules/<id>/index.js` exists and exports `init<Name>`.
+- [ ] `src/renderer/module-manifests/<id>.js`:
   - [ ] imports `init<Name>`,
-  - [ ] calls `initAndRegisterModule(moduleRegistry, '<key>', init<Name>, { ... })`,
-  - [ ] adds the renderer to `renderByViewId` for `views.<KEY>`,
-  - [ ] (optional) calls `modules.<key>.render()` in `renderAll()` for boot-time render.
+  - [ ] sets `key` to the registry key,
+	  - [ ] builds the module options in `createOptions(...)`,
+	  - [ ] adds `viewKey` plus `render(...)` for navigation rendering,
+	  - [ ] (optional) adds `bootOrder` for boot-time rendering,
+	  - [ ] (optional) adds `renderAll(...)` when the boot render differs from `render(...)`.
+- [ ] `src/renderer/module-manifests/index.js` exports the manifest in the correct initialization group.
 
 ### Cross-module
 
-- [ ] If other modules need to react when your data changes, you added/extended a service in `src/renderer/services/` and wired it through `module-runtime.js`.
+- [ ] If other modules need to react when your data changes, you added/extended a service in `src/renderer/services/` and passed it through your manifest options.
 - [ ] You did not import another feature module's internals directly.
 
 ### Build and run
@@ -49,7 +50,7 @@ Before you call your module done, verify all of the following.
 | View id | `<kebab-feature>-view` | `my-feature-view` |
 | `VIEWS` constant | `SCREAMING_SNAKE` | `MY_FEATURE` |
 | Init function | `init<PascalName>` | `initMyFeature` |
-| Module file | `<kebab-feature>.js` or folder `<kebab-feature>/` | `my-feature.js` |
+| Module entry | folder `<kebab-feature>/index.js` | `my-feature/index.js` |
 | Module registry key | `camelCase` matching the module name | `myFeature` |
 | State slice | plural-noun camelCase under `state.` | `state.myFeatureItems` |
 | DOM ids inside view | `<kebab-feature>-<purpose>` | `my-feature-list`, `my-feature-add-btn` |
@@ -66,7 +67,7 @@ Keep the same root noun across all the names. It dramatically reduces the cognit
 
 - View files contain `<section id="<id>"` matching the config entry. *Error:* `View file ... does not contain expected section id`.
 - No duplicate `id="..."` attributes anywhere in the concatenated HTML. *Error:* `Duplicate HTML id attributes detected: id1 (2), id2 (2)`.
-- No duplicate file paths in `css-order.json`. *Error:* `Duplicate CSS input entry`.
+- No duplicate shared or generated CSS paths. *Error:* `Duplicate CSS input entry`.
 - Every dock app has its id in `dockOrder`, and every id in `dockOrder` exists. *Errors:* `dockOrder references unknown app id`, `App "x" is placed in the dock but missing from dockOrder`, `dockOrder length must match the number of apps with placement "dock"`.
 - `app-registry.json` entries are well-formed (id, label, viewId, icon, placement among `dock` / `more`).
 
@@ -81,9 +82,9 @@ Keep the same root noun across all the names. It dramatically reduces the cognit
 | Symptom | Likely cause |
 | --- | --- |
 | Build error `Duplicate HTML id attributes` | another view or shell uses the same id; namespace yours |
-| Build error `View file ... does not contain expected section id` | typo between `app-registry.json`/`html-order.json` and the `<section>` id |
-| `npm start` boots, button shows, view stays blank | `renderByViewId` missing the entry, or the init function was added but never registered |
-| Click the dock button — page title updates but the view stays empty | The view fragment is registered in `html-order.json` but the `<section>` does not have `class="view"`; or `start-renderer-app.js`'s startup `showView()` resolves to a different id |
+| Build error `View file ... does not contain expected section id` | typo between `app-registry.json` and the `<section>` id |
+| `npm start` boots, button shows, view stays blank | manifest `viewKey`/`render` is missing, or the init function was added but never exported from `module-manifests/index.js` |
+| Click the dock button — page title updates but the view stays empty | The registry view fragment does not have `class="view"`, or the renderer core's startup `showView()` resolves to a different id |
 | State survives reload but other modules don't refresh after edits | You forgot to call the injected `on…Changed()` callback after `persist()` |
 | Other modules update fine, yours doesn't refresh after their edits | Their service callback list (e.g. `protocolService.handleProtocolsChanged`) does not call your module — extend the service |
 | Topbar search behaves oddly | An alias in `app-registry.json` collides with another app's alias; aliases are matched globally |
@@ -120,4 +121,4 @@ Don't reach for a framework. Match the surrounding patterns.
 
 ## Summary
 
-A module is six small files plus six small wiring edits. The build-time checks catch the easy mistakes. The registry/service layer keeps modules from coupling. Read [03-module-contract.md](./03-module-contract.md) for the JS contract, [05-cross-module-and-services.md](./05-cross-module-and-services.md) for cross-module patterns, and follow the recipe in [04-adding-a-new-module.md](./04-adding-a-new-module.md). Welcome aboard.
+A module is a view fragment, stylesheet, icon, folder entry, registry declaration, and manifest. The build-time checks catch the easy mistakes. The registry/service layer keeps modules from coupling. Read [03-module-contract.md](./03-module-contract.md) for the JS contract, [05-cross-module-and-services.md](./05-cross-module-and-services.md) for cross-module patterns, and follow the recipe in [04-adding-a-new-module.md](./04-adding-a-new-module.md).

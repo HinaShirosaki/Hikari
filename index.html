@@ -54,8 +54,24 @@
         <div id="app-more-menu" class="app-more-menu" role="menu" hidden></div>
       </nav>
       <div class="topbar-tools">
-        <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
-        <ul id="topbar-search-suggestions" class="topbar-search-suggestions" role="listbox" aria-label="Search suggestions" hidden></ul>
+        <div class="topbar-history-controls" role="group" aria-label="Undo and redo">
+          <button id="global-undo-btn" class="topbar-history-btn" type="button" aria-label="Undo" title="Nothing to undo" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 14 4 9l5-5" />
+              <path d="M4 9h11a5 5 0 1 1 0 10h-4" />
+            </svg>
+          </button>
+          <button id="global-redo-btn" class="topbar-history-btn" type="button" aria-label="Redo" title="Nothing to redo" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="m15 14 5-5-5-5" />
+              <path d="M20 9H9a5 5 0 1 0 0 10h4" />
+            </svg>
+          </button>
+        </div>
+        <div class="topbar-search-shell">
+          <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
+          <ul id="topbar-search-suggestions" class="topbar-search-suggestions" role="listbox" aria-label="Search suggestions" hidden></ul>
+        </div>
       </div>
     </header>
     <div class="workspace-shell">
@@ -442,6 +458,7 @@
               </div>
               <div class="form-actions">
                 <button type="button" id="protocol-export-pdf-btn" class="ghost-btn">Export PDF</button>
+                <button type="button" id="protocol-print-btn" class="ghost-btn">Print</button>
                 <button type="button" id="protocol-view-back-btn" class="ghost-btn" hidden>Back to List</button>
               </div>
             </div>
@@ -540,7 +557,7 @@
 
 <!-- SOURCE: ui/html/views/biology-notebook-view.html -->
 <section id="biology-notebook-view" class="view">
-      <div class="biology-notebook-layout left-rail-template">
+      <div id="biology-notebook-layout" class="biology-notebook-layout left-rail-template">
         <aside class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="left-rail-template__pinned">
             <div class="biology-notebook-rail-head">
@@ -548,13 +565,28 @@
               <p class="small-note">Projects and notebook pages</p>
             </div>
 
-            <div class="stack-form biology-notebook-select-stack">
-              <label>
-                Select Project
-                <select id="biology-notebook-project-select">
-                  <option value="">Select project</option>
-                </select>
-              </label>
+            <select id="biology-notebook-project-select" hidden aria-hidden="true" tabindex="-1">
+              <option value="">Select project</option>
+            </select>
+
+            <div class="biology-notebook-page-list-head">
+              <h3>Notebook Pages</h3>
+            </div>
+          </div>
+          <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
+        </aside>
+
+        <div class="biology-notebook-viewer-column left-rail-template__main">
+          <button id="biology-notebook-tool-mobile-toggle" class="ghost-btn biology-notebook-tool-mobile-toggle" type="button" aria-expanded="false">Bench Tools</button>
+          <div id="biology-notebook-page-starter" class="panel biology-notebook-page-starter">
+            <div class="biology-notebook-page-starter-head">
+              <div>
+                <p class="small-note biology-notebook-viewer-kicker">Add Notebook Page</p>
+                <h3 id="biology-notebook-page-starter-project">Choose a project folder</h3>
+              </div>
+              <button id="biology-notebook-open-projects-btn" class="ghost-btn" type="button">Create Project</button>
+            </div>
+            <div class="stack-form biology-notebook-select-stack biology-notebook-page-starter-controls">
               <label>
                 Search Protocol
                 <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
@@ -566,29 +598,20 @@
                 </select>
               </label>
             </div>
-
-            <div class="biology-notebook-page-list-head">
-              <h3>Notebook Pages</h3>
-            </div>
           </div>
-          <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
-        </aside>
 
-        <div class="biology-notebook-viewer-column left-rail-template__main">
           <div id="biology-notebook-empty-state" class="panel biology-notebook-empty-state">
             <h3>Protocol / Result Viewer</h3>
-            <p>Select a project and protocol to create a notebook page, or choose an existing page from the left panel.</p>
+            <p>Choose an existing notebook page from the left panel.</p>
           </div>
+
+          <div id="biology-notebook-project-dashboard" class="biology-notebook-project-dashboard project-dashboard" hidden></div>
 
           <div id="biology-notebook-protocol-area" class="panel biology-notebook-viewer" hidden>
             <div class="biology-notebook-viewer-head">
               <div class="biology-notebook-viewer-copy">
-                <p class="small-note biology-notebook-viewer-kicker">Filled protocol and results</p>
-                <label>
-                  Experiment Name
-                  <input id="biology-notebook-experiment-name" type="text" placeholder="Name this specific experiment" />
-                </label>
-                <h3 id="biology-notebook-protocol-title"></h3>
+                <input id="biology-notebook-experiment-name" class="biology-notebook-title-editor" type="text" placeholder="Name this specific experiment" aria-label="Experiment Name" hidden />
+                <h3 id="biology-notebook-protocol-title" class="biology-notebook-title-display" title="Double-click to rename"></h3>
                 <p id="biology-notebook-protocol-meta" class="small-note">Select a notebook page or start a new one.</p>
               </div>
               <div class="biology-notebook-viewer-actions">
@@ -597,6 +620,7 @@
                 <button id="biology-notebook-cancel-protocol-edit-btn" class="ghost-btn" type="button" hidden>Cancel Page Edit</button>
                 <button id="biology-notebook-mark-executed-btn" class="primary-btn" type="button" hidden>Executed</button>
                 <button id="biology-notebook-export-btn" class="ghost-btn" type="button" hidden>Export PDF</button>
+                <button id="biology-notebook-print-btn" class="ghost-btn" type="button" hidden>Print</button>
               </div>
             </div>
 
@@ -639,11 +663,15 @@
                 <div id="biology-notebook-linked-results" class="biology-notebook-linked-results">
                   <p class="small-note">Linked gel, assay, and plot previews will appear here.</p>
                 </div>
+                <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations">
+                  <p class="small-note biology-notebook-tool-calculation-empty">Recorded bench calculations will appear here.</p>
+                </div>
+                <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
                 <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
                   <div class="biology-notebook-result-table-head">
                     <p id="biology-notebook-result-table-status" class="small-note">Add a table to capture structured notebook results.</p>
                   </div>
-                  <div id="biology-notebook-result-table" class="biology-notebook-result-table" aria-label="Notebook result table"></div>
+                  <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables"></div>
                 </div>
                 <label>
                   Experiment Results File / Notes
@@ -662,6 +690,186 @@
             </section>
           </div>
         </div>
+
+        <aside id="biology-notebook-tool-sidebar" class="biology-notebook-tool-sidebar" data-notebook-tool-sidebar aria-label="Biology notebook bench tools">
+          <div class="biology-notebook-tool-content">
+            <div class="biology-notebook-tool-tabs" role="tablist" aria-label="Notebook bench tools">
+              <button id="biology-notebook-tool-tab-molarity" class="biology-notebook-tool-tab is-active" type="button" data-notebook-tool-tab="molarity" role="tab" aria-selected="true" aria-label="Open molarity calculator" title="Molarity calculator">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M8 4h8M10 4v5l-5 8a3 3 0 0 0 2.6 4.5h8.8A3 3 0 0 0 19 17l-5-8V4" /><path d="M8 15h8" /></svg>
+              </button>
+              <button id="biology-notebook-tool-tab-buffer" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="buffer" role="tab" aria-selected="false" aria-label="Open buffer preparer" title="Buffer preparer">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M7 4h10M9 4v6l-3.5 7A3 3 0 0 0 8.2 21h7.6a3 3 0 0 0 2.7-4L15 10V4" /><path d="M7.2 16h9.6" /><path d="M10 12h4" /></svg>
+              </button>
+              <button id="biology-notebook-tool-tab-reaction" class="biology-notebook-tool-tab" type="button" data-notebook-tool-tab="reaction" role="tab" aria-selected="false" aria-label="Open fixed volume reaction" title="Fixed volume reaction">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true"><path d="M5 12h8" /><path d="M10 8l4 4-4 4" /><path d="M16 6h3v3" /><path d="M19 6l-5 5" /><path d="M16 18h3v-3" /><path d="M19 18l-5-5" /></svg>
+              </button>
+            </div>
+
+            <div class="biology-notebook-tool-body">
+              <section id="biology-notebook-tool-panel-molarity" class="biology-notebook-tool-panel" data-notebook-tool-panel="molarity">
+              <label>
+                Calculation
+                <select id="biology-notebook-tool-molarity-mode">
+                  <option value="mass" selected>Mass from concentration</option>
+                  <option value="volume">Volume from mass</option>
+                  <option value="concentration">Concentration from mass</option>
+                  <option value="dilution">Dilute stock</option>
+                </select>
+              </label>
+
+              <div id="biology-notebook-tool-molarity-mass" class="biology-notebook-tool-mode">
+                <label>Concentration <input id="biology-notebook-tool-mass-concentration" type="number" min="0" step="0.000001" placeholder="10" /></label>
+                <select id="biology-notebook-tool-mass-concentration-unit">
+                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
+                </select>
+                <label>Formula Weight <input id="biology-notebook-tool-mass-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
+                <label>Volume <input id="biology-notebook-tool-mass-volume" type="number" min="0" step="0.000001" placeholder="100" /></label>
+                <select id="biology-notebook-tool-mass-volume-unit">
+                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
+                </select>
+                <select id="biology-notebook-tool-mass-output-unit">
+                  <option value="ug">ug</option><option value="mg" selected>mg</option><option value="g">g</option>
+                </select>
+              </div>
+
+              <div id="biology-notebook-tool-molarity-volume" class="biology-notebook-tool-mode" hidden>
+                <label>Mass <input id="biology-notebook-tool-volume-mass" type="number" min="0" step="0.000001" placeholder="50" /></label>
+                <select id="biology-notebook-tool-volume-mass-unit">
+                  <option value="ug">ug</option><option value="mg" selected>mg</option><option value="g">g</option>
+                </select>
+                <label>Formula Weight <input id="biology-notebook-tool-volume-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
+                <label>Concentration <input id="biology-notebook-tool-volume-concentration" type="number" min="0" step="0.000001" placeholder="10" /></label>
+                <select id="biology-notebook-tool-volume-concentration-unit">
+                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
+                </select>
+                <select id="biology-notebook-tool-volume-output-unit">
+                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
+                </select>
+              </div>
+
+              <div id="biology-notebook-tool-molarity-concentration" class="biology-notebook-tool-mode" hidden>
+                <label>Mass <input id="biology-notebook-tool-concentration-mass" type="number" min="0" step="0.000001" placeholder="50" /></label>
+                <select id="biology-notebook-tool-concentration-mass-unit">
+                  <option value="ug">ug</option><option value="mg" selected>mg</option><option value="g">g</option>
+                </select>
+                <label>Formula Weight <input id="biology-notebook-tool-concentration-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
+                <label>Volume <input id="biology-notebook-tool-concentration-volume" type="number" min="0" step="0.000001" placeholder="1" /></label>
+                <select id="biology-notebook-tool-concentration-volume-unit">
+                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
+                </select>
+                <select id="biology-notebook-tool-concentration-output-unit">
+                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
+                </select>
+              </div>
+
+              <div id="biology-notebook-tool-molarity-dilution" class="biology-notebook-tool-mode" hidden>
+                <label>Stock Conc <input id="biology-notebook-tool-dilution-stock" type="number" min="0" step="0.000001" placeholder="100" /></label>
+                <select id="biology-notebook-tool-dilution-stock-unit">
+                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
+                </select>
+                <label>Desired Conc <input id="biology-notebook-tool-dilution-target" type="number" min="0" step="0.000001" placeholder="10" /></label>
+                <select id="biology-notebook-tool-dilution-target-unit">
+                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
+                </select>
+                <label>Final Volume <input id="biology-notebook-tool-dilution-volume" type="number" min="0" step="0.000001" placeholder="1" /></label>
+                <select id="biology-notebook-tool-dilution-volume-unit">
+                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
+                </select>
+                <select id="biology-notebook-tool-dilution-output-unit">
+                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
+                </select>
+              </div>
+            </section>
+
+            <section id="biology-notebook-tool-panel-buffer" class="biology-notebook-tool-panel" data-notebook-tool-panel="buffer" hidden>
+              <label>Buffer Volume (mL) <input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" value="100" /></label>
+              <div class="form-actions">
+                <button id="biology-notebook-tool-buffer-add-row" class="ghost-btn" type="button">Add Ingredient</button>
+              </div>
+              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-1">
+                <input id="biology-notebook-tool-buffer-name-1" placeholder="Tris Base" value="Tris Base" />
+                <select id="biology-notebook-tool-buffer-form-1"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
+                <input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" value="121.14" />
+                <input id="biology-notebook-tool-buffer-concentration-1" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
+              </div>
+              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-2" hidden>
+                <input id="biology-notebook-tool-buffer-name-2" placeholder="NaCl" />
+                <select id="biology-notebook-tool-buffer-form-2"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
+                <input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" />
+                <input id="biology-notebook-tool-buffer-concentration-2" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
+              </div>
+              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-3" hidden>
+                <input id="biology-notebook-tool-buffer-name-3" placeholder="Tween 20" />
+                <select id="biology-notebook-tool-buffer-form-3"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
+                <input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" />
+                <input id="biology-notebook-tool-buffer-concentration-3" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
+              </div>
+              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-4" hidden>
+                <input id="biology-notebook-tool-buffer-name-4" placeholder="Ingredient" />
+                <select id="biology-notebook-tool-buffer-form-4"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
+                <input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" />
+                <input id="biology-notebook-tool-buffer-concentration-4" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
+              </div>
+            </section>
+
+            <section id="biology-notebook-tool-panel-reaction" class="biology-notebook-tool-panel" data-notebook-tool-panel="reaction" hidden>
+              <label>Total Volume <input id="biology-notebook-tool-reaction-total-volume" type="number" min="0" step="0.000001" value="100" /></label>
+              <select id="biology-notebook-tool-reaction-total-unit"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
+              <label>Fill Solution <input id="biology-notebook-tool-reaction-fill-name" value="Water / buffer" /></label>
+              <div class="form-actions">
+                <button id="biology-notebook-tool-reaction-add-row" class="ghost-btn" type="button">Add Reagent</button>
+              </div>
+              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-1">
+                <input id="biology-notebook-tool-reaction-name-1" placeholder="Reagent" />
+                <input id="biology-notebook-tool-reaction-stock-1" type="number" min="0" step="0.000001" placeholder="Stock" />
+                <select id="biology-notebook-tool-reaction-stock-unit-1"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-final-1" type="number" min="0" step="0.000001" placeholder="Final" />
+                <select id="biology-notebook-tool-reaction-final-unit-1"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-volume-1" type="number" min="0" step="0.000001" placeholder="Manual vol" />
+                <select id="biology-notebook-tool-reaction-volume-unit-1"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
+              </div>
+              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-2" hidden>
+                <input id="biology-notebook-tool-reaction-name-2" placeholder="Reagent" />
+                <input id="biology-notebook-tool-reaction-stock-2" type="number" min="0" step="0.000001" placeholder="Stock" />
+                <select id="biology-notebook-tool-reaction-stock-unit-2"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-final-2" type="number" min="0" step="0.000001" placeholder="Final" />
+                <select id="biology-notebook-tool-reaction-final-unit-2"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-volume-2" type="number" min="0" step="0.000001" placeholder="Manual vol" />
+                <select id="biology-notebook-tool-reaction-volume-unit-2"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
+              </div>
+              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-3" hidden>
+                <input id="biology-notebook-tool-reaction-name-3" placeholder="Reagent" />
+                <input id="biology-notebook-tool-reaction-stock-3" type="number" min="0" step="0.000001" placeholder="Stock" />
+                <select id="biology-notebook-tool-reaction-stock-unit-3"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-final-3" type="number" min="0" step="0.000001" placeholder="Final" />
+                <select id="biology-notebook-tool-reaction-final-unit-3"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-volume-3" type="number" min="0" step="0.000001" placeholder="Manual vol" />
+                <select id="biology-notebook-tool-reaction-volume-unit-3"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
+              </div>
+              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-4" hidden>
+                <input id="biology-notebook-tool-reaction-name-4" placeholder="Reagent" />
+                <input id="biology-notebook-tool-reaction-stock-4" type="number" min="0" step="0.000001" placeholder="Stock" />
+                <select id="biology-notebook-tool-reaction-stock-unit-4"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-final-4" type="number" min="0" step="0.000001" placeholder="Final" />
+                <select id="biology-notebook-tool-reaction-final-unit-4"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
+                <input id="biology-notebook-tool-reaction-volume-4" type="number" min="0" step="0.000001" placeholder="Manual vol" />
+                <select id="biology-notebook-tool-reaction-volume-unit-4"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
+              </div>
+            </section>
+
+            <div class="biology-notebook-tool-output" aria-live="polite">
+              <p id="biology-notebook-tool-output">Enter values to calculate or show a bench formula.</p>
+              <p id="biology-notebook-tool-formula" class="small-note"></p>
+            </div>
+            <div class="form-actions biology-notebook-tool-actions">
+              <button id="biology-notebook-tool-insert-notes-btn" class="ghost-btn" type="button">Insert into Notes</button>
+              <button id="biology-notebook-tool-use-placeholder-btn" class="ghost-btn" type="button">Use for Placeholder</button>
+              <button id="biology-notebook-tool-record-btn" class="primary-btn" type="button">Record</button>
+            </div>
+              <p id="biology-notebook-tool-status" class="small-note"></p>
+            </div>
+          </div>
+        </aside>
       </div>
     </section>
 
@@ -749,7 +957,6 @@
                   <option value="chemical">Chemical</option>
                   <option value="primer">Primer</option>
                 </select>
-                <button id="sample-compound-open-btn" type="button" class="ghost-btn sample-structure-open-btn">Add Structure</button>
               </span>
             </label>
             <section id="sample-cell-passage-fields" class="sample-cell-passage-fields" hidden>
@@ -771,15 +978,14 @@
             <section id="sample-compound-fields" class="sample-compound-fields">
               <div class="inline-row sample-compound-head">
                 <strong>Chemical Structure</strong>
-                <span class="small-note">Paste CDXML or MOL from ChemDraw, or open Ketcher to draw</span>
+                <span class="small-note">Paste SMILES, MOL/SDF, or a copied structure image</span>
               </div>
               <div class="form-actions">
                 <button id="sample-compound-paste-btn" type="button" class="ghost-btn">Paste Structure</button>
-                <button id="sample-compound-capture-btn" type="button" class="ghost-btn">Refresh Snapshot</button>
                 <button id="sample-compound-clear-btn" type="button" class="ghost-btn">Clear Structure</button>
               </div>
               <label>
-                Captured SMILES
+                Captured Structure
                 <input id="sample-compound-smiles" readonly placeholder="No structure captured yet" />
               </label>
               <div id="sample-compound-status" class="small-note"></div>
@@ -856,29 +1062,6 @@
         </div>
       </div>
 
-      <div id="sample-compound-dialog-overlay" class="sample-compound-dialog-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
-        <div class="sample-compound-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sample-compound-dialog-title">
-          <div class="sample-compound-dialog-head app-dialog-head">
-            <div>
-              <h3 id="sample-compound-dialog-title">Draw Chemical Structure</h3>
-              <p class="small-note">Use Ketcher to draw or edit the chemical, then apply the snapshot to the current sample.</p>
-            </div>
-            <button type="button" id="sample-compound-dialog-close-btn" class="ghost-btn" aria-label="Close Ketcher dialog">Close</button>
-          </div>
-          <iframe
-            id="sample-compound-ketcher-frame"
-            class="ketcher-frame sample-ketcher-frame"
-            title="Sample chemical Ketcher editor"
-            src="./ketcher-embedded.html"
-            loading="eager"
-            referrerpolicy="no-referrer"
-          ></iframe>
-          <div class="form-actions sample-compound-dialog-actions">
-            <button id="sample-compound-dialog-apply-btn" type="button" class="primary-btn">Use Structure</button>
-            <button id="sample-compound-dialog-cancel-btn" type="button" class="ghost-btn">Close</button>
-          </div>
-        </div>
-      </div>
     </section>
 
 <!-- SOURCE: ui/html/views/assay-view.html -->
@@ -971,6 +1154,58 @@
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
               <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Edit Conc.</button>
             </div>
+            <label class="assay-conc-unit-field">
+              Conc. unit
+              <input
+                type="text"
+                id="assay-concentration-unit"
+                class="assay-conc-unit-input"
+                list="assay-concentration-unit-options"
+                placeholder="e.g. nM"
+                autocomplete="off"
+              />
+              <datalist id="assay-concentration-unit-options">
+                <option value="fM"></option>
+                <option value="pM"></option>
+                <option value="nM"></option>
+                <option value="µM"></option>
+                <option value="mM"></option>
+                <option value="M"></option>
+              </datalist>
+            </label>
+            <label class="assay-conc-unit-field">
+              Fill
+              <select id="assay-fill-mode" class="assay-fill-mode-select">
+                <option value="factor">Dilution &divide;</option>
+                <option value="linear">Linear</option>
+                <option value="log">Log</option>
+              </select>
+            </label>
+            <input
+              type="number"
+              id="assay-dilution-factor"
+              class="assay-conc-unit-input"
+              min="0"
+              step="any"
+              placeholder="factor e.g. 10"
+            />
+            <input
+              type="text"
+              id="assay-fill-start"
+              class="assay-conc-unit-input"
+              placeholder="start"
+              autocomplete="off"
+              hidden
+            />
+            <input
+              type="text"
+              id="assay-fill-end"
+              class="assay-conc-unit-input"
+              placeholder="end"
+              autocomplete="off"
+              hidden
+            />
+            <button type="button" id="assay-dilution-fill-btn" class="ghost-btn">Fill</button>
             <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
             <button type="button" id="assay-serial-dilution-btn" class="ghost-btn">Serial Dilution</button>
           </div>
@@ -1054,189 +1289,7 @@
             <div id="assay-analysis-summary" class="small-note"></div>
           </div>
 
-          <details id="assay-chart-style-panel" class="assay-results-control-section assay-chart-style">
-            <summary class="assay-chart-style-summary">Chart Style</summary>
-            <div class="assay-chart-style-body">
-              <fieldset class="assay-chart-style-group">
-                <legend>Axes</legend>
-                <label>
-                  X column
-                  <select id="assay-chart-x-column"><option value="auto">Auto</option></select>
-                </label>
-                <label>
-                  Y column
-                  <select id="assay-chart-y-column"><option value="auto">Auto</option></select>
-                </label>
-                <label>
-                  Series column
-                  <select id="assay-chart-series-column"><option value="auto">Auto</option></select>
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Scale &amp; range</legend>
-                <label>
-                  X scale
-                  <select id="assay-chart-x-scale">
-                    <option value="auto">Auto</option>
-                    <option value="linear">Linear</option>
-                    <option value="log">Log</option>
-                    <option value="ordinal">Ordinal</option>
-                  </select>
-                </label>
-                <label>
-                  Y scale
-                  <select id="assay-chart-y-scale">
-                    <option value="linear">Linear</option>
-                    <option value="log">Log</option>
-                  </select>
-                </label>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-x-range-auto" checked />
-                  X auto range
-                </label>
-                <div class="assay-chart-style-row">
-                  <label>
-                    X min
-                    <input type="number" step="any" id="assay-chart-x-min" />
-                  </label>
-                  <label>
-                    X max
-                    <input type="number" step="any" id="assay-chart-x-max" />
-                  </label>
-                </div>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-y-range-auto" checked />
-                  Y auto range
-                </label>
-                <div class="assay-chart-style-row">
-                  <label>
-                    Y min
-                    <input type="number" step="any" id="assay-chart-y-min" />
-                  </label>
-                  <label>
-                    Y max
-                    <input type="number" step="any" id="assay-chart-y-max" />
-                  </label>
-                </div>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Points</legend>
-                <label>
-                  Shape
-                  <select id="assay-chart-point-shape">
-                    <option value="circle">Circle</option>
-                    <option value="square">Square</option>
-                    <option value="triangle">Triangle</option>
-                    <option value="diamond">Diamond</option>
-                    <option value="cross">Cross</option>
-                  </select>
-                </label>
-                <label>
-                  Size
-                  <input type="range" id="assay-chart-point-size" min="1" max="20" step="0.5" />
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Lines</legend>
-                <label>
-                  Style
-                  <select id="assay-chart-line-style">
-                    <option value="solid">Solid</option>
-                    <option value="dashed">Dashed</option>
-                    <option value="dotted">Dotted</option>
-                  </select>
-                </label>
-                <label>
-                  Curve
-                  <select id="assay-chart-curve">
-                    <option value="curveMonotoneX">Monotone</option>
-                    <option value="curveLinear">Linear</option>
-                    <option value="curveStep">Step</option>
-                  </select>
-                </label>
-                <label>
-                  Width
-                  <input type="range" id="assay-chart-line-width" min="0.5" max="8" step="0.1" />
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Frame</legend>
-                <label>
-                  Style
-                  <select id="assay-chart-frame-style">
-                    <option value="box">Box</option>
-                    <option value="l-shape">L-shape</option>
-                    <option value="none">None</option>
-                  </select>
-                </label>
-                <label>
-                  Stroke
-                  <input type="color" id="assay-chart-frame-stroke" />
-                </label>
-                <label>
-                  Stroke width
-                  <input type="range" id="assay-chart-frame-stroke-width" min="0" max="6" step="0.1" />
-                </label>
-                <label>
-                  Corner radius
-                  <input type="range" id="assay-chart-frame-corner-radius" min="0" max="40" step="1" />
-                </label>
-                <label>
-                  Background
-                  <input type="color" id="assay-chart-background-color" />
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Size</legend>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-size-auto" checked />
-                  Auto size
-                </label>
-                <label>
-                  Width (px)
-                  <input type="range" id="assay-chart-frame-width" min="320" max="2000" step="10" />
-                </label>
-                <label>
-                  Height (px)
-                  <input type="range" id="assay-chart-frame-height" min="180" max="1200" step="10" />
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Grid lines</legend>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-grid-vertical" checked />
-                  Vertical lines
-                </label>
-                <label class="assay-chart-style-checkbox">
-                  <input type="checkbox" id="assay-chart-grid-horizontal" checked />
-                  Horizontal lines
-                </label>
-                <label>
-                  Color
-                  <input type="color" id="assay-chart-grid-color" />
-                </label>
-                <label>
-                  Width
-                  <input type="range" id="assay-chart-grid-stroke-width" min="0" max="6" step="0.1" />
-                </label>
-              </fieldset>
-
-              <fieldset class="assay-chart-style-group">
-                <legend>Series colors</legend>
-                <div id="assay-chart-series-colors" class="assay-chart-style-series"></div>
-              </fieldset>
-
-              <div class="form-actions assay-chart-style-actions">
-                <button type="button" id="assay-chart-style-reset-btn" class="ghost-btn">Reset to defaults</button>
-              </div>
-            </div>
-          </details>
+          <div id="assay-chart-style-panel" class="assay-results-control-section" data-assay-chart-style-mount></div>
         </div>
 
         <div class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main">
@@ -1329,10 +1382,6 @@
               <input id="gel-ladder-lane" type="number" min="1" step="1" value="1" />
             </label>
             <label>
-              Ladder Band MW (kDa)
-              <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="Use in Step 5, e.g. 50" />
-            </label>
-            <label>
               Normalization
               <select id="gel-normalization">
                 <option value="none">None</option>
@@ -1377,11 +1426,6 @@
                   <button type="button" id="gel-rotate-right-btn" class="ghost-btn" disabled title="Rotate 90° clockwise">Rotate ↻</button>
                   <button type="button" id="gel-process-image-btn" class="ghost-btn">Process Image</button>
                   <button type="button" id="gel-view-original-btn" class="ghost-btn" aria-pressed="true">View Original</button>
-                  <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
-                  <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
-                  <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
-                  <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
-                  <button type="button" id="gel-add-table-btn" class="ghost-btn" hidden>Add table</button>
                 </div>
                 <div id="gel-viewer-stage" class="gel-viewer-stage">
                   <div id="gel-lane-table-shell" class="gel-lane-table-shell" hidden></div>
@@ -1396,6 +1440,51 @@
               </div>
 
               <div class="gel-side-rail">
+                <section class="panel gel-manual-panel gel-tool-panel" aria-label="Gel tools">
+                  <h3>Gel Tools</h3>
+                  <div class="gel-tool-groups">
+                    <details class="gel-tool-group" open>
+                      <summary>Lane</summary>
+                      <div class="gel-tool-actions">
+                        <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
+                        <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
+                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
+                        <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
+                        <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Adjust lane vertices</button>
+                        <label class="small-note gel-lane-count-control">
+                          Lanes:
+                          <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" />
+                        </label>
+                        <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect lanes</button>
+                      </div>
+                    </details>
+
+                    <details class="gel-tool-group" open>
+                      <summary>Band</summary>
+                      <div class="gel-tool-actions">
+                        <button type="button" id="gel-tool-band-top-btn" class="ghost-btn">Set band top line</button>
+                        <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn">Set band bottom line</button>
+                        <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false">Lane-by-lane band</button>
+                      </div>
+                    </details>
+
+                    <details class="gel-tool-group" open>
+                      <summary>Analysis</summary>
+                      <div class="gel-tool-actions">
+                        <label class="small-note gel-ladder-mw-control">
+                          Ladder MW (kDa)
+                          <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="e.g. 50" />
+                        </label>
+                        <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
+                        <button type="button" id="gel-measure-intensity-btn" class="ghost-btn">Measure intensity</button>
+                        <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn">Peak editor</button>
+                        <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
+                        <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Tools</button>
+                      </div>
+                    </details>
+                  </div>
+                </section>
+
                 <section id="gel-lane-profile-panel" class="panel gel-manual-panel gel-lane-profile-panel" hidden>
                   <div class="gel-lane-profile-head">
                     <div>
@@ -1415,30 +1504,6 @@
                   <div id="gel-lane-profile-meta" class="gel-lane-profile-meta small-note"></div>
                 </section>
 
-                <aside id="gel-manual-progress" class="panel gel-manual-progress gel-manual-panel" hidden>
-                  <h3>Manual Steps</h3>
-                  <ol class="gel-step-list">
-                    <li id="gel-step-left">1. Click left gel border</li>
-                    <li id="gel-step-right">2. Click right gel border</li>
-                    <li id="gel-step-dividers">3. Click lane dividers</li>
-                    <li id="gel-step-ladder">4. Click ladder lane</li>
-                    <li id="gel-step-ladder-mw">5. Click ladder band (uses MW input) or right-click to type MW</li>
-                    <li id="gel-step-band-top">6. Click top line of target band</li>
-                    <li id="gel-step-band-bottom">7. Click bottom line of target band</li>
-                    <li id="gel-step-quantify">8. Review per-cell intensities</li>
-                    <li id="gel-step-bands">9. (Optional) Click bands to add</li>
-                  </ol>
-                  <div class="form-actions">
-                    <button type="button" id="gel-manual-prev-btn" class="ghost-btn">Previous Step</button>
-                    <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
-                    <label class="small-note" style="display: inline-flex; align-items: center; gap: 4px;">
-                      Lanes:
-                      <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" style="width: 60px;" />
-                    </label>
-                    <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-Detect Lanes</button>
-                    <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Steps</button>
-                  </div>
-                </aside>
               </div>
             </div>
 
@@ -1460,6 +1525,34 @@
                 <pre id="gel-report-json" class="gel-report-json"></pre>
               </div>
             </div>
+          </div>
+
+          <div id="gel-peak-editor-overlay" class="gel-peak-editor-overlay" hidden>
+            <section class="gel-peak-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="gel-peak-editor-title">
+              <header class="gel-peak-editor-header">
+                <div>
+                  <h3 id="gel-peak-editor-title">Lane Peak Area</h3>
+                  <div id="gel-peak-editor-summary" class="small-note"></div>
+                </div>
+                <button type="button" id="gel-peak-editor-close-btn" class="ghost-btn">Close</button>
+              </header>
+              <div class="gel-peak-editor-toolbar" role="toolbar" aria-label="Peak area tools">
+                <label class="gel-peak-editor-lane-picker small-note">
+                  Lane
+                  <select id="gel-peak-editor-lane-select"></select>
+                </label>
+                <div class="gel-peak-editor-modes">
+                  <button type="button" id="gel-peak-editor-baseline-mode-btn" class="ghost-btn is-active" aria-pressed="true">Baseline</button>
+                  <button type="button" id="gel-peak-editor-divider-mode-btn" class="ghost-btn" aria-pressed="false">Divider</button>
+                </div>
+                <button type="button" id="gel-peak-editor-clear-lane-btn" class="ghost-btn">Clear lane</button>
+                <button type="button" id="gel-peak-editor-clear-all-btn" class="ghost-btn">Clear all</button>
+              </div>
+              <div class="gel-peak-editor-chart-shell">
+                <svg id="gel-peak-editor-chart" class="gel-peak-editor-chart" viewBox="0 0 920 440" preserveAspectRatio="none" role="img" aria-label="Manual peak area editor"></svg>
+              </div>
+              <div id="gel-peak-editor-table" class="gel-peak-editor-table"></div>
+            </section>
           </div>
         </div>
       </div>
@@ -1623,9 +1716,21 @@
               <span>Inventory Locations</span>
               <small>Shared location vocabulary</small>
             </button>
+            <button type="button" class="settings-nav-item" data-settings-target="sample-inventory">
+              <span>Sample &amp; Inventory</span>
+              <small>Storage locations and type names</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="preferred-journal">
+              <span>Preferred Journal</span>
+              <small>Default journal name or URL</small>
+            </button>
             <button type="button" class="settings-nav-item" data-settings-target="llm">
               <span>LLM Model &amp; Access</span>
               <small>Provider, model, endpoint</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="skills">
+              <span>External Skills</span>
+              <small>Agent skill files</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="telegram">
               <span>Telegram Bot</span>
@@ -1732,6 +1837,47 @@
               </div>
             </section>
 
+            <section class="settings-section" data-settings-panel="sample-inventory" hidden>
+              <div class="settings-section-head">
+                <h3>Sample &amp; Inventory</h3>
+                <p class="small-note">Configure sample storage sections and the visible names for sample types.</p>
+              </div>
+              <div class="stack-form">
+                <div class="settings-subsection">
+                  <h4>Storage Locations</h4>
+                  <div class="inline-row settings-location-entry">
+                    <input id="setting-sample-inventory-location-input" placeholder="Add sample storage location" />
+                    <button type="button" id="setting-sample-inventory-location-add-btn" class="ghost-btn">Add Location</button>
+                  </div>
+                  <div id="setting-sample-inventory-location-list" class="stack-form"></div>
+                </div>
+                <form id="sample-type-labels-form" class="stack-form settings-subsection">
+                  <h4>Sample Type Names</h4>
+                  <div id="setting-sample-type-label-list" class="settings-sample-type-label-list"></div>
+                  <div class="form-actions">
+                    <button type="submit" class="primary-btn">Save Type Names</button>
+                  </div>
+                </form>
+              </div>
+            </section>
+
+            <section class="settings-section" data-settings-panel="preferred-journal" hidden>
+              <div class="settings-section-head">
+                <h3>Preferred Journal</h3>
+                <p class="small-note">Set the journal you most often submit to or browse. Enter a journal name (e.g. <em>Nature Chemistry</em>) or a URL (e.g. <em>https://www.nature.com/nchem/</em>).</p>
+              </div>
+              <form id="preferred-journal-form" class="stack-form">
+                <label>
+                  Journal Name or URL
+                  <input id="setting-preferred-journal" placeholder="Journal name or https://..." />
+                </label>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Save Preferred Journal</button>
+                  <button type="button" id="clear-preferred-journal-btn" class="ghost-btn">Clear</button>
+                </div>
+              </form>
+            </section>
+
             <section class="settings-section" data-settings-panel="llm" hidden>
               <div class="settings-section-head">
                 <h3>LLM Model &amp; Access</h3>
@@ -1776,6 +1922,24 @@
                 </div>
               </form>
             </section>
+
+          <section class="settings-section" data-settings-panel="skills" hidden>
+            <div class="settings-section-head">
+              <h3>External Skills</h3>
+              <p class="small-note">View discovered skill files and control which ones the agent may use.</p>
+            </div>
+            <div class="stack-form">
+              <label class="inline-row settings-switch-row">
+                <input id="setting-agent-external-skills-enabled" type="checkbox" />
+                External skills enabled
+              </label>
+              <p id="setting-external-skills-status" class="small-note">External skills: loading...</p>
+              <div class="form-actions">
+                <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn">Refresh Skills</button>
+              </div>
+              <div id="setting-external-skills-list" class="settings-skill-list" aria-live="polite"></div>
+            </div>
+          </section>
 
           <section class="settings-section" data-settings-panel="telegram" hidden>
             <div class="settings-section-head">
@@ -2047,12 +2211,28 @@
                         <span aria-hidden="true">&gt;</span>
                       </button>
                     </div>
-                    <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn">-</button>
+                    <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom out" title="Zoom out">-</button>
                     <span id="paper-viewer-zoom-label" class="small-note">100%</span>
-                    <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
+                    <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom in" title="Zoom in">+</button>
                     <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
-                    <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
-                    <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
+                    <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Fit width" title="Fit width">
+                      <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <rect x="4.5" y="6" width="15" height="12" rx="1.5"></rect>
+                        <path d="M8 12h8"></path>
+                        <path d="m10 9-3 3 3 3"></path>
+                        <path d="m14 9 3 3-3 3"></path>
+                      </svg>
+                      <span class="sr-only">Fit width</span>
+                    </button>
+                    <button type="button" id="paper-viewer-print-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Print" title="Print">
+                      <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M7 8V4.75h10V8"></path>
+                        <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
+                        <path d="M6.5 17H5.25A2.25 2.25 0 0 1 3 14.75v-4A2.25 2.25 0 0 1 5.25 8.5h13.5A2.25 2.25 0 0 1 21 10.75v4A2.25 2.25 0 0 1 18.75 17H17.5"></path>
+                        <path d="M8.25 16.5h7.5"></path>
+                      </svg>
+                      <span class="sr-only">Print</span>
+                    </button>
                   </div>
                   <div class="papers-viewer-summary" hidden>
                     <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
@@ -2097,6 +2277,38 @@
                       </svg>
                       <span class="sr-only">Underline</span>
                     </button>
+                    <button type="button" id="paper-selection-search-btn" class="ghost-btn papers-selection-action-btn" aria-label="Search selected text" title="Search selected text">
+                      <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M10.75 5.25a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"></path>
+                        <path d="M15 15 19.25 19.25"></path>
+                      </svg>
+                      <span class="sr-only">Search selected text</span>
+                    </button>
+                    <button type="button" id="paper-selection-ask-btn" class="ghost-btn papers-selection-action-btn" aria-label="Ask Hikari about selected text" title="Ask Hikari">
+                      <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M9.25 8.5a3 3 0 0 1 5.85.95c0 2.8-3.3 2.55-3.3 5.05"></path>
+                        <path d="M12 18.25h.01"></path>
+                      </svg>
+                      <span class="sr-only">Ask Hikari about selected text</span>
+                    </button>
+                  </div>
+                  <div id="paper-selection-search-popover" class="papers-selection-search-popover" hidden>
+                    <div class="papers-selection-search-top">
+                      <div class="papers-selection-search-actions">
+                        <button type="button" id="paper-selection-search-pdf-btn" class="ghost-btn">This PDF</button>
+                        <button type="button" id="paper-selection-search-library-btn" class="ghost-btn">Paper database</button>
+                      </div>
+                      <div id="paper-selection-search-nav" class="papers-selection-search-nav" aria-label="Search match navigation" hidden>
+                        <button type="button" id="paper-selection-search-prev-btn" class="ghost-btn" aria-label="Previous matched word" title="Previous matched word">
+                          <span aria-hidden="true">&lt;</span>
+                        </button>
+                        <span id="paper-selection-search-count" class="papers-selection-search-count">0 / 0</span>
+                        <button type="button" id="paper-selection-search-next-btn" class="ghost-btn" aria-label="Next matched word" title="Next matched word">
+                          <span aria-hidden="true">&gt;</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div id="paper-selection-search-results" class="papers-selection-search-results"></div>
                   </div>
                   <div id="paper-selection-comment-popover" class="papers-selection-comment-popover" hidden>
                     <label>
@@ -2270,7 +2482,7 @@
               </div>
             </div>
             <div id="agent-review-overlay" class="agent-review-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
-              <section class="agent-review-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
+              <section class="agent-review-dialog" role="dialog" aria-modal="true" aria-labelledby="agent-review-title">
                 <header class="agent-review-dialog-header">
                   <div>
                     <h3 id="agent-review-title">Review Generated Drafts</h3>
@@ -2825,58 +3037,72 @@
       </div>
 
       <div id="tool-colony-counter-view" class="panel tool-subview" hidden>
-        <h3>Colony Counter (Manual Click)</h3>
+        <h3>Colony Counter</h3>
 
         <div class="colony-counter-shell">
-          <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
-            <label>
-              Plate Image
-              <input id="colony-image-file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif" />
-            </label>
-
-            <div class="form-actions">
-              <button id="colony-start-crop-btn" type="button" class="ghost-btn">Start Crop</button>
-              <button id="colony-apply-crop-btn" type="button" class="ghost-btn" disabled>Apply Crop</button>
-              <button id="colony-cancel-crop-btn" type="button" class="ghost-btn" disabled>Cancel Crop</button>
-              <button id="colony-reset-crop-btn" type="button" class="ghost-btn">Reset to Full Image</button>
+          <div class="colony-workspace-plate">
+            <div id="colony-cropper-shell" class="colony-cropper-shell" hidden>
+              <img id="colony-cropper-image" class="colony-cropper-image" alt="Colony cropper preview" />
             </div>
 
-            <div class="form-grid">
-              <label>
-                Display Max Size (px)
-                <input id="colony-max-size" type="number" min="300" max="5000" step="50" value="1600" />
-              </label>
-            </div>
-
-            <div class="form-actions">
-              <button id="colony-clear-markers-btn" type="button" class="ghost-btn">Clear Markers</button>
-              <button id="colony-run-btn" type="submit" class="primary-btn">Save Manual Count</button>
-              <button id="colony-reset-btn" type="button" class="ghost-btn">Reset</button>
-              <span id="colony-status" class="small-note"></span>
-            </div>
-          </form>
-
-          <div id="colony-summary" class="calc-output">
-            <p class="small-note">Choose or drop a plate image, then click each colony to count manually.</p>
-          </div>
-
-          <div id="colony-cropper-shell" class="colony-cropper-shell" hidden>
-            <img id="colony-cropper-image" class="colony-cropper-image" alt="Colony cropper preview" />
-          </div>
-
-          <div class="colony-preview-grid">
             <section class="result-card colony-preview-card">
               <div class="result-card-head">
                 <h4>Annotated Colonies</h4>
               </div>
               <canvas id="colony-preview-canvas" class="colony-preview-canvas"></canvas>
             </section>
-            <section class="result-card colony-preview-card">
-              <div class="result-card-head">
-                <h4>Marker Map</h4>
+          </div>
+
+          <div class="colony-workspace-settings">
+            <form id="colony-counter-form" class="stack-form colony-counter-controls" autocomplete="off">
+              <label>
+                Plate Image
+                <input id="colony-image-file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif" />
+              </label>
+
+              <div class="form-actions">
+                <button id="colony-start-crop-btn" type="button" class="ghost-btn">Start Crop</button>
+                <button id="colony-apply-crop-btn" type="button" class="ghost-btn" disabled>Apply Crop</button>
+                <button id="colony-cancel-crop-btn" type="button" class="ghost-btn" disabled>Cancel Crop</button>
+                <button id="colony-reset-crop-btn" type="button" class="ghost-btn">Reset to Full Image</button>
               </div>
-              <canvas id="colony-mask-canvas" class="colony-preview-canvas"></canvas>
-            </section>
+
+              <div class="form-grid">
+                <label>
+                  Display Max Size (px)
+                  <input id="colony-max-size" type="number" min="300" max="5000" step="50" value="1600" />
+                </label>
+                <label>
+                  Model Threshold
+                  <input id="colony-model-threshold" type="number" min="0.01" max="0.99" step="0.05" value="0.50" />
+                </label>
+                <label>
+                  Peak Min Distance (px)
+                  <input id="colony-model-min-distance" type="number" min="1" max="50" step="1" value="3" />
+                </label>
+                <label>
+                  Mask Shape
+                  <select id="colony-mask-mode">
+                    <option value="rectangle">Rectangle</option>
+                    <option value="circle">Circle</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="form-actions">
+                <button id="colony-auto-count-btn" type="button" class="primary-btn">Auto Count</button>
+                <button id="colony-start-mask-btn" type="button" class="ghost-btn">Draw Mask</button>
+                <button id="colony-clear-mask-btn" type="button" class="ghost-btn">Clear Mask</button>
+                <button id="colony-clear-markers-btn" type="button" class="ghost-btn">Clear Markers</button>
+                <button id="colony-run-btn" type="submit" class="ghost-btn">Save Count</button>
+                <button id="colony-reset-btn" type="button" class="ghost-btn">Reset</button>
+                <span id="colony-status" class="small-note"></span>
+              </div>
+            </form>
+
+            <div id="colony-summary" class="calc-output">
+              <p class="small-note">Choose or drop a plate image, then run auto count or click colonies manually.</p>
+            </div>
           </div>
         </div>
 
@@ -2893,11 +3119,11 @@
           <div class="sequence-viewer-home-layout left-rail-template">
             <aside class="sequence-viewer-home-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
               <div class="left-rail-template__stack">
-                <section class="left-rail-template__section">
-                  <div class="sequence-viewer-home-nav-copy">
+                <section class="sequence-viewer-rail-actions-section left-rail-template__section">
+                  <div class="sequence-viewer-rail-nav-copy">
                     <h2>Open Sequence</h2>
                   </div>
-                  <div class="form-actions sequence-viewer-home-nav-actions">
+                  <div class="form-actions sequence-viewer-rail-nav-actions">
                     <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
                     <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
                     <button id="sequence-viewer-home-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
@@ -3124,9 +3350,20 @@
         <div class="sequence-viewer-detail-layout left-rail-template">
           <aside class="sequence-viewer-detail-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
             <div class="left-rail-template__stack">
+              <section class="sequence-viewer-rail-actions-section left-rail-template__section">
+                <div class="sequence-viewer-rail-nav-copy">
+                  <h2>Open Sequence</h2>
+                </div>
+                <div class="form-actions sequence-viewer-rail-nav-actions">
+                  <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
+                  <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
+                  <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
+                  <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+                </div>
+              </section>
               <section class="sequence-viewer-library-card left-rail-template__section">
                 <div class="result-card-head">
-                  <h4>Sequences</h4>
+                  <h4>Sequence Library</h4>
                 </div>
                 <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
                   <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
@@ -3142,7 +3379,6 @@
 
           <div class="sequence-viewer-detail-main left-rail-template__main">
         <div class="sequence-viewer-detail-topbar">
-          <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
           <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
           <label class="sequence-viewer-save-name-wrap">
             Save Name
@@ -3231,9 +3467,12 @@
         </form>
 
         <div class="sequence-viewer-results">
-          <section class="sequence-viewer-sequence-card">
+          <section class="sequence-viewer-sequence-region">
             <div id="sequence-viewer-sequence-host" class="sequence-viewer-sequence-host">
               <p class="small-note">Load sequence data to begin.</p>
+            </div>
+            <div id="sequence-viewer-alignment-trace-panel" class="sequence-viewer-alignment-trace-panel" hidden>
+              <div id="sequence-viewer-alignment-trace-host" class="sequence-viewer-alignment-trace-host"></div>
             </div>
             <div class="sequence-viewer-feature-bottom">
               <div class="result-card-head">
@@ -3282,7 +3521,8 @@
               </label>
               <label>
                 Type
-                <input id="sequence-viewer-feature-editor-type" placeholder="e.g. promoter" />
+                <input id="sequence-viewer-feature-editor-type" list="sequence-viewer-feature-editor-type-options" placeholder="e.g. promoter" />
+                <datalist id="sequence-viewer-feature-editor-type-options"></datalist>
               </label>
               <label>
                 Strand
@@ -3505,8 +3745,66 @@
       </div>
     </section>
 </section>
+      <aside id="universal-agent-chat-rail" class="universal-agent-chat-rail" aria-label="Agent Chat Rail" aria-hidden="true" data-state="collapsed" hidden>
+        <button type="button" id="agent-chat-rail-toggle-btn" class="universal-agent-chat-rail__toggle" aria-label="Open agent chat rail" aria-expanded="false" title="Open chat">&lt;</button>
+        <div class="universal-agent-chat-rail__content">
+          <header class="universal-agent-chat-rail__header">
+            <div>
+              <h2>Chat</h2>
+            </div>
+          </header>
+          <div class="agent-conversation-shell universal-agent-chat-rail__conversation">
+            <div class="agent-history-viewport">
+              <div id="agent-rail-chat-history" class="agent-chat-history universal-agent-chat-rail__history" aria-live="polite"></div>
+              <button type="button" id="agent-rail-scroll-to-bottom-btn" class="ghost-btn agent-scroll-to-bottom-btn" hidden>Latest</button>
+            </div>
+            <div class="agent-composer-shell universal-agent-chat-rail__composer">
+              <div class="stack-form agent-composer-card">
+                <input id="agent-rail-attachment-input" type="file" multiple hidden />
+                <div id="agent-rail-quick-prompts" class="agent-rail-quick-prompts" aria-label="Common paper prompts">
+                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Generate a step-by-step experimental protocol from this paper. Include materials, timing, controls, and key caveats.">Generate protocol</button>
+                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Summarize the main finding, evidence, and limitations of this paper.">Summarize</button>
+                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Extract the methods that are directly reusable for my experiment.">Extract methods</button>
+                </div>
+                <label class="agent-composer-label">
+                  <span>Message</span>
+                  <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this paper."></textarea>
+                </label>
+                <div id="agent-rail-attachment-list" class="agent-attachment-list" hidden></div>
+                <div class="agent-composer-toolbar">
+                  <div class="agent-composer-toolbar-start">
+                    <button type="button" id="agent-rail-attach-btn" class="ghost-btn agent-attach-btn" aria-label="Attach photos or files" title="Attach photos or files">+</button>
+                  </div>
+                  <div class="form-actions agent-composer-actions">
+                    <button type="button" id="agent-rail-send-btn" class="primary-btn">Send</button>
+                    <button type="button" id="agent-rail-stop-btn" class="danger-btn" hidden>Stop</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
     </div>
   </main>
+
+  <div id="unsaved-changes-overlay" class="unsaved-changes-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+    <section class="unsaved-changes-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="unsaved-changes-title" aria-describedby="unsaved-changes-description">
+      <div class="app-dialog-head">
+        <div>
+          <h3 id="unsaved-changes-title">Save changes before quitting?</h3>
+          <p id="unsaved-changes-description" class="small-note">The following work has not been saved.</p>
+        </div>
+      </div>
+      <ul id="unsaved-changes-list" class="unsaved-changes-list"></ul>
+      <p id="unsaved-changes-status" class="small-note" role="status" aria-live="polite"></p>
+      <div class="form-actions unsaved-changes-actions">
+        <button type="button" id="unsaved-changes-cancel-btn" class="ghost-btn">Cancel</button>
+        <button type="button" id="unsaved-changes-discard-btn" class="danger-btn">Quit Without Saving</button>
+        <button type="button" id="unsaved-changes-save-btn" class="primary-btn">Save and Quit</button>
+      </div>
+    </section>
+  </div>
 
   <script src="./vendor/cropperjs/cropper.min.js"></script>
   <script src="./vendor/tabulator/tabulator.min.js"></script>

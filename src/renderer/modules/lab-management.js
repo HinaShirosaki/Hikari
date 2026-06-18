@@ -4,7 +4,7 @@ export function initLabManagement({ state, persist, createId, safeText }) {
   const memberNameInput = document.getElementById('member-name');
   const memberInstitutionEmailInput = document.getElementById('member-institution-email');
   const memberPositionInput = document.getElementById('member-position');
-  const memberEnanaEmailInput = document.getElementById('member-enana-email');
+  const memberHikariEmailInput = document.getElementById('member-hikari-email');
   const memberCancelBtn = document.getElementById('member-cancel-btn');
   const memberCards = document.getElementById('member-cards');
 
@@ -19,10 +19,10 @@ export function initLabManagement({ state, persist, createId, safeText }) {
       name: memberNameInput.value.trim(),
       institutionEmail: memberInstitutionEmailInput.value.trim(),
       position: memberPositionInput.value.trim(),
-      enanaEmail: memberEnanaEmailInput.value.trim()
+      hikariEmail: memberHikariEmailInput.value.trim()
     };
 
-    if (!member.name || !member.institutionEmail || !member.position || !member.enanaEmail) {
+    if (!member.name || !member.institutionEmail || !member.position || !member.hikariEmail) {
       return;
     }
 
@@ -53,7 +53,7 @@ export function initLabManagement({ state, persist, createId, safeText }) {
     memberNameInput.value = member.name;
     memberInstitutionEmailInput.value = member.institutionEmail;
     memberPositionInput.value = member.position;
-    memberEnanaEmailInput.value = member.enanaEmail;
+    memberHikariEmailInput.value = member.hikariEmail;
   }
 
   function deleteMember(memberId) {
@@ -73,7 +73,7 @@ export function initLabManagement({ state, persist, createId, safeText }) {
         <h3>${safeText(member.name)}</h3>
         <p><strong>Institution Email:</strong> ${safeText(member.institutionEmail)}</p>
         <p><strong>Position:</strong> ${safeText(member.position)}</p>
-        <p><strong>Hikari Email:</strong> ${safeText(member.enanaEmail)}</p>
+        <p><strong>Hikari Email:</strong> ${safeText(member.hikariEmail)}</p>
         <div class="card-actions">
           <button class="ghost-btn" data-member-edit="${member.id}">Edit</button>
           <button class="danger-btn" data-member-delete="${member.id}">Delete</button>

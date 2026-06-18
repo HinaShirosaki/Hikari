@@ -1,4 +1,5 @@
 import { COMMERCIAL_RESTRICTION_ENZYMES } from '../../../shared/data/commercial-restriction-enzymes.js';
+import * as sharedRestrictionFeatures from '../../../shared/sequence/restriction-features.js';
 import {
   FALLBACK_CHAR_ADVANCE_PX,
   RESTRICTION_VENDOR_CODE_BY_KEY,
@@ -265,8 +266,7 @@ export function filterCommercialRestrictionFeatures(features, vendorFilter) {
 }
 
 export function buildCommercialRestrictionFeatures(sequence, topology = 'linear', options = {}) {
-  const baseFeatures = buildCommercialRestrictionBaseFeatures(sequence, topology);
-  return filterCommercialRestrictionFeatures(baseFeatures, options?.vendorFilter);
+  return sharedRestrictionFeatures.buildCommercialRestrictionFeatures(sequence, topology, options);
 }
 
 function parseRestrictionCutDescriptor(feature) {

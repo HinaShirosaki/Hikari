@@ -1,7 +1,9 @@
 'use strict';
 
 const fs = require('fs/promises');
-const { recognizeSequenceBackboneInLibrary } = require('../sequence/sequence-backbone-recognition');
+const {
+  recognizeSequenceBackboneInLibrary
+} = require('../../../../shared/sequence/sequence-backbone-recognition');
 const {
   normalizeEntryRow,
   openDatabase,

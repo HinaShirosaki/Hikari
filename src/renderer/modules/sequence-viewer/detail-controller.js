@@ -417,6 +417,10 @@ export function createSequenceViewerDetailController(config = {}) {
     detailRenderingController.renderSelectedFeatureDetail(record);
   }
 
+  function renderAlignmentTrace(record) {
+    detailRenderingController.renderAlignmentTrace(record);
+  }
+
   function renderSequence(record, options = {}) {
     detailRenderingController.renderSequence(record, options);
   }
@@ -430,6 +434,7 @@ export function createSequenceViewerDetailController(config = {}) {
     renderProteinBuilderConfirmation(record);
     renderStats(record);
     renderSequence(record);
+    renderAlignmentTrace(record);
     renderFeatureRail(record);
     renderSelectedFeatureDetail(record);
     syncActionButtonsState();

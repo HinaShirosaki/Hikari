@@ -5,13 +5,18 @@ const path = require('path');
 const fs = require('node:fs/promises');
 
 const { createMainWindow } = require('../windows/create-main-window');
-const { createMainRuntime } = require('./main-runtime');
+const { createHikariMainCore } = require('../core/start-hikari-main-core');
+const { SYSTEM } = require('../../shared/ipc/channels');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 
 function startMainApp() {
   let mainWindow = null;
-  const runtime = createMainRuntime({
+  let allowWindowClose = false;
+  let closeRequestPending = false;
+  let appQuitPending = false;
+  let closeResponseTimer = null;
+  const mainCore = createHikariMainCore({
     app,
     BrowserWindow,
     dialog,
@@ -25,38 +30,113 @@ function startMainApp() {
   });
 
   function createWindow() {
+    allowWindowClose = false;
+    closeRequestPending = false;
+    appQuitPending = false;
+    closeResponseTimer = null;
     mainWindow = createMainWindow({
       BrowserWindow,
       path,
       projectRoot: PROJECT_ROOT,
-      appIconPath: runtime.appIconPath,
+      appIconPath: mainCore.appIconPath,
       preloadPath: path.join(__dirname, '..', 'preload.js'),
+      onCloseRequested: (event, window) => {
+        if (allowWindowClose || window.webContents?.isDestroyed?.()) {
+          allowWindowClose = true;
+          return;
+        }
+        event.preventDefault();
+        if (closeRequestPending) {
+          return;
+        }
+        closeRequestPending = true;
+        window.webContents.send(SYSTEM.APP_CLOSE_REQUESTED);
+        closeResponseTimer = setTimeout(async () => {
+          if (!closeRequestPending || !mainWindow) {
+            return;
+          }
+          closeRequestPending = false;
+          closeResponseTimer = null;
+          let result = null;
+          try {
+            result = await dialog.showMessageBox(mainWindow, {
+              type: 'warning',
+              title: 'Hikari',
+              message: 'Hikari could not check for unsaved changes.',
+              detail: 'The window is not responding. You can cancel and try again, or quit without saving.',
+              buttons: ['Cancel', 'Quit Without Saving'],
+              defaultId: 0,
+              cancelId: 0,
+              noLink: true
+            });
+          } catch (error) {
+            console.error('Failed to show the close fallback dialog:', error);
+          }
+          if (result?.response !== 1) {
+            appQuitPending = false;
+            return;
+          }
+          allowWindowClose = true;
+          if (appQuitPending) {
+            app.quit();
+          } else {
+            mainWindow?.close();
+          }
+        }, 3000);
+      },
       onClosed: () => {
+        if (closeResponseTimer) {
+          clearTimeout(closeResponseTimer);
+          closeResponseTimer = null;
+        }
         mainWindow = null;
       }
     });
   }
 
-  runtime.registerIpcHandlers();
-
-  app.whenReady().then(async () => {
-    if (process.platform === 'darwin' && app.dock) {
-      app.dock.setIcon(runtime.appIconPath);
+  ipcMain.on(SYSTEM.APP_CLOSE_RESPONSE, (event, payload = {}) => {
+    if (!mainWindow || !closeRequestPending || event.sender !== mainWindow.webContents) {
+      return;
     }
-
-    createWindow();
-    await runtime.telegramRuntime.hydrateSavedTelegramToken();
-    runtime.telegramRuntime.restartTelegramBot();
-    void runtime.agentLogRuntime.ensureAgentChatLogFile(runtime.appPaths.getAgentChatLogPath());
-    void runtime.llmPromptsRuntime.loadLlmPrompts();
-    runtime.startChatLogTransformMonitor();
-
-    app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        createWindow();
-      }
-    });
+    if (closeResponseTimer) {
+      clearTimeout(closeResponseTimer);
+      closeResponseTimer = null;
+    }
+    const action = String(payload?.action || '').trim().toLowerCase();
+    closeRequestPending = false;
+    if (action !== 'quit') {
+      appQuitPending = false;
+      return;
+    }
+    allowWindowClose = true;
+    if (appQuitPending) {
+      app.quit();
+    } else {
+      mainWindow.close();
+    }
   });
+
+  mainCore.registerIpcHandlers();
+
+  app.whenReady()
+    .then(async () => {
+      if (process.platform === 'darwin' && app.dock) {
+        app.dock.setIcon(mainCore.appIconPath);
+      }
+
+      createWindow();
+      await mainCore.onAppReady();
+
+      app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+          createWindow();
+        }
+      });
+    })
+    .catch((error) => {
+      console.error('Failed to start Hikari main services:', error);
+      app.quit();
+    });
 
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
@@ -64,12 +144,16 @@ function startMainApp() {
     }
   });
 
-  app.on('before-quit', () => {
-    runtime.chatLogTransformMonitor.stop();
-    if (runtime.codexAgentMcpHost && typeof runtime.codexAgentMcpHost.close === 'function') {
-      void runtime.codexAgentMcpHost.close();
+  app.on('before-quit', (event) => {
+    if (mainWindow && !allowWindowClose) {
+      event.preventDefault();
+      appQuitPending = true;
+      mainWindow.close();
+      return;
     }
-    runtime.telegramRuntime.stopTelegramBot('app quit');
+    void mainCore.shutdown().catch((error) => {
+      console.error('Failed to stop Hikari main services:', error);
+    });
   });
 }
 

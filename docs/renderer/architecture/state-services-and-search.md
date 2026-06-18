@@ -1,23 +1,21 @@
 # State, Services, And Search
 
-This doc explains the cross-cutting runtime pieces that sit underneath the feature modules: `modules/shared.js`, `services/`, the module registry, and the topbar search pipeline in `renderer.js`.
+This doc explains the cross-cutting runtime pieces that sit underneath the feature modules: `modules/views.js`, `modules/app-state.js`, `modules/utils.js`, `services/`, the module registry, and the topbar search pipeline in the renderer core.
 
 ## Canonical renderer state
 
-`src/renderer/modules/shared.js` is the canonical home for renderer-wide state contracts.
+Renderer-wide contracts are split across a few small files:
 
-It defines:
+They define:
 
-- `VIEWS` and `TITLES`
-- `defaultState`
-- state normalization helpers
-- local-storage load and persist helpers
-- LLM-provider defaults and endpoint normalization
-- a few small utilities such as `createId()`, `safeText()`, and `cssEscape()`
+- `src/renderer/modules/views.js`: `VIEWS` and `TITLES`
+- `src/renderer/modules/app-state.js`: `defaultState`, normalization, local-storage load/persist, and LLM settings normalization
+- `src/renderer/modules/utils.js`: small utilities such as `createId()`, `safeText()`, and `cssEscape()`
 
 The important thing is that `defaultState` is broad. It is not only UI preferences. It also contains the app's core working data:
 
 - members, instruments, protocols, projects
+  - `members` and `instruments` are retained for back-compat; their dedicated workspaces are no longer surfaced in navigation, but the state branches still load and normalize
 - workflows and workflow templates
 - notebook entries
 - assays and gel analyses
@@ -45,9 +43,9 @@ So when reading feature code, assume most modules receive a reasonably normalize
 
 There are two persistence layers to keep in mind:
 
-1. `persistState(state)` in `modules/shared.js`
+1. `persistState(state)` in `modules/app-state.js`
    - writes the local renderer snapshot to `localStorage`
-2. `persist()` in `renderer.js`
+2. `persist()` in `core/start-hikari-core.js`
    - rebuilds `state.objectGraph`
    - writes local storage
    - optionally auto-saves the `.ena` data file through the main-process bridge
@@ -92,18 +90,18 @@ That gives the renderer a light dependency-injection layer without requiring dir
 
 | Service | Main job |
 | --- | --- |
-| `protocolService.js` | protocol imports, share/import refreshes, and paper-to-protocol draft creation |
+| `protocolService.js` | protocol imports, external saved-protocol merges, share/import refreshes, and paper-to-protocol draft creation |
 | `notebookService.js` | rerender notebooks, workflows, assay links, and gel links when notebook pages change |
 | `projectService.js` | rerender all project-bound views when projects change |
 | `inventoryService.js` | rerender sample registry and route dashboard sample-search handoffs |
 | `analysisService.js` | update project notebook rollups after assay/gel changes |
 | `sequenceService.js` | hand off external payloads into the sequence viewer and open the detail view |
 
-The key design choice is that these services do not own data. They translate "feature X changed" into "which other views need to refresh?"
+The key design choice is that services do not own separate stores. They usually translate "feature X changed" into "which other views need to refresh?", and when they do mutate state, such as the protocol service merging an externally saved protocol, they use the shared renderer state plus `persist()` callback injected by the core.
 
 ## Search pipeline
 
-The topbar search in `renderer.js` has more routing logic than a normal text filter.
+The topbar search in the renderer core has more routing logic than a normal text filter.
 
 It supports three progressively broader modes:
 
@@ -137,4 +135,4 @@ The search system also doubles as an automation target.
 - route searches into chemical, sample, assay, or gel views
 - trigger the same global-search path used by the topbar
 
-That is why the alias maps and target maps live in `renderer.js` instead of inside any single feature module.
+That is why the alias maps and target maps live in the renderer core instead of inside any single feature module.

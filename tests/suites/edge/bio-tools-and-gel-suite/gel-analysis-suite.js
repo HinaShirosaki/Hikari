@@ -10,6 +10,17 @@ test('[EDGE] gel-analysis internal functions are exposed for unit tests', () => 
     'mean',
     'confidenceLabel',
     'normalizeManualOverrides',
+    'normalizeLaneBandWindows',
+    'normalizeLaneVertices',
+    'normalizePeakIntegrations',
+    'getLaneRowBounds',
+    'getLaneRowSegment',
+    'getLaneRectifiedWidth',
+    'lanePointToRectifiedRow',
+    'laneContainsPoint',
+    'getTargetBandWindowForLane',
+    'isPerLaneBandMode',
+    'analyzeGelImage',
     'safeFilePart',
     'escapeCsv',
     'computeHistogramPercentiles',
@@ -90,6 +101,839 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
   assert.match(elements.gelLaneTableShell.innerHTML, /width:31\.25%;/);
 });
 
+test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top and bottom per clicked lane', () => {
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual-workflow.js'));
+  const gelCanvas = new MockElement('gel-canvas');
+  gelCanvas.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    width: 100,
+    height: 100
+  });
+  const runtime = {
+    currentImage: {
+      width: 100,
+      height: 100,
+      gray: new Float32Array(10000).fill(0.1)
+    },
+    cropperActive: false,
+    currentReport: null,
+    manualDividerConfirmed: false,
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0,
+        gelRight: 99,
+        dividers: [50],
+        dividerDone: false
+      },
+      ladderLane: 1,
+      ladderBandsDone: true
+    }),
+    selectedViewerTool: 'dividers'
+  };
+  const elements = {
+    gelCanvas,
+    gelLaneBandModeBtn: new MockElement('gel-lane-band-mode-btn'),
+    gelOverrideStatus: new MockElement('gel-override-status'),
+    gelManualProgress: new MockElement('gel-manual-progress'),
+    gelStepLeft: new MockElement('gel-step-left'),
+    gelStepRight: new MockElement('gel-step-right'),
+    gelStepDividers: new MockElement('gel-step-dividers'),
+    gelStepLadder: new MockElement('gel-step-ladder'),
+    gelStepLadderMw: new MockElement('gel-step-ladder-mw'),
+    gelStepBandTop: new MockElement('gel-step-band-top'),
+    gelStepBandBottom: new MockElement('gel-step-band-bottom'),
+    gelStepQuantify: new MockElement('gel-step-quantify'),
+    gelStepBands: new MockElement('gel-step-bands'),
+    gelManualPrevBtn: new MockElement('gel-manual-prev-btn'),
+    gelManualNextBtn: new MockElement('gel-manual-next-btn')
+  };
+  const statuses = [];
+  let analysisRuns = 0;
+  const controller = manualModule.createManualWorkflowController({
+    runtime,
+    elements,
+    deps: {
+      onRunAnalysis: () => {
+        analysisRuns += 1;
+      },
+      renderCanvas() {},
+      renderLaneTable() {},
+      renderReport() {},
+      setStatus: (message) => statuses.push(message)
+    }
+  });
+
+  controller.onLaneBandModeToggle();
+  assert.equal(runtime.manualOverrides.laneSegmentation.perLaneBandEnabled, true);
+  assert.equal(runtime.manualOverrides.laneSegmentation.dividerDone, true);
+  assert.equal(runtime.manualDividerConfirmed, true);
+  assert.equal(runtime.selectedViewerTool, '');
+  assert.equal(controller.getManualStep(), 'band-top');
+
+  controller.onCanvasClick({ clientX: 25, clientY: 12 });
+  assert.equal(controller.getManualStep(), 'band-bottom');
+  assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.dividers), JSON.stringify([50]));
+  assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.laneBandWindows), JSON.stringify([
+    { laneIndex: 1, bandTop: 12, bandBottom: null }
+  ]));
+
+  controller.onCanvasClick({ clientX: 75, clientY: 22 });
+  assert.match(statuses[statuses.length - 1], /lane 1/i);
+  assert.equal(runtime.manualOverrides.laneSegmentation.laneBandWindows[0].bandBottom, null);
+
+  controller.onCanvasClick({ clientX: 25, clientY: 22 });
+  assert.equal(controller.getManualStep(), 'band-top');
+  assert.equal(runtime.manualOverrides.laneSegmentation.laneBandWindows[0].bandBottom, 22);
+
+  controller.onCanvasClick({ clientX: 75, clientY: 40 });
+  controller.onCanvasClick({ clientX: 75, clientY: 55 });
+  assert.equal(controller.getManualStep(), 'quantify');
+  assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.laneBandWindows), JSON.stringify([
+    { laneIndex: 1, bandTop: 12, bandBottom: 22 },
+    { laneIndex: 2, bandTop: 40, bandBottom: 55 }
+  ]));
+  assert.equal(analysisRuns, 2);
+});
+
+test('[EDGE] gel-analysis stale per-lane mode bypasses unfinished divider manual step', () => {
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual-workflow.js'));
+  const gelCanvas = new MockElement('gel-canvas');
+  gelCanvas.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    width: 100,
+    height: 100
+  });
+  const runtime = {
+    currentImage: {
+      width: 100,
+      height: 100,
+      gray: new Float32Array(10000).fill(0.1)
+    },
+    cropperActive: false,
+    currentReport: null,
+    manualDividerConfirmed: false,
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0,
+        gelRight: 99,
+        dividers: [50],
+        dividerDone: false,
+        perLaneBandEnabled: true
+      },
+      ladderLane: 1,
+      ladderBandsDone: true
+    }),
+    selectedViewerTool: ''
+  };
+  const elements = {
+    gelCanvas,
+    gelLaneBandModeBtn: new MockElement('gel-lane-band-mode-btn'),
+    gelOverrideStatus: new MockElement('gel-override-status'),
+    gelManualProgress: new MockElement('gel-manual-progress'),
+    gelStepLeft: new MockElement('gel-step-left'),
+    gelStepRight: new MockElement('gel-step-right'),
+    gelStepDividers: new MockElement('gel-step-dividers'),
+    gelStepLadder: new MockElement('gel-step-ladder'),
+    gelStepLadderMw: new MockElement('gel-step-ladder-mw'),
+    gelStepBandTop: new MockElement('gel-step-band-top'),
+    gelStepBandBottom: new MockElement('gel-step-band-bottom'),
+    gelStepQuantify: new MockElement('gel-step-quantify'),
+    gelStepBands: new MockElement('gel-step-bands'),
+    gelManualPrevBtn: new MockElement('gel-manual-prev-btn'),
+    gelManualNextBtn: new MockElement('gel-manual-next-btn')
+  };
+  const controller = manualModule.createManualWorkflowController({
+    runtime,
+    elements,
+    deps: {
+      onRunAnalysis() {},
+      renderCanvas() {},
+      renderLaneTable() {},
+      renderReport() {},
+      setStatus() {}
+    }
+  });
+
+  assert.equal(controller.getManualStep(), 'band-top');
+  controller.onCanvasClick({ clientX: 25, clientY: 12 });
+
+  assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.dividers), JSON.stringify([50]));
+  assert.equal(JSON.stringify(runtime.manualOverrides.laneSegmentation.laneBandWindows), JSON.stringify([
+    { laneIndex: 1, bandTop: 12, bandBottom: null }
+  ]));
+  assert.equal(controller.getManualStep(), 'band-bottom');
+});
+
+test('[EDGE] gel-analysis rendering keeps adjusted lane outlines visible in lane-by-lane band mode', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering.js'));
+  const operations = [];
+  let strokeStyle = '';
+  const context = {
+    set strokeStyle(value) {
+      strokeStyle = value;
+      operations.push({ type: 'strokeStyle', value });
+    },
+    get strokeStyle() {
+      return strokeStyle;
+    },
+    set lineWidth(value) {
+      operations.push({ type: 'lineWidth', value });
+    },
+    get lineWidth() {
+      return 1;
+    },
+    set fillStyle(value) {
+      operations.push({ type: 'fillStyle', value });
+    },
+    get fillStyle() {
+      return '';
+    },
+    set font(value) {
+      operations.push({ type: 'font', value });
+    },
+    get font() {
+      return '';
+    },
+    save() {},
+    restore() {},
+    clearRect() {},
+    putImageData() {},
+    beginPath() {
+      operations.push({ type: 'beginPath' });
+    },
+    moveTo(x, y) {
+      operations.push({ type: 'moveTo', x, y });
+    },
+    lineTo(x, y) {
+      operations.push({ type: 'lineTo', x, y });
+    },
+    closePath() {
+      operations.push({ type: 'closePath' });
+    },
+    stroke() {
+      operations.push({ type: 'stroke', strokeStyle });
+    },
+    strokeRect(x, y, width, height) {
+      operations.push({ type: 'strokeRect', x, y, width, height, strokeStyle });
+    },
+    setLineDash(value) {
+      operations.push({ type: 'setLineDash', value: value.slice() });
+    },
+    arc(x, y, radius) {
+      operations.push({ type: 'arc', x, y, radius });
+    },
+    fill() {},
+    fillText() {}
+  };
+  const gelCanvas = new MockElement('gel-canvas');
+  gelCanvas.getContext = () => context;
+  const runtime = {
+    currentImage: {
+      width: 100,
+      height: 100,
+      imageData: { tag: 'image-data' },
+      gray: new Float32Array(10000).fill(0.1)
+    },
+    cropperActive: false,
+    currentReport: null,
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0,
+        gelRight: 99,
+        dividers: [50],
+        dividerDone: true,
+        perLaneBandEnabled: true,
+        laneVertices: [{
+          laneIndex: 1,
+          topLeft: { x: 5, y: 0 },
+          topRight: { x: 48, y: 0 },
+          bottomRight: { x: 42, y: 99 },
+          bottomLeft: { x: 0, y: 99 }
+        }]
+      }
+    }),
+    selectedViewerTool: ''
+  };
+  const controller = renderingModule.createRenderingController({
+    runtime,
+    elements: { gelCanvas },
+    safeText: (value) => String(value),
+    deps: {}
+  });
+
+  controller.renderCanvas();
+
+  assert.equal(operations.some((item) => item.type === 'stroke' && item.strokeStyle === 'rgba(14, 165, 233, 0.95)'), true);
+  assert.equal(operations.some((item) => item.type === 'moveTo' && item.x === 5.5 && item.y === 0.5), true);
+  assert.equal(operations.some((item) => item.type === 'lineTo' && item.x === 42.5 && item.y === 99.5), true);
+  assert.equal(operations.some((item) => item.type === 'arc'), false);
+});
+
+test('[EDGE] gel-analysis peak editor records curve baselines and vertical dividers lane by lane', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering.js'));
+  const gray = new Float32Array(8 * 5);
+  [0.05, 0.2, 0.6, 0.3, 0.1].forEach((value, row) => {
+    for (let x = 0; x < 8; x += 1) {
+      gray[(row * 8) + x] = value;
+    }
+  });
+  const chart = new MockElement('gel-peak-editor-chart');
+  chart.setAttribute = (name, value) => {
+    chart[name] = value;
+  };
+  chart.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    width: 920,
+    height: 440
+  });
+  const runtime = {
+    currentImage: {
+      width: 8,
+      height: 5,
+      gray,
+      imageData: { tag: 'image-data' }
+    },
+    currentReport: null,
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0,
+        gelRight: 7,
+        dividers: [4],
+        dividerDone: true
+      }
+    }),
+    selectedLaneProfileLane: 1,
+    selectedViewerTool: ''
+  };
+  const elements = {
+    gelPeakEditorOverlay: new MockElement('gel-peak-editor-overlay'),
+    gelPeakEditorLaneSelect: new MockElement('gel-peak-editor-lane-select'),
+    gelPeakEditorBaselineModeBtn: new MockElement('gel-peak-editor-baseline-mode-btn'),
+    gelPeakEditorDividerModeBtn: new MockElement('gel-peak-editor-divider-mode-btn'),
+    gelPeakEditorChart: chart,
+    gelPeakEditorSummary: new MockElement('gel-peak-editor-summary'),
+    gelPeakEditorTable: new MockElement('gel-peak-editor-table')
+  };
+  const controller = renderingModule.createRenderingController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {}
+  });
+
+  controller.onPeakEditorOpen();
+  assert.equal(elements.gelPeakEditorOverlay.hidden, false);
+  assert.equal(elements.gelPeakEditorChart.innerHTML.includes('peak-editor-hover-dot'), false);
+
+  controller.onPeakEditorChartMouseMove({ row: 2 });
+  assert.equal(elements.gelPeakEditorChart.innerHTML.includes('peak-editor-hover-dot'), true);
+  assert.equal(elements.gelPeakEditorChart.innerHTML.includes('peak-editor-hover-label'), true);
+  controller.onPeakEditorChartMouseLeave();
+  assert.equal(elements.gelPeakEditorChart.innerHTML.includes('peak-editor-hover-dot'), false);
+
+  controller.onPeakEditorChartClick({ row: 0 });
+  assert.equal(runtime.manualOverrides.peakIntegrations.length, 1);
+  assert.equal(runtime.manualOverrides.peakIntegrations[0].right, null);
+
+  controller.onPeakEditorChartClick({ row: 4 });
+  assert.equal(runtime.manualOverrides.peakIntegrations[0].left.row, 0);
+  assert.equal(runtime.manualOverrides.peakIntegrations[0].right.row, 4);
+
+  controller.onPeakEditorModeSelected('divider');
+  controller.onPeakEditorChartClick({ row: 2 });
+
+  assert.equal(JSON.stringify(runtime.manualOverrides.peakIntegrations[0].dividers), JSON.stringify([2]));
+  assert.equal(elements.gelPeakEditorTable.innerHTML.includes('<table class="gel-peak-table">'), true);
+  assert.equal(elements.gelPeakEditorSummary.textContent.includes('1 baseline'), true);
+});
+
+test('[EDGE] gel-analysis peak editor maps cursor positions through rendered SVG width', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering.js'));
+  const width = 8;
+  const height = 101;
+  const gray = new Float32Array(width * height);
+  for (let row = 0; row < height; row += 1) {
+    const value = 0.1 + (row / (height - 1));
+    for (let x = 0; x < width; x += 1) {
+      gray[(row * width) + x] = value;
+    }
+  }
+
+  const chartRect = {
+    left: 10,
+    top: 20,
+    width: 1000,
+    height: 300
+  };
+  const chart = new MockElement('gel-peak-editor-chart');
+  chart.setAttribute = (name, value) => {
+    chart[name] = value;
+  };
+  chart.getAttribute = (name) => chart[name] || '';
+  chart.getBoundingClientRect = () => chartRect;
+  chart.createSVGPoint = () => {
+    throw new Error('peak editor should use DOMRect mapping before SVG CTM fallback');
+  };
+
+  const runtime = {
+    currentImage: {
+      width,
+      height,
+      gray,
+      imageData: { tag: 'image-data' }
+    },
+    currentReport: null,
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0,
+        gelRight: 7,
+        dividers: [4],
+        dividerDone: true
+      }
+    }),
+    selectedLaneProfileLane: 1,
+    selectedViewerTool: ''
+  };
+  const elements = {
+    gelPeakEditorOverlay: new MockElement('gel-peak-editor-overlay'),
+    gelPeakEditorLaneSelect: new MockElement('gel-peak-editor-lane-select'),
+    gelPeakEditorBaselineModeBtn: new MockElement('gel-peak-editor-baseline-mode-btn'),
+    gelPeakEditorDividerModeBtn: new MockElement('gel-peak-editor-divider-mode-btn'),
+    gelPeakEditorChart: chart,
+    gelPeakEditorSummary: new MockElement('gel-peak-editor-summary'),
+    gelPeakEditorTable: new MockElement('gel-peak-editor-table')
+  };
+  const controller = renderingModule.createRenderingController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {}
+  });
+
+  const rowToClientX = (row) => {
+    const svgWidth = 920;
+    const plotLeft = 58;
+    const plotRight = 884;
+    const svgX = plotLeft + ((row / (height - 1)) * (plotRight - plotLeft));
+    return chartRect.left + ((svgX / svgWidth) * chartRect.width);
+  };
+  const eventForRow = (row) => ({
+    clientX: rowToClientX(row),
+    clientY: chartRect.top + (chartRect.height / 2)
+  });
+
+  controller.onPeakEditorOpen();
+  assert.equal(elements.gelPeakEditorChart.preserveAspectRatio, 'none');
+  controller.onPeakEditorChartMouseMove(eventForRow(80));
+  assert.equal(elements.gelPeakEditorChart.innerHTML.includes('>80</text>'), true);
+
+  controller.onPeakEditorChartClick(eventForRow(10));
+  controller.onPeakEditorChartClick(eventForRow(90));
+  controller.onPeakEditorModeSelected('divider');
+  controller.onPeakEditorChartClick(eventForRow(80));
+
+  assert.equal(runtime.manualOverrides.peakIntegrations[0].left.row, 10);
+  assert.equal(runtime.manualOverrides.peakIntegrations[0].right.row, 90);
+  assert.equal(JSON.stringify(runtime.manualOverrides.peakIntegrations[0].dividers), JSON.stringify([80]));
+});
+
+test('[EDGE] gel-analysis peak editor profile preserves narrow neighboring peaks', () => {
+  const renderingModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering.js'),
+    {},
+    ['computeLaneIntensityProfile']
+  );
+  const width = 5;
+  const height = 80;
+  const signal = new Float32Array(width * height);
+  [40, 44].forEach((row) => {
+    for (let x = 0; x < width; x += 1) {
+      signal[(row * width) + x] = 1;
+    }
+  });
+
+  const profile = renderingModule.computeLaneIntensityProfile({
+    signal,
+    width,
+    height,
+    lane: { xStart: 0, xEnd: width - 1 }
+  });
+
+  assert.equal(profile.values[40], 1);
+  assert.equal(profile.values[44], 1);
+  assert.equal(profile.values[42], 0);
+});
+
+test('[EDGE] gel-analysis right-click assigns ladder MW outside ladder step', () => {
+  const promptCalls = [];
+  const manualModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual-workflow.js'),
+    {
+      window: {
+        prompt(message, defaultValue) {
+          promptCalls.push({ message, defaultValue });
+          return '75';
+        }
+      }
+    }
+  );
+  const gelCanvas = new MockElement('gel-canvas');
+  gelCanvas.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    width: 100,
+    height: 100
+  });
+  const runtime = {
+    currentImage: {
+      width: 100,
+      height: 100,
+      gray: new Float32Array(10000).fill(0.1)
+    },
+    cropperActive: false,
+    currentReport: null,
+    manualDividerConfirmed: true,
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0,
+        gelRight: 99,
+        dividers: [50],
+        dividerDone: true,
+        bandTop: 10,
+        bandBottom: 20
+      },
+      ladderLane: 1,
+      ladderBands: [{ pixelY: 12, mw: 50 }],
+      ladderBandsDone: true
+    }),
+    selectedViewerTool: ''
+  };
+  const elements = {
+    gelCanvas,
+    gelLaneBandModeBtn: new MockElement('gel-lane-band-mode-btn'),
+    gelOverrideStatus: new MockElement('gel-override-status'),
+    gelManualNextBtn: new MockElement('gel-manual-next-btn'),
+    gelLadderBandMwInput: new MockElement('gel-ladder-band-mw')
+  };
+  elements.gelLadderBandMwInput.value = '50';
+  let analysisRuns = 0;
+  let canvasRenders = 0;
+  const statuses = [];
+  const controller = manualModule.createManualWorkflowController({
+    runtime,
+    elements,
+    deps: {
+      onRunAnalysis: () => {
+        analysisRuns += 1;
+      },
+      renderCanvas: () => {
+        canvasRenders += 1;
+      },
+      renderLaneTable() {},
+      renderReport() {},
+      setStatus: (message) => statuses.push(message)
+    }
+  });
+
+  assert.equal(controller.getManualStep(), 'quantify');
+  let prevented = false;
+  controller.onCanvasContextMenu({
+    clientX: 25,
+    clientY: 30,
+    preventDefault() {
+      prevented = true;
+    }
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(promptCalls.length, 1);
+  assert.match(promptCalls[0].message, /row=30/);
+  assert.equal(JSON.stringify(runtime.manualOverrides.ladderBands), JSON.stringify([
+    { pixelY: 12, mw: 50 },
+    { pixelY: 30, mw: 75 }
+  ]));
+  assert.equal(elements.gelLadderBandMwInput.value, '75');
+  assert.equal(analysisRuns, 1);
+  assert.equal(canvasRenders, 1);
+  assert.match(statuses[statuses.length - 1], /MW=75/);
+});
+
+test('[EDGE] gel-analysis normalizes and scans tilted lane vertices', () => {
+  const normalized = gelAnalysisInternals.normalizeLaneVertices([
+    {
+      lane: '2',
+      vertices: [
+        { x: '2.4', y: 0 },
+        { x: 6, y: 0 },
+        { x: 8, y: 9 },
+        { x: 4, y: 9 }
+      ]
+    },
+    { laneIndex: 0, topLeft: { x: 1, y: 1 } }
+  ]);
+  assert.equal(JSON.stringify(normalized), JSON.stringify([
+    {
+      laneIndex: 2,
+      topLeft: { x: 2, y: 0 },
+      topRight: { x: 6, y: 0 },
+      bottomRight: { x: 8, y: 9 },
+      bottomLeft: { x: 4, y: 9 }
+    }
+  ]));
+
+  const lane = {
+    xStart: 2,
+    xEnd: 10,
+    vertices: normalized[0]
+  };
+  assert.equal(JSON.stringify(gelAnalysisInternals.getLaneRowBounds(lane, 0, 20)), JSON.stringify({ xStart: 2, xEnd: 6 }));
+  assert.equal(JSON.stringify(gelAnalysisInternals.getLaneRowBounds(lane, 4, 20)), JSON.stringify({ xStart: 3, xEnd: 6 }));
+  assert.equal(JSON.stringify(gelAnalysisInternals.getLaneRowBounds(lane, 9, 20)), JSON.stringify({ xStart: 4, xEnd: 8 }));
+  const rowSegment = gelAnalysisInternals.getLaneRowSegment(lane, 4, 10);
+  const rowVector = {
+    x: rowSegment.right.x - rowSegment.left.x,
+    y: rowSegment.right.y - rowSegment.left.y
+  };
+  const laneAxis = {
+    x: (normalized[0].bottomLeft.x - normalized[0].topLeft.x) + (normalized[0].bottomRight.x - normalized[0].topRight.x),
+    y: (normalized[0].bottomLeft.y - normalized[0].topLeft.y) + (normalized[0].bottomRight.y - normalized[0].topRight.y)
+  };
+  assertClose((rowVector.x * laneAxis.x) + (rowVector.y * laneAxis.y), 0, 1e-6);
+  assert.equal(Math.abs(rowSegment.left.y - rowSegment.right.y) > 0.1, true);
+  assert.equal(gelAnalysisInternals.getLaneRectifiedWidth(lane), 5);
+  assert.equal(gelAnalysisInternals.lanePointToRectifiedRow(lane, { x: 5, y: 4 }, 10), 4);
+  assert.equal(gelAnalysisInternals.laneContainsPoint(lane, 5, 4, 20), true);
+  assert.equal(gelAnalysisInternals.laneContainsPoint(lane, 9, 4, 20), false);
+});
+
+test('[EDGE] gel-analysis tilted lane vertices define target-band area in report', () => {
+  const width = 20;
+  const height = 20;
+  const gray = new Float32Array(width * height).fill(0.05);
+  const vertices = {
+    laneIndex: 1,
+    topLeft: { x: 3, y: 0 },
+    topRight: { x: 7, y: 0 },
+    bottomRight: { x: 11, y: 19 },
+    bottomLeft: { x: 7, y: 19 }
+  };
+  const laneShape = {
+    xStart: 3,
+    xEnd: 11,
+    vertices
+  };
+  const laneWidth = gelAnalysisInternals.getLaneRectifiedWidth(laneShape);
+  for (let y = 8; y <= 12; y += 1) {
+    const segment = gelAnalysisInternals.getLaneRowSegment(laneShape, y, height);
+    for (let sampleIndex = 0; sampleIndex < laneWidth; sampleIndex += 1) {
+      const fraction = laneWidth <= 1 ? 0.5 : sampleIndex / (laneWidth - 1);
+      const x = Math.round(segment.left.x + ((segment.right.x - segment.left.x) * fraction));
+      const sampleY = Math.round(segment.left.y + ((segment.right.y - segment.left.y) * fraction));
+      gray[(sampleY * width) + x] = 0.95;
+    }
+  }
+
+  const result = gelAnalysisInternals.analyzeGelImage({
+    gray,
+    imageName: 'tilted-lane.png',
+    width,
+    height,
+    preprocessed: {
+      cleanNormalized: gray,
+      preprocessing: {
+        grayscale: true,
+        backend: 'test'
+      }
+    },
+    params: {
+      analysisType: 'western',
+      ladderLane: 1,
+      ladderStandards: [250, 150, 100],
+      normalization: 'none',
+      enhancement: {},
+      manualOverrides: {
+        laneSegmentation: {
+          gelLeft: 0,
+          gelRight: 19,
+          dividers: [],
+          dividerDone: true,
+          bandTop: 8,
+          bandBottom: 12,
+          laneVertices: [vertices]
+        },
+        ladderLane: 1,
+        ladderBandsDone: true
+      }
+    }
+  });
+
+  assert.equal(result.report.preprocessing.manualOverridesSummary.laneSegmentationLaneVertices, 1);
+  assert.equal(result.report.lanes.length, 1);
+  assert.equal(result.report.lanes[0].xStart, 3);
+  assert.equal(result.report.lanes[0].xEnd, 11);
+  assert.equal(JSON.stringify(result.report.lanes[0].vertices.topLeft), JSON.stringify({ x: 3, y: 0 }));
+  assert.equal(result.report.lanes[0].targetBand.areaPx, laneWidth * 5);
+});
+
+test('[EDGE] gel-analysis lane vertex tool drag updates one lane quadrilateral', () => {
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual-workflow.js'));
+  const gelCanvas = new MockElement('gel-canvas');
+  gelCanvas.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    width: 100,
+    height: 100
+  });
+  const runtime = {
+    currentImage: {
+      width: 100,
+      height: 100,
+      gray: new Float32Array(10000).fill(0.1)
+    },
+    cropperActive: false,
+    currentReport: { lanes: [] },
+    manualDividerConfirmed: true,
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0,
+        gelRight: 99,
+        dividers: [50],
+        dividerDone: true,
+        bandTop: 10,
+        bandBottom: 20
+      },
+      ladderLane: 1,
+      ladderBandsDone: true
+    }),
+    selectedViewerTool: ''
+  };
+  const elements = {
+    gelCanvas,
+    gelToolLaneVerticesBtn: new MockElement('gel-tool-lane-vertices-btn'),
+    gelLaneBandModeBtn: new MockElement('gel-lane-band-mode-btn'),
+    gelOverrideStatus: new MockElement('gel-override-status'),
+    gelManualProgress: new MockElement('gel-manual-progress'),
+    gelStepLeft: new MockElement('gel-step-left'),
+    gelStepRight: new MockElement('gel-step-right'),
+    gelStepDividers: new MockElement('gel-step-dividers'),
+    gelStepLadder: new MockElement('gel-step-ladder'),
+    gelStepLadderMw: new MockElement('gel-step-ladder-mw'),
+    gelStepBandTop: new MockElement('gel-step-band-top'),
+    gelStepBandBottom: new MockElement('gel-step-band-bottom'),
+    gelStepQuantify: new MockElement('gel-step-quantify'),
+    gelStepBands: new MockElement('gel-step-bands'),
+    gelManualPrevBtn: new MockElement('gel-manual-prev-btn'),
+    gelManualNextBtn: new MockElement('gel-manual-next-btn')
+  };
+  let analysisRuns = 0;
+  const controller = manualModule.createManualWorkflowController({
+    runtime,
+    elements,
+    deps: {
+      onRunAnalysis: () => {
+        analysisRuns += 1;
+      },
+      renderCanvas() {},
+      renderLaneTable() {},
+      renderReport() {},
+      setStatus() {}
+    }
+  });
+
+  controller.onViewerToolSelected('lane-vertices');
+  controller.onCanvasMouseDown({ clientX: 0, clientY: 0, preventDefault() {} });
+  controller.onCanvasMouseMove({ clientX: 8, clientY: 4, preventDefault() {} });
+  controller.onCanvasMouseUp({ clientX: 8, clientY: 4, preventDefault() {} });
+
+  const laneVertices = runtime.manualOverrides.laneSegmentation.laneVertices;
+  assert.equal(laneVertices.length, 1);
+  assert.equal(laneVertices[0].laneIndex, 1);
+  assert.equal(JSON.stringify(laneVertices[0].topLeft), JSON.stringify({ x: 8, y: 0 }));
+  assert.equal(JSON.stringify(laneVertices[0].topRight), JSON.stringify({ x: 49, y: 0 }));
+  assert.equal(runtime.currentReport, null);
+  assert.equal(analysisRuns, 1);
+});
+
+test('[EDGE] gel-analysis lane vertex tool glues shared neighbor vertices', () => {
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual-workflow.js'));
+  const gelCanvas = new MockElement('gel-canvas');
+  gelCanvas.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    width: 100,
+    height: 100
+  });
+  const runtime = {
+    currentImage: {
+      width: 100,
+      height: 100,
+      gray: new Float32Array(10000).fill(0.1)
+    },
+    cropperActive: false,
+    currentReport: { lanes: [] },
+    manualDividerConfirmed: true,
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({
+      laneSegmentation: {
+        gelLeft: 0,
+        gelRight: 99,
+        dividers: [50],
+        dividerDone: true,
+        bandTop: 10,
+        bandBottom: 20
+      },
+      ladderLane: 1,
+      ladderBandsDone: true
+    }),
+    selectedViewerTool: ''
+  };
+  const elements = {
+    gelCanvas,
+    gelToolLaneVerticesBtn: new MockElement('gel-tool-lane-vertices-btn'),
+    gelLaneBandModeBtn: new MockElement('gel-lane-band-mode-btn'),
+    gelOverrideStatus: new MockElement('gel-override-status'),
+    gelManualProgress: new MockElement('gel-manual-progress'),
+    gelStepLeft: new MockElement('gel-step-left'),
+    gelStepRight: new MockElement('gel-step-right'),
+    gelStepDividers: new MockElement('gel-step-dividers'),
+    gelStepLadder: new MockElement('gel-step-ladder'),
+    gelStepLadderMw: new MockElement('gel-step-ladder-mw'),
+    gelStepBandTop: new MockElement('gel-step-band-top'),
+    gelStepBandBottom: new MockElement('gel-step-band-bottom'),
+    gelStepQuantify: new MockElement('gel-step-quantify'),
+    gelStepBands: new MockElement('gel-step-bands'),
+    gelManualPrevBtn: new MockElement('gel-manual-prev-btn'),
+    gelManualNextBtn: new MockElement('gel-manual-next-btn')
+  };
+  const controller = manualModule.createManualWorkflowController({
+    runtime,
+    elements,
+    deps: {
+      onRunAnalysis() {},
+      renderCanvas() {},
+      renderLaneTable() {},
+      renderReport() {},
+      setStatus() {}
+    }
+  });
+
+  controller.onViewerToolSelected('lane-vertices');
+  controller.onCanvasMouseDown({ clientX: 50, clientY: 99, preventDefault() {} });
+  controller.onCanvasMouseMove({ clientX: 45, clientY: 90, preventDefault() {} });
+  controller.onCanvasMouseUp({ clientX: 45, clientY: 90, preventDefault() {} });
+
+  const laneVertices = runtime.manualOverrides.laneSegmentation.laneVertices;
+  const laneOne = laneVertices.find((item) => item.laneIndex === 1);
+  const laneTwo = laneVertices.find((item) => item.laneIndex === 2);
+  assert.equal(laneVertices.length, 2);
+  assert.equal(JSON.stringify(laneOne.topRight), JSON.stringify({ x: 49, y: 0 }));
+  assert.equal(JSON.stringify(laneTwo.topLeft), JSON.stringify({ x: 50, y: 0 }));
+  assert.equal(JSON.stringify(laneOne.bottomRight), JSON.stringify({ x: 45, y: 99 }));
+  assert.equal(JSON.stringify(laneTwo.bottomLeft), JSON.stringify({ x: 45, y: 99 }));
+});
+
 [
   [0, 0, 10, 0],
   [5, 0, 10, 5],
@@ -147,9 +991,11 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
 
 test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
   const value = gelAnalysisInternals.createEmptyManualOverrides();
-  assert.equal(JSON.stringify(Object.keys(value).sort()), JSON.stringify(['addedBands', 'ladderBands', 'ladderBandsDone', 'ladderLane', 'laneSegmentation', 'laneTable']));
+  assert.equal(JSON.stringify(Object.keys(value).sort()), JSON.stringify(['addedBands', 'ladderBands', 'ladderBandsDone', 'ladderLane', 'laneSegmentation', 'laneTable', 'peakIntegrations']));
   assert.equal(Array.isArray(value.laneSegmentation.dividers), true);
   assert.equal(value.laneSegmentation.dividers.length, 0);
+  assert.equal(Array.isArray(value.peakIntegrations), true);
+  assert.equal(value.peakIntegrations.length, 0);
   assert.equal(Array.isArray(value.laneTable.rows), true);
   assert.equal(value.laneTable.rows.length, 0);
 });
@@ -163,12 +1009,28 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
         dividers: [30, '30', 50, -3, 120, 50],
         dividerDone: 'yes',
         bandTop: '5',
-        bandBottom: '20'
+        bandBottom: '20',
+        perLaneBandEnabled: true,
+        laneBandWindows: [
+          { laneIndex: '2', bandTop: '15.9', bandBottom: '30.2' },
+          { lane: '1', top: '8', bottom: '' },
+          { laneIndex: '2', bandTop: '16', bandBottom: '31' }
+        ]
       },
       addedBands: [{ laneIndex: '2', pixelY: '33.2' }, { laneIndex: -1, pixelY: 5 }],
       ladderLane: '3',
       ladderBands: [{ pixelY: 80.2, mw: 50 }, { pixelY: 10.2, mw: 150 }, { pixelY: 2, mw: 0 }],
       ladderBandsDone: 1,
+      peakIntegrations: [
+        {
+          lane: '2',
+          baselineLeft: { row: '40.9', value: '0.2' },
+          baselineRight: { pixelY: '90.1', intensity: '0.3' },
+          dividers: ['50', 50, '70.8', -1]
+        },
+        { laneIndex: 0, left: { row: 2, value: 1 } },
+        { laneIndex: 1, left: { row: '', value: 1 } }
+      ],
       laneTable: {
         rows: [
           { label: 'Samples', values: ['M', 'A', 42] },
@@ -180,10 +1042,23 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
       assert.equal(value.laneSegmentation.gelLeft, 10);
       assert.equal(value.laneSegmentation.gelRight, 100);
       assert.equal(JSON.stringify(value.laneSegmentation.dividers), JSON.stringify([30, 50, 120]));
+      assert.equal(value.laneSegmentation.perLaneBandEnabled, true);
+      assert.equal(JSON.stringify(value.laneSegmentation.laneBandWindows), JSON.stringify([
+        { laneIndex: 1, bandTop: 8, bandBottom: null },
+        { laneIndex: 2, bandTop: 16, bandBottom: 31 }
+      ]));
       assert.equal(value.addedBands.length, 2);
       assert.equal(value.ladderLane, 3);
       assert.equal(JSON.stringify(value.ladderBands.map((item) => item.mw)), JSON.stringify([150, 50]));
       assert.equal(value.ladderBandsDone, true);
+      assert.equal(JSON.stringify(value.peakIntegrations), JSON.stringify([
+        {
+          laneIndex: 2,
+          left: { row: 40, value: 0.2 },
+          right: { row: 90, value: 0.3 },
+          dividers: [50, 70]
+        }
+      ]));
       assert.equal(value.laneTable.rows.length, 2);
       assert.equal(value.laneTable.rows[0].label, 'Samples');
       assert.equal(JSON.stringify(value.laneTable.rows[0].values), JSON.stringify(['M', 'A', '42']));
@@ -200,6 +1075,136 @@ test('[EDGE] gel-analysis createEmptyManualOverrides baseline shape', () => {
     const value = gelAnalysisInternals.normalizeManualOverrides(scenario.raw);
     scenario.expectation(value);
   });
+});
+
+test('[EDGE] gel-analysis peak integration area uses baseline and vertical dividers', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering.js'));
+  const rows = renderingModule.calculatePeakIntegrationRows({
+    values: [1, 2, 5, 4, 3],
+    minValue: 1,
+    maxValue: 5
+  }, [
+    {
+      laneIndex: 2,
+      left: { row: 0, value: 1 },
+      right: { row: 4, value: 3 },
+      dividers: [2]
+    }
+  ]);
+
+  assert.equal(JSON.stringify(rows.map((row) => ({
+    laneIndex: row.laneIndex,
+    baselineIndex: row.baselineIndex,
+    peakIndex: row.peakIndex,
+    startRow: row.startRow,
+    endRow: row.endRow,
+    apexRow: row.apexRow,
+    area: row.area
+  }))), JSON.stringify([
+    { laneIndex: 2, baselineIndex: 1, peakIndex: 1, startRow: 0, endRow: 2, apexRow: 2, area: 3.5 },
+    { laneIndex: 2, baselineIndex: 1, peakIndex: 2, startRow: 3, endRow: 4, apexRow: 3, area: 1.5 }
+  ]));
+});
+
+test('[EDGE] gel-analysis resolves target band windows by global or per-lane mode', () => {
+  const global = gelAnalysisInternals.getTargetBandWindowForLane({
+    bandTop: 6,
+    bandBottom: 14,
+    perLaneBandEnabled: false,
+    laneBandWindows: [
+      { laneIndex: 2, bandTop: 20, bandBottom: 28 }
+    ]
+  }, 2);
+  assert.equal(JSON.stringify(global), JSON.stringify({
+    laneIndex: 2,
+    bandTop: 6,
+    bandBottom: 14,
+    perLane: false
+  }));
+
+  const perLane = gelAnalysisInternals.getTargetBandWindowForLane({
+    bandTop: 6,
+    bandBottom: 14,
+    perLaneBandEnabled: true,
+    laneBandWindows: [
+      { laneIndex: 1, bandTop: 4, bandBottom: 8 },
+      { laneIndex: 2, bandTop: 20, bandBottom: 28 }
+    ]
+  }, 2);
+  assert.equal(JSON.stringify(perLane), JSON.stringify({
+    laneIndex: 2,
+    bandTop: 20,
+    bandBottom: 28,
+    perLane: true
+  }));
+
+  const missing = gelAnalysisInternals.getTargetBandWindowForLane({
+    perLaneBandEnabled: true,
+    laneBandWindows: [
+      { laneIndex: 1, bandTop: 4, bandBottom: 8 }
+    ]
+  }, 2);
+  assert.equal(missing, null);
+});
+
+test('[EDGE] gel-analysis manual per-lane target windows feed lane-specific report cells', () => {
+  const width = 40;
+  const height = 30;
+  const gray = new Float32Array(width * height).fill(0.05);
+  for (let y = 4; y <= 8; y += 1) {
+    for (let x = 0; x < 20; x += 1) {
+      gray[(y * width) + x] = 0.9;
+    }
+  }
+  for (let y = 18; y <= 23; y += 1) {
+    for (let x = 20; x < 40; x += 1) {
+      gray[(y * width) + x] = 0.85;
+    }
+  }
+
+  const result = gelAnalysisInternals.analyzeGelImage({
+    gray,
+    imageName: 'per-lane.png',
+    width,
+    height,
+    preprocessed: {
+      cleanNormalized: gray,
+      preprocessing: {
+        grayscale: true,
+        backend: 'test'
+      }
+    },
+    params: {
+      analysisType: 'western',
+      ladderLane: 1,
+      ladderStandards: [250, 150, 100],
+      normalization: 'none',
+      enhancement: {},
+      manualOverrides: {
+        laneSegmentation: {
+          gelLeft: 0,
+          gelRight: 39,
+          dividers: [20],
+          dividerDone: true,
+          perLaneBandEnabled: true,
+          laneBandWindows: [
+            { laneIndex: 1, bandTop: 4, bandBottom: 8 },
+            { laneIndex: 2, bandTop: 18, bandBottom: 23 }
+          ]
+        },
+        ladderLane: 1,
+        ladderBandsDone: true
+      }
+    }
+  });
+
+  assert.equal(result.report.preprocessing.manualOverridesSummary.laneSegmentationBandMode, 'per-lane');
+  assert.equal(result.report.preprocessing.manualOverridesSummary.laneSegmentationLaneBandWindows, 2);
+  assert.equal(result.report.lanes.length, 2);
+  assert.equal(result.report.lanes[0].targetBand.top, 4);
+  assert.equal(result.report.lanes[0].targetBand.bottom, 8);
+  assert.equal(result.report.lanes[1].targetBand.top, 18);
+  assert.equal(result.report.lanes[1].targetBand.bottom, 23);
 });
 
 [

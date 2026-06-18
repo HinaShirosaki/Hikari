@@ -227,6 +227,7 @@ function registerAgentToolExecutors(deps = {}) {
   const memoryRuntime = deps.memoryRuntime || {};
   const paperDownloadRuntime = deps.paperDownloadRuntime || {};
   const paperAnalysisRuntime = deps.paperAnalysisRuntime || {};
+  const paperWikiSearchRuntime = deps.paperWikiSearchRuntime || {};
   const protocolGenerationRuntime = deps.protocolGenerationRuntime || {};
   const protocolSaveRuntime = deps.protocolSaveRuntime || {};
   const agentAppApi = deps.agentAppApi && typeof deps.agentAppApi === 'object'
@@ -660,6 +661,57 @@ function registerAgentToolExecutors(deps = {}) {
     });
   });
 
+  genericAgentToolRuntime.registerToolExecutor('paper-search', async ({ args, context }) => {
+    if (!paperWikiSearchRuntime || typeof paperWikiSearchRuntime.searchWikiSections !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Paper wiki search runtime is not configured.',
+        summary: 'Paper wiki search runtime is not configured.'
+      };
+    }
+    const snapshot = context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {};
+    const storagePath = cleanText(
+      args?.storage_path
+      || args?.storagePath
+      || context?.storagePath
+      || snapshot?.settings?.storagePath
+      || snapshot?.storagePath,
+      2000
+    );
+    const result = await paperWikiSearchRuntime.searchWikiSections({
+      storage_path: storagePath,
+      query: cleanText(args?.query, 400),
+      limit: toIntegerInRange(args?.limit, 8, 1, 25),
+      paper_id: cleanText(args?.paper_id || args?.paperId, 180),
+      scope: cleanText(args?.scope, 40),
+      container: cleanText(args?.container, 220)
+    }).catch((error) => ({
+      ok: false,
+      status: 'error',
+      error: cleanText(error?.message || error, 1200) || 'Paper wiki search failed.'
+    }));
+
+    const matches = Array.isArray(result?.matches) ? result.matches : [];
+    return {
+      ...result,
+      items: matches,
+      citations: matches.slice(0, 8).map((match, index) => ({
+        source: 'paper-wiki',
+        pointer: [
+          cleanText(match?.title, 200),
+          match?.page_citation ? `(${match.page_citation})` : '',
+          cleanText(match?.doi, 120)
+        ].filter(Boolean).join(' ') || `paper-wiki:${index + 1}`,
+        reason: cleanText(match?.section_heading, 120) || 'Matched section from paper wiki.'
+      })),
+      summary: cleanText(result?.summary, 320)
+        || (matches.length
+          ? `paper-search matched ${matches.length} section${matches.length === 1 ? '' : 's'}.`
+          : 'paper-search returned no matches.')
+    };
+  });
+
   genericAgentToolRuntime.registerToolExecutor('protocol-generation', async ({ args, context }) => {
     if (!protocolGenerationRuntime || typeof protocolGenerationRuntime.generateProtocol !== 'function') {
       return {
@@ -786,6 +838,7 @@ function registerAgentToolExecutors(deps = {}) {
     'purchase-recommendation',
     'paper-download',
     'paper-analysis',
+    'paper-search',
     'protocol-generation'
   ];
 }

@@ -60,6 +60,17 @@ import {
   computeCrisprOffTargetStats,
   designCrisprGuides
 } from './tool-box/crispr.js';
+import {
+  calculateMolarityMass,
+  calculateMolarityVolume,
+  calculateMolarityConcentration,
+  calculateMolarityDilution,
+  calculateMolarity,
+  calculateBufferIngredient,
+  calculateBufferRecipe,
+  calculateFixedReactionReagent,
+  calculateFixedReaction
+} from './tool-box/bench-calculations.js';
 
 export {
   toNumber,
@@ -106,7 +117,16 @@ export {
   parseCrisprTargetsInput,
   collectCrisprPamSites,
   computeCrisprOffTargetStats,
-  designCrisprGuides
+  designCrisprGuides,
+  calculateMolarityMass,
+  calculateMolarityVolume,
+  calculateMolarityConcentration,
+  calculateMolarityDilution,
+  calculateMolarity,
+  calculateBufferIngredient,
+  calculateBufferRecipe,
+  calculateFixedReactionReagent,
+  calculateFixedReaction
 };
 
 export function initToolBox(options = {}) {

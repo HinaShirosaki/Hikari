@@ -40,10 +40,10 @@ test('agent-chat prioritizes inventory lookup summary text and renders lookup me
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentChat: async () => ({
         ok: true,
@@ -104,7 +104,7 @@ test('agent-chat prioritizes inventory lookup summary text and renders lookup me
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });
@@ -174,10 +174,10 @@ test('agent-chat uses record lookup summary when inventory lookup payload is abs
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentChat: async () => ({
         ok: true,
@@ -209,7 +209,7 @@ test('agent-chat uses record lookup summary when inventory lookup payload is abs
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });
@@ -276,10 +276,10 @@ test('agent-chat prioritizes purchase recommendation summary, renders shopping t
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       openExternalUrl: async (url) => {
         openedUrls.push(url);
@@ -363,7 +363,7 @@ test('agent-chat prioritizes purchase recommendation summary, renders shopping t
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });

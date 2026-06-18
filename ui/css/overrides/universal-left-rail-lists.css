@@ -1,16 +1,16 @@
 /* Universal selection treatment for list rows inside the shared left rail. */
 
 :root {
-  --enana-left-rail-list-radius: 8px;
-  --enana-left-rail-list-hover: color-mix(in srgb, var(--surface-subtle) 64%, transparent);
-  --enana-left-rail-list-selected: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
-  --enana-left-rail-list-focus: color-mix(in srgb, var(--focus) 22%, transparent);
+  --hikari-left-rail-list-radius: 8px;
+  --hikari-left-rail-list-hover: color-mix(in srgb, var(--surface-subtle) 64%, transparent);
+  --hikari-left-rail-list-selected: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
+  --hikari-left-rail-list-focus: color-mix(in srgb, var(--focus) 22%, transparent);
 }
 
 body.theme-night {
-  --enana-left-rail-list-hover: color-mix(in srgb, var(--surface-subtle) 72%, var(--palette-white) 4%);
-  --enana-left-rail-list-selected: color-mix(in srgb, var(--surface-subtle) 86%, var(--palette-white) 7%);
-  --enana-left-rail-list-focus: color-mix(in srgb, var(--focus) 28%, transparent);
+  --hikari-left-rail-list-hover: color-mix(in srgb, var(--surface-subtle) 72%, var(--palette-white) 4%);
+  --hikari-left-rail-list-selected: color-mix(in srgb, var(--surface-subtle) 86%, var(--palette-white) 7%);
+  --hikari-left-rail-list-focus: color-mix(in srgb, var(--focus) 28%, transparent);
 }
 
 .left-rail-template__rail :is(
@@ -30,7 +30,7 @@ body.theme-night {
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ) {
-  border-radius: var(--enana-left-rail-list-radius);
+  border-radius: var(--hikari-left-rail-list-radius);
   color: var(--text);
   transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
 }
@@ -69,7 +69,7 @@ body.theme-night {
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ):focus-visible {
-  background: var(--enana-left-rail-list-hover) !important;
+  background: var(--hikari-left-rail-list-hover) !important;
   color: var(--strong) !important;
   outline: none;
 }
@@ -90,7 +90,7 @@ body.theme-night {
   .assay-browser-item.is-active,
   .list-row-selected
 ) {
-  background: var(--enana-left-rail-list-selected) !important;
+  background: var(--hikari-left-rail-list-selected) !important;
   border-color: transparent !important;
   color: var(--strong) !important;
   box-shadow: none !important;
@@ -113,7 +113,7 @@ body.theme-night {
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ):focus-visible {
-  box-shadow: 0 0 0 2px var(--enana-left-rail-list-focus) !important;
+  box-shadow: 0 0 0 2px var(--hikari-left-rail-list-focus) !important;
 }
 
 .left-rail-template__rail :is(
@@ -238,4 +238,9 @@ body.theme-night {
 
 .left-rail-template__rail .biology-notebook-page-badge {
   font-size: 0.7rem !important;
+}
+
+/* Protocol rows use full-width dividers; keep their active fill square. */
+#protocol-management-view .left-rail-template__rail .protocol-list-row {
+  border-radius: 0 !important;
 }

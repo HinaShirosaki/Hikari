@@ -130,7 +130,7 @@ const toolBox = loadEsmStyleModule(
   ]
 );
 const sequenceViewerInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+  path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
   {},
   [
     'normalizeSequenceText',
@@ -141,6 +141,8 @@ const sequenceViewerInternals = loadEsmStyleModule(
     'parseInputRecords',
     'normalizeExternalPayload',
     'parseGenBankLocationSegments',
+    'normalizeFeatureType',
+    'getFeatureTypeGenbankKey',
     'complementBase',
     'complementSequence',
     'renderDualStrandSequenceLinesHtml',
@@ -154,7 +156,7 @@ const sequenceViewerInternals = loadEsmStyleModule(
   ]
 );
 const gelAnalysisInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'gel-analysis.js'),
+  path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'public-api.js'),
   {},
   [
     'clamp',
@@ -162,7 +164,18 @@ const gelAnalysisInternals = loadEsmStyleModule(
     'mean',
     'confidenceLabel',
     'createEmptyManualOverrides',
+    'normalizeLaneBandWindows',
+    'normalizeLaneVertices',
+    'normalizePeakIntegrations',
+    'getLaneRowBounds',
+    'getLaneRowSegment',
+    'getLaneRectifiedWidth',
+    'lanePointToRectifiedRow',
+    'laneContainsPoint',
+    'getTargetBandWindowForLane',
+    'isPerLaneBandMode',
     'normalizeManualOverrides',
+    'analyzeGelImage',
     'safeFilePart',
     'escapeCsv',
     'computeHistogramPercentiles',
@@ -182,7 +195,7 @@ const gelLaneTableInternals = loadEsmStyleModule(
   path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'lane-table.js')
 );
 const papersManagementInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'papers-management.js'),
+  path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'normalizers.js'),
   {},
   ['normalizePaperSummary']
 );
@@ -221,8 +234,6 @@ const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
   'run_python_sandbox',
   'download_paper_pdf'
 ]);
-
-const LEGACY_CHEMISTRY_DRAFT_KEY = 'enana_synthesis_chemistry_draft_v1';
 
 const {
   buildAgentSimulationSnapshot,
@@ -328,7 +339,6 @@ const suiteScope = {
   forgeConfig,
   packageManifest,
   AGENT_SIMULATION_DISPATCH_TOOL_NAMES,
-  LEGACY_CHEMISTRY_DRAFT_KEY,
   buildAgentSimulationSnapshot,
   runSimulatedAgentTurn,
   pickMockRows,

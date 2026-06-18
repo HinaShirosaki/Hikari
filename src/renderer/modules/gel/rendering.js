@@ -1,6 +1,21 @@
 import { buildLanesFromManualSegmentation } from './analysis-core.js';
 import { buildQuantificationSignal } from './image-processing.js';
-import { clamp, mean, normalizeManualOverrides, round } from './shared.js';
+import {
+  clamp,
+  getLaneRectifiedWidth,
+  getLaneRowSegment,
+  getLaneVertexArray,
+  getTargetBandWindowForLane,
+  hasAnyTargetBandWindow,
+  laneContainsPoint,
+  lanePointToRectifiedRow,
+  isPerLaneBandMode,
+  mean,
+  normalizeLaneBandWindows,
+  normalizeManualOverrides,
+  round,
+  sampleArrayValue
+} from './shared.js';
 import { formatAnalysisTypeLabel } from './presentation.js';
 
 const LANE_PROFILE_VIEWBOX = Object.freeze({
@@ -12,6 +27,28 @@ const LANE_PROFILE_VIEWBOX = Object.freeze({
   plotBottom: 164
 });
 
+const PEAK_EDITOR_VIEWBOX = Object.freeze({
+  width: 920,
+  height: 440,
+  plotLeft: 58,
+  plotTop: 28,
+  plotRight: 884,
+  plotBottom: 372
+});
+
+const PEAK_EDITOR_COLUMNS = Object.freeze([
+  { title: 'Lane', field: 'laneIndex', hozAlign: 'right', width: 72 },
+  { title: 'Baseline', field: 'baselineIndex', hozAlign: 'right', width: 96 },
+  { title: 'Peak', field: 'peakIndex', hozAlign: 'right', width: 72 },
+  { title: 'Start row', field: 'startRow', hozAlign: 'right' },
+  { title: 'End row', field: 'endRow', hozAlign: 'right' },
+  { title: 'Apex row', field: 'apexRow', hozAlign: 'right' },
+  { title: 'Apex signal', field: 'apexValue', hozAlign: 'right' },
+  { title: 'Area', field: 'area', hozAlign: 'right' },
+  { title: 'Raw area', field: 'rawArea', hozAlign: 'right' },
+  { title: 'Baseline area', field: 'baselineArea', hozAlign: 'right' }
+]);
+
 export function selectViewerBaseImageData(currentImage, preprocessed = null, viewerMode = 'original') {
   if (viewerMode === 'processed' && preprocessed?.previewImageData) {
     return preprocessed.previewImageData;
@@ -19,48 +56,27 @@ export function selectViewerBaseImageData(currentImage, preprocessed = null, vie
   return currentImage?.imageData || null;
 }
 
-function smoothSeries(values, radius = 4) {
-  if (!values.length) {
-    return [];
-  }
-
-  const safeRadius = Math.max(1, Math.floor(radius));
-  const output = new Float32Array(values.length);
-
-  for (let index = 0; index < values.length; index += 1) {
-    let weightedSum = 0;
-    let totalWeight = 0;
-    for (let offset = -safeRadius; offset <= safeRadius; offset += 1) {
-      const sampleIndex = clamp(index + offset, 0, values.length - 1);
-      const weight = (safeRadius + 1) - Math.abs(offset);
-      weightedSum += values[sampleIndex] * weight;
-      totalWeight += weight;
-    }
-    output[index] = totalWeight ? (weightedSum / totalWeight) : values[index];
-  }
-
-  return Array.from(output);
-}
-
 function computeLaneIntensityProfile({ signal, width, height, lane }) {
   if (!signal?.length || !lane || width <= 0 || height <= 0) {
     return null;
   }
 
-  const laneWidth = Math.max(1, lane.xEnd - lane.xStart + 1);
   const rowMeans = new Float32Array(height);
+  const laneWidth = getLaneRectifiedWidth(lane);
 
   for (let y = 0; y < height; y += 1) {
-    const rowOffset = y * width;
+    const segment = getLaneRowSegment(lane, y, height);
     let rowSum = 0;
-    for (let x = lane.xStart; x <= lane.xEnd; x += 1) {
-      rowSum += signal[rowOffset + x];
+    for (let sampleIndex = 0; sampleIndex < laneWidth; sampleIndex += 1) {
+      const fraction = laneWidth <= 1 ? 0.5 : sampleIndex / (laneWidth - 1);
+      const x = segment.left.x + ((segment.right.x - segment.left.x) * fraction);
+      const sampleY = segment.left.y + ((segment.right.y - segment.left.y) * fraction);
+      rowSum += sampleArrayValue(signal, width, height, x, sampleY);
     }
-    rowMeans[y] = rowSum / laneWidth;
+    rowMeans[y] = rowSum / Math.max(1, laneWidth);
   }
 
-  const smoothingRadius = Math.max(2, Math.min(10, Math.round(height / 90)));
-  const values = smoothSeries(rowMeans, smoothingRadius);
+  const values = rowMeans;
 
   let minValue = Number.POSITIVE_INFINITY;
   let maxValue = Number.NEGATIVE_INFINITY;
@@ -89,6 +105,99 @@ function computeLaneIntensityProfile({ signal, width, height, lane }) {
   };
 }
 
+function getProfileValueAtRow(profile, row) {
+  if (!profile?.values?.length) {
+    return 0;
+  }
+  const safeRow = clamp(Math.round(Number(row) || 0), 0, profile.values.length - 1);
+  return Number(profile.values[safeRow]) || 0;
+}
+
+function makeProfilePoint(profile, row) {
+  const safeRow = clamp(Math.round(Number(row) || 0), 0, Math.max(0, (profile?.values?.length || 1) - 1));
+  return {
+    row: safeRow,
+    value: getProfileValueAtRow(profile, safeRow)
+  };
+}
+
+function formatTableNumber(value, digits = 4) {
+  return Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : '-';
+}
+
+export function calculatePeakIntegrationRows(profile, integrations = []) {
+  if (!profile?.values?.length || !Array.isArray(integrations)) {
+    return [];
+  }
+
+  const rowMax = profile.values.length - 1;
+  const rows = [];
+  integrations.forEach((integration, integrationIndex) => {
+    if (!integration?.left || !integration?.right) {
+      return;
+    }
+
+    const laneIndex = Math.max(1, Math.floor(Number(integration.laneIndex) || 1));
+    const left = makeProfilePoint(profile, integration.left.row);
+    const right = makeProfilePoint(profile, integration.right.row);
+    const start = Math.min(left.row, right.row);
+    const end = Math.max(left.row, right.row);
+    if (end <= start) {
+      return;
+    }
+
+    const startValue = left.row <= right.row ? left.value : right.value;
+    const endValue = left.row <= right.row ? right.value : left.value;
+    const dividerRows = (Array.isArray(integration.dividers) ? integration.dividers : [])
+      .map((divider) => clamp(Math.round(Number(divider) || 0), 0, rowMax))
+      .filter((divider) => divider > start && divider < end)
+      .sort((a, b) => a - b)
+      .filter((divider, index, all) => index === 0 || divider !== all[index - 1]);
+    const boundaries = [start, ...dividerRows, end];
+
+    for (let boundaryIndex = 0; boundaryIndex < boundaries.length - 1; boundaryIndex += 1) {
+      const segmentStart = boundaryIndex === 0 ? boundaries[boundaryIndex] : boundaries[boundaryIndex] + 1;
+      const segmentEnd = boundaries[boundaryIndex + 1];
+      if (segmentStart > segmentEnd) {
+        continue;
+      }
+      let area = 0;
+      let rawArea = 0;
+      let baselineArea = 0;
+      let apexRow = segmentStart;
+      let apexValue = Number.NEGATIVE_INFINITY;
+
+      for (let row = segmentStart; row <= segmentEnd; row += 1) {
+        const fraction = (row - start) / Math.max(1, end - start);
+        const baselineValue = startValue + ((endValue - startValue) * fraction);
+        const signalValue = getProfileValueAtRow(profile, row);
+        rawArea += signalValue;
+        baselineArea += baselineValue;
+        area += Math.max(0, signalValue - baselineValue);
+        if (signalValue > apexValue) {
+          apexValue = signalValue;
+          apexRow = row;
+        }
+      }
+
+      rows.push({
+        laneIndex,
+        baselineIndex: integrationIndex + 1,
+        peakIndex: boundaryIndex + 1,
+        startRow: segmentStart,
+        endRow: segmentEnd,
+        apexRow,
+        apexValue: round(apexValue, 4),
+        area: round(area, 4),
+        rawArea: round(rawArea, 4),
+        baselineArea: round(baselineArea, 4)
+      });
+    }
+  });
+
+  return rows;
+}
+
 function downsampleLaneProfile(values, maxPoints = 220) {
   if (!values.length) {
     return [];
@@ -96,7 +205,7 @@ function downsampleLaneProfile(values, maxPoints = 220) {
 
   const targetCount = Math.min(maxPoints, values.length);
   if (targetCount === values.length) {
-    return values.map((value, row) => ({ row, value }));
+    return Array.from(values, (value, row) => ({ row, value: Number(value) || 0 }));
   }
 
   const bucketSize = values.length / targetCount;
@@ -120,6 +229,17 @@ function downsampleLaneProfile(values, maxPoints = 220) {
   }
 
   return points;
+}
+
+function getPeakEditorProfilePoints(values) {
+  const exactPointLimit = 12000;
+  if (!values?.length) {
+    return [];
+  }
+  if (values.length <= exactPointLimit) {
+    return Array.from(values, (value, row) => ({ row, value: Number(value) || 0 }));
+  }
+  return downsampleLaneProfile(values, exactPointLimit);
 }
 
 function buildSmoothPath(points) {
@@ -146,25 +266,40 @@ function buildSmoothPath(points) {
   return path;
 }
 
+function buildLinearPath(points) {
+  if (!points.length) {
+    return '';
+  }
+  return points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
+    .join(' ');
+}
+
 function getLaneProfileLanes(runtime) {
   if (!runtime.currentImage) {
     return [];
   }
 
   const overrides = normalizeManualOverrides(runtime.manualOverrides);
-  const segmented = buildLanesFromManualSegmentation(overrides, runtime.currentImage.width) || [];
+  const segmented = buildLanesFromManualSegmentation(
+    overrides,
+    runtime.currentImage.width,
+    runtime.currentImage.height
+  ) || [];
   if (segmented.length) {
     return segmented.map((lane) => ({
       laneIndex: lane.index + 1,
       xStart: lane.xStart,
-      xEnd: lane.xEnd
+      xEnd: lane.xEnd,
+      vertices: lane.vertices || null
     }));
   }
 
   return (runtime.currentReport?.lanes || []).map((lane) => ({
     laneIndex: lane.laneIndex,
     xStart: lane.xStart,
-    xEnd: lane.xEnd
+    xEnd: lane.xEnd,
+    vertices: lane.vertices || null
   }));
 }
 
@@ -238,6 +373,217 @@ function renderLaneProfileSvg(svg, profile, bandTop = null, bandBottom = null) {
       <circle class="lane-profile-hover-dot" cx="0" cy="0" r="4" />
       <text class="lane-profile-hover-label" x="0" y="${plotTop - 4}" text-anchor="middle"></text>
     </g>
+  `;
+}
+
+function getPeakEditorScales(profile) {
+  const {
+    plotLeft,
+    plotTop,
+    plotRight,
+    plotBottom
+  } = PEAK_EDITOR_VIEWBOX;
+  const plotWidth = plotRight - plotLeft;
+  const plotHeight = plotBottom - plotTop;
+  const rowMax = Math.max(1, (profile?.values?.length || 1) - 1);
+  const valueSpan = Math.max(1e-6, (profile?.maxValue || 0) - (profile?.minValue || 0));
+  return {
+    rowMax,
+    rowToX: (row) => plotLeft + ((clamp(row, 0, rowMax) / rowMax) * plotWidth),
+    valueToY: (value) => plotBottom - ((((Number(value) || 0) - (profile?.minValue || 0)) / valueSpan) * plotHeight),
+    xToRow: (x) => clamp(Math.round(((x - plotLeft) / Math.max(1, plotWidth)) * rowMax), 0, rowMax)
+  };
+}
+
+function getPeakEditorSvgXFromEvent(svg, event) {
+  const clientX = Number(event?.clientX);
+  if (!Number.isFinite(clientX)) {
+    return null;
+  }
+
+  const rect = svg?.getBoundingClientRect?.();
+  if (rect?.width && rect?.height) {
+    const preserveAspectRatio = String(svg?.getAttribute?.('preserveAspectRatio') || '');
+    if (preserveAspectRatio.includes('none')) {
+      return ((clientX - rect.left) / rect.width) * PEAK_EDITOR_VIEWBOX.width;
+    }
+
+    const scale = Math.min(
+      rect.width / PEAK_EDITOR_VIEWBOX.width,
+      rect.height / PEAK_EDITOR_VIEWBOX.height
+    );
+    if (Number.isFinite(scale) && scale > 0) {
+      const renderedWidth = PEAK_EDITOR_VIEWBOX.width * scale;
+      const offsetX = (rect.width - renderedWidth) / 2;
+      return (clientX - rect.left - offsetX) / scale;
+    }
+  }
+
+  if (typeof svg?.createSVGPoint === 'function' && typeof svg?.getScreenCTM === 'function') {
+    try {
+      const point = svg.createSVGPoint();
+      point.x = clientX;
+      point.y = Number.isFinite(Number(event?.clientY)) ? Number(event.clientY) : 0;
+      const matrix = svg.getScreenCTM();
+      const inverse = typeof matrix?.inverse === 'function' ? matrix.inverse() : null;
+      const transformed = inverse ? point.matrixTransform(inverse) : null;
+      if (Number.isFinite(transformed?.x)) {
+        return transformed.x;
+      }
+    } catch {
+      // Fall through when a browser cannot provide a usable SVG transform.
+    }
+  }
+
+  return null;
+}
+
+function renderPeakEditorPlaceholder(svg, message) {
+  const {
+    width,
+    height,
+    plotLeft,
+    plotTop,
+    plotRight,
+    plotBottom
+  } = PEAK_EDITOR_VIEWBOX;
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.innerHTML = `
+    <rect class="peak-editor-frame" x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="10" />
+    <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" />
+    <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
+    <text class="peak-editor-empty" x="${width / 2}" y="${height / 2}" text-anchor="middle">${message}</text>
+  `;
+}
+
+function buildPeakAreaPath(profile, integration, startRow, endRow, scales) {
+  const baselineStart = makeProfilePoint(profile, integration.left.row);
+  const baselineEnd = makeProfilePoint(profile, integration.right.row);
+  const left = baselineStart.row <= baselineEnd.row ? baselineStart : baselineEnd;
+  const right = baselineStart.row <= baselineEnd.row ? baselineEnd : baselineStart;
+  const step = Math.max(1, Math.ceil((endRow - startRow) / 180));
+  const points = [];
+  for (let row = startRow; row <= endRow; row += step) {
+    points.push({
+      row,
+      value: getProfileValueAtRow(profile, row)
+    });
+  }
+  if (points[points.length - 1]?.row !== endRow) {
+    points.push({
+      row: endRow,
+      value: getProfileValueAtRow(profile, endRow)
+    });
+  }
+  const baselineValueAt = (row) => {
+    const fraction = (row - left.row) / Math.max(1, right.row - left.row);
+    return left.value + ((right.value - left.value) * fraction);
+  };
+  const curvePath = points
+    .map((point, index) => {
+      const command = index === 0 ? 'M' : 'L';
+      return `${command} ${scales.rowToX(point.row)} ${scales.valueToY(point.value)}`;
+    })
+    .join(' ');
+  return `${curvePath} L ${scales.rowToX(endRow)} ${scales.valueToY(baselineValueAt(endRow))} L ${scales.rowToX(startRow)} ${scales.valueToY(baselineValueAt(startRow))} Z`;
+}
+
+function renderPeakEditorSvg(svg, profile, integrations = [], hoverRow = null, mode = 'baseline') {
+  const {
+    width,
+    height,
+    plotLeft,
+    plotTop,
+    plotRight,
+    plotBottom
+  } = PEAK_EDITOR_VIEWBOX;
+  if (!profile) {
+    renderPeakEditorPlaceholder(svg, 'Select a lane to edit peak areas.');
+    return;
+  }
+
+  const scales = getPeakEditorScales(profile);
+  const points = getPeakEditorProfilePoints(profile.values).map((point) => ({
+    x: scales.rowToX(point.row),
+    y: scales.valueToY(point.value)
+  }));
+  const path = buildLinearPath(points);
+  const peakX = scales.rowToX(profile.peakRow);
+  const peakY = scales.valueToY(profile.peakValue);
+
+  const areaMarkup = [];
+  const overlayMarkup = [];
+  let hoverMarkup = '';
+  integrations.forEach((integration, integrationIndex) => {
+    if (!integration?.left) {
+      return;
+    }
+    const leftPoint = makeProfilePoint(profile, integration.left.row);
+    const rightPoint = integration.right ? makeProfilePoint(profile, integration.right.row) : null;
+    const leftX = scales.rowToX(leftPoint.row);
+    const leftY = scales.valueToY(leftPoint.value);
+    const rightX = rightPoint ? scales.rowToX(rightPoint.row) : null;
+    const rightY = rightPoint ? scales.valueToY(rightPoint.value) : null;
+    const baselineLabel = integrationIndex + 1;
+
+    if (rightPoint && rightPoint.row !== leftPoint.row) {
+      const start = Math.min(leftPoint.row, rightPoint.row);
+      const end = Math.max(leftPoint.row, rightPoint.row);
+      const dividers = (Array.isArray(integration.dividers) ? integration.dividers : [])
+        .map((divider) => clamp(Math.round(Number(divider) || 0), 0, scales.rowMax))
+        .filter((divider) => divider > start && divider < end)
+        .sort((a, b) => a - b)
+        .filter((divider, index, all) => index === 0 || divider !== all[index - 1]);
+      const boundaries = [start, ...dividers, end];
+      boundaries.slice(0, -1).forEach((boundary, boundaryIndex) => {
+        const segmentEnd = boundaries[boundaryIndex + 1];
+        areaMarkup.push(`<path class="peak-editor-area" d="${buildPeakAreaPath(profile, integration, boundary, segmentEnd, scales)}" />`);
+      });
+      dividers.forEach((divider) => {
+        const dividerX = scales.rowToX(divider);
+        overlayMarkup.push(`<line class="peak-editor-divider" x1="${dividerX}" y1="${plotTop}" x2="${dividerX}" y2="${plotBottom}" />`);
+        overlayMarkup.push(`<text class="peak-editor-divider-label" x="${dividerX}" y="${plotTop - 8}" text-anchor="middle">${divider}</text>`);
+      });
+      overlayMarkup.push(`<line class="peak-editor-baseline" x1="${leftX}" y1="${leftY}" x2="${rightX}" y2="${rightY}" />`);
+      overlayMarkup.push(`<text class="peak-editor-baseline-label" x="${(leftX + rightX) / 2}" y="${Math.min(leftY, rightY) - 8}" text-anchor="middle">B${baselineLabel}</text>`);
+    }
+
+    overlayMarkup.push(`<circle class="peak-editor-baseline-dot" cx="${leftX}" cy="${leftY}" r="6" />`);
+    if (rightPoint) {
+      overlayMarkup.push(`<circle class="peak-editor-baseline-dot" cx="${rightX}" cy="${rightY}" r="6" />`);
+    }
+  });
+
+  if (mode === 'baseline' && hoverRow !== null && hoverRow !== undefined && Number.isFinite(Number(hoverRow))) {
+    const hoverPoint = makeProfilePoint(profile, hoverRow);
+    const hoverX = scales.rowToX(hoverPoint.row);
+    const hoverY = scales.valueToY(hoverPoint.value);
+    hoverMarkup = `
+      <g class="peak-editor-hover">
+        <circle class="peak-editor-hover-dot" cx="${hoverX}" cy="${hoverY}" r="7" />
+        <text class="peak-editor-hover-label" x="${hoverX}" y="${Math.max(plotTop + 14, hoverY - 12)}" text-anchor="middle">${hoverPoint.row}</text>
+      </g>
+    `;
+  }
+
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.innerHTML = `
+    <rect class="peak-editor-frame" x="0.5" y="0.5" width="${width - 1}" height="${height - 1}" rx="10" />
+    <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop}" x2="${plotLeft}" y2="${plotBottom}" />
+    <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotBottom}" x2="${plotRight}" y2="${plotBottom}" />
+    <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop + ((plotBottom - plotTop) / 4)}" x2="${plotRight}" y2="${plotTop + ((plotBottom - plotTop) / 4)}" />
+    <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop + ((plotBottom - plotTop) / 2)}" x2="${plotRight}" y2="${plotTop + ((plotBottom - plotTop) / 2)}" />
+    <line class="peak-editor-grid" x1="${plotLeft}" y1="${plotTop + (((plotBottom - plotTop) * 3) / 4)}" x2="${plotRight}" y2="${plotTop + (((plotBottom - plotTop) * 3) / 4)}" />
+    ${areaMarkup.join('')}
+    <path class="peak-editor-path-shadow" d="${path}" />
+    <path class="peak-editor-path" d="${path}" />
+    <circle class="peak-editor-apex" cx="${peakX}" cy="${peakY}" r="5" />
+    ${overlayMarkup.join('')}
+    ${hoverMarkup}
+    <text class="peak-editor-axis-label" x="${plotLeft}" y="${height - 22}">Top</text>
+    <text class="peak-editor-axis-label" x="${plotRight}" y="${height - 22}" text-anchor="end">Bottom</text>
   `;
 }
 
@@ -364,12 +710,13 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       return;
     }
 
-    const hasBandWindow = Number.isFinite(overrides.laneSegmentation?.bandTop) && Number.isFinite(overrides.laneSegmentation?.bandBottom);
+    const selectedBandWindow = getTargetBandWindowForLane(overrides.laneSegmentation, selectedLane.laneIndex);
+    const hasBandWindow = Boolean(selectedBandWindow);
     const polarityNote = polarity === 'dark-on-light'
       ? 'Dark-on-light gel: signal inverted so bands appear as peaks.'
       : 'Bright-on-dark gel: bands appear as peaks.';
     elements.gelLaneProfileCaption.textContent = hasBandWindow
-      ? `Row signal from grayscale image for lane ${selectedLane.laneIndex}. Band window follows steps 6 and 7. ${polarityNote}`
+      ? `Row signal from grayscale image for lane ${selectedLane.laneIndex}. Band window follows steps 6 and 7${selectedBandWindow.perLane ? ' for this lane' : ''}. ${polarityNote}`
       : `Row signal from grayscale image for lane ${selectedLane.laneIndex}. ${polarityNote}`;
     elements.gelLaneProfileMeta.innerHTML = [
       `x ${selectedLane.xStart}-${selectedLane.xEnd}`,
@@ -384,8 +731,8 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     renderLaneProfileSvg(
       elements.gelLaneProfileChart,
       profile,
-      overrides.laneSegmentation?.bandTop,
-      overrides.laneSegmentation?.bandBottom
+      selectedBandWindow?.bandTop,
+      selectedBandWindow?.bandBottom
     );
 
     lastProfile = profile;
@@ -398,19 +745,501 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
   let lastProfile = null;
   let lastProfileLane = null;
 
+  function ensurePeakEditorState() {
+    runtime.peakEditor = {
+      open: false,
+      mode: 'baseline',
+      laneIndex: runtime.selectedLaneProfileLane || null,
+      ...(runtime.peakEditor || {})
+    };
+    if (runtime.peakEditor.mode !== 'divider') {
+      runtime.peakEditor.mode = 'baseline';
+    }
+    return runtime.peakEditor;
+  }
+
+  function setPeakEditorStatus(message) {
+    if (elements.gelPeakEditorSummary) {
+      elements.gelPeakEditorSummary.textContent = message || '';
+    }
+  }
+
+  function computeProfileForLane(lane) {
+    if (!runtime.currentImage || !lane) {
+      return null;
+    }
+    const { signal } = buildQuantificationSignal(runtime.currentImage.gray);
+    return signal ? computeLaneIntensityProfile({
+      signal,
+      width: runtime.currentImage.width,
+      height: runtime.currentImage.height,
+      lane
+    }) : null;
+  }
+
+  function getSelectedPeakEditorLane(lanes = getLaneProfileLanes(runtime)) {
+    const state = ensurePeakEditorState();
+    if (!lanes.length) {
+      state.laneIndex = null;
+      return null;
+    }
+    const preferredLane = Number(state.laneIndex || runtime.selectedLaneProfileLane);
+    const selected = lanes.find((lane) => lane.laneIndex === preferredLane) || lanes[0];
+    state.laneIndex = selected.laneIndex;
+    runtime.selectedLaneProfileLane = selected.laneIndex;
+    return selected;
+  }
+
+  function getPeakIntegrationsForLane(laneIndex) {
+    return normalizeManualOverrides(runtime.manualOverrides).peakIntegrations
+      .filter((integration) => integration.laneIndex === laneIndex);
+  }
+
+  function setPeakIntegrations(integrations) {
+    runtime.manualOverrides = {
+      ...normalizeManualOverrides(runtime.manualOverrides),
+      peakIntegrations: integrations
+    };
+  }
+
+  function getPeakEditorRowFromEvent(event, profile) {
+    const rowMax = Math.max(0, (profile?.values?.length || 1) - 1);
+    if (Number.isFinite(Number(event?.row))) {
+      return clamp(Math.round(Number(event.row)), 0, rowMax);
+    }
+    const svg = elements.gelPeakEditorChart;
+    const svgX = getPeakEditorSvgXFromEvent(svg, event);
+    if (!Number.isFinite(svgX)) {
+      return null;
+    }
+    return clamp(getPeakEditorScales(profile).xToRow(svgX), 0, rowMax);
+  }
+
+  function getAllPeakIntegrationRows() {
+    const lanes = getLaneProfileLanes(runtime);
+    if (!lanes.length) {
+      return [];
+    }
+    const integrations = normalizeManualOverrides(runtime.manualOverrides).peakIntegrations;
+    return lanes.flatMap((lane) => {
+      const profile = computeProfileForLane(lane);
+      if (!profile) {
+        return [];
+      }
+      return calculatePeakIntegrationRows(
+        profile,
+        integrations.filter((integration) => integration.laneIndex === lane.laneIndex)
+      );
+    });
+  }
+
+  function renderPeakEditorChartOnly(nextHoverRow) {
+    if (!elements.gelPeakEditorChart) {
+      return;
+    }
+    const hasHoverOverride = arguments.length > 0;
+    const state = ensurePeakEditorState();
+    if (!state.open) {
+      return;
+    }
+    const lanes = getLaneProfileLanes(runtime);
+    const selectedLane = getSelectedPeakEditorLane(lanes);
+    const profile = selectedLane ? computeProfileForLane(selectedLane) : null;
+    const laneIntegrations = selectedLane ? getPeakIntegrationsForLane(selectedLane.laneIndex) : [];
+    renderPeakEditorSvg(
+      elements.gelPeakEditorChart,
+      profile,
+      laneIntegrations,
+      hasHoverOverride ? nextHoverRow : state.hoverRow,
+      state.mode
+    );
+  }
+
+  function renderPeakIntegrationTable(rows) {
+    const host = elements.gelPeakEditorTable;
+    if (!host) {
+      return;
+    }
+
+    const tableRows = rows.map((row) => ({
+      ...row,
+      apexValue: formatTableNumber(row.apexValue),
+      area: formatTableNumber(row.area),
+      rawArea: formatTableNumber(row.rawArea),
+      baselineArea: formatTableNumber(row.baselineArea)
+    }));
+
+    if (typeof window !== 'undefined' && typeof window.Tabulator === 'function') {
+      if (!runtime.peakIntegrationTable) {
+        runtime.peakIntegrationTable = new window.Tabulator(host, {
+          data: tableRows,
+          columns: PEAK_EDITOR_COLUMNS,
+          layout: 'fitColumns',
+          height: '260px',
+          placeholder: 'No peak areas selected'
+        });
+      } else if (typeof runtime.peakIntegrationTable.setData === 'function') {
+        runtime.peakIntegrationTable.setData(tableRows);
+      }
+      return;
+    }
+
+    const rowsHtml = tableRows.map((row) => `
+      <tr>
+        <td class="num">${safeText(row.laneIndex)}</td>
+        <td class="num">${safeText(row.baselineIndex)}</td>
+        <td class="num">${safeText(row.peakIndex)}</td>
+        <td class="num">${safeText(row.startRow)}</td>
+        <td class="num">${safeText(row.endRow)}</td>
+        <td class="num">${safeText(row.apexRow)}</td>
+        <td class="num">${safeText(row.apexValue)}</td>
+        <td class="num">${safeText(row.area)}</td>
+        <td class="num">${safeText(row.rawArea)}</td>
+        <td class="num">${safeText(row.baselineArea)}</td>
+      </tr>
+    `).join('');
+    host.innerHTML = `
+      <table class="gel-peak-table">
+        <thead>
+          <tr>
+            ${PEAK_EDITOR_COLUMNS.map((column) => `<th>${safeText(column.title)}</th>`).join('')}
+          </tr>
+        </thead>
+        <tbody>${rowsHtml || '<tr><td colspan="10">No peak areas selected</td></tr>'}</tbody>
+      </table>
+    `;
+  }
+
+  function renderPeakEditor() {
+    const overlay = elements.gelPeakEditorOverlay;
+    if (!overlay) {
+      return;
+    }
+
+    const state = ensurePeakEditorState();
+    overlay.hidden = !state.open;
+    if (!state.open) {
+      return;
+    }
+
+    const lanes = getLaneProfileLanes(runtime);
+    const selectedLane = getSelectedPeakEditorLane(lanes);
+    if (elements.gelPeakEditorLaneSelect) {
+      elements.gelPeakEditorLaneSelect.disabled = !lanes.length;
+      elements.gelPeakEditorLaneSelect.innerHTML = lanes.length
+        ? lanes.map((lane) => `<option value="${lane.laneIndex}">Lane ${lane.laneIndex}</option>`).join('')
+        : '<option value="">No lanes</option>';
+      elements.gelPeakEditorLaneSelect.value = selectedLane ? String(selectedLane.laneIndex) : '';
+    }
+    if (elements.gelPeakEditorBaselineModeBtn) {
+      elements.gelPeakEditorBaselineModeBtn.classList.toggle('is-active', state.mode === 'baseline');
+      elements.gelPeakEditorBaselineModeBtn.setAttribute?.('aria-pressed', String(state.mode === 'baseline'));
+    }
+    if (elements.gelPeakEditorDividerModeBtn) {
+      elements.gelPeakEditorDividerModeBtn.classList.toggle('is-active', state.mode === 'divider');
+      elements.gelPeakEditorDividerModeBtn.setAttribute?.('aria-pressed', String(state.mode === 'divider'));
+    }
+
+    const profile = selectedLane ? computeProfileForLane(selectedLane) : null;
+    const laneIntegrations = selectedLane ? getPeakIntegrationsForLane(selectedLane.laneIndex) : [];
+    if (elements.gelPeakEditorChart) {
+      renderPeakEditorSvg(
+        elements.gelPeakEditorChart,
+        profile,
+        laneIntegrations,
+        state.hoverRow,
+        state.mode
+      );
+    }
+
+    const rows = getAllPeakIntegrationRows();
+    renderPeakIntegrationTable(rows);
+    const completeBaselines = laneIntegrations.filter((integration) => integration.left && integration.right).length;
+    const draftBaselines = laneIntegrations.filter((integration) => integration.left && !integration.right).length;
+    setPeakEditorStatus(selectedLane
+      ? `Lane ${selectedLane.laneIndex}: ${completeBaselines} baseline(s), ${draftBaselines} draft, ${rows.length} peak area row(s).`
+      : 'Divide the gel into lanes before editing peak areas.');
+  }
+
+  function onPeakEditorOpen() {
+    if (!runtime.currentImage) {
+      deps.setStatus?.('Load a gel image before opening the peak editor.');
+      return;
+    }
+    const state = ensurePeakEditorState();
+    state.open = true;
+    state.laneIndex = runtime.selectedLaneProfileLane || state.laneIndex;
+    renderPeakEditor();
+  }
+
+  function onPeakEditorClose() {
+    const state = ensurePeakEditorState();
+    state.open = false;
+    state.hoverRow = null;
+    renderPeakEditor();
+  }
+
+  function onPeakEditorModeSelected(mode) {
+    const state = ensurePeakEditorState();
+    state.mode = mode === 'divider' ? 'divider' : 'baseline';
+    if (state.mode !== 'baseline') {
+      state.hoverRow = null;
+    }
+    renderPeakEditor();
+  }
+
+  function onPeakEditorLaneChange(event) {
+    const nextLane = Number(event?.target?.value);
+    const state = ensurePeakEditorState();
+    state.laneIndex = Number.isFinite(nextLane) && nextLane > 0 ? Math.floor(nextLane) : null;
+    state.hoverRow = null;
+    runtime.selectedLaneProfileLane = state.laneIndex;
+    runtime.laneProfileHoverY = null;
+    renderLaneProfile();
+    renderPeakEditor();
+    drawCanvas();
+  }
+
+  function onPeakEditorChartClick(event) {
+    const lanes = getLaneProfileLanes(runtime);
+    const selectedLane = getSelectedPeakEditorLane(lanes);
+    const profile = selectedLane ? computeProfileForLane(selectedLane) : null;
+    if (!selectedLane || !profile) {
+      setPeakEditorStatus('Divide the gel into lanes before editing peak areas.');
+      return;
+    }
+
+    const row = getPeakEditorRowFromEvent(event, profile);
+    if (!Number.isFinite(row)) {
+      return;
+    }
+
+    const point = makeProfilePoint(profile, row);
+    const overrides = normalizeManualOverrides(runtime.manualOverrides);
+    const nextIntegrations = overrides.peakIntegrations.map((integration) => ({
+      ...integration,
+      dividers: [...(integration.dividers || [])]
+    }));
+    const state = ensurePeakEditorState();
+
+    if (state.mode === 'divider') {
+      const candidates = nextIntegrations
+        .map((integration, index) => ({ integration, index }))
+        .filter(({ integration }) => {
+          if (integration.laneIndex !== selectedLane.laneIndex || !integration.left || !integration.right) {
+            return false;
+          }
+          const start = Math.min(integration.left.row, integration.right.row);
+          const end = Math.max(integration.left.row, integration.right.row);
+          return row > start && row < end;
+        })
+        .sort((a, b) => {
+          const aSpan = Math.abs(a.integration.right.row - a.integration.left.row);
+          const bSpan = Math.abs(b.integration.right.row - b.integration.left.row);
+          return aSpan - bSpan;
+        });
+      const target = candidates[0];
+      if (!target) {
+        setPeakEditorStatus('Add a complete baseline before adding vertical peak dividers.');
+        return;
+      }
+      const dividers = new Set(target.integration.dividers || []);
+      dividers.add(point.row);
+      nextIntegrations[target.index] = {
+        ...target.integration,
+        dividers: [...dividers].sort((a, b) => a - b)
+      };
+      setPeakIntegrations(nextIntegrations);
+      renderPeakEditor();
+      return;
+    }
+
+    const draftIndex = nextIntegrations.findIndex((integration) => (
+      integration.laneIndex === selectedLane.laneIndex
+      && integration.left
+      && !integration.right
+    ));
+    if (draftIndex >= 0) {
+      if (nextIntegrations[draftIndex].left.row === point.row) {
+        setPeakEditorStatus('Choose a second baseline point at a different row.');
+        return;
+      }
+      nextIntegrations[draftIndex] = {
+        ...nextIntegrations[draftIndex],
+        right: point
+      };
+    } else {
+      nextIntegrations.push({
+        laneIndex: selectedLane.laneIndex,
+        left: point,
+        right: null,
+        dividers: []
+      });
+    }
+    setPeakIntegrations(nextIntegrations);
+    renderPeakEditor();
+  }
+
+  function onPeakEditorChartMouseMove(event) {
+    const state = ensurePeakEditorState();
+    if (!state.open || state.mode !== 'baseline') {
+      return;
+    }
+    const lanes = getLaneProfileLanes(runtime);
+    const selectedLane = getSelectedPeakEditorLane(lanes);
+    const profile = selectedLane ? computeProfileForLane(selectedLane) : null;
+    if (!profile) {
+      return;
+    }
+    const row = getPeakEditorRowFromEvent(event, profile);
+    if (!Number.isFinite(row)) {
+      return;
+    }
+    if (state.hoverRow === row) {
+      return;
+    }
+    state.hoverRow = row;
+    renderPeakEditorChartOnly(row);
+  }
+
+  function onPeakEditorChartMouseLeave() {
+    const state = ensurePeakEditorState();
+    if (!state.open) {
+      return;
+    }
+    state.hoverRow = null;
+    renderPeakEditorChartOnly(null);
+  }
+
+  function onPeakEditorClearLane() {
+    const selectedLane = getSelectedPeakEditorLane();
+    if (!selectedLane) {
+      return;
+    }
+    const overrides = normalizeManualOverrides(runtime.manualOverrides);
+    setPeakIntegrations(overrides.peakIntegrations.filter((integration) => integration.laneIndex !== selectedLane.laneIndex));
+    renderPeakEditor();
+  }
+
+  function onPeakEditorClearAll() {
+    setPeakIntegrations([]);
+    renderPeakEditor();
+  }
+
+  function strokeLaneOutline(context, lane, height) {
+    const vertices = getLaneVertexArray(lane);
+    if (vertices.length >= 4) {
+      context.beginPath();
+      context.moveTo(vertices[0].x + 0.5, vertices[0].y + 0.5);
+      vertices.slice(1).forEach((point) => {
+        context.lineTo(point.x + 0.5, point.y + 0.5);
+      });
+      context.closePath();
+      context.stroke();
+      return;
+    }
+    context.strokeRect(
+      lane.xStart + 0.5,
+      0.5,
+      Math.max(1, lane.xEnd - lane.xStart),
+      Math.max(1, height - 1)
+    );
+  }
+
+  function strokeLaneRowSegment(context, lane, y) {
+    const segment = getLaneRowSegment(lane, y, runtime.currentImage?.height);
+    context.beginPath();
+    context.moveTo(segment.left.x + 0.5, segment.left.y + 0.5);
+    context.lineTo(segment.right.x + 0.5, segment.right.y + 0.5);
+    context.stroke();
+    return true;
+  }
+
+  function strokeLaneWindow(context, lane, top, bottom) {
+    const topSegment = getLaneRowSegment(lane, top, runtime.currentImage?.height);
+    const bottomSegment = getLaneRowSegment(lane, bottom, runtime.currentImage?.height);
+    context.beginPath();
+    context.moveTo(topSegment.left.x + 0.5, topSegment.left.y + 0.5);
+    context.lineTo(topSegment.right.x + 0.5, topSegment.right.y + 0.5);
+    context.lineTo(bottomSegment.right.x + 0.5, bottomSegment.right.y + 0.5);
+    context.lineTo(bottomSegment.left.x + 0.5, bottomSegment.left.y + 0.5);
+    context.closePath();
+    context.stroke();
+    return true;
+  }
+
+  function drawLaneVertexHandles(context, lanes, savedLaneVertices = []) {
+    const vertexToolActive = runtime.selectedViewerTool === 'lane-vertices';
+    const savedLaneIndexes = new Set(
+      (Array.isArray(savedLaneVertices) ? savedLaneVertices : [])
+        .map((item) => Number(item?.laneIndex))
+        .filter(Number.isFinite)
+    );
+    const outlineLanes = vertexToolActive
+      ? lanes
+      : lanes.filter((lane) => savedLaneIndexes.has(lane.index + 1));
+    if (!outlineLanes.length) {
+      return;
+    }
+    context.save();
+    context.lineWidth = 1.7;
+    context.strokeStyle = 'rgba(14, 165, 233, 0.95)';
+    context.setLineDash([5, 3]);
+    outlineLanes.forEach((lane) => {
+      strokeLaneOutline(context, lane, runtime.currentImage.height);
+    });
+    if (!vertexToolActive) {
+      context.restore();
+      return;
+    }
+    context.setLineDash([]);
+    context.font = '11px "SF Pro Text", "Segoe UI", sans-serif';
+    outlineLanes.forEach((lane) => {
+      const points = getLaneVertexArray(lane);
+      points.forEach((point, index) => {
+        context.beginPath();
+        context.arc(point.x + 0.5, point.y + 0.5, 5, 0, Math.PI * 2);
+        context.fillStyle = 'rgba(14, 165, 233, 0.95)';
+        context.fill();
+        context.lineWidth = 1.5;
+        context.strokeStyle = 'rgba(255, 255, 255, 0.95)';
+        context.stroke();
+        context.fillStyle = 'rgba(255, 255, 255, 0.98)';
+        context.fillText(String(index + 1), point.x + 7, point.y - 5);
+      });
+    });
+    context.restore();
+  }
+
   function drawHoverLineOnCanvas(context) {
     if (runtime.laneProfileHoverY == null || !lastProfileLane) return;
     const y = Math.max(0, Math.min(runtime.currentImage.height - 1, Math.round(runtime.laneProfileHoverY)));
+    const segment = getLaneRowSegment(lastProfileLane, y, runtime.currentImage.height);
     context.save();
     context.lineWidth = 1.4;
     context.strokeStyle = 'rgba(250, 204, 21, 0.95)';
     context.setLineDash([3, 3]);
     context.beginPath();
-    context.moveTo(lastProfileLane.xStart + 0.5, y + 0.5);
-    context.lineTo(lastProfileLane.xEnd + 0.5, y + 0.5);
+    context.moveTo(segment.left.x + 0.5, segment.left.y + 0.5);
+    context.lineTo(segment.right.x + 0.5, segment.right.y + 0.5);
     context.stroke();
     context.setLineDash([]);
     context.restore();
+  }
+
+  function strokeRowsForLanes(context, lanes, rowY, fallbackColor = 'rgba(56, 189, 248, 0.95)') {
+    const y = clamp(rowY, 0, runtime.currentImage.height - 1);
+    context.strokeStyle = fallbackColor;
+    if (lanes.length) {
+      lanes.forEach((lane) => {
+        strokeLaneRowSegment(context, lane, y);
+      });
+      return;
+    }
+    context.beginPath();
+    context.moveTo(0, y + 0.5);
+    context.lineTo(runtime.currentImage.width, y + 0.5);
+    context.stroke();
   }
 
   function onLaneProfileChartMouseMove(event) {
@@ -453,17 +1282,19 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     };
   }
 
-  function findLaneAtX(x) {
+  function findLaneAtPoint(point) {
     const lanes = getLaneProfileLanes(runtime);
     if (!lanes.length) return null;
-    return lanes.find((lane) => x >= lane.xStart && x <= lane.xEnd) || null;
+    return lanes.find((lane) => laneContainsPoint(lane, point.x, point.y, runtime.currentImage.width))
+      || lanes.find((lane) => point.x >= lane.xStart && point.x <= lane.xEnd)
+      || null;
   }
 
   function onCanvasHoverMove(event) {
     if (!runtime.currentImage || runtime.cropperActive) return;
     const point = canvasPointFromEvent(event);
     if (!point) return;
-    const lane = findLaneAtX(point.x);
+    const lane = findLaneAtPoint(point);
     if (!lane) {
       onCanvasHoverLeave();
       return;
@@ -473,11 +1304,12 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       runtime.selectedLaneProfileLane = lane.laneIndex;
       needsProfileRender = true;
     }
-    runtime.laneProfileHoverY = point.y;
+    const rowY = lanePointToRectifiedRow(lane, point, runtime.currentImage.height) ?? point.y;
+    runtime.laneProfileHoverY = rowY;
     if (needsProfileRender) {
       renderLaneProfile();
     } else if (lastProfile) {
-      setLaneProfileHover(elements.gelLaneProfileChart, lastProfile, point.y);
+      setLaneProfileHover(elements.gelLaneProfileChart, lastProfile, rowY);
     }
     drawCanvas();
   }
@@ -499,7 +1331,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
 
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
     const segmentation = overrides.laneSegmentation || {};
-    const hasBandWindow = Number.isFinite(segmentation.bandTop) && Number.isFinite(segmentation.bandBottom);
+    const hasBandWindow = hasAnyTargetBandWindow(segmentation);
     const reportLanes = runtime.currentReport?.lanes || [];
     const cells = reportLanes
       .map((lane) => ({ lane, cell: lane.targetBand || null }))
@@ -574,7 +1406,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       return;
     }
     const segmentation = overrides.laneSegmentation || {};
-    if (!Number.isFinite(segmentation.bandTop) || !Number.isFinite(segmentation.bandBottom)) {
+    if (!hasAnyTargetBandWindow(segmentation)) {
       return;
     }
     const threshold = readSnrThreshold(elements.gelCellSnrThresholdInput);
@@ -597,17 +1429,13 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
         context.setLineDash([4, 3]);
         context.strokeStyle = 'rgba(148, 163, 184, 0.85)';
       }
-      context.strokeRect(
-        lane.xStart + 0.5,
-        top + 0.5,
-        Math.max(1, lane.xEnd - lane.xStart),
-        Math.max(1, bottom - top)
-      );
+      strokeLaneWindow(context, lane, top, bottom);
       context.setLineDash([]);
       const label = formatIntensity(Number(cell.correctedIntensity));
+      const topSegment = getLaneRowSegment(lane, top, runtime.currentImage.height);
       context.fillStyle = hasBand ? 'rgba(34, 197, 94, 0.95)' : 'rgba(148, 163, 184, 0.9)';
-      const textY = Math.max(10, top - 2);
-      context.fillText(label, lane.xStart + 2, textY);
+      const textY = Math.max(10, topSegment.left.y - 2);
+      context.fillText(label, topSegment.left.x + 2, textY);
     });
     context.restore();
   }
@@ -635,7 +1463,11 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
 
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
     const segmentation = overrides.laneSegmentation || {};
-    const segmentationLanes = buildLanesFromManualSegmentation(overrides, runtime.currentImage.width) || [];
+    const segmentationLanes = buildLanesFromManualSegmentation(
+      overrides,
+      runtime.currentImage.width,
+      runtime.currentImage.height
+    ) || [];
     if (
       Number.isFinite(segmentation.gelLeft)
       || Number.isFinite(segmentation.gelRight)
@@ -668,35 +1500,54 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
         context.stroke();
       });
 
-      if (Number.isFinite(segmentation.bandTop)) {
+      const laneBandMode = isPerLaneBandMode(segmentation);
+      if (!laneBandMode && Number.isFinite(segmentation.bandTop)) {
         const y = clamp(segmentation.bandTop, 0, runtime.currentImage.height - 1);
-        context.strokeStyle = 'rgba(56, 189, 248, 0.95)';
-        context.beginPath();
-        context.moveTo(0, y + 0.5);
-        context.lineTo(runtime.currentImage.width, y + 0.5);
-        context.stroke();
+        strokeRowsForLanes(context, segmentationLanes, y);
       }
-      if (Number.isFinite(segmentation.bandBottom)) {
+      if (!laneBandMode && Number.isFinite(segmentation.bandBottom)) {
         const y = clamp(segmentation.bandBottom, 0, runtime.currentImage.height - 1);
-        context.strokeStyle = 'rgba(56, 189, 248, 0.95)';
-        context.beginPath();
-        context.moveTo(0, y + 0.5);
-        context.lineTo(runtime.currentImage.width, y + 0.5);
-        context.stroke();
+        strokeRowsForLanes(context, segmentationLanes, y);
       }
 
-      if (Number.isFinite(segmentation.bandTop) && Number.isFinite(segmentation.bandBottom) && segmentationLanes.length) {
+      if (!laneBandMode && Number.isFinite(segmentation.bandTop) && Number.isFinite(segmentation.bandBottom) && segmentationLanes.length) {
         const top = clamp(Math.min(segmentation.bandTop, segmentation.bandBottom), 0, runtime.currentImage.height - 1);
         const bottom = clamp(Math.max(segmentation.bandTop, segmentation.bandBottom), top + 1, runtime.currentImage.height - 1);
         segmentationLanes.forEach((lane) => {
           context.strokeStyle = 'rgba(34, 197, 94, 0.95)';
           context.lineWidth = 1.2;
-          context.strokeRect(
-            lane.xStart + 0.5,
-            top + 0.5,
-            Math.max(1, lane.xEnd - lane.xStart),
-            Math.max(1, bottom - top)
-          );
+          strokeLaneWindow(context, lane, top, bottom);
+        });
+      }
+
+      if (laneBandMode && segmentationLanes.length) {
+        const laneWindowByIndex = new Map(
+          normalizeLaneBandWindows(segmentation.laneBandWindows)
+            .map((window) => [window.laneIndex, window])
+        );
+        segmentationLanes.forEach((lane) => {
+          const laneIndex = lane.index + 1;
+          const window = laneWindowByIndex.get(laneIndex);
+          if (!window) {
+            return;
+          }
+          context.lineWidth = 1.4;
+          context.strokeStyle = 'rgba(56, 189, 248, 0.95)';
+          if (Number.isFinite(window.bandTop)) {
+            const y = clamp(window.bandTop, 0, runtime.currentImage.height - 1);
+            strokeLaneRowSegment(context, lane, y);
+          }
+          if (Number.isFinite(window.bandBottom)) {
+            const y = clamp(window.bandBottom, 0, runtime.currentImage.height - 1);
+            strokeLaneRowSegment(context, lane, y);
+          }
+          if (Number.isFinite(window.bandTop) && Number.isFinite(window.bandBottom)) {
+            const top = clamp(Math.min(window.bandTop, window.bandBottom), 0, runtime.currentImage.height - 1);
+            const bottom = clamp(Math.max(window.bandTop, window.bandBottom), top + 1, runtime.currentImage.height - 1);
+            context.strokeStyle = 'rgba(34, 197, 94, 0.95)';
+            context.lineWidth = 1.2;
+            strokeLaneWindow(context, lane, top, bottom);
+          }
         });
       }
 
@@ -705,26 +1556,35 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
         if (ladder) {
           context.strokeStyle = 'rgba(255, 197, 61, 0.98)';
           context.lineWidth = 2.2;
-          context.strokeRect(
-            ladder.xStart + 0.5,
-            0.5,
-            Math.max(1, ladder.xEnd - ladder.xStart),
-            runtime.currentImage.height - 1
-          );
+          strokeLaneOutline(context, ladder, runtime.currentImage.height);
         }
       }
 
       (Array.isArray(overrides.ladderBands) ? overrides.ladderBands : []).forEach((item) => {
         const y = clamp(Math.round(item.pixelY), 0, runtime.currentImage.height - 1);
+        const ladderLane = Number.isFinite(overrides.ladderLane)
+          ? segmentationLanes.find((lane) => lane.index + 1 === overrides.ladderLane)
+          : null;
+        const labelSegment = ladderLane
+          ? getLaneRowSegment(ladderLane, y, runtime.currentImage.height)
+          : null;
         context.strokeStyle = 'rgba(255, 197, 61, 0.98)';
         context.lineWidth = 1.2;
-        context.beginPath();
-        context.moveTo(0, y + 0.5);
-        context.lineTo(runtime.currentImage.width, y + 0.5);
-        context.stroke();
+        if (ladderLane) {
+          strokeLaneRowSegment(context, ladderLane, y);
+        } else {
+          context.beginPath();
+          context.moveTo(0, y + 0.5);
+          context.lineTo(runtime.currentImage.width, y + 0.5);
+          context.stroke();
+        }
         context.fillStyle = 'rgba(255, 197, 61, 0.98)';
         context.font = '11px "SF Pro Text", "Segoe UI", sans-serif';
-        context.fillText(`${round(item.mw, 1)}kDa`, 4, Math.max(10, y - 3));
+        context.fillText(
+          `${round(item.mw, 1)}kDa`,
+          labelSegment ? labelSegment.right.x + 3 : 4,
+          labelSegment ? labelSegment.right.y - 3 : Math.max(10, y - 3)
+        );
       });
       context.restore();
     }
@@ -737,33 +1597,28 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
           || (runtime.currentReport.calibration?.ladderLane === lane.laneIndex);
         context.strokeStyle = isLadder ? 'rgba(255, 197, 61, 0.95)' : 'rgba(46, 173, 255, 0.9)';
         context.lineWidth = isLadder ? 2.2 : 1.6;
-        context.strokeRect(
-          lane.xStart + 0.5,
-          0.5,
-          Math.max(1, lane.xEnd - lane.xStart),
-          runtime.currentImage.height - 1
-        );
+        strokeLaneOutline(context, lane, runtime.currentImage.height);
 
+        const labelSegment = getLaneRowSegment(lane, 0, runtime.currentImage.height);
         context.fillStyle = isLadder ? 'rgba(255, 197, 61, 0.95)' : 'rgba(46, 173, 255, 0.95)';
         context.font = '12px "SF Pro Text", "Segoe UI", sans-serif';
-        context.fillText(String(lane.laneIndex), lane.xStart + 2, 12);
+        context.fillText(String(lane.laneIndex), labelSegment.left.x + 2, Math.max(12, labelSegment.left.y + 12));
 
         lane.bands.forEach((band) => {
           context.strokeStyle = band.manual ? 'rgba(34, 197, 94, 0.98)' : 'rgba(255, 99, 132, 0.95)';
           context.lineWidth = 1.3;
-          context.beginPath();
-          context.moveTo(lane.xStart, band.pixelY + 0.5);
-          context.lineTo(lane.xEnd, band.pixelY + 0.5);
-          context.stroke();
+          strokeLaneRowSegment(context, lane, band.pixelY);
 
           if (Number.isFinite(band.estimatedMw)) {
+            const bandSegment = getLaneRowSegment(lane, band.pixelY, runtime.currentImage.height);
             context.fillStyle = band.manualMw ? 'rgba(34, 197, 94, 0.95)' : 'rgba(255, 99, 132, 0.92)';
-            context.fillText(`${round(band.estimatedMw, 1)}kDa`, lane.xEnd + 3, band.pixelY - 1);
+            context.fillText(`${round(band.estimatedMw, 1)}kDa`, bandSegment.right.x + 3, bandSegment.right.y - 1);
           }
         });
       });
     }
 
+    drawLaneVertexHandles(context, segmentationLanes, segmentation.laneVertices);
     drawHoverLineOnCanvas(context);
   }
 
@@ -772,6 +1627,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     deps.renderLaneTable?.();
     renderLaneProfile();
     renderCellTable();
+    renderPeakEditor();
   }
 
   function renderReport() {
@@ -824,9 +1680,19 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     onCanvasHoverMove,
     onLaneProfileChartMouseLeave,
     onLaneProfileChartMouseMove,
+    onPeakEditorChartClick,
+    onPeakEditorChartMouseLeave,
+    onPeakEditorChartMouseMove,
+    onPeakEditorClearAll,
+    onPeakEditorClearLane,
+    onPeakEditorClose,
+    onPeakEditorLaneChange,
+    onPeakEditorModeSelected,
+    onPeakEditorOpen,
     renderCanvas,
     renderCellTable,
     renderLaneProfile,
+    renderPeakEditor,
     renderReport
   };
 }

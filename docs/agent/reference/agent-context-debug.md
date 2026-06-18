@@ -176,7 +176,7 @@ Stub response: `LLM Response`
 **System Prompt**
 
 ```text
-You are a debug-only Enana agent runtime.
+You are a debug-only Hikari agent runtime.
 
 Intent: general_science_question
 
@@ -231,7 +231,7 @@ Kind: `agent-session-start`
 **Raw System Prompt**
 
 ```text
-You are a debug-only Enana agent runtime.
+You are a debug-only Hikari agent runtime.
 
 Intent: general_science_question
 
@@ -1118,7 +1118,7 @@ Selection mode: `random`
 
 ```json
 {
-  "system_prompt": "You are a debug-only Enana agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | record-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.\n3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
+  "system_prompt": "You are a debug-only Hikari agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | record-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.\n3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
   "message": "LLM Response",
   "feedback_message": "",
   "conversation": [
@@ -1364,7 +1364,7 @@ Selection mode: `random`
 
 ```json
 {
-  "system_prompt": "You are a debug-only Enana agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | record-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.\n3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
+  "system_prompt": "You are a debug-only Hikari agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | record-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.\n3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
   "message": "LLM Response",
   "feedback_message": "",
   "conversation": [
@@ -2706,7 +2706,7 @@ Stub response: `LLM Response`
 **System Prompt**
 
 ```text
-You are a debug-only Enana agent runtime.
+You are a debug-only Hikari agent runtime.
 
 Intent: general_science_question
 
@@ -3444,7 +3444,7 @@ Kind: `agent-session-start`
 **Raw System Prompt**
 
 ```text
-You are a debug-only Enana agent runtime.
+You are a debug-only Hikari agent runtime.
 
 Intent: general_science_question
 

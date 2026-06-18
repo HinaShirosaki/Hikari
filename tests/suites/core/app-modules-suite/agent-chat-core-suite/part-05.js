@@ -70,10 +70,10 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentChat: async () => ({
         ok: true,
@@ -246,7 +246,7 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });
@@ -342,10 +342,10 @@ test('agent-chat toggles deep research mode and sends it in the chat payload', a
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentChat: async (payload) => {
         payloadSeen = payload;
@@ -384,7 +384,7 @@ test('agent-chat toggles deep research mode and sends it in the chat payload', a
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });

@@ -7,7 +7,8 @@ export function renderAgentChat({
   sessionManager,
   developerToolUi,
   developerContextController,
-  attachmentsController
+  attachmentsController,
+  loadPersistentSessions = true
 }) {
   shell.ensureAgentState();
   shell.renderProjectOptions();
@@ -15,7 +16,9 @@ export function renderAgentChat({
   developerToolUi.renderDeveloperToolOptions();
   shell.renderContextSummary();
   sessionManager.renderSessionList();
-  void sessionManager.refreshPersistentSessions();
+  if (loadPersistentSessions) {
+    void sessionManager.refreshPersistentSessions();
+  }
   if (dom.developerTools) {
     dom.developerTools.hidden = !(state.settings?.agent?.developerMode === true && api?.agentDeveloperTestTools);
   }

@@ -8,7 +8,7 @@
   align-items: center;
   overflow: auto;
   padding: 18px;
-  background: var(--palette-rgba-18-34-55-a24);
+  background: var(--palette-rgba-18-34-55-a2);
 }
 
 .app-dialog-overlay--top {
@@ -60,7 +60,7 @@
   position: absolute;
   z-index: 20;
   padding: 84px 24px 24px;
-  background: var(--palette-rgba-18-34-55-a22);
+  background: var(--palette-rgba-18-34-55-a2);
 }
 
 #home-view .home-dialog.app-dialog-surface {
@@ -76,10 +76,6 @@
 
 .chemical-dialog.app-dialog-surface {
   --app-dialog-width: 920px;
-}
-
-.sample-compound-dialog.app-dialog-surface {
-  --app-dialog-width: 1180px;
 }
 
 .assay-serial-dilution-dialog.app-dialog-surface,
@@ -122,6 +118,36 @@
   --app-dialog-padding: clamp(18px, 2.5vw, 24px);
   --app-dialog-gap: 14px;
   width: min(var(--app-dialog-width), 100%);
+}
+
+.unsaved-changes-dialog.app-dialog-surface {
+  --app-dialog-width: 520px;
+  --app-dialog-padding: 20px;
+  --app-dialog-gap: 14px;
+}
+
+.unsaved-changes-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unsaved-changes-list li {
+  padding: 9px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--surface-subtle);
+  color: var(--strong);
+}
+
+.unsaved-changes-actions {
+  justify-content: flex-end;
+}
+
+.unsaved-changes-dialog [role="status"].is-error {
+  color: var(--danger);
 }
 
 body.theme-night .app-dialog-overlay {

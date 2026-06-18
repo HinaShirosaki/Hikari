@@ -1,10 +1,10 @@
-// Manual colony counter tool.
+// Colony counter tool.
 //
 // Responsibilities:
 // - load and display colony plate images on layered canvases
-// - support crop, zoom, and pan interactions before manual counting
-// - let users add or remove colony markers directly on the preview
-// - keep a synchronized marker mask and manual count summary
+// - support crop, mask, zoom, and pan interactions before counting
+// - run the trained colony heatmap model and allow marker adjustments
+// - present the annotated plate and count summary in a two-column workspace
 import {
   clampNumber,
   escapeHtml
@@ -13,6 +13,11 @@ import {
   bindFileDropTarget,
   mergeFilesIntoInput
 } from '../file-drop.js';
+import {
+  countColoniesWithModel
+} from './colony-counter-model.js';
+
+const EMPTY_MASK = Object.freeze({ kind: 'none', x: 0, y: 0, width: 0, height: 0 });
 
 // Convert a pointer event into canvas pixel coordinates, accounting for CSS scaling and letterboxing.
 function getCanvasPointerPosition(canvas, event) {
@@ -145,6 +150,12 @@ export function initColonyCounterTool() {
   const colonyCounterShell = document.querySelector('#tool-colony-counter-view .colony-counter-shell');
   const colonyImageInput = document.getElementById('colony-image-file');
   const colonyMaxSizeInput = document.getElementById('colony-max-size');
+  const colonyModelThresholdInput = document.getElementById('colony-model-threshold');
+  const colonyModelMinDistanceInput = document.getElementById('colony-model-min-distance');
+  const colonyAutoCountBtn = document.getElementById('colony-auto-count-btn');
+  const colonyMaskModeSelect = document.getElementById('colony-mask-mode');
+  const colonyStartMaskBtn = document.getElementById('colony-start-mask-btn');
+  const colonyClearMaskBtn = document.getElementById('colony-clear-mask-btn');
   const colonyRunBtn = document.getElementById('colony-run-btn');
   const colonyResetBtn = document.getElementById('colony-reset-btn');
   const colonyStartCropBtn = document.getElementById('colony-start-crop-btn');
@@ -155,7 +166,6 @@ export function initColonyCounterTool() {
   const colonyStatus = document.getElementById('colony-status');
   const colonySummary = document.getElementById('colony-summary');
   const colonyPreviewCanvas = document.getElementById('colony-preview-canvas');
-  const colonyMaskCanvas = document.getElementById('colony-mask-canvas');
   const colonyCropperShell = document.getElementById('colony-cropper-shell');
   const colonyCropperImage = document.getElementById('colony-cropper-image');
   const colonySourceCanvas = document.getElementById('colony-source-canvas');
@@ -173,6 +183,13 @@ export function initColonyCounterTool() {
     hasImage: false,
     cropper: null,
     markers: [],
+    mask: { ...EMPTY_MASK },
+    maskDraft: null,
+    isDrawingMask: false,
+    maskStartPoint: null,
+    lastCountSource: 'manual',
+    lastModelStats: null,
+    isModelRunning: false,
     zoom: 1,
     viewX: 0,
     viewY: 0,
@@ -197,18 +214,79 @@ export function initColonyCounterTool() {
     if (!colonySummary) {
       return;
     }
-    colonySummary.innerHTML = '<p class="small-note">Choose or drop a plate image, then click each colony to count manually.</p>';
+    colonySummary.innerHTML = '<p class="small-note">Choose or drop a plate image, then run auto count or click colonies manually.</p>';
   }
 
-  // Render the current manual colony count and interaction hints.
+  function hasActiveMask(mask = colonyState.mask) {
+    return Boolean(mask && mask.kind && mask.kind !== 'none' && Math.abs(mask.width) > 1 && Math.abs(mask.height) > 1);
+  }
+
+  function normalizeMask(mask) {
+    if (!mask || mask.kind === 'none') {
+      return { ...EMPTY_MASK };
+    }
+
+    return {
+      kind: mask.kind === 'circle' ? 'circle' : 'rectangle',
+      x: Math.min(mask.x, mask.x + mask.width),
+      y: Math.min(mask.y, mask.y + mask.height),
+      width: Math.abs(mask.width),
+      height: Math.abs(mask.height)
+    };
+  }
+
+  function isSourcePointInsideMask(sourcePoint, mask = colonyState.mask) {
+    if (!sourcePoint || !hasActiveMask(mask)) {
+      return true;
+    }
+
+    const normalized = normalizeMask(mask);
+    const x0 = normalized.x;
+    const y0 = normalized.y;
+    const x1 = normalized.x + normalized.width;
+    const y1 = normalized.y + normalized.height;
+
+    if (normalized.kind === 'rectangle') {
+      return sourcePoint.x >= x0 && sourcePoint.x <= x1 && sourcePoint.y >= y0 && sourcePoint.y <= y1;
+    }
+
+    const rx = normalized.width / 2;
+    const ry = normalized.height / 2;
+    if (rx <= 0 || ry <= 0) {
+      return false;
+    }
+    const cx = normalized.x + rx;
+    const cy = normalized.y + ry;
+    const dx = (sourcePoint.x - cx) / rx;
+    const dy = (sourcePoint.y - cy) / ry;
+    return ((dx * dx) + (dy * dy)) <= 1;
+  }
+
+  function getCountedMarkers() {
+    return colonyState.markers.filter((marker) => isSourcePointInsideMask(marker));
+  }
+
+  // Render the current colony count and interaction hints.
   function renderColonySummary() {
     if (!colonySummary) {
       return;
     }
-    const count = colonyState.markers.length;
+    const countedMarkers = getCountedMarkers();
+    const count = countedMarkers.length;
+    const total = colonyState.markers.length;
+    const hasMask = hasActiveMask();
+    const label = colonyState.lastCountSource === 'model' ? 'Model colonies counted' : 'Colonies counted';
+    const maskNote = hasMask && total !== count
+      ? `<p class="small-note">${count} of ${total} marker${total === 1 ? '' : 's'} are inside the active mask.</p>`
+      : '';
+    const modelNote = colonyState.lastModelStats
+      ? `<p class="small-note">Model threshold ${colonyState.lastModelStats.threshold.toFixed(2)}, min distance ${colonyState.lastModelStats.minDistance}px, ${Math.round(colonyState.lastModelStats.elapsedMs).toLocaleString()} ms.${colonyState.lastModelStats.maskSource === 'plate-model' ? ' Plate detected automatically.' : ''}</p>`
+      : '';
     colonySummary.innerHTML = `
-      <p><strong>Manual colonies counted:</strong> ${count}</p>
-      <p class="small-note">Left-click to add a marker. Right-click to remove the nearest marker. Scroll to zoom, then drag to pan.</p>
+      <p><strong>${label}:</strong> ${count}</p>
+      ${maskNote}
+      ${modelNote}
+      <p class="small-note">Left-click to add a marker. Right-click to remove the nearest marker. Draw a mask to count only colonies inside it.</p>
     `;
   }
 
@@ -221,6 +299,13 @@ export function initColonyCounterTool() {
   function getDisplaySettings() {
     return {
       maxProcessSize: Math.round(clampNumber(colonyMaxSizeInput?.value, 300, 5000, 1600))
+    };
+  }
+
+  function getModelSettings() {
+    return {
+      threshold: clampNumber(colonyModelThresholdInput?.value, 0.01, 0.99, 0.5),
+      minDistance: Math.round(clampNumber(colonyModelMinDistanceInput?.value, 1, 50, 3))
     };
   }
 
@@ -323,6 +408,81 @@ export function initColonyCounterTool() {
     };
   }
 
+  function sourceMaskToPreviewBox(mask) {
+    if (!hasActiveMask(mask)) {
+      return null;
+    }
+
+    const normalized = normalizeMask(mask);
+    const topLeft = sourceToPreviewPoint({ x: normalized.x, y: normalized.y });
+    const bottomRight = sourceToPreviewPoint({
+      x: normalized.x + normalized.width,
+      y: normalized.y + normalized.height
+    });
+    if (!topLeft || !bottomRight) {
+      return null;
+    }
+
+    return {
+      kind: normalized.kind,
+      x: topLeft.x,
+      y: topLeft.y,
+      width: bottomRight.x - topLeft.x,
+      height: bottomRight.y - topLeft.y
+    };
+  }
+
+  function drawMaskShapePath(ctx, previewMask) {
+    if (!ctx || !previewMask) {
+      return;
+    }
+
+    if (previewMask.kind === 'circle') {
+      ctx.ellipse(
+        previewMask.x + (previewMask.width / 2),
+        previewMask.y + (previewMask.height / 2),
+        Math.abs(previewMask.width) / 2,
+        Math.abs(previewMask.height) / 2,
+        0,
+        0,
+        Math.PI * 2
+      );
+      return;
+    }
+
+    ctx.rect(previewMask.x, previewMask.y, previewMask.width, previewMask.height);
+  }
+
+  function drawMaskOverlay(ctx) {
+    if (!ctx) {
+      return;
+    }
+
+    const viewport = getViewport();
+    const mask = colonyState.maskDraft || colonyState.mask;
+    const previewMask = sourceMaskToPreviewBox(mask);
+    if (!viewport || !previewMask) {
+      return;
+    }
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, viewport.previewWidth, viewport.previewHeight);
+    drawMaskShapePath(ctx, previewMask);
+    ctx.fillStyle = 'rgba(5, 12, 24, 0.36)';
+    ctx.fill('evenodd');
+
+    ctx.beginPath();
+    drawMaskShapePath(ctx, previewMask);
+    ctx.fillStyle = colonyState.maskDraft ? 'rgba(45, 156, 219, 0.12)' : 'rgba(45, 156, 219, 0.08)';
+    ctx.strokeStyle = colonyState.maskDraft ? 'rgba(47, 128, 237, 0.95)' : 'rgba(47, 128, 237, 0.82)';
+    ctx.lineWidth = 3;
+    ctx.setLineDash(colonyState.maskDraft ? [8, 6] : []);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // Draw numbered marker circles onto the visible preview canvas.
   function drawMarkers(ctx) {
     if (!ctx) {
@@ -334,11 +494,10 @@ export function initColonyCounterTool() {
       return;
     }
 
-    const radius = 7;
+    const showLabels = colonyState.lastCountSource !== 'model' && colonyState.markers.length <= 120;
+    const radius = colonyState.lastCountSource === 'model' ? 5 : 7;
     ctx.save();
     ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(255, 99, 71, 0.95)';
-    ctx.fillStyle = 'rgba(255, 245, 245, 0.95)';
     ctx.font = '600 12px "SF Mono", Menlo, Consolas, monospace';
     ctx.textBaseline = 'top';
 
@@ -353,67 +512,29 @@ export function initColonyCounterTool() {
         return;
       }
 
+      const counted = isSourcePointInsideMask(marker);
+      ctx.strokeStyle = counted ? 'rgba(255, 99, 71, 0.95)' : 'rgba(115, 126, 145, 0.75)';
+      ctx.fillStyle = counted ? 'rgba(255, 245, 245, 0.95)' : 'rgba(232, 236, 243, 0.7)';
       ctx.beginPath();
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
+      if (!showLabels) {
+        return;
+      }
+
       const label = String(index + 1);
       const labelX = Math.max(0, x + 8);
       const labelY = Math.max(0, y + 8);
-      ctx.fillStyle = 'rgba(180, 20, 20, 0.95)';
+      ctx.fillStyle = counted ? 'rgba(180, 20, 20, 0.95)' : 'rgba(90, 101, 120, 0.85)';
       ctx.fillText(label, labelX, labelY);
-      ctx.fillStyle = 'rgba(255, 245, 245, 0.95)';
     });
 
     ctx.restore();
   }
 
-  // Render the simplified marker-only mask canvas used alongside the preview.
-  function renderMarkerCanvas() {
-    if (!colonyMaskCanvas) {
-      return;
-    }
-
-    const previewWidth = colonyPreviewCanvas?.width || 0;
-    const previewHeight = colonyPreviewCanvas?.height || 0;
-    if (!previewWidth || !previewHeight) {
-      clearCanvas(colonyMaskCanvas);
-      return;
-    }
-
-    colonyMaskCanvas.width = previewWidth;
-    colonyMaskCanvas.height = previewHeight;
-    const ctx = colonyMaskCanvas.getContext('2d');
-    if (!ctx) {
-      return;
-    }
-
-    ctx.clearRect(0, 0, previewWidth, previewHeight);
-    ctx.fillStyle = '#101827';
-    ctx.fillRect(0, 0, previewWidth, previewHeight);
-
-    ctx.save();
-    ctx.fillStyle = 'rgba(90, 230, 140, 0.95)';
-    colonyState.markers.forEach((marker) => {
-      const previewPoint = sourceToPreviewPoint(marker);
-      if (!previewPoint) {
-        return;
-      }
-      const x = previewPoint.x;
-      const y = previewPoint.y;
-      const radius = 5;
-      if (x < -radius || y < -radius || x > (previewWidth + radius) || y > (previewHeight + radius)) {
-        return;
-      }
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-
-  // Render the currently visible image region, then overlay manual markers.
+  // Render the currently visible image region, then overlay mask and markers.
   function renderPreviewCanvas() {
     if (!colonyPreviewCanvas || !colonySourceCanvas) {
       return;
@@ -423,7 +544,6 @@ export function initColonyCounterTool() {
     const { width, height } = setCanvasFromSource(colonyPreviewCanvas, colonySourceCanvas, settings.maxProcessSize);
 
     if (!width || !height) {
-      clearCanvas(colonyMaskCanvas);
       return;
     }
 
@@ -444,36 +564,50 @@ export function initColonyCounterTool() {
       width,
       height
     );
+    drawMaskOverlay(previewCtx);
     drawMarkers(previewCtx);
-    renderMarkerCanvas();
   }
 
   // Enable or disable buttons and cursors based on image availability, crop mode, and marker state.
   function updateControlState() {
     const hasImage = colonyState.hasImage;
     const cropActive = isCropModeActive();
+    const busy = colonyState.isModelRunning;
+    const drawingMask = colonyState.isDrawingMask;
 
     if (colonyStartCropBtn) {
-      colonyStartCropBtn.disabled = !hasImage || cropActive;
+      colonyStartCropBtn.disabled = !hasImage || cropActive || busy || drawingMask;
     }
     if (colonyApplyCropBtn) {
-      colonyApplyCropBtn.disabled = !cropActive;
+      colonyApplyCropBtn.disabled = !cropActive || busy || drawingMask;
     }
     if (colonyCancelCropBtn) {
-      colonyCancelCropBtn.disabled = !cropActive;
+      colonyCancelCropBtn.disabled = !cropActive || busy || drawingMask;
     }
     if (colonyResetCropBtn) {
-      colonyResetCropBtn.disabled = !hasImage || cropActive;
+      colonyResetCropBtn.disabled = !hasImage || cropActive || busy || drawingMask;
+    }
+    if (colonyAutoCountBtn) {
+      colonyAutoCountBtn.disabled = !hasImage || cropActive || busy || drawingMask;
+    }
+    if (colonyStartMaskBtn) {
+      colonyStartMaskBtn.disabled = !hasImage || cropActive || busy;
+      colonyStartMaskBtn.textContent = drawingMask ? 'Cancel Mask' : 'Draw Mask';
+    }
+    if (colonyClearMaskBtn) {
+      colonyClearMaskBtn.disabled = !hasImage || cropActive || busy || drawingMask || !hasActiveMask();
     }
     if (colonyClearMarkersBtn) {
-      colonyClearMarkersBtn.disabled = !hasImage || cropActive || colonyState.markers.length === 0;
+      colonyClearMarkersBtn.disabled = !hasImage || cropActive || busy || drawingMask || colonyState.markers.length === 0;
     }
     if (colonyRunBtn) {
-      colonyRunBtn.disabled = !hasImage || cropActive;
+      colonyRunBtn.disabled = !hasImage || cropActive || busy || drawingMask;
     }
     if (colonyPreviewCanvas) {
       if (!hasImage || cropActive) {
         colonyPreviewCanvas.style.cursor = 'default';
+      } else if (drawingMask) {
+        colonyPreviewCanvas.style.cursor = 'crosshair';
       } else if (colonyState.isPanning) {
         colonyPreviewCanvas.style.cursor = 'grabbing';
       } else if (colonyState.zoom > 1.001) {
@@ -505,21 +639,29 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
-  // Remove all manual colony markers from the current image.
+  // Remove all colony markers from the current image.
   function clearMarkers() {
     if (!colonyState.markers.length) {
       return;
     }
     colonyState.markers = [];
+    colonyState.lastCountSource = 'manual';
+    colonyState.lastModelStats = null;
     renderPreviewCanvas();
     renderColonySummary();
-    setColonyStatus('All manual markers cleared.');
+    setColonyStatus('All colony markers cleared.');
     updateControlState();
   }
 
-  // Clear markers silently when the loaded image or crop region changes.
+  // Clear markers, masks, and model run metadata when the loaded image or crop region changes.
   function clearMarkersForImageChange() {
     colonyState.markers = [];
+    colonyState.mask = { ...EMPTY_MASK };
+    colonyState.maskDraft = null;
+    colonyState.isDrawingMask = false;
+    colonyState.maskStartPoint = null;
+    colonyState.lastCountSource = 'manual';
+    colonyState.lastModelStats = null;
     renderColonySummary();
   }
 
@@ -552,7 +694,7 @@ export function initColonyCounterTool() {
     clearMarkersForImageChange();
     resetViewport();
     renderPreviewCanvas();
-    setColonyStatus(`Loaded ${colonyState.imageName} (${width}x${height}). Click each colony to count.`);
+    setColonyStatus(`Loaded ${colonyState.imageName} (${width}x${height}). Run auto count or click colonies to adjust.`);
     updateControlState();
   }
 
@@ -605,7 +747,7 @@ export function initColonyCounterTool() {
       background: false,
       checkCrossOrigin: false
     });
-    setColonyStatus('Crop mode active. Apply crop to continue manual counting.');
+    setColonyStatus('Crop mode active. Apply crop to continue counting.');
     updateControlState();
   }
 
@@ -637,7 +779,7 @@ export function initColonyCounterTool() {
     resetViewport();
     destroyCropper();
     renderPreviewCanvas();
-    setColonyStatus(`Crop applied (${croppedCanvas.width}x${croppedCanvas.height}). Click colonies to recount.`);
+    setColonyStatus(`Crop applied (${croppedCanvas.width}x${croppedCanvas.height}). Run auto count or click colonies to recount.`);
     updateControlState();
   }
 
@@ -665,8 +807,126 @@ export function initColonyCounterTool() {
     clearMarkersForImageChange();
     resetViewport();
     renderPreviewCanvas();
-    setColonyStatus(`Restored full image (${width}x${height}). Click colonies to count.`);
+    setColonyStatus(`Restored full image (${width}x${height}). Run auto count or click colonies to count.`);
     updateControlState();
+  }
+
+  function startMaskDrawing() {
+    if (!colonyState.hasImage) {
+      setColonyStatus('Load an image before drawing a mask.', true);
+      return;
+    }
+    if (isCropModeActive()) {
+      setColonyStatus('Apply or cancel crop mode before drawing a mask.', true);
+      return;
+    }
+    if (colonyState.isDrawingMask) {
+      colonyState.isDrawingMask = false;
+      colonyState.maskDraft = null;
+      colonyState.maskStartPoint = null;
+      renderPreviewCanvas();
+      setColonyStatus('Mask drawing cancelled.');
+      updateControlState();
+      return;
+    }
+
+    colonyState.isDrawingMask = true;
+    colonyState.maskDraft = null;
+    colonyState.maskStartPoint = null;
+    setColonyStatus('Drag on the plate preview to draw the count mask.');
+    updateControlState();
+  }
+
+  function clearMask() {
+    if (!hasActiveMask() && !colonyState.maskDraft) {
+      return;
+    }
+    colonyState.mask = { ...EMPTY_MASK };
+    colonyState.maskDraft = null;
+    colonyState.isDrawingMask = false;
+    colonyState.maskStartPoint = null;
+    renderPreviewCanvas();
+    renderColonySummary();
+    setColonyStatus('Mask cleared. Auto Count will detect the plate automatically when no hand mask is drawn.');
+    updateControlState();
+  }
+
+  function buildMaskFromSourcePoints(startPoint, endPoint) {
+    if (!startPoint || !endPoint) {
+      return null;
+    }
+
+    const kind = colonyMaskModeSelect?.value === 'circle' ? 'circle' : 'rectangle';
+    return normalizeMask({
+      kind,
+      x: startPoint.x,
+      y: startPoint.y,
+      width: endPoint.x - startPoint.x,
+      height: endPoint.y - startPoint.y
+    });
+  }
+
+  async function runModelCount() {
+    if (!colonyState.hasImage || !colonySourceCanvas) {
+      setColonyStatus('Load a plate image before running auto count.', true);
+      return;
+    }
+    if (isCropModeActive()) {
+      setColonyStatus('Apply or cancel crop mode before running auto count.', true);
+      return;
+    }
+    if (colonyState.isDrawingMask) {
+      setColonyStatus('Finish or cancel mask drawing before running auto count.', true);
+      return;
+    }
+
+    const settings = getModelSettings();
+    colonyState.isModelRunning = true;
+    updateControlState();
+    setColonyStatus('Loading colony model and counting...');
+
+    try {
+      const result = await countColoniesWithModel(colonySourceCanvas, {
+        ...settings,
+        mask: colonyState.mask
+      });
+
+      if (result.maskSource === 'plate-model' && result.detectedPlateMask) {
+        colonyState.mask = normalizeMask(result.detectedPlateMask);
+      }
+
+      colonyState.markers = result.colonies.map((colony) => ({
+        x: colony.x,
+        y: colony.y,
+        source: 'model',
+        score: colony.score
+      }));
+      colonyState.lastCountSource = 'model';
+      colonyState.lastModelStats = {
+        threshold: result.threshold,
+        minDistance: result.minDistance,
+        elapsedMs: result.elapsedMs,
+        totalPeaks: result.totalPeaks,
+        maskSource: result.maskSource,
+        plateThreshold: result.plateThreshold,
+        plateArea: result.plateArea
+      };
+
+      renderPreviewCanvas();
+      renderColonySummary();
+      const maskText = result.maskSource === 'plate-model'
+        ? ` inside detected plate (${result.totalPeaks} total colony peak${result.totalPeaks === 1 ? '' : 's'})`
+        : (hasActiveMask() ? ` inside mask (${result.totalPeaks} total colony peak${result.totalPeaks === 1 ? '' : 's'})` : '');
+      const fallbackText = result.maskSource === 'none' ? ' Plate was not detected; counted the full image.' : '';
+      const countText = `Auto count: ${colonyState.markers.length} colon${colonyState.markers.length === 1 ? 'y' : 'ies'}${maskText}.`;
+      setColonyStatus(`${countText}${fallbackText}`);
+    } catch (error) {
+      setColonyStatus(error?.message || 'Auto count failed.', true);
+      console.error('Colony auto count failed:', error);
+    } finally {
+      colonyState.isModelRunning = false;
+      updateControlState();
+    }
   }
 
   // Add a marker at the clicked colony unless one already exists nearby.
@@ -677,6 +937,11 @@ export function initColonyCounterTool() {
 
     const sourcePoint = previewToSourcePoint(point);
     if (!sourcePoint) {
+      return;
+    }
+
+    if (!isSourcePointInsideMask(sourcePoint)) {
+      setColonyStatus('That point is outside the active mask. Clear or redraw the mask to count it.');
       return;
     }
 
@@ -696,10 +961,15 @@ export function initColonyCounterTool() {
       return;
     }
 
-    colonyState.markers.push(sourcePoint);
+    colonyState.markers.push({
+      ...sourcePoint,
+      source: 'manual'
+    });
+    colonyState.lastCountSource = 'manual';
+    colonyState.lastModelStats = null;
     renderPreviewCanvas();
     renderColonySummary();
-    setColonyStatus(`Manual count: ${colonyState.markers.length}`);
+    setColonyStatus(`Count: ${getCountedMarkers().length}`);
     updateControlState();
   }
 
@@ -737,9 +1007,11 @@ export function initColonyCounterTool() {
     }
 
     colonyState.markers.splice(nearestIndex, 1);
+    colonyState.lastCountSource = 'manual';
+    colonyState.lastModelStats = null;
     renderPreviewCanvas();
     renderColonySummary();
-    setColonyStatus(`Manual count: ${colonyState.markers.length}`);
+    setColonyStatus(`Count: ${getCountedMarkers().length}`);
     updateControlState();
   }
 
@@ -804,15 +1076,15 @@ export function initColonyCounterTool() {
     updateControlState();
   }
 
-  // Finalize the current manual count into the status and summary display.
+  // Finalize the current count into the status and summary display.
   function renderManualCountResult() {
     if (!colonyState.hasImage) {
       setColonyStatus('Load a plate image first.', true);
       return;
     }
 
-    const count = colonyState.markers.length;
-    setColonyStatus(`Manual colony count saved: ${count}`);
+    const count = getCountedMarkers().length;
+    setColonyStatus(`Colony count saved: ${count}`);
     renderColonySummary();
   }
 
@@ -824,6 +1096,13 @@ export function initColonyCounterTool() {
     colonyState.sourceHeight = 0;
     colonyState.hasImage = false;
     colonyState.markers = [];
+    colonyState.mask = { ...EMPTY_MASK };
+    colonyState.maskDraft = null;
+    colonyState.isDrawingMask = false;
+    colonyState.maskStartPoint = null;
+    colonyState.lastCountSource = 'manual';
+    colonyState.lastModelStats = null;
+    colonyState.isModelRunning = false;
     resetViewport();
 
     if (colonyImageInput) {
@@ -842,10 +1121,53 @@ export function initColonyCounterTool() {
     }
 
     clearCanvas(colonyPreviewCanvas);
-    clearCanvas(colonyMaskCanvas);
     resetColonySummary();
-    setColonyStatus('Choose or drop an image, then click colonies to count manually.');
+    setColonyStatus('Choose or drop an image, then run auto count or click colonies manually.');
     updateControlState();
+  }
+
+  function updateMaskDraftFromCanvasPoint(point) {
+    if (!colonyState.isDrawingMask || !colonyState.maskStartPoint || !point) {
+      return;
+    }
+
+    const sourcePoint = previewToSourcePoint(point);
+    if (!sourcePoint) {
+      return;
+    }
+
+    colonyState.maskDraft = buildMaskFromSourcePoints(colonyState.maskStartPoint, sourcePoint);
+    renderPreviewCanvas();
+  }
+
+  function finishMaskDrawingFromCanvasPoint(point) {
+    if (!colonyState.isDrawingMask) {
+      return false;
+    }
+
+    if (point) {
+      updateMaskDraftFromCanvasPoint(point);
+    }
+
+    const draft = colonyState.maskDraft;
+    colonyState.isDrawingMask = false;
+    colonyState.maskStartPoint = null;
+    colonyState.maskDraft = null;
+    colonyState.suppressNextClick = true;
+
+    if (!hasActiveMask(draft)) {
+      renderPreviewCanvas();
+      setColonyStatus('Mask was too small. Drag a wider region to count under a mask.', true);
+      updateControlState();
+      return true;
+    }
+
+    colonyState.mask = normalizeMask(draft);
+    renderPreviewCanvas();
+    renderColonySummary();
+    setColonyStatus('Mask applied. Counts now include colonies inside the mask only.');
+    updateControlState();
+    return true;
   }
 
   // Handle left-click counting on the preview canvas when crop mode is inactive.
@@ -862,6 +1184,9 @@ export function initColonyCounterTool() {
       setColonyStatus('Apply or cancel crop mode before counting.', true);
       return;
     }
+    if (colonyState.isDrawingMask) {
+      return;
+    }
     const point = getCanvasPointerPosition(colonyPreviewCanvas, event);
     addManualMarkerFromCanvasPoint(point);
   }
@@ -869,6 +1194,17 @@ export function initColonyCounterTool() {
   // Start a pan gesture when the user presses on a zoomed preview.
   function handlePreviewMouseDown(event) {
     if (!colonyState.hasImage || isCropModeActive() || event.button !== 0) {
+      return;
+    }
+    if (colonyState.isDrawingMask) {
+      const point = getCanvasPointerPosition(colonyPreviewCanvas, event);
+      const sourcePoint = previewToSourcePoint(point);
+      if (sourcePoint) {
+        colonyState.maskStartPoint = sourcePoint;
+        colonyState.maskDraft = buildMaskFromSourcePoints(sourcePoint, sourcePoint);
+        renderPreviewCanvas();
+      }
+      event.preventDefault();
       return;
     }
     if (colonyState.zoom <= 1.001) {
@@ -888,6 +1224,13 @@ export function initColonyCounterTool() {
 
   // Continue an active pan gesture as the pointer moves across the preview.
   function handlePreviewMouseMove(event) {
+    if (colonyState.isDrawingMask) {
+      const point = getCanvasPointerPosition(colonyPreviewCanvas, event);
+      updateMaskDraftFromCanvasPoint(point);
+      event.preventDefault();
+      return;
+    }
+
     if (!colonyState.isPanning) {
       return;
     }
@@ -908,7 +1251,7 @@ export function initColonyCounterTool() {
 
   // Zoom in or out around the wheel pointer position.
   function handlePreviewWheel(event) {
-    if (!colonyState.hasImage || isCropModeActive()) {
+    if (!colonyState.hasImage || isCropModeActive() || colonyState.isDrawingMask) {
       return;
     }
     const point = getCanvasPointerPosition(colonyPreviewCanvas, event);
@@ -927,7 +1270,7 @@ export function initColonyCounterTool() {
   // Use right-click on the preview canvas to remove the nearest marker.
   function handlePreviewContextMenu(event) {
     event.preventDefault();
-    if (!colonyState.hasImage || isCropModeActive()) {
+    if (!colonyState.hasImage || isCropModeActive() || colonyState.isDrawingMask) {
       return;
     }
     const point = getCanvasPointerPosition(colonyPreviewCanvas, event);
@@ -935,8 +1278,9 @@ export function initColonyCounterTool() {
   }
 
   syncDisplayInput();
+  syncModelInputs();
   resetColonySummary();
-  setColonyStatus('Choose or drop an image, then click colonies to count manually.');
+  setColonyStatus('Choose or drop an image, then run auto count or click colonies manually.');
   updateControlState();
 
   // Clamp the max-size display input so preview rendering stays within supported bounds.
@@ -948,12 +1292,30 @@ export function initColonyCounterTool() {
     colonyMaxSizeInput.value = String(value);
   }
 
+  function syncModelInputs() {
+    const settings = getModelSettings();
+    if (colonyModelThresholdInput) {
+      colonyModelThresholdInput.value = settings.threshold.toFixed(2);
+    }
+    if (colonyModelMinDistanceInput) {
+      colonyModelMinDistanceInput.value = String(settings.minDistance);
+    }
+  }
+
   // Re-render the preview when the configured display size changes.
   colonyMaxSizeInput?.addEventListener('change', () => {
     syncDisplayInput();
     if (colonyState.hasImage) {
       renderPreviewCanvas();
     }
+  });
+
+  colonyModelThresholdInput?.addEventListener('change', () => {
+    syncModelInputs();
+  });
+
+  colonyModelMinDistanceInput?.addEventListener('change', () => {
+    syncModelInputs();
   });
 
   // Load a newly selected image file into the tool.
@@ -1000,6 +1362,18 @@ export function initColonyCounterTool() {
     resetToOriginalImage();
   });
 
+  colonyAutoCountBtn?.addEventListener('click', async () => {
+    await runModelCount();
+  });
+
+  colonyStartMaskBtn?.addEventListener('click', () => {
+    startMaskDrawing();
+  });
+
+  colonyClearMaskBtn?.addEventListener('click', () => {
+    clearMask();
+  });
+
   // Count colonies with left-click on the preview.
   colonyPreviewCanvas?.addEventListener('click', (event) => {
     handlePreviewClick(event);
@@ -1016,7 +1390,12 @@ export function initColonyCounterTool() {
   });
 
   // Finish panning when the mouse button is released over the preview.
-  colonyPreviewCanvas?.addEventListener('mouseup', () => {
+  colonyPreviewCanvas?.addEventListener('mouseup', (event) => {
+    if (colonyState.isDrawingMask) {
+      const point = getCanvasPointerPosition(colonyPreviewCanvas, event);
+      finishMaskDrawingFromCanvasPoint(point);
+      return;
+    }
     finishPanning();
   });
 
@@ -1037,10 +1416,14 @@ export function initColonyCounterTool() {
 
   // Ensure pan state is cleared even if the mouse is released outside the canvas.
   window.addEventListener('mouseup', () => {
+    if (colonyState.isDrawingMask && colonyState.maskDraft) {
+      finishMaskDrawingFromCanvasPoint(null);
+      return;
+    }
     finishPanning();
   });
 
-  // Treat form submission as confirmation of the current manual count.
+  // Treat form submission as confirmation of the current count.
   colonyCounterForm.addEventListener('submit', (event) => {
     event.preventDefault();
     renderManualCountResult();

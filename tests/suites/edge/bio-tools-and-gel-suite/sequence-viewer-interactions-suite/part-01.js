@@ -44,7 +44,7 @@ test('[EDGE] sequence-viewer ORF toggle defaults off and controls ORF bars plus 
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   moduleWithDom.initSequenceViewer();
@@ -138,7 +138,7 @@ test('[EDGE] sequence-viewer restriction vendor checkboxes filter visible unique
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   moduleWithDom.initSequenceViewer();
@@ -208,7 +208,7 @@ test('[EDGE] sequence-viewer bottom-track click updates selected feature detail 
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer();
@@ -283,7 +283,7 @@ test('[EDGE] sequence-viewer drag selection context menu can add a feature', asy
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer();

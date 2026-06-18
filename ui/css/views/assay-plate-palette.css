@@ -1,0 +1,53 @@
+/* Assay plate, assay chart, and labware preview colors.
+   Keep these here so the shared app palette can stay intentionally small. */
+
+:root {
+  --assay-plate-ink: #1f3b66;
+  --assay-plate-meta: var(--muted);
+  --assay-plate-danger: #9f1c1c;
+  --assay-plate-line-soft: rgba(53, 99, 153, 0.14);
+  --assay-plate-line: rgba(53, 99, 153, 0.22);
+  --assay-plate-line-strong: rgba(53, 99, 153, 0.46);
+  --assay-plate-header-soft: rgba(222, 237, 255, 0.72);
+  --assay-plate-header: rgba(222, 237, 255, 0.95);
+  --assay-plate-header-solid: rgb(222, 237, 255);
+  --assay-plate-surface-soft: rgba(255, 255, 255, 0.74);
+  --assay-plate-surface: rgba(255, 255, 255, 0.9);
+  --assay-plate-surface-strong: rgba(255, 255, 255, 0.98);
+  --assay-plate-disabled-bg: rgba(232, 236, 242, 0.75);
+  --assay-plate-overlay: rgba(18, 34, 55, 0.18);
+  --assay-plate-shadow: rgba(27, 20, 14, 0.14);
+  --assay-plate-body: #f4f5f1;
+  --assay-plate-body-mid: #ebede6;
+  --assay-plate-body-edge: #e3e5dc;
+  --assay-plate-edge: rgba(28, 32, 38, 0.55);
+  --assay-plate-skirt: #e8eae3;
+  --assay-plate-skirt-edge: #dcdfd6;
+  --assay-plate-skirt-shadow: rgba(20, 24, 30, 0.18);
+  --assay-plate-rim: rgba(20, 24, 30, 0.78);
+  --assay-plate-bowl: #f6f7f3;
+  --assay-plate-bowl-edge: #c9ccc1;
+  --assay-plate-bowl-hover-edge: #d3d6cd;
+  --assay-plate-grid-line: rgba(77, 109, 140, 0.45);
+  --assay-plate-label: rgba(33, 38, 43, 0.7);
+  --assay-plate-well-number: rgba(20, 57, 84, 0.78);
+  --assay-plate-sample-fallback: #718096;
+  --assay-plate-sample-count-bg: rgba(18, 49, 73, 0.88);
+  --assay-plate-selected-fill-start: #fff5d8;
+  --assay-plate-selected-fill-end: #f0d98a;
+  --assay-plate-selected-border: rgba(170, 122, 32, 0.85);
+  --assay-plate-selected-shadow: rgba(120, 80, 20, 0.3);
+  --assay-plate-selected-ring: rgba(206, 162, 60, 0.25);
+  --assay-labware-cap-start: #3f8ecb;
+  --assay-labware-cap-end: #1f5f95;
+  --assay-labware-shadow: rgba(10, 27, 48, 0.16);
+  --assay-labware-glass-border: rgba(108, 121, 137, 0.92);
+  --assay-labware-glass-start: rgba(252, 253, 255, 0.96);
+  --assay-labware-glass-end: rgba(236, 241, 247, 0.92);
+  --assay-labware-mark: rgba(102, 115, 130, 0.5);
+}
+
+body.theme-night {
+  --assay-plate-danger: #f1a7a7;
+  --assay-plate-line: rgba(145, 174, 214, 0.32);
+}

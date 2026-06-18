@@ -12,6 +12,10 @@ const {
 const { asArray, cleanText, cloneJson, ensureObject, parseJsonObject, readJsonFile } = require('./storage-utils');
 const { hydrateWorkflowRootFromStoragePath } = require('./workflow-storage');
 
+function isPermissionDeniedError(error) {
+  return error?.code === 'EPERM' || error?.code === 'EACCES';
+}
+
 function hydrateInventoryFromSqliteSnapshot(nextSnapshot, sqliteData) {
   const inventoryPersonalMap = {};
   asArray(sqliteData.inventoryPersonal).forEach((row) => {
@@ -139,9 +143,12 @@ function mergePaperRecords(existingRecords, importedRecords) {
   asArray(existingRecords).forEach((record, index) => {
     const source = ensureObject(record);
     const id = cleanText(source.id, 220) || `paper_existing_${index + 1}`;
+    const storedFilePath = cleanText(source.storedFilePath, 2400);
+    const storedRelativePath = cleanText(source.storedRelativePath, 2400);
     byId.set(id, {
       ...source,
-      id
+      id,
+      ...(storedFilePath || storedRelativePath ? { pdfDataUrl: '' } : {})
     });
   });
   asArray(importedRecords).forEach((record, index) => {
@@ -153,14 +160,18 @@ function mergePaperRecords(existingRecords, importedRecords) {
       ...source,
       id
     };
-    if (!cleanText(source.pdfDataUrl, 80)) {
-      merged.pdfDataUrl = cleanText(previous.pdfDataUrl, 10_000_000);
-    }
     if (!cleanText(source.storedFilePath, 2400)) {
       merged.storedFilePath = cleanText(previous.storedFilePath, 2400);
     }
     if (!cleanText(source.storedRelativePath, 2400)) {
       merged.storedRelativePath = cleanText(previous.storedRelativePath, 2400);
+    }
+    const hasStoredPdfReference = Boolean(cleanText(merged.storedFilePath, 2400))
+      || Boolean(cleanText(merged.storedRelativePath, 2400));
+    if (hasStoredPdfReference) {
+      merged.pdfDataUrl = '';
+    } else if (!cleanText(source.pdfDataUrl, 80)) {
+      merged.pdfDataUrl = cleanText(previous.pdfDataUrl, 10_000_000);
     }
     byId.set(id, merged);
   });
@@ -353,6 +364,14 @@ async function hydrateProjectRootFromStoragePath({
         projects: [],
         notebookEntries: [],
         warnings: []
+      };
+    }
+    if (isPermissionDeniedError(error)) {
+      return {
+        exists: false,
+        projects: [],
+        notebookEntries: [],
+        warnings: [`Permission denied reading project root ${projectRootPath}: ${String(error?.message || error)}`]
       };
     }
     throw error;
@@ -602,19 +621,24 @@ async function hydrateSnapshotFromBundle({
     const projectHydrated = await hydrateProjectRootFromStoragePath({
       storagePath: storageRootPath
     });
+    asArray(projectHydrated.warnings).forEach((warning) => {
+      if (warning) {
+        migration.warnings.push(String(warning));
+      }
+    });
     if (projectHydrated.exists) {
       nextSnapshot.projects = mergeRecordsById(nextSnapshot.projects, projectHydrated.projects, 'project');
       nextSnapshot.notebookEntries = mergeRecordsById(nextSnapshot.notebookEntries, projectHydrated.notebookEntries, 'notebook');
       migration.applied.push('project_root_storage');
-      asArray(projectHydrated.warnings).forEach((warning) => {
-        if (warning) {
-          migration.warnings.push(String(warning));
-        }
-      });
     }
 
     const workflowHydrated = await hydrateWorkflowRootFromStoragePath({
       storagePath: storageRootPath
+    });
+    asArray(workflowHydrated.warnings).forEach((warning) => {
+      if (warning) {
+        migration.warnings.push(String(warning));
+      }
     });
     if (workflowHydrated.exists) {
       nextSnapshot.workflowTemplates = mergeRecordsById(nextSnapshot.workflowTemplates, workflowHydrated.workflowTemplates, 'workflow_template');
@@ -626,11 +650,6 @@ async function hydrateSnapshotFromBundle({
         workflowHydrated.paperExperimentLinks
       );
       migration.applied.push('workflow_root_storage');
-      asArray(workflowHydrated.warnings).forEach((warning) => {
-        if (warning) {
-          migration.warnings.push(String(warning));
-        }
-      });
     }
   }
 
@@ -639,9 +658,6 @@ async function hydrateSnapshotFromBundle({
     commonSqliteData = await readSqliteBundleIndex(getLegacySqlitePath(bundlePaths));
   }
   let chemicalSqliteData = await readSqliteBundleIndex(bundlePaths.chemicalsSqlitePath);
-  if (!chemicalSqliteData.exists) {
-    chemicalSqliteData = await readSqliteBundleIndex(bundlePaths.legacyChemicalsSqlitePath);
-  }
   if (!chemicalSqliteData.exists && commonSqliteData.exists) {
     chemicalSqliteData = commonSqliteData;
   }

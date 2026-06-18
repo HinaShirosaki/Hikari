@@ -28,8 +28,8 @@
   gap: 2px;
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--line, var(--palette-rgba-100-114-85-a2)) 80%, transparent);
-  background: color-mix(in srgb, var(--panel, var(--palette-rgba-255-255-255-a75)) 92%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
   color: inherit;
   text-align: left;
   transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
@@ -50,7 +50,7 @@
 
 #setting-view .settings-nav-item.is-active {
   border-color: color-mix(in srgb, var(--accent) 60%, transparent);
-  background: color-mix(in srgb, var(--accent) 10%, var(--panel, var(--palette-rgba-255-255-255-a75)));
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
 }
 
 #setting-view .settings-detail {
@@ -64,8 +64,8 @@
   gap: 14px;
   margin-top: 0;
   padding: 16px 18px;
-  border: 1px solid color-mix(in srgb, var(--line, var(--palette-rgba-100-114-85-a18)) 78%, transparent);
-  background: color-mix(in srgb, var(--panel, var(--palette-rgba-255-255-255-a78)) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
 }
 
 #setting-view .settings-section[hidden] {
@@ -81,6 +81,15 @@
   margin: 0;
 }
 
+#setting-view .settings-subsection {
+  display: grid;
+  gap: 10px;
+}
+
+#setting-view .settings-subsection h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
 
 #setting-view .settings-location-entry {
   align-items: stretch;
@@ -94,6 +103,10 @@
   margin-top: 2px;
 }
 
+#setting-view .settings-switch-row {
+  width: fit-content;
+}
+
 #setting-view #setting-location-list {
   gap: 8px;
 }
@@ -101,8 +114,85 @@
 #setting-view #setting-location-list .card-actions {
   justify-content: space-between;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--line, var(--palette-rgba-100-114-85-a14)) 70%, transparent);
-  background: color-mix(in srgb, var(--panel, var(--palette-rgba-255-255-255-a72)) 90%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+}
+
+#setting-view .settings-edit-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+}
+
+#setting-view .settings-edit-row input {
+  min-width: 0;
+}
+
+#setting-view .settings-sample-type-label-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+#setting-view .settings-sample-type-label-row {
+  display: grid;
+  gap: 5px;
+}
+
+#setting-view .settings-sample-type-label-row span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+#setting-view .settings-skill-list {
+  display: grid;
+  gap: 8px;
+}
+
+#setting-view .settings-skill-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  background: color-mix(in srgb, var(--panel) 91%, transparent);
+}
+
+#setting-view .settings-skill-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+#setting-view .settings-skill-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  font-weight: 700;
+}
+
+#setting-view .settings-skill-command {
+  color: var(--muted);
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, Consolas, monospace);
+  font-size: 0.86em;
+}
+
+#setting-view .settings-skill-description,
+#setting-view .settings-skill-path {
+  overflow-wrap: anywhere;
+}
+
+#setting-view .settings-skill-toggle {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
 }
 
 @media (max-width: 840px) {
@@ -112,6 +202,18 @@
 
   #setting-view .settings-nav-item:hover {
     transform: none;
+  }
+
+  #setting-view .settings-skill-row {
+    grid-template-columns: 1fr;
+  }
+
+  #setting-view .settings-skill-toggle {
+    white-space: normal;
+  }
+
+  #setting-view .settings-edit-row {
+    grid-template-columns: 1fr;
   }
 }
 

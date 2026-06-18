@@ -1,0 +1,31 @@
+{
+  "schema_name": "hikari_samples",
+  "schema_version": "1.0.0",
+  "updated_at": "2026-06-18T00:47:26.658Z",
+  "samples": [
+    {
+      "id": "sample-1781743104683-3173",
+      "code": "EGFR-ECD-001",
+      "name": "EGFR extracellular domain, purified",
+      "type": "protein",
+      "lot": "2026-06-17-P1",
+      "concentration": "1.8 mg/mL",
+      "notes": "His-tagged EGFR ECD in PBS, pH 7.4. Aliquot 1 of 4; avoid more than two freeze-thaw cycles.",
+      "location": {
+        "storageType": "freezer",
+        "freezer": "-20 Degree",
+        "rack": "",
+        "box": "Protein Purification Box 1",
+        "position": "W1"
+      },
+      "inventoryLink": {
+        "section": "-20 Degree",
+        "containerId": "1781743078117-c3c49c10287268",
+        "wellIndex": 0
+      },
+      "chemicalLinks": [],
+      "compoundStructure": null,
+      "updatedAt": "2026-06-18T00:38:24.683Z"
+    }
+  ]
+}

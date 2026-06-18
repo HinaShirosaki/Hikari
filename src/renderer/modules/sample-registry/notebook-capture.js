@@ -57,7 +57,7 @@ export function appendPendingNotebookSampleCapture(ctx, record) {
     captureRequestedAt: String(capture?.requestedAt || '').trim()
   };
   const savedAtLabel = new Date(savedAt).toLocaleString();
-  const note = `[${savedAtLabel}] Saved sample ${formatSampleRecordLabel(record)} (${formatSampleTypeLabel(record?.type)}) from Add Samples. Saved in: ${storageLabel}.`;
+  const note = `[${savedAtLabel}] Saved sample ${formatSampleRecordLabel(record)} (${formatSampleTypeLabel(record?.type, ctx.state.settings)}) from Add Samples. Saved in: ${storageLabel}.`;
   const currentEntry = ctx.state.notebookEntries[entryIndex];
   const nextEntry = {
     ...currentEntry,

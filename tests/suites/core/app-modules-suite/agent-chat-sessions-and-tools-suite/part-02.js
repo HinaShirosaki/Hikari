@@ -48,10 +48,10 @@ test('agent-chat exposes developer-only manual tool smoke test action and render
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentDeveloperTestTools: async (payload) => {
         payloadSeen = payload;
@@ -85,7 +85,7 @@ test('agent-chat exposes developer-only manual tool smoke test action and render
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });
@@ -172,10 +172,10 @@ test('agent-chat lets developers run one tool with a manual message and inspect 
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentDeveloperTestTools: async (payload) => {
         payloadSeen = payload;
@@ -231,7 +231,7 @@ test('agent-chat lets developers run one tool with a manual message and inspect 
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });
@@ -331,10 +331,10 @@ test('agent-chat developer response simulator previews context and injects typed
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async () => ({
         ok: true,
-        filePath: '/tmp/enana-data.ena.json'
+        filePath: '/tmp/hikari-data.ena.json'
       }),
       agentDeveloperContextPreview: async (payload) => {
         previewPayloadSeen = payload;
@@ -365,7 +365,7 @@ test('agent-chat developer response simulator previews context and injects typed
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });

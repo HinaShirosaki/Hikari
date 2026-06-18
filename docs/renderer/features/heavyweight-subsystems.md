@@ -6,13 +6,15 @@ These are the renderer areas where the code is split into dedicated folders beca
 
 | Subsystem | Entry point | Approx. size | Mental model |
 | --- | --- | --- | --- |
-| `agent-chat/` | `modules/agent-chat.js` -> `agent-chat/index.js` | about 2.4k lines | chat UI plus session/context orchestration on top of main-process agent IPC |
-| `assay/` | `modules/assay.js` -> `assay/index.js` | about 4.7k lines | plate-definition editor, result grid, and analysis views |
-| `gel/` | `modules/gel-analysis.js` -> `gel/index.js` | about 3.0k lines | image ingestion, preprocessing, lane/band analysis, and export |
-| `papers/` | `modules/papers-management.js` -> `papers/index.js` | about 3.1k lines | library rail, PDF viewer, comments, paper actions, and LLM helpers |
-| `sequence-viewer/` | `modules/sequence-viewer.js` -> `sequence-viewer/index.js` | about 9.3k lines | file parsing, library storage, detailed sequence inspection, alignment, annotation, and analysis |
-| `workflow/` | `modules/workflow-management.js` -> `workflow/index.js` | about 2.2k lines | workflow data model, graph editor, list rendering, and actions |
-| `tool-box/` | `modules/tool-box.js` | about 7.3k lines | many small calculator/analysis tools sharing one workspace shell |
+| `agent-chat/` | `modules/agent-chat/index.js` | about 6.4k lines | chat UI plus session/context orchestration on top of main-process agent IPC |
+| `assay/` | `modules/assay/index.js` | about 9.0k lines | plate-definition editor, result grid, and analysis views (incl. `analysis/`) |
+| `gel/` | `modules/gel/index.js` | about 6.4k lines | controller-orchestrated image pipeline: ingestion, preprocessing, guided manual lane/band segmentation, auto-detection, quantification, and export |
+| `papers/` | `modules/papers/index.js` | about 7.5k lines | library rail, PDF viewer, comments, paper actions, and LLM helpers |
+| `sequence-viewer/` | `modules/sequence-viewer/index.js` | about 18.7k lines | file parsing, library storage, detailed sequence inspection, alignment, annotation, and analysis |
+| `workflow/` | `modules/workflow/index.js` | about 3.9k lines | workflow data model, graph editor, list rendering, and actions |
+| `tool-box/` | `modules/tool-box.js` | about 7.2k lines | many small calculator/analysis tools sharing one workspace shell |
+
+> Sizes are approximate and drift as subsystems grow. Regenerate a current snapshot with `find src/renderer/modules/<name> -name '*.js' | xargs wc -l` when in doubt.
 
 ## `agent-chat/`
 
@@ -36,7 +38,7 @@ Subfiles are split cleanly:
 - `notebook-drafts.js`: notebook-draft extraction, autosave, and proposal reconciliation
 - `developer-tools.js`: the developer-mode tool picker/hints
 
-This folder is the best example of a renderer module that is mostly orchestration around another subsystem documented elsewhere in [doc/agent/README.md](../../agent/README.md).
+This folder is the best example of a renderer module that is mostly orchestration around the agent subsystem documented elsewhere in [agent/README.md](../../agent/README.md).
 
 ## `assay/`
 
@@ -60,29 +62,61 @@ The useful mental model is:
 4. run summary/curve analysis
 5. persist one normalized assay record
 
-`modules/assay-analysis.js` exists as a stable pure-function wrapper around `assay/analysis/index.js`.
+The pure analysis math lives under `assay/analysis/` (`index.js` plus `curve-fitters.js`, `dose-response.js`, `standard-curve.js`, `regression.js`, `grouped-summary.js`), so it can be reused and tested without the view.
 
 ## `gel/`
 
-Start in `gel/index.js`.
+Start in `gel/index.js`, but treat it as wiring rather than logic. The subsystem grew from a single controller into a **controller-orchestrated** design similar to `papers/`: `index.js` builds a shared `runtime` bag, constructs six controllers around it, injects cross-controller render callbacks, and binds every DOM event. Almost no analysis or rendering logic lives in `index.js` itself.
 
-This subsystem mixes UI control with a real analysis pipeline:
+### The `runtime` bag
 
-- `image-io.js`: file decode and image normalization
-- `image-processing.js`: preprocessing and enhancement
-- `analysis-core.js`: lane detection, calibration, clustering, confidence scoring, and interpretation
-- `export.js`: JSON and CSV export
-- `dom.js` and `shared.js`: DOM references plus small shared helpers
+`index.js` creates one mutable `runtime` object (the current image, viewer mode, crop state, `manualOverrides`, the latest `currentReport`, lane-profile selection, persistence callbacks, etc.) and passes the same reference to every controller. Controllers read and mutate shared state through `runtime` instead of holding their own copies, and they call into each other through injected `deps` callbacks (`renderCanvas`, `renderReport`, `renderLaneTable`, `setStatus`, `onRunAnalysis`, ...). This is why the controllers can stay in separate files without a formal store.
 
-`gel/index.js` owns the user journey:
+### Controllers (stateful, DOM-facing)
 
-- load image
-- crop or adjust enhancement
-- optionally apply manual overrides
-- run analysis
-- save/export the resulting gel-analysis record
+Each is a `createXController({ runtime, elements, deps })` factory returning a small method surface:
 
-`modules/gel-analysis.js` wraps the folder with both `initGelAnalysis(...)` and many pure helper re-exports, which is a hint that parts of the gel pipeline are used outside the view itself.
+- `image-controller.js`: file load, decode, enhancement settings (denoise/contrast), and the preprocessed-image cache (`getPreprocessedImageForCurrentSettings`).
+- `crop-controller.js`: interactive crop and rotate, normalizing the canvas back into a working image.
+- `manual-workflow.js`: the largest controller. Owns the guided manual segmentation workflow, the viewer-tool toolbar, canvas pointer interaction (clicks, context menu, vertex dragging), auto-detect-lanes, and override status. See the workflow breakdown below.
+- `lane-table.js`: the editable lane/sample table beneath the viewer.
+- `rendering.js`: canvas drawing, the analysis report, the per-lane intensity-profile chart, the cell table, and hover overlays. `selectViewerBaseImageData(...)` (also re-exported from `index.js`) picks original vs. processed pixels for display.
+- `records-manager.js`: form state, save/load of gel-analysis records, the saved-record list/search, JSON/CSV export wiring, and `startLinkedGel(...)` for notebook-linked gels.
+
+### Pure / support modules (no DOM)
+
+- `analysis-core.js`: the analysis engine — `analyzeGelImage(...)` plus `buildCalibration`, `applyCalibrationToBands`, `applyNormalization`, `clusterBandsAcrossLanes`, `computeLaneConfidence`, `interpretLane`, and `linearRegression`.
+- `auto-lanes.js`: `detectLanes(...)` automatic lane detection.
+- `image-processing.js`: histogram percentiles, range normalization, Gaussian blur, `preprocessWithJs`, polarity detection, and the quantification signal.
+- `image-io.js`: decode and `normalizeDecodedImage` (handles multi-page TIFF).
+- `shared.js`: math helpers plus the manual-override model (`createEmptyManualOverrides`, lane-vertex and lane-band-window normalization/geometry helpers).
+- `export.js`: `createBandsCsv` and `downloadTextFile`.
+- `manual-ui.js`: small presentational helpers for the viewer toolbar and step classes.
+- `dom.js`, `constants.js`, `presentation.js`: element lookups and tiny constants.
+
+### Guided manual segmentation workflow
+
+The headline feature is a step-by-step manual override flow driven by `manual-workflow.js` and rendered as a numbered progress stepper. A viewer tool is selected, the user clicks on the canvas to place geometry, and `runtime.manualOverrides` accumulates:
+
+1. **Set left border** / 2. **Set right border** — gel bounds (`gelLeft` / `gelRight`).
+3. **Set dividers** — lane boundaries (confirmed via "Done Dividers").
+4. **Set ladder lane** — which lane is the MW ladder.
+5. **Ladder MW** — assign known molecular weights to ladder bands (confirmed via "Done Ladder MW").
+6. **Band top** / 7. **Band bottom** — the quantification band window; supports a per-lane band mode where each lane gets its own top/bottom (progress shows `n/total` lanes).
+- **Quantify** confirmation and freeform **added bands** rounds.
+
+Additional viewer tools include **lane-vertices** (drag the four corners of a lane to correct tilt/skew, with glued shared edges between adjacent lanes). `renderOverrideStatus()` prints a compact summary line (`gel … | div … | bandY … | tilt … | add … | ladderMW … | ladder …`).
+
+### User journey
+
+1. Load an image (file picker or drag-and-drop onto the viewer stage).
+2. Optionally crop/rotate and tune denoise/contrast; toggle **original vs. processed** view.
+3. Auto-detect lanes, or run the guided manual segmentation steps.
+4. Run analysis (`onRunAnalysis` → `analyzeGelImage`), which produces lanes, band groups, calibration, and confidence.
+5. Inspect the report, lane table, and per-lane intensity profiles.
+6. Save the normalized gel-analysis record and/or export JSON/CSV; optionally link it to a notebook page.
+
+Consumers that need gel calculations import the specific pure module (`analysis-core.js`, `image-processing.js`, or `shared.js`) instead of routing through the view entry.
 
 ## `papers/`
 
@@ -138,7 +172,9 @@ This is the largest renderer subsystem by a wide margin. Read it as several coop
 - align sequences
 - build proteins
 
-`modules/sequence-viewer.js` is also a wrapper layer. It injects the `window.enanaApi` bridge and re-exports many pure helpers for parsing, rendering, ORF generation, restriction analysis, and alignment.
+`modules/sequence-viewer/public-api.js` is the explicit secondary surface for parsing, rendering, ORF generation, restriction analysis, and alignment. The manifest imports `index.js` directly and supplies the API bridge and storage path as dependencies.
+
+Reusable plasmid annotation, ORF, restriction-site, and backbone-recognition algorithms live in `src/shared/sequence/` so main and renderer code depend on the same implementation.
 
 ## `workflow/`
 

@@ -8,11 +8,19 @@ import { createRecordsManager } from './records-manager.js';
 import { createRenderingController, selectViewerBaseImageData } from './rendering.js';
 import { createEmptyManualOverrides } from './shared.js';
 import { bindFileDropTarget } from '../file-drop.js';
+import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
 
 export { selectViewerBaseImageData };
 
-export function initGelAnalysis({ state, persist, createId, safeText, onGelAnalysesChanged }) {
-  const elements = getGelElements(document);
+export function initGelAnalysis({
+  state,
+  persist,
+  createId,
+  safeText,
+  onGelAnalysesChanged,
+  document: rootDocument = globalThis?.document || null
+}) {
+  const elements = getGelElements(rootDocument);
   const runtime = {
     createId,
     cropApplied: false,
@@ -32,11 +40,38 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     preprocessedCache: null,
     safeText,
     laneProfileHoverY: null,
+    laneVertexDrag: null,
     selectedLaneProfileLane: null,
     selectedViewerTool: '',
     state,
-    viewerMode: 'original'
+    viewerMode: 'original',
+    markDraftSaved: null
   };
+  let savedDraftSnapshot = '';
+
+  function getCurrentDraftSnapshot() {
+    return serializeDraftSnapshot({
+      controls: snapshotFormControls(elements.gelForm),
+      currentImage: runtime.currentImage
+        ? {
+          name: runtime.currentImage.name || '',
+          width: runtime.currentImage.width || 0,
+          height: runtime.currentImage.height || 0,
+          revision: runtime.imageRevision
+        }
+        : null,
+      currentReport: runtime.currentReport,
+      manualOverrides: runtime.manualOverrides,
+      cropApplied: runtime.cropApplied,
+      pendingNotebookLink: runtime.pendingNotebookLink
+    });
+  }
+
+  function markDraftSaved() {
+    savedDraftSnapshot = getCurrentDraftSnapshot();
+  }
+
+  runtime.markDraftSaved = markDraftSaved;
 
   function setStatus(message) {
     if (elements.gelStatus) {
@@ -139,6 +174,11 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   elements.gelRotateRightBtn?.addEventListener('click', cropController.onRotateRight);
   elements.gelCanvas?.addEventListener('click', manualWorkflow.onCanvasClick);
   elements.gelCanvas?.addEventListener('contextmenu', manualWorkflow.onCanvasContextMenu);
+  elements.gelCanvas?.addEventListener('mousedown', manualWorkflow.onCanvasMouseDown);
+  if (typeof window !== 'undefined') {
+    window.addEventListener('mousemove', manualWorkflow.onCanvasMouseMove);
+    window.addEventListener('mouseup', manualWorkflow.onCanvasMouseUp);
+  }
   elements.gelCancelBtn?.addEventListener('click', recordsManager.resetForm);
   elements.gelExportJsonBtn?.addEventListener('click', recordsManager.onExportJson);
   elements.gelExportCsvBtn?.addEventListener('click', recordsManager.onExportCsv);
@@ -146,13 +186,17 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   elements.gelToolRightBorderBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('right'));
   elements.gelToolDividersBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('dividers'));
   elements.gelToolLadderLaneBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('ladder'));
+  elements.gelToolLaneVerticesBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('lane-vertices'));
+  elements.gelToolBandTopBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('band-top'));
+  elements.gelToolBandBottomBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('band-bottom'));
+  elements.gelLaneBandModeBtn?.addEventListener('click', manualWorkflow.onLaneBandModeToggle);
   elements.gelAddTableBtn?.addEventListener('click', laneTable.onAddTableClick);
+  elements.gelMeasureIntensityBtn?.addEventListener('click', onRunAnalysis);
   elements.gelLaneTableShell?.addEventListener('click', laneTable.onShellClick);
   elements.gelLaneTableShell?.addEventListener('input', laneTable.onShellInput);
   elements.gelForm?.addEventListener('submit', recordsManager.onSaveAnalysis);
   elements.gelSearchInput?.addEventListener('input', recordsManager.renderList);
   elements.gelList?.addEventListener('click', recordsManager.onListClick);
-  elements.gelManualPrevBtn?.addEventListener('click', manualWorkflow.onManualPrevStep);
   elements.gelManualNextBtn?.addEventListener('click', manualWorkflow.onManualNextStep);
   elements.gelManualResetBtn?.addEventListener('click', manualWorkflow.onManualResetSteps);
   elements.gelAutoDetectLanesBtn?.addEventListener('click', manualWorkflow.onAutoDetectLanes);
@@ -199,6 +243,16 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   });
   elements.gelLaneProfileChart?.addEventListener('mousemove', rendering.onLaneProfileChartMouseMove);
   elements.gelLaneProfileChart?.addEventListener('mouseleave', rendering.onLaneProfileChartMouseLeave);
+  elements.gelOpenPeakEditorBtn?.addEventListener('click', rendering.onPeakEditorOpen);
+  elements.gelPeakEditorCloseBtn?.addEventListener('click', rendering.onPeakEditorClose);
+  elements.gelPeakEditorLaneSelect?.addEventListener('change', rendering.onPeakEditorLaneChange);
+  elements.gelPeakEditorBaselineModeBtn?.addEventListener('click', () => rendering.onPeakEditorModeSelected('baseline'));
+  elements.gelPeakEditorDividerModeBtn?.addEventListener('click', () => rendering.onPeakEditorModeSelected('divider'));
+  elements.gelPeakEditorClearLaneBtn?.addEventListener('click', rendering.onPeakEditorClearLane);
+  elements.gelPeakEditorClearAllBtn?.addEventListener('click', rendering.onPeakEditorClearAll);
+  elements.gelPeakEditorChart?.addEventListener('click', rendering.onPeakEditorChartClick);
+  elements.gelPeakEditorChart?.addEventListener('mousemove', rendering.onPeakEditorChartMouseMove);
+  elements.gelPeakEditorChart?.addEventListener('mouseleave', rendering.onPeakEditorChartMouseLeave);
   elements.gelCanvas?.addEventListener('mousemove', rendering.onCanvasHoverMove);
   elements.gelCanvas?.addEventListener('mouseleave', rendering.onCanvasHoverLeave);
 
@@ -214,6 +268,9 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
     recordsManager.renderList();
     if (!runtime.currentImage) {
       rendering.renderCanvas();
+    }
+    if (!savedDraftSnapshot) {
+      markDraftSaved();
     }
   }
 
@@ -246,8 +303,13 @@ export function initGelAnalysis({ state, persist, createId, safeText, onGelAnaly
   }
 
   return {
+    hasUnsavedChanges: () => Boolean(savedDraftSnapshot && getCurrentDraftSnapshot() !== savedDraftSnapshot),
     render,
     renderList: recordsManager.renderList,
+    saveUnsavedChanges: async () => {
+      const record = await recordsManager.onSaveAnalysis({ preventDefault() {} });
+      return Boolean(record) && getCurrentDraftSnapshot() === savedDraftSnapshot;
+    },
     startLinkedGel: recordsManager.startLinkedGel
   };
 }

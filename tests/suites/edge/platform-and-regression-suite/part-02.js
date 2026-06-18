@@ -11,6 +11,16 @@ function readSource(relativePath) {
   return sourceCache.get(filePath);
 }
 
+function listJavaScriptFiles(rootPath) {
+  return fs.readdirSync(rootPath, { withFileTypes: true }).flatMap((entry) => {
+    const entryPath = path.join(rootPath, entry.name);
+    if (entry.isDirectory()) {
+      return listJavaScriptFiles(entryPath);
+    }
+    return entry.isFile() && entry.name.endsWith('.js') ? [entryPath] : [];
+  });
+}
+
 function hasEdge(graph, from, relation, to) {
   return graph.edges.some((edge) => edge.from === from && edge.relation === relation && edge.to === to);
 }
@@ -248,29 +258,62 @@ expectedGraphRelations.forEach(([from, relation, to], idx) => {
 });
 
 const moduleExportContracts = [
-  ['src/renderer/modules/agent-chat.js', /export function initAgentChat/],
-  ['src/renderer/modules/assay/index.js', /export function initAssay/],
-  ['src/renderer/modules/assay/analysis/index.js', /export function analyzeAssayData/],
-  ['src/renderer/modules/biology-notebook/index.js', /export function initLabNotebook/],
-  ['src/renderer/modules/buffer-compounds.js', /export const BUFFER_COMPOUNDS/],
-  ['src/renderer/modules/collaboration-management/index.js', /export function initCollaborationManagement/],
-  ['src/renderer/modules/gel-analysis.js', /export function initGelAnalysis/],
-  ['src/renderer/modules/lab-common-inventory/index.js', /export function initLabCommonInventory/],
-  ['src/renderer/modules/lab-management.js', /export function initLabManagement/],
-  ['src/renderer/modules/object-graph.js', /export function createUid/],
-  ['src/renderer/modules/object-graph.js', /export function rebuildObjectGraph/],
-  ['src/renderer/modules/papers-management.js', /export function initPapersManagement/],
-  ['src/renderer/modules/personal-inventory/index.js', /export function initPersonalInventory/],
-  ['src/renderer/modules/project-management/index.js', /export function initProjectManagement/],
-  ['src/renderer/modules/protocol-management.js', /export function initProtocolManagement/],
-  ['src/renderer/modules/sample-registry/index.js', /export function initSampleRegistry/],
-  ['src/renderer/modules/settings/index.js', /export function initSettings/],
-  ['src/renderer/modules/tool-box.js', /export function initToolBox/],
-  ['src/renderer/modules/workflow/index.js', /export function initWorkflowManagement/]
+  ['src/renderer/modules/agent-chat/index.js', 'initAgentChat', 'function'],
+  ['src/renderer/modules/assay/index.js', 'initAssay', 'function'],
+  ['src/renderer/modules/assay/analysis/index.js', 'analyzeAssayData', 'function'],
+  ['src/renderer/modules/biology-notebook/index.js', 'initLabNotebook', 'function'],
+  ['src/renderer/modules/buffer-compounds.js', 'BUFFER_COMPOUNDS', 'object'],
+  ['src/renderer/modules/collaboration-management/index.js', 'initCollaborationManagement', 'function'],
+  ['src/renderer/modules/gel/index.js', 'initGelAnalysis', 'function'],
+  ['src/renderer/modules/lab-common-inventory/index.js', 'initLabCommonInventory', 'function'],
+  ['src/renderer/modules/lab-management.js', 'initLabManagement', 'function'],
+  ['src/renderer/modules/object-graph.js', 'createUid', 'function'],
+  ['src/renderer/modules/object-graph.js', 'rebuildObjectGraph', 'function'],
+  ['src/renderer/modules/papers/index.js', 'initPapersManagement', 'function'],
+  ['src/renderer/modules/personal-inventory/index.js', 'initPersonalInventory', 'function'],
+  ['src/renderer/modules/project-management/index.js', 'initProjectManagement', 'function'],
+  ['src/renderer/modules/protocol/index.js', 'initProtocolManagement', 'function'],
+  ['src/renderer/modules/sample-registry/index.js', 'initSampleRegistry', 'function'],
+  ['src/renderer/modules/settings/index.js', 'initSettings', 'function'],
+  ['src/renderer/modules/tool-box.js', 'initToolBox', 'function'],
+  ['src/renderer/modules/workflow/index.js', 'initWorkflowManagement', 'function']
 ];
-moduleExportContracts.forEach(([relativePath, pattern], idx) => {
+moduleExportContracts.forEach(([relativePath, exportName, expectedType], idx) => {
   test(`[P1] module export contract case ${idx + 1} (${relativePath})`, () => {
-    assert.match(readSource(relativePath), pattern);
+    const loaded = loadEsmStyleModule(path.join(__dirname, relativePath));
+    assert.equal(typeof loaded[exportName], expectedType);
+  });
+});
+
+test('[P0] main-process modules do not import renderer implementation files', () => {
+  const rendererRoot = path.join(__dirname, 'src', 'renderer');
+  const violations = [];
+  listJavaScriptFiles(path.join(__dirname, 'src', 'main')).forEach((filePath) => {
+    const source = fs.readFileSync(filePath, 'utf8');
+    const specifiers = [
+      ...source.matchAll(/\bfrom\s+['"]([^'"]+)['"]/g),
+      ...source.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g),
+      ...source.matchAll(/\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g)
+    ].map((match) => match[1]).filter((specifier) => specifier.startsWith('.'));
+    specifiers.forEach((specifier) => {
+      const resolved = path.resolve(path.dirname(filePath), specifier);
+      if (resolved === rendererRoot || resolved.startsWith(`${rendererRoot}${path.sep}`)) {
+        violations.push(`${path.relative(__dirname, filePath)} -> ${specifier}`);
+      }
+    });
+  });
+  assert.deepEqual(violations, []);
+});
+
+test('[P1] renderer folder modules have no obsolete top-level compatibility entries', () => {
+  [
+    'agent-chat.js',
+    'gel-analysis.js',
+    'papers-management.js',
+    'protocol-management.js',
+    'sequence-viewer.js'
+  ].forEach((fileName) => {
+    assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', fileName)), false);
   });
 });
 
@@ -278,16 +321,13 @@ const removedCodeGuards = [
   ['src/renderer/modules/views.js', /LAB_NOTEBOOK/, false],
   ['src/main/lib/telegramBot.js', /telegram-message/, false],
   ['src/main/preload.js', /onTelegramMessage/, false],
-  ['ketcher-embedded.html', /\/Users\//, false],
-  ['ketcher-embedded.html', /file:\/\//, false],
   ['index.html', /lab-notebook-view/, false],
   ['src/renderer/renderer.js', /VIEWS\.LAB_NOTEBOOK/, false],
   ['forge.config.js', /hikari-data/, true],
   ['package.json', /"build:ui": "node scripts\/build-ui\.mjs"/, true],
   ['package.json', /"check:dom-ids": "node scripts\/check-dom-ids\.mjs"/, true],
   ['package.json', /"dist": "npm run build:ui && electron-forge make"/, true],
-  ['package.json', /"package:app": "npm run build:ui && electron-forge package"/, true],
-  ['src/renderer/modules/agent-chat.js', /apiKey: provider === 'codex' \? '' : String\(state\.settings\?\.llm\?\.apiKey/, true]
+  ['package.json', /"package:app": "npm run build:ui && electron-forge package"/, true]
 ];
 removedCodeGuards.forEach(([relativePath, pattern, shouldMatch], idx) => {
   test(`[P1] regression guard case ${idx + 1} (${relativePath})`, () => {

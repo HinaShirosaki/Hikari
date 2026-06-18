@@ -1,4 +1,5 @@
 import { exportProtocolPdf } from '../pdf-export/index.js';
+import { printElement } from '../print/index.js';
 import { requestLlmText } from '../direct-llm.js';
 import { parseJsonFromText } from '../papers/normalizers.js';
 import { DEFAULT_PROTOCOL_JSON_IMPORT_STATUS, DEFAULT_SHARE_STATUS, PLACEHOLDER_TOKEN_REGEX } from './constants.js';
@@ -11,6 +12,7 @@ import { createProtocolListController } from './list.js';
 import { createProtocolPolishController } from './polish.js';
 import { createProtocolGenerationController } from './generation.js';
 import { createProtocolEditorHelpers } from './editor-utils.js';
+import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
 
 export function initProtocolManagement({
   state,
@@ -24,7 +26,7 @@ export function initProtocolManagement({
 }) {
   const documentRef = __globals.document || globalThis.document;
   const windowObject = __globals.windowObject || globalThis.window || null;
-  const api = __globals.enanaApi || windowObject?.enanaApi || globalThis.enanaApi || null;
+  const api = __globals.hikariApi || windowObject?.hikariApi || globalThis.hikariApi || null;
   const navigatorRef = __globals.navigator || globalThis.navigator || null;
   const FileReaderClass = __globals.FileReader || globalThis.FileReader || null;
   const TextEncoderClass = __globals.TextEncoder || globalThis.TextEncoder || null;
@@ -64,6 +66,24 @@ export function initProtocolManagement({
   let importController = null;
   let polishController = null;
   let generationController = null;
+  let savedDraftSnapshot = '';
+  let draftRequiresSave = false;
+
+  function getCurrentDraftSnapshot() {
+    if (localState.protocolDetailMode !== 'edit') {
+      return '';
+    }
+    return serializeDraftSnapshot({
+      draftId: localState.currentProtocolDraft.id || '',
+      isCreateMode: localState.isCreateEditorMode,
+      controls: snapshotFormControls(ui.protocolForm)
+    });
+  }
+
+  function markDraftSaved() {
+    savedDraftSnapshot = getCurrentDraftSnapshot();
+    draftRequiresSave = false;
+  }
 
   function cloneSelectionInsights(insights) {
     try {
@@ -198,6 +218,8 @@ export function initProtocolManagement({
     previewHelpers.populateEditorFormFromDraft(ui, localState.currentProtocolDraft);
     generationController?.syncProtocolGenerateButtonVisibility();
     showEditorPanel();
+    markDraftSaved();
+    draftRequiresSave = options.requiresSave === true;
     ui.protocolNameInput?.focus();
   }
 
@@ -239,6 +261,24 @@ export function initProtocolManagement({
     if (protocol) {
       exportProtocolPdf(protocol);
     }
+  }
+
+  function onPrintViewedProtocol() {
+    const protocol = getSelectedProtocol();
+    if (!protocol || !ui.protocolViewContent) {
+      return;
+    }
+    const name = String(protocol.name || 'Protocol').trim() || 'Protocol';
+    const header = `<h1>${safeText(name)}</h1>`;
+    const body = `${header}${ui.protocolViewContent.innerHTML}`;
+    printElement(
+      (() => {
+        const wrapper = documentRef.createElement('div');
+        wrapper.innerHTML = body;
+        return wrapper;
+      })(),
+      { title: `Protocol - ${name}` }
+    );
   }
 
   function deleteProtocol(protocolId) {
@@ -317,7 +357,7 @@ export function initProtocolManagement({
 
     const editorDraft = editorHelpers.buildDraftFromEditorInputs();
     if (!editorDraft.name || !editorDraft.steps.length) {
-      return;
+      return null;
     }
 
     const nowIso = new Date().toISOString();
@@ -349,6 +389,8 @@ export function initProtocolManagement({
     onProtocolsChanged?.();
     resetEditorDraft();
     showViewPanel();
+    markDraftSaved();
+    return protocol;
   }
 
   function addDraftFromExtractedMethod(method, source) {
@@ -376,7 +418,7 @@ export function initProtocolManagement({
       materials,
       steps: convertedSteps,
       troubleshooting
-    }, 'Create Protocol', { isCreateMode: true });
+    }, 'Create Protocol', { isCreateMode: true, requiresSave: true });
     return true;
   }
 
@@ -550,6 +592,7 @@ export function initProtocolManagement({
     listController.renderList();
   });
   ui.protocolExportPdfBtn?.addEventListener('click', onExportViewedProtocolPdf);
+  ui.protocolPrintBtn?.addEventListener('click', onPrintViewedProtocol);
   ui.importProtocolJsonBtn?.addEventListener('click', importController.onImportProtocolJson);
 
   sharingController.setShareStatus(DEFAULT_SHARE_STATUS);
@@ -617,10 +660,19 @@ export function initProtocolManagement({
   });
 
   return {
-    renderShareTargets: sharingController.renderShareTargets,
-    renderList: listController.renderList,
-    editProtocol,
     addDraftFromExtractedMethod,
-    importProtocolsFromJson: importController.importProtocolsFromJson
+    editProtocol,
+    hasUnsavedChanges: () => Boolean(
+      localState.protocolDetailMode === 'edit'
+      && savedDraftSnapshot
+      && (draftRequiresSave || getCurrentDraftSnapshot() !== savedDraftSnapshot)
+    ),
+    importProtocolsFromJson: importController.importProtocolsFromJson,
+    renderList: listController.renderList,
+    renderShareTargets: sharingController.renderShareTargets,
+    saveUnsavedChanges: async () => {
+      const protocol = onProtocolSubmit({ preventDefault() {} });
+      return Boolean(protocol) && localState.protocolDetailMode !== 'edit';
+    }
   };
 }

@@ -644,6 +644,11 @@ function createAgentIntentDispatcher({
               || getParserProjectEntityName(parserPayload),
             {
               agent: {
+                sessionPrompt: cleanText(
+                  snapshot?.paper_agent?.session_prompt
+                    || payload?.agent?.paperSessionPrompt,
+                  2400
+                ),
                 skillsCatalogPrompt: cleanText(context?.skillPromptPayload?.skills_catalog_prompt, 16000),
                 activeSkillsPrompt: cleanText(context?.skillPromptPayload?.active_skills_prompt, 24000)
               }

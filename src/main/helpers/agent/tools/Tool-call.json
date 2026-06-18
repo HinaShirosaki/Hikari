@@ -453,7 +453,7 @@
     }
   },
   "python-sandbox": {
-    "description": "Use this tool when the agent needs to write and run Python code to compute, transform, inspect, or generate artifacts in a controlled sandbox. The agent can start a new sandbox run by supplying runnable `code`, optionally stage input files in `files`, and request outputs through `readback_paths`. The managed Python sandbox sub-agent will try to repair failing runs itself before giving up. To continue a prior sandbox helper after the main agent decides the result is insufficient, call this tool again with `sub_agent_id` and optional `feedback`; the same helper will keep working instead of starting over. Inside the sandbox, `import enana_sandbox as sandbox` to read staged files and emit chat-renderable text or image outputs. Prefer this for deterministic analysis or file generation, not for calling local lab records that already have dedicated lookup tools.",
+    "description": "Use this tool when the agent needs to write and run Python code to compute, transform, inspect, or generate artifacts in a controlled sandbox. The agent can start a new sandbox run by supplying runnable `code`, optionally stage input files in `files`, and request outputs through `readback_paths`. The managed Python sandbox sub-agent will try to repair failing runs itself before giving up. To continue a prior sandbox helper after the main agent decides the result is insufficient, call this tool again with `sub_agent_id` and optional `feedback`; the same helper will keep working instead of starting over. Inside the sandbox, `import hikari_sandbox as sandbox` to read staged files and emit chat-renderable text or image outputs. Prefer this for deterministic analysis or file generation, not for calling local lab records that already have dedicated lookup tools.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -963,6 +963,42 @@
         },
         "protocol_title_hint": {
           "type": "string"
+        }
+      }
+    }
+  },
+  "paper-search": {
+    "description": "Use this tool to look up information across the local paper wiki. Each paper has been rewritten into a structured Markdown file with sections like Background, Methods, Key results, Limitations, etc., chunked and indexed with FTS5. Provide a compact keyword `query` (e.g. `MAPK inhibitor resistance`). Optionally pass `paper_id` to restrict to one paper, or `scope`/`container` (`scope`=`project`|`journal-club`, `container`=project or club name) to restrict to one folder. Returns top section matches with title, DOI, section heading, page citation, and a snippet — prefer this over re-reading the full PDF when answering a focused question.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["query"],
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 400
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "paper_id": {
+          "type": "string",
+          "maxLength": 180
+        },
+        "scope": {
+          "type": "string",
+          "enum": ["project", "journal-club", "global"]
+        },
+        "container": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "storage_path": {
+          "type": "string",
+          "maxLength": 2000
         }
       }
     }

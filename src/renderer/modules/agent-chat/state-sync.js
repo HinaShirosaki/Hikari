@@ -8,8 +8,9 @@ export const buildSyncedStateSnapshot = async ({
 }) => {
   let syncResult = null;
   const storagePath = trimText(state.settings?.storagePath, 1200);
+  const persistableState = state?.__agentChatRootState || state;
   if (api?.autoSaveDataFile && storagePath) {
-    syncResult = await api.autoSaveDataFile(state, '');
+    syncResult = await api.autoSaveDataFile(persistableState, '');
     if (!syncResult?.ok) {
       throw new Error(syncResult?.error || 'Failed to sync data before agent request.');
     }

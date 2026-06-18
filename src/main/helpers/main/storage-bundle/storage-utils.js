@@ -12,6 +12,20 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function sanitizeFolderName(value, fallback = 'item') {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 180);
+  return cleaned || fallback;
+}
+
+function toPosixRelative(rootPath, targetPath) {
+  return path.relative(rootPath, targetPath).split(path.sep).join('/');
+}
+
 function cleanText(value, _maxLength = 2000) {
   const text = String(value || '');
   if (!text) {
@@ -127,5 +141,7 @@ module.exports = {
   normalizeFileTimestamp,
   parseJsonArray,
   parseJsonObject,
-  readJsonFile
+  readJsonFile,
+  sanitizeFolderName,
+  toPosixRelative
 };

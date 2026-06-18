@@ -38,13 +38,42 @@ export function readChemicalStructureCandidatesFromClipboard(options = {}) {
   return readChemicalStructureClipboard(options).then((result) => result.candidates);
 }
 
+export function toChemicalStructureDraftFromCandidate(candidate) {
+  const imageDataUrl = normalizeImageDataUrl(candidate?.imageDataUrl || candidate?.source);
+  if (imageDataUrl) {
+    return { smiles: '', molfile: '', imageDataUrl };
+  }
+
+  const source = String(candidate?.source || '').trim();
+  if (!source) {
+    return null;
+  }
+
+  const sourceFormat = String(candidate?.sourceFormat || '').trim().toLowerCase();
+  if (sourceFormat === 'smiles') {
+    return { smiles: source, molfile: '', imageDataUrl: '' };
+  }
+  if (sourceFormat === 'molfile' || sourceFormat === 'sdf') {
+    return { smiles: '', molfile: source, imageDataUrl: '' };
+  }
+
+  const parsed = extractChemicalStructureFromText(source)
+    .find((item) => item.sourceFormat === 'smiles' || item.sourceFormat === 'molfile' || item.sourceFormat === 'sdf');
+  if (!parsed) {
+    return null;
+  }
+  return parsed.sourceFormat === 'smiles'
+    ? { smiles: parsed.source, molfile: '', imageDataUrl: '' }
+    : { smiles: '', molfile: parsed.source, imageDataUrl: '' };
+}
+
 async function readChemicalStructureClipboardInternal({
   clipboardData = null,
-  enanaApi = globalThis.window?.enanaApi,
+  hikariApi = globalThis.window?.hikariApi,
   navigatorRef = globalThis.navigator
 } = {}) {
   const candidates = collectClipboardDataTransferCandidates(clipboardData);
-  const apiClipboard = await readEnanaClipboard(enanaApi);
+  const apiClipboard = await readHikariClipboard(hikariApi);
   const browserCandidates = apiClipboard.candidates.length ? [] : await readBrowserClipboardCandidates(navigatorRef);
   const parsedCandidates = extractChemicalStructureCandidates(candidates.concat(apiClipboard.candidates, browserCandidates));
   return {
@@ -160,12 +189,12 @@ function collectClipboardFormats(clipboardData) {
   return Array.from(clipboardData?.types || []).map((type) => String(type || '').trim()).filter(Boolean);
 }
 
-async function readEnanaClipboard(enanaApi) {
-  if (!enanaApi || typeof enanaApi.readChemicalClipboard !== 'function') {
+async function readHikariClipboard(hikariApi) {
+  if (!hikariApi || typeof hikariApi.readChemicalClipboard !== 'function') {
     return { candidates: [], formats: [] };
   }
   try {
-    const result = await enanaApi.readChemicalClipboard();
+    const result = await hikariApi.readChemicalClipboard();
     return {
       candidates: Array.isArray(result?.candidates) ? result.candidates : [],
       formats: Array.isArray(result?.formats) ? result.formats.map((format) => String(format || '').trim()).filter(Boolean) : []

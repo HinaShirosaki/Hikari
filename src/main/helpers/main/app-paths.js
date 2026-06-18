@@ -35,7 +35,7 @@ function createMainAppPaths(deps = {}) {
   }
 
   function getDefaultAppDataRoot() {
-    const override = String(processObject.env.HIKARI_APP_DATA_ROOT || processObject.env.ENANA_APP_DATA_ROOT || '').trim();
+    const override = String(processObject.env.HIKARI_APP_DATA_ROOT || '').trim();
     if (override) {
       return path.resolve(override);
     }
@@ -49,7 +49,7 @@ function createMainAppPaths(deps = {}) {
   }
 
   function getCodexCliHomePath() {
-    const override = String(processObject.env.HIKARI_CODEX_HOME || processObject.env.ENANA_CODEX_HOME || '').trim();
+    const override = String(processObject.env.HIKARI_CODEX_HOME || '').trim();
     if (override) {
       return path.resolve(override);
     }
@@ -79,7 +79,7 @@ function createMainAppPaths(deps = {}) {
   }
 
   function getAgentChatLogPath() {
-    const override = String(processObject.env.ENANA_AGENT_CHAT_LOG_PATH || '').trim();
+    const override = String(processObject.env.HIKARI_AGENT_CHAT_LOG_PATH || '').trim();
     if (override) {
       return override;
     }
@@ -88,7 +88,7 @@ function createMainAppPaths(deps = {}) {
   }
 
   function getAgentPythonSandboxRoot() {
-    const override = String(processObject.env.ENANA_AGENT_PYTHON_SANDBOX_ROOT || '').trim();
+    const override = String(processObject.env.HIKARI_AGENT_PYTHON_SANDBOX_ROOT || '').trim();
     if (override) {
       return path.resolve(override);
     }
@@ -97,7 +97,7 @@ function createMainAppPaths(deps = {}) {
   }
 
   function getAgentMemoryFilePath() {
-    const override = String(processObject.env.ENANA_AGENT_MEMORY_PATH || '').trim();
+    const override = String(processObject.env.HIKARI_AGENT_MEMORY_PATH || '').trim();
     if (override) {
       return path.resolve(override);
     }

@@ -1,0 +1,297 @@
+'use strict';
+
+const fs = require('node:fs/promises');
+const path = require('node:path');
+const {
+  buildHikariCodexMcpToolName
+} = require('../mcp-contract/instructions.js');
+
+const CODEX_AGENTS_FOLDER_NAME = '.agents';
+const CODEX_SKILLS_FOLDER_NAME = 'skills';
+const OFFICIAL_MCP_SKILL_MARKER = 'HIKARI_OFFICIAL_MCP_SKILL';
+const PROTOCOL_GENERATION_TOOL_NAME = buildHikariCodexMcpToolName('protocol_generation');
+const NOTEBOOK_DRAFT_TOOL_NAME = buildHikariCodexMcpToolName('notebook_draft');
+const PAPER_INTAKE_SEARCH_SUMMARIES_TOOL_NAME = buildHikariCodexMcpToolName('paper_intake_search_summaries');
+const PAPER_INTAKE_SEARCH_EXPERIMENTS_TOOL_NAME = buildHikariCodexMcpToolName('paper_intake_search_experiments');
+const PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME = buildHikariCodexMcpToolName('paper_intake_list_project_summaries');
+
+function buildSkillMarkdown({ id = '', name = '', description = '', body = '' } = {}) {
+  return [
+    '---',
+    `name: "${name}"`,
+    `description: "${description}"`,
+    '---',
+    '',
+    `<!-- ${OFFICIAL_MCP_SKILL_MARKER}:${id} -->`,
+    '',
+    body.trim(),
+    ''
+  ].join('\n');
+}
+
+const OFFICIAL_MCP_SKILLS = Object.freeze([
+  Object.freeze({
+    id: 'paper-intake',
+    directory: 'hikari-paper-intake',
+    content: buildSkillMarkdown({
+      id: 'paper-intake',
+      name: 'hikari-paper-intake',
+      description: 'Use immediately after a paper PDF is ingested into `knowledgebase/papers.md/<id>/paper.md` to classify the document, produce a one-sentence summary, and list every experiment. Falls back to extracted figures or the original PDF only when the markdown is insufficient.',
+      body: `
+# Hikari Paper Intake
+
+Trigger this skill the first time a freshly uploaded paper PDF lands in \`knowledgebase/papers.md/<paper_id>/paper.md\`. The transfer is what arms the skill: do not run it on user chat, on already-summarized papers, or before \`paper.md\` exists.
+
+## Inputs you can rely on
+
+For the active \`<paper_id>\`, the following artifacts are written next to \`paper.md\`:
+
+- \`paper.md\` — primary markdown rewrite of the paper (always read this first, end to end).
+- \`extracted.txt\` — raw text fallback when the markdown elides a section.
+- \`meta.json\` — title, authors, DOI, source PDF filename, page count.
+- \`figures/<page>.png|jpg\` — transformed images extracted per page; \`paper.md\` references them inline as \`![Figure on page N](figures/...)\`.
+- Original PDF — path is in \`meta.json.pdf_path\`; only open it when text+figures still leave a question unanswered.
+
+## Step 1 — Classify the document
+
+Read \`paper.md\` (and \`meta.json\` if the type is ambiguous). Pick exactly one class:
+
+- **research_paper** — primary report of original experiments or analyses (computational, wet-lab, clinical, simulation). Has a Methods/Experiments section and reports new results.
+- **review** — synthesizes prior literature without reporting new experiments. Includes systematic reviews and meta-analyses (meta-analyses are reviews here, not research_paper, even when they compute new statistics).
+- **book / book_chapter** — long-form pedagogical or reference text, monograph, edited-volume chapter, or textbook excerpt.
+- **other** — preprint commentary, editorial, perspective, thesis abstract, dataset descriptor, retraction notice, etc.
+
+Default to **research_paper** only when a Methods/Experiments section is explicitly present and the paper reports new findings. If unsure between research_paper and review, choose **review**.
+
+## Step 2 — Branch on the class
+
+### research_paper (the main path)
+
+Produce exactly two artifacts in your reply:
+
+1. **One-sentence summary** — a single sentence (no semicolons stacked into multiple clauses, no bullet split) that names: the system/question studied, the core method, and the headline finding.
+2. **Experiment list** — every distinct experiment the paper conducts, in the order presented. For each entry include:
+   - a short experiment title (e.g., "Knockout viability assay in HEK293"),
+   - the technique or assay used,
+   - the variables compared or the hypothesis tested,
+   - the figure or table that reports the result (e.g., "Fig. 2B", "Table 1"),
+   - a one-line outcome.
+
+   Cover ablations, controls run as separate experiments, supplementary experiments referenced in the main text, and computational/simulation experiments. Group sub-panels of the same experiment under one entry; do not invent experiments that are only described as future work.
+
+### review / book / book_chapter / other (the alternative path)
+
+Do **not** produce an experiment list — these documents do not conduct experiments. Instead reply with:
+
+1. **One-sentence summary** — what the document covers and its central thesis or scope.
+2. **Structure outline** — the document's own section/chapter headings with a one-line description each, in order.
+3. **Notable claims or cited evidence** — up to five bullets, each tagged with the section it appears in.
+
+State the detected class explicitly at the top of your reply (e.g., \`Document type: review\`) so the user can correct a misclassification.
+
+## Step 3 — When to consult figures or the original PDF
+
+Stay in \`paper.md\` by default. Escalate only when you have a concrete question the markdown cannot answer:
+
+- Open a file under \`figures/\` when a figure caption is the only place a quantitative result or experimental condition is reported, when reading a panel label is required to attribute results to an experiment, or when the markdown explicitly shows the figure inline and you need to see it to describe the outcome.
+- Open the original PDF (from \`meta.json.pdf_path\`) only when \`paper.md\` and \`extracted.txt\` both omit content you can see was present in the source (e.g., tables that were dropped, equations rendered as images without alt text, a supplementary section). Read the minimum page range needed.
+- Never paste figure pixels or PDF pages into the reply; cite them by path or page number.
+
+## Output rules
+
+- Keep the one-sentence summary literally one sentence.
+- Use the paper's own terminology for assay/technique names; do not paraphrase domain terms.
+- If a section is missing from \`paper.md\` and you did not escalate to the PDF, say so rather than guessing.
+- Do not invoke this skill again for the same \`<paper_id>\` unless the markdown was regenerated.
+`
+    })
+  }),
+  Object.freeze({
+    id: 'paper-retrieval',
+    directory: 'hikari-paper-retrieval',
+    content: buildSkillMarkdown({
+      id: 'paper-retrieval',
+      name: 'hikari-paper-retrieval',
+      description: `Use Hikari MCP paper-intake retrieval tools to find already-ingested papers, summaries, and experiment entries from the local paper-intake knowledge base before reading full paper markdown.`,
+      body: `
+# Hikari Paper Retrieval MCP
+
+Use this skill when the user asks about papers that are already in Hikari, asks which ingested paper covers a topic, asks what experiments an ingested paper ran, or asks for a project-level roll-up of previously ingested papers.
+
+Do not use this skill to download new papers. For new external literature search or PDF download, use the literature or paper-download flow first. This skill is for the local paper-intake knowledge base produced after \`KnowledgeBase/papers.md/<paper_id>/paper.md\` exists and the paper-intake summary has been saved.
+
+Direct tools:
+
+- \`${PAPER_INTAKE_SEARCH_SUMMARIES_TOOL_NAME}\` — search ingested paper titles and one-sentence summaries by topic, finding, organism, method, molecule, or concept.
+- \`${PAPER_INTAKE_SEARCH_EXPERIMENTS_TOOL_NAME}\` — search structured experiment entries by assay, technique, condition, variable, figure/table reference, or outcome.
+- \`${PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME}\` — list ingested paper summaries attached to a known Hikari project.
+
+Retrieval workflow:
+
+1. Decide the narrowest retrieval mode:
+   - Use \`${PAPER_INTAKE_SEARCH_SUMMARIES_TOOL_NAME}\` for "find papers about...", title/topic/finding questions, or when the user wants candidate papers.
+   - Use \`${PAPER_INTAKE_SEARCH_EXPERIMENTS_TOOL_NAME}\` for "which paper did assay X?", "find experiments using technique Y", condition/outcome questions, or figure-level experiment lookup.
+   - Use \`${PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME}\` when the user gives a project id/name and wants papers attached to that project.
+2. Call the chosen MCP tool with a short keyword query. Preserve technical terms such as assay names, proteins, cell lines, compounds, figure labels, and paper-specific tags.
+3. Inspect \`status\`, \`items\`, \`matched_terms\`, \`score\`, \`doc_type\`, \`paper_id\`, \`title\`, \`one_sentence_summary\`, \`experiment\`, and \`source_paths\`.
+4. If the returned fields answer the question, answer from the tool result and cite the returned \`paper_id\`, \`title\`, and \`source_paths.paper_md\`.
+5. If the user asks for details that are not in the summary or experiment entry, read the returned \`source_paths.paper_md\` from the current workspace before answering. Use \`extracted.txt\`, figures, or the original PDF only when \`paper.md\` leaves a concrete question unanswered.
+6. If no intake item matches, say that the local paper-intake KB had no match. Then ask whether to search external literature or download/ingest a new paper if that would help.
+
+Argument patterns:
+
+- Topic search:
+  \`{ "query": "MG-PACE compact degron molecular glue", "limit": 5 }\`
+- Experiment search:
+  \`{ "query": "phage-assisted continuous evolution SD40", "technique": "phage-assisted continuous evolution", "limit": 5 }\`
+- Project roll-up:
+  \`{ "project_name": "Atlas", "doc_types": ["research_paper"], "limit": 20 }\`
+
+Answering rules:
+
+- Prefer the paper-intake MCP result over memory or guesses for local paper availability.
+- Do not imply a paper is attached to a project unless \`${PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME}\` or the returned \`project_ids\` supports it.
+- Do not claim the full paper supports a detail unless you read \`paper.md\` or the detail appears in the returned \`experiment\` or \`one_sentence_summary\`.
+- For reviews, books, or non-research documents, do not invent experiments; use \`doc_type\`, \`structure_outline\`, or \`notable_claims\` only when the returned record provides them.
+- Keep citations local and concrete: use \`paper_id\`, title, and \`source_paths.paper_md\` rather than invented source labels.
+`
+    })
+  }),
+  Object.freeze({
+    id: 'protocol-generation',
+    directory: 'hikari-protocol-generation',
+    content: buildSkillMarkdown({
+      id: 'protocol-generation',
+      name: 'hikari-protocol-generation',
+      description: `Use Hikari MCP ${PROTOCOL_GENERATION_TOOL_NAME} to normalize complete protocol JSON and queue protocol saves for user approval.`,
+      body: `
+# Hikari Protocol Generation MCP
+
+Use this skill when the user asks Codex to prepare, normalize, add, save, or import a wet-lab protocol for Hikari.
+Also use it when the user asks to turn paper methods, selected paper text, local records, or a draft procedure into a Protocols-module candidate.
+
+Direct tool:
+
+- Call the direct Hikari MCP tool \`${PROTOCOL_GENERATION_TOOL_NAME}\`.
+
+Protocol JSON checklist:
+
+- \`protocol.name\`: concise protocol title suitable for the Protocols module.
+- \`protocol.purpose\`: short experimental goal, including the biological system or assay when known.
+- \`protocol.materials\`: array of reagents, samples, equipment, strains, plasmids, cell lines, buffers, and controls supported by the loaded evidence.
+- \`protocol.steps\`: ordered array of strings or step objects. Include timing, temperature, volumes, concentrations, incubation conditions, controls, and readouts inside the relevant step text. When a value should remain user-fillable, write a bracket placeholder directly in the step text, such as \`[volume]\`, \`[buffer]\`, \`[temperature]\`, or \`[time]\`.
+- \`protocol.troubleshooting\`: caveats, quality checks, expected outcomes, failure modes, safety notes, and paper-specific limitations when available.
+- \`result_summary\`: one sentence describing what was prepared.
+- \`save: true\`: include this when the user asks to add, save, import, persist, or queue the generated protocol for review.
+
+Placeholder usage:
+
+- Use bracket placeholders for values the user must choose at execution time or values not specified by the evidence: \`"Add [volume] of [buffer] to each [sample]."\`
+- Prefer meaningful placeholder names that match what the user will fill in later, for example \`[plasmid]\`, \`[protein]\`, \`[volume]\`, \`[buffer]\`, \`[temperature]\`, or \`[time]\`.
+- If supplying structured step objects with explicit placeholder ids, bind each placeholder in \`text\` with \`{{ph:<id>}}\` and include matching \`placeholders: [{ id: "<id>", name: "<display name>" }]\`.
+- Do not invent exact values just to remove a placeholder. Keep placeholders visible when the paper, selected text, or user request leaves the value open.
+
+Workflow:
+
+1. Gather the source evidence first: active paper markdown, selected methods text, local protocols, records, or user-provided procedure text.
+2. Author the complete protocol JSON yourself from that evidence, using placeholders for execution-time or missing values.
+3. Call \`${PROTOCOL_GENERATION_TOOL_NAME}\` once with \`{ protocol, result_summary, save: true }\` for generated protocols that should enter Hikari review.
+4. Read the tool result and use the returned \`protocol\`, \`status\`, \`save_requested\`, and \`requires_user_approval\` fields as the source of truth.
+5. Reply in normal assistant prose that the generated protocol is ready for review, and mention the normalized protocol name plus any important caveats or user-fillable placeholders.
+
+The \`${PROTOCOL_GENERATION_TOOL_NAME}\` tool expects complete protocol JSON and returns the normalized protocol fields plus approval status.
+`
+    })
+  }),
+  Object.freeze({
+    id: 'notebook-draft',
+    directory: 'hikari-notebook-draft',
+    content: buildSkillMarkdown({
+      id: 'notebook-draft',
+      name: 'hikari-notebook-draft',
+      description: `Use Hikari MCP ${NOTEBOOK_DRAFT_TOOL_NAME} to prepare planned next-experiment notebook drafts for user confirmation.`,
+      body: `
+# Hikari Notebook Draft MCP
+
+Use this skill when the user asks for a planned notebook draft, next experiment plan, workflow follow-up, or future biology notebook page.
+
+Direct tool:
+
+- Call the direct Hikari MCP tool \`${NOTEBOOK_DRAFT_TOOL_NAME}\`.
+
+Draft context checklist:
+
+- \`message\`: the user's notebook-draft request or planning goal.
+- \`project_id\` or \`project_name\`: include the selected or resolved Hikari project when known.
+- \`workflow_id\`: include the workflow step identifier when the next experiment should follow a workflow.
+- \`protocol_name\` or \`protocol_candidates\`: include likely protocol names when the draft should be based on a protocol.
+- \`evidence_context\`: include compact summaries from records, protocol lookup, notebook lookup, literature, or paper analysis that were actually loaded for this turn.
+- \`parser_payload\`: include intent/entity hints when the surrounding Hikari run already prepared them.
+
+Workflow:
+
+1. Resolve the project and experiment target from the selected project, user request, recent workflow state, protocol candidates, and loaded notebook history.
+2. Gather local Hikari context first when it matters: protocol candidates, workflow progress, previous notebook results, relevant records, and paper-derived evidence.
+3. Call \`${NOTEBOOK_DRAFT_TOOL_NAME}\` with the resolved project fields, workflow/protocol hints, and evidence context.
+4. Read the tool result and use \`status\`, \`proposal_summary\`, \`proposal\`, \`notebook\`, \`missing_placeholders\`, and \`follow_up_questions\` as the source of truth.
+5. Return the confirmation-ready draft for user approval. Include concise next-step context and any follow-up questions reported by the tool.
+
+If one blocking detail is missing, ask the user through the Hikari clarification flow instead of inventing values.
+`
+    })
+  })
+]);
+
+function getCodexWorkspaceSkillRoot(workspacePath = '') {
+  const root = String(workspacePath || '').trim();
+  if (!root) {
+    return '';
+  }
+  return path.join(root, CODEX_AGENTS_FOLDER_NAME, CODEX_SKILLS_FOLDER_NAME);
+}
+
+async function releaseOfficialMcpSkillsForWorkspace(workspacePath = '') {
+  const skillRootPath = getCodexWorkspaceSkillRoot(workspacePath);
+  return releaseOfficialMcpSkills(skillRootPath);
+}
+
+async function releaseOfficialMcpSkills(skillRootPath = '') {
+  const root = String(skillRootPath || '').trim();
+  if (!root) {
+    return [];
+  }
+  await fs.mkdir(root, { recursive: true });
+  const releases = [];
+  for (const skill of OFFICIAL_MCP_SKILLS) {
+    releases.push(await releaseOfficialMcpSkill(root, skill));
+  }
+  return releases.filter(Boolean);
+}
+
+async function releaseOfficialMcpSkill(skillRootPath, skill) {
+  const skillDir = path.join(skillRootPath, skill.directory);
+  const skillPath = path.join(skillDir, 'SKILL.md');
+  let existing = '';
+  try {
+    existing = await fs.readFile(skillPath, 'utf8');
+  } catch {
+    existing = '';
+  }
+  if (existing && !existing.includes(OFFICIAL_MCP_SKILL_MARKER)) {
+    return { path: skillPath, status: 'preserved' };
+  }
+  await fs.mkdir(skillDir, { recursive: true });
+  if (existing !== skill.content) {
+    await fs.writeFile(skillPath, skill.content, 'utf8');
+  }
+  return { path: skillPath, status: 'released' };
+}
+
+module.exports = {
+  CODEX_AGENTS_FOLDER_NAME,
+  CODEX_SKILLS_FOLDER_NAME,
+  OFFICIAL_MCP_SKILLS,
+  getCodexWorkspaceSkillRoot,
+  releaseOfficialMcpSkills,
+  releaseOfficialMcpSkillsForWorkspace
+};

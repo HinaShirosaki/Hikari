@@ -9,11 +9,31 @@
     "papers",
     "sequence-viewer"
   ],
+  "viewOrder": [
+    "home-view",
+    "protocol-management-view",
+    "biology-notebook-view",
+    "personal-inventory-view",
+    "sample-registry-view",
+    "assay-view",
+    "gel-view",
+    "lab-common-inventory-view",
+    "setting-view",
+    "project-management-view",
+    "workflow-management-view",
+    "papers-view",
+    "agent-view",
+    "tool-box-view",
+    "sequence-viewer-view",
+    "sequence-viewer-detail-view"
+  ],
   "apps": [
     {
       "id": "home",
+      "viewKey": "HOME",
       "label": "Home",
       "viewId": "home-view",
+      "subtitle": "Bench overview, contribution activity, reminders, and lab timers.",
       "icon": "home.svg",
       "placement": "dock",
       "aliases": ["dashboard", "overview"],
@@ -21,8 +41,10 @@
     },
     {
       "id": "protocols",
+      "viewKey": "PROTOCOL_MANAGEMENT",
       "label": "Protocols",
       "viewId": "protocol-management-view",
+      "subtitle": "Protocol library for drafting, editing, and reuse.",
       "icon": "protocols.svg",
       "placement": "dock",
       "aliases": ["protocol", "procedure"],
@@ -30,8 +52,10 @@
     },
     {
       "id": "biology-notebook",
+      "viewKey": "BIOLOGY_NOTEBOOK",
       "label": "Biology Notebook",
       "viewId": "biology-notebook-view",
+      "subtitle": "Biology notebook entries and wet-lab context.",
       "icon": "biology-notebook.svg",
       "placement": "more",
       "aliases": ["biology", "bio notebook", "wet lab"],
@@ -39,8 +63,10 @@
     },
     {
       "id": "chemicals",
+      "viewKey": "LAB_COMMON_INVENTORY",
       "label": "Chemicals",
       "viewId": "lab-common-inventory-view",
+      "subtitle": "Chemical inventory, locations, and stock records.",
       "icon": "chemicals.svg",
       "placement": "more",
       "aliases": ["chemical", "reagents", "inventory chemicals"],
@@ -48,8 +74,10 @@
     },
     {
       "id": "sample-inventory",
+      "viewKey": "SAMPLE_REGISTRY",
       "label": "Sample & Inventory",
       "viewId": "sample-registry-view",
+      "subtitle": "Samples, storage containers, and personal inventory in one workspace.",
       "icon": "sample-inventory.svg",
       "placement": "dock",
       "aliases": ["sample", "samples", "inventory", "sample inventory", "sampleinventory"],
@@ -57,8 +85,10 @@
     },
     {
       "id": "assay",
+      "viewKey": "ASSAY",
       "label": "Assay",
       "viewId": "assay-view",
+      "subtitle": "Plate setup, pasted results, and assay analysis.",
       "icon": "assay.svg",
       "placement": "dock",
       "aliases": ["assays", "plate"],
@@ -66,8 +96,10 @@
     },
     {
       "id": "gel",
+      "viewKey": "GEL",
       "label": "Gel",
       "viewId": "gel-view",
+      "subtitle": "Gel and blot analysis with band-level review.",
       "icon": "gel.svg",
       "placement": "dock",
       "aliases": ["gels", "blot", "western"],
@@ -75,8 +107,10 @@
     },
     {
       "id": "projects",
+      "viewKey": "PROJECT_MANAGEMENT",
       "label": "Projects",
       "viewId": "project-management-view",
+      "subtitle": "Projects that organize notebook and paper context.",
       "icon": "projects.svg",
       "placement": "more",
       "aliases": ["project"],
@@ -84,8 +118,10 @@
     },
     {
       "id": "workflows",
+      "viewKey": "WORKFLOW_MANAGEMENT",
       "label": "Workflows",
       "viewId": "workflow-management-view",
+      "subtitle": "Workflow templates, reusable blocks, and next-step planning.",
       "icon": "workflows.svg",
       "placement": "dock",
       "aliases": ["workflow"],
@@ -93,17 +129,22 @@
     },
     {
       "id": "papers",
+      "viewKey": "PAPERS",
       "label": "Papers",
       "viewId": "papers-view",
+      "subtitle": "Paper library, linked projects, comments, and summaries.",
       "icon": "papers.svg",
       "placement": "dock",
       "aliases": ["paper", "literature", "journal"],
-      "searchInputId": ""
+      "searchInputId": "",
+      "agentChatRail": true
     },
     {
       "id": "agent",
+      "viewKey": "AGENT",
       "label": "Agent",
       "viewId": "agent-view",
+      "subtitle": "Assistant sessions with project context and evidence-grounded responses.",
       "icon": "agent.svg",
       "placement": "more",
       "aliases": ["assistant", "chat", "lab assistant"],
@@ -111,8 +152,10 @@
     },
     {
       "id": "sequence-viewer",
+      "viewKey": "SEQUENCE_VIEWER",
       "label": "Sequence Viewer",
       "viewId": "sequence-viewer-view",
+      "subtitle": "Sequence records, annotations, overlays, and detail views.",
       "icon": "sequence-viewer.svg",
       "placement": "dock",
       "aliases": ["sequence", "seqviewer", "sequence viewer", "dna"],
@@ -120,8 +163,10 @@
     },
     {
       "id": "tools",
+      "viewKey": "TOOL_BOX",
       "label": "Tools",
       "viewId": "tool-box-view",
+      "subtitle": "Bench calculators, sequence utilities, and quick analysis tools.",
       "icon": "tools.svg",
       "placement": "more",
       "aliases": ["tool", "toolbox", "calculator"],
@@ -129,12 +174,26 @@
     },
     {
       "id": "settings",
+      "viewKey": "SETTING",
       "label": "Settings",
       "viewId": "setting-view",
+      "subtitle": "Workspace appearance, startup, storage, and model settings.",
       "icon": "settings.svg",
       "placement": "more",
       "aliases": ["setting", "preferences"],
       "searchInputId": ""
+    }
+  ],
+  "supplementalViews": [
+    {
+      "viewKey": "PERSONAL_INVENTORY",
+      "viewId": "personal-inventory-view",
+      "subtitle": "Samples, storage containers, and personal inventory in one workspace."
+    },
+    {
+      "viewId": "sequence-viewer-detail-view",
+      "subtitle": "Sequence records, annotations, overlays, and detail views.",
+      "includeStyle": false
     }
   ]
 }

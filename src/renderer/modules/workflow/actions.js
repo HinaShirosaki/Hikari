@@ -16,6 +16,7 @@ import {
   buildWorkflowExecutionLayout,
   computeEntryProgress
 } from './execution.js';
+import { createWorkflowArtifactStorage } from './artifact-storage.js';
 
 function createEmptyStepState() {
   return {
@@ -86,6 +87,19 @@ export function createWorkflowActions(config = {}) {
   function getTemplateById(templateId) {
     return (state.workflowTemplates || []).find((template) => template.id === templateId) || null;
   }
+
+  const {
+    buildWorkflowStepNotebookFolderPath,
+    buildWorkflowStepResultsFolderPath,
+    ensureStorageFolderExists,
+    persistImportedWorkflowFiles
+  } = createWorkflowArtifactStorage({
+    state,
+    renderer,
+    getTemplateById,
+    windowObject: config?.windowObject || globalThis?.window || null,
+    FileReaderClass: config?.FileReaderClass || globalThis?.FileReader || null
+  });
 
   function getWorkflowsForTemplate(templateId) {
     const normalizedTemplateId = String(templateId || '').trim();
@@ -579,137 +593,6 @@ export function createWorkflowActions(config = {}) {
 
   function touchWorkflow(workflow) {
     workflow.updatedAt = new Date().toISOString();
-  }
-
-  function sanitizeFolderName(value) {
-    return String(value || '')
-      .trim()
-      .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-      .replace(/\s+/g, '_')
-      .replace(/^_+|_+$/g, '');
-  }
-
-  function buildTemplateFolderName(template) {
-    return `${sanitizeFolderName(template?.name || 'Untitled_Template') || 'Untitled_Template'}__${sanitizeFolderName(template?.id || 'template') || 'template'}`;
-  }
-
-  function buildWorkflowFolderName(workflow) {
-    return `${sanitizeFolderName(workflow?.name || 'Untitled_Workflow') || 'Untitled_Workflow'}__${sanitizeFolderName(workflow?.id || 'workflow') || 'workflow'}`;
-  }
-
-  function buildEntryFolderName(entry) {
-    return `${sanitizeFolderName(entry?.name || 'Entry') || 'Entry'}__${sanitizeFolderName(entry?.id || 'entry') || 'entry'}`;
-  }
-
-  function buildNotebookPageFolderName(notebookEntryId = '') {
-    return `${sanitizeFolderName('Notebook_Page') || 'Notebook_Page'}__${sanitizeFolderName(notebookEntryId || 'page') || 'page'}`;
-  }
-
-  function buildBlockFolderName(block) {
-    const blockLabel = renderer.titleForBlock?.(block) || block?.id || 'Step';
-    return `${sanitizeFolderName(blockLabel || 'Step') || 'Step'}__${sanitizeFolderName(block?.id || 'step') || 'step'}`;
-  }
-
-  function buildWorkflowInstanceRootFolderPath(workflow) {
-    const rootPath = String(state.settings?.storagePath || '').trim();
-    if (!rootPath) {
-      return '';
-    }
-
-    const template = getTemplateById(String(workflow?.templateId || '').trim()) || {
-      id: String(workflow?.templateId || 'untemplated').trim() || 'untemplated',
-      name: 'Untemplated Workflow'
-    };
-    return `${rootPath}/Workflow/${buildTemplateFolderName(template)}/${buildWorkflowFolderName(workflow)}`;
-  }
-
-  function buildWorkflowStepResultsFolderPath(workflow, entry, block) {
-    const workflowRoot = buildWorkflowInstanceRootFolderPath(workflow);
-    if (!workflowRoot) {
-      return '';
-    }
-    return `${workflowRoot}/Results/${buildEntryFolderName(entry)}/${buildBlockFolderName(block)}`;
-  }
-
-  function buildWorkflowStepNotebookFolderPath(workflow, entry, notebookEntryId = '') {
-    const workflowRoot = buildWorkflowInstanceRootFolderPath(workflow);
-    if (!workflowRoot) {
-      return '';
-    }
-    return `${workflowRoot}/Notebook/${buildEntryFolderName(entry)}/${buildNotebookPageFolderName(notebookEntryId)}`;
-  }
-
-  async function ensureStorageFolderExists(storageFolder) {
-    if (!storageFolder || !window.enanaApi?.ensureStorageDirectory) {
-      return;
-    }
-    await window.enanaApi.ensureStorageDirectory(storageFolder);
-  }
-
-  function blobToDataUrl(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ''));
-      reader.onerror = () => reject(new Error('Cannot convert imported file to data URL.'));
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  function extractBase64Payload(dataUrl) {
-    const source = String(dataUrl || '');
-    const commaIndex = source.indexOf(',');
-    if (commaIndex < 0) {
-      return '';
-    }
-    return source.slice(commaIndex + 1).trim();
-  }
-
-  async function persistImportedWorkflowFiles({ files, storageFolder }) {
-    const selectedFiles = Array.isArray(files) ? files.filter(Boolean) : [];
-    if (!selectedFiles.length) {
-      return [];
-    }
-
-    const rootPath = String(state.settings?.storagePath || '').trim();
-    if (!rootPath) {
-      throw new Error('Set Storage Folder Path in Settings before importing workflow files.');
-    }
-    if (!storageFolder) {
-      throw new Error('Workflow storage folder is missing.');
-    }
-    if (!window.enanaApi?.storeImportedFile) {
-      throw new Error('Imported file storage API is unavailable.');
-    }
-
-    const targetFolder = `${storageFolder}/ResultFiles`;
-    const importedAt = new Date().toISOString();
-    const records = [];
-
-    for (const file of selectedFiles) {
-      const dataUrl = await blobToDataUrl(file);
-      const dataBase64 = extractBase64Payload(dataUrl);
-      if (!dataBase64) {
-        throw new Error(`Cannot read ${file.name}.`);
-      }
-      const result = await window.enanaApi.storeImportedFile({
-        storagePath: rootPath,
-        targetFolder,
-        fileName: file.name,
-        dataBase64
-      });
-      if (!result?.ok) {
-        throw new Error(result?.error || `Failed to store ${file.name}.`);
-      }
-      records.push({
-        name: result.fileName || file.name,
-        path: result.filePath || '',
-        relativePath: result.relativePath || '',
-        size: Number(file.size) || 0,
-        importedAt
-      });
-    }
-
-    return records;
   }
 
   function cloneProtocolSnapshot(protocol) {

@@ -1,4 +1,9 @@
 import { isChemicalStructureSampleType } from './compound-model.js';
+import {
+  getEditableSampleTypeEntries,
+  getSampleTypeLabel,
+  normalizeSampleType
+} from '../sample-inventory-settings.js';
 
 export function ensureSampleState(ctx) {
   if (!Array.isArray(ctx.state.samples)) {
@@ -40,13 +45,26 @@ export function formatSampleRecordLabel(sample) {
   return code || name || String(sample?.id || 'Sample').trim();
 }
 
-export function formatSampleTypeLabel(sampleType) {
+export function formatSampleTypeLabel(sampleType, settings = {}) {
   if (isChemicalStructureSampleType(sampleType)) {
-    return 'Chemical';
+    return getSampleTypeLabel(settings, 'chemical');
   }
-  return String(sampleType || 'sample')
-    .replace(/_/g, ' ')
-    .replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+  return getSampleTypeLabel(settings, sampleType);
+}
+
+export function renderSampleTypeOptions(ctx) {
+  const select = ctx.dom.sampleTypeInput;
+  if (!select) {
+    return;
+  }
+  const selected = normalizeSampleType(select.value || 'plasmid');
+  const entries = getEditableSampleTypeEntries(ctx.state.settings);
+  select.innerHTML = entries.map((entry) => `
+    <option value="${escapeHtml(entry.type)}"${selected === entry.type ? ' selected' : ''}>${escapeHtml(entry.label)}</option>
+  `).join('');
+  if (!entries.some((entry) => entry.type === selected)) {
+    select.value = 'plasmid';
+  }
 }
 
 export function escapeHtml(text) {

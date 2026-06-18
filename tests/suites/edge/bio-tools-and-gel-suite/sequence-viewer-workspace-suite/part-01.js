@@ -45,7 +45,7 @@ test('[EDGE] sequence-viewer initializes home workspace and keeps detail workspa
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   moduleWithDom.initSequenceViewer();
@@ -76,6 +76,9 @@ test('[EDGE] sequence-viewer loadFromExternal switches to detail workspace', () 
     'sequence-viewer-home-import-input',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
+    'sequence-viewer-detail-new-btn',
+    'sequence-viewer-detail-open-btn',
+    'sequence-viewer-detail-open-input',
     'sequence-viewer-save-btn',
     'sequence-viewer-save-name',
     'sequence-viewer-mode-paste',
@@ -106,7 +109,7 @@ test('[EDGE] sequence-viewer loadFromExternal switches to detail workspace', () 
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer();
@@ -120,8 +123,22 @@ test('[EDGE] sequence-viewer loadFromExternal switches to detail workspace', () 
 
   const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
   const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
+  const detailNewBtn = document.getElementById('sequence-viewer-detail-new-btn');
+  const detailOpenBtn = document.getElementById('sequence-viewer-detail-open-btn');
+  const loadBtn = document.getElementById('sequence-viewer-load-btn');
+  const pastePanel = document.getElementById('sequence-viewer-paste-panel');
+
   assert.equal(Boolean(homeWorkspace.hidden), true);
   assert.equal(Boolean(detailWorkspace.hidden), false);
+  assert.equal(Boolean(detailNewBtn.hidden), false);
+  assert.equal(Boolean(detailOpenBtn.hidden), false);
+  assert.equal(Boolean(loadBtn.hidden), true);
+
+  trigger(detailNewBtn, 'click');
+  assert.equal(Boolean(homeWorkspace.hidden), true);
+  assert.equal(Boolean(detailWorkspace.hidden), false);
+  assert.equal(Boolean(loadBtn.hidden), false);
+  assert.equal(Boolean(pastePanel.hidden), false);
 });
 test('[EDGE] sequence-viewer render sync returns to the home workspace when the home shell is reopened from detail', () => {
   const ids = [
@@ -166,7 +183,7 @@ test('[EDGE] sequence-viewer render sync returns to the home workspace when the 
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer({
@@ -257,7 +274,7 @@ test('[EDGE] sequence-viewer render sync keeps Protein Builder visible inside th
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer({
@@ -334,7 +351,7 @@ test('[EDGE] sequence-viewer home paste button opens detail workspace even with 
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   moduleWithDom.initSequenceViewer();
@@ -356,7 +373,7 @@ test('[EDGE] sequence-viewer New action uses navigation callback', () => {
   const document = createMockDocument(ids);
   const transitions = [];
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   moduleWithDom.initSequenceViewer({
@@ -397,7 +414,7 @@ ORIGIN
   const document = createMockDocument(ids);
   const transitions = [];
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryList: async () => ({ ok: true, entries: [entry] }),
       sequenceLibraryGet: async (payload) => {
         if (payload?.includeGbk) {
@@ -409,14 +426,14 @@ ORIGIN
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   moduleWithDom.initSequenceViewer({

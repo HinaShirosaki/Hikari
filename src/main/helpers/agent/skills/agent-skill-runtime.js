@@ -244,11 +244,49 @@ function createAgentSkillRuntime(deps = {}) {
     const workspace = resolveWorkspaceDir(workspaceDir);
     return [
       ...extraSkillDirs.map((item) => cleanText(item, 1200)).filter(Boolean),
-      path.join(homeDir, '.enana', 'skills'),
+      path.join(homeDir, '.hikari', 'skills'),
       path.join(homeDir, '.agents', 'skills'),
       path.join(workspace, '.agents', 'skills'),
       path.join(workspace, 'skills')
     ];
+  }
+
+  function normalizeDisabledSkillNames(value) {
+    return new Set(
+      asArray(value)
+        .map((item) => cleanText(item, 160).toLowerCase())
+        .filter(Boolean)
+    );
+  }
+
+  function resolveExternalSkillControls(input = {}) {
+    const source = ensureObject(input);
+    const snapshot = ensureObject(source.snapshot || source.stateSnapshot || source.state_snapshot);
+    const snapshotSettings = ensureObject(snapshot.settings);
+    const explicitSettings = ensureObject(source.settings);
+    const agentSettings = ensureObject(
+      source.agent
+      || source.agentSettings
+      || source.agent_settings
+      || explicitSettings.agent
+      || snapshotSettings.agent
+    );
+    const enabledCandidates = [
+      source.externalSkillsEnabled,
+      source.external_skills_enabled,
+      agentSettings.externalSkillsEnabled,
+      agentSettings.external_skills_enabled
+    ];
+    const explicitEnabled = enabledCandidates.find((item) => typeof item === 'boolean');
+    const disabledSkillNames = normalizeDisabledSkillNames([
+      ...asArray(source.disabledExternalSkillNames || source.disabled_external_skill_names),
+      ...asArray(agentSettings.disabledExternalSkillNames || agentSettings.disabled_external_skill_names),
+      ...asArray(agentSettings.disabledSkills || agentSettings.disabled_skills)
+    ]);
+    return {
+      externalSkillsEnabled: explicitEnabled === undefined ? true : explicitEnabled !== false,
+      disabledSkillNames
+    };
   }
 
   function normalizeSkill(rawSkill = {}) {
@@ -341,9 +379,37 @@ function createAgentSkillRuntime(deps = {}) {
     return true;
   }
 
+  function applyExternalSkillControls(skill, controls = {}) {
+    const source = normalizeSkill(skill);
+    if (!source) {
+      return null;
+    }
+    const skillNameKey = source.name.toLowerCase();
+    const explicitlyDisabled = controls.disabledSkillNames?.has?.(skillNameKey) === true;
+    const settingsEnabled = controls.externalSkillsEnabled !== false && !explicitlyDisabled;
+    const eligible = isSkillEligible(source);
+    const disabledReason = controls.externalSkillsEnabled === false
+      ? 'External skills are switched off in Settings.'
+      : explicitlyDisabled
+        ? 'Disabled in Settings.'
+        : eligible
+          ? ''
+          : 'Missing required binary, environment, or OS support.';
+    return {
+      ...source,
+      external_skill: true,
+      settings_enabled: settingsEnabled,
+      eligible,
+      enabled: settingsEnabled && eligible,
+      disabled_reason: disabledReason
+    };
+  }
+
   function listSkills(input = {}) {
     const workspaceDir = resolveWorkspaceDir(input.workspaceDir || input.workspace_dir);
     const includeIneligible = input.includeIneligible === true;
+    const includeDisabled = input.includeDisabled === true || input.include_disabled === true;
+    const externalSkillControls = resolveExternalSkillControls(input);
     const byName = new Map();
     resolveSkillRoots(workspaceDir).forEach((rootPath) => {
       collectSkillDirectories(rootPath).forEach((skillDirectory) => {
@@ -357,7 +423,10 @@ function createAgentSkillRuntime(deps = {}) {
     });
 
     return Array.from(byName.values())
-      .filter((skill) => includeIneligible === true || isSkillEligible(skill))
+      .map((skill) => applyExternalSkillControls(skill, externalSkillControls))
+      .filter(Boolean)
+      .filter((skill) => includeDisabled === true || skill.settings_enabled === true)
+      .filter((skill) => includeIneligible === true || skill.eligible === true)
       .sort((left, right) => left.name.localeCompare(right.name));
   }
 

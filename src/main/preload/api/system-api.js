@@ -40,6 +40,19 @@ const MAX_NATIVE_IMAGE_DIMENSION = 1600;
 function createSystemApi(ipcRenderer, deps = {}) {
   return {
     openExternalUrl: (url) => ipcRenderer.invoke(SYSTEM.OPEN_EXTERNAL_URL, { url }),
+    onAppCloseRequested: (handler) => {
+      if (typeof handler !== 'function') {
+        return () => {};
+      }
+      const listener = () => handler();
+      ipcRenderer.on(SYSTEM.APP_CLOSE_REQUESTED, listener);
+      return () => ipcRenderer.removeListener(SYSTEM.APP_CLOSE_REQUESTED, listener);
+    },
+    respondToAppClose: (action) => {
+      ipcRenderer.send(SYSTEM.APP_CLOSE_RESPONSE, {
+        action: String(action || '').trim()
+      });
+    },
     readChemicalClipboard: () => readChemicalClipboard(deps.clipboard, deps.nativeImage)
   };
 }

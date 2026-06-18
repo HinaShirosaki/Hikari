@@ -1,6 +1,7 @@
 import { axisLabel, oppositeAxis } from './shared.js';
 import { parseWellId, sortLayout } from './plate-model.js';
 import {
+  formatConcentrationLabel,
   formatVolumeText,
   parseConcentrationMagnitude
 } from './concentration-utils.js';
@@ -8,6 +9,7 @@ import {
 export function buildSerialDilutionGroups({
   layout,
   sampleAxis,
+  concentrationUnit = '',
   findInventorySampleRecordBySampleId
 }) {
   const groupsBySample = new Map();
@@ -38,7 +40,8 @@ export function buildSerialDilutionGroups({
       group.entriesByIndex.set(concentrationIndex, {
         concentrationIndex,
         concentrationLabel: concentration,
-        magnitude: parseConcentrationMagnitude(concentration),
+        concentrationDisplay: formatConcentrationLabel(concentration, concentrationUnit),
+        magnitude: parseConcentrationMagnitude(concentration, concentrationUnit),
         wells: [item.well]
       });
       return;
@@ -46,7 +49,8 @@ export function buildSerialDilutionGroups({
     existing.wells.push(item.well);
     if (!existing.concentrationLabel && concentration) {
       existing.concentrationLabel = concentration;
-      existing.magnitude = parseConcentrationMagnitude(concentration);
+      existing.concentrationDisplay = formatConcentrationLabel(concentration, concentrationUnit);
+      existing.magnitude = parseConcentrationMagnitude(concentration, concentrationUnit);
       return;
     }
     if (existing.concentrationLabel !== concentration) {
@@ -87,7 +91,7 @@ export function buildSerialDilutionGroups({
     });
 }
 
-export function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConcentrationText }) {
+export function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConcentrationText, concentrationUnit = '' }) {
   const notes = [];
   const trailingZeroEntries = group.trailingEntries.filter((entry) => entry.magnitude === 0);
   const trailingOtherEntries = group.trailingEntries.filter((entry) => entry.magnitude !== 0);
@@ -123,7 +127,7 @@ export function calculateSerialDilutionPlan({ group, volumePerWellUl, stockConce
     };
   }
 
-  const stockMagnitude = parseConcentrationMagnitude(stockConcentrationText);
+  const stockMagnitude = parseConcentrationMagnitude(stockConcentrationText, concentrationUnit);
   if (!(Number.isFinite(stockMagnitude) && stockMagnitude > 0)) {
     return {
       rows: [],
@@ -240,6 +244,7 @@ export function buildSerialDilutionSummaryModel({
   groups,
   sampleAxis,
   volumePerWellUl,
+  concentrationUnit = '',
   getSerialDilutionStockValue
 }) {
   const concentrationAxisName = axisLabel(oppositeAxis(sampleAxis));
@@ -252,7 +257,8 @@ export function buildSerialDilutionSummaryModel({
       plan: calculateSerialDilutionPlan({
         group,
         volumePerWellUl,
-        stockConcentrationText: stockValue
+        stockConcentrationText: stockValue,
+        concentrationUnit
       })
     };
   });
@@ -291,7 +297,7 @@ export function buildSerialDilutionSummaryModel({
 
   const followingDilutionRows = referenceFollowingRows.map((row, index) => ({
     step: `Step ${index + 1}`,
-    targetConcentration: row.concentrationLabel,
+    targetConcentration: row.concentrationDisplay || row.concentrationLabel,
     fromPreviousWell: formatVolumeText(row.inputVolume),
     bufferVolume: formatVolumeText(row.bufferVolume),
     transferOrDiscard: row.outputLabel === 'Discard'

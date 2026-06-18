@@ -3,16 +3,9 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { hasSupportedDataExtension } = require('./storage-paths');
-const { asArray, cleanText, ensureObject, normalizeFileTimestamp } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, normalizeFileTimestamp, toPosixRelative } = require('./storage-utils');
 
 const STORAGE_MANIFEST_FILE_NAME = 'hikari-storage-manifest.json';
-const LEGACY_STORAGE_MANIFEST_FILE_NAMES = Object.freeze([
-  'enana-storage-manifest.json'
-]);
-
-function toPosixRelative(rootPath, targetPath) {
-  return path.relative(rootPath, targetPath).split(path.sep).join('/');
-}
 
 async function buildEntryMeta(rootPath, absPath, role = 'other') {
   try {
@@ -35,10 +28,7 @@ function detectManifestRole(relativePath) {
   if (!normalized || normalized === '.') {
     return 'root';
   }
-  if (
-    normalized === STORAGE_MANIFEST_FILE_NAME.toLowerCase()
-    || LEGACY_STORAGE_MANIFEST_FILE_NAMES.includes(normalized)
-  ) {
+  if (normalized === STORAGE_MANIFEST_FILE_NAME.toLowerCase()) {
     return 'storage_manifest';
   }
   if (normalized === 'protocol') {
@@ -101,7 +91,7 @@ function detectManifestRole(relativePath) {
   if (normalized === 'protocol/protocol.index.sqlite') {
     return 'protocol_index';
   }
-  if (normalized === 'hikari-chemicals.index.sqlite' || normalized === 'enana-chemicals.index.sqlite') {
+  if (normalized === 'hikari-chemicals.index.sqlite') {
     return 'chemical_inventory_index';
   }
   if (normalized.endsWith('.index.sqlite')) {
@@ -196,7 +186,7 @@ function normalizeBundleSummary(snapshot) {
 
 function isBundleCandidateName(fileName) {
   const lower = String(fileName || '').toLowerCase();
-  if (!lower || lower === STORAGE_MANIFEST_FILE_NAME.toLowerCase() || LEGACY_STORAGE_MANIFEST_FILE_NAMES.includes(lower)) {
+  if (!lower || lower === STORAGE_MANIFEST_FILE_NAME.toLowerCase()) {
     return false;
   }
   if (lower.endsWith('.index.sqlite')) {
@@ -207,13 +197,13 @@ function isBundleCandidateName(fileName) {
 
 function isSqliteBundleCandidateName(fileName) {
   const lower = String(fileName || '').toLowerCase();
-  if (!lower || lower === STORAGE_MANIFEST_FILE_NAME.toLowerCase() || LEGACY_STORAGE_MANIFEST_FILE_NAMES.includes(lower)) {
+  if (!lower || lower === STORAGE_MANIFEST_FILE_NAME.toLowerCase()) {
     return false;
   }
   return lower.endsWith('.index.sqlite');
 }
 
-function looksLikeEnanaSnapshot(payload) {
+function looksLikeHikariSnapshot(payload) {
   const source = ensureObject(payload);
   return [
     Array.isArray(source.protocols),
@@ -234,7 +224,7 @@ module.exports = {
   detectManifestRole,
   isBundleCandidateName,
   isSqliteBundleCandidateName,
-  looksLikeEnanaSnapshot,
+  looksLikeHikariSnapshot,
   normalizeBundleSummary,
   toPosixRelative
 };

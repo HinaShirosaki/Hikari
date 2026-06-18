@@ -47,7 +47,7 @@ test('[EDGE] sequence-viewer drag selection context menu can edit and delete an 
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer();
@@ -180,7 +180,7 @@ test('[EDGE] sequence-viewer context menu designs primers for selected sequence 
   let copiedText = '';
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     {
       document,
       navigator: {
@@ -332,7 +332,7 @@ test('[EDGE] sequence-viewer keyboard edits selected bases through the sequence 
   const listeners = {};
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     {
       document,
       addEventListener(type, listener) {

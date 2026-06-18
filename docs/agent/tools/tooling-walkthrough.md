@@ -36,16 +36,15 @@ It does not know how to run any concrete tool by itself. It only runs what has b
 
 `agent-tool-call.js` now exists as a thin compatibility wrapper that re-exports both modules.
 
-## Current wiring in `main.js`
+## Current wiring (agent-service assembly)
 
 This is the most important practical detail in the whole tools layer:
 
-- `main.js` creates one shared `genericAgentToolRuntime`
-- it explicitly registers only one executor on that shared instance: `notebook-draft`
-- inventory and record lookups bypass that shared executor and are called directly from `agent-lookup-runtime`
-- many other tool modules exist and are smoke-tested, but are not yet registered on the shared executor used by `agent:chat`
+- the agent-service assembly (`create-main-agent-services.js`) creates one shared `genericAgentToolRuntime`
+- it then calls `registerAgentToolExecutors(...)` (`tools/register-agent-tool-executors.js`), which registers the full tool suite on that shared instance: `inventory-lookup`, `record-lookup`, `protocol-matching`, `notebook-generation`, `notebook-draft`, `web-search`, `sub-agent`, `memory`, `literature-search`, `paper-download`, `paper-search`, `paper-analysis`, `purchase-recommendation`, `protocol-generation`, `python-sandbox`, and `command-line`
+- the `inventory_lookup` and `record_lookup` *intents* still call `agent-lookup-runtime` directly from the controller, but the same lookups are also registered as tools for the science/deep-research loops to call
 
-So the folder contains more capability than the current controller wiring exposes.
+So the shared executor now exposes the folder's full tool surface, not just a single tool.
 
 ## Concrete tools
 
@@ -120,4 +119,4 @@ That means sub-agents are not only a standalone tool. They are also the executio
 
 `agent-tool-smoke-test.js` is a developer runtime that creates many concrete tools directly and exercises them with lightweight fixtures or mocked structured responders.
 
-It matters because it shows the intended tool surface, even where `main.js` has not yet registered every tool on the shared executor.
+It is useful for exercising tool runtimes in isolation with lightweight fixtures, independent of the live executor wired up for `agent:chat`.

@@ -52,10 +52,10 @@ export function createRecordsManager({ runtime, elements, deps }) {
   async function persistDataUrlArtifact({ targetFolder, fileName, dataUrl }) {
     const storageRoot = getStorageRoot();
     const dataBase64 = encodeDataUrlPayload(dataUrl);
-    if (!storageRoot || !targetFolder || !dataBase64 || !window.enanaApi?.storeImportedFile) {
+    if (!storageRoot || !targetFolder || !dataBase64 || !window.hikariApi?.storeImportedFile) {
       return null;
     }
-    const result = await window.enanaApi.storeImportedFile({
+    const result = await window.hikariApi.storeImportedFile({
       storagePath: storageRoot,
       targetFolder,
       fileName,
@@ -157,7 +157,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
   async function persistGelRecordArtifacts(record, existingRecord = null) {
     const storageRoot = getStorageRoot();
     const targetFolder = buildGelArtifactFolder(record);
-    if (!storageRoot || !targetFolder || !window.enanaApi?.writeJsonFile) {
+    if (!storageRoot || !targetFolder || !window.hikariApi?.writeJsonFile) {
       return {};
     }
 
@@ -170,13 +170,13 @@ export function createRecordsManager({ runtime, elements, deps }) {
     let sourceImageResult = null;
     try {
       [reportResult, metadataResult, sourceImageResult] = await Promise.all([
-        window.enanaApi.writeJsonFile({
+        window.hikariApi.writeJsonFile({
           storagePath: storageRoot,
           targetFolder,
           fileName: 'analysis-result.json',
           data: record.report || {}
         }),
-        window.enanaApi.writeJsonFile({
+        window.hikariApi.writeJsonFile({
           storagePath: storageRoot,
           targetFolder,
           fileName: 'gel-record.json',
@@ -274,7 +274,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     const name = elements.gelNameInput?.value.trim() || '';
     if (!name) {
       deps.setStatus('Gel name is required.');
-      return;
+      return null;
     }
 
     const editingId = elements.gelIdInput?.value || '';
@@ -300,6 +300,8 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.setStatus(record.report
       ? `Saved gel analysis: ${record.name}.`
       : `Saved gel draft: ${record.name}. You can finish the analysis later.`);
+    runtime.markDraftSaved?.();
+    return record;
   }
 
   function onExportJson() {
@@ -361,6 +363,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.renderCanvas();
     deps.renderReport();
     deps.setStatus('');
+    runtime.markDraftSaved?.();
   }
 
   function fillFromRecord(record) {
@@ -399,6 +402,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.renderCanvas();
     deps.renderReport();
     deps.setStatus('Loaded saved report. Upload original image to view overlay.');
+    runtime.markDraftSaved?.();
   }
 
   function deleteRecord(recordId) {

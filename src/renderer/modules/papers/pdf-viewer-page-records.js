@@ -1,27 +1,72 @@
+function cancelPageRecordRenderTasks(record) {
+  if (!record) {
+    return;
+  }
+  if (typeof record?.textSelectionCleanup === 'function') {
+    try {
+      record.textSelectionCleanup();
+    } catch {}
+    record.textSelectionCleanup = null;
+  }
+  if (!record?.renderTask || typeof record.renderTask.cancel !== 'function') {
+    record.renderTask = null;
+  } else {
+    try {
+      record.renderTask.cancel();
+    } catch {}
+    record.renderTask = null;
+  }
+  if (!record?.textLayerBuilder || typeof record.textLayerBuilder.cancel !== 'function') {
+    record.textLayerBuilder = null;
+    return;
+  }
+  try {
+    record.textLayerBuilder.cancel();
+  } catch {}
+  record.textLayerBuilder = null;
+}
+
 export function cancelAllRenderTasks(pageRecords = []) {
   pageRecords.forEach((record) => {
-    if (typeof record?.textSelectionCleanup === 'function') {
-      try {
-        record.textSelectionCleanup();
-      } catch {}
-      record.textSelectionCleanup = null;
+    cancelPageRecordRenderTasks(record);
+  });
+}
+
+export function clearPageRecordRender(record, {
+  clearText = true,
+  clearLinks = true
+} = {}) {
+  if (!record) {
+    return;
+  }
+  cancelPageRecordRenderTasks(record);
+  if (record.canvas) {
+    record.canvas.width = 0;
+    record.canvas.height = 0;
+  }
+  record.renderedScale = 0;
+  if (clearText && record.textLayer) {
+    record.textLayer.innerHTML = '';
+    record.renderedTextScale = 0;
+  }
+  if (clearLinks && record.linkLayer) {
+    record.linkLayer.innerHTML = '';
+    record.renderedLinkScale = 0;
+  }
+}
+
+export function clearPageRecordsOutsideRange({
+  pageRecords = [],
+  firstPageNumber = 1,
+  lastPageNumber = 1
+} = {}) {
+  const first = Math.max(1, Math.round(Number(firstPageNumber) || 1));
+  const last = Math.max(first, Math.round(Number(lastPageNumber) || first));
+  pageRecords.forEach((record) => {
+    const pageNumber = Math.max(1, Math.round(Number(record?.pageNumber) || 1));
+    if (pageNumber < first || pageNumber > last) {
+      clearPageRecordRender(record);
     }
-    if (!record?.renderTask || typeof record.renderTask.cancel !== 'function') {
-      record.renderTask = null;
-    } else {
-      try {
-        record.renderTask.cancel();
-      } catch {}
-      record.renderTask = null;
-    }
-    if (!record?.textLayerBuilder || typeof record.textLayerBuilder.cancel !== 'function') {
-      record.textLayerBuilder = null;
-      return;
-    }
-    try {
-      record.textLayerBuilder.cancel();
-    } catch {}
-    record.textLayerBuilder = null;
   });
 }
 
@@ -92,7 +137,9 @@ export function buildPageRecords({ doc, pageMetrics = [] } = {}) {
       renderTask: null,
       textLayerBuilder: null,
       textSelectionCleanup: null,
-      renderedScale: 0
+      renderedScale: 0,
+      renderedTextScale: 0,
+      renderedLinkScale: 0
     };
   });
 }
@@ -121,21 +168,6 @@ export function attachPageRecords({ pageLayer, pageRecords = [] } = {}) {
     }
   });
   pageLayer.replaceChildren(fragment);
-}
-
-export function ensurePageRecords({ pageLayer, pageMetrics = [] } = {}) {
-  if (!pageLayer) {
-    return [];
-  }
-
-  const doc = pageLayer.ownerDocument || (typeof document !== 'undefined' ? document : null);
-  if (!doc?.createElement) {
-    return [];
-  }
-
-  const records = buildPageRecords({ doc, pageMetrics });
-  attachPageRecords({ pageLayer, pageRecords: records });
-  return records;
 }
 
 export function applyPageSizing({ pageRecords = [], scale } = {}) {

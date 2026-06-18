@@ -5,6 +5,7 @@ const path = require('node:path');
 const { Buffer } = require('node:buffer');
 const { buildPdfMarkdownFromExtraction } = require('../../main/pdf-to-md.js');
 const { joinTextItems, stripRunningHeadersAndFooters } = require('../../main/pdf-text-layout.js');
+const { extractFiguresFromPdfDocument } = require('../../main/pdf-figure-extraction.js');
 
 const PDF_TEXT_EXTRACTION_ACTIONS = Object.freeze({
   EXTRACT: 'extract'
@@ -145,6 +146,23 @@ function numberOrDefault(value, fallback) {
 function installPdfJsNodePolyfills() {
   if (typeof globalThis.DOMMatrix === 'undefined') {
     globalThis.DOMMatrix = PdfTextDomMatrix;
+  }
+  // pdf.js 4+ relies on the TC39 stage-3 `Map.prototype.getOrInsertComputed`,
+  // which Node does not yet ship. Without this polyfill `getOperatorList()`
+  // (and therefore figure extraction) throws on every call.
+  if (typeof Map.prototype.getOrInsertComputed !== 'function') {
+    Object.defineProperty(Map.prototype, 'getOrInsertComputed', {
+      value(key, callbackfn) {
+        if (this.has(key)) {
+          return this.get(key);
+        }
+        const value = callbackfn(key);
+        this.set(key, value);
+        return value;
+      },
+      writable: true,
+      configurable: true
+    });
   }
 }
 
@@ -634,6 +652,17 @@ function createPdfTextExtractionRuntime(deps = {}) {
     const includeMarkdown = source.include_markdown === true
       || source.includeMarkdown === true
       || cleanText(source.output_format || source.outputFormat, 80).toLowerCase() === 'markdown';
+    const figuresOutputDir = cleanText(source.figures_output_dir || source.figuresOutputDir, 4000);
+    const figureMinDimension = normalizeInteger(
+      source.figure_min_dimension || source.figureMinDimension,
+      32,
+      { min: 1, max: 10000 }
+    );
+    const figureMinPixels = normalizeInteger(
+      source.figure_min_pixels || source.figureMinPixels,
+      figureMinDimension * figureMinDimension,
+      { min: 1, max: 100000000 }
+    );
 
     let pdfBuffer;
     try {
@@ -799,6 +828,24 @@ function createPdfTextExtractionRuntime(deps = {}) {
         }
       }
 
+      let figures;
+      let figuresError = '';
+      if (figuresOutputDir) {
+        try {
+          figures = await extractFiguresFromPdfDocument({
+            pdfDocument,
+            outputDir: figuresOutputDir,
+            startPage: start,
+            endPage: Math.min(lastTargetPage, end),
+            minDimension: figureMinDimension,
+            minPixels: figureMinPixels
+          });
+        } catch (error) {
+          figures = [];
+          figuresError = cleanText(error?.message || error, 1200) || 'Figure extraction failed.';
+        }
+      }
+
       const result = {
         ok: true,
         status: 'completed',
@@ -815,8 +862,11 @@ function createPdfTextExtractionRuntime(deps = {}) {
         pages: includePages ? internalPages : undefined,
         sections: includeSections ? sections : undefined,
         sections_source: includeSections ? sectionsSource : undefined,
+        figures: figuresOutputDir ? (figures || []) : undefined,
+        figures_output_dir: figuresOutputDir || undefined,
+        figures_error: figuresError || undefined,
         summary: internalPages.length || totalCharacters
-          ? `Extracted text from ${internalPages.length} page(s) (${totalCharacters} characters)${sections.length ? `, ${sections.length} section(s) via ${sectionsSource}` : ''}.`
+          ? `Extracted text from ${internalPages.length} page(s) (${totalCharacters} characters)${sections.length ? `, ${sections.length} section(s) via ${sectionsSource}` : ''}${figures?.length ? `, ${figures.length} figure(s)` : ''}.`
           : 'No extractable text was found in the PDF.'
       };
       if (includeMarkdown) {

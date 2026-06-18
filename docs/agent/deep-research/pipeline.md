@@ -95,11 +95,11 @@ The return payload keeps more internal structure than the shared science loop, i
 
 ## Important wiring note
 
-The deep-research architecture is coherent, but it still relies on the shared `runTool(...)` adapter supplied by the controller. In the current `main.js` wiring, the shared generic tool executor only has `notebook-draft` explicitly registered.
+The deep-research architecture relies on the shared `runTool(...)` adapter supplied by the controller. The shared generic tool executor now has the full tool suite registered (via `register-agent-tool-executors.js`) — inventory/record lookup, protocol matching, notebook generation/draft, web search, sub-agent, memory, literature search, paper download/search/analysis, purchase recommendation, protocol generation, python sandbox, and command line.
 
-So when you read the deep-research code, distinguish between:
+So when you read the deep-research code, keep in mind:
 
-- the intended workflow inside `deep-research/`
-- the subset of concrete tools that are already registered on the controller's shared executor
+- the orchestration workflow lives inside `deep-research/`
+- the concrete tools it can call are the ones registered on the controller's shared executor
 
 That distinction explains why the pipeline looks broader than the currently exposed main-path tool integration.

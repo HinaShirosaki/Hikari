@@ -37,26 +37,3 @@ export function getPdfCommentPinPosition(anchorX, anchorY) {
     top: `${(top * 100).toFixed(3)}%`
   };
 }
-
-export function getHighlightMarkerBox(box = {}) {
-  const left = clamp(Number(box.x) || 0, 0, 1);
-  const top = clamp(Number(box.y) || 0, 0, 1);
-  const width = clamp(Number(box.width) || 0, 0, 1);
-  const height = clamp(Number(box.height) || 0, 0, 1);
-  if (width <= 0 || height <= 0) {
-    return null;
-  }
-
-  const adjustedTop = clamp(top + (height * 0.3), 0, 1);
-  const adjustedBottom = clamp(top + (height * 1.02), 0, 1);
-  if (adjustedBottom <= adjustedTop) {
-    return null;
-  }
-
-  return {
-    left,
-    top: adjustedTop,
-    width: Math.min(width, 1 - left),
-    height: adjustedBottom - adjustedTop
-  };
-}

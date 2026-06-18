@@ -34,7 +34,7 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 | `runtime/agent-lookup-runtime.js` | Main path | controller-facing inventory/record lookup coordinator |
 | `runtime/agent-protocol-notebook.js` | Main path | protocol-to-notebook coordinator with pending-session state |
 | `runtime/agent-science-main-utils.js` | Support | science response shaping, project/paper evidence helpers |
-| `runtime/agent-science-reasoning-loop.js` | Main path | non-deep-research science loop |
+| `runtime/science-reasoning-loop/` | Main path | non-deep-research science loop (folder; entry `index.js`) |
 | `codex-agent/runtime.js` | Main path for Codex provider | Codex-only whole-turn runtime |
 | `codex-agent/runtime-files.js` | Support for Codex provider | AGENTS.md and Codex CLI MCP config writer |
 | `mcp-contract/` | Support | provider-neutral MCP stdio server, gateway, direct tools, and callback host |
@@ -48,18 +48,19 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 | `tools/agent-tool-loading.js` | Main path | loads tool catalog JSON, validates schemas, and builds model-facing prompts |
 | `tools/agent-tool-execution.js` | Main path | executor registry and normalized tool execution wrapper |
 | `tools/agent-tool-call.js` | Support | compatibility wrapper that re-exports the split loading/execution helpers |
+| `tools/register-agent-tool-executors.js` | Main path | registers the full tool suite on the shared `genericAgentToolRuntime` during assembly |
 | `tools/agent-inventory-lookup.js` | Main path | concrete inventory lookup logic |
 | `tools/agent-record-lookup.js` | Main path | concrete record lookup logic |
 | `tools/agent-protocol-matching.js` | Support | protocol ranking and tie-break selection |
 | `tools/agent-notebook-generation.js` | Support | placeholder resolution and notebook payload generation |
-| `tools/agent-notebook-draft.js` | Main path | planned notebook proposal flow; explicitly registered in `main.js` |
-| `tools/agent-literature-search.js` | Secondary | concrete retrieval tool; cataloged, smoke-tested, but not visibly registered on the shared executor |
-| `tools/agent-paper-download.js` | Secondary | action-based paper acquisition runtime |
-| `tools/agent-paper-analysis.js` | Secondary | paper summarization and protocol extraction |
-| `tools/agent-protocol-generation.js` | Secondary | deterministic protocol JSON normalization |
-| `tools/agent-protocol-save.js` | Secondary | persisted protocol save and renderer refresh bridge |
-| `tools/agent-sub-agent.js` | Secondary | action-based helper-agent runtime |
-| `tools/agent-python-sandbox.js` | Secondary | low-level sandbox plus managed supervisor wrapper |
+| `tools/agent-notebook-draft.js` | Main path | planned notebook proposal flow; explicitly registered during agent-service assembly (`create-main-agent-services.js`) |
+| `tools/agent-literature-search.js` | Main path | retrieval tool; registered as `literature-search` |
+| `tools/agent-paper-download.js` | Main path | action-based paper acquisition; registered as `paper-download` |
+| `tools/agent-paper-analysis.js` | Main path | paper summarization and protocol extraction; registered as `paper-analysis` |
+| `tools/agent-protocol-generation.js` | Main path | protocol JSON normalization; registered as `protocol-generation` |
+| `tools/agent-protocol-save.js` | Support | persisted protocol save and renderer refresh bridge |
+| `tools/agent-sub-agent.js` | Main path | action-based helper-agent runtime; registered as `sub-agent` |
+| `tools/agent-python-sandbox.js` | Main path | low-level sandbox plus managed supervisor; registered as `python-sandbox` |
 | `tools/agent-tool-smoke-test.js` | Main path | exposed through developer IPC for manual tool testing |
 
 ## Context
@@ -68,7 +69,7 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 | --- | --- | --- |
 | `context/agent-chat-log.js` | Main path | session storage, assistant message projection, chat history reads |
 | `context/agent-context-management.js` | Secondary | layered in-memory context runtime, not currently on the main chat flow |
-| `context/agent-memory.js` | Secondary | sparse long-term memory runtime, also not on the main chat flow |
+| `context/agent-memory.js` | Main path | sparse long-term memory runtime; wired into chat as the `memory` tool |
 
 ## Deep research
 
@@ -85,11 +86,19 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 | `deep-research/final-synthesis-quality.js` | Support | default outline and section validation helpers |
 | `deep-research/sub-agent-usage.js` | Support | delegation heuristics and completion-check helper |
 
+## Newer subsystems
+
+| Folder | Status | Notes |
+| --- | --- | --- |
+| `literature-search/` | Secondary | literature-search and Codex paper-context workflows |
+| `paper-intake/` | Secondary | paper intake pipeline, search, store, and MCP tools |
+| `skills/` | Secondary | agent skill runtime |
+
 ## Two good places to start in code
 
 If you want to read the code itself after this document set:
 
-1. `src/main/helpers/main/register-agent-ipc.js`
-2. `src/main/main.js`
+1. `src/main/ipc/register-agent-ipc/` (the `agent:chat` registrar folder)
+2. `src/main/core/start-hikari-main-core.js` (assembly via `createMainAgentServices(...)`)
 
-Those two files show how the pieces from `src/main/helpers/agent` are actually composed into the application's live request path.
+Those show how the pieces from `src/main/helpers/agent` are actually composed into the application's live request path.

@@ -1,4 +1,5 @@
 import { DEFAULT_MAX_RECORDS } from './constants.js';
+import { normalizeFeatureType } from './feature-types.js';
 import {
   clamp,
   detectSequenceFormat,
@@ -6,6 +7,7 @@ import {
   normalizeSequenceText,
   normalizeTopology
 } from './shared.js';
+import { postProcessAb1Trace } from './algorithms/ab1-trace-postprocess.js';
 
 function readAsciiString(bytes) {
   let result = '';
@@ -283,6 +285,18 @@ export function parseAb1Record(rawInput, options = {}) {
       .replace(/\.[^.]+$/u, '')
       .trim();
 
+    let processedTrace = trace;
+    if (trace && options?.postProcess !== false) {
+      try {
+        const processed = postProcessAb1Trace({ ...trace, sequence }, quality, options?.postProcessOptions || {});
+        if (processed) {
+          processedTrace = { ...trace, processed };
+        }
+      } catch (postProcessError) {
+        warnings.push(`AB1 post-processing skipped: ${postProcessError?.message || 'unknown error'}.`);
+      }
+    }
+
     return {
       format: 'ab1',
       records: [{
@@ -293,7 +307,7 @@ export function parseAb1Record(rawInput, options = {}) {
         topology: 'linear',
         sequence,
         quality,
-        trace,
+        trace: processedTrace,
         features: []
       }],
       warnings,
@@ -710,7 +724,7 @@ function parseGenBankFeatureEntries(featureBlock, sequenceLength) {
       return {
         id: `gbk_feature_${index + 1}`,
         name,
-        type: String(entry.type || 'misc_feature').toLowerCase(),
+        type: normalizeFeatureType(entry.type || 'misc_feature'),
         strand,
         description,
         ...(translation ? { translation } : {}),
@@ -856,7 +870,7 @@ function normalizeExternalFeature(feature, sequenceLength, index = 0) {
   return {
     id: String(feature.id || `external_feature_${index + 1}`),
     name: normalizeRecordName(feature.name || feature.label || `feature_${index + 1}`, `feature_${index + 1}`),
-    type: normalizeRecordName(feature.type || 'misc_feature', 'misc_feature').toLowerCase(),
+    type: normalizeFeatureType(feature.type || 'misc_feature'),
     strand,
     description: String(feature.description || ''),
     source: String(feature.source || 'external'),

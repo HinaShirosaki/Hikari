@@ -1,0 +1,77 @@
+/* Sequence Viewer colors.
+   These colors encode biological features, base traces, restrictions, and
+   selection states; keep them outside the shared product palette. */
+
+:root {
+  --sequence-viewer-control-muted: rgba(31, 49, 73, 0.72);
+  --sequence-viewer-control-ink: #1f3553;
+  --sequence-viewer-control-border: rgba(109, 141, 183, 0.34);
+  --sequence-viewer-control-surface: rgba(255, 255, 255, 0.88);
+  --sequence-viewer-blue-ink: #17385f;
+  --sequence-viewer-blue-muted: #36567e;
+  --sequence-viewer-blue-border-strong: rgba(43, 87, 154, 0.72);
+  --sequence-viewer-active-blue: rgba(33, 77, 145, 1);
+  --sequence-viewer-overlay: rgba(18, 34, 55, 0.24);
+  --sequence-viewer-overlay-soft: rgba(18, 34, 55, 0.18);
+  --sequence-viewer-overlay-shadow: rgba(18, 34, 55, 0.22);
+  --sequence-viewer-alert-surface: rgba(173, 47, 47, 0.07);
+  --sequence-viewer-alert-ring: rgba(173, 47, 47, 0.18);
+  --sequence-viewer-alert-border: rgba(173, 47, 47, 0.3);
+  --sequence-viewer-track-surface: #ffffff;
+  --sequence-viewer-track-border: #d6d6d6;
+  --sequence-viewer-track-grid: rgba(0, 0, 0, 0.12);
+  --sequence-viewer-active-ring: rgba(0, 0, 0, 0.26);
+  --sequence-viewer-axis-muted: #727272;
+  --sequence-viewer-selection-highlight-light: rgba(78, 127, 255, 0.22);
+  --sequence-viewer-selection-highlight-strong: rgba(78, 127, 255, 0.35);
+  --sequence-viewer-cursor: rgba(33, 77, 145, 0.96);
+  --sequence-viewer-mismatch-bg: rgba(208, 48, 48, 0.18);
+  --sequence-viewer-mismatch-ink: #a61717;
+  --sequence-viewer-mismatch-shadow: rgba(166, 23, 23, 0.22);
+  --sequence-viewer-aa-border: rgba(92, 132, 191, 0.28);
+  --sequence-viewer-aa-bg: rgba(92, 132, 191, 0.14);
+  --sequence-viewer-aa-ink: #355a8a;
+  --sequence-viewer-restriction-border: rgba(71, 101, 150, 0.86);
+  --sequence-viewer-restriction-bg: rgba(220, 236, 255, 0.18);
+  --sequence-viewer-restriction-line: rgba(49, 81, 133, 0.92);
+  --sequence-viewer-restriction-active-bg: rgba(186, 219, 255, 0.26);
+  --sequence-viewer-restriction-active-ink: #1f4275;
+  --sequence-viewer-restriction-active-line: rgba(20, 59, 120, 0.98);
+  --sequence-viewer-line-feature-border: rgba(104, 132, 173, 0.88);
+  --sequence-viewer-line-feature-ink: #14325a;
+  --sequence-viewer-base-a-stroke: #258d49;
+  --sequence-viewer-base-a-ink: #176a35;
+  --sequence-viewer-base-c-stroke: #2f6fec;
+  --sequence-viewer-base-t-stroke: #c7362f;
+  --sequence-viewer-builder-tag: #667553;
+  --sequence-viewer-builder-linker: #8a744b;
+  --sequence-viewer-builder-cleavage: #95604a;
+  --sequence-viewer-builder-feature: #2f6b7d;
+  --sequence-viewer-builder-custom: #6b5968;
+  --sequence-viewer-builder-poi: #49654a;
+  --sequence-viewer-night-border: rgba(186, 218, 255, 0.32);
+  --sequence-viewer-night-border-strong: rgba(186, 218, 255, 0.34);
+  --sequence-viewer-night-control: rgba(27, 40, 61, 0.62);
+  --sequence-viewer-night-control-strong: rgba(27, 40, 61, 0.72);
+  --sequence-viewer-night-muted: rgba(213, 234, 255, 0.82);
+  --sequence-viewer-night-text: rgba(236, 246, 255, 0.96);
+  --sequence-viewer-night-hover: rgba(171, 205, 245, 0.16);
+  --sequence-viewer-night-panel: rgba(20, 31, 48, 0.5);
+  --sequence-viewer-night-input: rgba(18, 30, 49, 0.9);
+  --sequence-viewer-night-overlay: rgba(3, 8, 18, 0.44);
+  --sequence-viewer-night-overlay-strong: rgba(3, 8, 18, 0.58);
+  --sequence-viewer-night-inset: rgba(255, 255, 255, 0.06);
+  --sequence-viewer-night-strong: rgba(199, 224, 255, 0.95);
+  --sequence-viewer-night-restriction-border: rgba(145, 186, 236, 0.92);
+  --sequence-viewer-night-restriction-bg: rgba(127, 178, 244, 0.15);
+  --sequence-viewer-night-restriction-line: rgba(174, 210, 255, 0.95);
+  --sequence-viewer-night-active-border: rgba(188, 218, 255, 0.98);
+  --sequence-viewer-night-active-bg: rgba(146, 198, 255, 0.28);
+  --sequence-viewer-night-feature-border: rgba(189, 220, 255, 0.78);
+  --sequence-viewer-night-feature-active-border: rgba(236, 248, 255, 0.98);
+  --sequence-viewer-night-feature-ring: rgba(198, 226, 255, 0.45);
+  --sequence-viewer-night-menu-item: rgba(39, 57, 92, 0.9);
+  --sequence-viewer-night-menu-hover: rgba(60, 85, 126, 0.96);
+  --sequence-viewer-night-shadow: rgba(12, 9, 7, 0.18);
+  --sequence-viewer-night-tooltip-base: #14110e;
+}

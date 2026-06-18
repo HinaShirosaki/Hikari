@@ -4,12 +4,12 @@ let activeToastTimer = 0;
 let activeToastFadeTimer = 0;
 
 function ensureToastElement() {
-  let toast = document.querySelector('[data-enana-transient-toast]');
+  let toast = document.querySelector('[data-hikari-transient-toast]');
   if (toast) {
     return toast;
   }
   toast = document.createElement('div');
-  toast.setAttribute('data-enana-transient-toast', 'true');
+  toast.setAttribute('data-hikari-transient-toast', 'true');
   toast.hidden = true;
   Object.assign(toast.style, {
     position: 'fixed',

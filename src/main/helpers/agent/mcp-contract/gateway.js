@@ -1,23 +1,7 @@
 'use strict';
 
-const {
-  AGENT_TOOL_CATALOG,
-  AGENT_TOOL_CALL_CATALOG,
-  normalizeToolArgumentsPayload,
-  resolveCanonicalToolName
-} = require('../tools/agent-tool-loading.js');
+const fs = require('node:fs/promises');
 const { createDirectMcpToolRouter } = require('./direct-tools/index.js');
-const { buildHikariAgentMcpInstructions } = require('./instructions.js');
-
-const CODEX_DIRECT_APP_TOOL_SEARCH_EXCLUSIONS = Object.freeze(new Set([
-  'inventory-lookup',
-  'notebook-draft',
-  'protocol-generation'
-]));
-
-function asArray(value) {
-  return Array.isArray(value) ? value : [];
-}
 
 function cleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -28,231 +12,40 @@ function cleanText(value, maxLength = 2000) {
   return limit > 0 ? text.slice(0, limit) : text;
 }
 
-function ensureObject(value) {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
-}
-
-function normalizeQuery(value = '') {
-  return cleanText(value, 500)
-    .toLowerCase()
-    .split(/[^a-z0-9]+/i)
-    .map((token) => token.trim())
-    .filter((token) => token.length >= 2)
-    .slice(0, 16);
-}
-
-function scoreText(text = '', tokens = []) {
-  if (!tokens.length) {
-    return 1;
-  }
-  const haystack = String(text || '').toLowerCase();
-  return tokens.reduce((score, token) => (haystack.includes(token) ? score + 1 : score), 0);
-}
-
-function getToolSchema(toolId) {
-  const canonical = resolveCanonicalToolName(toolId);
-  return canonical ? ensureObject(AGENT_TOOL_CALL_CATALOG[canonical]) : {};
-}
-
-function buildInputHint(toolId) {
-  const schema = ensureObject(getToolSchema(toolId).input_schema);
-  const properties = ensureObject(schema.properties);
-  const required = new Set(asArray(schema.required).map((key) => cleanText(key, 80)).filter(Boolean));
-  const keys = Object.keys(properties).slice(0, 7);
-  return keys.map((key) => (required.has(key) ? key : `${key}?`)).join(', ');
-}
-
-function summarizeTool(entry) {
-  return {
-    tool_id: entry.name,
-    summary: cleanText(entry.description, 800),
-    input_hint: buildInputHint(entry.name)
-  };
-}
-
-function isCodexBackedContext(context = {}) {
-  return cleanText(context.provider, 80).toLowerCase() === 'codex';
-}
-
-function getSearchableToolCatalog(context = {}) {
-  if (!isCodexBackedContext(context)) {
-    return AGENT_TOOL_CATALOG;
-  }
-  return AGENT_TOOL_CATALOG.filter((entry) => !CODEX_DIRECT_APP_TOOL_SEARCH_EXCLUSIONS.has(entry.name));
-}
-
 function createAgentMcpGateway(deps = {}) {
+  const env = deps.env && typeof deps.env === 'object' ? deps.env : process.env;
   const runTool = typeof deps.runTool === 'function'
     ? deps.runTool
     : null;
-  const directToolRouter = createDirectMcpToolRouter({
-    runTool
-  });
 
-  function toolSearch(input = {}, context = {}) {
-    const tokens = normalizeQuery(input.query);
-    const limit = Math.max(1, Math.min(30, Number(input.limit) || 8));
-    const results = getSearchableToolCatalog(context)
-      .map((entry) => {
-        const schema = getToolSchema(entry.name);
-        return {
-          entry,
-          score: scoreText([
-            entry.name,
-            entry.description,
-            schema.description,
-            buildInputHint(entry.name)
-          ].join(' '), tokens)
-        };
-      })
-      .filter((row) => !tokens.length || row.score > 0)
-      .sort((left, right) => right.score - left.score || left.entry.name.localeCompare(right.entry.name))
-      .slice(0, limit)
-      .map((row) => summarizeTool(row.entry));
+  function buildDirectRouterDeps(context = {}) {
+    const safeContext = context && typeof context === 'object' && !Array.isArray(context)
+      ? context
+      : {};
+    const workspacePath = cleanText(
+      deps.workspacePath
+        || deps.workspace_path
+        || env.HIKARI_AGENT_MCP_WORKSPACE
+        || env.HIKARI_CODEX_WORKSPACE
+        || safeContext.cwd
+        || safeContext.workspacePath
+        || safeContext.workspace_path,
+      2400
+    );
     return {
-      ok: true,
-      results
+      ...deps,
+      runTool,
+      fs: deps.fs || fs,
+      workspacePath
     };
   }
 
-  function toolInfo(input = {}) {
-    const toolId = resolveCanonicalToolName(input.tool_id || input.toolId);
-    const entry = AGENT_TOOL_CATALOG.find((candidate) => candidate.name === toolId);
-    if (!entry) {
-      return {
-        ok: false,
-        error: `Unknown tool_id "${cleanText(input.tool_id || input.toolId, 160) || 'unknown'}".`
-      };
-    }
-    const detailLevel = cleanText(input.detail_level || input.detailLevel || 'summary', 40);
-    const schema = getToolSchema(toolId);
-    return {
-      ok: true,
-      detail_level: detailLevel,
-      tool: {
-        ...summarizeTool(entry),
-        detailed_description: cleanText(schema.description, 2400),
-        ...(['schema', 'full'].includes(detailLevel) ? {
-          input_schema: cloneJson(schema.input_schema, {}),
-          schema_defs: cloneJson(AGENT_TOOL_CALL_CATALOG.$defs, {})
-        } : {})
-      }
-    };
-  }
-
-  async function toolCall(input = {}, context = {}) {
-    const toolId = resolveCanonicalToolName(input.tool_id || input.toolId);
-    if (!toolId) {
-      return {
-        ok: false,
-        status: 'invalid_tool',
-        error: `Unknown tool_id "${cleanText(input.tool_id || input.toolId, 160) || 'unknown'}".`
-      };
-    }
-    const normalized = normalizeToolArgumentsPayload({
-      tool_calls: [{
-        tool_name: toolId,
-        arguments: ensureObject(input.args)
-      }]
-    }, {
-      selectedToolNames: [toolId]
-    });
-    if (!normalized.ok) {
-      return {
-        ok: false,
-        status: 'invalid_arguments',
-        tool_id: toolId,
-        error: normalized.error
-      };
-    }
-    if (!runTool) {
-      return {
-        ok: false,
-        status: 'executor_unavailable',
-        tool_id: toolId,
-        error: 'Hikari MCP tool execution is not connected to a host app runtime yet.'
-      };
-    }
-    const result = await runTool(toolId, normalized.payload.tool_calls[0].arguments, ensureObject(context.snapshot), context);
-    return {
-      ok: result?.ok !== false,
-      status: result?.ok === false ? 'failed' : 'completed',
-      tool_id: toolId,
-      output: cloneJson(result, result)
-    };
-  }
-
-  function resourceSearch(input = {}) {
-    const tokens = normalizeQuery(input.query);
-    const resources = [
-      {
-        uri: 'hikari://instructions/agent-mcp',
-        name: 'Agent MCP instructions',
-        description: 'Provider-neutral Hikari MCP usage rules for direct tools, broader tool calls, and resources.'
-      },
-      ...AGENT_TOOL_CATALOG.map((entry) => ({
-        uri: `hikari://tool/${entry.name}`,
-        name: `${entry.name} tool manifest`,
-        description: entry.description
-      }))
-    ];
-    return {
-      ok: true,
-      results: resources
-        .map((resource) => ({
-          resource,
-          score: scoreText(`${resource.name} ${resource.description} ${resource.uri}`, tokens)
-        }))
-        .filter((row) => !tokens.length || row.score > 0)
-        .sort((left, right) => right.score - left.score)
-        .slice(0, Math.max(1, Math.min(40, Number(input.limit) || 10)))
-        .map((row) => row.resource)
-    };
-  }
-
-  function resourceRead(input = {}) {
-    const uri = cleanText(input.uri, 1000);
-    if (
-      uri === 'hikari://instructions/agent-mcp'
-      || uri === 'enana://instructions/agent-mcp'
-      || uri === 'hikari://instructions/codex-agent'
-      || uri === 'enana://instructions/codex-agent'
-    ) {
-      return {
-        ok: true,
-        uri,
-        mimeType: 'text/markdown',
-        contents: buildHikariAgentMcpInstructions()
-      };
-    }
-    const toolMatch = uri.match(/^(?:hikari|enana):\/\/tool\/(.+)$/i);
-    if (toolMatch) {
-      return {
-        ok: true,
-        uri,
-        mimeType: 'application/json',
-        contents: toolInfo({ tool_id: toolMatch[1], detail_level: 'full' })
-      };
-    }
-    return {
-      ok: false,
-      uri,
-      error: `Resource "${uri || 'unknown'}" is not available.`
-    };
-  }
+  const directToolRouter = createDirectMcpToolRouter(buildDirectRouterDeps());
 
   async function callGatewayTool(name = '', args = {}, context = {}) {
     const toolName = cleanText(name, 120);
     if (directToolRouter.hasTool(toolName)) {
-      return directToolRouter.callTool(toolName, args, context);
+      return createDirectMcpToolRouter(buildDirectRouterDeps(context)).callTool(toolName, args, context);
     }
     return {
       ok: false,
@@ -261,12 +54,7 @@ function createAgentMcpGateway(deps = {}) {
   }
 
   return {
-    callGatewayTool,
-    toolSearch,
-    toolInfo,
-    toolCall,
-    resourceSearch,
-    resourceRead
+    callGatewayTool
   };
 }
 

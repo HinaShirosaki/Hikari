@@ -130,11 +130,31 @@ function registerDataIpc(deps = {}) {
     throw new Error('Unable to find a unique file name for imported file.');
   }
 
+  function normalizeImportedDataBytes(value) {
+    if (!value) {
+      return null;
+    }
+    if (Buffer.isBuffer(value)) {
+      return value;
+    }
+    if (value instanceof ArrayBuffer) {
+      return Buffer.from(value);
+    }
+    if (ArrayBuffer.isView(value)) {
+      return Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+    }
+    if (Array.isArray(value?.data)) {
+      return Buffer.from(value.data);
+    }
+    return null;
+  }
+
   async function storeImportedFile(payload) {
     const storagePath = String(payload?.storagePath || '').trim();
     const targetFolderInput = String(payload?.targetFolder || '').trim();
     const fileName = sanitizeImportedFileName(payload?.fileName);
     const dataBase64 = String(payload?.dataBase64 || '').trim();
+    const dataBytes = normalizeImportedDataBytes(payload?.dataBytes);
 
     if (!storagePath) {
       throw new Error('Missing storage path.');
@@ -142,7 +162,7 @@ function registerDataIpc(deps = {}) {
     if (!targetFolderInput) {
       throw new Error('Missing target folder.');
     }
-    if (!dataBase64) {
+    if (!dataBase64 && !dataBytes?.byteLength) {
       throw new Error('Missing imported file data.');
     }
 
@@ -151,7 +171,7 @@ function registerDataIpc(deps = {}) {
     await fs.mkdir(resolvedTargetFolder, { recursive: true });
 
     const targetFilePath = await getUniqueFilePath(resolvedTargetFolder, fileName);
-    const binary = Buffer.from(dataBase64, 'base64');
+    const binary = dataBytes?.byteLength ? dataBytes : Buffer.from(dataBase64, 'base64');
     await fs.writeFile(targetFilePath, binary);
     let paperMarkdown = null;
     if (payload?.transformPdfToMarkdown === true && /\.pdf$/i.test(targetFilePath)) {
@@ -378,6 +398,30 @@ function registerDataIpc(deps = {}) {
       return { ok: false, error: String(error) };
     }
     return { ok: true, path: resolvedPath };
+  });
+
+  ipcMain.handle(STORAGE.READ_FILE_BYTES, async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
+    if (!targetPath) {
+      return { ok: false, error: 'Missing file path.' };
+    }
+
+    const resolvedPath = path.resolve(targetPath);
+    try {
+      const bytes = await fs.readFile(resolvedPath);
+      return {
+        ok: true,
+        path: resolvedPath,
+        bytes: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: String(error?.message || error),
+        path: resolvedPath
+      };
+    }
   });
 
   ipcMain.handle(STORAGE.READ_FILE_BASE64, async (_event, payload) => {

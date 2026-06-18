@@ -1,12 +1,11 @@
 import { fillCellPassage, readCellPassage, renderCellPassageFields } from './cell-passage.js';
-import { closeCompoundDialog, renderCompoundFields } from './compound-dialog.js';
+import { renderCompoundFields } from './compound-dialog.js';
 import {
   emptyCompoundStructureDraft,
   isChemicalStructureSampleType,
   normalizeCompoundStructureData,
   toCompoundStructureDraft
 } from './compound-model.js';
-import { captureCompoundStructureFromEditor, clearCompoundCanvas } from './compound-ketcher.js';
 import {
   buildLocationFromInventoryLink,
   findLinkedContainer,
@@ -21,6 +20,7 @@ import {
   ensureSampleState,
   makeDefaultCode,
   normalizeCode,
+  renderSampleTypeOptions,
   setMultiSelectValues
 } from './sample-utils.js';
 
@@ -33,14 +33,14 @@ export async function onSubmit(ctx, event) {
   const name = sampleNameInput.value.trim();
   const code = normalizeCode(sampleCodeInput.value) || makeDefaultCode();
   if (!name) {
-    return;
+    return null;
   }
 
   const editingId = sampleIdInput.value;
   const existing = ctx.state.samples.find((item) => item.id === editingId);
   const duplicateCode = ctx.state.samples.find((item) => item.code === code && item.id !== editingId);
   if (duplicateCode) {
-    return;
+    return null;
   }
 
   const linkedContainer = findLinkedContainer(ctx, sampleLinkContainerInput?.value);
@@ -55,14 +55,9 @@ export async function onSubmit(ctx, event) {
   const isCellLine = sampleType === 'cell_line';
 
   if (isChemicalStructureSample) {
-    try {
-      await captureCompoundStructureFromEditor(ctx);
-    } catch {
-      ctx.setCompoundStatus('Ketcher is not ready. Saving sample with last captured structure.', true);
-    }
+    ctx.compoundStructureDraft = toCompoundStructureDraft(ctx.compoundStructureDraft);
   } else {
     ctx.compoundStructureDraft = emptyCompoundStructureDraft();
-    closeCompoundDialog(ctx);
   }
 
   const resolvedStructure = isChemicalStructureSample
@@ -109,15 +104,16 @@ export async function onSubmit(ctx, event) {
   }
   resetForm(ctx);
   renderList(ctx);
+  return record;
 }
 
 export function resetForm(ctx) {
   const { sampleForm, sampleIdInput, sampleLinkPositionInput, sampleNotesInput, sampleSearchInput, sampleStorageTypeInput } = ctx.dom;
   sampleIdInput.value = '';
   sampleForm.reset();
+  renderSampleTypeOptions(ctx);
   sampleStorageTypeInput.value = 'freezer';
   ctx.compoundStructureDraft = emptyCompoundStructureDraft();
-  closeCompoundDialog(ctx);
   if (sampleNotesInput) {
     sampleNotesInput.placeholder = '';
   }
@@ -130,10 +126,10 @@ export function resetForm(ctx) {
   fillCellPassage(ctx, null);
   renderCellPassageFields(ctx);
   renderCompoundFields(ctx);
-  clearCompoundCanvas(ctx).catch(() => {});
   if (sampleSearchInput && ctx.clearSearchOnReset) {
     sampleSearchInput.value = '';
   }
+  ctx.markDraftSaved?.();
 }
 
 export function editSample(ctx, sampleId) {
@@ -147,12 +143,12 @@ export function editSample(ctx, sampleId) {
   sampleIdInput.value = sample.id;
   sampleCodeInput.value = sample.code || '';
   sampleNameInput.value = sample.name || '';
+  renderSampleTypeOptions(ctx);
   sampleTypeInput.value = isChemicalStructureSampleType(sample.type) ? 'chemical' : (sample.type || 'plasmid');
   sampleLotInput.value = sample.lot || '';
   sampleConcentrationInput.value = sample.concentration || '';
   sampleNotesInput.value = sample.notes || '';
   ctx.compoundStructureDraft = toCompoundStructureDraft(sample.compoundStructure);
-  closeCompoundDialog(ctx);
   renderLinkedContainerOptions(ctx);
   renderChemicalLinkOptions(ctx);
   sampleLinkContainerInput.value = sample.inventoryLink
@@ -170,6 +166,7 @@ export function editSample(ctx, sampleId) {
   renderCellPassageFields(ctx);
   renderCompoundFields(ctx);
   renderList(ctx);
+  ctx.markDraftSaved?.();
 }
 
 export function deleteSample(ctx, sampleId) {

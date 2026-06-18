@@ -11,20 +11,26 @@ export function getViewerToolLabel(tool = '') {
   if (tool === 'ladder') {
     return 'Set ladder lane';
   }
+  if (tool === 'lane-vertices') {
+    return 'Adjust lane vertices';
+  }
+  if (tool === 'band-top') {
+    return 'Set band top line';
+  }
+  if (tool === 'band-bottom') {
+    return 'Set band bottom line';
+  }
   return '';
 }
 
-export function renderViewerToolbar(elements, selectedViewerTool) {
+export function renderViewerToolbar(elements, selectedViewerTool, laneBandMode = false) {
   elements.gelToolLeftBorderBtn?.classList.toggle('is-active', selectedViewerTool === 'left');
   elements.gelToolRightBorderBtn?.classList.toggle('is-active', selectedViewerTool === 'right');
   elements.gelToolDividersBtn?.classList.toggle('is-active', selectedViewerTool === 'dividers');
   elements.gelToolLadderLaneBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder');
-}
-
-export function updateStepClass(element, state) {
-  if (!element) {
-    return;
-  }
-  element.classList.toggle('is-active', state === 'active');
-  element.classList.toggle('is-done', state === 'done');
+  elements.gelToolLaneVerticesBtn?.classList.toggle('is-active', selectedViewerTool === 'lane-vertices');
+  elements.gelToolBandTopBtn?.classList.toggle('is-active', selectedViewerTool === 'band-top');
+  elements.gelToolBandBottomBtn?.classList.toggle('is-active', selectedViewerTool === 'band-bottom');
+  elements.gelLaneBandModeBtn?.classList.toggle('is-active', Boolean(laneBandMode));
+  elements.gelLaneBandModeBtn?.setAttribute?.('aria-pressed', String(Boolean(laneBandMode)));
 }

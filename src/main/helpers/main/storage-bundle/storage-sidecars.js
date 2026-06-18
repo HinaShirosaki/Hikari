@@ -4,6 +4,11 @@ const fs = require('fs/promises');
 const path = require('path');
 const { getBundlePaths } = require('./storage-paths');
 const {
+  releaseOfficialMcpSkillsForWorkspace
+} = require('../../agent/codex-agent/official-mcp-skills.js');
+const {
+  CODEX_AGENTS_FOLDER_NAME,
+  CODEX_SKILLS_FOLDER_NAME,
   MEMORY_FILE_NAME,
   buildProjectMemoryMarkdown,
   collectProjectMemoryRecords
@@ -12,24 +17,14 @@ const {
   writeChemicalSqliteBundleIndex,
   writeSqliteBundleIndex
 } = require('./storage-sql-write');
-const { asArray, cleanText, ensureObject } = require('./storage-utils');
+const { asArray, cleanText, ensureObject, sanitizeFolderName } = require('./storage-utils');
 const { syncWorkflowRootFromSnapshot } = require('./workflow-storage');
 
-const PROTOCOL_SIDECAR_SCHEMA = 'enana_protocols';
-const NOTEBOOK_SIDECAR_SCHEMA = 'enana_notebook_pages';
-const SAMPLE_SIDECAR_SCHEMA = 'enana_samples';
+const PROTOCOL_SIDECAR_SCHEMA = 'hikari_protocols';
+const NOTEBOOK_SIDECAR_SCHEMA = 'hikari_notebook_pages';
+const SAMPLE_SIDECAR_SCHEMA = 'hikari_samples';
 const SIDECAR_SCHEMA_VERSION = '1.0.0';
 const PROTOCOL_FILE_NAME = 'protocol.json';
-
-function sanitizeFolderName(value, fallback = 'item') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
-  return cleaned || fallback;
-}
 
 function buildProtocolFolderName(protocol, index = 0) {
   const source = ensureObject(protocol);
@@ -186,6 +181,8 @@ async function writeProjectMemoryFiles(storageRootPath, snapshot) {
     const folderPath = path.join(projectRootPath, cleanText(projectRecord.folderName, 320) || 'Untitled_Project');
     const filePath = path.join(folderPath, MEMORY_FILE_NAME);
     await fs.mkdir(folderPath, { recursive: true });
+    await fs.mkdir(path.join(folderPath, CODEX_AGENTS_FOLDER_NAME, CODEX_SKILLS_FOLDER_NAME), { recursive: true });
+    await releaseOfficialMcpSkillsForWorkspace(folderPath);
     await fs.writeFile(filePath, buildProjectMemoryMarkdown(projectRecord), 'utf8');
     writtenPaths.push(filePath);
   }
@@ -226,6 +223,7 @@ async function syncBundleFromSnapshot({
   }
   const updatedAt = new Date().toISOString();
   await fs.mkdir(storageRootPath, { recursive: true });
+  await releaseOfficialMcpSkillsForWorkspace(storageRootPath);
   if (bundlePaths.dataFilePath) {
     await fs.mkdir(path.dirname(bundlePaths.dataFilePath), { recursive: true });
   }

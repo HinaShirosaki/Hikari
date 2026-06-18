@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SESSION_NAME="${ENANA_TG_SESSION_NAME:-enana-telegram-bot}"
+SESSION_NAME="${HIKARI_TG_SESSION_NAME:-hikari-telegram-bot}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 LOG_DIR="${PROJECT_DIR}/data"
@@ -14,7 +14,7 @@ usage() {
 Usage: scripts/telegram-bot-tmux.sh <start|stop|restart|status|attach|logs>
 
 Commands:
-  start    Start Enana in a detached tmux session with caffeinate.
+  start    Start Hikari in a detached tmux session with caffeinate.
   stop     Stop the tmux session.
   restart  Restart the tmux session.
   status   Show tmux session status.

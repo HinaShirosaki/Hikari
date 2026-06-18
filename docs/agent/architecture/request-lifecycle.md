@@ -1,21 +1,23 @@
 # Request Lifecycle
 
-This is the shortest path to understanding the agent package: start at `src/main/main.js`, then follow the call into `src/main/helpers/main/register-agent-ipc.js`.
+This is the shortest path to understanding the agent package: start at `src/main/core/main-service-catalog.js`, then follow the `agent-foundation`, `mcp`, `codex`, `agent-controllers`, and `agent-ipc` definitions.
 
-## Assembly in `main.js`
+## Assembly in the service catalog
 
-`main.js` does not contain the routing logic itself. Instead, it assembles the agent backend by:
+`main.js` is a thin 5-line entry. The main service catalog assembles the agent backend by:
 
-- creating shared helpers such as `controllerUtils`, `observability`, `agentRuntimeRegistry`, and `agentRuntimeSupport`
+- calling `createMainAgentServices(...)` (`src/main/helpers/main/create-main-agent-services.js`), which builds provider-neutral helpers such as `controllerUtils`, `observability`, `agentRuntimeRegistry`, and `agentRuntimeSupport`
 - creating intent-specific runtimes such as lookup, protocol-notebook, notebook-draft, science-loop, and deep-research
 - creating the generic tool-call runtime and exposing it as `agentToolRuntime`
-- passing all of those objects into `registerAgentIpc(...)`
+- constructing MCP from the shared tool executor
+- constructing Codex from the MCP service and shared agent foundation
+- passing the completed dependency bag directly to `registerAgentIpc(...)` from the `agent-ipc` adapter service
 
 That means `src/main/helpers/agent` is best read as a set of factories plus helper modules, not as a single monolithic controller.
 
 ## Entry point: `agent:chat`
 
-The main IPC entry point is `ipcMain.handle('agent:chat', ...)` in `src/main/helpers/main/register-agent-ipc.js`.
+The main IPC entry point is `ipcMain.handle(AGENT.CHAT, ...)` registered from `src/main/ipc/register-agent-ipc/agent-chat-handler.js` (the registrar folder's `index.js` composes the chat, log, lifecycle, and controller-core pieces).
 
 Before the controller runs, the handler:
 
@@ -51,9 +53,9 @@ If the parser fails, the request stops there and returns an error envelope.
 | `inventory_lookup` | direct lookup | `runtime/agent-lookup-runtime.js` |
 | `record_lookup` | direct lookup | `runtime/agent-lookup-runtime.js` |
 | `notebook_draft` | shared tool wrapper calling one registered executor | `tools/agent-notebook-draft.js` |
-| `general_science_question` | science mode | `runtime/agent-science-reasoning-loop.js` or `deep-research/index.js` |
-| `project_science_question` | science mode | `runtime/agent-science-reasoning-loop.js` or `deep-research/index.js` |
-| `result_analysis` | science mode | `runtime/agent-science-reasoning-loop.js` or `deep-research/index.js` |
+| `general_science_question` | science mode | `runtime/science-reasoning-loop/index.js` or `deep-research/index.js` |
+| `project_science_question` | science mode | `runtime/science-reasoning-loop/index.js` or `deep-research/index.js` |
+| `result_analysis` | science mode | `runtime/science-reasoning-loop/index.js` or `deep-research/index.js` |
 | anything else | parser-only result | no further specialized runtime |
 
 ## Protocol-to-notebook path
@@ -85,7 +87,7 @@ Both paths:
 
 ## Notebook-draft path
 
-This branch uses the generic tool-call runtime, but only because `main.js` explicitly registers a `notebook-draft` executor.
+This branch uses the generic tool-call runtime. `notebook-draft` is one of the executors registered on the shared runtime by `register-agent-tool-executors.js`.
 
 The flow is:
 

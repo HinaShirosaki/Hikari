@@ -2,9 +2,11 @@
 
 The data-persistence story in `src/main/helpers/main` is built around a compact primary snapshot plus heavier sidecars.
 
+> Layout note: `data-helpers.js` and `data-snapshot-utils.js` now live under `helpers/main/data/`, and the persistence engine is the `helpers/main/storage-bundle/` folder (entry: `storage-bundle/index.js`).
+
 ## The compact snapshot
 
-`data-snapshot-utils.js` exports `buildCompactIndexedSnapshot(snapshot)`.
+`data/data-snapshot-utils.js` exports `buildCompactIndexedSnapshot(snapshot)`.
 
 Its job is to strip the heavy searchable data out of the main JSON file before it is written. In practice it:
 
@@ -16,9 +18,9 @@ Its job is to strip the heavy searchable data out of the main JSON file before i
 - clears `inventory`
 - keeps lightweight bundle metadata under `data_bundle`
 
-This is the snapshot shape written by `main.js`.
+This is the snapshot shape written by the persistence facade.
 
-## The high-level facade: `data-helpers.js`
+## The high-level facade: `data/data-helpers.js`
 
 `createMainDataHelpers(...)` is the small facade used by `register-data-ipc.js`.
 
@@ -36,9 +38,9 @@ Internally those all funnel into:
 
 The key detail is that persistence is not “write one JSON file and stop.” A save also syncs the bundle sidecars and SQLite index through `syncBundleFromSnapshot(...)`.
 
-## `storage-bundle.js` is the real persistence engine
+## `storage-bundle/` is the real persistence engine
 
-This file defines the on-disk bundle layout.
+This folder defines the on-disk bundle layout. Its work is split across focused modules — `storage-paths.js`, `storage-sidecars.js`, `storage-manifest.js`, `storage-hydration.js`, `storage-import.js`, the `storage-sql-read/write/schema.js` trio, `workflow-storage.js`, and `paper-discovery.js` — re-exported from `storage-bundle/index.js`.
 
 Given a base data file, it derives:
 
@@ -47,9 +49,9 @@ Given a base data file, it derives:
 - `*.index.sqlite`
 - `Samples/samples.json`
 
-`getBundlePaths(...)` is the shared path builder used throughout the rest of the file.
+`getBundlePaths(...)` is the shared path builder used throughout the folder. The manifest helper exports `STORAGE_MANIFEST_FILE_NAME` (`hikari-storage-manifest.json`), and the layout has grown additional sidecars such as `protocol/protocol.index.sqlite` and a `knowledgebase/knowledge.index.sqlite`. A separate `workflow-storage.js` syncs and imports a workflow root alongside the main bundle.
 
-For the standalone Chemicals workspace, the app now also supports a SQLite-only bundle at `hikari-chemicals.index.sqlite` without requiring a sibling `hikari-chemicals.ena.json`. Legacy `enana-chemicals.index.sqlite` bundles are still recognized on import.
+For the standalone Chemicals workspace, the app now also supports a SQLite-only bundle at `hikari-chemicals.index.sqlite` without requiring a sibling `hikari-chemicals.ena.json`. 
 
 ## Write path
 

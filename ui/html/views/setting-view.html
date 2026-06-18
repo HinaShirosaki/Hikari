@@ -26,9 +26,21 @@
               <span>Inventory Locations</span>
               <small>Shared location vocabulary</small>
             </button>
+            <button type="button" class="settings-nav-item" data-settings-target="sample-inventory">
+              <span>Sample &amp; Inventory</span>
+              <small>Storage locations and type names</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="preferred-journal">
+              <span>Preferred Journal</span>
+              <small>Default journal name or URL</small>
+            </button>
             <button type="button" class="settings-nav-item" data-settings-target="llm">
               <span>LLM Model &amp; Access</span>
               <small>Provider, model, endpoint</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="skills">
+              <span>External Skills</span>
+              <small>Agent skill files</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="telegram">
               <span>Telegram Bot</span>
@@ -135,6 +147,47 @@
               </div>
             </section>
 
+            <section class="settings-section" data-settings-panel="sample-inventory" hidden>
+              <div class="settings-section-head">
+                <h3>Sample &amp; Inventory</h3>
+                <p class="small-note">Configure sample storage sections and the visible names for sample types.</p>
+              </div>
+              <div class="stack-form">
+                <div class="settings-subsection">
+                  <h4>Storage Locations</h4>
+                  <div class="inline-row settings-location-entry">
+                    <input id="setting-sample-inventory-location-input" placeholder="Add sample storage location" />
+                    <button type="button" id="setting-sample-inventory-location-add-btn" class="ghost-btn">Add Location</button>
+                  </div>
+                  <div id="setting-sample-inventory-location-list" class="stack-form"></div>
+                </div>
+                <form id="sample-type-labels-form" class="stack-form settings-subsection">
+                  <h4>Sample Type Names</h4>
+                  <div id="setting-sample-type-label-list" class="settings-sample-type-label-list"></div>
+                  <div class="form-actions">
+                    <button type="submit" class="primary-btn">Save Type Names</button>
+                  </div>
+                </form>
+              </div>
+            </section>
+
+            <section class="settings-section" data-settings-panel="preferred-journal" hidden>
+              <div class="settings-section-head">
+                <h3>Preferred Journal</h3>
+                <p class="small-note">Set the journal you most often submit to or browse. Enter a journal name (e.g. <em>Nature Chemistry</em>) or a URL (e.g. <em>https://www.nature.com/nchem/</em>).</p>
+              </div>
+              <form id="preferred-journal-form" class="stack-form">
+                <label>
+                  Journal Name or URL
+                  <input id="setting-preferred-journal" placeholder="Journal name or https://..." />
+                </label>
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn">Save Preferred Journal</button>
+                  <button type="button" id="clear-preferred-journal-btn" class="ghost-btn">Clear</button>
+                </div>
+              </form>
+            </section>
+
             <section class="settings-section" data-settings-panel="llm" hidden>
               <div class="settings-section-head">
                 <h3>LLM Model &amp; Access</h3>
@@ -179,6 +232,24 @@
                 </div>
               </form>
             </section>
+
+          <section class="settings-section" data-settings-panel="skills" hidden>
+            <div class="settings-section-head">
+              <h3>External Skills</h3>
+              <p class="small-note">View discovered skill files and control which ones the agent may use.</p>
+            </div>
+            <div class="stack-form">
+              <label class="inline-row settings-switch-row">
+                <input id="setting-agent-external-skills-enabled" type="checkbox" />
+                External skills enabled
+              </label>
+              <p id="setting-external-skills-status" class="small-note">External skills: loading...</p>
+              <div class="form-actions">
+                <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn">Refresh Skills</button>
+              </div>
+              <div id="setting-external-skills-list" class="settings-skill-list" aria-live="polite"></div>
+            </div>
+          </section>
 
           <section class="settings-section" data-settings-panel="telegram" hidden>
             <div class="settings-section-head">

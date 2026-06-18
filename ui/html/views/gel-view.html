@@ -38,10 +38,6 @@
               <input id="gel-ladder-lane" type="number" min="1" step="1" value="1" />
             </label>
             <label>
-              Ladder Band MW (kDa)
-              <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="Use in Step 5, e.g. 50" />
-            </label>
-            <label>
               Normalization
               <select id="gel-normalization">
                 <option value="none">None</option>
@@ -86,11 +82,6 @@
                   <button type="button" id="gel-rotate-right-btn" class="ghost-btn" disabled title="Rotate 90° clockwise">Rotate ↻</button>
                   <button type="button" id="gel-process-image-btn" class="ghost-btn">Process Image</button>
                   <button type="button" id="gel-view-original-btn" class="ghost-btn" aria-pressed="true">View Original</button>
-                  <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
-                  <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
-                  <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
-                  <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
-                  <button type="button" id="gel-add-table-btn" class="ghost-btn" hidden>Add table</button>
                 </div>
                 <div id="gel-viewer-stage" class="gel-viewer-stage">
                   <div id="gel-lane-table-shell" class="gel-lane-table-shell" hidden></div>
@@ -105,6 +96,51 @@
               </div>
 
               <div class="gel-side-rail">
+                <section class="panel gel-manual-panel gel-tool-panel" aria-label="Gel tools">
+                  <h3>Gel Tools</h3>
+                  <div class="gel-tool-groups">
+                    <details class="gel-tool-group" open>
+                      <summary>Lane</summary>
+                      <div class="gel-tool-actions">
+                        <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
+                        <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
+                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
+                        <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
+                        <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Adjust lane vertices</button>
+                        <label class="small-note gel-lane-count-control">
+                          Lanes:
+                          <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" />
+                        </label>
+                        <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect lanes</button>
+                      </div>
+                    </details>
+
+                    <details class="gel-tool-group" open>
+                      <summary>Band</summary>
+                      <div class="gel-tool-actions">
+                        <button type="button" id="gel-tool-band-top-btn" class="ghost-btn">Set band top line</button>
+                        <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn">Set band bottom line</button>
+                        <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false">Lane-by-lane band</button>
+                      </div>
+                    </details>
+
+                    <details class="gel-tool-group" open>
+                      <summary>Analysis</summary>
+                      <div class="gel-tool-actions">
+                        <label class="small-note gel-ladder-mw-control">
+                          Ladder MW (kDa)
+                          <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="e.g. 50" />
+                        </label>
+                        <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
+                        <button type="button" id="gel-measure-intensity-btn" class="ghost-btn">Measure intensity</button>
+                        <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn">Peak editor</button>
+                        <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
+                        <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Tools</button>
+                      </div>
+                    </details>
+                  </div>
+                </section>
+
                 <section id="gel-lane-profile-panel" class="panel gel-manual-panel gel-lane-profile-panel" hidden>
                   <div class="gel-lane-profile-head">
                     <div>
@@ -124,30 +160,6 @@
                   <div id="gel-lane-profile-meta" class="gel-lane-profile-meta small-note"></div>
                 </section>
 
-                <aside id="gel-manual-progress" class="panel gel-manual-progress gel-manual-panel" hidden>
-                  <h3>Manual Steps</h3>
-                  <ol class="gel-step-list">
-                    <li id="gel-step-left">1. Click left gel border</li>
-                    <li id="gel-step-right">2. Click right gel border</li>
-                    <li id="gel-step-dividers">3. Click lane dividers</li>
-                    <li id="gel-step-ladder">4. Click ladder lane</li>
-                    <li id="gel-step-ladder-mw">5. Click ladder band (uses MW input) or right-click to type MW</li>
-                    <li id="gel-step-band-top">6. Click top line of target band</li>
-                    <li id="gel-step-band-bottom">7. Click bottom line of target band</li>
-                    <li id="gel-step-quantify">8. Review per-cell intensities</li>
-                    <li id="gel-step-bands">9. (Optional) Click bands to add</li>
-                  </ol>
-                  <div class="form-actions">
-                    <button type="button" id="gel-manual-prev-btn" class="ghost-btn">Previous Step</button>
-                    <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
-                    <label class="small-note" style="display: inline-flex; align-items: center; gap: 4px;">
-                      Lanes:
-                      <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" style="width: 60px;" />
-                    </label>
-                    <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-Detect Lanes</button>
-                    <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Steps</button>
-                  </div>
-                </aside>
               </div>
             </div>
 
@@ -169,6 +181,34 @@
                 <pre id="gel-report-json" class="gel-report-json"></pre>
               </div>
             </div>
+          </div>
+
+          <div id="gel-peak-editor-overlay" class="gel-peak-editor-overlay" hidden>
+            <section class="gel-peak-editor-dialog" role="dialog" aria-modal="true" aria-labelledby="gel-peak-editor-title">
+              <header class="gel-peak-editor-header">
+                <div>
+                  <h3 id="gel-peak-editor-title">Lane Peak Area</h3>
+                  <div id="gel-peak-editor-summary" class="small-note"></div>
+                </div>
+                <button type="button" id="gel-peak-editor-close-btn" class="ghost-btn">Close</button>
+              </header>
+              <div class="gel-peak-editor-toolbar" role="toolbar" aria-label="Peak area tools">
+                <label class="gel-peak-editor-lane-picker small-note">
+                  Lane
+                  <select id="gel-peak-editor-lane-select"></select>
+                </label>
+                <div class="gel-peak-editor-modes">
+                  <button type="button" id="gel-peak-editor-baseline-mode-btn" class="ghost-btn is-active" aria-pressed="true">Baseline</button>
+                  <button type="button" id="gel-peak-editor-divider-mode-btn" class="ghost-btn" aria-pressed="false">Divider</button>
+                </div>
+                <button type="button" id="gel-peak-editor-clear-lane-btn" class="ghost-btn">Clear lane</button>
+                <button type="button" id="gel-peak-editor-clear-all-btn" class="ghost-btn">Clear all</button>
+              </div>
+              <div class="gel-peak-editor-chart-shell">
+                <svg id="gel-peak-editor-chart" class="gel-peak-editor-chart" viewBox="0 0 920 440" preserveAspectRatio="none" role="img" aria-label="Manual peak area editor"></svg>
+              </div>
+              <div id="gel-peak-editor-table" class="gel-peak-editor-table"></div>
+            </section>
           </div>
         </div>
       </div>

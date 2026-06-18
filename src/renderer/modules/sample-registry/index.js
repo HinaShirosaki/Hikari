@@ -1,5 +1,5 @@
 import { renderCellPassageFields } from './cell-passage.js';
-import { closeCompoundDialog, renderCompoundFields, setCompoundStatus } from './compound-dialog.js';
+import { renderCompoundFields, setCompoundStatus } from './compound-dialog.js';
 import { emptyCompoundStructureDraft } from './compound-model.js';
 import { getSampleRegistryDom } from './dom.js';
 import { bindSampleRegistryEvents } from './events.js';
@@ -8,9 +8,11 @@ import {
   renderLinkedContainerOptions
 } from './inventory-links.js';
 import { renderLocationFields } from './location-fields.js';
-import { startNotebookSampleCapture as startNotebookCapture } from './notebook-workflow.js';
+import { startNotebookSampleCapture } from './notebook-workflow.js';
 import { renderList } from './sample-list.js';
-import { ensureSampleState } from './sample-utils.js';
+import { onSubmit } from './sample-form.js';
+import { ensureSampleState, renderSampleTypeOptions } from './sample-utils.js';
+import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
 
 export function initSampleRegistry({ state, persist, safeText, onNotebookSampleCaptured }) {
   const ctx = {
@@ -20,22 +22,34 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
     onNotebookSampleCaptured,
     dom: getSampleRegistryDom(),
     selectedSampleId: '',
-    compoundEditorOpen: false,
     compoundStructureDraft: emptyCompoundStructureDraft(),
     clearSearchOnReset: false,
-    closeCompoundDialog: null,
     renderCellPassageFields: null,
-    setCompoundStatus: null
+    setCompoundStatus: null,
+    markDraftSaved: null
   };
+  let savedDraftSnapshot = '';
 
-  ctx.closeCompoundDialog = () => closeCompoundDialog(ctx);
+  function getCurrentDraftSnapshot() {
+    return serializeDraftSnapshot({
+      controls: snapshotFormControls(ctx.dom.sampleForm),
+      compoundStructureDraft: ctx.compoundStructureDraft
+    });
+  }
+
+  function markDraftSaved() {
+    savedDraftSnapshot = getCurrentDraftSnapshot();
+  }
+
   ctx.renderCellPassageFields = () => renderCellPassageFields(ctx);
   ctx.setCompoundStatus = (message, isError) => setCompoundStatus(ctx, message, isError);
+  ctx.markDraftSaved = markDraftSaved;
 
   bindSampleRegistryEvents(ctx);
 
   function render() {
     ensureSampleState(ctx);
+    renderSampleTypeOptions(ctx);
     renderLinkedContainerOptions(ctx);
     renderChemicalLinkOptions(ctx);
     if (!ctx.dom.sampleLocationFields.innerHTML.trim()) {
@@ -44,11 +58,19 @@ export function initSampleRegistry({ state, persist, safeText, onNotebookSampleC
     renderCellPassageFields(ctx);
     renderCompoundFields(ctx);
     renderList(ctx);
+    if (!savedDraftSnapshot) {
+      markDraftSaved();
+    }
   }
 
   return {
+    hasUnsavedChanges: () => Boolean(savedDraftSnapshot && getCurrentDraftSnapshot() !== savedDraftSnapshot),
     render,
     renderList: () => renderList(ctx),
-    startNotebookSampleCapture: (context) => startNotebookCapture(ctx, context)
+    saveUnsavedChanges: async () => {
+      const record = await onSubmit(ctx, { preventDefault() {} });
+      return Boolean(record) && getCurrentDraftSnapshot() === savedDraftSnapshot;
+    },
+    startNotebookSampleCapture: (context) => startNotebookSampleCapture(ctx, context)
   };
 }

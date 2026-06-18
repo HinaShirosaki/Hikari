@@ -61,6 +61,7 @@ export function buildPlatePreviewHtml({
   layout,
   sampleValues,
   concentrationValues,
+  concentrationUnit,
   plateEditField,
   activeWellEditorId,
   safeText
@@ -72,8 +73,10 @@ export function buildPlatePreviewHtml({
 
   const rowAxisRole = sampleAxis === 'row' ? 'sample' : 'concentration';
   const columnAxisRole = sampleAxis === 'row' ? 'concentration' : 'sample';
-  const rowAxisLabel = rowAxisRole === 'sample' ? 'Sample ID' : 'Conc.';
-  const columnAxisLabel = columnAxisRole === 'sample' ? 'Sample ID' : 'Conc.';
+  const unitSuffix = String(concentrationUnit || '').trim() ? ` (${String(concentrationUnit).trim()})` : '';
+  const concentrationAxisLabel = `Conc.${unitSuffix}`;
+  const rowAxisLabel = rowAxisRole === 'sample' ? 'Sample ID' : concentrationAxisLabel;
+  const columnAxisLabel = columnAxisRole === 'sample' ? 'Sample ID' : concentrationAxisLabel;
   const rowAxisValues = rowAxisRole === 'sample' ? sampleValues : concentrationValues;
   const columnAxisValues = columnAxisRole === 'sample' ? sampleValues : concentrationValues;
   const filledLayouts = Object.values(cellMap).filter((item) => item && (item.sampleId || item.concentration));

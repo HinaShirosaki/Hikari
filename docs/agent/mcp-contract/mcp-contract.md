@@ -9,38 +9,57 @@ Any agent provider that supports MCP can launch the shared stdio server. The Cod
 ```toml
 # HIKARI_MCP_CONFIG_START
 [mcp_servers.hikari]
-command = "node"
+enabled = true
+required = true
+command = "/absolute/path/to/node"
 args = ["/absolute/path/to/src/main/helpers/agent/mcp-contract/stdio-server.js"]
+enabled_tools = [
+  "inventory_lookup",
+  "chemical_lookup",
+  "record_lookup",
+  "protocol_lookup",
+  "protocol_generation",
+  "notebook_draft",
+  "notebook_generation",
+  "notebook_lookup",
+  "literature_search",
+  "paper_download",
+  "paper_analysis",
+  "paper_intake_search_summaries",
+  "paper_intake_search_experiments",
+  "paper_intake_list_project_summaries",
+  "purchase_recommendation",
+  "memory",
+  "ask_user"
+]
+default_tools_approval_mode = "approve"
+startup_timeout_sec = 30
+tool_timeout_sec = 120
 env = {
   HIKARI_AGENT_MCP = "1",
   HIKARI_AGENT_MCP_WORKSPACE = "/runtime/workspace",
   HIKARI_AGENT_MCP_HOST = "http://127.0.0.1:<port>",
   HIKARI_AGENT_MCP_TOKEN = "<opaque bearer token>",
+  HIKARI_AGENT_MCP_REQUEST_CONTEXT = "<per-turn JSON>",
   HIKARI_CODEX_MCP = "1",
   HIKARI_CODEX_WORKSPACE = "/runtime/workspace",
   HIKARI_CODEX_MCP_HOST = "http://127.0.0.1:<port>",
   HIKARI_CODEX_MCP_TOKEN = "<opaque bearer token>",
+  HIKARI_CODEX_REQUEST_CONTEXT = "<per-turn JSON>",
   HIKARI_AGENT_DATA_FILE = "/path/to/hikari-data.json",
   HIKARI_AGENT_STORAGE_PATH = "/path/to/storage",
-  ENANA_AGENT_MCP = "1",
-  ENANA_AGENT_MCP_WORKSPACE = "/runtime/workspace",
-  ENANA_AGENT_MCP_HOST = "http://127.0.0.1:<port>",
-  ENANA_AGENT_MCP_TOKEN = "<opaque bearer token>",
-  ENANA_CODEX_MCP = "1",
-  ENANA_CODEX_WORKSPACE = "/runtime/workspace",
-  ENANA_CODEX_MCP_HOST = "http://127.0.0.1:<port>",
-  ENANA_CODEX_MCP_TOKEN = "<opaque bearer token>",
-  ENANA_AGENT_DATA_FILE = "/path/to/hikari-data.json",
-  ENANA_AGENT_STORAGE_PATH = "/path/to/storage"
 }
+
+[mcp_servers.hikari.tools.protocol_generation]
+approval_mode = "approve"
 # HIKARI_MCP_CONFIG_END
 ```
 
-`HIKARI_AGENT_MCP_HOST` and `HIKARI_AGENT_MCP_TOKEN` are present when the app-side callback host is running. The `HIKARI_CODEX_*` values are compatibility aliases for the Codex CLI integration, and the legacy `ENANA_*` aliases are still emitted for compatibility. The stdio MCP server uses these values to relay `tool_call` requests into the live Hikari process.
+`HIKARI_AGENT_MCP_HOST` and `HIKARI_AGENT_MCP_TOKEN` are present when the app-side callback host is running. The `HIKARI_CODEX_*` values are compatibility aliases for the Codex CLI integration. The stdio MCP server uses these values to relay direct tool execution requests into the live Hikari process. In packaged Electron builds, `command` is resolved to an absolute Node executable path, such as `/opt/homebrew/bin/node`, so Codex does not depend on the Finder-launched app inheriting a shell `PATH`.
 
 ## Per-request context
 
-Each provider run can receive `HIKARI_AGENT_MCP_REQUEST_CONTEXT` as JSON. Codex runs also receive `HIKARI_CODEX_REQUEST_CONTEXT`; `ENANA_AGENT_MCP_REQUEST_CONTEXT` and `ENANA_CODEX_REQUEST_CONTEXT` are compatibility aliases. The stdio server merges this object into every gateway call context.
+Each provider run can receive `HIKARI_AGENT_MCP_REQUEST_CONTEXT` as JSON. Codex runs also receive `HIKARI_CODEX_REQUEST_CONTEXT`. The stdio server merges this object into every gateway call context.
 
 ```json
 {
@@ -79,9 +98,6 @@ Capabilities:
 {
   "tools": {
     "listChanged": false
-  },
-  "resources": {
-    "listChanged": false
   }
 }
 ```
@@ -93,21 +109,18 @@ Supported JSON-RPC methods:
 | `initialize` | Protocol version, capabilities, server info |
 | `tools/list` | Direct Hikari app and contract tools only |
 | `tools/call` | Gateway result encoded as one text content item |
-| `resources/list` | Instruction and app-tool manifest resources |
-| `resources/read` | Resource contents for the requested URI |
 | `ping` | Empty object |
 
-Unsupported methods return JSON-RPC error `-32601`. Internal failures return `-32603`. Missing resources return `-32004`.
+Unsupported methods return JSON-RPC error `-32601`. Internal failures return `-32603`.
 
 ## MCP tools
 
-The Hikari MCP surface is direct-only. Agent providers call the named tools below without using `tool_search`, `tool_info`, generic `tool_call`, `resource_search`, or `resource_read` as tools:
+The Hikari MCP surface is direct-tool-only. Agent providers call the named tools below as the complete Hikari app tool surface for this server:
 
 - `inventory_lookup`
 - `chemical_lookup`
 - `record_lookup`
 - `protocol_lookup`
-- `protocol_matching`
 - `protocol_generation`
 - `notebook_draft`
 - `notebook_generation`
@@ -115,15 +128,34 @@ The Hikari MCP surface is direct-only. Agent providers call the named tools belo
 - `literature_search`
 - `paper_download`
 - `paper_analysis`
-- `web_search`
+- `paper_intake_search_summaries`
+- `paper_intake_search_experiments`
+- `paper_intake_list_project_summaries`
 - `purchase_recommendation`
-- `python_sandbox`
-- `command_line`
-- `sub_agent`
 - `memory`
 - `ask_user`
 
-Generic direct app-tool wrappers use the app tool schema and return this envelope:
+Codex exposes the same server tools to the model with the server namespace prefix. Codex-facing instructions, skills, and model-facing examples should use:
+
+- `mcp__hikari__inventory_lookup`
+- `mcp__hikari__chemical_lookup`
+- `mcp__hikari__record_lookup`
+- `mcp__hikari__protocol_lookup`
+- `mcp__hikari__protocol_generation`
+- `mcp__hikari__notebook_draft`
+- `mcp__hikari__notebook_generation`
+- `mcp__hikari__notebook_lookup`
+- `mcp__hikari__literature_search`
+- `mcp__hikari__paper_download`
+- `mcp__hikari__paper_analysis`
+- `mcp__hikari__paper_intake_search_summaries`
+- `mcp__hikari__paper_intake_search_experiments`
+- `mcp__hikari__paper_intake_list_project_summaries`
+- `mcp__hikari__purchase_recommendation`
+- `mcp__hikari__memory`
+- `mcp__hikari__ask_user`
+
+Direct wrappers that delegate to app executors use the app tool schema and return this envelope:
 
 ```json
 {
@@ -390,15 +422,6 @@ Direct lookup result shape:
 }
 ```
 
-## Resources
-
-| URI | MIME type | Contents |
-| --- | --- | --- |
-| `hikari://instructions/agent-mcp` | `text/markdown` | Provider-neutral MCP usage instructions |
-| `hikari://tool/<tool-id>` | `application/json` | Full app tool manifest envelope |
-
-Resource discovery also returns one resource per Hikari app tool manifest. Legacy `enana://` resource URIs are still accepted for direct reads. The old `hikari://instructions/codex-agent` URI is accepted as a compatibility alias, but it returns the provider-neutral MCP instructions.
-
 ## App-side callback host
 
 The stdio MCP server calls the app-side host for live tool execution.
@@ -418,7 +441,7 @@ Response:
 }
 ```
 
-Tool call:
+Direct tool execution:
 
 ```http
 POST /tool-call
@@ -461,8 +484,8 @@ Response:
 
 Unauthorized calls return HTTP 401 with `status: "unauthorized"`. Missing executor returns HTTP 503 with `status: "executor_unavailable"`.
 
-## Direct app tool wrappers
+## Direct tool files
 
-The former generic app-tool bridge is now exposed through direct MCP tool names. Hyphenated app tool ids are available as snake-case MCP tools, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `record-lookup` as `record_lookup`.
+The MCP surface is allow-listed by `src/main/helpers/agent/mcp-contract/direct-tools/index.js`. Most direct wrappers live under `direct-tools/`; the paper-intake tools are grouped in `src/main/helpers/agent/paper-intake/mcp-tools.js` and folded into the same allow-list. Hyphenated app tool ids are available only when a direct tool wrapper exists, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `record-lookup` as `record_lookup`.
 
-See `mcp-contract.json` next to this file for the exact generated MCP tool definitions, resource list, app tool summaries, and app tool input schemas.
+See `mcp-contract.json` next to this file for the exact generated MCP tool definitions and input schemas.

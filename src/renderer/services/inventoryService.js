@@ -3,6 +3,11 @@ export function createInventoryService(registry) {
     registry.get('sampleRegistry').render?.();
   }
 
+  function handleSampleInventorySettingsChanged() {
+    registry.get('personalInventory').renderSections?.();
+    registry.get('sampleRegistry').render?.();
+  }
+
   function openSampleSearch(query) {
     const showView = registry.get('showView');
     const setSearchInputValue = registry.get('setSearchInputValue');
@@ -17,6 +22,7 @@ export function createInventoryService(registry) {
 
   return {
     handleSamplesChanged,
+    handleSampleInventorySettingsChanged,
     openSampleSearch
   };
 }

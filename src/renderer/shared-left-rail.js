@@ -1,4 +1,4 @@
-const STORAGE_KEY = 'enana_shared_left_rail_width_v2';
+const STORAGE_KEY = 'hikari_shared_left_rail_width_v2';
 const DEFAULT_WIDTH = 280;
 const MIN_WIDTH = 240;
 const MAX_WIDTH = 400;

@@ -12,7 +12,8 @@ import {
   resolveSampleTypeForPlaceholder
 } from './sample-helpers.js';
 import { renderStepSentence } from './step-renderer.js';
-import { summarizeNotebookResultTable } from '../notebook-result-table.js';
+import { summarizeNotebookResultTables } from '../notebook-result-table.js';
+import { summarizeNotebookToolCalculations } from './tool-calculations.js';
 
 export function buildViewerMeta({
   project,
@@ -32,15 +33,19 @@ export function buildViewerMeta({
     const resultFiles = Array.isArray(entry.resultFiles) && entry.resultFiles.length
       ? ` Result files: ${entry.resultFiles.join(', ')}.`
       : '';
-    const resultTableSummary = summarizeNotebookResultTable(entry?.resultTable);
+    const resultTableSummary = summarizeNotebookResultTables(entry?.resultTables, entry?.resultTable);
     const resultTable = resultTableSummary
       ? ` Result table: ${resultTableSummary}.`
+      : '';
+    const toolCalculationSummary = summarizeNotebookToolCalculations(entry?.toolCalculations);
+    const toolCalculations = toolCalculationSummary
+      ? ` Tool calculations: ${toolCalculationSummary}.`
       : '';
     const sampleLinkCount = normalizeNotebookSampleLinks(entry?.sampleLinks).length;
     const sampleLinks = sampleLinkCount
       ? ` Linked samples: ${sampleLinkCount}.`
       : '';
-    return `${contextLabel} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${resultFiles}${resultTable}${sampleLinks}`;
+    return `${contextLabel} notebook page. State: ${stateLabel}. Updated ${updatedAt}.${executedAt}${resultFiles}${resultTable}${toolCalculations}${sampleLinks}`;
   }
   if (isSavedEntry) {
     return `${contextLabel} notebook page.`;
@@ -52,6 +57,7 @@ export function buildProtocolStepsHtml({
   protocol,
   values,
   safeText,
+  settings = {},
   samplePlaceholderTypeAliases,
   getSampleLink
 }) {
@@ -59,7 +65,7 @@ export function buildProtocolStepsHtml({
     safeText,
     getSampleLink,
     resolveType: (name) => resolveSampleTypeForPlaceholder(name, samplePlaceholderTypeAliases),
-    getSampleLabel: getSampleTypeLabel,
+    getSampleLabel: (type) => getSampleTypeLabel(type, settings),
     formatLinkValue: formatSampleLinkValue
   };
   return (Array.isArray(protocol?.steps) ? protocol.steps : []).map((step, index) => {

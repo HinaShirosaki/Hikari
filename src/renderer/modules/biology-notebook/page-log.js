@@ -16,6 +16,8 @@ const DEFAULT_DIFF_FIELDS = [
   'values',
   'result',
   'resultTable',
+  'resultTables',
+  'toolCalculations',
   'sampleLinks',
   'resultFiles',
   'notebookState',
@@ -125,6 +127,31 @@ function describeResultTableChange(before, after) {
   };
 }
 
+function normalizeResultTablesForDiff(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+  return value && typeof value === 'object' ? [value] : [];
+}
+
+function describeResultTableShape(table) {
+  return {
+    rowCount: Array.isArray(table?.rows) ? table.rows.length : 0,
+    columnCount: Array.isArray(table?.columns) ? table.columns.length : 0
+  };
+}
+
+function describeResultTablesChange(before, after) {
+  const prev = normalizeResultTablesForDiff(before);
+  const next = normalizeResultTablesForDiff(after);
+  return {
+    beforeCount: prev.length,
+    afterCount: next.length,
+    beforeTables: prev.map((table) => describeResultTableShape(table)),
+    afterTables: next.map((table) => describeResultTableShape(table))
+  };
+}
+
 function sampleLinkKey(link) {
   if (!link || typeof link !== 'object') {
     return '';
@@ -210,6 +237,8 @@ function describeFieldChange(field, before, after) {
       return describeStringArrayChange(before, after);
     case 'resultTable':
       return describeResultTableChange(before, after);
+    case 'resultTables':
+      return describeResultTablesChange(before, after);
     case 'sampleLinks':
       return describeSampleLinksChange(before, after);
     case 'protocolSnapshot':
@@ -251,7 +280,7 @@ export function logNotebookPageEvent({
   summary = '',
   details = {}
 } = {}) {
-  const appendLog = window?.enanaApi?.appendNotebookPageLog;
+  const appendLog = window?.hikariApi?.appendNotebookPageLog;
   if (typeof appendLog !== 'function') {
     return Promise.resolve({ ok: false, error: 'appendNotebookPageLog unavailable' });
   }

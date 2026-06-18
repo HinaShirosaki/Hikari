@@ -40,6 +40,7 @@ export function createSampleLinkMenuController({
   win = (typeof window !== 'undefined' ? window : null),
   getSamples,
   getInventory,
+  getSettings,
   safeText,
   onSelect
 } = {}) {
@@ -94,10 +95,11 @@ export function createSampleLinkMenuController({
       placeholderType: menuState.placeholderType,
       query: menuState.query
     });
+    const settings = typeof getSettings === 'function' ? getSettings() : {};
     if (!samples.length) {
       resultsHost.innerHTML = `
         <p class="small-note biology-notebook-sample-link-empty">
-          No ${safeText(getSampleTypeLabel(menuState.placeholderType))} samples found.
+          No ${safeText(getSampleTypeLabel(menuState.placeholderType, settings))} samples found.
         </p>
       `;
       return;
@@ -108,7 +110,7 @@ export function createSampleLinkMenuController({
       return `
         <button type="button" class="biology-notebook-sample-link-option" data-sample-link-select="${safeText(sample.id)}">
           <span class="biology-notebook-sample-link-option-main">${safeText(formatSampleRecordLabel(sample))}</span>
-          <span class="biology-notebook-sample-link-option-meta">${safeText(`${getSampleTypeLabel(sample.type)} - ${storageLabel}`)}</span>
+          <span class="biology-notebook-sample-link-option-meta">${safeText(`${getSampleTypeLabel(sample.type, settings)} - ${storageLabel}`)}</span>
         </button>
       `;
     }).join('');
@@ -147,7 +149,7 @@ export function createSampleLinkMenuController({
     };
     menuEl.innerHTML = `
       <div class="biology-notebook-sample-link-menu-head">
-        <strong>Link ${safeText(getSampleTypeLabel(placeholderType))}</strong>
+        <strong>Link ${safeText(getSampleTypeLabel(placeholderType, typeof getSettings === 'function' ? getSettings() : {}))}</strong>
         <span class="small-note">${safeText(placeholderName || 'Placeholder')}</span>
       </div>
       <input

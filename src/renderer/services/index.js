@@ -5,6 +5,8 @@ import { createProjectService } from './projectService.js';
 import { createInventoryService } from './inventoryService.js';
 import { createAnalysisService } from './analysisService.js';
 import { createSequenceService } from './sequenceService.js';
+import { createUndoService } from './undoService.js';
+import { createUnsavedChangesService } from './unsavedChangesService.js';
 
 export {
   createModuleRegistry,
@@ -13,12 +15,14 @@ export {
   createProjectService,
   createInventoryService,
   createAnalysisService,
-  createSequenceService
+  createSequenceService,
+  createUndoService,
+  createUnsavedChangesService
 };
 
-export function createRendererServices(registry) {
+export function createRendererServices(registry, options = {}) {
   return {
-    protocol: createProtocolService(registry),
+    protocol: createProtocolService(registry, options.protocol || {}),
     notebook: createNotebookService(registry),
     project: createProjectService(registry),
     inventory: createInventoryService(registry),

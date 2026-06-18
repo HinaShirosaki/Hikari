@@ -9,16 +9,17 @@ import {
   parseNumericResult
 } from './shared.js';
 import {
+  createChartEngine,
   createDefaultChartStyle,
   normalizeChartStyle
-} from './chart-style-model.js';
-import { createAssayAnalysisChartRenderer } from './analysis-chart-renderer.js';
+} from '../../lib/chart-engine/index.js';
+import { buildAnalysisChartModel } from './analysis-chart-renderer.js';
 
 export {
   CHART_STYLE_OPTIONS,
   createDefaultChartStyle,
   normalizeChartStyle
-} from './chart-style-model.js';
+} from '../../lib/chart-engine/index.js';
 
 export function createAssayAnalysisView({
   runtime,
@@ -39,7 +40,8 @@ export function createAssayAnalysisView({
     assayAnalysisMethodInput,
     assayAnalysisSummary,
     assayAnalysisRowGroupsInput,
-    assayAnalysisTable
+    assayAnalysisTable,
+    assayChartStyleMount
   } = elements;
   const hasReactVis = Boolean(ReactLib && ReactDOMLib && ReactVisLib);
   let lastAnalysisContext = {
@@ -54,41 +56,34 @@ export function createAssayAnalysisView({
     runtime.chartStyle = normalizeChartStyle(runtime.chartStyle);
   }
 
-  const chartRenderer = createAssayAnalysisChartRenderer({
+  const chartEngine = createChartEngine({
+    getChartTarget: () => assayAnalysisTable?.querySelector('[data-assay-analysis-chart]'),
+    controlsTarget: assayChartStyleMount,
     ReactLib,
     ReactDOMLib,
     ReactVisLib,
-    hasReactVis,
-    getChartStyle: () => runtime.chartStyle,
-    getAnalysisTable: () => assayAnalysisTable
+    initialStyle: runtime.chartStyle,
+    safeText,
+    onChange: (style) => {
+      runtime.chartStyle = style;
+      if (typeof onChartStyleChanged === 'function') {
+        onChartStyleChanged(style);
+      }
+      onAnalysisConfigChange();
+    }
   });
 
   function getChartStyle() {
+    return chartEngine.getStyle();
+  }
+
+  function loadChartStyle(style) {
+    runtime.chartStyle = chartEngine.loadStyle(style);
     return runtime.chartStyle;
   }
 
-  function setChartStyle(patch) {
-    runtime.chartStyle = normalizeChartStyle({ ...runtime.chartStyle, ...(patch || {}) });
-    if (typeof onChartStyleChanged === 'function') {
-      onChartStyleChanged(runtime.chartStyle);
-    }
-    return runtime.chartStyle;
-  }
-
-  function resetChartStyle() {
-    runtime.chartStyle = createDefaultChartStyle();
-    if (typeof onChartStyleChanged === 'function') {
-      onChartStyleChanged(runtime.chartStyle);
-    }
-    return runtime.chartStyle;
-  }
-
-  function getChartContext() {
-    return {
-      headers: lastAnalysisContext.headers.slice(),
-      seriesLabels: lastAnalysisContext.seriesLabels.slice(),
-      method: lastAnalysisContext.method
-    };
+  function refreshChartControls() {
+    chartEngine.refreshControls();
   }
 
   function collectNumericObservations() {
@@ -163,11 +158,12 @@ export function createAssayAnalysisView({
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
-    chartRenderer.unmount();
+    chartEngine.unmount();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
     lastAnalysisContext = { headers: [], seriesLabels: [], method: '' };
+    chartEngine.setContext(lastAnalysisContext);
   }
 
   function renderAnalysis() {
@@ -175,7 +171,7 @@ export function createAssayAnalysisView({
       return;
     }
 
-    chartRenderer.unmount();
+    chartEngine.unmount();
     syncCurrentResultsFromGrid();
     const method = String(assayAnalysisMethodInput?.value || 'grouped_summary');
     const { observations, nonNumericCount } = collectNumericObservations();
@@ -225,15 +221,18 @@ export function createAssayAnalysisView({
         </div>
       `
       : tableHtml;
-    const chartInfo = chartRenderer.render(result, method);
+    const model = result.chartModel || buildAnalysisChartModel(result, method, chartEngine.getStyle());
+    chartEngine.setData(model);
+    const chartInfo = chartEngine.render();
     lastAnalysisContext = {
       ...lastAnalysisContext,
       seriesLabels: chartInfo.seriesLabels
     };
+    chartEngine.setContext(lastAnalysisContext);
     onAnalysisRendered?.({
       method,
       summary: assayAnalysisSummary.textContent,
-      chartDataUrl: chartRenderer.captureRenderedChartDataUrl(),
+      chartDataUrl: chartEngine.toDataUrl(),
       analyzedAt: new Date().toISOString()
     });
   }
@@ -271,8 +270,8 @@ export function createAssayAnalysisView({
     onAnalysisConfigChange,
     onAnalyzeResults,
     getChartStyle,
-    setChartStyle,
-    resetChartStyle,
-    getChartContext
+    loadChartStyle,
+    refreshChartControls,
+    destroy: () => chartEngine.destroy()
   };
 }

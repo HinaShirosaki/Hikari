@@ -240,9 +240,37 @@ test('[P1] normalizeState preserves explicit inventory locations array', () => {
   const normalized = shared.normalizeState({ settings: { inventoryLocations: ['Freezer A', 'Fridge B'] } });
   assert.deepEqual(normalized.settings.inventoryLocations, ['Freezer A', 'Fridge B']);
 });
+test('[P0] normalizeState keeps default sample inventory locations when invalid', () => {
+  const normalized = shared.normalizeState({ settings: { sampleInventoryLocations: 'bad' } });
+  assert.deepEqual(
+    Array.from(normalized.settings.sampleInventoryLocations),
+    Array.from(shared.defaultState.settings.sampleInventoryLocations)
+  );
+});
+test('[P1] normalizeState dedupes explicit sample inventory locations', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      sampleInventoryLocations: ['Freezer A', ' freezer a ', 'Fridge B']
+    }
+  });
+  assert.deepEqual(Array.from(normalized.settings.sampleInventoryLocations), ['Freezer A', 'Fridge B']);
+});
+test('[P1] normalizeState merges sample type label overrides', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      sampleTypeLabels: {
+        plasmid: 'Construct',
+        cell_line: ''
+      }
+    }
+  });
+  assert.equal(normalized.settings.sampleTypeLabels.plasmid, 'Construct');
+  assert.equal(normalized.settings.sampleTypeLabels.cell_line, shared.defaultState.settings.sampleTypeLabels.cell_line);
+});
 test('[P1] normalizeState keeps startup defaults when settings.startup is missing', () => {
   const normalized = shared.normalizeState({ settings: {} });
-  assert.deepEqual(normalized.settings.startup, shared.defaultState.settings.startup);
+  assert.equal(normalized.settings.startup.defaultViewId, shared.defaultState.settings.startup.defaultViewId);
+  assert.equal(normalized.settings.startup.rememberLastView, shared.defaultState.settings.startup.rememberLastView);
 });
 test('[P0] normalizeState falls back to home-view for invalid startup defaultViewId', () => {
   const normalized = shared.normalizeState({

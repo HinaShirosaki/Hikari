@@ -132,7 +132,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart05(contex
     test('python sandbox exposes helper APIs for staged file reads and renderable outputs', async () => {
       const result = await agentPython.runPythonSandbox({
         code: [
-          'import enana_sandbox as sandbox',
+          'import hikari_sandbox as sandbox',
           'payload = sandbox.read_json("input.json")',
           'sandbox.emit_text("Loaded " + payload["name"], title="Summary")',
           'sandbox.emit_json({"value": payload["value"]}, title="Structured")',

@@ -42,10 +42,10 @@ Splitting those pieces makes the storage pipeline easier to navigate and safer t
 - `sequence-library-summary.js`
   - Sequence library aggregation used during storage import.
 
-## Compatibility
+## Public API
 
-- `src/main/helpers/main/storage-bundle.js` remains as a thin wrapper so existing `require('./storage-bundle')` call sites do not need to change.
-- The public exports remain the same:
+- `index.js` is the canonical package entry. Node callers may require either the folder or `index.js`.
+- The public exports are:
   - `STORAGE_MANIFEST_FILE_NAME`
   - `getBundlePaths`
   - `syncBundleFromSnapshot`

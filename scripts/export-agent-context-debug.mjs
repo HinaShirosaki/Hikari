@@ -885,7 +885,7 @@ async function runScenario(scenario) {
     routing: scenario.routing,
     project: scenario.project,
     projectResolutionQuestion: scenario.projectResolutionQuestion,
-    baseSystemPrompt: 'You are a debug-only Enana agent runtime.',
+    baseSystemPrompt: 'You are a debug-only Hikari agent runtime.',
     traceContext: {
       enabled: false,
       rows: [],

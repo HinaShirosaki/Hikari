@@ -29,7 +29,7 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
     inventory: {},
     labInventory: { chemicals: [] },
     settings: {
-      storagePath: '/tmp/enana-storage',
+      storagePath: '/tmp/hikari-storage',
       llm: {
         provider: 'openai',
         model: 'gpt-5',
@@ -49,7 +49,7 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       agentChatLogListSessions: async () => ({
         ok: true,
         items: [
@@ -154,7 +154,7 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });
@@ -220,7 +220,7 @@ test('agent-chat session switching honors nested click targets and replays the l
     inventory: {},
     labInventory: { chemicals: [] },
     settings: {
-      storagePath: '/tmp/enana-storage',
+      storagePath: '/tmp/hikari-storage',
       llm: {
         provider: 'openai',
         model: 'gpt-5',
@@ -241,7 +241,7 @@ test('agent-chat session switching honors nested click targets and replays the l
 
   let releaseChat2Load = null;
   const window = {
-    enanaApi: {
+    hikariApi: {
       agentChatLogListSessions: async () => ({
         ok: true,
         items: [
@@ -347,7 +347,7 @@ test('agent-chat session switching honors nested click targets and replays the l
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });

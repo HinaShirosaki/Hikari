@@ -1,11 +1,11 @@
-# Enana
+# Hikari
 
-Enana is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay and gel analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace without requiring a hosted backend.
+Hikari is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay and gel analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace without requiring a hosted backend.
 
 ## Highlights
 
 - Local desktop app built with Electron.
-- One workspace for `Home`, `Instruments`, `Protocols`, `Projects`, `Workflows`, `Biology Notebook`, `Sample & Inventory`, `Chemicals`, `Assay`, `Gel`, `Papers`, `Agent`, `Sequence Viewer`, `Tools`, and `Settings`.
+- One workspace for `Home`, `Protocols`, `Projects`, `Workflows`, `Biology Notebook`, `Sample & Inventory`, `Chemicals`, `Assay`, `Gel`, `Papers`, `Agent`, `Sequence Viewer`, `Tools`, and `Settings`.
 - Snapshot save/load support for `.json` and `.ena` data files.
 - Storage-root-backed files for notebooks, projects, papers, and sequence assets.
 - Optional LLM-backed features for `Papers` and `Agent`.
@@ -16,7 +16,6 @@ Enana is a local-first Electron desktop app for day-to-day lab work. It brings p
 ### Planning and operations
 
 - `Home`: dashboard with quick navigation, workflow progress, lab timer, and cell-passage reminders.
-- `Instruments`: instrument calendar and reservation management.
 - `Protocols`: protocol authoring, import/export, share flows, and notebook placeholders.
 - `Projects`: project registry with linked notebook, assay, gel, and paper context.
 - `Workflows`: graph-based workflow builder with templates and project linkage.
@@ -77,7 +76,7 @@ Supported providers:
 
 Environment variable fallbacks:
 
-- `ENANA_LLM_API_KEY`
+- `HIKARI_LLM_API_KEY`
 - `LLM_API_KEY`
 
 Notes:
@@ -85,7 +84,7 @@ Notes:
 - `Papers` and `Agent` require valid LLM settings.
 - Provider defaults come from [`config/llm-providers.json`](./config/llm-providers.json).
 - DeepSeek uses the OpenAI-compatible Chat Completions API at `https://api.deepseek.com`.
-- Codex Agent mode does not use an API endpoint or API key; it uses the signed-in `codex` CLI plus Enana MCP tools.
+- Codex Agent mode does not use an API endpoint or API key; it uses the signed-in `codex` CLI plus Hikari MCP tools.
 
 ### Codex Agent Setup
 
@@ -117,18 +116,27 @@ Common commands:
 - `/gel <query>`
 - `/status`
 
+The bot supports many more commands, including:
+
+- quick logging: `/log`, `/note`, `/use`
+- protocol-run control: `/start_protocol`, `/next`, `/done`, `/timer`
+- draft generation: `/draft_notebook`, `/draft_summary`, `/draft_assay`
+- inventory queries: `/expiring`, `/lowstock`
+
+The canonical command, search-scope, and alias maps live in [`src/main/lib/telegram-bot/config.js`](./src/main/lib/telegram-bot/config.js).
+
 ## Data and Storage
 
-Enana keeps state in a few layers:
+Hikari keeps state in a few layers:
 
-- Fast local UI state in browser storage under `localStorage` key `enana_state_v1`
+- Fast local UI state in browser storage under `localStorage` key `hikari_state_v1`
 - Snapshot save/load through `Settings > Data File`
 - Storage-root-backed files for notebook attachments, project assets, paper uploads, and sequence-library data
 
 Data file notes:
 
 - Supported save/load extensions include `.json` and `.ena`
-- The default filename is `enana-data.json`
+- The default filename is `hikari-data.json`
 - Auto-save can be enabled for the current data file from `Settings`
 
 Backup suggestions:
@@ -180,11 +188,13 @@ Packaging notes:
 
 ## Internal Docs
 
-If you are onboarding to the codebase, these are the best starting points:
+If you are onboarding to the codebase, start with the docs index and then the area you need:
 
+- [`docs/README.md`](./docs/README.md) — internal docs index and architecture overview
 - [`docs/renderer/README.md`](./docs/renderer/README.md)
 - [`docs/main-helpers/README.md`](./docs/main-helpers/README.md)
 - [`docs/agent/README.md`](./docs/agent/README.md)
+- [`docs/module-development/README.md`](./docs/module-development/README.md) — how to add a new module
 - [`tests/README.md`](./tests/README.md)
 
 ## Troubleshooting
@@ -198,7 +208,7 @@ If you are onboarding to the codebase, these are the best starting points:
 
 - For OpenAI, Gemini, Claude, or DeepSeek, set the provider, model, endpoint, and key in `Settings > LLM Model & Access`.
 - For Codex Agent, sign in with `codex login`; no endpoint or API key is used.
-- Or export `ENANA_LLM_API_KEY` / `LLM_API_KEY` before launching the app.
+- Or export `HIKARI_LLM_API_KEY` / `LLM_API_KEY` before launching the app.
 
 ### Codex mode is selected but nothing responds
 

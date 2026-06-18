@@ -76,6 +76,23 @@ export function cloneNotebookResultTable(rawTable) {
   return normalizeNotebookResultTable(rawTable);
 }
 
+export function normalizeNotebookResultTables(rawTables, legacyTable = null) {
+  const normalizedTables = Array.isArray(rawTables)
+    ? rawTables.map((table) => normalizeNotebookResultTable(table)).filter(Boolean)
+    : [];
+  if (normalizedTables.length) {
+    return normalizedTables;
+  }
+
+  const singleTable = normalizeNotebookResultTable(Array.isArray(rawTables) ? legacyTable : rawTables)
+    || normalizeNotebookResultTable(legacyTable);
+  return singleTable ? [singleTable] : [];
+}
+
+export function cloneNotebookResultTables(rawTables, legacyTable = null) {
+  return normalizeNotebookResultTables(rawTables, legacyTable);
+}
+
 export function createDefaultNotebookResultTable(createId, {
   columnCount = DEFAULT_NOTEBOOK_TABLE_COLUMNS,
   rowCount = DEFAULT_NOTEBOOK_TABLE_ROWS
@@ -131,6 +148,18 @@ export function summarizeNotebookResultTable(rawTable) {
   return `${columnCount} column${columnCount === 1 ? '' : 's'} x ${rowCount} row${rowCount === 1 ? '' : 's'}`;
 }
 
+export function summarizeNotebookResultTables(rawTables, legacyTable = null) {
+  const tables = normalizeNotebookResultTables(rawTables, legacyTable);
+  if (!tables.length) {
+    return '';
+  }
+  if (tables.length === 1) {
+    return summarizeNotebookResultTable(tables[0]);
+  }
+  const parts = tables.map((table, index) => `Table ${index + 1}: ${summarizeNotebookResultTable(table)}`);
+  return `${tables.length} tables (${parts.join('; ')})`;
+}
+
 export function flattenNotebookResultTableText(rawTable) {
   const table = normalizeNotebookResultTable(rawTable);
   if (!table) {
@@ -138,6 +167,17 @@ export function flattenNotebookResultTableText(rawTable) {
   }
   const lines = notebookResultTableToLines(table);
   return lines.join(' ').trim();
+}
+
+export function flattenNotebookResultTablesText(rawTables, legacyTable = null) {
+  return normalizeNotebookResultTables(rawTables, legacyTable)
+    .map((table, index) => [
+      `Table ${index + 1}`,
+      flattenNotebookResultTableText(table)
+    ].filter(Boolean).join(' '))
+    .filter(Boolean)
+    .join(' ')
+    .trim();
 }
 
 export function notebookResultTableToLines(rawTable) {

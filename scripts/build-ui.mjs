@@ -9,6 +9,7 @@ const HTML_CONFIG_PATH = path.join(ROOT_DIR, 'ui', 'config', 'html-order.json');
 const CSS_CONFIG_PATH = path.join(ROOT_DIR, 'ui', 'config', 'css-order.json');
 const APP_REGISTRY_PATH = path.join(ROOT_DIR, 'ui', 'config', 'app-registry.json');
 const APP_REGISTRY_MODULE_OUTPUT = 'src/renderer/modules/app-registry.generated.js';
+const VIEWS_MODULE_OUTPUT = 'src/renderer/modules/views.js';
 const MAIN_LLM_PROVIDER_MODULE_OUTPUT = 'src/main/generated/llm-provider-config.generated.js';
 const RENDERER_LLM_PROVIDER_MODULE_OUTPUT = 'src/renderer/modules/llm-provider-config.generated.js';
 
@@ -370,32 +371,60 @@ function ensureAppRegistryShape(registry) {
   }
 }
 
-async function buildAppRegistry(validViewIds) {
+function normalizeViewDescriptor(rawView, sourceLabel) {
+  const viewKey = String(rawView?.viewKey || '').trim();
+  const viewId = String(rawView?.viewId || '').trim();
+  const subtitle = String(rawView?.subtitle || '').trim();
+  if (!viewId || !subtitle) {
+    throw new Error(`${sourceLabel} requires viewId and subtitle`);
+  }
+  if (viewKey && !/^[A-Z][A-Z0-9_]*$/.test(viewKey)) {
+    throw new Error(`${sourceLabel} has invalid viewKey "${viewKey}"`);
+  }
+  return {
+    viewKey,
+    viewId,
+    subtitle,
+    file: `ui/html/views/${viewId}.html`,
+    styleFile: rawView?.includeStyle === false ? '' : `ui/css/views/${viewId}.css`
+  };
+}
+
+async function buildAppRegistry() {
   const registry = await readJson(APP_REGISTRY_PATH);
   ensureAppRegistryShape(registry);
 
   const seenIds = new Set();
   const seenViewIds = new Set();
+  const seenViewKeys = new Set();
   const seenIcons = new Set();
   const dockApps = [];
   const normalizedApps = [];
+  const normalizedViews = [];
 
   for (const [index, rawApp] of registry.apps.entries()) {
     if (!rawApp || typeof rawApp !== 'object' || Array.isArray(rawApp)) {
       throw new Error(`Invalid app entry at index ${index} in app-registry.json`);
     }
     const id = String(rawApp.id || '').trim();
+    const viewKey = String(rawApp.viewKey || '').trim();
     const label = String(rawApp.label || '').trim();
     const viewId = String(rawApp.viewId || '').trim();
+    const subtitle = String(rawApp.subtitle || '').trim();
     const icon = String(rawApp.icon || '').trim();
     const placement = String(rawApp.placement || '').trim();
     const aliases = Array.isArray(rawApp.aliases)
       ? rawApp.aliases.map((value) => String(value || '').trim()).filter(Boolean)
       : [];
     const searchInputId = String(rawApp.searchInputId || '').trim();
+    const agentChatRail = rawApp.agentChatRail === true;
+    const hiddenFromNavigation = rawApp.hiddenFromNavigation === true;
 
-    if (!id || !label || !viewId || !icon || !placement) {
+    if (!id || !viewKey || !label || !viewId || !subtitle || !icon || !placement) {
       throw new Error(`App entry "${id || `index ${index}`}" is missing a required field`);
+    }
+    if (!/^[A-Z][A-Z0-9_]*$/.test(viewKey)) {
+      throw new Error(`App "${id}" has invalid viewKey "${viewKey}"`);
     }
     if (placement !== 'dock' && placement !== 'more') {
       throw new Error(`App "${id}" has unsupported placement "${placement}"`);
@@ -406,13 +435,12 @@ async function buildAppRegistry(validViewIds) {
     if (seenViewIds.has(viewId)) {
       throw new Error(`Duplicate app viewId in app-registry.json: ${viewId}`);
     }
+    if (seenViewKeys.has(viewKey)) {
+      throw new Error(`Duplicate app viewKey in app-registry.json: ${viewKey}`);
+    }
     if (seenIcons.has(icon)) {
       throw new Error(`Duplicate app icon in app-registry.json: ${icon}`);
     }
-    if (!validViewIds.has(viewId)) {
-      throw new Error(`App "${id}" references unknown viewId "${viewId}"`);
-    }
-
     const iconPath = path.join(ROOT_DIR, 'assets', 'icons', icon);
     let iconMarkup = '';
     try {
@@ -424,23 +452,57 @@ async function buildAppRegistry(validViewIds) {
 
     seenIds.add(id);
     seenViewIds.add(viewId);
+    seenViewKeys.add(viewKey);
     seenIcons.add(icon);
 
     const app = {
       id,
+      viewKey,
       label,
       viewId,
+      subtitle,
       icon,
       iconMarkup,
       placement,
       aliases,
-      searchInputId
+      searchInputId,
+      agentChatRail,
+      hiddenFromNavigation
     };
     if (placement === 'dock') {
       dockApps.push(id);
     }
     normalizedApps.push(app);
+    normalizedViews.push(normalizeViewDescriptor(app, `App "${id}"`));
   }
+
+  for (const [index, rawView] of (registry.supplementalViews || []).entries()) {
+    const view = normalizeViewDescriptor(rawView, `Supplemental view at index ${index}`);
+    if (seenViewIds.has(view.viewId)) {
+      throw new Error(`Duplicate supplemental viewId in app-registry.json: ${view.viewId}`);
+    }
+    if (view.viewKey && seenViewKeys.has(view.viewKey)) {
+      throw new Error(`Duplicate supplemental viewKey in app-registry.json: ${view.viewKey}`);
+    }
+    seenViewIds.add(view.viewId);
+    if (view.viewKey) {
+      seenViewKeys.add(view.viewKey);
+    }
+    normalizedViews.push(view);
+  }
+
+  const viewOrder = Array.isArray(registry.viewOrder)
+    ? registry.viewOrder.map((value) => String(value || '').trim()).filter(Boolean)
+    : [];
+  if (viewOrder.length !== normalizedViews.length || new Set(viewOrder).size !== viewOrder.length) {
+    throw new Error('viewOrder must list every app and supplemental view exactly once');
+  }
+  normalizedViews.forEach((view) => {
+    if (!viewOrder.includes(view.viewId)) {
+      throw new Error(`viewOrder is missing viewId "${view.viewId}"`);
+    }
+  });
+  normalizedViews.sort((left, right) => viewOrder.indexOf(left.viewId) - viewOrder.indexOf(right.viewId));
 
   const dockOrder = registry.dockOrder.map((value) => String(value || '').trim()).filter(Boolean);
   if (dockOrder.length !== dockApps.length) {
@@ -471,8 +533,34 @@ async function buildAppRegistry(validViewIds) {
     ''
   ].join('\n');
 
+  const viewEntries = normalizedViews
+    .filter((view) => view.viewKey)
+    .map((view) => `  ${view.viewKey}: ${JSON.stringify(view.viewId)}`)
+    .join(',\n');
+  const titleEntries = normalizedViews
+    .filter((view) => view.viewKey)
+    .map((view) => `  [VIEWS.${view.viewKey}]: ${JSON.stringify(view.subtitle)}`)
+    .join(',\n');
+  const generatedViews = [
+    '/* AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY. */',
+    `/* Source config: ${toPosix(path.relative(ROOT_DIR, APP_REGISTRY_PATH))} */`,
+    '',
+    'export const VIEWS = Object.freeze({',
+    viewEntries,
+    '});',
+    '',
+    'export const TITLES = Object.freeze({',
+    titleEntries,
+    '});',
+    ''
+  ].join('\n');
+
   await writeText(APP_REGISTRY_MODULE_OUTPUT, generated);
-  return normalizedApps;
+  await writeText(VIEWS_MODULE_OUTPUT, generatedViews);
+  return {
+    apps: normalizedApps,
+    views: normalizedViews
+  };
 }
 
 function collectHtmlIds(htmlText) {
@@ -494,21 +582,19 @@ function ensureViewBlock({ id, file, contents }) {
   }
 }
 
-async function buildHtml() {
+async function buildHtml(views) {
   const config = await readJson(HTML_CONFIG_PATH);
-  const validViewIds = new Set((config.views || []).map((entry) => String(entry?.id || '').trim()).filter(Boolean));
-  await buildAppRegistry(validViewIds);
   const shellStart = await readText(config.shellStart);
   const shellEnd = await readText(config.shellEnd);
 
   const viewParts = [];
   const seenViewIds = new Set();
 
-  for (const entry of config.views || []) {
+  for (const entry of views) {
     if (!entry || typeof entry !== 'object') {
       throw new Error('Invalid view entry in html-order.json');
     }
-    const { id, file } = entry;
+    const { viewId: id, file } = entry;
     if (!id || !file) {
       throw new Error('Each html view entry requires id and file');
     }
@@ -545,9 +631,14 @@ async function buildHtml() {
   return config.output;
 }
 
-async function buildCss() {
+async function buildCss(views) {
   const config = await readJson(CSS_CONFIG_PATH);
-  const inputs = config.inputs || [];
+  const viewInputs = views.map((view) => view.styleFile).filter(Boolean);
+  const inputs = [
+    ...(config.prefixInputs || []),
+    ...viewInputs,
+    ...(config.suffixInputs || [])
+  ];
   const seen = new Set();
   const importLines = [];
 
@@ -582,9 +673,16 @@ async function buildCss() {
 
 async function main() {
   const llmProviderOutputs = await buildLlmProviderModules();
-  const htmlOutput = await buildHtml();
-  const cssOutput = await buildCss();
-  console.log(`Built ${[...llmProviderOutputs, htmlOutput, cssOutput].join(', ')}`);
+  const appRegistryOutputs = await buildAppRegistry();
+  const htmlOutput = await buildHtml(appRegistryOutputs.views);
+  const cssOutput = await buildCss(appRegistryOutputs.views);
+  console.log(`Built ${[
+    ...llmProviderOutputs,
+    APP_REGISTRY_MODULE_OUTPUT,
+    VIEWS_MODULE_OUTPUT,
+    htmlOutput,
+    cssOutput
+  ].join(', ')}`);
 }
 
 main().catch((error) => {

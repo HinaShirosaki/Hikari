@@ -96,7 +96,7 @@ function buildMockToolArgs(toolName, message, snapshot) {
       linked_name: snapshot.projects[0]?.name || 'Atlas',
       paper_pdf_url: 'https://example.org/paper.pdf',
       paper_file_name: 'atlas-paper.pdf',
-      storage_path: snapshot.settings?.storagePath || '/tmp/enana-storage'
+      storage_path: snapshot.settings?.storagePath || '/tmp/hikari-storage'
     };
   }
   return {

@@ -409,21 +409,21 @@
 }
 
 .crispr-risk-low {
-  color: var(--palette-hex-0b5c3f);
-  border-color: var(--palette-rgba-98-191-150-a58);
-  background: var(--palette-rgba-135-226-184-a3);
+  color: var(--success);
+  border-color: color-mix(in srgb, var(--success) 34%, var(--line));
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
 }
 
 .crispr-risk-medium {
-  color: var(--palette-amber-text);
-  border-color: var(--palette-rgba-233-168-69-a58);
-  background: var(--palette-rgba-255-214-143-a36);
+  color: var(--warning);
+  border-color: color-mix(in srgb, var(--warning) 40%, var(--line));
+  background: color-mix(in srgb, var(--warning) 12%, var(--surface));
 }
 
 .crispr-risk-high {
-  color: var(--palette-hex-7b1b25);
-  border-color: var(--palette-rgba-224-100-124-a58);
-  background: var(--palette-rgba-255-181-194-a35);
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 38%, var(--line));
+  background: color-mix(in srgb, var(--danger) 10%, var(--surface));
 }
 
 @media (max-width: 920px) {
@@ -439,6 +439,16 @@
 .colony-counter-shell {
   display: grid;
   gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  align-items: start;
+}
+
+.colony-workspace-plate,
+.colony-workspace-settings {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
 }
 
 .colony-counter-controls {
@@ -448,19 +458,13 @@
   padding: 12px;
 }
 
-.colony-preview-grid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-}
-
 .colony-preview-card {
   margin: 0;
 }
 
 .colony-cropper-shell {
   border-radius: 12px;
-  border: 1px solid var(--palette-rgba-255-255-255-a72);
+  border: 1px solid var(--palette-rgba-255-255-255-a7);
   background: var(--palette-white);
   padding: 10px;
   min-height: 320px;
@@ -476,14 +480,14 @@
   width: 100%;
   display: block;
   border-radius: 10px;
-  border: 1px solid var(--palette-rgba-255-255-255-a72);
+  border: 1px solid var(--palette-rgba-255-255-255-a7);
   background: var(--palette-white);
   max-height: 620px;
   object-fit: contain;
 }
 
 @media (max-width: 920px) {
-  .colony-preview-grid {
+  .colony-counter-shell {
     grid-template-columns: 1fr;
   }
 }
@@ -610,21 +614,21 @@ body.theme-night .protein-assembly-row {
 }
 
 body.theme-night .crispr-risk-low {
-  color: var(--palette-mint-text-dark);
-  border-color: var(--palette-rgba-80-184-139-a65);
-  background: var(--palette-rgba-38-89-67-a56);
+  color: color-mix(in srgb, var(--success) 38%, var(--palette-white));
+  border-color: color-mix(in srgb, var(--success) 50%, var(--line));
+  background: color-mix(in srgb, var(--success) 24%, var(--surface));
 }
 
 body.theme-night .crispr-risk-medium {
-  color: var(--palette-amber-text-dark);
-  border-color: var(--palette-rgba-223-155-66-a66);
-  background: var(--palette-rgba-92-61-22-a54);
+  color: color-mix(in srgb, var(--warning) 48%, var(--palette-white));
+  border-color: color-mix(in srgb, var(--warning) 58%, var(--line));
+  background: color-mix(in srgb, var(--warning) 24%, var(--surface));
 }
 
 body.theme-night .crispr-risk-high {
-  color: var(--palette-rose-text-dark);
-  border-color: var(--palette-rgba-190-91-111-a68);
-  background: var(--palette-rgba-97-32-47-a56);
+  color: color-mix(in srgb, var(--danger) 46%, var(--palette-white));
+  border-color: color-mix(in srgb, var(--danger) 54%, var(--line));
+  background: color-mix(in srgb, var(--danger) 24%, var(--surface));
 }
 
 body.ui-neutral-compact .sequence-block,

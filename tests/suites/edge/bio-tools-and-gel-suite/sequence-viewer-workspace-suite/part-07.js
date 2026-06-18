@@ -63,7 +63,7 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
   const upsertCalls = [];
   const document = createMockDocument(ids);
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryList: async () => ({ ok: true, entries: [] }),
       sequenceLibraryUpsert: async (payload) => {
         upsertCalls.push(payload);
@@ -87,14 +87,14 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   const viewer = moduleWithDom.initSequenceViewer({
@@ -135,7 +135,7 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
   assert.equal(Boolean(document.getElementById('sequence-viewer-alignment-workspace').hidden), true);
   assert.equal(alignmentToggle.disabled, false);
   assert.equal(alignmentToggle.checked, true);
-  assert.match(document.getElementById('sequence-viewer-alignment-active-note').textContent, /trace_1|visible/i);
+  assert.equal(document.getElementById('sequence-viewer-alignment-active-note').textContent, '');
   assert.match(sequenceHost.innerHTML, /sequence-viewer-seq-highlight-alignment/);
 
   alignmentToggle.checked = false;
@@ -145,6 +145,57 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
   alignmentToggle.checked = true;
   trigger(alignmentToggle, 'change');
   assert.match(sequenceHost.innerHTML, /sequence-viewer-seq-highlight-alignment/);
+});
+test('[EDGE] sequence-viewer shows the AB1 chromatogram panel for an active sequencing alignment', async () => {
+  const document = createMockDocument([
+    'sequence-viewer-alignment-trace-panel',
+    'sequence-viewer-alignment-trace-host'
+  ]);
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer({ document });
+  viewer.loadFromExternal({
+    name: 'RefSeq',
+    sequence: 'GGGACGTACGTCCC',
+    topology: 'linear',
+    source: 'external',
+    features: []
+  });
+
+  viewer.openSequencingAlignmentWorkspace();
+  await viewer.loadSequencingAlignmentQuery({
+    name: 'trace_ab1.ab1',
+    sourceKind: 'file',
+    record: {
+      name: 'trace_ab1',
+      sourceFormat: 'ab1',
+      topology: 'linear',
+      sequence: 'ACGTTCGT',
+      quality: 'IIIIIIII',
+      trace: {
+        positions: [2, 5, 8, 11, 14, 17, 20, 23],
+        channels: [
+          { base: 'A', values: [0, 9, 2, 1, 0, 1, 0, 0, 6, 1, 0, 0, 0, 0, 1, 0, 9, 2, 0, 0, 0, 0, 0, 0] },
+          { base: 'C', values: [0, 1, 7, 1, 0, 8, 2, 0, 1, 9, 1, 0, 0, 2, 8, 1, 0, 7, 2, 0, 0, 8, 2, 0] },
+          { base: 'G', values: [0, 0, 1, 8, 0, 1, 7, 1, 0, 1, 8, 1, 0, 0, 2, 8, 0, 1, 8, 1, 0, 1, 7, 1] },
+          { base: 'T', values: [0, 0, 0, 1, 7, 1, 0, 8, 2, 0, 1, 9, 2, 0, 8, 1, 0, 0, 2, 9, 1, 0, 1, 8] }
+        ]
+      }
+    }
+  });
+  const result = await viewer.runSequencingAlignment();
+  await flushAsync();
+
+  const panel = document.getElementById('sequence-viewer-alignment-trace-panel');
+  const host = document.getElementById('sequence-viewer-alignment-trace-host');
+  assert.equal(Boolean(result), true);
+  assert.equal(Boolean(panel.hidden), false);
+  assert.match(host.innerHTML, /trace_ab1/);
+  assert.match(host.innerHTML, /sequence-viewer-alignment-trace-svg/);
+  assert.match(host.innerHTML, /sequence-viewer-trace-line-a/);
+  assert.match(host.innerHTML, /sequence-viewer-trace-diff-mismatch/);
 });
   }
 };

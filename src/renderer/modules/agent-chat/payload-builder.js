@@ -8,6 +8,43 @@ export function createAgentPayloadBuilder({
   getComposerAttachments,
   ensureAgentState
 }) {
+  let hiddenDraftContexts = [];
+
+  function normalizeHiddenContext(context = {}) {
+    const source = context && typeof context === 'object' ? context : {};
+    const text = trimText(source.text, 4000);
+    if (!text) {
+      return null;
+    }
+    return {
+      kind: trimText(source.kind || 'selection', 80),
+      label: trimText(source.label || 'Hidden context', 120),
+      text,
+      paperId: trimText(source.paperId, 220),
+      paperTitle: trimText(source.paperTitle, 320),
+      pageNumber: Number.isFinite(Number(source.pageNumber))
+        ? Math.max(1, Math.round(Number(source.pageNumber)))
+        : 0
+    };
+  }
+
+  function getHiddenDraftContexts() {
+    return hiddenDraftContexts.map((context) => ({ ...context }));
+  }
+
+  function primeHiddenContext(context = {}) {
+    const normalized = normalizeHiddenContext(context);
+    if (!normalized) {
+      return false;
+    }
+    hiddenDraftContexts = [normalized];
+    return true;
+  }
+
+  function consumeHiddenContexts() {
+    hiddenDraftContexts = [];
+  }
+
   function getCurrentProjectDetails() {
     ensureAgentState();
     const projectId = state.agentChat.projectId || '';
@@ -40,10 +77,29 @@ export function createAgentPayloadBuilder({
     };
   }
 
-  function buildAgentFlagsPayload() {
+  function buildAgentFlagsPayload(options = {}) {
+    const paperContext = state.agentChatContext && typeof state.agentChatContext === 'object'
+      ? state.agentChatContext
+      : {};
+    const paperSessionPrompt = trimText(paperContext.sessionPrompt, 2400);
+    const hiddenContexts = asArray(options.hiddenContexts).map(normalizeHiddenContext).filter(Boolean);
     return {
       developerMode: state.settings?.agent?.developerMode === true,
-      deepResearchEnabled: state.agentChat.deepResearchEnabled === true
+      externalSkillsEnabled: state.settings?.agent?.externalSkillsEnabled !== false,
+      disabledExternalSkillNames: asArray(state.settings?.agent?.disabledExternalSkillNames)
+        .map((item) => trimText(item, 160))
+        .filter(Boolean),
+      deepResearchEnabled: state.agentChat.deepResearchEnabled === true,
+      ...(hiddenContexts.length ? { hiddenContexts } : {}),
+      ...(paperSessionPrompt ? {
+        paperSessionPrompt,
+        paperSession: {
+          paperId: trimText(paperContext.paperId, 220),
+          paperTitle: trimText(paperContext.paperTitle, 320),
+          transformedMarkdownRelativePath: trimText(paperContext.knowledgeMarkdownRelativePath, 2400),
+          knowledgeStatus: trimText(paperContext.knowledgeStatus, 80)
+        }
+      } : {})
     };
   }
 
@@ -51,12 +107,17 @@ export function createAgentPayloadBuilder({
     const rawMessageText = trimText(input.value, 3000);
     const attachments = getComposerAttachments();
     const messageText = buildMessagePayloadText(rawMessageText, attachments);
-    return { rawMessageText, attachments, messageText };
+    return {
+      rawMessageText,
+      attachments,
+      messageText,
+      hiddenContexts: getHiddenDraftContexts()
+    };
   }
 
   function buildDeveloperContextPreviewPayload(stateSnapshot) {
     ensureAgentState();
-    const { attachments, messageText } = getDraftRequest();
+    const { attachments, messageText, hiddenContexts } = getDraftRequest();
     const { projectId, projectName } = getCurrentProjectDetails();
     const llm = buildAgentLlmPayload();
     return {
@@ -67,7 +128,7 @@ export function createAgentPayloadBuilder({
       conversation: toConversation(state.agentChat.messages),
       stateSnapshot,
       llm,
-      agent: buildAgentFlagsPayload()
+      agent: buildAgentFlagsPayload({ hiddenContexts })
     };
   }
 
@@ -113,8 +174,10 @@ export function createAgentPayloadBuilder({
     buildAgentLlmPayload,
     buildDeveloperContextPreviewPayload,
     buildLocalDeveloperContextPreview,
+    consumeHiddenContexts,
     getCurrentProjectDetails,
     getDraftRequest,
+    primeHiddenContext,
     summarizeAgentLlmPayload
   };
 }

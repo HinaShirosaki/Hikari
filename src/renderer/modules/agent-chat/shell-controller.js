@@ -27,6 +27,9 @@ export function createAgentChatShellController({
   }
 
   function setStatus(text) {
+    if (!dom.status) {
+      return;
+    }
     dom.status.textContent = text;
     const normalized = trimText(text, 160).toLowerCase();
     let tone = 'neutral';
@@ -80,10 +83,19 @@ export function createAgentChatShellController({
   }
 
   function syncComposerHeight() {
+    const computedStyle = typeof dom.input.ownerDocument?.defaultView?.getComputedStyle === 'function'
+      ? dom.input.ownerDocument.defaultView.getComputedStyle(dom.input)
+      : null;
+    const readHeight = (name, fallback) => {
+      const value = Number.parseFloat(computedStyle?.getPropertyValue?.(name) || '');
+      return Number.isFinite(value) && value > 0 ? value : fallback;
+    };
+    const minHeight = readHeight('--agent-composer-min-height', 92);
+    const maxHeight = readHeight('--agent-composer-max-height', 220);
     dom.input.style.height = 'auto';
-    const nextHeight = Math.min(Math.max(dom.input.scrollHeight, 92), 220);
+    const nextHeight = Math.min(Math.max(dom.input.scrollHeight, minHeight), maxHeight);
     dom.input.style.height = `${nextHeight}px`;
-    dom.input.style.overflowY = dom.input.scrollHeight > 220 ? 'auto' : 'hidden';
+    dom.input.style.overflowY = dom.input.scrollHeight > maxHeight ? 'auto' : 'hidden';
   }
 
   function renderHistoryView(options = {}) {
@@ -111,6 +123,9 @@ export function createAgentChatShellController({
 
   function renderProjectOptions() {
     ensureAgentState();
+    if (!dom.projectSelect) {
+      return;
+    }
     const selected = state.agentChat.projectId;
     const options = ['<option value="">All projects</option>'];
     asArray(state.projects).forEach((project) => {
@@ -166,8 +181,12 @@ export function createAgentChatShellController({
     ].filter(Boolean).forEach((node) => {
       node.disabled = runtime.inFlight;
     });
-    dom.clearBtn.disabled = runtime.inFlight;
-    dom.projectSelect.disabled = runtime.inFlight;
+    if (dom.clearBtn) {
+      dom.clearBtn.disabled = runtime.inFlight;
+    }
+    if (dom.projectSelect) {
+      dom.projectSelect.disabled = runtime.inFlight;
+    }
     dom.input.disabled = runtime.inFlight;
     sessionManager?.renderSessionList();
   }

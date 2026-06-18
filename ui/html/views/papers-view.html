@@ -70,12 +70,28 @@
                         <span aria-hidden="true">&gt;</span>
                       </button>
                     </div>
-                    <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn">-</button>
+                    <button type="button" id="paper-viewer-zoom-out-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom out" title="Zoom out">-</button>
                     <span id="paper-viewer-zoom-label" class="small-note">100%</span>
-                    <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn">+</button>
+                    <button type="button" id="paper-viewer-zoom-in-btn" class="ghost-btn papers-viewer-zoom-step-btn" aria-label="Zoom in" title="Zoom in">+</button>
                     <button type="button" id="paper-viewer-zoom-reset-btn" class="ghost-btn">100%</button>
-                    <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn">Fit Width</button>
-                    <button type="button" id="paper-viewer-open-btn" class="ghost-btn">Open Externally</button>
+                    <button type="button" id="paper-viewer-fit-width-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Fit width" title="Fit width">
+                      <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <rect x="4.5" y="6" width="15" height="12" rx="1.5"></rect>
+                        <path d="M8 12h8"></path>
+                        <path d="m10 9-3 3 3 3"></path>
+                        <path d="m14 9 3 3-3 3"></path>
+                      </svg>
+                      <span class="sr-only">Fit width</span>
+                    </button>
+                    <button type="button" id="paper-viewer-print-btn" class="ghost-btn papers-viewer-toolbar-icon-btn" aria-label="Print" title="Print">
+                      <svg class="papers-viewer-toolbar-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M7 8V4.75h10V8"></path>
+                        <rect x="6" y="14" width="12" height="5.25" rx="1"></rect>
+                        <path d="M6.5 17H5.25A2.25 2.25 0 0 1 3 14.75v-4A2.25 2.25 0 0 1 5.25 8.5h13.5A2.25 2.25 0 0 1 21 10.75v4A2.25 2.25 0 0 1 18.75 17H17.5"></path>
+                        <path d="M8.25 16.5h7.5"></path>
+                      </svg>
+                      <span class="sr-only">Print</span>
+                    </button>
                   </div>
                   <div class="papers-viewer-summary" hidden>
                     <p id="paper-viewer-title" class="papers-viewer-title">No paper selected</p>
@@ -120,6 +136,38 @@
                       </svg>
                       <span class="sr-only">Underline</span>
                     </button>
+                    <button type="button" id="paper-selection-search-btn" class="ghost-btn papers-selection-action-btn" aria-label="Search selected text" title="Search selected text">
+                      <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M10.75 5.25a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11Z"></path>
+                        <path d="M15 15 19.25 19.25"></path>
+                      </svg>
+                      <span class="sr-only">Search selected text</span>
+                    </button>
+                    <button type="button" id="paper-selection-ask-btn" class="ghost-btn papers-selection-action-btn" aria-label="Ask Hikari about selected text" title="Ask Hikari">
+                      <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M9.25 8.5a3 3 0 0 1 5.85.95c0 2.8-3.3 2.55-3.3 5.05"></path>
+                        <path d="M12 18.25h.01"></path>
+                      </svg>
+                      <span class="sr-only">Ask Hikari about selected text</span>
+                    </button>
+                  </div>
+                  <div id="paper-selection-search-popover" class="papers-selection-search-popover" hidden>
+                    <div class="papers-selection-search-top">
+                      <div class="papers-selection-search-actions">
+                        <button type="button" id="paper-selection-search-pdf-btn" class="ghost-btn">This PDF</button>
+                        <button type="button" id="paper-selection-search-library-btn" class="ghost-btn">Paper database</button>
+                      </div>
+                      <div id="paper-selection-search-nav" class="papers-selection-search-nav" aria-label="Search match navigation" hidden>
+                        <button type="button" id="paper-selection-search-prev-btn" class="ghost-btn" aria-label="Previous matched word" title="Previous matched word">
+                          <span aria-hidden="true">&lt;</span>
+                        </button>
+                        <span id="paper-selection-search-count" class="papers-selection-search-count">0 / 0</span>
+                        <button type="button" id="paper-selection-search-next-btn" class="ghost-btn" aria-label="Next matched word" title="Next matched word">
+                          <span aria-hidden="true">&gt;</span>
+                        </button>
+                      </div>
+                    </div>
+                    <div id="paper-selection-search-results" class="papers-selection-search-results"></div>
                   </div>
                   <div id="paper-selection-comment-popover" class="papers-selection-comment-popover" hidden>
                     <label>

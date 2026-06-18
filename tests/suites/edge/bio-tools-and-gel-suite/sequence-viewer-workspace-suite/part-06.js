@@ -41,7 +41,7 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
   const upsertBackboneCalls = [];
   const document = createMockDocument(ids);
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryUpsertBackbone: async (payload) => {
         upsertBackboneCalls.push(payload);
         return {
@@ -143,14 +143,14 @@ test('[EDGE] sequence-viewer backbone recognition stores a Protein Builder artif
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   const viewer = moduleWithDom.initSequenceViewer();
@@ -232,7 +232,7 @@ test('[EDGE] sequence-viewer annotate button adds SQL DNA and CDS features to th
   const annotateCalls = [];
   const document = createMockDocument(ids);
   const window = {
-    enanaApi: {
+    hikariApi: {
       sequenceLibraryAnnotate: async (payload) => {
         annotateCalls.push(payload);
         return {
@@ -266,14 +266,14 @@ test('[EDGE] sequence-viewer annotate button adds SQL DNA and CDS features to th
   };
   const localStorage = {
     getItem(key) {
-      if (key === 'enana_state_v1') {
+      if (key === 'hikari_state_v1') {
         return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
       }
       return null;
     }
   };
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document, window, localStorage }
   );
   const viewer = moduleWithDom.initSequenceViewer();
@@ -313,7 +313,7 @@ test('[EDGE] sequence-viewer keeps the sequencing alignment workspace hidden unt
     'sequence-viewer-alignment-status'
   ]);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer();
@@ -356,7 +356,7 @@ test('[EDGE] sequence-viewer sequencing alignment workspace loads multi-record i
   ];
   const document = createMockDocument(ids);
   const moduleWithDom = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer();
@@ -395,7 +395,7 @@ ACGTACGT
   assert.equal(Boolean(document.getElementById('sequence-viewer-alignment-workspace').hidden), true);
   assert.equal(document.getElementById('sequence-viewer-alignment-toggle').disabled, false);
   assert.equal(document.getElementById('sequence-viewer-alignment-toggle').checked, true);
-  assert.match(document.getElementById('sequence-viewer-alignment-active-note').textContent, /query_b|visible/i);
+  assert.equal(document.getElementById('sequence-viewer-alignment-active-note').textContent, '');
 });
   }
 };

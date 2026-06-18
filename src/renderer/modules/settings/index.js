@@ -3,51 +3,77 @@ import {
   LLM_PROVIDER_OPTIONS,
   apiKeyPlaceholderForProvider,
   defaultLlmEndpointForProvider,
-  getLlmModelConfig,
-  getLlmProviderModelOptions,
   modelPlaceholderForProvider,
-  normalizeLlmProvider,
-  normalizeReasoningEffort
+  normalizeLlmProvider
 } from '../llm-provider-config.generated.js';
+import { createExternalSkillsController } from './external-skills-controller.js';
+import {
+  createLlmModelCatalog,
+  normalizeCodexLoginStatus
+} from './llm-model-catalog.js';
+import { getSettingsElements } from './dom.js';
+import { renderStorageImportStatus as renderStorageStatus } from './storage-status.js';
+import { escapeHtml } from './html.js';
+import { createSampleInventorySettingsController } from './sample-inventory-controller.js';
 
 const FIXED_ACCENT = '#647255';
 const FIXED_FOCUS = '#7a8a69';
 
-export function initSettings({ state, persist, onStoragePathSaved }) {
-  const settingsNavItems = [...document.querySelectorAll('#setting-view [data-settings-target]')];
-  const settingsPanels = [...document.querySelectorAll('#setting-view [data-settings-panel]')];
-
-  const appearanceForm = document.getElementById('appearance-form');
-  const settingFontSize = document.getElementById('setting-font-size');
-  const settingMode = document.getElementById('setting-mode');
-
-  const storageForm = document.getElementById('storage-form');
-  const settingStoragePath = document.getElementById('setting-storage-path');
-  const settingStorageImportStatus = document.getElementById('setting-storage-import-status');
-  const selectStoragePathBtn = document.getElementById('select-storage-path-btn');
-  const startupForm = document.getElementById('startup-form');
-  const settingStartupDefaultView = document.getElementById('setting-startup-default-view');
-  const settingStartupRememberLastView = document.getElementById('setting-startup-remember-last-view');
-
-  const llmForm = document.getElementById('llm-form');
-  const settingProvider = document.getElementById('setting-provider');
-  const settingModel = document.getElementById('setting-model');
-  const settingModelOptions = document.getElementById('setting-model-options');
-  const settingReasoningEffort = document.getElementById('setting-reasoning-effort');
-  const settingApiEndpoint = document.getElementById('setting-api-endpoint');
-  const settingApiKey = document.getElementById('setting-api-key');
-  const settingCodexAuthControls = document.getElementById('setting-codex-auth-controls');
-  const settingCodexStatus = document.getElementById('setting-codex-status');
-  const startCodexLoginBtn = document.getElementById('start-codex-login-btn');
-  const clearCodexLoginBtn = document.getElementById('clear-codex-login-btn');
-  const settingAgentDeveloperMode = document.getElementById('setting-agent-developer-mode');
-  const telegramForm = document.getElementById('telegram-form');
-  const settingTelegramToken = document.getElementById('setting-telegram-token');
-  const settingTelegramStatus = document.getElementById('setting-telegram-status');
-  const clearTelegramTokenBtn = document.getElementById('clear-telegram-token-btn');
-  const locationInput = document.getElementById('setting-location-input');
-  const locationAddBtn = document.getElementById('setting-location-add-btn');
-  const locationList = document.getElementById('setting-location-list');
+export function initSettings({
+  state,
+  persist,
+  onStoragePathSaved,
+  onSampleInventorySettingsChanged,
+  document: rootDocument = globalThis?.document || null,
+  windowObject = globalThis?.window || null
+}) {
+  const document = rootDocument;
+  const window = windowObject;
+  const {
+    settingsNavItems,
+    settingsPanels,
+    appearanceForm,
+    settingFontSize,
+    settingMode,
+    storageForm,
+    settingStoragePath,
+    settingStorageImportStatus,
+    selectStoragePathBtn,
+    startupForm,
+    settingStartupDefaultView,
+    settingStartupRememberLastView,
+    llmForm,
+    settingProvider,
+    settingModel,
+    settingModelOptions,
+    settingReasoningEffort,
+    settingApiEndpoint,
+    settingApiKey,
+    settingCodexAuthControls,
+    settingCodexStatus,
+    startCodexLoginBtn,
+    clearCodexLoginBtn,
+    settingAgentDeveloperMode,
+    settingAgentExternalSkillsEnabled,
+    settingExternalSkillsStatus,
+    settingExternalSkillsRefreshBtn,
+    settingExternalSkillsList,
+    telegramForm,
+    settingTelegramToken,
+    settingTelegramStatus,
+    clearTelegramTokenBtn,
+    locationInput,
+    locationAddBtn,
+    locationList,
+    sampleInventoryLocationInput,
+    sampleInventoryLocationAddBtn,
+    sampleInventoryLocationList,
+    sampleTypeLabelsForm,
+    sampleTypeLabelList,
+    preferredJournalForm,
+    settingPreferredJournal,
+    clearPreferredJournalBtn
+  } = getSettingsElements(document);
   let telegramConfig = {
     enabled: false,
     source: 'none',
@@ -63,10 +89,33 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   };
   let storageImportInFlight = false;
   let activeLlmProvider = DEFAULT_LLM_PROVIDER;
-  let codexCatalog = null;
+  const llmModelCatalog = createLlmModelCatalog();
   let codexLoginRefreshTimers = [];
   let activeSettingsPanel = settingsNavItems[0]?.dataset.settingsTarget || 'appearance';
   const looksLikeEndpoint = (value) => /^[a-z]+:\/\//i.test(String(value || '').trim());
+  const externalSkillsController = createExternalSkillsController({
+    state,
+    persist,
+    api: window.hikariApi || null,
+    enabledInput: settingAgentExternalSkillsEnabled,
+    statusElement: settingExternalSkillsStatus,
+    listElement: settingExternalSkillsList,
+    escapeHtml
+  });
+  const sampleInventoryController = createSampleInventorySettingsController({
+    state,
+    persist,
+    elements: {
+      locationInput,
+      locationList,
+      sampleInventoryLocationInput,
+      sampleInventoryLocationList,
+      sampleTypeLabelList
+    },
+    escapeHtml,
+    renderSettings: renderForms,
+    onSettingsChanged: onSampleInventorySettingsChanged
+  });
 
   function renderCodexAccessFields(provider = '') {
     const isCodexProvider = provider === 'codex';
@@ -107,15 +156,24 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   settingModel?.addEventListener('change', onModelChanged);
   startCodexLoginBtn?.addEventListener('click', onStartCodexLogin);
   clearCodexLoginBtn?.addEventListener('click', onClearCodexLogin);
+  settingAgentExternalSkillsEnabled?.addEventListener('change', externalSkillsController.onGlobalEnabledChanged);
+  settingExternalSkillsRefreshBtn?.addEventListener('click', () => {
+    void externalSkillsController.refresh();
+  });
   telegramForm?.addEventListener('submit', onSaveTelegramToken);
   clearTelegramTokenBtn?.addEventListener('click', onClearTelegramToken);
-  locationAddBtn.addEventListener('click', onAddLocation);
+  locationAddBtn.addEventListener('click', sampleInventoryController.onAddLocation);
+  sampleInventoryLocationAddBtn?.addEventListener('click', sampleInventoryController.onAddSampleInventoryLocation);
+  sampleTypeLabelsForm?.addEventListener('submit', sampleInventoryController.onSaveSampleTypeLabels);
+  preferredJournalForm?.addEventListener('submit', onSavePreferredJournal);
+  clearPreferredJournalBtn?.addEventListener('click', onClearPreferredJournal);
   window.addEventListener('focus', () => {
     if (activeLlmProvider === 'codex') {
       void refreshCodexLoginStatus();
     }
   });
   void refreshTelegramBotStatus();
+  void externalSkillsController.refresh();
   void refreshCodexCatalog();
   void refreshCodexLoginStatus();
   activateSettingsPanel(activeSettingsPanel);
@@ -138,86 +196,17 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     if (activeSettingsPanel === 'llm' && activeLlmProvider === 'codex') {
       void refreshCodexLoginStatus();
     }
-  }
-
-  function normalizeCodexCatalog(rawCatalog) {
-    const source = rawCatalog && typeof rawCatalog === 'object' ? rawCatalog : {};
-    return {
-      defaultModel: String(source.defaultModel || '').trim(),
-      defaultReasoningEffort: String(source.defaultReasoningEffort || '').trim().toLowerCase(),
-      models: Array.isArray(source.models)
-        ? source.models.map((entry) => ({
-          id: String(entry?.id || '').trim(),
-          label: String(entry?.label || entry?.id || '').trim(),
-          reasoningEfforts: Array.isArray(entry?.reasoningEfforts)
-            ? entry.reasoningEfforts.map((effort) => String(effort || '').trim().toLowerCase()).filter(Boolean)
-            : [],
-          defaultReasoningEffort: String(entry?.defaultReasoningEffort || '').trim().toLowerCase()
-        })).filter((entry) => entry.id)
-        : []
-    };
-  }
-
-  function normalizeCodexLoginStatus(rawStatus) {
-    const source = rawStatus && typeof rawStatus === 'object' ? rawStatus : {};
-    return {
-      ok: source.ok === true,
-      loggedIn: source.loggedIn === true,
-      source: String(source.source || '').trim().toLowerCase() || 'none',
-      expired: source.expired === true,
-      sourcePath: String(source.sourcePath || '').trim(),
-      message: String(source.message || '').trim()
-    };
-  }
-
-  function getCodexModelConfig(model = '') {
-    const target = String(model || '').trim();
-    if (!codexCatalog?.models?.length || !target) {
-      return null;
+    if (
+      activeSettingsPanel === 'skills'
+      && !externalSkillsController.hasDiscoveredSkills()
+      && !externalSkillsController.isLoading()
+    ) {
+      void externalSkillsController.refresh();
     }
-    return codexCatalog.models.find((entry) => entry.id === target) || null;
-  }
-
-  function getModelConfigForProvider(provider, model = '') {
-    if (provider === 'codex' && codexCatalog?.models?.length) {
-      return getCodexModelConfig(model);
-    }
-    return getLlmModelConfig(provider, model);
-  }
-
-  function getModelOptionsForProvider(provider) {
-    if (provider === 'codex' && codexCatalog?.models?.length) {
-      return codexCatalog.models.map((entry) => ({
-        value: entry.id,
-        label: entry.label || entry.id
-      }));
-    }
-    return getLlmProviderModelOptions(provider);
-  }
-
-  function normalizeModelForProvider(provider, model = '') {
-    const cleanModel = String(model || '').trim();
-    if (!cleanModel) {
-      return '';
-    }
-    if (provider === 'codex' && codexCatalog?.models?.length) {
-      return getCodexModelConfig(cleanModel)?.id || String(codexCatalog.defaultModel || '').trim() || cleanModel;
-    }
-    return cleanModel;
-  }
-
-  function normalizeReasoningForProvider(provider, model = '', reasoningEffort = '') {
-    const cleanEffort = String(reasoningEffort || '').trim().toLowerCase();
-    const modelConfig = getModelConfigForProvider(provider, model);
-    const supported = Array.isArray(modelConfig?.reasoningEfforts) ? modelConfig.reasoningEfforts : [];
-    if (!supported.length) {
-      return normalizeReasoningEffort(provider, model, cleanEffort);
-    }
-    return supported.includes(cleanEffort) ? cleanEffort : '';
   }
 
   function syncCodexSettingsFromCatalog() {
-    if (!codexCatalog?.models?.length) {
+    if (!llmModelCatalog.hasCodexModels()) {
       return false;
     }
     const llm = state.settings?.llm && typeof state.settings.llm === 'object'
@@ -230,9 +219,9 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
 
     const currentModel = String(llm.model || '').trim();
     const nextModel = currentModel
-      ? normalizeModelForProvider(provider, currentModel)
+      ? llmModelCatalog.normalizeModel(provider, currentModel)
       : currentModel;
-    const nextReasoningEffort = normalizeReasoningForProvider(
+    const nextReasoningEffort = llmModelCatalog.normalizeReasoning(
       provider,
       nextModel,
       llm.reasoningEffort
@@ -254,7 +243,7 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     if (!settingModelOptions) {
       return;
     }
-    const modelOptions = getModelOptionsForProvider(provider);
+    const modelOptions = llmModelCatalog.getModelOptions(provider);
     settingModelOptions.textContent = '';
     modelOptions.forEach((entry) => {
       const option = document.createElement('option');
@@ -271,9 +260,9 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
       return;
     }
 
-    const modelConfig = getModelConfigForProvider(provider, model);
+    const modelConfig = llmModelCatalog.getModelConfig(provider, model);
     const supported = Array.isArray(modelConfig?.reasoningEfforts) ? modelConfig.reasoningEfforts : [];
-    const normalizedSelected = normalizeReasoningForProvider(provider, model, selectedReasoningEffort);
+    const normalizedSelected = llmModelCatalog.normalizeReasoning(provider, model, selectedReasoningEffort);
     settingReasoningEffort.textContent = '';
 
     const defaultOption = document.createElement('option');
@@ -341,37 +330,20 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     if (settingAgentDeveloperMode) {
       settingAgentDeveloperMode.checked = state.settings?.agent?.developerMode === true;
     }
+    if (settingAgentExternalSkillsEnabled) {
+      settingAgentExternalSkillsEnabled.checked = state.settings?.agent?.externalSkillsEnabled !== false;
+    }
     renderCodexStatus();
+    externalSkillsController.render();
     renderTelegramStatus();
-    renderLocationList();
+    sampleInventoryController.renderLocationList();
+    sampleInventoryController.renderSampleInventoryLocationList();
+    sampleInventoryController.renderSampleTypeLabelList();
+    renderPreferredJournal();
     renderStorageImportStatus();
     if (didSyncCodexSettings) {
       persist();
     }
-  }
-
-  function renderLocationList() {
-    const locations = state.settings.inventoryLocations || [];
-    if (!locations.length) {
-      locationList.innerHTML = '<p class="small-note">No locations configured.</p>';
-      return;
-    }
-
-    locationList.innerHTML = locations.map((location, index) => `
-      <div class="card-actions">
-        <span>${escapeHtml(location)}</span>
-        <button type="button" class="danger-btn" data-location-delete="${index}">Delete</button>
-      </div>
-    `).join('');
-
-    locationList.querySelectorAll('[data-location-delete]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const idx = Number(button.dataset.locationDelete);
-        state.settings.inventoryLocations.splice(idx, 1);
-        persist();
-        renderForms();
-      });
-    });
   }
 
   function applyAppearance() {
@@ -385,7 +357,7 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
 
     document.body.classList.toggle('theme-night', appearance.mode === 'night');
     document.body.classList.add('ui-neutral-compact');
-    window.dispatchEvent(new CustomEvent('enana:appearance-changed'));
+    window.dispatchEvent(new CustomEvent('hikari:appearance-changed'));
   }
 
   function onSaveAppearance(event) {
@@ -407,11 +379,11 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function onSelectStoragePath() {
-    if (!window.enanaApi?.pickStorageDirectory) {
+    if (!window.hikariApi?.pickStorageDirectory) {
       return;
     }
 
-    const result = await window.enanaApi.pickStorageDirectory(settingStoragePath.value);
+    const result = await window.hikariApi.pickStorageDirectory(settingStoragePath.value);
     if (!result?.ok || !result.path) {
       return;
     }
@@ -525,12 +497,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function refreshCodexLoginStatus() {
-    if (!window.enanaApi?.getCodexLlmStatus) {
+    if (!window.hikariApi?.getCodexLlmStatus) {
       renderCodexStatus('Codex login is unavailable.');
       return codexLoginConfig;
     }
     try {
-      const result = await window.enanaApi.getCodexLlmStatus();
+      const result = await window.hikariApi.getCodexLlmStatus();
       codexLoginConfig = normalizeCodexLoginStatus(result);
       renderCodexStatus();
       return codexLoginConfig;
@@ -541,12 +513,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function startCodexLoginFlow() {
-    if (!window.enanaApi?.loginCodexLlm) {
+    if (!window.hikariApi?.loginCodexLlm) {
       renderCodexStatus('Codex login is unavailable.');
       return { ok: false };
     }
     try {
-      const result = await window.enanaApi.loginCodexLlm();
+      const result = await window.hikariApi.loginCodexLlm();
       if (!result?.ok) {
         renderCodexStatus(result?.error || 'Failed to start the OpenAI login flow.');
         return result;
@@ -566,12 +538,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
 
   async function onClearCodexLogin() {
     clearCodexLoginRefreshTimers();
-    if (!window.enanaApi?.clearCodexLlmLogin) {
+    if (!window.hikariApi?.clearCodexLlmLogin) {
       renderCodexStatus('Codex login reset is unavailable.');
       return;
     }
 
-    const result = await window.enanaApi.clearCodexLlmLogin();
+    const result = await window.hikariApi.clearCodexLlmLogin();
     if (!result?.ok) {
       renderCodexStatus(result?.error || 'Failed to clear the saved Codex login.');
       return;
@@ -584,8 +556,8 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   async function onSaveLlmSettings(event) {
     event.preventDefault();
     const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint.value);
-    const model = normalizeModelForProvider(provider, settingModel?.value);
-    const reasoningEffort = normalizeReasoningForProvider(provider, model, settingReasoningEffort?.value);
+    const model = llmModelCatalog.normalizeModel(provider, settingModel?.value);
+    const reasoningEffort = llmModelCatalog.normalizeReasoning(provider, model, settingReasoningEffort?.value);
     const endpoint = provider === 'codex'
       ? ''
       : (settingApiEndpoint.value.trim() || defaultLlmEndpointForProvider(provider));
@@ -609,11 +581,11 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     if (provider === 'codex') {
       try {
         await Promise.all([
-          window.enanaApi?.setCodexLlmModel
-            ? window.enanaApi.setCodexLlmModel(state.settings.llm.model)
+          window.hikariApi?.setCodexLlmModel
+            ? window.hikariApi.setCodexLlmModel(state.settings.llm.model)
             : Promise.resolve(),
-          window.enanaApi?.setCodexLlmReasoningEffort
-            ? window.enanaApi.setCodexLlmReasoningEffort(state.settings.llm.reasoningEffort)
+          window.hikariApi?.setCodexLlmReasoningEffort
+            ? window.hikariApi.setCodexLlmReasoningEffort(state.settings.llm.reasoningEffort)
             : Promise.resolve()
         ]);
         const status = await refreshCodexLoginStatus();
@@ -656,15 +628,15 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function refreshCodexCatalog() {
-    if (!window.enanaApi?.getCodexLlmCatalog) {
+    if (!window.hikariApi?.getCodexLlmCatalog) {
       return;
     }
     try {
-      const result = await window.enanaApi.getCodexLlmCatalog();
+      const result = await window.hikariApi.getCodexLlmCatalog();
       if (!result?.ok) {
         return;
       }
-      codexCatalog = normalizeCodexCatalog(result);
+      llmModelCatalog.setCodexCatalog(result);
       renderForms();
     } catch {
       // Keep settings available even when the desktop bridge cannot inspect Codex CLI.
@@ -678,12 +650,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
       renderTelegramStatus('Token is required.');
       return;
     }
-    if (!window.enanaApi?.setTelegramBotToken) {
+    if (!window.hikariApi?.setTelegramBotToken) {
       renderTelegramStatus('Telegram integration is unavailable.');
       return;
     }
 
-    const result = await window.enanaApi.setTelegramBotToken(token);
+    const result = await window.hikariApi.setTelegramBotToken(token);
     if (!result?.ok) {
       renderTelegramStatus(result?.error || 'Failed to save token.');
       return;
@@ -701,12 +673,12 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   async function onClearTelegramToken() {
-    if (!window.enanaApi?.clearTelegramBotToken) {
+    if (!window.hikariApi?.clearTelegramBotToken) {
       renderTelegramStatus('Telegram integration is unavailable.');
       return;
     }
 
-    const result = await window.enanaApi.clearTelegramBotToken();
+    const result = await window.hikariApi.clearTelegramBotToken();
     if (!result?.ok) {
       renderTelegramStatus(result?.error || 'Failed to clear saved token.');
       return;
@@ -723,32 +695,35 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
     renderTelegramStatus();
   }
 
-  function onAddLocation() {
-    const value = locationInput.value.trim();
-    if (!value) {
+  function renderPreferredJournal() {
+    if (!settingPreferredJournal) {
       return;
     }
+    settingPreferredJournal.value = String(state.settings.preferredJournal || '').trim();
+  }
 
-    if (!Array.isArray(state.settings.inventoryLocations)) {
-      state.settings.inventoryLocations = [];
+  function onSavePreferredJournal(event) {
+    event.preventDefault();
+    state.settings.preferredJournal = String(settingPreferredJournal?.value || '').trim();
+    persist();
+    renderPreferredJournal();
+  }
+
+  function onClearPreferredJournal() {
+    if (settingPreferredJournal) {
+      settingPreferredJournal.value = '';
     }
-    const normalized = value.toLowerCase();
-    const hasLocation = state.settings.inventoryLocations.some((item) => String(item).trim().toLowerCase() === normalized);
-    if (!hasLocation) {
-      state.settings.inventoryLocations.push(value);
-      persist();
-      renderForms();
-    }
-    locationInput.value = '';
+    state.settings.preferredJournal = '';
+    persist();
   }
 
   async function refreshTelegramBotStatus() {
-    if (!window.enanaApi?.getTelegramBotConfig) {
+    if (!window.hikariApi?.getTelegramBotConfig) {
       renderTelegramStatus('Telegram integration is unavailable.');
       return;
     }
 
-    const result = await window.enanaApi.getTelegramBotConfig();
+    const result = await window.hikariApi.getTelegramBotConfig();
     if (!result?.ok) {
       renderTelegramStatus(result?.error || 'Failed to load Telegram bot status.');
       return;
@@ -796,53 +771,7 @@ export function initSettings({ state, persist, onStoragePathSaved }) {
   }
 
   function renderStorageImportStatus() {
-    if (!settingStorageImportStatus) {
-      return;
-    }
-    if (storageImportInFlight) {
-      settingStorageImportStatus.textContent = 'Storage import: refreshing workspace and scanning records...';
-      return;
-    }
-    const info = state.settings?.storageImport && typeof state.settings.storageImport === 'object'
-      ? state.settings.storageImport
-      : {};
-    const summary = info.summary && typeof info.summary === 'object' ? info.summary : {};
-    const warningCount = Array.isArray(info.warnings) ? info.warnings.length : 0;
-    if (String(info.error || '').trim()) {
-      settingStorageImportStatus.textContent = `Storage import: ${String(info.error).trim()}`;
-      return;
-    }
-    if (String(info.lastImportedAt || '').trim()) {
-      const parts = [
-        `${Number(summary.protocols) || 0} protocols`,
-        `${Number(summary.notebookEntries) || 0} notebook entries`,
-        `${Number(summary.workflowTemplates) || 0} workflow templates`,
-        `${Number(summary.workflows) || 0} workflows`,
-        `${Number(summary.papers) || 0} papers`,
-        `${Number(summary.chemicals) || 0} chemicals`,
-        `${Number(summary.personalInventoryContainers) || 0} inventory containers`,
-        `${Number(summary.sequenceEntries) || 0} sequences`
-      ];
-      const warningText = warningCount ? ` (${warningCount} warnings)` : '';
-      const manifestPath = String(info.manifestPath || '').trim();
-      const suffix = manifestPath ? ` · manifest: ${manifestPath}` : '';
-      settingStorageImportStatus.textContent = `Storage import: ${parts.join(', ')}${warningText}${suffix}`;
-      return;
-    }
-    settingStorageImportStatus.textContent = 'Storage import: not started.';
-  }
-
-  function escapeHtml(text) {
-    return String(text || '').replace(/[&<>"']/g, (char) => {
-      const entityMap = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-      };
-      return entityMap[char] || char;
-    });
+    renderStorageStatus(settingStorageImportStatus, state, storageImportInFlight);
   }
 
   function populateLlmProviderOptions() {

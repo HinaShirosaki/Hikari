@@ -143,6 +143,8 @@ test('agent-chat sends settings API key to main process and stores assistant res
           { name: 'Reagent Z', type: 'compound', identifier: 'RZ-1', notes: 'demo' }
         ],
         pdfDataUrl: 'data:application/pdf;base64,AAAA',
+        knowledgeMarkdownRelativePath: 'KnowledgeBase/papers.md/atlas-uploaded-paper/paper.md',
+        knowledgeStatus: 'ready',
         deepReadReady: true,
         availabilityStatus: 'deep_ready',
         ingestionStatus: 'ready',
@@ -154,7 +156,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
     inventory: {},
     labInventory: { chemicals: [] },
     settings: {
-      storagePath: '/tmp/enana-storage',
+      storagePath: '/tmp/hikari-storage',
       llm: {
         model: 'gpt-5',
         apiEndpoint: 'https://api.openai.com/v1/responses',
@@ -168,21 +170,21 @@ test('agent-chat sends settings API key to main process and stores assistant res
   };
 
   const window = {
-    enanaApi: {
+    hikariApi: {
       autoSaveDataFile: async (data, filePath) => {
         autoSaveCalls.push({ data, filePath });
         return {
           ok: true,
-          filePath: '/tmp/enana-data.ena.json',
+          filePath: '/tmp/hikari-data.ena.json',
           sidecarPaths: {
             protocolsPath: '/tmp/Protocol',
-            notebookPagesPath: '/tmp/enana-data.notebook-pages.json',
+            notebookPagesPath: '/tmp/hikari-data.notebook-pages.json',
             sqlitePath: '/tmp/Protocol/protocol.index.sqlite'
           },
           bundlePaths: {
-            dataFilePath: '/tmp/enana-data.ena.json',
+            dataFilePath: '/tmp/hikari-data.ena.json',
             protocolsPath: '/tmp/Protocol',
-            notebookPagesPath: '/tmp/enana-data.notebook-pages.json',
+            notebookPagesPath: '/tmp/hikari-data.notebook-pages.json',
             sqlitePath: '/tmp/Protocol/protocol.index.sqlite'
           }
         };
@@ -283,7 +285,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
     }
   };
 
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat.js'), {
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window
   });
@@ -320,7 +322,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.agent.deepResearchEnabled, false);
   assert.equal(payloadSeen.projectId, 'p1');
   assert.equal(payloadSeen.stateSnapshot.snapshot_mode, 'thin');
-  assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/enana-data.ena.json');
+  assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/hikari-data.ena.json');
   assert.equal(payloadSeen.stateSnapshot.protocols.length, 1);
   assert.equal(payloadSeen.stateSnapshot.protocols[0].name, 'Cell Prep');
   assert.equal(payloadSeen.stateSnapshot.protocols[0].steps.length, 2);
@@ -337,13 +339,14 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.stateSnapshot.papers.length, 1);
   assert.equal(payloadSeen.stateSnapshot.papers[0].availability_status, 'deep_ready');
   assert.equal(payloadSeen.stateSnapshot.papers[0].deep_read_ready, true);
+  assert.equal(payloadSeen.stateSnapshot.papers[0].knowledge_markdown_relative_path, 'KnowledgeBase/papers.md/atlas-uploaded-paper/paper.md');
   assert.equal(Array.isArray(payloadSeen.stateSnapshot.papers[0].key_figures), true);
   assert.equal(payloadSeen.stateSnapshot.papers[0].key_figures.length > 0, true);
   assert.equal(payloadSeen.stateSnapshot.assays.length, 1);
   assert.equal(payloadSeen.stateSnapshot.assays[0].project_id, 'p1');
   assert.equal(payloadSeen.stateSnapshot.gelAnalyses.length, 1);
   assert.equal(payloadSeen.stateSnapshot.gelAnalyses[0].project_id, 'p1');
-  assert.equal(payloadSeen.stateSnapshot.experimentData.schema_name, 'enana_experiment_json');
+  assert.equal(payloadSeen.stateSnapshot.experimentData.schema_name, 'hikari_experiment_json');
   assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].notebook_state, 'executed');
   assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].executed_at, '');
   assert.equal(payloadSeen.stateSnapshot.experimentData.notebook_runs[0].agent_draft_status, '');
@@ -383,6 +386,161 @@ test('agent-chat sends settings API key to main process and stores assistant res
   trigger(clearBtn, 'click');
   assert.equal(state.agentChat.messages.length, 0);
   assert.equal(status.textContent, 'New chat ready.');
+});
+
+test('paper-scoped agent chat snapshot includes the active transformed markdown prompt', () => {
+  const snapshotModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'state-snapshot.js'
+  ));
+  const scopedStateModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'scoped-state.js'
+  ));
+  const rootState = {
+    projects: [{ id: 'p1', name: 'Cancer Study' }],
+    protocols: [],
+    notebookEntries: [],
+    workflows: [],
+    assays: [],
+    gelAnalyses: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: { storagePath: '/tmp/hikari-storage' },
+    papers: [{
+      id: 'paper-1',
+      title: 'Atlas Uploaded Paper',
+      linkedType: 'project',
+      linkedId: 'p1',
+      linkedName: 'Cancer Study',
+      summary: 'Paper summary text.',
+      knowledgeMarkdownRelativePath: 'KnowledgeBase/papers.md/atlas-uploaded-paper/paper.md',
+      knowledgeStatus: 'ready',
+      deepReadReady: true,
+      availabilityStatus: 'deep_ready'
+    }]
+  };
+  const scopedState = scopedStateModule.createPaperScopedAgentChatState(rootState, {
+    getPaperContext: () => ({
+      paperId: 'paper-1',
+      paperTitle: 'Atlas Uploaded Paper',
+      projectId: 'p1',
+      knowledgeMarkdownRelativePath: 'KnowledgeBase/papers.md/atlas-uploaded-paper/paper.md',
+      knowledgeStatus: 'ready'
+    })
+  });
+
+  assert.match(scopedState.agentChatContext.sessionPrompt, /transformed markdown paper\.md/);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /Atlas Uploaded Paper/);
+
+  const snapshot = snapshotModule.buildStateSnapshot(scopedState, 'p1');
+  assert.equal(snapshot.activePaper.id, 'paper-1');
+  assert.equal(snapshot.paper_agent.active_paper_id, 'paper-1');
+  assert.equal(snapshot.paper_agent.transformed_markdown_relative_path, 'KnowledgeBase/papers.md/atlas-uploaded-paper/paper.md');
+  assert.equal(snapshot.paper_agent.has_transformed_markdown, true);
+  assert.match(snapshot.paper_agent.session_prompt, /read the transformed markdown/i);
+});
+
+test('paper rail selected text is carried as hidden one-shot agent context', () => {
+  const payloadModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'payload-builder.js'
+  ));
+  const state = {
+    projects: [],
+    settings: {
+      llm: { provider: 'codex', model: 'gpt-5' },
+      agent: { developerMode: false }
+    },
+    agentChat: { projectId: '', messages: [], deepResearchEnabled: false },
+    agentChatContext: {
+      sessionPrompt: 'You are reading the active paper markdown.',
+      paperId: 'paper-1',
+      paperTitle: 'Atlas Uploaded Paper',
+      knowledgeMarkdownRelativePath: 'KnowledgeBase/papers.md/atlas-uploaded-paper/paper.md',
+      knowledgeStatus: 'ready'
+    }
+  };
+  const input = { value: 'What does this imply for follow-up experiments?' };
+  const payloadBuilder = payloadModule.createAgentPayloadBuilder({
+    state,
+    input,
+    getComposerAttachments: () => [],
+    ensureAgentState: () => {}
+  });
+
+  const didPrime = payloadBuilder.primeHiddenContext({
+    kind: 'paper-selection',
+    label: 'Selected paper text',
+    text: 'A hidden selected sentence from page 2.',
+    paperId: 'paper-1',
+    paperTitle: 'Atlas Uploaded Paper',
+    pageNumber: 2
+  });
+  const draft = payloadBuilder.getDraftRequest();
+  const agentFlags = payloadBuilder.buildAgentFlagsPayload({ hiddenContexts: draft.hiddenContexts });
+
+  assert.equal(didPrime, true);
+  assert.equal(draft.messageText, 'What does this imply for follow-up experiments?');
+  assert.doesNotMatch(draft.messageText, /hidden selected sentence/);
+  assert.equal(agentFlags.hiddenContexts.length, 1);
+  assert.equal(agentFlags.hiddenContexts[0].text, 'A hidden selected sentence from page 2.');
+  assert.equal(agentFlags.hiddenContexts[0].pageNumber, 2);
+  assert.match(agentFlags.paperSessionPrompt, /active paper markdown/);
+
+  payloadBuilder.consumeHiddenContexts();
+  assert.equal(payloadBuilder.getDraftRequest().hiddenContexts.length, 0);
+});
+
+test('paper rail quick prompts load a common prompt into the composer', () => {
+  const document = createMockDocument([
+    'agent-rail-chat-history',
+    'agent-rail-message-input',
+    'agent-rail-send-btn',
+    'agent-rail-quick-prompts'
+  ]);
+  const prompt = 'Generate a step-by-step experimental protocol from this paper.';
+  const quickPrompts = document.getElementById('agent-rail-quick-prompts');
+  const messageInput = document.getElementById('agent-rail-message-input');
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window: {}
+  });
+  const agent = agentModule.initAgentChat({
+    idPrefix: 'agent-rail',
+    state: {
+      projects: [],
+      settings: {},
+      agentChat: { projectId: '', messages: [], sessions: [], deepResearchEnabled: false }
+    },
+    persist: () => {},
+    createId: () => 'agent-msg-1',
+    safeText: shared.safeText
+  });
+
+  agent.render();
+  trigger(quickPrompts, 'click', {
+    target: {
+      dataset: { agentSuggestPrompt: prompt },
+      closest(selector) {
+        return selector === '[data-agent-suggest-prompt]' ? this : null;
+      }
+    }
+  });
+
+  assert.equal(messageInput.value, prompt);
 });
   }
 };

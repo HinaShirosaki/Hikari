@@ -5,16 +5,13 @@ const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
 const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
 const {
   CallToolRequestSchema,
-  ListResourcesRequestSchema,
-  ListToolsRequestSchema,
-  ReadResourceRequestSchema,
-  McpError,
-  ErrorCode
+  ListToolsRequestSchema
 } = require('@modelcontextprotocol/sdk/types.js');
 
 const { createAgentMcpGateway } = require('./gateway.js');
 const { createAgentMcpHostToolRunner } = require('./host-client.js');
 const { getDirectMcpToolDefinitions } = require('./direct-tools/index.js');
+const { buildHikariAgentMcpInstructions } = require('./instructions.js');
 
 const SERVER_NAME = 'hikari-agent-mcp';
 const SERVER_VERSION = '0.1.0';
@@ -35,9 +32,7 @@ function parseJsonObject(raw = '') {
 function getRequestContextFromEnv(env = process.env) {
   return parseJsonObject(
     env.HIKARI_AGENT_MCP_REQUEST_CONTEXT
-      || env.ENANA_AGENT_MCP_REQUEST_CONTEXT
       || env.HIKARI_CODEX_REQUEST_CONTEXT
-      || env.ENANA_CODEX_REQUEST_CONTEXT
   );
 }
 
@@ -57,7 +52,10 @@ function createAgentMcpStdioServer(deps = {}) {
 
   const server = new Server(
     { name: SERVER_NAME, version: SERVER_VERSION },
-    { capabilities: { tools: {}, resources: {} } }
+    {
+      capabilities: { tools: { listChanged: false } },
+      instructions: buildHikariAgentMcpInstructions()
+    }
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -79,31 +77,8 @@ function createAgentMcpStdioServer(deps = {}) {
         type: 'text',
         text: JSON.stringify(result, null, 2)
       }],
+      structuredContent: ensureObject(result),
       isError: result?.ok === false
-    };
-  });
-
-  server.setRequestHandler(ListResourcesRequestSchema, async () => ({
-    resources: gateway.resourceSearch({ query: '', limit: 40 }).results
-  }));
-
-  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-    const params = ensureObject(request?.params);
-    const result = gateway.resourceRead({ uri: params.uri });
-    if (!result.ok) {
-      throw new McpError(
-        ErrorCode.InvalidParams,
-        result.error || `Resource "${params.uri || 'unknown'}" is not available.`
-      );
-    }
-    return {
-      contents: [{
-        uri: params.uri,
-        mimeType: result.mimeType || 'application/json',
-        text: typeof result.contents === 'string'
-          ? result.contents
-          : JSON.stringify(result.contents, null, 2)
-      }]
     };
   });
 

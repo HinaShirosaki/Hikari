@@ -52,8 +52,24 @@
         <div id="app-more-menu" class="app-more-menu" role="menu" hidden></div>
       </nav>
       <div class="topbar-tools">
-        <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
-        <ul id="topbar-search-suggestions" class="topbar-search-suggestions" role="listbox" aria-label="Search suggestions" hidden></ul>
+        <div class="topbar-history-controls" role="group" aria-label="Undo and redo">
+          <button id="global-undo-btn" class="topbar-history-btn" type="button" aria-label="Undo" title="Nothing to undo" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M9 14 4 9l5-5" />
+              <path d="M4 9h11a5 5 0 1 1 0 10h-4" />
+            </svg>
+          </button>
+          <button id="global-redo-btn" class="topbar-history-btn" type="button" aria-label="Redo" title="Nothing to redo" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="m15 14 5-5-5-5" />
+              <path d="M20 9H9a5 5 0 1 0 0 10h4" />
+            </svg>
+          </button>
+        </div>
+        <div class="topbar-search-shell">
+          <input id="topbar-search" type="search" placeholder="Search modules or use sample: EGFR" aria-label="Search modules and records" />
+          <ul id="topbar-search-suggestions" class="topbar-search-suggestions" role="listbox" aria-label="Search suggestions" hidden></ul>
+        </div>
       </div>
     </header>
     <div class="workspace-shell">

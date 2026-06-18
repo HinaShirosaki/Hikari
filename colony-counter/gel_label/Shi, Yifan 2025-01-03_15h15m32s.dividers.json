@@ -1,0 +1,48 @@
+{
+  "image": "/Users/shiyifan/Projects/colony-counter/gel_image/Shi, Yifan 2025-01-03_15h15m32s.tif",
+  "image_name": "Shi, Yifan 2025-01-03_15h15m32s.tif",
+  "image_width": 775,
+  "image_height": 543,
+  "rotation": -3.0,
+  "corrected_width": 802,
+  "corrected_height": 583,
+  "dividers": [
+    {
+      "x_top": 236.52734375,
+      "x_bottom": 236.52734375
+    },
+    {
+      "x_top": 280.38671875,
+      "x_bottom": 280.38671875
+    },
+    {
+      "x_top": 313.28125,
+      "x_bottom": 313.28125
+    },
+    {
+      "x_top": 352.44140625,
+      "x_bottom": 352.44140625
+    },
+    {
+      "x_top": 391.6015625,
+      "x_bottom": 391.6015625
+    },
+    {
+      "x_top": 429.1953125,
+      "x_bottom": 429.1953125
+    },
+    {
+      "x_top": 469.921875,
+      "x_bottom": 469.921875
+    },
+    {
+      "x_top": 507.515625,
+      "x_bottom": 507.515625
+    },
+    {
+      "x_top": 545.109375,
+      "x_bottom": 545.109375
+    }
+  ],
+  "divider_count": 9
+}

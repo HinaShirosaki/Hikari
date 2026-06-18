@@ -1,6 +1,7 @@
 import {
   getChemicalStructureCandidatesFromClipboardData,
-  readChemicalStructureClipboard
+  readChemicalStructureClipboard,
+  toChemicalStructureDraftFromCandidate
 } from '../chemical-structure-clipboard.js';
 import {
   buildCompoundClipboardNotFoundMessage,
@@ -9,30 +10,9 @@ import {
   toCompoundStructureDraft
 } from './compound-model.js';
 import {
-  closeCompoundDialog,
-  openCompoundDialog,
   renderCompoundFields,
   setCompoundStatus
 } from './compound-dialog.js';
-import {
-  captureCompoundStructureFromEditor,
-  clearCompoundCanvas,
-  loadCompoundStructureSource,
-  syncCompoundDraftToEditor
-} from './compound-ketcher.js';
-
-export async function onCompoundOpenClick(ctx) {
-  if (!isChemicalStructureSampleType(ctx.dom.sampleTypeInput?.value)) {
-    return;
-  }
-  openCompoundDialog(ctx);
-  const loaded = await syncCompoundDraftToEditor(ctx);
-  if (!loaded) {
-    setCompoundStatus(ctx, 'Ketcher is still loading.', true);
-    return;
-  }
-  setCompoundStatus(ctx, 'Ketcher is ready. Draw the structure and apply it to the sample.', false);
-}
 
 export async function onCompoundPasteClick(ctx) {
   if (!isChemicalStructureSampleType(ctx.dom.sampleTypeInput?.value)) {
@@ -54,18 +34,8 @@ export function onCompoundStructurePaste(ctx, event) {
   event.preventDefault();
   setCompoundStatus(ctx, 'Reading pasted chemical structure...', false);
   applyCompoundStructurePasteCandidates(ctx, candidates, Array.from(event.clipboardData?.types || [])).catch(() => {
-    setCompoundStatus(ctx, 'Cannot render that structure yet. Try Copy As CDXML or MOL from ChemDraw.', true);
+    setCompoundStatus(ctx, 'Cannot save that structure yet. Try SMILES, MOL/SDF, or a copied image.', true);
   });
-}
-
-export async function onCompoundDialogApplyClick(ctx) {
-  try {
-    await captureCompoundStructureFromEditor(ctx);
-    closeCompoundDialog(ctx);
-    setCompoundStatus(ctx, ctx.compoundStructureDraft.smiles ? 'Structure snapshot saved with this sample.' : 'No structure detected on canvas.', false);
-  } catch {
-    setCompoundStatus(ctx, 'Cannot read Ketcher yet. Wait a second and try again.', true);
-  }
 }
 
 export async function applyCompoundStructurePasteCandidates(ctx, candidates, formats = []) {
@@ -75,40 +45,34 @@ export async function applyCompoundStructurePasteCandidates(ctx, candidates, for
   }
 
   for (const candidate of candidates) {
-    try {
-      if (candidate?.imageDataUrl) {
-        ctx.compoundStructureDraft = toCompoundStructureDraft({ imageDataUrl: candidate.imageDataUrl });
-        renderCompoundFields(ctx);
-        setCompoundStatus(ctx, 'Structure image pasted from clipboard. Save the sample to keep it.', false);
-        return true;
-      }
-      await loadCompoundStructureSource(ctx, candidate.source);
-      setCompoundStatus(ctx, 'Structure pasted from clipboard. Save the sample to keep it.', false);
+    const draft = toChemicalStructureDraftFromCandidate(candidate);
+    if (draft) {
+      ctx.compoundStructureDraft = toCompoundStructureDraft(draft);
+      renderCompoundFields(ctx);
+      setCompoundStatus(ctx, buildCompoundPasteStatus(ctx.compoundStructureDraft), false);
       return true;
-    } catch {
-      // Try the next clipboard representation if Ketcher cannot parse this one.
     }
   }
 
-  setCompoundStatus(ctx, 'Cannot render that structure yet. Try Copy As CDXML or MOL from ChemDraw.', true);
+  setCompoundStatus(ctx, 'Cannot save that structure yet. Try SMILES, MOL/SDF, or a copied image.', true);
   return false;
 }
 
-export async function onCompoundCaptureClick(ctx) {
-  if (!isChemicalStructureSampleType(ctx.dom.sampleTypeInput?.value)) {
-    return;
+function buildCompoundPasteStatus(draft) {
+  if (draft.imageDataUrl && !draft.smiles && !draft.molfile) {
+    return 'Structure image pasted from clipboard. Save the sample to keep it.';
   }
-  try {
-    await captureCompoundStructureFromEditor(ctx);
-    setCompoundStatus(ctx, ctx.compoundStructureDraft.smiles ? 'Structure snapshot refreshed from Ketcher.' : 'No structure detected on canvas.', false);
-  } catch {
-    setCompoundStatus(ctx, 'Cannot read Ketcher yet. Open editor and try again.', true);
+  if (draft.smiles) {
+    return 'SMILES pasted from clipboard. Save the sample to keep it.';
   }
+  if (draft.molfile) {
+    return 'MOL/SDF structure pasted from clipboard. Save the sample to keep it.';
+  }
+  return 'Structure pasted from clipboard. Save the sample to keep it.';
 }
 
-export async function onCompoundClearClick(ctx) {
+export function onCompoundClearClick(ctx) {
   ctx.compoundStructureDraft = emptyCompoundStructureDraft();
   renderCompoundFields(ctx);
-  await clearCompoundCanvas(ctx);
   setCompoundStatus(ctx, 'Chemical structure cleared.', false);
 }
