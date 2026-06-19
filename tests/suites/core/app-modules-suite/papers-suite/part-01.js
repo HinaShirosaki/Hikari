@@ -128,6 +128,7 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     'paper-selection-underline-btn',
     'paper-selection-search-btn',
     'paper-selection-ask-btn',
+    'paper-selection-copy-btn',
     'paper-selection-search-popover',
     'paper-selection-search-pdf-btn',
     'paper-selection-search-library-btn',

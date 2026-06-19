@@ -558,7 +558,7 @@
 <!-- SOURCE: ui/html/views/biology-notebook-view.html -->
 <section id="biology-notebook-view" class="view">
       <div id="biology-notebook-layout" class="biology-notebook-layout left-rail-template">
-        <aside class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+        <aside id="biology-notebook-rail" class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="left-rail-template__pinned">
             <div class="biology-notebook-rail-head">
               <h2>Biology Notebook</h2>
@@ -574,6 +574,9 @@
             </div>
           </div>
           <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
+          <div id="biology-notebook-project-context-menu" class="biology-notebook-context-menu" hidden>
+            <button id="biology-notebook-add-project-btn" class="biology-notebook-context-item" type="button">Add a project</button>
+          </div>
         </aside>
 
         <div class="biology-notebook-viewer-column left-rail-template__main">
@@ -584,7 +587,6 @@
                 <p class="small-note biology-notebook-viewer-kicker">Add Notebook Page</p>
                 <h3 id="biology-notebook-page-starter-project">Choose a project folder</h3>
               </div>
-              <button id="biology-notebook-open-projects-btn" class="ghost-btn" type="button">Create Project</button>
             </div>
             <div class="stack-form biology-notebook-select-stack biology-notebook-page-starter-controls">
               <label>
@@ -870,6 +872,32 @@
             </div>
           </div>
         </aside>
+      </div>
+
+      <div id="biology-notebook-project-dialog-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
+        <div class="biology-notebook-project-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-project-dialog-title">
+          <div class="app-dialog-head">
+            <div>
+              <h3 id="biology-notebook-project-dialog-title">Add a project</h3>
+              <p class="small-note">Create a project folder for notebook pages and linked work.</p>
+            </div>
+            <button id="biology-notebook-project-dialog-close-btn" class="ghost-btn" type="button" aria-label="Close add project dialog">Close</button>
+          </div>
+          <form id="biology-notebook-project-form" class="stack-form">
+            <label>
+              Project Name
+              <input id="biology-notebook-project-name" required />
+            </label>
+            <label>
+              Description
+              <textarea id="biology-notebook-project-description" rows="3"></textarea>
+            </label>
+            <div class="form-actions">
+              <button class="primary-btn" type="submit">Add Project</button>
+              <button id="biology-notebook-project-cancel-btn" class="ghost-btn" type="button">Cancel</button>
+            </div>
+          </form>
+        </div>
       </div>
     </section>
 
@@ -1803,7 +1831,6 @@
                     <option value="sample-registry-view">Sample &amp; Inventory</option>
                     <option value="assay-view">Assay</option>
                     <option value="gel-view">Gel</option>
-                    <option value="project-management-view">Projects</option>
                     <option value="workflow-management-view">Workflows</option>
                     <option value="papers-view">Papers</option>
                     <option value="agent-view">Agent</option>
@@ -1959,49 +1986,6 @@
               </div>
             </form>
           </section>
-        </div>
-      </div>
-    </section>
-
-<!-- SOURCE: ui/html/views/project-management-view.html -->
-<section id="project-management-view" class="view">
-      <div class="project-layout left-rail-template">
-        <aside class="project-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="left-rail-template__stack">
-            <section class="left-rail-template__section">
-              <div class="project-sidebar-copy">
-                <h2>Projects</h2>
-                <p class="small-note">Select a project to review its workspace activity.</p>
-              </div>
-              <div id="project-list" class="project-rail-list"></div>
-            </section>
-
-            <section class="left-rail-template__section">
-              <div class="project-sidebar-copy">
-                <h3>Project Details</h3>
-                <p class="small-note">Create a project or edit the selected project notes.</p>
-              </div>
-              <form id="project-form" class="stack-form">
-                <input type="hidden" id="project-id" />
-                <label>
-                  Project Name
-                  <input id="project-name" required />
-                </label>
-                <label>
-                  Description
-                  <textarea id="project-description" rows="3"></textarea>
-                </label>
-                <div class="form-actions">
-                  <button type="submit" class="primary-btn">Save Project</button>
-                  <button type="button" id="project-cancel-btn" class="ghost-btn">Cancel Edit</button>
-                </div>
-              </form>
-            </section>
-          </div>
-        </aside>
-
-        <div class="project-main left-rail-template__main">
-          <div id="project-dashboard" class="project-dashboard"></div>
         </div>
       </div>
     </section>
@@ -2290,6 +2274,13 @@
                         <path d="M12 18.25h.01"></path>
                       </svg>
                       <span class="sr-only">Ask Hikari about selected text</span>
+                    </button>
+                    <button type="button" id="paper-selection-copy-btn" class="ghost-btn papers-selection-action-btn" aria-label="Copy selected text" title="Copy selected text">
+                      <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <rect x="8" y="8" width="11" height="11" rx="1.75"></rect>
+                        <path d="M5 16V6.75A1.75 1.75 0 0 1 6.75 5H16"></path>
+                      </svg>
+                      <span class="sr-only">Copy selected text</span>
                     </button>
                   </div>
                   <div id="paper-selection-search-popover" class="papers-selection-search-popover" hidden>

@@ -42,6 +42,19 @@ export function createEntryListRenderer({
   function groupEntries(entries) {
     const projects = getProjects();
     const groups = new Map();
+    projects
+      .slice()
+      .sort((left, right) => String(left?.name || '').localeCompare(String(right?.name || '')))
+      .forEach((project) => {
+        groups.set(project.id, {
+          groupKey: project.id,
+          groupName: project.name || 'Untitled Project',
+          projectId: project.id,
+          groupClass: 'biology-notebook-folder--project',
+          itemClass: 'biology-notebook-folder-item--project',
+          entries: []
+        });
+      });
     entries.forEach((entry) => {
       const workflowEntryId = String(entry?.workflowContext?.workflowEntryId || '').trim();
       const workflowName = String(entry?.workflowContext?.workflowName || '').trim();
@@ -92,7 +105,7 @@ export function createEntryListRenderer({
         return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
       });
 
-    if (!entries.length) {
+    if (!entries.length && !projects.length) {
       listEl.innerHTML = '<p class="biology-notebook-page-list-empty">No notebook pages saved yet.</p>';
       return;
     }
@@ -100,7 +113,9 @@ export function createEntryListRenderer({
     const groups = groupEntries(entries);
     const activeProjectDashboardId = String(getActiveProjectDashboardId() || '');
     listEl.innerHTML = Array.from(groups.values()).map((group) => {
-      const entryButtons = group.entries.map((entry) => buildEntryButtonHtml(entry)).join('');
+      const entryButtons = group.entries.length
+        ? group.entries.map((entry) => buildEntryButtonHtml(entry)).join('')
+        : '<p class="biology-notebook-page-list-empty biology-notebook-page-list-empty--folder">No pages yet.</p>';
       const projectDataAttrs = group.projectId
         ? ` data-notebook-project-id="${safeText(group.projectId)}" data-notebook-project-name="${safeText(group.groupName)}"`
         : '';

@@ -271,7 +271,7 @@ const moduleExportContracts = [
   ['src/renderer/modules/object-graph.js', 'rebuildObjectGraph', 'function'],
   ['src/renderer/modules/papers/index.js', 'initPapersManagement', 'function'],
   ['src/renderer/modules/personal-inventory/index.js', 'initPersonalInventory', 'function'],
-  ['src/renderer/modules/project-management/index.js', 'initProjectManagement', 'function'],
+  ['src/renderer/modules/biology-notebook/project-controller.js', 'createNotebookProjectController', 'function'],
   ['src/renderer/modules/protocol/index.js', 'initProtocolManagement', 'function'],
   ['src/renderer/modules/sample-registry/index.js', 'initSampleRegistry', 'function'],
   ['src/renderer/modules/settings/index.js', 'initSettings', 'function'],

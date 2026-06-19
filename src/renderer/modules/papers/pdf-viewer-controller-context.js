@@ -29,6 +29,7 @@ export function createPapersPdfViewerContext(elements = {}) {
     selectionUnderlineBtn: elements.selectionUnderlineBtn || null,
     selectionSearchBtn: elements.selectionSearchBtn || null,
     selectionAskBtn: elements.selectionAskBtn || null,
+    selectionCopyBtn: elements.selectionCopyBtn || null,
     selectionSearchPopover: elements.selectionSearchPopover || null,
     selectionSearchPdfBtn: elements.selectionSearchPdfBtn || null,
     selectionSearchLibraryBtn: elements.selectionSearchLibraryBtn || null,

@@ -257,7 +257,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       const registry = createRegistryWithUi(servicesModule);
       const services = servicesModule.createRendererServices(registry);
 
-      const projectNotebookPages = createSpy('projectNotebookPages');
       const workflowRender = createSpy('workflowRender');
       const assayNotebookOptions = createSpy('assayNotebookOptions');
       const assayList = createSpy('assayList');
@@ -266,7 +265,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       const synthesisEntries = createSpy('synthesisEntries');
       const biologyEntries = createSpy('biologyEntries');
 
-      registry.register('projectManagement', { renderNotebookPages: projectNotebookPages });
       registry.register('workflowManagement', { render: workflowRender });
       registry.register('assay', {
         renderNotebookOptions: assayNotebookOptions,
@@ -280,7 +278,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       registry.register('biologyNotebook', { renderEntries: biologyEntries });
 
       services.notebook.handleNotebookEntriesChanged();
-      assert.equal(projectNotebookPages.calls.length, 1);
       assert.equal(workflowRender.calls.length, 1);
       assert.equal(assayNotebookOptions.calls.length, 1);
       assert.equal(assayList.calls.length, 1);
@@ -290,7 +287,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       assert.equal(biologyEntries.calls.length, 0);
 
       services.notebook.handleAgentNotebookEntriesChanged();
-      assert.equal(projectNotebookPages.calls.length, 2);
       assert.equal(workflowRender.calls.length, 2);
       assert.equal(assayNotebookOptions.calls.length, 2);
       assert.equal(assayList.calls.length, 2);
@@ -384,18 +380,18 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       assert.deepEqual(setSearchInputValue.calls, [['sample-search', 'HEK293']]);
     });
 
-    test('analysis service refreshes project notebook pages for assay and gel changes', () => {
+    test('analysis service refreshes biology notebook previews for assay and gel changes', () => {
       const servicesModule = loadServicesModule();
       const registry = createRegistryWithUi(servicesModule);
       const services = servicesModule.createRendererServices(registry);
 
-      const renderNotebookPages = createSpy('renderNotebookPages');
-      registry.register('projectManagement', { renderNotebookPages });
+      const renderLinkedPreviews = createSpy('renderLinkedPreviews');
+      registry.register('biologyNotebook', { renderLinkedPreviews });
 
       services.analysis.handleAssaysChanged();
       services.analysis.handleGelAnalysesChanged();
 
-      assert.equal(renderNotebookPages.calls.length, 2);
+      assert.equal(renderLinkedPreviews.calls.length, 2);
     });
 
     test('sequence service loads payload into sequence viewer and opens detail view', () => {

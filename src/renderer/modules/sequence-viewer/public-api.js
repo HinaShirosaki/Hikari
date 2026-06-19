@@ -67,11 +67,16 @@ export function initSequenceViewer(options = {}) {
   const getApiBridge = typeof options?.getApiBridge === 'function'
     ? options.getApiBridge
     : () => options?.apiBridge || options?.bridge || globalThis?.hikariApi || null;
+  const explicitStoragePath = String(options?.storagePath || '').trim();
+  const getStoragePath = typeof options?.getStoragePath === 'function'
+    ? options.getStoragePath
+    : () => explicitStoragePath || readWrapperStoragePath();
   return initSequenceViewerInternal({
     ...options,
     document: options?.document || globalThis?.document || (typeof document !== 'undefined' ? document : null),
     apiBridge: getApiBridge(),
     getApiBridge,
-    storagePath: String(options?.storagePath || readWrapperStoragePath() || '').trim()
+    getStoragePath,
+    storagePath: explicitStoragePath
   });
 }

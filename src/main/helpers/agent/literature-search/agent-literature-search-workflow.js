@@ -1,7 +1,7 @@
 'use strict';
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
-const { normalizeRelatedComments } = require('../shared/paper-comment-context.js');
+const { cloneJson, normalizeRelatedComments } = require('../shared/paper-comment-context.js');
 const { createAgentSubAgentRuntime } = require('../tools/agent-sub-agent.js');
 const {
   normalizePreferredWebSource,
@@ -32,14 +32,6 @@ const SOURCE_ORDER = new Map([
 
 function defaultEnsureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
-}
-
-function cloneJson(value, fallback) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
 }
 
 function parseDateToTimestamp(value) {
@@ -997,7 +989,5 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
 }
 
 module.exports = {
-  createLiteratureSearchWorkflowRuntime,
-  selectPaperCandidates,
-  scorePaperCandidate
+  createLiteratureSearchWorkflowRuntime
 };

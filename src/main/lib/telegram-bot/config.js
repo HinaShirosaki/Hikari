@@ -8,7 +8,7 @@ const TELEGRAM_MODULE_MAP = new Map([
   ['assay', { type: 'open-view', viewId: 'assay-view', label: 'Assay' }],
   ['gel', { type: 'open-view', viewId: 'gel-view', label: 'Gel' }],
   ['inventory', { type: 'open-view', viewId: 'sample-registry-view', label: 'Sample & Inventory' }],
-  ['projects', { type: 'open-view', viewId: 'project-management-view', label: 'Projects' }],
+  ['projects', { type: 'open-view', viewId: 'biology-notebook-view', label: 'Biology Notebook' }],
   ['workflows', { type: 'open-view', viewId: 'workflow-management-view', label: 'Workflows' }],
   ['papers', { type: 'open-view', viewId: 'papers-view', label: 'Papers' }],
   ['tools', { type: 'open-view', viewId: 'tool-box-view', label: 'Tools' }],

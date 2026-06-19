@@ -1,43 +1,112 @@
+<div align="center">
+
+<img src="assets/icon.png" alt="Hikari" width="96" height="96" />
+
 # Hikari
 
-Hikari is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay and gel analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace without requiring a hosted backend.
+**A local-first lab workspace for the bench — planning, protocols, records, analysis, papers, and AI, all on your machine.**
+
+<p>
+  <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-555?style=flat-square" alt="platforms" />
+  <img src="https://img.shields.io/badge/Electron-40-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron 40" />
+  <img src="https://img.shields.io/badge/Node.js-20%2B-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node 20+" />
+  <img src="https://img.shields.io/badge/local--first-no%20backend-7C3AED?style=flat-square" alt="local-first" />
+  <img src="https://img.shields.io/badge/version-1.0.0-0EA5E9?style=flat-square" alt="version 1.0.0" />
+</p>
+
+<a href="#quick-start">Quick Start</a> ·
+<a href="#app-surface">Features</a> ·
+<a href="#ai-and-agent-setup">AI Setup</a> ·
+<a href="#telegram-bot">Telegram</a> ·
+<a href="#data-and-storage">Data</a> ·
+<a href="#development">Development</a> ·
+<a href="#troubleshooting">Troubleshooting</a>
+
+</div>
+
+<!--
+  📸 SCREENSHOTS — these are images Claude cannot capture for you.
+  Run the app (`npm run start`), take screenshots, and save them to docs/screenshots/
+  using the exact filenames referenced below. They will appear automatically.
+  See the "Screenshots" section for the full shot list and capture tips.
+-->
+
+<!-- Hero shot: save a full-window screenshot of the Home dashboard here -->
+![Hikari Home dashboard](docs/screenshots/home.png)
+
+Hikari is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay and gel analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace — no hosted backend required.
 
 ## Highlights
 
-- Local desktop app built with Electron.
+- Local desktop app built with Electron — your data stays on your machine.
 - One workspace for `Home`, `Protocols`, `Projects`, `Workflows`, `Biology Notebook`, `Sample & Inventory`, `Chemicals`, `Assay`, `Gel`, `Papers`, `Agent`, `Sequence Viewer`, `Tools`, and `Settings`.
 - Snapshot save/load support for `.json` and `.ena` data files.
 - Storage-root-backed files for notebooks, projects, papers, and sequence assets.
 - Optional LLM-backed features for `Papers` and `Agent`.
 - Optional Telegram bot for simple remote commands and lookups.
 
+## Screenshots
+
+> **These images do not exist in the repo yet — you need to add them.** Claude cannot launch the
+> desktop app or take screenshots, so this is the one part of the README you must fill in by hand.
+>
+> **How to add them:**
+> 1. Run the app: `npm run start`.
+> 2. Open each module and capture the window (macOS: `Cmd+Shift+4` then `Space`, click the window).
+> 3. Create the folder `docs/screenshots/` and save each file with the **exact name** listed below.
+> 4. The images then render automatically here and in the hero above — no Markdown edits needed.
+>
+> Keep shots ~1600px wide, PNG, and crop to the app window. Replace any sample data with something
+> you're happy to show publicly before capturing.
+
+| File to save (`docs/screenshots/…`) | What to capture |
+| --- | --- |
+| `home.png` | Home dashboard (also used as the hero image at the top) |
+| `workflows.png` | A workflow graph with a few linked steps |
+| `notebook.png` | A Biology Notebook record with structured fields |
+| `assay.png` | An assay plate layout or analysis view |
+| `gel.png` | A gel image with lane/band annotations |
+| `papers.png` | The Papers library with a summary open |
+| `sequence-viewer.png` | A sequence with annotations / restriction sites |
+| `agent.png` | An Agent answer citing app records |
+
+<!-- Drop the matching PNGs in docs/screenshots/ and uncomment any extra shots you want shown inline. -->
+
 ## App Surface
 
 ### Planning and operations
 
-- `Home`: dashboard with quick navigation, workflow progress, lab timer, and cell-passage reminders.
-- `Protocols`: protocol authoring, import/export, share flows, and notebook placeholders.
-- `Projects`: project registry with linked notebook, assay, gel, and paper context.
-- `Workflows`: graph-based workflow builder with templates and project linkage.
+| Module | What it does |
+| --- | --- |
+| <img src="assets/icons/home.svg" width="16"/> `Home` | Dashboard with quick navigation, workflow progress, lab timer, and cell-passage reminders. |
+| <img src="assets/icons/protocols.svg" width="16"/> `Protocols` | Protocol authoring, import/export, share flows, and notebook placeholders. |
+| <img src="assets/icons/folder-2-svgrepo-com.svg" width="16"/> `Projects` | Project registry with linked notebook, assay, gel, and paper context. |
+| <img src="assets/icons/workflows.svg" width="16"/> `Workflows` | Graph-based workflow builder with templates and project linkage. |
 
 ### Experiment data
 
-- `Biology Notebook`: protocol-linked experiment records with structured fields, attachments, and PDF export.
-- `Sample & Inventory`: sample registry for plasmids, cell lines, strains, antibodies, proteins, compounds, primers, and storage locations.
-- `Chemicals`: shared reagent inventory with searchable records, locations, lots, and activity history.
-- `Assay`: plate design, CSV mapping flow, result capture, and analysis views.
-- `Gel`: manual gel analysis with lane/band annotation and CSV/JSON export.
+| Module | What it does |
+| --- | --- |
+| <img src="assets/icons/biology-notebook.svg" width="16"/> `Biology Notebook` | Protocol-linked experiment records with structured fields, attachments, and PDF export. |
+| <img src="assets/icons/sample-inventory.svg" width="16"/> `Sample & Inventory` | Registry for plasmids, cell lines, strains, antibodies, proteins, compounds, primers, and storage locations. |
+| <img src="assets/icons/chemicals.svg" width="16"/> `Chemicals` | Shared reagent inventory with searchable records, locations, lots, and activity history. |
+| <img src="assets/icons/assay.svg" width="16"/> `Assay` | Plate design, CSV mapping flow, result capture, and analysis views. |
+| <img src="assets/icons/gel.svg" width="16"/> `Gel` | Manual gel analysis with lane/band annotation and CSV/JSON export. |
 
 ### Research and bench support
 
-- `Papers`: local PDF library with project linkage, summaries, extracted methods, and project-scoped Q&A.
-- `Sequence Viewer`: FASTA, FASTQ, GenBank, and raw-sequence inspection with annotations and restriction analysis.
-- `Tools`: bench calculators and utilities including molarity, qPCR, CRISPR, oligo, buffer, peptide, translation, and colony-count workflows.
+| Module | What it does |
+| --- | --- |
+| <img src="assets/icons/papers.svg" width="16"/> `Papers` | Local PDF library with project linkage, summaries, extracted methods, and project-scoped Q&A. |
+| <img src="assets/icons/sequence-viewer.svg" width="16"/> `Sequence Viewer` | FASTA, FASTQ, GenBank, and raw-sequence inspection with annotations and restriction analysis. |
+| <img src="assets/icons/tools.svg" width="16"/> `Tools` | Bench calculators: molarity, qPCR, CRISPR, oligo, buffer, peptide, translation, and colony-count workflows. |
 
 ### AI and configuration
 
-- `Agent`: evidence-grounded assistant over app state, papers, workflows, and linked records.
-- `Settings`: personal profile, appearance, startup behavior, storage path, LLM provider setup, Telegram token, and data file controls.
+| Module | What it does |
+| --- | --- |
+| <img src="assets/icons/agent.svg" width="16"/> `Agent` | Evidence-grounded assistant over app state, papers, workflows, and linked records. |
+| <img src="assets/icons/settings.svg" width="16"/> `Settings` | Personal profile, appearance, startup behavior, storage path, LLM provider setup, Telegram token, and data file controls. |
 
 ## Quick Start
 
@@ -116,12 +185,15 @@ Common commands:
 - `/gel <query>`
 - `/status`
 
-The bot supports many more commands, including:
+<details>
+<summary><strong>More commands</strong></summary>
 
 - quick logging: `/log`, `/note`, `/use`
 - protocol-run control: `/start_protocol`, `/next`, `/done`, `/timer`
 - draft generation: `/draft_notebook`, `/draft_summary`, `/draft_assay`
 - inventory queries: `/expiring`, `/lowstock`
+
+</details>
 
 The canonical command, search-scope, and alias maps live in [`src/main/lib/telegram-bot/config.js`](./src/main/lib/telegram-bot/config.js).
 
@@ -199,28 +271,43 @@ If you are onboarding to the codebase, start with the docs index and then the ar
 
 ## Troubleshooting
 
-### The app opens but my data is missing
+<details>
+<summary><strong>The app opens but my data is missing</strong></summary>
 
 - Open `Settings > Data File` and load the correct `.json` or `.ena` file.
 - Verify that auto-load is pointing at the file you expect.
 
-### Papers or Agent says an API key is missing
+</details>
+
+<details>
+<summary><strong>Papers or Agent says an API key is missing</strong></summary>
 
 - For OpenAI, Gemini, Claude, or DeepSeek, set the provider, model, endpoint, and key in `Settings > LLM Model & Access`.
 - For Codex Agent, sign in with `codex login`; no endpoint or API key is used.
 - Or export `HIKARI_LLM_API_KEY` / `LLM_API_KEY` before launching the app.
 
-### Codex mode is selected but nothing responds
+</details>
+
+<details>
+<summary><strong>Codex mode is selected but nothing responds</strong></summary>
 
 - Confirm `codex` is installed and available on `PATH`.
 - Run `codex login`.
 
-### File imports or paper uploads fail with path-related errors
+</details>
+
+<details>
+<summary><strong>File imports or paper uploads fail with path-related errors</strong></summary>
 
 - Make sure `Storage Folder Path` is set in `Settings`.
 - Re-open the relevant module after saving the path.
 
-### Packaging fails
+</details>
+
+<details>
+<summary><strong>Packaging fails</strong></summary>
 
 - Re-run `npm install`.
 - Confirm Electron Forge dependencies are present for your platform.
+
+</details>

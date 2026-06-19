@@ -13,7 +13,10 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
   }
 
   function getStoragePath() {
-    return String(options?.storagePath || '').trim() || readStoragePathFromLocalState();
+    const liveStoragePath = typeof options?.getStoragePath === 'function'
+      ? options.getStoragePath()
+      : '';
+    return String(liveStoragePath || options?.storagePath || '').trim() || readStoragePathFromLocalState();
   }
 
   function hasStoragePath() {

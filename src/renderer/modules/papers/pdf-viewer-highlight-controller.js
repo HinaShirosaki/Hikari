@@ -20,6 +20,7 @@ export const installPdfViewerHighlightController = (ctx) => {
   let highlightPopoverHideTimer = 0;
   let activeHighlightId = '';
   let activeHighlightCopyText = '';
+  let activeHighlight = null;
 
   function cancelHighlightPopoverHide() {
     if (!highlightPopoverHideTimer) {
@@ -38,6 +39,7 @@ export const installPdfViewerHighlightController = (ctx) => {
     cancelHighlightPopoverHide();
     activeHighlightId = '';
     activeHighlightCopyText = '';
+    activeHighlight = null;
     if (highlightCommentPopover) {
       highlightCommentPopover.hidden = true;
       highlightCommentPopover.innerHTML = '';
@@ -73,7 +75,8 @@ export const installPdfViewerHighlightController = (ctx) => {
     }
     activeHighlightId = highlightId;
     activeHighlightCopyText = copyText;
-    highlightCommentPopover.innerHTML = buildHighlightPopoverMarkup(highlight, comment);
+    activeHighlight = highlight;
+    highlightCommentPopover.innerHTML = buildHighlightPopoverMarkup(highlight);
     highlightCommentPopover.hidden = false;
     const shellRect = shell.getBoundingClientRect?.();
     const rawLeft = (Number(clientX) || 0) - Number(shellRect?.left || 0) + 12;
@@ -219,18 +222,35 @@ export const installPdfViewerHighlightController = (ctx) => {
   }
 
   async function handleHighlightPopoverClick(event) {
-    const button = event?.target?.closest?.('[data-paper-highlight-copy]') || null;
+    const button = event?.target?.closest?.('[data-paper-highlight-copy], [data-paper-highlight-ask]') || null;
     if (!button || !highlightCommentPopover?.contains?.(button)) {
       return;
     }
     event.preventDefault?.();
     event.stopPropagation?.();
     cancelHighlightPopoverHide();
-    const copied = await copyPdfHighlightText(activeHighlightCopyText, ctx.getWindowRef()?.navigator);
-    const status = highlightCommentPopover.querySelector?.('[data-paper-highlight-copy-status]') || null;
-    if (status) {
-      status.textContent = copied ? 'Copied' : 'Copy unavailable';
+    if (button.matches?.('[data-paper-highlight-ask]')) {
+      if (!activeHighlight || typeof state.onSelectionAsk !== 'function') {
+        return;
+      }
+      const didOpen = state.onSelectionAsk({
+        paperId: state.paperId,
+        paperTitle: state.paperTitle,
+        pageNumber: activeHighlight.pageNumber,
+        text: activeHighlightCopyText,
+        boxes: activeHighlight.boxes,
+        pageWidth: activeHighlight.pageWidth,
+        pageHeight: activeHighlight.pageHeight
+      });
+      if (didOpen !== false) {
+        const pageNumber = activeHighlight.pageNumber;
+        hideHighlightCommentPopover();
+        ctx.setStatus(`Loaded highlighted text from page ${pageNumber} into chat context.`);
+      }
+      return;
     }
+    const copied = await copyPdfHighlightText(activeHighlightCopyText, ctx.getWindowRef()?.navigator);
+    ctx.setStatus(copied ? 'Copied highlighted text.' : 'Unable to copy highlighted text.');
     button.classList?.toggle?.('is-copied', copied);
     button.setAttribute?.('aria-label', copied ? 'Highlighted text copied' : 'Copy highlighted text');
     button.setAttribute?.('title', copied ? 'Copied' : 'Copy highlighted text');

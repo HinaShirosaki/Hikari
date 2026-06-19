@@ -2,48 +2,35 @@ module.exports = function registerAppLabAndProjectSuitePart02(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-test('project-management deletes projects with linked notebook and workflow cleanup', () => {
+test('biology-notebook project context menu creates a project', async () => {
   const document = createMockDocument([
-    'project-form',
-    'project-id',
-    'project-name',
-    'project-description',
-    'project-cancel-btn',
-    'project-list',
-    'project-notebook-filter',
-    'project-notebook-pages'
+    'biology-notebook-rail',
+    'biology-notebook-project-context-menu',
+    'biology-notebook-add-project-btn',
+    'biology-notebook-project-dialog-overlay',
+    'biology-notebook-project-form',
+    'biology-notebook-project-name',
+    'biology-notebook-project-description',
+    'biology-notebook-project-dialog-close-btn',
+    'biology-notebook-project-cancel-btn'
   ]);
-  const projectForm = document.getElementById('project-form');
-  const projectNameInput = document.getElementById('project-name');
-  const projectDescriptionInput = document.getElementById('project-description');
-  wireFormReset(projectForm, [projectNameInput, projectDescriptionInput, document.getElementById('project-id')]);
-
+  const projectForm = document.getElementById('biology-notebook-project-form');
+  const projectNameInput = document.getElementById('biology-notebook-project-name');
+  const projectDescriptionInput = document.getElementById('biology-notebook-project-description');
+  wireFormReset(projectForm, [projectNameInput, projectDescriptionInput]);
   let persistCalls = 0;
   let projectsChangedCalls = 0;
-  const state = {
-    projects: [
-      { id: 'p1', name: 'Project One', description: 'Primary' },
-      { id: 'p2', name: 'Project Two', description: 'Secondary' }
-    ],
-    notebookEntries: [
-      { id: 'n1', projectId: 'p1', protocolName: 'Protocol A', updatedAt: '2026-01-03T00:00:00.000Z', resultFiles: [] },
-      { id: 'n2', projectId: 'p2', protocolName: 'Protocol B', updatedAt: '2026-01-02T00:00:00.000Z', resultFiles: [] }
-    ],
-    assays: [
-      { id: 'a1', name: 'Assay A', projectId: 'p1', notebookEntryId: 'n1', updatedAt: '2026-01-03T01:00:00.000Z' }
-    ],
-    gelAnalyses: [
-      { id: 'g1', name: 'Gel A', projectId: 'p1', notebookEntryId: 'n1', updatedAt: '2026-01-03T01:30:00.000Z' }
-    ],
-    workflows: [
-      { id: 'w1', projectId: 'p1', notebookEntryIds: ['n1', 'n2'] }
-    ]
-  };
-
-  const projectManagementModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'project-management', 'index.js'), {
-    document
-  });
-  const projectManagement = projectManagementModule.initProjectManagement({
+  let createdProject = null;
+  const state = { projects: [], settings: {} };
+  const projectControllerModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'biology-notebook',
+    'project-controller.js'
+  ));
+  projectControllerModule.createNotebookProjectController({
     state,
     persist: () => {
       persistCalls += 1;
@@ -52,74 +39,77 @@ test('project-management deletes projects with linked notebook and workflow clea
     safeText: shared.safeText,
     onProjectsChanged: () => {
       projectsChangedCalls += 1;
-    }
+    },
+    onProjectCreated: (project) => {
+      createdProject = project;
+    },
+    railEl: document.getElementById('biology-notebook-rail'),
+    contextMenuEl: document.getElementById('biology-notebook-project-context-menu'),
+    addProjectBtn: document.getElementById('biology-notebook-add-project-btn'),
+    dialogOverlay: document.getElementById('biology-notebook-project-dialog-overlay'),
+    dialogForm: projectForm,
+    projectNameInput,
+    projectDescriptionInput,
+    dialogCloseBtn: document.getElementById('biology-notebook-project-dialog-close-btn'),
+    dialogCancelBtn: document.getElementById('biology-notebook-project-cancel-btn'),
+    windowRef: {}
   });
 
-  projectManagement.render();
-  const projectList = document.getElementById('project-list');
-  const deleteBtn = projectList.querySelectorAll('[data-project-delete]')[0];
-  trigger(deleteBtn, 'click');
+  const contextMenu = document.getElementById('biology-notebook-project-context-menu');
+  const dialogOverlay = document.getElementById('biology-notebook-project-dialog-overlay');
+  contextMenu.hidden = true;
+  dialogOverlay.hidden = true;
 
-  assert.deepEqual(state.projects.map((item) => item.id), ['p2']);
-  assert.deepEqual(state.notebookEntries.map((item) => item.id), ['n2']);
-  assert.equal(state.assays.length, 0);
-  assert.equal(state.gelAnalyses.length, 0);
-  assert.equal(state.workflows[0].projectId, '');
-  assert.deepEqual(state.workflows[0].notebookEntryIds, ['n2']);
-  assert.equal(document.getElementById('project-notebook-filter').value, 'p2');
-  assert.ok(persistCalls >= 1);
-  assert.ok(projectsChangedCalls >= 1);
+  trigger(document.getElementById('biology-notebook-rail'), 'contextmenu', { clientX: 24, clientY: 48 });
+  assert.equal(contextMenu.hidden, false);
+  assert.equal(contextMenu.style.left, '24px');
+  assert.equal(contextMenu.style.top, '48px');
+
+  trigger(document.getElementById('biology-notebook-add-project-btn'), 'click');
+  assert.equal(contextMenu.hidden, true);
+  assert.equal(dialogOverlay.hidden, false);
+
+  projectNameInput.value = 'Atlas';
+  projectDescriptionInput.value = 'Protein stability study';
+  trigger(projectForm, 'submit');
+  await flushAsync();
+
+  assert.equal(state.projects.length, 1);
+  assert.equal(state.projects[0].id, 'project-new');
+  assert.equal(state.projects[0].name, 'Atlas');
+  assert.equal(state.projects[0].description, 'Protein stability study');
+  assert.equal(createdProject?.id, 'project-new');
+  assert.equal(dialogOverlay.hidden, true);
+  assert.equal(persistCalls, 1);
+  assert.equal(projectsChangedCalls, 1);
 });
-test('project-management renders notebook state labels for project pages', () => {
+
+test('biology-notebook project tree renders projects before they have pages', () => {
   const document = createMockDocument([
-    'project-form',
-    'project-id',
-    'project-name',
-    'project-description',
-    'project-cancel-btn',
-    'project-list',
-    'project-notebook-filter',
-    'project-notebook-pages'
+    'biology-notebook-entry-list'
   ]);
-  const projectForm = document.getElementById('project-form');
-  wireFormReset(projectForm, [
-    document.getElementById('project-name'),
-    document.getElementById('project-description'),
-    document.getElementById('project-id')
-  ]);
-
-  const state = {
-    projects: [
-      { id: 'p1', name: 'Atlas', description: 'Primary' }
-    ],
-    notebookEntries: [
-      {
-        id: 'n1',
-        projectId: 'p1',
-        protocolName: 'Viability Assay',
-        notebookState: 'planned',
-        updatedAt: '2026-03-01T00:00:00.000Z',
-        resultFiles: []
-      }
-    ],
-    assays: [],
-    gelAnalyses: [],
-    workflows: []
-  };
-
-  const projectManagementModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'project-management', 'index.js'), {
-    document
-  });
-  const projectManagement = projectManagementModule.initProjectManagement({
-    state,
-    persist: () => {},
-    createId: () => 'project-new',
+  const entryListModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'biology-notebook',
+    'entry-list-renderer.js'
+  ));
+  const renderer = entryListModule.createEntryListRenderer({
+    listEl: document.getElementById('biology-notebook-entry-list'),
+    notebookType: 'biology',
     safeText: shared.safeText,
-    onProjectsChanged: () => {}
+    getNotebookEntries: () => [],
+    getProjects: () => [{ id: 'p1', name: 'Atlas' }],
+    getEditingEntryId: () => null
   });
 
-  projectManagement.render();
-  assert.match(document.getElementById('project-notebook-pages').innerHTML, /State:<\/strong> Planned/);
+  renderer.renderEntries();
+  const html = document.getElementById('biology-notebook-entry-list').innerHTML;
+  assert.match(html, /data-notebook-project-id="p1"/);
+  assert.match(html, />Atlas</);
+  assert.match(html, /No pages yet\./);
 });
 test('biology-notebook keeps planned pages distinct, marks them executed, and preserves metadata on save', async () => {
   const document = createMockDocument([

@@ -71,7 +71,18 @@ export function createTopbarOpenItemHandlers({
     Chemical: (itemId) => openItemViaDataAttr(views.LAB_COMMON_INVENTORY, 'data-chemical-open', itemId),
     Assay: (itemId) => openItemViaDataAttr(views.ASSAY, 'data-assay-open-results', itemId),
     Gel: (itemId) => openItemViaDataAttr(views.GEL, 'data-gel-edit', itemId),
-    Project: (itemId) => openItemViaDataAttr(views.PROJECT_MANAGEMENT, 'data-project-select', itemId),
+    Project: (itemId) => {
+      if (!itemId) {
+        return false;
+      }
+      showView(views.BIOLOGY_NOTEBOOK);
+      const biologyNotebook = moduleRegistry.get('biologyNotebook');
+      if (typeof biologyNotebook?.openProjectDashboard !== 'function') {
+        return false;
+      }
+      biologyNotebook.openProjectDashboard(itemId);
+      return true;
+    },
     Paper: (itemId) => openItemViaDataAttr(views.PAPERS, 'data-paper-view', itemId),
     Workflow: (itemId) => openItemViaDataAttr(views.WORKFLOW_MANAGEMENT, 'data-workflow-run-open', itemId)
   };

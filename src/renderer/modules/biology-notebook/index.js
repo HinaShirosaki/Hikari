@@ -41,7 +41,8 @@ import { createEntryListRenderer } from './entry-list-renderer.js';
 import { createDropdownRenderer } from './dropdown-renderer.js';
 import { createProtocolSnapshotEditor } from './protocol-snapshot-editor.js';
 import { createLinkedWorkActions } from './linked-work-actions.js';
-import { createProjectDashboardRenderer } from '../project-management/dashboard-renderer.js';
+import { createProjectDashboardRenderer } from './project-dashboard-renderer.js';
+import { createNotebookProjectController } from './project-controller.js';
 import { createNotebookToolSidebarController } from './tool-sidebar.js';
 import {
   buildProtocolStepsHtml,
@@ -72,7 +73,7 @@ export function initLabNotebook({
   onCreateLinkedAssay,
   onCreateLinkedGel,
   onOpenSampleRecorder,
-  onOpenProjects,
+  onProjectsChanged,
   selectionInsightsController = null,
   notebookType = 'biology'
 }) {
@@ -84,7 +85,15 @@ export function initLabNotebook({
   const notebookProtocolSelect = document.getElementById('biology-notebook-protocol-select');
   const notebookPageStarter = document.getElementById('biology-notebook-page-starter');
   const notebookPageStarterProject = document.getElementById('biology-notebook-page-starter-project');
-  const notebookOpenProjectsBtn = document.getElementById('biology-notebook-open-projects-btn');
+  const notebookRail = document.getElementById('biology-notebook-rail');
+  const notebookProjectContextMenu = document.getElementById('biology-notebook-project-context-menu');
+  const notebookAddProjectBtn = document.getElementById('biology-notebook-add-project-btn');
+  const notebookProjectDialogOverlay = document.getElementById('biology-notebook-project-dialog-overlay');
+  const notebookProjectForm = document.getElementById('biology-notebook-project-form');
+  const notebookProjectNameInput = document.getElementById('biology-notebook-project-name');
+  const notebookProjectDescriptionInput = document.getElementById('biology-notebook-project-description');
+  const notebookProjectDialogCloseBtn = document.getElementById('biology-notebook-project-dialog-close-btn');
+  const notebookProjectCancelBtn = document.getElementById('biology-notebook-project-cancel-btn');
   const notebookEmptyState = document.getElementById('biology-notebook-empty-state');
   const notebookProjectDashboard = document.getElementById('biology-notebook-project-dashboard');
   const notebookProtocolArea = document.getElementById('biology-notebook-protocol-area');
@@ -126,8 +135,6 @@ export function initLabNotebook({
   let sampleLinkDrafts = new Map();
   let pendingDroppedResultFiles = [];
   let savedDraftSnapshot = '';
-
-  notebookOpenProjectsBtn?.addEventListener('click', () => onOpenProjects?.());
 
   if (notebookProjectDashboard) {
     notebookProjectDashboard.hidden = true;
@@ -213,6 +220,30 @@ export function initLabNotebook({
     onProtocolChange: () => onProtocolChange()
   });
 
+  createNotebookProjectController({
+    state,
+    persist,
+    createId,
+    onProjectsChanged,
+    railEl: notebookRail,
+    contextMenuEl: notebookProjectContextMenu,
+    addProjectBtn: notebookAddProjectBtn,
+    dialogOverlay: notebookProjectDialogOverlay,
+    dialogForm: notebookProjectForm,
+    projectNameInput: notebookProjectNameInput,
+    projectDescriptionInput: notebookProjectDescriptionInput,
+    dialogCloseBtn: notebookProjectDialogCloseBtn,
+    dialogCancelBtn: notebookProjectCancelBtn,
+    onProjectCreated: (project) => {
+      dropdownRenderer.renderProjectOptions();
+      notebookProjectSelect.value = project.id;
+      dropdownRenderer.renderProtocolOptions('', { triggerChange: false });
+      syncPageStarterProject();
+      entryListRenderer.renderEntries();
+      showProjectDashboard(project.id, project.name);
+    }
+  });
+
   const linkedWorkActions = createLinkedWorkActions({
     notebookType,
     experimentNameInput: notebookExperimentName,
@@ -264,9 +295,6 @@ export function initLabNotebook({
     }
     if (notebookPageStarter) {
       notebookPageStarter.dataset.projectId = project?.id || '';
-    }
-    if (notebookOpenProjectsBtn) {
-      notebookOpenProjectsBtn.textContent = project ? 'Manage Projects' : 'Create Project';
     }
     if (notebookProtocolSearchInput) {
       notebookProtocolSearchInput.disabled = !project;

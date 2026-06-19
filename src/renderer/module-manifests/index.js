@@ -1,6 +1,5 @@
 import { biologyNotebookManifest } from './biology-notebook.js';
 import { protocolManifest } from './protocol.js';
-import { projectManagementManifest } from './project-management.js';
 import { agentChatManifest } from './agent-chat.js';
 import { agentChatRailManifest } from './agent-chat-rail.js';
 import { workflowManagementManifest } from './workflow.js';
@@ -17,8 +16,7 @@ import { homeDashboardManifest } from './home-dashboard.js';
 
 export const foundationModuleManifests = [
   biologyNotebookManifest,
-  protocolManifest,
-  projectManagementManifest
+  protocolManifest
 ];
 
 export const collaborationModuleManifests = [

@@ -5,6 +5,7 @@ const fsPromises = require('node:fs/promises');
 const {
   attachRelatedCommentsToContextBlocks,
   buildPaperAnnotationContext,
+  cloneJson,
   getRelatedCommentsForPaperId,
   normalizeRelatedComments
 } = require('../shared/paper-comment-context.js');
@@ -29,13 +30,6 @@ function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
-function cloneJson(value, fallback = null) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch {
-    return fallback;
-  }
-}
 
 function parseJsonObjectFromText(raw = '') {
   const text = String(raw || '').trim();
@@ -914,15 +908,6 @@ async function runCodexPaperContextSubAgent(input = {}, helpers = {}) {
 }
 
 module.exports = {
-  DEFAULT_MAX_CONTEXT_BLOCKS,
-  buildCodexPaperContextMessage,
-  buildCodexPaperContextSystemPrompt,
-  buildPaperReadTargets,
-  normalizeCodexPaperContextPayload,
-  normalizeCodexPaperLinePayload,
-  normalizeLineRanges,
-  parseJsonObjectFromText,
-  readLineRangesFromText,
   runCodexPaperContextSubAgent,
   shouldUseCodexPaperContextWorkflow
 };

@@ -1,6 +1,5 @@
 export function createNotebookService(registry) {
   function handleNotebookEntriesChanged() {
-    registry.get('projectManagement').renderNotebookPages?.();
     registry.get('workflowManagement').render?.();
     registry.get('assay').renderNotebookOptions?.();
     registry.get('assay').renderList?.();
