@@ -387,6 +387,7 @@ function attachRelatedCommentsToContextBlocks(blocks = [], annotationContext = {
 module.exports = {
   attachRelatedCommentsToContextBlocks,
   buildPaperAnnotationContext,
+  cloneJson,
   getRelatedCommentsForBlock,
   getRelatedCommentsForPaperId,
   normalizePaperAnnotationRecord,

@@ -60,6 +60,69 @@ test('[EDGE] sequence-viewer initializes home workspace and keeps detail workspa
   assert.equal(Boolean(openBtn.disabled), false);
   assert.match(homeStatus.textContent, /New or Open|Storage Folder Path|storage path|storage/i);
 });
+test('[EDGE] sequence-viewer refreshes the library from the live storage root after a folder switch', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host',
+    'sequence-viewer-save-btn',
+    'sequence-viewer-save-name',
+    'sequence-viewer-status',
+    'sequence-viewer-record-select',
+    'sequence-viewer-feature-rail-host',
+    'sequence-viewer-feature-detail',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const listCalls = [];
+  let storagePath = '/old/root';
+  const apiBridge = {
+    sequenceLibraryList: async (payload) => {
+      listCalls.push(payload);
+      const isNewRoot = payload.storagePath === '/new/root';
+      return {
+        ok: true,
+        entries: [{
+          id: isNewRoot ? 'new-entry' : 'old-entry',
+          name: isNewRoot ? 'New root sequence' : 'Old root sequence',
+          status: 'saved'
+        }]
+      };
+    },
+    sequenceLibraryGet: async (payload) => ({
+      ok: true,
+      entry: {
+        id: payload.id,
+        name: payload.id === 'new-entry' ? 'New root sequence' : 'Old root sequence',
+        status: 'saved'
+      },
+      htmlText: '<html><body>preview</body></html>'
+    })
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
+    { document }
+  );
+  const viewer = moduleWithDom.initSequenceViewer({
+    apiBridge,
+    getStoragePath: () => storagePath,
+    homeViewId: 'sequence-viewer-view'
+  });
+  await flushAsync();
+
+  storagePath = '/new/root';
+  viewer.render({ activeViewId: 'sequence-viewer-view' });
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(listCalls.at(-1).storagePath, '/new/root');
+  assert.match(document.getElementById('sequence-viewer-library-list').innerHTML, /New root sequence/);
+  assert.doesNotMatch(document.getElementById('sequence-viewer-library-list').innerHTML, /Old root sequence/);
+});
 test('[EDGE] sequence-viewer loadFromExternal switches to detail workspace', () => {
   const ids = [
     'sequence-viewer-home-workspace',

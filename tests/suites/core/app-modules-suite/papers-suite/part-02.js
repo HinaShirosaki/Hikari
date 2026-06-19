@@ -128,6 +128,7 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
     'paper-selection-underline-btn',
     'paper-selection-search-btn',
     'paper-selection-ask-btn',
+    'paper-selection-copy-btn',
     'paper-selection-search-popover',
     'paper-selection-search-pdf-btn',
     'paper-selection-search-library-btn',
@@ -351,7 +352,7 @@ test('papers highlighted text copy helper merges PDF line wraps and preserves pa
   }), true);
   assert.deepEqual(writes, [expected]);
 });
-test('papers highlighted text hover markup includes an accessible copy action', () => {
+test('papers highlighted text hover markup is a compact ask and copy toolbar', () => {
   const viewerModule = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
   );
@@ -360,8 +361,10 @@ test('papers highlighted text hover markup includes an accessible copy action', 
   });
 
   assert.match(markup, /data-paper-highlight-copy/);
+  assert.match(markup, /data-paper-highlight-ask/);
   assert.match(markup, /aria-label="Copy highlighted text"/);
-  assert.match(markup, /First PDF line second PDF line/);
+  assert.match(markup, /aria-label="Ask Hikari about highlighted text"/);
+  assert.doesNotMatch(markup, /First PDF line second PDF line/);
 });
 test('papers PDF selection search helper finds matching pages and next target', () => {
   const viewerModule = loadEsmStyleModule(

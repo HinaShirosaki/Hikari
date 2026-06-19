@@ -85,23 +85,19 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.ok(ladderMwInput > analysisStart);
     });
 
-    test('project management stays registered and remains reachable from navigation and biology notebook', () => {
+    test('projects are notebook-owned and created from the biology notebook context menu', () => {
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const generatedRegistry = readLocalSource('src', 'renderer', 'modules', 'app-registry.generated.js');
-      const rendererShellSource = readRendererShellSource();
-      const topbarSearchSource = readLocalSource('src', 'renderer', 'app', 'topbar-search.js');
       const biologyNotebookView = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
       const biologyNotebookManifest = readLocalSource('src', 'renderer', 'module-manifests', 'biology-notebook.js');
-      const projectEntry = registry.apps.find((app) => app.id === 'projects');
 
-      assert.ok(projectEntry);
-      assert.equal(projectEntry.viewId, 'project-management-view');
-      assert.notEqual(projectEntry.hiddenFromNavigation, true);
-      assert.doesNotMatch(generatedRegistry, /"id": "projects"[\s\S]*"hiddenFromNavigation": true/);
-      assert.match(rendererShellSource, /const navigationApps = APP_REGISTRY\.filter\(\(app\) => app\.hiddenFromNavigation !== true\);/);
-      assert.match(topbarSearchSource, /hiddenFromNavigation === true/);
-      assert.match(biologyNotebookView, /id="biology-notebook-open-projects-btn"[\s\S]*Create Project/);
-      assert.match(biologyNotebookManifest, /onOpenProjects: \(\) => showView\(views\.PROJECT_MANAGEMENT\)/);
+      assert.equal(registry.apps.some((app) => app.id === 'projects'), false);
+      assert.equal(registry.viewOrder.includes('project-management-view'), false);
+      assert.doesNotMatch(generatedRegistry, /"id": "projects"/);
+      assert.match(biologyNotebookView, /id="biology-notebook-project-context-menu"/);
+      assert.match(biologyNotebookView, /id="biology-notebook-add-project-btn"[\s\S]*Add a project/);
+      assert.match(biologyNotebookView, /id="biology-notebook-project-form"/);
+      assert.match(biologyNotebookManifest, /onProjectsChanged: rendererServices\.project\.handleProjectsChanged/);
     });
 
     test('universal agent chat rail is shell-scoped and registry gated', () => {
@@ -178,6 +174,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(moduleRuntimeSource, /key:\s*'sequenceViewer'[\s\S]*init:\s*initSequenceViewerWithRoutes[\s\S]*viewKey:\s*'SEQUENCE_VIEWER'[\s\S]*viewIds:\s*\[[\s\S]*SEQUENCE_VIEWER_DETAIL_VIEW_ID/);
       assert.match(moduleRuntimeSource, /homeViewId:\s*views\.SEQUENCE_VIEWER[\s\S]*detailViewId:\s*SEQUENCE_VIEWER_DETAIL_VIEW_ID[\s\S]*onNavigateHome:\s*\(\)\s*=>\s*\{\s*showView\(views\.SEQUENCE_VIEWER\);/);
       assert.match(moduleRuntimeSource, /onNavigateDetail:\s*\(\)\s*=>\s*\{\s*showView\(SEQUENCE_VIEWER_DETAIL_VIEW_ID\);/);
+      assert.match(moduleRuntimeSource, /getStoragePath:\s*\(\)\s*=>\s*String\(state\.settings\?\.storagePath \|\| ''\)\.trim\(\)/);
+      assert.doesNotMatch(moduleRuntimeSource, /storagePath:\s*String\(state\.settings\?\.storagePath \|\| ''\)\.trim\(\)/);
       assert.match(moduleRuntimeSource, /render:\s*\(\{ modules \},\s*\{ viewId \}\s*=\s*\{\}\)\s*=>\s*\{\s*modules\.sequenceViewer\?\.\s*render\?\.\(\{\s*activeViewId:\s*viewId\s*\}\);/);
     });
 

@@ -19,7 +19,6 @@
     "gel-view",
     "lab-common-inventory-view",
     "setting-view",
-    "project-management-view",
     "workflow-management-view",
     "papers-view",
     "agent-view",
@@ -58,7 +57,7 @@
       "subtitle": "Biology notebook entries and wet-lab context.",
       "icon": "biology-notebook.svg",
       "placement": "more",
-      "aliases": ["biology", "bio notebook", "wet lab"],
+      "aliases": ["biology", "bio notebook", "wet lab", "project", "projects"],
       "searchInputId": ""
     },
     {
@@ -104,17 +103,6 @@
       "placement": "dock",
       "aliases": ["gels", "blot", "western"],
       "searchInputId": "gel-search"
-    },
-    {
-      "id": "projects",
-      "viewKey": "PROJECT_MANAGEMENT",
-      "label": "Projects",
-      "viewId": "project-management-view",
-      "subtitle": "Projects that organize notebook and paper context.",
-      "icon": "projects.svg",
-      "placement": "more",
-      "aliases": ["project"],
-      "searchInputId": ""
     },
     {
       "id": "workflows",

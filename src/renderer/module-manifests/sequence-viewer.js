@@ -51,7 +51,7 @@ export const sequenceViewerManifest = {
     document: rootDocument,
     apiBridge,
     getApiBridge,
-    storagePath: String(state.settings?.storagePath || '').trim(),
+    getStoragePath: () => String(state.settings?.storagePath || '').trim(),
     onNotebookEntriesChanged: () => {
       rendererServices.project.handleProjectsChanged();
       rendererServices.protocol.handleProtocolsChanged();

@@ -25,6 +25,7 @@ body.theme-night {
 .app-more-menu,
 .selection-insight-menu,
 .papers-context-menu,
+.biology-notebook-context-menu,
 .workflow-context-menu,
 .sequence-viewer-context-menu,
 .protocol-action-menu {
@@ -45,6 +46,7 @@ body.theme-night {
 .app-more-item,
 .selection-insight-menu-item,
 .papers-context-item,
+.biology-notebook-context-item,
 .workflow-context-item,
 .sequence-viewer-context-item,
 .protocol-action-item {
@@ -75,6 +77,8 @@ body.theme-night {
 .selection-insight-menu-item:focus-visible,
 .papers-context-item:hover,
 .papers-context-item:focus-visible,
+.biology-notebook-context-item:hover,
+.biology-notebook-context-item:focus-visible,
 .workflow-context-item:hover,
 .workflow-context-item:focus-visible,
 .sequence-viewer-context-item:hover:not(:disabled),
@@ -89,6 +93,7 @@ body.theme-night {
 .app-more-item:active,
 .selection-insight-menu-item:active,
 .papers-context-item:active,
+.biology-notebook-context-item:active,
 .workflow-context-item:active,
 .sequence-viewer-context-item:active:not(:disabled),
 .protocol-action-item:active {

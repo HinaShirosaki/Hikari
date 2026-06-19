@@ -22,7 +22,8 @@ module.exports = function registerTelegramAndManifestContracts(context = {}) {
       assert.equal(typeof internals.getModuleCatalog, 'function');
       assert.equal(typeof internals.levenshteinDistance, 'function');
       assert.ok(internals.getModuleCatalog().some((entry) => entry.token === 'protocols'));
-      assert.ok(internals.getModuleCatalog().some((entry) => entry.token === 'projects'));
+      assert.ok(internals.getModuleCatalog().some((entry) => entry.token === 'biology'));
+      assert.equal(internals.getModuleTarget('projects')?.viewId, 'biology-notebook-view');
       assert.ok(internals.getModuleSuggestions('protcols').includes('protocols'));
       assert.equal(internals.levenshteinDistance('assay', 'asay'), 1);
     });

@@ -48,7 +48,9 @@ export const APP_REGISTRY = [
     "aliases": [
       "biology",
       "bio notebook",
-      "wet lab"
+      "wet lab",
+      "project",
+      "projects"
     ],
     "searchInputId": "",
     "agentChatRail": false,
@@ -124,22 +126,6 @@ export const APP_REGISTRY = [
       "western"
     ],
     "searchInputId": "gel-search",
-    "agentChatRail": false,
-    "hiddenFromNavigation": false
-  },
-  {
-    "id": "projects",
-    "viewKey": "PROJECT_MANAGEMENT",
-    "label": "Projects",
-    "viewId": "project-management-view",
-    "subtitle": "Projects that organize notebook and paper context.",
-    "icon": "projects.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M4.5 7.5A2.5 2.5 0 0 1 7 5h3l1.5 2H17A2.5 2.5 0 0 1 19.5 9.5v7A2.5 2.5 0 0 1 17 19H7a2.5 2.5 0 0 1-2.5-2.5Z\" />\n</svg>",
-    "placement": "more",
-    "aliases": [
-      "project"
-    ],
-    "searchInputId": "",
     "agentChatRail": false,
     "hiddenFromNavigation": false
   },

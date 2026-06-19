@@ -74,42 +74,38 @@ export async function copyPdfHighlightText(value = '', navigatorRef = globalThis
   }
 }
 
-export function buildHighlightPopoverMarkup(highlight = {}, comment = null) {
+export function buildHighlightPopoverMarkup(highlight = {}) {
   const text = normalizePdfHighlightText(highlight?.text);
   if (!text) {
     return '';
   }
-  const preview = text.length > 1400
-    ? `${text.slice(0, 1397).trimEnd()}...`
-    : text;
-  const paragraphs = preview
-    .split(/\n{2,}/)
-    .map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`)
-    .join('');
-  const commentMarkup = comment
-    ? `<div class="papers-highlight-popover-comment">${buildHighlightCommentPopoverMarkup(comment)}</div>`
-    : '';
   return `
-      <div class="papers-highlight-popover-head">
-        <strong>Highlighted text</strong>
-        <div class="papers-highlight-popover-copy-wrap">
-          <span class="papers-highlight-popover-copy-status" data-paper-highlight-copy-status aria-live="polite"></span>
-          <button
-            type="button"
-            class="papers-highlight-popover-copy-btn"
-            data-paper-highlight-copy
-            aria-label="Copy highlighted text"
-            title="Copy highlighted text"
-          >
-            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-              <rect x="8" y="8" width="11" height="11" rx="1.75"></rect>
-              <path d="M5 16V6.75A1.75 1.75 0 0 1 6.75 5H16"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
-      <div class="papers-highlight-popover-text">${paragraphs}</div>
-      ${commentMarkup}
+      <button
+        type="button"
+        class="ghost-btn papers-selection-action-btn"
+        data-paper-highlight-ask
+        aria-label="Ask Hikari about highlighted text"
+        title="Ask Hikari"
+      >
+        <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+          <path d="M9.25 8.5a3 3 0 0 1 5.85.95c0 2.8-3.3 2.55-3.3 5.05"></path>
+          <path d="M12 18.25h.01"></path>
+        </svg>
+        <span class="sr-only">Ask Hikari about highlighted text</span>
+      </button>
+      <button
+        type="button"
+        class="ghost-btn papers-selection-action-btn"
+        data-paper-highlight-copy
+        aria-label="Copy highlighted text"
+        title="Copy highlighted text"
+      >
+        <svg class="papers-selection-action-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+          <rect x="8" y="8" width="11" height="11" rx="1.75"></rect>
+          <path d="M5 16V6.75A1.75 1.75 0 0 1 6.75 5H16"></path>
+        </svg>
+        <span class="sr-only">Copy highlighted text</span>
+      </button>
     `;
 }
 

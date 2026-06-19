@@ -1,3 +1,5 @@
+import { copyPdfHighlightText } from './pdf-viewer-search.js';
+
 export const installPdfViewerSelectionActionsController = (ctx) => {
   const { elements, state } = ctx;
   const {
@@ -52,6 +54,16 @@ export const installPdfViewerSelectionActionsController = (ctx) => {
     return true;
   }
 
+  async function copySelectedText() {
+    const selection = state.pendingSelection;
+    if (!selection) {
+      return false;
+    }
+    const copied = await copyPdfHighlightText(selection.text, ctx.getWindowRef()?.navigator);
+    ctx.setStatus(copied ? 'Copied selected text.' : 'Unable to copy selected text.');
+    return copied;
+  }
+
   function openSelectionCommentPopover() {
     if (!state.pendingSelection || !selectionCommentPopover) {
       return;
@@ -93,6 +105,7 @@ export const installPdfViewerSelectionActionsController = (ctx) => {
 
   Object.assign(ctx, {
     askAgentAboutSelection,
+    copySelectedText,
     createSelectionAnnotation,
     openSelectionCommentPopover,
     saveSelectionComment

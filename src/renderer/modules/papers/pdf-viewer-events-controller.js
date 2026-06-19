@@ -19,6 +19,7 @@ export const installPdfViewerEventsController = (ctx) => {
     selectionCommentBtn,
     selectionSearchBtn,
     selectionAskBtn,
+    selectionCopyBtn,
     selectionSearchPdfBtn,
     selectionSearchLibraryBtn,
     selectionSearchPrevBtn,
@@ -65,6 +66,9 @@ export const installPdfViewerEventsController = (ctx) => {
     });
     selectionAskBtn?.addEventListener('click', () => {
       ctx.askAgentAboutSelection();
+    });
+    selectionCopyBtn?.addEventListener('click', () => {
+      void ctx.copySelectedText();
     });
     selectionSearchPdfBtn?.addEventListener('click', () => {
       void ctx.runSelectionSearch('pdf');
