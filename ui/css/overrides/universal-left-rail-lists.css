@@ -2,15 +2,15 @@
 
 :root {
   --hikari-left-rail-list-radius: 8px;
-  --hikari-left-rail-list-hover: color-mix(in srgb, var(--surface-subtle) 64%, transparent);
-  --hikari-left-rail-list-selected: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
-  --hikari-left-rail-list-focus: color-mix(in srgb, var(--focus) 22%, transparent);
+  --hikari-left-rail-list-hover: color-mix(in srgb, var(--theme-surface-subtle) 64%, transparent);
+  --hikari-left-rail-list-selected: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
+  --hikari-left-rail-list-focus: color-mix(in srgb, var(--theme-focus) 22%, transparent);
 }
 
 body.theme-night {
-  --hikari-left-rail-list-hover: color-mix(in srgb, var(--surface-subtle) 72%, var(--palette-white) 4%);
-  --hikari-left-rail-list-selected: color-mix(in srgb, var(--surface-subtle) 86%, var(--palette-white) 7%);
-  --hikari-left-rail-list-focus: color-mix(in srgb, var(--focus) 28%, transparent);
+  --hikari-left-rail-list-hover: color-mix(in srgb, var(--theme-surface-subtle) 72%, var(--theme-surface-elevated) 4%);
+  --hikari-left-rail-list-selected: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-surface-elevated) 7%);
+  --hikari-left-rail-list-focus: color-mix(in srgb, var(--theme-focus) 28%, transparent);
 }
 
 .left-rail-template__rail :is(
@@ -31,7 +31,7 @@ body.theme-night {
   .list-row:not(.list-row-header)
 ) {
   border-radius: var(--hikari-left-rail-list-radius);
-  color: var(--text);
+  color: var(--theme-text);
   transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
 }
 
@@ -70,7 +70,7 @@ body.theme-night {
   .list-row:not(.list-row-header)
 ):focus-visible {
   background: var(--hikari-left-rail-list-hover) !important;
-  color: var(--strong) !important;
+  color: var(--theme-text-strong) !important;
   outline: none;
 }
 
@@ -92,7 +92,7 @@ body.theme-night {
 ) {
   background: var(--hikari-left-rail-list-selected) !important;
   border-color: transparent !important;
-  color: var(--strong) !important;
+  color: var(--theme-text-strong) !important;
   box-shadow: none !important;
 }
 
@@ -154,7 +154,7 @@ body.theme-night {
   .list-row-selected .text-list-btn,
   .list-row-selected .list-main-text
 ) {
-  color: var(--strong) !important;
+  color: var(--theme-text-strong) !important;
   font-weight: 700 !important;
 }
 

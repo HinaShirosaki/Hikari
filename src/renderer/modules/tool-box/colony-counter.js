@@ -206,7 +206,7 @@ export function initColonyCounterTool() {
       return;
     }
     colonyStatus.textContent = message;
-    colonyStatus.style.color = isError ? 'var(--danger)' : '';
+    colonyStatus.style.color = isError ? 'var(--theme-danger)' : '';
   }
 
   // Restore the summary panel to its default instructional text.

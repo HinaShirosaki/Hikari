@@ -36,7 +36,7 @@
   border-bottom: 0 !important;
   border-left: 0 !important;
   border-radius: 0 !important;
-  background: var(--app-left-rail-surface, var(--surface)) !important;
+  background: var(--app-left-rail-surface, var(--theme-surface)) !important;
   box-shadow: none !important;
   overflow-x: hidden !important;
   overflow-y: auto !important;
@@ -125,7 +125,7 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
 
 .left-rail-template__section + .left-rail-template__section {
   padding-top: 16px;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 
@@ -229,7 +229,7 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
   margin-top: 4px;
   padding: 12px 0 0 !important;
   border: 0 !important;
-  border-top: 1px solid var(--line-soft) !important;
+  border-top: 1px solid var(--theme-border-soft) !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;
@@ -237,7 +237,7 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
 
 .left-rail-template__rail .workflow-card {
   border: 0 !important;
-  border-top: 1px solid var(--line-soft) !important;
+  border-top: 1px solid var(--theme-border-soft) !important;
   border-radius: 0 !important;
   background: transparent !important;
   box-shadow: none !important;

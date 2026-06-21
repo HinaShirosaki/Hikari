@@ -81,7 +81,7 @@ body.agent-view-fixed-scroll .workspace-main {
 .agent-new-chat-btn:hover,
 .agent-new-chat-btn:focus-visible {
   background: transparent;
-  color: var(--accent);
+  color: var(--theme-accent);
 }
 
 .agent-new-chat-btn svg {
@@ -115,14 +115,14 @@ body.agent-view-fixed-scroll .workspace-main {
   align-items: center;
   text-align: left;
   cursor: pointer;
-  color: var(--text);
+  color: var(--theme-text);
   min-width: 0;
   overflow: hidden;
 }
 
 .agent-session-card.is-active {
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 8%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--theme-accent) 55%, transparent);
 }
 
 .agent-session-card:disabled {
@@ -134,7 +134,7 @@ body.agent-view-fixed-scroll .workspace-main {
   display: block;
   font-size: 0.92rem;
   line-height: 1.25;
-  color: var(--primary);
+  color: var(--theme-primary);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -209,7 +209,7 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-chat-item-user {
-  background: color-mix(in srgb, var(--surface-subtle) 55%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 55%, transparent);
   margin-left: auto;
 }
 
@@ -229,7 +229,7 @@ body.agent-view-fixed-scroll .workspace-main {
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 6px;
-  color: var(--primary);
+  color: var(--theme-primary);
 }
 
 .agent-chat-header strong {
@@ -238,7 +238,7 @@ body.agent-view-fixed-scroll .workspace-main {
 
 .agent-chat-header span {
   font-size: 0.8rem;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .agent-chat-body {
@@ -276,7 +276,7 @@ body.agent-view-fixed-scroll .workspace-main {
 .agent-chat-markdown h6 {
   margin: 1rem 0 0.5rem;
   line-height: 1.25;
-  color: var(--primary);
+  color: var(--theme-primary);
 }
 
 .agent-chat-markdown h1 {
@@ -306,7 +306,7 @@ body.agent-view-fixed-scroll .workspace-main {
 .agent-chat-markdown code {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.92em;
-  background: color-mix(in srgb, var(--surface-subtle) 75%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 75%, transparent);
   padding: 0.08rem 0.32rem;
   border-radius: 4px;
 }
@@ -315,8 +315,8 @@ body.agent-view-fixed-scroll .workspace-main {
   overflow-x: auto;
   padding: 0.8rem 0.95rem;
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-subtle) 82%, transparent);
-  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, transparent);
+  border: 1px solid var(--theme-border);
 }
 
 .agent-chat-code-block code {
@@ -335,7 +335,7 @@ body.agent-view-fixed-scroll .workspace-main {
 
 .agent-python-output-group h4 {
   margin: 0;
-  color: var(--primary);
+  color: var(--theme-primary);
 }
 
 .agent-python-output-run {
@@ -352,8 +352,8 @@ body.agent-view-fixed-scroll .workspace-main {
   display: grid;
   gap: 8px;
   padding: 10px 12px;
-  background: color-mix(in srgb, var(--surface-subtle) 58%, transparent);
-  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 58%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
 }
 
 .agent-python-output-header {
@@ -364,11 +364,11 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-python-output-header strong {
-  color: var(--primary);
+  color: var(--theme-primary);
 }
 
 .agent-python-output-header span {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.8rem;
 }
 
@@ -394,7 +394,7 @@ body.agent-view-fixed-scroll .workspace-main {
   width: 100%;
   max-height: 320px;
   object-fit: contain;
-  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 78%, transparent);
 }
 
 .agent-purchase-group {
@@ -430,7 +430,7 @@ body.agent-view-fixed-scroll .workspace-main {
   aspect-ratio: 1 / 1;
   border-radius: 18px;
   overflow: hidden;
-  background: color-mix(in srgb, var(--surface) 92%, var(--palette-white) 8%);
+  background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-surface-elevated) 8%);
 }
 
 .agent-purchase-image {
@@ -448,18 +448,18 @@ body.agent-view-fixed-scroll .workspace-main {
 .agent-purchase-title {
   font-size: 1rem;
   line-height: 1.25;
-  color: var(--accent);
+  color: var(--theme-accent);
 }
 
 .agent-purchase-price {
   font-size: 1.02rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--theme-primary);
 }
 
 .agent-purchase-vendor {
   font-size: 0.98rem;
-  color: var(--primary);
+  color: var(--theme-primary);
 }
 
 .agent-purchase-item:hover .agent-purchase-title,
@@ -469,7 +469,7 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-purchase-item:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent) 65%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 65%, transparent);
   outline-offset: 4px;
   border-radius: 12px;
 }
@@ -478,19 +478,19 @@ body.agent-view-fixed-scroll .workspace-main {
   margin-left: 0;
   margin-right: 0;
   padding-left: 0.9rem;
-  border-left: 3px solid color-mix(in srgb, var(--accent) 55%, var(--line));
-  color: var(--muted);
+  border-left: 3px solid color-mix(in srgb, var(--theme-accent) 55%, var(--theme-border));
+  color: var(--theme-text-muted);
 }
 
 .agent-chat-markdown a {
-  color: var(--accent);
+  color: var(--theme-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
 .agent-chat-markdown hr {
   border: 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--theme-border);
 }
 
 .agent-chat-table-wrap {
@@ -501,21 +501,21 @@ body.agent-view-fixed-scroll .workspace-main {
   width: 100%;
   min-width: 320px;
   border-collapse: collapse;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
+  border: 1px solid var(--theme-border);
+  background: color-mix(in srgb, var(--theme-surface) 84%, transparent);
 }
 
 .agent-chat-table th,
 .agent-chat-table td {
   padding: 0.55rem 0.7rem;
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   vertical-align: top;
 }
 
 .agent-chat-table th {
-  background: color-mix(in srgb, var(--surface-subtle) 82%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, transparent);
   text-align: left;
-  color: var(--primary);
+  color: var(--theme-primary);
 }
 
 .agent-chat-table [data-align="center"] {
@@ -540,7 +540,7 @@ body.agent-view-fixed-scroll .workspace-main {
   display: grid;
   gap: 12px;
   padding: 14px 0 0 16px;
-  border-left: 2px solid color-mix(in srgb, var(--accent) 42%, var(--line));
+  border-left: 2px solid color-mix(in srgb, var(--theme-accent) 42%, var(--theme-border));
 }
 
 .agent-user-question-kicker {
@@ -548,21 +548,21 @@ body.agent-view-fixed-scroll .workspace-main {
   font-size: 0.72rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .agent-user-question-card h4 {
   margin: 0;
   font-size: 1rem;
   line-height: 1.35;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .agent-user-question-context,
 .agent-user-question-answer {
   margin: 0;
   line-height: 1.45;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .agent-user-question-options {
@@ -577,10 +577,10 @@ body.agent-view-fixed-scroll .workspace-main {
   gap: 3px;
   justify-items: start;
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 88%, var(--palette-white) 12%);
-  color: var(--strong);
+  background: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-surface-elevated) 12%);
+  color: var(--theme-text-strong);
   text-align: left;
   font: inherit;
   cursor: pointer;
@@ -592,18 +592,18 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-user-question-option small {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   line-height: 1.35;
 }
 
 .agent-user-question-option:hover,
 .agent-user-question-option:focus-visible {
-  border-color: color-mix(in srgb, var(--accent) 46%, var(--line));
-  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  border-color: color-mix(in srgb, var(--theme-accent) 46%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface));
 }
 
 .agent-user-question-option:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 38%, transparent);
   outline-offset: 2px;
 }
 
@@ -626,19 +626,19 @@ body.agent-view-fixed-scroll .workspace-main {
   min-height: 44px;
   max-height: 110px;
   resize: vertical;
-  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
   border-radius: 8px;
   padding: 10px 12px;
-  background: color-mix(in srgb, var(--surface) 88%, var(--palette-white) 12%);
-  color: var(--strong);
+  background: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-surface-elevated) 12%);
+  color: var(--theme-text-strong);
   font: inherit;
   line-height: 1.45;
 }
 
 .agent-user-question-custom textarea:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 34%, transparent);
   outline-offset: 2px;
-  border-color: color-mix(in srgb, var(--accent) 48%, var(--line));
+  border-color: color-mix(in srgb, var(--theme-accent) 48%, var(--theme-border));
 }
 
 .agent-thinking-trace {
@@ -646,7 +646,7 @@ body.agent-view-fixed-scroll .workspace-main {
   gap: 10px;
   margin: 0;
   padding-left: 16px;
-  border-left: 2px solid color-mix(in srgb, var(--accent) 24%, var(--line));
+  border-left: 2px solid color-mix(in srgb, var(--theme-accent) 24%, var(--theme-border));
 }
 
 .agent-thinking-trace-summary {
@@ -656,12 +656,12 @@ body.agent-view-fixed-scroll .workspace-main {
   line-height: 1.2;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .agent-thinking-trace-summary::marker,
 .agent-thinking-trace-summary::-webkit-details-marker {
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .agent-thinking-trace-list {
@@ -679,7 +679,7 @@ details.agent-thinking-trace:not([open]) > .agent-thinking-trace-list {
 .agent-thinking-trace-item {
   margin: 0;
   line-height: 1.55;
-  color: color-mix(in srgb, var(--strong) 76%, var(--muted));
+  color: color-mix(in srgb, var(--theme-text-strong) 76%, var(--theme-text-muted));
 }
 
 
@@ -724,16 +724,16 @@ details.agent-thinking-trace:not([open]) > .agent-thinking-trace-list {
 }
 
 .agent-meta-grid details {
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   padding: 8px 10px;
-  background: var(--surface);
+  background: var(--theme-surface);
 }
 
 .agent-meta-grid summary {
   cursor: pointer;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--theme-primary);
 }
 
 .agent-meta-grid ul {
@@ -771,8 +771,8 @@ details.agent-thinking-trace:not([open]) > .agent-thinking-trace-list {
 }
 
 body.ui-neutral-compact .agent-chat-item {
-  border: 1px solid var(--palette-slate-250);
-  background: var(--palette-white);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
 }
 
 body.ui-neutral-compact .agent-chat-item-assistant {
@@ -782,13 +782,13 @@ body.ui-neutral-compact .agent-chat-item-assistant {
 
 
 body.ui-neutral-compact .agent-meta-grid details {
-  border-color: var(--palette-slate-250);
-  background: var(--palette-slate-25);
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
 }
 
 body.ui-neutral-compact.theme-night .agent-chat-item {
-  border-color: var(--palette-slate-700);
-  background: var(--bg);
+  border-color: var(--theme-border);
+  background: var(--theme-background);
 }
 
 body.ui-neutral-compact.theme-night .agent-chat-item-assistant {
@@ -798,8 +798,8 @@ body.ui-neutral-compact.theme-night .agent-chat-item-assistant {
 
 
 body.ui-neutral-compact.theme-night .agent-meta-grid details {
-  border-color: var(--palette-slate-700);
-  background: var(--palette-slate-850);
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
 }
 
 .agent-session-card,
@@ -815,7 +815,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 .agent-chat-header,
 .agent-session-card strong,
 .agent-meta-grid summary {
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 
@@ -854,7 +854,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-session-card:hover,
 .agent-session-card:focus-visible {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   background: transparent;
   outline: none;
 }
@@ -866,14 +866,14 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-session-card.is-active strong {
   font-weight: 600;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .agent-session-card strong {
   font-size: 0.96rem;
   line-height: 1.35;
   font-weight: 500;
-  color: var(--text);
+  color: var(--theme-text);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -904,39 +904,39 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   margin: 0;
   padding: 7px 12px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
-  background: color-mix(in srgb, var(--surface) 90%, var(--palette-white) 10%);
-  color: var(--muted);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 80%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 90%, var(--theme-surface-elevated) 10%);
+  color: var(--theme-text-muted);
   white-space: nowrap;
 }
 
 .agent-status-pill[data-state="ready"] {
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .agent-status-pill[data-state="working"] {
-  color: color-mix(in srgb, var(--strong) 76%, var(--warning));
-  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: color-mix(in srgb, var(--theme-text-strong) 76%, var(--theme-warning));
+  border-color: color-mix(in srgb, var(--theme-accent) 28%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
 }
 
 .agent-status-pill[data-state="complete"] {
-  color: var(--success);
-  border-color: color-mix(in srgb, var(--success) 18%, var(--line));
-  background: color-mix(in srgb, var(--success) 10%, var(--palette-white));
+  color: var(--theme-success);
+  border-color: color-mix(in srgb, var(--theme-success) 18%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-success) 10%, var(--theme-surface-elevated));
 }
 
 .agent-status-pill[data-state="error"] {
-  color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 22%, var(--line));
-  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+  color: var(--theme-danger);
+  border-color: color-mix(in srgb, var(--theme-danger) 22%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-danger) 8%, var(--theme-surface));
 }
 
 .agent-developer-tools {
   gap: 12px;
   padding: 12px 0 16px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 76%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 76%, transparent);
   border-left: 0;
   border-right: 0;
   border-radius: 0;
@@ -952,10 +952,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   width: min(560px, calc(100% - 32px));
   max-height: calc(100% - 76px);
   overflow: hidden;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 94%, var(--palette-white) 6%);
-  box-shadow: 0 18px 44px color-mix(in srgb, var(--strong) 18%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 94%, var(--theme-surface-elevated) 6%);
+  box-shadow: 0 18px 44px color-mix(in srgb, var(--theme-text-strong) 18%, transparent);
 }
 
 .agent-dev-response-header {
@@ -964,8 +964,8 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   justify-content: space-between;
   gap: 12px;
   padding: 10px 12px;
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
-  background: color-mix(in srgb, var(--surface) 86%, var(--surface-subtle) 14%);
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 74%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 86%, var(--theme-surface-subtle) 14%);
 }
 
 .agent-dev-response-header > div {
@@ -975,7 +975,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .agent-dev-response-header strong {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 0.92rem;
   line-height: 1.2;
 }
@@ -992,7 +992,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   display: grid;
   gap: 6px;
   min-width: 0;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.82rem;
   font-weight: 600;
 }
@@ -1004,8 +1004,8 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 0.78rem;
   line-height: 1.45;
-  color: var(--strong);
-  background: color-mix(in srgb, var(--surface) 82%, var(--palette-white) 18%);
+  color: var(--theme-text-strong);
+  background: color-mix(in srgb, var(--theme-surface) 82%, var(--theme-surface-elevated) 18%);
 }
 
 #agent-dev-visible-context {
@@ -1066,7 +1066,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   position: relative;
   min-height: 0;
   overflow: hidden;
-  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
 }
 
 .agent-chat-history {
@@ -1088,8 +1088,8 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   transform: translateX(-50%);
   border-radius: 999px;
   padding: 8px 14px;
-  border: 1px solid color-mix(in srgb, var(--line) 84%, transparent);
-  background: color-mix(in srgb, var(--surface) 92%, var(--palette-white) 8%);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 84%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-surface-elevated) 8%);
   box-shadow: none;
 }
 
@@ -1107,9 +1107,9 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   margin: 0 auto;
   gap: 14px;
   padding: 16px 18px 18px;
-  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 76%, transparent);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--surface) 90%, var(--palette-white) 10%);
+  background: color-mix(in srgb, var(--theme-surface) 90%, var(--theme-surface-elevated) 10%);
   box-shadow: none;
   filter: none;
 }
@@ -1124,15 +1124,15 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   font-size: 0.76rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .agent-composer-project select {
   min-height: 42px;
   border-radius: 14px;
-  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
-  background: color-mix(in srgb, var(--surface-subtle) 82%, transparent);
-  color: var(--strong);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 76%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, transparent);
+  color: var(--theme-text-strong);
 }
 
 .agent-composer-label {
@@ -1144,7 +1144,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   font-size: 0.76rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .agent-composer-card textarea {
@@ -1161,7 +1161,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   font: inherit;
   font-size: 1rem;
   line-height: 1.58;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .agent-composer-card textarea:focus {
@@ -1181,22 +1181,22 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   max-width: 100%;
   padding: 7px 12px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
-  background: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
-  color: var(--strong);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 74%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
+  color: var(--theme-text-strong);
   font-size: 0.82rem;
 }
 
 .agent-attachment-pill.is-image {
-  border-color: color-mix(in srgb, var(--accent) 28%, var(--line));
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface-subtle));
+  border-color: color-mix(in srgb, var(--theme-accent) 28%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface-subtle));
 }
 
 .agent-attachment-pill button {
   border: 0;
   padding: 0;
   background: transparent;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font: inherit;
   line-height: 1;
   cursor: pointer;
@@ -1204,7 +1204,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-attachment-pill button:hover,
 .agent-attachment-pill button:focus-visible {
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .agent-composer-toolbar {
@@ -1269,7 +1269,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   font-size: clamp(1.9rem, 3vw, 2.6rem);
   line-height: 1.04;
   font-family: var(--font-app);
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .agent-empty-kicker {
@@ -1277,7 +1277,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   font-size: 0.76rem;
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .agent-empty-prompt-list {
@@ -1328,17 +1328,17 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-  border: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 76%, transparent);
 }
 
 .agent-chat-avatar-assistant {
   background: transparent;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .agent-chat-avatar-user {
   background: transparent;
-  color: color-mix(in srgb, var(--strong) 72%, var(--muted));
+  color: color-mix(in srgb, var(--theme-text-strong) 72%, var(--theme-text-muted));
 }
 
 .agent-chat-item {
@@ -1350,10 +1350,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   width: auto;
   max-width: min(78%, 620px);
   padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--line) 74%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 74%, transparent);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--surface) 88%, var(--palette-white) 12%);
-  box-shadow: 0 12px 32px var(--palette-rgba-27-20-14-a08);
+  background: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-surface-elevated) 12%);
+  box-shadow: 0 12px 32px var(--theme-shadow-color-subtle);
 }
 
 .agent-chat-item-assistant {
@@ -1379,12 +1379,12 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-chat-header strong {
   font-size: 0.9rem;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .agent-chat-header span {
   font-size: 0.78rem;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .agent-live-pill {
@@ -1392,14 +1392,14 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   align-items: center;
   border-radius: 999px;
   padding: 3px 8px;
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: color-mix(in srgb, var(--strong) 78%, var(--muted));
+  background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
+  color: color-mix(in srgb, var(--theme-text-strong) 78%, var(--theme-text-muted));
   font-size: 0.72rem;
 }
 
 .agent-chat-body {
   line-height: 1.65;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .agent-chat-body-plain {
@@ -1415,26 +1415,26 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 .agent-meta-grid details {
   padding: 12px 0;
   border: 0;
-  border-top: 1px solid color-mix(in srgb, var(--line) 76%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 76%, transparent);
   border-radius: 0;
   background: transparent;
 }
 
 .agent-meta-grid summary {
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .agent-thinking-trace {
   padding: 14px 0 0 16px;
-  border-left: 2px solid color-mix(in srgb, var(--accent) 34%, var(--line));
+  border-left: 2px solid color-mix(in srgb, var(--theme-accent) 34%, var(--theme-border));
 }
 
 .agent-thinking-trace-summary {
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .agent-thinking-trace-item {
-  color: color-mix(in srgb, var(--strong) 80%, var(--muted));
+  color: color-mix(in srgb, var(--theme-text-strong) 80%, var(--theme-text-muted));
 }
 
 .agent-draft-actions {
@@ -1451,11 +1451,11 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-python-output-card + .agent-python-output-card {
   padding-top: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 70%, transparent);
 }
 
 .agent-python-output-image {
-  border: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
   background: transparent;
 }
 
@@ -1476,7 +1476,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   justify-items: center;
   overflow: hidden;
   padding: clamp(20px, 3vw, 34px) 24px 24px;
-  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 70%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -1516,7 +1516,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-review-dialog-header h3 {
   margin: 0;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 1.04rem;
   line-height: 1.25;
 }
@@ -1546,9 +1546,9 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   gap: 16px;
   scroll-snap-align: center;
   padding: 18px;
-  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 88%, var(--palette-white) 12%);
+  background: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-surface-elevated) 12%);
   overflow: hidden;
 }
 
@@ -1559,7 +1559,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-review-card-header h4 {
   margin: 0;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 1rem;
   line-height: 1.32;
   overflow-wrap: anywhere;
@@ -1567,14 +1567,14 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-review-card-header p {
   margin: 0;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   line-height: 1.4;
 }
 
 .agent-review-type {
   display: inline-flex;
   width: max-content;
-  color: color-mix(in srgb, var(--accent) 78%, var(--strong));
+  color: color-mix(in srgb, var(--theme-accent) 78%, var(--theme-text-strong));
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -1597,7 +1597,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 
 .agent-review-section h5 {
   margin: 0;
-  color: var(--primary);
+  color: var(--theme-primary);
   font-size: 0.84rem;
   line-height: 1.3;
 }
@@ -1622,7 +1622,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .agent-review-muted {
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .agent-review-actions,
@@ -1636,7 +1636,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 .agent-review-actions {
   justify-content: flex-end;
   padding-top: 4px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 70%, transparent);
 }
 
 .agent-review-footer {
@@ -1653,7 +1653,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 .agent-progress-flow-text {
   display: inline-block;
   max-width: 100%;
-  color: color-mix(in srgb, var(--strong) 70%, var(--muted));
+  color: color-mix(in srgb, var(--theme-text-strong) 70%, var(--theme-text-muted));
 }
 
 @supports ((background-clip: text) or (-webkit-background-clip: text)) {
@@ -1661,11 +1661,11 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
     background:
       linear-gradient(
         90deg,
-        color-mix(in srgb, var(--muted) 86%, transparent) 0%,
-        color-mix(in srgb, var(--strong) 92%, var(--accent)) 36%,
-        color-mix(in srgb, var(--accent) 74%, var(--strong)) 50%,
-        color-mix(in srgb, var(--strong) 92%, var(--accent)) 64%,
-        color-mix(in srgb, var(--muted) 86%, transparent) 100%
+        color-mix(in srgb, var(--theme-text-muted) 86%, transparent) 0%,
+        color-mix(in srgb, var(--theme-text-strong) 92%, var(--theme-accent)) 36%,
+        color-mix(in srgb, var(--theme-accent) 74%, var(--theme-text-strong)) 50%,
+        color-mix(in srgb, var(--theme-text-strong) 92%, var(--theme-accent)) 64%,
+        color-mix(in srgb, var(--theme-text-muted) 86%, transparent) 100%
       );
     background-size: 260% 100%;
     background-position: 120% 0;
@@ -1701,11 +1701,11 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   0%,
 100% {
     transform: scale(1);
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 16%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--theme-accent) 16%, transparent);
   }
   50% {
     transform: scale(1.03);
-    box-shadow: 0 0 0 8px color-mix(in srgb, var(--accent) 0%, transparent);
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--theme-accent) 0%, transparent);
   }
 }
 

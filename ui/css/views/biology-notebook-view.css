@@ -80,7 +80,7 @@
   gap: 10px;
   align-items: center;
   cursor: default;
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 .biology-notebook-folder-toggle {
@@ -100,7 +100,7 @@
 .biology-notebook-folder-item:hover,
 .biology-notebook-folder-item:focus-visible {
   background: transparent;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   outline: none;
 }
 
@@ -140,7 +140,7 @@
 }
 
 .biology-notebook-folder.is-active > .biology-notebook-folder-item {
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .biology-notebook-folder.is-active > .biology-notebook-folder-item .biology-notebook-folder-name {
@@ -173,19 +173,19 @@
   align-items: center;
   text-align: left;
   cursor: pointer;
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 .biology-notebook-page-row:hover,
 .biology-notebook-page-row:focus-visible {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   background: transparent;
   outline: none;
 }
 
 .biology-notebook-page-row.is-active .biology-notebook-page-name {
   font-weight: 600;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .biology-notebook-page-name {
@@ -201,16 +201,16 @@
 }
 
 .biology-notebook-page-row.is-planned .biology-notebook-page-badge {
-  color: var(--warning);
+  color: var(--theme-warning);
 }
 
 .biology-notebook-page-row.is-executed .biology-notebook-page-badge {
-  color: var(--success);
+  color: var(--theme-success);
 }
 
 .biology-notebook-page-list-empty {
   margin: 0;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .biology-notebook-page-list-empty--folder {
@@ -284,9 +284,9 @@
   transform: rotate(180deg);
   text-align: center;
   font-weight: 700;
-  color: var(--strong);
-  border: 1px solid var(--line-soft);
-  background: color-mix(in srgb, var(--surface) 94%, var(--accent) 6%);
+  color: var(--theme-text-strong);
+  border: 1px solid var(--theme-border-soft);
+  background: color-mix(in srgb, var(--theme-surface) 94%, var(--theme-accent) 6%);
   box-shadow: none;
 }
 
@@ -328,10 +328,10 @@
   height: 44px;
   min-height: 44px;
   padding: 9px;
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
+  background: var(--theme-surface);
+  color: var(--theme-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -348,9 +348,9 @@
 }
 
 .biology-notebook-tool-tab.is-active {
-  color: var(--strong);
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--line-soft));
-  background: color-mix(in srgb, var(--surface) 88%, var(--accent) 12%);
+  color: var(--theme-text-strong);
+  border-color: color-mix(in srgb, var(--theme-accent) 60%, var(--theme-border-soft));
+  background: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-accent) 12%);
   box-shadow: none;
 }
 
@@ -358,9 +358,9 @@
   display: grid;
   gap: 12px;
   padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--panel) 92%, var(--palette-white));
+  background: color-mix(in srgb, var(--theme-panel) 92%, var(--theme-surface-elevated));
 }
 
 .biology-notebook-tool-workspace[hidden] {
@@ -418,7 +418,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(78px, auto);
   gap: 8px;
   padding: 10px 0;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 .biology-notebook-tool-row--reaction {
@@ -444,7 +444,7 @@
   display: grid;
   gap: 6px;
   padding-top: 10px;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 .biology-notebook-tool-output p,
@@ -481,11 +481,11 @@
   display: grid;
   gap: 6px;
   padding: 10px 0;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 .biology-notebook-tool-calculation:last-child {
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--theme-border-soft);
 }
 
 .biology-notebook-tool-calculation-head {
@@ -502,7 +502,7 @@
 }
 
 .biology-notebook-tool-calculation-head span {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.74rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -564,7 +564,7 @@
 }
 
 .project-eyebrow {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.78rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -588,26 +588,26 @@
   min-height: 118px;
   align-content: start;
   padding: 14px;
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-elevated) 86%, var(--surface-subtle));
+  background: color-mix(in srgb, var(--theme-surface-elevated) 86%, var(--theme-surface-subtle));
 }
 
 .project-stat-card span {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.82rem;
   font-weight: 650;
 }
 
 .project-stat-card strong {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: clamp(1.8rem, 3vw, 2.6rem);
   line-height: 1;
 }
 
 .project-stat-card p {
   margin: 0;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.88rem;
 }
 
@@ -629,7 +629,7 @@
   column-gap: var(--project-contribution-cell-gap);
   padding-left: 36px;
   min-width: max-content;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.78rem;
 }
 
@@ -650,7 +650,7 @@
   display: grid;
   grid-template-rows: repeat(7, var(--project-contribution-cell-size));
   row-gap: var(--project-contribution-cell-gap);
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.72rem;
   line-height: var(--project-contribution-cell-size);
 }
@@ -679,9 +679,9 @@
 .project-contribution-legend-cell {
   width: var(--project-contribution-cell-size);
   height: var(--project-contribution-cell-size);
-  border: 1px solid var(--palette-rgba-27-20-14-a08);
+  border: 1px solid var(--theme-shadow-color-subtle);
   border-radius: 3px;
-  background: color-mix(in srgb, var(--surface-subtle) 68%, var(--palette-white));
+  background: color-mix(in srgb, var(--theme-surface-subtle) 68%, var(--theme-surface-elevated));
 }
 
 .project-contribution-cell {
@@ -692,28 +692,28 @@
 
 .project-contribution-cell:hover,
 .project-contribution-cell:focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 2px solid var(--theme-focus);
   outline-offset: 1px;
 }
 
 .project-contribution-cell[data-level="1"],
 .project-contribution-legend-cell[data-level="1"] {
-  background: color-mix(in srgb, var(--accent) 32%, var(--palette-white));
+  background: color-mix(in srgb, var(--theme-accent) 32%, var(--theme-surface-elevated));
 }
 
 .project-contribution-cell[data-level="2"],
 .project-contribution-legend-cell[data-level="2"] {
-  background: color-mix(in srgb, var(--accent) 52%, var(--palette-white));
+  background: color-mix(in srgb, var(--theme-accent) 52%, var(--theme-surface-elevated));
 }
 
 .project-contribution-cell[data-level="3"],
 .project-contribution-legend-cell[data-level="3"] {
-  background: color-mix(in srgb, var(--accent) 74%, var(--palette-white));
+  background: color-mix(in srgb, var(--theme-accent) 74%, var(--theme-surface-elevated));
 }
 
 .project-contribution-cell[data-level="4"],
 .project-contribution-legend-cell[data-level="4"] {
-  background: color-mix(in srgb, var(--accent) 92%, var(--palette-black));
+  background: color-mix(in srgb, var(--theme-accent) 92%, var(--theme-text-strong));
 }
 
 .project-contribution-legend {
@@ -722,7 +722,7 @@
   justify-content: flex-end;
   gap: 5px;
   min-width: max-content;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.78rem;
 }
 
@@ -736,33 +736,33 @@
 }
 
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-stat-card {
-  background: color-mix(in srgb, var(--surface-elevated) 82%, var(--surface-subtle));
+  background: color-mix(in srgb, var(--theme-surface-elevated) 82%, var(--theme-surface-subtle));
 }
 
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell,
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell {
-  border-color: var(--palette-rgba-255-255-255-a12);
-  background: color-mix(in srgb, var(--surface-subtle) 70%, var(--palette-black));
+  border-color: color-mix(in srgb, var(--theme-text-strong) 12%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 70%, var(--theme-text-strong));
 }
 
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="1"],
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="1"] {
-  background: color-mix(in srgb, var(--accent) 45%, var(--surface-subtle));
+  background: color-mix(in srgb, var(--theme-accent) 45%, var(--theme-surface-subtle));
 }
 
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="2"],
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="2"] {
-  background: color-mix(in srgb, var(--accent) 62%, var(--surface-subtle));
+  background: color-mix(in srgb, var(--theme-accent) 62%, var(--theme-surface-subtle));
 }
 
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="3"],
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="3"] {
-  background: color-mix(in srgb, var(--accent) 78%, var(--surface-subtle));
+  background: color-mix(in srgb, var(--theme-accent) 78%, var(--theme-surface-subtle));
 }
 
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-cell[data-level="4"],
 body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .project-contribution-legend-cell[data-level="4"] {
-  background: color-mix(in srgb, var(--accent) 94%, var(--palette-white));
+  background: color-mix(in srgb, var(--theme-accent) 94%, var(--theme-surface-elevated));
 }
 
 .biology-notebook-empty-state {
@@ -799,7 +799,7 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 }
 
 .biology-notebook-viewer-section {
-  border-top: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
   padding-top: 10px;
 }
 
@@ -811,7 +811,7 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   gap: 12px;
   cursor: pointer;
   font-weight: 600;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .biology-notebook-viewer-section-summary::-webkit-details-marker {
@@ -841,9 +841,9 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   display: grid;
   gap: 12px;
   padding: 14px;
-  border: 1px dashed color-mix(in srgb, var(--line) 78%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--theme-border) 78%, transparent);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--panel) 90%, var(--palette-white));
+  background: color-mix(in srgb, var(--theme-panel) 90%, var(--theme-surface-elevated));
 }
 
 .biology-notebook-protocol-editor-note {
@@ -875,9 +875,9 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--panel) 92%, var(--palette-white));
+  background: color-mix(in srgb, var(--theme-panel) 92%, var(--theme-surface-elevated));
 }
 
 .biology-notebook-result-table-head p {
@@ -893,14 +893,14 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   display: grid;
   gap: 8px;
   padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--palette-white) 94%, var(--panel));
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-panel));
 }
 
 .biology-notebook-result-table-editor.is-active {
-  border-color: color-mix(in srgb, var(--palette-hex-3d79c5) 62%, var(--line));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--palette-hex-3d79c5) 14%, transparent);
+  border-color: color-mix(in srgb, var(--theme-focus) 62%, var(--theme-border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-focus) 14%, transparent);
 }
 
 .biology-notebook-result-table-editor-head {
@@ -920,22 +920,22 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   background: transparent !important;
   box-shadow: none;
   padding: 0;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-weight: 700;
   text-align: left;
   cursor: pointer;
 }
 
 .biology-notebook-result-table-select:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--palette-hex-3d79c5) 72%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--theme-focus) 72%, transparent);
   outline-offset: 3px;
 }
 
 .biology-notebook-result-table {
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
   border-radius: 8px;
   overflow: hidden;
-  background: var(--palette-white);
+  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-result-table.tabulator {
@@ -953,25 +953,25 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 }
 
 .biology-notebook-result-table .tabulator-header {
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
-  background: color-mix(in srgb, var(--palette-white) 90%, var(--panel));
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 90%, var(--theme-panel));
 }
 
 .biology-notebook-result-table .tabulator-col,
 .biology-notebook-result-table .tabulator-cell {
-  border-right: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-right: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
 }
 
 .biology-notebook-result-table .tabulator-row {
-  background: var(--palette-white);
+  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-result-table .tabulator-row:not(:last-child) {
-  border-bottom: 1px solid color-mix(in srgb, var(--line) 66%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 66%, transparent);
 }
 
 .biology-notebook-result-table .tabulator-cell:focus {
-  outline: 2px solid color-mix(in srgb, var(--palette-hex-3d79c5) 72%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--theme-focus) 72%, transparent);
   outline-offset: -2px;
 }
 
@@ -979,9 +979,9 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--panel) 92%, var(--palette-white));
+  background: color-mix(in srgb, var(--theme-panel) 92%, var(--theme-surface-elevated));
 }
 
 .biology-notebook-linked-preview-head {
@@ -1004,7 +1004,7 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 }
 
 .biology-notebook-linked-preview-meta {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.82rem;
 }
 
@@ -1023,8 +1023,8 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   width: 100%;
   max-width: 100%;
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
-  background: var(--palette-white);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+  background: var(--theme-surface-elevated);
 }
 
 .biology-notebook-linked-assay-grid {
@@ -1057,17 +1057,17 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
 .biology-notebook-linked-results .assay-serial-dilution-table-wrap {
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
 }
 
 .biology-notebook-linked-results .assay-plate-table-wrap {
   max-height: min(52vh, 520px);
   border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
 }
 
 .biology-notebook-linked-results .assay-plate-table tr > *:nth-child(2) {
-  background: color-mix(in srgb, var(--palette-white) 94%, var(--panel));
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-panel));
 }
 
 .biology-notebook-linked-results .assay-well {
@@ -1093,12 +1093,12 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
 .biology-notebook-assay-well-secondary {
   font-size: 0.66rem;
-  color: color-mix(in srgb, var(--text) 78%, transparent);
+  color: color-mix(in srgb, var(--theme-text) 78%, transparent);
 }
 
 .biology-notebook-linked-empty {
   margin: 0;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 #biology-notebook-view .notebook-steps {
@@ -1121,9 +1121,9 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 .inline-placeholder-token {
   display: inline-flex;
   align-items: center;
-  background: var(--surface-subtle);
-  color: var(--strong);
-  border: 1px solid var(--line);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
   padding: 2px 8px;
   font-size: 0.85rem;
@@ -1131,7 +1131,7 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 }
 
 .inline-placeholder-token.is-empty {
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 .inline-placeholder-editor {
@@ -1141,8 +1141,8 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   font-size: 0.85rem;
   padding: 2px 8px;
   border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--surface-elevated);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
 }
 
 #biology-notebook-view .inline-placeholder-token.is-sample-placeholder {
@@ -1150,9 +1150,9 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 }
 
 #biology-notebook-view .inline-placeholder-token.is-linked-sample {
-  border-color: color-mix(in srgb, var(--success) 46%, var(--line));
-  background: color-mix(in srgb, var(--success) 10%, var(--palette-white));
-  color: var(--success);
+  border-color: color-mix(in srgb, var(--theme-success) 46%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-success) 10%, var(--theme-surface-elevated));
+  color: var(--theme-success);
   font-weight: 600;
 }
 
@@ -1165,10 +1165,10 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   display: grid;
   gap: 6px;
   padding: 8px;
-  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 86%, transparent);
   border-radius: 8px;
-  background: var(--surface-elevated);
-  box-shadow: 0 18px 42px var(--palette-rgba-15-23-42-a18);
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 18px 42px var(--theme-shadow-color-strong);
 }
 
 .biology-notebook-sample-link-menu[hidden] {
@@ -1201,15 +1201,15 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: var(--text);
+  color: var(--theme-text);
   text-align: left;
   cursor: pointer;
 }
 
 .biology-notebook-sample-link-option:hover,
 .biology-notebook-sample-link-option:focus-visible {
-  border-color: color-mix(in srgb, var(--line) 84%, transparent);
-  background: color-mix(in srgb, var(--surface-subtle) 86%, var(--surface-elevated));
+  border-color: color-mix(in srgb, var(--theme-border) 84%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-surface-elevated));
   outline: none;
 }
 
@@ -1221,12 +1221,12 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
 .biology-notebook-sample-link-option-main {
   font-weight: 600;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .biology-notebook-sample-link-option-meta {
   font-size: 0.78rem;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .biology-notebook-sample-link-empty {
@@ -1282,9 +1282,9 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
     max-height: none;
     overflow: auto;
     padding: 18px;
-    border-left: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
-    background: var(--surface-elevated);
-    box-shadow: -20px 0 44px var(--palette-rgba-15-23-42-a18);
+    border-left: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
+    background: var(--theme-surface-elevated);
+    box-shadow: -20px 0 44px var(--theme-shadow-color-strong);
     transform: translateX(100%);
     transition: transform 160ms ease;
   }

@@ -47,7 +47,7 @@ export function createProteinBuilderContext(config = {}) {
       return;
     }
     elements.proteinBuilderStatus.textContent = state.statusMessage;
-    elements.proteinBuilderStatus.style.color = state.statusError ? 'var(--danger)' : '';
+    elements.proteinBuilderStatus.style.color = state.statusError ? 'var(--theme-danger)' : '';
   };
 
   ctx.setFeatureSearchStatus = function setFeatureSearchStatus(message, isError = false) {
@@ -55,7 +55,7 @@ export function createProteinBuilderContext(config = {}) {
       return;
     }
     elements.proteinBuilderFeatureSearchStatus.textContent = String(message || '');
-    elements.proteinBuilderFeatureSearchStatus.style.color = isError ? 'var(--danger)' : '';
+    elements.proteinBuilderFeatureSearchStatus.style.color = isError ? 'var(--theme-danger)' : '';
   };
 
   ctx.syncFeatureSearchControls = function syncFeatureSearchControls() {

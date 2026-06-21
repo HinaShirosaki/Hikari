@@ -66,18 +66,18 @@
   border-left: 2px solid transparent;
   background: transparent;
   text-align: left;
-  color: var(--text);
+  color: var(--theme-text);
   font: inherit;
 }
 
 .workflow-template-name-item:hover {
-  background: var(--surface-subtle);
+  background: var(--theme-surface-subtle);
 }
 
 .workflow-template-name-item.is-active {
-  border-left-color: color-mix(in srgb, var(--accent) 60%, var(--line));
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
-  color: var(--primary);
+  border-left-color: color-mix(in srgb, var(--theme-accent) 60%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 8%, transparent);
+  color: var(--theme-primary);
 }
 
 
@@ -98,15 +98,15 @@
 
 .workflow-graph-canvas {
   margin-top: 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   overflow: auto;
   min-height: 560px;
   max-height: min(72vh, 860px);
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--line-soft) 80%, transparent) 1px, transparent 1px),
-    linear-gradient(0deg, color-mix(in srgb, var(--line-soft) 80%, transparent) 1px, transparent 1px),
-    var(--surface);
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-border-soft) 80%, transparent) 1px, transparent 1px),
+    linear-gradient(0deg, color-mix(in srgb, var(--theme-border-soft) 80%, transparent) 1px, transparent 1px),
+    var(--theme-surface);
   background-size: 28px 28px, 28px 28px, auto;
 }
 
@@ -135,9 +135,9 @@
   position: absolute;
   width: 244px;
   min-height: 104px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background: var(--surface-elevated);
+  background: var(--theme-surface-elevated);
   box-shadow: none;
   pointer-events: auto;
   user-select: none;
@@ -154,13 +154,13 @@
 }
 
 .workflow-node-connecting {
-  border-color: color-mix(in srgb, var(--accent) 75%, var(--line));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: color-mix(in srgb, var(--theme-accent) 75%, var(--theme-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 20%, transparent);
 }
 
 .workflow-node-selected {
-  border-color: color-mix(in srgb, var(--accent) 75%, var(--line));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: color-mix(in srgb, var(--theme-accent) 75%, var(--theme-border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 20%, transparent);
 }
 
 .workflow-node-header {
@@ -169,7 +169,7 @@
   gap: 8px;
   padding: 10px 12px;
   cursor: grab;
-  color: var(--primary);
+  color: var(--theme-primary);
   font-size: 0.93rem;
 }
 
@@ -190,8 +190,8 @@
   border-radius: 6px;
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--strong);
-  background: var(--surface-subtle);
+  color: var(--theme-text-strong);
+  background: var(--theme-surface-subtle);
 }
 
 
@@ -206,8 +206,8 @@
   height: 22px;
   border: 0;
   border-radius: 999px;
-  background: var(--danger);
-  color: var(--palette-white);
+  background: var(--theme-danger);
+  color: var(--theme-surface-elevated);
   font-size: 0.95rem;
   font-weight: 700;
   line-height: 1;
@@ -228,7 +228,7 @@
 
 .workflow-node-remove:hover,
 .workflow-node-remove:focus-visible {
-  background: color-mix(in srgb, var(--danger) 82%, var(--palette-black));
+  background: color-mix(in srgb, var(--theme-danger) 82%, var(--theme-text-strong));
   transform: scale(1);
 }
 
@@ -238,8 +238,8 @@
   width: 16px;
   height: 16px;
   border-radius: 6px;
-  border: 1px solid var(--line);
-  background: var(--surface-subtle);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-subtle);
   box-shadow: none;
   padding: 0;
 }
@@ -259,26 +259,26 @@
 
 .workflow-graph-link {
   fill: none;
-  stroke: var(--palette-rgba-37-113-194-a86);
+  stroke: var(--workflow-link);
   stroke-width: 3;
   stroke-linecap: round;
   cursor: pointer;
 }
 
 .workflow-graph-link:hover {
-  stroke: var(--palette-rgba-31-86-146-a95);
+  stroke: var(--workflow-link-hover);
 }
 
 .workflow-graph-link-preview {
-  stroke: var(--palette-rgba-71-145-224-a8);
+  stroke: var(--workflow-link-preview);
   stroke-dasharray: 8 6;
   pointer-events: none;
 }
 
 .workflow-graph-selection {
   position: absolute;
-  border: 1px dashed var(--palette-rgba-49-122-210-a88);
-  background: var(--palette-rgba-82-154-231-a18);
+  border: 1px dashed var(--workflow-selection-border);
+  background: var(--workflow-selection-background);
   border-radius: 6px;
   pointer-events: none;
 }
@@ -289,9 +289,9 @@
   min-width: 210px;
   padding: 6px;
   border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--surface-elevated);
-  box-shadow: 0 2px 8px var(--palette-rgba-27-20-14-a1);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 2px 8px var(--theme-shadow-color);
   display: grid;
   gap: 4px;
 }
@@ -300,22 +300,22 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--text);
+  color: var(--theme-text);
   text-align: left;
   padding: 7px 9px;
   font-size: 0.86rem;
 }
 
 .workflow-context-item:hover {
-  background: var(--surface-subtle);
+  background: var(--theme-surface-subtle);
 }
 
 .workflow-card {
   display: grid;
   gap: 8px;
   padding: 12px;
-  border: 1px solid var(--line-soft);
-  background: var(--surface);
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface);
 }
 
 
@@ -399,8 +399,8 @@
 .workflow-execution-table td {
   min-width: 170px;
   padding: 12px;
-  border-bottom: 1px solid var(--line-soft);
-  background: var(--surface);
+  border-bottom: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface);
   vertical-align: middle;
 }
 
@@ -409,8 +409,8 @@
   top: 0;
   z-index: 2;
   font-size: 0.82rem;
-  color: var(--primary);
-  background: var(--surface);
+  color: var(--theme-primary);
+  background: var(--theme-surface);
 }
 
 .workflow-run-row {
@@ -418,11 +418,11 @@
 }
 
 .workflow-run-row:hover td {
-  background: var(--surface);
+  background: var(--theme-surface);
 }
 
 .workflow-run-row.is-expanded td {
-  background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  background: color-mix(in srgb, var(--theme-accent) 6%, var(--theme-surface));
 }
 
 .workflow-entry-column,
@@ -431,7 +431,7 @@
   left: 0;
   z-index: 1;
   min-width: 240px !important;
-  background: var(--surface) !important;
+  background: var(--theme-surface) !important;
 }
 
 .workflow-entry-name-field {
@@ -486,14 +486,14 @@
   z-index: 0;
   right: var(--workflow-track-inset);
   left: var(--workflow-track-inset);
-  border-top: 2px dashed color-mix(in srgb, var(--line) 92%, var(--text));
+  border-top: 2px dashed color-mix(in srgb, var(--theme-border) 92%, var(--theme-text));
 }
 
 .workflow-progress-track-complete {
   z-index: 1;
   left: var(--workflow-track-segment-left);
   width: var(--workflow-track-segment-width);
-  border-top: 2px solid color-mix(in srgb, var(--accent) 72%, var(--line));
+  border-top: 2px solid color-mix(in srgb, var(--theme-accent) 72%, var(--theme-border));
 }
 
 .workflow-progress-node {
@@ -520,40 +520,40 @@
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  border: 2px solid var(--line);
-  background: var(--palette-white);
+  border: 2px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
 }
 
 .workflow-progress-node:hover .workflow-progress-dot {
-  box-shadow: 0 0 0 4px var(--palette-rgba-32-32-32-a08);
+  box-shadow: 0 0 0 4px var(--workflow-node-selected-ring);
 }
 
 .workflow-progress-node.is-finished .workflow-progress-dot,
 .workflow-step-status-dot.is-finished {
-  border-color: var(--success);
-  background: var(--success);
+  border-color: var(--theme-success);
+  background: var(--theme-success);
 }
 
 .workflow-progress-node.is-failed .workflow-progress-dot,
 .workflow-step-status-dot.is-failed {
-  border-color: var(--danger);
-  background: var(--danger);
+  border-color: var(--theme-danger);
+  background: var(--theme-danger);
 }
 
 .workflow-progress-node.is-pending .workflow-progress-dot,
 .workflow-step-status-dot.is-pending {
-  border-color: var(--warning);
-  background: color-mix(in srgb, var(--warning) 66%, var(--palette-white));
+  border-color: var(--theme-warning);
+  background: color-mix(in srgb, var(--theme-warning) 66%, var(--theme-surface-elevated));
 }
 
 .workflow-progress-node.is-empty .workflow-progress-dot,
 .workflow-step-status-dot.is-empty {
-  border-color: var(--line);
-  background: var(--palette-white);
+  border-color: var(--theme-border);
+  background: var(--theme-surface-elevated);
 }
 
 .workflow-progress-node.is-active .workflow-progress-dot {
-  box-shadow: 0 0 0 4px var(--palette-rgba-32-32-32-a08);
+  box-shadow: 0 0 0 4px var(--workflow-node-selected-ring);
 }
 
 .workflow-step-inline {
@@ -562,10 +562,10 @@
   align-content: start;
   width: min(230px, 70vw);
   padding: 10px;
-  border: 1px solid var(--line-soft);
-  background: var(--palette-white);
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface-elevated);
   text-align: left;
-  box-shadow: 0 12px 28px var(--palette-rgba-21-21-21-a12);
+  box-shadow: 0 12px 28px var(--theme-shadow-color);
 }
 
 .workflow-step-popover {
@@ -586,14 +586,14 @@
 }
 
 .workflow-step-inline.is-active {
-  color: var(--primary);
+  color: var(--theme-primary);
 }
 
 .workflow-step-inline-text {
   margin: 0;
   font-size: 0.82rem;
   line-height: 1.45;
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 
@@ -607,7 +607,7 @@
 .workflow-placeholder-table th,
 .workflow-placeholder-table td {
   padding: 4px 0;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--theme-border-soft);
   text-align: left;
   vertical-align: top;
 }
@@ -619,7 +619,7 @@
 
 .workflow-placeholder-table th {
   width: 34%;
-  color: var(--primary);
+  color: var(--theme-primary);
   font-weight: 600;
   padding-right: 10px;
 }
@@ -631,12 +631,12 @@
   border-radius: 0;
   background: transparent;
   padding: 0;
-  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--line-soft) 92%, transparent);
+  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--theme-border-soft) 92%, transparent);
 }
 
 .workflow-placeholder-table td input:focus {
   outline: none;
-  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--accent) 62%, var(--line));
+  box-shadow: inset 0 -2px 0 color-mix(in srgb, var(--theme-accent) 62%, var(--theme-border));
 }
 
 .workflow-step-empty {
@@ -664,7 +664,7 @@
 
 .workflow-step-status-option.is-selected {
   border-radius: 999px;
-  box-shadow: 0 0 0 4px var(--palette-rgba-32-32-32-a08);
+  box-shadow: 0 0 0 4px var(--workflow-node-selected-ring);
 }
 
 .workflow-step-status-dot {
@@ -672,8 +672,8 @@
   width: 14px;
   height: 14px;
   border-radius: 999px;
-  border: 2px solid var(--line);
-  background: var(--palette-white);
+  border: 2px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
 }
 
 
@@ -687,7 +687,7 @@
 .workflow-branch-section h5 {
   margin: 0;
   font-size: 0.9rem;
-  color: var(--primary);
+  color: var(--theme-primary);
 }
 
 .workflow-branch-list {
@@ -699,13 +699,13 @@
   display: grid;
   gap: 10px;
   padding: 12px;
-  border: 1px dashed var(--line);
-  background: var(--surface);
+  border: 1px dashed var(--theme-border);
+  background: var(--theme-surface);
 }
 
 .workflow-branch-card.is-active {
   border-style: solid;
-  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  border-color: color-mix(in srgb, var(--theme-accent) 50%, var(--theme-border));
 }
 
 .workflow-branch-card-head {
@@ -730,8 +730,8 @@
   position: relative;
   min-width: 150px;
   padding: 10px 12px 12px;
-  border: 1px solid var(--line-soft);
-  background: var(--surface-elevated);
+  border: 1px solid var(--theme-border-soft);
+  background: var(--theme-surface-elevated);
   text-align: left;
 }
 
@@ -739,7 +739,7 @@
   display: block;
   margin-bottom: 8px;
   font-size: 0.82rem;
-  color: var(--primary);
+  color: var(--theme-primary);
 }
 
 .workflow-branch-node-dot {
@@ -747,30 +747,30 @@
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  border: 2px solid color-mix(in srgb, var(--line) 92%, var(--text));
+  border: 2px solid color-mix(in srgb, var(--theme-border) 92%, var(--theme-text));
   background: transparent;
 }
 
 .workflow-branch-node.is-complete .workflow-branch-node-dot {
-  border-color: color-mix(in srgb, var(--accent) 78%, var(--line));
-  background: color-mix(in srgb, var(--accent) 82%, var(--palette-white));
+  border-color: color-mix(in srgb, var(--theme-accent) 78%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 82%, var(--theme-surface-elevated));
 }
 
 .workflow-branch-node.is-active {
-  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+  border-color: color-mix(in srgb, var(--theme-accent) 50%, var(--theme-border));
 }
 
 .workflow-branch-node-connector {
   display: inline-block;
   width: 34px;
   margin-left: 10px;
-  border-top: 2px dashed color-mix(in srgb, var(--line) 92%, var(--text));
+  border-top: 2px dashed color-mix(in srgb, var(--theme-border) 92%, var(--theme-text));
   vertical-align: middle;
 }
 
 .workflow-branch-node-connector.is-complete {
   border-top-style: solid;
-  border-top-color: color-mix(in srgb, var(--accent) 72%, var(--line));
+  border-top-color: color-mix(in srgb, var(--theme-accent) 72%, var(--theme-border));
 }
 
 body.workflow-dragging {
@@ -821,61 +821,61 @@ body.workflow-dragging {
 
 /* Extracted from ui/css/themes/modes.css */
 body.theme-night .workflow-graph-canvas {
-  border-color: var(--palette-rgba-145-174-214-a35);
+  border-color: var(--workflow-canvas-border);
   background:
-    linear-gradient(90deg, var(--palette-rgba-111-138-183-a2) 1px, transparent 1px),
-    linear-gradient(0deg, var(--palette-rgba-111-138-183-a2) 1px, transparent 1px),
-    linear-gradient(145deg, var(--palette-rgba-27-42-72-a9), var(--palette-rgba-19-31-56-a84));
+    linear-gradient(90deg, var(--workflow-canvas-grid) 1px, transparent 1px),
+    linear-gradient(0deg, var(--workflow-canvas-grid) 1px, transparent 1px),
+    linear-gradient(145deg, var(--workflow-canvas-start), var(--workflow-canvas-end));
   background-size: 28px 28px, 28px 28px, auto;
 }
 
 body.theme-night .workflow-node {
-  border-color: var(--palette-rgba-142-174-217-a45);
-  background: var(--surface-elevated);
+  border-color: var(--workflow-node-border);
+  background: var(--theme-surface-elevated);
   box-shadow: none;
 }
 
 body.theme-night .workflow-node-selected {
-  border-color: var(--palette-rgba-116-179-244-a95);
+  border-color: var(--workflow-node-selected-border);
   box-shadow:
-    inset 0 1px 0 var(--palette-rgba-165-196-235-a16),
-    0 0 0 2px var(--palette-rgba-116-179-244-a3),
-    0 12px 24px var(--palette-rgba-0-0-0-a3);
+    inset 0 1px 0 var(--workflow-node-selected-highlight),
+    0 0 0 2px var(--workflow-node-selected-ring),
+    0 12px 24px var(--theme-shadow-color);
 }
 
 body.theme-night .workflow-node-header {
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 
 body.theme-night .workflow-port {
-  border-color: var(--palette-rgba-171-204-246-a45);
-  background: var(--surface-subtle);
+  border-color: var(--workflow-port-border);
+  background: var(--theme-surface-subtle);
 }
 
 body.theme-night .workflow-graph-link {
-  stroke: var(--palette-rgba-114-177-244-a88);
+  stroke: var(--workflow-link);
 }
 
 body.theme-night .workflow-graph-selection {
-  border-color: var(--palette-rgba-114-177-244-a95);
-  background: var(--palette-rgba-88-149-214-a22);
+  border-color: var(--workflow-selection-border);
+  background: var(--workflow-selection-background);
 }
 
 body.theme-night .workflow-context-menu {
-  border-color: var(--palette-rgba-121-152-198-a6);
-  background: var(--surface-elevated);
-  box-shadow: 0 2px 8px var(--palette-rgba-27-20-14-a12);
+  border-color: var(--workflow-context-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 2px 8px var(--theme-shadow-color);
 }
 
 body.theme-night .workflow-context-item {
-  border-color: var(--palette-rgba-85-115-162-a7);
-  background: var(--palette-rgba-34-52-86-a9);
-  color: var(--text);
+  border-color: var(--workflow-context-item-border);
+  background: var(--workflow-context-item-background);
+  color: var(--theme-text);
 }
 
 body.theme-night .workflow-context-item:hover {
-  background: var(--palette-rgba-46-68-109-a94);
+  background: var(--workflow-context-item-hover);
 }
 
 #workflow-management-view .panel,
@@ -888,17 +888,17 @@ body.theme-night .workflow-context-item:hover {
 
 .workflow-graph-canvas {
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--line-soft) 80%, transparent) 1px, transparent 1px),
-    linear-gradient(0deg, color-mix(in srgb, var(--line-soft) 80%, transparent) 1px, transparent 1px),
-    var(--surface);
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-border-soft) 80%, transparent) 1px, transparent 1px),
+    linear-gradient(0deg, color-mix(in srgb, var(--theme-border-soft) 80%, transparent) 1px, transparent 1px),
+    var(--theme-surface);
   background-size: 28px 28px, 28px 28px, auto;
 }
 
 .workflow-context-menu {
-  background: var(--surface-elevated);
+  background: var(--theme-surface-elevated);
 }
 
 .workflow-node-selected,
 .workflow-node-connecting {
-  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: inset 2px 0 0 color-mix(in srgb, var(--theme-accent) 55%, transparent);
 }

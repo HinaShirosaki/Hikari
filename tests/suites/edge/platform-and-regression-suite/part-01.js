@@ -267,6 +267,26 @@ test('[P1] normalizeState merges sample type label overrides', () => {
   assert.equal(normalized.settings.sampleTypeLabels.plasmid, 'Construct');
   assert.equal(normalized.settings.sampleTypeLabels.cell_line, shared.defaultState.settings.sampleTypeLabels.cell_line);
 });
+test('[P1] normalizeState preserves the Hatsune Miku appearance theme', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      appearance: {
+        mode: 'miku'
+      }
+    }
+  });
+  assert.equal(normalized.settings.appearance.mode, 'miku');
+});
+test('[P0] normalizeState resets unsupported appearance themes to day', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      appearance: {
+        mode: 'unknown-theme'
+      }
+    }
+  });
+  assert.equal(normalized.settings.appearance.mode, 'day');
+});
 test('[P1] normalizeState keeps startup defaults when settings.startup is missing', () => {
   const normalized = shared.normalizeState({ settings: {} });
   assert.equal(normalized.settings.startup.defaultViewId, shared.defaultState.settings.startup.defaultViewId);

@@ -60,21 +60,21 @@
   content: "";
   position: absolute;
   inset: auto 0 0;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--theme-border-soft);
   pointer-events: none;
 }
 
 .protocol-list-row-selected {
-  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 82%);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 10%, transparent), transparent 82%);
 }
 
 .protocol-list-row:hover {
-  background: color-mix(in srgb, var(--surface-subtle) 55%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 55%, transparent);
 }
 
 .protocol-name-text {
   font-weight: 600;
-  color: var(--primary);
+  color: var(--theme-primary);
   line-height: 1.4;
 }
 
@@ -84,13 +84,13 @@
 }
 
 .protocol-list-row:focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 2px solid var(--theme-focus);
   outline-offset: 2px;
 }
 
 .protocol-row-meta {
   font-size: 0.84rem;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .protocol-list-actions {
@@ -114,12 +114,12 @@
   line-height: 1;
   border: 0;
   background: transparent;
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 .protocol-menu-btn.is-open {
-  background: var(--surface-subtle);
-  color: var(--strong);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
 }
 
 .protocol-action-menu {
@@ -130,10 +130,10 @@
   z-index: 5;
   min-width: 180px;
   padding: 6px;
-  border: 1px solid var(--line) !important;
+  border: 1px solid var(--theme-border) !important;
   border-radius: 8px;
-  background: var(--surface-elevated) !important;
-  box-shadow: 0 10px 24px var(--palette-rgba-27-20-14-a14);
+  background: var(--theme-surface-elevated) !important;
+  box-shadow: 0 10px 24px var(--theme-shadow-color);
   backdrop-filter: blur(8px);
 }
 
@@ -143,17 +143,17 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 .protocol-action-item:hover,
 .protocol-action-item:focus-visible {
-  background: var(--surface-subtle);
-  color: var(--strong);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
 }
 
 .protocol-action-item-danger {
-  color: var(--danger);
+  color: var(--theme-danger);
 }
 
 .protocol-legacy-actions {
@@ -176,7 +176,7 @@
   flex-wrap: wrap;
   gap: 8px;
   padding-top: 8px;
-  border-top: 1px solid var(--palette-rgba-255-255-255-a7);
+  border-top: 1px solid var(--theme-border);
 }
 
 .protocol-share-inline select {
@@ -196,27 +196,27 @@
 }
 
 .protocol-view-btn {
-  color: var(--text);
-  border-color: var(--line);
-  background: var(--surface);
+  color: var(--theme-text);
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
 }
 
 .protocol-edit-btn {
-  color: var(--text);
-  border-color: var(--line);
-  background: var(--surface);
+  color: var(--theme-text);
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
 }
 
 .protocol-share-btn {
-  color: var(--text);
-  border-color: var(--line);
-  background: var(--surface);
+  color: var(--theme-text);
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
 }
 
 .protocol-delete-btn {
-  color: var(--danger);
-  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
-  background: var(--surface);
+  color: var(--theme-danger);
+  border-color: color-mix(in srgb, var(--theme-danger) 35%, var(--theme-border));
+  background: var(--theme-surface);
 }
 
 .protocol-panel-head {
@@ -229,10 +229,10 @@
 }
 
 .protocol-preview-block {
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
   padding: 10px 12px;
-  background: var(--surface);
+  background: var(--theme-surface);
 }
 
 .protocol-preview-block h4 {
@@ -273,7 +273,7 @@
 .protocol-steps-toolbar-label {
   font-size: 0.84rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .protocol-placeholder-presets {
@@ -286,15 +286,15 @@
   min-height: 32px;
   padding: 5px 10px;
   border-radius: 999px;
-  border-color: var(--line);
-  background: var(--surface-subtle);
-  color: var(--strong);
+  border-color: var(--theme-border);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
   font-size: 0.88rem;
 }
 
 .protocol-placeholder-preset:hover,
 .protocol-placeholder-preset:focus-visible {
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface-subtle));
+  background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface-subtle));
 }
 
 #placeholder-name {
@@ -335,7 +335,7 @@
   justify-items: center;
   overflow: hidden;
   padding: max(86px, env(safe-area-inset-top, 0px)) clamp(16px, 3vw, 30px) clamp(16px, 3vw, 30px);
-  background: color-mix(in srgb, var(--strong) 20%, transparent);
+  background: color-mix(in srgb, var(--theme-text-strong) 20%, transparent);
   backdrop-filter: blur(10px);
 }
 
@@ -389,12 +389,12 @@
   display: grid;
   gap: 14px;
   padding: clamp(18px, 2.5vw, 24px);
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 22px;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--surface-elevated) 95%, transparent), color-mix(in srgb, var(--surface) 96%, transparent)),
-    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 10%, transparent), transparent 38%);
-  box-shadow: 0 28px 72px var(--palette-rgba-27-20-14-a16);
+    linear-gradient(180deg, color-mix(in srgb, var(--theme-surface-elevated) 95%, transparent), color-mix(in srgb, var(--theme-surface) 96%, transparent)),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--theme-accent) 10%, transparent), transparent 38%);
+  box-shadow: 0 28px 72px var(--theme-shadow-color-strong);
   max-height: calc(100svh - 132px);
 }
 
@@ -468,7 +468,7 @@
 #protocol-generate-input-status[data-state="error"],
 #protocol-generate-status[data-state="error"],
 #protocol-polish-status[data-state="error"] {
-  color: var(--danger);
+  color: var(--theme-danger);
 }
 
 .protocol-polish-preview-empty,
@@ -478,9 +478,9 @@
   place-items: center;
   gap: 12px;
   padding: 28px 20px;
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--theme-border);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 90%, transparent);
   text-align: center;
 }
 
@@ -491,9 +491,9 @@
 }
 
 .protocol-polish-preview-empty[data-state="error"] {
-  border-color: color-mix(in srgb, var(--danger) 28%, var(--line));
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 6%, var(--surface));
+  border-color: color-mix(in srgb, var(--theme-danger) 28%, var(--theme-border));
+  color: var(--theme-danger);
+  background: color-mix(in srgb, var(--theme-danger) 6%, var(--theme-surface));
 }
 
 .protocol-polish-loading-dots {
@@ -504,7 +504,7 @@
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.08em;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .protocol-polish-loading-dots span {
@@ -542,10 +542,10 @@
   align-content: center;
   justify-items: start;
   padding: clamp(24px, 4vw, 48px);
-  border: 1px dashed var(--line);
+  border: 1px dashed var(--theme-border);
   background:
-    radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 10%, transparent), transparent 38%),
-    color-mix(in srgb, var(--surface) 82%, transparent);
+    radial-gradient(circle at top right, color-mix(in srgb, var(--theme-accent) 10%, transparent), transparent 38%),
+    color-mix(in srgb, var(--theme-surface) 82%, transparent);
 }
 
 .protocol-empty-panel h3 {
@@ -563,9 +563,9 @@
   align-items: center;
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--surface-subtle);
-  color: var(--strong);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -588,9 +588,9 @@
 .placeholder-chip {
   display: inline-flex;
   align-items: center;
-  background: var(--surface-subtle);
-  color: var(--strong);
-  border: 1px solid var(--line);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
   padding: 3px 8px;
   font-size: 0.85rem;

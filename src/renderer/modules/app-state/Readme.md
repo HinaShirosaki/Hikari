@@ -3,6 +3,7 @@
 `app-state.js` is the stable public facade for loading, normalizing, persisting, and tracking events on the single renderer state object.
 
 - `defaults.js`: the canonical persisted state shape.
+- `appearance.js`: supported theme modes and shared document theme application.
 - `state-normalizer.js`: top-level state assembly and compatibility normalization.
 - `dashboard-normalizers.js`: dashboard timers, quick logs, incubation locations, and workflow progress.
 - `paper-normalizers.js`: paper comments, highlights, and stored-PDF records.

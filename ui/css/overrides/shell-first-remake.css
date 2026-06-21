@@ -5,9 +5,9 @@
 #sequence-viewer-detail-view .sequence-viewer-mode-switch {
   gap: 4px;
   padding: 2px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background: var(--surface);
+  background: var(--theme-surface);
 }
 
 .calendar-view-switch > button,
@@ -16,7 +16,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   padding: 7px 10px;
 }
 
@@ -26,15 +26,15 @@
 #sequence-viewer-view .sequence-viewer-library-switch > button:focus-visible,
 #sequence-viewer-detail-view .sequence-viewer-mode-switch > button:hover,
 #sequence-viewer-detail-view .sequence-viewer-mode-switch > button:focus-visible {
-  background: var(--surface-subtle);
-  color: var(--strong);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
 }
 
 .calendar-view-switch > .calendar-view-active,
 #sequence-viewer-view .sequence-viewer-library-switch-btn-active,
 #sequence-viewer-detail-view .sequence-viewer-mode-btn-active {
-  background: var(--surface-subtle);
-  color: var(--strong);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
 }
 
 #tool-box-view .calc-output,
@@ -55,16 +55,16 @@
 #sequence-viewer-detail-view .sequence-viewer-context-menu,
 #sequence-viewer-detail-view .sequence-viewer-feature-editor,
 #sequence-viewer-detail-view .sequence-viewer-feature-hover-tooltip {
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background: var(--surface);
+  background: var(--theme-surface);
   box-shadow: none;
 }
 
 #tool-box-view .workflow-card {
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 8px;
-  background: var(--surface-elevated);
+  background: var(--theme-surface-elevated);
   box-shadow: none;
 }
 
@@ -74,41 +74,41 @@
 #workflow-management-view .workflow-context-item:hover,
 #sequence-viewer-detail-view .sequence-viewer-context-item:hover:not(:disabled),
 #sequence-viewer-detail-view .sequence-viewer-context-item:focus-visible:not(:disabled) {
-  background: var(--surface-subtle);
+  background: var(--theme-surface-subtle);
 }
 
 
 #workflow-management-view .workflow-context-item,
 #sequence-viewer-detail-view .sequence-viewer-context-item {
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 #tool-box-view .molarity-block {
-  border-top-color: var(--line);
+  border-top-color: var(--theme-border);
 }
 
 #tool-box-view .crispr-risk-badge,
 #protocol-management-view .placeholder-chip,
 #sequence-viewer-view .sequence-viewer-feature-search-type {
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
-  background: var(--surface-subtle);
-  color: var(--strong);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
   letter-spacing: 0;
   text-transform: none;
   box-shadow: none;
 }
 
 #tool-box-view .crispr-risk-low {
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 #tool-box-view .crispr-risk-medium {
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 #tool-box-view .crispr-risk-high {
-  color: var(--danger);
+  color: var(--theme-danger);
 }
 
 #sample-registry-view .sample-compound-fields,
@@ -117,19 +117,19 @@
 }
 
 #protocol-management-view .protocol-share-inline {
-  border-top-color: var(--line-soft);
+  border-top-color: var(--theme-border-soft);
 }
 
 #protocol-management-view .protocol-view-btn,
 #protocol-management-view .protocol-edit-btn,
 #protocol-management-view .protocol-share-btn {
-  color: var(--text);
-  border-color: var(--line);
-  background: var(--surface);
+  color: var(--theme-text);
+  border-color: var(--theme-border);
+  background: var(--theme-surface);
 }
 
 #protocol-management-view .protocol-delete-btn {
-  background: var(--surface);
+  background: var(--theme-surface);
 }
 
 #assay-view .assay-plate-table th,
@@ -152,7 +152,7 @@
 
 #assay-view .assay-result-disabled {
   background: var(--assay-plate-disabled-bg);
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 #assay-view .assay-analysis-chart .rv-xy-plot__grid-lines__line {
@@ -165,42 +165,42 @@
 }
 
 #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__text {
-  fill: var(--muted);
+  fill: var(--theme-text-muted);
 }
 
 #workflow-management-view .workflow-graph-canvas {
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--line-soft) 80%, transparent) 1px, transparent 1px),
-    linear-gradient(0deg, color-mix(in srgb, var(--line-soft) 80%, transparent) 1px, transparent 1px),
-    var(--surface);
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-border-soft) 80%, transparent) 1px, transparent 1px),
+    linear-gradient(0deg, color-mix(in srgb, var(--theme-border-soft) 80%, transparent) 1px, transparent 1px),
+    var(--theme-surface);
   background-size: 28px 28px, 28px 28px, auto;
 }
 
 #workflow-management-view .workflow-node-header {
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 
 #workflow-management-view .workflow-node-index,
 #workflow-management-view .workflow-port {
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
-  background: var(--surface-subtle);
-  color: var(--strong);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
   box-shadow: none;
 }
 
 #workflow-management-view .workflow-graph-link {
-  stroke: color-mix(in srgb, var(--accent) 60%, var(--text));
+  stroke: color-mix(in srgb, var(--theme-accent) 60%, var(--theme-text));
 }
 
 #workflow-management-view .workflow-graph-link-preview {
-  stroke: color-mix(in srgb, var(--accent) 45%, var(--muted));
+  stroke: color-mix(in srgb, var(--theme-accent) 45%, var(--theme-text-muted));
 }
 
 #workflow-management-view .workflow-graph-selection {
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border-color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 14%, transparent);
 }
 
 #workflow-management-view .workflow-context-item {
@@ -223,12 +223,12 @@
 
 #papers-view .papers-folder-item:hover,
 #papers-view .papers-folder-item:focus-visible {
-  background: var(--surface-subtle);
+  background: var(--theme-surface-subtle);
 }
 
 #papers-view .papers-folder-item.is-active {
-  border-color: var(--line);
-  background: var(--surface-subtle);
+  border-color: var(--theme-border);
+  background: var(--theme-surface-subtle);
 }
 
 #papers-view .papers-paper-row {
@@ -239,7 +239,7 @@
 
 #papers-view .papers-paper-row.is-active {
   border-color: transparent;
-  background: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
   padding: 7px 8px;
 }
 
@@ -252,24 +252,24 @@
 }
 
 #papers-view .papers-viewer-canvas {
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 4px;
   box-shadow: none;
 }
 
 #papers-view .papers-viewer-pin {
-  border: 2px solid var(--surface-elevated);
-  background: var(--danger);
+  border: 2px solid var(--theme-surface-elevated);
+  background: var(--theme-danger);
   box-shadow: none;
 }
 
 #papers-view .papers-viewer-pin.is-active {
-  background: var(--accent);
+  background: var(--theme-accent);
 }
 
 #papers-view .papers-comment-card.is-active {
-  border-color: var(--line);
-  background: var(--surface-subtle);
+  border-color: var(--theme-border);
+  background: var(--theme-surface-subtle);
 }
 
 #sequence-viewer-view .sequence-viewer-home-nav-copy {
@@ -280,44 +280,44 @@
 #sequence-viewer-view .sequence-viewer-home-nav-copy h2 {
   margin: 0;
   font-size: 1rem;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 
 #sequence-viewer-view .sequence-viewer-library-item,
 #sequence-viewer-view .sequence-viewer-feature-search-item,
 #sequence-viewer-view .sequence-viewer-feature-search-host {
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 #sequence-viewer-view .sequence-viewer-library-item:hover,
 #sequence-viewer-view .sequence-viewer-feature-search-host:hover {
-  border-color: var(--line);
+  border-color: var(--theme-border);
 }
 
 #sequence-viewer-view .sequence-viewer-library-item-active {
-  border-color: color-mix(in srgb, var(--accent) 75%, var(--line));
-  background: var(--surface-subtle);
+  border-color: color-mix(in srgb, var(--theme-accent) 75%, var(--theme-border));
+  background: var(--theme-surface-subtle);
 }
 
 #sequence-viewer-view .sequence-viewer-library-item-name,
 #sequence-viewer-view .sequence-viewer-feature-search-name,
 #sequence-viewer-view .sequence-viewer-feature-search-host-name {
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 #sequence-viewer-view .sequence-viewer-library-item-meta,
 #sequence-viewer-view .sequence-viewer-feature-search-host-meta,
 #sequence-viewer-view .sequence-viewer-feature-search-sequence {
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 #sequence-viewer-detail-view .sequence-viewer-inline-toggle,
 #sequence-viewer-detail-view .sequence-viewer-inline-toggle-group {
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 6px;
   background: transparent;
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 #sequence-viewer-detail-view .sequence-viewer-inline-toggle {
@@ -330,7 +330,7 @@
 }
 
 #sequence-viewer-detail-view .sequence-viewer-inline-toggle-group-label {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   letter-spacing: 0;
   text-transform: none;
 }
@@ -345,14 +345,14 @@
 }
 
 #sequence-viewer-detail-view .sequence-viewer-feature-editor-grid label {
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 #sequence-viewer-detail-view .sequence-viewer-feature-editor-grid input,
 #sequence-viewer-detail-view .sequence-viewer-feature-editor-grid select,
 #sequence-viewer-detail-view .sequence-viewer-feature-editor-grid textarea {
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
-  background: var(--surface-elevated);
-  color: var(--text);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
 }

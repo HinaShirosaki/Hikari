@@ -15,9 +15,11 @@ import { getSettingsElements } from './dom.js';
 import { renderStorageImportStatus as renderStorageStatus } from './storage-status.js';
 import { escapeHtml } from './html.js';
 import { createSampleInventorySettingsController } from './sample-inventory-controller.js';
+import {
+  applyAppearanceToDocument,
+  normalizeAppearanceMode
+} from '../app-state/appearance.js';
 
-const FIXED_ACCENT = '#647255';
-const FIXED_FOCUS = '#7a8a69';
 
 export function initSettings({
   state,
@@ -348,15 +350,7 @@ export function initSettings({
 
   function applyAppearance() {
     const appearance = state.settings.appearance;
-    const root = document.documentElement;
-
-    root.style.setProperty('--accent', FIXED_ACCENT);
-    root.style.setProperty('--focus', FIXED_FOCUS);
-    root.style.setProperty('--app-font-size', `${appearance.fontSize || 16}px`);
-    root.style.setProperty('font-size', `${appearance.fontSize || 16}px`);
-
-    document.body.classList.toggle('theme-night', appearance.mode === 'night');
-    document.body.classList.add('ui-neutral-compact');
+    applyAppearanceToDocument(appearance, document, 16);
     window.dispatchEvent(new CustomEvent('hikari:appearance-changed'));
   }
 
@@ -366,7 +360,7 @@ export function initSettings({
     state.settings.appearance = {
       ...state.settings.appearance,
       fontSize: Number(settingFontSize.value) || 16,
-      mode: settingMode.value === 'night' ? 'night' : 'day'
+      mode: normalizeAppearanceMode(settingMode.value)
     };
 
     persist();

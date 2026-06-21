@@ -299,7 +299,7 @@ export function createSequenceViewerSequenceEditingController(config = {}) {
 
     if (mode !== 'delete' && !replacement.length) {
       if (elements.sequenceEditNote) {
-        elements.sequenceEditNote.innerHTML = '<span style="color:var(--danger);">Enter at least one base before confirming.</span>';
+        elements.sequenceEditNote.innerHTML = '<span style="color:var(--theme-danger);">Enter at least one base before confirming.</span>';
       }
       setStatus('Enter at least one base before confirming.', true);
       return;

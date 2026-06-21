@@ -143,7 +143,8 @@ export function createAssayArtifactStorage({
             })
           : Promise.resolve(null)
       ]);
-    } catch {
+    } catch (error) {
+      console.warn('Failed to persist assay artifacts:', error);
       return;
     }
 

@@ -533,7 +533,7 @@ export function syncAlignmentControlsState({ elements = {}, state = {}, record =
         : 'No alignment selected.');
   }
   if (elements.alignmentActiveNote?.style) {
-    elements.alignmentActiveNote.style.color = hasAppliedAlignment || savedSessions.length ? '' : 'var(--muted)';
+    elements.alignmentActiveNote.style.color = hasAppliedAlignment || savedSessions.length ? '' : 'var(--theme-text-muted)';
   }
 }
 

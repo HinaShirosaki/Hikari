@@ -1,13 +1,13 @@
 /* home-view */
 
 #home-view {
-  --home-tile-bg: var(--palette-white);
-  --home-tile-bg-strong: var(--palette-white);
-  --home-tile-bg-soft: var(--surface);
-  --home-tile-line: var(--palette-rgba-27-20-14-a12);
-  --home-tile-line-soft: var(--palette-rgba-27-20-14-a08);
-  --home-tile-text: var(--text);
-  --home-tile-muted: var(--muted);
+  --home-tile-bg: var(--theme-surface-elevated);
+  --home-tile-bg-strong: var(--theme-surface-elevated);
+  --home-tile-bg-soft: var(--theme-surface);
+  --home-tile-line: color-mix(in srgb, var(--theme-text-strong) 12%, transparent);
+  --home-tile-line-soft: var(--theme-shadow-color-subtle);
+  --home-tile-text: var(--theme-text);
+  --home-tile-muted: var(--theme-text-muted);
   --home-shell-gap-inline: clamp(18px, 1.9vw, 28px);
   --home-shell-gap-bottom: clamp(18px, 2vh, 24px);
   --home-gap: 14px;
@@ -39,21 +39,21 @@
 }
 
 body.theme-night #home-view {
-  --home-tile-bg: color-mix(in srgb, var(--surface-elevated) 88%, var(--accent) 12%);
-  --home-tile-bg-strong: color-mix(in srgb, var(--surface) 90%, var(--accent) 10%);
-  --home-tile-bg-soft: color-mix(in srgb, var(--surface-subtle) 86%, var(--accent) 14%);
-  --home-tile-line: color-mix(in srgb, var(--line) 82%, transparent);
-  --home-tile-line-soft: color-mix(in srgb, var(--line-soft) 82%, transparent);
-  --home-tile-text: var(--strong);
-  --home-tile-muted: color-mix(in srgb, var(--muted) 88%, var(--strong) 12%);
-  --home-tile-control-bg: var(--night-control-bg);
-  --home-tile-control-bg-hover: var(--night-control-bg-hover);
-  --home-tile-control-border: var(--night-control-border);
-  --home-tile-filled-bg: var(--night-filled-bg);
-  --home-tile-filled-text: var(--night-filled-text);
-  --home-tile-disabled-bg: var(--night-disabled-bg);
-  --home-tile-disabled-text: var(--night-disabled-text);
-  --home-contribution-empty-bg: color-mix(in srgb, var(--surface) 74%, var(--palette-black) 26%);
+  --home-tile-bg: color-mix(in srgb, var(--theme-surface-elevated) 88%, var(--theme-accent) 12%);
+  --home-tile-bg-strong: color-mix(in srgb, var(--theme-surface) 90%, var(--theme-accent) 10%);
+  --home-tile-bg-soft: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-accent) 14%);
+  --home-tile-line: color-mix(in srgb, var(--theme-border) 82%, transparent);
+  --home-tile-line-soft: color-mix(in srgb, var(--theme-border-soft) 82%, transparent);
+  --home-tile-text: var(--theme-text-strong);
+  --home-tile-muted: color-mix(in srgb, var(--theme-text-muted) 88%, var(--theme-text-strong) 12%);
+  --home-tile-control-bg: var(--theme-control-background);
+  --home-tile-control-bg-hover: var(--theme-control-background-hover);
+  --home-tile-control-border: var(--theme-control-border);
+  --home-tile-filled-bg: var(--theme-control-filled-background);
+  --home-tile-filled-text: var(--theme-control-filled-text);
+  --home-tile-disabled-bg: var(--theme-control-disabled-background);
+  --home-tile-disabled-text: var(--theme-control-disabled-text);
+  --home-contribution-empty-bg: var(--home-contribution-empty);
 }
 
 #home-view .home-layout {
@@ -78,7 +78,7 @@ body.theme-night #home-view {
   border-radius: 8px;
   background: var(--home-tile-bg);
   color: var(--home-tile-text);
-  box-shadow: 0 1px 3px rgba(27, 20, 14, 0.06);
+  box-shadow: 0 1px 3px var(--theme-shadow-color-subtle);
 }
 
 
@@ -129,7 +129,7 @@ body.theme-night #home-view {
 
 #home-view .home-tile-head h2 {
   margin: 0;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 1.04rem;
   font-weight: 650;
   line-height: 1.15;
@@ -275,7 +275,7 @@ body.theme-night #home-view {
 }
 
 #home-view .dashboard-incubation-row.is-due .dashboard-incubation-detail {
-  color: var(--warning);
+  color: var(--theme-warning);
 }
 
 #home-view .home-tile .dashboard-notebook-page-row {
@@ -322,13 +322,13 @@ body.theme-night #home-view {
   padding: 0;
   border: 1px solid var(--home-tile-line);
   border-radius: 999px;
-  background: var(--palette-white);
+  background: var(--theme-surface-elevated);
   color: var(--home-tile-text);
 }
 
 #home-view .dashboard-incubation-action:hover,
 #home-view .dashboard-incubation-action:focus-visible {
-  background: var(--palette-white);
+  background: var(--theme-surface-elevated);
   border-color: var(--home-tile-line);
   transform: scale(1.04);
 }
@@ -469,9 +469,9 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
 #home-view .home-contribution-legend-cell {
   width: var(--contribution-cell-size);
   height: var(--contribution-cell-size);
-  border: 1px solid var(--palette-rgba-27-31-36-a06);
+  border: 1px solid var(--home-contribution-border);
   border-radius: 3px;
-  background: var(--palette-github-empty);
+  background: var(--home-contribution-empty);
 }
 
 #home-view .home-contribution-cell {
@@ -482,28 +482,28 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
 
 #home-view .home-contribution-cell:hover,
 #home-view .home-contribution-cell:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 42%, transparent);
   outline-offset: 1px;
 }
 
 #home-view .home-contribution-cell[data-level="1"],
 #home-view .home-contribution-legend-cell[data-level="1"] {
-  background: var(--palette-github-green-200);
+  background: var(--home-contribution-level-1);
 }
 
 #home-view .home-contribution-cell[data-level="2"],
 #home-view .home-contribution-legend-cell[data-level="2"] {
-  background: var(--palette-github-green-500);
+  background: var(--home-contribution-level-2);
 }
 
 #home-view .home-contribution-cell[data-level="3"],
 #home-view .home-contribution-legend-cell[data-level="3"] {
-  background: var(--palette-github-green-600);
+  background: var(--home-contribution-level-3);
 }
 
 #home-view .home-contribution-cell[data-level="4"],
 #home-view .home-contribution-legend-cell[data-level="4"] {
-  background: var(--palette-github-green-700);
+  background: var(--home-contribution-level-4);
 }
 
 #home-view .home-contribution-legend {
@@ -541,7 +541,7 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
 
 #home-view .home-tile .home-quicklog-chip:hover,
 #home-view .home-tile .home-quicklog-chip:focus-visible {
-  background: var(--surface-subtle);
+  background: var(--theme-surface-subtle);
 }
 
 #home-view .home-quick-log-input-wrap {
@@ -579,29 +579,29 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: var(--palette-white);
-  color: var(--palette-hex-1f2328);
-  box-shadow: 0 6px 14px var(--palette-rgba-27-20-14-a12);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-inverse-surface);
+  box-shadow: var(--theme-shadow-medium);
 }
 
 #home-view .home-tile .home-quick-log-send-btn {
-  background: var(--palette-hex-1f2328);
-  color: var(--palette-white);
+  background: var(--theme-inverse-surface);
+  color: var(--theme-surface-elevated);
 }
 
 #home-view .home-tile .home-quick-log-icon-btn:hover,
 #home-view .home-tile .home-quick-log-icon-btn:focus-visible,
 #home-view .home-tile .home-quick-log-send-btn:hover,
 #home-view .home-tile .home-quick-log-send-btn:focus-visible {
-  background: var(--palette-white);
-  color: var(--palette-hex-1f2328);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-inverse-surface);
   transform: translateY(-1px);
 }
 
 #home-view .home-tile .home-quick-log-send-btn:hover,
 #home-view .home-tile .home-quick-log-send-btn:focus-visible {
-  background: var(--palette-hex-161a1f);
-  color: var(--palette-white);
+  background: var(--theme-inverse-surface);
+  color: var(--theme-surface-elevated);
   transform: translateY(-1px);
 }
 
@@ -611,8 +611,8 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
 #home-view .home-tile .home-quick-log-send-btn:disabled,
 #home-view .home-tile .home-quick-log-send-btn:disabled:hover,
 #home-view .home-tile .home-quick-log-send-btn:disabled:focus-visible {
-  background: var(--palette-hex-8c939b);
-  color: var(--palette-white);
+  background: var(--theme-control-disabled-background);
+  color: var(--theme-surface-elevated);
   transform: none;
   box-shadow: none;
   cursor: not-allowed;
@@ -634,7 +634,7 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
 #home-view .home-tile textarea,
 #home-view .home-tile select {
   border-color: var(--home-tile-line);
-  background: color-mix(in srgb, var(--surface-subtle) 78%, var(--palette-white) 22%);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
   color: var(--home-tile-text);
 }
 
@@ -645,13 +645,13 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
 
 #home-view .home-tile button {
   border-color: var(--home-tile-line);
-  background: color-mix(in srgb, var(--surface-subtle) 86%, var(--palette-white) 14%);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-surface-elevated) 14%);
   color: var(--home-tile-text);
 }
 
 #home-view .home-tile button:hover,
 #home-view .home-tile button:focus-visible {
-  background: color-mix(in srgb, var(--surface-subtle) 100%, var(--palette-white) 0%);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 100%, var(--theme-surface-elevated) 0%);
 }
 
 #home-view .home-tile .home-passage-add-btn {
@@ -665,8 +665,8 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: var(--palette-hex-a8a8a8);
-  color: var(--palette-white);
+  background: var(--theme-text-muted);
+  color: var(--theme-surface-elevated);
   font-size: 1.15rem;
   line-height: 1;
   font-weight: 600;
@@ -674,17 +674,17 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
 
 #home-view .home-tile .home-passage-add-btn:hover,
 #home-view .home-tile .home-passage-add-btn:focus-visible {
-  background: var(--palette-hex-949494);
+  background: color-mix(in srgb, var(--theme-text-muted) 88%, var(--theme-text-strong) 12%);
 }
 
 #home-view .home-tile .primary-btn {
-  border-color: color-mix(in srgb, var(--accent) 25%, var(--line));
-  background: var(--accent);
+  border-color: color-mix(in srgb, var(--theme-accent) 25%, var(--theme-border));
+  background: var(--theme-accent);
   color: var(--home-tile-text);
 }
 
 #home-view .home-tile .primary-btn:hover {
-  background: color-mix(in srgb, var(--accent) 88%, var(--palette-black) 12%);
+  background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong) 12%);
 }
 
 body.theme-night #home-view .home-tile input,
@@ -729,7 +729,7 @@ body.theme-night #home-view .home-tile .home-quick-log-icon-btn:not(.home-quick-
 body.theme-night #home-view .home-tile .home-quick-log-icon-btn:not(.home-quick-log-send-btn):focus-visible {
   background: var(--home-tile-control-bg);
   color: var(--home-tile-text);
-  box-shadow: 0 6px 14px var(--palette-rgba-0-0-0-a2);
+  box-shadow: var(--theme-shadow-medium);
 }
 
 body.theme-night #home-view .home-contribution-cell,
@@ -740,22 +740,22 @@ body.theme-night #home-view .home-contribution-legend-cell {
 
 body.theme-night #home-view .home-contribution-cell[data-level="1"],
 body.theme-night #home-view .home-contribution-legend-cell[data-level="1"] {
-  background: var(--palette-hex-77c987);
+  background: var(--home-contribution-level-1);
 }
 
 body.theme-night #home-view .home-contribution-cell[data-level="2"],
 body.theme-night #home-view .home-contribution-legend-cell[data-level="2"] {
-  background: var(--palette-hex-44b864);
+  background: var(--home-contribution-level-2);
 }
 
 body.theme-night #home-view .home-contribution-cell[data-level="3"],
 body.theme-night #home-view .home-contribution-legend-cell[data-level="3"] {
-  background: var(--palette-hex-258d49);
+  background: var(--home-contribution-level-3);
 }
 
 body.theme-night #home-view .home-contribution-cell[data-level="4"],
 body.theme-night #home-view .home-contribution-legend-cell[data-level="4"] {
-  background: var(--palette-hex-176a35);
+  background: var(--home-contribution-level-4);
 }
 
 body.theme-night #home-view .home-tile .home-quick-log-send-btn:disabled,
@@ -773,13 +773,13 @@ body.theme-night #home-view .home-tile .home-quick-log-icon-btn:disabled:focus-v
 }
 
 body.theme-night #home-view .home-tile .primary-btn {
-  border-color: color-mix(in srgb, var(--text-on-accent) 18%, transparent);
-  background: color-mix(in srgb, var(--text-on-accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--theme-text-on-accent) 18%, transparent);
+  background: color-mix(in srgb, var(--theme-text-on-accent) 16%, transparent);
   color: var(--home-tile-text);
 }
 
 body.theme-night #home-view .home-tile .primary-btn:hover {
-  background: color-mix(in srgb, var(--text-on-accent) 24%, transparent);
+  background: color-mix(in srgb, var(--theme-text-on-accent) 24%, transparent);
 }
 
 
@@ -821,12 +821,12 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
   padding: 12px;
   border: 1px solid var(--home-tile-line-soft);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-subtle) 88%, var(--palette-white) 12%);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 88%, var(--theme-surface-elevated) 12%);
 }
 
 #home-view .dashboard-timer-active-row.is-alert {
-  border-color: color-mix(in srgb, var(--danger) 35%, transparent);
-  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  border-color: color-mix(in srgb, var(--theme-danger) 35%, transparent);
+  background: color-mix(in srgb, var(--theme-danger) 8%, transparent);
 }
 
 #home-view .dashboard-timer-active-copy {
@@ -863,7 +863,7 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
 
 #home-view .dashboard-timer-active-row.is-alert .dashboard-timer-active-value,
 #home-view .dashboard-timer-active-row.is-alert .dashboard-timer-active-detail {
-  color: var(--danger);
+  color: var(--theme-danger);
 }
 
 #home-view .dashboard-timer-active-track {
@@ -877,21 +877,21 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
 #home-view .dashboard-timer-active-fill {
   height: 100%;
   border-radius: 999px;
-  background: var(--accent);
+  background: var(--theme-accent);
   transition: width 0.4s linear;
 }
 
 #home-view .dashboard-timer-active-fill.is-warn {
-  background: var(--palette-hex-b07d18, #b07d18);
+  background: var(--theme-warning);
 }
 
 #home-view .dashboard-timer-active-row.is-alert .dashboard-timer-active-fill {
-  background: var(--danger);
+  background: var(--theme-danger);
 }
 
 #home-view .dashboard-timer-active-value.is-warn,
 #home-view .dashboard-timer-active-row.is-warn .dashboard-timer-active-detail {
-  color: var(--palette-hex-b07d18, #b07d18);
+  color: var(--theme-warning);
 }
 
 #home-view .home-timer-open-btn {
@@ -932,7 +932,7 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
   padding: 10px 12px;
   border: 1px solid var(--home-tile-line-soft);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-subtle) 88%, var(--palette-white) 12%);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 88%, var(--theme-surface-elevated) 12%);
 }
 
 #home-view .home-timer-template-copy {
@@ -970,7 +970,7 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: var(--palette-white);
+  background: var(--theme-surface-elevated);
   color: var(--home-tile-text);
 }
 
@@ -992,8 +992,8 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
 }
 
 #home-view .dashboard-timer-remove-btn {
-  background: var(--danger);
-  color: var(--palette-white);
+  background: var(--theme-danger);
+  color: var(--theme-surface-elevated);
 }
 
 body.theme-night #home-view .dashboard-timer-active-row,
@@ -1012,8 +1012,8 @@ body.theme-night #home-view .home-timer-template-start-btn:focus-visible {
 body.theme-night #home-view .dashboard-timer-remove-btn,
 body.theme-night #home-view .dashboard-timer-remove-btn:hover,
 body.theme-night #home-view .dashboard-timer-remove-btn:focus-visible {
-  background: var(--danger);
-  color: var(--palette-white);
+  background: var(--theme-danger);
+  color: var(--theme-surface-elevated);
 }
 
 #home-view .home-dialog-overlay {
@@ -1024,7 +1024,7 @@ body.theme-night #home-view .dashboard-timer-remove-btn:focus-visible {
   align-items: start;
   justify-content: center;
   padding: 84px 24px 24px;
-  background: var(--palette-rgba-27-20-14-a16);
+  background: var(--theme-shadow-color-strong);
 }
 
 #home-view .home-dialog-overlay[hidden] {
@@ -1036,8 +1036,8 @@ body.theme-night #home-view .dashboard-timer-remove-btn:focus-visible {
   padding: 18px;
   border: 1px solid var(--home-tile-line);
   border-radius: 8px;
-  background: var(--palette-white);
-  box-shadow: 0 20px 48px var(--palette-rgba-27-20-14-a16);
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 20px 48px var(--theme-shadow-color-strong);
 }
 
 #home-view .home-dialog-form {
@@ -1077,7 +1077,7 @@ body.theme-night #home-view .home-dialog {
   padding: 10px 12px;
   border: 1px solid var(--home-tile-line-soft);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-subtle) 88%, var(--palette-white) 12%);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 88%, var(--theme-surface-elevated) 12%);
 }
 
 #home-view .home-incubation-location-name {
@@ -1109,13 +1109,13 @@ body.theme-night #home-view .home-dialog {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: var(--danger);
-  color: var(--palette-white);
+  background: var(--theme-danger);
+  color: var(--theme-surface-elevated);
 }
 
 #home-view .home-incubation-delete-btn:hover,
 #home-view .home-incubation-delete-btn:focus-visible {
-  background: color-mix(in srgb, var(--danger) 84%, var(--palette-black));
+  background: color-mix(in srgb, var(--theme-danger) 84%, var(--theme-text-strong));
 }
 
 #home-view .home-incubation-delete-btn svg {
@@ -1130,8 +1130,8 @@ body.theme-night #home-view .home-incubation-location-row {
 body.theme-night #home-view .home-incubation-delete-btn,
 body.theme-night #home-view .home-incubation-delete-btn:hover,
 body.theme-night #home-view .home-incubation-delete-btn:focus-visible {
-  background: var(--danger);
-  color: var(--palette-white);
+  background: var(--theme-danger);
+  color: var(--theme-surface-elevated);
 }
 
 @media (max-height: 980px) and (min-width: 901px) {

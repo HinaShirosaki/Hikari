@@ -144,7 +144,9 @@ export function createRecordsManager({ runtime, elements, deps }) {
             previewImageDataUrl: ''
           };
         }
-      } catch {}
+      } catch (error) {
+        console.warn('Failed to persist gel preview image:', error);
+      }
     }
 
     return {
@@ -203,7 +205,8 @@ export function createRecordsManager({ runtime, elements, deps }) {
             })
           : Promise.resolve(null)
       ]);
-    } catch {
+    } catch (error) {
+      console.warn('Failed to persist gel record artifacts:', error);
       return {};
     }
 

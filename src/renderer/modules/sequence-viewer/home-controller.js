@@ -67,7 +67,7 @@ export function createSequenceViewerHomeController(config = {}) {
   function setHomeStatus(message, isError = false) {
     compactElementList(elements.homeStatusNote, elements.detailLibraryStatusNote).forEach((statusNode) => {
       statusNode.textContent = message;
-      statusNode.style.color = isError ? 'var(--danger)' : '';
+      statusNode.style.color = isError ? 'var(--theme-danger)' : '';
     });
   }
 
@@ -76,7 +76,7 @@ export function createSequenceViewerHomeController(config = {}) {
       return;
     }
     elements.featureSearchStatus.textContent = message;
-    elements.featureSearchStatus.style.color = isError ? 'var(--danger)' : '';
+    elements.featureSearchStatus.style.color = isError ? 'var(--theme-danger)' : '';
   }
 
   function applyPreviewFrameSurfaceBridge(frame) {

@@ -3,23 +3,23 @@
 :root {
   --hikari-menu-radius: 10px;
   --hikari-menu-item-radius: 8px;
-  --hikari-menu-surface: color-mix(in srgb, var(--surface-elevated) 96%, var(--surface-subtle) 4%);
-  --hikari-menu-border: color-mix(in srgb, var(--line) 78%, transparent);
-  --hikari-menu-separator: color-mix(in srgb, var(--line-soft) 88%, transparent);
-  --hikari-menu-hover: color-mix(in srgb, var(--surface-subtle) 74%, var(--surface-elevated) 26%);
-  --hikari-menu-pressed: color-mix(in srgb, var(--surface-subtle) 88%, var(--surface-elevated) 12%);
-  --hikari-menu-search: color-mix(in srgb, var(--surface-subtle) 64%, var(--surface-elevated) 36%);
-  --hikari-menu-shadow: 0 16px 34px var(--palette-rgba-27-20-14-a14), 0 2px 8px var(--palette-rgba-27-20-14-a08);
+  --hikari-menu-surface: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-surface-subtle) 4%);
+  --hikari-menu-border: color-mix(in srgb, var(--theme-border) 78%, transparent);
+  --hikari-menu-separator: color-mix(in srgb, var(--theme-border-soft) 88%, transparent);
+  --hikari-menu-hover: color-mix(in srgb, var(--theme-surface-subtle) 74%, var(--theme-surface-elevated) 26%);
+  --hikari-menu-pressed: color-mix(in srgb, var(--theme-surface-subtle) 88%, var(--theme-surface-elevated) 12%);
+  --hikari-menu-search: color-mix(in srgb, var(--theme-surface-subtle) 64%, var(--theme-surface-elevated) 36%);
+  --hikari-menu-shadow: 0 16px 34px var(--theme-shadow-color), 0 2px 8px var(--theme-shadow-color-subtle);
 }
 
 body.theme-night {
-  --hikari-menu-surface: color-mix(in srgb, var(--surface-elevated) 92%, var(--bg) 8%);
-  --hikari-menu-border: color-mix(in srgb, var(--line) 84%, var(--palette-white) 8%);
-  --hikari-menu-separator: color-mix(in srgb, var(--line-soft) 86%, var(--palette-white) 8%);
-  --hikari-menu-hover: color-mix(in srgb, var(--surface-subtle) 82%, var(--palette-white) 8%);
-  --hikari-menu-pressed: color-mix(in srgb, var(--surface-subtle) 92%, var(--palette-white) 10%);
-  --hikari-menu-search: color-mix(in srgb, var(--surface-subtle) 84%, var(--palette-white) 4%);
-  --hikari-menu-shadow: 0 18px 40px var(--palette-rgba-0-0-0-a3), 0 2px 10px var(--palette-rgba-0-0-0-a2);
+  --hikari-menu-surface: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-background) 8%);
+  --hikari-menu-border: color-mix(in srgb, var(--theme-border) 84%, var(--theme-surface-elevated) 8%);
+  --hikari-menu-separator: color-mix(in srgb, var(--theme-border-soft) 86%, var(--theme-surface-elevated) 8%);
+  --hikari-menu-hover: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-surface-elevated) 8%);
+  --hikari-menu-pressed: color-mix(in srgb, var(--theme-surface-subtle) 92%, var(--theme-surface-elevated) 10%);
+  --hikari-menu-search: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-surface-elevated) 4%);
+  --hikari-menu-shadow: 0 18px 40px var(--theme-shadow-color), 0 2px 10px var(--theme-shadow-color);
 }
 
 .app-more-menu,
@@ -60,7 +60,7 @@ body.theme-night {
   border: 0 !important;
   border-radius: var(--hikari-menu-item-radius);
   background: transparent !important;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font: inherit;
   font-size: 0.94rem;
   font-weight: 500;
@@ -86,7 +86,7 @@ body.theme-night {
 .protocol-action-item:hover,
 .protocol-action-item:focus-visible {
   background: var(--hikari-menu-hover) !important;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   outline: none;
 }
 
@@ -107,15 +107,15 @@ body.theme-night {
 
 .papers-context-item-danger,
 .protocol-action-item-danger {
-  color: var(--danger);
+  color: var(--theme-danger);
 }
 
 .papers-context-item-danger:hover,
 .papers-context-item-danger:focus-visible,
 .protocol-action-item-danger:hover,
 .protocol-action-item-danger:focus-visible {
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 11%, var(--hikari-menu-surface)) !important;
+  color: var(--theme-danger);
+  background: color-mix(in srgb, var(--theme-danger) 11%, var(--hikari-menu-surface)) !important;
 }
 
 
@@ -144,7 +144,7 @@ body.theme-night {
   gap: 2px;
   padding: 12px 20px 8px;
   border-top: 1px solid var(--hikari-menu-separator);
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .assay-sample-picker-head {
@@ -154,7 +154,7 @@ body.theme-night {
 
 .biology-notebook-sample-link-menu-head strong,
 .assay-sample-picker-head strong {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.76rem;
   font-weight: 650;
   line-height: 1.2;
@@ -164,7 +164,7 @@ body.theme-night {
 
 .biology-notebook-sample-link-menu-head .small-note,
 .assay-sample-picker-head span {
-  color: color-mix(in srgb, var(--muted) 88%, transparent);
+  color: color-mix(in srgb, var(--theme-text-muted) 88%, transparent);
   font-size: 0.78rem;
   line-height: 1.2;
   letter-spacing: 0;
@@ -187,18 +187,18 @@ body.theme-night {
   min-width: 0;
   height: 42px;
   padding: 0 14px 0 40px;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
   border-radius: 9px;
   background-color: var(--hikari-menu-search);
   background-image: url("data:image/svg+xml,%3Csvg width='18' height='18' viewBox='0 0 24 24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='11' cy='11' r='6.25' stroke='%2372675d' stroke-width='2'/%3E%3Cpath d='M16.1 16.1L21 21' stroke='%2372675d' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
   background-position: 13px 50%;
   background-repeat: no-repeat;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font: inherit;
   font-size: 0.95rem;
   letter-spacing: 0;
   outline: none;
-  box-shadow: inset 0 1px 2px var(--palette-rgba-27-20-14-a08);
+  box-shadow: inset 0 1px 2px var(--theme-shadow-color-subtle);
 }
 
 body.theme-night .biology-notebook-sample-link-search,
@@ -208,14 +208,14 @@ body.theme-night .assay-sample-picker-search-input {
 
 .biology-notebook-sample-link-search::placeholder,
 .assay-sample-picker-search-input::placeholder {
-  color: color-mix(in srgb, var(--muted) 82%, transparent);
+  color: color-mix(in srgb, var(--theme-text-muted) 82%, transparent);
 }
 
 .biology-notebook-sample-link-search:focus,
 .assay-sample-picker-search-input:focus {
-  border-color: color-mix(in srgb, var(--focus) 58%, var(--line));
-  background-color: color-mix(in srgb, var(--hikari-menu-search) 84%, var(--surface-elevated) 16%);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 18%, transparent), inset 0 1px 2px var(--palette-rgba-27-20-14-a08);
+  border-color: color-mix(in srgb, var(--theme-focus) 58%, var(--theme-border));
+  background-color: color-mix(in srgb, var(--hikari-menu-search) 84%, var(--theme-surface-elevated) 16%);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-focus) 18%, transparent), inset 0 1px 2px var(--theme-shadow-color-subtle);
 }
 
 .biology-notebook-sample-link-results,
@@ -238,7 +238,7 @@ body.theme-night .assay-sample-picker-search-input {
   border: 0 !important;
   border-radius: var(--hikari-menu-item-radius);
   background: transparent !important;
-  color: var(--text);
+  color: var(--theme-text);
   text-align: left;
   cursor: pointer;
 }
@@ -249,13 +249,13 @@ body.theme-night .assay-sample-picker-search-input {
 .assay-sample-picker-item:focus-visible,
 .assay-sample-picker-item.is-current {
   background: var(--hikari-menu-hover) !important;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   outline: none;
 }
 
 .biology-notebook-sample-link-option-main,
 .assay-sample-picker-item-title {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 0.94rem;
   font-weight: 650;
   line-height: 1.2;
@@ -263,7 +263,7 @@ body.theme-night .assay-sample-picker-search-input {
 
 .biology-notebook-sample-link-option-meta,
 .assay-sample-picker-item-meta {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.8rem;
   line-height: 1.25;
 }
@@ -272,7 +272,7 @@ body.theme-night .assay-sample-picker-search-input {
 .assay-sample-picker-empty {
   margin: 0;
   padding: 14px 10px;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .biology-notebook-sample-link-menu {
@@ -301,12 +301,12 @@ body.theme-night .assay-sample-picker-search-input {
   background-position: 10px 50%;
   background-size: 15px 15px;
   font-size: 0.86rem;
-  box-shadow: inset 0 1px 2px var(--palette-rgba-27-20-14-a08);
+  box-shadow: inset 0 1px 2px var(--theme-shadow-color-subtle);
 }
 
 .biology-notebook-sample-link-search:focus {
-  border-color: color-mix(in srgb, var(--focus) 42%, var(--line));
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--focus) 14%, transparent), inset 0 1px 2px var(--palette-rgba-27-20-14-a08);
+  border-color: color-mix(in srgb, var(--theme-focus) 42%, var(--theme-border));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-focus) 14%, transparent), inset 0 1px 2px var(--theme-shadow-color-subtle);
 }
 
 .biology-notebook-sample-link-results {
@@ -346,7 +346,7 @@ body.theme-night .protocol-action-item,
 body.theme-night .biology-notebook-sample-link-option,
 body.theme-night .assay-sample-picker-item {
   background: transparent !important;
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 body.theme-night .app-more-item:hover,
@@ -367,5 +367,5 @@ body.theme-night .assay-sample-picker-item:hover,
 body.theme-night .assay-sample-picker-item:focus-visible,
 body.theme-night .assay-sample-picker-item.is-current {
   background: var(--hikari-menu-hover) !important;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }

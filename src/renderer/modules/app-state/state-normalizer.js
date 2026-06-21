@@ -9,6 +9,7 @@ import {
   normalizeSampleTypeLabels
 } from '../sample-inventory-settings.js';
 import { defaultState, STARTUP_DEFAULT_VIEW_IDS } from './defaults.js';
+import { normalizeAppearanceMode } from './appearance.js';
 import {
   normalizeDashboardActiveTimers,
   normalizeDashboardIncubationLocations,
@@ -70,7 +71,8 @@ function normalizeSettings(source) {
     },
     appearance: {
       ...defaultState.settings.appearance,
-      ...rawAppearance
+      ...rawAppearance,
+      mode: normalizeAppearanceMode(rawAppearance.mode)
     },
     storageImport: {
       ...defaultState.settings.storageImport,
