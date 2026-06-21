@@ -227,11 +227,16 @@ export function initTimerWidget({
         }
         const remainingMs = Math.max(0, normalized.endAtMs - now);
         const isAlert = remainingMs <= 0;
+        const totalMs = Math.max(1, normalized.durationMinutes * 60 * 1000);
+        const pct = Math.min(100, Math.max(0, (1 - remainingMs / totalMs) * 100));
+        const isWarn = !isAlert && remainingMs <= 5 * 60 * 1000; // ponytail: fixed 5-min amber threshold
         return {
           sourceIndex: index,
           name: normalized.name,
           durationMinutes: normalized.durationMinutes,
           remainingMs,
+          pct,
+          isWarn,
           isAlert,
           detail: isAlert
             ? `${formatTimerTemplateDuration(normalized.durationMinutes)} timer complete`
@@ -272,13 +277,16 @@ export function initTimerWidget({
     }
 
     timerActiveList.innerHTML = activeTimers.map((timer) => `
-      <article class="dashboard-timer-active-row${timer.isAlert ? ' is-alert' : ''}">
+      <article class="dashboard-timer-active-row${timer.isAlert ? ' is-alert' : ''}${timer.isWarn ? ' is-warn' : ''}">
         <div class="dashboard-timer-active-copy">
           <strong class="dashboard-timer-active-title">${safeText(timer.name)}</strong>
           <p class="dashboard-timer-active-detail">${safeText(timer.detail)}</p>
+          <div class="dashboard-timer-active-track" aria-hidden="true">
+            <div class="dashboard-timer-active-fill${timer.isWarn ? ' is-warn' : ''}" style="width: ${timer.pct.toFixed(1)}%"></div>
+          </div>
         </div>
         <div class="dashboard-timer-active-side">
-          <span class="dashboard-timer-active-value">${safeText(formatTimer(timer.remainingMs))}</span>
+          <span class="dashboard-timer-active-value${timer.isWarn ? ' is-warn' : ''}">${safeText(formatTimer(timer.remainingMs))}</span>
           <button
             type="button"
             class="dashboard-timer-remove-btn"

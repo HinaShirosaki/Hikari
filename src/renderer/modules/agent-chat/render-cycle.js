@@ -12,7 +12,6 @@ export function renderAgentChat({
 }) {
   shell.ensureAgentState();
   shell.renderProjectOptions();
-  shell.renderDeepResearchToggle();
   developerToolUi.renderDeveloperToolOptions();
   shell.renderContextSummary();
   sessionManager.renderSessionList();

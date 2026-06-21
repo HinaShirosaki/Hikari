@@ -83,17 +83,6 @@ export function bindAgentChatEvents({
     void sessionManager.startNewChatSession();
   });
 
-  dom.deepResearchToggleBtn?.addEventListener('click', () => {
-    shell.ensureAgentState();
-    state.agentChat.deepResearchEnabled = !(state.agentChat.deepResearchEnabled === true);
-    developerContextController.invalidate();
-    persist();
-    shell.renderDeepResearchToggle();
-    shell.setStatus(state.agentChat.deepResearchEnabled === true
-      ? 'Deep research enabled.'
-      : 'Deep research disabled.');
-  });
-
   dom.clearBtn?.addEventListener('click', () => {
     dom.input.value = '';
     attachmentsController.reset();

@@ -1,19 +1,24 @@
-import { reverseComplementDna } from '../sequence.js';
-import { buildCommercialRestrictionFeatures } from '../../sequence-viewer/restriction-analysis.js';
+import { reverseComplementDna } from '../../tool-box/sequence.js';
+import { matchesIupacPattern, normalizeIupacPattern } from '../../tool-box/crispr.js';
+import { buildCommercialRestrictionFeatures } from '../restriction-analysis.js';
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { asArray, normalizeSequence } from './sequence-utils.js';
 import { normalizeFragment, normalizeHostVector } from './fragments.js';
 
+// Count windows of `sequence` (concrete ACGT) that satisfy `site`. Recognition
+// sites may carry IUPAC ambiguity codes (e.g. GTMKAC, CACNNNGTG); normalizeSequence
+// would strip those codes and corrupt the motif, so match position-by-position.
 export function countSiteMatches(sequence, site) {
   const cleaned = normalizeSequence(sequence);
-  const motif = normalizeSequence(site);
-  if (!cleaned.length || !motif.length) {
+  const rawSite = String(site || '').toUpperCase().replace(/[^A-Z]/g, '');
+  if (!cleaned.length || !rawSite.length) {
     return 0;
   }
 
+  const pattern = normalizeIupacPattern(rawSite);
   let count = 0;
-  for (let index = 0; index <= cleaned.length - motif.length; index += 1) {
-    if (cleaned.slice(index, index + motif.length) === motif) {
+  for (let index = 0; index + pattern.length <= cleaned.length; index += 1) {
+    if (matchesIupacPattern(cleaned.slice(index, index + pattern.length), pattern)) {
       count += 1;
     }
   }
@@ -21,18 +26,13 @@ export function countSiteMatches(sequence, site) {
 }
 
 export function sequenceContainsSite(sequence, site) {
-  const motif = normalizeSequence(site);
-  if (!motif.length) {
-    return false;
-  }
-  if (countSiteMatches(sequence, motif) > 0) {
+  const cleaned = normalizeSequence(sequence);
+  if (countSiteMatches(cleaned, site) > 0) {
     return true;
   }
-  const reverseSite = reverseComplementDna(motif);
-  if (reverseSite === motif) {
-    return false;
-  }
-  return countSiteMatches(sequence, reverseSite) > 0;
+  // Scan the reverse strand by matching the same pattern against the
+  // reverse-complement of the (concrete) insert sequence.
+  return countSiteMatches(reverseComplementDna(cleaned), site) > 0;
 }
 
 export function circularDistance(totalLength, leftStart, rightStart) {

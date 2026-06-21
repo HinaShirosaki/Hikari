@@ -2,7 +2,7 @@ import {
   PROTEIN_ASSEMBLY_CLEAVAGE_SITES,
   PROTEIN_ASSEMBLY_LINKERS,
   PROTEIN_ASSEMBLY_TAGS
-} from '../../tool-box/protein-assembly.js';
+} from './assembly-model.js';
 
 export const BLOCK_TYPE_LABELS = Object.freeze({
   tag: 'Tag',

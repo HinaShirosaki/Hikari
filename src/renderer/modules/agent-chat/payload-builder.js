@@ -89,7 +89,6 @@ export function createAgentPayloadBuilder({
       disabledExternalSkillNames: asArray(state.settings?.agent?.disabledExternalSkillNames)
         .map((item) => trimText(item, 160))
         .filter(Boolean),
-      deepResearchEnabled: state.agentChat.deepResearchEnabled === true,
       ...(hiddenContexts.length ? { hiddenContexts } : {}),
       ...(paperSessionPrompt ? {
         paperSessionPrompt,

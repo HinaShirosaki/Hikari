@@ -491,49 +491,6 @@
     grid-template-columns: 1fr;
   }
 }
-
-
-
-.protein-assembly-rows {
-  display: grid;
-  gap: 10px;
-}
-
-.protein-assembly-row {
-  display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  align-items: end;
-  padding: 12px;
-  border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--surface);
-}
-
-.protein-assembly-row-actions {
-  justify-content: flex-end;
-  align-self: end;
-}
-
-.protein-assembly-row-note {
-  grid-column: 1 / -1;
-  margin: 0;
-}
-
-
-
-
-.protein-assembly-cell-seq {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  letter-spacing: 0;
-}
-
-@media (max-width: 920px) {
-  .protein-assembly-row {
-    grid-template-columns: 1fr;
-  }
-}
-
 .molarity-block {
   margin-top: 14px;
   padding-top: 10px;
@@ -606,11 +563,6 @@ body.theme-night .colony-preview-canvas {
 body.theme-night .colony-cropper-shell {
   border-color: var(--palette-hex-dddddd);
   background: var(--palette-white);
-}
-
-body.theme-night .protein-assembly-row {
-  border-color: var(--palette-rgba-186-218-255-a3);
-  background: var(--surface);
 }
 
 body.theme-night .crispr-risk-low {
@@ -740,8 +692,7 @@ body.ui-neutral-compact input[id*="api-key"] {
   }
 }
 
-.crispr-guide-seq,
-.protein-assembly-cell-seq {
+.crispr-guide-seq {
   letter-spacing: 0;
 }
 

@@ -178,10 +178,127 @@ module.exports = function registerMainServiceLifecycleSuite(context = {}) {
       assert.equal(orderedKeys.indexOf('mcp') < orderedKeys.indexOf('codex'), true);
       assert.equal(orderedKeys.indexOf('codex') < orderedKeys.indexOf('agent-controllers'), true);
       assert.equal(orderedKeys.indexOf('agent-controllers') < orderedKeys.indexOf('agent-ipc'), true);
+      assert.equal(orderedKeys.indexOf('app-metadata') < orderedKeys.indexOf('npm-updater'), true);
       assert.equal(
         catalog.find((entry) => entry.key === 'mcp').policy,
         SERVICE_POLICIES.BEST_EFFORT
       );
+      assert.equal(
+        catalog.find((entry) => entry.key === 'npm-updater').policy,
+        SERVICE_POLICIES.BEST_EFFORT
+      );
+    });
+
+    test('release agent provider config exposes Codex only while API agent support is disabled', () => {
+      const providerConfig = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'generated',
+        'llm-provider-config.generated.js'
+      ));
+      assert.equal(providerConfig.ALLOW_API_AGENT, false);
+      assert.equal(providerConfig.DEFAULT_AGENT_LLM_PROVIDER, providerConfig.LLM_PROVIDERS.CODEX);
+      assert.deepEqual(
+        providerConfig.AGENT_LLM_PROVIDER_OPTIONS.map((entry) => entry.value),
+        [providerConfig.LLM_PROVIDERS.CODEX]
+      );
+      assert.equal(
+        providerConfig.normalizeAgentLlmProvider(providerConfig.LLM_PROVIDERS.OPENAI),
+        providerConfig.LLM_PROVIDERS.CODEX
+      );
+    });
+
+    test('npm updater resolves npm metadata, compares versions, and opens a newer release', async () => {
+      const {
+        compareSemver,
+        createNpmUpdaterService,
+        resolveNpmReleaseMetadata
+      } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'core',
+        'services',
+        'create-npm-updater-service.js'
+      ));
+      const metadata = {
+        'dist-tags': {
+          latest: '1.2.0'
+        },
+        versions: {
+          '1.2.0': {
+            version: '1.2.0',
+            dist: {
+              tarball: 'https://registry.npmjs.org/hikari/-/hikari-1.2.0.tgz'
+            }
+          }
+        }
+      };
+      const release = resolveNpmReleaseMetadata(metadata);
+      assert.equal(release.version, '1.2.0');
+      assert.equal(
+        release.releaseUrl,
+        'https://registry.npmjs.org/hikari/-/hikari-1.2.0.tgz'
+      );
+      assert.equal(compareSemver('1.2.0', '1.1.9'), 1);
+      assert.equal(compareSemver('1.2.0-beta.1', '1.2.0'), -1);
+
+      const openedUrls = [];
+      const updater = createNpmUpdaterService({
+        app: {
+          isPackaged: true,
+          getVersion: () => '1.0.0'
+        },
+        updateUrl: 'https://registry.npmjs.org/hikari',
+        fetchImpl: async () => ({
+          ok: true,
+          status: 200,
+          json: async () => metadata
+        }),
+        dialog: {
+          showMessageBox: async () => ({ response: 0 })
+        },
+        shell: {
+          openExternal: async (url) => openedUrls.push(url)
+        },
+        getMainWindow: () => null
+      });
+
+      const result = await updater.checkForUpdates();
+      assert.equal(result.status, 'update-available');
+      assert.equal(result.currentVersion, '1.0.0');
+      assert.equal(result.latestVersion, '1.2.0');
+      assert.equal(result.action, 'opened');
+      assert.deepEqual(openedUrls, [release.releaseUrl]);
+    });
+
+    test('npm updater remains dormant until its npm metadata URL is configured', () => {
+      let fetchCalls = 0;
+      const { createNpmUpdaterService } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'core',
+        'services',
+        'create-npm-updater-service.js'
+      ));
+      const updater = createNpmUpdaterService({
+        app: {
+          isPackaged: true,
+          getVersion: () => '1.0.0'
+        },
+        updateUrl: '',
+        fetchImpl: async () => {
+          fetchCalls += 1;
+          return { ok: true, json: async () => ({}) };
+        }
+      });
+
+      const status = updater.start();
+      assert.equal(status.configured, false);
+      assert.equal(status.status, 'not-configured');
+      assert.equal(fetchCalls, 0);
     });
 
     test('provider-neutral agent foundation does not construct MCP or Codex', () => {

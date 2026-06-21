@@ -1,5 +1,5 @@
-import { reverseComplementDna } from '../sequence.js';
-import { oligoTm } from '../oligo.js';
+import { reverseComplementDna } from '../../tool-box/sequence.js';
+import { oligoTm } from '../../tool-box/oligo.js';
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { createMidpoint, normalizeSequence } from './sequence-utils.js';
 import { candidateScore } from './overlap-windows.js';

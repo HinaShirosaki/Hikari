@@ -60,7 +60,7 @@ Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), a
 | `buffer-compounds.js`, `common-promoters.js` | reference datasets for toolbox and sequence features |
 | `app-registry.generated.js`, `llm-provider-config.generated.js` | generated shell configuration and LLM provider catalog |
 
-The generated commercial restriction-enzyme catalog lives in `src/shared/data/commercial-restriction-enzymes.js`; process-neutral restriction detection lives in `src/shared/sequence/restriction-features.js`.
+The generated commercial restriction-enzyme catalog and process-neutral restriction detection live inside `src/renderer/modules/sequence-viewer/`.
 
 ## Reading advice
 

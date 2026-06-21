@@ -39,6 +39,7 @@
 }
 
 #create-protocol-btn,
+#open-protocol-json-import-btn,
 #protocol-generate-btn,
 #protocol-polish-btn,
 #protocol-sort-field-btn,
@@ -238,11 +239,18 @@
   margin-top: 0;
 }
 
-.protocol-json-import-panel {
+.protocol-json-import-launcher {
+  justify-content: flex-start;
   margin-bottom: 16px;
-  padding: 16px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.protocol-json-import-dialog.app-dialog-surface {
+  --app-dialog-width: 640px;
+}
+
+.protocol-json-import-dialog textarea {
+  min-height: 180px;
+  resize: vertical;
 }
 
 #protocol-editor-panel #protocol-name {

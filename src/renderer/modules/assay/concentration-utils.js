@@ -50,6 +50,12 @@ export function parseConcentrationMagnitude(value, defaultUnit = '') {
     return null;
   }
   const unit = parts.unit || normalizeUnit(defaultUnit);
+  // A present-but-unknown unit is a typo/unsupported unit, not base units. Returning
+  // null routes it into callers' "valid concentration?" guards instead of silently
+  // scaling by 1 (which produced dilution recipes wrong by orders of magnitude).
+  if (unit && !isKnownUnit(unit)) {
+    return null;
+  }
   const scale = SCALE_MAP[unit] || 1;
   return parts.numeric * scale;
 }
@@ -101,6 +107,12 @@ export function formatConcentrationNumber(value) {
 // Scale of a unit relative to base units (e.g. 'nM' -> 1e-9); unknown/empty -> 1.
 export function unitScale(unit) {
   return SCALE_MAP[normalizeUnit(unit)] || 1;
+}
+
+// True when `unit` is a concentration/mass unit the parser understands.
+export function isKnownUnit(unit) {
+  const normalized = normalizeUnit(unit);
+  return Boolean(normalized && Object.prototype.hasOwnProperty.call(SCALE_MAP, normalized));
 }
 
 // Interpolated series of length `count` from `startValue` to `endValue` inclusive.

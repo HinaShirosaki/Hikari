@@ -24,7 +24,6 @@ That file owns the renderer-side chat experience:
 
 - project-scoped context selection
 - history rendering
-- deep-research toggle
 - session selection and creation
 - notebook-draft creation from assistant responses
 - developer-tool testing UI
@@ -150,6 +149,8 @@ The folder has several layers:
   - `restriction-analysis.js`
   - `orf-analysis.js`
   - `feature-model.js`
+  - `cloning-assembly.js` and `cloning-assembly/`
+  - `protein-builder/`
 - rendering/layout support
   - `detail-rendering.js`
   - `detail-layout.js`
@@ -170,11 +171,11 @@ This is the largest renderer subsystem by a wide margin. Read it as several coop
 - inspect features and ORFs
 - run restriction analysis
 - align sequences
-- build proteins
+- build proteins and plan cloning assemblies
 
-`modules/sequence-viewer/public-api.js` is the explicit secondary surface for parsing, rendering, ORF generation, restriction analysis, and alignment. The manifest imports `index.js` directly and supplies the API bridge and storage path as dependencies.
+`modules/sequence-viewer/public-api.js` is the explicit secondary surface for parsing, rendering, ORF generation, restriction analysis, alignment, and cloning planning. The manifest imports `index.js` directly and supplies the API bridge and storage path as dependencies.
 
-Reusable plasmid annotation, ORF, restriction-site, and backbone-recognition algorithms live in `src/shared/sequence/` so main and renderer code depend on the same implementation.
+Reusable plasmid annotation, ORF, restriction-site, and backbone-recognition algorithms live directly in `src/renderer/modules/sequence-viewer/algorithms/`.
 
 ## `workflow/`
 
@@ -197,7 +198,7 @@ Start in `tool-box.js` and then immediately open `tool-box/view-manager.js`.
 
 The toolbox is really a collection of mini-tools with two kinds of files:
 
-- pure calculators and sequence helpers such as `molarity.js`, `sequence.js`, `crispr.js`, `cloning-assembly.js`, and `protein-assembly.js`
+- pure calculators and sequence helpers such as `molarity.js`, `sequence.js`, and `crispr.js`
 - UI initializers such as `molarity-ui.js`, `translation-ui.js`, `crispr-ui.js`, and `buffer-ui.js`
 
 Two details matter here:

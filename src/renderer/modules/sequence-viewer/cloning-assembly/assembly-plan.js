@@ -1,4 +1,4 @@
-import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
+import { CLONING_PRIMER_TM_THRESHOLDS, DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { asArray, normalizeSequence } from './sequence-utils.js';
 import { normalizeFragment } from './fragments.js';
 import { findSelectedHostVector } from './host-vector-selection.js';
@@ -9,6 +9,29 @@ import { evaluateSiteDirectedMutagenesis } from './site-mutagenesis-evaluation.j
 import { buildAlternateStrategyRecommendation, buildGlobalWarnings, chooseAssemblyStrategy } from './strategy.js';
 import { buildAssemblyDesign, buildProcedureSteps, buildValidationPlan } from './procedure.js';
 import { designCloningPrimers } from './primer-design.js';
+
+const ROUTE_THRESHOLD_LEVELS = [
+  ['strict', CLONING_PRIMER_TM_THRESHOLDS.strict],
+  ['moderate', CLONING_PRIMER_TM_THRESHOLDS.moderate],
+  ['relaxed', CLONING_PRIMER_TM_THRESHOLDS.relaxed]
+];
+
+// Route feasibility climbs the same strict->moderate->relaxed ladder as primer
+// design: a junction whose only workable overlap sits in the moderate/relaxed Tm
+// band should still let the route through (and carry that level's overlaps into
+// primer design) instead of being frozen out at strict. Returns the first feasible
+// level, or the relaxed attempt if every level fails.
+function evaluateRouteWithFallback(evaluate, fragments, options) {
+  let lastResult = null;
+  for (const [thresholdLevel, thresholds] of ROUTE_THRESHOLD_LEVELS) {
+    const result = { ...evaluate(fragments, { ...options, thresholds }), thresholdLevel };
+    if (result.feasible) {
+      return result;
+    }
+    lastResult = result;
+  }
+  return lastResult;
+}
 
 export function assembleCloningPlan(payload = {}) {
   const config = {
@@ -41,10 +64,10 @@ export function assembleCloningPlan(payload = {}) {
       ]
     : insertFragments;
 
-  const overlapPCR = evaluateOverlapPcr(insertFragments, {
+  const overlapPCR = evaluateRouteWithFallback(evaluateOverlapPcr, insertFragments, {
     preferences: config
   });
-  const gibson = evaluateGibsonAssembly(assemblyFragments, {
+  const gibson = evaluateRouteWithFallback(evaluateGibsonAssembly, assemblyFragments, {
     preferences: config,
     circular: Boolean(selectedHost)
   });

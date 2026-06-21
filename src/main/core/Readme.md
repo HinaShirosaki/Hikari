@@ -41,6 +41,7 @@ The lifecycle validates duplicate keys, missing dependencies, and cycles; constr
 - Codex runtime
 - completed agent-controller facade
 - logging/monitoring, prompt loading, and Telegram
+- best-effort packaged-app update checks against npm metadata
 - data, agent, and system IPC adapters
 
 Codex and MCP construction live in `core/services/`. The provider-neutral agent factory must not create either integration. Codex requests ask the MCP service to initialize again, so an app-start MCP failure remains recoverable.

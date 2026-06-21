@@ -1,4 +1,4 @@
-import { sanitizeProteinAssemblySequence } from '../../tool-box/protein-assembly.js';
+import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import { getBlockTypeLabel } from './constants.js';
 

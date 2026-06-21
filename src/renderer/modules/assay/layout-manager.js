@@ -28,7 +28,12 @@ import {
 import { createInventorySamplePicker } from './inventory-sample-picker.js';
 import { createSerialDilutionController } from './serial-dilution.js';
 import { buildPlatePreviewHtml } from './plate-preview-renderer.js';
-import { buildDilutionSeries, buildInterpolatedSeries } from './concentration-utils.js';
+import {
+  buildDilutionSeries,
+  buildInterpolatedSeries,
+  isKnownUnit,
+  splitConcentrationValue
+} from './concentration-utils.js';
 
 export function createAssayLayoutManager({
   runtime,
@@ -88,6 +93,17 @@ export function createAssayLayoutManager({
     if (serialDilution.isOpen()) {
       serialDilution.render();
     }
+  }
+
+  // When a concentration cell carries a recognized unit (e.g. "100 nM"), adopt it as
+  // the axis unit so bare cells, fills and the dilution dialog all use it.
+  function recognizeConcentrationUnit(text) {
+    const parts = splitConcentrationValue(text);
+    if (parts && isKnownUnit(parts.unit) && getConcentrationUnit() !== parts.unit) {
+      setConcentrationUnit(parts.unit);
+      return true;
+    }
+    return false;
   }
 
   function getFillMode() {
@@ -624,6 +640,9 @@ export function createAssayLayoutManager({
   function onPlatePreviewChange(event) {
     const axisInput = event.target.closest('[data-axis-dimension]');
     if (axisInput) {
+      if (axisInput.dataset.axisDimension === oppositeAxis(getSampleAxis())) {
+        recognizeConcentrationUnit(axisInput.value);
+      }
       setLayoutFromAxisAndOverrides();
       renderPlatePreview();
       renderResultTable();
@@ -637,6 +656,9 @@ export function createAssayLayoutManager({
       return;
     }
 
+    if (inlineInput.dataset.wellInlineField === 'concentration') {
+      recognizeConcentrationUnit(inlineInput.value);
+    }
     updateInlineWellOverride(
       inlineInput.dataset.well,
       inlineInput.dataset.wellInlineField,

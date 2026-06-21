@@ -15,9 +15,9 @@
   --home-tile-inner-gap: 12px;
   --home-top-row: minmax(226px, 0.98fr);
   --home-middle-row: minmax(156px, 0.48fr);
-  --home-bottom-row: minmax(156px, 0.48fr);
-  --contribution-cell-size: 15px;
-  --contribution-cell-gap: 4px;
+  --home-bottom-row: minmax(176px, 0.6fr);
+  --contribution-cell-size: 12px;
+  --contribution-cell-gap: 2px;
   --contribution-weekday-width: 28px;
   --contribution-body-gap: 9px;
   --contribution-grid-width: calc(
@@ -60,12 +60,12 @@ body.theme-night #home-view {
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-columns: minmax(var(--contribution-card-width), 1fr) minmax(var(--contribution-card-width), 1fr) minmax(300px, 0.86fr);
+  grid-template-columns: minmax(calc(var(--contribution-card-width) + 132px), 1.42fr) minmax(0, 1.05fr) minmax(0, 1.05fr);
   grid-template-areas:
-    "contribution notebook timer"
-    "contribution notebook passage"
-    "actions actions incubation";
-  grid-template-rows: var(--home-top-row) var(--home-middle-row) var(--home-bottom-row);
+    "timer notebook quicklog"
+    "timer notebook quicklog"
+    "contribution passage incubation";
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) var(--home-bottom-row);
   gap: var(--home-gap);
 }
 
@@ -73,51 +73,46 @@ body.theme-night #home-view {
   display: grid;
   gap: var(--home-tile-inner-gap);
   min-height: 0;
-  padding: var(--home-tile-padding);
+  padding: 15px var(--home-tile-padding);
   border: 1px solid var(--home-tile-line);
   border-radius: 8px;
   background: var(--home-tile-bg);
   color: var(--home-tile-text);
-  box-shadow: 0 1px 3px var(--palette-rgba-27-20-14-a08);
+  box-shadow: 0 1px 3px rgba(27, 20, 14, 0.06);
 }
 
 
 #home-view .home-tile-passage {
   grid-area: passage;
   grid-template-rows: auto minmax(0, 1fr);
-  background: var(--home-tile-bg-strong);
+  background: var(--home-tile-bg-soft);
 }
 
 #home-view .home-tile-contribution {
   grid-area: contribution;
-  grid-template-rows: auto minmax(168px, 0.68fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
 }
 
 #home-view .home-tile-timer {
   grid-area: timer;
-  background: var(--home-tile-bg-strong);
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+#home-view .home-tile-quicklog {
+  grid-area: quicklog;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 #home-view .home-tile-incubation {
   grid-area: incubation;
   grid-template-rows: auto minmax(0, 1fr);
-  background: var(--home-tile-bg-strong);
+  background: var(--home-tile-bg-soft);
 }
 
 #home-view .home-tile-notebook-pages {
   grid-area: notebook;
   grid-template-rows: auto minmax(0, 1fr);
-}
-
-#home-view .home-tile-actions {
-  grid-area: actions;
-  grid-template-columns: auto minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  align-items: center;
-  background: var(--home-tile-bg-strong);
-  overflow: hidden;
 }
 
 #home-view .home-tile-head {
@@ -134,15 +129,16 @@ body.theme-night #home-view {
 
 #home-view .home-tile-head h2 {
   margin: 0;
-  color: var(--home-tile-text);
-  font-size: clamp(1rem, 1.05vw, 1.14rem);
-  line-height: 1.18;
+  color: var(--strong);
+  font-size: 1.04rem;
+  font-weight: 650;
+  line-height: 1.15;
 }
 
 #home-view .home-tile .small-note {
   color: var(--home-tile-muted);
   margin: 0;
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   line-height: 1.25;
 }
 
@@ -365,15 +361,47 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
   height: 100%;
 }
 
+#home-view .home-contribution-display {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  min-height: 0;
+  overflow: hidden;
+}
+
 #home-view .home-contribution-map {
   display: grid;
   gap: 8px;
   align-content: center;
-  justify-items: center;
+  justify-items: start;
   min-width: 0;
-  overflow: visible;
-  padding: 8px 0 12px;
-  border-bottom: 1px solid var(--home-tile-line-soft);
+  overflow: hidden;
+  padding: 2px 0;
+}
+
+#home-view .home-contribution-streak {
+  display: grid;
+  justify-items: end;
+  align-content: center;
+  justify-self: end;
+  gap: 2px;
+  max-width: 132px;
+  text-align: right;
+}
+
+#home-view .home-contribution-streak-num {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 650;
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: var(--home-tile-text);
+  font-variant-numeric: tabular-nums;
+}
+
+#home-view .home-contribution-streak-label {
+  font-size: 0.78rem;
+  color: var(--home-tile-muted);
 }
 
 #home-view .home-contribution-months {
@@ -487,24 +515,33 @@ body.theme-night #home-view .dashboard-incubation-action:focus-visible {
   font-size: 0.72rem;
 }
 
-#home-view .home-contribution-quick-log {
+#home-view .home-quicklog-body {
   display: grid;
-  grid-template-rows: auto minmax(92px, 0.9fr) minmax(0, 0.82fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 10px;
   min-height: 0;
-  padding-top: 0;
 }
 
-#home-view .home-contribution-quick-log-head {
-  display: grid;
-  gap: 3px;
+#home-view .home-quicklog-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
-#home-view .home-contribution-quick-log-head h3 {
-  margin: 0;
+#home-view .home-tile .home-quicklog-chip {
+  padding: 4px 10px;
+  border: 1px solid var(--home-tile-line);
+  border-radius: 999px;
+  background: var(--home-tile-bg-soft);
   color: var(--home-tile-text);
-  font-size: 0.95rem;
-  line-height: 1.2;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+#home-view .home-tile .home-quicklog-chip:hover,
+#home-view .home-tile .home-quicklog-chip:focus-visible {
+  background: var(--surface-subtle);
 }
 
 #home-view .home-quick-log-input-wrap {
@@ -829,6 +866,34 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
   color: var(--danger);
 }
 
+#home-view .dashboard-timer-active-track {
+  height: 4px;
+  margin-top: 2px;
+  border-radius: 999px;
+  background: var(--home-tile-line-soft);
+  overflow: hidden;
+}
+
+#home-view .dashboard-timer-active-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 0.4s linear;
+}
+
+#home-view .dashboard-timer-active-fill.is-warn {
+  background: var(--palette-hex-b07d18, #b07d18);
+}
+
+#home-view .dashboard-timer-active-row.is-alert .dashboard-timer-active-fill {
+  background: var(--danger);
+}
+
+#home-view .dashboard-timer-active-value.is-warn,
+#home-view .dashboard-timer-active-row.is-warn .dashboard-timer-active-detail {
+  color: var(--palette-hex-b07d18, #b07d18);
+}
+
 #home-view .home-timer-open-btn {
   justify-content: center;
   width: 100%;
@@ -1069,70 +1134,10 @@ body.theme-night #home-view .home-incubation-delete-btn:focus-visible {
   color: var(--palette-white);
 }
 
-#home-view .home-action-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-template-rows: minmax(0, 1fr);
-  align-content: stretch;
-  gap: 8px;
-  min-height: 0;
-  overflow: hidden;
-}
-
-#home-view .home-tile-actions .home-tile-head {
-  min-width: max-content;
-}
-
-#home-view .home-tile-actions .small-note:empty {
-  display: none;
-}
-
-#home-view .home-tile .home-action-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  min-height: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border-color: var(--home-tile-line-soft);
-  background: var(--palette-white);
-  overflow: hidden;
-  font-size: 0.9rem;
-  text-align: center;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-#home-view .home-tile .home-action-btn:hover,
-#home-view .home-tile .home-action-btn:focus-visible {
-  background: var(--palette-white);
-  border-color: var(--home-tile-line);
-}
-
-body.theme-night #home-view .home-tile .home-action-btn,
-body.theme-night #home-view .home-tile .home-action-btn:hover,
-body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
-  border-color: var(--home-tile-control-border);
-  background: var(--home-tile-control-bg);
-  color: var(--home-tile-text);
-}
-
-#home-view .home-action-btn:hover,
-#home-view .home-action-btn:focus-visible {
-  background: transparent;
-  border-color: var(--home-tile-line);
-}
-
 @media (max-height: 980px) and (min-width: 901px) {
   #home-view {
-    --home-gap: 12px;
-    --home-tile-padding: 14px;
-    --home-tile-inner-gap: 10px;
-    --home-top-row: minmax(220px, 0.96fr);
-    --home-middle-row: minmax(150px, 0.48fr);
-    --home-bottom-row: minmax(150px, 0.48fr);
-    --contribution-cell-size: 14px;
+    /* keep prototype card spacing; only the bottom heatmap row tightens */
+    --home-bottom-row: minmax(168px, 0.54fr);
   }
 
   
@@ -1151,12 +1156,8 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
 
 @media (max-height: 860px) and (min-width: 901px) {
   #home-view {
-    --home-gap: 10px;
-    --home-tile-padding: 12px;
-    --home-tile-inner-gap: 8px;
-    --home-top-row: minmax(198px, 0.92fr);
-    --home-middle-row: minmax(132px, 0.46fr);
-    --home-bottom-row: minmax(132px, 0.46fr);
+    /* keep prototype card spacing; tighten only the heatmap on short screens */
+    --home-bottom-row: minmax(150px, 0.5fr);
     --contribution-cell-size: 11px;
   }
 
@@ -1168,16 +1169,11 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
 
   #home-view .dashboard-local-date,
 #home-view .small-note {
-    font-size: 0.84rem;
+    font-size: 0.8rem;
   }
 
   #home-view .dashboard-timer-active-value {
     font-size: 1.05rem;
-  }
-
-  #home-view .home-action-btn {
-    padding: 8px 11px;
-    font-size: 0.9rem;
   }
 
   #home-view .home-dialog-overlay {
@@ -1195,18 +1191,18 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
   #home-view .home-layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
-      "contribution notebook"
-      "contribution notebook"
-      "timer timer"
-      "passage incubation"
-      "actions actions";
-    grid-template-rows: repeat(2, minmax(300px, auto)) minmax(220px, auto) minmax(180px, auto) minmax(92px, auto);
+      "timer notebook"
+      "timer notebook"
+      "quicklog quicklog"
+      "contribution contribution"
+      "passage incubation";
+    grid-template-rows: repeat(2, minmax(220px, auto)) minmax(200px, auto) minmax(200px, auto) minmax(180px, auto);
     height: auto;
     min-height: auto;
   }
 
   #home-view .home-tile-timer {
-    grid-template-rows: auto auto minmax(120px, 1fr);
+    grid-template-rows: auto auto minmax(120px, 1fr) auto;
   }
 }
 
@@ -1220,29 +1216,16 @@ body.theme-night #home-view .home-tile .home-action-btn:focus-visible {
   #home-view .home-layout {
     grid-template-columns: 1fr;
     grid-template-areas:
-      "contribution"
-      "notebook"
       "timer"
-      "actions"
+      "quicklog"
+      "notebook"
+      "contribution"
       "passage"
       "incubation";
     grid-template-rows: none;
     min-height: auto;
   }
 
-  #home-view .home-action-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: repeat(4, minmax(44px, auto));
-  }
-
-  #home-view .home-tile-actions {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  
-  
-  
   #home-view .home-timer-form-row {
     grid-template-columns: 1fr;
   }

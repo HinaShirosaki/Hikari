@@ -319,7 +319,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.llm.apiEndpoint, 'https://api.openai.com/v1/responses');
   assert.equal(payloadSeen.llm.apiKey, 'sk-local-key');
   assert.equal(payloadSeen.agent.developerMode, false);
-  assert.equal(payloadSeen.agent.deepResearchEnabled, false);
+  assert.equal(Object.hasOwn(payloadSeen.agent, 'deepResearchEnabled'), false);
   assert.equal(payloadSeen.projectId, 'p1');
   assert.equal(payloadSeen.stateSnapshot.snapshot_mode, 'thin');
   assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/hikari-data.ena.json');
@@ -464,7 +464,7 @@ test('paper rail selected text is carried as hidden one-shot agent context', () 
       llm: { provider: 'codex', model: 'gpt-5' },
       agent: { developerMode: false }
     },
-    agentChat: { projectId: '', messages: [], deepResearchEnabled: false },
+    agentChat: { projectId: '', messages: [] },
     agentChatContext: {
       sessionPrompt: 'You are reading the active paper markdown.',
       paperId: 'paper-1',
@@ -523,7 +523,7 @@ test('paper rail quick prompts load a common prompt into the composer', () => {
     state: {
       projects: [],
       settings: {},
-      agentChat: { projectId: '', messages: [], sessions: [], deepResearchEnabled: false }
+      agentChat: { projectId: '', messages: [], sessions: [] }
     },
     persist: () => {},
     createId: () => 'agent-msg-1',

@@ -33,7 +33,6 @@ function normalizeAgentChatState(source = {}, defaults = {}) {
   const hasProjectId = Object.prototype.hasOwnProperty.call(value, 'projectId');
   return {
     projectId: trimText(hasProjectId ? value.projectId : defaults.projectId, 120),
-    deepResearchEnabled: value.deepResearchEnabled === true,
     currentSessionId: trimText(value.currentSessionId, 120),
     sessions: asArray(value.sessions),
     messages: asArray(value.messages)

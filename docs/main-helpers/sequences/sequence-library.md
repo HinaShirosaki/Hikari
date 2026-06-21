@@ -71,7 +71,7 @@ It returns features plus their host-vector occurrences, which makes it a richer 
 
 ## Backbone recognition
 
-`recognizeSequenceBackbone(...)` is orchestrated by `sequence-library/backbone-service.js`. The process-neutral matcher lives in `src/shared/sequence/sequence-backbone-recognition/`, alongside its circular-annotation, ORF, and restriction-feature dependencies.
+`recognizeSequenceBackbone(...)` is orchestrated by `sequence-library/backbone-service.js`. The process-neutral matcher lives in `src/renderer/modules/sequence-viewer/algorithms/sequence-backbone-recognition/`, alongside its circular-annotation, ORF, and restriction-feature dependencies.
 
 At a high level it:
 

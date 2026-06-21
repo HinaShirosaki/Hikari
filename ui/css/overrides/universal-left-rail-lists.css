@@ -244,3 +244,12 @@ body.theme-night {
 #protocol-management-view .left-rail-template__rail .protocol-list-row {
   border-radius: 0 !important;
 }
+
+/* Tool rows use full-width dividers; round only the selected highlight. */
+#tool-box-view .left-rail-template__rail .tool-tile .label {
+  border-radius: 0 !important;
+}
+
+#tool-box-view .left-rail-template__rail .tool-tile-active .label {
+  border-radius: var(--hikari-left-rail-list-radius) !important;
+}

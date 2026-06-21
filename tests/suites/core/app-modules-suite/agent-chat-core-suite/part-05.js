@@ -7,7 +7,6 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
     'agent-project-select',
     'agent-chat-history',
     'agent-message-input',
-    'agent-deep-research-toggle-btn',
     'agent-send-btn',
     'agent-clear-btn',
     'agent-status'
@@ -298,123 +297,6 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
   assert.equal(state.notebookEntries.length, 1);
   assert.equal(openedNotebookEntryId, state.notebookEntries[0].id);
   assert.equal(status.textContent, 'Opened planned notebook page.');
-});
-test('agent-chat toggles deep research mode and sends it in the chat payload', async () => {
-  const document = createMockDocument([
-    'agent-project-select',
-    'agent-chat-history',
-    'agent-message-input',
-    'agent-deep-research-toggle-btn',
-    'agent-send-btn',
-    'agent-clear-btn',
-    'agent-status'
-  ]);
-  const messageInput = document.getElementById('agent-message-input');
-  const toggleBtn = document.getElementById('agent-deep-research-toggle-btn');
-  const sendBtn = document.getElementById('agent-send-btn');
-
-  let payloadSeen = null;
-  const state = {
-    projects: [],
-    protocols: [],
-    notebookEntries: [],
-    assays: [],
-    gelAnalyses: [],
-    workflows: [],
-    papers: [],
-    inventory: {},
-    labInventory: { chemicals: [] },
-    settings: {
-      llm: {
-        model: 'gpt-5',
-        apiEndpoint: 'https://api.openai.com/v1/responses',
-        apiKey: 'sk-local-key'
-      },
-      agent: {
-        developerMode: false
-      }
-    },
-    agentChat: {
-      projectId: '',
-      deepResearchEnabled: false,
-      messages: []
-    }
-  };
-
-  const window = {
-    hikariApi: {
-      autoSaveDataFile: async () => ({
-        ok: true,
-        filePath: '/tmp/hikari-data.ena.json'
-      }),
-      agentChat: async (payload) => {
-        payloadSeen = payload;
-        return {
-          ok: true,
-          parser: {
-            primary_intent: 'general_science_question',
-            needs_clarification: false,
-            clarification_reason: null,
-            entities: {},
-            inventory_search: {
-              normalized_query: null,
-              candidate_terms: [],
-              aliases: [],
-              search_mode: null
-            },
-            protocol_candidates: [],
-            reasoning_summary: 'Use deep research.'
-          },
-          general_science_question: {
-            status: 'completed',
-            answer: 'Deep research answer.',
-            execution_mode: 'deep_research',
-            citations: [],
-            decision_record: {
-              assumptions: [],
-              open_questions: [],
-              verification_notes: []
-            },
-            rounds_executed: 1,
-            follow_up_questions: []
-          },
-          developer_trace: []
-        };
-      }
-    }
-  };
-
-  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
-    document,
-    window
-  });
-  const agent = agentModule.initAgentChat({
-    state,
-    persist: () => {},
-    createId: (() => {
-      let idx = 0;
-      return () => `agent-msg-${idx += 1}`;
-    })(),
-    safeText: shared.safeText,
-    onNotebookEntriesChanged: () => {}
-  });
-
-  agent.render();
-  assert.equal(toggleBtn.textContent, 'Deep Research: Off');
-
-  trigger(toggleBtn, 'click');
-  assert.equal(state.agentChat.deepResearchEnabled, true);
-  assert.equal(toggleBtn.textContent, 'Deep Research: On');
-
-  messageInput.value = 'Why did the yield drop?';
-  trigger(sendBtn, 'click');
-  await flushAsync();
-  await flushAsync();
-
-  assert.equal(payloadSeen.agent.developerMode, false);
-  assert.equal(payloadSeen.agent.deepResearchEnabled, true);
-  assert.equal(state.agentChat.messages.length, 2);
-  assert.equal(state.agentChat.messages[1].meta.general_science_question.execution_mode, 'deep_research');
 });
   }
 };

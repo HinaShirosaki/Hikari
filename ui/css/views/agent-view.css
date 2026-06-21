@@ -1257,12 +1257,6 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   border-radius: 999px;
 }
 
-#agent-deep-research-toggle-btn[data-enabled="true"] {
-  border-color: color-mix(in srgb, var(--accent) 34%, var(--line));
-  background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--strong);
-}
-
 .agent-empty-state {
   width: min(100%, 760px);
   margin: clamp(48px, 11vh, 110px) auto 0;

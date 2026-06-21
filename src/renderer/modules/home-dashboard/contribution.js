@@ -4,7 +4,7 @@ import { formatDateLocal, normalizeNotebookState } from './utils.js';
 // notebook entries, completed protocol steps, file uploads, analysis notes,
 // and quick logs into per-day buckets.
 export function initContributionWidget({ state, safeText, elements }) {
-  const { monthLabels, grid } = elements;
+  const { monthLabels, grid, streak } = elements;
 
   function createContributionBucket() {
     return {
@@ -275,8 +275,28 @@ export function initContributionWidget({ state, safeText, elements }) {
     `).join('');
   }
 
+  function computeLoggingStreak(dayMap) {
+    const cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+    // Keep an unbroken streak visible until a full day is actually missed:
+    // if today has no activity yet, count from yesterday.
+    if (!((dayMap.get(formatDateLocal(cursor))?.total || 0) > 0)) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    let count = 0;
+    while ((dayMap.get(formatDateLocal(cursor))?.total || 0) > 0) {
+      count += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return count;
+  }
+
   function render() {
-    renderContributionWidget(collectContributionActivity());
+    const dayMap = collectContributionActivity();
+    renderContributionWidget(dayMap);
+    if (streak) {
+      streak.textContent = String(computeLoggingStreak(dayMap));
+    }
   }
 
   return {

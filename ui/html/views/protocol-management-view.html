@@ -38,20 +38,8 @@
                 <button type="button" id="protocol-cancel-btn" class="ghost-btn">Cancel</button>
               </div>
             </div>
-            <div id="protocol-json-import-panel" class="stack-form protocol-json-import-panel">
-              <h4>Import Protocol JSON</h4>
-              <label>
-                JSON File
-                <input id="protocol-json-import-file" type="file" accept=".json,.ena,application/json" />
-              </label>
-              <label>
-                Or Paste JSON
-                <textarea id="protocol-json-import-input" rows="4" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
-              </label>
-              <div class="form-actions">
-                <button type="button" id="import-protocol-json-btn" class="ghost-btn">Import Protocol JSON</button>
-              </div>
-              <p id="protocol-json-import-status" class="small-note">Import one or more protocols from JSON.</p>
+            <div id="protocol-json-import-panel" class="form-actions protocol-json-import-launcher">
+              <button type="button" id="open-protocol-json-import-btn" class="ghost-btn">Import Protocol JSON</button>
             </div>
             <form id="protocol-form" class="stack-form">
               <label>
@@ -110,6 +98,32 @@
               </div>
             </div>
             <div id="protocol-view-content" class="stack-form"></div>
+          </div>
+
+          <div id="protocol-json-import-overlay" class="protocol-json-import-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+            <section class="protocol-json-import-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="protocol-json-import-title">
+              <div class="app-dialog-head">
+                <div>
+                  <span class="protocol-detail-mode">Import</span>
+                  <h3 id="protocol-json-import-title">Import Protocol JSON</h3>
+                </div>
+                <button type="button" id="protocol-json-import-close-btn" class="ghost-btn">Close</button>
+              </div>
+              <div class="stack-form">
+                <label>
+                  Choose JSON File
+                  <input id="protocol-json-import-file" type="file" accept=".json,.ena,application/json" />
+                </label>
+                <label>
+                  Or Paste JSON
+                  <textarea id="protocol-json-import-input" rows="8" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
+                </label>
+                <p id="protocol-json-import-status" class="small-note">Import one or more protocols from JSON.</p>
+                <div class="form-actions">
+                  <button type="button" id="import-protocol-json-btn" class="primary-btn">Import Protocol JSON</button>
+                </div>
+              </div>
+            </section>
           </div>
 
           <div id="protocol-generate-input-overlay" class="protocol-generate-overlay app-dialog-overlay app-dialog-overlay--top" hidden>

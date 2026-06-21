@@ -226,12 +226,20 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(detailBlock, /id="sequence-viewer-restriction-thermo-toggle"/);
     });
 
-    test('tool box no longer exposes the protein builder subview', () => {
+    test('tool box no longer owns Sequence Viewer cloning or protein-builder code', () => {
       const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
       const source = readSource('src/renderer/modules/tool-box.js');
       assert.equal(html.includes('tool-protein-assembly-view'), false);
       assert.equal(html.includes('Protein Assembler'), false);
       assert.equal(source.includes('initProteinAssemblyTool'), false);
+      assert.equal(source.includes('cloning-assembly'), false);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box', 'cloning-assembly.js')), false);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box', 'protein-assembly.js')), false);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-assembly.js')), true);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'assembly-model.js')), true);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'shared', 'sequence-viewer')), false);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'algorithms', 'sequence-backbone-recognition.js')), true);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'data', 'commercial-restriction-enzymes.js')), true);
     });
 
     test('sequence viewer map preview renderer omits metadata text overlays', () => {

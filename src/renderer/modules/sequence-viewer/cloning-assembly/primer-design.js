@@ -3,8 +3,7 @@ import { asArray, normalizeSequence } from './sequence-utils.js';
 import { normalizeEditRequest } from './edit-map.js';
 import { selectBindingWindow } from './overlap-windows.js';
 import { buildPrimerRecord, summarizePrimerPlan } from './primer-records.js';
-import { designRestrictionLigationPrimers } from './assembly-primers.js';
-import { designAssemblyPrimersForRoute } from './assembly-primers.js';
+import { designAssemblyPrimersForRoute, designRestrictionLigationPrimers } from './assembly-primers.js';
 import { designMutagenesisPrimers } from './mutagenesis.js';
 import { designWithThresholdFallback } from './strategy.js';
 

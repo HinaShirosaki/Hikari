@@ -635,6 +635,23 @@ export function createWorkflowRenderer(config = {}) {
                     ? runtime.activeBlockId
                     : '')
                   : '';
+                const stepCount = layout.mainPath.length;
+                const completedTrackMarkup = entry
+                  ? layout.mainPath.slice(0, -1).map((block, index) => {
+                      const stepState = getWorkflowStepState(entry, block.id);
+                      const nextStepState = getWorkflowStepState(entry, layout.mainPath[index + 1].id);
+                      if (stepState.status !== 'completed' || nextStepState.status !== 'completed') {
+                        return '';
+                      }
+                      return `
+                        <span
+                          class="workflow-progress-track-complete"
+                          style="--workflow-track-segment-left: ${((index + 0.5) / stepCount) * 100}%; --workflow-track-segment-width: ${100 / stepCount}%;"
+                          aria-hidden="true"
+                        ></span>
+                      `;
+                    }).join('')
+                  : '';
                 return `
                   <tr class="workflow-entry-row workflow-run-row${expanded ? ' is-expanded' : ''}" data-workflow-run-open="${safeText(workflow.id)}">
                     <td class="workflow-entry-cell">
@@ -646,29 +663,22 @@ export function createWorkflowRenderer(config = {}) {
                         />
                       </label>
                     </td>
-                    ${layout.mainPath.map((block, index) => {
-                      const stepState = entry ? getWorkflowStepState(entry, block.id) : { status: 'pending' };
-                      const previousBlock = index > 0 ? layout.mainPath[index - 1] : null;
-                      const previousStepState = previousBlock && entry
-                        ? getWorkflowStepState(entry, previousBlock.id)
-                        : null;
-                      const isActive = expanded && activeBlockId === block.id;
-                      const leadingConnectorClass = index > 0 && entry
-                        ? (previousStepState?.status === 'completed'
-                          && stepState.status === 'completed'
-                          ? ' is-complete'
-                          : '')
-                        : '';
-                      const trailingConnectorClass = index < layout.mainPath.length - 1 && entry
-                        ? (stepState.status === 'completed'
-                          && getWorkflowStepState(entry, layout.mainPath[index + 1].id).status === 'completed'
-                          ? ' is-complete'
-                          : '')
-                        : '';
-                      const dotState = classifyWorkflowDot(stepState, block.id, activeBlockId, progress);
-                      return `
-                        <td class="workflow-progress-cell${isActive ? ' has-popover' : ''}">
-                          ${entry ? `
+                    <td class="workflow-progress-track-cell" colspan="${stepCount}">
+                      <div
+                        class="workflow-progress-track-grid"
+                        style="--workflow-step-count: ${stepCount}; --workflow-track-inset: ${50 / stepCount}%;"
+                      >
+                        ${entry ? `
+                          <span class="workflow-progress-track-line" aria-hidden="true"></span>
+                          ${completedTrackMarkup}
+                        ` : ''}
+                        ${layout.mainPath.map((block) => {
+                          const stepState = entry ? getWorkflowStepState(entry, block.id) : { status: 'pending' };
+                          const isActive = expanded && activeBlockId === block.id;
+                          const dotState = classifyWorkflowDot(stepState, block.id, activeBlockId, progress);
+                          return `
+                            <div class="workflow-progress-cell${isActive ? ' has-popover' : ''}">
+                              ${entry ? `
                             <button
                               type="button"
                               class="workflow-progress-node ${dotState.className}${isActive ? ' is-active' : ''}"
@@ -679,14 +689,14 @@ export function createWorkflowRenderer(config = {}) {
                               aria-label="${safeText(`${titleForBlock(block)} for ${workflow.name || 'workflow'}: ${dotState.title}`)}"
                               title="${safeText(dotState.title)}"
                             >
-                              ${index > 0 ? `<span class="workflow-progress-connector workflow-progress-connector-start${leadingConnectorClass}"></span>` : ''}
                               <span class="workflow-progress-dot"></span>
-                              ${index < layout.mainPath.length - 1 ? `<span class="workflow-progress-connector workflow-progress-connector-end${trailingConnectorClass}"></span>` : ''}
                             </button>
-                          ` : '<span class="small-note">-</span>'}
-                        </td>
-                      `;
-                    }).join('')}
+                              ` : '<span class="small-note">-</span>'}
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    </td>
                   </tr>
                 `;
               }).join('')}

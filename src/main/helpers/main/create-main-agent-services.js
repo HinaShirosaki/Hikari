@@ -114,6 +114,9 @@ function createMainAgentServices(deps = {}) {
   const normalizeLlmProvider = typeof deps.normalizeLlmProvider === 'function'
     ? deps.normalizeLlmProvider
     : null;
+  const normalizeAgentLlmProvider = typeof deps.normalizeAgentLlmProvider === 'function'
+    ? deps.normalizeAgentLlmProvider
+    : null;
   const defaultLlmEndpointForProvider = typeof deps.defaultLlmEndpointForProvider === 'function'
     ? deps.defaultLlmEndpointForProvider
     : null;
@@ -196,6 +199,7 @@ function createMainAgentServices(deps = {}) {
     DEFAULT_AGENT_MODELS,
     inferLlmProviderFromEndpoint,
     normalizeLlmProvider,
+    normalizeAgentLlmProvider,
     defaultLlmEndpointForProvider,
     defaultAgentModelForProvider,
     asArray,

@@ -1,5 +1,5 @@
 import { escapeHtml } from '../tool-box/common.js';
-import { assembleCloningPlan } from '../tool-box/cloning-assembly.js';
+import { assembleCloningPlan } from './cloning-assembly.js';
 import { cleanText, clamp, normalizeSequenceText } from './shared.js';
 import { copyPrimerValueFromEvent, renderPrimerCopyButton } from './primer-copy.js';
 

@@ -37,7 +37,8 @@ export function initHomeDashboard({
 
   const contributionElements = {
     monthLabels: document.getElementById('dashboard-contribution-months'),
-    grid: document.getElementById('dashboard-contribution-grid')
+    grid: document.getElementById('dashboard-contribution-grid'),
+    streak: document.getElementById('dashboard-contribution-streak')
   };
 
   const incubationElements = {
@@ -55,7 +56,8 @@ export function initHomeDashboard({
     quickLogStatus: document.getElementById('dashboard-quick-log-status'),
     quickLogSaveBtn: document.getElementById('dashboard-quick-log-save-btn'),
     quickLogAgentBtn: document.getElementById('dashboard-quick-log-agent-btn'),
-    quickActionButtons: [...document.querySelectorAll('[data-dashboard-action]')]
+    quickActionButtons: [...document.querySelectorAll('[data-dashboard-action]')],
+    quickLogChips: [...document.querySelectorAll('[data-dashboard-quicklog-chip]')]
   };
 
   const notebookElements = {

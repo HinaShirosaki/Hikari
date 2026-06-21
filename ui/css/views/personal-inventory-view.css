@@ -278,6 +278,13 @@
   min-height: 520px;
 }
 
+.well-grid-column {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
 .falcon-grid-panel {
   display: grid;
   justify-items: center;
@@ -730,7 +737,7 @@
 .well-saved-sample-fill {
   display: grid;
   gap: 8px;
-  margin: 10px 0 12px;
+  margin: 0;
   padding: 10px;
   border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
   border-radius: 8px;

@@ -16,11 +16,10 @@ export function createAgentChatShellController({
 
   function ensureAgentState() {
     if (!state.agentChat || typeof state.agentChat !== 'object') {
-      state.agentChat = { projectId: '', deepResearchEnabled: false, currentSessionId: '', sessions: [], messages: [] };
+      state.agentChat = { projectId: '', currentSessionId: '', sessions: [], messages: [] };
       return;
     }
     state.agentChat.projectId = String(state.agentChat.projectId || '');
-    state.agentChat.deepResearchEnabled = state.agentChat.deepResearchEnabled === true;
     state.agentChat.currentSessionId = String(state.agentChat.currentSessionId || '');
     state.agentChat.sessions = asArray(state.agentChat.sessions);
     state.agentChat.messages = asArray(state.agentChat.messages);
@@ -141,17 +140,6 @@ export function createAgentChatShellController({
     }
   }
 
-  function renderDeepResearchToggle() {
-    if (!dom.deepResearchToggleBtn) {
-      return;
-    }
-    ensureAgentState();
-    dom.deepResearchToggleBtn.dataset.enabled = state.agentChat.deepResearchEnabled === true ? 'true' : 'false';
-    dom.deepResearchToggleBtn.textContent = state.agentChat.deepResearchEnabled === true
-      ? 'Deep Research: On'
-      : 'Deep Research: Off';
-  }
-
   function renderContextSummary() {
     // Context summary UI has been removed from the agent rail.
   }
@@ -176,8 +164,7 @@ export function createAgentChatShellController({
       dom.developerToolMessageInput,
       dom.developerRefreshContextBtn,
       dom.developerUseMockResponseBtn,
-      dom.developerMockResponseInput,
-      dom.deepResearchToggleBtn
+      dom.developerMockResponseInput
     ].filter(Boolean).forEach((node) => {
       node.disabled = runtime.inFlight;
     });
@@ -195,7 +182,6 @@ export function createAgentChatShellController({
     ensureAgentState,
     getStoragePath,
     renderContextSummary,
-    renderDeepResearchToggle,
     renderHistoryView,
     renderProjectOptions,
     scrollHistoryToBottom,

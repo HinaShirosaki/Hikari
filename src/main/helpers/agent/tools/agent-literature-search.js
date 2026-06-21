@@ -154,11 +154,6 @@ function parseDateToTimestamp(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function xmlTagValue(block, tagName) {
-  const match = String(block || '').match(new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'));
-  return match?.[1] ? stripHtml(match[1]) : '';
-}
-
 function buildUniProtUrl(accession) {
   const normalized = String(accession || '').trim();
   return normalized ? `https://www.uniprot.org/uniprotkb/${encodeURIComponent(normalized)}` : '';

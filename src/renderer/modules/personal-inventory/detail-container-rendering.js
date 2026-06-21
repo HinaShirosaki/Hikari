@@ -9,12 +9,55 @@ export function createContainerDetailRenderer({
 }) {
   const {
     getLinkedSamples,
+    getSavedSamplesForWellFill,
     getSampleTypeColor,
     getSampleTypeLabel,
     renderSampleLegendForContainer,
     getWellDataForType,
     buildSampleDotFill
   } = helpers;
+
+  function renderSavedSampleFillList() {
+    const samples = typeof getSavedSamplesForWellFill === 'function'
+      ? getSavedSamplesForWellFill()
+      : [];
+    const sampleList = samples.length
+      ? `
+        <div class="well-saved-sample-list" aria-label="Saved samples">
+          ${samples.map((sample) => {
+            const label = sample.code || sample.name || sample.id;
+            const name = sample.name && sample.name !== label ? sample.name : '';
+            const typeLabel = getSampleTypeLabel(sample.type);
+            const typeColor = getSampleTypeColor(sample.type);
+            return `
+              <button
+                type="button"
+                class="well-saved-sample-chip"
+                draggable="true"
+                data-saved-sample-drag="${safeText(sample.id)}"
+                title="${safeText(`${label}${name ? ` - ${name}` : ''}`)}"
+              >
+                <span class="well-saved-sample-copy">
+                  <span class="well-saved-sample-code">${safeText(label)}</span>
+                  ${name ? `<span class="well-saved-sample-name">${safeText(name)}</span>` : ''}
+                </span>
+                <span class="well-saved-sample-type" style="--sample-type-color:${safeText(typeColor)};">${safeText(typeLabel)}</span>
+              </button>
+            `;
+          }).join('')}
+        </div>
+      `
+      : '<p class="small-note well-saved-sample-empty">No saved samples available.</p>';
+
+    return `
+      <div class="well-saved-sample-fill well-saved-sample-fill-global">
+        <div class="well-saved-sample-head">
+          <strong>Saved Samples</strong>
+        </div>
+        ${sampleList}
+      </div>
+    `;
+  }
 
   function renderSingleContainerPreview(section, container) {
     const linkedSamples = getLinkedSamples(section, container.id, null);
@@ -96,23 +139,26 @@ export function createContainerDetailRenderer({
         <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
         <p class="small-note">${safeText(layout.helperText)}</p>
         <div class="well-editor-shell">
-          <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">
-            ${layout.className === 'plate96'
-              ? `
-                <div class="plate96-shell">
-                  <span class="plate96-corner" aria-hidden="true"></span>
-                  <div class="plate96-col-labels" aria-hidden="true">${columnLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
-                  <div class="plate96-row-labels" aria-hidden="true">${rowLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
-                  <div class="plate96-well-area">
-                    <span class="plate96-skirt-shape" aria-hidden="true"></span>
-                    <span class="plate96-skirt-edge" aria-hidden="true"></span>
-                    <div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>
+          <div class="well-grid-column">
+            <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">
+              ${layout.className === 'plate96'
+                ? `
+                  <div class="plate96-shell">
+                    <span class="plate96-corner" aria-hidden="true"></span>
+                    <div class="plate96-col-labels" aria-hidden="true">${columnLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
+                    <div class="plate96-row-labels" aria-hidden="true">${rowLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
+                    <div class="plate96-well-area">
+                      <span class="plate96-skirt-shape" aria-hidden="true"></span>
+                      <span class="plate96-skirt-edge" aria-hidden="true"></span>
+                      <div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>
+                    </div>
                   </div>
-                </div>
-              `
-              : `<div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>`
-            }
-            ${renderSampleLegendForContainer(section, container)}
+                `
+                : `<div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>`
+              }
+              ${renderSampleLegendForContainer(section, container)}
+            </div>
+            ${renderSavedSampleFillList()}
           </div>
           ${renderWellEditor(section, container, uiState.editingWellIndex)}
         </div>

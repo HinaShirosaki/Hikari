@@ -12,6 +12,7 @@ const {
   requestCodexCliText
 } = require('../../lib/codex-cli-provider');
 const {
+  ALLOW_API_AGENT,
   LLM_PROVIDERS
 } = require('../../generated/llm-provider-config.generated.js');
 const {
@@ -68,6 +69,7 @@ function createIpcServiceDefinitions(context = {}) {
         const agents = dependencies['agent-controllers'];
         registerAgentIpc({
           ipcMain,
+          ALLOW_API_AGENT,
           LLM_PROVIDERS,
           cleanText,
           controllerUtils: agents.controllerUtils,

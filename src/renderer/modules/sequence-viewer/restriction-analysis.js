@@ -1,5 +1,5 @@
-import { COMMERCIAL_RESTRICTION_ENZYMES } from '../../../shared/data/commercial-restriction-enzymes.js';
-import * as sharedRestrictionFeatures from '../../../shared/sequence/restriction-features.js';
+import { COMMERCIAL_RESTRICTION_ENZYMES } from './data/commercial-restriction-enzymes.js';
+import * as sharedRestrictionFeatures from './algorithms/restriction-features.js';
 import {
   FALLBACK_CHAR_ADVANCE_PX,
   RESTRICTION_VENDOR_CODE_BY_KEY,

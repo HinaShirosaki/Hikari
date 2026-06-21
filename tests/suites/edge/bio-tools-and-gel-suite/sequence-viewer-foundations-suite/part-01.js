@@ -32,7 +32,14 @@ test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () 
     'countAmbiguousBases',
     'summarizeFastqQuality',
     'renderAlignmentTracePanelHtml',
-    'buildCircularPreviewHtmlDocument'
+    'buildCircularPreviewHtmlDocument',
+    'assembleCloningPlan',
+    'evaluateOverlapPcr',
+    'evaluateGibsonAssembly',
+    'evaluateRestrictionLigation',
+    'evaluateSiteDirectedMutagenesis',
+    'designCloningPrimers',
+    'designPcrPrimerPair'
   ].forEach((name) => {
     assert.equal(typeof sequenceViewerInternals[name], 'function');
   });

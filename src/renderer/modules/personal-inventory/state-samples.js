@@ -28,17 +28,10 @@ export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
     return (state.samples || []).find((sample) => sample.id === sampleId) || null;
   }
 
-  function getSavedSamplesForWellFill({ section = '', containerId = '', wellIndex = null } = {}) {
+  function getSavedSamplesForWellFill() {
     ensureSamples();
     return state.samples
       .filter((sample) => sample && sample.id)
-      .filter((sample) => {
-        const link = sample.inventoryLink;
-        if (!link || link.section !== section || link.containerId !== containerId) {
-          return true;
-        }
-        return Number(link.wellIndex) !== Number(wellIndex);
-      })
       .sort((a, b) => String(a.code || a.name || a.id).localeCompare(String(b.code || b.name || b.id)));
   }
 

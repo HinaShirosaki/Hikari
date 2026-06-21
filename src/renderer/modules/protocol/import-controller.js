@@ -91,6 +91,21 @@ export function createProtocolImportController({
       ui.protocolJsonImportFileInput.value = '';
     }
     setProtocolJsonImportStatus(defaultProtocolJsonImportStatus);
+    closeProtocolJsonImportOverlay();
+  }
+
+  function openProtocolJsonImportOverlay() {
+    if (!ui.protocolJsonImportOverlay || localState.isCreateEditorMode !== true) {
+      return;
+    }
+    ui.protocolJsonImportOverlay.hidden = false;
+    ui.protocolJsonImportInput?.focus?.();
+  }
+
+  function closeProtocolJsonImportOverlay() {
+    if (ui.protocolJsonImportOverlay) {
+      ui.protocolJsonImportOverlay.hidden = true;
+    }
   }
 
   function syncProtocolImportPanelVisibility() {
@@ -98,6 +113,9 @@ export function createProtocolImportController({
       return;
     }
     ui.protocolJsonImportPanel.hidden = !localState.isCreateEditorMode;
+    if (!localState.isCreateEditorMode) {
+      closeProtocolJsonImportOverlay();
+    }
   }
 
   function importProtocolsFromJson(rawInput, options = {}) {
@@ -151,14 +169,20 @@ export function createProtocolImportController({
 
     if (result.importedProtocols.length === 1) {
       setProtocolJsonImportStatus(`Imported "${result.importedProtocols[0].name}".`);
+      closeProtocolJsonImportOverlay();
       return;
     }
     setProtocolJsonImportStatus(`Imported ${result.importedProtocols.length} protocols.`);
+    closeProtocolJsonImportOverlay();
   }
+
+  closeProtocolJsonImportOverlay();
 
   return {
     setProtocolJsonImportStatus,
     resetProtocolJsonImportUi,
+    openProtocolJsonImportOverlay,
+    closeProtocolJsonImportOverlay,
     syncProtocolImportPanelVisibility,
     importProtocolsFromJson,
     onImportProtocolJson

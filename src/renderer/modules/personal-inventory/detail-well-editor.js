@@ -6,54 +6,9 @@ export function createWellEditorRenderer({
 }) {
   const {
     getLinkedSamples,
-    getSavedSamplesForWellFill,
-    getSampleTypeColor,
-    getSampleTypeLabel,
     renderSampleTypeOptions,
     getWellDataForType
   } = helpers;
-
-  function renderSavedSampleFillList(section, container, index) {
-    const samples = typeof getSavedSamplesForWellFill === 'function'
-      ? getSavedSamplesForWellFill({ section, containerId: container.id, wellIndex: index })
-      : [];
-    const sampleList = samples.length
-      ? `
-        <div class="well-saved-sample-list" aria-label="Saved samples">
-          ${samples.map((sample) => {
-            const label = sample.code || sample.name || sample.id;
-            const name = sample.name && sample.name !== label ? sample.name : '';
-            const typeLabel = getSampleTypeLabel(sample.type);
-            const typeColor = getSampleTypeColor(sample.type);
-            return `
-              <button
-                type="button"
-                class="well-saved-sample-chip"
-                draggable="true"
-                data-saved-sample-drag="${safeText(sample.id)}"
-                title="${safeText(`${label}${name ? ` - ${name}` : ''}`)}"
-              >
-                <span class="well-saved-sample-copy">
-                  <span class="well-saved-sample-code">${safeText(label)}</span>
-                  ${name ? `<span class="well-saved-sample-name">${safeText(name)}</span>` : ''}
-                </span>
-                <span class="well-saved-sample-type" style="--sample-type-color:${safeText(typeColor)};">${safeText(typeLabel)}</span>
-              </button>
-            `;
-          }).join('')}
-        </div>
-      `
-      : '<p class="small-note well-saved-sample-empty">No saved samples available.</p>';
-
-    return `
-      <div class="well-saved-sample-fill">
-        <div class="well-saved-sample-head">
-          <strong>Saved Samples</strong>
-        </div>
-        ${sampleList}
-      </div>
-    `;
-  }
 
   function renderWellEditor(section, container, index) {
     if (!Number.isInteger(index) || index < 0) {
@@ -68,7 +23,6 @@ export function createWellEditorRenderer({
     const linkedSamples = getLinkedSamples(section, container.id, index);
     const activeSample = linkedSamples.find((item) => item.id === uiState.editingSampleId) || null;
     const statusMarkup = uiState.wellEditorStatus ? `<p class="small-note well-editor-status">${safeText(uiState.wellEditorStatus)}</p>` : '';
-    const savedSampleFillList = renderSavedSampleFillList(section, container, index);
     const sampleSelector = linkedSamples.length > 1
       ? `
         <label>
@@ -96,7 +50,6 @@ export function createWellEditorRenderer({
           </div>
         </div>
         ${sampleSelector}
-        ${savedSampleFillList}
         <label>
           Sample Code
           <input data-well-sample-code value="${safeText(activeSample.code || '')}" placeholder="e.g. S-001" />
@@ -136,7 +89,6 @@ export function createWellEditorRenderer({
           </div>
         </div>
         <p class="small-note">No sample linked to this cell yet.</p>
-        ${savedSampleFillList}
         <label>
           Sample Code
           <input data-well-sample-new-code placeholder="e.g. S-001" />

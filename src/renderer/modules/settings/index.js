@@ -1,10 +1,10 @@
 import {
-  DEFAULT_LLM_PROVIDER,
-  LLM_PROVIDER_OPTIONS,
+  DEFAULT_AGENT_LLM_PROVIDER as DEFAULT_LLM_PROVIDER,
+  AGENT_LLM_PROVIDER_OPTIONS as LLM_PROVIDER_OPTIONS,
   apiKeyPlaceholderForProvider,
   defaultLlmEndpointForProvider,
   modelPlaceholderForProvider,
-  normalizeLlmProvider
+  normalizeAgentLlmProvider as normalizeLlmProvider
 } from '../llm-provider-config.generated.js';
 import { createExternalSkillsController } from './external-skills-controller.js';
 import {

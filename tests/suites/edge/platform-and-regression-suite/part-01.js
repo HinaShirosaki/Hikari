@@ -299,11 +299,11 @@ test('[P0] normalizeState resets invalid startup flags to defaults', () => {
     shared.defaultState.settings.startup.rememberLastView
   );
 });
-test('[P1] normalizeState migrates legacy endpoint from llm.api URL', () => {
+test('[P1] normalizeState forces legacy API endpoint settings onto the Codex release agent', () => {
   const normalized = shared.normalizeState({ settings: { llm: { api: 'https://example.com/v1' } } });
-  assert.equal(normalized.settings.llm.apiEndpoint, 'https://example.com/v1');
+  assert.equal(normalized.settings.llm.apiEndpoint, '');
   assert.equal(normalized.settings.llm.apiKey, '');
-  assert.equal(normalized.settings.llm.provider, 'openai');
+  assert.equal(normalized.settings.llm.provider, 'codex');
 });
 test('[P1] normalizeState treats codex:// legacy llm.api as a Codex agent marker', () => {
   const normalized = shared.normalizeState({ settings: { llm: { provider: 'codex', api: 'codex://cli' } } });
@@ -311,20 +311,22 @@ test('[P1] normalizeState treats codex:// legacy llm.api as a Codex agent marker
   assert.equal(normalized.settings.llm.apiEndpoint, '');
   assert.equal(normalized.settings.llm.apiKey, '');
 });
-test('[P1] normalizeState keeps explicit llm.apiKey over legacy llm.api key', () => {
+test('[P1] normalizeState clears API credentials while the release agent is Codex-only', () => {
   const normalized = shared.normalizeState({ settings: { llm: { api: 'legacy-key', apiKey: 'new-key' } } });
-  assert.equal(normalized.settings.llm.apiKey, 'new-key');
+  assert.equal(normalized.settings.llm.provider, 'codex');
+  assert.equal(normalized.settings.llm.apiKey, '');
 });
-test('[P1] normalizeState trims llm.apiEndpoint whitespace', () => {
+test('[P1] normalizeState clears API endpoints while the release agent is Codex-only', () => {
   const normalized = shared.normalizeState({ settings: { llm: { apiEndpoint: '  https://api.example/v1  ' } } });
-  assert.equal(normalized.settings.llm.apiEndpoint, 'https://api.example/v1');
+  assert.equal(normalized.settings.llm.provider, 'codex');
+  assert.equal(normalized.settings.llm.apiEndpoint, '');
 });
-test('[P1] normalizeState keeps explicit llm.provider', () => {
+test('[P1] normalizeState replaces an explicit API provider with Codex in release builds', () => {
   const normalized = shared.normalizeState({ settings: { llm: { provider: 'claude' } } });
-  assert.equal(normalized.settings.llm.provider, 'claude');
-  assert.equal(normalized.settings.llm.apiEndpoint, 'https://api.anthropic.com/v1/messages');
+  assert.equal(normalized.settings.llm.provider, 'codex');
+  assert.equal(normalized.settings.llm.apiEndpoint, '');
 });
-test('[P1] normalizeState infers llm.provider from endpoint', () => {
+test('[P1] normalizeState replaces an inferred API provider with Codex in release builds', () => {
   const normalized = shared.normalizeState({
     settings: {
       llm: {
@@ -332,7 +334,8 @@ test('[P1] normalizeState infers llm.provider from endpoint', () => {
       }
     }
   });
-  assert.equal(normalized.settings.llm.provider, 'gemini');
+  assert.equal(normalized.settings.llm.provider, 'codex');
+  assert.equal(normalized.settings.llm.apiEndpoint, '');
 });
 test('[P1] normalizeState infers llm.provider from legacy codex marker without keeping an endpoint', () => {
   const normalized = shared.normalizeState({

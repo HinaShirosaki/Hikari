@@ -1,4 +1,4 @@
-import { cleanProteinSequence } from './sequence.js';
+import { cleanProteinSequence } from '../../tool-box/sequence.js';
 
 export const PROTEIN_ASSEMBLY_PART_TYPES = Object.freeze([
   { id: 'tag', label: 'Tag' },

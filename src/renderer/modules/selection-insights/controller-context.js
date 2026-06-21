@@ -85,7 +85,6 @@ export async function requestInsightAnswer(ctx, context, selectionContext, actio
       disabledExternalSkillNames: Array.isArray(ctx.state?.settings?.agent?.disabledExternalSkillNames)
         ? ctx.state.settings.agent.disabledExternalSkillNames.map((item) => cleanText(item, 160)).filter(Boolean)
         : [],
-      deepResearchEnabled: false,
       selectionInsight: {
         actionType,
         selectedText: selectionContext.selectedText,

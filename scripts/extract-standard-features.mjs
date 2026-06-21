@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, '..');
 const sourceDir = path.join(projectRoot, 'Exported Standard Features');
-const outputFile = path.join(projectRoot, 'src', 'shared', 'data', 'exported-standard-features.js');
+const outputFile = path.join(projectRoot, 'src', 'renderer', 'modules', 'sequence-viewer', 'data', 'exported-standard-features.js');
 
 function normalizeQualifier(value) {
   return String(value || '')

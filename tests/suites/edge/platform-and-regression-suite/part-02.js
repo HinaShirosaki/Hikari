@@ -285,8 +285,14 @@ moduleExportContracts.forEach(([relativePath, exportName, expectedType], idx) =>
   });
 });
 
-test('[P0] main-process modules do not import renderer implementation files', () => {
+test('[P0] main-process modules do not import renderer UI or controller implementation files', () => {
   const rendererRoot = path.join(__dirname, 'src', 'renderer');
+  const sequenceViewerAlgorithmsRoot = path.join(
+    rendererRoot,
+    'modules',
+    'sequence-viewer',
+    'algorithms'
+  );
   const violations = [];
   listJavaScriptFiles(path.join(__dirname, 'src', 'main')).forEach((filePath) => {
     const source = fs.readFileSync(filePath, 'utf8');
@@ -297,7 +303,12 @@ test('[P0] main-process modules do not import renderer implementation files', ()
     ].map((match) => match[1]).filter((specifier) => specifier.startsWith('.'));
     specifiers.forEach((specifier) => {
       const resolved = path.resolve(path.dirname(filePath), specifier);
-      if (resolved === rendererRoot || resolved.startsWith(`${rendererRoot}${path.sep}`)) {
+      const isSequenceViewerAlgorithm = resolved === sequenceViewerAlgorithmsRoot
+        || resolved.startsWith(`${sequenceViewerAlgorithmsRoot}${path.sep}`);
+      if (
+        !isSequenceViewerAlgorithm
+        && (resolved === rendererRoot || resolved.startsWith(`${rendererRoot}${path.sep}`))
+      ) {
         violations.push(`${path.relative(__dirname, filePath)} -> ${specifier}`);
       }
     });

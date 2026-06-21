@@ -128,20 +128,24 @@ npm run start
 2. Set a `Storage Folder Path` for notebooks, project-linked files, papers, and sequence assets.
 3. Use `Data File` controls to save an initial `.json` or `.ena` file.
 4. Choose startup behavior if you want a default module or "remember last opened module".
-5. Optionally configure an LLM provider for `Papers` and `Agent`.
+5. Sign in to the Codex CLI for `Agent`.
 6. Optionally add a Telegram bot token.
 
 ## AI and Agent Setup
 
 Configure AI features in `Settings > LLM Model & Access`.
 
-Supported providers:
+The shipped agent uses:
+
+- `Codex Agent (CLI)`
+
+API-backed agent providers remain available for development builds when
+`allowApiAgent` is set to `true` in [`config/llm-providers.json`](./config/llm-providers.json):
 
 - `OpenAI`
 - `Gemini`
 - `Claude`
 - `DeepSeek`
-- `Codex Agent (CLI)`
 
 Environment variable fallbacks:
 
@@ -150,7 +154,7 @@ Environment variable fallbacks:
 
 Notes:
 
-- `Papers` and `Agent` require valid LLM settings.
+- `Agent` defaults to Codex and ignores persisted API-agent selections while `allowApiAgent` is `false`.
 - Provider defaults come from [`config/llm-providers.json`](./config/llm-providers.json).
 - DeepSeek uses the OpenAI-compatible Chat Completions API at `https://api.deepseek.com`.
 - Codex Agent mode does not use an API endpoint or API key; it uses the signed-in `codex` CLI plus Hikari MCP tools.

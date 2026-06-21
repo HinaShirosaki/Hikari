@@ -1,4 +1,4 @@
-import { oligoTm } from '../oligo.js';
+import { oligoTm } from '../../tool-box/oligo.js';
 import {
   DEFAULT_CLONING_PREFERENCES,
   DEFAULT_MAX_ENGINEERED_OVERLAP_LENGTH,

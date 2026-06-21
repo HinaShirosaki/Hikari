@@ -1,30 +1,15 @@
 import { CLONING_PRIMER_TM_THRESHOLDS } from './constants.js';
 import { asArray } from './sequence-utils.js';
-import { buildRouteWarnings } from './primer-records.js';
+import { buildRouteWarnings, forwardReversePairs } from './primer-records.js';
 
-// Largest Tm gap between any forward/reverse primer pair (grouped by the shared
-// `<name>_F` / `<name>_R` base). Multi-oligo tile primers carry no `_F`/`_R`
-// suffix and are intentionally excluded here — their compatibility is governed by
-// the overlap Tm cap, not by a forward/reverse pairing.
+// Largest Tm gap between any forward/reverse primer pair. Multi-oligo tile primers
+// carry no `_F`/`_R` suffix and are excluded by forwardReversePairs — their
+// compatibility is governed by the overlap Tm cap, not a forward/reverse pairing.
 function maxForwardReverseTmDifference(primers) {
-  const pairs = new Map();
-  asArray(primers).forEach((primer) => {
-    const match = String(primer?.name || '').match(/^(.*)_([FR])$/);
-    if (!match) {
-      return;
-    }
-    const group = pairs.get(match[1]) || {};
-    group[match[2]] = Number(primer?.tm) || 0;
-    pairs.set(match[1], group);
-  });
-
-  let maxDifference = 0;
-  pairs.forEach((group) => {
-    if (Number.isFinite(group.F) && Number.isFinite(group.R)) {
-      maxDifference = Math.max(maxDifference, Math.abs(group.F - group.R));
-    }
-  });
-  return maxDifference;
+  return forwardReversePairs(primers).reduce(
+    (max, group) => Math.max(max, Math.abs(group.F - group.R)),
+    0
+  );
 }
 
 function overlapTmSpread(overlapSummary) {

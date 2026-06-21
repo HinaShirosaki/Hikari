@@ -1,4 +1,4 @@
-import { assembleCloningPlan } from '../tool-box/cloning-assembly.js';
+import { assembleCloningPlan } from './cloning-assembly.js';
 import { cleanText, normalizeSequenceText } from './shared.js';
 
 const CLONING_NOTEBOOK_SOURCE = 'protein_builder_cloning_assembly';

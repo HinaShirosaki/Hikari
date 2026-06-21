@@ -1,4 +1,4 @@
-import { sanitizeProteinAssemblySequence } from '../../tool-box/protein-assembly.js';
+import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { cleanText } from '../shared.js';
 
 export function installProteinBuilderEvents(ctx) {

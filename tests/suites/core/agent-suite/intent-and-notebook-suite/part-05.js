@@ -471,5 +471,89 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
       assert.equal(result.purchase_recommendation.items[0].vendor, 'sigmaaldrich.com');
       assert.match(String(result.purchase_recommendation.summary || ''), /Sigma and Fisher/i);
     });
+    test('controller core refuses API agent routing when the release feature flag is disabled', async () => {
+      const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
+      let parserCallCount = 0;
+      const lifecycleStages = [];
+      const controller = createAgentControllerCore({
+        deps: {
+          ALLOW_API_AGENT: false,
+          LLM_PROVIDERS: {
+            OPENAI: 'openai',
+            CODEX: 'codex'
+          }
+        },
+        cleanText: (value, maxLength = 2000) => String(value || '').trim().slice(0, maxLength),
+        controllerUtils: {
+          resolveAgentLlmSource: () => ({
+            provider: 'openai',
+            endpoint: 'https://api.openai.com/v1/responses',
+            apiKey: 'development-key',
+            model: 'gpt-test'
+          }),
+          resolveAgentProvider: () => 'openai',
+          extractConversation: () => [],
+          resolveAgentExecutionFlags: () => ({ developerMode: false }),
+          createAgentLlmTraceContext: () => ({
+            enabled: false,
+            rows: [],
+            entries: []
+          }),
+          async requestIntentParserPayload() {
+            parserCallCount += 1;
+            throw new Error('Disabled API agent must not start its parser.');
+          }
+        },
+        observability: {
+          recordLifecycleEvent: (_recorder, event = {}) => {
+            lifecycleStages.push(event.stage || '');
+          }
+        },
+        codexAgentRuntime: null,
+        agentToolRuntime: {
+          normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
+          listSkills: () => [],
+          parseSkillInvocation: (message) => ({
+            type: 'none',
+            active_skill_names: [],
+            cleaned_message: message
+          }),
+          buildSkillsPromptPayload: () => ({
+            active_skills_prompt: '',
+            skills_catalog_prompt: ''
+          })
+        },
+        getAgentChatLogPath: () => '',
+        getDefaultDataFilePath: () => '',
+        setCodexCliModel: () => {},
+        setCodexCliReasoningEffort: () => {},
+        lifecycleService: {
+          normalizeJsonPayload: (payload, fallback = {}) => (
+            payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : fallback
+          ),
+          asArray: (value) => (Array.isArray(value) ? value : [])
+        }
+      });
+
+      const result = await controller.runAgentController({
+        message: 'Try the API agent.',
+        llm: {
+          provider: 'openai',
+          apiKey: 'development-key'
+        },
+        stateSnapshot: {}
+      }, {
+        lifecycleRecorder: {
+          requestId: 'req-api-disabled',
+          events: []
+        }
+      });
+
+      assert.equal(parserCallCount, 0);
+      assert.equal(result.ok, false);
+      assert.equal(result.provider, 'codex');
+      assert.match(result.error, /Codex agent only/);
+      assert.equal(lifecycleStages.includes('controller_api_agent_disabled'), true);
+    });
   }
 };

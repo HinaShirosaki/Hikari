@@ -340,12 +340,15 @@ test('personal-inventory fills a well by dragging a saved sample', () => {
   const openBtn = inventorySections.querySelectorAll('[data-container-open]')[0];
   openBtn.dataset.section = '-20 Degree';
   trigger(openBtn, 'click');
+  assert.match(inventorySections.innerHTML, /well-saved-sample-fill-global/);
+  assert.match(inventorySections.innerHTML, /data-saved-sample-drag="sample-drag"/);
+  assert.match(inventorySections.innerHTML, /Select one cell to edit well and sample information/);
   const firstWellBtn = inventorySections.querySelectorAll('[data-well-index]')[0];
   firstWellBtn.dataset.section = '-20 Degree';
   firstWellBtn.dataset.containerId = 'box-drag';
   trigger(firstWellBtn, 'click');
 
-  assert.match(inventorySections.innerHTML, /data-saved-sample-drag="sample-drag"/);
+  assert.match(inventorySections.innerHTML, /well-saved-sample-fill-global/);
 
   const transferStore = new Map();
   const dataTransfer = {

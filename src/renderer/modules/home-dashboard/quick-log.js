@@ -21,7 +21,8 @@ export function initQuickLogWidget({
     quickLogStatus,
     quickLogSaveBtn,
     quickLogAgentBtn,
-    quickActionButtons
+    quickActionButtons,
+    quickLogChips = []
   } = elements;
 
   quickLogInput.addEventListener('input', onQuickLogInput);
@@ -31,6 +32,28 @@ export function initQuickLogWidget({
   quickActionButtons.forEach((button) => {
     button.addEventListener('click', onQuickActionClick);
   });
+  quickLogChips.forEach((chip) => {
+    chip.addEventListener('click', () => insertChipPrefix(chip.dataset.dashboardQuicklogChip));
+  });
+
+  function insertChipPrefix(label) {
+    const prefix = String(label || '').trim();
+    if (!prefix) {
+      return;
+    }
+    const current = String(quickLogInput.value || '');
+    const base = current.trim() ? `${current.replace(/\s+$/, '')}\n` : '';
+    quickLogInput.value = `${base}${prefix}: `;
+    ensureDashboardState(state);
+    state.settings.dashboard.quickLogDraft = quickLogInput.value;
+    persist();
+    quickLogInput.focus();
+    const caret = quickLogInput.value.length;
+    quickLogInput.setSelectionRange(caret, caret);
+    quickLogSaveBtn.disabled = false;
+    quickLogAgentBtn.disabled = false;
+    setQuickLogStatus('Draft saved locally.');
+  }
 
   function syncQuickLogInput() {
     const draft = String(state.settings.dashboard.quickLogDraft || '');

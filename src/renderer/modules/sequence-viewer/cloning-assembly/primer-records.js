@@ -1,4 +1,4 @@
-import { oligoTm } from '../oligo.js';
+import { oligoTm } from '../../tool-box/oligo.js';
 import { asArray, computeGcContent, mean, normalizeSequence } from './sequence-utils.js';
 
 export function buildPrimerRecord({ name, role, sequence, tailSequence = '', bindingSequence = '', tmSequence = '', warnings = [] }) {
@@ -105,14 +105,27 @@ export function resolveFragmentPrimerTemplate(fragment = {}) {
   };
 }
 
+// Group primers into forward/reverse pairs by their shared `<base>_F` / `<base>_R`
+// name. Returns one entry per complete pair; primers without an `_F`/`_R` suffix
+// (e.g. multi-oligo tiles) are excluded.
+export function forwardReversePairs(primers) {
+  const pairs = new Map();
+  asArray(primers).forEach((primer) => {
+    const match = String(primer?.name || '').match(/^(.*)_([FR])$/);
+    if (!match) {
+      return;
+    }
+    const group = pairs.get(match[1]) || { base: match[1] };
+    group[match[2]] = Number(primer?.tm) || 0;
+    pairs.set(match[1], group);
+  });
+  return [...pairs.values()].filter((group) => Number.isFinite(group.F) && Number.isFinite(group.R));
+}
+
 export function summarizePrimerPlan(primers, overlaps = []) {
   const safePrimers = asArray(primers);
   const tmValues = safePrimers.map((primer) => Number(primer?.tm) || 0);
   const sortedTm = [...tmValues].sort((left, right) => left - right);
-  const primerTmDifferences = [];
-  for (let index = 1; index < sortedTm.length; index += 1) {
-    primerTmDifferences.push(Math.abs(sortedTm[index] - sortedTm[index - 1]));
-  }
 
   return {
     primerCount: safePrimers.length,
@@ -122,7 +135,10 @@ export function summarizePrimerPlan(primers, overlaps = []) {
       max: safePrimers.length ? sortedTm[sortedTm.length - 1] : 0,
       mean: mean(tmValues)
     },
-    primerTmDifferences,
+    primerTmDifferences: forwardReversePairs(safePrimers).map((group) => ({
+      pair: group.base,
+      tmDifference: Math.abs(group.F - group.R)
+    })),
     overlapSummary: asArray(overlaps).map((item) => ({
       leftFragmentId: item.leftFragmentId,
       rightFragmentId: item.rightFragmentId,

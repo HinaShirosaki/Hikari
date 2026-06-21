@@ -1,19 +1,8 @@
 <section id="home-view" class="view is-active" aria-label="Home">
       <div class="home-layout">
         <section class="home-tile home-tile-contribution" aria-labelledby="dashboard-contribution-heading">
-          <div class="home-tile-head">
+          <div class="home-tile-head home-tile-head-row">
             <h2 id="dashboard-contribution-heading">Contribution Heatmap</h2>
-          </div>
-          <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
-            <div id="dashboard-contribution-months" class="home-contribution-months" aria-hidden="true"></div>
-            <div class="home-contribution-body">
-              <div class="home-contribution-weekdays" aria-hidden="true">
-                <span>Mon</span>
-                <span>Wed</span>
-                <span>Fri</span>
-              </div>
-              <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity"></div>
-            </div>
             <div class="home-contribution-legend" aria-hidden="true">
               <span>Less</span>
               <span class="home-contribution-legend-cell" data-level="0"></span>
@@ -24,44 +13,22 @@
               <span>More</span>
             </div>
           </div>
-          <div class="home-contribution-quick-log">
-            <div class="home-contribution-quick-log-head">
-              <h3>Quick Log Notebook</h3>
-              <p id="dashboard-quick-log-status" class="small-note"></p>
-            </div>
-            <label class="dashboard-field dashboard-field-grow">
-              Bench Note
-              <div class="home-quick-log-input-wrap">
-                <textarea
-                  id="dashboard-quick-log-input"
-                  rows="3"
-                  placeholder="Log a notebook entry, upload note, analysis note, or completed protocol."
-                ></textarea>
-                <div class="home-quick-log-actions">
-                  <button
-                    type="button"
-                    id="dashboard-quick-log-save-btn"
-                    class="home-quick-log-icon-btn"
-                    aria-label="Save quick log"
-                  >
-                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-                      <path d="m5 12.5 4.2 4.1L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path>
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    id="dashboard-quick-log-agent-btn"
-                    class="home-quick-log-icon-btn home-quick-log-send-btn"
-                    aria-label="Save quick log and send to Assistant"
-                  >
-                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-                      <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
-                      <path d="M6.5 12.5 12 7l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                    </svg>
-                  </button>
+          <div class="home-contribution-display">
+            <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
+              <div id="dashboard-contribution-months" class="home-contribution-months" aria-hidden="true"></div>
+              <div class="home-contribution-body">
+                <div class="home-contribution-weekdays" aria-hidden="true">
+                  <span>Mon</span>
+                  <span>Wed</span>
+                  <span>Fri</span>
                 </div>
+                <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity"></div>
               </div>
-            </label>
+            </div>
+            <div class="home-contribution-streak" role="group" aria-label="Logging streak">
+              <span id="dashboard-contribution-streak" class="home-contribution-streak-num">0</span>
+              <span class="home-contribution-streak-label">day logging streak</span>
+            </div>
           </div>
         </section>
 
@@ -124,16 +91,48 @@
           </div>
         </section>
 
-        <section class="home-tile home-tile-actions" aria-labelledby="dashboard-actions-heading">
+        <section class="home-tile home-tile-quicklog" aria-labelledby="dashboard-quicklog-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-actions-heading">Quick Actions</h2>
-            <p class="small-note"></p>
+            <h2 id="dashboard-quicklog-heading">Quick Log Notebook</h2>
+            <p id="dashboard-quick-log-status" class="small-note"></p>
           </div>
-          <div class="home-action-grid">
-            <button type="button" class="home-action-btn" data-dashboard-action="samples">Open Samples</button>
-            <button type="button" class="home-action-btn" data-dashboard-action="workflow">Open Workflow</button>
-            <button type="button" class="home-action-btn" data-dashboard-action="notebook">Open Notebook</button>
-            <button type="button" class="home-action-btn" data-dashboard-action="assistant">Open Assistant</button>
+          <div class="home-quicklog-body">
+            <div class="home-quicklog-chips" aria-label="Quick log shortcuts">
+              <button type="button" class="home-quicklog-chip" data-dashboard-quicklog-chip="Passage">＋ Passage</button>
+              <button type="button" class="home-quicklog-chip" data-dashboard-quicklog-chip="Western blot">＋ Western blot</button>
+              <button type="button" class="home-quicklog-chip" data-dashboard-quicklog-chip="Order reagent">＋ Order reagent</button>
+              <button type="button" class="home-quicklog-chip" data-dashboard-quicklog-chip="Observation">＋ Observation</button>
+            </div>
+            <div class="home-quick-log-input-wrap">
+              <textarea
+                id="dashboard-quick-log-input"
+                rows="3"
+                placeholder="Log a notebook entry, upload note, analysis note, or completed protocol."
+              ></textarea>
+              <div class="home-quick-log-actions">
+                <button
+                  type="button"
+                  id="dashboard-quick-log-save-btn"
+                  class="home-quick-log-icon-btn"
+                  aria-label="Save quick log"
+                >
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                    <path d="m5 12.5 4.2 4.1L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  id="dashboard-quick-log-agent-btn"
+                  class="home-quick-log-icon-btn home-quick-log-send-btn"
+                  aria-label="Save quick log and send to Assistant"
+                >
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                    <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+                    <path d="M6.5 12.5 12 7l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
         </section>
       </div>

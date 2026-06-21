@@ -250,9 +250,9 @@ test('[EDGE] tool-box reverseTranslateProteinSequence rejects unsupported amino 
     assertClose(toolBox.oligoTm(sequence, type), expected, 1e-6);
   });
 });
-test('[EDGE] tool-box evaluateOverlapPcr recognizes strong existing terminal overlaps', () => {
+test('[EDGE] sequence-viewer evaluateOverlapPcr recognizes strong existing terminal overlaps', () => {
   const overlap = 'GCGCGCGCGCGCGCGCG';
-  const result = toolBox.evaluateOverlapPcr([
+  const result = sequenceViewerInternals.evaluateOverlapPcr([
     { id: 'frag-a', name: 'Fragment A', sequence: `AAATTT${overlap}` },
     { id: 'frag-b', name: 'Fragment B', sequence: `${overlap}TTTAAA` }
   ]);
@@ -262,8 +262,8 @@ test('[EDGE] tool-box evaluateOverlapPcr recognizes strong existing terminal ove
   assert.equal(result.junctions[0].mode, 'existing');
   assert.equal(result.junctions[0].overlapSequence, overlap);
 });
-test('[EDGE] tool-box evaluateOverlapPcr can propose primer-introduced overlaps', () => {
-  const result = toolBox.evaluateOverlapPcr([
+test('[EDGE] sequence-viewer evaluateOverlapPcr can propose primer-introduced overlaps', () => {
+  const result = sequenceViewerInternals.evaluateOverlapPcr([
     { id: 'frag-a', name: 'Fragment A', sequence: 'ATATATATATATGGGGGGGGGGGGGGAAAA' },
     { id: 'frag-b', name: 'Fragment B', sequence: 'GCGCGCGCGCGCGCGCGTTTAAAATTTAAA' }
   ]);
@@ -273,10 +273,10 @@ test('[EDGE] tool-box evaluateOverlapPcr can propose primer-introduced overlaps'
   assert.equal(result.junctions[0].mode, 'primer-introduced');
   assert.equal(result.junctions[0].overlapLength >= 12, true);
 });
-test('[EDGE] tool-box evaluateGibsonAssembly supports multi-fragment junction analysis', () => {
+test('[EDGE] sequence-viewer evaluateGibsonAssembly supports multi-fragment junction analysis', () => {
   const overlapOne = 'GCGCGCGCGCGCGCGCG';
   const overlapTwo = 'CGCGCGCGCGCGCGCGC';
-  const result = toolBox.evaluateGibsonAssembly([
+  const result = sequenceViewerInternals.evaluateGibsonAssembly([
     { id: 'frag-a', name: 'Fragment A', sequence: `AAA${overlapOne}` },
     { id: 'frag-b', name: 'Fragment B', sequence: `${overlapOne}TTT${overlapTwo}` },
     { id: 'frag-c', name: 'Fragment C', sequence: `${overlapTwo}GGGAAA` }
@@ -286,8 +286,8 @@ test('[EDGE] tool-box evaluateGibsonAssembly supports multi-fragment junction an
   assert.equal(result.junctions.length, 2);
   assert.equal(result.junctions.every((junction) => junction.feasible), true);
 });
-test('[EDGE] tool-box evaluateRestrictionLigation selects a clean unique cutter pair', () => {
-  const result = toolBox.evaluateRestrictionLigation({
+test('[EDGE] sequence-viewer evaluateRestrictionLigation selects a clean unique cutter pair', () => {
+  const result = sequenceViewerInternals.evaluateRestrictionLigation({
     host: {
       id: 'host-1',
       name: 'Host Backbone',
@@ -312,8 +312,8 @@ test('[EDGE] tool-box evaluateRestrictionLigation selects a clean unique cutter 
     !'GCGCGCGCGCGCGATTTTTTTTTTGCGCGCGCGCGCGAT'.includes(String(site.site || '').replace(/[^ACGT]/g, ''))
   )), true);
 });
-test('[EDGE] tool-box evaluateRestrictionLigation rejects insert-conflicting site pairs', () => {
-  const result = toolBox.evaluateRestrictionLigation({
+test('[EDGE] sequence-viewer evaluateRestrictionLigation rejects insert-conflicting site pairs', () => {
+  const result = sequenceViewerInternals.evaluateRestrictionLigation({
     host: {
       id: 'host-1',
       name: 'Host Backbone',
@@ -333,8 +333,8 @@ test('[EDGE] tool-box evaluateRestrictionLigation rejects insert-conflicting sit
   assert.equal(result.feasible, false);
   assert.equal(result.selectedSites, null);
 });
-test('[EDGE] tool-box evaluateSiteDirectedMutagenesis supports point mutation requests', () => {
-  const result = toolBox.evaluateSiteDirectedMutagenesis({
+test('[EDGE] sequence-viewer evaluateSiteDirectedMutagenesis supports point mutation requests', () => {
+  const result = sequenceViewerInternals.evaluateSiteDirectedMutagenesis({
     host: {
       id: 'host-1',
       name: 'Template',
@@ -352,8 +352,8 @@ test('[EDGE] tool-box evaluateSiteDirectedMutagenesis supports point mutation re
   assert.equal(result.feasible, true);
   assert.equal(result.editType, 'point-mutation');
 });
-test('[EDGE] tool-box evaluateSiteDirectedMutagenesis supports short insertion requests', () => {
-  const result = toolBox.evaluateSiteDirectedMutagenesis({
+test('[EDGE] sequence-viewer evaluateSiteDirectedMutagenesis supports short insertion requests', () => {
+  const result = sequenceViewerInternals.evaluateSiteDirectedMutagenesis({
     host: {
       id: 'host-1',
       name: 'Template',
@@ -369,11 +369,11 @@ test('[EDGE] tool-box evaluateSiteDirectedMutagenesis supports short insertion r
   assert.equal(result.feasible, true);
   assert.equal(result.editType, 'insertion');
 });
-test('[EDGE] tool-box designCloningPrimers designs simple site-directed mutagenesis primers', () => {
+test('[EDGE] sequence-viewer designCloningPrimers designs simple site-directed mutagenesis primers', () => {
   const leftFlank = 'GCGCGCGCGCGCGATATATATATATATATATATA';
   const rightFlank = 'ATATATATATATATATATATGCGCGCGCGCGCGAT';
   const template = `${leftFlank}AAA${rightFlank}`;
-  const primerPlan = toolBox.designCloningPrimers({
+  const primerPlan = sequenceViewerInternals.designCloningPrimers({
     strategy: 'site-directed-mutagenesis',
     selectedHost: {
       id: 'host-1',
@@ -395,13 +395,14 @@ test('[EDGE] tool-box designCloningPrimers designs simple site-directed mutagene
   assert.equal(primerPlan.primers[1].role, 'mutagenesis-reverse');
   assert.equal(primerPlan.primers[0].tailSequence, 'GAA');
   assert.equal(primerPlan.primers[1].tailSequence, 'TTC');
-  assert.equal(primerPlan.primerTmDifferences[0], 0);
+  assert.equal(primerPlan.primerTmDifferences[0].pair, 'mutagenesis');
+  assert.equal(primerPlan.primerTmDifferences[0].tmDifference, 0);
 });
-test('[EDGE] tool-box designCloningPrimers preserves insertion boundaries for mutagenesis primers', () => {
+test('[EDGE] sequence-viewer designCloningPrimers preserves insertion boundaries for mutagenesis primers', () => {
   const template = 'GCGCGCGCGCGCGATATATATATATATATATATAAAAACCCCCGGGGGTTTTTATATATATATGCGCGCGCGCGCGAT';
   const insertAt = 36;
   const insertedSequence = 'CCATGG';
-  const primerPlan = toolBox.designCloningPrimers({
+  const primerPlan = sequenceViewerInternals.designCloningPrimers({
     strategy: 'site-directed-mutagenesis',
     selectedHost: {
       id: 'host-1',

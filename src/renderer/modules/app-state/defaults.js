@@ -1,5 +1,5 @@
 import {
-  DEFAULT_LLM_PROVIDER,
+  DEFAULT_AGENT_LLM_PROVIDER,
   DEFAULT_LLM_ENDPOINTS
 } from '../llm-provider-config.generated.js';
 import { VIEWS } from '../views.js';
@@ -38,7 +38,6 @@ export const defaultState = {
   paperAgentChatSessions: {},
   agentChat: {
     projectId: '',
-    deepResearchEnabled: false,
     currentSessionId: '',
     sessions: [],
     messages: []
@@ -104,11 +103,11 @@ export const defaultState = {
       error: ''
     },
     llm: {
-      provider: DEFAULT_LLM_PROVIDER,
+      provider: DEFAULT_AGENT_LLM_PROVIDER,
       model: '',
       reasoningEffort: '',
       api: '',
-      apiEndpoint: DEFAULT_LLM_ENDPOINTS[DEFAULT_LLM_PROVIDER],
+      apiEndpoint: DEFAULT_LLM_ENDPOINTS[DEFAULT_AGENT_LLM_PROVIDER],
       apiKey: ''
     },
     agent: {

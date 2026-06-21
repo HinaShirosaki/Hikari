@@ -1,4 +1,4 @@
-import { cleanNucleotideSequence } from '../sequence.js';
+import { cleanNucleotideSequence } from '../../tool-box/sequence.js';
 
 export function asArray(value) {
   return Array.isArray(value) ? value : [];

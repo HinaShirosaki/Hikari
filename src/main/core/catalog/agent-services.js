@@ -6,8 +6,10 @@ const {
   DEFAULT_LLM_PROVIDER,
   DEFAULT_LLM_ENDPOINTS,
   DEFAULT_AGENT_MODELS,
+  ALLOW_API_AGENT,
   inferLlmProviderFromEndpoint,
   normalizeLlmProvider,
+  normalizeAgentLlmProvider,
   defaultLlmEndpointForProvider,
   defaultAgentModelForProvider
 } = require('../../generated/llm-provider-config.generated.js');
@@ -34,6 +36,7 @@ function createAgentServiceDefinitions(context = {}) {
           DEFAULT_AGENT_MODELS,
           inferLlmProviderFromEndpoint,
           normalizeLlmProvider,
+          normalizeAgentLlmProvider,
           defaultLlmEndpointForProvider,
           defaultAgentModelForProvider,
           cleanText,
@@ -107,6 +110,7 @@ function createAgentServiceDefinitions(context = {}) {
       dependsOn: ['agent-foundation', 'codex'],
       create: ({ dependencies }) => ({
         ...dependencies['agent-foundation'],
+        allowApiAgent: ALLOW_API_AGENT,
         codexAgentRuntime: dependencies.codex.codexAgentRuntime
       })
     }

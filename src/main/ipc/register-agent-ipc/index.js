@@ -25,7 +25,12 @@ function registerAgentIpc(deps = {}) {
   });
 
   const { runAgentController } = createAgentControllerCore({
-    deps,
+    deps: {
+      ...deps,
+      ALLOW_API_AGENT: typeof deps.ALLOW_API_AGENT === 'boolean'
+        ? deps.ALLOW_API_AGENT
+        : true
+    },
     cleanText,
     controllerUtils: deps.controllerUtils || {},
     observability: deps.observability || {},

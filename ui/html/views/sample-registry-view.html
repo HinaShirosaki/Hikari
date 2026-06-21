@@ -117,7 +117,13 @@
                   <h3>Registered Samples</h3>
                   <p id="sample-results-summary" class="small-note">Showing 0 samples.</p>
                 </div>
+                <div class="form-actions">
+                  <button type="button" id="sample-export-csv-btn" class="ghost-btn">Export CSV</button>
+                  <button type="button" id="sample-import-csv-btn" class="ghost-btn">Import CSV</button>
+                  <input id="sample-import-csv-file" type="file" accept=".csv,text/csv" hidden />
+                </div>
               </div>
+              <p id="sample-csv-status" class="small-note"></p>
               <div id="sample-registry-list" class="list-table"></div>
             </div>
 
