@@ -1100,6 +1100,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-alignment-dialog {
+  position: relative;
   width: min(760px, 100%);
   max-height: calc(100svh - 90px);
   overflow: auto;
@@ -1112,34 +1113,31 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   gap: 12px;
 }
 
-.sequence-viewer-alignment-toolbar {
-  border-radius: 8px;
-  border: 1px solid var(--theme-border);
-  background: var(--theme-surface);
-  padding: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-
-
 .sequence-viewer-alignment-close-icon {
-  min-width: 34px;
-  min-height: 34px;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  width: 18px;
+  height: 18px;
   padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--theme-danger);
+  color: var(--theme-text-on-accent);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1rem;
+  font-size: 0.78rem;
   line-height: 1;
+  cursor: pointer;
 }
 
 
 
 .sequence-viewer-alignment-panel {
   margin: 0;
+  display: grid;
+  gap: 10px;
 }
 
 
@@ -1403,93 +1401,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   scrollbar-gutter: stable;
 }
 
-.sequence-viewer-alignment-trace-panel {
-  border: 1px solid var(--theme-border);
-  border-radius: 8px;
-  background: var(--theme-surface);
-  padding: 10px;
-  min-width: 0;
-}
-
-.sequence-viewer-alignment-trace-panel[hidden] {
-  display: none !important;
-}
-
-.sequence-viewer-alignment-trace-host {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-}
-
-.sequence-viewer-alignment-trace-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.sequence-viewer-alignment-trace-head-title {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px;
-  min-width: 0;
-}
-
-.sequence-viewer-alignment-trace-head strong {
-  color: var(--theme-text-strong);
-  font-size: 0.9rem;
-}
-
-.sequence-viewer-trace-source-switch {
-  display: inline-flex;
-  border: 1px solid var(--theme-border-soft);
-  border-radius: 6px;
-  overflow: hidden;
-  background: var(--theme-surface-subtle);
-}
-
-.sequence-viewer-trace-source-btn {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: var(--theme-text-muted);
-  font-size: 0.78rem;
-  font-weight: 500;
-  padding: 4px 10px;
-  cursor: pointer;
-  line-height: 1.2;
-}
-
-.sequence-viewer-trace-source-btn + .sequence-viewer-trace-source-btn {
-  border-left: 1px solid var(--theme-border-soft);
-}
-
-.sequence-viewer-trace-source-btn:hover {
-  color: var(--theme-text-strong);
-}
-
-.sequence-viewer-trace-source-btn-active {
-  background: var(--theme-surface-elevated);
-  color: var(--theme-text-strong);
-}
-
-.sequence-viewer-alignment-trace-scroll {
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  border: 1px solid var(--theme-border-soft);
-  border-radius: 6px;
-  background: var(--theme-surface-subtle);
-}
-
-.sequence-viewer-alignment-trace-svg {
-  display: block;
-  min-width: 100%;
-  max-width: none;
-  height: 220px;
-}
-
 .sequence-viewer-trace-plot-bg {
   fill: var(--theme-surface-elevated);
 }
@@ -1506,106 +1417,20 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   stroke-width: 1.8;
 }
 
-.sequence-viewer-trace-line-a,
-.sequence-viewer-trace-base-a .sequence-viewer-trace-legend-swatch {
+.sequence-viewer-trace-line-a {
   stroke: var(--sequence-viewer-base-a-stroke);
-  color: var(--sequence-viewer-base-a-ink);
-  background: var(--sequence-viewer-base-a-stroke);
 }
 
-.sequence-viewer-trace-base-a {
-  fill: var(--sequence-viewer-base-a-ink);
-}
-
-.sequence-viewer-trace-line-c,
-.sequence-viewer-trace-base-c .sequence-viewer-trace-legend-swatch {
+.sequence-viewer-trace-line-c {
   stroke: var(--sequence-viewer-base-c-stroke);
-  color: var(--sequence-viewer-blue-ink);
-  background: var(--sequence-viewer-base-c-stroke);
 }
 
-.sequence-viewer-trace-base-c {
-  fill: var(--sequence-viewer-blue-ink);
-}
-
-.sequence-viewer-trace-line-g,
-.sequence-viewer-trace-base-g .sequence-viewer-trace-legend-swatch {
+.sequence-viewer-trace-line-g {
   stroke: var(--theme-text-strong);
-  color: var(--theme-text-strong);
-  background: var(--theme-text-strong);
 }
 
-.sequence-viewer-trace-base-g {
-  fill: var(--theme-text-strong);
-}
-
-.sequence-viewer-trace-line-t,
-.sequence-viewer-trace-base-t .sequence-viewer-trace-legend-swatch {
+.sequence-viewer-trace-line-t {
   stroke: var(--sequence-viewer-base-t-stroke);
-  color: var(--sequence-viewer-mismatch-ink);
-  background: var(--sequence-viewer-base-t-stroke);
-}
-
-.sequence-viewer-trace-base-t {
-  fill: var(--sequence-viewer-mismatch-ink);
-}
-
-.sequence-viewer-trace-base-tick {
-  stroke: var(--theme-border);
-  stroke-width: 1;
-}
-
-.sequence-viewer-trace-base-tick-mismatch,
-.sequence-viewer-trace-base-tick-insertion {
-  stroke: var(--theme-danger);
-  stroke-width: 1.4;
-}
-
-.sequence-viewer-trace-base-call {
-  dominant-baseline: middle;
-  font-family: var(--sequence-viewer-sequence-font);
-  font-size: 13px;
-  font-weight: 700;
-  text-anchor: middle;
-}
-
-.sequence-viewer-trace-base-call-mismatch,
-.sequence-viewer-trace-base-call-insertion {
-  fill: var(--theme-danger);
-}
-
-.sequence-viewer-trace-diff-marker {
-  fill: var(--theme-danger);
-  stroke: var(--theme-surface-elevated);
-  stroke-width: 1.5;
-}
-
-.sequence-viewer-alignment-trace-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  align-items: center;
-  color: var(--theme-text-muted);
-  font-size: 0.78rem;
-}
-
-.sequence-viewer-trace-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-weight: 700;
-}
-
-.sequence-viewer-trace-legend-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.sequence-viewer-trace-legend-diff {
-  color: var(--theme-danger);
-  font-weight: 700;
 }
 
 .sequence-viewer-dual-line {
@@ -1644,6 +1469,59 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-strand-row-bottom {
   opacity: 0.95;
+}
+
+.sequence-viewer-alignment-query-row {
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-alignment-query-row .sequence-viewer-seq-text-content {
+  user-select: none;
+}
+
+.sequence-viewer-alignment-query-end {
+  color: transparent;
+}
+
+.sequence-viewer-inline-trace-row {
+  align-items: stretch;
+}
+
+.sequence-viewer-inline-trace-cell {
+  display: block;
+  justify-self: start;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  background: var(--theme-surface-subtle);
+}
+
+.sequence-viewer-inline-trace-svg {
+  display: block;
+  max-width: none;
+  height: 104px;
+}
+
+.sequence-viewer-alignment-query-base {
+  font-weight: 650;
+  border-radius: 3px;
+}
+
+.sequence-viewer-alignment-query-base-empty {
+  color: transparent;
+}
+
+.sequence-viewer-alignment-query-base-mismatch,
+.sequence-viewer-alignment-query-base-deletion {
+  background: var(--sequence-viewer-mismatch-bg);
+  color: var(--sequence-viewer-mismatch-ink);
+  box-shadow: inset 0 -1px 0 var(--sequence-viewer-mismatch-shadow);
+}
+
+.sequence-viewer-alignment-query-base-gap {
+  font-weight: 800;
+  color: var(--theme-danger);
 }
 
 .sequence-viewer-seq-coord {
@@ -2150,11 +2028,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
     justify-self: start;
   }
 
-  .sequence-viewer-alignment-toolbar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .sequence-viewer-results {
     grid-template-columns: 1fr;
   }
@@ -2232,7 +2105,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 /* Extracted from ui/css/themes/modes.css */
 body.theme-night .sequence-viewer-protein-builder-toolbar,
 body.theme-night .sequence-viewer-cloning-design-toolbar,
-body.theme-night .sequence-viewer-alignment-toolbar,
 body.theme-night .sequence-viewer-controls,
 body.theme-night .sequence-viewer-protein-builder-panel,
 body.theme-night .sequence-viewer-cloning-design-panel,

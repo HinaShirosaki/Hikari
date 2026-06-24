@@ -115,6 +115,74 @@ function buildHighlightedLineMarkup(sourceText, lineStart, lineEnd, lineHighligh
   return runs.join('');
 }
 
+function normalizeAlignmentSequenceTrack(track, sequenceLength) {
+  const safeLength = Math.max(0, Math.floor(Number(sequenceLength) || 0));
+  const sourceCells = Array.isArray(track?.cells) ? track.cells : [];
+  if (!safeLength || !sourceCells.length) {
+    return null;
+  }
+
+  let hasCells = false;
+  const cells = Array.from({ length: safeLength }, (_item, index) => {
+    const sourceCell = sourceCells[index];
+    const rawBase = String(sourceCell?.base || '').trim().toUpperCase();
+    if (!rawBase) {
+      return null;
+    }
+
+    hasCells = true;
+    const kind = String(sourceCell?.kind || '').toLowerCase();
+    return {
+      base: rawBase === '-' ? '-' : rawBase.slice(0, 1),
+      kind: kind === 'mismatch' || kind === 'deletion' ? kind : 'match'
+    };
+  });
+
+  const traceLines = track?.traceLines && typeof track.traceLines === 'object'
+    ? track.traceLines
+    : {};
+  return hasCells ? { cells, traceLines } : null;
+}
+
+function renderAlignmentQueryRowHtml(lineStart, lineEnd, alignmentSequenceTrack) {
+  if (!alignmentSequenceTrack?.cells?.length) {
+    return '';
+  }
+
+  let hasAlignedBases = false;
+  const body = [];
+  for (let baseIndex = lineStart; baseIndex < lineEnd; baseIndex += 1) {
+    const cell = alignmentSequenceTrack.cells[baseIndex] || null;
+    if (!cell) {
+      body.push('<span class="sequence-viewer-seq-base sequence-viewer-alignment-query-base sequence-viewer-alignment-query-base-empty">&nbsp;</span>');
+      continue;
+    }
+
+    hasAlignedBases = true;
+    const kindClass = cell.kind === 'mismatch' || cell.kind === 'deletion'
+      ? ` sequence-viewer-alignment-query-base-${cell.kind}`
+      : '';
+    const gapClass = cell.base === '-' ? ' sequence-viewer-alignment-query-base-gap' : '';
+    body.push(
+      `<span class="sequence-viewer-seq-base sequence-viewer-alignment-query-base${kindClass}${gapClass}">${escapeHtml(cell.base)}</span>`
+    );
+  }
+
+  if (!hasAlignedBases) {
+    return '';
+  }
+
+  return `
+    <div class="sequence-viewer-strand-row sequence-viewer-alignment-query-row">
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
+      <span class="sequence-viewer-seq-text sequence-viewer-alignment-query-text">
+        <span class="sequence-viewer-seq-text-content">${body.join('')}</span>
+      </span>
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
+    </div>
+  `;
+}
+
 export function normalizeHighlightSegments(segments, sequenceLength = null) {
   const maxLength = Number.isFinite(Number(sequenceLength))
     ? Math.max(0, Number(sequenceLength))
@@ -502,7 +570,7 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
   const orfTranslationContext = options?.orfTranslationContext || null;
   const complementary = complementSequence(text);
   const sortedHighlights = normalizeHighlightSegments(highlightedSegments, text.length);
-  const strandPairHeightPx = Math.max(8, (sequenceLineHeightPx * 2) + STRAND_PAIR_ROW_GAP_PX);
+  const alignmentSequenceTrack = normalizeAlignmentSequenceTrack(options?.alignmentSequenceTrack, text.length);
 
   const lines = [];
 
@@ -519,6 +587,10 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
 
     const forwardBody = buildHighlightedLineMarkup(text, lineStart, lineEnd, lineHighlights);
     const complementaryBody = buildHighlightedLineMarkup(complementary, lineStart, lineEnd, lineHighlights);
+    const alignmentQueryRow = renderAlignmentQueryRowHtml(lineStart, lineEnd, alignmentSequenceTrack);
+    const alignmentTraceRow = alignmentQueryRow
+      ? String(alignmentSequenceTrack?.traceLines?.[String(lineStart)] || '')
+      : '';
     const aminoAcidRow = renderOrfAminoAcidRowHtml(lineStart, lineEnd, orfTranslationContext, charAdvancePx);
     const lineRestrictionAnnotations = renderLineRestrictionAnnotationsHtml(
       indexedFeatures,
@@ -543,6 +615,11 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
     const cursorLeftPx = hasCursorOnLine
       ? lineFeatureOffsetPx + ((cursorBaseIndex - lineStart) * charAdvancePx)
       : null;
+    const cursorRowCount = alignmentQueryRow ? 3 : 2;
+    const strandPairHeightPx = Math.max(
+      8,
+      (sequenceLineHeightPx * cursorRowCount) + (STRAND_PAIR_ROW_GAP_PX * (cursorRowCount - 1))
+    );
     const strandPairStyle = restrictionTopPaddingPx > 0
       ? ` style="padding-top:${restrictionTopPaddingPx.toFixed(3)}px;"`
       : '';
@@ -566,6 +643,8 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
               </span>
               <span class="sequence-viewer-strand-end">3'</span>
             </div>
+            ${alignmentTraceRow}
+            ${alignmentQueryRow}
             <div class="sequence-viewer-strand-row sequence-viewer-strand-row-bottom">
               <span class="sequence-viewer-strand-end">3'</span>
               <span class="sequence-viewer-seq-text"><span class="sequence-viewer-seq-text-content">${complementaryBody}</span></span>

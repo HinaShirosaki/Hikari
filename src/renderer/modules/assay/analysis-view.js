@@ -24,9 +24,6 @@ export {
 export function createAssayAnalysisView({
   runtime,
   elements,
-  ReactLib,
-  ReactDOMLib,
-  ReactVisLib,
   safeText,
   getCurrentDefinition,
   syncCurrentResultsFromGrid,
@@ -43,7 +40,7 @@ export function createAssayAnalysisView({
     assayAnalysisTable,
     assayChartStyleMount
   } = elements;
-  const hasReactVis = Boolean(ReactLib && ReactDOMLib && ReactVisLib);
+  const hasPlotly = typeof window !== 'undefined' && Boolean(window.Plotly);
   let lastAnalysisContext = {
     headers: [],
     seriesLabels: [],
@@ -59,9 +56,6 @@ export function createAssayAnalysisView({
   const chartEngine = createChartEngine({
     getChartTarget: () => assayAnalysisTable?.querySelector('[data-assay-analysis-chart]'),
     controlsTarget: assayChartStyleMount,
-    ReactLib,
-    ReactDOMLib,
-    ReactVisLib,
     initialStyle: runtime.chartStyle,
     safeText,
     onChange: (style) => {
@@ -213,7 +207,7 @@ export function createAssayAnalysisView({
     }
 
     const tableHtml = buildAnalysisTable(result.headers, result.rows);
-    assayAnalysisTable.innerHTML = hasReactVis
+    assayAnalysisTable.innerHTML = hasPlotly
       ? `
         <div class="assay-analysis-results">
           <div class="assay-analysis-chart" data-assay-analysis-chart></div>

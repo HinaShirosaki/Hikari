@@ -438,6 +438,8 @@ test('biology-notebook project folder click renders the project dashboard in pla
     }
   };
 
+  let persistCalls = 0;
+  let projectsChangedCalls = 0;
   const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
     document,
     window: {
@@ -446,10 +448,15 @@ test('biology-notebook project folder click renders the project dashboard in pla
   });
   const notebook = notebookModule.initLabNotebook({
     state,
-    persist: () => {},
+    persist: () => {
+      persistCalls += 1;
+    },
     createId: () => 'new-entry',
     safeText: shared.safeText,
-    onNotebookEntriesChanged: () => {}
+    onNotebookEntriesChanged: () => {},
+    onProjectsChanged: () => {
+      projectsChangedCalls += 1;
+    }
   });
 
   notebook.renderProjectOptions();
@@ -489,10 +496,20 @@ test('biology-notebook project folder click renders the project dashboard in pla
   assert.match(dashboard.innerHTML, /Project Activity/);
   assert.match(dashboard.innerHTML, /Notebook-visible project\./);
   assert.match(dashboard.innerHTML, /Contribution Heatmap/);
+  assert.match(dashboard.innerHTML, /data-project-description="p1"/);
   assert.doesNotMatch(dashboard.innerHTML, /data-project-edit/);
   assert.equal(document.getElementById('biology-notebook-project-select').value, 'p1');
   assert.equal(document.getElementById('biology-notebook-page-starter-project').textContent, 'Atlas');
   assert.match(entryList.innerHTML, /biology-notebook-folder biology-notebook-folder--project is-active/);
+
+  const descriptionInput = dashboard.querySelector('[data-project-description]');
+  descriptionInput.value = 'Updated project context from overview.';
+  trigger(dashboard, 'input', { target: descriptionInput });
+
+  assert.equal(state.projects[0].description, 'Updated project context from overview.');
+  assert.equal(typeof state.projects[0].updatedAt, 'string');
+  assert.equal(persistCalls, 1);
+  assert.equal(projectsChangedCalls, 1);
 
   const protocolSelect = document.getElementById('biology-notebook-protocol-select');
   protocolSelect.value = 'pr2';

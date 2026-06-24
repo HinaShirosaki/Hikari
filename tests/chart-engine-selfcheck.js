@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Self-check for the extracted chart engine's pure logic (no DOM / react-vis needed).
+// Self-check for the extracted chart engine's pure logic (no DOM / Plotly needed).
 // Run: node tests/chart-engine-selfcheck.js
 const assert = require('node:assert/strict');
 const path = require('node:path');

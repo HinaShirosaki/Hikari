@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="./vendor/cropperjs/cropper.min.css" />
   <link rel="stylesheet" href="./vendor/tabulator/tabulator.min.css" />
-  <link rel="stylesheet" href="./vendor/react-vis/react-vis.css" />
 </head>
 <body>
   <script type="module" src="src/renderer/bootstrap/index-shell.js"></script>
@@ -3428,7 +3427,7 @@
             <div class="sequence-viewer-menu-anchor">
               <button id="sequence-viewer-alignment-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">Alignment ▾</button>
               <div id="sequence-viewer-alignment-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
-                <button id="sequence-viewer-alignment-open-btn" type="button" class="sequence-viewer-context-item">Open Alignment Workspace…</button>
+                <button id="sequence-viewer-alignment-open-btn" type="button" class="sequence-viewer-context-item">Open Sequence</button>
                 <label class="sequence-viewer-inline-toggle" title="Show or hide the currently selected sequencing alignment on the reference sequence.">
                   <input id="sequence-viewer-alignment-toggle" type="checkbox" />
                   <span>Show Alignment</span>
@@ -3465,6 +3464,33 @@
                     <span>TGA</span>
                   </label>
                 </div>
+                <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="ORF reading frames">
+                  <span class="sequence-viewer-inline-toggle-group-label">Frames</span>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +1.">
+                    <input id="sequence-viewer-orf-frame-p1-toggle" type="checkbox" checked />
+                    <span>+1</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +2.">
+                    <input id="sequence-viewer-orf-frame-p2-toggle" type="checkbox" checked />
+                    <span>+2</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +3.">
+                    <input id="sequence-viewer-orf-frame-p3-toggle" type="checkbox" checked />
+                    <span>+3</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -1.">
+                    <input id="sequence-viewer-orf-frame-m1-toggle" type="checkbox" checked />
+                    <span>-1</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -2.">
+                    <input id="sequence-viewer-orf-frame-m2-toggle" type="checkbox" checked />
+                    <span>-2</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -3.">
+                    <input id="sequence-viewer-orf-frame-m3-toggle" type="checkbox" checked />
+                    <span>-3</span>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -3472,7 +3498,6 @@
               <button id="sequence-viewer-cutter-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">Cutter ▾</button>
               <div id="sequence-viewer-cutter-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
                 <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
-                  <span class="sequence-viewer-inline-toggle-group-label">Cutters</span>
                   <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs.">
                     <input id="sequence-viewer-restriction-neb-toggle" type="checkbox" checked />
                     <span>NEB</span>
@@ -3500,9 +3525,6 @@
           <section class="sequence-viewer-sequence-region">
             <div id="sequence-viewer-sequence-host" class="sequence-viewer-sequence-host">
               <p class="small-note">Load sequence data to begin.</p>
-            </div>
-            <div id="sequence-viewer-alignment-trace-panel" class="sequence-viewer-alignment-trace-panel" hidden>
-              <div id="sequence-viewer-alignment-trace-host" class="sequence-viewer-alignment-trace-host"></div>
             </div>
             <div class="sequence-viewer-feature-bottom">
               <div class="result-card-head">
@@ -3724,25 +3746,16 @@
 
       <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace app-dialog-overlay app-dialog-overlay--top" hidden>
         <div class="sequence-viewer-alignment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-label="Alignment">
-          <div class="sequence-viewer-alignment-toolbar">
-            <button id="sequence-viewer-alignment-close-btn" type="button" class="ghost-btn sequence-viewer-alignment-close-icon" aria-label="Close alignment dialog">x</button>
-            <span id="sequence-viewer-alignment-status" class="small-note">Paste a sequence or choose a file to align against the current record.</span>
-          </div>
+          <button id="sequence-viewer-alignment-close-btn" type="button" class="sequence-viewer-alignment-close-icon" aria-label="Close alignment dialog">×</button>
 
           <section class="result-card sequence-viewer-alignment-panel">
-            <div class="result-card-head">
-              <h4>New Query</h4>
-            </div>
             <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Alignment query input mode">
               <button id="sequence-viewer-alignment-query-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Align Copied Sequence</button>
               <button id="sequence-viewer-alignment-query-mode-file" class="sequence-viewer-mode-btn" type="button">Align With File</button>
             </div>
 
             <div id="sequence-viewer-alignment-query-paste-panel" class="sequence-viewer-input-panel">
-              <label>
-                Sequence or Records
-                <textarea id="sequence-viewer-alignment-query-textarea" rows="7" placeholder="Paste FASTA, GenBank, or plain sequence text for alignment."></textarea>
-              </label>
+              <textarea id="sequence-viewer-alignment-query-textarea" rows="7" placeholder="Paste FASTA, GenBank, or plain sequence text for alignment."></textarea>
             </div>
 
             <div id="sequence-viewer-alignment-query-file-panel" class="sequence-viewer-input-panel" hidden>
@@ -3754,21 +3767,17 @@
               />
               <div class="inline-row">
                 <button id="sequence-viewer-alignment-query-choose" type="button" class="ghost-btn">Choose Query File</button>
-                <span id="sequence-viewer-alignment-query-file-name" class="small-note">No query file selected</span>
               </div>
             </div>
 
-            <div id="sequence-viewer-alignment-query-summary" class="small-note">No query loaded.</div>
             <label id="sequence-viewer-alignment-query-record-wrap" class="sequence-viewer-alignment-record-wrap" hidden>
               Query Record
               <select id="sequence-viewer-alignment-query-record-select"></select>
             </label>
-            <span id="sequence-viewer-alignment-query-status" class="small-note">Query parser idle.</span>
           </section>
 
           <div class="form-actions sequence-viewer-alignment-actions">
             <button id="sequence-viewer-alignment-run-btn" type="button" class="primary-btn">Run Alignment</button>
-            <button id="sequence-viewer-alignment-reset-btn" type="button" class="ghost-btn">Clear Query</button>
           </div>
 
         </div>
@@ -3839,9 +3848,7 @@
   <script src="./vendor/cropperjs/cropper.min.js"></script>
   <script src="./vendor/tabulator/tabulator.min.js"></script>
   <script src="./vendor/jspdf.umd.min.js"></script>
-  <script src="./vendor/react/react.production.min.js"></script>
-  <script src="./vendor/react/react-dom.production.min.js"></script>
-  <script src="./vendor/react-vis/react-vis.min.js"></script>
+  <script src="./vendor/plotly/plotly.min.js"></script>
   <script type="module" src="src/renderer/renderer.js"></script>
 </body>
 </html>

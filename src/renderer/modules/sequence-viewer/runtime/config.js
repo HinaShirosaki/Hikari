@@ -37,6 +37,7 @@ export function createInitialSequenceViewerState() {
     },
     orfViewEnabled: false,
     orfStopCodons: normalizeOrfStopCodonSelection({ TAG: true, TAA: true, TGA: true }),
+    orfFrameFilter: { '+1': true, '+2': true, '+3': true, '-1': true, '-2': true, '-3': true },
     restrictionVendorFilter: { ...DEFAULT_RESTRICTION_VENDOR_FILTER },
     inputComposerVisible: true,
     libraryFilter: LIBRARY_STATUS_SAVED,

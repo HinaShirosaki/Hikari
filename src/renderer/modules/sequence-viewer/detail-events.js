@@ -19,6 +19,8 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const setOrfViewEnabled = config?.setOrfViewEnabled || (() => {});
   const readOrfStopCodonsFromControls = config?.readOrfStopCodonsFromControls || (() => ({}));
   const setOrfStopCodons = config?.setOrfStopCodons || (() => {});
+  const readOrfFrameFilterFromControls = config?.readOrfFrameFilterFromControls || (() => ({}));
+  const setOrfFrameFilter = config?.setOrfFrameFilter || (() => {});
   const setRestrictionVendorFilter = config?.setRestrictionVendorFilter || (() => {});
   const setStatus = config?.setStatus || (() => {});
   const resolveSequenceBoundaryFromEvent = config?.resolveSequenceBoundaryFromEvent || (() => null);
@@ -62,6 +64,17 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   elements.orfStopTagToggle?.addEventListener('change', handleOrfStopToggleChange);
   elements.orfStopTaaToggle?.addEventListener('change', handleOrfStopToggleChange);
   elements.orfStopTgaToggle?.addEventListener('change', handleOrfStopToggleChange);
+
+  const handleOrfFrameToggleChange = () => {
+    setOrfFrameFilter(readOrfFrameFilterFromControls());
+  };
+
+  for (const key of [
+    'orfFramePlus1Toggle', 'orfFramePlus2Toggle', 'orfFramePlus3Toggle',
+    'orfFrameMinus1Toggle', 'orfFrameMinus2Toggle', 'orfFrameMinus3Toggle'
+  ]) {
+    elements[key]?.addEventListener('change', handleOrfFrameToggleChange);
+  }
 
   elements.restrictionNebToggle?.addEventListener('change', () => {
     setRestrictionVendorFilter({
@@ -133,21 +146,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
       }
     }
     state.alignmentViewEnabled = Boolean(elements.alignmentToggle.checked);
-    renderActiveRecord();
-  });
-
-  elements.alignmentTraceHost?.addEventListener('click', (event) => {
-    const target = event?.target?.closest?.('[data-trace-source]');
-    if (!target) {
-      return;
-    }
-    event.preventDefault();
-    const requested = target.getAttribute('data-trace-source');
-    const nextUseProcessed = requested !== 'raw';
-    if (Boolean(state.traceUseProcessed) === nextUseProcessed) {
-      return;
-    }
-    state.traceUseProcessed = nextUseProcessed;
     renderActiveRecord();
   });
 

@@ -8,7 +8,7 @@ import {
 import { buildSelectedOrfTranslationContext } from './orf-analysis.js';
 import { summarizeFastqQuality } from './parsing.js';
 import { computeSequenceLayoutMetrics } from './detail-layout.js';
-import { renderAlignmentTracePanelHtml } from './detail-alignment.js';
+import { buildAlignmentSequenceTrack } from './detail-alignment.js';
 import {
   formatSelectedFeatureDetailHtml,
   normalizeHighlightSegments,
@@ -121,13 +121,6 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
       })
       : null;
 
-    const selectionHighlights = getSequenceSelectionSegments(record);
-    const alignmentHighlights = getAlignmentHighlightSegments(record);
-    const highlights = selectionHighlights.length
-      ? selectionHighlights
-      : (alignmentHighlights.length
-        ? alignmentHighlights
-        : normalizeHighlightSegments(selectedFeature?.segments || [], record.sequence.length));
     const { lineLength, charAdvancePx, lineHeightPx, lineFeatureOffsetPx } = computeSequenceLayoutMetrics(
       rootDocument,
       elements.sequenceHost
@@ -138,6 +131,17 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
       lineHeightPx,
       lineFeatureOffsetPx
     };
+    const selectionHighlights = getSequenceSelectionSegments(record);
+    const alignmentHighlights = getAlignmentHighlightSegments(record);
+    const alignmentSequenceTrack = buildAlignmentSequenceTrack(state, record, {
+      lineLength,
+      charAdvancePx
+    });
+    const highlights = selectionHighlights.length
+      ? selectionHighlights
+      : (alignmentHighlights.length
+        ? alignmentHighlights
+        : normalizeHighlightSegments(selectedFeature?.segments || [], record.sequence.length));
 
     elements.sequenceHost.innerHTML = renderDualStrandSequenceLinesHtml(record.sequence, highlights, {
       lineLength,
@@ -147,6 +151,7 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
       features,
       selectedFeatureIndex: state.selectedFeatureIndex,
       cursorBaseIndex: state.sequenceCursorBase,
+      alignmentSequenceTrack,
       orfTranslationContext
     });
 
@@ -159,16 +164,6 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
     } else {
       elements.sequenceHost.scrollTop = 0;
     }
-  }
-
-  function renderAlignmentTrace() {
-    if (!elements.alignmentTracePanel || !elements.alignmentTraceHost) {
-      return;
-    }
-
-    const html = renderAlignmentTracePanelHtml({ state });
-    elements.alignmentTracePanel.hidden = !html;
-    elements.alignmentTraceHost.innerHTML = html || '';
   }
 
   function renderStats(record) {
@@ -221,7 +216,6 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
   }
 
   return {
-    renderAlignmentTrace,
     renderFeatureRail,
     renderSelectedFeatureDetail,
     renderSequence,

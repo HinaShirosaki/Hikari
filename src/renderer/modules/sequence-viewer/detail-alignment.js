@@ -10,17 +10,14 @@ import {
 import { postProcessAb1Trace } from './algorithms/ab1-trace-postprocess.js';
 
 const TRACE_BASE_ORDER = ['A', 'C', 'G', 'T'];
-const TRACE_MIN_WIDTH = 960;
-const TRACE_MAX_WIDTH = 48000;
 const TRACE_PIXELS_PER_BASE = 16;
-const TRACE_PIXELS_PER_SAMPLE = 0.9;
-const TRACE_HEIGHT = 220;
 const TRACE_SIGNAL_TOP = 20;
 const TRACE_SIGNAL_HEIGHT = 118;
-const TRACE_BASE_LABEL_Y = 166;
-const TRACE_DIFF_MARKER_Y = 190;
 const TRACE_MAX_PATH_POINTS = 2600;
 const TRACE_SMOOTHING_RADIUS = 2;
+const INLINE_TRACE_HEIGHT = 104;
+const INLINE_TRACE_SIGNAL_TOP = 10;
+const INLINE_TRACE_SIGNAL_HEIGHT = 82;
 
 function clampTraceValue(value, min, max) {
   const numeric = Number(value);
@@ -136,9 +133,8 @@ function reverseTraceChannelValues(channels) {
 function ensureProcessedTrace(queryRecord) {
   // Old alignment sessions were persisted before the post-processor existed —
   // their queryRecord.trace has raw channels but no `processed` payload.
-  // Compute it once on demand and cache it on the trace object so the
-  // Raw/Processed switch can render and subsequent renders don't re-run
-  // the pipeline.
+  // Compute it once on demand and cache it on the trace object so inline
+  // rendering can use processed data without re-running the pipeline.
   const trace = queryRecord?.trace;
   if (!trace || typeof trace !== 'object') {
     return;
@@ -195,40 +191,6 @@ function buildDisplayAlignmentTrace(queryRecord, result, options = {}) {
   };
 }
 
-function buildAlignmentQueryDifferenceMap(result) {
-  const map = new Map();
-  const differences = Array.isArray(result?.differences) ? result.differences : [];
-  differences.forEach((difference) => {
-    const type = cleanText(difference?.type, 40).toLowerCase();
-    if (type !== 'mismatch' && type !== 'insertion') {
-      return;
-    }
-    const start = Math.max(0, Math.floor(Number(difference?.queryStart) || 0));
-    const end = Math.max(start, Math.floor(Number(difference?.queryEnd) || 0));
-    for (let index = start; index < end; index += 1) {
-      map.set(index, type);
-    }
-  });
-  return map;
-}
-
-function computeTraceViewportWidth(displayTrace) {
-  const baseCount = Math.max(0, Math.floor(Number(displayTrace?.sequence?.length) || 0));
-  const sampleCount = Math.max(0, Math.floor(Number(displayTrace?.sampleCount) || 0));
-  const targetWidth = Math.max(
-    TRACE_MIN_WIDTH,
-    baseCount * TRACE_PIXELS_PER_BASE,
-    sampleCount * TRACE_PIXELS_PER_SAMPLE
-  );
-  return Math.round(clampTraceValue(targetWidth, TRACE_MIN_WIDTH, TRACE_MAX_WIDTH));
-}
-
-function positionToTraceX(position, sampleCount, traceWidth) {
-  const sampleLast = Math.max(1, Math.floor(Number(sampleCount) || 1) - 1);
-  const safeWidth = Math.max(TRACE_MIN_WIDTH, Number(traceWidth) || TRACE_MIN_WIDTH);
-  return (clampTraceValue(position, 0, sampleLast) / sampleLast) * safeWidth;
-}
-
 function smoothTraceValues(values) {
   const safeValues = toNumberList(values);
   if (!safeValues.length) {
@@ -246,44 +208,6 @@ function smoothTraceValues(values) {
     }
     return weightTotal ? weightedTotal / weightTotal : 0;
   });
-}
-
-function buildTraceSamplePoints(values, sampleCount, maxSignal, traceWidth) {
-  const smoothedValues = smoothTraceValues(values);
-  if (!smoothedValues.length) {
-    return [];
-  }
-
-  const step = Math.max(1, Math.ceil(smoothedValues.length / TRACE_MAX_PATH_POINTS));
-  const signalMax = Math.max(1, Number(maxSignal) || 1);
-  const points = [];
-
-  for (let start = 0; start < smoothedValues.length; start += step) {
-    const end = Math.min(smoothedValues.length, start + step);
-    let total = 0;
-    for (let index = start; index < end; index += 1) {
-      total += Math.max(0, Number(smoothedValues[index]) || 0);
-    }
-
-    const averageValue = total / Math.max(1, end - start);
-    const sampleIndex = start + ((end - start - 1) / 2);
-    points.push({
-      x: positionToTraceX(sampleIndex, sampleCount, traceWidth),
-      y: TRACE_SIGNAL_TOP + TRACE_SIGNAL_HEIGHT - ((averageValue / signalMax) * TRACE_SIGNAL_HEIGHT)
-    });
-  }
-
-  const lastSampleIndex = smoothedValues.length - 1;
-  const lastPoint = points[points.length - 1];
-  if (lastPoint && lastPoint.x < positionToTraceX(lastSampleIndex, sampleCount, traceWidth)) {
-    const lastValue = Math.max(0, Number(smoothedValues[lastSampleIndex]) || 0);
-    points.push({
-      x: positionToTraceX(lastSampleIndex, sampleCount, traceWidth),
-      y: TRACE_SIGNAL_TOP + TRACE_SIGNAL_HEIGHT - ((lastValue / signalMax) * TRACE_SIGNAL_HEIGHT)
-    });
-  }
-
-  return points;
 }
 
 function buildSmoothTracePathData(points) {
@@ -316,172 +240,262 @@ function buildSmoothTracePathData(points) {
   return commands.join(' ');
 }
 
-function buildTracePathData(values, sampleCount, maxSignal, traceWidth) {
-  return buildSmoothTracePathData(buildTraceSamplePoints(values, sampleCount, maxSignal, traceWidth));
+function positionToInlineTraceX(position, sampleStart, sampleEnd, traceWidth) {
+  const safeStart = Number(sampleStart) || 0;
+  const safeEnd = Math.max(safeStart + 1, Number(sampleEnd) || safeStart + 1);
+  const safeWidth = Math.max(1, Number(traceWidth) || 1);
+  return ((clampTraceValue(position, safeStart, safeEnd) - safeStart) / (safeEnd - safeStart)) * safeWidth;
 }
 
-function renderTraceGrid(traceWidth) {
-  return [0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-    const x = formatSvgNumber(ratio * traceWidth);
-    return `<line class="sequence-viewer-trace-grid-line" x1="${x}" y1="${TRACE_SIGNAL_TOP}" x2="${x}" y2="${TRACE_SIGNAL_TOP + TRACE_SIGNAL_HEIGHT}"></line>`;
-  }).join('');
+function buildInlineTraceSamplePoints(values, sampleStart, sampleEnd, maxSignal, traceWidth) {
+  const smoothedValues = smoothTraceValues(values);
+  if (!smoothedValues.length) {
+    return [];
+  }
+
+  const startIndex = clampTraceValue(Math.floor(Number(sampleStart) || 0), 0, smoothedValues.length - 1);
+  const endIndex = clampTraceValue(Math.ceil(Number(sampleEnd) || startIndex + 1), startIndex + 1, smoothedValues.length);
+  const pointCount = Math.max(1, endIndex - startIndex);
+  const step = Math.max(1, Math.ceil(pointCount / TRACE_MAX_PATH_POINTS));
+  const signalMax = Math.max(1, Number(maxSignal) || 1);
+  const points = [];
+
+  for (let start = startIndex; start < endIndex; start += step) {
+    const end = Math.min(endIndex, start + step);
+    let total = 0;
+    for (let index = start; index < end; index += 1) {
+      total += Math.max(0, Number(smoothedValues[index]) || 0);
+    }
+
+    const averageValue = total / Math.max(1, end - start);
+    const sampleIndex = start + ((end - start - 1) / 2);
+    points.push({
+      x: positionToInlineTraceX(sampleIndex, sampleStart, sampleEnd, traceWidth),
+      y: INLINE_TRACE_SIGNAL_TOP + INLINE_TRACE_SIGNAL_HEIGHT - ((averageValue / signalMax) * INLINE_TRACE_SIGNAL_HEIGHT)
+    });
+  }
+
+  return points;
 }
 
-function renderTraceChannelPolylines(displayTrace, traceWidth) {
+function buildInlineTracePathData(values, sampleStart, sampleEnd, maxSignal, traceWidth) {
+  return buildSmoothTracePathData(buildInlineTraceSamplePoints(values, sampleStart, sampleEnd, maxSignal, traceWidth));
+}
+
+function computeInlineTraceSampleWindow(traceCells, displayTrace) {
+  const positions = traceCells
+    .map((cell) => Number(cell?.position))
+    .filter((position) => Number.isFinite(position));
+  if (!positions.length) {
+    return null;
+  }
+
+  const sorted = [...positions].sort((left, right) => left - right);
+  const gaps = [];
+  for (let index = 1; index < sorted.length; index += 1) {
+    const gap = sorted[index] - sorted[index - 1];
+    if (gap > 0) {
+      gaps.push(gap);
+    }
+  }
+  const averageGap = gaps.length
+    ? gaps.reduce((total, gap) => total + gap, 0) / gaps.length
+    : Math.max(8, Math.floor((Number(displayTrace?.sampleCount) || 1) / Math.max(1, Number(displayTrace?.sequence?.length) || 1)));
+  const padding = Math.max(4, averageGap * 0.75);
+  return {
+    start: clampTraceValue(sorted[0] - padding, 0, Math.max(1, displayTrace.sampleCount - 1)),
+    end: clampTraceValue(sorted[sorted.length - 1] + padding, 1, Math.max(1, displayTrace.sampleCount))
+  };
+}
+
+function renderInlineTraceChannelPaths(displayTrace, sampleWindow, traceWidth) {
+  const startIndex = clampTraceValue(Math.floor(sampleWindow.start), 0, displayTrace.sampleCount - 1);
+  const endIndex = clampTraceValue(Math.ceil(sampleWindow.end), startIndex + 1, displayTrace.sampleCount);
+  const smoothedByBase = displayTrace.channels.map((channel) => ({
+    base: cleanText(channel.base, 1).toLowerCase(),
+    values: smoothTraceValues(channel.values)
+  }));
   const maxSignal = Math.max(
     1,
-    ...displayTrace.channels.flatMap((channel) => toNumberList(channel.values))
+    ...smoothedByBase.flatMap((channel) => channel.values.slice(startIndex, endIndex))
       .map((value) => Math.max(0, Number(value) || 0))
   );
 
-  return displayTrace.channels
+  return smoothedByBase
     .map((channel) => {
-      const base = cleanText(channel.base, 1).toLowerCase();
-      const pathData = buildTracePathData(channel.values, displayTrace.sampleCount, maxSignal, traceWidth);
+      const pathData = buildInlineTracePathData(channel.values, sampleWindow.start, sampleWindow.end, maxSignal, traceWidth);
       return pathData
-        ? `<path class="sequence-viewer-trace-line sequence-viewer-trace-line-${base}" d="${pathData}"></path>`
+        ? `<path class="sequence-viewer-trace-line sequence-viewer-trace-line-${channel.base}" d="${pathData}"></path>`
         : '';
     })
     .filter(Boolean)
     .join('');
 }
 
-function renderTraceBaseCalls(displayTrace, differenceMap, traceWidth) {
-  const sequence = String(displayTrace.sequence || '');
-
-  return displayTrace.positions
-    .map((position, index) => {
-      const x = formatSvgNumber(positionToTraceX(position, displayTrace.sampleCount, traceWidth));
-      const base = sequence[index] || 'N';
-      const baseClass = TRACE_BASE_ORDER.includes(base) ? base.toLowerCase() : 'unknown';
-      const diffType = differenceMap.get(index) || '';
-      const tick = `<line class="sequence-viewer-trace-base-tick${diffType ? ` sequence-viewer-trace-base-tick-${diffType}` : ''}" x1="${x}" y1="${TRACE_SIGNAL_TOP + TRACE_SIGNAL_HEIGHT + 6}" x2="${x}" y2="${TRACE_SIGNAL_TOP + TRACE_SIGNAL_HEIGHT + 18}"></line>`;
-      const label = `<text class="sequence-viewer-trace-base-call sequence-viewer-trace-base-${baseClass}${diffType ? ` sequence-viewer-trace-base-call-${diffType}` : ''}" x="${x}" y="${TRACE_BASE_LABEL_Y}">${escapeHtml(base)}</text>`;
-      return `${tick}${label}`;
-    })
-    .join('');
+function renderInlineTraceGrid(traceWidth) {
+  return [0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+    const x = formatSvgNumber(ratio * traceWidth);
+    return `<line class="sequence-viewer-trace-grid-line" x1="${x}" y1="${INLINE_TRACE_SIGNAL_TOP}" x2="${x}" y2="${INLINE_TRACE_SIGNAL_TOP + INLINE_TRACE_SIGNAL_HEIGHT}"></line>`;
+  }).join('');
 }
 
-function renderTraceDifferenceMarkers(displayTrace, differenceMap, traceWidth) {
-  return [...differenceMap.entries()]
-    .filter(([index]) => Number.isFinite(Number(displayTrace.positions[index])))
-    .slice(0, 500)
-    .map(([index, type]) => {
-      const x = formatSvgNumber(positionToTraceX(displayTrace.positions[index], displayTrace.sampleCount, traceWidth));
-      const label = `${type} at query base ${index + 1}`;
-      return `
-        <circle class="sequence-viewer-trace-diff-marker sequence-viewer-trace-diff-${escapeHtml(type)}" cx="${x}" cy="${TRACE_DIFF_MARKER_Y}" r="4">
-          <title>${escapeHtml(label)}</title>
-        </circle>
-      `;
-    })
-    .join('');
-}
+function renderInlineTraceLineHtml(displayTrace, traceCells, lineStart, lineEnd, options = {}) {
+  const safeCells = (Array.isArray(traceCells) ? traceCells : [])
+    .filter((cell) => Number(cell?.referenceIndex) >= lineStart && Number(cell?.referenceIndex) < lineEnd);
+  if (!safeCells.length) {
+    return '';
+  }
 
-function renderTraceLegend() {
-  return TRACE_BASE_ORDER.map((base) => `
-    <span class="sequence-viewer-trace-legend-item sequence-viewer-trace-base-${base.toLowerCase()}">
-      <span class="sequence-viewer-trace-legend-swatch" aria-hidden="true"></span>${base}
-    </span>
-  `).join('');
-}
+  const sampleWindow = computeInlineTraceSampleWindow(safeCells, displayTrace);
+  if (!sampleWindow) {
+    return '';
+  }
 
-function renderTraceUnavailableHtml(queryRecord) {
-  const queryName = cleanText(queryRecord?.name, 140) || 'AB1 trace';
+  const charAdvancePx = Math.max(1, Number(options?.charAdvancePx) || TRACE_PIXELS_PER_BASE);
+  const traceWidth = Math.max(1, (lineEnd - lineStart) * charAdvancePx);
+
   return `
-    <div class="sequence-viewer-alignment-trace-head">
-      <strong>Chromatogram</strong>
-      <span class="small-note">${escapeHtml(queryName)}</span>
+    <div class="sequence-viewer-strand-row sequence-viewer-inline-trace-row">
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
+      <span class="sequence-viewer-inline-trace-cell" style="width:${traceWidth.toFixed(3)}px;">
+        <svg
+          class="sequence-viewer-inline-trace-svg"
+          style="width:${traceWidth.toFixed(3)}px;"
+          viewBox="0 0 ${formatSvgNumber(traceWidth)} ${INLINE_TRACE_HEIGHT}"
+          role="img"
+          aria-label="Chromatogram bases ${lineStart + 1}-${lineEnd}"
+        >
+          <rect class="sequence-viewer-trace-plot-bg" x="0" y="${INLINE_TRACE_SIGNAL_TOP}" width="${formatSvgNumber(traceWidth)}" height="${INLINE_TRACE_SIGNAL_HEIGHT}"></rect>
+          <g class="sequence-viewer-trace-grid">${renderInlineTraceGrid(traceWidth)}</g>
+          <g class="sequence-viewer-trace-lines">${renderInlineTraceChannelPaths(displayTrace, sampleWindow, traceWidth)}</g>
+        </svg>
+      </span>
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
     </div>
-    <p class="small-note">AB1 chromatogram channels were not available for this alignment.</p>
   `;
 }
 
-export function renderAlignmentTracePanelHtml({ state = {} } = {}) {
+function buildInlineTraceLines(displayTrace, traceCells, sequenceLength, options = {}) {
+  const lineLength = Math.max(1, Math.floor(Number(options?.lineLength) || 0));
+  if (!displayTrace || !traceCells?.length || !lineLength) {
+    return {};
+  }
+
+  const traceLines = {};
+  for (let lineStart = 0; lineStart < sequenceLength; lineStart += lineLength) {
+    const lineEnd = Math.min(sequenceLength, lineStart + lineLength);
+    const html = renderInlineTraceLineHtml(displayTrace, traceCells, lineStart, lineEnd, {
+      charAdvancePx: options.charAdvancePx
+    });
+    if (html) {
+      traceLines[String(lineStart)] = html;
+    }
+  }
+  return traceLines;
+}
+
+function normalizeTrackReferenceIndex(value, sequenceLength, allowWrap) {
+  const safeLength = Math.max(0, Math.floor(Number(sequenceLength) || 0));
+  if (!safeLength) {
+    return null;
+  }
+
+  const numeric = Math.floor(Number(value) || 0);
+  if (numeric >= 0 && numeric < safeLength) {
+    return numeric;
+  }
+  if (!allowWrap) {
+    return null;
+  }
+
+  let wrapped = numeric % safeLength;
+  if (wrapped < 0) {
+    wrapped += safeLength;
+  }
+  return wrapped;
+}
+
+export function buildAlignmentSequenceTrack(state, record, options = {}) {
+  const referenceSequence = normalizeSequenceText(record?.sequence || '');
   const result = state?.activeAlignmentResult && typeof state.activeAlignmentResult === 'object'
     ? state.activeAlignmentResult
     : null;
+  if (!state?.alignmentViewEnabled || !referenceSequence.length || !result) {
+    return null;
+  }
+
+  const alignedReference = String(result.alignedReference || '').toUpperCase();
+  const alignedQuery = String(result.alignedQuery || '').toUpperCase();
+  const columnCount = Math.min(alignedReference.length, alignedQuery.length);
+  if (!columnCount) {
+    return null;
+  }
+
+  const cells = Array.from({ length: referenceSequence.length }, () => null);
+  const traceCells = [];
   const queryRecord = state?.activeAlignmentQueryRecord && typeof state.activeAlignmentQueryRecord === 'object'
     ? state.activeAlignmentQueryRecord
     : null;
-  if (!state?.alignmentViewEnabled || !result || !queryRecord) {
-    return '';
+  const displayTrace = queryRecord
+    ? buildDisplayAlignmentTrace(queryRecord, result, { useProcessed: state?.traceUseProcessed !== false })
+    : null;
+  const allowWrap = Boolean(result.referenceSpan?.wraps);
+  let referenceCursor = Math.max(0, Math.floor(Number(result.referenceSpan?.start) || 0));
+  let queryCursor = 0;
+  let filledCount = 0;
+
+  for (let columnIndex = 0; columnIndex < columnCount; columnIndex += 1) {
+    const referenceBase = alignedReference[columnIndex] || '-';
+    const queryBase = alignedQuery[columnIndex] || '-';
+    if (referenceBase === '-') {
+      if (queryBase !== '-') {
+        queryCursor += 1;
+      }
+      continue;
+    }
+
+    const referenceIndex = normalizeTrackReferenceIndex(referenceCursor, referenceSequence.length, allowWrap);
+    referenceCursor += 1;
+    if (!Number.isFinite(referenceIndex)) {
+      continue;
+    }
+
+    const displayBase = queryBase === '-' ? '-' : queryBase;
+    const kind = queryBase === '-'
+      ? 'deletion'
+      : (referenceBase === queryBase ? 'match' : 'mismatch');
+    cells[referenceIndex] = {
+      base: displayBase,
+      kind
+    };
+    if (queryBase !== '-' && displayTrace?.positions?.length) {
+      traceCells.push({
+        referenceIndex,
+        queryIndex: queryCursor,
+        position: displayTrace.positions[queryCursor],
+        base: displayTrace.sequence?.[queryCursor] || queryBase,
+        kind
+      });
+    }
+    if (queryBase !== '-') {
+      queryCursor += 1;
+    }
+    filledCount += 1;
   }
 
-  const sourceFormat = cleanText(queryRecord.sourceFormat || result.queryFormat, 80).toLowerCase();
-  const hasTraceObject = Boolean(queryRecord.trace && typeof queryRecord.trace === 'object');
-  if (!hasTraceObject && sourceFormat !== 'ab1') {
-    return '';
+  if (!filledCount) {
+    return null;
   }
 
-  const useProcessed = state?.traceUseProcessed !== false;
-  const displayTrace = buildDisplayAlignmentTrace(queryRecord, result, { useProcessed });
-  if (!displayTrace) {
-    return sourceFormat === 'ab1' ? renderTraceUnavailableHtml(queryRecord) : '';
-  }
-
-  const differenceMap = buildAlignmentQueryDifferenceMap(result);
-  const traceWidth = computeTraceViewportWidth(displayTrace);
-  const queryName = cleanText(queryRecord.name || result.queryName, 140) || 'AB1 trace';
-  const identity = Number(result.identityPercent);
-  const coverage = Number(result.queryCoveragePercent);
-  const details = [
-    `${displayTrace.sequence.length.toLocaleString()} bases`,
-    `${displayTrace.sampleCount.toLocaleString()} samples`,
-    `${displayTrace.orientation} alignment`,
-    Number.isFinite(identity) ? `${identity.toFixed(2)}% identity` : '',
-    Number.isFinite(coverage) ? `${coverage.toFixed(2)}% coverage` : ''
-  ].filter(Boolean);
-  const svgLabel = `AB1 chromatogram for ${queryName}`;
-  const hasProcessed = Boolean(
-    queryRecord?.trace
-    && queryRecord.trace.processed
-    && Array.isArray(queryRecord.trace.processed.channels)
-    && queryRecord.trace.processed.channels.length
-  );
-  const sourceSwitch = hasProcessed ? `
-    <div class="sequence-viewer-trace-source-switch" role="group" aria-label="Chromatogram signal source">
-      <button type="button"
-              class="sequence-viewer-trace-source-btn${useProcessed ? '' : ' sequence-viewer-trace-source-btn-active'}"
-              data-trace-source="raw"
-              aria-pressed="${useProcessed ? 'false' : 'true'}"
-              title="Show the raw chromatogram channels exactly as recorded in the AB1 file.">Raw</button>
-      <button type="button"
-              class="sequence-viewer-trace-source-btn${useProcessed ? ' sequence-viewer-trace-source-btn-active' : ''}"
-              data-trace-source="processed"
-              aria-pressed="${useProcessed ? 'true' : 'false'}"
-              title="Show the post-processed chromatogram: baseline subtraction, cross-talk reduction, normalization, Savitzky-Golay smoothing, and peak refinement.">Processed</button>
-    </div>
-  ` : '';
-
-  return `
-    <div class="sequence-viewer-alignment-trace-head">
-      <div class="sequence-viewer-alignment-trace-head-title">
-        <strong>Chromatogram</strong>
-        <span class="small-note">${escapeHtml(queryName)} | ${escapeHtml(details.join(' | '))}</span>
-      </div>
-      ${sourceSwitch}
-    </div>
-    <div class="sequence-viewer-alignment-trace-scroll">
-      <svg
-        class="sequence-viewer-alignment-trace-svg"
-        style="width:${traceWidth}px;"
-        viewBox="0 0 ${traceWidth} ${TRACE_HEIGHT}"
-        role="img"
-        aria-label="${escapeHtml(svgLabel)}"
-      >
-        <rect class="sequence-viewer-trace-plot-bg" x="0" y="${TRACE_SIGNAL_TOP}" width="${traceWidth}" height="${TRACE_SIGNAL_HEIGHT}"></rect>
-        <g class="sequence-viewer-trace-grid">${renderTraceGrid(traceWidth)}</g>
-        <g class="sequence-viewer-trace-lines">${renderTraceChannelPolylines(displayTrace, traceWidth)}</g>
-        <g class="sequence-viewer-trace-base-calls">${renderTraceBaseCalls(displayTrace, differenceMap, traceWidth)}</g>
-        <g class="sequence-viewer-trace-differences">${renderTraceDifferenceMarkers(displayTrace, differenceMap, traceWidth)}</g>
-      </svg>
-    </div>
-    <div class="sequence-viewer-alignment-trace-legend">
-      ${renderTraceLegend()}
-      ${differenceMap.size ? '<span class="sequence-viewer-trace-legend-diff">Differences marked below base calls</span>' : ''}
-    </div>
-  `;
+  return {
+    cells,
+    traceLines: buildInlineTraceLines(displayTrace, traceCells, referenceSequence.length, {
+      lineLength: options?.lineLength,
+      charAdvancePx: options?.charAdvancePx
+    }),
+    name: cleanText(state.activeAlignmentSessionName || result.queryName, 140),
+    orientation: cleanText(result.orientation, 40).toLowerCase() === 'reverse' ? 'reverse' : 'forward'
+  };
 }
 
 export function getAlignmentSessionsForRecord(state, record) {

@@ -1,67 +1,31 @@
 import { CHART_FONT_FAMILY, DEFAULT_CHART_PALETTE } from './chart-style-model.js';
 
-const LINE_DASH_MAP = {
-  solid: '',
-  dashed: '6,4',
-  dotted: '2,3'
+const LINE_DASH_MAP = { solid: 'solid', dashed: 'dash', dotted: 'dot' };
+const POINT_SYMBOL_MAP = {
+  circle: 'circle',
+  square: 'square',
+  triangle: 'triangle-up',
+  diamond: 'diamond',
+  cross: 'cross'
 };
-
-function makePointRenderer(ReactLib, shape, color) {
-  if (shape === 'triangle') {
-    return () => ReactLib.createElement('polygon', {
-      points: '0,-1 1,1 -1,1',
-      fill: color,
-      stroke: color
-    });
-  }
-  if (shape === 'cross') {
-    return () => ReactLib.createElement('path', {
-      d: 'M-1 0 H1 M0 -1 V1',
-      stroke: color,
-      strokeWidth: 0.4,
-      fill: 'none'
-    });
-  }
-  return null;
-}
-
-function pointShapeStringFor(shape) {
-  if (shape === 'square' || shape === 'diamond' || shape === 'circle') {
-    return shape;
-  }
-  return null;
-}
+const LINE_SHAPE_MAP = { curveMonotoneX: 'spline', curveLinear: 'linear', curveStep: 'hv' };
 
 function pickSeriesColor(style, label, index) {
   const labelKey = String(label || '');
-  if (labelKey && style.seriesColors[labelKey]) {
+  if (labelKey && style.seriesColors && style.seriesColors[labelKey]) {
     return style.seriesColors[labelKey];
   }
   const palette = style.palette && style.palette.length ? style.palette : DEFAULT_CHART_PALETTE;
   return palette[index % palette.length];
 }
 
-function computeDomain(range, fallbackData, accessor) {
+function explicitRange(range) {
   if (range && range.auto === false
     && Number.isFinite(range.min) && Number.isFinite(range.max)
     && range.min < range.max) {
     return [range.min, range.max];
   }
-  if (!Array.isArray(fallbackData) || !fallbackData.length) {
-    return null;
-  }
-  let min = Number.POSITIVE_INFINITY;
-  let max = Number.NEGATIVE_INFINITY;
-  fallbackData.forEach((point) => {
-    const value = accessor(point);
-    if (!Number.isFinite(value)) return;
-    if (value < min) min = value;
-    if (value > max) max = value;
-  });
-  if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) {
-    return null;
-  }
-  return [min, max];
+  return null;
 }
 
 function serializeSvgToDataUrl(svgElement) {
@@ -86,284 +50,173 @@ function serializeSvgToDataUrl(svgElement) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(clone.outerHTML)}`;
 }
 
-// Generic chart renderer: render(target, chartModel, style) -> { seriesLabels }.
+// Generic chart renderer (Plotly.js engine): render(target, chartModel, style) -> { seriesLabels }.
 // chartModel = { chartType: 'line' | 'bar', xLabel, yLabel, showErrorBars?, series: [{ label, data:[{x,y,yVariance?}], markers? }] }
-export function createChartRenderer({ ReactLib, ReactDOMLib, ReactVisLib, hasReactVis }) {
+// Plotly is loaded as a window global by index.html.
+export function createChartRenderer() {
   let chartHost = null;
 
+  const getPlotly = () => (typeof window !== 'undefined' ? window.Plotly : null);
+
   function unmount() {
-    if (chartHost && ReactDOMLib?.unmountComponentAtNode) {
-      ReactDOMLib.unmountComponentAtNode(chartHost);
+    const Plotly = getPlotly();
+    if (chartHost && Plotly?.purge) {
+      Plotly.purge(chartHost);
     }
     chartHost = null;
   }
 
+  // ponytail: best-effort sync thumbnail from the rendered SVG. For full-fidelity
+  // (legend layer, exact pixels) switch to async Plotly.toImage.
   function captureDataUrl() {
-    const svg = chartHost?.querySelector?.('svg');
-    return serializeSvgToDataUrl(svg);
+    return serializeSvgToDataUrl(chartHost?.querySelector?.('.main-svg'));
   }
 
   function render(target, chartModel, style) {
+    const Plotly = getPlotly();
     unmount();
-    if (!hasReactVis || !target || !chartModel || !Array.isArray(chartModel.series) || !chartModel.series.length) {
+    if (!Plotly || !target || !chartModel || !Array.isArray(chartModel.series) || !chartModel.series.length) {
       return { seriesLabels: [] };
     }
 
-    const {
-      XYPlot,
-      XAxis,
-      YAxis,
-      VerticalGridLines,
-      HorizontalGridLines,
-      VerticalBarSeries,
-      LineSeries,
-      MarkSeries,
-      CustomSVGSeries,
-      WhiskerSeries,
-      DiscreteColorLegend
-    } = ReactVisLib;
-    if (!XYPlot || !XAxis || !YAxis || !VerticalGridLines || !HorizontalGridLines) {
-      return { seriesLabels: [] };
-    }
-
-    const longestSeries = chartModel.series.reduce((max, item) => Math.max(max, item.data.length), 0);
-    const autoWidth = Math.max(420, Math.min(1280, (longestSeries || 1) * (chartModel.chartType === 'line' ? 60 : 70)));
-    const autoHeight = 280;
-    const useCustomSize = style.sizeAuto === false;
-    const plotWidth = useCustomSize && Number.isFinite(style.frameWidth) ? style.frameWidth : autoWidth;
-    const plotHeight = useCustomSize && Number.isFinite(style.frameHeight) ? style.frameHeight : autoHeight;
-    const marginBottom = chartModel.chartType === 'bar' ? 108 : 72;
-    const plotProps = {
-      width: plotWidth,
-      height: plotHeight,
-      margin: { left: 72, right: 24, top: 20, bottom: marginBottom }
-    };
-    if (chartModel.chartType === 'bar') {
-      plotProps.xType = 'ordinal';
-    } else {
-      const userXScale = style.xScale && style.xScale !== 'auto' ? style.xScale : null;
-      if (userXScale && userXScale !== 'ordinal') {
-        plotProps.xType = userXScale;
-      }
-    }
-    if (style.yScale && style.yScale !== 'linear') {
-      plotProps.yType = style.yScale;
-    }
-
-    const allPoints = chartModel.series.flatMap((s) => [
-      ...(Array.isArray(s.data) ? s.data : []),
-      ...(Array.isArray(s.markers) ? s.markers : [])
-    ]);
-    if (chartModel.chartType === 'line') {
-      const xDomain = computeDomain(style.xRange, allPoints, (p) => p.x);
-      if (xDomain) plotProps.xDomain = xDomain;
-    }
-    const yDomain = computeDomain(style.yRange, allPoints, (p) => p.y);
-    if (yDomain) plotProps.yDomain = yDomain;
-
-    const axisColor = style.frameStroke || '#9bb0c9';
-    const textStyle = style.text || {};
-    const textFontFamily = textStyle.fontFamily
+    const st = style || {};
+    const isBar = chartModel.chartType === 'bar';
+    const textStyle = st.text || {};
+    const fontFamily = textStyle.fontFamily
       ? `${textStyle.fontFamily}, ${CHART_FONT_FAMILY}`
       : CHART_FONT_FAMILY;
-    const textFill = textStyle.color || axisColor;
-    const textFontSize = Number.isFinite(textStyle.fontSize) ? textStyle.fontSize : 11;
-    const textFontWeight = textStyle.bold ? 700 : 400;
-    const textFontStyle = textStyle.italic ? 'italic' : 'normal';
-    const textDecoration = textStyle.underline ? 'underline' : 'none';
-    const baselineShift = textStyle.baseline === 'super'
-      ? 'super'
-      : textStyle.baseline === 'sub' ? 'sub' : 'baseline';
-    const textAnchor = textStyle.textAlign || 'middle';
-    const svgTextStyle = {
-      fill: textFill,
-      fontFamily: textFontFamily,
-      fontSize: textFontSize,
-      fontWeight: textFontWeight,
-      fontStyle: textFontStyle,
-      textDecoration,
-      baselineShift
+    const font = {
+      family: fontFamily,
+      size: Number.isFinite(textStyle.fontSize) ? textStyle.fontSize : 11,
+      color: textStyle.color || st.frameStroke || '#000000',
+      weight: textStyle.bold ? 700 : 400,
+      style: textStyle.italic ? 'italic' : 'normal',
+      lineposition: textStyle.underline ? 'under' : 'none'
     };
-    const axisLineStyle = {
-      line: {
-        stroke: axisColor,
-        strokeWidth: style.frameStrokeWidth ?? 1
-      },
-      text: svgTextStyle,
-      title: { ...svgTextStyle, textAnchor }
-    };
+    const axisColor = st.frameStroke || '#9bb0c9';
+    const gridColor = st.gridColor || '#9bb0c9';
+    const dash = LINE_DASH_MAP[st.lineStyle] || 'solid';
+    const symbol = POINT_SYMBOL_MAP[st.pointShape] || 'circle';
+    const lineShape = LINE_SHAPE_MAP[st.curve] || 'spline';
+    const pointSize = Number.isFinite(st.pointSize) ? st.pointSize : 6;
+    const lineWidth = Number.isFinite(st.lineWidth) ? st.lineWidth : 2.5;
 
-    const gridStyle = {
-      stroke: style.gridColor || '#9bb0c9',
-      strokeWidth: style.gridStrokeWidth ?? 1
-    };
-
-    const plotChildren = [];
-    if (style.showVerticalGrid !== false) {
-      plotChildren.push(ReactLib.createElement(VerticalGridLines, { key: 'v-grid', style: gridStyle }));
-    }
-    if (style.showHorizontalGrid !== false) {
-      plotChildren.push(ReactLib.createElement(HorizontalGridLines, { key: 'h-grid', style: gridStyle }));
-    }
-    plotChildren.push(
-      ReactLib.createElement(XAxis, {
-        key: 'x-axis',
-        tickLabelAngle: chartModel.chartType === 'bar' ? -35 : 0,
-        style: axisLineStyle
-      }),
-      ReactLib.createElement(YAxis, {
-        key: 'y-axis',
-        style: axisLineStyle
-      })
-    );
-
-    if (style.frameStyle === 'box') {
-      plotChildren.push(ReactLib.createElement(XAxis, {
-        key: 'x-axis-top',
-        orientation: 'top',
-        tickFormat: () => '',
-        style: axisLineStyle
-      }));
-      plotChildren.push(ReactLib.createElement(YAxis, {
-        key: 'y-axis-right',
-        orientation: 'right',
-        tickFormat: () => '',
-        style: axisLineStyle
-      }));
-    }
-
-    const dashArray = LINE_DASH_MAP[style.lineStyle] || '';
-
+    const traces = [];
     chartModel.series.forEach((series, index) => {
-      const color = pickSeriesColor(style, series.label, index);
-      if (chartModel.chartType === 'line') {
-        const hasExplicitMarkers = Array.isArray(series.markers);
-        const markerData = hasExplicitMarkers ? series.markers : series.data;
-        if (LineSeries && series.data && series.data.length) {
-          plotChildren.push(ReactLib.createElement(LineSeries, {
-            key: `line-${series.label}-${index}`,
-            data: series.data,
-            color,
-            strokeWidth: style.lineWidth,
-            curve: style.curve || 'curveMonotoneX',
-            style: dashArray ? { strokeDasharray: dashArray } : undefined
-          }));
+      const color = pickSeriesColor(st, series.label, index);
+      const data = Array.isArray(series.data) ? series.data : [];
+      const name = String(series.label || '');
+      let error_y;
+      if (chartModel.showErrorBars) {
+        const array = data.map((p) => (Number.isFinite(p.yVariance) && p.yVariance > 0 ? p.yVariance : 0));
+        if (array.some((v) => v > 0)) {
+          error_y = { type: 'data', array, color, thickness: 1.2, width: 4, visible: true };
         }
-        const stringShape = pointShapeStringFor(style.pointShape);
-        const functionShape = makePointRenderer(ReactLib, style.pointShape, color);
-        if (markerData && markerData.length) {
-          if (functionShape && CustomSVGSeries) {
-            const data = markerData.map((point) => ({
-              ...point,
-              customComponent: functionShape,
-              size: style.pointSize
-            }));
-            plotChildren.push(ReactLib.createElement(CustomSVGSeries, {
-              key: `point-${series.label}-${index}`,
-              data,
-              color
-            }));
-          } else if (stringShape && stringShape !== 'circle' && CustomSVGSeries) {
-            const data = markerData.map((point) => ({
-              ...point,
-              customComponent: stringShape,
-              size: style.pointSize
-            }));
-            plotChildren.push(ReactLib.createElement(CustomSVGSeries, {
-              key: `point-${series.label}-${index}`,
-              data,
-              color
-            }));
-          } else if (MarkSeries) {
-            plotChildren.push(ReactLib.createElement(MarkSeries, {
-              key: `point-${series.label}-${index}`,
-              data: markerData,
-              color,
-              size: style.pointSize
-            }));
-          }
-        }
-      } else if (VerticalBarSeries) {
-        plotChildren.push(ReactLib.createElement(VerticalBarSeries, {
-          key: `bar-${series.label}-${index}`,
-          data: series.data,
-          color,
-          cluster: 'chart-engine'
-        }));
       }
 
-      if (chartModel.showErrorBars && WhiskerSeries) {
-        const whiskerData = series.data.filter((point) => Number.isFinite(point.yVariance) && point.yVariance > 0);
-        if (whiskerData.length) {
-          plotChildren.push(ReactLib.createElement(WhiskerSeries, {
-            key: `whisker-${series.label}-${index}`,
-            data: whiskerData,
-            color,
-            strokeWidth: 1.2,
-            crossBarWidth: 8,
-            style: { pointerEvents: 'none' }
-          }));
-        }
+      if (isBar) {
+        traces.push({
+          type: 'bar',
+          name,
+          x: data.map((p) => p.x),
+          y: data.map((p) => p.y),
+          marker: { color },
+          error_y
+        });
+        return;
+      }
+
+      const hasExplicitMarkers = Array.isArray(series.markers);
+      traces.push({
+        type: 'scatter',
+        mode: hasExplicitMarkers ? 'lines' : 'lines+markers',
+        name,
+        x: data.map((p) => p.x),
+        y: data.map((p) => p.y),
+        line: { color, width: lineWidth, dash, shape: lineShape },
+        marker: { color, size: pointSize, symbol },
+        error_y
+      });
+      if (hasExplicitMarkers && series.markers.length) {
+        traces.push({
+          type: 'scatter',
+          mode: 'markers',
+          name,
+          showlegend: false,
+          x: series.markers.map((p) => p.x),
+          y: series.markers.map((p) => p.y),
+          marker: { color, size: pointSize, symbol }
+        });
       }
     });
 
-    const legendItems = chartModel.series.map((series, index) => ({
-      title: series.label,
-      color: pickSeriesColor(style, series.label, index)
-    }));
-    const legendAlign = textStyle.textAlign === 'start'
-      ? 'left'
-      : textStyle.textAlign === 'end' ? 'right' : 'center';
-    const legendVerticalAlign = textStyle.baseline === 'super'
-      ? 'super'
-      : textStyle.baseline === 'sub' ? 'sub' : 'baseline';
-    const legendStyle = {
-      fontFamily: textFontFamily,
-      fontSize: `${textFontSize}px`,
-      color: textFill,
-      fontWeight: textFontWeight,
-      fontStyle: textFontStyle,
-      textDecoration,
-      textAlign: legendAlign,
-      verticalAlign: legendVerticalAlign
-    };
-    const legendElement = DiscreteColorLegend && legendItems.length > 1
-      ? ReactLib.createElement(DiscreteColorLegend, {
-        key: 'legend',
-        orientation: 'horizontal',
-        items: legendItems,
-        style: legendStyle
-      })
-      : null;
+    const longestSeries = chartModel.series.reduce((max, s) => Math.max(max, (s.data || []).length), 0);
+    const autoWidth = Math.max(420, Math.min(1280, (longestSeries || 1) * (isBar ? 70 : 60)));
+    const useCustomSize = st.sizeAuto === false;
+    const width = useCustomSize && Number.isFinite(st.frameWidth) ? st.frameWidth : autoWidth;
+    const height = useCustomSize && Number.isFinite(st.frameHeight) ? st.frameHeight : 280;
 
-    const canvasClassName = ['assay-analysis-chart-canvas', `frame-${style.frameStyle || 'box'}`].join(' ');
-    const canvasStyle = {
-      backgroundColor: style.backgroundColor || '#ffffff',
-      borderRadius: `${style.frameCornerRadius ?? 0}px`
+    const frameStyle = st.frameStyle || 'box';
+    const axisBase = {
+      showline: frameStyle !== 'none',
+      linecolor: axisColor,
+      linewidth: st.frameStrokeWidth ?? 1,
+      mirror: frameStyle === 'box',
+      zeroline: false,
+      gridcolor: gridColor,
+      gridwidth: st.gridStrokeWidth ?? 1,
+      tickfont: font,
+      automargin: true
     };
 
-    const chartContent = [
-      ReactLib.createElement('div', { className: 'assay-analysis-chart-plot', key: 'plot' }, [
-        ReactLib.createElement(
-          'div',
-          { className: canvasClassName, style: canvasStyle, key: 'canvas' },
-          ReactLib.createElement(XYPlot, { ...plotProps, key: 'xy-plot' }, plotChildren)
-        )
-      ])
-    ];
-    if (legendElement) {
-      chartContent.unshift(ReactLib.createElement('div', { className: 'assay-analysis-chart-head', key: 'head' }, [
-        legendElement
-      ]));
+    const xAxisType = isBar
+      ? 'category'
+      : (st.xScale === 'log' ? 'log' : st.xScale === 'ordinal' ? 'category' : undefined);
+    const yAxisType = st.yScale === 'log' ? 'log' : 'linear';
+
+    const xaxis = {
+      ...axisBase,
+      title: { text: chartModel.xLabel || '', font },
+      showgrid: st.showVerticalGrid !== false,
+      tickangle: isBar ? -35 : 0
+    };
+    if (xAxisType) xaxis.type = xAxisType;
+    const yaxis = {
+      ...axisBase,
+      title: { text: chartModel.yLabel || '', font },
+      showgrid: st.showHorizontalGrid !== false,
+      type: yAxisType
+    };
+    // ponytail: explicit ranges only on linear axes (Plotly log range is log10).
+    if (!isBar && xAxisType !== 'log' && xAxisType !== 'category') {
+      const xr = explicitRange(st.xRange);
+      if (xr) xaxis.range = xr;
+    }
+    if (yAxisType !== 'log') {
+      const yr = explicitRange(st.yRange);
+      if (yr) yaxis.range = yr;
     }
 
-    const chartElement = ReactLib.createElement('div', null, chartContent);
-
-    ReactDOMLib.render(chartElement, target);
-    chartHost = target;
-    return {
-      seriesLabels: chartModel.series.map((series) => String(series.label || ''))
+    const bgColor = st.backgroundColor || '#ffffff';
+    const layout = {
+      width,
+      height,
+      margin: { l: 70, r: 24, t: 24, b: isBar ? 96 : 56 },
+      paper_bgcolor: bgColor,
+      plot_bgcolor: bgColor,
+      font,
+      xaxis,
+      yaxis,
+      showlegend: chartModel.series.length > 1,
+      legend: { orientation: 'h', x: 0.5, xanchor: 'center', y: 1.12, yanchor: 'bottom', font },
+      barmode: 'group'
     };
+
+    target.style.borderRadius = `${st.frameCornerRadius ?? 0}px`;
+    target.style.overflow = 'hidden';
+    Plotly.newPlot(target, traces, layout, { displayModeBar: false, responsive: false });
+    chartHost = target;
+    return { seriesLabels: chartModel.series.map((s) => String(s.label || '')) };
   }
 
   return { render, unmount, captureDataUrl };

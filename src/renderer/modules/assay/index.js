@@ -23,9 +23,6 @@ import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.j
 
 export function initAssay({ state, persist, createId, safeText, onAssaysChanged }) {
   const TabulatorLib = window.Tabulator || null;
-  const ReactLib = window.React || null;
-  const ReactDOMLib = window.ReactDOM || null;
-  const ReactVisLib = window.reactVis || null;
   const elements = getAssayElements(document);
   const runtime = {
     currentLayout: [],
@@ -342,9 +339,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged 
   analysisView = createAssayAnalysisView({
     runtime,
     elements,
-    ReactLib,
-    ReactDOMLib,
-    ReactVisLib,
     safeText,
     getCurrentDefinition: layoutManager.getCurrentDefinition,
     syncCurrentResultsFromGrid: resultsManager.syncCurrentResultsFromGrid,

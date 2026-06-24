@@ -334,6 +334,15 @@
   text-transform: none;
 }
 
+/* Inside a dropdown menu the popover supplies the box, so flatten the
+   per-toggle/group outlines to avoid box-in-box nesting. */
+#sequence-viewer-detail-view .sequence-viewer-toolbar-menu .sequence-viewer-inline-toggle,
+#sequence-viewer-detail-view .sequence-viewer-toolbar-menu .sequence-viewer-inline-toggle-group {
+  border: 0;
+  background: transparent;
+  padding: 4px 6px;
+}
+
 #sequence-viewer-detail-view .sequence-viewer-feature-detail,
 #sequence-viewer-detail-view .sequence-viewer-message-box {
   font-family: inherit;

@@ -42,7 +42,7 @@ export {
 } from './rendering.js';
 
 export { alignSequenceToReference } from './alignment.js';
-export { renderAlignmentTracePanelHtml } from './detail-alignment.js';
+export { buildAlignmentSequenceTrack } from './detail-alignment.js';
 export { buildCircularPreviewHtmlDocument } from './storage.js';
 export {
   assembleCloningPlan,

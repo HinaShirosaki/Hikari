@@ -19,6 +19,25 @@ import {
 } from './shared.js';
 import { normalizeOrfStopCodonSelection } from './translation-style.js';
 
+// ORF reading frames paired with their toolbar toggle element keys.
+const ORF_FRAME_TOGGLES = [
+  ['+1', 'orfFramePlus1Toggle'],
+  ['+2', 'orfFramePlus2Toggle'],
+  ['+3', 'orfFramePlus3Toggle'],
+  ['-1', 'orfFrameMinus1Toggle'],
+  ['-2', 'orfFrameMinus2Toggle'],
+  ['-3', 'orfFrameMinus3Toggle']
+];
+
+function normalizeOrfFrameFilter(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const result = {};
+  for (const [frame] of ORF_FRAME_TOGGLES) {
+    result[frame] = source[frame] !== false;
+  }
+  return result;
+}
+
 export function createSequenceViewerDetailController(config = {}) {
   const rootDocument = config?.rootDocument || globalThis?.document || null;
   const elements = config?.elements || {};
@@ -53,6 +72,7 @@ export function createSequenceViewerDetailController(config = {}) {
     return getRenderableFeaturesForRecord(record, {
       includeOrf: state.orfViewEnabled,
       orfStopCodons: state.orfStopCodons,
+      orfFrameFilter: state.orfFrameFilter,
       restrictionVendorFilter: state.restrictionVendorFilter
     });
   }
@@ -320,6 +340,14 @@ export function createSequenceViewerDetailController(config = {}) {
       elements.orfStopTgaToggle.checked = Boolean(stopCodons.TGA);
       elements.orfStopTgaToggle.disabled = !hasRecord;
     }
+    const frameFilter = normalizeOrfFrameFilter(state.orfFrameFilter);
+    for (const [frame, key] of ORF_FRAME_TOGGLES) {
+      const toggle = elements[key];
+      if (toggle) {
+        toggle.checked = frameFilter[frame];
+        toggle.disabled = !hasRecord;
+      }
+    }
   }
 
   function readOrfStopCodonsFromControls() {
@@ -328,6 +356,14 @@ export function createSequenceViewerDetailController(config = {}) {
       TAA: Boolean(elements.orfStopTaaToggle?.checked),
       TGA: Boolean(elements.orfStopTgaToggle?.checked)
     });
+  }
+
+  function readOrfFrameFilterFromControls() {
+    const result = {};
+    for (const [frame, key] of ORF_FRAME_TOGGLES) {
+      result[frame] = Boolean(elements[key]?.checked);
+    }
+    return result;
   }
 
   function getAlignmentHighlightSegments(record) {
@@ -421,10 +457,6 @@ export function createSequenceViewerDetailController(config = {}) {
     detailRenderingController.renderSelectedFeatureDetail(record);
   }
 
-  function renderAlignmentTrace(record) {
-    detailRenderingController.renderAlignmentTrace(record);
-  }
-
   function renderSequence(record, options = {}) {
     detailRenderingController.renderSequence(record, options);
   }
@@ -438,7 +470,6 @@ export function createSequenceViewerDetailController(config = {}) {
     renderProteinBuilderConfirmation(record);
     renderStats(record);
     renderSequence(record);
-    renderAlignmentTrace(record);
     renderFeatureRail(record);
     renderSelectedFeatureDetail(record);
     syncActionButtonsState();
@@ -516,6 +547,27 @@ export function createSequenceViewerDetailController(config = {}) {
     renderActiveRecord();
   }
 
+  function setOrfFrameFilter(nextFilter) {
+    const record = getSelectedRecord();
+    const previousFeatures = getVisibleFeaturesForRecord(record);
+    const selectedFeature = (
+      Number.isFinite(state.selectedFeatureIndex)
+      && state.selectedFeatureIndex >= 0
+      && state.selectedFeatureIndex < previousFeatures.length
+    ) ? previousFeatures[state.selectedFeatureIndex] : null;
+
+    state.orfFrameFilter = normalizeOrfFrameFilter(nextFilter);
+
+    if (selectedFeature) {
+      const nextFeatures = getVisibleFeaturesForRecord(record);
+      state.selectedFeatureIndex = findFeatureIndexByIdentity(nextFeatures, selectedFeature);
+    } else {
+      state.selectedFeatureIndex = -1;
+    }
+
+    renderActiveRecord();
+  }
+
   featureEditingController = createSequenceViewerFeatureEditingController({
     elements,
     state,
@@ -564,6 +616,8 @@ export function createSequenceViewerDetailController(config = {}) {
       setOrfViewEnabled,
       readOrfStopCodonsFromControls,
       setOrfStopCodons,
+      readOrfFrameFilterFromControls,
+      setOrfFrameFilter,
       setRestrictionVendorFilter,
       resolveSequenceBoundaryFromEvent,
       resolveFeatureActionContext,
