@@ -73,6 +73,12 @@ function parseConcentrationMagnitude(value) {
     pg: 1e-12
   };
   const unit = rawUnit.replace(/\/.*$/, '');
+  // A present-but-unknown unit is a typo/unsupported unit, not base molar. Returning
+  // null drops it (it's filtered out below) instead of scaling by 1 — a stray "10
+  // millimolar" would otherwise read as 10 M and skew the whole heatmap min/max.
+  if (unit && !Object.prototype.hasOwnProperty.call(scaleMap, unit)) {
+    return null;
+  }
   return numeric * (scaleMap[unit] || 1);
 }
 

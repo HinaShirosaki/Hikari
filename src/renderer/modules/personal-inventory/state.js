@@ -28,7 +28,6 @@ export function createPersonalInventoryStateHelpers({ state, safeText, uiState }
     makeDefaultSampleCode: sampleHelpers.makeDefaultSampleCode,
     normalizeSampleCode: sampleHelpers.normalizeSampleCode,
     getSampleById: sampleHelpers.getSampleById,
-    getSavedSamplesForWellFill: sampleHelpers.getSavedSamplesForWellFill,
     isLocationEmpty: sampleHelpers.isLocationEmpty,
     buildAutoLocationFromLink: sampleHelpers.buildAutoLocationFromLink,
     normalizeSampleType: sampleHelpers.normalizeSampleType,

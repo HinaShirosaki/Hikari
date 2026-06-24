@@ -1,4 +1,4 @@
-import { cleanText, clamp, normalizeRecordName } from './shared.js';
+import { cleanText, clamp } from './shared.js';
 import { copyPrimerValueFromEvent } from './primer-copy.js';
 
 export function bindSequenceViewerDetailEvents(config = {}) {
@@ -34,8 +34,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const hasOpenSequenceEditDialog = config?.hasOpenSequenceEditDialog || (() => false);
   const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
-  const onRequestClear = config?.onRequestClear || (() => {});
-  const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
   const onRequestCloningDesign = config?.onRequestCloningDesign || (() => {});
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
@@ -79,18 +77,35 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     });
   });
 
-  elements.clearBtn?.addEventListener('click', (event) => {
-    event.preventDefault();
-    onRequestClear();
-  });
+  const toolbarMenus = [
+    { btn: elements.alignmentMenuBtn, menu: elements.alignmentMenu },
+    { btn: elements.orfMenuBtn, menu: elements.orfMenu },
+    { btn: elements.cutterMenuBtn, menu: elements.cutterMenu }
+  ].filter((entry) => entry.btn && entry.menu);
 
-  elements.saveBtn?.addEventListener('click', (event) => {
-    event.preventDefault();
-    void onRequestSave();
-  });
+  const closeToolbarMenus = (except = null) => {
+    for (const { btn, menu } of toolbarMenus) {
+      if (menu === except) {
+        continue;
+      }
+      menu.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  };
+
+  for (const { btn, menu } of toolbarMenus) {
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      const willOpen = menu.hidden;
+      closeToolbarMenus(willOpen ? menu : null);
+      menu.hidden = !willOpen;
+      btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+  }
 
   elements.alignmentOpenBtn?.addEventListener('click', (event) => {
     event.preventDefault();
+    closeToolbarMenus();
     void onRequestAlignment();
   });
 
@@ -156,10 +171,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     hideSequenceEditDialog();
     onReferenceRecordChanged();
     renderActiveRecord();
-    const selected = getSelectedRecord();
-    if (selected && elements.saveNameInput) {
-      elements.saveNameInput.value = normalizeRecordName(selected.name || 'sequence', 'sequence');
-    }
   });
 
   elements.featureRailHost?.addEventListener('click', (event) => {
@@ -432,10 +443,14 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     if (!event?.target?.closest?.('#sequence-viewer-feature-context-menu')) {
       hideFeatureContextMenu();
     }
+    if (!event?.target?.closest?.('.sequence-viewer-menu-anchor')) {
+      closeToolbarMenus();
+    }
   });
 
   globalThis.addEventListener?.('keydown', (event) => {
     if (String(event?.key || '') === 'Escape') {
+      closeToolbarMenus();
       hideFeatureContextMenu();
       hideFeatureEditor();
       hidePrimerDesignOverlay();

@@ -1,15 +1,14 @@
 import {
-  buildPassageReminderCode,
-  ensureSamplesState,
+  ensureDashboardState,
   formatDateLocal,
   formatRelativeDays,
-  nextSampleId,
   parseLocalDate,
+  passageReminderId,
   sampleLabel
 } from './utils.js';
 
 // Cell-passage reminder widget — surfaces overdue and upcoming sub-cultures,
-// plus an "add reminder" dialog that registers a cell-line sample on submit.
+// plus an "add reminder" dialog that stores dashboard-only reminder records.
 export function initPassageWidget({
   state,
   persist,
@@ -75,24 +74,15 @@ export function initPassageWidget({
 
     const now = new Date();
     const today = formatDateLocal(now);
-    ensureSamplesState(state);
-    state.samples.push({
-      id: nextSampleId(createId),
-      code: buildPassageReminderCode(state, strain),
+    ensureDashboardState(state);
+    state.settings.dashboard.passageReminders.push({
+      id: passageReminderId(createId),
       name: strain,
-      type: 'cell_line',
-      lot: '',
-      concentration: '',
-      notes: '',
       cellPassage: {
         lastPassageDate: today,
         intervalDays,
         passageNumber
       },
-      location: null,
-      inventoryLink: null,
-      chemicalLinks: [],
-      compoundStructure: null,
       updatedAt: now.toISOString()
     });
 
@@ -112,44 +102,46 @@ export function initPassageWidget({
     return Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
   }
 
-  function renderPassageStatusIcon(status) {
-    if (status === 'overdue') {
-      return `
-        <span class="dashboard-passage-status" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="presentation">
-            <path d="M12 3 22 20H2Z" fill="#d9544d"></path>
-            <path d="M11.1 8.2h1.8l-.2 6.4h-1.4zM12 18a1.15 1.15 0 1 1 0-2.3 1.15 1.15 0 0 1 0 2.3Z" fill="#ffffff"></path>
-          </svg>
-        </span>
-      `;
+  function passageDotClass(row) {
+    if (row.status === 'overdue' || row.status === 'due_today') {
+      return ' is-alert';
     }
-    if (status === 'due_today') {
-      return `
-        <span class="dashboard-passage-status" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="presentation">
-            <path d="M11.1 4.2h1.8l-.2 10.1h-1.4zM12 19.1a1.4 1.4 0 1 1 0-2.8 1.4 1.4 0 0 1 0 2.8Z" fill="#c77b00"></path>
-          </svg>
-        </span>
-      `;
+    if (row.status === 'unconfigured') {
+      return ' is-warn';
     }
-    if (status === 'unconfigured') {
-      return `
-        <span class="dashboard-passage-status" aria-hidden="true">
-          <svg viewBox="0 0 24 24" role="presentation">
-            <circle cx="12" cy="12" r="9" fill="#c2beb7"></circle>
-            <rect x="7" y="11" width="10" height="2" rx="1" fill="#ffffff"></rect>
-          </svg>
-        </span>
-      `;
+    if (row.status === 'incubating' && row.daysFromToday <= 1) {
+      return ' is-warn';
     }
-    return `
-      <span class="dashboard-passage-status" aria-hidden="true">
-        <svg viewBox="0 0 24 24" role="presentation">
-          <circle cx="12" cy="12" r="8.5" fill="none" stroke="#7a8670" stroke-width="1.8"></circle>
-          <path d="M12 7.6v4.8l3 1.8" fill="none" stroke="#7a8670" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>
-        </svg>
-      </span>
-    `;
+    return '';
+  }
+
+  function passageTag(row) {
+    if (row.status === 'unconfigured') {
+      return { text: 'set up', cls: '' };
+    }
+    if (row.status === 'overdue') {
+      const days = Math.abs(row.daysFromToday);
+      return { text: days <= 0 ? 'due now' : `${days} d overdue`, cls: ' is-due' };
+    }
+    if (row.status === 'due_today') {
+      return { text: 'due today', cls: ' is-due' };
+    }
+    if (row.daysFromToday <= 1) {
+      return { text: 'in 1 d', cls: ' is-soon' };
+    }
+    return { text: `in ${row.daysFromToday} d`, cls: '' };
+  }
+
+  function passageName(row) {
+    const label = sampleLabel(row.sample);
+    return row.passageNumber > 0 ? `${label} (P${row.passageNumber})` : label;
+  }
+
+  function passageMeta(row) {
+    if (row.status === 'unconfigured') {
+      return 'Needs last passage date or interval';
+    }
+    return `Every ${row.intervalDays} d`;
   }
 
   function renderPassageActionIcon(action) {
@@ -173,25 +165,26 @@ export function initPassageWidget({
     if (!row.isActionable) {
       return '';
     }
-    const sampleId = safeText(String(row.sample?.id || ''));
+    const passageId = safeText(String(row.sample?.id || ''));
+    const passageSource = safeText(String(row.source || 'sample'));
     const label = safeText(sampleLabel(row.sample));
     return `
-      <div class="dashboard-passage-actions">
-        <button
-          type="button"
-          class="dashboard-passage-action"
-          data-dashboard-passage-action="done"
-          data-dashboard-passage-sample="${sampleId}"
-          aria-label="Mark passage done for ${label}"
-        >${renderPassageActionIcon('done')}</button>
-        <button
-          type="button"
-          class="dashboard-passage-action"
-          data-dashboard-passage-action="extend"
-          data-dashboard-passage-sample="${sampleId}"
-          aria-label="Extend passage reminder one day for ${label}"
-        >${renderPassageActionIcon('extend')}</button>
-      </div>
+      <button
+        type="button"
+        class="home-row-action"
+        data-dashboard-passage-action="done"
+        data-dashboard-passage-id="${passageId}"
+        data-dashboard-passage-source="${passageSource}"
+        aria-label="Mark passage done for ${label}"
+      >${renderPassageActionIcon('done')}</button>
+      <button
+        type="button"
+        class="home-row-action"
+        data-dashboard-passage-action="extend"
+        data-dashboard-passage-id="${passageId}"
+        data-dashboard-passage-source="${passageSource}"
+        aria-label="Extend passage reminder one day for ${label}"
+      >${renderPassageActionIcon('extend')}</button>
     `;
   }
 
@@ -242,38 +235,47 @@ export function initPassageWidget({
     return nextConfig;
   }
 
-  function completePassage(sampleId) {
-    const sample = (Array.isArray(state.samples) ? state.samples : []).find((item) => item.id === sampleId);
-    const current = clonePassageConfig(sample);
-    if (!sample || !current) {
+  function findPassageRecord(source, recordId) {
+    if (source === 'dashboard') {
+      return (Array.isArray(state.settings?.dashboard?.passageReminders)
+        ? state.settings.dashboard.passageReminders
+        : []).find((item) => item.id === recordId) || null;
+    }
+    return (Array.isArray(state.samples) ? state.samples : []).find((item) => item.id === recordId) || null;
+  }
+
+  function completePassage(source, recordId) {
+    const record = findPassageRecord(source, recordId);
+    const current = clonePassageConfig(record);
+    if (!record || !current) {
       return;
     }
     const now = new Date();
-    sample.cellPassage = {
+    record.cellPassage = {
       lastPassageDate: formatDateLocal(now),
       intervalDays: current.intervalDays,
       passageNumber: current.passageNumber > 0 ? current.passageNumber + 1 : undefined
     };
-    sample.updatedAt = now.toISOString();
+    record.updatedAt = now.toISOString();
     persist();
     render();
   }
 
-  function extendPassageOneDay(sampleId) {
-    const sample = (Array.isArray(state.samples) ? state.samples : []).find((item) => item.id === sampleId);
-    const current = clonePassageConfig(sample);
-    if (!sample || !current) {
+  function extendPassageOneDay(source, recordId) {
+    const record = findPassageRecord(source, recordId);
+    const current = clonePassageConfig(record);
+    if (!record || !current) {
       return;
     }
     const now = new Date();
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(0, 0, 0, 0);
-    sample.cellPassage = {
+    record.cellPassage = {
       ...current,
       deferredUntilDate: formatDateLocal(tomorrow)
     };
-    sample.updatedAt = now.toISOString();
+    record.updatedAt = now.toISOString();
     persist();
     render();
   }
@@ -287,9 +289,11 @@ export function initPassageWidget({
     const unconfigured = [];
     const rows = [];
 
-    (Array.isArray(state.samples) ? state.samples : []).forEach((sample) => {
+    function collectRecord(sample, source) {
       if (String(sample?.type || '').trim().toLowerCase() !== 'cell_line') {
-        return;
+        if (source !== 'dashboard') {
+          return;
+        }
       }
       const dateValue = String(sample?.cellPassage?.lastPassageDate || '').trim();
       const interval = Math.round(Number(sample?.cellPassage?.intervalDays));
@@ -298,6 +302,7 @@ export function initPassageWidget({
       if (!lastPassage || !Number.isFinite(interval) || interval <= 0) {
         const row = {
           sample,
+          source,
           status: 'unconfigured',
           intervalDays: 0,
           passageNumber,
@@ -324,6 +329,7 @@ export function initPassageWidget({
         : (effectiveDueDate.getTime() === today.getTime() ? 'due_today' : 'incubating');
       const row = {
         sample,
+        source,
         status,
         intervalDays: interval,
         passageNumber,
@@ -341,6 +347,15 @@ export function initPassageWidget({
         incubating.push(row);
       }
       rows.push(row);
+    }
+
+    (Array.isArray(state.samples) ? state.samples : []).forEach((sample) => {
+      collectRecord(sample, 'sample');
+    });
+    (Array.isArray(state.settings?.dashboard?.passageReminders)
+      ? state.settings.dashboard.passageReminders
+      : []).forEach((reminder) => {
+      collectRecord(reminder, 'dashboard');
     });
 
     const statusRank = {
@@ -372,21 +387,29 @@ export function initPassageWidget({
   }
 
   function renderPassageWidget(passageRows) {
-    summary.textContent = `Overdue: ${passageRows.overdue.length} | Need today: ${passageRows.dueToday.length} | Incubating: ${passageRows.incubating.length}${passageRows.unconfigured.length ? ` | Needs setup: ${passageRows.unconfigured.length}` : ''}`;
     if (!passageRows.rows.length) {
+      summary.textContent = 'No cell line reminders yet.';
       list.innerHTML = '<p class="small-note">No cell line reminders yet.</p>';
       return;
     }
-    list.innerHTML = passageRows.rows.map((row) => `
-      <article class="dashboard-passage-row${row.status === 'unconfigured' ? ' is-unconfigured' : ''}">
-        ${renderPassageStatusIcon(row.status)}
-        <div class="dashboard-passage-copy">
-          <strong class="dashboard-passage-title">${safeText(sampleLabel(row.sample))}</strong>
-          <p class="dashboard-passage-detail">${safeText(formatPassageRowDetail(row))}</p>
+    const dueCount = passageRows.overdue.length + passageRows.dueToday.length;
+    summary.textContent = `${dueCount} due · ${passageRows.rows.length} line${passageRows.rows.length === 1 ? '' : 's'}`;
+    list.innerHTML = passageRows.rows.map((row) => {
+      const tag = passageTag(row);
+      return `
+      <article class="home-row${row.status === 'unconfigured' ? ' is-muted' : ''}">
+        <span class="home-dot${passageDotClass(row)}" aria-hidden="true"></span>
+        <div class="home-row-copy">
+          <div class="home-row-name">${safeText(passageName(row))}</div>
+          <div class="home-row-meta">${safeText(passageMeta(row))}</div>
         </div>
-        ${renderPassageActionButtons(row)}
+        <div class="home-row-end">
+          <span class="home-row-tag${tag.cls}">${safeText(tag.text)}</span>
+          ${renderPassageActionButtons(row)}
+        </div>
       </article>
-    `).join('');
+    `;
+    }).join('');
   }
 
   function onPassageListClick(event) {
@@ -394,17 +417,18 @@ export function initPassageWidget({
     if (!button) {
       return;
     }
-    const sampleId = String(button.dataset.dashboardPassageSample || '').trim();
+    const recordId = String(button.dataset.dashboardPassageId || '').trim();
+    const source = String(button.dataset.dashboardPassageSource || 'sample').trim().toLowerCase();
     const action = String(button.dataset.dashboardPassageAction || '').trim().toLowerCase();
-    if (!sampleId || !action) {
+    if (!recordId || !action) {
       return;
     }
     if (action === 'done') {
-      completePassage(sampleId);
+      completePassage(source, recordId);
       return;
     }
     if (action === 'extend') {
-      extendPassageOneDay(sampleId);
+      extendPassageOneDay(source, recordId);
     }
   }
 

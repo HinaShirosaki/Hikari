@@ -15,7 +15,6 @@ export function createSequenceViewerHomeController(config = {}) {
   const getBridge = config?.getBridge || (() => null);
   const getStoragePath = config?.getStoragePath || (() => '');
   const hasStoragePath = config?.hasStoragePath || (() => false);
-  const getSelectedRecord = config?.getSelectedRecord || (() => null);
   const setMode = config?.setMode || (() => {});
   const setInputComposerVisible = config?.setInputComposerVisible || (() => {});
   const setRecords = config?.setRecords || (() => {});
@@ -27,11 +26,13 @@ export function createSequenceViewerHomeController(config = {}) {
   const onNavigateDetail = typeof config?.onNavigateDetail === 'function' ? config.onNavigateDetail : null;
   const onClearAll = config?.onClearAll || (() => {});
   const onParsedRecordsOpened = config?.onParsedRecordsOpened || (async () => null);
+  const onRenameLibraryEntry = config?.onRenameLibraryEntry || (async () => null);
   const onLibraryEntryLoaded = typeof config?.onLibraryEntryLoaded === 'function'
     ? config.onLibraryEntryLoaded
     : () => {};
   const libraryPreviewDelayMs = 320;
   let libraryPreviewTimer = null;
+  let libraryContextEntryId = '';
 
   function compactElementList(...items) {
     const seen = new Set();
@@ -54,6 +55,57 @@ export function createSequenceViewerHomeController(config = {}) {
 
   function getLibraryTemporaryFilterButtons() {
     return compactElementList(elements.libraryFilterTemporaryBtn, elements.detailLibraryFilterTemporaryBtn);
+  }
+
+  function getLibraryContextMenus() {
+    return compactElementList(elements.libraryContextMenu, elements.detailLibraryContextMenu);
+  }
+
+  function hideLibraryContextMenus() {
+    getLibraryContextMenus().forEach((menu) => {
+      menu.hidden = true;
+    });
+    libraryContextEntryId = '';
+  }
+
+  function showLibraryContextMenu(menu, entryId, event) {
+    if (!menu || !entryId) {
+      return;
+    }
+    hideLibraryContextMenus();
+    libraryContextEntryId = entryId;
+    menu.hidden = false;
+    menu.style.left = `${Math.max(8, Number(event?.clientX) || 0)}px`;
+    menu.style.top = `${Math.max(8, Number(event?.clientY) || 0)}px`;
+  }
+
+  async function renameLibraryEntryFromContextMenu() {
+    const entryId = cleanText(libraryContextEntryId, 200);
+    const entry = (Array.isArray(state.libraryEntries) ? state.libraryEntries : [])
+      .find((item) => cleanText(item?.id, 200) === entryId);
+    hideLibraryContextMenus();
+    if (!entry) {
+      return;
+    }
+    const promptFn = rootDocument?.defaultView?.prompt || globalThis?.prompt;
+    if (typeof promptFn !== 'function') {
+      setHomeStatus('Rename prompt unavailable.', true);
+      return;
+    }
+    const requestedName = promptFn('Rename sequence', String(entry.name || 'sequence'));
+    if (requestedName === null) {
+      return;
+    }
+    const nextName = cleanText(requestedName, 140);
+    if (!nextName) {
+      setHomeStatus('Enter a sequence name.', true);
+      return;
+    }
+    try {
+      await onRenameLibraryEntry(entryId, nextName);
+    } catch (error) {
+      setHomeStatus(error?.message || 'Failed to rename sequence entry.', true);
+    }
   }
 
   function clearLibraryPreviewTimer() {
@@ -178,9 +230,6 @@ export function createSequenceViewerHomeController(config = {}) {
     getLibraryTemporaryFilterButtons().forEach((button) => {
       button.disabled = !hasStorage;
     });
-    if (elements.saveBtn) {
-      elements.saveBtn.disabled = !getSelectedRecord()?.sequence?.length;
-    }
     if (elements.featureSearchInput) {
       elements.featureSearchInput.disabled = !hasStorage || Boolean(state.isSearchingFeatures);
     }
@@ -616,11 +665,9 @@ export function createSequenceViewerHomeController(config = {}) {
 
       state.activeEntryId = cleanText(response.entry.id, 200);
       state.activeEntryStatus = String(response.entry.status || '').toLowerCase();
+      parsed.records[0].name = response.entry.name || parsed.records[0].name || 'sequence';
       if (elements.inputTextarea) {
         elements.inputTextarea.value = String(response.gbkText || '');
-      }
-      if (elements.saveNameInput) {
-        elements.saveNameInput.value = response.entry.name || parsed.records[0].name || 'sequence';
       }
       setMode('paste');
       setInputComposerVisible(false);
@@ -806,10 +853,49 @@ export function createSequenceViewerHomeController(config = {}) {
         }
         openLibraryEntryFromList(entryId);
       });
+
+      libraryList.addEventListener('contextmenu', (event) => {
+        const entryId = resolveLibraryEntryIdFromEvent(event);
+        if (!entryId) {
+          hideLibraryContextMenus();
+          return;
+        }
+        event.preventDefault?.();
+        clearLibraryPreviewTimer();
+        state.selectedLibraryEntryId = entryId;
+        renderLibraryList();
+        showLibraryContextMenu(options.contextMenu, entryId, event);
+      });
     };
 
-    bindLibraryList(elements.libraryList);
-    bindLibraryList(elements.detailLibraryList, { navigateHome: true });
+    bindLibraryList(elements.libraryList, { contextMenu: elements.libraryContextMenu });
+    bindLibraryList(elements.detailLibraryList, {
+      contextMenu: elements.detailLibraryContextMenu,
+      navigateHome: true
+    });
+
+    getLibraryContextMenus().forEach((menu) => {
+      menu.addEventListener('click', (event) => {
+        const action = cleanText(
+          event?.target?.closest?.('[data-sequence-library-action]')?.dataset?.sequenceLibraryAction,
+          40
+        );
+        if (action === 'rename') {
+          void renameLibraryEntryFromContextMenu();
+        }
+      });
+    });
+
+    rootDocument?.addEventListener?.('click', (event) => {
+      if (!event?.target?.closest?.('.sequence-viewer-context-menu')) {
+        hideLibraryContextMenus();
+      }
+    });
+    rootDocument?.addEventListener?.('keydown', (event) => {
+      if (String(event?.key || '') === 'Escape') {
+        hideLibraryContextMenus();
+      }
+    });
 
     elements.featureSearchBtn?.addEventListener('click', () => {
       void runFeatureSearch();

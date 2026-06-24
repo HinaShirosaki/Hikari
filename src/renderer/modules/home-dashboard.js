@@ -1,4 +1,8 @@
-import { ensureDashboardState, ensureSamplesState } from './home-dashboard/utils.js';
+import {
+  ensureDashboardState,
+  ensureSamplesState,
+  migrateLegacyPassageSamples
+} from './home-dashboard/utils.js';
 import { initContributionWidget } from './home-dashboard/contribution.js';
 import { initIncubationWidget } from './home-dashboard/incubation.js';
 import { initNotebookWidget } from './home-dashboard/notebook.js';
@@ -38,8 +42,14 @@ export function initHomeDashboard({
   const contributionElements = {
     monthLabels: document.getElementById('dashboard-contribution-months'),
     grid: document.getElementById('dashboard-contribution-grid'),
-    streak: document.getElementById('dashboard-contribution-streak')
+    streak: document.getElementById('dashboard-contribution-streak'),
+    summary: document.getElementById('dashboard-contribution-summary')
   };
+
+  const notebookOpenBtn = document.getElementById('dashboard-notebook-open-btn');
+  if (notebookOpenBtn) {
+    notebookOpenBtn.addEventListener('click', () => onOpenNotebook());
+  }
 
   const incubationElements = {
     summary: document.getElementById('dashboard-incubation-summary'),
@@ -104,6 +114,7 @@ export function initHomeDashboard({
   function masterRender() {
     let changed = ensureDashboardState(state);
     changed = ensureSamplesState(state) || changed;
+    changed = migrateLegacyPassageSamples(state) || changed;
     if (changed) {
       persist();
     }

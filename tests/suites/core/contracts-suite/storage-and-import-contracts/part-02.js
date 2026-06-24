@@ -68,7 +68,6 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
         },
         persistState: () => {},
         normalizeStateStoragePaths: () => {},
-        rebuildObjectGraph: () => ({ nodes: {}, edges: [], backlinks: {}, updatedAt: 'rebuilt' }),
         windowObject: {
           hikariApi: {
             ensureStorageDirectory: async (storagePath) => {
@@ -133,7 +132,6 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
           persistedState = structuredClone(state);
         },
         normalizeStateStoragePaths: () => {},
-        rebuildObjectGraph: () => ({ nodes: {}, edges: [], backlinks: {}, updatedAt: 'rebuilt' }),
         windowObject: {
           hikariApi: {
             ensureStorageDirectory: async (storagePath) => ({ ok: true, path: storagePath }),

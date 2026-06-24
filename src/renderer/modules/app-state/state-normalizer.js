@@ -13,6 +13,7 @@ import { normalizeAppearanceMode } from './appearance.js';
 import {
   normalizeDashboardActiveTimers,
   normalizeDashboardIncubationLocations,
+  normalizeDashboardPassageReminders,
   normalizeDashboardQuickLogEntries,
   normalizeDashboardTimerTemplates,
   normalizeWorkflowProgressMap
@@ -95,6 +96,8 @@ function normalizeSettings(source) {
       workflowProgress: normalizeWorkflowProgressMap(rawDashboard.workflowProgress),
       quickLogDraft: String(rawDashboard.quickLogDraft || ''),
       quickLogEntries: normalizeDashboardQuickLogEntries(rawDashboard.quickLogEntries),
+      passageReminders: normalizeDashboardPassageReminders(rawDashboard.passageReminders),
+      legacyPassageSamplesMigrated: rawDashboard.legacyPassageSamplesMigrated === true,
       incubationLocations: normalizeDashboardIncubationLocations(rawDashboard.incubationLocations),
       timerTemplates: normalizeDashboardTimerTemplates(rawDashboard.timerTemplates),
       activeTimers: normalizeDashboardActiveTimers(rawDashboard.activeTimers)
@@ -174,10 +177,6 @@ export function normalizeState(parsed) {
     gelAnalyses: Array.isArray(source.gelAnalyses) ? source.gelAnalyses : [],
     samples: (Array.isArray(source.samples) ? source.samples : []).map((sample) => normalizeSampleRecord(sample)),
     growthMetrics: normalizeGrowthMetrics(source),
-    objectGraph: {
-      ...defaultState.objectGraph,
-      ...asObject(source.objectGraph)
-    },
     messages: Array.isArray(source.messages) ? source.messages : [],
     labInventory: {
       ...defaultState.labInventory,

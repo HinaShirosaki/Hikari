@@ -8,7 +8,7 @@
   --assay-plate-highlight: rgba(255, 255, 255, 0.7);
   --assay-plate-highlight-strong: rgba(255, 255, 255, 0.9);
   --assay-plate-shadow-soft: rgba(0, 0, 0, 0.08);
-  --assay-plate-shadow: rgba(0, 0, 0, 0.18);
+  --assay-plate-shadow: rgba(27, 20, 14, 0.14);
   --assay-plate-shadow-strong: rgba(0, 0, 0, 0.3);
   --assay-plate-pure-white: #ffffff;
   --assay-plate-pure-black: #000000;
@@ -26,7 +26,6 @@
   --assay-plate-surface-strong: rgba(255, 255, 255, 0.98);
   --assay-plate-disabled-bg: rgba(232, 236, 242, 0.75);
   --assay-plate-overlay: rgba(18, 34, 55, 0.18);
-  --assay-plate-shadow: rgba(27, 20, 14, 0.14);
   --assay-plate-body: #f4f5f1;
   --assay-plate-body-mid: #ebede6;
   --assay-plate-body-edge: #e3e5dc;

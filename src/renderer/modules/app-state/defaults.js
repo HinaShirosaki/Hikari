@@ -57,12 +57,6 @@ export const defaultState = {
   assays: [],
   gelAnalyses: [],
   samples: [],
-  objectGraph: {
-    nodes: {},
-    edges: [],
-    backlinks: {},
-    updatedAt: ''
-  },
   labInventory: {
     chemicals: [],
     blocks: [],
@@ -124,6 +118,8 @@ export const defaultState = {
       workflowProgress: {},
       quickLogDraft: '',
       quickLogEntries: [],
+      passageReminders: [],
+      legacyPassageSamplesMigrated: false,
       incubationLocations: [],
       timerTemplates: [],
       activeTimers: []

@@ -28,6 +28,7 @@ body.theme-night {
 .biology-notebook-context-menu,
 .workflow-context-menu,
 .sequence-viewer-context-menu,
+.personal-inventory-context-menu,
 .protocol-action-menu {
   padding: 8px !important;
   border: 1px solid var(--hikari-menu-border) !important;
@@ -39,7 +40,8 @@ body.theme-night {
 
 .selection-insight-menu,
 .workflow-context-menu,
-.sequence-viewer-context-menu {
+.sequence-viewer-context-menu,
+.personal-inventory-context-menu {
   gap: 4px;
 }
 
@@ -49,6 +51,7 @@ body.theme-night {
 .biology-notebook-context-item,
 .workflow-context-item,
 .sequence-viewer-context-item,
+.personal-inventory-context-item,
 .protocol-action-item {
   min-height: 40px;
   width: 100%;
@@ -83,6 +86,8 @@ body.theme-night {
 .workflow-context-item:focus-visible,
 .sequence-viewer-context-item:hover:not(:disabled),
 .sequence-viewer-context-item:focus-visible:not(:disabled),
+.personal-inventory-context-item:hover,
+.personal-inventory-context-item:focus-visible,
 .protocol-action-item:hover,
 .protocol-action-item:focus-visible {
   background: var(--hikari-menu-hover) !important;
@@ -96,6 +101,7 @@ body.theme-night {
 .biology-notebook-context-item:active,
 .workflow-context-item:active,
 .sequence-viewer-context-item:active:not(:disabled),
+.personal-inventory-context-item:active,
 .protocol-action-item:active {
   background: var(--hikari-menu-pressed) !important;
 }
@@ -105,13 +111,29 @@ body.theme-night {
   opacity: 0.52;
 }
 
+.personal-inventory-context-rename-input {
+  width: 100%;
+  min-width: 168px;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  border: 1px solid var(--hikari-menu-border);
+  border-radius: var(--hikari-menu-item-radius);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
+  font: inherit;
+  font-size: 0.94rem;
+}
+
 .papers-context-item-danger,
+.personal-inventory-context-item-danger,
 .protocol-action-item-danger {
   color: var(--theme-danger);
 }
 
 .papers-context-item-danger:hover,
 .papers-context-item-danger:focus-visible,
+.personal-inventory-context-item-danger:hover,
+.personal-inventory-context-item-danger:focus-visible,
 .protocol-action-item-danger:hover,
 .protocol-action-item-danger:focus-visible {
   color: var(--theme-danger);

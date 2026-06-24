@@ -49,6 +49,104 @@ test('[EDGE] sequence-viewer library rows render only sequence names in the left
   assert.doesNotMatch(libraryList.innerHTML, /sequence-viewer-library-item-meta/);
   assert.doesNotMatch(libraryList.innerHTML, /6076|6,076|bp|features|updated/i);
 });
+test('[EDGE] sequence-viewer renames a library entry from the right-click menu', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-list',
+    'sequence-viewer-library-context-menu',
+    'sequence-viewer-preview-host'
+  ];
+  const originalEntry = {
+    id: 'entry_rename',
+    name: 'Original Name',
+    status: 'saved',
+    sourceFormat: 'genbank',
+    topology: 'circular',
+    sequenceLength: 12,
+    featureCount: 0
+  };
+  let currentEntry = { ...originalEntry };
+  let upsertPayload = null;
+  const document = createMockDocument(ids);
+  document.defaultView = {
+    prompt(label, value) {
+      assert.equal(label, 'Rename sequence');
+      assert.equal(value, 'Original Name');
+      return 'Renamed Vector';
+    }
+  };
+  const window = {
+    hikariApi: {
+      sequenceLibraryList: async () => ({ ok: true, entries: [currentEntry] }),
+      sequenceLibraryGet: async () => ({
+        ok: true,
+        entry: currentEntry,
+        gbkText: `LOCUS       ORIGINAL        12 bp    DNA     circular SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+ORIGIN
+        1 acgtacgtacgt
+//
+`,
+        alignments: []
+      }),
+      sequenceLibraryUpsert: async (payload) => {
+        upsertPayload = payload;
+        currentEntry = { ...currentEntry, name: payload.name };
+        return { ok: true, entry: currentEntry, alignments: [] };
+      }
+    }
+  };
+  const localStorage = {
+    getItem() {
+      return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
+    { document, window, localStorage }
+  );
+  moduleWithDom.initSequenceViewer();
+  await flushAsync();
+
+  const rowTarget = {
+    dataset: { sequenceEntryId: originalEntry.id },
+    closest(selector) {
+      return selector === '[data-sequence-entry-id]' ? this : null;
+    }
+  };
+  const libraryList = document.getElementById('sequence-viewer-library-list');
+  const contextMenu = document.getElementById('sequence-viewer-library-context-menu');
+  trigger(libraryList, 'contextmenu', {
+    target: rowTarget,
+    clientX: 44,
+    clientY: 72
+  });
+  assert.equal(contextMenu.hidden, false);
+  assert.equal(contextMenu.style.left, '44px');
+  assert.equal(contextMenu.style.top, '72px');
+
+  const renameTarget = {
+    closest(selector) {
+      return selector === '[data-sequence-library-action]'
+        ? { dataset: { sequenceLibraryAction: 'rename' } }
+        : null;
+    }
+  };
+  trigger(contextMenu, 'click', { target: renameTarget });
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(upsertPayload.id, originalEntry.id);
+  assert.equal(upsertPayload.name, 'Renamed Vector');
+  assert.equal(upsertPayload.status, 'saved');
+  assert.match(upsertPayload.gbkText, /LOCUS\s+Renamed_Vector/);
+  assert.match(libraryList.innerHTML, /Renamed Vector/);
+  assert.equal(contextMenu.hidden, true);
+});
 test('[EDGE] sequence-viewer hides input composer after successful load', () => {
   const ids = [
     'sequence-viewer-home-workspace',

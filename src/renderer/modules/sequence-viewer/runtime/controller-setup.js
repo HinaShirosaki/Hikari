@@ -22,13 +22,13 @@ export function setupSequenceViewerControllers(ctx) {
     getBridge: actions.getBridge,
     getStoragePath: actions.getStoragePath,
     hasStoragePath: actions.hasStoragePath,
-    getSelectedRecord: actions.getSelectedRecord,
     setMode: actions.setMode,
     setInputComposerVisible: actions.setInputComposerVisible,
     setRecords: actions.setRecords,
     setStatus: actions.setStatus,
     readFileAsText: actions.readFileAsText,
     onParsedRecordsOpened: actions.maybePersistImportedGenbankRecord,
+    onRenameLibraryEntry: actions.renameLibraryEntry,
     onLibraryEntryLoaded: ({ alignments }) => {
       actions.setAlignmentSessions(alignments);
       controllers.alignment?.handleReferenceRecordChanged?.();
@@ -51,8 +51,6 @@ export function setupSequenceViewerControllers(ctx) {
     persistFeatureMutation: actions.persistFeatureMutation,
     onRequestAnnotate: () => controllers.annotation?.annotateCurrentRecord?.(),
     onRequestRecognizeBackbone: actions.recognizeCurrentBackboneInsert,
-    onRequestClear: actions.clearAll,
-    onRequestSave: actions.saveCurrentRecordAsSaved,
     onApplySequenceEdit: actions.applySequenceEdit,
     onRequestAlignment: () => controllers.alignment?.openSequencingAlignmentWorkspace?.(),
     onRequestCloningDesign: () => controllers.cloningDesign?.open?.(),

@@ -4,7 +4,7 @@ import {
   onCompoundStructurePaste
 } from './compound-actions.js';
 import { onSampleTypeChange } from './compound-dialog.js';
-import { renderLinkedPositionOptions } from './inventory-links.js';
+import { renderLinkedContainerOptions, renderLinkedPositionOptions } from './inventory-links.js';
 import { renderLocationFields } from './location-fields.js';
 import {
   deleteSample,
@@ -34,7 +34,7 @@ export function bindSampleRegistryEvents(ctx) {
   dom.sampleSearchInput?.addEventListener('input', () => renderList(ctx));
   dom.sampleExportCsvBtn?.addEventListener('click', () => {
     const samples = ctx.state.samples || [];
-    const blob = new Blob([`\uFEFF${toSamplesCsv(samples)}`], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob([`\uFEFF${toSamplesCsv(samples, ctx.state.inventory)}`], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = `samples-${new Date().toISOString().slice(0, 10)}.csv`;
@@ -54,9 +54,9 @@ export function bindSampleRegistryEvents(ctx) {
         setSampleCsvStatus(ctx, 'Import failed: no rows with a "name" column were found.');
         return;
       }
-      const { samples, created, updated } = mergeSamplesFromCsv(ctx.state.samples, rows);
-      ctx.state.samples = samples;
+      const { created, updated } = mergeSamplesFromCsv(ctx.state, rows);
       ctx.persist();
+      renderLinkedContainerOptions(ctx);
       renderList(ctx);
       setSampleCsvStatus(ctx, `Imported ${created + updated} samples (${created} new, ${updated} updated).`);
     } catch (error) {

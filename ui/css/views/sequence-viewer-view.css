@@ -41,20 +41,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   min-height: 0;
 }
 
-.sequence-viewer-rail-nav-copy {
-  display: grid;
-  gap: 4px;
-  max-width: 560px;
-}
-
-.sequence-viewer-rail-nav-copy strong {
-  color: var(--theme-text-strong);
-}
-
-.sequence-viewer-rail-nav-copy .small-note {
-  margin: 0;
-}
-
 .sequence-viewer-rail-nav-actions {
   display: flex;
   flex-wrap: wrap;
@@ -886,19 +872,28 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-detail-workspace {
   display: grid;
-  gap: 12px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0;
   min-width: 0;
-  min-height: var(--shared-left-rail-layout-height);
-  height: var(--shared-left-rail-layout-height);
+  min-height: 0;
+  height: 100%;
+}
+
+#sequence-viewer-protein-builder-confirmation:not([hidden]) {
+  grid-row: 1;
+  margin-bottom: 12px;
 }
 
 #sequence-viewer-detail-view.view.is-active {
-  align-content: stretch;
-  grid-auto-rows: minmax(0, 1fr);
+  display: grid;
+  min-height: 0;
+  height: 100%;
 }
 
-.sequence-viewer-detail-layout {
+#sequence-viewer-detail-view .sequence-viewer-detail-layout.left-rail-template {
   --left-rail-main-gap: 20px;
+  grid-row: 2;
+  align-items: stretch;
   min-height: 0;
   height: 100%;
 }
@@ -908,19 +903,33 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   min-height: 0;
 }
 
-.sequence-viewer-detail-main {
-  display: grid;
-  gap: 12px;
-  align-content: start;
+.sequence-viewer-detail-sidebar {
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
 }
 
-#sequence-viewer-detail-view .sequence-viewer-detail-main {
-  grid-template-rows: auto auto minmax(0, 1fr);
-  align-content: stretch;
+.sequence-viewer-detail-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-detail-layout.left-rail-template > .sequence-viewer-detail-main.left-rail-template__main {
+  align-self: stretch;
+  height: 100%;
   min-height: 0;
+  padding-left: var(--left-rail-main-gap);
   overflow: hidden;
   overscroll-behavior: contain;
   scrollbar-gutter: auto;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-detail-layout.left-rail-template > .sequence-viewer-detail-sidebar.left-rail-template__rail {
+  align-self: stretch;
+  height: 100%;
+  min-height: 0;
 }
 
 .sequence-viewer-protein-builder-confirmation {
@@ -1172,27 +1181,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 
 
-.sequence-viewer-detail-topbar {
-  border-radius: 8px;
-  border: 1px solid var(--theme-border);
-  background: var(--theme-surface);
-  padding: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: end;
-}
-
-.sequence-viewer-save-name-wrap {
-  display: grid;
-  gap: 5px;
-  flex: 1 1 190px;
-  min-width: min(190px, 100%);
-  max-width: 320px;
-  font-size: 0.8rem;
-  color: var(--theme-text-muted);
-}
-
 .sequence-viewer-controls {
   border-radius: 8px;
   border: 1px solid var(--theme-border);
@@ -1293,12 +1281,22 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   letter-spacing: 0;
 }
 
+.sequence-viewer-menu-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.sequence-viewer-context-menu.sequence-viewer-toolbar-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  gap: 8px;
+}
+
 .sequence-viewer-results {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  align-items: stretch;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
 }
@@ -1366,9 +1364,10 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-sequence-region {
-  display: grid;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   gap: 10px;
-  grid-template-rows: minmax(0, 1fr) auto auto;
   min-height: 0;
   margin: 0;
   padding: 0;
@@ -1391,8 +1390,9 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   --sequence-viewer-sequence-font: "SF Mono", "SFMono-Regular", "Cascadia Mono", "Roboto Mono", ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
   --sequence-viewer-nt-gap: 1.5px;
   --sequence-viewer-selection-highlight: var(--sequence-viewer-selection-highlight-light);
+  flex: 1 1 auto;
   min-height: 0;
-  height: 100%;
+  height: auto;
   border-radius: 0;
   border: 0;
   background: transparent;
@@ -1614,6 +1614,10 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   gap: 10px;
   align-items: start;
   margin-bottom: 22px;
+}
+
+.sequence-viewer-sequence-host > .sequence-viewer-dual-line:last-child {
+  margin-bottom: 0;
 }
 
 .sequence-viewer-strand-pair {
@@ -2137,14 +2141,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
     margin-left: 0;
   }
 
-  .sequence-viewer-detail-topbar {
-    align-items: flex-end;
-  }
-
-  .sequence-viewer-save-name-wrap {
-    max-width: none;
-  }
-
   .sequence-viewer-protein-builder-confirmation {
     grid-template-columns: 1fr;
     align-items: stretch;
@@ -2236,7 +2232,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 /* Extracted from ui/css/themes/modes.css */
 body.theme-night .sequence-viewer-protein-builder-toolbar,
 body.theme-night .sequence-viewer-cloning-design-toolbar,
-body.theme-night .sequence-viewer-detail-topbar,
 body.theme-night .sequence-viewer-alignment-toolbar,
 body.theme-night .sequence-viewer-controls,
 body.theme-night .sequence-viewer-protein-builder-panel,
@@ -2431,10 +2426,6 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-}
-
-.sequence-viewer-rail-nav-copy strong {
-  display: none;
 }
 
 .sequence-viewer-feature-search-sequence,

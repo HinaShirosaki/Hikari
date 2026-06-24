@@ -84,13 +84,14 @@ body.theme-night {
   --theme-text-muted: #b4c0ae;
   --theme-text-strong: #f8fbf4;
   --theme-primary: var(--theme-text-strong);
-  --theme-text-on-accent: #fbf9f4;
+  /* Accent is light in night mode, so ink that sits on it must be dark. */
+  --theme-text-on-accent: #071006;
 
   --theme-accent: #91aa75;
   --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 18%, transparent);
   --theme-focus: #a4bd8a;
-  --theme-success: #166534;
-  --theme-warning: #b25522;
+  --theme-success: #5cc98a;
+  --theme-warning: #e5a063;
   --theme-danger: #ef8b77;
 
   --theme-panel: var(--theme-surface-elevated);

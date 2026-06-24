@@ -28,13 +28,6 @@ export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
     return (state.samples || []).find((sample) => sample.id === sampleId) || null;
   }
 
-  function getSavedSamplesForWellFill() {
-    ensureSamples();
-    return state.samples
-      .filter((sample) => sample && sample.id)
-      .sort((a, b) => String(a.code || a.name || a.id).localeCompare(String(b.code || b.name || b.id)));
-  }
-
   function isLocationEmpty(location) {
     if (!location || typeof location !== 'object') {
       return true;
@@ -97,7 +90,6 @@ export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
     makeDefaultSampleCode,
     normalizeSampleCode,
     getSampleById,
-    getSavedSamplesForWellFill,
     isLocationEmpty,
     buildAutoLocationFromLink,
     normalizeSampleType,

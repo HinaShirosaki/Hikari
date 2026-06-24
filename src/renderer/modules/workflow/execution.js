@@ -249,20 +249,33 @@ export function buildOrderedActiveBlockIds(layout, entry) {
   return orderedIds;
 }
 
+function getActiveUpstreamIds(entry, layout, blockId) {
+  const activeBlockIds = new Set(buildOrderedActiveBlockIds(layout, entry));
+  return (layout?.upstream?.get(blockId) || []).filter((upstreamId) => activeBlockIds.has(upstreamId));
+}
+
+export function isWorkflowStepOpenable(entry, layout, blockId) {
+  const orderedIds = buildOrderedActiveBlockIds(layout, entry);
+  const normalizedBlockId = String(blockId || '').trim();
+  if (!orderedIds.includes(normalizedBlockId)) {
+    return false;
+  }
+  return getActiveUpstreamIds(entry, layout, normalizedBlockId)
+    .every((upstreamId) => getWorkflowStepState(entry, upstreamId).status === 'completed');
+}
+
 export function computeEntryProgress(entry, layout) {
   const orderedIds = buildOrderedActiveBlockIds(layout, entry);
   const activeBlockIds = new Set(orderedIds);
   const completedBlockIds = new Set(
     orderedIds.filter((blockId) => getWorkflowStepState(entry, blockId).status === 'completed')
   );
-  const actionable = orderedIds.filter((blockId) => {
-    if (completedBlockIds.has(blockId)) {
-      return false;
-    }
-    const upstreamIds = (layout?.upstream?.get(blockId) || []).filter((upstreamId) => activeBlockIds.has(upstreamId));
-    return upstreamIds.every((upstreamId) => completedBlockIds.has(upstreamId));
-  });
-  const nextBlockId = actionable[0] || orderedIds.find((blockId) => !completedBlockIds.has(blockId)) || '';
+  const actionableIds = orderedIds.filter((blockId) => (
+    !completedBlockIds.has(blockId)
+    && getActiveUpstreamIds(entry, layout, blockId)
+      .every((upstreamId) => completedBlockIds.has(upstreamId))
+  ));
+  const nextBlockId = actionableIds[0] || orderedIds.find((blockId) => !completedBlockIds.has(blockId)) || '';
   const totalSteps = orderedIds.length;
   const completedSteps = completedBlockIds.size;
   const percentComplete = totalSteps ? Math.round((completedSteps / totalSteps) * 100) : 0;
@@ -278,4 +291,3 @@ export function computeEntryProgress(entry, layout) {
     completedBlockIds
   };
 }
-

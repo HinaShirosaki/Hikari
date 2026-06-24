@@ -66,6 +66,23 @@ export function initQuickLogWidget({
     quickLogStatus.textContent = String(message || '').trim();
   }
 
+  function lastSavedSummary() {
+    const entries = Array.isArray(state.settings?.dashboard?.quickLogEntries)
+      ? state.settings.dashboard.quickLogEntries
+      : [];
+    const last = entries[entries.length - 1];
+    if (!last) {
+      return 'No notes yet';
+    }
+    const stamp = new Date(String(last.createdAt || last.updatedAt || ''));
+    const time = Number.isNaN(stamp.getTime())
+      ? ''
+      : stamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    const text = String(last.text || '').trim();
+    const short = text.length > 26 ? `${text.slice(0, 26)}…` : text;
+    return `Last saved${time ? ` ${time}` : ''}${short ? ` · ${short}` : ''}`;
+  }
+
   function renderQuickLogWidget() {
     syncQuickLogInput();
     const hasDraft = Boolean(String(state.settings.dashboard.quickLogDraft || '').trim());
@@ -75,7 +92,7 @@ export function initQuickLogWidget({
       setQuickLogStatus('Draft saved locally.');
       return;
     }
-    setQuickLogStatus('');
+    setQuickLogStatus(lastSavedSummary());
   }
 
   function onQuickLogInput() {
@@ -89,7 +106,7 @@ export function initQuickLogWidget({
       setQuickLogStatus('Draft saved locally.');
       return;
     }
-    setQuickLogStatus('');
+    setQuickLogStatus(lastSavedSummary());
   }
 
   function onQuickLogKeydown(event) {

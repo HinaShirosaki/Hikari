@@ -611,9 +611,30 @@
   font-size: 0.88rem;
 }
 
+.project-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 0.72fr) minmax(0, 1.28fr);
+  gap: 18px;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.project-description-panel {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  min-width: 0;
+}
+
+.project-description-input {
+  min-height: 152px;
+  resize: vertical;
+}
+
 .project-contribution-panel {
   display: grid;
   gap: 14px;
+  min-width: 0;
 }
 
 .project-contribution-map {
@@ -789,6 +810,10 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
   .project-dashboard-actions {
     justify-content: flex-start;
+  }
+
+  .project-overview-grid {
+    grid-template-columns: 1fr;
   }
 }
 

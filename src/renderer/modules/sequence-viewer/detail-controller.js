@@ -31,8 +31,6 @@ export function createSequenceViewerDetailController(config = {}) {
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
   const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
-  const onRequestClear = config?.onRequestClear || (() => {});
-  const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
   const onRequestCloningDesign = config?.onRequestCloningDesign || (() => {});
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
@@ -276,11 +274,17 @@ export function createSequenceViewerDetailController(config = {}) {
     if (elements.recognizeBackboneBtn) {
       elements.recognizeBackboneBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isRecognizingBackbone);
     }
-    if (elements.saveBtn) {
-      elements.saveBtn.disabled = !hasRecord || !hasStoragePath();
-    }
     if (elements.alignmentOpenBtn) {
       elements.alignmentOpenBtn.disabled = !hasRecord;
+    }
+    if (elements.alignmentMenuBtn) {
+      elements.alignmentMenuBtn.disabled = !hasRecord;
+    }
+    if (elements.orfMenuBtn) {
+      elements.orfMenuBtn.disabled = !hasRecord;
+    }
+    if (elements.cutterMenuBtn) {
+      elements.cutterMenuBtn.disabled = !hasRecord;
     }
     if (elements.cloningDesignBtn) {
       const canOpenCloningDesign = hasRecord && Boolean(hasCloningDesignSource());
@@ -574,8 +578,6 @@ export function createSequenceViewerDetailController(config = {}) {
       hasOpenSequenceEditDialog: () => sequenceEditingController?.hasOpenSequenceEditDialog?.() || false,
       onRequestAnnotate,
       onRequestRecognizeBackbone,
-      onRequestClear,
-      onRequestSave,
       onRequestAlignment,
       onRequestCloningDesign,
       onSelectAlignmentSession,

@@ -12,6 +12,7 @@ export function createPersonalInventoryContext({
   const elements = {
     inventorySections: document.getElementById('inventory-sections'),
     inventoryLocationNav: document.getElementById('inventory-location-nav'),
+    containerContextMenu: document.getElementById('inventory-container-context-menu'),
     inventorySummaryCard: document.getElementById('inventory-summary-card'),
     addContainerBtn: document.getElementById('inventory-add-container-btn'),
     addContainerForm: document.getElementById('inventory-add-container-form'),
@@ -30,7 +31,8 @@ export function createPersonalInventoryContext({
     editingSampleId: '',
     wellEditorStatus: '',
     isAddContainerFormOpen: false,
-    shouldAutoOpenContainer: true
+    shouldAutoOpenContainer: true,
+    contextContainer: null
   };
   const pendingStructureDrafts = new Map();
   const helpers = createPersonalInventoryStateHelpers({ state, safeText, uiState });

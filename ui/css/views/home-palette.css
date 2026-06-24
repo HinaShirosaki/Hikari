@@ -7,6 +7,10 @@
   --home-contribution-level-2: #40c463;
   --home-contribution-level-3: #30a14e;
   --home-contribution-level-4: #216e39;
+
+  /* Prototype card chrome + warn accent (exact values from the design prototype). */
+  --home-tile-shadow: 0 1px 3px rgba(27, 20, 14, 0.06);
+  --home-warn: #b07d18;
 }
 
 body.theme-night {
@@ -16,6 +20,9 @@ body.theme-night {
   --home-contribution-level-2: #44b864;
   --home-contribution-level-3: #258d49;
   --home-contribution-level-4: #176a35;
+
+  --home-tile-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  --home-warn: #d3a23f;
 }
 
 body.theme-miku {

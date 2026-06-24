@@ -86,7 +86,6 @@ const agentWebFallback = optionalRequire(path.join(__dirname, 'src', 'main', 'he
 const phase89Runtime = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-phase89-runtime.js'));
 const agentSqliteIndex = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-sqlite-index.js'));
 const sequenceLibrary = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sequence', 'sequence-library.js'));
-const objectGraph = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'object-graph.js'));
 const toolBox = loadEsmStyleModule(
   path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box.js'),
   {},
@@ -326,7 +325,6 @@ const suiteScope = {
   phase89Runtime,
   agentSqliteIndex,
   sequenceLibrary,
-  objectGraph,
   toolBox,
   sequenceViewerInternals,
   gelAnalysisInternals,

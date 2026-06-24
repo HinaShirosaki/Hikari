@@ -1,6 +1,6 @@
 /* Universal selection treatment for list rows inside the shared left rail. */
 
-:root {
+body {
   --hikari-left-rail-list-radius: 8px;
   --hikari-left-rail-list-hover: color-mix(in srgb, var(--theme-surface-subtle) 64%, transparent);
   --hikari-left-rail-list-selected: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
@@ -229,11 +229,44 @@ body.theme-night {
   gap: 6px !important;
 }
 
+.left-rail-template__rail :is(
+  .papers-thread-list,
+  .papers-paper-list,
+  .papers-folder-group,
+  .papers-folder-children,
+  .biology-notebook-page-list,
+  .biology-notebook-folder,
+  .biology-notebook-folder-children,
+  .biology-notebook-folder-children--pages
+) {
+  gap: 2px !important;
+}
+
+.left-rail-template__rail :is(
+  .papers-folder-item,
+  .papers-paper-row,
+  .biology-notebook-folder-item,
+  .biology-notebook-page-row
+) {
+  box-sizing: border-box !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+.left-rail-template__rail .papers-folder-children,
 .left-rail-template__rail .biology-notebook-folder-children,
 .left-rail-template__rail .biology-notebook-folder-children--pages {
   padding-top: 0 !important;
   padding-bottom: 2px !important;
   padding-left: 18px !important;
+}
+
+.left-rail-template__rail .papers-folder-children > .papers-paper-row,
+.left-rail-template__rail .biology-notebook-folder-children > .biology-notebook-page-row {
+  margin-left: -18px !important;
+  width: calc(100% + 18px) !important;
+  max-width: calc(100% + 18px) !important;
+  padding-left: 26px !important;
 }
 
 .left-rail-template__rail .biology-notebook-page-badge {

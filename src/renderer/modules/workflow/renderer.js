@@ -13,7 +13,8 @@ import {
   buildWorkflowExecutionLayout,
   computeEntryProgress,
   getActiveBranchGroups,
-  getWorkflowStepState
+  getWorkflowStepState,
+  isWorkflowStepOpenable
 } from './execution.js';
 
 export function createWorkflowRenderer(config = {}) {
@@ -125,6 +126,31 @@ export function createWorkflowRenderer(config = {}) {
       className: 'is-empty',
       title: 'Not done'
     };
+  }
+
+  function getWorkflowTrackColumnCount(layout) {
+    const mainCount = Math.max(1, layout?.mainPath?.length || 0);
+    return Math.max(
+      mainCount,
+      ...((layout?.branches || []).map((branch) => (
+        (Number(branch.anchorIndex) || 0) + (branch.blockIds?.length || 0)
+      )))
+    );
+  }
+
+  function workflowTrackSegmentStyle(startIndex, widthColumns, rowOffset, trackColumnCount) {
+    const safeColumnCount = Math.max(1, Number(trackColumnCount) || 1);
+    const left = ((Number(startIndex) || 0) + 0.5) / safeColumnCount * 100;
+    const width = Math.max(0, Number(widthColumns) || 0) / safeColumnCount * 100;
+    return [
+      `--workflow-track-segment-left: ${left}%;`,
+      `--workflow-track-segment-width: ${width}%;`,
+      `--workflow-track-row-offset: ${Math.max(0, Number(rowOffset) || 0)};`
+    ].join(' ');
+  }
+
+  function workflowTrackCellStyle(columnIndex, rowIndex) {
+    return `grid-column: ${Math.max(1, Number(columnIndex) || 1)}; grid-row: ${Math.max(1, Number(rowIndex) || 1)};`;
   }
 
   function templateSearchText(template) {
@@ -442,69 +468,6 @@ export function createWorkflowRenderer(config = {}) {
     `;
   }
 
-  function buildBranchMarkup(workflow, entry, layout) {
-    const branchGroups = layout.branches || [];
-    if (!branchGroups.length) {
-      return '';
-    }
-
-    return `
-      <section class="workflow-branch-section">
-        <h5>Branches</h5>
-        <div class="workflow-branch-list">
-          ${branchGroups.map((branch) => {
-            const rootBlock = layout.blockById.get(branch.rootId);
-            const anchorBlock = layout.blockById.get(branch.anchorBlockId);
-            const active = getActiveBranchGroups(layout, entry).some((item) => item.rootId === branch.rootId);
-            return `
-              <article class="workflow-branch-card${active ? ' is-active' : ''}">
-                <div class="workflow-branch-card-head">
-                  <div>
-                    <strong>${safeText(titleForBlock(rootBlock))}</strong>
-                    <p class="small-note">${safeText(`From ${titleForBlock(anchorBlock)}`)}</p>
-                  </div>
-                  <button
-                    type="button"
-                    class="ghost-btn"
-                    data-workflow-branch-toggle="${safeText(branch.rootId)}"
-                    data-workflow-entry-id="${safeText(entry.id)}"
-                    data-workflow-workflow-id="${safeText(workflow.id)}"
-                  >${active ? 'Hide Branch' : 'Activate Branch'}</button>
-                </div>
-                <div class="workflow-branch-track">
-                  ${branch.blockIds.map((blockId, index) => {
-                    const block = layout.blockById.get(blockId);
-                    const stepState = getWorkflowStepState(entry, blockId);
-                    const isActive = runtime.activeEntryId === entry.id && runtime.activeBlockId === blockId;
-                    const connectorClass = index < branch.blockIds.length - 1
-                      ? (stepState.status === 'completed'
-                        && getWorkflowStepState(entry, branch.blockIds[index + 1]).status === 'completed'
-                        ? ' is-complete'
-                        : '')
-                      : '';
-                    return `
-                      <button
-                        type="button"
-                        class="workflow-branch-node${stepState.status === 'completed' ? ' is-complete' : ''}${isActive ? ' is-active' : ''}"
-                        data-workflow-step-open="${safeText(blockId)}"
-                        data-workflow-entry-id="${safeText(entry.id)}"
-                        data-workflow-workflow-id="${safeText(workflow.id)}"
-                      >
-                        <span class="workflow-branch-node-label">${safeText(titleForBlock(block))}</span>
-                        <span class="workflow-branch-node-dot"></span>
-                        ${index < branch.blockIds.length - 1 ? `<span class="workflow-branch-node-connector${connectorClass}"></span>` : ''}
-                      </button>
-                    `;
-                  }).join('')}
-                </div>
-              </article>
-            `;
-          }).join('')}
-        </div>
-      </section>
-    `;
-  }
-
   function buildStepCellMarkup(workflow, entry, block, options = {}) {
     const stepState = getWorkflowStepState(entry, block.id);
     const protocol = (state.protocols || []).find((item) => item.id === block.protocolId) || null;
@@ -593,6 +556,13 @@ export function createWorkflowRenderer(config = {}) {
       links: activeTemplate?.links || []
     };
     const referenceLayout = buildWorkflowExecutionLayout(referenceWorkflow);
+    const workflowLayouts = new Map();
+    const layoutForWorkflow = (workflow) => {
+      if (!workflowLayouts.has(workflow.id)) {
+        workflowLayouts.set(workflow.id, buildWorkflowExecutionLayout(workflow));
+      }
+      return workflowLayouts.get(workflow.id);
+    };
     const activeEntry = activeWorkflow?.entries.find((entry) => entry.id === runtime.activeEntryId)
       || activeWorkflow?.entries[0]
       || null;
@@ -612,6 +582,12 @@ export function createWorkflowRenderer(config = {}) {
       return '<p class="small-note">No specific workflows created from this template yet. Use Add Workflow to create one.</p>';
     }
 
+    const trackColumnCount = Math.max(
+      getWorkflowTrackColumnCount(referenceLayout),
+      ...workflows.map((workflow) => getWorkflowTrackColumnCount(layoutForWorkflow(workflow)))
+    );
+    const extraHeaderCount = Math.max(0, trackColumnCount - referenceLayout.mainPath.length);
+
     return `
       <div class="workflow-execution-shell">
         <div class="workflow-execution-scroll">
@@ -620,11 +596,12 @@ export function createWorkflowRenderer(config = {}) {
               <tr>
                 <th class="workflow-entry-column">Entity</th>
                 ${referenceLayout.mainPath.map((block) => `<th>${safeText(titleForBlock(block))}</th>`).join('')}
+                ${Array.from({ length: extraHeaderCount }).map(() => '<th class="workflow-branch-overflow-heading" aria-hidden="true"></th>').join('')}
               </tr>
             </thead>
             <tbody>
               ${workflows.map((workflow) => {
-                const layout = buildWorkflowExecutionLayout(workflow);
+                const layout = layoutForWorkflow(workflow);
                 const entry = workflow.entries[0] || null;
                 const progress = entry
                   ? computeEntryProgress(entry, layout)
@@ -632,10 +609,23 @@ export function createWorkflowRenderer(config = {}) {
                 const expanded = workflow.id === activeWorkflow?.id && Boolean(entry);
                 const activeBlockId = expanded
                   ? (layout.blockById.has(runtime.activeBlockId)
-                    ? runtime.activeBlockId
-                    : '')
+                      ? runtime.activeBlockId
+                      : '')
                   : '';
-                const stepCount = layout.mainPath.length;
+                const stepCount = trackColumnCount;
+                const activeBranchRootIds = new Set(entry
+                  ? getActiveBranchGroups(layout, entry).map((branch) => branch.rootId)
+                  : []);
+                const trackRowCount = Math.max(1, 1 + (layout.branches || []).length);
+                const mainTrackMarkup = entry && layout.mainPath.length > 1
+                  ? `
+                    <span
+                      class="workflow-progress-track-line"
+                      style="${workflowTrackSegmentStyle(0, layout.mainPath.length - 1, 0, stepCount)}"
+                      aria-hidden="true"
+                    ></span>
+                  `
+                  : '';
                 const completedTrackMarkup = entry
                   ? layout.mainPath.slice(0, -1).map((block, index) => {
                       const stepState = getWorkflowStepState(entry, block.id);
@@ -646,10 +636,85 @@ export function createWorkflowRenderer(config = {}) {
                       return `
                         <span
                           class="workflow-progress-track-complete"
-                          style="--workflow-track-segment-left: ${((index + 0.5) / stepCount) * 100}%; --workflow-track-segment-width: ${100 / stepCount}%;"
+                          style="${workflowTrackSegmentStyle(index, 1, 0, stepCount)}"
                           aria-hidden="true"
                         ></span>
                       `;
+                    }).join('')
+                  : '';
+                const branchTrackMarkup = entry
+                  ? (layout.branches || []).map((branch, branchIndex) => {
+                      const branchActive = activeBranchRootIds.has(branch.rootId);
+                      const rowOffset = branchIndex + 1;
+                      return branch.blockIds.slice(0, -1).map((blockId, index) => {
+                        const stepState = getWorkflowStepState(entry, blockId);
+                        const nextStepState = getWorkflowStepState(entry, branch.blockIds[index + 1]);
+                        const segmentComplete = branchActive
+                          && stepState.status === 'completed'
+                          && nextStepState.status === 'completed';
+                        return `
+                          <span
+                            class="workflow-progress-branch-track-line${segmentComplete ? ' is-complete' : ''}${branchActive ? '' : ' is-inactive'}"
+                            style="${workflowTrackSegmentStyle((Number(branch.anchorIndex) || 0) + index, 1, rowOffset, stepCount)}"
+                            aria-hidden="true"
+                          ></span>
+                        `;
+                      }).join('');
+                    }).join('')
+                  : '';
+                const branchCellsMarkup = entry
+                  ? (layout.branches || []).map((branch, branchIndex) => {
+                      const branchActive = activeBranchRootIds.has(branch.rootId);
+                      const rowIndex = branchIndex + 2;
+                      const rowOffset = rowIndex - 1;
+                      const anchorBlock = layout.blockById.get(branch.anchorBlockId);
+                      return branch.blockIds.map((blockId, index) => {
+                        const block = layout.blockById.get(blockId);
+                        const stepState = getWorkflowStepState(entry, blockId);
+                        const isRoot = index === 0;
+                        const isActivationNode = isRoot && !branchActive;
+                        const isActive = expanded && activeBlockId === blockId;
+                        const openable = branchActive ? isWorkflowStepOpenable(entry, layout, blockId) : false;
+                        const disabled = branchActive ? !openable : !isActivationNode;
+                        const dotState = branchActive
+                          ? classifyWorkflowDot(stepState, blockId, activeBlockId, progress)
+                          : { className: 'is-empty', title: isActivationNode ? 'Activate branch' : 'Activate the branch root first' };
+                        const dotTitle = disabled
+                          ? (isActivationNode ? dotState.title : 'Complete earlier steps first')
+                          : dotState.title;
+                        const branchActionAttributes = isActivationNode
+                          ? `
+                              data-workflow-branch-toggle="${safeText(branch.rootId)}"
+                              data-workflow-entry-id="${safeText(entry.id)}"
+                              data-workflow-workflow-id="${safeText(workflow.id)}"
+                            `
+                          : `
+                              data-workflow-step-open="${safeText(blockId)}"
+                              data-workflow-entry-id="${safeText(entry.id)}"
+                              data-workflow-workflow-id="${safeText(workflow.id)}"
+                            `;
+                        return `
+                          <div
+                            class="workflow-progress-cell workflow-progress-branch-cell${isRoot ? ' is-branch-root' : ''}${branchActive ? ' is-branch-active' : ' is-branch-inactive'}${isActive ? ' has-popover' : ''}"
+                            style="${workflowTrackCellStyle((Number(branch.anchorIndex) || 0) + index + 1, rowIndex)} --workflow-branch-row-offset: ${rowOffset};"
+                            ${isRoot ? `data-workflow-branch-parent="${safeText(branch.anchorBlockId)}"` : ''}
+                            data-workflow-branch-root="${safeText(branch.rootId)}"
+                          >
+                            <button
+                              type="button"
+                              class="workflow-progress-node workflow-progress-branch-node ${dotState.className}${isActive ? ' is-active' : ''}${disabled ? ' is-locked' : ''}${isActivationNode ? ' is-branch-activation' : ''}"
+                              ${isActive ? 'data-workflow-step-anchor="true"' : ''}
+                              ${branchActionAttributes}
+                              aria-label="${safeText(`${titleForBlock(block)} branch from ${titleForBlock(anchorBlock)} for ${workflow.name || 'workflow'}: ${dotTitle}`)}"
+                              title="${safeText(dotTitle)}"
+                              ${disabled ? 'disabled aria-disabled="true"' : ''}
+                            >
+                              <span class="workflow-progress-dot"></span>
+                              <span class="workflow-progress-branch-label">${safeText(titleForBlock(block))}</span>
+                            </button>
+                          </div>
+                        `;
+                      }).join('');
                     }).join('')
                   : '';
                 return `
@@ -666,28 +731,35 @@ export function createWorkflowRenderer(config = {}) {
                     <td class="workflow-progress-track-cell" colspan="${stepCount}">
                       <div
                         class="workflow-progress-track-grid"
-                        style="--workflow-step-count: ${stepCount}; --workflow-track-inset: ${50 / stepCount}%;"
+                        style="--workflow-step-count: ${stepCount}; --workflow-track-row-count: ${trackRowCount};"
                       >
                         ${entry ? `
-                          <span class="workflow-progress-track-line" aria-hidden="true"></span>
+                          ${mainTrackMarkup}
                           ${completedTrackMarkup}
+                          ${branchTrackMarkup}
                         ` : ''}
-                        ${layout.mainPath.map((block) => {
+                        ${layout.mainPath.map((block, index) => {
                           const stepState = entry ? getWorkflowStepState(entry, block.id) : { status: 'pending' };
                           const isActive = expanded && activeBlockId === block.id;
+                          const openable = entry ? isWorkflowStepOpenable(entry, layout, block.id) : false;
                           const dotState = classifyWorkflowDot(stepState, block.id, activeBlockId, progress);
+                          const dotTitle = openable ? dotState.title : 'Locked — complete earlier steps first';
                           return `
-                            <div class="workflow-progress-cell${isActive ? ' has-popover' : ''}">
+                            <div
+                              class="workflow-progress-cell workflow-progress-main-cell${isActive ? ' has-popover' : ''}"
+                              style="${workflowTrackCellStyle(index + 1, 1)}"
+                            >
                               ${entry ? `
                             <button
                               type="button"
-                              class="workflow-progress-node ${dotState.className}${isActive ? ' is-active' : ''}"
+                              class="workflow-progress-node ${dotState.className}${isActive ? ' is-active' : ''}${openable ? '' : ' is-locked'}"
                               ${isActive ? 'data-workflow-step-anchor="true"' : ''}
                               data-workflow-step-open="${safeText(block.id)}"
                               data-workflow-entry-id="${safeText(entry.id)}"
                               data-workflow-workflow-id="${safeText(workflow.id)}"
-                              aria-label="${safeText(`${titleForBlock(block)} for ${workflow.name || 'workflow'}: ${dotState.title}`)}"
-                              title="${safeText(dotState.title)}"
+                              aria-label="${safeText(`${titleForBlock(block)} for ${workflow.name || 'workflow'}: ${dotTitle}`)}"
+                              title="${safeText(dotTitle)}"
+                              ${openable ? '' : 'disabled aria-disabled="true"'}
                             >
                               <span class="workflow-progress-dot"></span>
                             </button>
@@ -695,6 +767,7 @@ export function createWorkflowRenderer(config = {}) {
                             </div>
                           `;
                         }).join('')}
+                        ${branchCellsMarkup}
                       </div>
                     </td>
                   </tr>
@@ -754,7 +827,10 @@ export function createWorkflowRenderer(config = {}) {
       const activeLayout = buildWorkflowExecutionLayout(activeWorkflow);
       const activeProgress = activeEntry ? computeEntryProgress(activeEntry, activeLayout) : null;
       const allowedActiveBlockIds = new Set(activeProgress?.orderedIds || activeLayout.mainPathIds);
-      if (!allowedActiveBlockIds.has(runtime.activeBlockId)) {
+      if (
+        !allowedActiveBlockIds.has(runtime.activeBlockId)
+        || !isWorkflowStepOpenable(activeEntry, activeLayout, runtime.activeBlockId)
+      ) {
         runtime.activeBlockId = '';
       }
     }

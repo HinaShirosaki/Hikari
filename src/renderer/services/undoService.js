@@ -1,7 +1,6 @@
 const DEFAULT_MAX_DEPTH = 80;
 const DEFAULT_MAX_BYTES = 24 * 1024 * 1024;
 const DEFAULT_COALESCE_MS = 700;
-const EXCLUDED_STATE_KEYS = new Set(['objectGraph']);
 const COALESCED_INPUT_TYPES = new Set([
   'color',
   'date',
@@ -24,13 +23,7 @@ function serializeHistoryState(state) {
     return null;
   }
   try {
-    const snapshot = {};
-    Object.entries(state).forEach(([key, value]) => {
-      if (!EXCLUDED_STATE_KEYS.has(key)) {
-        snapshot[key] = value;
-      }
-    });
-    return JSON.stringify(snapshot);
+    return JSON.stringify(state);
   } catch (error) {
     console.warn('Unable to serialize undo history snapshot:', error);
     return null;

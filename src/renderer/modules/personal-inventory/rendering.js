@@ -1,4 +1,3 @@
-import { bindContainerDeleteEvents } from './container-delete-events.js';
 import { bindSingleSampleEvents } from './single-sample-events.js';
 import { bindStructureButtons } from './structure-bindings.js';
 import { bindWellSampleEvents } from './well-sample-events.js';
@@ -37,7 +36,6 @@ function renderSections() {
       ctx.openContainer(button.dataset.section, button.dataset.containerOpen);
     });
   });
-    bindContainerDeleteEvents(ctx);
     bindWellSampleEvents(ctx);
     bindSingleSampleEvents(ctx);
     bindStructureButtons(ctx);

@@ -322,6 +322,40 @@ export function initLabNotebook({
     return state.projects.find((item) => String(item?.name || '').trim().toLowerCase() === cleanProjectName) || null;
   }
 
+  function findProjectDescriptionInputTarget(event) {
+    const target = event?.target;
+    if (!target) {
+      return null;
+    }
+    return target?.closest?.('[data-project-description]')
+      || (target?.dataset?.projectDescription ? target : null);
+  }
+
+  function updateProjectDescription(projectId, description) {
+    const project = findDashboardProject(projectId);
+    if (!project) {
+      return;
+    }
+    const nextDescription = String(description || '').trim();
+    if (String(project.description || '') === nextDescription) {
+      return;
+    }
+    project.description = nextDescription;
+    project.updatedAt = new Date().toISOString();
+    persist();
+    if (typeof onProjectsChanged === 'function') {
+      onProjectsChanged();
+    }
+  }
+
+  function onProjectDashboardDescriptionInput(event) {
+    const input = findProjectDescriptionInputTarget(event);
+    if (!input) {
+      return;
+    }
+    updateProjectDescription(input.dataset.projectDescription, input.value);
+  }
+
   function findSelectedProtocol() {
     return state.protocols.find((item) => item.id === notebookProtocolSelect.value) || null;
   }
@@ -1338,6 +1372,8 @@ export function initLabNotebook({
   notebookAddSamplesBtn?.addEventListener('click', () => { void linkedWorkActions.onAddSamplesClick(); });
   cancelEditBtn?.addEventListener('click', cancelEdit);
   notebookEntryList?.addEventListener('click', onEntryListClick);
+  notebookProjectDashboard?.addEventListener('input', onProjectDashboardDescriptionInput);
+  notebookProjectDashboard?.addEventListener('change', onProjectDashboardDescriptionInput);
   notebookExportBtn?.addEventListener('click', onExportButtonClick);
   notebookPrintBtn?.addEventListener('click', onPrintButtonClick);
   notebookMarkExecutedBtn?.addEventListener('click', markEntryExecuted);

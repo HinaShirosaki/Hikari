@@ -9,55 +9,12 @@ export function createContainerDetailRenderer({
 }) {
   const {
     getLinkedSamples,
-    getSavedSamplesForWellFill,
     getSampleTypeColor,
     getSampleTypeLabel,
     renderSampleLegendForContainer,
     getWellDataForType,
     buildSampleDotFill
   } = helpers;
-
-  function renderSavedSampleFillList() {
-    const samples = typeof getSavedSamplesForWellFill === 'function'
-      ? getSavedSamplesForWellFill()
-      : [];
-    const sampleList = samples.length
-      ? `
-        <div class="well-saved-sample-list" aria-label="Saved samples">
-          ${samples.map((sample) => {
-            const label = sample.code || sample.name || sample.id;
-            const name = sample.name && sample.name !== label ? sample.name : '';
-            const typeLabel = getSampleTypeLabel(sample.type);
-            const typeColor = getSampleTypeColor(sample.type);
-            return `
-              <button
-                type="button"
-                class="well-saved-sample-chip"
-                draggable="true"
-                data-saved-sample-drag="${safeText(sample.id)}"
-                title="${safeText(`${label}${name ? ` - ${name}` : ''}`)}"
-              >
-                <span class="well-saved-sample-copy">
-                  <span class="well-saved-sample-code">${safeText(label)}</span>
-                  ${name ? `<span class="well-saved-sample-name">${safeText(name)}</span>` : ''}
-                </span>
-                <span class="well-saved-sample-type" style="--sample-type-color:${safeText(typeColor)};">${safeText(typeLabel)}</span>
-              </button>
-            `;
-          }).join('')}
-        </div>
-      `
-      : '<p class="small-note well-saved-sample-empty">No saved samples available.</p>';
-
-    return `
-      <div class="well-saved-sample-fill well-saved-sample-fill-global">
-        <div class="well-saved-sample-head">
-          <strong>Saved Samples</strong>
-        </div>
-        ${sampleList}
-      </div>
-    `;
-  }
 
   function renderSingleContainerPreview(section, container) {
     const linkedSamples = getLinkedSamples(section, container.id, null);
@@ -97,9 +54,6 @@ export function createContainerDetailRenderer({
               ${linkedSamples.length ? renderSampleLegendForContainer(section, container) : ''}
             </div>
             ${renderSingleContainerEditor(section, container)}
-          </div>
-          <div class="container-detail-actions">
-            <button type="button" class="danger-btn" data-container-delete="${safeText(container.id)}" data-section="${safeText(section)}">Delete</button>
           </div>
         </div>
       `;
@@ -158,12 +112,8 @@ export function createContainerDetailRenderer({
               }
               ${renderSampleLegendForContainer(section, container)}
             </div>
-            ${renderSavedSampleFillList()}
           </div>
           ${renderWellEditor(section, container, uiState.editingWellIndex)}
-        </div>
-        <div class="container-detail-actions">
-          <button type="button" class="danger-btn" data-container-delete="${safeText(container.id)}" data-section="${safeText(section)}">Delete</button>
         </div>
       </div>
     `;

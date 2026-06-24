@@ -2,6 +2,7 @@ import {
   buildCircularPreviewHtmlDocument,
   buildRecordGenbankText
 } from '../storage.js';
+import { parseInputRecords } from '../parsing.js';
 import {
   buildSequenceSignature,
   cleanText,
@@ -14,7 +15,7 @@ import {
 } from './config.js';
 
 export function createLibraryPersistenceActions(ctx) {
-  const { state, elements, actions, controllers } = ctx;
+  const { state, actions, controllers } = ctx;
 
   async function persistRecordToLibrary(record, persistOptions = {}) {
     const bridge = actions.getBridge();
@@ -34,7 +35,7 @@ export function createLibraryPersistenceActions(ctx) {
     const status = String(persistOptions?.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY).toLowerCase() === LIBRARY_STATUS_SAVED
       ? LIBRARY_STATUS_SAVED
       : LIBRARY_STATUS_TEMPORARY;
-    const name = normalizeRecordName(persistOptions?.name || elements.saveNameInput?.value || safeRecord.name || 'sequence', 'sequence');
+    const name = normalizeRecordName(persistOptions?.name || safeRecord.name || 'sequence', 'sequence');
     const gbkText = buildRecordGenbankText(safeRecord);
     if (!gbkText.trim()) {
       throw new Error('Failed to generate GenBank text for sequence entry.');
@@ -64,9 +65,6 @@ export function createLibraryPersistenceActions(ctx) {
     if (Array.isArray(response.alignments)) {
       actions.setAlignmentSessions(response.alignments);
     }
-    if (elements.saveNameInput) {
-      elements.saveNameInput.value = response.entry.name || name;
-    }
     return {
       ...response.entry,
       alignments: Array.isArray(response.alignments) ? response.alignments : []
@@ -82,7 +80,7 @@ export function createLibraryPersistenceActions(ctx) {
       const entry = await persistRecordToLibrary(record, {
         id: state.activeEntryId,
         status: state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY,
-        name: elements.saveNameInput?.value || record.name || 'sequence'
+        name: record.name || 'sequence'
       });
       await controllers.home?.refreshLibraryEntries({ selectedId: entry.id, filter: entry.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY, silent: true });
       actions.setStatus(`${actionLabel} Saved to ${entry.name}.`);
@@ -91,28 +89,68 @@ export function createLibraryPersistenceActions(ctx) {
     }
   }
 
-  async function saveCurrentRecordAsSaved() {
-    const record = actions.getSelectedRecord();
+  async function renameLibraryEntry(entryId, requestedName) {
+    const bridge = actions.getBridge();
+    const storagePath = actions.getStoragePath();
+    const safeEntryId = cleanText(entryId, 200);
+    const nextName = normalizeRecordName(requestedName, '');
+    if (!storagePath || !safeEntryId || !nextName) {
+      throw new Error('Enter a sequence name.');
+    }
+    if (!bridge?.sequenceLibraryGet || !bridge?.sequenceLibraryUpsert) {
+      throw new Error('Sequence library storage API unavailable.');
+    }
+
+    const current = await bridge.sequenceLibraryGet({
+      storagePath,
+      id: safeEntryId,
+      includeGbk: true,
+      includeAlignments: true
+    });
+    if (!current?.ok || !current?.entry) {
+      throw new Error(current?.error || 'Sequence entry not found.');
+    }
+    const parsed = parseInputRecords(String(current.gbkText || ''));
+    const record = Array.isArray(parsed.records) ? parsed.records[0] : null;
     if (!record?.sequence?.length) {
-      actions.setStatus('Load a record before saving.', true);
-      return;
+      throw new Error(parsed?.errors?.[0] || 'Stored sequence entry contains no valid record.');
     }
-    try {
-      const entry = await persistRecordToLibrary(record, {
-        id: state.activeEntryId,
-        status: LIBRARY_STATUS_SAVED,
-        name: elements.saveNameInput?.value || record.name || 'sequence'
-      });
-      state.activeEntryId = cleanText(entry.id, 200);
-      state.activeEntryStatus = LIBRARY_STATUS_SAVED;
-      await controllers.home?.refreshLibraryEntries({ selectedId: entry.id, filter: entry.status || LIBRARY_STATUS_SAVED, silent: true });
-      actions.setProteinBuilderConfirmation(null, { render: false });
+    record.name = nextName;
+    const response = await bridge.sequenceLibraryUpsert({
+      storagePath,
+      id: safeEntryId,
+      name: nextName,
+      status: current.entry.status,
+      sourceFormat: record.sourceFormat || current.entry.sourceFormat,
+      topology: normalizeTopology(record.topology || current.entry.topology || 'linear'),
+      sequenceLength: record.sequence.length,
+      featureCount: Array.isArray(record.features) ? record.features.length : 0,
+      sequence: record.sequence,
+      features: Array.isArray(record.features) ? record.features : [],
+      gbkText: buildRecordGenbankText(record),
+      htmlText: buildCircularPreviewHtmlDocument(record),
+      alignmentSessions: Array.isArray(current.alignments) ? current.alignments : []
+    });
+    if (!response?.ok || !response?.entry) {
+      throw new Error(response?.error || 'Failed to rename sequence entry.');
+    }
+
+    if (cleanText(state.activeEntryId, 200) === safeEntryId) {
+      const activeRecord = actions.getSelectedRecord();
+      if (activeRecord) {
+        activeRecord.name = response.entry.name || nextName;
+      }
+      controllers.detail?.updateRecordSelect?.();
       controllers.detail?.renderActiveRecord?.();
-      actions.setStatus(`Saved sequence as ${entry.name}.`);
-      controllers.home?.setHomeStatus(`Saved sequence entry: ${entry.name}.`);
-    } catch (error) {
-      actions.setStatus(error?.message || 'Failed to save sequence.', true);
     }
+    await controllers.home?.refreshLibraryEntries({
+      selectedId: safeEntryId,
+      filter: response.entry.status || current.entry.status,
+      silent: true
+    });
+    actions.setStatus(`Renamed sequence to ${response.entry.name}.`);
+    controllers.home?.setHomeStatus(`Renamed sequence entry: ${response.entry.name}.`);
+    return response.entry;
   }
 
   async function persistAlignmentSession(payload = {}) {
@@ -143,7 +181,7 @@ export function createLibraryPersistenceActions(ctx) {
     if (!entryId) {
       const entry = await persistRecordToLibrary(referenceRecord, {
         status: LIBRARY_STATUS_TEMPORARY,
-        name: elements.saveNameInput?.value || referenceRecord.name || 'sequence',
+        name: referenceRecord.name || 'sequence',
         alignmentSessions: []
       });
       entryId = cleanText(entry.id, 200);
@@ -154,7 +192,7 @@ export function createLibraryPersistenceActions(ctx) {
     const entry = await persistRecordToLibrary(referenceRecord, {
       id: entryId,
       status: state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY,
-      name: elements.saveNameInput?.value || referenceRecord.name || 'sequence',
+      name: referenceRecord.name || 'sequence',
       alignmentSessions: nextSessions
     });
     await controllers.home?.refreshLibraryEntries({ selectedId: entry.id, filter: entry.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY, silent: true });
@@ -165,6 +203,6 @@ export function createLibraryPersistenceActions(ctx) {
     persistAlignmentSession,
     persistFeatureMutation,
     persistRecordToLibrary,
-    saveCurrentRecordAsSaved
+    renameLibraryEntry
   };
 }

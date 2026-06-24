@@ -538,6 +538,32 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
     `;
   }
 
+  function renderProjectDescriptionEditor(project) {
+    return `
+      <section class="panel project-description-panel" aria-labelledby="project-description-heading">
+        <div class="project-panel-copy">
+          <h3 id="project-description-heading">Project Description</h3>
+        </div>
+        <textarea
+          class="project-description-input"
+          data-project-description="${escapeText(project?.id || '')}"
+          rows="8"
+          aria-label="Project description"
+          placeholder="Add project notes, goals, or context"
+        >${escapeText(project?.description || '')}</textarea>
+      </section>
+    `;
+  }
+
+  function renderProjectOverview(project, summary, options = {}) {
+    return `
+      <section class="project-overview-grid" aria-label="Project overview">
+        ${renderProjectDescriptionEditor(project)}
+        ${renderContributionHeatmap(summary.activeDayMap, options)}
+      </section>
+    `;
+  }
+
   function renderStatCard({ label, value, note }) {
     return `
       <article class="project-stat-card">
@@ -660,7 +686,6 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
         <div class="project-dashboard-title">
           <span class="project-eyebrow">Project Activity</span>
           <h2>${escapeText(heading)}</h2>
-          <p class="small-note">${escapeText(project.description || 'No description yet.')}</p>
         </div>
         ${includeEditAction ? `
           <div class="project-dashboard-actions">
@@ -669,7 +694,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
         ` : ''}
       </section>
       ${renderStats(summary)}
-      ${renderContributionHeatmap(summary.activeDayMap, { headingId: contributionHeadingId })}
+      ${renderProjectOverview(project, summary, { headingId: contributionHeadingId })}
     `;
   }
 

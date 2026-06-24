@@ -14,7 +14,8 @@ import {
 } from './state.js';
 import {
   buildWorkflowExecutionLayout,
-  computeEntryProgress
+  computeEntryProgress,
+  isWorkflowStepOpenable
 } from './execution.js';
 import { createWorkflowArtifactStorage } from './artifact-storage.js';
 
@@ -748,9 +749,17 @@ export function createWorkflowActions(config = {}) {
 
     const stepOpen = event.target.closest('[data-workflow-step-open]');
     if (stepOpen) {
-      runtime.activeWorkflowId = String(stepOpen.dataset.workflowWorkflowId || '').trim();
-      runtime.activeEntryId = String(stepOpen.dataset.workflowEntryId || '').trim();
-      runtime.activeBlockId = String(stepOpen.dataset.workflowStepOpen || '').trim();
+      const workflowId = String(stepOpen.dataset.workflowWorkflowId || '').trim();
+      const entryId = String(stepOpen.dataset.workflowEntryId || '').trim();
+      const blockId = String(stepOpen.dataset.workflowStepOpen || '').trim();
+      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
+      const layout = workflow ? buildWorkflowExecutionLayout(workflow) : null;
+      if (!workflow || !entry || !isWorkflowStepOpenable(entry, layout, blockId)) {
+        return;
+      }
+      runtime.activeWorkflowId = workflowId;
+      runtime.activeEntryId = entryId;
+      runtime.activeBlockId = blockId;
       renderWorkflowViews();
       return;
     }
@@ -886,6 +895,12 @@ export function createWorkflowActions(config = {}) {
       const entry = getPrimaryWorkflowEntry(workflow);
       runtime.activeWorkflowId = workflowId;
       runtime.activeEntryId = entry?.id || '';
+      runtime.activeBlockId = '';
+      renderWorkflowViews();
+      return;
+    }
+
+    if (runtime.activeBlockId) {
       runtime.activeBlockId = '';
       renderWorkflowViews();
     }

@@ -155,6 +155,29 @@ export function initNotebookWidget({
       .slice(0, 6);
   }
 
+  function relativeShort(timestamp) {
+    const date = new Date(String(timestamp || ''));
+    if (Number.isNaN(date.getTime())) {
+      return '';
+    }
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+    if (minutes < 1) {
+      return 'now';
+    }
+    if (minutes < 60) {
+      return `${minutes}m ago`;
+    }
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+      return `${hours}h ago`;
+    }
+    const days = Math.floor(hours / 24);
+    if (days < 7) {
+      return date.toLocaleDateString([], { weekday: 'short' });
+    }
+    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+  }
+
   function renderRecentNotebookPages(entries) {
     pagesStatus.textContent = entries.length
       ? 'Tap a page to add a note.'
@@ -163,16 +186,23 @@ export function initNotebookWidget({
       pageList.innerHTML = '<p class="small-note">Save a notebook page to show it here.</p>';
       return;
     }
-    pageList.innerHTML = entries.map((entry) => `
+    pageList.innerHTML = entries.map((entry) => {
+      const project = String(entry?.projectName || 'No project').trim() || 'No project';
+      return `
       <button
         type="button"
-        class="dashboard-notebook-page-row"
+        class="home-row is-clickable"
         data-dashboard-notebook-entry="${safeText(entry.id)}"
       >
-        <strong class="dashboard-notebook-page-title">${safeText(notebookPageLabel(entry))}</strong>
-        <p class="dashboard-notebook-page-meta">${safeText(`${String(entry?.projectName || 'No project').trim() || 'No project'} | Updated ${formatNotebookTimestamp(entry?.updatedAt || entry?.createdAt)}`)}</p>
+        <span class="home-row-spacer" aria-hidden="true"></span>
+        <div class="home-row-copy">
+          <div class="home-row-name">${safeText(notebookPageLabel(entry))}</div>
+          <div class="home-row-meta">${safeText(project)}</div>
+        </div>
+        <span class="home-row-tag">${safeText(relativeShort(entry?.updatedAt || entry?.createdAt))}</span>
       </button>
-    `).join('');
+    `;
+    }).join('');
   }
 
   function renderWidget() {

@@ -1,4 +1,5 @@
 import { installContainerForm } from './container-form.js';
+import { installContainerContextMenu } from './container-context-menu.js';
 import { createPersonalInventoryContext } from './controller-context.js';
 import { bindPersonalInventoryEvents } from './events.js';
 import { installPersonalInventoryRendering } from './rendering.js';
@@ -11,6 +12,7 @@ export function initPersonalInventory(options = {}) {
   installStructureState(ctx);
   installStructureActions(ctx);
   installContainerForm(ctx);
+  installContainerContextMenu(ctx);
   installSectionNavigation(ctx);
   installPersonalInventoryRendering(ctx);
   bindPersonalInventoryEvents(ctx);

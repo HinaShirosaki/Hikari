@@ -11,95 +11,9 @@ function readSource(relativePath) {
   return sourceCache.get(filePath);
 }
 
-function hasEdge(graph, from, relation, to) {
-  return graph.edges.some((edge) => edge.from === from && edge.relation === relation && edge.to === to);
-}
-
 function assertClose(actual, expected, epsilon = 1e-6) {
   assert.equal(Number.isFinite(actual), true, `Expected finite number, got ${actual}`);
   assert.ok(Math.abs(actual - expected) <= epsilon, `Expected ${actual} to be within ${epsilon} of ${expected}`);
-}
-
-function buildObjectGraphFixture() {
-  return {
-    members: [{ id: 'm1', name: 'Alice' }],
-    projects: [{ id: 'p1', name: 'Project 1' }],
-    protocols: [{ id: 'pr1', name: 'Protocol 1' }],
-    workflowTemplates: [
-      {
-        id: 'wt1',
-        name: 'Template 1',
-        blocks: [{ id: 'tb1', protocolId: 'pr1', assigneeId: 'm1' }],
-        links: []
-      }
-    ],
-    workflows: [
-      {
-        id: 'w1',
-        name: 'Workflow 1',
-        projectId: 'p1',
-        notebookEntryIds: ['n1'],
-        blocks: [{ id: 'b1', protocolId: 'pr1', assigneeId: 'm1' }],
-        links: []
-      }
-    ],
-    instruments: [{ id: 'i1', name: 'HPLC' }],
-    papers: [
-      {
-        id: 'pa1',
-        title: 'Paper 1',
-        methodsExtract: [{ title: 'Method A' }],
-        keyReagents: [{ name: 'Reagent A' }]
-      }
-    ],
-    paperExperimentLinks: [{ paperId: 'pa1', entryId: 'n1', projectId: 'p1', note: 'linked' }],
-    labInventory: { chemicals: [{ id: 'c1', name: 'Acetone' }] },
-    samples: [
-      {
-        id: 's1',
-        code: 'S-1',
-        name: 'Sample 1',
-        location: { storageType: 'freezer', freezer: 'F1', rack: 'R1', box: 'B1', position: 'A1' },
-        chemicalLinks: ['c1'],
-        inventoryLink: { containerId: 'box1', section: '-20 Degree', wellIndex: 5 }
-      }
-    ],
-    inventory: {
-      '-20 Degree': [
-        {
-          id: 'box1',
-          name: 'Box 1',
-          type: 'box81',
-          wells: [{ name: 'A1', content: 'Material' }]
-        }
-      ]
-    },
-    notebookEntries: [
-      {
-        id: 'n1',
-        projectId: 'p1',
-        protocolId: 'pr1',
-        protocolName: 'Protocol 1',
-        updatedAt: '2026-01-15T00:00:00.000Z',
-        references: {
-          instrumentId: 'i1',
-          chemicalIds: ['c1'],
-          sampleIds: ['S-1'],
-          paperIds: ['pa1'],
-          peopleIds: ['m1'],
-          reagentLots: ['lot-42']
-        },
-        synthesisOutcome: {
-          producedCompoundCode: 'CMP-1',
-          purityPercent: 98,
-          usedInAssay: 'yes'
-        },
-        resultFiles: ['result.txt']
-      }
-    ],
-    assays: [{ id: 'a1', name: 'Assay 1', projectId: 'p1', notebookEntryId: 'n1' }],
-    gelAnalyses: [{ id: 'g1', name: 'Gel 1', projectId: 'p1', notebookEntryId: 'n1', report: { confidence: { score: 0.9 } } }]
-  };
 }
 
 const normalizedArrayKeys = [
@@ -396,16 +310,6 @@ test('[P1] normalizeState does not mutate defaultState arrays', () => {
   const normalized = shared.normalizeState({});
   normalized.members.push({ id: 'm1' });
   assert.equal(shared.defaultState.members.length, 0);
-});
-test('[P1] normalizeState merges objectGraph from source', () => {
-  const normalized = shared.normalizeState({
-    objectGraph: {
-      nodes: { 'project:p1': { uid: 'project:p1' } },
-      edges: [{ from: 'a', to: 'b', relation: 'r' }]
-    }
-  });
-  assert.equal(Boolean(normalized.objectGraph.nodes['project:p1']), true);
-  assert.equal(normalized.objectGraph.edges.length, 1);
 });
 [
   ['plain text', 'plain text'],
