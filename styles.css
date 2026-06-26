@@ -5,7 +5,12 @@
 @import url("./ui/css/base/core.css");
 @import url("./ui/css/themes/modes.css");
 @import url("./ui/css/views/assay-plate-palette.css");
+@import url("./ui/css/views/gel-palette.css");
+@import url("./ui/css/views/home-palette.css");
+@import url("./ui/css/views/papers-palette.css");
 @import url("./ui/css/views/sequence-viewer-palette.css");
+@import url("./ui/css/views/tool-box-palette.css");
+@import url("./ui/css/views/workflow-palette.css");
 @import url("./ui/css/views/home-view.css");
 @import url("./ui/css/views/protocol-management-view.css");
 @import url("./ui/css/views/biology-notebook-view.css");

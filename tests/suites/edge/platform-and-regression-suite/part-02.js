@@ -21,95 +21,9 @@ function listJavaScriptFiles(rootPath) {
   });
 }
 
-function hasEdge(graph, from, relation, to) {
-  return graph.edges.some((edge) => edge.from === from && edge.relation === relation && edge.to === to);
-}
-
 function assertClose(actual, expected, epsilon = 1e-6) {
   assert.equal(Number.isFinite(actual), true, `Expected finite number, got ${actual}`);
   assert.ok(Math.abs(actual - expected) <= epsilon, `Expected ${actual} to be within ${epsilon} of ${expected}`);
-}
-
-function buildObjectGraphFixture() {
-  return {
-    members: [{ id: 'm1', name: 'Alice' }],
-    projects: [{ id: 'p1', name: 'Project 1' }],
-    protocols: [{ id: 'pr1', name: 'Protocol 1' }],
-    workflowTemplates: [
-      {
-        id: 'wt1',
-        name: 'Template 1',
-        blocks: [{ id: 'tb1', protocolId: 'pr1', assigneeId: 'm1' }],
-        links: []
-      }
-    ],
-    workflows: [
-      {
-        id: 'w1',
-        name: 'Workflow 1',
-        projectId: 'p1',
-        notebookEntryIds: ['n1'],
-        blocks: [{ id: 'b1', protocolId: 'pr1', assigneeId: 'm1' }],
-        links: []
-      }
-    ],
-    instruments: [{ id: 'i1', name: 'HPLC' }],
-    papers: [
-      {
-        id: 'pa1',
-        title: 'Paper 1',
-        methodsExtract: [{ title: 'Method A' }],
-        keyReagents: [{ name: 'Reagent A' }]
-      }
-    ],
-    paperExperimentLinks: [{ paperId: 'pa1', entryId: 'n1', projectId: 'p1', note: 'linked' }],
-    labInventory: { chemicals: [{ id: 'c1', name: 'Acetone' }] },
-    samples: [
-      {
-        id: 's1',
-        code: 'S-1',
-        name: 'Sample 1',
-        location: { storageType: 'freezer', freezer: 'F1', rack: 'R1', box: 'B1', position: 'A1' },
-        chemicalLinks: ['c1'],
-        inventoryLink: { containerId: 'box1', section: '-20 Degree', wellIndex: 5 }
-      }
-    ],
-    inventory: {
-      '-20 Degree': [
-        {
-          id: 'box1',
-          name: 'Box 1',
-          type: 'box81',
-          wells: [{ name: 'A1', content: 'Material' }]
-        }
-      ]
-    },
-    notebookEntries: [
-      {
-        id: 'n1',
-        projectId: 'p1',
-        protocolId: 'pr1',
-        protocolName: 'Protocol 1',
-        updatedAt: '2026-01-15T00:00:00.000Z',
-        references: {
-          instrumentId: 'i1',
-          chemicalIds: ['c1'],
-          sampleIds: ['S-1'],
-          paperIds: ['pa1'],
-          peopleIds: ['m1'],
-          reagentLots: ['lot-42']
-        },
-        synthesisOutcome: {
-          producedCompoundCode: 'CMP-1',
-          purityPercent: 98,
-          usedInAssay: 'yes'
-        },
-        resultFiles: ['result.txt']
-      }
-    ],
-    assays: [{ id: 'a1', name: 'Assay 1', projectId: 'p1', notebookEntryId: 'n1' }],
-    gelAnalyses: [{ id: 'g1', name: 'Gel 1', projectId: 'p1', notebookEntryId: 'n1', report: { confidence: { score: 0.9 } } }]
-  };
 }
 
 const normalizedArrayKeys = [
@@ -176,87 +90,6 @@ test('[P1] sanitizeOutputName uses custom fallback when normalized output is emp
   });
 });
 
-const expectedGraphRelations = [
-  ['workflow:w1', 'uses_project', 'project:p1'],
-  ['workflow:w1', 'links_notebook_page', 'notebook_entry:n1'],
-  ['workflow:w1', 'has_block', 'workflow_block:w1:block:b1'],
-  ['workflow_block:w1:block:b1', 'uses_protocol', 'protocol:pr1'],
-  ['workflow_block:w1:block:b1', 'assigned_to', 'person:m1'],
-  ['workflow_template:wt1', 'has_block', 'workflow_template_block:wt1:block:tb1'],
-  ['workflow_template_block:wt1:block:tb1', 'uses_protocol', 'protocol:pr1'],
-  ['workflow_template_block:wt1:block:tb1', 'suggested_assignee', 'person:m1'],
-  ['paper:pa1', 'describes_method', 'method:pa1:method:1'],
-  ['paper:pa1', 'mentions_reagent', 'reagent:pa1:reagent:1'],
-  ['sample:S-1', 'stored_at', 'location:F1 -> R1 -> B1 -> A1'],
-  ['sample:S-1', 'related_chemical', 'chemical:c1'],
-  ['sample:S-1', 'stored_in_container', 'container:box1'],
-  ['sample:box1:well:1', 'stored_in', 'container:box1'],
-  ['notebook_entry:n1', 'uses_project', 'project:p1'],
-  ['notebook_entry:n1', 'uses_protocol', 'protocol:pr1'],
-  ['notebook_entry:n1', 'uses_instrument', 'instrument:i1'],
-  ['notebook_entry:n1', 'uses_chemical', 'chemical:c1'],
-  ['notebook_entry:n1', 'uses_sample', 'sample:S-1'],
-  ['notebook_entry:n1', 'references_paper', 'paper:pa1'],
-  ['notebook_entry:n1', 'performed_by', 'person:m1'],
-  ['notebook_entry:n1', 'uses_reagent_lot', 'reagent_lot:lot-42'],
-  ['notebook_entry:n1', 'produces_compound', 'compound:CMP-1'],
-  ['notebook_entry:n1', 'has_attachment', 'file:n1:result.txt'],
-  ['assay:a1', 'uses_project', 'project:p1'],
-  ['assay:a1', 'links_notebook_page', 'notebook_entry:n1'],
-  ['gel_analysis:g1', 'uses_project', 'project:p1'],
-  ['gel_analysis:g1', 'links_notebook_page', 'notebook_entry:n1'],
-  ['paper:pa1', 'inspires_experiment', 'notebook_entry:n1']
-];
-expectedGraphRelations.forEach(([from, relation, to], idx) => {
-  test(`[P0] rebuildObjectGraph relation case ${idx + 1}`, () => {
-    const graph = objectGraph.rebuildObjectGraph(buildObjectGraphFixture());
-    assert.equal(hasEdge(graph, from, relation, to), true);
-  });
-});
-[
-  [{ storageType: 'freezer', freezer: 'F1', rack: 'R1', box: 'B1', position: 'A1' }, 'location:F1 -> R1 -> B1 -> A1'],
-  [{ storageType: 'fridge', fridge: 'FR1', shelf: 'Top' }, 'location:FR1 -> Top'],
-  [{ storageType: 'desiccator', desiccator: 'D2', position: 'P3' }, 'location:D2 -> P3'],
-  [{ storageType: 'cabinet', cabinet: 'CAB', slot: 'S1' }, 'location:CAB -> S1']
-].forEach(([location, expectedNode], idx) => {
-  test(`[P1] rebuildObjectGraph builds location node case ${idx + 1}`, () => {
-    const state = buildObjectGraphFixture();
-    state.samples = [{ id: 's1', code: 'S-1', name: 'Sample', location, chemicalLinks: [], inventoryLink: null }];
-    const graph = objectGraph.rebuildObjectGraph(state);
-    assert.equal(Boolean(graph.nodes[expectedNode]), true);
-  });
-});
-[
-  ['uses_chemical', 'chemical', 'c1', ['n1']],
-  ['uses_sample', 'sample', 'S-1', ['n1']],
-  ['uses_reagent_lot', 'reagent_lot', 'lot-42', ['n1']],
-  ['references_paper', 'paper', 'pa1', ['n1']],
-  ['performed_by', 'person', 'm1', ['n1']],
-  ['uses_project', 'project', 'missing', []],
-  ['missing_relation', 'chemical', 'c1', []]
-].forEach(([relation, targetType, targetId, expectedIds], idx) => {
-  test(`[P0] queryNotebookEntriesByRelation case ${idx + 1}`, () => {
-    const state = buildObjectGraphFixture();
-    const entries = objectGraph.queryNotebookEntriesByRelation(state, { relation, targetType, targetId });
-    assert.equal(JSON.stringify(entries.map((item) => item.id)), JSON.stringify(expectedIds));
-  });
-});
-[
-  ['i1', '2026-01-01T00:00:00.000Z', '2026-01-31T23:59:59.000Z', ['n1']],
-  ['i1', '2026-01-15T00:00:00.000Z', '2026-01-15T00:00:00.000Z', ['n1']],
-  ['i1', 'bad', '2026-01-31T23:59:59.000Z', []],
-  ['i1', '2026-01-01T00:00:00.000Z', 'bad', []],
-  ['i2', '2026-01-01T00:00:00.000Z', '2026-01-31T23:59:59.000Z', []],
-  ['i1', '2026-01-16T00:00:00.000Z', '2026-01-31T23:59:59.000Z', []],
-  ['i1', '2026-01-31T23:59:59.000Z', '2026-01-01T00:00:00.000Z', []]
-].forEach(([instrumentId, startIso, endIso, expectedIds], idx) => {
-  test(`[P0] queryInstrumentUsageInRange case ${idx + 1}`, () => {
-    const state = buildObjectGraphFixture();
-    const entries = objectGraph.queryInstrumentUsageInRange(state, instrumentId, startIso, endIso);
-    assert.equal(JSON.stringify(entries.map((item) => item.id)), JSON.stringify(expectedIds));
-  });
-});
-
 const moduleExportContracts = [
   ['src/renderer/modules/agent-chat/index.js', 'initAgentChat', 'function'],
   ['src/renderer/modules/assay/index.js', 'initAssay', 'function'],
@@ -267,8 +100,6 @@ const moduleExportContracts = [
   ['src/renderer/modules/gel/index.js', 'initGelAnalysis', 'function'],
   ['src/renderer/modules/lab-common-inventory/index.js', 'initLabCommonInventory', 'function'],
   ['src/renderer/modules/lab-management.js', 'initLabManagement', 'function'],
-  ['src/renderer/modules/object-graph.js', 'createUid', 'function'],
-  ['src/renderer/modules/object-graph.js', 'rebuildObjectGraph', 'function'],
   ['src/renderer/modules/papers/index.js', 'initPapersManagement', 'function'],
   ['src/renderer/modules/personal-inventory/index.js', 'initPersonalInventory', 'function'],
   ['src/renderer/modules/biology-notebook/project-controller.js', 'createNotebookProjectController', 'function'],
@@ -285,8 +116,14 @@ moduleExportContracts.forEach(([relativePath, exportName, expectedType], idx) =>
   });
 });
 
-test('[P0] main-process modules do not import renderer implementation files', () => {
+test('[P0] main-process modules do not import renderer UI or controller implementation files', () => {
   const rendererRoot = path.join(__dirname, 'src', 'renderer');
+  const sequenceViewerAlgorithmsRoot = path.join(
+    rendererRoot,
+    'modules',
+    'sequence-viewer',
+    'algorithms'
+  );
   const violations = [];
   listJavaScriptFiles(path.join(__dirname, 'src', 'main')).forEach((filePath) => {
     const source = fs.readFileSync(filePath, 'utf8');
@@ -297,7 +134,12 @@ test('[P0] main-process modules do not import renderer implementation files', ()
     ].map((match) => match[1]).filter((specifier) => specifier.startsWith('.'));
     specifiers.forEach((specifier) => {
       const resolved = path.resolve(path.dirname(filePath), specifier);
-      if (resolved === rendererRoot || resolved.startsWith(`${rendererRoot}${path.sep}`)) {
+      const isSequenceViewerAlgorithm = resolved === sequenceViewerAlgorithmsRoot
+        || resolved.startsWith(`${sequenceViewerAlgorithmsRoot}${path.sep}`);
+      if (
+        !isSequenceViewerAlgorithm
+        && (resolved === rendererRoot || resolved.startsWith(`${rendererRoot}${path.sep}`))
+      ) {
         violations.push(`${path.relative(__dirname, filePath)} -> ${specifier}`);
       }
     });

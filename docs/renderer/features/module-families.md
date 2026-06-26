@@ -36,7 +36,7 @@ Modules do **not** own their own persistence; `persist()` rebuilds the object gr
 
 Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), and a `bootOrder`. `module-runtime.js` initializes modules in `bootOrder`, which roughly runs `protocol` (10) → `projectManagement` (20) → `workflowManagement` (30) → `labCommonInventory` (40) → `biologyNotebook` (50) → `sampleRegistry` (60) → `assay` (70) → `gel` (80) → `settings` (90) → `homeDashboard` (100) → `papers` (110) → `agentChat` (120). Boot order is independent of the family grouping above.
 
-`agentChatRail` is special: it has no view of its own and mounts a paper-scoped agent chat as a side rail inside the Papers workspace.
+`agentChatRail` is special: it has no view of its own and mounts a scoped agent chat as a side rail in Papers and Biology Notebook.
 
 ## A few wrinkles worth knowing
 
@@ -60,7 +60,7 @@ Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), a
 | `buffer-compounds.js`, `common-promoters.js` | reference datasets for toolbox and sequence features |
 | `app-registry.generated.js`, `llm-provider-config.generated.js` | generated shell configuration and LLM provider catalog |
 
-The generated commercial restriction-enzyme catalog lives in `src/shared/data/commercial-restriction-enzymes.js`; process-neutral restriction detection lives in `src/shared/sequence/restriction-features.js`.
+The generated commercial restriction-enzyme catalog and process-neutral restriction detection live inside `src/renderer/modules/sequence-viewer/`.
 
 ## Reading advice
 

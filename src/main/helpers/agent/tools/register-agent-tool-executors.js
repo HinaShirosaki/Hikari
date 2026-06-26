@@ -224,6 +224,7 @@ function registerAgentToolExecutors(deps = {}) {
   const protocolMatchingRuntime = deps.protocolMatchingRuntime || {};
   const notebookGenerationRuntime = deps.notebookGenerationRuntime || {};
   const subAgentRuntime = deps.subAgentRuntime || {};
+  const containerRuntime = deps.containerRuntime || {};
   const memoryRuntime = deps.memoryRuntime || {};
   const paperDownloadRuntime = deps.paperDownloadRuntime || {};
   const paperAnalysisRuntime = deps.paperAnalysisRuntime || {};
@@ -532,6 +533,26 @@ function registerAgentToolExecutors(deps = {}) {
     };
   });
 
+  genericAgentToolRuntime.registerToolExecutor('container', async ({ args }) => {
+    if (!containerRuntime || typeof containerRuntime.execute !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Container runtime is not configured.',
+        summary: 'Container runtime is not configured.'
+      };
+    }
+    const result = await containerRuntime.execute(args);
+    return {
+      ...result,
+      items: Array.isArray(result?.items)
+        ? result.items
+        : (result?.container ? [result.container] : []),
+      summary: cleanText(result?.summary, 320)
+        || buildExecutorSummary(cleanText, 'container', result?.items, 'container returned no items.')
+    };
+  });
+
   genericAgentToolRuntime.registerToolExecutor('literature-search', async ({ args, context }) => {
     if (!literatureSearchRuntime || typeof literatureSearchRuntime.execute !== 'function') {
       return {
@@ -834,6 +855,7 @@ function registerAgentToolExecutors(deps = {}) {
     'web-search',
     'sub-agent',
     'memory',
+    'container',
     'literature-search',
     'purchase-recommendation',
     'paper-download',

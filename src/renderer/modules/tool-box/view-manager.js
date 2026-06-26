@@ -25,7 +25,7 @@ export function initToolBoxViewManager(options = {}) {
         const colonyStatus = rootDocument.getElementById('colony-status');
         if (colonyStatus) {
           colonyStatus.textContent = 'Failed to load colony counter tool.';
-          colonyStatus.style.color = 'var(--danger)';
+          colonyStatus.style.color = 'var(--theme-danger)';
         }
       });
 

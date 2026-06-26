@@ -59,7 +59,8 @@ export function getLlmPrompts() {
       }
       const parsed = await response.json();
       return normalizePromptConfig(parsed);
-    } catch {
+    } catch (error) {
+      console.warn('Failed to load LLM prompts; falling back to empty config:', error);
       return normalizePromptConfig({});
     }
   })();

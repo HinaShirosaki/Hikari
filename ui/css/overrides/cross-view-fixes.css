@@ -1,13 +1,13 @@
 /* Spacing and overlap fixes by view */
 
 :root {
-  --multi-panel-left-rail-bg: color-mix(in srgb, var(--surface-subtle) 92%, var(--strong) 8%);
-  --multi-panel-left-rail-border: color-mix(in srgb, var(--line-soft) 84%, var(--strong) 10%);
+  --multi-panel-left-rail-bg: color-mix(in srgb, var(--theme-surface-subtle) 92%, var(--theme-text-strong) 8%);
+  --multi-panel-left-rail-border: color-mix(in srgb, var(--theme-border-soft) 84%, var(--theme-text-strong) 10%);
   --multi-panel-left-rail-max-height: calc(100vh - 168px);
-  --app-left-rail-surface: color-mix(in srgb, var(--surface-elevated) 96%, var(--bg) 4%);
+  --app-left-rail-surface: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-background) 4%);
   --app-left-rail-bg: var(--app-left-rail-surface);
-  --app-left-rail-divider: color-mix(in srgb, var(--line-soft) 88%, var(--strong) 12%);
-  --app-left-rail-handle: color-mix(in srgb, var(--line) 80%, var(--accent) 20%);
+  --app-left-rail-divider: color-mix(in srgb, var(--theme-border-soft) 88%, var(--theme-text-strong) 12%);
+  --app-left-rail-handle: color-mix(in srgb, var(--theme-border) 80%, var(--theme-accent) 20%);
 }
 
 
@@ -57,10 +57,10 @@
 }
 
 .app-file-drop-target.is-file-drop-active {
-  outline: 2px solid color-mix(in srgb, var(--accent) 78%, var(--palette-white) 22%);
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 78%, var(--theme-surface-elevated) 22%);
   outline-offset: 4px;
-  background: color-mix(in srgb, var(--surface-subtle) 86%, var(--accent) 14%);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 24%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-accent) 14%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 24%, transparent);
 }
 
 .app-left-rail-section {
@@ -72,7 +72,7 @@
 
 .app-left-rail-section + .app-left-rail-section {
   padding-top: 16px;
-  border-top: 1px solid color-mix(in srgb, var(--line-soft) 92%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--theme-border-soft) 92%, transparent);
 }
 
 .app-left-rail-list {

@@ -1,6 +1,7 @@
 import { asArray, trimText } from './shared.js';
 
 const DEFAULT_SCOPE_KEY = 'papers:library';
+const DEFAULT_NOTEBOOK_SCOPE_KEY = 'notebook:workspace';
 
 function buildPaperAgentSessionPrompt(context = {}) {
   const paperId = trimText(context.paperId, 220);
@@ -28,21 +29,69 @@ function buildPaperAgentSessionPrompt(context = {}) {
   return lines.join('\n');
 }
 
+function buildNotebookAgentSessionPrompt(context = {}) {
+  const entryId = trimText(context.notebookEntryId, 220);
+  const pageTitle = trimText(context.pageTitle, 320);
+  const projectName = trimText(context.projectName, 220);
+  const protocolName = trimText(context.protocolName, 220);
+  if (!entryId && !pageTitle && !projectName && !protocolName) {
+    return '';
+  }
+  const lines = [
+    'You are in a Biology Notebook right-rail chat session. Treat the active notebook page as the default subject when the user says "this page", "this notebook page", or "my current experiment".',
+    'Use the hidden notebook page context supplied with each user question as the current page content. It may include unsaved placeholder values, notes, tables, and linked result summaries.',
+    'Do not claim that saved notebook data contains unsaved edits unless those edits were supplied in the hidden page context.'
+  ];
+  if (pageTitle) {
+    lines.push(`Active notebook page title: ${pageTitle}`);
+  }
+  if (entryId) {
+    lines.push(`Active notebook entry id: ${entryId}`);
+  }
+  if (projectName) {
+    lines.push(`Project: ${projectName}`);
+  }
+  if (protocolName) {
+    lines.push(`Protocol: ${protocolName}`);
+  }
+  return lines.join('\n');
+}
+
 function normalizeAgentChatState(source = {}, defaults = {}) {
   const value = source && typeof source === 'object' ? source : {};
   const hasProjectId = Object.prototype.hasOwnProperty.call(value, 'projectId');
   return {
     projectId: trimText(hasProjectId ? value.projectId : defaults.projectId, 120),
-    deepResearchEnabled: value.deepResearchEnabled === true,
     currentSessionId: trimText(value.currentSessionId, 120),
     sessions: asArray(value.sessions),
     messages: asArray(value.messages)
   };
 }
 
-function normalizeScopeKey(value) {
+function normalizePaperScopeKey(value) {
   const raw = trimText(value, 220);
   return raw ? `paper:${raw}` : DEFAULT_SCOPE_KEY;
+}
+
+function normalizeNotebookScopeKey(context = {}) {
+  const entryId = trimText(context.notebookEntryId, 220);
+  if (entryId) {
+    return `notebook:${entryId}`;
+  }
+  const projectId = trimText(context.projectId, 120);
+  const protocolId = trimText(context.protocolId, 120);
+  if (projectId || protocolId) {
+    return `notebook:draft:${projectId || 'project'}:${protocolId || 'protocol'}`;
+  }
+  return DEFAULT_NOTEBOOK_SCOPE_KEY;
+}
+
+function normalizeScopeKey(context = {}) {
+  const scopeType = trimText(context.scopeType, 80);
+  if (scopeType === 'notebook') {
+    return normalizeNotebookScopeKey(context);
+  }
+  return normalizePaperScopeKey(context.paperId);
 }
 
 function normalizeStoredScopeKey(value) {
@@ -50,10 +99,10 @@ function normalizeStoredScopeKey(value) {
   if (!raw || raw === DEFAULT_SCOPE_KEY) {
     return DEFAULT_SCOPE_KEY;
   }
-  if (raw.startsWith('paper:')) {
+  if (raw === DEFAULT_NOTEBOOK_SCOPE_KEY || raw.startsWith('paper:') || raw.startsWith('notebook:')) {
     return raw;
   }
-  return normalizeScopeKey(raw);
+  return normalizePaperScopeKey(raw);
 }
 
 function ensurePaperAgentChatSessions(rootState) {
@@ -75,36 +124,98 @@ export function normalizePaperAgentChatSessions(source = {}) {
   );
 }
 
-export function createPaperScopedAgentChatState(rootState, options = {}) {
-  const getPaperContext = typeof options.getPaperContext === 'function'
-    ? options.getPaperContext
+function normalizeHiddenContext(context = {}) {
+  const source = context && typeof context === 'object' ? context : {};
+  const text = trimText(source.text, 4000);
+  if (!text) {
+    return null;
+  }
+  return {
+    kind: trimText(source.kind || 'selection', 80),
+    label: trimText(source.label || 'Hidden context', 120),
+    text,
+    paperId: trimText(source.paperId, 220),
+    paperTitle: trimText(source.paperTitle, 320),
+    pageNumber: Number.isFinite(Number(source.pageNumber))
+      ? Math.max(1, Math.round(Number(source.pageNumber)))
+      : 0,
+    notebookEntryId: trimText(source.notebookEntryId, 220),
+    projectName: trimText(source.projectName, 220),
+    protocolName: trimText(source.protocolName, 220)
+  };
+}
+
+function normalizeNotebookAgentContext(context = {}) {
+  const notebookEntryId = trimText(context.notebookEntryId, 220);
+  const projectName = trimText(context.projectName, 220);
+  const protocolName = trimText(context.protocolName, 220);
+  const pageTitle = trimText(context.pageTitle, 320);
+  const hiddenContexts = asArray(context.hiddenContexts)
+    .map(normalizeHiddenContext)
+    .filter(Boolean);
+  const singleHiddenContext = normalizeHiddenContext(context.hiddenContext);
+  if (singleHiddenContext) {
+    hiddenContexts.unshift(singleHiddenContext);
+  }
+  return {
+    scopeType: 'notebook',
+    notebookEntryId,
+    pageTitle,
+    projectId: trimText(context.projectId, 120),
+    projectName,
+    protocolId: trimText(context.protocolId, 120),
+    protocolName,
+    hiddenContexts: hiddenContexts.slice(0, 3),
+    sessionPrompt: buildNotebookAgentSessionPrompt({
+      notebookEntryId,
+      pageTitle,
+      projectName,
+      protocolName
+    })
+  };
+}
+
+function normalizePaperAgentContext(context = {}) {
+  const paperId = trimText(context.paperId, 220);
+  const knowledgeMarkdownRelativePath = trimText(context.knowledgeMarkdownRelativePath, 2400);
+  const paperTitle = trimText(context.paperTitle, 320);
+  return {
+    scopeType: 'paper',
+    paperId,
+    paperTitle,
+    projectId: trimText(context.projectId, 120),
+    knowledgeMarkdownRelativePath,
+    knowledgeExtractedTextRelativePath: trimText(context.knowledgeExtractedTextRelativePath, 2400),
+    knowledgeMetaRelativePath: trimText(context.knowledgeMetaRelativePath, 2400),
+    knowledgeStatus: trimText(context.knowledgeStatus, 80),
+    sessionPrompt: buildPaperAgentSessionPrompt({
+      paperId,
+      paperTitle,
+      knowledgeMarkdownRelativePath
+    })
+  };
+}
+
+function normalizeScopeContext(context = {}) {
+  const scopeType = trimText(context.scopeType, 80);
+  return scopeType === 'notebook'
+    ? normalizeNotebookAgentContext(context)
+    : normalizePaperAgentContext(context);
+}
+
+export function createScopedAgentChatState(rootState, options = {}) {
+  const getRawScopeContext = typeof options.getScopeContext === 'function'
+    ? options.getScopeContext
     : () => ({});
 
   function getScopeContext() {
-    const context = getPaperContext() || {};
-    const paperId = trimText(context.paperId, 220);
-    const knowledgeMarkdownRelativePath = trimText(context.knowledgeMarkdownRelativePath, 2400);
-    const paperTitle = trimText(context.paperTitle, 320);
-    return {
-      paperId,
-      paperTitle,
-      projectId: trimText(context.projectId, 120),
-      knowledgeMarkdownRelativePath,
-      knowledgeExtractedTextRelativePath: trimText(context.knowledgeExtractedTextRelativePath, 2400),
-      knowledgeMetaRelativePath: trimText(context.knowledgeMetaRelativePath, 2400),
-      knowledgeStatus: trimText(context.knowledgeStatus, 80),
-      sessionPrompt: buildPaperAgentSessionPrompt({
-        paperId,
-        paperTitle,
-        knowledgeMarkdownRelativePath
-      })
-    };
+    return normalizeScopeContext(getRawScopeContext() || {});
   }
 
   function getScopedAgentChat() {
     const context = getScopeContext();
     const sessions = ensurePaperAgentChatSessions(rootState);
-    const scopeKey = normalizeScopeKey(context.paperId);
+    const scopeKey = normalizeScopeKey(context);
     sessions[scopeKey] = normalizeAgentChatState(sessions[scopeKey], {
       projectId: context.projectId
     });
@@ -128,7 +239,7 @@ export function createPaperScopedAgentChatState(rootState, options = {}) {
       if (property === 'agentChat') {
         const context = getScopeContext();
         const sessions = ensurePaperAgentChatSessions(rootState);
-        sessions[normalizeScopeKey(context.paperId)] = normalizeAgentChatState(value, {
+        sessions[normalizeScopeKey(context)] = normalizeAgentChatState(value, {
           projectId: context.projectId
         });
         return true;
@@ -138,4 +249,4 @@ export function createPaperScopedAgentChatState(rootState, options = {}) {
   });
 }
 
-export { buildPaperAgentSessionPrompt };
+export { buildNotebookAgentSessionPrompt, buildPaperAgentSessionPrompt };

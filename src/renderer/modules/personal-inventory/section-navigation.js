@@ -7,6 +7,7 @@ function openContainer(section, containerId) {
   if (!container) {
     return;
   }
+  ctx.hideContainerContextMenu?.();
   uiState.selectedSectionName = section;
   uiState.selectedContainer = { section, containerId };
   uiState.editingWellIndex = -1;
@@ -77,6 +78,13 @@ function renderSectionNavigation(activeSection) {
   inventoryLocationNav.querySelectorAll('[data-container-open]').forEach((button) => {
     button.addEventListener('click', () => {
       ctx.openContainer(button.dataset.section, button.dataset.containerOpen);
+    });
+    button.addEventListener('contextmenu', (event) => {
+      ctx.openContainerContextMenu?.(
+        event,
+        button.dataset.section,
+        button.dataset.containerOpen
+      );
     });
   });
 }

@@ -35,7 +35,7 @@
   margin: 0;
   padding: 12px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--surface-subtle) 62%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 62%, transparent);
 }
 
 .inventory-location-btn {
@@ -55,8 +55,8 @@
 .inventory-location-btn:hover,
 .inventory-location-btn:focus-visible,
 .inventory-location-btn.active {
-  border-color: var(--line-soft);
-  background: color-mix(in srgb, var(--surface-subtle) 70%, transparent);
+  border-color: var(--theme-border-soft);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 70%, transparent);
 }
 
 .inventory-location-group {
@@ -77,8 +77,8 @@
   align-items: center;
   justify-content: center;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--surface-subtle) 82%, transparent);
-  color: var(--strong);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, transparent);
+  color: var(--theme-text-strong);
   font-size: 0.66rem;
   font-weight: 700;
 }
@@ -89,14 +89,14 @@
 }
 
 .inventory-location-title {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-weight: 650;
   font-size: 0.88rem;
 }
 
 .inventory-location-meta,
 .inventory-location-count {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.72rem;
 }
 
@@ -114,7 +114,7 @@
   padding: 7px 9px;
   border: 1px solid transparent;
   border-radius: 11px;
-  background: color-mix(in srgb, var(--surface-subtle) 40%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 40%, transparent);
   color: inherit;
   text-align: left;
 }
@@ -122,14 +122,24 @@
 .inventory-container-btn:hover,
 .inventory-container-btn:focus-visible,
 .inventory-container-btn.active {
-  border-color: var(--line-soft);
-  background: color-mix(in srgb, var(--surface-subtle) 82%, transparent);
+  border-color: var(--theme-border-soft);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, transparent);
 }
 
 .inventory-container-name {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-weight: 650;
   font-size: 0.82rem;
+}
+
+.personal-inventory-context-menu {
+  position: fixed;
+  z-index: 60;
+  min-width: 160px;
+}
+
+.personal-inventory-context-menu[hidden] {
+  display: none;
 }
 
 .inventory-summary-card {
@@ -171,19 +181,19 @@
 }
 
 .inventory-summary-dot-total {
-  background: var(--muted);
+  background: var(--theme-text-muted);
 }
 
 .inventory-summary-dot-plasmid {
-  background: var(--accent);
+  background: var(--theme-accent);
 }
 
 .inventory-summary-dot-cell {
-  background: var(--warning);
+  background: var(--theme-warning);
 }
 
 .inventory-summary-dot-protein {
-  background: var(--success);
+  background: var(--theme-success);
 }
 
 
@@ -200,7 +210,7 @@
   margin-bottom: 12px;
   padding: 12px;
   border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-subtle) 78%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
 }
 
 .inventory-custom-grid-fields {
@@ -219,7 +229,7 @@
   border-radius: 12px;
   padding: 12px;
   border: 0;
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 72%, transparent);
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -237,7 +247,7 @@
   margin: 0;
   padding: 24px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--surface-subtle) 62%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 62%, transparent);
 }
 
 
@@ -258,10 +268,10 @@
   margin: 0 0 8px;
 }
 
-.container-detail-actions {
+.container-detail-toolbar {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 12px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .well-editor-shell {
@@ -276,6 +286,13 @@
   min-width: 0;
   width: 100%;
   min-height: 520px;
+}
+
+.well-grid-column {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  align-content: start;
 }
 
 .falcon-grid-panel {
@@ -294,14 +311,14 @@
   border-radius: 14px;
   border: 1px solid var(--plate-edge);
   background:
-    linear-gradient(180deg, var(--palette-rgba-255-255-255-a5), var(--palette-rgba-0-0-0-0) 22%),
+    linear-gradient(180deg, var(--assay-plate-highlight-soft), var(--assay-plate-transparent) 22%),
     linear-gradient(180deg, var(--plate-body), var(--assay-plate-body-mid) 70%, var(--assay-plate-body-edge) 100%);
   box-shadow:
-    inset 0 1px 0 var(--palette-rgba-255-255-255-a9),
-    inset 0 -1px 0 var(--palette-rgba-0-0-0-a08),
-    inset 0 0 0 1px var(--palette-rgba-255-255-255-a45),
-    0 14px 28px -16px var(--palette-rgba-0-0-0-a3),
-    0 2px 6px var(--palette-rgba-0-0-0-a08);
+    inset 0 1px 0 var(--assay-plate-highlight-strong),
+    inset 0 -1px 0 var(--assay-plate-shadow-soft),
+    inset 0 0 0 1px var(--assay-plate-highlight-soft),
+    0 14px 28px -16px var(--assay-plate-shadow-strong),
+    0 2px 6px var(--assay-plate-shadow-soft);
   padding: 18px 20px 22px;
   position: relative;
 }
@@ -314,7 +331,7 @@
   right: 6px;
   bottom: 6px;
   border-radius: 10px;
-  border: 1px solid var(--palette-rgba-255-255-255-a5);
+  border: 1px solid var(--assay-plate-highlight-soft);
   pointer-events: none;
 }
 
@@ -351,12 +368,12 @@
   border: 0;
   border-radius: 999px;
   background:
-    radial-gradient(circle at 34% 30%, var(--palette-rgba-255-255-255-a9) 0%, var(--palette-transparent) 52%),
+    radial-gradient(circle at 34% 30%, var(--assay-plate-highlight-strong) 0%, var(--assay-plate-transparent) 52%),
     radial-gradient(circle at 50% 60%, var(--well-bowl, var(--assay-plate-bowl)) 0%, var(--assay-plate-bowl-edge) 100%);
   box-shadow:
     inset 0 0 0 1px var(--well-rim, var(--assay-plate-rim)),
-    inset 0 2px 3px var(--palette-rgba-0-0-0-a3),
-    inset 0 -1px 1px var(--palette-rgba-255-255-255-a7);
+    inset 0 2px 3px var(--assay-plate-shadow-strong),
+    inset 0 -1px 1px var(--assay-plate-highlight);
   aspect-ratio: 1 / 1;
   align-self: center;
   justify-self: center;
@@ -368,8 +385,8 @@
 
 .well-plate96:hover {
   background:
-    radial-gradient(circle at 32% 28%, var(--palette-rgba-255-255-255-a9) 0%, var(--palette-transparent) 55%),
-    radial-gradient(circle at 50% 50%, var(--palette-white) 0%, var(--assay-plate-bowl-hover-edge) 100%);
+    radial-gradient(circle at 32% 28%, var(--assay-plate-highlight-strong) 0%, var(--assay-plate-transparent) 55%),
+    radial-gradient(circle at 50% 50%, var(--assay-plate-pure-white) 0%, var(--assay-plate-bowl-hover-edge) 100%);
 }
 
 .well-plate96 .well-number {
@@ -387,22 +404,22 @@
 
 .well-plate96 .well-sample-dot.has-sample {
   background:
-    radial-gradient(circle at 38% 32%, var(--palette-rgba-255-255-255-a5) 0%, var(--palette-transparent) 60%),
-    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--well-sample-fill, var(--assay-plate-sample-fallback)) 92%, var(--palette-white)) 0%, color-mix(in srgb, var(--well-sample-fill, var(--assay-plate-sample-fallback)) 70%, var(--palette-black) 12%) 100%);
+    radial-gradient(circle at 38% 32%, var(--assay-plate-highlight-soft) 0%, var(--assay-plate-transparent) 60%),
+    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--well-sample-fill, var(--assay-plate-sample-fallback)) 92%, var(--assay-plate-pure-white)) 0%, color-mix(in srgb, var(--well-sample-fill, var(--assay-plate-sample-fallback)) 70%, var(--assay-plate-pure-black) 12%) 100%);
   border: 0;
   box-shadow:
-    inset 0 1px 1px var(--palette-rgba-255-255-255-a45),
-    inset 0 -2px 3px var(--palette-rgba-0-0-0-a18);
+    inset 0 1px 1px var(--assay-plate-highlight-soft),
+    inset 0 -2px 3px var(--assay-plate-shadow);
 }
 
 .well-plate96.well-selected {
   background:
-    radial-gradient(circle at 32% 28%, var(--palette-rgba-255-255-255-a9) 0%, var(--palette-transparent) 55%),
+    radial-gradient(circle at 32% 28%, var(--assay-plate-highlight-strong) 0%, var(--assay-plate-transparent) 55%),
     radial-gradient(circle at 50% 50%, var(--assay-plate-selected-fill-start) 0%, var(--assay-plate-selected-fill-end) 100%);
   box-shadow:
     inset 0 0 0 1.5px var(--assay-plate-selected-border),
     inset 0 2px 3px var(--assay-plate-selected-shadow),
-    inset 0 -1px 1px var(--palette-rgba-255-255-255-a7),
+    inset 0 -1px 1px var(--assay-plate-highlight),
     0 0 0 2px var(--assay-plate-selected-ring);
 }
 
@@ -436,8 +453,8 @@
   height: 11%;
   transform: translateX(-50%);
   border-radius: 10px 10px 7px 7px;
-  background: linear-gradient(180deg, var(--assay-labware-cap-start), var(--assay-labware-cap-end));
-  box-shadow: inset 0 -2px 0 var(--assay-labware-shadow);
+  background: linear-gradient(180deg, var(--assay-plate-labware-cap-start), var(--assay-plate-labware-cap-end));
+  box-shadow: inset 0 -2px 0 var(--assay-plate-labware-shadow);
 }
 
 .falcon-body {
@@ -447,9 +464,9 @@
   width: 50%;
   height: 86%;
   transform: translateX(-50%);
-  border: 2px solid var(--assay-labware-glass-border);
+  border: 2px solid var(--assay-plate-labware-glass-border);
   border-radius: 18px 18px 44px 44px / 14px 14px 72px 72px;
-  background: linear-gradient(180deg, var(--assay-labware-glass-start), var(--assay-labware-glass-end));
+  background: linear-gradient(180deg, var(--assay-plate-labware-glass-start), var(--assay-plate-labware-glass-end));
   overflow: hidden;
 }
 
@@ -461,7 +478,7 @@
   width: 28%;
   height: 26%;
   transform: translateX(-50%);
-  border: 2px solid var(--assay-labware-glass-border);
+  border: 2px solid var(--assay-plate-labware-glass-border);
   border-top: 0;
   border-radius: 0 0 40px 40px / 0 0 100% 100%;
   background: inherit;
@@ -481,7 +498,7 @@
 
 .falcon-liquid.has-sample {
   height: 33%;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--falcon-fill, var(--assay-plate-sample-fallback)) 86%, var(--palette-white)) 0%, var(--falcon-fill, var(--assay-plate-sample-fallback)) 100%);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--falcon-fill, var(--assay-plate-sample-fallback)) 86%, var(--assay-plate-pure-white)) 0%, var(--falcon-fill, var(--assay-plate-sample-fallback)) 100%);
 }
 
 .falcon-highlight {
@@ -491,7 +508,7 @@
   width: 12%;
   height: 68%;
   border-radius: 999px;
-  background: linear-gradient(180deg, var(--palette-rgba-255-255-255-a7), var(--palette-rgba-255-255-255-a12));
+  background: linear-gradient(180deg, var(--assay-plate-highlight), var(--assay-plate-highlight-faint));
 }
 
 .falcon-mark {
@@ -499,7 +516,7 @@
   right: 14%;
   width: 16%;
   height: 1.5%;
-  background: var(--assay-labware-mark);
+  background: var(--assay-plate-labware-mark);
   border-radius: 999px;
 }
 
@@ -566,12 +583,12 @@
   inset: 0;
   border-radius: 5px;
   background:
-    linear-gradient(180deg, var(--palette-rgba-0-0-0-a08), var(--palette-rgba-0-0-0-0) 28%),
+    linear-gradient(180deg, var(--assay-plate-shadow-soft), var(--assay-plate-transparent) 28%),
     linear-gradient(180deg, var(--plate-skirt, var(--assay-plate-skirt)) 0%, var(--assay-plate-skirt-edge) 100%);
   box-shadow:
-    inset 0 1px 2px var(--palette-rgba-0-0-0-a2),
-    inset 0 -1px 0 var(--palette-rgba-255-255-255-a5),
-    inset 0 0 0 1px var(--palette-rgba-0-0-0-a3);
+    inset 0 1px 2px var(--assay-plate-shadow),
+    inset 0 -1px 0 var(--assay-plate-highlight-soft),
+    inset 0 0 0 1px var(--assay-plate-shadow-strong);
   /* chamfered bottom-left corner — A1 orientation marker on real plates */
   clip-path: polygon(
     0 0,
@@ -594,8 +611,8 @@
   background: linear-gradient(
     to top right,
     transparent calc(50% - 0.5px),
-    var(--palette-rgba-0-0-0-a3) calc(50% - 0.5px),
-    var(--palette-rgba-0-0-0-a3) calc(50% + 0.5px),
+    var(--assay-plate-shadow-strong) calc(50% - 0.5px),
+    var(--assay-plate-shadow-strong) calc(50% + 0.5px),
     transparent calc(50% + 0.5px)
   );
 }
@@ -618,14 +635,14 @@
   width: 56%;
   height: 56%;
   border-radius: 6px;
-  border: 1.5px solid var(--line);
-  background: var(--surface-subtle);
+  border: 1.5px solid var(--theme-border);
+  background: var(--theme-surface-subtle);
   transition: background-color 140ms ease, border-color 140ms ease;
 }
 
 .well-sample-dot.has-sample {
   background: var(--well-sample-fill, var(--assay-plate-sample-fallback));
-  border-color: var(--palette-rgba-255-255-255-a7);
+  border-color: var(--assay-plate-highlight);
 }
 
 .well-sample-count {
@@ -637,7 +654,7 @@
   border-radius: 6px;
   padding: 0 3px;
   background: var(--assay-plate-sample-count-bg);
-  color: var(--palette-white);
+  color: var(--assay-plate-pure-white);
   font-size: 0.56rem;
   line-height: 14px;
   text-align: center;
@@ -664,32 +681,13 @@
   height: 10px;
   border-radius: 4px;
   background: var(--sample-type-color, var(--assay-plate-sample-fallback));
-  border: 1px solid var(--palette-rgba-255-255-255-a7);
+  border: 1px solid var(--assay-plate-highlight);
 }
 
 .well-selected {
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface-elevated));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface-elevated));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 30%, transparent);
   z-index: 1;
-}
-
-.well-drag-over {
-  background: color-mix(in srgb, var(--success) 16%, var(--surface-elevated));
-  box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--success) 50%, transparent),
-    0 0 0 2px color-mix(in srgb, var(--success) 16%, transparent);
-  z-index: 2;
-}
-
-.well-plate96.well-drag-over {
-  background:
-    radial-gradient(circle at 32% 28%, var(--palette-rgba-255-255-255-a9) 0%, var(--palette-transparent) 55%),
-    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--success) 18%, var(--assay-plate-bowl)) 0%, color-mix(in srgb, var(--success) 22%, var(--assay-plate-bowl-edge)) 100%);
-  box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--success) 56%, transparent),
-    inset 0 2px 3px var(--palette-rgba-0-0-0-a3),
-    inset 0 -1px 1px var(--palette-rgba-255-255-255-a7),
-    0 0 0 2px color-mix(in srgb, var(--success) 18%, transparent);
 }
 
 .well-inline-editor {
@@ -727,102 +725,6 @@
   flex-wrap: wrap;
 }
 
-.well-saved-sample-fill {
-  display: grid;
-  gap: 8px;
-  margin: 10px 0 12px;
-  padding: 10px;
-  border: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--surface-subtle) 58%, transparent);
-}
-
-.well-saved-sample-head strong {
-  margin: 0;
-  font-size: 0.82rem;
-}
-
-.well-saved-sample-list {
-  display: grid;
-  gap: 6px;
-  max-height: 182px;
-  overflow: auto;
-  padding-right: 2px;
-}
-
-.well-saved-sample-chip {
-  width: 100%;
-  min-height: 38px;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 8px;
-  border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  color: inherit;
-  cursor: grab;
-  text-align: left;
-}
-
-.well-saved-sample-chip:hover,
-.well-saved-sample-chip:focus-visible {
-  border-color: color-mix(in srgb, var(--accent) 42%, var(--line));
-  background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
-}
-
-.well-saved-sample-chip.is-dragging {
-  opacity: 0.62;
-  cursor: grabbing;
-}
-
-.well-saved-sample-copy {
-  min-width: 0;
-  display: grid;
-  gap: 1px;
-}
-
-.well-saved-sample-code,
-.well-saved-sample-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.well-saved-sample-code {
-  color: var(--strong);
-  font-size: 0.78rem;
-  font-weight: 650;
-}
-
-.well-saved-sample-name {
-  color: var(--muted);
-  font-size: 0.7rem;
-}
-
-.well-saved-sample-type {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  color: var(--muted);
-  font-size: 0.68rem;
-  white-space: nowrap;
-}
-
-.well-saved-sample-type::before {
-  content: "";
-  width: 8px;
-  height: 8px;
-  border-radius: 4px;
-  background: var(--sample-type-color, var(--accent));
-}
-
-.well-saved-sample-empty {
-  margin: 0;
-}
-
 .inventory-sample-structure-control {
   display: grid;
   gap: 4px;
@@ -845,9 +747,9 @@
   display: grid;
   place-items: center;
   padding: 8px;
-  border: 1px dashed color-mix(in srgb, var(--line) 74%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--theme-border) 74%, transparent);
   border-radius: 8px;
-  background: color-mix(in srgb, var(--surface) 92%, var(--palette-white));
+  background: color-mix(in srgb, var(--theme-surface) 92%, var(--assay-plate-pure-white));
 }
 
 .inventory-sample-structure-preview[hidden] {

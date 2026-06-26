@@ -22,6 +22,9 @@ function createAgentControllerUtils(deps = {}) {
   const normalizeLlmProviderOverride = typeof deps.normalizeLlmProvider === 'function'
     ? deps.normalizeLlmProvider
     : null;
+  const normalizeAgentLlmProviderOverride = typeof deps.normalizeAgentLlmProvider === 'function'
+    ? deps.normalizeAgentLlmProvider
+    : null;
   const defaultLlmEndpointForProviderOverride = typeof deps.defaultLlmEndpointForProvider === 'function'
     ? deps.defaultLlmEndpointForProvider
     : null;
@@ -550,6 +553,12 @@ function createAgentControllerUtils(deps = {}) {
   }
 
   function resolveAgentProvider(llm) {
+    if (normalizeAgentLlmProviderOverride) {
+      return cleanText(
+        normalizeAgentLlmProviderOverride(llm?.provider, llm?.apiEndpoint || llm?.api),
+        80
+      ).toLowerCase() || DEFAULT_LLM_PROVIDER;
+    }
     return normalizeLlmProvider(llm?.provider, llm?.apiEndpoint || llm?.api);
   }
 

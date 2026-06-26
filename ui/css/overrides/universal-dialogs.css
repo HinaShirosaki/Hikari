@@ -8,7 +8,7 @@
   align-items: center;
   overflow: auto;
   padding: 18px;
-  background: var(--palette-rgba-18-34-55-a2);
+  background: var(--theme-overlay);
 }
 
 .app-dialog-overlay--top {
@@ -36,10 +36,10 @@
   display: grid;
   gap: var(--app-dialog-gap);
   padding: var(--app-dialog-padding);
-  border: 1px solid color-mix(in srgb, var(--line) 88%, var(--accent) 12%);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 88%, var(--theme-accent) 12%);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--surface-elevated) 96%, var(--surface-subtle) 4%);
-  box-shadow: 0 24px 58px var(--palette-rgba-18-34-55-a2);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-surface-subtle) 4%);
+  box-shadow: 0 24px 58px var(--theme-overlay);
 }
 
 .app-dialog-head {
@@ -60,14 +60,14 @@
   position: absolute;
   z-index: 20;
   padding: 84px 24px 24px;
-  background: var(--palette-rgba-18-34-55-a2);
+  background: var(--theme-overlay);
 }
 
 #home-view .home-dialog.app-dialog-surface {
   --app-dialog-width: 320px;
   --app-dialog-padding: 18px;
   --app-dialog-gap: 12px;
-  border-color: color-mix(in srgb, var(--home-tile-line) 88%, var(--accent) 12%);
+  border-color: color-mix(in srgb, var(--home-tile-line) 88%, var(--theme-accent) 12%);
 }
 
 #home-view .home-notebook-note-dialog.app-dialog-surface {
@@ -136,10 +136,10 @@
 
 .unsaved-changes-list li {
   padding: 9px 10px;
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 6px;
-  background: var(--surface-subtle);
-  color: var(--strong);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
 }
 
 .unsaved-changes-actions {
@@ -147,22 +147,22 @@
 }
 
 .unsaved-changes-dialog [role="status"].is-error {
-  color: var(--danger);
+  color: var(--theme-danger);
 }
 
 body.theme-night .app-dialog-overlay {
-  background: var(--night-overlay);
+  background: var(--theme-overlay-strong);
 }
 
 body.theme-night .app-dialog-surface {
-  border-color: color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
-  background: color-mix(in srgb, var(--surface-elevated) 94%, var(--surface-subtle) 6%);
-  color: var(--text);
-  box-shadow: 0 24px 58px var(--palette-rgba-0-0-0-a46);
+  border-color: color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface-subtle) 6%);
+  color: var(--theme-text);
+  box-shadow: 0 24px 58px var(--theme-shadow-color-strong);
 }
 
 body.theme-night #home-view .home-dialog.app-dialog-surface {
-  background: color-mix(in srgb, var(--surface-elevated) 92%, var(--accent) 8%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
 }
 
 @media (max-width: 720px) {

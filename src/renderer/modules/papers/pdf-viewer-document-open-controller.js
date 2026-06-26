@@ -49,6 +49,7 @@ export const installPdfViewerDocumentOpenController = (ctx) => {
     const previousState = capturePreviousOpenState(state);
     state.loadToken += 1;
     const activeLoadToken = state.loadToken;
+    ctx.cancelScreenshotSelection?.({ silent: true });
     applyPaperOpenShellState(ctx, { paper, summary, resolveBytes, onOpenExternal });
     ctx.cancelScrollSync();
     ctx.cancelScheduledRender?.();

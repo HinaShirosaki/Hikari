@@ -3,6 +3,51 @@ function normalizeDashboardDateString(rawValue) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : '';
 }
 
+export function normalizeDashboardPassageReminders(rawValue) {
+  if (!Array.isArray(rawValue)) {
+    return [];
+  }
+  return rawValue.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return null;
+    }
+    const id = String(item.id || '').trim();
+    const name = String(item.name || item.strain || '').trim().replace(/\s+/g, ' ');
+    const rawPassage = item.cellPassage && typeof item.cellPassage === 'object'
+      ? item.cellPassage
+      : item;
+    const lastPassageDate = normalizeDashboardDateString(rawPassage.lastPassageDate);
+    const intervalDays = Math.round(Number(rawPassage.intervalDays));
+    const passageNumber = Math.round(Number(rawPassage.passageNumber));
+    if (
+      !id
+      || !name
+      || !lastPassageDate
+      || !Number.isFinite(intervalDays)
+      || intervalDays <= 0
+      || !Number.isFinite(passageNumber)
+      || passageNumber <= 0
+    ) {
+      return null;
+    }
+    const cellPassage = {
+      lastPassageDate,
+      intervalDays,
+      passageNumber
+    };
+    const deferredUntilDate = normalizeDashboardDateString(rawPassage.deferredUntilDate);
+    if (deferredUntilDate) {
+      cellPassage.deferredUntilDate = deferredUntilDate;
+    }
+    return {
+      id,
+      name,
+      cellPassage,
+      updatedAt: String(item.updatedAt || '').trim()
+    };
+  }).filter(Boolean);
+}
+
 export function normalizeDashboardIncubationLocations(rawValue) {
   if (!Array.isArray(rawValue)) {
     return [];
@@ -55,6 +100,8 @@ export function normalizeDashboardActiveTimers(rawValue) {
     const durationMinutes = Math.round(Number(item.durationMinutes || item.minutes));
     const startedAtMs = Number(item.startedAtMs || item.startedAt || 0);
     const endAtMs = Number(item.endAtMs || item.endAt || 0);
+    const isPaused = item.isPaused === true || item.paused === true;
+    const remainingMs = Math.max(0, Number(item.remainingMs || item.pausedRemainingMs || 0));
     if (
       !name
       || !Number.isFinite(durationMinutes)
@@ -63,10 +110,18 @@ export function normalizeDashboardActiveTimers(rawValue) {
       || startedAtMs <= 0
       || !Number.isFinite(endAtMs)
       || endAtMs <= startedAtMs
+      || !Number.isFinite(remainingMs)
     ) {
       return null;
     }
-    return { name, durationMinutes, startedAtMs, endAtMs };
+    return {
+      name,
+      durationMinutes,
+      startedAtMs,
+      endAtMs,
+      isPaused,
+      remainingMs: isPaused ? remainingMs : 0
+    };
   }).filter(Boolean);
 }
 

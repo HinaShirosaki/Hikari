@@ -50,7 +50,7 @@
   --sequence-viewer-builder-custom: #6b5968;
   --sequence-viewer-builder-poi: #49654a;
   --sequence-viewer-night-border: rgba(186, 218, 255, 0.32);
-  --sequence-viewer-night-border-strong: rgba(186, 218, 255, 0.34);
+  --sequence-viewer-night-border-strong: rgba(186, 218, 255, 0.5);
   --sequence-viewer-night-control: rgba(27, 40, 61, 0.62);
   --sequence-viewer-night-control-strong: rgba(27, 40, 61, 0.72);
   --sequence-viewer-night-muted: rgba(213, 234, 255, 0.82);

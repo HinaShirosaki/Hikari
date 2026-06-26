@@ -13,6 +13,7 @@ const { createNotebookDraftRuntime } = require('./agent-notebook-draft.js');
 const { runPythonSandbox } = require('./agent-python-sandbox.js');
 const { createAgentCommandLineRuntime } = require('./agent-command-line.js');
 const { createAgentSubAgentRuntime } = require('./agent-sub-agent.js');
+const { createAgentContainerRuntime } = require('./agent-container.js');
 const { createAgentMemoryRuntime } = require('../context/agent-memory.js');
 const { createWebSearchRuntime } = require('./agent-web-search.js');
 const { createLiteratureSearchRuntime } = require('./agent-literature-search.js');
@@ -368,6 +369,9 @@ function buildPreview(toolName, result) {
   if (toolName === 'memory') {
     return cleanText(source.items?.[0]?.summary || source.items?.[0]?.key, 220);
   }
+  if (toolName === 'container') {
+    return cleanText(source.container?.name || source.container?.id || source.items?.[0]?.name, 220);
+  }
   if (toolName === 'web-search') {
     return cleanText(source.items?.[0]?.title || source.items?.[0]?.url, 220);
   }
@@ -397,6 +401,9 @@ function buildResultMessage(toolName, result, fallbackSummary = '') {
   const candidates = [];
   if (toolName === 'memory') {
     candidates.push(source.items?.[0]?.summary);
+  }
+  if (toolName === 'container') {
+    candidates.push(source.container?.value_preview, source.container?.name);
   }
   if (toolName === 'web-search') {
     candidates.push(source.items?.[0]?.summary);
@@ -730,6 +737,56 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       summary: itemCount > 0
         ? `Recalled ${itemCount} memory record${itemCount === 1 ? '' : 's'}.`
         : 'No memory records matched the recall query.'
+    };
+  }
+
+  async function smokeContainer(options = {}) {
+    const requestMessage = resolveFocusedToolText(options.message, 'alpha beta', 6);
+    const runtime = createAgentContainerRuntime({
+      now: (() => {
+        let index = 0;
+        const values = [
+          '2026-03-22T12:00:00.000Z',
+          '2026-03-22T12:00:01.000Z'
+        ];
+        return () => values[Math.min(index++, values.length - 1)];
+      })()
+    });
+    const created = await runtime.execute({
+      action: 'create',
+      name: 'smoke phrase',
+      value: requestMessage,
+      source: 'direct_literal:smoke'
+    });
+    const id = cleanText(created?.container?.id, 40);
+    const edited = await runtime.execute({
+      action: 'replace_range',
+      id,
+      start: 0,
+      end: Math.min(5, requestMessage.length),
+      replacement: 'smoke'
+    });
+    const read = await runtime.execute({
+      action: 'read',
+      id
+    });
+    const ok = created?.ok !== false
+      && edited?.ok !== false
+      && read?.ok !== false
+      && cleanText(read?.container?.id, 40) === '1';
+    return {
+      ...read,
+      ok,
+      status: ok ? 'completed' : 'error',
+      items: read?.container ? [read.container] : [],
+      summary: ok
+        ? `Container smoke test edited ${read.container.id}.`
+        : 'Container smoke test failed.',
+      error: ok ? '' : uniqueStrings([
+        created?.error,
+        edited?.error,
+        read?.error
+      ], 4).join(' | ')
     };
   }
 
@@ -1080,6 +1137,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     'web-search': async (options = {}) => smokeWebSearch(options),
     'sub-agent': async (options = {}) => smokeSubAgent(options),
     memory: async (options = {}) => smokeMemory(options),
+    container: async (options = {}) => smokeContainer(options),
     'literature-search': async (options = {}) => smokeLiteratureSearch(options),
     'purchase-recommendation': async (options = {}) => smokePurchaseRecommendation(options),
     'paper-download': async (options = {}) => smokePaperDownload(options),

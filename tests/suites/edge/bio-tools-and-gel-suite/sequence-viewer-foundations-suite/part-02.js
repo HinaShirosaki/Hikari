@@ -387,6 +387,71 @@ test('[EDGE] sequence-viewer dual-strand renderer places selected ORF amino-acid
   const minusAa = minusHtml.indexOf('sequence-viewer-aa-row-minus');
   assert.equal(minusBottom < minusAa, true);
 });
+test('[EDGE] sequence-viewer dual-strand renderer places aligned query bases directly under the reference strand', () => {
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('AAACCCGGGTTT', [], {
+    lineLength: 12,
+    charAdvancePx: 8,
+    sequenceLineHeightPx: 16,
+    alignmentSequenceTrack: {
+      cells: [
+        null,
+        null,
+        null,
+        { base: 'C', kind: 'match' },
+        { base: 'C', kind: 'match' },
+        { base: 'C', kind: 'match' },
+        { base: 'A', kind: 'mismatch' },
+        { base: 'G', kind: 'match' },
+        { base: '-', kind: 'deletion' }
+      ]
+    }
+  });
+
+  assert.match(html, /sequence-viewer-alignment-query-row/);
+  assert.match(html, /sequence-viewer-alignment-query-base-mismatch/);
+  assert.match(html, /sequence-viewer-alignment-query-base-deletion/);
+  assert.match(html, /sequence-viewer-alignment-query-base-gap/);
+
+  const topIndex = html.indexOf('sequence-viewer-strand-row-top');
+  const alignmentIndex = html.indexOf('sequence-viewer-alignment-query-row');
+  const bottomIndex = html.indexOf('sequence-viewer-strand-row-bottom');
+  assert.equal(topIndex < alignmentIndex && alignmentIndex < bottomIndex, true);
+});
+test('[EDGE] sequence-viewer dual-strand renderer inserts AB1 trace between reference and aligned query rows', () => {
+  const cells = Array.from({ length: 60 }, () => ({ base: 'A', kind: 'match' }));
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('A'.repeat(60), [], {
+    lineLength: 24,
+    charAdvancePx: 8,
+    sequenceLineHeightPx: 16,
+    alignmentSequenceTrack: {
+      cells,
+      traceLines: {
+        0: '<div class="sequence-viewer-strand-row sequence-viewer-inline-trace-row" data-trace-line="0"></div>',
+        24: '<div class="sequence-viewer-strand-row sequence-viewer-inline-trace-row" data-trace-line="24"></div>'
+      }
+    }
+  });
+
+  assert.equal((html.match(/sequence-viewer-inline-trace-row/g) || []).length, 2);
+  assert.doesNotMatch(html, /sequence-viewer-inline-alignment-trace/);
+  assert.doesNotMatch(html, /sequence-viewer-alignment-trace-scroll/);
+
+  const firstLineStart = html.indexOf('data-line-start="0"');
+  const secondLineStart = html.indexOf('data-line-start="24"');
+  const thirdLineStart = html.indexOf('data-line-start="48"');
+  const firstLineHtml = html.slice(firstLineStart, secondLineStart);
+  const secondLineHtml = html.slice(secondLineStart, thirdLineStart);
+  const firstTopIndex = firstLineHtml.indexOf('sequence-viewer-strand-row-top');
+  const firstTraceIndex = firstLineHtml.indexOf('sequence-viewer-inline-trace-row');
+  const firstAlignmentIndex = firstLineHtml.indexOf('sequence-viewer-alignment-query-row');
+  const firstBottomIndex = firstLineHtml.indexOf('sequence-viewer-strand-row-bottom');
+  const secondTopIndex = secondLineHtml.indexOf('sequence-viewer-strand-row-top');
+  const secondTraceIndex = secondLineHtml.indexOf('sequence-viewer-inline-trace-row');
+  const secondAlignmentIndex = secondLineHtml.indexOf('sequence-viewer-alignment-query-row');
+  const secondBottomIndex = secondLineHtml.indexOf('sequence-viewer-strand-row-bottom');
+  assert.equal(firstTopIndex < firstTraceIndex && firstTraceIndex < firstAlignmentIndex && firstAlignmentIndex < firstBottomIndex, true);
+  assert.equal(secondTopIndex < secondTraceIndex && secondTraceIndex < secondAlignmentIndex && secondAlignmentIndex < secondBottomIndex, true);
+});
 test('[EDGE] sequence-viewer ORF translation context terminates before stop codons', () => {
   const sequence = 'ATGAAATAGCCC';
   const feature = sequenceViewerInternals.buildOrfFeatures(sequence, 'linear', { minAaLength: 2 })[0];

@@ -43,7 +43,7 @@ scripts/
 
 `npm run build:ui` runs `scripts/build-ui.mjs`, which:
 
-1. Reads `config/llm-providers.json` and writes `src/main/generated/llm-provider-config.generated.js` and `src/renderer/modules/llm-provider-config.generated.js`.
+1. Reads `config/llm-providers.json` and writes `src/main/generated/llm-provider-config.generated.js` and `src/renderer/modules/llm-provider-config.generated.js`. The `allowApiAgent` flag is generated into both modules; keep it `false` for Codex-only release builds.
 2. Reads `ui/config/app-registry.json` and writes both `src/renderer/modules/app-registry.generated.js` and `src/renderer/modules/views.js`.
 3. Uses `app-registry.json.viewOrder` to place each declared view between the shell fragments from `ui/config/html-order.json`, then writes `index.html`.
 4. Inserts each declared view stylesheet between `prefixInputs` and `suffixInputs` from `ui/config/css-order.json`, then writes `styles.css`.

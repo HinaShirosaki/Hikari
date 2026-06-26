@@ -23,7 +23,10 @@ This folder splits those responsibilities into smaller modules so each part is e
   - Owns the `agent:chat` IPC flow.
   - Coordinates request logging, lifecycle recording, session persistence, and final response shaping.
 - `agent-controller-core.js`
-  - Validates controller inputs, resolves LLM/provider configuration, runs the intent parser, and hands off to the dispatcher.
+  - Validates controller inputs, resolves agent-provider configuration, and owns the Codex route.
+- `api-agent-controller.js`
+  - Lazily loaded development module for API-backed parser and intent-dispatch flows.
+  - It is unavailable when generated `ALLOW_API_AGENT` is `false`.
 - `agent-intent-dispatcher.js`
   - Contains the intent-specific branching for notebook, lookup, and science flows.
 - `agent-session-service.js`

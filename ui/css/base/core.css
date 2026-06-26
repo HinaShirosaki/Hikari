@@ -59,8 +59,8 @@ body {
   height: 100%;
   min-height: 100svh;
   overflow: hidden;
-  color: var(--text);
-  background: var(--bg);
+  color: var(--theme-text);
+  background: var(--theme-background);
   font-family: var(--font-app);
   font-size: var(--app-font-size);
   line-height: 1.45;
@@ -78,7 +78,7 @@ body {
   z-index: 1000;
   display: grid;
   place-items: center;
-  background: var(--palette-night-bg);
+  background: var(--theme-loading-background);
   pointer-events: all;
   opacity: 1;
   transition: opacity 260ms ease, visibility 260ms ease;
@@ -117,30 +117,30 @@ body {
   0% {
     transform: scale(0.94);
     opacity: 0.58;
-    filter: brightness(0) invert(1) drop-shadow(0 0 0 var(--palette-rgba-255-255-255-0));
+    filter: brightness(0) invert(1) drop-shadow(0 0 0 transparent);
   }
 
   50% {
     transform: scale(1);
     opacity: 1;
-    filter: brightness(0) invert(1) drop-shadow(0 0 24px var(--palette-rgba-255-255-255-a12));
+    filter: brightness(0) invert(1) drop-shadow(0 0 24px color-mix(in srgb, var(--theme-text-strong) 12%, transparent));
   }
 
   100% {
     transform: scale(0.94);
     opacity: 0.58;
-    filter: brightness(0) invert(1) drop-shadow(0 0 0 var(--palette-rgba-255-255-255-0));
+    filter: brightness(0) invert(1) drop-shadow(0 0 0 transparent);
   }
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) transparent;
+  scrollbar-color: var(--theme-scrollbar-thumb) transparent;
 }
 
 *::-webkit-scrollbar {
-  width: var(--scrollbar-size);
-  height: var(--scrollbar-size);
+  width: var(--theme-scrollbar-size);
+  height: var(--theme-scrollbar-size);
 }
 
 *::-webkit-scrollbar-track,
@@ -152,12 +152,12 @@ body {
   min-height: 36px;
   border: 2px solid transparent;
   border-radius: 999px;
-  background: var(--scrollbar-thumb);
+  background: var(--theme-scrollbar-thumb);
   background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover);
+  background: var(--theme-scrollbar-thumb-hover);
   background-clip: padding-box;
 }
 
@@ -194,7 +194,7 @@ div {
   gap: 14px;
   padding: 8px 20px 6px;
   border-bottom: 0;
-  background: var(--bg);
+  background: var(--theme-background);
   overflow: visible;
 }
 
@@ -210,7 +210,7 @@ div {
   font-size: 1.2rem;
   line-height: 1.1;
   font-weight: 650;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .topbar-context {
@@ -228,7 +228,7 @@ div {
 
 .topbar-page-title {
   margin: 0;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 1rem;
   font-weight: 650;
 }
@@ -242,7 +242,7 @@ div {
 
 #page-subtitle {
   margin: 0;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.84rem;
 }
 
@@ -273,14 +273,14 @@ div {
   justify-content: center;
   border-color: transparent;
   background: transparent;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .topbar-history-btn:hover:not(:disabled),
 .topbar-history-btn:focus-visible:not(:disabled) {
-  background: var(--surface-subtle);
-  border-color: var(--line);
-  color: var(--strong);
+  background: var(--theme-surface-subtle);
+  border-color: var(--theme-border);
+  color: var(--theme-text-strong);
 }
 
 .topbar-history-btn svg {
@@ -312,10 +312,10 @@ div {
   margin: 0;
   padding: 4px;
   list-style: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
+  background: var(--theme-surface);
+  border: 1px solid var(--theme-border-translucent);
   border-radius: 8px;
-  box-shadow: 0 12px 28px var(--palette-rgba-0-0-0-a18);
+  box-shadow: 0 12px 28px var(--theme-shadow-color-strong);
   max-height: min(420px, 60vh);
   overflow-y: auto;
   z-index: 50;
@@ -333,7 +333,7 @@ div {
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.88rem;
-  color: var(--text);
+  color: var(--theme-text);
   user-select: none;
 }
 
@@ -343,7 +343,7 @@ div {
 
 .topbar-search-suggestion.is-active,
 .topbar-search-suggestion:hover {
-  background: var(--accent-soft);
+  background: var(--theme-accent-soft);
 }
 
 .topbar-search-suggestion-body {
@@ -362,7 +362,7 @@ div {
 }
 
 .topbar-search-suggestion-sublabel {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.78rem;
   white-space: nowrap;
   overflow: hidden;
@@ -374,17 +374,17 @@ div {
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--muted);
-  background: var(--surface-muted);
+  color: var(--theme-text-muted);
+  background: var(--theme-surface-muted);
   padding: 2px 6px;
   border-radius: 999px;
   white-space: nowrap;
 }
 
 body.theme-night .topbar-search-suggestions {
-  background: var(--surface);
-  border-color: var(--border);
-  box-shadow: 0 16px 32px var(--palette-rgba-0-0-0-a46);
+  background: var(--theme-surface);
+  border-color: var(--theme-border-translucent);
+  box-shadow: 0 16px 32px var(--theme-shadow-color-strong);
 }
 
 .workspace-shell {
@@ -411,7 +411,7 @@ body.has-shared-left-rail-view .workspace-shell::before {
   position: absolute;
   inset: 0 auto 0 0;
   width: var(--app-left-rail-track-width);
-  background: var(--app-left-rail-surface, var(--surface));
+  background: var(--app-left-rail-surface, var(--theme-surface));
   pointer-events: none;
   z-index: 0;
 }
@@ -438,8 +438,8 @@ body.has-shared-left-rail-view .workspace-main {
   min-height: 0;
   height: 100%;
   padding: 8px 6px;
-  border-left: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
-  background: color-mix(in srgb, var(--surface) 94%, var(--bg) 6%);
+  border-left: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
+  background: color-mix(in srgb, var(--theme-surface) 94%, var(--theme-background) 6%);
   overflow: hidden;
 }
 
@@ -454,7 +454,7 @@ body.has-shared-left-rail-view .workspace-main {
   padding: 0;
   border: 0;
   border-radius: 8px;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   background: transparent;
   font: 700 1.1rem/1 var(--font-app);
   cursor: pointer;
@@ -462,7 +462,7 @@ body.has-shared-left-rail-view .workspace-main {
 
 .universal-agent-chat-rail__toggle:hover,
 .universal-agent-chat-rail__toggle:focus-visible {
-  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+  background: color-mix(in srgb, var(--theme-accent-soft) 70%, transparent);
   outline: none;
 }
 
@@ -514,7 +514,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 
 .universal-agent-chat-rail__header h2 {
   margin: 0;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 1.05rem;
   line-height: 1.2;
 }
@@ -524,7 +524,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 }
 
 .universal-agent-chat-rail .agent-history-viewport {
-  border-top: 1px solid color-mix(in srgb, var(--line) 72%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
 }
 
 .universal-agent-chat-rail .agent-chat-history {
@@ -541,7 +541,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 
 .universal-agent-chat-rail .agent-chat-item-user {
   padding: 8px 10px;
-  background: color-mix(in srgb, var(--surface-subtle) 58%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 58%, transparent);
 }
 
 .universal-agent-chat-rail .agent-composer-shell,
@@ -588,8 +588,8 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   border: 0;
   border-radius: 999px;
   padding: 5px 9px;
-  background: color-mix(in srgb, var(--surface-subtle) 74%, transparent);
-  color: var(--muted);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 74%, transparent);
+  color: var(--theme-text-muted);
   font-size: 0.76rem;
   line-height: 1.2;
   white-space: nowrap;
@@ -597,8 +597,8 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 
 .agent-rail-quick-prompt:hover,
 .agent-rail-quick-prompt:focus-visible {
-  color: var(--strong);
-  background: color-mix(in srgb, var(--accent-soft) 70%, transparent);
+  color: var(--theme-text-strong);
+  background: color-mix(in srgb, var(--theme-accent-soft) 70%, transparent);
   outline: none;
 }
 
@@ -661,7 +661,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   flex: 0 0 1px;
   align-self: center;
   height: 26px;
-  background: var(--line);
+  background: var(--theme-border);
 }
 
 .app-dock-btn {
@@ -684,7 +684,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   z-index: 0;
   border-color: transparent;
   background: transparent;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   overflow: visible;
 }
 
@@ -692,9 +692,9 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 .app-dock-btn:focus-visible,
 .app-dock-btn.is-active {
   z-index: 2;
-  color: var(--strong);
-  background: var(--surface-subtle);
-  border-color: var(--line);
+  color: var(--theme-text-strong);
+  background: var(--theme-surface-subtle);
+  border-color: var(--theme-border);
 }
 
 .app-dock-btn::before {
@@ -705,10 +705,10 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   bottom: auto;
   transform: translate(-50%, -6px);
   padding: 4px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 6px;
-  background: var(--surface-elevated);
-  color: var(--strong);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
   font-size: 0.77rem;
   line-height: 1.2;
   white-space: nowrap;
@@ -736,7 +736,7 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   bottom: 4px;
   height: 2px;
   border-radius: 2px;
-  background: var(--accent);
+  background: var(--theme-accent);
 }
 
 .app-dock-btn-more {
@@ -744,9 +744,9 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 }
 
 .app-dock-btn-more.is-open {
-  background: var(--surface-subtle);
-  border-color: var(--line);
-  color: var(--strong);
+  background: var(--theme-surface-subtle);
+  border-color: var(--theme-border);
+  color: var(--theme-text-strong);
 }
 
 .app-more-menu {
@@ -758,9 +758,9 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   min-width: 260px;
   padding: 6px;
   border-radius: 8px;
-  border: 1px solid var(--line);
-  background: var(--surface-elevated);
-  box-shadow: 0 2px 8px var(--palette-rgba-27-20-14-a1);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 2px 8px var(--theme-shadow-color);
   transform: none;
 }
 
@@ -774,14 +774,14 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
   border-radius: 6px;
   padding: 7px 9px;
   background: transparent;
-  color: var(--text);
+  color: var(--theme-text);
 }
 
 .app-more-item:hover,
 .app-more-item:focus-visible,
 .app-more-item.is-active {
-  background: var(--surface-subtle);
-  color: var(--strong);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
 }
 
 .app-more-label {
@@ -871,7 +871,7 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
   position: relative;
   margin-top: 18px;
   padding: 18px 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--theme-border);
   background: transparent;
 }
 
@@ -884,13 +884,13 @@ h2,
 h3,
 h4 {
   margin-top: 0;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 label {
   display: grid;
   gap: 6px;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 0.94rem;
   font-weight: 500;
 }
@@ -906,9 +906,9 @@ input,
 textarea,
 select {
   width: 100%;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--text);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  color: var(--theme-text);
   padding: 9px 11px;
   border-radius: 8px;
 }
@@ -919,40 +919,40 @@ textarea {
 }
 
 button {
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
+  background: var(--theme-surface);
+  color: var(--theme-text);
   cursor: pointer;
   padding: 8px 12px;
   transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
 button:hover {
-  background: var(--surface-subtle);
+  background: var(--theme-surface-subtle);
 }
 
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 button:focus-visible {
-  outline: 2px solid var(--focus);
+  outline: 2px solid var(--theme-focus);
   outline-offset: 2px;
 }
 
 .primary-btn {
-  border-color: color-mix(in srgb, var(--accent) 60%, var(--line));
-  background: var(--accent);
-  color: var(--palette-cream-75);
+  border-color: color-mix(in srgb, var(--theme-accent) 60%, var(--theme-border));
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
 }
 
 .primary-btn:hover {
-  background: color-mix(in srgb, var(--accent) 88%, var(--palette-black) 12%);
+  background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong) 12%);
 }
 
 .ghost-btn {
-  background: var(--surface);
-  color: var(--text);
+  background: var(--theme-surface);
+  color: var(--theme-text);
 }
 
 a.ghost-btn {
@@ -962,9 +962,9 @@ a.ghost-btn {
 }
 
 .danger-btn {
-  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
-  color: var(--danger);
-  background: var(--surface);
+  border-color: color-mix(in srgb, var(--theme-danger) 35%, var(--theme-border));
+  color: var(--theme-danger);
+  background: var(--theme-surface);
 }
 
 button:disabled {
@@ -1019,7 +1019,7 @@ button:disabled {
   margin-top: 14px;
   display: grid;
   gap: 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--theme-border);
 }
 
 .list-row {
@@ -1028,16 +1028,16 @@ button:disabled {
   gap: 10px;
   align-items: center;
   padding: 11px 0;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--theme-border-soft);
   background: transparent;
 }
 
 .list-row-selected {
-  background: color-mix(in srgb, var(--surface) 70%, var(--surface-subtle));
+  background: color-mix(in srgb, var(--theme-surface) 70%, var(--theme-surface-subtle));
 }
 
 .list-row-header {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 0.88rem;
   font-weight: 650;
 }
@@ -1052,7 +1052,7 @@ button:disabled {
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-weight: 600;
   padding: 0;
 }
@@ -1077,7 +1077,7 @@ button:disabled {
   gap: 10px;
   cursor: pointer;
   font-weight: 600;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .list-row-details {
@@ -1087,11 +1087,11 @@ button:disabled {
 .list-detail-content {
   margin-top: 8px;
   padding-top: 10px;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 .small-note {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   margin: 0;
   font-size: 0.9rem;
 }
@@ -1103,12 +1103,12 @@ button:disabled {
 .well {
   position: relative;
   border: 0;
-  border-right: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  border-right: 1px solid var(--theme-border);
+  border-bottom: 1px solid var(--theme-border);
   border-radius: 0;
   padding: 0;
-  background: var(--surface);
-  color: var(--strong);
+  background: var(--theme-surface);
+  color: var(--theme-text-strong);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1125,7 +1125,7 @@ button:disabled {
 }
 
 .well:hover {
-  background: var(--surface-subtle);
+  background: var(--theme-surface-subtle);
 }
 
 .notebook-steps {
@@ -1145,15 +1145,15 @@ button:disabled {
 
 .selection-insight-anchor {
   border-radius: 0.45em;
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  text-decoration: underline dotted color-mix(in srgb, var(--accent) 72%, var(--line));
+  background: color-mix(in srgb, var(--theme-accent) 10%, transparent);
+  text-decoration: underline dotted color-mix(in srgb, var(--theme-accent) 72%, var(--theme-border));
   text-underline-offset: 2px;
   cursor: help;
 }
 
 .selection-insight-anchor:focus-visible,
 .selection-insight-anchor:hover {
-  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  background: color-mix(in srgb, var(--theme-accent) 16%, transparent);
   outline: none;
 }
 
@@ -1173,10 +1173,10 @@ button:disabled {
   display: grid;
   gap: 6px;
   padding: 8px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 12px;
-  background: var(--surface-elevated);
-  box-shadow: 0 18px 36px var(--palette-rgba-27-20-14-a16);
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 18px 36px var(--theme-shadow-color-strong);
   backdrop-filter: blur(12px);
 }
 
@@ -1187,15 +1187,15 @@ button:disabled {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--text);
+  color: var(--theme-text);
   font: inherit;
   text-align: left;
 }
 
 .selection-insight-menu-item:hover,
 .selection-insight-menu-item:focus-visible {
-  background: var(--surface-subtle);
-  color: var(--strong);
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
 }
 
 .selection-insight-panel {
@@ -1205,10 +1205,10 @@ button:disabled {
   display: grid;
   gap: 12px;
   padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--line) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 86%, transparent);
   border-radius: 16px;
-  background: var(--surface-elevated);
-  box-shadow: 0 22px 48px var(--palette-rgba-27-20-14-a18);
+  background: var(--theme-surface-elevated);
+  box-shadow: 0 22px 48px var(--theme-shadow-color-strong);
 }
 
 .selection-insight-panel-head,
@@ -1227,7 +1227,7 @@ button:disabled {
 
 .selection-insight-panel-kicker,
 .selection-insight-panel-meta {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.82rem;
 }
 
@@ -1240,15 +1240,15 @@ button:disabled {
   display: grid;
   gap: 10px;
   padding-top: 10px;
-  border-top: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 82%, transparent);
 }
 
 .selection-insight-answer-block.is-pending {
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .selection-insight-answer-block.is-error {
-  color: var(--danger);
+  color: var(--theme-danger);
 }
 
 .selection-insight-purchase-static {
@@ -1271,7 +1271,7 @@ button:disabled {
   }
 
   .universal-agent-chat-rail {
-    border-top: 1px solid color-mix(in srgb, var(--line) 78%, transparent);
+    border-top: 1px solid color-mix(in srgb, var(--theme-border) 78%, transparent);
     border-left: 0;
   }
 

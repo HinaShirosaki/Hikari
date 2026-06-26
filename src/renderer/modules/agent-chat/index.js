@@ -30,15 +30,26 @@ export function initAgentChat({
   safeText,
   onNotebookEntriesChanged,
   onOpenNotebookEntry = () => {},
-  onProtocolsChanged = () => {}
+  onProtocolsChanged = () => {},
+  captureImageAttachment = null
 }) {
   const api = windowObject?.hikariApi || null;
   const dom = collectAgentChatDom(rootDocument, { idPrefix });
   if (!hasRequiredAgentChatDom(dom)) {
     return { render: () => {} };
   }
+  if (dom.paperScreenshotBtn && typeof captureImageAttachment !== 'function') {
+    dom.paperScreenshotBtn.hidden = true;
+  }
   const runtime = createAgentChatRuntimeState();
-  const shell = createAgentChatShellController({ dom, state, persist, safeText, runtime });
+  const shell = createAgentChatShellController({
+    dom,
+    state,
+    persist,
+    safeText,
+    runtime,
+    hasImageCapture: typeof captureImageAttachment === 'function'
+  });
   let developerContextController = null;
   let requestController = null;
   const attachmentsController = createComposerAttachmentsController({
@@ -224,6 +235,7 @@ export function initAgentChat({
     developerMockController,
     developerToolTestController,
     historyController,
+    captureImageAttachment,
     renderDeveloperToolHint: developerToolUi.renderDeveloperToolHint
   });
 

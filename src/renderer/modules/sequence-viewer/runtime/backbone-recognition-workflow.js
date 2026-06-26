@@ -169,7 +169,7 @@ export function createBackboneRecognitionWorkflow(ctx) {
         const entry = await actions.persistRecordToLibrary(current, {
           id: state.activeEntryId,
           status: state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY,
-          name: ctx.elements.saveNameInput?.value || current.name || 'sequence'
+          name: current.name || 'sequence'
         });
         await controllers.home?.refreshLibraryEntries({ selectedId: entry.id, filter: entry.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY, silent: true });
         result.sequenceCleanupSaved = true;

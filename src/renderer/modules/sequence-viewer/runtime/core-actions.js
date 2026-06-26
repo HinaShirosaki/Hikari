@@ -61,7 +61,7 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
       return;
     }
     elements.statusNote.textContent = message;
-    elements.statusNote.style.color = isError ? 'var(--danger)' : '';
+    elements.statusNote.style.color = isError ? 'var(--theme-danger)' : '';
   }
 
   function updateMessages() {
@@ -69,7 +69,7 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
       return;
     }
     const rows = [
-      ...state.errors.map((text) => `<p class="small-note" style="color:var(--danger);">${escapeHtml(text)}</p>`),
+      ...state.errors.map((text) => `<p class="small-note" style="color:var(--theme-danger);">${escapeHtml(text)}</p>`),
       ...state.warnings.map((text) => `<p class="small-note">${escapeHtml(text)}</p>`)
     ];
     elements.messageBox.innerHTML = rows.length

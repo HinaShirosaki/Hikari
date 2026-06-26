@@ -40,7 +40,10 @@
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 20px;
   align-items: stretch;
-  min-height: var(--shared-left-rail-layout-height);
+  /* Bounded to the (height:100%) view so the workspace __main scrolls instead of
+     overflowing the clip; matches the sequence-viewer detail layout. */
+  min-height: 0;
+  height: 100%;
 }
 
 .assay-results-layout > * {
@@ -57,7 +60,7 @@
   margin: 0;
   padding: 0 0 6px;
   border: 0;
-  border-bottom: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--theme-border-soft);
 }
 
 .assay-browser-summary {
@@ -68,7 +71,7 @@
   gap: 12px;
   padding: 0 0 10px;
   cursor: pointer;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-weight: 650;
 }
 
@@ -121,7 +124,7 @@
 }
 
 .assay-browser-item-title {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 0.94rem;
   font-weight: 650;
 }
@@ -141,7 +144,7 @@
 
 .assay-results-control-section + .assay-results-control-section {
   padding-top: 16px;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 .assay-results-workspace {
@@ -164,7 +167,7 @@
 .assay-results-output-stage:has(#assay-analysis-table:not(:empty)) {
   display: grid;
   padding-top: 14px;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 .assay-results-workspace #assay-result-table,
@@ -188,7 +191,7 @@
 }
 
 .assay-display-label {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 0.94rem;
   font-weight: 500;
 }
@@ -197,7 +200,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 0.9rem;
   font-weight: 500;
 }
@@ -205,10 +208,10 @@
 .assay-conc-unit-input {
   width: 72px;
   padding: 6px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background: var(--surface-elevated);
-  color: var(--strong);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
   font-size: 0.9rem;
 }
 
@@ -218,10 +221,10 @@
 
 .assay-fill-mode-select {
   padding: 6px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background: var(--surface-elevated);
-  color: var(--strong);
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text-strong);
   font-size: 0.9rem;
 }
 
@@ -229,13 +232,13 @@
   min-height: 41px;
   display: flex;
   align-items: center;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 1rem;
   font-weight: 650;
   padding: 9px 11px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 8px;
-  background: var(--surface);
+  background: var(--theme-surface);
 }
 
 .assay-form-note,
@@ -316,7 +319,7 @@
   gap: 10px;
   padding: 12px;
   border: 1px solid var(--assay-plate-line);
-  background: color-mix(in srgb, var(--surface-elevated) 92%, var(--surface-subtle) 8%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-surface-subtle) 8%);
   box-shadow: 0 18px 40px var(--assay-plate-shadow);
 }
 
@@ -329,7 +332,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 10px;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 0.78rem;
 }
 
@@ -356,20 +359,20 @@
   padding: 9px 10px;
   border: 1px solid var(--assay-plate-line-soft);
   background: var(--assay-plate-surface);
-  color: var(--text);
+  color: var(--theme-text);
   text-align: left;
   cursor: pointer;
 }
 
 .assay-sample-picker-item:hover,
 .assay-sample-picker-item:focus-visible {
-  background: color-mix(in srgb, var(--accent) 10%, var(--surface-elevated));
+  background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface-elevated));
   border-color: var(--assay-plate-line);
 }
 
 .assay-sample-picker-item.is-current {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--surface-elevated));
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface-elevated));
+  border-color: color-mix(in srgb, var(--theme-accent) 45%, var(--theme-surface-elevated));
+  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface-elevated));
 }
 
 .assay-sample-picker-item-title {
@@ -378,7 +381,7 @@
 }
 
 .assay-sample-picker-item-meta {
-  color: var(--muted);
+  color: var(--theme-text-muted);
   font-size: 0.75rem;
   line-height: 1.25;
 }
@@ -418,7 +421,7 @@
   gap: 12px;
   padding: 16px;
   border: 1px solid var(--assay-plate-line);
-  background: color-mix(in srgb, var(--surface-elevated) 94%, var(--surface-subtle) 6%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface-subtle) 6%);
   box-shadow: 0 18px 40px var(--assay-plate-shadow);
 }
 
@@ -472,15 +475,15 @@
   padding: 10px;
   border: 1px solid var(--assay-plate-line);
   background: var(--assay-plate-surface-soft);
-  color: var(--text);
+  color: var(--theme-text);
   text-align: left;
 }
 
 .assay-result-import-choice:hover,
 .assay-result-import-choice:focus-visible,
 .assay-result-import-choice.is-active {
-  border-color: color-mix(in srgb, var(--accent) 42%, var(--surface-elevated));
-  background: color-mix(in srgb, var(--accent) 12%, var(--surface-elevated));
+  border-color: color-mix(in srgb, var(--theme-accent) 42%, var(--theme-surface-elevated));
+  background: color-mix(in srgb, var(--theme-accent) 12%, var(--theme-surface-elevated));
 }
 
 .assay-result-import-choice strong,
@@ -657,7 +660,7 @@
   min-width: var(--assay-axis-column-width);
   position: sticky;
   left: var(--assay-row-header-width);
-  background: var(--surface-elevated);
+  background: var(--theme-surface-elevated);
 }
 
 .assay-plate-table tbody th {
@@ -769,11 +772,11 @@
 
 .assay-well.is-filled {
   font-weight: 600;
-  background: color-mix(in srgb, var(--accent) 18%, var(--surface-elevated));
+  background: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface-elevated));
 }
 
 .assay-well.is-active {
-  outline: 2px solid color-mix(in srgb, var(--accent) 45%, var(--surface-elevated));
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 45%, var(--theme-surface-elevated));
   outline-offset: -2px;
 }
 
@@ -782,11 +785,11 @@
 
 .assay-result-disabled {
   background: var(--assay-plate-disabled-bg);
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .assay-result-paste-target:focus {
-  outline: 2px solid color-mix(in srgb, var(--accent) 40%, var(--surface-elevated));
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 40%, var(--theme-surface-elevated));
   outline-offset: 0;
 }
 
@@ -850,7 +853,7 @@
 
 .assay-result-col-meta {
   font-size: 0.72rem;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   max-width: 72px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -899,14 +902,9 @@
 .assay-analysis-chart {
   border: 1px solid var(--assay-plate-line);
   border-radius: 10px;
-  background: var(--surface-elevated);
+  background: var(--theme-surface-elevated);
   font-family: Arial, sans-serif;
   padding: 10px;
-}
-
-.assay-analysis-chart-canvas {
-  background: var(--surface-elevated);
-  border-radius: 6px;
 }
 
 @media (max-width: 1100px) {
@@ -957,125 +955,84 @@
   }
 }
 
-.assay-analysis-chart-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.assay-analysis-chart-title {
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-.assay-analysis-chart-plot {
-  overflow-x: auto;
-}
-
-.assay-analysis-chart .rv-xy-plot__grid-lines__line {
-  stroke: var(--assay-plate-line);
-}
-
-.assay-analysis-chart .rv-xy-plot__axis__tick__line {
-  stroke: var(--assay-plate-line-strong);
-}
-
-.assay-analysis-chart-canvas.frame-none .rv-xy-plot__axis__line {
-  display: none;
-}
-
-.assay-analysis-chart .rv-xy-plot__axis__tick__text {
-  fill: var(--primary);
-  font-family: Arial, sans-serif;
-  font-size: 11px;
-}
-
-.assay-analysis-chart .rv-xy-plot text,
-.assay-analysis-chart .rv-xy-plot__axis__title text,
-.assay-analysis-chart .rv-discrete-color-legend {
-  font-family: Arial, sans-serif;
-}
-
 body.theme-night .assay-plate-table-wrap {
   background: transparent;
 }
 
 body.theme-night .assay-plate-table th,
 body.theme-night .assay-plate-table td {
-  border-color: color-mix(in srgb, var(--line) 84%, transparent);
+  border-color: color-mix(in srgb, var(--theme-border) 84%, transparent);
 }
 
 body.theme-night .assay-plate-table thead th,
 body.theme-night .assay-plate-table thead td,
 body.theme-night .assay-plate-table tbody th {
-  background: var(--surface-subtle);
+  background: var(--theme-surface-subtle);
 }
 
 body.theme-night .assay-plate-table tr > *:nth-child(2) {
-  background: color-mix(in srgb, var(--surface) 88%, var(--surface-subtle) 12%);
+  background: color-mix(in srgb, var(--theme-surface) 88%, var(--theme-surface-subtle) 12%);
 }
 
 body.theme-night .assay-sample-picker {
-  border-color: color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
-  background: color-mix(in srgb, var(--surface-elevated) 94%, var(--surface-subtle) 6%);
+  border-color: color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface-subtle) 6%);
 }
 
 body.theme-night .assay-sample-picker-item {
-  border-color: color-mix(in srgb, var(--line-soft) 86%, transparent);
-  background: var(--night-control-bg);
-  color: var(--text);
+  border-color: color-mix(in srgb, var(--theme-border-soft) 86%, transparent);
+  background: var(--theme-control-background);
+  color: var(--theme-text);
 }
 
 body.theme-night .assay-sample-picker-item:hover,
 body.theme-night .assay-sample-picker-item:focus-visible,
 body.theme-night .assay-sample-picker-item.is-current {
-  background: var(--night-control-bg-hover);
+  background: var(--theme-control-background-hover);
 }
 
 body.theme-night .assay-sample-picker-item-meta {
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 body.theme-night .assay-serial-dilution-overlay,
 body.theme-night .assay-result-import-overlay {
-  background: var(--night-overlay-soft);
+  background: var(--theme-overlay);
 }
 
 body.theme-night .assay-serial-dilution-dialog,
 body.theme-night .assay-result-import-dialog {
-  border-color: color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
-  background: color-mix(in srgb, var(--surface-elevated) 94%, var(--surface-subtle) 6%);
+  border-color: color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface-subtle) 6%);
 }
 
 body.theme-night .assay-result-import-choice {
-  border-color: color-mix(in srgb, var(--line-soft) 86%, transparent);
-  background: var(--night-control-bg);
+  border-color: color-mix(in srgb, var(--theme-border-soft) 86%, transparent);
+  background: var(--theme-control-background);
 }
 
 body.theme-night .assay-result-import-choice:hover,
 body.theme-night .assay-result-import-choice:focus-visible,
 body.theme-night .assay-result-import-choice.is-active {
-  border-color: color-mix(in srgb, var(--accent) 56%, var(--line));
-  background: var(--night-control-bg-hover);
+  border-color: color-mix(in srgb, var(--theme-accent) 56%, var(--theme-border));
+  background: var(--theme-control-background-hover);
 }
 
 body.theme-night .assay-serial-dilution-sample {
-  border-color: color-mix(in srgb, var(--line-soft) 86%, transparent);
-  background: var(--night-control-bg);
+  border-color: color-mix(in srgb, var(--theme-border-soft) 86%, transparent);
+  background: var(--theme-control-background);
 }
 
 body.theme-night .assay-serial-dilution-stock-table th,
 body.theme-night .assay-serial-dilution-stock-table td,
 body.theme-night .assay-serial-dilution-table th,
 body.theme-night .assay-serial-dilution-table td {
-  border-color: color-mix(in srgb, var(--line-soft) 86%, transparent);
+  border-color: color-mix(in srgb, var(--theme-border-soft) 86%, transparent);
 }
 
 body.theme-night .assay-serial-dilution-stock-table th,
 body.theme-night .assay-serial-dilution-table th {
-  background: var(--surface-subtle);
+  background: var(--theme-surface-subtle);
 }
 
 body.theme-night .assay-serial-dilution-error {
@@ -1083,38 +1040,17 @@ body.theme-night .assay-serial-dilution-error {
 }
 
 body.theme-night .assay-well {
-  background: var(--surface-elevated);
+  background: var(--theme-surface-elevated);
 }
 
 body.theme-night .assay-tabulator {
-  border-color: color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
-  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  border-color: color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
+  background: color-mix(in srgb, var(--theme-surface) 86%, transparent);
 }
 
 body.theme-night .assay-analysis-chart {
   border-color: var(--assay-plate-line);
-  background: var(--surface-elevated);
-}
-
-body.theme-night .assay-analysis-chart-canvas {
-  background: var(--surface-elevated);
-}
-
-body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__grid-lines__line {
-  stroke: var(--assay-plate-line);
-}
-
-body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__line,
-body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__line {
-  stroke: var(--assay-plate-line-strong);
-}
-
-body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__text {
-  fill: var(--assay-plate-ink);
-}
-
-body.theme-night .assay-analysis-chart-title {
-  color: var(--assay-plate-ink);
+  background: var(--theme-surface-elevated);
 }
 
 #assay-view .panel,
@@ -1132,7 +1068,7 @@ body.theme-night .assay-analysis-chart-title {
 
 .assay-chart-style-summary {
   cursor: pointer;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-weight: 650;
   padding: 4px 0;
   list-style: none;
@@ -1146,7 +1082,7 @@ body.theme-night .assay-analysis-chart-title {
   content: '▸';
   margin-left: 6px;
   font-size: 0.8em;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   transition: transform 140ms ease;
   display: inline-block;
 }
@@ -1166,14 +1102,14 @@ body.theme-night .assay-analysis-chart-title {
   gap: 8px;
   padding: 8px 10px 10px;
   margin: 0;
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 6px;
 }
 
 .assay-chart-style-group legend {
   padding: 0 4px;
   font-size: 0.78rem;
-  color: var(--muted);
+  color: var(--theme-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -1182,7 +1118,7 @@ body.theme-night .assay-analysis-chart-title {
   display: grid;
   gap: 4px;
   font-size: 0.85rem;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .assay-chart-style-checkbox {
@@ -1219,10 +1155,14 @@ body.theme-night .assay-analysis-chart-title {
 
 .assay-chart-style-series-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 8px;
   font-size: 0.82rem;
+}
+
+.assay-chart-style-series-shape {
+  max-width: 104px;
 }
 
 .assay-chart-style-series-row input[type="color"] {
@@ -1233,7 +1173,7 @@ body.theme-night .assay-analysis-chart-title {
 
 .assay-chart-style-series-empty {
   font-size: 0.78rem;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .assay-chart-style-actions {
@@ -1252,9 +1192,9 @@ body.theme-night .assay-analysis-chart-title {
   width: 100%;
   min-height: 30px;
   padding: 4px 8px;
-  background: var(--surface);
-  color: var(--strong);
-  border: 1px solid var(--line-soft);
+  background: var(--theme-surface);
+  color: var(--theme-text-strong);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 6px;
   cursor: pointer;
   font: inherit;
@@ -1263,12 +1203,12 @@ body.theme-night .assay-analysis-chart-title {
 }
 
 .assay-chart-picker__trigger:hover {
-  border-color: var(--accent);
+  border-color: var(--theme-accent);
 }
 
 .assay-chart-picker.is-open .assay-chart-picker__trigger {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--theme-accent);
+  box-shadow: 0 0 0 1px var(--theme-accent);
 }
 
 .assay-chart-picker-mount.is-disabled .assay-chart-picker__trigger {
@@ -1281,7 +1221,7 @@ body.theme-night .assay-analysis-chart-title {
   align-items: center;
   justify-content: center;
   min-width: 18px;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .assay-chart-picker__preview svg {
@@ -1291,7 +1231,7 @@ body.theme-night .assay-analysis-chart-title {
 .assay-chart-picker__label {
   flex: 1 1 auto;
   font-size: 0.85rem;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1300,7 +1240,7 @@ body.theme-night .assay-analysis-chart-title {
 .assay-chart-picker__caret {
   display: inline-flex;
   align-items: center;
-  color: var(--muted);
+  color: var(--theme-text-muted);
 }
 
 .assay-chart-picker__menu {
@@ -1310,11 +1250,11 @@ body.theme-night .assay-analysis-chart-title {
   max-height: 280px;
   overflow-y: auto;
   padding: 4px;
-  background: var(--surface);
-  color: var(--strong);
-  border: 1px solid var(--line-soft);
+  background: var(--theme-surface);
+  color: var(--theme-text-strong);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 6px;
-  box-shadow: var(--shadow-warm-sm);
+  box-shadow: var(--theme-shadow-medium);
 }
 
 .assay-chart-picker__option {
@@ -1333,12 +1273,12 @@ body.theme-night .assay-analysis-chart-title {
 }
 
 .assay-chart-picker__option:hover {
-  background: var(--surface-hover, color-mix(in srgb, var(--accent) 8%, var(--surface)));
+  background: var(--theme-surface-hover, color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface)));
 }
 
 .assay-chart-picker__option.is-selected {
-  background: var(--surface-active, color-mix(in srgb, var(--accent) 14%, var(--surface)));
-  border-color: var(--accent);
+  background: var(--theme-surface-active, color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface)));
+  border-color: var(--theme-accent);
 }
 
 .assay-chart-picker__option-preview {
@@ -1346,7 +1286,7 @@ body.theme-night .assay-analysis-chart-title {
   align-items: center;
   justify-content: center;
   min-width: 24px;
-  color: var(--strong);
+  color: var(--theme-text-strong);
 }
 
 .assay-chart-picker__option-preview svg {
@@ -1355,7 +1295,7 @@ body.theme-night .assay-analysis-chart-title {
 
 .assay-chart-picker__option-label {
   font-size: 0.85rem;
-  color: var(--strong);
+  color: var(--theme-text-strong);
   flex: 1 1 auto;
 }
 
@@ -1400,9 +1340,9 @@ body.theme-night .assay-analysis-chart-title {
   width: 38px;
   min-height: 30px;
   padding: 2px;
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 6px;
-  background: var(--surface);
+  background: var(--theme-surface);
   cursor: pointer;
 }
 
@@ -1413,22 +1353,22 @@ body.theme-night .assay-analysis-chart-title {
   width: 28px;
   height: 28px;
   padding: 0;
-  background: var(--surface);
-  color: var(--strong);
-  border: 1px solid var(--line-soft);
+  background: var(--theme-surface);
+  color: var(--theme-text-strong);
+  border: 1px solid var(--theme-border-soft);
   border-radius: 5px;
   cursor: pointer;
   transition: background 120ms ease, border-color 120ms ease;
 }
 
 .assay-chart-text-bar__toggle:hover {
-  border-color: var(--accent);
+  border-color: var(--theme-accent);
 }
 
 .assay-chart-text-bar__toggle.is-active {
-  background: var(--accent);
-  color: var(--text-on-accent);
-  border-color: var(--accent);
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+  border-color: var(--theme-accent);
 }
 
 .assay-chart-text-bar__toggle svg {
@@ -1439,7 +1379,7 @@ body.theme-night .assay-analysis-chart-title {
   display: inline-block;
   width: 1px;
   height: 18px;
-  background: var(--line-soft);
+  background: var(--theme-border-soft);
   margin: 0 4px;
 }
 

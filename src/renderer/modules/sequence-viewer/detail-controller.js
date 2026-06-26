@@ -19,6 +19,25 @@ import {
 } from './shared.js';
 import { normalizeOrfStopCodonSelection } from './translation-style.js';
 
+// ORF reading frames paired with their toolbar toggle element keys.
+const ORF_FRAME_TOGGLES = [
+  ['+1', 'orfFramePlus1Toggle'],
+  ['+2', 'orfFramePlus2Toggle'],
+  ['+3', 'orfFramePlus3Toggle'],
+  ['-1', 'orfFrameMinus1Toggle'],
+  ['-2', 'orfFrameMinus2Toggle'],
+  ['-3', 'orfFrameMinus3Toggle']
+];
+
+function normalizeOrfFrameFilter(value) {
+  const source = value && typeof value === 'object' ? value : {};
+  const result = {};
+  for (const [frame] of ORF_FRAME_TOGGLES) {
+    result[frame] = source[frame] !== false;
+  }
+  return result;
+}
+
 export function createSequenceViewerDetailController(config = {}) {
   const rootDocument = config?.rootDocument || globalThis?.document || null;
   const elements = config?.elements || {};
@@ -31,8 +50,6 @@ export function createSequenceViewerDetailController(config = {}) {
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
   const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
-  const onRequestClear = config?.onRequestClear || (() => {});
-  const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
   const onRequestCloningDesign = config?.onRequestCloningDesign || (() => {});
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
@@ -52,10 +69,14 @@ export function createSequenceViewerDetailController(config = {}) {
   let activeFeatureActionContext = null;
 
   function getVisibleFeaturesForRecord(record) {
+    // The alignment overlay is for comparing sequences; cutters just clutter it.
+    const alignmentActive = Boolean(state.alignmentViewEnabled && state.activeAlignmentResult);
     return getRenderableFeaturesForRecord(record, {
       includeOrf: state.orfViewEnabled,
       orfStopCodons: state.orfStopCodons,
-      restrictionVendorFilter: state.restrictionVendorFilter
+      orfFrameFilter: state.orfFrameFilter,
+      restrictionVendorFilter: state.restrictionVendorFilter,
+      includeRestriction: !alignmentActive
     });
   }
 
@@ -276,11 +297,17 @@ export function createSequenceViewerDetailController(config = {}) {
     if (elements.recognizeBackboneBtn) {
       elements.recognizeBackboneBtn.disabled = !hasRecord || !hasStoragePath() || Boolean(state.isRecognizingBackbone);
     }
-    if (elements.saveBtn) {
-      elements.saveBtn.disabled = !hasRecord || !hasStoragePath();
-    }
     if (elements.alignmentOpenBtn) {
       elements.alignmentOpenBtn.disabled = !hasRecord;
+    }
+    if (elements.alignmentMenuBtn) {
+      elements.alignmentMenuBtn.disabled = !hasRecord;
+    }
+    if (elements.orfMenuBtn) {
+      elements.orfMenuBtn.disabled = !hasRecord;
+    }
+    if (elements.cutterMenuBtn) {
+      elements.cutterMenuBtn.disabled = !hasRecord;
     }
     if (elements.cloningDesignBtn) {
       const canOpenCloningDesign = hasRecord && Boolean(hasCloningDesignSource());
@@ -316,6 +343,14 @@ export function createSequenceViewerDetailController(config = {}) {
       elements.orfStopTgaToggle.checked = Boolean(stopCodons.TGA);
       elements.orfStopTgaToggle.disabled = !hasRecord;
     }
+    const frameFilter = normalizeOrfFrameFilter(state.orfFrameFilter);
+    for (const [frame, key] of ORF_FRAME_TOGGLES) {
+      const toggle = elements[key];
+      if (toggle) {
+        toggle.checked = frameFilter[frame];
+        toggle.disabled = !hasRecord;
+      }
+    }
   }
 
   function readOrfStopCodonsFromControls() {
@@ -324,6 +359,14 @@ export function createSequenceViewerDetailController(config = {}) {
       TAA: Boolean(elements.orfStopTaaToggle?.checked),
       TGA: Boolean(elements.orfStopTgaToggle?.checked)
     });
+  }
+
+  function readOrfFrameFilterFromControls() {
+    const result = {};
+    for (const [frame, key] of ORF_FRAME_TOGGLES) {
+      result[frame] = Boolean(elements[key]?.checked);
+    }
+    return result;
   }
 
   function getAlignmentHighlightSegments(record) {
@@ -417,24 +460,23 @@ export function createSequenceViewerDetailController(config = {}) {
     detailRenderingController.renderSelectedFeatureDetail(record);
   }
 
-  function renderAlignmentTrace(record) {
-    detailRenderingController.renderAlignmentTrace(record);
-  }
-
   function renderSequence(record, options = {}) {
     detailRenderingController.renderSequence(record, options);
+  }
+
+  function updateSequenceCursor() {
+    detailRenderingController.updateCursorOnly();
   }
 
   function renderStats(record) {
     detailRenderingController.renderStats(record);
   }
 
-  function renderActiveRecord() {
+  function renderActiveRecord(options = {}) {
     const record = getSelectedRecord();
     renderProteinBuilderConfirmation(record);
     renderStats(record);
-    renderSequence(record);
-    renderAlignmentTrace(record);
+    renderSequence(record, { preserveScroll: Boolean(options?.preserveScroll) });
     renderFeatureRail(record);
     renderSelectedFeatureDetail(record);
     syncActionButtonsState();
@@ -512,6 +554,27 @@ export function createSequenceViewerDetailController(config = {}) {
     renderActiveRecord();
   }
 
+  function setOrfFrameFilter(nextFilter) {
+    const record = getSelectedRecord();
+    const previousFeatures = getVisibleFeaturesForRecord(record);
+    const selectedFeature = (
+      Number.isFinite(state.selectedFeatureIndex)
+      && state.selectedFeatureIndex >= 0
+      && state.selectedFeatureIndex < previousFeatures.length
+    ) ? previousFeatures[state.selectedFeatureIndex] : null;
+
+    state.orfFrameFilter = normalizeOrfFrameFilter(nextFilter);
+
+    if (selectedFeature) {
+      const nextFeatures = getVisibleFeaturesForRecord(record);
+      state.selectedFeatureIndex = findFeatureIndexByIdentity(nextFeatures, selectedFeature);
+    } else {
+      state.selectedFeatureIndex = -1;
+    }
+
+    renderActiveRecord();
+  }
+
   featureEditingController = createSequenceViewerFeatureEditingController({
     elements,
     state,
@@ -556,10 +619,13 @@ export function createSequenceViewerDetailController(config = {}) {
       showSequenceHoverTooltip,
       renderActiveRecord,
       renderSequence,
+      updateSequenceCursor,
       renderSelectedFeatureDetail,
       setOrfViewEnabled,
       readOrfStopCodonsFromControls,
       setOrfStopCodons,
+      readOrfFrameFilterFromControls,
+      setOrfFrameFilter,
       setRestrictionVendorFilter,
       resolveSequenceBoundaryFromEvent,
       resolveFeatureActionContext,
@@ -574,8 +640,6 @@ export function createSequenceViewerDetailController(config = {}) {
       hasOpenSequenceEditDialog: () => sequenceEditingController?.hasOpenSequenceEditDialog?.() || false,
       onRequestAnnotate,
       onRequestRecognizeBackbone,
-      onRequestClear,
-      onRequestSave,
       onRequestAlignment,
       onRequestCloningDesign,
       onSelectAlignmentSession,

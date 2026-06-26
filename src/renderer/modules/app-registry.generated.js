@@ -53,7 +53,7 @@ export const APP_REGISTRY = [
       "projects"
     ],
     "searchInputId": "",
-    "agentChatRail": false,
+    "agentChatRail": true,
     "hiddenFromNavigation": false
   },
   {

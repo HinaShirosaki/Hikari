@@ -593,7 +593,14 @@ export function initProtocolManagement({
   });
   ui.protocolExportPdfBtn?.addEventListener('click', onExportViewedProtocolPdf);
   ui.protocolPrintBtn?.addEventListener('click', onPrintViewedProtocol);
+  ui.openProtocolJsonImportBtn?.addEventListener('click', importController.openProtocolJsonImportOverlay);
+  ui.protocolJsonImportCloseBtn?.addEventListener('click', importController.closeProtocolJsonImportOverlay);
   ui.importProtocolJsonBtn?.addEventListener('click', importController.onImportProtocolJson);
+  ui.protocolJsonImportOverlay?.addEventListener('click', (event) => {
+    if (event.target === ui.protocolJsonImportOverlay) {
+      importController.closeProtocolJsonImportOverlay();
+    }
+  });
 
   sharingController.setShareStatus(DEFAULT_SHARE_STATUS);
   if (ui.protocolJsonImportStatus && !String(ui.protocolJsonImportStatus.textContent || '').trim()) ui.protocolJsonImportStatus.textContent = DEFAULT_PROTOCOL_JSON_IMPORT_STATUS;
@@ -641,6 +648,10 @@ export function initProtocolManagement({
   });
 
   documentRef?.addEventListener?.('keydown', (event) => {
+    if (event.key === 'Escape' && ui.protocolJsonImportOverlay && !ui.protocolJsonImportOverlay.hidden) {
+      importController.closeProtocolJsonImportOverlay();
+      return;
+    }
     if (event.key === 'Escape' && ui.protocolGenerateInputOverlay && !ui.protocolGenerateInputOverlay.hidden) {
       generationController.closeProtocolGenerateInputOverlay({ resetComposer: false });
       return;

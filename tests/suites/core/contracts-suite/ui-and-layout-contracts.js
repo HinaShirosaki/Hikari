@@ -73,6 +73,12 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(registry.apps.some((app) => app.viewId === 'personal-inventory-view'), false);
     });
 
+    test('shared left-rail selection colors resolve on the active body theme', () => {
+      const css = readLocalSource('ui', 'css', 'overrides', 'universal-left-rail-lists.css');
+      assert.match(css, /body\s*\{[\s\S]*--hikari-left-rail-list-selected:\s*color-mix\(in srgb, var\(--theme-surface-subtle\) 78%, transparent\);/);
+      assert.doesNotMatch(css, /:root\s*\{[\s\S]*--hikari-left-rail-list-selected:/);
+    });
+
     test('gel tools omit manual steps and keep ladder MW in analysis controls', () => {
       const gelView = readLocalSource('ui', 'html', 'views', 'gel-view.html');
       const analysisStart = gelView.indexOf('<summary>Analysis</summary>');
@@ -119,7 +125,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(html, /universal-agent-chat-rail__kicker/);
       assert.doesNotMatch(html, /id="agent-rail-clear-btn"/);
       assert.doesNotMatch(html, /id="agent-rail-project-select"/);
-      assert.equal((registry.apps || []).filter((app) => app.agentChatRail === true).map((app) => app.id).join(','), 'papers');
+      assert.equal((registry.apps || []).filter((app) => app.agentChatRail === true).map((app) => app.id).join(','), 'biology-notebook,papers');
+      assert.match(generatedRegistry, /"id": "biology-notebook"[\s\S]*"agentChatRail": true/);
       assert.match(generatedRegistry, /"id": "papers"[\s\S]*"agentChatRail": true/);
       assert.match(rendererShellSource, /app\?\.agentChatRail === true/);
       assert.match(rendererShellSource, /agentChatRail\.hidden = !enabled/);
@@ -128,9 +135,11 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(rendererShellSource, /moduleRuntime\.renderAgentChatRail\?\.\(\)/);
       assert.match(moduleRuntimeSource, /idPrefix:\s*'agent-rail'/);
       assert.match(moduleRuntimeSource, /loadPersistentSessions:\s*false/);
-      assert.match(moduleRuntimeSource, /createPaperScopedAgentChatState/);
+      assert.match(moduleRuntimeSource, /createScopedAgentChatState/);
       assert.match(moduleRuntimeSource, /getActivePaperId/);
+      assert.match(moduleRuntimeSource, /getAgentChatContext/);
       assert.match(moduleRuntimeSource, /onAskSelectedText:[\s\S]*openPaperAgentChatWithSelection/);
+      assert.match(moduleRuntimeSource, /onActiveNotebookPageChanged:[\s\S]*modules\?\.agentChatRail\?\.render\?\.\(\)/);
       assert.match(moduleRuntimeSource, /primeHiddenContext/);
       assert.match(domBindingsSource, /const id = \(suffix\) => `\$\{idPrefix\}-\$\{suffix\}`;/);
       assert.match(domBindingsSource, /quickPrompts:\s*byId\(id\('quick-prompts'\)\)/);
@@ -218,7 +227,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(detailBlock.includes('Back to Library'), false);
       assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*<h2>Open Sequence<\/h2>[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-detail-protein-builder-btn"[\s\S]*<h4>Sequence Library<\/h4>/);
       assert.match(detailBlock, /id="sequence-viewer-detail-protein-builder-btn"/);
-      assert.match(detailBlock, /id="sequence-viewer-save-btn"/);
+      assert.equal(detailBlock.includes('id="sequence-viewer-save-btn"'), false);
+      assert.equal(detailBlock.includes('id="sequence-viewer-save-name"'), false);
+      assert.match(detailBlock, /id="sequence-viewer-detail-library-context-menu"[\s\S]*data-sequence-library-action="rename"/);
+      assert.match(homeBlock, /id="sequence-viewer-library-context-menu"[\s\S]*data-sequence-library-action="rename"/);
       assert.match(detailBlock, /id="sequence-viewer-annotate-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-recognize-backbone-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-orf-toggle"/);
@@ -226,12 +238,20 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(detailBlock, /id="sequence-viewer-restriction-thermo-toggle"/);
     });
 
-    test('tool box no longer exposes the protein builder subview', () => {
+    test('tool box no longer owns Sequence Viewer cloning or protein-builder code', () => {
       const html = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
       const source = readSource('src/renderer/modules/tool-box.js');
       assert.equal(html.includes('tool-protein-assembly-view'), false);
       assert.equal(html.includes('Protein Assembler'), false);
       assert.equal(source.includes('initProteinAssemblyTool'), false);
+      assert.equal(source.includes('cloning-assembly'), false);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box', 'cloning-assembly.js')), false);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box', 'protein-assembly.js')), false);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-assembly.js')), true);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'assembly-model.js')), true);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'shared', 'sequence-viewer')), false);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'algorithms', 'sequence-backbone-recognition.js')), true);
+      assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'data', 'commercial-restriction-enzymes.js')), true);
     });
 
     test('sequence viewer map preview renderer omits metadata text overlays', () => {
@@ -244,6 +264,21 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('sequence viewer input panels force-hide when hidden attribute is set', () => {
       const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sequence-viewer-view.css'), 'utf8');
       assert.match(css, /\.sequence-viewer-input-panel\[hidden\]\s*\{\s*display:\s*none !important;/);
+    });
+
+    test('sequence viewer detail layout follows the app height and keeps the sequence host scrollable', () => {
+      const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'sequence-viewer-view.css'), 'utf8');
+      assert.match(css, /#sequence-viewer-detail-view\.view\.is-active\s*\{[^}]*display:\s*grid;[^}]*height:\s*100%;/s);
+      assert.match(css, /\.sequence-viewer-detail-workspace\s*\{[^}]*grid-template-rows:\s*auto minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*height:\s*100%;/s);
+      assert.match(css, /#sequence-viewer-protein-builder-confirmation:not\(\[hidden\]\)\s*\{[^}]*grid-row:\s*1;[^}]*margin-bottom:\s*12px;/s);
+      assert.match(css, /#sequence-viewer-detail-view\s+\.sequence-viewer-detail-layout\.left-rail-template\s*\{[^}]*grid-row:\s*2;[^}]*align-items:\s*stretch;[^}]*height:\s*100%;/s);
+      assert.match(css, /\.sequence-viewer-detail-main\s*\{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;[^}]*height:\s*100%;/s);
+      assert.match(css, /#sequence-viewer-detail-view\s+\.sequence-viewer-detail-layout\.left-rail-template\s*>\s*\.sequence-viewer-detail-main\.left-rail-template__main\s*\{[^}]*align-self:\s*stretch;[^}]*height:\s*100%;[^}]*overflow:\s*hidden;/s);
+      assert.match(css, /#sequence-viewer-detail-view\s+\.sequence-viewer-detail-layout\.left-rail-template\s*>\s*\.sequence-viewer-detail-sidebar\.left-rail-template__rail\s*\{[^}]*align-self:\s*stretch;[^}]*height:\s*100%;/s);
+      assert.match(css, /\.sequence-viewer-results\s*\{[^}]*display:\s*flex;[^}]*flex:\s*1 1 auto;/s);
+      assert.match(css, /\.sequence-viewer-sequence-region\s*\{[^}]*display:\s*flex;[^}]*flex:\s*1 1 auto;/s);
+      assert.match(css, /\.sequence-viewer-sequence-host\s*\{[^}]*flex:\s*1 1 auto;[^}]*height:\s*auto;[^}]*overflow:\s*auto;/s);
+      assert.match(css, /\.sequence-viewer-sequence-host\s*>\s*\.sequence-viewer-dual-line:last-child\s*\{\s*margin-bottom:\s*0;/s);
     });
 
     test('papers PDF text layer keeps native browser selection stable during drag', () => {

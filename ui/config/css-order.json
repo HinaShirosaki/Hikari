@@ -5,7 +5,12 @@
     "ui/css/base/core.css",
     "ui/css/themes/modes.css",
     "ui/css/views/assay-plate-palette.css",
-    "ui/css/views/sequence-viewer-palette.css"
+    "ui/css/views/gel-palette.css",
+    "ui/css/views/home-palette.css",
+    "ui/css/views/papers-palette.css",
+    "ui/css/views/sequence-viewer-palette.css",
+    "ui/css/views/tool-box-palette.css",
+    "ui/css/views/workflow-palette.css"
   ],
   "suffixInputs": [
     "ui/css/overrides/cross-view-fixes.css",

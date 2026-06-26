@@ -57,7 +57,7 @@
 
 .sample-detail-panel {
   padding-top: 18px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--theme-border);
 }
 
 .sample-detail-grid {
@@ -70,7 +70,7 @@
   display: grid;
   gap: 2px;
   padding: 10px 0;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 .sample-detail-item-wide {
@@ -78,13 +78,13 @@
 }
 
 .sample-detail-label {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 0.8rem;
   font-weight: 600;
 }
 
 .sample-detail-value {
-  color: var(--text);
+  color: var(--theme-text);
   font-size: 0.92rem;
   overflow-wrap: anywhere;
 }
@@ -93,9 +93,9 @@
   display: grid;
   gap: 10px;
   padding: 14px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--theme-border);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--surface) 92%, var(--palette-white) 8%);
+  background: color-mix(in srgb, var(--theme-surface) 92%, var(--theme-surface-elevated) 8%);
 }
 
 .sample-compound-structure-card h4,
@@ -108,9 +108,9 @@
   place-items: center;
   min-height: 220px;
   padding: 14px;
-  border: 1px dashed color-mix(in srgb, var(--line) 75%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--theme-border) 75%, transparent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--palette-white) 94%, var(--surface));
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface));
 }
 
 .sample-compound-structure-preview img {
@@ -124,7 +124,7 @@
   margin-top: 4px;
   padding: 12px 0 0;
   border: 0;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--theme-border-soft);
   border-radius: 0;
   background: transparent;
 }
@@ -140,9 +140,9 @@
   place-items: center;
   min-height: 220px;
   padding: 12px;
-  border: 1px dashed color-mix(in srgb, var(--line) 72%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--theme-border) 72%, transparent);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--palette-white) 94%, var(--surface));
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface));
 }
 
 .sample-compound-preview img {
@@ -156,7 +156,7 @@
   margin-top: 4px;
   padding: 12px 0 0;
   border: 0;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--theme-border-soft);
   border-radius: 0;
   background: transparent;
 }

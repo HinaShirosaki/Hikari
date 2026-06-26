@@ -1,6 +1,6 @@
 import {
   defaultLlmEndpointForProvider,
-  normalizeLlmProvider,
+  normalizeAgentLlmProvider,
   normalizeReasoningEffort
 } from '../llm-provider-config.generated.js';
 import { normalizePaperAgentChatSessions } from '../agent-chat/scoped-state.js';
@@ -9,9 +9,11 @@ import {
   normalizeSampleTypeLabels
 } from '../sample-inventory-settings.js';
 import { defaultState, STARTUP_DEFAULT_VIEW_IDS } from './defaults.js';
+import { normalizeAppearanceMode } from './appearance.js';
 import {
   normalizeDashboardActiveTimers,
   normalizeDashboardIncubationLocations,
+  normalizeDashboardPassageReminders,
   normalizeDashboardQuickLogEntries,
   normalizeDashboardTimerTemplates,
   normalizeWorkflowProgressMap
@@ -31,7 +33,7 @@ function normalizeLlmSettings(rawLlm) {
   const legacyCodexMarker = legacyApi.toLowerCase().startsWith('codex://');
   const legacyEndpoint = legacyApiLooksLikeEndpoint && !legacyCodexMarker ? legacyApi : '';
   const legacyApiKey = legacyApi && !legacyApiLooksLikeEndpoint ? legacyApi : '';
-  const provider = normalizeLlmProvider(rawLlm.provider, rawLlm.apiEndpoint || legacyApi || legacyEndpoint);
+  const provider = normalizeAgentLlmProvider(rawLlm.provider, rawLlm.apiEndpoint || legacyApi || legacyEndpoint);
   const model = String(rawLlm.model || '').trim();
   const apiEndpoint = provider === 'codex'
     ? ''
@@ -70,7 +72,8 @@ function normalizeSettings(source) {
     },
     appearance: {
       ...defaultState.settings.appearance,
-      ...rawAppearance
+      ...rawAppearance,
+      mode: normalizeAppearanceMode(rawAppearance.mode)
     },
     storageImport: {
       ...defaultState.settings.storageImport,
@@ -93,6 +96,8 @@ function normalizeSettings(source) {
       workflowProgress: normalizeWorkflowProgressMap(rawDashboard.workflowProgress),
       quickLogDraft: String(rawDashboard.quickLogDraft || ''),
       quickLogEntries: normalizeDashboardQuickLogEntries(rawDashboard.quickLogEntries),
+      passageReminders: normalizeDashboardPassageReminders(rawDashboard.passageReminders),
+      legacyPassageSamplesMigrated: rawDashboard.legacyPassageSamplesMigrated === true,
       incubationLocations: normalizeDashboardIncubationLocations(rawDashboard.incubationLocations),
       timerTemplates: normalizeDashboardTimerTemplates(rawDashboard.timerTemplates),
       activeTimers: normalizeDashboardActiveTimers(rawDashboard.activeTimers)
@@ -160,9 +165,7 @@ export function normalizeState(parsed) {
     knowledgeChats: asObject(source.knowledgeChats),
     agentChat: {
       ...defaultState.agentChat,
-      ...asObject(source.agentChat),
       projectId: String(source.agentChat?.projectId || ''),
-      deepResearchEnabled: source.agentChat?.deepResearchEnabled === true,
       currentSessionId: String(source.agentChat?.currentSessionId || ''),
       sessions: Array.isArray(source.agentChat?.sessions) ? source.agentChat.sessions : [],
       messages: Array.isArray(source.agentChat?.messages) ? source.agentChat.messages : []
@@ -174,10 +177,6 @@ export function normalizeState(parsed) {
     gelAnalyses: Array.isArray(source.gelAnalyses) ? source.gelAnalyses : [],
     samples: (Array.isArray(source.samples) ? source.samples : []).map((sample) => normalizeSampleRecord(sample)),
     growthMetrics: normalizeGrowthMetrics(source),
-    objectGraph: {
-      ...defaultState.objectGraph,
-      ...asObject(source.objectGraph)
-    },
     messages: Array.isArray(source.messages) ? source.messages : [],
     labInventory: {
       ...defaultState.labInventory,

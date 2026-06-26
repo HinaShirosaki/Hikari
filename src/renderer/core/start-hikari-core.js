@@ -5,10 +5,6 @@ import {
   persistState,
   trackGrowthEvent
 } from '../modules/app-state.js';
-import {
-  rebuildObjectGraph,
-  queryNotebookEntriesByRelation
-} from '../modules/object-graph.js';
 import { APP_DOCK_ORDER, APP_REGISTRY } from '../modules/app-registry.generated.js';
 import { createRendererModuleRuntime } from '../module-runtime.js';
 import {
@@ -98,8 +94,7 @@ function createSearchController() {
 
 export function startHikariCore({
   documentObject = document,
-  windowObject = window,
-  exposeDebugGlobals = false
+  windowObject = window
 } = {}) {
   const state = loadState();
   const normalizeAppViewId = (viewId) => normalizeViewId(VIEWS, viewId);
@@ -136,12 +131,21 @@ export function startHikariCore({
 
   function persistStateNow() {
     normalizeStateStoragePaths(state);
-    state.objectGraph = rebuildObjectGraph(state);
     persistState(state);
     if (windowObject.hikariApi?.autoSaveDataFile && String(state.settings?.storagePath || '').trim()) {
       windowObject.hikariApi
         .autoSaveDataFile(state, '')
-        .catch(() => {});
+        .then((result) => {
+          // autoSaveDataFile resolves { ok:false, error } on a write failure (it
+          // does not throw), so the result must be inspected — otherwise a failed
+          // durable save to the storage folder is lost silently.
+          if (result && result.ok === false) {
+            console.warn('Auto-save to the storage folder failed:', result.error);
+          }
+        })
+        .catch((error) => {
+          console.warn('Auto-save to the storage folder failed:', error);
+        });
     }
   }
 
@@ -150,7 +154,6 @@ export function startHikariCore({
   }
 
   function renderAll() {
-    state.objectGraph = rebuildObjectGraph(state);
     moduleRuntime?.renderAll();
   }
 
@@ -183,7 +186,6 @@ export function startHikariCore({
     persist,
     persistState,
     normalizeStateStoragePaths,
-    rebuildObjectGraph,
     windowObject
   });
 
@@ -272,21 +274,6 @@ export function startHikariCore({
       pendingProtocolRecordEvents.push(payload);
     }
   });
-
-  if (exposeDebugGlobals) {
-    windowObject.hikariGraph = {
-      rebuild: () => {
-        state.objectGraph = rebuildObjectGraph(state);
-        persistState(state);
-        return state.objectGraph;
-      },
-      entriesUsingReagentLot: (lot) => queryNotebookEntriesByRelation(state, {
-        relation: 'uses_reagent_lot',
-        targetType: 'reagent_lot',
-        targetId: lot
-      })
-    };
-  }
 
   async function initApp() {
     await storageImportController.hydrateStateFromStorageRoot();

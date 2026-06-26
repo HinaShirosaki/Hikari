@@ -1,5 +1,5 @@
 import { cleanProteinSequence, translateDnaSequence } from '../../tool-box/sequence.js';
-import { sanitizeProteinAssemblySequence } from '../../tool-box/protein-assembly.js';
+import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { normalizeSequenceText } from '../shared.js';
 import { DNA_ALPHABET } from './constants.js';
 

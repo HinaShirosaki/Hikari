@@ -284,7 +284,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
     test('agent tool-call catalog stays in sync and prompt builders render tool metadata', () => {
       const toolNames = toolLoading.AGENT_TOOL_CATALOG.map((entry) => entry.name);
       const schemaNames = Object.keys(toolLoading.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
-      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'command-line', 'web-search', 'sub-agent', 'memory', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'paper-search', 'protocol-generation']);
+      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'command-line', 'web-search', 'sub-agent', 'memory', 'container', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'paper-search', 'protocol-generation']);
       assert.deepEqual(schemaNames, toolNames);
       const inventoryEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'inventory-lookup');
       const protocolEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'protocol-matching');
@@ -351,6 +351,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(scienceTools.tool_names.includes('python-sandbox'), true);
       assert.equal(scienceTools.tool_names.includes('record-lookup'), false);
       assert.equal(scienceTools.tool_names.includes('memory'), false);
+      assert.equal(scienceTools.tool_names.includes('container'), false);
       assert.equal(scienceTools.tool_names.includes('command-line'), false);
       assert.equal(scienceTools.tool_names.includes('notebook-generation'), false);
       assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'literature-search'), true);
@@ -376,6 +377,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(catalogTools.tool_names.includes('web-search'), true);
       assert.equal(catalogTools.tool_names.includes('command-line'), true);
       assert.equal(catalogTools.tool_names.includes('purchase-recommendation'), true);
+      assert.equal(catalogTools.tool_names.includes('container'), true);
       assert.equal(catalogTools.tool_names.includes('protocol-generation'), true);
     });
     test('command-line runtime executes focused commands and blocks mutating commands when write tools are disabled', async () => {

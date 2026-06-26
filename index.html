@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="./vendor/cropperjs/cropper.min.css" />
   <link rel="stylesheet" href="./vendor/tabulator/tabulator.min.css" />
-  <link rel="stylesheet" href="./vendor/react-vis/react-vis.css" />
 </head>
 <body>
   <script type="module" src="src/renderer/bootstrap/index-shell.js"></script>
@@ -79,19 +78,86 @@
 <!-- SOURCE: ui/html/views/home-view.html -->
 <section id="home-view" class="view is-active" aria-label="Home">
       <div class="home-layout">
+        <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
+          <div class="home-tile-head">
+            <div class="home-tile-titles">
+              <h2 id="dashboard-timer-heading">Lab timers</h2>
+              <p id="dashboard-timer-status" class="small-note"></p>
+            </div>
+            <button type="button" id="dashboard-timer-open-btn" class="home-link-btn">+ Start timer</button>
+          </div>
+          <div class="home-timer-clock">
+            <p id="dashboard-local-time" class="dashboard-local-time">--:--:--</p>
+            <p id="dashboard-local-date" class="dashboard-local-date">Loading local date</p>
+          </div>
+          <div id="dashboard-timer-active-list" class="dashboard-timer-active-list"></div>
+        </section>
+
+        <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
+          <div class="home-tile-head">
+            <div class="home-tile-titles">
+              <h2 id="dashboard-notebook-pages-heading">Recent notebook pages</h2>
+              <p id="dashboard-notebook-pages-status" class="sr-only">Tap a page to add a note.</p>
+            </div>
+            <button type="button" id="dashboard-notebook-open-btn" class="home-link-btn">View all →</button>
+          </div>
+          <div class="home-tile-scroll">
+            <div id="dashboard-notebook-page-list" class="dashboard-list"></div>
+          </div>
+        </section>
+
+        <section class="home-tile home-tile-quicklog" aria-labelledby="dashboard-quicklog-heading">
+          <div class="home-tile-head">
+            <div class="home-tile-titles">
+              <h2 id="dashboard-quicklog-heading">Quick log</h2>
+              <p class="small-note">Bench note &rarr; notebook</p>
+            </div>
+          </div>
+          <div class="home-quicklog-body">
+            <div class="home-quicklog-chips" aria-label="Quick log shortcuts">
+              <button type="button" class="home-chip" data-dashboard-quicklog-chip="Passage">&#xFF0B; Passage</button>
+              <button type="button" class="home-chip" data-dashboard-quicklog-chip="Western blot">&#xFF0B; Western blot</button>
+              <button type="button" class="home-chip" data-dashboard-quicklog-chip="Order reagent">&#xFF0B; Order reagent</button>
+              <button type="button" class="home-chip" data-dashboard-quicklog-chip="Observation">&#xFF0B; Observation</button>
+            </div>
+            <textarea
+              id="dashboard-quick-log-input"
+              class="home-quicklog-input"
+              rows="3"
+              placeholder="Log a notebook entry, upload note, analysis note, or completed protocol."
+            ></textarea>
+            <div class="home-quicklog-actions">
+              <span id="dashboard-quick-log-status" class="small-note home-quicklog-status"></span>
+              <button
+                type="button"
+                id="dashboard-quick-log-save-btn"
+                class="home-icon-btn"
+                aria-label="Save quick log"
+              >
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                  <path d="m5 12.5 4.2 4.1L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </button>
+              <button
+                type="button"
+                id="dashboard-quick-log-agent-btn"
+                class="home-icon-btn home-icon-btn-send"
+                aria-label="Save quick log and send to Assistant"
+              >
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+                  <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
+                  <path d="M6.5 12.5 12 7l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </section>
+
         <section class="home-tile home-tile-contribution" aria-labelledby="dashboard-contribution-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-contribution-heading">Contribution Heatmap</h2>
-          </div>
-          <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
-            <div id="dashboard-contribution-months" class="home-contribution-months" aria-hidden="true"></div>
-            <div class="home-contribution-body">
-              <div class="home-contribution-weekdays" aria-hidden="true">
-                <span>Mon</span>
-                <span>Wed</span>
-                <span>Fri</span>
-              </div>
-              <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity"></div>
+            <div class="home-tile-titles">
+              <h2 id="dashboard-contribution-heading">Contribution heatmap</h2>
+              <p id="dashboard-contribution-summary" class="small-note"></p>
             </div>
             <div class="home-contribution-legend" aria-hidden="true">
               <span>Less</span>
@@ -103,116 +169,58 @@
               <span>More</span>
             </div>
           </div>
-          <div class="home-contribution-quick-log">
-            <div class="home-contribution-quick-log-head">
-              <h3>Quick Log Notebook</h3>
-              <p id="dashboard-quick-log-status" class="small-note"></p>
-            </div>
-            <label class="dashboard-field dashboard-field-grow">
-              Bench Note
-              <div class="home-quick-log-input-wrap">
-                <textarea
-                  id="dashboard-quick-log-input"
-                  rows="3"
-                  placeholder="Log a notebook entry, upload note, analysis note, or completed protocol."
-                ></textarea>
-                <div class="home-quick-log-actions">
-                  <button
-                    type="button"
-                    id="dashboard-quick-log-save-btn"
-                    class="home-quick-log-icon-btn"
-                    aria-label="Save quick log"
-                  >
-                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-                      <path d="m5 12.5 4.2 4.1L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path>
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    id="dashboard-quick-log-agent-btn"
-                    class="home-quick-log-icon-btn home-quick-log-send-btn"
-                    aria-label="Save quick log and send to Assistant"
-                  >
-                    <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-                      <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
-                      <path d="M6.5 12.5 12 7l5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>
-                    </svg>
-                  </button>
+          <div class="home-contribution-display">
+            <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
+              <div id="dashboard-contribution-months" class="home-contribution-months" aria-hidden="true"></div>
+              <div class="home-contribution-body">
+                <div class="home-contribution-weekdays" aria-hidden="true">
+                  <span>Mon</span>
+                  <span>Wed</span>
+                  <span>Fri</span>
                 </div>
+                <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity"></div>
               </div>
-            </label>
+            </div>
+            <div class="home-contribution-streak" role="group" aria-label="Logging streak">
+              <span id="dashboard-contribution-streak" class="home-contribution-streak-num">0</span>
+              <span class="home-contribution-streak-label">day logging streak</span>
+            </div>
           </div>
         </section>
 
-        <section class="home-tile home-tile-passage" aria-labelledby="dashboard-passage-heading">
+        <section class="home-tile home-tile-soft home-tile-passage" aria-labelledby="dashboard-passage-heading">
           <div class="home-tile-head">
-            <div class="home-tile-head-row">
-              <h2 id="dashboard-passage-heading">Cell Passage Reminder</h2>
-              <button
-                type="button"
-                id="dashboard-passage-add-btn"
-                class="home-passage-add-btn"
-                aria-label="Add cell to passage reminder"
-              >+</button>
+            <div class="home-tile-titles">
+              <h2 id="dashboard-passage-heading">Cell passage</h2>
+              <p id="dashboard-passage-summary" class="small-note">No cell line reminders yet.</p>
             </div>
-            <p id="dashboard-passage-summary" class="small-note">No cell line reminders yet.</p>
+            <button
+              type="button"
+              id="dashboard-passage-add-btn"
+              class="home-add-btn"
+              aria-label="Add cell to passage reminder"
+            >+</button>
           </div>
           <div class="home-tile-scroll">
             <div id="dashboard-passage-list" class="dashboard-list dashboard-passage-list"></div>
           </div>
         </section>
 
-        <section class="home-tile home-tile-timer" aria-labelledby="dashboard-timer-heading">
+        <section class="home-tile home-tile-soft home-tile-incubation" aria-labelledby="dashboard-incubation-heading">
           <div class="home-tile-head">
-            <h2 id="dashboard-timer-heading">Lab Timers</h2>
-            <p id="dashboard-timer-status" class="small-note"></p>
-          </div>
-          <div class="home-timer-clock">
-            <p id="dashboard-local-time" class="dashboard-local-time">--:--:--</p>
-            <p id="dashboard-local-date" class="dashboard-local-date">Loading local date</p>
-          </div>
-          <div id="dashboard-timer-active-list" class="dashboard-timer-active-list"></div>
-          <button type="button" id="dashboard-timer-open-btn" class="ghost-btn home-timer-open-btn">+Start Timer</button>
-        </section>
-
-        <section class="home-tile home-tile-incubation" aria-labelledby="dashboard-incubation-heading">
-          <div class="home-tile-head">
-            <div class="home-tile-head-row">
-              <h2 id="dashboard-incubation-heading">Overnight Incubation Timer</h2>
-              <button
-                type="button"
-                id="dashboard-incubation-add-btn"
-                class="home-passage-add-btn"
-                aria-label="Manage incubation locations"
-              >+</button>
+            <div class="home-tile-titles">
+              <h2 id="dashboard-incubation-heading">Overnight incubation</h2>
+              <p id="dashboard-incubation-summary" class="small-note">No incubation locations yet.</p>
             </div>
-            <p id="dashboard-incubation-summary" class="small-note">No incubation locations yet.</p>
+            <button
+              type="button"
+              id="dashboard-incubation-add-btn"
+              class="home-add-btn"
+              aria-label="Manage incubation locations"
+            >+</button>
           </div>
           <div class="home-tile-scroll">
             <div id="dashboard-incubation-list" class="dashboard-list"></div>
-          </div>
-        </section>
-
-        <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
-          <div class="home-tile-head">
-            <h2 id="dashboard-notebook-pages-heading">Recent Notebook Pages</h2>
-            <p id="dashboard-notebook-pages-status" class="small-note">Tap a page to add a note.</p>
-          </div>
-          <div class="home-tile-scroll">
-            <div id="dashboard-notebook-page-list" class="dashboard-list"></div>
-          </div>
-        </section>
-
-        <section class="home-tile home-tile-actions" aria-labelledby="dashboard-actions-heading">
-          <div class="home-tile-head">
-            <h2 id="dashboard-actions-heading">Quick Actions</h2>
-            <p class="small-note"></p>
-          </div>
-          <div class="home-action-grid">
-            <button type="button" class="home-action-btn" data-dashboard-action="samples">Open Samples</button>
-            <button type="button" class="home-action-btn" data-dashboard-action="workflow">Open Workflow</button>
-            <button type="button" class="home-action-btn" data-dashboard-action="notebook">Open Notebook</button>
-            <button type="button" class="home-action-btn" data-dashboard-action="assistant">Open Assistant</button>
           </div>
         </section>
       </div>
@@ -225,7 +233,7 @@
           aria-labelledby="dashboard-passage-dialog-title"
         >
           <form id="dashboard-passage-dialog-form" class="home-dialog-form">
-            <h3 id="dashboard-passage-dialog-title">Add Cell to Passage</h3>
+            <h3 id="dashboard-passage-dialog-title">Add cell to passage</h3>
             <label class="dashboard-field">
               Cell Strain
               <input
@@ -271,7 +279,7 @@
           aria-labelledby="dashboard-timer-dialog-title"
         >
           <div class="home-dialog-form">
-            <h3 id="dashboard-timer-dialog-title">Start Timer</h3>
+            <h3 id="dashboard-timer-dialog-title">Start timer</h3>
             <form id="dashboard-timer-dialog-form" class="home-timer-form-row">
               <input
                 id="dashboard-timer-name-input"
@@ -391,20 +399,8 @@
                 <button type="button" id="protocol-cancel-btn" class="ghost-btn">Cancel</button>
               </div>
             </div>
-            <div id="protocol-json-import-panel" class="stack-form protocol-json-import-panel">
-              <h4>Import Protocol JSON</h4>
-              <label>
-                JSON File
-                <input id="protocol-json-import-file" type="file" accept=".json,.ena,application/json" />
-              </label>
-              <label>
-                Or Paste JSON
-                <textarea id="protocol-json-import-input" rows="4" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
-              </label>
-              <div class="form-actions">
-                <button type="button" id="import-protocol-json-btn" class="ghost-btn">Import Protocol JSON</button>
-              </div>
-              <p id="protocol-json-import-status" class="small-note">Import one or more protocols from JSON.</p>
+            <div id="protocol-json-import-panel" class="form-actions protocol-json-import-launcher">
+              <button type="button" id="open-protocol-json-import-btn" class="ghost-btn">Import Protocol JSON</button>
             </div>
             <form id="protocol-form" class="stack-form">
               <label>
@@ -463,6 +459,32 @@
               </div>
             </div>
             <div id="protocol-view-content" class="stack-form"></div>
+          </div>
+
+          <div id="protocol-json-import-overlay" class="protocol-json-import-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+            <section class="protocol-json-import-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="protocol-json-import-title">
+              <div class="app-dialog-head">
+                <div>
+                  <span class="protocol-detail-mode">Import</span>
+                  <h3 id="protocol-json-import-title">Import Protocol JSON</h3>
+                </div>
+                <button type="button" id="protocol-json-import-close-btn" class="ghost-btn">Close</button>
+              </div>
+              <div class="stack-form">
+                <label>
+                  Choose JSON File
+                  <input id="protocol-json-import-file" type="file" accept=".json,.ena,application/json" />
+                </label>
+                <label>
+                  Or Paste JSON
+                  <textarea id="protocol-json-import-input" rows="8" placeholder='Paste protocol JSON, e.g. {"protocols":[...]} or [...]'></textarea>
+                </label>
+                <p id="protocol-json-import-status" class="small-note">Import one or more protocols from JSON.</p>
+                <div class="form-actions">
+                  <button type="button" id="import-protocol-json-btn" class="primary-btn">Import Protocol JSON</button>
+                </div>
+              </div>
+            </section>
           </div>
 
           <div id="protocol-generate-input-overlay" class="protocol-generate-overlay app-dialog-overlay app-dialog-overlay--top" hidden>
@@ -908,6 +930,7 @@
           <div class="inventory-rail-stack app-left-rail-section">
             <button id="inventory-add-container-btn" type="button" class="primary-btn">Add Container</button>
             <div id="inventory-location-nav" class="inventory-location-nav"></div>
+            <div id="inventory-container-context-menu" class="personal-inventory-context-menu" hidden></div>
           </div>
           <div id="inventory-summary-card" class="inventory-summary-card app-left-rail-section"></div>
         </aside>
@@ -1074,7 +1097,13 @@
                   <h3>Registered Samples</h3>
                   <p id="sample-results-summary" class="small-note">Showing 0 samples.</p>
                 </div>
+                <div class="form-actions">
+                  <button type="button" id="sample-export-csv-btn" class="ghost-btn">Export CSV</button>
+                  <button type="button" id="sample-import-csv-btn" class="ghost-btn">Import CSV</button>
+                  <input id="sample-import-csv-file" type="file" accept=".csv,text/csv" hidden />
+                </div>
               </div>
+              <p id="sample-csv-status" class="small-note"></p>
               <div id="sample-registry-list" class="list-table"></div>
             </div>
 
@@ -1784,10 +1813,11 @@
                   </select>
                 </label>
                 <label>
-                  Mode
+                  Theme
                   <select id="setting-mode">
                     <option value="day">Day</option>
                     <option value="night">Night</option>
+                    <option value="miku">Hatsune Miku</option>
                   </select>
                 </label>
                 <div class="form-actions">
@@ -2463,7 +2493,6 @@
                       </label>
                     </div>
                     <div class="form-actions agent-composer-actions">
-                      <button type="button" id="agent-deep-research-toggle-btn" class="ghost-btn">Deep Research: Off</button>
                       <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
                       <button type="button" id="agent-stop-btn" class="danger-btn" hidden>Stop</button>
                       <button type="button" id="agent-clear-btn" class="ghost-btn">New Thread</button>
@@ -3111,12 +3140,9 @@
             <aside class="sequence-viewer-home-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
               <div class="left-rail-template__stack">
                 <section class="sequence-viewer-rail-actions-section left-rail-template__section">
-                  <div class="sequence-viewer-rail-nav-copy">
-                    <h2>Open Sequence</h2>
-                  </div>
                   <div class="form-actions sequence-viewer-rail-nav-actions">
                     <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
-                    <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
+                    <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open</button>
                     <button id="sequence-viewer-home-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
                     <span id="sequence-viewer-home-status" class="small-note"></span>
                   </div>
@@ -3133,6 +3159,9 @@
               </div>
               <div id="sequence-viewer-library-list" class="sequence-viewer-library-list">
                 <p class="small-note">No sequence entries found.</p>
+              </div>
+              <div id="sequence-viewer-library-context-menu" class="sequence-viewer-context-menu" hidden>
+                <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename">Rename</button>
               </div>
                 </section>
               </div>
@@ -3342,12 +3371,9 @@
           <aside class="sequence-viewer-detail-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
             <div class="left-rail-template__stack">
               <section class="sequence-viewer-rail-actions-section left-rail-template__section">
-                <div class="sequence-viewer-rail-nav-copy">
-                  <h2>Open Sequence</h2>
-                </div>
                 <div class="form-actions sequence-viewer-rail-nav-actions">
                   <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
-                  <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open GBK/FASTA</button>
+                  <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open</button>
                   <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
                   <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
                 </div>
@@ -3363,21 +3389,15 @@
                 <div id="sequence-viewer-detail-library-list" class="sequence-viewer-library-list">
                   <p class="small-note">No sequence entries found.</p>
                 </div>
+                <div id="sequence-viewer-detail-library-context-menu" class="sequence-viewer-context-menu" hidden>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename">Rename</button>
+                </div>
                 <span id="sequence-viewer-detail-library-status" class="small-note"></span>
               </section>
             </div>
           </aside>
 
           <div class="sequence-viewer-detail-main left-rail-template__main">
-        <div class="sequence-viewer-detail-topbar">
-          <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
-          <label class="sequence-viewer-save-name-wrap">
-            Save Name
-            <input id="sequence-viewer-save-name" placeholder="e.g. pLenti_GFP" />
-          </label>
-          <button id="sequence-viewer-save-btn" type="button" class="primary-btn">Save</button>
-        </div>
-
         <form id="sequence-viewer-form" class="stack-form sequence-viewer-controls" autocomplete="off">
           <div class="sequence-viewer-mode-switch sequence-viewer-detail-input-switch" role="tablist" aria-label="Sequence viewer input mode" hidden aria-hidden="true">
             <button id="sequence-viewer-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Paste Text</button>
@@ -3400,53 +3420,96 @@
           </div>
 
           <div class="form-actions">
+            <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
             <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
             <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
             <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn">Recognize Backbone/Insert</button>
-            <button id="sequence-viewer-alignment-open-btn" type="button" class="ghost-btn">Alignment</button>
-            <label class="sequence-viewer-inline-toggle" title="Show or hide the currently selected sequencing alignment on the reference sequence.">
-              <input id="sequence-viewer-alignment-toggle" type="checkbox" />
-              <span>Show Alignment</span>
-            </label>
-            <label class="sequence-viewer-inline-select" title="Choose a saved sequencing alignment for the current reference.">
-              <span>Saved Alignment</span>
-              <select id="sequence-viewer-alignment-session-select">
-                <option value="">No saved alignments</option>
-              </select>
-            </label>
-            <span id="sequence-viewer-alignment-active-note" class="small-note">No alignment selected.</span>
-            <label class="sequence-viewer-inline-toggle" title="Show/hide predicted ORFs and selected ORF amino-acid translation.">
-              <input id="sequence-viewer-orf-toggle" type="checkbox" />
-              <span>ORF View</span>
-            </label>
-            <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="ORF stop codons">
-              <span class="sequence-viewer-inline-toggle-group-label">ORF Stops</span>
-              <label class="sequence-viewer-inline-toggle" title="Use TAG as an ORF terminator.">
-                <input id="sequence-viewer-orf-stop-tag-toggle" type="checkbox" checked />
-                <span>TAG</span>
-              </label>
-              <label class="sequence-viewer-inline-toggle" title="Use TAA as an ORF terminator.">
-                <input id="sequence-viewer-orf-stop-taa-toggle" type="checkbox" checked />
-                <span>TAA</span>
-              </label>
-              <label class="sequence-viewer-inline-toggle" title="Use TGA as an ORF terminator.">
-                <input id="sequence-viewer-orf-stop-tga-toggle" type="checkbox" checked />
-                <span>TGA</span>
-              </label>
+            <div class="sequence-viewer-menu-anchor">
+              <button id="sequence-viewer-alignment-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">Alignment ▾</button>
+              <div id="sequence-viewer-alignment-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
+                <button id="sequence-viewer-alignment-open-btn" type="button" class="sequence-viewer-context-item">Open Sequence</button>
+                <label class="sequence-viewer-inline-toggle" title="Show or hide the currently selected sequencing alignment on the reference sequence.">
+                  <input id="sequence-viewer-alignment-toggle" type="checkbox" />
+                  <span>Show Alignment</span>
+                </label>
+                <label class="sequence-viewer-inline-select" title="Choose a saved sequencing alignment for the current reference.">
+                  <span>Saved Alignment</span>
+                  <select id="sequence-viewer-alignment-session-select">
+                    <option value="">No saved alignments</option>
+                  </select>
+                </label>
+                <span id="sequence-viewer-alignment-active-note" class="small-note">No alignment selected.</span>
+              </div>
             </div>
-            <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
-              <span class="sequence-viewer-inline-toggle-group-label">Cutters</span>
-              <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs.">
-                <input id="sequence-viewer-restriction-neb-toggle" type="checkbox" checked />
-                <span>NEB</span>
-              </label>
-              <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by Thermo Fisher Scientific.">
-                <input id="sequence-viewer-restriction-thermo-toggle" type="checkbox" checked />
-                <span>Thermo</span>
-              </label>
+
+            <div class="sequence-viewer-menu-anchor">
+              <button id="sequence-viewer-orf-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">ORF View ▾</button>
+              <div id="sequence-viewer-orf-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
+                <label class="sequence-viewer-inline-toggle" title="Show/hide predicted ORFs and selected ORF amino-acid translation.">
+                  <input id="sequence-viewer-orf-toggle" type="checkbox" />
+                  <span>ORF View</span>
+                </label>
+                <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="ORF stop codons">
+                  <span class="sequence-viewer-inline-toggle-group-label">ORF Stops</span>
+                  <label class="sequence-viewer-inline-toggle" title="Use TAG as an ORF terminator.">
+                    <input id="sequence-viewer-orf-stop-tag-toggle" type="checkbox" checked />
+                    <span>TAG</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Use TAA as an ORF terminator.">
+                    <input id="sequence-viewer-orf-stop-taa-toggle" type="checkbox" checked />
+                    <span>TAA</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Use TGA as an ORF terminator.">
+                    <input id="sequence-viewer-orf-stop-tga-toggle" type="checkbox" checked />
+                    <span>TGA</span>
+                  </label>
+                </div>
+                <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="ORF reading frames">
+                  <span class="sequence-viewer-inline-toggle-group-label">Frames</span>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +1.">
+                    <input id="sequence-viewer-orf-frame-p1-toggle" type="checkbox" checked />
+                    <span>+1</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +2.">
+                    <input id="sequence-viewer-orf-frame-p2-toggle" type="checkbox" checked />
+                    <span>+2</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in forward frame +3.">
+                    <input id="sequence-viewer-orf-frame-p3-toggle" type="checkbox" checked />
+                    <span>+3</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -1.">
+                    <input id="sequence-viewer-orf-frame-m1-toggle" type="checkbox" checked />
+                    <span>-1</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -2.">
+                    <input id="sequence-viewer-orf-frame-m2-toggle" type="checkbox" checked />
+                    <span>-2</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Show ORFs in reverse frame -3.">
+                    <input id="sequence-viewer-orf-frame-m3-toggle" type="checkbox" checked />
+                    <span>-3</span>
+                  </label>
+                </div>
+              </div>
             </div>
-            <button id="sequence-viewer-clear-btn" type="button" class="ghost-btn">Clear</button>
-            <span id="sequence-viewer-status" class="small-note">Idle</span>
+
+            <div class="sequence-viewer-menu-anchor">
+              <button id="sequence-viewer-cutter-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">Cutter ▾</button>
+              <div id="sequence-viewer-cutter-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
+                <div class="sequence-viewer-inline-toggle-group" role="group" aria-label="Restriction enzyme vendors">
+                  <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by New England Biolabs.">
+                    <input id="sequence-viewer-restriction-neb-toggle" type="checkbox" checked />
+                    <span>NEB</span>
+                  </label>
+                  <label class="sequence-viewer-inline-toggle" title="Show unique cutters sold by Thermo Fisher Scientific.">
+                    <input id="sequence-viewer-restriction-thermo-toggle" type="checkbox" checked />
+                    <span>Thermo</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
           </div>
 
           <label class="sequence-viewer-hidden-control" hidden aria-hidden="true">
@@ -3461,9 +3524,6 @@
           <section class="sequence-viewer-sequence-region">
             <div id="sequence-viewer-sequence-host" class="sequence-viewer-sequence-host">
               <p class="small-note">Load sequence data to begin.</p>
-            </div>
-            <div id="sequence-viewer-alignment-trace-panel" class="sequence-viewer-alignment-trace-panel" hidden>
-              <div id="sequence-viewer-alignment-trace-host" class="sequence-viewer-alignment-trace-host"></div>
             </div>
             <div class="sequence-viewer-feature-bottom">
               <div class="result-card-head">
@@ -3685,25 +3745,16 @@
 
       <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace app-dialog-overlay app-dialog-overlay--top" hidden>
         <div class="sequence-viewer-alignment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-label="Alignment">
-          <div class="sequence-viewer-alignment-toolbar">
-            <button id="sequence-viewer-alignment-close-btn" type="button" class="ghost-btn sequence-viewer-alignment-close-icon" aria-label="Close alignment dialog">x</button>
-            <span id="sequence-viewer-alignment-status" class="small-note">Paste a sequence or choose a file to align against the current record.</span>
-          </div>
+          <button id="sequence-viewer-alignment-close-btn" type="button" class="sequence-viewer-alignment-close-icon" aria-label="Close alignment dialog">×</button>
 
           <section class="result-card sequence-viewer-alignment-panel">
-            <div class="result-card-head">
-              <h4>New Query</h4>
-            </div>
             <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Alignment query input mode">
               <button id="sequence-viewer-alignment-query-mode-paste" class="sequence-viewer-mode-btn sequence-viewer-mode-btn-active" type="button">Align Copied Sequence</button>
               <button id="sequence-viewer-alignment-query-mode-file" class="sequence-viewer-mode-btn" type="button">Align With File</button>
             </div>
 
             <div id="sequence-viewer-alignment-query-paste-panel" class="sequence-viewer-input-panel">
-              <label>
-                Sequence or Records
-                <textarea id="sequence-viewer-alignment-query-textarea" rows="7" placeholder="Paste FASTA, GenBank, or plain sequence text for alignment."></textarea>
-              </label>
+              <textarea id="sequence-viewer-alignment-query-textarea" rows="7" placeholder="Paste FASTA, GenBank, or plain sequence text for alignment."></textarea>
             </div>
 
             <div id="sequence-viewer-alignment-query-file-panel" class="sequence-viewer-input-panel" hidden>
@@ -3715,21 +3766,17 @@
               />
               <div class="inline-row">
                 <button id="sequence-viewer-alignment-query-choose" type="button" class="ghost-btn">Choose Query File</button>
-                <span id="sequence-viewer-alignment-query-file-name" class="small-note">No query file selected</span>
               </div>
             </div>
 
-            <div id="sequence-viewer-alignment-query-summary" class="small-note">No query loaded.</div>
             <label id="sequence-viewer-alignment-query-record-wrap" class="sequence-viewer-alignment-record-wrap" hidden>
               Query Record
               <select id="sequence-viewer-alignment-query-record-select"></select>
             </label>
-            <span id="sequence-viewer-alignment-query-status" class="small-note">Query parser idle.</span>
           </section>
 
           <div class="form-actions sequence-viewer-alignment-actions">
             <button id="sequence-viewer-alignment-run-btn" type="button" class="primary-btn">Run Alignment</button>
-            <button id="sequence-viewer-alignment-reset-btn" type="button" class="ghost-btn">Clear Query</button>
           </div>
 
         </div>
@@ -3759,7 +3806,25 @@
                 </div>
                 <label class="agent-composer-label">
                   <span>Message</span>
-                  <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this paper."></textarea>
+                  <span class="agent-composer-input-wrap">
+                    <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this paper."></textarea>
+                    <button
+                      type="button"
+                      id="agent-rail-paper-screenshot-btn"
+                      class="ghost-btn agent-paper-screenshot-btn"
+                      aria-label="Select an area of the paper to attach"
+                      aria-pressed="false"
+                      title="Select area from paper"
+                    >
+                      <svg class="agent-paper-screenshot-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M7 3.75H4.75a1 1 0 0 0-1 1V7"></path>
+                        <path d="M17 3.75h2.25a1 1 0 0 1 1 1V7"></path>
+                        <path d="M20.25 17v2.25a1 1 0 0 1-1 1H17"></path>
+                        <path d="M7 20.25H4.75a1 1 0 0 1-1-1V17"></path>
+                        <rect x="8" y="8" width="8" height="8" rx="1.25"></rect>
+                      </svg>
+                    </button>
+                  </span>
                 </label>
                 <div id="agent-rail-attachment-list" class="agent-attachment-list" hidden></div>
                 <div class="agent-composer-toolbar">
@@ -3800,9 +3865,7 @@
   <script src="./vendor/cropperjs/cropper.min.js"></script>
   <script src="./vendor/tabulator/tabulator.min.js"></script>
   <script src="./vendor/jspdf.umd.min.js"></script>
-  <script src="./vendor/react/react.production.min.js"></script>
-  <script src="./vendor/react/react-dom.production.min.js"></script>
-  <script src="./vendor/react-vis/react-vis.min.js"></script>
+  <script src="./vendor/plotly/plotly.min.js"></script>
   <script type="module" src="src/renderer/renderer.js"></script>
 </body>
 </html>

@@ -2,7 +2,9 @@ import { clamp } from './pdf-viewer-anchors.js';
 import {
   DEFAULT_ZOOM,
   MAX_ZOOM,
-  MIN_ZOOM
+  MIN_ZOOM,
+  ZOOM_STEP,
+  ZOOM_WHEEL_SENSITIVITY
 } from './pdf-viewer-constants.js';
 
 export const installPdfViewerPdfNavigationController = (ctx) => {
@@ -169,6 +171,31 @@ export const installPdfViewerPdfNavigationController = (ctx) => {
     await ctx.renderDocumentPages({ preserveScroll: true });
   }
 
+  function handleZoomWheel(event) {
+    // Chromium delivers trackpad pinch as a ctrl+wheel event; ctrl+mouse-wheel lands here too.
+    if (!event?.ctrlKey || !state.pdfDocument) {
+      return;
+    }
+    event.preventDefault();
+    state.pendingZoomDelta -= (Number(event.deltaY) || 0) * ZOOM_WHEEL_SENSITIVITY;
+    if (state.zoomWheelFrame) {
+      return;
+    }
+    const win = ctx.getWindowRef();
+    const schedule = typeof win?.requestAnimationFrame === 'function'
+      ? win.requestAnimationFrame.bind(win)
+      : (callback) => setTimeout(callback, 16);
+    state.zoomWheelFrame = schedule(() => {
+      state.zoomWheelFrame = 0;
+      // ponytail: cap per-frame step so one mouse-wheel notch ≈ one button press; a pinch coalesces many small deltas
+      const delta = clamp(state.pendingZoomDelta, -ZOOM_STEP, ZOOM_STEP);
+      state.pendingZoomDelta = 0;
+      if (delta) {
+        void adjustZoom(delta);
+      }
+    });
+  }
+
   Object.assign(ctx, {
     resolveDestinationPageNumber,
     goToDestination,
@@ -177,6 +204,7 @@ export const installPdfViewerPdfNavigationController = (ctx) => {
     openExternalLink,
     adjustZoom,
     resetZoom,
-    fitToWidth
+    fitToWidth,
+    handleZoomWheel
   });
 };

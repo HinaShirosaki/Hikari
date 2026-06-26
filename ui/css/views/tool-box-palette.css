@@ -1,0 +1,6 @@
+/* Tool Box visual canvases that must remain paper-white in every app theme. */
+
+:root {
+  --tool-box-canvas-background: #ffffff;
+  --tool-box-canvas-border: #dddddd;
+}

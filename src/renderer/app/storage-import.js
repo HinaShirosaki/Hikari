@@ -18,7 +18,6 @@ const WORKSPACE_STATE_KEYS = [
   'assays',
   'gelAnalyses',
   'samples',
-  'objectGraph',
   'labInventory',
   'inventory'
 ];
@@ -256,7 +255,6 @@ export function createStorageImportController({
   persist,
   persistState,
   normalizeStateStoragePaths,
-  rebuildObjectGraph,
   windowObject = window
 }) {
   function refreshWorkspaceForStorageRoot(storagePath) {
@@ -385,7 +383,6 @@ export function createStorageImportController({
         persist();
       } else {
         normalizeStateStoragePaths(state);
-        state.objectGraph = rebuildObjectGraph(state);
         persistState(state);
       }
       if (syncSidecars) {

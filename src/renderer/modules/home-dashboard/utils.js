@@ -114,6 +114,8 @@ export function normalizeActiveTimerRecord(rawValue) {
   const durationMinutes = Math.round(Number(source?.durationMinutes || source?.minutes));
   const startedAtMs = Number(source?.startedAtMs || source?.startedAt || 0);
   const endAtMs = Number(source?.endAtMs || source?.endAt || 0);
+  const isPaused = source?.isPaused === true || source?.paused === true;
+  const remainingMs = Math.max(0, Number(source?.remainingMs || source?.pausedRemainingMs || 0));
   if (
     !name
     || !Number.isFinite(durationMinutes)
@@ -122,6 +124,7 @@ export function normalizeActiveTimerRecord(rawValue) {
     || startedAtMs <= 0
     || !Number.isFinite(endAtMs)
     || endAtMs <= startedAtMs
+    || !Number.isFinite(remainingMs)
   ) {
     return null;
   }
@@ -129,7 +132,9 @@ export function normalizeActiveTimerRecord(rawValue) {
     name,
     durationMinutes,
     startedAtMs,
-    endAtMs
+    endAtMs,
+    isPaused,
+    remainingMs: isPaused ? remainingMs : 0
   };
 }
 
@@ -152,12 +157,12 @@ export function normalizeQuickLogRecord(rawValue) {
   };
 }
 
-export function nextSampleId(createId) {
+export function passageReminderId(createId) {
   const generatedId = String((createId && createId()) || '').trim();
   if (generatedId) {
     return generatedId;
   }
-  return `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
+  return `passage-reminder-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`;
 }
 
 export function quickLogId(createId) {
@@ -173,23 +178,6 @@ export function normalizeSampleCode(value) {
     .trim()
     .replace(/\s+/g, '-')
     .replace(/[^a-zA-Z0-9._-]/g, '');
-}
-
-export function buildPassageReminderCode(state, strain) {
-  const base = normalizeSampleCode(strain).slice(0, 24) || 'CELL';
-  const existingCodes = new Set(
-    (Array.isArray(state.samples) ? state.samples : [])
-      .map((sample) => String(sample?.code || '').trim().toLowerCase())
-      .filter(Boolean)
-  );
-  if (!existingCodes.has(base.toLowerCase())) {
-    return base;
-  }
-  let suffix = 2;
-  while (existingCodes.has(`${base}-${suffix}`.toLowerCase())) {
-    suffix += 1;
-  }
-  return `${base}-${suffix}`;
 }
 
 export function sampleLabel(sample) {
@@ -209,6 +197,90 @@ export function ensureSamplesState(state) {
   return false;
 }
 
+function normalizePassageReminderRecord(rawValue) {
+  if (!rawValue || typeof rawValue !== 'object' || Array.isArray(rawValue)) {
+    return null;
+  }
+  const id = String(rawValue.id || '').trim();
+  const name = String(rawValue.name || rawValue.strain || '').trim().replace(/\s+/g, ' ');
+  const rawPassage = rawValue.cellPassage && typeof rawValue.cellPassage === 'object'
+    ? rawValue.cellPassage
+    : rawValue;
+  const lastPassageDate = String(rawPassage.lastPassageDate || '').trim();
+  const intervalDays = Math.round(Number(rawPassage.intervalDays));
+  const passageNumber = Math.round(Number(rawPassage.passageNumber));
+  if (
+    !id
+    || !name
+    || !parseLocalDate(lastPassageDate)
+    || !Number.isFinite(intervalDays)
+    || intervalDays <= 0
+    || !Number.isFinite(passageNumber)
+    || passageNumber <= 0
+  ) {
+    return null;
+  }
+  const cellPassage = {
+    lastPassageDate,
+    intervalDays,
+    passageNumber
+  };
+  const deferredUntilDate = String(rawPassage.deferredUntilDate || '').trim();
+  if (parseLocalDate(deferredUntilDate)) {
+    cellPassage.deferredUntilDate = deferredUntilDate;
+  }
+  return {
+    id,
+    name,
+    cellPassage,
+    updatedAt: String(rawValue.updatedAt || '').trim()
+  };
+}
+
+function isEmptyLocation(location) {
+  if (!location || typeof location !== 'object' || Array.isArray(location)) {
+    return true;
+  }
+  return Object.values(location).every((value) => !String(value || '').trim());
+}
+
+function hasSampleReference(state, sample) {
+  const ids = new Set([
+    String(sample?.id || '').trim(),
+    String(sample?.code || '').trim()
+  ].filter(Boolean));
+  return (Array.isArray(state.notebookEntries) ? state.notebookEntries : []).some((entry) => {
+    const referenceIds = Array.isArray(entry?.references?.sampleIds) ? entry.references.sampleIds : [];
+    const sampleLinks = Array.isArray(entry?.sampleLinks) ? entry.sampleLinks : [];
+    return referenceIds.some((value) => ids.has(String(value || '').trim()))
+      || sampleLinks.some((link) => ids.has(String(link?.sampleId || link?.sampleCode || '').trim()));
+  });
+}
+
+function isLegacyDashboardPassageSample(state, sample) {
+  if (!sample || typeof sample !== 'object' || Array.isArray(sample)) {
+    return false;
+  }
+  if (String(sample.type || '').trim().toLowerCase() !== 'cell_line') {
+    return false;
+  }
+  const reminder = normalizePassageReminderRecord(sample);
+  if (!reminder || hasSampleReference(state, sample)) {
+    return false;
+  }
+  const generatedBase = normalizeSampleCode(reminder.name).slice(0, 24) || 'CELL';
+  const code = String(sample.code || '').trim();
+  const generatedCodePattern = new RegExp(`^${generatedBase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:-\\d+)?$`, 'i');
+  return generatedCodePattern.test(code)
+    && !String(sample.lot || '').trim()
+    && !String(sample.concentration || '').trim()
+    && !String(sample.notes || '').trim()
+    && isEmptyLocation(sample.location)
+    && !sample.inventoryLink
+    && (!Array.isArray(sample.chemicalLinks) || sample.chemicalLinks.length === 0)
+    && !sample.compoundStructure;
+}
+
 export function ensureDashboardState(state) {
   if (!state.settings || typeof state.settings !== 'object') {
     state.settings = {};
@@ -219,6 +291,8 @@ export function ensureDashboardState(state) {
       workflowProgress: {},
       quickLogDraft: '',
       quickLogEntries: [],
+      passageReminders: [],
+      legacyPassageSamplesMigrated: false,
       incubationLocations: [],
       timerTemplates: [],
       activeTimers: []
@@ -262,6 +336,27 @@ export function ensureDashboardState(state) {
       state.settings.dashboard.quickLogEntries = normalizedQuickLogs;
       changed = true;
     }
+  }
+  if (!Array.isArray(state.settings.dashboard.passageReminders)) {
+    state.settings.dashboard.passageReminders = [];
+    changed = true;
+  } else {
+    const normalizedReminders = state.settings.dashboard.passageReminders
+      .map(normalizePassageReminderRecord)
+      .filter(Boolean);
+    const rawReminders = state.settings.dashboard.passageReminders;
+    const remindersChanged = normalizedReminders.length !== rawReminders.length
+      || normalizedReminders.some((reminder, index) => (
+        JSON.stringify(reminder) !== JSON.stringify(rawReminders[index])
+      ));
+    if (remindersChanged) {
+      state.settings.dashboard.passageReminders = normalizedReminders;
+      changed = true;
+    }
+  }
+  if (typeof state.settings.dashboard.legacyPassageSamplesMigrated !== 'boolean') {
+    state.settings.dashboard.legacyPassageSamplesMigrated = false;
+    changed = true;
   }
   if (!Array.isArray(state.settings.dashboard.incubationLocations)) {
     state.settings.dashboard.incubationLocations = [];
@@ -313,6 +408,8 @@ export function ensureDashboardState(state) {
         || timer.durationMinutes !== rawActiveTimers[index]?.durationMinutes
         || timer.startedAtMs !== rawActiveTimers[index]?.startedAtMs
         || timer.endAtMs !== rawActiveTimers[index]?.endAtMs
+        || timer.isPaused !== (rawActiveTimers[index]?.isPaused === true)
+        || timer.remainingMs !== Math.max(0, Number(rawActiveTimers[index]?.remainingMs || 0))
       ));
     if (activeTimersChanged) {
       state.settings.dashboard.activeTimers = normalizedActiveTimers;
@@ -320,4 +417,32 @@ export function ensureDashboardState(state) {
     }
   }
   return changed;
+}
+
+export function migrateLegacyPassageSamples(state) {
+  ensureDashboardState(state);
+  const dashboard = state.settings.dashboard;
+  if (dashboard.legacyPassageSamplesMigrated) {
+    return false;
+  }
+
+  const existingReminderIds = new Set(
+    dashboard.passageReminders.map((reminder) => String(reminder.id || '').trim()).filter(Boolean)
+  );
+  const retainedSamples = [];
+  (Array.isArray(state.samples) ? state.samples : []).forEach((sample) => {
+    if (!isLegacyDashboardPassageSample(state, sample)) {
+      retainedSamples.push(sample);
+      return;
+    }
+    const reminder = normalizePassageReminderRecord(sample);
+    if (reminder && !existingReminderIds.has(reminder.id)) {
+      dashboard.passageReminders.push(reminder);
+      existingReminderIds.add(reminder.id);
+    }
+  });
+
+  state.samples = retainedSamples;
+  dashboard.legacyPassageSamplesMigrated = true;
+  return true;
 }

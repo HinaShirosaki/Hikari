@@ -228,6 +228,7 @@ class MockElement {
     };
     this.classList = new MockClassList();
     this.listeners = {};
+    this.attributes = new Map();
     this._innerHTML = '';
     this._queryCache = new Map();
     this._submitButton = null;
@@ -283,6 +284,23 @@ class MockElement {
   focus() {}
 
   reset() {}
+
+  setAttribute(name, value) {
+    this.attributes.set(String(name || ''), String(value));
+  }
+
+  getAttribute(name) {
+    const key = String(name || '');
+    return this.attributes.has(key) ? this.attributes.get(key) : null;
+  }
+
+  removeAttribute(name) {
+    this.attributes.delete(String(name || ''));
+  }
+
+  hasAttribute(name) {
+    return this.attributes.has(String(name || ''));
+  }
 
   setSubmitButton(element) {
     this._submitButton = element;

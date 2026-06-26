@@ -1,5 +1,5 @@
 import { escapeHtml } from '../../tool-box/common.js';
-import { sanitizeProteinAssemblySequence } from '../../tool-box/protein-assembly.js';
+import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import { LIBRARY_LOOKUP } from './constants.js';
 import { buildFeatureDerivedSequence } from './sequence-utils.js';

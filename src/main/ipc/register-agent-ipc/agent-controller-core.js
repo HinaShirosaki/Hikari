@@ -1,8 +1,5 @@
 'use strict';
 
-const { createAgentIntentDispatcher } = require('./agent-intent-dispatcher');
-const { createAgentOpenContextRuntime } = require('./agent-open-context-runtime');
-const { createSelectionInsightRuntime } = require('./selection-insight-runtime');
 const { throwIfAgentRequestAborted } = require('../../helpers/agent/shared/agent-request-context.js');
 
 function createAgentControllerCore({
@@ -26,15 +23,25 @@ function createAgentControllerCore({
   lifecycleService
 } = {}) {
   const { normalizeJsonPayload, asArray } = lifecycleService;
-  const openContextRuntime = createAgentOpenContextRuntime({
-    cleanText,
-    observability,
-    protocolNotebookRuntime,
-    executeInventoryLookup,
-    executeRecordLookup,
-    getDefaultDataFilePath,
-    agentChatLogRuntime
-  });
+  const allowApiAgent = deps.ALLOW_API_AGENT !== false;
+  const apiAgentController = allowApiAgent
+    ? require('./api-agent-controller').createApiAgentController({
+      deps,
+      cleanText,
+      controllerUtils,
+      observability,
+      protocolNotebookRuntime,
+      scienceReasoningLoopRuntime,
+      deepResearchRuntime,
+      scienceMainUtils,
+      agentToolRuntime,
+      executeInventoryLookup,
+      executeRecordLookup,
+      agentChatLogRuntime,
+      getDefaultDataFilePath,
+      lifecycleService
+    })
+    : null;
 
   function normalizeAttachments(rawAttachments = []) {
     return asArray(rawAttachments).map((attachment) => {
@@ -65,19 +72,26 @@ function createAgentControllerCore({
         paperTitle: cleanText(source.paperTitle, 320),
         pageNumber: Number.isFinite(Number(source.pageNumber))
           ? Math.max(1, Math.round(Number(source.pageNumber)))
-          : 0
+          : 0,
+        notebookEntryId: cleanText(source.notebookEntryId, 220),
+        projectName: cleanText(source.projectName, 220),
+        protocolName: cleanText(source.protocolName, 220)
       };
     }).filter(Boolean).slice(0, 3);
   }
 
   function buildHiddenContextPrompt(hiddenContexts = []) {
     const rows = normalizeHiddenContexts(hiddenContexts).map((context, index) => {
+      const isNotebookContext = context.kind === 'notebook-page' || Boolean(context.notebookEntryId);
       const sourceRows = [
         `Hidden context ${index + 1}: ${context.label}`,
+        context.projectName ? `Project: ${context.projectName}` : '',
+        context.protocolName ? `Protocol: ${context.protocolName}` : '',
+        context.notebookEntryId ? `Notebook entry ID: ${context.notebookEntryId}` : '',
         context.paperTitle ? `Paper: ${context.paperTitle}` : '',
         context.pageNumber ? `Page: ${context.pageNumber}` : '',
         context.paperId ? `Paper ID: ${context.paperId}` : '',
-        'Selected text:',
+        isNotebookContext ? 'Notebook page content:' : 'Selected text:',
         context.text
       ].filter(Boolean);
       return sourceRows.join('\n');
@@ -102,100 +116,6 @@ function createAgentControllerCore({
       visible ? `User question:\n${visible}` : ''
     ].filter(Boolean).join('\n\n');
   }
-
-  function clarificationNeedsProjectScope(parserPayload = {}) {
-    const clarificationText = cleanText(
-      parserPayload?.clarification_reason || parserPayload?.clarification_question,
-      320
-    ).toLowerCase();
-    return /\bproject\b|\bworkspace\b/.test(clarificationText);
-  }
-
-  function contextualizeParserPayload(parserPayload = {}, {
-    projectId = '',
-    projectName = ''
-  } = {}) {
-    const selectedProjectId = cleanText(projectId, 120);
-    const selectedProjectName = cleanText(projectName, 220);
-    if (!selectedProjectId && !selectedProjectName) {
-      return parserPayload && typeof parserPayload === 'object' ? parserPayload : {};
-    }
-
-    const source = parserPayload && typeof parserPayload === 'object' ? parserPayload : {};
-    const entities = source.entities && typeof source.entities === 'object' && !Array.isArray(source.entities)
-      ? { ...source.entities }
-      : {};
-    const next = {
-      ...source,
-      entities
-    };
-    const originalIntent = cleanText(source.primary_intent, 80);
-    const projectScopedIntents = new Set([
-      'project_science_question',
-      'protocol_to_notebook',
-      'notebook_draft'
-    ]);
-    const upgradeToProjectScience = originalIntent === 'general_science_question';
-    if (upgradeToProjectScience) {
-      next.primary_intent = 'project_science_question';
-    }
-    const effectiveIntent = cleanText(next.primary_intent, 80);
-    if (projectScopedIntents.has(effectiveIntent)) {
-      if (!cleanText(entities.project_id, 120) && selectedProjectId) {
-        entities.project_id = selectedProjectId;
-      }
-      if (!cleanText(entities.project_name, 220) && !cleanText(entities.project, 220) && selectedProjectName) {
-        entities.project_name = selectedProjectName;
-      }
-      if (next.needs_clarification === true && clarificationNeedsProjectScope(next)) {
-        next.needs_clarification = false;
-        next.clarification_reason = null;
-        if (Object.prototype.hasOwnProperty.call(next, 'clarification_question')) {
-          next.clarification_question = '';
-        }
-      }
-    }
-    const contextualNotes = [];
-    if (upgradeToProjectScience) {
-      contextualNotes.push(
-        `Selected project scope ${selectedProjectName || selectedProjectId} upgraded this request to project_science_question.`
-      );
-    }
-    if (source.needs_clarification === true && next.needs_clarification === false) {
-      contextualNotes.push('Selected project scope satisfied the missing project requirement.');
-    }
-    if (contextualNotes.length) {
-      next.reasoning_summary = [
-        cleanText(source.reasoning_summary, 1200),
-        ...contextualNotes
-      ].filter(Boolean).join(' ');
-    }
-    return next;
-  }
-  const intentDispatcher = createAgentIntentDispatcher({
-    deps,
-    cleanText,
-    observability,
-    protocolNotebookRuntime,
-    scienceReasoningLoopRuntime,
-    deepResearchRuntime,
-    scienceMainUtils,
-    agentToolRuntime,
-    executeInventoryLookup,
-    executeRecordLookup,
-    getDefaultDataFilePath,
-    lifecycleService
-  });
-  const selectionInsightRuntime = createSelectionInsightRuntime({
-    cleanText,
-    requestText: typeof controllerUtils.requestText === 'function'
-      ? controllerUtils.requestText
-      : null,
-    requestWebSearch: typeof controllerUtils.requestWebSearch === 'function'
-      ? controllerUtils.requestWebSearch
-      : null,
-    observability
-  });
 
   function buildSkillCommandParserPayload({
     skillName = '',
@@ -239,30 +159,6 @@ function createAgentControllerCore({
     return rows.length
       ? `Available skills:\n${rows.join('\n')}`
       : 'No eligible skills were found in the current workspace.';
-  }
-
-  function cloneJson(value, fallback = null) {
-    try {
-      return JSON.parse(JSON.stringify(value));
-    } catch {
-      return fallback;
-    }
-  }
-
-  function extractStructuredThinkingTrace(result = {}) {
-    const source = result && typeof result === 'object' ? result : {};
-    const candidates = [
-      source.thinking_trace,
-      source.general_science_question?.thinking_trace,
-      source.project_science_question?.thinking_trace,
-      source.result_analysis?.thinking_trace
-    ];
-    const match = candidates.find((candidate) => (
-      candidate
-      && typeof candidate === 'object'
-      && !Array.isArray(candidate)
-    ));
-    return match ? cloneJson(match, null) : null;
   }
 
   function buildSkillCommandResult({
@@ -455,9 +351,6 @@ function createAgentControllerCore({
     const apiKey = cleanText(llmSource?.apiKey, 400);
     const model = cleanText(llmSource?.model, 120);
     const reasoningEffort = cleanText(payload?.llm?.reasoningEffort, 40).toLowerCase();
-    if (provider !== deps.LLM_PROVIDERS.CODEX && !apiKey) {
-      throw new Error('Missing LLM API key. Set it in Settings > LLM Model & Access, or use LLM_API_KEY / HIKARI_LLM_API_KEY.');
-    }
     if (provider === deps.LLM_PROVIDERS.CODEX) {
       setCodexCliModel(model);
       setCodexCliReasoningEffort(reasoningEffort);
@@ -473,7 +366,6 @@ function createAgentControllerCore({
       )
     );
     const executionFlags = controllerUtils.resolveAgentExecutionFlags(payload, { settings: rawSnapshot?.settings || {} });
-    const deepResearchEnabled = payload?.agent?.deepResearchEnabled === true;
     const traceContext = controllerUtils.createAgentLlmTraceContext({
       enabled: executionFlags.developerMode === true,
       requestId: cleanText(runtime?.requestId, 80),
@@ -519,7 +411,7 @@ function createAgentControllerCore({
         dataFilePath: cleanText(snapshot?.data_file_path || defaultDataFilePath, 1600),
         fallbackDataFilePath: defaultDataFilePath,
         executionFlags,
-        deepResearchEnabled,
+        deepResearchEnabled: payload?.agent?.deepResearchEnabled === true,
         traceContext,
         projectId,
         projectName,
@@ -538,116 +430,38 @@ function createAgentControllerCore({
       return codexResult;
     }
 
-    const selectionInsightResult = await selectionInsightRuntime.runSelectionInsight(payload, {
+    if (!apiAgentController) {
+      observability.recordLifecycleEvent(lifecycleRecorder, {
+        stage: 'controller_api_agent_disabled',
+        status: 'failed',
+        message: 'API agent support is disabled by the application feature flag.'
+      });
+      return {
+        ok: false,
+        provider: deps.LLM_PROVIDERS.CODEX,
+        model: 'codex-default',
+        error: 'API agent support is disabled. This build uses the Codex agent only.'
+      };
+    }
+
+    return apiAgentController.run({
+      payload,
+      runtime,
       provider,
       endpoint,
       apiKey,
       model,
+      effectiveMessage,
+      promptConversation,
+      attachments,
       snapshot,
+      executionFlags,
       traceContext,
-      lifecycleRecorder
-    });
-    if (selectionInsightResult) {
-      if (executionFlags.developerMode === true) {
-        selectionInsightResult.developer_trace = asArray(traceContext?.rows);
-      }
-      return selectionInsightResult;
-    }
-
-    observability.recordLifecycleEvent(lifecycleRecorder, {
-      stage: 'controller_intent_only',
-      status: 'ok',
-      message: 'Running parser-first intent phraser pipeline.'
-    });
-
-    const parserBypass = await openContextRuntime.resolveParserBypass({
       projectId,
       projectName,
-      chatSessionId: cleanText(runtime?.chatSessionId, 120),
-      chatSessionStoragePath: cleanText(runtime?.chatSessionStoragePath, 2400)
+      skillPromptPayload,
+      lifecycleRecorder
     });
-    const parserWasSkipped = Boolean(parserBypass?.ok === true && parserBypass?.payload);
-    const rawParserResult = parserWasSkipped
-      ? {
-        ok: true,
-        payload: parserBypass.payload
-      }
-      : await controllerUtils.requestIntentParserPayload({
-        message: effectiveMessage,
-        conversation: promptConversation,
-        projectName,
-        traceContext
-      });
-    throwIfAgentRequestAborted('Agent request stopped after intent parsing.');
-    if (!rawParserResult?.ok || !rawParserResult?.payload) {
-      observability.recordLifecycleEvent(lifecycleRecorder, {
-        stage: 'parser_completed',
-        status: 'failed',
-        message: cleanText(rawParserResult?.error || 'Malformed parser output.', 320),
-        failure_reasons: ['intent_parser_failed']
-      });
-      return {
-        ok: false,
-        provider,
-        model: model || (provider === deps.LLM_PROVIDERS.CODEX ? 'codex-default' : ''),
-        error: cleanText(`Intent parser failed: ${rawParserResult?.error || 'Malformed parser output.'}`, 360)
-      };
-    }
-    const parserResult = {
-      ...rawParserResult,
-      payload: contextualizeParserPayload(rawParserResult.payload, {
-        projectId: cleanText(payload?.projectId, 80),
-        projectName: cleanText(payload?.projectName, 180)
-      })
-    };
-    observability.recordLifecycleEvent(lifecycleRecorder, {
-      stage: 'parser_completed',
-      status: 'ok',
-      routing_intent: cleanText(parserResult.payload.primary_intent, 80) || 'unclear',
-      message: parserWasSkipped
-        ? cleanText(parserBypass?.message, 320) || 'Skipped intent parser because the context is still open.'
-        : `Intent parser returned primary_intent=${cleanText(parserResult.payload.primary_intent, 80) || 'unknown'}.`,
-      meta: {
-        needs_clarification: parserResult.payload.needs_clarification === true,
-        skipped: parserWasSkipped === true,
-        resumed_from_pending: parserBypass?.meta?.resumed_from_pending === true
-      }
-    });
-
-    const result = {
-      ok: true,
-      parser: parserResult.payload
-    };
-
-    await intentDispatcher.dispatchIntent({
-      payload,
-      context: {
-        provider,
-        endpoint,
-        apiKey,
-        model,
-        message: effectiveMessage,
-        promptConversation,
-        attachments,
-        snapshot,
-        executionFlags,
-        deepResearchEnabled,
-        traceContext,
-        projectId,
-        projectName,
-        skillPromptPayload,
-        parserPayload: parserResult.payload,
-        lifecycleRecorder
-      },
-      result
-    });
-    throwIfAgentRequestAborted('Agent request stopped before finalizing agent response.');
-
-    result.thinking_trace = extractStructuredThinkingTrace(result);
-    if (executionFlags.developerMode === true) {
-      result.developer_trace = asArray(traceContext?.rows);
-    }
-    return result;
   }
 
   async function runAgentController(payload, runtime = {}) {
@@ -667,9 +481,11 @@ function createAgentControllerCore({
       return runAgentControllerCore(payload, runtime && typeof runtime === 'object' ? runtime : {});
     }
     observability.recordLifecycleEvent(lifecycleRecorder, {
-      stage: 'controller_intent_only_selected',
-      status: 'ok',
-      message: 'Using intent-only parser controller path.'
+      stage: allowApiAgent ? 'controller_intent_only_selected' : 'controller_api_agent_disabled',
+      status: allowApiAgent ? 'ok' : 'failed',
+      message: allowApiAgent
+        ? 'Using modular API agent controller path.'
+        : 'API agent support is disabled by the application feature flag.'
     });
     return runAgentControllerCore(payload, runtime && typeof runtime === 'object' ? runtime : {});
   }

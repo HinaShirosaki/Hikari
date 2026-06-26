@@ -1,5 +1,5 @@
 import { escapeHtml } from '../tool-box/common.js';
-import { designPcrPrimerPair } from '../tool-box/cloning-assembly.js';
+import { designPcrPrimerPair } from './cloning-assembly.js';
 import {
   COMMON_SEQUENCE_FEATURE_TYPES,
   normalizeFeatureType

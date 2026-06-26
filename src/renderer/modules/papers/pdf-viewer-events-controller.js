@@ -109,6 +109,7 @@ export const installPdfViewerEventsController = (ctx) => {
       void ctx.resetViewer();
     });
     stage?.addEventListener('scroll', ctx.handleStageScroll, { passive: true });
+    stage?.addEventListener('wheel', ctx.handleZoomWheel, { passive: false });
     pageLayer?.addEventListener('click', ctx.handleOverlayClick);
     pageLayer?.addEventListener('pointerdown', ctx.handleTextSelectionPointerDown);
     pageLayer?.addEventListener('pointermove', ctx.handleHighlightHover, { passive: true });

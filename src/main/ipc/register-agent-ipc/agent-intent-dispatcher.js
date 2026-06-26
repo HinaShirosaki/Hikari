@@ -646,6 +646,7 @@ function createAgentIntentDispatcher({
               agent: {
                 sessionPrompt: cleanText(
                   snapshot?.paper_agent?.session_prompt
+                    || payload?.agent?.sessionPrompt
                     || payload?.agent?.paperSessionPrompt,
                   2400
                 ),

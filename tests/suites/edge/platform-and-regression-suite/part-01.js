@@ -11,95 +11,9 @@ function readSource(relativePath) {
   return sourceCache.get(filePath);
 }
 
-function hasEdge(graph, from, relation, to) {
-  return graph.edges.some((edge) => edge.from === from && edge.relation === relation && edge.to === to);
-}
-
 function assertClose(actual, expected, epsilon = 1e-6) {
   assert.equal(Number.isFinite(actual), true, `Expected finite number, got ${actual}`);
   assert.ok(Math.abs(actual - expected) <= epsilon, `Expected ${actual} to be within ${epsilon} of ${expected}`);
-}
-
-function buildObjectGraphFixture() {
-  return {
-    members: [{ id: 'm1', name: 'Alice' }],
-    projects: [{ id: 'p1', name: 'Project 1' }],
-    protocols: [{ id: 'pr1', name: 'Protocol 1' }],
-    workflowTemplates: [
-      {
-        id: 'wt1',
-        name: 'Template 1',
-        blocks: [{ id: 'tb1', protocolId: 'pr1', assigneeId: 'm1' }],
-        links: []
-      }
-    ],
-    workflows: [
-      {
-        id: 'w1',
-        name: 'Workflow 1',
-        projectId: 'p1',
-        notebookEntryIds: ['n1'],
-        blocks: [{ id: 'b1', protocolId: 'pr1', assigneeId: 'm1' }],
-        links: []
-      }
-    ],
-    instruments: [{ id: 'i1', name: 'HPLC' }],
-    papers: [
-      {
-        id: 'pa1',
-        title: 'Paper 1',
-        methodsExtract: [{ title: 'Method A' }],
-        keyReagents: [{ name: 'Reagent A' }]
-      }
-    ],
-    paperExperimentLinks: [{ paperId: 'pa1', entryId: 'n1', projectId: 'p1', note: 'linked' }],
-    labInventory: { chemicals: [{ id: 'c1', name: 'Acetone' }] },
-    samples: [
-      {
-        id: 's1',
-        code: 'S-1',
-        name: 'Sample 1',
-        location: { storageType: 'freezer', freezer: 'F1', rack: 'R1', box: 'B1', position: 'A1' },
-        chemicalLinks: ['c1'],
-        inventoryLink: { containerId: 'box1', section: '-20 Degree', wellIndex: 5 }
-      }
-    ],
-    inventory: {
-      '-20 Degree': [
-        {
-          id: 'box1',
-          name: 'Box 1',
-          type: 'box81',
-          wells: [{ name: 'A1', content: 'Material' }]
-        }
-      ]
-    },
-    notebookEntries: [
-      {
-        id: 'n1',
-        projectId: 'p1',
-        protocolId: 'pr1',
-        protocolName: 'Protocol 1',
-        updatedAt: '2026-01-15T00:00:00.000Z',
-        references: {
-          instrumentId: 'i1',
-          chemicalIds: ['c1'],
-          sampleIds: ['S-1'],
-          paperIds: ['pa1'],
-          peopleIds: ['m1'],
-          reagentLots: ['lot-42']
-        },
-        synthesisOutcome: {
-          producedCompoundCode: 'CMP-1',
-          purityPercent: 98,
-          usedInAssay: 'yes'
-        },
-        resultFiles: ['result.txt']
-      }
-    ],
-    assays: [{ id: 'a1', name: 'Assay 1', projectId: 'p1', notebookEntryId: 'n1' }],
-    gelAnalyses: [{ id: 'g1', name: 'Gel 1', projectId: 'p1', notebookEntryId: 'n1', report: { confidence: { score: 0.9 } } }]
-  };
 }
 
 const normalizedArrayKeys = [
@@ -267,6 +181,26 @@ test('[P1] normalizeState merges sample type label overrides', () => {
   assert.equal(normalized.settings.sampleTypeLabels.plasmid, 'Construct');
   assert.equal(normalized.settings.sampleTypeLabels.cell_line, shared.defaultState.settings.sampleTypeLabels.cell_line);
 });
+test('[P1] normalizeState preserves the Hatsune Miku appearance theme', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      appearance: {
+        mode: 'miku'
+      }
+    }
+  });
+  assert.equal(normalized.settings.appearance.mode, 'miku');
+});
+test('[P0] normalizeState resets unsupported appearance themes to day', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      appearance: {
+        mode: 'unknown-theme'
+      }
+    }
+  });
+  assert.equal(normalized.settings.appearance.mode, 'day');
+});
 test('[P1] normalizeState keeps startup defaults when settings.startup is missing', () => {
   const normalized = shared.normalizeState({ settings: {} });
   assert.equal(normalized.settings.startup.defaultViewId, shared.defaultState.settings.startup.defaultViewId);
@@ -299,11 +233,11 @@ test('[P0] normalizeState resets invalid startup flags to defaults', () => {
     shared.defaultState.settings.startup.rememberLastView
   );
 });
-test('[P1] normalizeState migrates legacy endpoint from llm.api URL', () => {
+test('[P1] normalizeState forces legacy API endpoint settings onto the Codex release agent', () => {
   const normalized = shared.normalizeState({ settings: { llm: { api: 'https://example.com/v1' } } });
-  assert.equal(normalized.settings.llm.apiEndpoint, 'https://example.com/v1');
+  assert.equal(normalized.settings.llm.apiEndpoint, '');
   assert.equal(normalized.settings.llm.apiKey, '');
-  assert.equal(normalized.settings.llm.provider, 'openai');
+  assert.equal(normalized.settings.llm.provider, 'codex');
 });
 test('[P1] normalizeState treats codex:// legacy llm.api as a Codex agent marker', () => {
   const normalized = shared.normalizeState({ settings: { llm: { provider: 'codex', api: 'codex://cli' } } });
@@ -311,20 +245,22 @@ test('[P1] normalizeState treats codex:// legacy llm.api as a Codex agent marker
   assert.equal(normalized.settings.llm.apiEndpoint, '');
   assert.equal(normalized.settings.llm.apiKey, '');
 });
-test('[P1] normalizeState keeps explicit llm.apiKey over legacy llm.api key', () => {
+test('[P1] normalizeState clears API credentials while the release agent is Codex-only', () => {
   const normalized = shared.normalizeState({ settings: { llm: { api: 'legacy-key', apiKey: 'new-key' } } });
-  assert.equal(normalized.settings.llm.apiKey, 'new-key');
+  assert.equal(normalized.settings.llm.provider, 'codex');
+  assert.equal(normalized.settings.llm.apiKey, '');
 });
-test('[P1] normalizeState trims llm.apiEndpoint whitespace', () => {
+test('[P1] normalizeState clears API endpoints while the release agent is Codex-only', () => {
   const normalized = shared.normalizeState({ settings: { llm: { apiEndpoint: '  https://api.example/v1  ' } } });
-  assert.equal(normalized.settings.llm.apiEndpoint, 'https://api.example/v1');
+  assert.equal(normalized.settings.llm.provider, 'codex');
+  assert.equal(normalized.settings.llm.apiEndpoint, '');
 });
-test('[P1] normalizeState keeps explicit llm.provider', () => {
+test('[P1] normalizeState replaces an explicit API provider with Codex in release builds', () => {
   const normalized = shared.normalizeState({ settings: { llm: { provider: 'claude' } } });
-  assert.equal(normalized.settings.llm.provider, 'claude');
-  assert.equal(normalized.settings.llm.apiEndpoint, 'https://api.anthropic.com/v1/messages');
+  assert.equal(normalized.settings.llm.provider, 'codex');
+  assert.equal(normalized.settings.llm.apiEndpoint, '');
 });
-test('[P1] normalizeState infers llm.provider from endpoint', () => {
+test('[P1] normalizeState replaces an inferred API provider with Codex in release builds', () => {
   const normalized = shared.normalizeState({
     settings: {
       llm: {
@@ -332,7 +268,8 @@ test('[P1] normalizeState infers llm.provider from endpoint', () => {
       }
     }
   });
-  assert.equal(normalized.settings.llm.provider, 'gemini');
+  assert.equal(normalized.settings.llm.provider, 'codex');
+  assert.equal(normalized.settings.llm.apiEndpoint, '');
 });
 test('[P1] normalizeState infers llm.provider from legacy codex marker without keeping an endpoint', () => {
   const normalized = shared.normalizeState({
@@ -373,16 +310,6 @@ test('[P1] normalizeState does not mutate defaultState arrays', () => {
   const normalized = shared.normalizeState({});
   normalized.members.push({ id: 'm1' });
   assert.equal(shared.defaultState.members.length, 0);
-});
-test('[P1] normalizeState merges objectGraph from source', () => {
-  const normalized = shared.normalizeState({
-    objectGraph: {
-      nodes: { 'project:p1': { uid: 'project:p1' } },
-      edges: [{ from: 'a', to: 'b', relation: 'r' }]
-    }
-  });
-  assert.equal(Boolean(normalized.objectGraph.nodes['project:p1']), true);
-  assert.equal(normalized.objectGraph.edges.length, 1);
 });
 [
   ['plain text', 'plain text'],

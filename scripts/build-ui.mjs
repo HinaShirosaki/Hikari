@@ -57,6 +57,7 @@ function ensureLlmProviderCatalogShape(catalog) {
 
 function normalizeLlmProviderCatalog(catalog) {
   ensureLlmProviderCatalogShape(catalog);
+  const allowApiAgent = catalog.allowApiAgent === true;
   const defaultProvider = String(catalog.defaultProvider || '').trim().toLowerCase();
   const seenIds = new Set();
   const providers = catalog.providers.map((entry, index) => {
@@ -133,6 +134,7 @@ function normalizeLlmProviderCatalog(catalog) {
   }
 
   return {
+    allowApiAgent,
     defaultProvider,
     providers
   };
@@ -141,6 +143,7 @@ function normalizeLlmProviderCatalog(catalog) {
 function buildLlmProviderModuleSource({ catalog, moduleType }) {
   const sourcePath = toPosix(path.relative(ROOT_DIR, LLM_PROVIDER_CONFIG_PATH));
   const rawProviders = JSON.stringify(catalog.providers, null, 2);
+  const allowApiAgent = catalog.allowApiAgent === true ? 'true' : 'false';
   const defaultProvider = JSON.stringify(catalog.defaultProvider);
   const providerEnumEntries = catalog.providers
     .map((provider) => `  ${provider.key}: ${JSON.stringify(provider.id)}`)
@@ -154,11 +157,15 @@ function buildLlmProviderModuleSource({ catalog, moduleType }) {
       '  PROVIDER_CONFIG_BY_ID,',
       '  MODEL_CONFIG_BY_PROVIDER_ID,',
       '  LLM_PROVIDERS,',
+      '  ALLOW_API_AGENT,',
       '  DEFAULT_LLM_PROVIDER,',
+      '  DEFAULT_AGENT_LLM_PROVIDER,',
+      '  AGENT_LLM_PROVIDER_OPTIONS,',
       '  DEFAULT_LLM_ENDPOINTS,',
       '  DEFAULT_AGENT_MODELS,',
       '  inferLlmProviderFromEndpoint,',
       '  normalizeLlmProvider,',
+      '  normalizeAgentLlmProvider,',
       '  getLlmProviderConfig,',
       '  getLlmProviderModelOptions,',
       '  getLlmModelConfig,',
@@ -179,11 +186,15 @@ function buildLlmProviderModuleSource({ catalog, moduleType }) {
       '  PROVIDER_CONFIG_BY_ID,',
       '  MODEL_CONFIG_BY_PROVIDER_ID,',
       '  LLM_PROVIDERS,',
+      '  ALLOW_API_AGENT,',
       '  DEFAULT_LLM_PROVIDER,',
+      '  DEFAULT_AGENT_LLM_PROVIDER,',
+      '  AGENT_LLM_PROVIDER_OPTIONS,',
       '  DEFAULT_LLM_ENDPOINTS,',
       '  DEFAULT_AGENT_MODELS,',
       '  inferLlmProviderFromEndpoint,',
       '  normalizeLlmProvider,',
+      '  normalizeAgentLlmProvider,',
       '  getLlmProviderConfig,',
       '  getLlmProviderModelOptions,',
       '  getLlmModelConfig,',
@@ -248,7 +259,14 @@ function buildLlmProviderModuleSource({ catalog, moduleType }) {
     providerEnumEntries,
     '});',
     '',
+    `const ALLOW_API_AGENT = ${allowApiAgent};`,
     `const DEFAULT_LLM_PROVIDER = ${defaultProvider};`,
+    'const DEFAULT_AGENT_LLM_PROVIDER = LLM_PROVIDERS.CODEX || DEFAULT_LLM_PROVIDER;',
+    'const AGENT_LLM_PROVIDER_OPTIONS = Object.freeze(',
+    '  ALLOW_API_AGENT',
+    '    ? [...LLM_PROVIDER_OPTIONS]',
+    '    : LLM_PROVIDER_OPTIONS.filter((provider) => provider.value === DEFAULT_AGENT_LLM_PROVIDER)',
+    ');',
     'const DEFAULT_LLM_ENDPOINTS = Object.freeze(',
     '  Object.fromEntries(LLM_PROVIDER_CONFIGS.map((provider) => [provider.id, provider.defaultEndpoint]))',
     ');',
@@ -279,6 +297,14 @@ function buildLlmProviderModuleSource({ catalog, moduleType }) {
     '    return clean;',
     '  }',
     '  return inferLlmProviderFromEndpoint(endpoint) || DEFAULT_LLM_PROVIDER;',
+    '}',
+    '',
+    'function normalizeAgentLlmProvider(provider, endpoint = \'\') {',
+    '  const resolved = normalizeLlmProvider(provider, endpoint);',
+    '  if (ALLOW_API_AGENT || resolved === LLM_PROVIDERS.CODEX) {',
+    '    return resolved;',
+    '  }',
+    '  return DEFAULT_AGENT_LLM_PROVIDER;',
     '}',
     '',
     'function getLlmProviderConfig(provider, endpoint = \'\') {',

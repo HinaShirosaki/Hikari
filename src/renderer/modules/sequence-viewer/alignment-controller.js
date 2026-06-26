@@ -91,7 +91,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
     state.statusIsError = isError === true;
     if (elements.alignmentStatus) {
       elements.alignmentStatus.textContent = state.statusMessage;
-      elements.alignmentStatus.style.color = isError ? 'var(--danger)' : '';
+      elements.alignmentStatus.style.color = isError ? 'var(--theme-danger)' : '';
     }
   }
 
@@ -215,7 +215,7 @@ export function createSequenceViewerAlignmentController(config = {}) {
     if (elements.alignmentQueryStatus) {
       if (state.query.errors.length) {
         elements.alignmentQueryStatus.textContent = state.query.errors[0];
-        elements.alignmentQueryStatus.style.color = 'var(--danger)';
+        elements.alignmentQueryStatus.style.color = 'var(--theme-danger)';
       } else if (state.query.warnings.length) {
         elements.alignmentQueryStatus.textContent = state.query.warnings.join(' | ');
         elements.alignmentQueryStatus.style.color = '';

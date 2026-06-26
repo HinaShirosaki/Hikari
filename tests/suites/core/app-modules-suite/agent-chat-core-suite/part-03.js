@@ -319,7 +319,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.llm.apiEndpoint, 'https://api.openai.com/v1/responses');
   assert.equal(payloadSeen.llm.apiKey, 'sk-local-key');
   assert.equal(payloadSeen.agent.developerMode, false);
-  assert.equal(payloadSeen.agent.deepResearchEnabled, false);
+  assert.equal(Object.hasOwn(payloadSeen.agent, 'deepResearchEnabled'), false);
   assert.equal(payloadSeen.projectId, 'p1');
   assert.equal(payloadSeen.stateSnapshot.snapshot_mode, 'thin');
   assert.equal(payloadSeen.stateSnapshot.data_file_path, '/tmp/hikari-data.ena.json');
@@ -428,8 +428,9 @@ test('paper-scoped agent chat snapshot includes the active transformed markdown 
       availabilityStatus: 'deep_ready'
     }]
   };
-  const scopedState = scopedStateModule.createPaperScopedAgentChatState(rootState, {
-    getPaperContext: () => ({
+  const scopedState = scopedStateModule.createScopedAgentChatState(rootState, {
+    getScopeContext: () => ({
+      scopeType: 'paper',
       paperId: 'paper-1',
       paperTitle: 'Atlas Uploaded Paper',
       projectId: 'p1',
@@ -449,6 +450,54 @@ test('paper-scoped agent chat snapshot includes the active transformed markdown 
   assert.match(snapshot.paper_agent.session_prompt, /read the transformed markdown/i);
 });
 
+test('notebook-scoped agent chat stores page sessions and exposes hidden page context', () => {
+  const scopedStateModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'scoped-state.js'
+  ));
+  const rootState = {
+    paperAgentChatSessions: {}
+  };
+  const scopedState = scopedStateModule.createScopedAgentChatState(rootState, {
+    getScopeContext: () => ({
+      scopeType: 'notebook',
+      notebookEntryId: 'note-1',
+      pageTitle: 'Atlas transfection',
+      projectId: 'p1',
+      projectName: 'Atlas',
+      protocolId: 'prot-1',
+      protocolName: 'HEK293 Transfection',
+      hiddenContext: {
+        kind: 'notebook-page',
+        label: 'Active notebook page: Atlas transfection',
+        text: 'Active biology notebook page:\nStep 1: Seed cells.',
+        notebookEntryId: 'note-1',
+        projectName: 'Atlas',
+        protocolName: 'HEK293 Transfection'
+      }
+    })
+  });
+
+  assert.equal(scopedState.agentChat.projectId, 'p1');
+  assert.equal(Object.keys(rootState.paperAgentChatSessions).join(','), 'notebook:note-1');
+  assert.match(scopedState.agentChatContext.sessionPrompt, /Biology Notebook right-rail/);
+  assert.equal(scopedState.agentChatContext.hiddenContexts[0].kind, 'notebook-page');
+  assert.equal(scopedState.agentChatContext.hiddenContexts[0].notebookEntryId, 'note-1');
+
+  const normalized = scopedStateModule.normalizePaperAgentChatSessions({
+    'notebook:note-1': {
+      projectId: 'p1',
+      messages: [{ id: 'm1', role: 'user', text: 'Summarize this page.' }]
+    }
+  });
+  assert.equal(normalized['notebook:note-1'].projectId, 'p1');
+  assert.equal(normalized['notebook:note-1'].messages.length, 1);
+});
+
 test('paper rail selected text is carried as hidden one-shot agent context', () => {
   const payloadModule = loadEsmStyleModule(path.join(
     __dirname,
@@ -464,7 +513,7 @@ test('paper rail selected text is carried as hidden one-shot agent context', () 
       llm: { provider: 'codex', model: 'gpt-5' },
       agent: { developerMode: false }
     },
-    agentChat: { projectId: '', messages: [], deepResearchEnabled: false },
+    agentChat: { projectId: '', messages: [] },
     agentChatContext: {
       sessionPrompt: 'You are reading the active paper markdown.',
       paperId: 'paper-1',
@@ -504,6 +553,59 @@ test('paper rail selected text is carried as hidden one-shot agent context', () 
   assert.equal(payloadBuilder.getDraftRequest().hiddenContexts.length, 0);
 });
 
+test('notebook rail automatically carries active page content as hidden agent context', () => {
+  const payloadModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'payload-builder.js'
+  ));
+  const state = {
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    settings: {
+      llm: { provider: 'codex', model: 'gpt-5' },
+      agent: { developerMode: false }
+    },
+    agentChat: { projectId: 'p1', messages: [] },
+    agentChatContext: {
+      scopeType: 'notebook',
+      sessionPrompt: 'You are reading the active notebook page.',
+      hiddenContext: {
+        kind: 'notebook-page',
+        label: 'Active notebook page: Atlas transfection',
+        text: 'Active biology notebook page:\nStep 1: Seed cells.\nPage notes/results: Cells looked healthy.',
+        notebookEntryId: 'note-1',
+        projectName: 'Atlas',
+        protocolName: 'HEK293 Transfection'
+      }
+    }
+  };
+  const input = { value: 'What should I do next?' };
+  const payloadBuilder = payloadModule.createAgentPayloadBuilder({
+    state,
+    input,
+    getComposerAttachments: () => [],
+    ensureAgentState: () => {}
+  });
+
+  const draft = payloadBuilder.getDraftRequest();
+  const agentFlags = payloadBuilder.buildAgentFlagsPayload({ hiddenContexts: draft.hiddenContexts });
+
+  assert.equal(draft.messageText, 'What should I do next?');
+  assert.doesNotMatch(draft.messageText, /Cells looked healthy/);
+  assert.equal(agentFlags.hiddenContexts.length, 1);
+  assert.equal(agentFlags.hiddenContexts[0].kind, 'notebook-page');
+  assert.equal(agentFlags.hiddenContexts[0].notebookEntryId, 'note-1');
+  assert.match(agentFlags.hiddenContexts[0].text, /Cells looked healthy/);
+  assert.equal(agentFlags.sessionPrompt, 'You are reading the active notebook page.');
+  assert.equal(agentFlags.paperSessionPrompt, undefined);
+
+  payloadBuilder.consumeHiddenContexts();
+  assert.equal(payloadBuilder.getDraftRequest().hiddenContexts.length, 1);
+});
+
 test('paper rail quick prompts load a common prompt into the composer', () => {
   const document = createMockDocument([
     'agent-rail-chat-history',
@@ -523,7 +625,7 @@ test('paper rail quick prompts load a common prompt into the composer', () => {
     state: {
       projects: [],
       settings: {},
-      agentChat: { projectId: '', messages: [], sessions: [], deepResearchEnabled: false }
+      agentChat: { projectId: '', messages: [], sessions: [] }
     },
     persist: () => {},
     createId: () => 'agent-msg-1',

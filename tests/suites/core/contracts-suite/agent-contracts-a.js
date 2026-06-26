@@ -32,14 +32,16 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('agent registrar keeps intent-only lifecycle stages and replay IPC handlers', () => {
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
       const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
-      const combinedSource = `${agentChatHandlerSource}\n${controllerCoreSource}\n${logHandlersSource}`;
+      const combinedSource = `${agentChatHandlerSource}\n${controllerCoreSource}\n${apiControllerSource}\n${logHandlersSource}`;
       assert.match(agentChatHandlerSource, /createLifecycleRecorder/);
       assert.match(agentChatHandlerSource, /recordLifecycleEvent/);
       assert.match(agentChatHandlerSource, /appendAgentChatLogEntry/);
-      assert.match(controllerCoreSource, /stage: 'controller_intent_only_selected'/);
-      assert.match(controllerCoreSource, /stage: 'controller_intent_only'/);
-      assert.match(controllerCoreSource, /stage: 'parser_completed'/);
+      assert.match(controllerCoreSource, /controller_intent_only_selected/);
+      assert.match(controllerCoreSource, /require\('\.\/api-agent-controller'\)/);
+      assert.match(apiControllerSource, /stage: 'controller_intent_only'/);
+      assert.match(apiControllerSource, /stage: 'parser_completed'/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_LIST_REQUESTS/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_REPLAY/);
       assert.equal(/agent-validation-safety/.test(combinedSource), false);
@@ -74,6 +76,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'purchase-recommendation'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'container'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
     });
 
@@ -122,10 +125,11 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('agent registrar controller output returns parser payload and optional developer trace', () => {
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
       const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
       const openContextRuntimeSource = fs.readFileSync(agentRegistrarPath('agent-open-context-runtime.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
-      assert.match(controllerCoreSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
+      assert.match(apiControllerSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
       assert.match(dispatcherSource, /createAgentOpenContextRuntime/);
       assert.match(dispatcherSource, /dispatchOpenContextIntent/);
       assert.match(openContextRuntimeSource, /if \(cleanText\(parserPayload\?\.primary_intent, 80\) === 'protocol_to_notebook'\)/);
@@ -146,13 +150,13 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(mainAgentServicesSource, /buildInventorySearchTerms/);
       assert.match(mainAgentServicesSource, /createProtocolNotebookRuntime/);
       assert.match(mainAgentServicesSource, /createNotebookDraftRuntime/);
-      assert.match(controllerCoreSource, /if \(executionFlags\.developerMode === true\) \{\s*result\.developer_trace = asArray\(traceContext\?\.rows\);/);
-      assert.match(controllerCoreSource, /requestIntentParserPayload\(/);
+      assert.match(apiControllerSource, /if \(executionFlags\.developerMode === true\) \{\s*result\.developer_trace = asArray\(traceContext\?\.rows\);/);
+      assert.match(apiControllerSource, /requestIntentParserPayload\(/);
       assert.match(mainAgentServicesSource, /createAgentControllerUtils/);
       assert.match(controllerUtilsSource, /normalizeIntentParserPayload/);
       assert.match(controllerCoreSource, /runAgentControllerCore\(/);
       assert.equal(/controller_intent_only_selected/.test(controllerCoreSource), true);
-      assert.equal(/controller_intent_only/.test(controllerCoreSource), true);
+      assert.equal(/controller_intent_only/.test(apiControllerSource), true);
     });
 
     test('codex-owned lifecycle stays scoped to agent chat while utility calls use the CLI adapter', () => {
@@ -216,10 +220,10 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('agent registrar hard-errors when intent parser output is invalid', () => {
-      const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
-      assert.match(controllerCoreSource, /if \(!rawParserResult\?\.ok \|\| !rawParserResult\?\.payload\)/);
-      assert.match(controllerCoreSource, /ok:\s*false/);
-      assert.match(controllerCoreSource, /Intent parser failed:/);
+      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
+      assert.match(apiControllerSource, /if \(!rawParserResult\?\.ok \|\| !rawParserResult\?\.payload\)/);
+      assert.match(apiControllerSource, /ok:\s*false/);
+      assert.match(apiControllerSource, /Intent parser failed:/);
     });
 
     test('science controller path is wired through the agent registrar and shared reasoning loop', () => {
@@ -279,6 +283,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'web-search'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'sub-agent'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'memory'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'container'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'purchase-recommendation'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
@@ -290,6 +295,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(Boolean(toolCallCatalog['web-search']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['sub-agent']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog.memory?.input_schema), true);
+      assert.equal(Boolean(toolCallCatalog.container?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['literature-search']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['purchase-recommendation']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['paper-download']?.input_schema), true);
@@ -299,6 +305,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(typeof toolCallCatalog['inventory-lookup']?.description, 'string');
       assert.equal(typeof toolCallCatalog['command-line']?.description, 'string');
       assert.equal(typeof toolCallCatalog.memory?.description, 'string');
+      assert.equal(typeof toolCallCatalog.container?.description, 'string');
       assert.equal(typeof toolCallCatalog['literature-search']?.description, 'string');
       assert.equal(typeof toolCallCatalog['purchase-recommendation']?.description, 'string');
       assert.equal(typeof toolCallCatalog['paper-download']?.description, 'string');
@@ -320,6 +327,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(/["']python-sandbox["']/.test(executionSource), false);
       assert.equal(/["']sub-agent["']/.test(executionSource), false);
       assert.equal(/["']memory["']/.test(executionSource), false);
+      assert.equal(/["']container["']/.test(executionSource), false);
       assert.equal(/["']literature-search["']/.test(executionSource), false);
       assert.equal(/["']purchase-recommendation["']/.test(executionSource), false);
       assert.equal(/["']paper-download["']/.test(executionSource), false);
@@ -372,6 +380,7 @@ module.exports = function registerAgentContractsA(context = {}) {
         ['tools', 'agent-paper-analysis.js'],
         ['tools', 'agent-python-sandbox.js'],
         ['tools', 'agent-sub-agent.js'],
+        ['tools', 'agent-container.js'],
         ['context', 'agent-context-management.js'],
         ['context', 'agent-memory.js'],
         ['context', 'agent-chat-log.js']

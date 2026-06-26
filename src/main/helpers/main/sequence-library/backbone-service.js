@@ -3,7 +3,7 @@
 const fs = require('fs/promises');
 const {
   recognizeSequenceBackboneInLibrary
-} = require('../../../../shared/sequence/sequence-backbone-recognition');
+} = require('../../../../renderer/modules/sequence-viewer/algorithms/sequence-backbone-recognition');
 const {
   normalizeEntryRow,
   openDatabase,

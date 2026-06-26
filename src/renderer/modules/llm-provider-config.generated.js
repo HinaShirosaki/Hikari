@@ -392,7 +392,14 @@ const LLM_PROVIDERS = Object.freeze({
   CODEX: "codex"
 });
 
+const ALLOW_API_AGENT = false;
 const DEFAULT_LLM_PROVIDER = "openai";
+const DEFAULT_AGENT_LLM_PROVIDER = LLM_PROVIDERS.CODEX || DEFAULT_LLM_PROVIDER;
+const AGENT_LLM_PROVIDER_OPTIONS = Object.freeze(
+  ALLOW_API_AGENT
+    ? [...LLM_PROVIDER_OPTIONS]
+    : LLM_PROVIDER_OPTIONS.filter((provider) => provider.value === DEFAULT_AGENT_LLM_PROVIDER)
+);
 const DEFAULT_LLM_ENDPOINTS = Object.freeze(
   Object.fromEntries(LLM_PROVIDER_CONFIGS.map((provider) => [provider.id, provider.defaultEndpoint]))
 );
@@ -423,6 +430,14 @@ function normalizeLlmProvider(provider, endpoint = '') {
     return clean;
   }
   return inferLlmProviderFromEndpoint(endpoint) || DEFAULT_LLM_PROVIDER;
+}
+
+function normalizeAgentLlmProvider(provider, endpoint = '') {
+  const resolved = normalizeLlmProvider(provider, endpoint);
+  if (ALLOW_API_AGENT || resolved === LLM_PROVIDERS.CODEX) {
+    return resolved;
+  }
+  return DEFAULT_AGENT_LLM_PROVIDER;
 }
 
 function getLlmProviderConfig(provider, endpoint = '') {
@@ -492,11 +507,15 @@ export {
   PROVIDER_CONFIG_BY_ID,
   MODEL_CONFIG_BY_PROVIDER_ID,
   LLM_PROVIDERS,
+  ALLOW_API_AGENT,
   DEFAULT_LLM_PROVIDER,
+  DEFAULT_AGENT_LLM_PROVIDER,
+  AGENT_LLM_PROVIDER_OPTIONS,
   DEFAULT_LLM_ENDPOINTS,
   DEFAULT_AGENT_MODELS,
   inferLlmProviderFromEndpoint,
   normalizeLlmProvider,
+  normalizeAgentLlmProvider,
   getLlmProviderConfig,
   getLlmProviderModelOptions,
   getLlmModelConfig,

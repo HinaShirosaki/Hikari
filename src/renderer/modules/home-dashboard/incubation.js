@@ -184,31 +184,32 @@ export function initIncubationWidget({
   }
 
   function renderIncubationWidget(locations) {
-    const dueCount = locations.filter((location) => location.isDue).length;
-    const scheduledCount = locations.filter((location) => location.dayDelta !== null && location.dayDelta > 0).length;
-    summary.textContent = locations.length
-      ? `Due today: ${dueCount} | Scheduled: ${scheduledCount}`
-      : 'No incubation locations yet.';
     if (!locations.length) {
+      summary.textContent = 'No incubation locations yet.';
       list.innerHTML = '<p class="small-note">Add an incubation location to track overnight setups here.</p>';
       return;
     }
+    const dueCount = locations.filter((location) => location.isDue).length;
+    summary.textContent = `${dueCount} due · ${locations.length} location${locations.length === 1 ? '' : 's'}`;
     list.innerHTML = locations.map((location) => `
-      <article class="dashboard-incubation-row${location.isDue ? ' is-due' : ''}">
-        <div class="dashboard-incubation-copy">
-          <strong class="dashboard-incubation-title">${safeText(location.name)}</strong>
-          <p class="dashboard-incubation-detail">${safeText(location.detail)}</p>
+      <article class="home-row">
+        <span class="home-dot${location.isDue ? ' is-warn' : ''}" aria-hidden="true"></span>
+        <div class="home-row-copy">
+          <div class="home-row-name">${safeText(location.name)}</div>
+          <div class="home-row-meta">${safeText(location.detail)}</div>
         </div>
-        <button
-          type="button"
-          class="dashboard-incubation-action"
-          data-dashboard-incubation-remind="${location.sourceIndex}"
-          aria-label="Set reminder for tomorrow for ${safeText(location.name)}"
-        >
-          <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-            <path d="M12 5.5v13M5.5 12h13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>
-          </svg>
-        </button>
+        <div class="home-row-end">
+          <button
+            type="button"
+            class="home-row-action"
+            data-dashboard-incubation-remind="${location.sourceIndex}"
+            aria-label="Set reminder for tomorrow for ${safeText(location.name)}"
+          >
+            <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
+              <path d="M12 5.5v13M5.5 12h13" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"></path>
+            </svg>
+          </button>
+        </div>
       </article>
     `).join('');
   }

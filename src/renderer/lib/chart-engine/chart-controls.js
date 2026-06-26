@@ -5,10 +5,7 @@ import {
   FRAME_STYLE_OPTIONS,
   POINT_SIZE_OPTIONS,
   LINE_WIDTH_OPTIONS,
-  STROKE_WIDTH_OPTIONS,
-  CORNER_RADIUS_OPTIONS,
-  FRAME_WIDTH_OPTIONS,
-  FRAME_HEIGHT_OPTIONS
+  STROKE_WIDTH_OPTIONS
 } from './chart-style-pickers.js';
 import { createChartTextControls } from './chart-text-controls.js';
 
@@ -17,19 +14,27 @@ const PANEL_HTML = `
     <summary class="assay-chart-style-summary">Chart Style</summary>
     <div class="assay-chart-style-body">
       <fieldset class="assay-chart-style-group">
-        <legend>Axes</legend>
-        <label>X column<select data-cc="xColumn"><option value="auto">Auto</option></select></label>
-        <label>Y column<select data-cc="yColumn"><option value="auto">Auto</option></select></label>
-        <label>Series column<select data-cc="seriesColumn"><option value="auto">Auto</option></select></label>
+        <legend>Figure</legend>
+        <label>Title<input type="text" data-cc="title" placeholder="(none)" /></label>
+        <label>Display<select data-cc="mode">
+          <option value="lines+markers">Line + points</option>
+          <option value="lines">Line only</option>
+          <option value="markers">Points only</option>
+        </select></label>
+        <label>Legend<select data-cc="legendPosition">
+          <option value="top">Top</option><option value="bottom">Bottom</option>
+          <option value="right">Right</option><option value="none">Hidden</option>
+        </select></label>
       </fieldset>
       <fieldset class="assay-chart-style-group">
         <legend>Scale &amp; range</legend>
         <label>X scale<select data-cc="xScale">
-          <option value="auto">Auto</option><option value="linear">Linear</option>
-          <option value="log">Log</option><option value="ordinal">Ordinal</option>
+          <option value="linear">Linear</option><option value="log10">Log10</option>
+          <option value="log2">Log2</option><option value="ln">Ln</option>
         </select></label>
         <label>Y scale<select data-cc="yScale">
-          <option value="linear">Linear</option><option value="log">Log</option>
+          <option value="linear">Linear</option><option value="log10">Log10</option>
+          <option value="log2">Log2</option><option value="ln">Ln</option>
         </select></label>
         <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="xRangeAuto" checked />X auto range</label>
         <div class="assay-chart-style-row">
@@ -41,48 +46,78 @@ const PANEL_HTML = `
           <label>Y min<input type="number" step="any" data-cc="yMin" /></label>
           <label>Y max<input type="number" step="any" data-cc="yMax" /></label>
         </div>
+        <div class="assay-chart-style-row">
+          <label>X tick interval<input type="number" step="any" min="0" data-cc="xTick" /></label>
+          <label>Y tick interval<input type="number" step="any" min="0" data-cc="yTick" /></label>
+        </div>
+      </fieldset>
+      <fieldset class="assay-chart-style-group">
+        <legend>Ticks</legend>
+        <label>Marks<select data-cc="tickDir">
+          <option value="outside">Outside</option><option value="inside">Inside</option><option value="none">None</option>
+        </select></label>
+        <label>Length<input type="number" min="0" max="20" step="1" data-cc="tickLen" /></label>
+        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="minorTicks" />Minor ticks</label>
+        <label>Number format<select data-cc="tickFormat">
+          <option value="auto">Auto</option><option value="fixed1">0.0</option><option value="fixed2">0.00</option>
+          <option value="sci">1e3</option><option value="si">SI (k/M)</option><option value="power">10ⁿ</option>
+        </select></label>
       </fieldset>
       <fieldset class="assay-chart-style-group">
         <legend>Points</legend>
         <label>Shape<div data-cc="pointShape" class="assay-chart-picker-mount"></div></label>
         <label>Size<div data-cc="pointSize" class="assay-chart-picker-mount"></div></label>
+        <label>Fill<select data-cc="markerFill"><option value="filled">Filled</option><option value="open">Open</option></select></label>
+        <label>Opacity<input type="number" min="0.1" max="1" step="0.1" data-cc="opacity" /></label>
       </fieldset>
       <fieldset class="assay-chart-style-group">
         <legend>Lines</legend>
         <label>Style<div data-cc="lineStyle" class="assay-chart-picker-mount"></div></label>
-        <label>Curve<select data-cc="curve">
-          <option value="curveMonotoneX">Monotone</option><option value="curveLinear">Linear</option>
-          <option value="curveStep">Step</option>
-        </select></label>
-        <label>Width<div data-cc="lineWidth" class="assay-chart-picker-mount"></div></label>
+        <label>Width (pt)<div data-cc="lineWidth" class="assay-chart-picker-mount"></div></label>
+      </fieldset>
+      <fieldset class="assay-chart-style-group">
+        <legend>Error bars</legend>
+        <label>Cap width<input type="number" min="0" max="20" step="1" data-cc="errorCapWidth" /></label>
+        <label>Thickness<input type="number" min="0.5" max="6" step="0.5" data-cc="errorThickness" /></label>
       </fieldset>
       <fieldset class="assay-chart-style-group">
         <legend>Frame</legend>
         <label>Style<div data-cc="frameStyle" class="assay-chart-picker-mount"></div></label>
         <label>Stroke<input type="color" data-cc="frameStroke" /></label>
-        <label>Stroke width<div data-cc="frameStrokeWidth" class="assay-chart-picker-mount"></div></label>
-        <label>Corner radius<div data-cc="frameCornerRadius" class="assay-chart-picker-mount"></div></label>
-        <label>Background<input type="color" data-cc="backgroundColor" /></label>
+        <label>Stroke width (pt)<div data-cc="frameStrokeWidth" class="assay-chart-picker-mount"></div></label>
+      </fieldset>
+      <fieldset class="assay-chart-style-group">
+        <legend>Reference line</legend>
+        <label>Axis<select data-cc="refLineAxis">
+          <option value="y">Horizontal (Y)</option><option value="x">Vertical (X)</option>
+        </select></label>
+        <label>Value<input type="number" step="any" data-cc="refLineValue" placeholder="(off)" /></label>
       </fieldset>
       <fieldset class="assay-chart-style-group">
         <legend>Size</legend>
         <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="sizeAuto" checked />Auto size</label>
-        <label>Width (px)<div data-cc="frameWidth" class="assay-chart-picker-mount"></div></label>
-        <label>Height (px)<div data-cc="frameHeight" class="assay-chart-picker-mount"></div></label>
+        <label>Width (px)<input type="number" min="320" max="2000" step="1" data-cc="frameWidth" /></label>
+        <label>Height (px)<input type="number" min="180" max="1200" step="1" data-cc="frameHeight" /></label>
+      </fieldset>
+      <fieldset class="assay-chart-style-group">
+        <legend>Bars</legend>
+        <label>Mode<select data-cc="barMode"><option value="group">Grouped</option><option value="stack">Stacked</option></select></label>
+        <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="barLabels" />Value labels</label>
+        <label>Corner radius<input type="number" min="0" max="30" step="1" data-cc="barCornerRadius" /></label>
       </fieldset>
       <fieldset class="assay-chart-style-group">
         <legend>Grid lines</legend>
         <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="gridVertical" checked />Vertical lines</label>
         <label class="assay-chart-style-checkbox"><input type="checkbox" data-cc="gridHorizontal" checked />Horizontal lines</label>
         <label>Color<input type="color" data-cc="gridColor" /></label>
-        <label>Width<div data-cc="gridStrokeWidth" class="assay-chart-picker-mount"></div></label>
+        <label>Width (px)<div data-cc="gridStrokeWidth" class="assay-chart-picker-mount"></div></label>
       </fieldset>
       <fieldset class="assay-chart-style-group">
         <legend>Text</legend>
         <div data-cc="textBar"></div>
       </fieldset>
       <fieldset class="assay-chart-style-group">
-        <legend>Series colors</legend>
+        <legend>Series colors &amp; shapes</legend>
         <div data-cc="seriesColors" class="assay-chart-style-series"></div>
       </fieldset>
       <div class="form-actions assay-chart-style-actions">
@@ -157,25 +192,6 @@ export function mountChartControls(container, { store, safeText } = {}) {
     pickers.frameStrokeWidth = createChartStylePicker(q('frameStrokeWidth'), {
       kind: 'stroke-width', options: STROKE_WIDTH_OPTIONS, value: 1, onChange: onFormInput
     });
-    pickers.frameCornerRadius = createChartStylePicker(q('frameCornerRadius'), {
-      kind: 'corner-radius', options: CORNER_RADIUS_OPTIONS, value: 0, onChange: onFormInput
-    });
-    pickers.frameWidth = createChartStylePicker(q('frameWidth'), {
-      kind: 'dim-width',
-      options: FRAME_WIDTH_OPTIONS,
-      value: 720,
-      min: FRAME_WIDTH_OPTIONS[0].value,
-      max: FRAME_WIDTH_OPTIONS[FRAME_WIDTH_OPTIONS.length - 1].value,
-      onChange: onFormInput
-    });
-    pickers.frameHeight = createChartStylePicker(q('frameHeight'), {
-      kind: 'dim-height',
-      options: FRAME_HEIGHT_OPTIONS,
-      value: 360,
-      min: FRAME_HEIGHT_OPTIONS[0].value,
-      max: FRAME_HEIGHT_OPTIONS[FRAME_HEIGHT_OPTIONS.length - 1].value,
-      onChange: onFormInput
-    });
     pickers.gridStrokeWidth = createChartStylePicker(q('gridStrokeWidth'), {
       kind: 'grid-width', options: STROKE_WIDTH_OPTIONS, value: 1, onChange: onFormInput
     });
@@ -186,19 +202,6 @@ export function mountChartControls(container, { store, safeText } = {}) {
         applyPatch({ text: textValue });
       }
     });
-  }
-
-  function populateColumnOptions(select, headers) {
-    if (!select) return;
-    const current = select.value || 'auto';
-    const options = ['<option value="auto">Auto</option>'];
-    headers.forEach((header) => {
-      const label = String(header || '').trim();
-      if (!label) return;
-      options.push(`<option value="${escape(label)}">${escape(label)}</option>`);
-    });
-    select.innerHTML = options.join('');
-    select.value = headers.includes(current) || current === 'auto' ? current : 'auto';
   }
 
   function setValueIfPresent(input, value) {
@@ -221,12 +224,6 @@ export function mountChartControls(container, { store, safeText } = {}) {
   function syncFormFromStyle() {
     const style = store.getStyle();
     const ctx = store.getContext();
-    populateColumnOptions(q('xColumn'), ctx.headers);
-    populateColumnOptions(q('yColumn'), ctx.headers);
-    populateColumnOptions(q('seriesColumn'), ctx.headers);
-    q('xColumn') && (q('xColumn').value = ctx.headers.includes(style.xColumn) ? style.xColumn : 'auto');
-    q('yColumn') && (q('yColumn').value = ctx.headers.includes(style.yColumn) ? style.yColumn : 'auto');
-    q('seriesColumn') && (q('seriesColumn').value = ctx.headers.includes(style.seriesColumn) ? style.seriesColumn : 'auto');
 
     setValueIfPresent(q('xScale'), style.xScale);
     setValueIfPresent(q('yScale'), style.yScale);
@@ -236,25 +233,40 @@ export function mountChartControls(container, { store, safeText } = {}) {
     setValueIfPresent(q('yRangeAuto'), style.yRange.auto);
     setValueIfPresent(q('yMin'), style.yRange.min);
     setValueIfPresent(q('yMax'), style.yRange.max);
+    setValueIfPresent(q('xTick'), style.xTick);
+    setValueIfPresent(q('yTick'), style.yTick);
 
     if (pickers.pointShape) pickers.pointShape.setValue(style.pointShape);
     setPickerValue(pickers.pointSize, style.pointSize, POINT_SIZE_OPTIONS);
     if (pickers.pointSize) pickers.pointSize.setShapeContext(style.pointShape);
     if (pickers.lineStyle) pickers.lineStyle.setValue(style.lineStyle);
-    setValueIfPresent(q('curve'), style.curve);
     setPickerValue(pickers.lineWidth, style.lineWidth, LINE_WIDTH_OPTIONS);
     if (pickers.frameStyle) pickers.frameStyle.setValue(style.frameStyle);
     setValueIfPresent(q('frameStroke'), style.frameStroke);
     setPickerValue(pickers.frameStrokeWidth, style.frameStrokeWidth, STROKE_WIDTH_OPTIONS);
-    setPickerValue(pickers.frameCornerRadius, style.frameCornerRadius, CORNER_RADIUS_OPTIONS);
-    setValueIfPresent(q('backgroundColor'), style.backgroundColor);
     setValueIfPresent(q('sizeAuto'), style.sizeAuto !== false);
-    setPickerValue(pickers.frameWidth, Number.isFinite(style.frameWidth) ? style.frameWidth : 720, FRAME_WIDTH_OPTIONS);
-    setPickerValue(pickers.frameHeight, Number.isFinite(style.frameHeight) ? style.frameHeight : 360, FRAME_HEIGHT_OPTIONS);
+    setValueIfPresent(q('frameWidth'), Number.isFinite(style.frameWidth) ? style.frameWidth : '');
+    setValueIfPresent(q('frameHeight'), Number.isFinite(style.frameHeight) ? style.frameHeight : '');
     setValueIfPresent(q('gridVertical'), style.showVerticalGrid !== false);
     setValueIfPresent(q('gridHorizontal'), style.showHorizontalGrid !== false);
     setValueIfPresent(q('gridColor'), style.gridColor);
     setPickerValue(pickers.gridStrokeWidth, style.gridStrokeWidth, STROKE_WIDTH_OPTIONS);
+    setValueIfPresent(q('title'), style.title);
+    setValueIfPresent(q('mode'), style.mode);
+    setValueIfPresent(q('legendPosition'), style.legendPosition);
+    setValueIfPresent(q('tickDir'), style.tickDir);
+    setValueIfPresent(q('tickLen'), style.tickLen);
+    setValueIfPresent(q('minorTicks'), style.minorTicks);
+    setValueIfPresent(q('tickFormat'), style.tickFormat);
+    setValueIfPresent(q('markerFill'), style.markerFill);
+    setValueIfPresent(q('opacity'), style.opacity);
+    setValueIfPresent(q('errorCapWidth'), style.errorCapWidth);
+    setValueIfPresent(q('errorThickness'), style.errorThickness);
+    setValueIfPresent(q('refLineAxis'), style.refLineAxis);
+    setValueIfPresent(q('refLineValue'), style.refLineValue);
+    setValueIfPresent(q('barMode'), style.barMode);
+    setValueIfPresent(q('barLabels'), style.barLabels);
+    setValueIfPresent(q('barCornerRadius'), style.barCornerRadius);
     if (textControls) textControls.setValue(style.text || {});
 
     applyRangeDisabledState();
@@ -273,14 +285,19 @@ export function mountChartControls(container, { store, safeText } = {}) {
 
   function applySizeDisabledState() {
     const auto = Boolean(q('sizeAuto')?.checked);
-    if (q('frameWidth')) q('frameWidth').classList.toggle('is-disabled', auto);
-    if (q('frameHeight')) q('frameHeight').classList.toggle('is-disabled', auto);
+    if (q('frameWidth')) q('frameWidth').disabled = auto;
+    if (q('frameHeight')) q('frameHeight').disabled = auto;
+  }
+
+  function clampDim(value, min, max) {
+    if (value == null) return null;
+    return Math.max(min, Math.min(max, value));
   }
 
   function clearSeriesColorListeners() {
     while (seriesColorListeners.length) {
-      const { input, handler } = seriesColorListeners.pop();
-      input.removeEventListener('input', handler);
+      const { el, event, handler } = seriesColorListeners.pop();
+      el.removeEventListener(event, handler);
     }
   }
 
@@ -292,7 +309,7 @@ export function mountChartControls(container, { store, safeText } = {}) {
     if (!seriesLabels.length) {
       const empty = document.createElement('p');
       empty.className = 'assay-chart-style-series-empty';
-      empty.textContent = 'Run analysis to configure series colors.';
+      empty.textContent = 'Run analysis to configure series colors & shapes.';
       host.appendChild(empty);
       return;
     }
@@ -301,13 +318,31 @@ export function mountChartControls(container, { store, safeText } = {}) {
       row.className = 'assay-chart-style-series-row';
       const labelEl = document.createElement('span');
       labelEl.textContent = label || `Series ${index + 1}`;
+
+      const shape = document.createElement('select');
+      shape.className = 'assay-chart-style-series-shape';
+      shape.innerHTML = `<option value="">Default</option>${SHAPE_OPTIONS
+        .map((opt) => `<option value="${opt.value}">${escape(opt.label)}</option>`)
+        .join('')}`;
+      shape.value = (style.seriesShapes || {})[label] || '';
+      const shapeHandler = () => {
+        const next = { ...style.seriesShapes };
+        if (shape.value) next[label] = shape.value;
+        else delete next[label];
+        applyPatch({ seriesShapes: next });
+      };
+      shape.addEventListener('change', shapeHandler);
+      seriesColorListeners.push({ el: shape, event: 'change', handler: shapeHandler });
+
       const input = document.createElement('input');
       input.type = 'color';
       input.value = style.seriesColors[label] || style.palette[index % style.palette.length] || '#1f77b4';
       const handler = () => applyPatch({ seriesColors: { ...style.seriesColors, [label]: input.value } });
       input.addEventListener('input', handler);
-      seriesColorListeners.push({ input, handler });
+      seriesColorListeners.push({ el: input, event: 'input', handler });
+
       row.appendChild(labelEl);
+      row.appendChild(shape);
       row.appendChild(input);
       host.appendChild(row);
     });
@@ -330,30 +365,42 @@ export function mountChartControls(container, { store, safeText } = {}) {
   function readFormPatch() {
     const style = store.getStyle();
     return {
-      xColumn: q('xColumn')?.value || 'auto',
-      yColumn: q('yColumn')?.value || 'auto',
-      seriesColumn: q('seriesColumn')?.value || 'auto',
-      xScale: q('xScale')?.value || 'auto',
+      xScale: q('xScale')?.value || 'linear',
       yScale: q('yScale')?.value || 'linear',
       xRange: { auto: Boolean(q('xRangeAuto')?.checked), min: parseRangeNumber(q('xMin')), max: parseRangeNumber(q('xMax')) },
       yRange: { auto: Boolean(q('yRangeAuto')?.checked), min: parseRangeNumber(q('yMin')), max: parseRangeNumber(q('yMax')) },
+      xTick: parseRangeNumber(q('xTick')),
+      yTick: parseRangeNumber(q('yTick')),
       pointShape: pickers.pointShape ? pickers.pointShape.value : style.pointShape,
       pointSize: pickerNumberValue(pickers.pointSize, style.pointSize),
       lineStyle: pickers.lineStyle ? pickers.lineStyle.value : style.lineStyle,
-      curve: q('curve')?.value || style.curve,
       lineWidth: pickerNumberValue(pickers.lineWidth, style.lineWidth),
       frameStyle: pickers.frameStyle ? pickers.frameStyle.value : style.frameStyle,
       frameStroke: q('frameStroke')?.value || style.frameStroke,
       frameStrokeWidth: pickerNumberValue(pickers.frameStrokeWidth, style.frameStrokeWidth),
-      frameCornerRadius: pickerNumberValue(pickers.frameCornerRadius, style.frameCornerRadius),
-      backgroundColor: q('backgroundColor')?.value || style.backgroundColor,
       sizeAuto: q('sizeAuto') ? Boolean(q('sizeAuto').checked) : style.sizeAuto,
-      frameWidth: pickerNumberValue(pickers.frameWidth, style.frameWidth),
-      frameHeight: pickerNumberValue(pickers.frameHeight, style.frameHeight),
+      frameWidth: clampDim(parseRangeNumber(q('frameWidth')), 320, 2000),
+      frameHeight: clampDim(parseRangeNumber(q('frameHeight')), 180, 1200),
       showVerticalGrid: q('gridVertical') ? Boolean(q('gridVertical').checked) : style.showVerticalGrid,
       showHorizontalGrid: q('gridHorizontal') ? Boolean(q('gridHorizontal').checked) : style.showHorizontalGrid,
       gridColor: q('gridColor')?.value || style.gridColor,
-      gridStrokeWidth: pickerNumberValue(pickers.gridStrokeWidth, style.gridStrokeWidth)
+      gridStrokeWidth: pickerNumberValue(pickers.gridStrokeWidth, style.gridStrokeWidth),
+      title: q('title') ? q('title').value : style.title,
+      mode: q('mode')?.value || 'lines+markers',
+      legendPosition: q('legendPosition')?.value || 'top',
+      tickDir: q('tickDir')?.value || 'outside',
+      tickLen: parseRangeNumber(q('tickLen')),
+      minorTicks: q('minorTicks') ? Boolean(q('minorTicks').checked) : style.minorTicks,
+      tickFormat: q('tickFormat')?.value || 'auto',
+      markerFill: q('markerFill')?.value || 'filled',
+      opacity: parseRangeNumber(q('opacity')),
+      errorCapWidth: parseRangeNumber(q('errorCapWidth')),
+      errorThickness: parseRangeNumber(q('errorThickness')),
+      refLineAxis: q('refLineAxis')?.value || 'y',
+      refLineValue: parseRangeNumber(q('refLineValue')),
+      barMode: q('barMode')?.value || 'group',
+      barLabels: q('barLabels') ? Boolean(q('barLabels').checked) : style.barLabels,
+      barCornerRadius: parseRangeNumber(q('barCornerRadius'))
     };
   }
 
@@ -376,10 +423,15 @@ export function mountChartControls(container, { store, safeText } = {}) {
   }
 
   const nativeInputKeys = [
-    'xColumn', 'yColumn', 'seriesColumn', 'xScale', 'yScale',
+    'xScale', 'yScale',
     'xRangeAuto', 'xMin', 'xMax', 'yRangeAuto', 'yMin', 'yMax',
-    'curve', 'frameStroke', 'backgroundColor', 'sizeAuto',
-    'gridVertical', 'gridHorizontal', 'gridColor'
+    'xTick', 'yTick',
+    'frameStroke', 'sizeAuto', 'frameWidth', 'frameHeight',
+    'gridVertical', 'gridHorizontal', 'gridColor',
+    'title', 'mode', 'legendPosition',
+    'tickDir', 'tickLen', 'minorTicks', 'tickFormat',
+    'markerFill', 'opacity', 'errorCapWidth', 'errorThickness',
+    'refLineAxis', 'refLineValue', 'barMode', 'barLabels', 'barCornerRadius'
   ];
 
   buildPickers();

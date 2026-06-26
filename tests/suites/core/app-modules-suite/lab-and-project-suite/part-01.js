@@ -2,8 +2,154 @@ module.exports = function registerAppLabAndProjectSuitePart01(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-test('createUid uses type:id convention', () => {
-  assert.equal(objectGraph.createUid('project', 'p1'), 'project:p1');
+test('home dashboard passage reminders persist outside the sample registry', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      dashboard: {
+        passageReminders: [
+          {
+            id: 'passage-1',
+            name: 'HEK293',
+            cellPassage: {
+              lastPassageDate: '2026-06-22',
+              intervalDays: 3,
+              passageNumber: 12
+            },
+            updatedAt: '2026-06-22T12:00:00.000Z'
+          }
+        ],
+        legacyPassageSamplesMigrated: true
+      }
+    },
+    samples: []
+  });
+
+  assert.equal(normalized.samples.length, 0);
+  assert.equal(normalized.settings.dashboard.passageReminders.length, 1);
+  assert.equal(normalized.settings.dashboard.passageReminders[0].name, 'HEK293');
+  assert.equal(normalized.settings.dashboard.passageReminders[0].cellPassage.passageNumber, 12);
+});
+test('home dashboard migrates its legacy passage-only samples out of inventory once', () => {
+  const dashboardUtils = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'home-dashboard',
+    'utils.js'
+  ));
+  const state = {
+    settings: { dashboard: {} },
+    notebookEntries: [],
+    samples: [
+      {
+        id: 'legacy-passage',
+        code: 'HEK293',
+        name: 'HEK293',
+        type: 'cell_line',
+        lot: '',
+        concentration: '',
+        notes: '',
+        cellPassage: {
+          lastPassageDate: '2026-06-22',
+          intervalDays: 3,
+          passageNumber: 12
+        },
+        location: null,
+        inventoryLink: null,
+        chemicalLinks: [],
+        compoundStructure: null,
+        updatedAt: '2026-06-22T12:00:00.000Z'
+      },
+      {
+        id: 'stored-cell-line',
+        code: 'CL-001',
+        name: 'Stored line',
+        type: 'cell_line',
+        lot: 'bank-1',
+        concentration: '',
+        notes: '',
+        cellPassage: {
+          lastPassageDate: '2026-06-22',
+          intervalDays: 3,
+          passageNumber: 4
+        },
+        location: null,
+        inventoryLink: null,
+        chemicalLinks: [],
+        compoundStructure: null,
+        updatedAt: '2026-06-22T12:00:00.000Z'
+      }
+    ]
+  };
+
+  assert.equal(dashboardUtils.migrateLegacyPassageSamples(state), true);
+  assert.equal(state.samples.map((sample) => sample.id).join(','), 'stored-cell-line');
+  assert.equal(state.settings.dashboard.passageReminders.length, 1);
+  assert.equal(state.settings.dashboard.passageReminders[0].id, 'legacy-passage');
+  assert.equal(state.settings.dashboard.legacyPassageSamplesMigrated, true);
+  assert.equal(dashboardUtils.migrateLegacyPassageSamples(state), false);
+});
+test('adding a dashboard passage reminder does not create an inventory sample', () => {
+  const passageModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'home-dashboard',
+    'passage.js'
+  ));
+  const summary = new MockElement('passage-summary');
+  const list = new MockElement('passage-list');
+  const addBtn = new MockElement('passage-add');
+  const dialogOverlay = new MockElement('passage-overlay');
+  const dialogForm = new MockElement('passage-form');
+  const strainInput = new MockElement('passage-strain');
+  const intervalInput = new MockElement('passage-interval');
+  const numberInput = new MockElement('passage-number');
+  dialogForm.reportValidity = () => true;
+  wireFormReset(dialogForm, [strainInput, intervalInput, numberInput]);
+  const state = {
+    samples: [],
+    settings: { dashboard: {} }
+  };
+  let persistCalls = 0;
+  let renderCalls = 0;
+  const widget = passageModule.initPassageWidget({
+    state,
+    persist: () => {
+      persistCalls += 1;
+    },
+    safeText: shared.safeText,
+    createId: () => 'passage-reminder-1',
+    render: () => {
+      renderCalls += 1;
+    },
+    elements: {
+      summary,
+      list,
+      addBtn,
+      dialogOverlay,
+      dialogForm,
+      strainInput,
+      intervalInput,
+      numberInput
+    }
+  });
+
+  strainInput.value = 'HEK293';
+  intervalInput.value = '3';
+  numberInput.value = '12';
+  trigger(dialogForm, 'submit');
+
+  assert.equal(state.samples.length, 0);
+  assert.equal(state.settings.dashboard.passageReminders.length, 1);
+  assert.equal(state.settings.dashboard.passageReminders[0].name, 'HEK293');
+  assert.equal(persistCalls, 1);
+  assert.equal(renderCalls, 1);
+
+  widget.render();
+  assert.match(list.innerHTML, /HEK293 \(P12\)/);
 });
 test('lab-management supports member create, edit, and delete lifecycle', () => {
   const document = createMockDocument([
@@ -274,9 +420,11 @@ test('personal-inventory creates a linked sample from the side editor for an emp
   assert.ok(persistCalls >= 1);
   assert.equal(sampleChangedCalls, 1);
 });
-test('personal-inventory fills a well by dragging a saved sample', () => {
+test('personal-inventory removes the saved-sample card and deletes containers from the left-rail context menu', () => {
   const document = createMockDocument([
     'inventory-sections',
+    'inventory-location-nav',
+    'inventory-container-context-menu',
     'container-detail',
     'inventory-add-container-btn',
     'inventory-add-container-form',
@@ -286,21 +434,27 @@ test('personal-inventory fills a well by dragging a saved sample', () => {
     'inventory-add-container-cancel'
   ]);
   const inventorySections = document.getElementById('inventory-sections');
+  const inventoryLocationNav = document.getElementById('inventory-location-nav');
+  const containerContextMenu = document.getElementById('inventory-container-context-menu');
   const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'index.js'), {
     document
   });
 
   let persistCalls = 0;
-  let sampleChangedCalls = 0;
+  let inventoryChangedCalls = 0;
   const state = {
     samples: [
       {
-        id: 'sample-drag',
-        code: 'S-DRAG',
-        name: 'Saved Drag Sample',
+        id: 'sample-linked',
+        code: 'S-LINKED',
+        name: 'Linked Sample',
         type: 'plasmid',
         location: null,
-        inventoryLink: null,
+        inventoryLink: {
+          section: '-20 Degree',
+          containerId: 'box-context',
+          wellIndex: 0
+        },
         chemicalLinks: [],
         updatedAt: '2026-03-01T00:00:00.000Z'
       }
@@ -310,13 +464,10 @@ test('personal-inventory fills a well by dragging a saved sample', () => {
       '4 Degree': [],
       '-20 Degree': [
         {
-          id: 'box-drag',
-          name: 'Box Drag',
+          id: 'box-context',
+          name: 'Context Box',
           type: 'box81',
-          wells: [
-            { name: 'A1', content: '' },
-            { name: 'A2', content: '' }
-          ]
+          wells: [{ name: 'A1', content: '' }]
         }
       ],
       '-80 Degree': [],
@@ -328,56 +479,35 @@ test('personal-inventory fills a well by dragging a saved sample', () => {
     persist: () => {
       persistCalls += 1;
     },
-    createId: () => 'container-drag',
+    createId: () => 'container-context',
     safeText: shared.safeText,
     cssEscape: shared.cssEscape,
-    onSamplesChanged: () => {
-      sampleChangedCalls += 1;
+    onInventoryChanged: () => {
+      inventoryChangedCalls += 1;
     }
   });
 
   personalInventory.renderSections();
-  const openBtn = inventorySections.querySelectorAll('[data-container-open]')[0];
-  openBtn.dataset.section = '-20 Degree';
-  trigger(openBtn, 'click');
-  const firstWellBtn = inventorySections.querySelectorAll('[data-well-index]')[0];
-  firstWellBtn.dataset.section = '-20 Degree';
-  firstWellBtn.dataset.containerId = 'box-drag';
-  trigger(firstWellBtn, 'click');
+  assert.doesNotMatch(inventorySections.innerHTML, /Saved Samples/);
+  assert.doesNotMatch(inventorySections.innerHTML, /data-saved-sample-drag/);
+  assert.doesNotMatch(inventorySections.innerHTML, /data-container-delete/);
+  assert.match(inventorySections.innerHTML, /Select one cell to edit well and sample information/);
 
-  assert.match(inventorySections.innerHTML, /data-saved-sample-drag="sample-drag"/);
+  const containerBtn = inventoryLocationNav.querySelectorAll('[data-container-open]')[0];
+  containerBtn.dataset.section = '-20 Degree';
+  trigger(containerBtn, 'contextmenu', { clientX: 80, clientY: 120 });
+  assert.equal(containerContextMenu.hidden, false);
+  assert.equal(containerContextMenu.style.left, '80px');
+  assert.equal(containerContextMenu.style.top, '120px');
 
-  const transferStore = new Map();
-  const dataTransfer = {
-    effectAllowed: '',
-    dropEffect: '',
-    setData(type, value) {
-      transferStore.set(type, String(value));
-    },
-    getData(type) {
-      return transferStore.get(type) || '';
-    }
-  };
-  const sampleChip = inventorySections.querySelector('[data-saved-sample-drag]');
-  const secondWellBtn = inventorySections.querySelectorAll('[data-well-index]')[1];
-  secondWellBtn.dataset.section = '-20 Degree';
-  secondWellBtn.dataset.containerId = 'box-drag';
-  trigger(sampleChip, 'dragstart', { dataTransfer });
-  trigger(secondWellBtn, 'dragover', { dataTransfer });
-  assert.equal(secondWellBtn.classList.contains('well-drag-over'), true);
-  trigger(secondWellBtn, 'drop', { dataTransfer });
+  const deleteBtn = containerContextMenu.querySelector('[data-container-context-delete]');
+  trigger(deleteBtn, 'click');
 
-  assert.equal(state.samples[0].inventoryLink.section, '-20 Degree');
-  assert.equal(state.samples[0].inventoryLink.containerId, 'box-drag');
-  assert.equal(state.samples[0].inventoryLink.wellIndex, 1);
-  assert.equal(state.samples[0].location.storageType, 'freezer');
-  assert.equal(state.samples[0].location.freezer, '-20 Degree');
-  assert.equal(state.samples[0].location.rack, '');
-  assert.equal(state.samples[0].location.box, 'Box Drag');
-  assert.equal(state.samples[0].location.position, 'A2');
+  assert.equal(state.inventory['-20 Degree'].length, 0);
+  assert.equal(state.samples[0].inventoryLink, null);
   assert.equal(persistCalls, 1);
-  assert.equal(sampleChangedCalls, 1);
-  assert.match(inventorySections.innerHTML, /Filled A2 with S-DRAG/);
+  assert.equal(inventoryChangedCalls, 1);
+  assert.equal(containerContextMenu.hidden, true);
 });
 test('personal-inventory previews a copied structure image before saving a chemical sample', async () => {
   const document = createMockDocument([

@@ -1,4 +1,4 @@
-import { cleanText, clamp, normalizeRecordName } from './shared.js';
+import { cleanText, clamp } from './shared.js';
 import { copyPrimerValueFromEvent } from './primer-copy.js';
 
 export function bindSequenceViewerDetailEvents(config = {}) {
@@ -15,10 +15,13 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const showSequenceHoverTooltip = config?.showSequenceHoverTooltip || (() => {});
   const renderActiveRecord = config?.renderActiveRecord || (() => {});
   const renderSequence = config?.renderSequence || (() => {});
+  const updateSequenceCursor = config?.updateSequenceCursor || (() => {});
   const renderSelectedFeatureDetail = config?.renderSelectedFeatureDetail || (() => {});
   const setOrfViewEnabled = config?.setOrfViewEnabled || (() => {});
   const readOrfStopCodonsFromControls = config?.readOrfStopCodonsFromControls || (() => ({}));
   const setOrfStopCodons = config?.setOrfStopCodons || (() => {});
+  const readOrfFrameFilterFromControls = config?.readOrfFrameFilterFromControls || (() => ({}));
+  const setOrfFrameFilter = config?.setOrfFrameFilter || (() => {});
   const setRestrictionVendorFilter = config?.setRestrictionVendorFilter || (() => {});
   const setStatus = config?.setStatus || (() => {});
   const resolveSequenceBoundaryFromEvent = config?.resolveSequenceBoundaryFromEvent || (() => null);
@@ -34,8 +37,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const hasOpenSequenceEditDialog = config?.hasOpenSequenceEditDialog || (() => false);
   const onRequestAnnotate = config?.onRequestAnnotate || (() => {});
   const onRequestRecognizeBackbone = config?.onRequestRecognizeBackbone || (() => {});
-  const onRequestClear = config?.onRequestClear || (() => {});
-  const onRequestSave = config?.onRequestSave || (() => {});
   const onRequestAlignment = config?.onRequestAlignment || (() => {});
   const onRequestCloningDesign = config?.onRequestCloningDesign || (() => {});
   const onSelectAlignmentSession = config?.onSelectAlignmentSession || (() => {});
@@ -65,6 +66,17 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   elements.orfStopTaaToggle?.addEventListener('change', handleOrfStopToggleChange);
   elements.orfStopTgaToggle?.addEventListener('change', handleOrfStopToggleChange);
 
+  const handleOrfFrameToggleChange = () => {
+    setOrfFrameFilter(readOrfFrameFilterFromControls());
+  };
+
+  for (const key of [
+    'orfFramePlus1Toggle', 'orfFramePlus2Toggle', 'orfFramePlus3Toggle',
+    'orfFrameMinus1Toggle', 'orfFrameMinus2Toggle', 'orfFrameMinus3Toggle'
+  ]) {
+    elements[key]?.addEventListener('change', handleOrfFrameToggleChange);
+  }
+
   elements.restrictionNebToggle?.addEventListener('change', () => {
     setRestrictionVendorFilter({
       ...state.restrictionVendorFilter,
@@ -79,18 +91,35 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     });
   });
 
-  elements.clearBtn?.addEventListener('click', (event) => {
-    event.preventDefault();
-    onRequestClear();
-  });
+  const toolbarMenus = [
+    { btn: elements.alignmentMenuBtn, menu: elements.alignmentMenu },
+    { btn: elements.orfMenuBtn, menu: elements.orfMenu },
+    { btn: elements.cutterMenuBtn, menu: elements.cutterMenu }
+  ].filter((entry) => entry.btn && entry.menu);
 
-  elements.saveBtn?.addEventListener('click', (event) => {
-    event.preventDefault();
-    void onRequestSave();
-  });
+  const closeToolbarMenus = (except = null) => {
+    for (const { btn, menu } of toolbarMenus) {
+      if (menu === except) {
+        continue;
+      }
+      menu.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  };
+
+  for (const { btn, menu } of toolbarMenus) {
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      const willOpen = menu.hidden;
+      closeToolbarMenus(willOpen ? menu : null);
+      menu.hidden = !willOpen;
+      btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+  }
 
   elements.alignmentOpenBtn?.addEventListener('click', (event) => {
     event.preventDefault();
+    closeToolbarMenus();
     void onRequestAlignment();
   });
 
@@ -121,21 +150,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     renderActiveRecord();
   });
 
-  elements.alignmentTraceHost?.addEventListener('click', (event) => {
-    const target = event?.target?.closest?.('[data-trace-source]');
-    if (!target) {
-      return;
-    }
-    event.preventDefault();
-    const requested = target.getAttribute('data-trace-source');
-    const nextUseProcessed = requested !== 'raw';
-    if (Boolean(state.traceUseProcessed) === nextUseProcessed) {
-      return;
-    }
-    state.traceUseProcessed = nextUseProcessed;
-    renderActiveRecord();
-  });
-
   elements.proteinBuilderConfirmationConfirmBtn?.addEventListener('click', (event) => {
     event.preventDefault();
     onConfirmProteinBuilderConstruct();
@@ -156,10 +170,6 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     hideSequenceEditDialog();
     onReferenceRecordChanged();
     renderActiveRecord();
-    const selected = getSelectedRecord();
-    if (selected && elements.saveNameInput) {
-      elements.saveNameInput.value = normalizeRecordName(selected.name || 'sequence', 'sequence');
-    }
   });
 
   elements.featureRailHost?.addEventListener('click', (event) => {
@@ -174,7 +184,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     state.selectedFeatureIndex = index;
     clearSequenceSelection();
     hideFeatureContextMenu();
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
   });
 
   elements.sequenceHost?.addEventListener('mousedown', (event) => {
@@ -238,7 +248,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     }
 
     if (rerenderNeeded) {
-      renderSequence(record, { preserveScroll: true });
+      updateSequenceCursor();
     }
   });
 
@@ -275,7 +285,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     }
     if (Number.isFinite(state.sequenceCursorBase)) {
       state.sequenceCursorBase = null;
-      renderSequence(getSelectedRecord(), { preserveScroll: true });
+      updateSequenceCursor();
     }
   });
 
@@ -296,7 +306,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     }
     state.selectedFeatureIndex = index;
     clearSequenceSelection({ preserveCursor: true });
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
   });
 
   elements.sequenceHost?.addEventListener('mouseup', () => {
@@ -432,10 +442,14 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     if (!event?.target?.closest?.('#sequence-viewer-feature-context-menu')) {
       hideFeatureContextMenu();
     }
+    if (!event?.target?.closest?.('.sequence-viewer-menu-anchor')) {
+      closeToolbarMenus();
+    }
   });
 
   globalThis.addEventListener?.('keydown', (event) => {
     if (String(event?.key || '') === 'Escape') {
+      closeToolbarMenus();
       hideFeatureContextMenu();
       hideFeatureEditor();
       hidePrimerDesignOverlay();

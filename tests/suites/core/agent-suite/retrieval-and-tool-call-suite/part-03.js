@@ -185,6 +185,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
         'web-search',
         'sub-agent',
         'memory',
+        'container',
         'literature-search',
         'paper-download',
         'paper-analysis',
@@ -289,6 +290,14 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
           },
           memory: {
             description: 'memory usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          container: {
+            description: 'container usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,
@@ -400,6 +409,14 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
           },
           memory: {
             description: 'memory usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          container: {
+            description: 'container usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,

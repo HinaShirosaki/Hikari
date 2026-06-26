@@ -1,4 +1,5 @@
 {
+  "allowApiAgent": false,
   "defaultProvider": "openai",
   "providers": [
     {

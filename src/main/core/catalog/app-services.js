@@ -36,6 +36,7 @@ const { createChatLogTransformMonitor } = require('../../helpers/main/llm/chat-l
 const { createAgentLogRuntime } = require('../../app/agent-log-runtime');
 const { createLlmPromptsRuntime } = require('../../app/llm-prompts-runtime');
 const { createTelegramRuntime } = require('../../app/telegram-runtime');
+const { createNpmUpdaterService } = require('../services/create-npm-updater-service');
 const { SERVICE_POLICIES } = require('../service-lifecycle');
 const {
   AGENT_CHAT_LOG_FILE_NAME,
@@ -162,6 +163,19 @@ function createAppServiceDefinitions(context = {}) {
         promptsFilePath: dependencies['app-metadata'].llmPromptsFilePath
       }),
       start: ({ service }) => service.loadLlmPrompts()
+    },
+    {
+      key: 'npm-updater',
+      dependsOn: ['app-metadata'],
+      policy: SERVICE_POLICIES.BEST_EFFORT,
+      create: () => createNpmUpdaterService({
+        app,
+        dialog: context.dialog,
+        shell: context.shell,
+        getMainWindow
+      }),
+      start: ({ service }) => service.start(),
+      stop: ({ service }) => service.stop()
     },
     {
       key: 'telegram',

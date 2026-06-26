@@ -30,9 +30,11 @@ Before the controller runs, the handler:
 
 Only after that setup does it call `runAgentController(...)`.
 
-## Parser-first controller
+## Agent controller routing
 
-`runAgentController()` is intentionally thin. It immediately delegates to `runAgentControllerCore()` after recording that the parser-first path was selected.
+`runAgentController()` is intentionally thin. Codex requests stay in
+`agent-controller-core.js`. API-backed requests are delegated to the lazily loaded
+`api-agent-controller.js` module only when generated `ALLOW_API_AGENT` is `true`.
 
 `runAgentControllerCore()` performs these steps:
 
@@ -40,10 +42,14 @@ Only after that setup does it call `runAgentController(...)`.
 2. Resolve LLM provider, endpoint, model, and API key.
 3. Normalize the incoming data snapshot with `agentToolRuntime.normalizeAgentSnapshot(...)`.
 4. Build or extend the conversation window.
-5. Run `controllerUtils.requestIntentParserPayload(...)`.
-6. Dispatch on `parserResult.payload.primary_intent`.
+5. Run the Codex-owned lifecycle, or hand an enabled API provider to the API-agent module.
 
-If the parser fails, the request stops there and returns an error envelope.
+The API-agent module runs `controllerUtils.requestIntentParserPayload(...)` and
+dispatches on `parserResult.payload.primary_intent`. If the parser fails, the
+request stops there and returns an error envelope.
+
+Release builds set `allowApiAgent: false` in `config/llm-providers.json`, so
+renderer state normalization and main-process routing both force the Codex path.
 
 ## Intent dispatch table
 

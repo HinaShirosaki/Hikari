@@ -55,9 +55,6 @@ export function createContainerDetailRenderer({
             </div>
             ${renderSingleContainerEditor(section, container)}
           </div>
-          <div class="container-detail-actions">
-            <button type="button" class="danger-btn" data-container-delete="${safeText(container.id)}" data-section="${safeText(section)}">Delete</button>
-          </div>
         </div>
       `;
     }
@@ -95,29 +92,32 @@ export function createContainerDetailRenderer({
       <div class="container-inline-detail">
         <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
         <p class="small-note">${safeText(layout.helperText)}</p>
+        <div class="container-detail-toolbar">
+          <button type="button" class="ghost-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}">Import CSV</button>
+          <input type="file" accept=".csv,text/csv" data-container-import-input="${safeText(container.id)}" hidden />
+        </div>
         <div class="well-editor-shell">
-          <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">
-            ${layout.className === 'plate96'
-              ? `
-                <div class="plate96-shell">
-                  <span class="plate96-corner" aria-hidden="true"></span>
-                  <div class="plate96-col-labels" aria-hidden="true">${columnLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
-                  <div class="plate96-row-labels" aria-hidden="true">${rowLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
-                  <div class="plate96-well-area">
-                    <span class="plate96-skirt-shape" aria-hidden="true"></span>
-                    <span class="plate96-skirt-edge" aria-hidden="true"></span>
-                    <div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>
+          <div class="well-grid-column">
+            <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">
+              ${layout.className === 'plate96'
+                ? `
+                  <div class="plate96-shell">
+                    <span class="plate96-corner" aria-hidden="true"></span>
+                    <div class="plate96-col-labels" aria-hidden="true">${columnLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
+                    <div class="plate96-row-labels" aria-hidden="true">${rowLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
+                    <div class="plate96-well-area">
+                      <span class="plate96-skirt-shape" aria-hidden="true"></span>
+                      <span class="plate96-skirt-edge" aria-hidden="true"></span>
+                      <div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>
+                    </div>
                   </div>
-                </div>
-              `
-              : `<div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>`
-            }
-            ${renderSampleLegendForContainer(section, container)}
+                `
+                : `<div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>`
+              }
+              ${renderSampleLegendForContainer(section, container)}
+            </div>
           </div>
           ${renderWellEditor(section, container, uiState.editingWellIndex)}
-        </div>
-        <div class="container-detail-actions">
-          <button type="button" class="danger-btn" data-container-delete="${safeText(container.id)}" data-section="${safeText(section)}">Delete</button>
         </div>
       </div>
     `;

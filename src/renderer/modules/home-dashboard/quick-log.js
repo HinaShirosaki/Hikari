@@ -21,7 +21,8 @@ export function initQuickLogWidget({
     quickLogStatus,
     quickLogSaveBtn,
     quickLogAgentBtn,
-    quickActionButtons
+    quickActionButtons,
+    quickLogChips = []
   } = elements;
 
   quickLogInput.addEventListener('input', onQuickLogInput);
@@ -31,6 +32,28 @@ export function initQuickLogWidget({
   quickActionButtons.forEach((button) => {
     button.addEventListener('click', onQuickActionClick);
   });
+  quickLogChips.forEach((chip) => {
+    chip.addEventListener('click', () => insertChipPrefix(chip.dataset.dashboardQuicklogChip));
+  });
+
+  function insertChipPrefix(label) {
+    const prefix = String(label || '').trim();
+    if (!prefix) {
+      return;
+    }
+    const current = String(quickLogInput.value || '');
+    const base = current.trim() ? `${current.replace(/\s+$/, '')}\n` : '';
+    quickLogInput.value = `${base}${prefix}: `;
+    ensureDashboardState(state);
+    state.settings.dashboard.quickLogDraft = quickLogInput.value;
+    persist();
+    quickLogInput.focus();
+    const caret = quickLogInput.value.length;
+    quickLogInput.setSelectionRange(caret, caret);
+    quickLogSaveBtn.disabled = false;
+    quickLogAgentBtn.disabled = false;
+    setQuickLogStatus('Draft saved locally.');
+  }
 
   function syncQuickLogInput() {
     const draft = String(state.settings.dashboard.quickLogDraft || '');
@@ -43,6 +66,23 @@ export function initQuickLogWidget({
     quickLogStatus.textContent = String(message || '').trim();
   }
 
+  function lastSavedSummary() {
+    const entries = Array.isArray(state.settings?.dashboard?.quickLogEntries)
+      ? state.settings.dashboard.quickLogEntries
+      : [];
+    const last = entries[entries.length - 1];
+    if (!last) {
+      return 'No notes yet';
+    }
+    const stamp = new Date(String(last.createdAt || last.updatedAt || ''));
+    const time = Number.isNaN(stamp.getTime())
+      ? ''
+      : stamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    const text = String(last.text || '').trim();
+    const short = text.length > 26 ? `${text.slice(0, 26)}…` : text;
+    return `Last saved${time ? ` ${time}` : ''}${short ? ` · ${short}` : ''}`;
+  }
+
   function renderQuickLogWidget() {
     syncQuickLogInput();
     const hasDraft = Boolean(String(state.settings.dashboard.quickLogDraft || '').trim());
@@ -52,7 +92,7 @@ export function initQuickLogWidget({
       setQuickLogStatus('Draft saved locally.');
       return;
     }
-    setQuickLogStatus('');
+    setQuickLogStatus(lastSavedSummary());
   }
 
   function onQuickLogInput() {
@@ -66,7 +106,7 @@ export function initQuickLogWidget({
       setQuickLogStatus('Draft saved locally.');
       return;
     }
-    setQuickLogStatus('');
+    setQuickLogStatus(lastSavedSummary());
   }
 
   function onQuickLogKeydown(event) {

@@ -147,19 +147,6 @@ function frameStyleSvg(style) {
   return svg;
 }
 
-function cornerRadiusSvg(radius) {
-  const w = 40;
-  const h = 22;
-  const svg = makeIconSvg(w, h);
-  const r = Math.max(0, Math.min(10, (radius / 40) * 10));
-  svg.appendChild(svgEl('rect', {
-    x: '3', y: '3', width: String(w - 6), height: String(h - 6),
-    fill: 'none', stroke: 'currentColor', 'stroke-width': '1.4',
-    rx: String(r), ry: String(r)
-  }));
-  return svg;
-}
-
 function strokeWidthSvg(width, opts) {
   const w = opts?.width ?? 44;
   const h = opts?.height ?? 14;
@@ -179,32 +166,6 @@ function strokeWidthSvg(width, opts) {
       'stroke-linecap': 'round'
     }));
   }
-  return svg;
-}
-
-function dimensionSvg(value, axis, minVal, maxVal) {
-  const w = 44;
-  const h = 22;
-  const svg = makeIconSvg(w, h);
-  const t = Math.max(0, Math.min(1, (value - minVal) / (maxVal - minVal)));
-  const maxW = w - 6;
-  const maxH = h - 6;
-  let rw;
-  let rh;
-  if (axis === 'width') {
-    rw = Math.max(4, 6 + (maxW - 6) * t);
-    rh = maxH * 0.55;
-  } else {
-    rh = Math.max(4, 6 + (maxH - 6) * t);
-    rw = maxW * 0.55;
-  }
-  const x = (w - rw) / 2;
-  const y = (h - rh) / 2;
-  svg.appendChild(svgEl('rect', {
-    x: String(x), y: String(y),
-    width: String(rw), height: String(rh),
-    fill: 'none', stroke: 'currentColor', 'stroke-width': '1.2', rx: '1'
-  }));
   return svg;
 }
 
@@ -337,12 +298,6 @@ export function createChartStylePicker(mount, config) {
       case 'stroke-width':
       case 'grid-width':
         return strokeWidthSvg(opt.value, { width: 52, height: 12 });
-      case 'corner-radius':
-        return cornerRadiusSvg(opt.value);
-      case 'dim-width':
-        return dimensionSvg(opt.value, 'width', config.min ?? 0, config.max ?? 1);
-      case 'dim-height':
-        return dimensionSvg(opt.value, 'height', config.min ?? 0, config.max ?? 1);
       default:
         return makeIconSvg(0, 0);
     }
@@ -365,12 +320,6 @@ export function createChartStylePicker(mount, config) {
       case 'stroke-width':
       case 'grid-width':
         return strokeWidthSvg(opt.value, { width: 36, height: 12 });
-      case 'corner-radius':
-        return cornerRadiusSvg(opt.value);
-      case 'dim-width':
-        return dimensionSvg(opt.value, 'width', config.min ?? 0, config.max ?? 1);
-      case 'dim-height':
-        return dimensionSvg(opt.value, 'height', config.min ?? 0, config.max ?? 1);
       default:
         return null;
     }
@@ -515,9 +464,6 @@ export function createChartStylePicker(mount, config) {
 export const POINT_SIZE_OPTIONS = [2, 3, 4, 5, 6, 8, 10, 12, 14, 16, 18, 20].map((v) => ({ value: v }));
 export const LINE_WIDTH_OPTIONS = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8].map((v) => ({ value: v }));
 export const STROKE_WIDTH_OPTIONS = [0, 0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 6].map((v) => ({ value: v }));
-export const CORNER_RADIUS_OPTIONS = [0, 2, 4, 6, 8, 12, 16, 20, 24, 32, 40].map((v) => ({ value: v }));
-export const FRAME_WIDTH_OPTIONS = [320, 480, 640, 720, 800, 960, 1024, 1200, 1440, 1600, 1920, 2000].map((v) => ({ value: v, label: `${v} px` }));
-export const FRAME_HEIGHT_OPTIONS = [180, 240, 320, 360, 400, 480, 540, 600, 720, 800, 960, 1200].map((v) => ({ value: v, label: `${v} px` }));
 export const SHAPE_OPTIONS = ['circle', 'square', 'triangle', 'diamond', 'cross'].map((v) => ({ value: v, label: SHAPE_LABELS[v] }));
 export const LINE_STYLE_OPTIONS = [
   { value: 'solid', label: 'Solid' },

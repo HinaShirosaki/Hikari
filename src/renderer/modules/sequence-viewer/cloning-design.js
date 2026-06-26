@@ -1,5 +1,5 @@
 import { escapeHtml } from '../tool-box/common.js';
-import { assembleCloningPlan } from '../tool-box/cloning-assembly.js';
+import { assembleCloningPlan } from './cloning-assembly.js';
 import { cleanText, clamp, normalizeSequenceText } from './shared.js';
 import { copyPrimerValueFromEvent, renderPrimerCopyButton } from './primer-copy.js';
 
@@ -498,6 +498,32 @@ function renderProcedure(displayPlan = {}) {
   `;
 }
 
+function renderRestrictionEnzymes(displayPlan = {}) {
+  const enzymes = asArray(displayPlan?.plans)
+    .map((entry) => asArray(entry?.plan?.restrictionEnzymeSelection))
+    .find((selection) => selection.length) || [];
+  if (!enzymes.length) {
+    return '';
+  }
+
+  const rows = enzymes.map((enzyme) => {
+    const name = cleanText(enzyme?.name, 80) || cleanText(enzyme?.site, 80) || 'enzyme';
+    const recognition = cleanText(enzyme?.site, 80) || '-';
+    const cut = cleanText(enzyme?.cut || asArray(enzyme?.cutPatterns)[0], 80);
+    return `
+      <li>
+        <strong>${escapeHtml(name)}</strong>
+        <span>recognition ${escapeHtml(recognition)}${cut ? ` | cut ${escapeHtml(cut)}` : ''}</span>
+      </li>
+    `;
+  }).join('');
+
+  return `
+    <ul class="sequence-viewer-cloning-design-enzyme-list">${rows}</ul>
+    <p class="small-note">Digest the backbone and the insert amplicon with this enzyme pair, then ligate.</p>
+  `;
+}
+
 function renderWarnings(warnings = []) {
   if (!warnings.length) {
     return '<p class="small-note">No route warnings.</p>';
@@ -648,6 +674,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       return;
     }
 
+    const restrictionEnzymesHtml = renderRestrictionEnzymes(displayPlan);
     elements.cloningDesignResult.innerHTML = `
       <section class="sequence-viewer-cloning-design-result-section">
         <div class="result-card-head">
@@ -655,6 +682,13 @@ export function createSequenceViewerCloningDesignController(config = {}) {
         </div>
         ${renderPlanSummary(displayPlan, source, range)}
       </section>
+      ${restrictionEnzymesHtml ? `
+      <section class="sequence-viewer-cloning-design-result-section">
+        <div class="result-card-head">
+          <h4>Digestion Enzymes</h4>
+        </div>
+        ${restrictionEnzymesHtml}
+      </section>` : ''}
       <section class="sequence-viewer-cloning-design-result-section">
         <div class="result-card-head">
           <h4>Primers</h4>
@@ -690,7 +724,7 @@ export function createSequenceViewerCloningDesignController(config = {}) {
       elements.cloningDesignStatus.textContent = hasSource
         ? `${formatStrategyLabel(designState.strategy)} ready.`
         : 'Edit the active sequence to enable cloning design.';
-      elements.cloningDesignStatus.style.color = hasSource ? '' : 'var(--danger)';
+      elements.cloningDesignStatus.style.color = hasSource ? '' : 'var(--theme-danger)';
     }
   }
 

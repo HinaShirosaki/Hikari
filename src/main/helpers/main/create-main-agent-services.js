@@ -46,6 +46,7 @@ const { createAgentToolCallRuntime } = require('../agent/tools/agent-tool-execut
 const { createAgentToolProviderRuntime } = require('../agent/tools/agent-tool-provide.js');
 const { createAgentCommandLineRuntime } = require('../agent/tools/agent-command-line.js');
 const { createAgentSubAgentRuntime } = require('../agent/tools/agent-sub-agent.js');
+const { createAgentContainerRuntime } = require('../agent/tools/agent-container.js');
 const { createAgentMemoryRuntime } = require('../agent/context/agent-memory.js');
 const { createNotebookDraftRuntime } = require('../agent/tools/agent-notebook-draft.js');
 const { createWebSearchRuntime } = require('../agent/tools/agent-web-search.js');
@@ -113,6 +114,9 @@ function createMainAgentServices(deps = {}) {
     : null;
   const normalizeLlmProvider = typeof deps.normalizeLlmProvider === 'function'
     ? deps.normalizeLlmProvider
+    : null;
+  const normalizeAgentLlmProvider = typeof deps.normalizeAgentLlmProvider === 'function'
+    ? deps.normalizeAgentLlmProvider
     : null;
   const defaultLlmEndpointForProvider = typeof deps.defaultLlmEndpointForProvider === 'function'
     ? deps.defaultLlmEndpointForProvider
@@ -196,6 +200,7 @@ function createMainAgentServices(deps = {}) {
     DEFAULT_AGENT_MODELS,
     inferLlmProviderFromEndpoint,
     normalizeLlmProvider,
+    normalizeAgentLlmProvider,
     defaultLlmEndpointForProvider,
     defaultAgentModelForProvider,
     asArray,
@@ -411,6 +416,7 @@ function createMainAgentServices(deps = {}) {
     ...sharedAgentLlmDeps,
     runSubAgentTurn
   });
+  const containerRuntime = createAgentContainerRuntime({});
   const memoryRuntime = createAgentMemoryRuntime({
     ...sharedAgentLlmDeps,
     memoryFilePath: cleanText(getAgentMemoryFilePath(), 2400)
@@ -481,6 +487,7 @@ function createMainAgentServices(deps = {}) {
     notebookGenerationRuntime,
     agentAppApi,
     subAgentRuntime,
+    containerRuntime,
     memoryRuntime,
     paperDownloadRuntime,
     paperAnalysisRuntime,

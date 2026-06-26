@@ -54,15 +54,15 @@
 }
 
 .chemical-import-status[data-status="success"] {
-  color: color-mix(in srgb, var(--success) 82%, var(--text) 18%);
+  color: color-mix(in srgb, var(--theme-success) 82%, var(--theme-text) 18%);
 }
 
 .chemical-import-status[data-status="warning"] {
-  color: color-mix(in srgb, var(--warning) 82%, var(--text) 18%);
+  color: color-mix(in srgb, var(--theme-warning) 82%, var(--theme-text) 18%);
 }
 
 .chemical-import-status[data-status="error"] {
-  color: color-mix(in srgb, var(--danger) 82%, var(--text) 18%);
+  color: color-mix(in srgb, var(--theme-danger) 82%, var(--theme-text) 18%);
 }
 
 .chemical-search-field {
@@ -98,7 +98,7 @@
   display: grid;
   gap: 14px;
   padding-top: 18px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--theme-border);
 }
 
 .chemical-detail-grid {
@@ -111,7 +111,7 @@
   display: grid;
   gap: 2px;
   padding: 10px 0;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--theme-border-soft);
 }
 
 .chemical-detail-item-wide {
@@ -119,13 +119,13 @@
 }
 
 .chemical-detail-label {
-  color: var(--strong);
+  color: var(--theme-text-strong);
   font-size: 0.8rem;
   font-weight: 600;
 }
 
 .chemical-detail-value {
-  color: var(--text);
+  color: var(--theme-text);
   font-size: 0.92rem;
   overflow-wrap: anywhere;
 }
@@ -134,7 +134,7 @@
   position: fixed;
   inset: 0;
   z-index: 2550;
-  background: var(--palette-rgba-18-34-55-a2);
+  background: var(--theme-overlay);
   display: grid;
   place-items: center;
   padding: 18px;
@@ -151,10 +151,10 @@
   display: grid;
   gap: 16px;
   padding: 18px;
-  border: 1px solid var(--palette-rgba-53-99-153-a2);
+  border: 1px solid var(--theme-border);
   border-radius: 16px;
-  background: color-mix(in srgb, var(--surface-elevated) 95%, var(--surface-subtle) 5%);
-  box-shadow: 0 22px 54px var(--palette-rgba-27-20-14-a18);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 95%, var(--theme-surface-subtle) 5%);
+  box-shadow: 0 22px 54px var(--theme-shadow-color-strong);
 }
 
 .chemical-dialog-head {
@@ -212,11 +212,11 @@
 }
 
 body.theme-night .chemical-dialog-overlay {
-  background: var(--night-overlay-soft);
+  background: var(--theme-overlay);
 }
 
 body.theme-night .chemical-dialog {
-  border-color: color-mix(in srgb, var(--line) 82%, var(--accent) 18%);
-  background: color-mix(in srgb, var(--surface-elevated) 94%, var(--surface-subtle) 6%);
-  color: var(--text);
+  border-color: color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface-subtle) 6%);
+  color: var(--theme-text);
 }

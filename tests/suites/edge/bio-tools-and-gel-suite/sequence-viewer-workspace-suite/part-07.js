@@ -137,28 +137,58 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
   assert.equal(alignmentToggle.checked, true);
   assert.equal(document.getElementById('sequence-viewer-alignment-active-note').textContent, '');
   assert.match(sequenceHost.innerHTML, /sequence-viewer-seq-highlight-alignment/);
+  assert.match(sequenceHost.innerHTML, /sequence-viewer-alignment-query-row/);
+  const topRowIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-strand-row-top');
+  const queryRowIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-alignment-query-row');
+  const bottomRowIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-strand-row-bottom');
+  assert.equal(topRowIndex < queryRowIndex && queryRowIndex < bottomRowIndex, true);
 
   alignmentToggle.checked = false;
   trigger(alignmentToggle, 'change');
   assert.doesNotMatch(sequenceHost.innerHTML, /sequence-viewer-seq-highlight-alignment/);
+  assert.doesNotMatch(sequenceHost.innerHTML, /sequence-viewer-alignment-query-row/);
 
   alignmentToggle.checked = true;
   trigger(alignmentToggle, 'change');
   assert.match(sequenceHost.innerHTML, /sequence-viewer-seq-highlight-alignment/);
+  assert.match(sequenceHost.innerHTML, /sequence-viewer-alignment-query-row/);
 });
-test('[EDGE] sequence-viewer shows the AB1 chromatogram panel for an active sequencing alignment', async () => {
-  const document = createMockDocument([
-    'sequence-viewer-alignment-trace-panel',
-    'sequence-viewer-alignment-trace-host'
-  ]);
+test('[EDGE] sequence-viewer detail view no longer includes the standalone alignment trace panel', () => {
+  const detailViewSource = readSource('ui/html/views/sequence-viewer-detail-view.html');
+  const publicApiSource = readSource('src/renderer/modules/sequence-viewer/public-api.js');
+  assert.doesNotMatch(detailViewSource, /sequence-viewer-alignment-trace-panel/);
+  assert.doesNotMatch(detailViewSource, /sequence-viewer-alignment-trace-host/);
+  assert.doesNotMatch(publicApiSource, /renderAlignmentTracePanelHtml/);
+});
+test('[EDGE] sequence-viewer shows the AB1 chromatogram inline for an active sequencing alignment', async () => {
+  const document = createMockDocument();
   const moduleWithDom = loadEsmStyleModule(
     path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
     { document }
   );
   const viewer = moduleWithDom.initSequenceViewer({ document });
+  const referenceSequence = 'ACGT'.repeat(70);
+  const querySequence = `${referenceSequence.slice(0, 10)}T${referenceSequence.slice(11)}`;
+  const positions = Array.from({ length: querySequence.length }, (_item, index) => 2 + (index * 3));
+  const sampleCount = positions[positions.length - 1] + 4;
+  const channels = ['A', 'C', 'G', 'T'].map((base) => {
+    const values = Array.from({ length: sampleCount }, () => 0);
+    for (let index = 0; index < querySequence.length; index += 1) {
+      const position = positions[index];
+      const matchesBase = querySequence[index] === base;
+      values[position] = matchesBase ? 9 : 1;
+      if (matchesBase && position > 0) {
+        values[position - 1] = 3;
+      }
+      if (matchesBase && position + 1 < values.length) {
+        values[position + 1] = 3;
+      }
+    }
+    return { base, values };
+  });
   viewer.loadFromExternal({
     name: 'RefSeq',
-    sequence: 'GGGACGTACGTCCC',
+    sequence: referenceSequence,
     topology: 'linear',
     source: 'external',
     features: []
@@ -172,30 +202,33 @@ test('[EDGE] sequence-viewer shows the AB1 chromatogram panel for an active sequ
       name: 'trace_ab1',
       sourceFormat: 'ab1',
       topology: 'linear',
-      sequence: 'ACGTTCGT',
-      quality: 'IIIIIIII',
+      sequence: querySequence,
+      quality: 'I'.repeat(querySequence.length),
       trace: {
-        positions: [2, 5, 8, 11, 14, 17, 20, 23],
-        channels: [
-          { base: 'A', values: [0, 9, 2, 1, 0, 1, 0, 0, 6, 1, 0, 0, 0, 0, 1, 0, 9, 2, 0, 0, 0, 0, 0, 0] },
-          { base: 'C', values: [0, 1, 7, 1, 0, 8, 2, 0, 1, 9, 1, 0, 0, 2, 8, 1, 0, 7, 2, 0, 0, 8, 2, 0] },
-          { base: 'G', values: [0, 0, 1, 8, 0, 1, 7, 1, 0, 1, 8, 1, 0, 0, 2, 8, 0, 1, 8, 1, 0, 1, 7, 1] },
-          { base: 'T', values: [0, 0, 0, 1, 7, 1, 0, 8, 2, 0, 1, 9, 2, 0, 8, 1, 0, 0, 2, 9, 1, 0, 1, 8] }
-        ]
+        positions,
+        channels
       }
     }
   });
   const result = await viewer.runSequencingAlignment();
   await flushAsync();
 
-  const panel = document.getElementById('sequence-viewer-alignment-trace-panel');
-  const host = document.getElementById('sequence-viewer-alignment-trace-host');
+  const sequenceHost = document.getElementById('sequence-viewer-sequence-host');
   assert.equal(Boolean(result), true);
-  assert.equal(Boolean(panel.hidden), false);
-  assert.match(host.innerHTML, /trace_ab1/);
-  assert.match(host.innerHTML, /sequence-viewer-alignment-trace-svg/);
-  assert.match(host.innerHTML, /sequence-viewer-trace-line-a/);
-  assert.match(host.innerHTML, /sequence-viewer-trace-diff-mismatch/);
+  assert.match(sequenceHost.innerHTML, /sequence-viewer-inline-trace-row/);
+  assert.match(sequenceHost.innerHTML, /sequence-viewer-inline-trace-svg/);
+  assert.doesNotMatch(sequenceHost.innerHTML, /sequence-viewer-inline-alignment-trace/);
+  assert.doesNotMatch(sequenceHost.innerHTML, /sequence-viewer-alignment-trace-scroll/);
+  assert.doesNotMatch(sequenceHost.innerHTML, /sequence-viewer-trace-base-call/);
+  assert.doesNotMatch(sequenceHost.innerHTML, /sequence-viewer-trace-base-tick/);
+  assert.doesNotMatch(sequenceHost.innerHTML, /sequence-viewer-trace-diff-mismatch/);
+  assert.equal((sequenceHost.innerHTML.match(/sequence-viewer-inline-trace-row/g) || []).length > 1, true);
+  assert.match(sequenceHost.innerHTML, /sequence-viewer-trace-line-a/);
+  assert.match(sequenceHost.innerHTML, /sequence-viewer-alignment-query-base-mismatch/);
+  const topIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-strand-row-top');
+  const traceIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-inline-trace-row');
+  const queryIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-alignment-query-row');
+  assert.equal(topIndex < traceIndex && traceIndex < queryIndex, true);
 });
   }
 };

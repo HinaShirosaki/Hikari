@@ -1,4 +1,4 @@
-import { sanitizeProteinAssemblySequence } from '../../tool-box/protein-assembly.js';
+import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { buildFeatureDerivedSequence } from './sequence-utils.js';
 import { formatCount } from './row-factory.js';
 

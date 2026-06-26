@@ -1,50 +1,47 @@
-const SAVED_SAMPLE_DRAG_MIME = 'application/x-hikari-saved-sample-id';
-
-function getDraggedSavedSampleId(event, uiState) {
-  const dataTransfer = event?.dataTransfer;
-  const explicitId = dataTransfer
-    ? dataTransfer.getData(SAVED_SAMPLE_DRAG_MIME) || dataTransfer.getData('text/plain')
-    : '';
-  return String(explicitId || uiState?.draggingSavedSampleId || '').trim();
-}
-
-function clearWellDropTargets(inventorySections) {
-  inventorySections.querySelectorAll('[data-well-index]').forEach((button) => {
-    button.classList.remove('well-drag-over');
-  });
-}
-
-export function fillWellWithSavedSample(ctx, sampleId, section, containerId, wellIndex) {
-  const { helpers, persist, uiState } = ctx;
+// CSV columns: well,code,name,type,lot,concentration,notes (header required, "well" matches the well label e.g. A1 or W3)
+function importContainerCsv(ctx, section, container, csvText) {
+  const { helpers, persist, state } = ctx;
   helpers.ensureSamples();
-  const index = Number(wellIndex);
-  const cleanSampleId = String(sampleId || '').trim();
-  if (!cleanSampleId || !section || !containerId || !Number.isInteger(index) || index < 0) {
-    return false;
+  const lines = csvText.split(/\r\n|\r|\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 2) {
+    return;
   }
-
-  const sample = helpers.getSampleById(cleanSampleId);
-  const container = helpers.getContainer(section, containerId);
-  const wells = Array.isArray(container?.wells) ? container.wells : [];
-  if (!sample || !container || index >= wells.length) {
-    return false;
+  const header = lines[0].split(',').map((cell) => cell.trim().toLowerCase());
+  const wellIndex = header.indexOf('well');
+  if (wellIndex < 0) {
+    ctx.uiState.wellEditorStatus = 'Import CSV needs a "well" column.';
+    return;
   }
-
-  sample.inventoryLink = { section, containerId: container.id, wellIndex: index };
-  sample.location = helpers.buildAutoLocationFromLink(section, container, index);
-  sample.updatedAt = new Date().toISOString();
-  uiState.selectedContainer = { section, containerId: container.id };
-  uiState.selectedSectionName = section;
-  uiState.editingWellIndex = index;
-  uiState.editingSampleId = sample.id;
-  const wellLabel = typeof helpers.getWellLabel === 'function'
-    ? helpers.getWellLabel(container, index)
-    : `Cell ${index + 1}`;
-  uiState.wellEditorStatus = `Filled ${wellLabel} with ${sample.code || sample.name || sample.id}.`;
+  lines.slice(1).forEach((line) => {
+    const cells = line.split(',').map((cell) => cell.trim());
+    const wellLabel = cells[wellIndex];
+    const targetIndex = (container.wells || []).findIndex((_well, index) => (
+      helpers.getWellLabel(container, index).toLowerCase() === wellLabel.toLowerCase()
+    ));
+    const name = header.indexOf('name') >= 0 ? cells[header.indexOf('name')] : '';
+    if (targetIndex < 0 || !name) {
+      return;
+    }
+    const code = header.indexOf('code') >= 0 ? helpers.normalizeSampleCode(cells[header.indexOf('code')]) : '';
+    const sample = {
+      id: `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+      code: code || helpers.makeDefaultSampleCode(),
+      name,
+      type: helpers.normalizeSampleType(header.indexOf('type') >= 0 ? cells[header.indexOf('type')] : 'plasmid'),
+      lot: header.indexOf('lot') >= 0 ? cells[header.indexOf('lot')] : '',
+      concentration: header.indexOf('concentration') >= 0 ? cells[header.indexOf('concentration')] : '',
+      notes: header.indexOf('notes') >= 0 ? cells[header.indexOf('notes')] : '',
+      location: helpers.buildAutoLocationFromLink(section, container, targetIndex),
+      inventoryLink: { section, containerId: container.id, wellIndex: targetIndex },
+      chemicalLinks: [],
+      compoundStructure: null,
+      updatedAt: new Date().toISOString()
+    };
+    state.samples.push(sample);
+  });
+  ctx.uiState.wellEditorStatus = 'Imported samples from CSV.';
   persist();
   ctx.notifySamplesChanged();
-  ctx.renderSections();
-  return true;
 }
 
 export function bindWellSampleEvents(ctx) {
@@ -71,58 +68,6 @@ export function bindWellSampleEvents(ctx) {
       renderSections();
     });
 
-    button.addEventListener('dragover', (event) => {
-      if (!getDraggedSavedSampleId(event, uiState)) {
-        return;
-      }
-      event.preventDefault();
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'move';
-      }
-      button.classList.add('well-drag-over');
-    });
-
-    button.addEventListener('dragleave', () => {
-      button.classList.remove('well-drag-over');
-    });
-
-    button.addEventListener('drop', (event) => {
-      const sampleId = getDraggedSavedSampleId(event, uiState);
-      if (!sampleId) {
-        return;
-      }
-      event.preventDefault();
-      button.classList.remove('well-drag-over');
-      fillWellWithSavedSample(
-        ctx,
-        sampleId,
-        button.dataset.section,
-        button.dataset.containerId,
-        button.dataset.wellIndex
-      );
-    });
-  });
-
-  inventorySections.querySelectorAll('[data-saved-sample-drag]').forEach((button) => {
-    button.addEventListener('dragstart', (event) => {
-      const sampleId = String(button.dataset.savedSampleDrag || '').trim();
-      if (!sampleId) {
-        return;
-      }
-      uiState.draggingSavedSampleId = sampleId;
-      button.classList.add('is-dragging');
-      if (event.dataTransfer) {
-        event.dataTransfer.effectAllowed = 'move';
-        event.dataTransfer.setData(SAVED_SAMPLE_DRAG_MIME, sampleId);
-        event.dataTransfer.setData('text/plain', sampleId);
-      }
-    });
-
-    button.addEventListener('dragend', () => {
-      uiState.draggingSavedSampleId = '';
-      button.classList.remove('is-dragging');
-      clearWellDropTargets(inventorySections);
-    });
   });
 
   inventorySections.querySelectorAll('[data-well-sample-select]').forEach((select) => {
@@ -200,6 +145,70 @@ export function bindWellSampleEvents(ctx) {
       persist();
       notifySamplesChanged();
       renderSections();
+    });
+  });
+
+  inventorySections.querySelectorAll('[data-well-sample-clone]').forEach((button) => {
+    button.addEventListener('click', () => {
+      helpers.ensureSamples();
+      const section = uiState.selectedContainer?.section;
+      const containerId = uiState.selectedContainer?.containerId;
+      const container = section && containerId ? helpers.getContainer(section, containerId) : null;
+      const sample = helpers.getSampleById(button.dataset.wellSampleClone);
+      if (!container || !sample) {
+        return;
+      }
+      const targetLabel = window.prompt(`Clone "${sample.code || sample.name}" to which well? (e.g. ${helpers.getWellLabel(container, 0)})`, '');
+      if (!targetLabel) {
+        return;
+      }
+      const targetIndex = (container.wells || []).findIndex((_well, wellIndex) => (
+        helpers.getWellLabel(container, wellIndex).toLowerCase() === targetLabel.trim().toLowerCase()
+      ));
+      if (targetIndex < 0) {
+        uiState.wellEditorStatus = `No well named "${targetLabel}" in this container.`;
+        renderSections();
+        return;
+      }
+      const clone = {
+        ...sample,
+        id: `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+        inventoryLink: { section, containerId, wellIndex: targetIndex },
+        location: helpers.buildAutoLocationFromLink(section, container, targetIndex),
+        updatedAt: new Date().toISOString()
+      };
+      state.samples.push(clone);
+      uiState.editingWellIndex = targetIndex;
+      uiState.editingSampleId = clone.id;
+      uiState.wellEditorStatus = `Cloned sample into ${helpers.getWellLabel(container, targetIndex)}.`;
+      persist();
+      notifySamplesChanged();
+      renderSections();
+    });
+  });
+
+  inventorySections.querySelectorAll('[data-container-import-csv]').forEach((button) => {
+    button.addEventListener('click', () => {
+      inventorySections.querySelector(`[data-container-import-input="${button.dataset.containerImportCsv}"]`)?.click();
+    });
+  });
+
+  inventorySections.querySelectorAll('[data-container-import-input]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      input.value = '';
+      if (!file) {
+        return;
+      }
+      const section = uiState.selectedContainer?.section;
+      const containerId = input.dataset.containerImportInput;
+      const container = section && containerId ? helpers.getContainer(section, containerId) : null;
+      if (!container) {
+        return;
+      }
+      file.text().then((text) => importContainerCsv(ctx, section, container, text)).then(() => {
+        renderSections();
+      });
     });
   });
 

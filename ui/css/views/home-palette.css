@@ -1,0 +1,35 @@
+/* Home dashboard visualization colors that are not part of the app theme. */
+
+:root {
+  --home-contribution-empty: #ebedf0;
+  --home-contribution-border: rgba(27, 31, 36, 0.06);
+  --home-contribution-level-1: #9be9a8;
+  --home-contribution-level-2: #40c463;
+  --home-contribution-level-3: #30a14e;
+  --home-contribution-level-4: #216e39;
+
+  /* Prototype card chrome + warn accent (exact values from the design prototype). */
+  --home-tile-shadow: 0 1px 3px rgba(27, 20, 14, 0.06);
+  --home-warn: #b07d18;
+}
+
+body.theme-night {
+  --home-contribution-empty: color-mix(in srgb, var(--theme-surface) 74%, var(--theme-text-strong) 26%);
+  --home-contribution-border: color-mix(in srgb, var(--theme-border-soft) 88%, transparent);
+  --home-contribution-level-1: #77c987;
+  --home-contribution-level-2: #44b864;
+  --home-contribution-level-3: #258d49;
+  --home-contribution-level-4: #176a35;
+
+  --home-tile-shadow: 0 1px 3px rgba(0, 0, 0, 0.22);
+  --home-warn: #d3a23f;
+}
+
+body.theme-miku {
+  --home-contribution-empty: #e2f4f2;
+  --home-contribution-border: rgba(24, 111, 107, 0.12);
+  --home-contribution-level-1: #a9ece7;
+  --home-contribution-level-2: #76ddd5;
+  --home-contribution-level-3: #39c5bb;
+  --home-contribution-level-4: #208f88;
+}

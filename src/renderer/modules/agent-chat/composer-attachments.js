@@ -18,6 +18,15 @@ function formatAttachmentSize(size) {
   return `${numeric} B`;
 }
 
+function estimateDataUrlSize(dataUrl = '') {
+  const base64 = String(dataUrl || '').split(',')[1] || '';
+  if (!base64) {
+    return 0;
+  }
+  const padding = base64.endsWith('==') ? 2 : (base64.endsWith('=') ? 1 : 0);
+  return Math.max(0, Math.floor((base64.length * 3) / 4) - padding);
+}
+
 export function buildAttachmentSummary(attachments = []) {
   const items = asArray(attachments).filter((attachment) => trimText(attachment?.name, 180));
   if (!items.length) {
@@ -54,17 +63,33 @@ export function createComposerAttachmentsController({
 }) {
   let composerAttachments = [];
 
+  function normalizeAttachmentRecord(source = {}) {
+    const dataUrl = String(source?.dataUrl || source?.data_url || '').trim();
+    const inferredMimeType = trimText(String(dataUrl).match(/^data:([^;,]+)/i)?.[1], 160);
+    const mimeType = trimText(source?.mimeType || source?.mime_type, 160) || inferredMimeType;
+    const kind = trimText(source?.kind, 40) || (mimeType.startsWith('image/') ? 'image' : 'file');
+    return {
+      ...source,
+      id: trimText(source?.id, 120) || createId(),
+      name: sanitizeAttachmentName(source?.name, kind === 'image' ? 'image.png' : 'attachment'),
+      mimeType,
+      size: Number.isFinite(Number(source?.size)) && Number(source.size) > 0
+        ? Number(source.size)
+        : estimateDataUrlSize(dataUrl),
+      dataUrl,
+      kind
+    };
+  }
+
   async function normalizeAttachmentFile(file) {
     const dataUrl = await fileToDataUrl(file);
     const mimeType = trimText(file?.type, 160) || trimText(String(dataUrl).match(/^data:([^;,]+)/i)?.[1], 160);
-    return {
-      id: createId(),
+    return normalizeAttachmentRecord({
       name: sanitizeAttachmentName(file?.name, mimeType.startsWith('image/') ? 'image' : 'attachment'),
       mimeType,
       size: Number(file?.size) || 0,
-      dataUrl,
-      kind: mimeType.startsWith('image/') ? 'image' : 'file'
-    };
+      dataUrl
+    });
   }
 
   function render() {
@@ -81,11 +106,18 @@ export function createComposerAttachmentsController({
     attachmentList.innerHTML = items.map((attachment) => {
       const label = trimText(attachment?.kind, 20) === 'image' ? 'Image' : 'File';
       const size = formatAttachmentSize(attachment?.size);
+      const dataUrl = trimText(attachment?.dataUrl, 500000);
+      const thumbnail = label === 'Image' && dataUrl.startsWith('data:image/')
+        ? `<img class="agent-attachment-thumb" src="${safeText(dataUrl)}" alt="" aria-hidden="true" />`
+        : '';
       return `
         <span class="agent-attachment-pill${label === 'Image' ? ' is-image' : ''}">
-          <span>${safeText(label)}</span>
-          <span>${safeText(trimText(attachment?.name, 180))}</span>
-          ${size ? `<span>${safeText(size)}</span>` : ''}
+          ${thumbnail}
+          <span class="agent-attachment-pill-meta">
+            <span>${safeText(label)}</span>
+            <span>${safeText(trimText(attachment?.name, 180))}</span>
+            ${size ? `<span>${safeText(size)}</span>` : ''}
+          </span>
           <button type="button" data-agent-remove-attachment="${safeText(trimText(attachment?.id, 120))}" aria-label="${safeText(`Remove ${trimText(attachment?.name, 180)}`)}">&times;</button>
         </span>
       `;
@@ -99,6 +131,21 @@ export function createComposerAttachmentsController({
     }
     invalidateDeveloperContextPreview();
     render();
+  }
+
+  function addAttachment(attachment = {}, options = {}) {
+    const normalized = normalizeAttachmentRecord(attachment);
+    if (!trimText(normalized?.name, 180) || !trimText(normalized?.dataUrl, 500000)) {
+      return null;
+    }
+    composerAttachments = [...composerAttachments, normalized].slice(-8);
+    invalidateDeveloperContextPreview();
+    render();
+    renderDeveloperResponseSimulator();
+    if (options.announce !== false) {
+      setStatus(`${composerAttachments.length} attachment${composerAttachments.length === 1 ? '' : 's'} ready.`);
+    }
+    return { ...normalized };
   }
 
   async function handleSelection(files = []) {
@@ -130,6 +177,7 @@ export function createComposerAttachmentsController({
   }
 
   return {
+    addAttachment,
     getAttachments: () => asArray(composerAttachments).map((attachment) => ({ ...attachment })),
     handleSelection,
     removeById,

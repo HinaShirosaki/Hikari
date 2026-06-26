@@ -2,8 +2,8 @@ module.exports = function registerEdgeToolBoxSuitePart02(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-test('[EDGE] tool-box designCloningPrimers falls back to relaxed thresholds when needed', () => {
-  const primerPlan = toolBox.designCloningPrimers({
+test('[EDGE] sequence-viewer designCloningPrimers falls back to relaxed thresholds when needed', () => {
+  const primerPlan = sequenceViewerInternals.designCloningPrimers({
     strategy: 'restriction-ligation',
     preferences: {
       maxPrimerLength: 25
@@ -32,8 +32,8 @@ test('[EDGE] tool-box designCloningPrimers falls back to relaxed thresholds when
   assert.equal(primerPlan.selectedThresholdLevel, 'relaxed');
   assert.equal(primerPlan.primers.length, 2);
 });
-test('[EDGE] tool-box designCloningPrimers supports multi-primer tiling for long insertions', () => {
-  const primerPlan = toolBox.designCloningPrimers({
+test('[EDGE] sequence-viewer designCloningPrimers supports multi-primer tiling for long insertions', () => {
+  const primerPlan = sequenceViewerInternals.designCloningPrimers({
     strategy: 'site-directed-mutagenesis',
     selectedHost: {
       id: 'host-1',
@@ -51,14 +51,14 @@ test('[EDGE] tool-box designCloningPrimers supports multi-primer tiling for long
   assert.equal(primerPlan.primerCount > 2, true);
   assert.equal(primerPlan.primerOrder.includes('tile_outer_left'), true);
 });
-test('[EDGE] tool-box designCloningPrimers enforces the per-level overlap Tm-difference cap', () => {
+test('[EDGE] sequence-viewer designCloningPrimers enforces the per-level overlap Tm-difference cap', () => {
   const fragmentMap = {
     fragments: [
       { id: 'frag-1', name: 'Frag1', role: 'insert', sequence: 'ATGGCAGCAGCAGGTGCAGCAGCAGGTGCAGCAGCAGGT' },
       { id: 'frag-2', name: 'Frag2', role: 'insert', sequence: 'GCAGCAGCAGGTGCAGCAGCAGGTATGGCAGCAGCAGGT' }
     ]
   };
-  const planWithOverlapTms = (leftTm, rightTm) => toolBox.designCloningPrimers({
+  const planWithOverlapTms = (leftTm, rightTm) => sequenceViewerInternals.designCloningPrimers({
     strategy: 'overlap-pcr',
     fragmentMap,
     routeEvaluations: {
@@ -88,9 +88,9 @@ test('[EDGE] tool-box designCloningPrimers enforces the per-level overlap Tm-dif
   assert.equal(rejected.attempts.every((attempt) => attempt.rejectedForTmDifference === true), true);
   assert.match(rejected.warnings[0], /Tm-difference cap/);
 });
-test('[EDGE] tool-box restrictionCutOverhang distinguishes sticky from blunt cutters', () => {
+test('[EDGE] sequence-viewer restrictionCutOverhang distinguishes sticky from blunt cutters', () => {
   const restrictionLigation = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box', 'cloning-assembly', 'restriction-ligation.js')
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'cloning-assembly', 'restriction-ligation.js')
   );
   const overhang = restrictionLigation.restrictionCutOverhang;
 
@@ -108,8 +108,8 @@ test('[EDGE] tool-box restrictionCutOverhang distinguishes sticky from blunt cut
 
   assert.equal(overhang('').type, 'unknown');
 });
-test('[EDGE] tool-box designPcrPrimerPair designs a forward and reverse primer for a selected sequence', () => {
-  const primerPlan = toolBox.designPcrPrimerPair(
+test('[EDGE] sequence-viewer designPcrPrimerPair designs a forward and reverse primer for a selected sequence', () => {
+  const primerPlan = sequenceViewerInternals.designPcrPrimerPair(
     'GCGCGCGCGCGCGATATATATATATATATATATAGCGCGCGCGCGCGAT',
     { name: 'selected_region' }
   );
@@ -163,8 +163,8 @@ test('[EDGE] bench tool calculations return instant results and substituted form
   assert.match(reactionResult.resultText, /Water: 90 uL/i);
   assert.match(reactionResult.formulaText, /ATP volume = 1 mM x 100 uL \/ 10 mM/i);
 });
-test('[EDGE] tool-box assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {
-  const plan = toolBox.assembleCloningPlan({
+test('[EDGE] sequence-viewer assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {
+  const plan = sequenceViewerInternals.assembleCloningPlan({
     hostVectors: [
       {
         id: 'host-1',
@@ -191,8 +191,8 @@ test('[EDGE] tool-box assembleCloningPlan prefers restriction-ligation for simpl
   assert.equal(Array.isArray(plan.validationPlan), true);
   assert.equal(plan.primerOligoPlan.feasible, true);
 });
-test('[EDGE] tool-box assembleCloningPlan reports infeasible inputs with alternate guidance', () => {
-  const plan = toolBox.assembleCloningPlan({
+test('[EDGE] sequence-viewer assembleCloningPlan reports infeasible inputs with alternate guidance', () => {
+  const plan = sequenceViewerInternals.assembleCloningPlan({
     fragments: [
       {
         id: 'insert-1',

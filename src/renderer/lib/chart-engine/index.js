@@ -15,11 +15,11 @@ export {
 //   const engine = createChartEngine({
 //     getChartTarget: () => document.querySelector('#chart'),  // re-evaluated each render
 //     controlsTarget: document.querySelector('#chart-controls'), // optional; panel built here
-//     ReactLib, ReactDOMLib, ReactVisLib,
 //     initialStyle,            // optional saved style
 //     onChange: (style) => {}, // optional; if given, engine does NOT auto-render
 //     safeText                 // optional html escaper for column labels
 //   });
+// Rendering uses Plotly.js (loaded as the window.Plotly global by index.html).
 //   engine.setContext({ headers, seriesLabels });  // feeds the column/series controls
 //   engine.setData(chartModel);
 //   engine.render();
@@ -33,15 +33,11 @@ export {
 export function createChartEngine({
   getChartTarget,
   controlsTarget,
-  ReactLib,
-  ReactDOMLib,
-  ReactVisLib,
   initialStyle,
   onChange,
   safeText
 } = {}) {
-  const hasReactVis = Boolean(ReactLib && ReactDOMLib && ReactVisLib);
-  const renderer = createChartRenderer({ ReactLib, ReactDOMLib, ReactVisLib, hasReactVis });
+  const renderer = createChartRenderer();
   let currentModel = null;
   let lastSeriesLabels = [];
 

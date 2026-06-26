@@ -126,10 +126,31 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         'mcp-contract',
         'stdio-server.js'
       ));
+      const { createAgentContainerRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'agent-container.js'
+      ));
+      const containerRuntime = createAgentContainerRuntime({
+        now: () => '2026-06-25T12:00:00.000Z'
+      });
       const calls = [];
       const gateway = createAgentMcpGateway({
         runTool: async (toolId, args, snapshot, context) => {
           calls.push({ toolId, args, snapshot, context });
+          if (toolId === 'container') {
+            const result = await containerRuntime.execute(args);
+            return {
+              ok: result.ok !== false,
+              result,
+              items: Array.isArray(result.items) ? result.items : (result.container ? [result.container] : []),
+              summary: result.summary
+            };
+          }
           if (toolId === 'protocol-matching') {
             const selectedProtocol = {
               id: 'prot-1',
@@ -322,6 +343,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(mcpToolNames.includes('command_line'), false);
       assert.equal(mcpToolNames.includes('sub_agent'), false);
       assert.equal(mcpToolNames.includes('memory'), true);
+      assert.equal(mcpToolNames.includes('container'), true);
       assert.equal(mcpToolNames.includes('ask_user'), true);
       assert.equal(mcpToolNames.includes('unknown_direct_tool'), false);
       assert.equal(mcpToolNames.includes('tool_info'), false);
@@ -331,6 +353,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       const askUserDefinition = mcpTools.find((tool) => tool.name === 'ask_user');
       const protocolGenerationDefinition = mcpTools.find((tool) => tool.name === 'protocol_generation');
       const notebookDraftDefinition = mcpTools.find((tool) => tool.name === 'notebook_draft');
+      const containerDefinition = mcpTools.find((tool) => tool.name === 'container');
       const literatureSearchDefinition = mcpTools.find((tool) => tool.name === 'literature_search');
       const paperDownloadDefinition = mcpTools.find((tool) => tool.name === 'paper_download');
       assert.equal(askUserDefinition.annotations.readOnlyHint, true);
@@ -340,6 +363,8 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(protocolGenerationDefinition.annotations.destructiveHint, false);
       assert.equal(notebookDraftDefinition.annotations.readOnlyHint, true);
       assert.equal(notebookDraftDefinition.annotations.idempotentHint, false);
+      assert.equal(containerDefinition.annotations.readOnlyHint, false);
+      assert.equal(containerDefinition.inputSchema.properties.action.enum.includes('replace_range'), true);
       assert.equal(literatureSearchDefinition.annotations.openWorldHint, true);
       assert.equal(literatureSearchDefinition.inputSchema.type, 'object');
       assert.equal(literatureSearchDefinition.inputSchema.properties.use_codex_paper_context.type, 'boolean');
@@ -476,6 +501,40 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(askUserResult.user_question.options.length, 2);
       assert.equal(askUserResult.final_response.status, 'needs_more_info');
       assert.equal(calls[calls.length - 1].toolId, 'notebook-draft');
+
+      const containerCreateResult = await gateway.callGatewayTool('container', {
+        action: 'create',
+        name: 'copied phrase',
+        value: 'alpha beta',
+        source: 'direct_literal:test'
+      }, {
+        requestId: 'req-container-create'
+      });
+      assert.equal(containerCreateResult.ok, true);
+      assert.equal(containerCreateResult.status, 'created');
+      assert.equal(containerCreateResult.container.id, '1');
+      assert.equal(containerCreateResult.container.name, 'copied phrase');
+      assert.equal(containerCreateResult.container.value, 'alpha beta');
+      assert.equal(calls[calls.length - 1].toolId, 'container');
+
+      const containerEditResult = await gateway.callGatewayTool('container', {
+        action: 'replace_range',
+        id: '1',
+        start: 6,
+        end: 10,
+        replacement: 'gamma'
+      }, {
+        requestId: 'req-container-edit'
+      });
+      assert.equal(containerEditResult.ok, true);
+      assert.equal(containerEditResult.status, 'replaced');
+      assert.equal(containerEditResult.container.id, '1');
+      assert.equal(containerEditResult.container.value, 'alpha gamma');
+      assert.deepEqual(containerEditResult.range, {
+        start: 6,
+        end: 10,
+        inserted_length: 5
+      });
 
       const invalidResult = await gateway.callGatewayTool('record_lookup', {
         query: 'PEI',

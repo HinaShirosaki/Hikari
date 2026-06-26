@@ -11,7 +11,7 @@ const dilution = loadEsmStyleModule(path.join(root, 'src/renderer/modules/assay/
 
 const {
   parseConcentrationMagnitude, formatConcentrationLabel, hasExplicitUnit,
-  buildDilutionSeries, buildInterpolatedSeries
+  buildDilutionSeries, buildInterpolatedSeries, isKnownUnit, splitConcentrationValue
 } = conc;
 
 // --- default unit fallback for bare numbers; inline unit always wins ---
@@ -20,11 +20,24 @@ assert.ok(Math.abs(parseConcentrationMagnitude('100', 'nM') - 1e-7) < 1e-18, 'ba
 assert.ok(Math.abs(parseConcentrationMagnitude('1 mM', 'nM') - 1e-3) < 1e-15, 'inline unit overrides axis unit');
 assert.equal(parseConcentrationMagnitude('1e3', 'nM'), 1e3 * 1e-9, 'scientific notation not mistaken for a unit');
 
+// --- a present-but-unknown unit is rejected, not silently treated as base units ---
+assert.equal(parseConcentrationMagnitude('10 millimolar', 'nM'), null, 'spelled-out unit rejected (no silent base-unit fallback)');
+assert.equal(parseConcentrationMagnitude('5 nMM'), null, 'typo unit rejected');
+assert.equal(parseConcentrationMagnitude('100 xyz'), null, 'gibberish unit rejected');
+
 // --- display labels ---
 assert.equal(formatConcentrationLabel('100', 'nM'), '100 nM', 'appends axis unit to bare number');
 assert.equal(formatConcentrationLabel('1 µM', 'nM'), '1 µM', 'keeps an explicit unit as-is');
 assert.equal(hasExplicitUnit('1e3'), false, 'exponent is not a unit');
 assert.equal(hasExplicitUnit('5 pM'), true, 'pM detected as a unit');
+
+// --- in-cell unit recognition (drives adopting a typed unit as the axis unit) ---
+assert.equal(splitConcentrationValue('100 nM').unit, 'nM', 'unit text preserved with case');
+assert.equal(isKnownUnit('nM'), true, 'nM is recognized');
+assert.equal(isKnownUnit('µM'), true, 'µM is recognized');
+assert.equal(isKnownUnit('n'), false, 'partial "100 n" typing is not recognized yet');
+assert.equal(isKnownUnit('abc'), false, 'gibberish unit is not recognized');
+assert.equal(isKnownUnit(''), false, 'bare number has no unit to recognize');
 
 // --- dilution-factor auto-fill series (keeps the start cell's unit) ---
 assert.equal(
@@ -103,5 +116,15 @@ const badPlan = dilution.calculateSerialDilutionPlan({
   concentrationUnit: 'nM'
 });
 assert.notEqual(badPlan.error, '', 'stock below first target is rejected');
+
+// An unknown stock unit must be rejected, not silently scaled to base molar
+// (which would pass the >0 guard and emit a wrong-by-orders-of-magnitude recipe).
+const unknownUnitPlan = dilution.calculateSerialDilutionPlan({
+  group: groups[0],
+  volumePerWellUl: 100,
+  stockConcentrationText: '10 millimolar',
+  concentrationUnit: 'nM'
+});
+assert.notEqual(unknownUnitPlan.error, '', 'unknown stock unit is rejected, not silently treated as base molar');
 
 console.log('assay concentration-unit self-check passed');

@@ -16,6 +16,7 @@ export function bindAgentChatEvents({
   developerMockController,
   developerToolTestController,
   historyController,
+  captureImageAttachment,
   renderDeveloperToolHint
 }) {
   function applySuggestedPrompt(event) {
@@ -83,17 +84,6 @@ export function bindAgentChatEvents({
     void sessionManager.startNewChatSession();
   });
 
-  dom.deepResearchToggleBtn?.addEventListener('click', () => {
-    shell.ensureAgentState();
-    state.agentChat.deepResearchEnabled = !(state.agentChat.deepResearchEnabled === true);
-    developerContextController.invalidate();
-    persist();
-    shell.renderDeepResearchToggle();
-    shell.setStatus(state.agentChat.deepResearchEnabled === true
-      ? 'Deep research enabled.'
-      : 'Deep research disabled.');
-  });
-
   dom.clearBtn?.addEventListener('click', () => {
     dom.input.value = '';
     attachmentsController.reset();
@@ -142,6 +132,40 @@ export function bindAgentChatEvents({
 
   dom.attachBtn?.addEventListener('click', () => {
     dom.attachmentInput?.click();
+  });
+
+  dom.paperScreenshotBtn?.addEventListener('click', async () => {
+    if (typeof captureImageAttachment !== 'function') {
+      shell.setStatus('Paper screenshot capture is unavailable.');
+      return;
+    }
+    dom.paperScreenshotBtn.disabled = true;
+    dom.paperScreenshotBtn.classList.add('is-active');
+    dom.paperScreenshotBtn.setAttribute('aria-pressed', 'true');
+    shell.setStatus('Drag over the paper to capture a screenshot.');
+    try {
+      const result = await captureImageAttachment();
+      if (!result?.ok) {
+        if (!result?.cancelled) {
+          shell.setStatus(trimText(result?.error, 240) || 'Paper screenshot was not captured.');
+        }
+        return;
+      }
+      const attachment = attachmentsController.addAttachment(result.attachment, { announce: false });
+      if (!attachment) {
+        shell.setStatus('Paper screenshot was not attached.');
+        return;
+      }
+      dom.input.focus();
+      shell.syncComposerHeight();
+      shell.setStatus('Paper screenshot attached.');
+    } catch (error) {
+      shell.setStatus(String(error?.message || error || 'Failed to capture paper screenshot.'));
+    } finally {
+      dom.paperScreenshotBtn.disabled = false;
+      dom.paperScreenshotBtn.classList.remove('is-active');
+      dom.paperScreenshotBtn.setAttribute('aria-pressed', 'false');
+    }
   });
 
   dom.attachmentInput?.addEventListener('change', (event) => {

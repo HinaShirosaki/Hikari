@@ -46,14 +46,14 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(rendererSource, /project_science_question/);
       assert.match(rendererSource, /result_analysis/);
     });
-    test('deep research helper exports stepwise runtime and the app wires the toggle and routing', () => {
+    test('deep research helper remains backend-routable without renderer UI wiring', () => {
       const helperSource = fs.readFileSync(agentPath('deep-research', 'index.js'), 'utf8');
       const step4Source = fs.readFileSync(agentPath('deep-research', 'step-4-execute-plan.js'), 'utf8');
       const step5Source = fs.readFileSync(agentPath('deep-research', 'step-5-assemble-final-answer.js'), 'utf8');
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const agentRegistrarSource = fs.readFileSync(agentRegistrarPath('index.js'), 'utf8');
-      const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
       const rendererSource = [
         fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'event-bindings.js'), 'utf8'),
         fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'payload-builder.js'), 'utf8')
@@ -74,11 +74,10 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(mainAgentServicesSource, /createDeepResearchRuntime/);
       assert.match(mainAgentServicesSource, /const deepResearchRuntime = createDeepResearchRuntime/);
       assert.match(agentRegistrarSource, /deepResearchRuntime: deps\.deepResearchRuntime/);
-      assert.match(controllerCoreSource, /payload\?\.agent\?\.deepResearchEnabled === true/);
-      assert.match(rendererSource, /deepResearchEnabled: state\.agentChat\.deepResearchEnabled === true/);
-      assert.match(sharedSource, /deepResearchEnabled: false/);
-      assert.match(sharedSource, /deepResearchEnabled: source\.agentChat\?\.deepResearchEnabled === true/);
-      assert.match(agentViewSource, /id="agent-deep-research-toggle-btn"/);
+      assert.match(apiControllerSource, /payload\?\.agent\?\.deepResearchEnabled === true/);
+      assert.doesNotMatch(rendererSource, /deepResearchEnabled/);
+      assert.doesNotMatch(sharedSource, /deepResearchEnabled/);
+      assert.doesNotMatch(agentViewSource, /agent-deep-research-toggle-btn/);
     });
     test('sub-agent helper exports reusable runtime and action contract', () => {
       const source = fs.readFileSync(agentPath('tools', 'agent-sub-agent.js'), 'utf8');
@@ -115,6 +114,18 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(memorySource, /async function list\(input = \{\}\)/);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'memory'), true);
       assert.deepEqual(toolCallCatalog.memory?.input_schema?.properties?.action?.enum, ['recall', 'remember', 'forget', 'list']);
+    });
+    test('temporary container helper exports reusable runtime and short-id action contract', () => {
+      const containerSource = fs.readFileSync(agentPath('tools', 'agent-container.js'), 'utf8');
+      const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
+      const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
+
+      assert.match(containerSource, /const CONTAINER_ACTIONS = Object\.freeze/);
+      assert.match(containerSource, /function createAgentContainerRuntime\(deps = \{\}\)/);
+      assert.match(containerSource, /function allocateId\(\)/);
+      assert.match(containerSource, /function replaceRange\(input = \{\}\)/);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'container'), true);
+      assert.deepEqual(toolCallCatalog.container?.input_schema?.properties?.action?.enum, ['create', 'read', 'list', 'update', 'replace_range', 'rename', 'delete', 'clear']);
     });
     test('agent chat log helper exports reusable session log runtime and renderer consumes session UI ids', () => {
       const helperSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
@@ -350,7 +361,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     test('main wires intent parser + observability paths for parser-only controller', () => {
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
       const sessionRuntimeSource = fs.readFileSync(agentPath('runtime', 'agent-session-runtime.js'), 'utf8');
@@ -359,7 +370,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-observability'\)/);
       assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-controller-utils'\)/);
       assert.match(mainSource, /registerAgentIpc/);
-      assert.match(controllerCoreSource, /requestIntentParserPayload\(/);
+      assert.match(apiControllerSource, /requestIntentParserPayload\(/);
       assert.match(llmBridgeSource, /function createAgentLlmProviderBridge\(deps = \{\}\)/);
       assert.match(llmBridgeSource, /function requestText\(options = \{\}\)/);
       assert.match(llmBridgeSource, /function requestImageInput\(options = \{\}\)/);

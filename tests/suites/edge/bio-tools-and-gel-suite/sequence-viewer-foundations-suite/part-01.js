@@ -31,8 +31,15 @@ test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () 
     'computeGcPercent',
     'countAmbiguousBases',
     'summarizeFastqQuality',
-    'renderAlignmentTracePanelHtml',
-    'buildCircularPreviewHtmlDocument'
+    'buildAlignmentSequenceTrack',
+    'buildCircularPreviewHtmlDocument',
+    'assembleCloningPlan',
+    'evaluateOverlapPcr',
+    'evaluateGibsonAssembly',
+    'evaluateRestrictionLigation',
+    'evaluateSiteDirectedMutagenesis',
+    'designCloningPrimers',
+    'designPcrPrimerPair'
   ].forEach((name) => {
     assert.equal(typeof sequenceViewerInternals[name], 'function');
   });
@@ -302,21 +309,22 @@ test('[EDGE] sequence-viewer parseAb1Record captures chromatogram traces and bas
   assert.deepEqual(Array.from(aChannel.values), [7, 9, 12, 8]);
   assert.deepEqual(Array.from(gChannel.values), [1, 4, 2, 1]);
 });
-test('[EDGE] sequence-viewer renders AB1 chromatogram traces for the active alignment view', () => {
-  const html = sequenceViewerInternals.renderAlignmentTracePanelHtml({
-    state: {
+test('[EDGE] sequence-viewer builds AB1 chromatogram rows for the inline alignment track', () => {
+  const track = sequenceViewerInternals.buildAlignmentSequenceTrack(
+    {
       alignmentViewEnabled: true,
       activeAlignmentQueryRecord: {
         name: 'trace_with_channels',
         sourceFormat: 'ab1',
-        sequence: 'ACGT',
+        sequence: 'AGGT',
+        quality: 'IIII',
         trace: {
           positions: [5, 15, 25, 35],
           channels: [
-            { base: 'A', values: [7, 9, 12, 8] },
-            { base: 'C', values: [6, 3, 2, 1] },
-            { base: 'G', values: [1, 4, 2, 1] },
-            { base: 'T', values: [2, 1, 8, 10] }
+            { base: 'A', values: [7, 9, 12, 8, 1, 0, 0, 0, 0, 0, 1, 2, 8, 2, 1, 0, 0, 0, 0, 0, 1, 2, 8, 2, 1, 0, 0, 0, 0, 0, 1, 2, 8, 2, 1, 0] },
+            { base: 'C', values: [6, 3, 2, 1, 0, 1, 2, 8, 2, 1, 0, 0, 1, 2, 8, 2, 1, 0, 0, 0, 1, 2, 8, 2, 1, 0, 0, 0, 0, 0, 1, 2, 8, 2, 1, 0] },
+            { base: 'G', values: [1, 4, 2, 1, 0, 0, 1, 2, 8, 2, 1, 0, 0, 1, 2, 8, 2, 1, 0, 0, 0, 1, 2, 8, 2, 1, 0, 0, 0, 1, 2, 8, 2, 1, 0, 0] },
+            { base: 'T', values: [2, 1, 8, 10, 0, 0, 0, 1, 2, 8, 2, 1, 0, 0, 1, 2, 8, 2, 1, 0, 0, 0, 1, 2, 8, 2, 1, 0, 0, 0, 1, 2, 8, 2, 1, 0] }
           ]
         }
       },
@@ -324,62 +332,38 @@ test('[EDGE] sequence-viewer renders AB1 chromatogram traces for the active alig
         queryName: 'trace_with_channels',
         queryFormat: 'ab1',
         orientation: 'forward',
+        alignedReference: 'ACGT',
+        alignedQuery: 'AGGT',
+        referenceSpan: { start: 0, end: 4, wraps: false },
         identityPercent: 75,
         queryCoveragePercent: 100,
         differences: [
           {
             type: 'mismatch',
+            referenceStart: 1,
+            referenceEnd: 2,
             queryStart: 1,
             queryEnd: 2
           }
         ]
       }
+    },
+    makeAlignmentRecord('ACGT'),
+    {
+      lineLength: 4,
+      charAdvancePx: 8
     }
-  });
+  );
+  const traceHtml = track.traceLines['0'];
 
-  assert.match(html, /Chromatogram/);
-  assert.match(html, /sequence-viewer-alignment-trace-svg/);
-  assert.match(html, /sequence-viewer-trace-line-a/);
-  assert.match(html, /sequence-viewer-trace-line-c/);
-  assert.match(html, /<path class="sequence-viewer-trace-line sequence-viewer-trace-line-a" d="M[^"]+ C/u);
-  assert.equal(/<polyline class="sequence-viewer-trace-line/u.test(html), false);
-  assert.match(html, /sequence-viewer-trace-base-call-mismatch/);
-});
-test('[EDGE] sequence-viewer expands long AB1 chromatograms instead of squeezing them into the minimum plot width', () => {
-  const sequence = 'ACGT'.repeat(120);
-  const sampleCount = sequence.length * 10;
-  const values = Array.from({ length: sampleCount }, (_item, index) => index % 18);
-  const html = sequenceViewerInternals.renderAlignmentTracePanelHtml({
-    state: {
-      alignmentViewEnabled: true,
-      activeAlignmentQueryRecord: {
-        name: 'long_trace',
-        sourceFormat: 'ab1',
-        sequence,
-        trace: {
-          positions: Array.from({ length: sequence.length }, (_item, index) => index * 10),
-          channels: [
-            { base: 'A', values },
-            { base: 'C', values },
-            { base: 'G', values },
-            { base: 'T', values }
-          ]
-        }
-      },
-      activeAlignmentResult: {
-        queryName: 'long_trace',
-        queryFormat: 'ab1',
-        orientation: 'forward',
-        identityPercent: 100,
-        queryCoveragePercent: 100,
-        differences: []
-      }
-    }
-  });
-  const match = html.match(/viewBox="0 0 ([0-9]+) 220"/);
-  assert.equal(Boolean(match), true);
-  assert.equal(Number(match[1]) > 960, true);
-  assert.match(html, /style="width:[0-9]+px;"/);
+  assert.equal(track.cells[1].kind, 'mismatch');
+  assert.match(traceHtml, /sequence-viewer-inline-trace-row/);
+  assert.match(traceHtml, /sequence-viewer-inline-trace-svg/);
+  assert.match(traceHtml, /sequence-viewer-trace-line-a/);
+  assert.match(traceHtml, /<path class="sequence-viewer-trace-line sequence-viewer-trace-line-a" d="M[^"]+ C/u);
+  assert.equal(/<polyline class="sequence-viewer-trace-line/u.test(traceHtml), false);
+  assert.doesNotMatch(traceHtml, /sequence-viewer-alignment-trace-svg/);
+  assert.doesNotMatch(traceHtml, /sequence-viewer-trace-base-call/);
 });
 test('[EDGE] sequence-viewer alignSequenceToReference finds an exact forward hit', () => {
   const result = sequenceViewerInternals.alignSequenceToReference(

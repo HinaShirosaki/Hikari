@@ -19,6 +19,7 @@ const HIKARI_MCP_TOOL_NAMES = Object.freeze([
   'paper_intake_list_project_summaries',
   'purchase_recommendation',
   'memory',
+  'container',
   'ask_user'
 ]);
 
@@ -50,6 +51,7 @@ function buildHikariAgentMcpInstructionBodyLines() {
     `- \`${toolName('paper_intake_list_project_summaries')}\`: list paper-intake summaries for papers attached to a project.`,
     `- \`${toolName('purchase_recommendation')}\`: search and rank purchasable products.`,
     `- \`${toolName('memory')}\`: recall, remember, forget, and list sparse long-term memory records.`,
+    `- \`${toolName('container')}\`: store, name, read, copy, update, and position-edit temporary string or number containers with short runtime IDs.`,
     `- \`${toolName('ask_user')}\`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.`,
     '',
     'Tool-use rules:',
@@ -60,6 +62,7 @@ function buildHikariAgentMcpInstructionBodyLines() {
     `- Use \`${toolName('paper_analysis')}\` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.`,
     `- Use \`${toolName('paper_intake_search_summaries')}\` or \`${toolName('paper_intake_search_experiments')}\` when already-ingested papers are enough and a full paper read is unnecessary.`,
     `- Use \`${toolName('paper_intake_list_project_summaries')}\` for a project-scoped roll-up of ingested paper summaries.`,
+    `- Use \`${toolName('container')}\` for temporary exact string or number storage, especially when a value should be named, reused, copied, or edited by string position without turning it into long-term memory.`,
     `- Use direct \`${toolName('protocol_generation')}\` only after complete protocol JSON already exists.`,
     `- When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first, then call \`${toolName('protocol_generation')}\` with \`save: true\`, then summarize the review-ready protocol.`,
     `- When the user asks to save or add a generated protocol, call \`${toolName('protocol_generation')}\` once with \`save: true\`; Hikari will ask the user to approve or reject the generated protocol.`,

@@ -366,7 +366,7 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
   assert.ok(persistCalls >= 3);
   assert.ok(importedCalls >= 2);
 });
-test('protocol-management shows JSON import on create and hides it on edit', async () => {
+test('protocol-management opens JSON import in an overlay on create and hides the launcher on edit', async () => {
   const document = createMockDocument([
     'protocol-list-panel',
     'protocol-editor-panel',
@@ -380,6 +380,9 @@ test('protocol-management shows JSON import on create and hides it on edit', asy
     'protocol-view-content',
     'protocol-form',
     'protocol-json-import-panel',
+    'open-protocol-json-import-btn',
+    'protocol-json-import-overlay',
+    'protocol-json-import-close-btn',
     'protocol-json-import-file',
     'protocol-json-import-input',
     'import-protocol-json-btn',
@@ -444,7 +447,11 @@ test('protocol-management shows JSON import on create and hides it on edit', asy
 
   trigger(document.getElementById('create-protocol-btn'), 'click');
   assert.equal(document.getElementById('protocol-json-import-panel').hidden, false);
+  assert.equal(document.getElementById('protocol-json-import-overlay').hidden, true);
   assert.equal(document.getElementById('protocol-generate-btn').hidden, false);
+
+  trigger(document.getElementById('open-protocol-json-import-btn'), 'click');
+  assert.equal(document.getElementById('protocol-json-import-overlay').hidden, false);
 
   document.getElementById('protocol-json-import-input').value = '{"name":"Imported From Create","steps":["Add buffer"]}';
   trigger(document.getElementById('import-protocol-json-btn'), 'click');
@@ -453,12 +460,19 @@ test('protocol-management shows JSON import on create and hides it on edit', asy
   assert.equal(state.protocols.length, 1);
   assert.equal(state.protocols[0].name, 'Imported From Create');
   assert.match(document.getElementById('protocol-json-import-status').textContent, /Imported "Imported From Create"/);
+  assert.equal(document.getElementById('protocol-json-import-overlay').hidden, true);
+
+  trigger(document.getElementById('open-protocol-json-import-btn'), 'click');
+  assert.equal(document.getElementById('protocol-json-import-overlay').hidden, false);
+  trigger(document.getElementById('protocol-json-import-close-btn'), 'click');
+  assert.equal(document.getElementById('protocol-json-import-overlay').hidden, true);
 
   protocol.renderList();
   const editBtn = document.getElementById('protocol-list').querySelectorAll('[data-protocol-edit]')[0];
   trigger(editBtn, 'click');
 
   assert.equal(document.getElementById('protocol-json-import-panel').hidden, true);
+  assert.equal(document.getElementById('protocol-json-import-overlay').hidden, true);
   assert.equal(document.getElementById('protocol-generate-btn').hidden, true);
 });
   }

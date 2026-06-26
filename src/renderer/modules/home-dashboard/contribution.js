@@ -1,10 +1,10 @@
 import { formatDateLocal, normalizeNotebookState } from './utils.js';
 
-// GitHub-style contribution heatmap covering the past 22 weeks. Aggregates
+// GitHub-style contribution heatmap covering the past 18 weeks. Aggregates
 // notebook entries, completed protocol steps, file uploads, analysis notes,
 // and quick logs into per-day buckets.
 export function initContributionWidget({ state, safeText, elements }) {
-  const { monthLabels, grid } = elements;
+  const { monthLabels, grid, streak, summary } = elements;
 
   function createContributionBucket() {
     return {
@@ -185,7 +185,7 @@ export function initContributionWidget({ state, safeText, elements }) {
   }
 
   function buildContributionDays(dayMap) {
-    const weekCount = 22;
+    const weekCount = 18;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const start = startOfWeek(today);
@@ -260,8 +260,7 @@ export function initContributionWidget({ state, safeText, elements }) {
     `).join('');
   }
 
-  function renderContributionWidget(dayMap) {
-    const days = buildContributionDays(dayMap);
+  function renderContributionWidget(days) {
     renderContributionMonthLabels(days);
     grid.innerHTML = days.map((day) => `
       <span
@@ -275,8 +274,33 @@ export function initContributionWidget({ state, safeText, elements }) {
     `).join('');
   }
 
+  function computeLoggingStreak(dayMap) {
+    const cursor = new Date();
+    cursor.setHours(0, 0, 0, 0);
+    // Keep an unbroken streak visible until a full day is actually missed:
+    // if today has no activity yet, count from yesterday.
+    if (!((dayMap.get(formatDateLocal(cursor))?.total || 0) > 0)) {
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    let count = 0;
+    while ((dayMap.get(formatDateLocal(cursor))?.total || 0) > 0) {
+      count += 1;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+    return count;
+  }
+
   function render() {
-    renderContributionWidget(collectContributionActivity());
+    const dayMap = collectContributionActivity();
+    const days = buildContributionDays(dayMap);
+    renderContributionWidget(days);
+    if (summary) {
+      const total = days.reduce((sum, day) => sum + (Number(day.bucket.total) || 0), 0);
+      summary.textContent = `${total} ${total === 1 ? 'entry' : 'entries'} · 18 weeks`;
+    }
+    if (streak) {
+      streak.textContent = String(computeLoggingStreak(dayMap));
+    }
   }
 
   return {

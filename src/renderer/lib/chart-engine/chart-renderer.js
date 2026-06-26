@@ -1,67 +1,64 @@
 import { CHART_FONT_FAMILY, DEFAULT_CHART_PALETTE } from './chart-style-model.js';
 
-const LINE_DASH_MAP = {
-  solid: '',
-  dashed: '6,4',
-  dotted: '2,3'
+const LINE_DASH_MAP = { solid: 'solid', dashed: 'dash', dotted: 'dot' };
+const POINT_SYMBOL_MAP = {
+  circle: 'circle',
+  square: 'square',
+  triangle: 'triangle-up',
+  diamond: 'diamond',
+  cross: 'cross'
 };
+const LINE_SHAPE_MAP = { curveMonotoneX: 'spline', curveLinear: 'linear', curveStep: 'hv' };
 
-function makePointRenderer(ReactLib, shape, color) {
-  if (shape === 'triangle') {
-    return () => ReactLib.createElement('polygon', {
-      points: '0,-1 1,1 -1,1',
-      fill: color,
-      stroke: color
-    });
-  }
-  if (shape === 'cross') {
-    return () => ReactLib.createElement('path', {
-      d: 'M-1 0 H1 M0 -1 V1',
-      stroke: color,
-      strokeWidth: 0.4,
-      fill: 'none'
-    });
-  }
-  return null;
+// Plotly log axes are positioned in log10; a log10-space dtick of log10(base) lands
+// ticks on consecutive powers of that base (Plotly's documented multi-base trick).
+const LOG10_2 = Math.log10(2);
+const LOG10_E = Math.LOG10E;
+function scaleAxis(scale) {
+  if (scale === 'log10') return { type: 'log', dtick: 1 };
+  if (scale === 'log2') return { type: 'log', dtick: LOG10_2 };
+  if (scale === 'ln') return { type: 'log', dtick: LOG10_E };
+  return { type: 'linear', dtick: null };
 }
 
-function pointShapeStringFor(shape) {
-  if (shape === 'square' || shape === 'diamond' || shape === 'circle') {
-    return shape;
+// Maps the style's tickFormat enum onto Plotly axis number-formatting attributes.
+function tickFormatSpec(format) {
+  switch (format) {
+    case 'fixed1': return { tickformat: '.1f' };
+    case 'fixed2': return { tickformat: '.2f' };
+    case 'sci': return { exponentformat: 'e' };
+    case 'si': return { exponentformat: 'SI' };
+    case 'power': return { exponentformat: 'power' };
+    default: return {};
   }
-  return null;
+}
+
+function legendLayout(position, font) {
+  if (position === 'right') return { orientation: 'v', x: 1.02, xanchor: 'left', y: 1, yanchor: 'top', font };
+  if (position === 'bottom') return { orientation: 'h', x: 0.5, xanchor: 'center', y: -0.22, yanchor: 'top', font };
+  return { orientation: 'h', x: 0.5, xanchor: 'center', y: 1.12, yanchor: 'bottom', font }; // top
+}
+
+function formatValue(value) {
+  return Number.isFinite(value) ? String(Math.round(value * 100) / 100) : '';
 }
 
 function pickSeriesColor(style, label, index) {
   const labelKey = String(label || '');
-  if (labelKey && style.seriesColors[labelKey]) {
+  if (labelKey && style.seriesColors && style.seriesColors[labelKey]) {
     return style.seriesColors[labelKey];
   }
   const palette = style.palette && style.palette.length ? style.palette : DEFAULT_CHART_PALETTE;
   return palette[index % palette.length];
 }
 
-function computeDomain(range, fallbackData, accessor) {
+function explicitRange(range) {
   if (range && range.auto === false
     && Number.isFinite(range.min) && Number.isFinite(range.max)
     && range.min < range.max) {
     return [range.min, range.max];
   }
-  if (!Array.isArray(fallbackData) || !fallbackData.length) {
-    return null;
-  }
-  let min = Number.POSITIVE_INFINITY;
-  let max = Number.NEGATIVE_INFINITY;
-  fallbackData.forEach((point) => {
-    const value = accessor(point);
-    if (!Number.isFinite(value)) return;
-    if (value < min) min = value;
-    if (value > max) max = value;
-  });
-  if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) {
-    return null;
-  }
-  return [min, max];
+  return null;
 }
 
 function serializeSvgToDataUrl(svgElement) {
@@ -86,284 +83,237 @@ function serializeSvgToDataUrl(svgElement) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(clone.outerHTML)}`;
 }
 
-// Generic chart renderer: render(target, chartModel, style) -> { seriesLabels }.
+// Generic chart renderer (Plotly.js engine): render(target, chartModel, style) -> { seriesLabels }.
 // chartModel = { chartType: 'line' | 'bar', xLabel, yLabel, showErrorBars?, series: [{ label, data:[{x,y,yVariance?}], markers? }] }
-export function createChartRenderer({ ReactLib, ReactDOMLib, ReactVisLib, hasReactVis }) {
+// Plotly is loaded as a window global by index.html.
+export function createChartRenderer() {
   let chartHost = null;
 
+  const getPlotly = () => (typeof window !== 'undefined' ? window.Plotly : null);
+
   function unmount() {
-    if (chartHost && ReactDOMLib?.unmountComponentAtNode) {
-      ReactDOMLib.unmountComponentAtNode(chartHost);
+    const Plotly = getPlotly();
+    if (chartHost && Plotly?.purge) {
+      Plotly.purge(chartHost);
     }
     chartHost = null;
   }
 
+  // ponytail: best-effort sync thumbnail from the rendered SVG. For full-fidelity
+  // (legend layer, exact pixels) switch to async Plotly.toImage.
   function captureDataUrl() {
-    const svg = chartHost?.querySelector?.('svg');
-    return serializeSvgToDataUrl(svg);
+    return serializeSvgToDataUrl(chartHost?.querySelector?.('.main-svg'));
   }
 
   function render(target, chartModel, style) {
+    const Plotly = getPlotly();
     unmount();
-    if (!hasReactVis || !target || !chartModel || !Array.isArray(chartModel.series) || !chartModel.series.length) {
+    if (!Plotly || !target || !chartModel || !Array.isArray(chartModel.series) || !chartModel.series.length) {
       return { seriesLabels: [] };
     }
 
-    const {
-      XYPlot,
-      XAxis,
-      YAxis,
-      VerticalGridLines,
-      HorizontalGridLines,
-      VerticalBarSeries,
-      LineSeries,
-      MarkSeries,
-      CustomSVGSeries,
-      WhiskerSeries,
-      DiscreteColorLegend
-    } = ReactVisLib;
-    if (!XYPlot || !XAxis || !YAxis || !VerticalGridLines || !HorizontalGridLines) {
-      return { seriesLabels: [] };
-    }
-
-    const longestSeries = chartModel.series.reduce((max, item) => Math.max(max, item.data.length), 0);
-    const autoWidth = Math.max(420, Math.min(1280, (longestSeries || 1) * (chartModel.chartType === 'line' ? 60 : 70)));
-    const autoHeight = 280;
-    const useCustomSize = style.sizeAuto === false;
-    const plotWidth = useCustomSize && Number.isFinite(style.frameWidth) ? style.frameWidth : autoWidth;
-    const plotHeight = useCustomSize && Number.isFinite(style.frameHeight) ? style.frameHeight : autoHeight;
-    const marginBottom = chartModel.chartType === 'bar' ? 108 : 72;
-    const plotProps = {
-      width: plotWidth,
-      height: plotHeight,
-      margin: { left: 72, right: 24, top: 20, bottom: marginBottom }
-    };
-    if (chartModel.chartType === 'bar') {
-      plotProps.xType = 'ordinal';
-    } else {
-      const userXScale = style.xScale && style.xScale !== 'auto' ? style.xScale : null;
-      if (userXScale && userXScale !== 'ordinal') {
-        plotProps.xType = userXScale;
-      }
-    }
-    if (style.yScale && style.yScale !== 'linear') {
-      plotProps.yType = style.yScale;
-    }
-
-    const allPoints = chartModel.series.flatMap((s) => [
-      ...(Array.isArray(s.data) ? s.data : []),
-      ...(Array.isArray(s.markers) ? s.markers : [])
-    ]);
-    if (chartModel.chartType === 'line') {
-      const xDomain = computeDomain(style.xRange, allPoints, (p) => p.x);
-      if (xDomain) plotProps.xDomain = xDomain;
-    }
-    const yDomain = computeDomain(style.yRange, allPoints, (p) => p.y);
-    if (yDomain) plotProps.yDomain = yDomain;
-
-    const axisColor = style.frameStroke || '#9bb0c9';
-    const textStyle = style.text || {};
-    const textFontFamily = textStyle.fontFamily
+    const st = style || {};
+    const isBar = chartModel.chartType === 'bar';
+    const textStyle = st.text || {};
+    const fontFamily = textStyle.fontFamily
       ? `${textStyle.fontFamily}, ${CHART_FONT_FAMILY}`
       : CHART_FONT_FAMILY;
-    const textFill = textStyle.color || axisColor;
-    const textFontSize = Number.isFinite(textStyle.fontSize) ? textStyle.fontSize : 11;
-    const textFontWeight = textStyle.bold ? 700 : 400;
-    const textFontStyle = textStyle.italic ? 'italic' : 'normal';
-    const textDecoration = textStyle.underline ? 'underline' : 'none';
-    const baselineShift = textStyle.baseline === 'super'
-      ? 'super'
-      : textStyle.baseline === 'sub' ? 'sub' : 'baseline';
-    const textAnchor = textStyle.textAlign || 'middle';
-    const svgTextStyle = {
-      fill: textFill,
-      fontFamily: textFontFamily,
-      fontSize: textFontSize,
-      fontWeight: textFontWeight,
-      fontStyle: textFontStyle,
-      textDecoration,
-      baselineShift
+    const font = {
+      family: fontFamily,
+      size: Number.isFinite(textStyle.fontSize) ? textStyle.fontSize : 11,
+      color: textStyle.color || st.frameStroke || '#000000',
+      weight: textStyle.bold ? 700 : 400,
+      style: textStyle.italic ? 'italic' : 'normal',
+      lineposition: textStyle.underline ? 'under' : 'none'
     };
-    const axisLineStyle = {
-      line: {
-        stroke: axisColor,
-        strokeWidth: style.frameStrokeWidth ?? 1
-      },
-      text: svgTextStyle,
-      title: { ...svgTextStyle, textAnchor }
-    };
+    const axisColor = st.frameStroke || '#9bb0c9';
+    const gridColor = st.gridColor || '#9bb0c9';
+    const dash = LINE_DASH_MAP[st.lineStyle] || 'solid';
+    const lineShape = LINE_SHAPE_MAP[st.curve] || 'spline';
+    const pointSize = Number.isFinite(st.pointSize) ? st.pointSize : 6;
+    const lineWidth = Number.isFinite(st.lineWidth) ? st.lineWidth : 2.5;
+    const bgColor = st.backgroundColor || '#ffffff';
+    const opacity = Number.isFinite(st.opacity) ? st.opacity : 1;
+    const errThickness = Number.isFinite(st.errorThickness) ? st.errorThickness : 1.2;
+    const errCapWidth = Number.isFinite(st.errorCapWidth) ? st.errorCapWidth : 4;
+    // Per-series shape overrides the global pointShape default (mirrors seriesColors).
+    const seriesShapes = st.seriesShapes || {};
+    const symbolFor = (label) => POINT_SYMBOL_MAP[seriesShapes[label] || st.pointShape] || 'circle';
+    // Open markers = background-filled symbol with a colored outline (Prism convention).
+    const markerSpec = (color, sym) => (st.markerFill === 'open'
+      ? { color: bgColor, size: pointSize, symbol: sym, line: { color, width: Math.max(1, lineWidth * 0.6) } }
+      : { color, size: pointSize, symbol: sym });
 
-    const gridStyle = {
-      stroke: style.gridColor || '#9bb0c9',
-      strokeWidth: style.gridStrokeWidth ?? 1
-    };
-
-    const plotChildren = [];
-    if (style.showVerticalGrid !== false) {
-      plotChildren.push(ReactLib.createElement(VerticalGridLines, { key: 'v-grid', style: gridStyle }));
-    }
-    if (style.showHorizontalGrid !== false) {
-      plotChildren.push(ReactLib.createElement(HorizontalGridLines, { key: 'h-grid', style: gridStyle }));
-    }
-    plotChildren.push(
-      ReactLib.createElement(XAxis, {
-        key: 'x-axis',
-        tickLabelAngle: chartModel.chartType === 'bar' ? -35 : 0,
-        style: axisLineStyle
-      }),
-      ReactLib.createElement(YAxis, {
-        key: 'y-axis',
-        style: axisLineStyle
-      })
-    );
-
-    if (style.frameStyle === 'box') {
-      plotChildren.push(ReactLib.createElement(XAxis, {
-        key: 'x-axis-top',
-        orientation: 'top',
-        tickFormat: () => '',
-        style: axisLineStyle
-      }));
-      plotChildren.push(ReactLib.createElement(YAxis, {
-        key: 'y-axis-right',
-        orientation: 'right',
-        tickFormat: () => '',
-        style: axisLineStyle
-      }));
-    }
-
-    const dashArray = LINE_DASH_MAP[style.lineStyle] || '';
-
+    const traces = [];
     chartModel.series.forEach((series, index) => {
-      const color = pickSeriesColor(style, series.label, index);
-      if (chartModel.chartType === 'line') {
-        const hasExplicitMarkers = Array.isArray(series.markers);
-        const markerData = hasExplicitMarkers ? series.markers : series.data;
-        if (LineSeries && series.data && series.data.length) {
-          plotChildren.push(ReactLib.createElement(LineSeries, {
-            key: `line-${series.label}-${index}`,
-            data: series.data,
-            color,
-            strokeWidth: style.lineWidth,
-            curve: style.curve || 'curveMonotoneX',
-            style: dashArray ? { strokeDasharray: dashArray } : undefined
-          }));
+      const color = pickSeriesColor(st, series.label, index);
+      const data = Array.isArray(series.data) ? series.data : [];
+      const name = String(series.label || '');
+      const sym = symbolFor(name);
+      let error_y;
+      if (chartModel.showErrorBars) {
+        const array = data.map((p) => (Number.isFinite(p.yVariance) && p.yVariance > 0 ? p.yVariance : 0));
+        if (array.some((v) => v > 0)) {
+          error_y = { type: 'data', array, color, thickness: errThickness, width: errCapWidth, visible: true };
         }
-        const stringShape = pointShapeStringFor(style.pointShape);
-        const functionShape = makePointRenderer(ReactLib, style.pointShape, color);
-        if (markerData && markerData.length) {
-          if (functionShape && CustomSVGSeries) {
-            const data = markerData.map((point) => ({
-              ...point,
-              customComponent: functionShape,
-              size: style.pointSize
-            }));
-            plotChildren.push(ReactLib.createElement(CustomSVGSeries, {
-              key: `point-${series.label}-${index}`,
-              data,
-              color
-            }));
-          } else if (stringShape && stringShape !== 'circle' && CustomSVGSeries) {
-            const data = markerData.map((point) => ({
-              ...point,
-              customComponent: stringShape,
-              size: style.pointSize
-            }));
-            plotChildren.push(ReactLib.createElement(CustomSVGSeries, {
-              key: `point-${series.label}-${index}`,
-              data,
-              color
-            }));
-          } else if (MarkSeries) {
-            plotChildren.push(ReactLib.createElement(MarkSeries, {
-              key: `point-${series.label}-${index}`,
-              data: markerData,
-              color,
-              size: style.pointSize
-            }));
-          }
-        }
-      } else if (VerticalBarSeries) {
-        plotChildren.push(ReactLib.createElement(VerticalBarSeries, {
-          key: `bar-${series.label}-${index}`,
-          data: series.data,
-          color,
-          cluster: 'chart-engine'
-        }));
       }
 
-      if (chartModel.showErrorBars && WhiskerSeries) {
-        const whiskerData = series.data.filter((point) => Number.isFinite(point.yVariance) && point.yVariance > 0);
-        if (whiskerData.length) {
-          plotChildren.push(ReactLib.createElement(WhiskerSeries, {
-            key: `whisker-${series.label}-${index}`,
-            data: whiskerData,
-            color,
-            strokeWidth: 1.2,
-            crossBarWidth: 8,
-            style: { pointerEvents: 'none' }
-          }));
+      if (isBar) {
+        const marker = { color };
+        if (Number.isFinite(st.barCornerRadius) && st.barCornerRadius > 0) {
+          marker.cornerradius = st.barCornerRadius;
         }
+        const bar = {
+          type: 'bar',
+          name,
+          opacity,
+          x: data.map((p) => p.x),
+          y: data.map((p) => p.y),
+          marker,
+          error_y
+        };
+        if (st.barLabels) {
+          bar.text = data.map((p) => formatValue(p.y));
+          bar.textposition = 'outside';
+          bar.textfont = font;
+        }
+        traces.push(bar);
+        return;
+      }
+
+      const hasExplicitMarkers = Array.isArray(series.markers);
+      traces.push({
+        type: 'scatter',
+        mode: hasExplicitMarkers ? 'lines' : (st.mode || 'lines+markers'),
+        name,
+        opacity,
+        x: data.map((p) => p.x),
+        y: data.map((p) => p.y),
+        line: { color, width: lineWidth, dash, shape: lineShape },
+        marker: markerSpec(color, sym),
+        error_y
+      });
+      if (hasExplicitMarkers && series.markers.length) {
+        traces.push({
+          type: 'scatter',
+          mode: 'markers',
+          name,
+          opacity,
+          showlegend: false,
+          x: series.markers.map((p) => p.x),
+          y: series.markers.map((p) => p.y),
+          marker: markerSpec(color)
+        });
       }
     });
 
-    const legendItems = chartModel.series.map((series, index) => ({
-      title: series.label,
-      color: pickSeriesColor(style, series.label, index)
-    }));
-    const legendAlign = textStyle.textAlign === 'start'
-      ? 'left'
-      : textStyle.textAlign === 'end' ? 'right' : 'center';
-    const legendVerticalAlign = textStyle.baseline === 'super'
-      ? 'super'
-      : textStyle.baseline === 'sub' ? 'sub' : 'baseline';
-    const legendStyle = {
-      fontFamily: textFontFamily,
-      fontSize: `${textFontSize}px`,
-      color: textFill,
-      fontWeight: textFontWeight,
-      fontStyle: textFontStyle,
-      textDecoration,
-      textAlign: legendAlign,
-      verticalAlign: legendVerticalAlign
-    };
-    const legendElement = DiscreteColorLegend && legendItems.length > 1
-      ? ReactLib.createElement(DiscreteColorLegend, {
-        key: 'legend',
-        orientation: 'horizontal',
-        items: legendItems,
-        style: legendStyle
-      })
-      : null;
+    const longestSeries = chartModel.series.reduce((max, s) => Math.max(max, (s.data || []).length), 0);
+    const autoWidth = Math.max(420, Math.min(1280, (longestSeries || 1) * (isBar ? 70 : 60)));
+    const useCustomSize = st.sizeAuto === false;
+    const width = useCustomSize && Number.isFinite(st.frameWidth) ? st.frameWidth : autoWidth;
+    const height = useCustomSize && Number.isFinite(st.frameHeight) ? st.frameHeight : 280;
 
-    const canvasClassName = ['assay-analysis-chart-canvas', `frame-${style.frameStyle || 'box'}`].join(' ');
-    const canvasStyle = {
-      backgroundColor: style.backgroundColor || '#ffffff',
-      borderRadius: `${style.frameCornerRadius ?? 0}px`
+    const frameStyle = st.frameStyle || 'box';
+    const tickMark = st.tickDir === 'none' ? '' : (st.tickDir || 'outside');
+    const tickLen = Number.isFinite(st.tickLen) ? st.tickLen : 5;
+    const axisBase = {
+      showline: frameStyle !== 'none',
+      linecolor: axisColor,
+      linewidth: st.frameStrokeWidth ?? 1,
+      mirror: frameStyle === 'box',
+      zeroline: false,
+      gridcolor: gridColor,
+      gridwidth: st.gridStrokeWidth ?? 1,
+      tickfont: font,
+      ticks: tickMark,
+      ticklen: tickLen,
+      tickcolor: axisColor,
+      automargin: true,
+      ...tickFormatSpec(st.tickFormat)
+    };
+    const minorFor = (cfg) => {
+      if (!st.minorTicks) return undefined;
+      const minor = {
+        ticks: tickMark || 'outside',
+        ticklen: Math.max(2, tickLen * 0.6),
+        tickcolor: axisColor,
+        showgrid: false
+      };
+      if (cfg.type === 'linear') minor.nticks = 5;
+      return minor;
     };
 
-    const chartContent = [
-      ReactLib.createElement('div', { className: 'assay-analysis-chart-plot', key: 'plot' }, [
-        ReactLib.createElement(
-          'div',
-          { className: canvasClassName, style: canvasStyle, key: 'canvas' },
-          ReactLib.createElement(XYPlot, { ...plotProps, key: 'xy-plot' }, plotChildren)
-        )
-      ])
-    ];
-    if (legendElement) {
-      chartContent.unshift(ReactLib.createElement('div', { className: 'assay-analysis-chart-head', key: 'head' }, [
-        legendElement
-      ]));
+    const xScaleCfg = isBar ? { type: 'category', dtick: null } : scaleAxis(st.xScale);
+    const yScaleCfg = scaleAxis(st.yScale);
+
+    const xaxis = {
+      ...axisBase,
+      title: { text: chartModel.xLabel || '', font },
+      type: xScaleCfg.type,
+      showgrid: st.showVerticalGrid !== false,
+      tickangle: isBar ? -35 : 0
+    };
+    const yaxis = {
+      ...axisBase,
+      title: { text: chartModel.yLabel || '', font },
+      type: yScaleCfg.type,
+      showgrid: st.showHorizontalGrid !== false
+    };
+    // Tick interval: user value on linear axes; log axes tick by their base (2/e/10).
+    const xDtick = xScaleCfg.type === 'linear' && Number.isFinite(st.xTick) && st.xTick > 0
+      ? st.xTick : xScaleCfg.dtick;
+    if (xDtick != null) xaxis.dtick = xDtick;
+    const yDtick = yScaleCfg.type === 'linear' && Number.isFinite(st.yTick) && st.yTick > 0
+      ? st.yTick : yScaleCfg.dtick;
+    if (yDtick != null) yaxis.dtick = yDtick;
+    // ponytail: explicit ranges only on linear axes (Plotly log range is log10).
+    if (xScaleCfg.type === 'linear') {
+      const xr = explicitRange(st.xRange);
+      if (xr) xaxis.range = xr;
+    }
+    if (yScaleCfg.type === 'linear') {
+      const yr = explicitRange(st.yRange);
+      if (yr) yaxis.range = yr;
     }
 
-    const chartElement = ReactLib.createElement('div', null, chartContent);
+    const xMinor = minorFor(xScaleCfg);
+    if (xMinor) xaxis.minor = xMinor;
+    const yMinor = minorFor(yScaleCfg);
+    if (yMinor) yaxis.minor = yMinor;
 
-    ReactDOMLib.render(chartElement, target);
-    chartHost = target;
-    return {
-      seriesLabels: chartModel.series.map((series) => String(series.label || ''))
+    const showlegend = st.legendPosition !== 'none' && chartModel.series.length > 1;
+    const layout = {
+      width,
+      height,
+      margin: { l: 70, r: 24, t: st.title ? 44 : 24, b: isBar ? 96 : 56 },
+      paper_bgcolor: bgColor,
+      plot_bgcolor: bgColor,
+      font,
+      xaxis,
+      yaxis,
+      showlegend,
+      legend: legendLayout(st.legendPosition, font),
+      barmode: st.barMode || 'group'
     };
+    if (st.title) {
+      layout.title = { text: st.title, font, x: 0.5, xanchor: 'center' };
+    }
+    // Reference line: value is in data space; on a log axis Plotly shape coords are log10.
+    if (Number.isFinite(st.refLineValue)) {
+      const onY = st.refLineAxis !== 'x';
+      const cfg = onY ? yScaleCfg : xScaleCfg;
+      const v = cfg.type === 'log' ? (st.refLineValue > 0 ? Math.log10(st.refLineValue) : null) : st.refLineValue;
+      if (v != null) {
+        const line = { color: '#666666', width: 1.5, dash: 'dash' };
+        layout.shapes = [onY
+          ? { type: 'line', xref: 'paper', yref: 'y', x0: 0, x1: 1, y0: v, y1: v, line }
+          : { type: 'line', xref: 'x', yref: 'paper', x0: v, x1: v, y0: 0, y1: 1, line }];
+      }
+    }
+
+    Plotly.newPlot(target, traces, layout, { displayModeBar: false, responsive: false });
+    chartHost = target;
+    return { seriesLabels: chartModel.series.map((s) => String(s.label || '')) };
   }
 
   return { render, unmount, captureDataUrl };

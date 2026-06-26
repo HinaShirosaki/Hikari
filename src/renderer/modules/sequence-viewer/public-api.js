@@ -42,8 +42,17 @@ export {
 } from './rendering.js';
 
 export { alignSequenceToReference } from './alignment.js';
-export { renderAlignmentTracePanelHtml } from './detail-alignment.js';
+export { buildAlignmentSequenceTrack } from './detail-alignment.js';
 export { buildCircularPreviewHtmlDocument } from './storage.js';
+export {
+  assembleCloningPlan,
+  designCloningPrimers,
+  designPcrPrimerPair,
+  evaluateGibsonAssembly,
+  evaluateOverlapPcr,
+  evaluateRestrictionLigation,
+  evaluateSiteDirectedMutagenesis
+} from './cloning-assembly.js';
 export {
   postProcessAb1Trace,
   trimByMottAlgorithm as trimAb1ByMottAlgorithm

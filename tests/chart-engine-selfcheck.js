@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Self-check for the extracted chart engine's pure logic (no DOM / react-vis needed).
+// Self-check for the extracted chart engine's pure logic (no DOM / Plotly needed).
 // Run: node tests/chart-engine-selfcheck.js
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -11,6 +11,9 @@ const { createChartStyleStore } = loadEsmStyleModule(
 );
 const { buildAnalysisChartModel } = loadEsmStyleModule(
   path.join(root, 'src/renderer/modules/assay/analysis-chart-renderer.js')
+);
+const { createDefaultChartStyle, normalizeChartStyle } = loadEsmStyleModule(
+  path.join(root, 'src/renderer/lib/chart-engine/chart-style-model.js')
 );
 
 // --- store: setStyle merges + emits; setStyleSilent does not emit; reset emits defaults ---
@@ -54,5 +57,22 @@ assert.equal(model.chartType, 'line', 'numeric-x ec50 -> line chart');
 assert.equal(model.series[0].data.length, 3, 'three points bucketed');
 assert.deepEqual(model.series[0].data.map((p) => p.x), [10, 100, 1000], 'points sorted by x');
 assert.deepEqual(model.series[0].data.map((p) => p.y), [90, 60, 20], 'y follows the chosen column');
+
+// --- style model: new control fields normalize cleanly (regression guard for clampFinite null bug) ---
+const def = createDefaultChartStyle();
+assert.equal(normalizeChartStyle(def).refLineValue, null, 'default refLineValue stays null (no spurious reference line at 0)');
+assert.equal(normalizeChartStyle(def).xTick, null, 'default xTick stays null (auto ticks)');
+assert.equal(normalizeChartStyle({ refLineValue: 'x' }).refLineValue, null, 'non-numeric refLineValue -> null');
+assert.equal(normalizeChartStyle({ refLineValue: 50 }).refLineValue, 50, 'numeric refLineValue preserved');
+assert.equal(normalizeChartStyle({ opacity: 5 }).opacity, 1, 'opacity clamps to 1');
+assert.equal(normalizeChartStyle({ xScale: 'log' }).xScale, 'log10', 'legacy "log" scale migrates to log10');
+assert.equal(normalizeChartStyle({ mode: 'bogus' }).mode, def.mode, 'invalid display mode falls back to default');
+// Note: objects from the vm-loaded module carry that realm's prototype, so compare
+// keys/values directly rather than deepEqual against a test-realm literal.
+assert.equal(Object.keys(normalizeChartStyle(def).seriesShapes).length, 0, 'default seriesShapes is empty');
+const shp = normalizeChartStyle({ seriesShapes: { A: 'square', B: 'bogus', C: 'triangle' } }).seriesShapes;
+assert.equal(shp.A, 'square', 'seriesShapes keeps a valid shape');
+assert.equal(shp.C, 'triangle', 'seriesShapes keeps another valid shape');
+assert.equal('B' in shp, false, 'seriesShapes drops an invalid shape');
 
 console.log('chart-engine self-check passed');

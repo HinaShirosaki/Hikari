@@ -1,23 +1,13 @@
+import { applyAppearanceToDocument } from '../modules/app-state/appearance.js';
+
 const LAST_ACTIVE_VIEW_STORAGE_KEY = 'hikari_last_active_view_v1';
-const FIXED_ACCENT = '#647255';
-const FIXED_FOCUS = '#7a8a69';
 
 export function normalizeViewId(VIEWS, viewId) {
   return viewId === VIEWS.PERSONAL_INVENTORY ? VIEWS.SAMPLE_REGISTRY : viewId;
 }
 
 export function applyAppearanceSnapshot(appearance, rootDocument = document) {
-  const root = rootDocument.documentElement;
-  const resolved = appearance && typeof appearance === 'object' ? appearance : {};
-  const fontSize = Number(resolved.fontSize) || 16;
-  const mode = resolved.mode === 'night' ? 'night' : 'day';
-
-  root.style.setProperty('--accent', FIXED_ACCENT);
-  root.style.setProperty('--focus', FIXED_FOCUS);
-  root.style.setProperty('--app-font-size', `${fontSize}px`);
-  root.style.setProperty('font-size', `${fontSize}px`);
-  rootDocument.body.classList.toggle('theme-night', mode === 'night');
-  rootDocument.body.classList.add('ui-neutral-compact');
+  return applyAppearanceToDocument(appearance, rootDocument, 16);
 }
 
 function createNavigationAliasMap(aliases, normalize) {

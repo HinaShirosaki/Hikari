@@ -1,8 +1,5 @@
 import { parseInputRecords, normalizeExternalPayload } from '../parsing.js';
-import {
-  cleanText,
-  normalizeRecordName
-} from '../shared.js';
+import { cleanText } from '../shared.js';
 import {
   DEFAULT_MAX_RECORDS
 } from '../constants.js';
@@ -30,9 +27,6 @@ export function createRecordWorkflowActions(ctx) {
     controllers.detail?.updateRecordSelect();
     controllers.detail?.renderActiveRecord();
     controllers.proteinBuilder?.render();
-    if (elements.saveNameInput && state.records.length) {
-      elements.saveNameInput.value = normalizeRecordName(state.records[0].name || 'sequence', 'sequence');
-    }
     controllers.home?.syncHomeControlsState();
     actions.setStatus(state.records.length ? `${statusPrefix}: ${state.records.length} record(s).` : (state.errors[0] || 'No records loaded.'), !state.records.length);
   }
@@ -73,7 +67,8 @@ export function createRecordWorkflowActions(ctx) {
       const entry = await actions.persistRecordToLibrary(records[0], { status: LIBRARY_STATUS_TEMPORARY, name: records[0].name || 'sequence' });
       await controllers.home?.refreshLibraryEntries({ selectedId: entry.id, filter: entry.status || LIBRARY_STATUS_TEMPORARY, silent: true });
       return entry;
-    } catch {
+    } catch (error) {
+      console.warn('Failed to persist imported GenBank record to the library:', error);
       return null;
     }
   }
@@ -100,9 +95,6 @@ export function createRecordWorkflowActions(ctx) {
     resetDetailSurfaces();
     setRecords({ records: [], warnings: [], errors: [] }, 'Cleared');
     actions.setStatus('Idle');
-    if (elements.saveNameInput) {
-      elements.saveNameInput.value = '';
-    }
   }
 
   function loadFromExternal(payload, loadOptions = {}) {
@@ -115,9 +107,6 @@ export function createRecordWorkflowActions(ctx) {
     }
     state.activeEntryId = '';
     state.activeEntryStatus = '';
-    if (elements.saveNameInput) {
-      elements.saveNameInput.value = record.name || 'sequence';
-    }
     setRecords({
       records: hasSequence ? [record] : [],
       warnings: hasSequence ? [] : ['External payload had no sequence.'],

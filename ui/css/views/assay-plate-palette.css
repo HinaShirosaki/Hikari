@@ -2,8 +2,18 @@
    Keep these here so the shared app palette can stay intentionally small. */
 
 :root {
+  --assay-plate-transparent: transparent;
+  --assay-plate-highlight-faint: rgba(255, 255, 255, 0.12);
+  --assay-plate-highlight-soft: rgba(255, 255, 255, 0.45);
+  --assay-plate-highlight: rgba(255, 255, 255, 0.7);
+  --assay-plate-highlight-strong: rgba(255, 255, 255, 0.9);
+  --assay-plate-shadow-soft: rgba(0, 0, 0, 0.08);
+  --assay-plate-shadow: rgba(27, 20, 14, 0.14);
+  --assay-plate-shadow-strong: rgba(0, 0, 0, 0.3);
+  --assay-plate-pure-white: #ffffff;
+  --assay-plate-pure-black: #000000;
   --assay-plate-ink: #1f3b66;
-  --assay-plate-meta: var(--muted);
+  --assay-plate-meta: var(--theme-text-muted);
   --assay-plate-danger: #9f1c1c;
   --assay-plate-line-soft: rgba(53, 99, 153, 0.14);
   --assay-plate-line: rgba(53, 99, 153, 0.22);
@@ -16,7 +26,6 @@
   --assay-plate-surface-strong: rgba(255, 255, 255, 0.98);
   --assay-plate-disabled-bg: rgba(232, 236, 242, 0.75);
   --assay-plate-overlay: rgba(18, 34, 55, 0.18);
-  --assay-plate-shadow: rgba(27, 20, 14, 0.14);
   --assay-plate-body: #f4f5f1;
   --assay-plate-body-mid: #ebede6;
   --assay-plate-body-edge: #e3e5dc;
@@ -38,13 +47,13 @@
   --assay-plate-selected-border: rgba(170, 122, 32, 0.85);
   --assay-plate-selected-shadow: rgba(120, 80, 20, 0.3);
   --assay-plate-selected-ring: rgba(206, 162, 60, 0.25);
-  --assay-labware-cap-start: #3f8ecb;
-  --assay-labware-cap-end: #1f5f95;
-  --assay-labware-shadow: rgba(10, 27, 48, 0.16);
-  --assay-labware-glass-border: rgba(108, 121, 137, 0.92);
-  --assay-labware-glass-start: rgba(252, 253, 255, 0.96);
-  --assay-labware-glass-end: rgba(236, 241, 247, 0.92);
-  --assay-labware-mark: rgba(102, 115, 130, 0.5);
+  --assay-plate-labware-cap-start: #3f8ecb;
+  --assay-plate-labware-cap-end: #1f5f95;
+  --assay-plate-labware-shadow: rgba(10, 27, 48, 0.16);
+  --assay-plate-labware-glass-border: rgba(108, 121, 137, 0.92);
+  --assay-plate-labware-glass-start: rgba(252, 253, 255, 0.96);
+  --assay-plate-labware-glass-end: rgba(236, 241, 247, 0.92);
+  --assay-plate-labware-mark: rgba(102, 115, 130, 0.5);
 }
 
 body.theme-night {

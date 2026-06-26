@@ -45,11 +45,6 @@ function buildCompactIndexedSnapshot(snapshot) {
     protocols: [],
     notebookEntries: [],
     samples: [],
-    objectGraph: {
-      nodes: {},
-      edges: [],
-      updatedAt: ''
-    },
     labInventory: {
       chemicals: [],
       blocks: asArray(labInventory.blocks),

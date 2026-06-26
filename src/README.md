@@ -4,7 +4,7 @@
 
 - `main/`: Electron main process. `main.js` starts the generic lifecycle in `core/`; `core/catalog/` declares services; `ipc/` exposes adapters; `helpers/` contains domain implementations.
 - `renderer/`: browser-side application. `core/` boots the shell, `module-manifests/` declares feature wiring, `modules/<feature>/` owns each workspace, and `services/` handles cross-feature fan-out.
-- `shared/`: process-neutral contracts and algorithms. IPC channel names, generated datasets, and sequence analysis used by both runtimes belong here.
+- `shared/`: process-neutral contracts used across runtime boundaries, such as IPC channel names.
 
 The intended dependency direction is:
 
@@ -14,7 +14,7 @@ main ─────┐
 renderer ─┘
 ```
 
-`main/` must not import from `renderer/`. Renderer features should communicate through manifest options and `renderer/services/`, not by importing another feature's controller.
+`main/` must not import renderer controllers or UI code. The Sequence Viewer storage adapter has one explicit exception: it invokes process-neutral matching code from `renderer/modules/sequence-viewer/algorithms/` so the feature's domain implementation remains colocated. Renderer features should communicate through manifest options and `renderer/services/`, not by importing another feature's controller.
 
 ## Useful entry points
 
@@ -23,7 +23,7 @@ renderer ─┘
 - Renderer boot: `renderer/renderer.js` → `renderer/core/start-hikari-core.js`
 - Renderer feature wiring: `renderer/module-manifests/index.js`
 - Renderer state: `renderer/modules/app-state.js` → `renderer/modules/app-state/`
-- Shared sequence logic: `shared/sequence/`
+- Sequence Viewer feature logic: `renderer/modules/sequence-viewer/`
 
 ## Generated files
 
