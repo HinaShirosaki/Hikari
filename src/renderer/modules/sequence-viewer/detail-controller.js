@@ -69,11 +69,14 @@ export function createSequenceViewerDetailController(config = {}) {
   let activeFeatureActionContext = null;
 
   function getVisibleFeaturesForRecord(record) {
+    // The alignment overlay is for comparing sequences; cutters just clutter it.
+    const alignmentActive = Boolean(state.alignmentViewEnabled && state.activeAlignmentResult);
     return getRenderableFeaturesForRecord(record, {
       includeOrf: state.orfViewEnabled,
       orfStopCodons: state.orfStopCodons,
       orfFrameFilter: state.orfFrameFilter,
-      restrictionVendorFilter: state.restrictionVendorFilter
+      restrictionVendorFilter: state.restrictionVendorFilter,
+      includeRestriction: !alignmentActive
     });
   }
 
@@ -461,15 +464,19 @@ export function createSequenceViewerDetailController(config = {}) {
     detailRenderingController.renderSequence(record, options);
   }
 
+  function updateSequenceCursor() {
+    detailRenderingController.updateCursorOnly();
+  }
+
   function renderStats(record) {
     detailRenderingController.renderStats(record);
   }
 
-  function renderActiveRecord() {
+  function renderActiveRecord(options = {}) {
     const record = getSelectedRecord();
     renderProteinBuilderConfirmation(record);
     renderStats(record);
-    renderSequence(record);
+    renderSequence(record, { preserveScroll: Boolean(options?.preserveScroll) });
     renderFeatureRail(record);
     renderSelectedFeatureDetail(record);
     syncActionButtonsState();
@@ -612,6 +619,7 @@ export function createSequenceViewerDetailController(config = {}) {
       showSequenceHoverTooltip,
       renderActiveRecord,
       renderSequence,
+      updateSequenceCursor,
       renderSelectedFeatureDetail,
       setOrfViewEnabled,
       readOrfStopCodonsFromControls,

@@ -22,6 +22,7 @@ import {
 } from './entry-helpers.js';
 import {
   buildSamplePlaceholderTypeAliases,
+  formatSampleLinkValue,
   normalizeNotebookSampleLink,
   normalizeNotebookSampleLinks
 } from './sample-helpers.js';
@@ -62,6 +63,7 @@ import {
 import { bindFileDropTarget, mergeFilesIntoInput } from '../file-drop.js';
 import { printElement } from '../print/index.js';
 import { serializeDraftSnapshot } from '../unsaved-draft.js';
+import { flattenNotebookResultTablesText } from '../notebook-result-table.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({
@@ -75,6 +77,7 @@ export function initLabNotebook({
   onOpenSampleRecorder,
   onProjectsChanged,
   selectionInsightsController = null,
+  onActiveNotebookPageChanged = () => {},
   notebookType = 'biology'
 }) {
   const SAMPLE_PLACEHOLDER_TYPE_ALIASES = buildSamplePlaceholderTypeAliases(state.settings);
@@ -512,6 +515,129 @@ export function initLabNotebook({
       values[input.dataset.nbKey] = input.value.trim();
     });
     return values;
+  }
+
+  function compactContextLine(value, maxLength = 900) {
+    const text = String(value || '').replace(/\s+/g, ' ').trim();
+    if (!text) {
+      return '';
+    }
+    return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
+  }
+
+  function getProtocolStepText(step) {
+    return compactContextLine(step?.text || step?.instruction || step?.action || step?.description, 1200);
+  }
+
+  function buildStepContextLines(protocol, values = {}) {
+    const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
+    return steps.slice(0, 80).map((step, index) => {
+      const stepId = String(step?.id || `step_${index + 1}`).trim();
+      const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
+      const filledValues = placeholders.map((placeholder) => {
+        const placeholderId = String(placeholder?.id || '').trim();
+        const placeholderName = String(placeholder?.name || placeholderId || 'value').trim();
+        const value = compactContextLine(values[`${stepId}:${placeholderId}`] || values[placeholderId] || '', 180);
+        return value ? `${placeholderName}=${value}` : '';
+      }).filter(Boolean);
+      const suffix = filledValues.length ? ` Filled values: ${filledValues.join('; ')}.` : '';
+      return `Step ${index + 1}: ${getProtocolStepText(step)}${suffix}`;
+    }).filter(Boolean);
+  }
+
+  function buildSampleLinkContextLines(entry = null, protocol = null) {
+    const links = collectNotebookSampleLinks(entry, protocol);
+    return normalizeNotebookSampleLinks(links)
+      .slice(0, 24)
+      .map((link) => {
+        const placeholder = compactContextLine(link.placeholderName || link.placeholderKey, 120);
+        const sample = compactContextLine(formatSampleLinkValue(link), 180);
+        return [placeholder, sample].filter(Boolean).join(': ');
+      })
+      .filter(Boolean);
+  }
+
+  function getActiveNotebookPageAgentContext() {
+    if (!notebookProtocolArea || notebookProtocolArea.hidden) {
+      return null;
+    }
+    const entry = getActiveEntry();
+    const project = resolveViewerProject(entry);
+    const protocol = resolveViewerProtocol(entry);
+    if (!project || !protocol) {
+      return null;
+    }
+    const values = pruneNotebookValuesForProtocol(
+      mergeNotebookValues(entry?.values, collectNotebookValues()),
+      protocol
+    );
+    const resultText = compactContextLine(notebookResult?.value || entry?.result || '', 2000);
+    const resultTables = resultTableController.getCurrentTables();
+    const tableText = compactContextLine(flattenNotebookResultTablesText(resultTables, entry?.resultTable), 1600);
+    const toolCalculations = toolSidebarController.getCalculations();
+    const sampleLinks = buildSampleLinkContextLines(entry, protocol);
+    const pageTitle = compactContextLine(
+      notebookExperimentName?.value || resolveEntryExperimentName(entry, protocol) || protocol.name,
+      320
+    );
+    const pageState = entry ? normalizeNotebookState(entry.notebookState) : 'draft';
+    const lines = [
+      'Active biology notebook page:',
+      `Title: ${pageTitle || 'Untitled notebook page'}`,
+      `Entry ID: ${entry?.id || 'unsaved draft'}`,
+      `Notebook state: ${pageState}`,
+      `Project: ${compactContextLine(project.name, 220)}${project.id ? ` (${project.id})` : ''}`,
+      `Protocol: ${compactContextLine(protocol.name, 220)}${protocol.id ? ` (${protocol.id})` : ''}`,
+      'Protocol steps:',
+      ...buildStepContextLines(protocol, values),
+      resultText ? 'Page notes/results:' : '',
+      resultText,
+      tableText ? 'Result tables:' : '',
+      tableText,
+      sampleLinks.length ? 'Linked samples:' : '',
+      ...sampleLinks,
+      toolCalculations.length ? `Recorded bench calculations: ${toolCalculations.length}` : '',
+      Array.isArray(entry?.resultFiles) && entry.resultFiles.length ? `Result files: ${entry.resultFiles.join(', ')}` : ''
+    ].filter((line) => line !== '');
+
+    return {
+      scopeType: 'notebook',
+      notebookEntryId: entry?.id || '',
+      pageTitle,
+      projectId: String(project.id || '').trim(),
+      projectName: String(project.name || '').trim(),
+      protocolId: String(protocol.id || '').trim(),
+      protocolName: String(protocol.name || '').trim(),
+      hiddenContext: {
+        kind: 'notebook-page',
+        label: pageTitle ? `Active notebook page: ${pageTitle}` : 'Active notebook page',
+        text: lines.join('\n'),
+        notebookEntryId: entry?.id || '',
+        projectName: String(project.name || '').trim(),
+        protocolName: String(protocol.name || '').trim()
+      }
+    };
+  }
+
+  function getAgentChatContext() {
+    const pageContext = getActiveNotebookPageAgentContext();
+    if (pageContext) {
+      return pageContext;
+    }
+    const dashboardProject = activeProjectDashboardId
+      ? findDashboardProject(activeProjectDashboardId)
+      : findSelectedProject();
+    return {
+      scopeType: 'notebook',
+      projectId: String(dashboardProject?.id || '').trim(),
+      projectName: String(dashboardProject?.name || '').trim()
+    };
+  }
+
+  function notifyActiveNotebookPageChanged() {
+    if (typeof onActiveNotebookPageChanged === 'function') {
+      onActiveNotebookPageChanged(getAgentChatContext());
+    }
   }
 
   function getCurrentDraftSnapshot() {
@@ -1074,6 +1200,7 @@ export function initLabNotebook({
     if (markSavedBaseline) {
       markDraftSaved();
     }
+    notifyActiveNotebookPageChanged();
   }
 
   function hideProjectDashboard() {
@@ -1104,6 +1231,7 @@ export function initLabNotebook({
     notebookProjectDashboard.hidden = false;
     syncViewerVisibility();
     entryListRenderer.renderEntries();
+    notifyActiveNotebookPageChanged();
   }
 
   function renderProjectDashboardActions(project) {
@@ -1173,6 +1301,7 @@ export function initLabNotebook({
     updateSaveButtonLabel();
     syncViewerVisibility();
     savedDraftSnapshot = '';
+    notifyActiveNotebookPageChanged();
   }
 
   function syncViewerVisibility() {
@@ -1423,6 +1552,7 @@ export function initLabNotebook({
     ),
     openEntry: editEntry,
     openProjectDashboard: showProjectDashboard,
+    getAgentChatContext,
     renderProjectOptions: dropdownRenderer.renderProjectOptions,
     renderProtocolOptions: dropdownRenderer.renderProtocolOptions,
     renderEntries: entryListRenderer.renderEntries,

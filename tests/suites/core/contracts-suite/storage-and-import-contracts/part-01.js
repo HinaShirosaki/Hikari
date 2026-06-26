@@ -65,6 +65,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         const projectProtocolSkillPath = path.join(storageRoot, 'Project', 'Atlas', '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
         const projectNotebookSkillPath = path.join(storageRoot, 'Project', 'Atlas', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
         const projectPaperRetrievalSkillPath = path.join(storageRoot, 'Project', 'Atlas', '.agents', 'skills', 'hikari-paper-retrieval', 'SKILL.md');
+        const projectContainerSkillPath = path.join(storageRoot, 'Project', 'Atlas', '.agents', 'skills', 'hikari-container', 'SKILL.md');
         await assert.rejects(fsPromises.access(projectProtocolSkillPath));
 
         const helpers = createMainDataHelpers({
@@ -83,6 +84,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         assert.match(await fsPromises.readFile(projectProtocolSkillPath, 'utf8'), /name: "hikari-protocol-generation"/);
         assert.match(await fsPromises.readFile(projectNotebookSkillPath, 'utf8'), /name: "hikari-notebook-draft"/);
         assert.match(await fsPromises.readFile(projectPaperRetrievalSkillPath, 'utf8'), /name: "hikari-paper-retrieval"/);
+        assert.match(await fsPromises.readFile(projectContainerSkillPath, 'utf8'), /name: "hikari-container"/);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -182,9 +184,11 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         const rootProtocolSkillPath = path.join(tempDir, '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
         const rootNotebookSkillPath = path.join(tempDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
         const rootPaperRetrievalSkillPath = path.join(tempDir, '.agents', 'skills', 'hikari-paper-retrieval', 'SKILL.md');
+        const rootContainerSkillPath = path.join(tempDir, '.agents', 'skills', 'hikari-container', 'SKILL.md');
         const projectProtocolSkillPath = path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md');
         const projectNotebookSkillPath = path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
         const projectPaperRetrievalSkillPath = path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-paper-retrieval', 'SKILL.md');
+        const projectContainerSkillPath = path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-container', 'SKILL.md');
         assert.match(memoryText, /Name: Atlas/);
         assert.match(memoryText, /ID: project-1/);
         assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /Call the direct Hikari MCP tool `mcp__hikari__protocol_generation`/);
@@ -195,9 +199,13 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         assert.match(await fsPromises.readFile(rootPaperRetrievalSkillPath, 'utf8'), /Hikari Paper Retrieval MCP/);
         assert.match(await fsPromises.readFile(rootPaperRetrievalSkillPath, 'utf8'), /mcp__hikari__paper_intake_search_summaries/);
         assert.match(await fsPromises.readFile(rootPaperRetrievalSkillPath, 'utf8'), /source_paths\.paper_md/);
+        assert.match(await fsPromises.readFile(rootContainerSkillPath, 'utf8'), /Call the direct Hikari MCP tool `mcp__hikari__container`/);
+        assert.match(await fsPromises.readFile(rootContainerSkillPath, 'utf8'), /Direct literals are feasible/);
+        assert.match(await fsPromises.readFile(rootContainerSkillPath, 'utf8'), /replace_range/);
         assert.match(await fsPromises.readFile(projectProtocolSkillPath, 'utf8'), /name: "hikari-protocol-generation"/);
         assert.match(await fsPromises.readFile(projectNotebookSkillPath, 'utf8'), /name: "hikari-notebook-draft"/);
         assert.match(await fsPromises.readFile(projectPaperRetrievalSkillPath, 'utf8'), /name: "hikari-paper-retrieval"/);
+        assert.match(await fsPromises.readFile(projectContainerSkillPath, 'utf8'), /name: "hikari-container"/);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -333,6 +341,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md'));
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md'));
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-paper-retrieval', 'SKILL.md'));
+        await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-container', 'SKILL.md'));
         await fsPromises.access(path.join(tempDir, 'KnowledgeBase', 'papers.md'));
         const samplesPath = path.join(tempDir, 'Samples', 'samples.json');
         const samplesPayload = JSON.parse(await fsPromises.readFile(samplesPath, 'utf8'));

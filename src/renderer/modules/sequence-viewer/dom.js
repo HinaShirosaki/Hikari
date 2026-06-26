@@ -75,7 +75,6 @@ export function getSequenceViewerElements(rootDocument) {
     orfMenu: rootDocument?.getElementById?.('sequence-viewer-orf-menu'),
     cutterMenuBtn: rootDocument?.getElementById?.('sequence-viewer-cutter-menu-btn'),
     cutterMenu: rootDocument?.getElementById?.('sequence-viewer-cutter-menu'),
-    statusNote: rootDocument?.getElementById?.('sequence-viewer-status'),
     messageBox: rootDocument?.getElementById?.('sequence-viewer-messages'),
     recordSelect: rootDocument?.getElementById?.('sequence-viewer-record-select'),
     statFormat: rootDocument?.getElementById?.('sequence-viewer-stat-format'),

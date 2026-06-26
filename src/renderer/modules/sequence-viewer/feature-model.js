@@ -124,8 +124,10 @@ export function getRenderableFeaturesForRecord(record, options = {}) {
       stopCodons: options?.orfStopCodons ?? options?.stopCodons
     }).filter((feature) => !orfFrameFilter || orfFrameFilter[String(feature?.orfFrame || '')] !== false)
     : [];
-  const restrictionFeatures = getCommercialRestrictionFeaturesForRecord(record, {
-    vendorFilter: options?.restrictionVendorFilter
-  });
+  const restrictionFeatures = options?.includeRestriction === false
+    ? []
+    : getCommercialRestrictionFeaturesForRecord(record, {
+      vendorFilter: options?.restrictionVendorFilter
+    });
   return [...parsedFeatures, ...orfFeatures, ...restrictionFeatures];
 }

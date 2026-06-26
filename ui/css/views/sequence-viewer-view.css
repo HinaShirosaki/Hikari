@@ -389,6 +389,20 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   padding-left: var(--app-left-rail-padding-inline, 16px);
 }
 
+/* The toolbar shares the ghost-button surface (var(--theme-surface)), so the
+   default back button blends into it. Give the nav button a contrasting
+   surface + stronger border so it reads as a button in every theme. */
+.sequence-viewer-protein-builder-toolbar-nav .ghost-btn,
+.sequence-viewer-cloning-design-toolbar-nav .ghost-btn {
+  background: var(--theme-surface-subtle);
+  border-color: var(--theme-text-muted);
+}
+
+.sequence-viewer-protein-builder-toolbar-nav .ghost-btn:hover,
+.sequence-viewer-cloning-design-toolbar-nav .ghost-btn:hover {
+  background: var(--theme-surface-elevated);
+}
+
 .sequence-viewer-cloning-design-toolbar-copy {
   grid-column: 2;
   display: grid;
@@ -603,6 +617,23 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-cloning-design-procedure span {
+  color: var(--theme-text);
+  font-size: 0.86rem;
+}
+
+.sequence-viewer-cloning-design-enzyme-list {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+
+.sequence-viewer-cloning-design-enzyme-list strong {
+  color: var(--theme-text-strong);
+  display: block;
+}
+
+.sequence-viewer-cloning-design-enzyme-list span {
   color: var(--theme-text);
   font-size: 0.86rem;
 }
@@ -1402,7 +1433,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-trace-plot-bg {
-  fill: var(--theme-surface-elevated);
+  fill: transparent;
 }
 
 .sequence-viewer-trace-grid-line {
@@ -1492,9 +1523,9 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   justify-self: start;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--theme-border-soft);
-  border-radius: 6px;
-  background: var(--theme-surface-subtle);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .sequence-viewer-inline-trace-svg {
@@ -1583,6 +1614,15 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   border-left: 1px solid var(--sequence-viewer-cursor);
   pointer-events: none;
   z-index: 3;
+}
+
+/* Alignment mode: highlight the whole nt column (reference + aligned base)
+   instead of a thin insertion line. Width is set inline (one char advance). */
+.sequence-viewer-line-cursor-block {
+  border-left: 0;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--sequence-viewer-cursor) 20%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sequence-viewer-cursor) 55%, transparent);
 }
 
 .sequence-viewer-seq-text-top {
@@ -1786,6 +1826,13 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-restriction-annot:hover,
 .sequence-viewer-restriction-annot:focus-visible {
   transform: none;
+}
+
+/* The annotation is a <button>, so the global button:hover background would
+   paint over the translucent restriction box and hide it. Keep it transparent. */
+.sequence-viewer-restriction-annot:hover,
+.sequence-viewer-restriction-annot:focus-visible {
+  background: transparent;
 }
 
 .sequence-viewer-feature-hover-tooltip {

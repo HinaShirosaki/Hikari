@@ -1,3 +1,49 @@
+// CSV columns: well,code,name,type,lot,concentration,notes (header required, "well" matches the well label e.g. A1 or W3)
+function importContainerCsv(ctx, section, container, csvText) {
+  const { helpers, persist, state } = ctx;
+  helpers.ensureSamples();
+  const lines = csvText.split(/\r\n|\r|\n/).map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 2) {
+    return;
+  }
+  const header = lines[0].split(',').map((cell) => cell.trim().toLowerCase());
+  const wellIndex = header.indexOf('well');
+  if (wellIndex < 0) {
+    ctx.uiState.wellEditorStatus = 'Import CSV needs a "well" column.';
+    return;
+  }
+  lines.slice(1).forEach((line) => {
+    const cells = line.split(',').map((cell) => cell.trim());
+    const wellLabel = cells[wellIndex];
+    const targetIndex = (container.wells || []).findIndex((_well, index) => (
+      helpers.getWellLabel(container, index).toLowerCase() === wellLabel.toLowerCase()
+    ));
+    const name = header.indexOf('name') >= 0 ? cells[header.indexOf('name')] : '';
+    if (targetIndex < 0 || !name) {
+      return;
+    }
+    const code = header.indexOf('code') >= 0 ? helpers.normalizeSampleCode(cells[header.indexOf('code')]) : '';
+    const sample = {
+      id: `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+      code: code || helpers.makeDefaultSampleCode(),
+      name,
+      type: helpers.normalizeSampleType(header.indexOf('type') >= 0 ? cells[header.indexOf('type')] : 'plasmid'),
+      lot: header.indexOf('lot') >= 0 ? cells[header.indexOf('lot')] : '',
+      concentration: header.indexOf('concentration') >= 0 ? cells[header.indexOf('concentration')] : '',
+      notes: header.indexOf('notes') >= 0 ? cells[header.indexOf('notes')] : '',
+      location: helpers.buildAutoLocationFromLink(section, container, targetIndex),
+      inventoryLink: { section, containerId: container.id, wellIndex: targetIndex },
+      chemicalLinks: [],
+      compoundStructure: null,
+      updatedAt: new Date().toISOString()
+    };
+    state.samples.push(sample);
+  });
+  ctx.uiState.wellEditorStatus = 'Imported samples from CSV.';
+  persist();
+  ctx.notifySamplesChanged();
+}
+
 export function bindWellSampleEvents(ctx) {
   const { helpers, persist, state, uiState } = ctx;
   const { inventorySections } = ctx.elements;
@@ -99,6 +145,70 @@ export function bindWellSampleEvents(ctx) {
       persist();
       notifySamplesChanged();
       renderSections();
+    });
+  });
+
+  inventorySections.querySelectorAll('[data-well-sample-clone]').forEach((button) => {
+    button.addEventListener('click', () => {
+      helpers.ensureSamples();
+      const section = uiState.selectedContainer?.section;
+      const containerId = uiState.selectedContainer?.containerId;
+      const container = section && containerId ? helpers.getContainer(section, containerId) : null;
+      const sample = helpers.getSampleById(button.dataset.wellSampleClone);
+      if (!container || !sample) {
+        return;
+      }
+      const targetLabel = window.prompt(`Clone "${sample.code || sample.name}" to which well? (e.g. ${helpers.getWellLabel(container, 0)})`, '');
+      if (!targetLabel) {
+        return;
+      }
+      const targetIndex = (container.wells || []).findIndex((_well, wellIndex) => (
+        helpers.getWellLabel(container, wellIndex).toLowerCase() === targetLabel.trim().toLowerCase()
+      ));
+      if (targetIndex < 0) {
+        uiState.wellEditorStatus = `No well named "${targetLabel}" in this container.`;
+        renderSections();
+        return;
+      }
+      const clone = {
+        ...sample,
+        id: `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+        inventoryLink: { section, containerId, wellIndex: targetIndex },
+        location: helpers.buildAutoLocationFromLink(section, container, targetIndex),
+        updatedAt: new Date().toISOString()
+      };
+      state.samples.push(clone);
+      uiState.editingWellIndex = targetIndex;
+      uiState.editingSampleId = clone.id;
+      uiState.wellEditorStatus = `Cloned sample into ${helpers.getWellLabel(container, targetIndex)}.`;
+      persist();
+      notifySamplesChanged();
+      renderSections();
+    });
+  });
+
+  inventorySections.querySelectorAll('[data-container-import-csv]').forEach((button) => {
+    button.addEventListener('click', () => {
+      inventorySections.querySelector(`[data-container-import-input="${button.dataset.containerImportCsv}"]`)?.click();
+    });
+  });
+
+  inventorySections.querySelectorAll('[data-container-import-input]').forEach((input) => {
+    input.addEventListener('change', () => {
+      const file = input.files?.[0];
+      input.value = '';
+      if (!file) {
+        return;
+      }
+      const section = uiState.selectedContainer?.section;
+      const containerId = input.dataset.containerImportInput;
+      const container = section && containerId ? helpers.getContainer(section, containerId) : null;
+      if (!container) {
+        return;
+      }
+      file.text().then((text) => importContainerCsv(ctx, section, container, text)).then(() => {
+        renderSections();
+      });
     });
   });
 

@@ -22,7 +22,25 @@
                 </div>
                 <label class="agent-composer-label">
                   <span>Message</span>
-                  <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this paper."></textarea>
+                  <span class="agent-composer-input-wrap">
+                    <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this paper."></textarea>
+                    <button
+                      type="button"
+                      id="agent-rail-paper-screenshot-btn"
+                      class="ghost-btn agent-paper-screenshot-btn"
+                      aria-label="Select an area of the paper to attach"
+                      aria-pressed="false"
+                      title="Select area from paper"
+                    >
+                      <svg class="agent-paper-screenshot-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                        <path d="M7 3.75H4.75a1 1 0 0 0-1 1V7"></path>
+                        <path d="M17 3.75h2.25a1 1 0 0 1 1 1V7"></path>
+                        <path d="M20.25 17v2.25a1 1 0 0 1-1 1H17"></path>
+                        <path d="M7 20.25H4.75a1 1 0 0 1-1-1V17"></path>
+                        <rect x="8" y="8" width="8" height="8" rx="1.25"></rect>
+                      </svg>
+                    </button>
+                  </span>
                 </label>
                 <div id="agent-rail-attachment-list" class="agent-attachment-list" hidden></div>
                 <div class="agent-composer-toolbar">

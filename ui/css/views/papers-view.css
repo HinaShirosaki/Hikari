@@ -576,6 +576,10 @@
   min-width: 0;
 }
 
+.papers-viewer-shell.is-screenshot-selecting .papers-viewer-stage {
+  cursor: crosshair;
+}
+
 .papers-viewer-page-layer {
   display: grid;
   gap: 18px;
@@ -768,6 +772,20 @@
 
 .papers-viewer-overlay {
   z-index: 5;
+  pointer-events: none;
+}
+
+.papers-viewer-screenshot-selection {
+  position: absolute;
+  z-index: 6;
+  min-width: 1px;
+  min-height: 1px;
+  border: 2px solid color-mix(in srgb, var(--theme-accent) 84%, var(--theme-text-strong) 10%);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--theme-surface-elevated) 78%, transparent),
+    0 10px 24px color-mix(in srgb, var(--theme-shadow-color) 50%, transparent);
   pointer-events: none;
 }
 

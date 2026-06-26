@@ -154,19 +154,6 @@
   color: var(--theme-text-muted);
 }
 
-#assay-view .assay-analysis-chart .rv-xy-plot__grid-lines__line {
-  stroke: var(--assay-plate-line);
-}
-
-#assay-view .assay-analysis-chart .rv-xy-plot__axis__line,
-#assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__line {
-  stroke: var(--assay-plate-line-strong);
-}
-
-#assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__text {
-  fill: var(--theme-text-muted);
-}
-
 #workflow-management-view .workflow-graph-canvas {
   background:
     linear-gradient(90deg, color-mix(in srgb, var(--theme-border-soft) 80%, transparent) 1px, transparent 1px),
@@ -341,6 +328,12 @@
   border: 0;
   background: transparent;
   padding: 4px 6px;
+}
+
+/* The detail-view action bar reads as a flat toolbar, not a boxed panel. */
+#sequence-viewer-detail-view .sequence-viewer-controls {
+  border: 0;
+  background: transparent;
 }
 
 #sequence-viewer-detail-view .sequence-viewer-feature-detail,

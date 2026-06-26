@@ -15,6 +15,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const showSequenceHoverTooltip = config?.showSequenceHoverTooltip || (() => {});
   const renderActiveRecord = config?.renderActiveRecord || (() => {});
   const renderSequence = config?.renderSequence || (() => {});
+  const updateSequenceCursor = config?.updateSequenceCursor || (() => {});
   const renderSelectedFeatureDetail = config?.renderSelectedFeatureDetail || (() => {});
   const setOrfViewEnabled = config?.setOrfViewEnabled || (() => {});
   const readOrfStopCodonsFromControls = config?.readOrfStopCodonsFromControls || (() => ({}));
@@ -183,7 +184,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     state.selectedFeatureIndex = index;
     clearSequenceSelection();
     hideFeatureContextMenu();
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
   });
 
   elements.sequenceHost?.addEventListener('mousedown', (event) => {
@@ -247,7 +248,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     }
 
     if (rerenderNeeded) {
-      renderSequence(record, { preserveScroll: true });
+      updateSequenceCursor();
     }
   });
 
@@ -284,7 +285,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     }
     if (Number.isFinite(state.sequenceCursorBase)) {
       state.sequenceCursorBase = null;
-      renderSequence(getSelectedRecord(), { preserveScroll: true });
+      updateSequenceCursor();
     }
   });
 
@@ -305,7 +306,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
     }
     state.selectedFeatureIndex = index;
     clearSequenceSelection({ preserveCursor: true });
-    renderActiveRecord();
+    renderActiveRecord({ preserveScroll: true });
   });
 
   elements.sequenceHost?.addEventListener('mouseup', () => {

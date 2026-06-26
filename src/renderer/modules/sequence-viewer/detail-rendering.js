@@ -137,6 +137,8 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
       lineLength,
       charAdvancePx
     });
+    // Drives the nt-column cursor highlight in updateCursorOnly (hover path).
+    state.alignmentCursorActive = Boolean(alignmentSequenceTrack?.cells?.some?.((cell) => cell));
     const highlights = selectionHighlights.length
       ? selectionHighlights
       : (alignmentHighlights.length
@@ -215,10 +217,60 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
     }
   }
 
+  // Move the insertion cursor without rebuilding the whole sequence DOM.
+  // ponytail: targeted DOM edit instead of a full innerHTML rebuild on every
+  // hover; full renderSequence still owns selection/highlight changes.
+  function updateCursorOnly() {
+    const host = elements.sequenceHost;
+    if (!host) {
+      return;
+    }
+    host.querySelectorAll('.sequence-viewer-line-cursor').forEach((node) => node.remove());
+
+    const base = Number(state.sequenceCursorBase);
+    const layout = state.sequenceLayout || {};
+    const lineLength = Number(layout.lineLength) || 0;
+    const charAdvancePx = Number(layout.charAdvancePx) || 0;
+    const lineFeatureOffsetPx = Number(layout.lineFeatureOffsetPx) || 0;
+    if (!Number.isFinite(base) || base < 0 || lineLength <= 0) {
+      return;
+    }
+
+    const lineStart = Math.floor(base / lineLength) * lineLength;
+    const lineDiv = host.querySelector(`.sequence-viewer-dual-line[data-line-start="${lineStart}"]`);
+    const pair = lineDiv?.querySelector?.('.sequence-viewer-strand-pair');
+    if (!pair || !rootDocument?.createElement) {
+      return;
+    }
+
+    // In alignment mode highlight the nt column (reference + aligned) instead of
+    // a thin line, matching renderDualStrandSequenceLinesHtml. Needs a real base
+    // on this line (base < lineEnd).
+    const lineEnd = Number(lineDiv.dataset.lineEnd) || 0;
+    const blockMode = Boolean(state.alignmentCursorActive) && base < lineEnd;
+
+    // renderDualStrandSequenceLinesHtml writes restriction padding inline, so
+    // we can read it back without forcing a style recalc.
+    const paddingTop = Number.parseFloat(pair.style.paddingTop) || 0;
+    const cursor = rootDocument.createElement('span');
+    cursor.className = blockMode
+      ? 'sequence-viewer-line-cursor sequence-viewer-line-cursor-block'
+      : 'sequence-viewer-line-cursor';
+    cursor.setAttribute('aria-hidden', 'true');
+    cursor.style.left = `${(lineFeatureOffsetPx + ((base - lineStart) * charAdvancePx)).toFixed(3)}px`;
+    cursor.style.top = `${paddingTop.toFixed(3)}px`;
+    cursor.style.height = `${Math.max(0, pair.clientHeight - paddingTop).toFixed(3)}px`;
+    if (blockMode) {
+      cursor.style.width = `${charAdvancePx.toFixed(3)}px`;
+    }
+    pair.appendChild(cursor);
+  }
+
   return {
     renderFeatureRail,
     renderSelectedFeatureDetail,
     renderSequence,
-    renderStats
+    renderStats,
+    updateCursorOnly
   };
 }

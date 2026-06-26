@@ -520,6 +520,16 @@ test('biology-notebook project folder click renders the project dashboard in pla
   assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Fresh Protocol');
   assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Atlas protocol draft/);
   assert.equal(document.getElementById('biology-notebook-page-starter-project').textContent, 'Atlas');
+
+  document.getElementById('biology-notebook-result').value = 'Observed healthy cells after setup.';
+  const agentContext = notebook.getAgentChatContext();
+  assert.equal(agentContext.scopeType, 'notebook');
+  assert.equal(agentContext.projectId, 'p1');
+  assert.equal(agentContext.protocolId, 'pr2');
+  assert.equal(agentContext.hiddenContext.kind, 'notebook-page');
+  assert.match(agentContext.hiddenContext.text, /Active biology notebook page/);
+  assert.match(agentContext.hiddenContext.text, /Run the fresh protocol/);
+  assert.match(agentContext.hiddenContext.text, /Observed healthy cells/);
 });
   }
 };

@@ -656,6 +656,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         assert.match(configText, /\[mcp_servers\.hikari\]/);
         assert.match(configText, /required = true/);
         assert.match(configText, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
+        assert.match(configText, /"container"/);
         assert.match(configText, /default_tools_approval_mode = "approve"/);
         assert.match(configText, /\[mcp_servers\.hikari\.tools\.protocol_generation\]/);
         assert.match(configText, /HIKARI_AGENT_MCP_REQUEST_CONTEXT/);
@@ -732,6 +733,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         const rootSkillPath = path.join(workspaceDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
         const storageSkillPath = path.join(storageRoot, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
         const projectSkillPath = path.join(storageRoot, 'Project', 'Atlas_Project', '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md');
+        const projectContainerSkillPath = path.join(storageRoot, 'Project', 'Atlas_Project', '.agents', 'skills', 'hikari-container', 'SKILL.md');
 
         assert.equal(result.ok, true);
         assert.equal(hostStartCount, 1);
@@ -749,6 +751,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         assert.equal(fs.existsSync(rootSkillPath), true);
         assert.equal(fs.existsSync(storageSkillPath), true);
         assert.equal(fs.existsSync(projectSkillPath), true);
+        assert.equal(fs.existsSync(projectContainerSkillPath), true);
         assert.equal(result.workspace_paths.includes(workspaceDir), true);
         assert.equal(result.workspace_paths.includes(storageRoot), true);
         assert.equal(result.workspace_paths.includes(path.join(storageRoot, 'Project', 'Atlas_Project')), true);

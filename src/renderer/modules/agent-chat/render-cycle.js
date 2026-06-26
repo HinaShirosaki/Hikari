@@ -12,6 +12,7 @@ export function renderAgentChat({
 }) {
   shell.ensureAgentState();
   shell.renderProjectOptions();
+  shell.renderScopedComposer();
   developerToolUi.renderDeveloperToolOptions();
   shell.renderContextSummary();
   sessionManager.renderSessionList();

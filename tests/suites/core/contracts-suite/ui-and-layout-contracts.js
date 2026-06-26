@@ -125,7 +125,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(html, /universal-agent-chat-rail__kicker/);
       assert.doesNotMatch(html, /id="agent-rail-clear-btn"/);
       assert.doesNotMatch(html, /id="agent-rail-project-select"/);
-      assert.equal((registry.apps || []).filter((app) => app.agentChatRail === true).map((app) => app.id).join(','), 'papers');
+      assert.equal((registry.apps || []).filter((app) => app.agentChatRail === true).map((app) => app.id).join(','), 'biology-notebook,papers');
+      assert.match(generatedRegistry, /"id": "biology-notebook"[\s\S]*"agentChatRail": true/);
       assert.match(generatedRegistry, /"id": "papers"[\s\S]*"agentChatRail": true/);
       assert.match(rendererShellSource, /app\?\.agentChatRail === true/);
       assert.match(rendererShellSource, /agentChatRail\.hidden = !enabled/);
@@ -134,9 +135,11 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(rendererShellSource, /moduleRuntime\.renderAgentChatRail\?\.\(\)/);
       assert.match(moduleRuntimeSource, /idPrefix:\s*'agent-rail'/);
       assert.match(moduleRuntimeSource, /loadPersistentSessions:\s*false/);
-      assert.match(moduleRuntimeSource, /createPaperScopedAgentChatState/);
+      assert.match(moduleRuntimeSource, /createScopedAgentChatState/);
       assert.match(moduleRuntimeSource, /getActivePaperId/);
+      assert.match(moduleRuntimeSource, /getAgentChatContext/);
       assert.match(moduleRuntimeSource, /onAskSelectedText:[\s\S]*openPaperAgentChatWithSelection/);
+      assert.match(moduleRuntimeSource, /onActiveNotebookPageChanged:[\s\S]*modules\?\.agentChatRail\?\.render\?\.\(\)/);
       assert.match(moduleRuntimeSource, /primeHiddenContext/);
       assert.match(domBindingsSource, /const id = \(suffix\) => `\$\{idPrefix\}-\$\{suffix\}`;/);
       assert.match(domBindingsSource, /quickPrompts:\s*byId\(id\('quick-prompts'\)\)/);

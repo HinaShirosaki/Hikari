@@ -28,6 +28,7 @@ import { installPdfViewerSearchExecutionController } from './pdf-viewer-search-e
 import { installPdfViewerSearchUiController } from './pdf-viewer-search-ui-controller.js';
 import { installPdfViewerSelectionActionsController } from './pdf-viewer-selection-actions-controller.js';
 import { installPdfViewerSelectionMenuController } from './pdf-viewer-selection-menu-controller.js';
+import { installPdfViewerScreenshotSelectionController } from './pdf-viewer-screenshot-selection-controller.js';
 import { installPdfViewerToolbarController } from './pdf-viewer-toolbar-controller.js';
 
 export {
@@ -59,6 +60,7 @@ function installPdfViewerControllers(ctx) {
   installPdfViewerDocumentCleanupController(ctx);
   installPdfViewerDocumentOpenController(ctx);
   installPdfViewerDataController(ctx);
+  installPdfViewerScreenshotSelectionController(ctx);
   installPdfViewerEventsController(ctx);
 }
 
@@ -78,6 +80,7 @@ export function createPapersPdfViewer(elements = {}) {
       return ctx.state.pageNumber;
     },
     hasActiveDocument: ctx.hasActiveDocument,
+    startPaperScreenshotSelection: ctx.startPaperScreenshotSelection,
     goToPage: ctx.goToPage,
     openExternalUrl: ctx.openExternalLink,
     setComments: ctx.setComments,

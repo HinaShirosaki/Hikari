@@ -76,6 +76,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'purchase-recommendation'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'container'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
     });
 
@@ -282,6 +283,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'web-search'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'sub-agent'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'memory'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'container'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'purchase-recommendation'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
@@ -293,6 +295,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(Boolean(toolCallCatalog['web-search']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['sub-agent']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog.memory?.input_schema), true);
+      assert.equal(Boolean(toolCallCatalog.container?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['literature-search']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['purchase-recommendation']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['paper-download']?.input_schema), true);
@@ -302,6 +305,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(typeof toolCallCatalog['inventory-lookup']?.description, 'string');
       assert.equal(typeof toolCallCatalog['command-line']?.description, 'string');
       assert.equal(typeof toolCallCatalog.memory?.description, 'string');
+      assert.equal(typeof toolCallCatalog.container?.description, 'string');
       assert.equal(typeof toolCallCatalog['literature-search']?.description, 'string');
       assert.equal(typeof toolCallCatalog['purchase-recommendation']?.description, 'string');
       assert.equal(typeof toolCallCatalog['paper-download']?.description, 'string');
@@ -323,6 +327,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(/["']python-sandbox["']/.test(executionSource), false);
       assert.equal(/["']sub-agent["']/.test(executionSource), false);
       assert.equal(/["']memory["']/.test(executionSource), false);
+      assert.equal(/["']container["']/.test(executionSource), false);
       assert.equal(/["']literature-search["']/.test(executionSource), false);
       assert.equal(/["']purchase-recommendation["']/.test(executionSource), false);
       assert.equal(/["']paper-download["']/.test(executionSource), false);
@@ -375,6 +380,7 @@ module.exports = function registerAgentContractsA(context = {}) {
         ['tools', 'agent-paper-analysis.js'],
         ['tools', 'agent-python-sandbox.js'],
         ['tools', 'agent-sub-agent.js'],
+        ['tools', 'agent-container.js'],
         ['context', 'agent-context-management.js'],
         ['context', 'agent-memory.js'],
         ['context', 'agent-chat-log.js']

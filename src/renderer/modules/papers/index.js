@@ -792,6 +792,7 @@ export function initPapersManagement({
 
   return {
     getActivePaperId: () => paperViewer.getActivePaperId(),
+    startPaperScreenshotSelection: () => paperViewer.startPaperScreenshotSelection?.(),
     render: context.render,
     renderLinkTargets: library.renderLinkTargets
   };

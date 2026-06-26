@@ -24,12 +24,32 @@ export function createAgentPayloadBuilder({
       paperTitle: trimText(source.paperTitle, 320),
       pageNumber: Number.isFinite(Number(source.pageNumber))
         ? Math.max(1, Math.round(Number(source.pageNumber)))
-        : 0
+        : 0,
+      notebookEntryId: trimText(source.notebookEntryId, 220),
+      projectName: trimText(source.projectName, 220),
+      protocolName: trimText(source.protocolName, 220)
     };
   }
 
+  function getScopedAutomaticHiddenContexts() {
+    const context = state.agentChatContext && typeof state.agentChatContext === 'object'
+      ? state.agentChatContext
+      : {};
+    const hiddenContexts = asArray(context.hiddenContexts || context.hidden_contexts)
+      .map(normalizeHiddenContext)
+      .filter(Boolean);
+    const singleHiddenContext = normalizeHiddenContext(context.hiddenContext || context.hidden_context);
+    if (singleHiddenContext) {
+      hiddenContexts.unshift(singleHiddenContext);
+    }
+    return hiddenContexts.slice(0, 3);
+  }
+
   function getHiddenDraftContexts() {
-    return hiddenDraftContexts.map((context) => ({ ...context }));
+    return [
+      ...getScopedAutomaticHiddenContexts(),
+      ...hiddenDraftContexts.map((context) => ({ ...context }))
+    ].slice(0, 3);
   }
 
   function primeHiddenContext(context = {}) {
@@ -78,11 +98,12 @@ export function createAgentPayloadBuilder({
   }
 
   function buildAgentFlagsPayload(options = {}) {
-    const paperContext = state.agentChatContext && typeof state.agentChatContext === 'object'
+    const agentContext = state.agentChatContext && typeof state.agentChatContext === 'object'
       ? state.agentChatContext
       : {};
-    const paperSessionPrompt = trimText(paperContext.sessionPrompt, 2400);
+    const sessionPrompt = trimText(agentContext.sessionPrompt, 2400);
     const hiddenContexts = asArray(options.hiddenContexts).map(normalizeHiddenContext).filter(Boolean);
+    const isPaperSession = trimText(agentContext.scopeType, 80) !== 'notebook';
     return {
       developerMode: state.settings?.agent?.developerMode === true,
       externalSkillsEnabled: state.settings?.agent?.externalSkillsEnabled !== false,
@@ -90,13 +111,14 @@ export function createAgentPayloadBuilder({
         .map((item) => trimText(item, 160))
         .filter(Boolean),
       ...(hiddenContexts.length ? { hiddenContexts } : {}),
-      ...(paperSessionPrompt ? {
-        paperSessionPrompt,
+      ...(sessionPrompt ? { sessionPrompt } : {}),
+      ...(sessionPrompt && isPaperSession ? {
+        paperSessionPrompt: sessionPrompt,
         paperSession: {
-          paperId: trimText(paperContext.paperId, 220),
-          paperTitle: trimText(paperContext.paperTitle, 320),
-          transformedMarkdownRelativePath: trimText(paperContext.knowledgeMarkdownRelativePath, 2400),
-          knowledgeStatus: trimText(paperContext.knowledgeStatus, 80)
+          paperId: trimText(agentContext.paperId, 220),
+          paperTitle: trimText(agentContext.paperTitle, 320),
+          transformedMarkdownRelativePath: trimText(agentContext.knowledgeMarkdownRelativePath, 2400),
+          knowledgeStatus: trimText(agentContext.knowledgeStatus, 80)
         }
       } : {})
     };

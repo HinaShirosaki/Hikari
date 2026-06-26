@@ -30,6 +30,9 @@ export const biologyNotebookManifest = {
     },
     onProjectsChanged: rendererServices.project.handleProjectsChanged,
     onNotebookEntriesChanged: rendererServices.notebook.handleNotebookEntriesChanged,
+    onActiveNotebookPageChanged: () => {
+      modules?.agentChatRail?.render?.();
+    },
     selectionInsightsController
   }),
   render: ({ modules }) => {

@@ -40,7 +40,10 @@
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 20px;
   align-items: stretch;
-  min-height: var(--shared-left-rail-layout-height);
+  /* Bounded to the (height:100%) view so the workspace __main scrolls instead of
+     overflowing the clip; matches the sequence-viewer detail layout. */
+  min-height: 0;
+  height: 100%;
 }
 
 .assay-results-layout > * {
@@ -904,11 +907,6 @@
   padding: 10px;
 }
 
-.assay-analysis-chart-canvas {
-  background: var(--theme-surface-elevated);
-  border-radius: 6px;
-}
-
 @media (max-width: 1100px) {
   .assay-create-layout {
     grid-template-columns: 1fr;
@@ -955,47 +953,6 @@
 .assay-form-grid {
     grid-template-columns: 1fr;
   }
-}
-
-.assay-analysis-chart-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.assay-analysis-chart-title {
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-.assay-analysis-chart-plot {
-  overflow-x: auto;
-}
-
-.assay-analysis-chart .rv-xy-plot__grid-lines__line {
-  stroke: var(--assay-plate-line);
-}
-
-.assay-analysis-chart .rv-xy-plot__axis__tick__line {
-  stroke: var(--assay-plate-line-strong);
-}
-
-.assay-analysis-chart-canvas.frame-none .rv-xy-plot__axis__line {
-  display: none;
-}
-
-.assay-analysis-chart .rv-xy-plot__axis__tick__text {
-  fill: var(--theme-primary);
-  font-family: Arial, sans-serif;
-  font-size: 11px;
-}
-
-.assay-analysis-chart .rv-xy-plot text,
-.assay-analysis-chart .rv-xy-plot__axis__title text,
-.assay-analysis-chart .rv-discrete-color-legend {
-  font-family: Arial, sans-serif;
 }
 
 body.theme-night .assay-plate-table-wrap {
@@ -1094,27 +1051,6 @@ body.theme-night .assay-tabulator {
 body.theme-night .assay-analysis-chart {
   border-color: var(--assay-plate-line);
   background: var(--theme-surface-elevated);
-}
-
-body.theme-night .assay-analysis-chart-canvas {
-  background: var(--theme-surface-elevated);
-}
-
-body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__grid-lines__line {
-  stroke: var(--assay-plate-line);
-}
-
-body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__line,
-body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__line {
-  stroke: var(--assay-plate-line-strong);
-}
-
-body.theme-night #assay-view .assay-analysis-chart .rv-xy-plot__axis__tick__text {
-  fill: var(--assay-plate-ink);
-}
-
-body.theme-night .assay-analysis-chart-title {
-  color: var(--assay-plate-ink);
 }
 
 #assay-view .panel,
@@ -1219,10 +1155,14 @@ body.theme-night .assay-analysis-chart-title {
 
 .assay-chart-style-series-row {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 8px;
   font-size: 0.82rem;
+}
+
+.assay-chart-style-series-shape {
+  max-width: 104px;
 }
 
 .assay-chart-style-series-row input[type="color"] {

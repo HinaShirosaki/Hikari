@@ -72,19 +72,26 @@ function createAgentControllerCore({
         paperTitle: cleanText(source.paperTitle, 320),
         pageNumber: Number.isFinite(Number(source.pageNumber))
           ? Math.max(1, Math.round(Number(source.pageNumber)))
-          : 0
+          : 0,
+        notebookEntryId: cleanText(source.notebookEntryId, 220),
+        projectName: cleanText(source.projectName, 220),
+        protocolName: cleanText(source.protocolName, 220)
       };
     }).filter(Boolean).slice(0, 3);
   }
 
   function buildHiddenContextPrompt(hiddenContexts = []) {
     const rows = normalizeHiddenContexts(hiddenContexts).map((context, index) => {
+      const isNotebookContext = context.kind === 'notebook-page' || Boolean(context.notebookEntryId);
       const sourceRows = [
         `Hidden context ${index + 1}: ${context.label}`,
+        context.projectName ? `Project: ${context.projectName}` : '',
+        context.protocolName ? `Protocol: ${context.protocolName}` : '',
+        context.notebookEntryId ? `Notebook entry ID: ${context.notebookEntryId}` : '',
         context.paperTitle ? `Paper: ${context.paperTitle}` : '',
         context.pageNumber ? `Page: ${context.pageNumber}` : '',
         context.paperId ? `Paper ID: ${context.paperId}` : '',
-        'Selected text:',
+        isNotebookContext ? 'Notebook page content:' : 'Selected text:',
         context.text
       ].filter(Boolean);
       return sourceRows.join('\n');

@@ -58,7 +58,8 @@
       "icon": "biology-notebook.svg",
       "placement": "more",
       "aliases": ["biology", "bio notebook", "wet lab", "project", "projects"],
-      "searchInputId": ""
+      "searchInputId": "",
+      "agentChatRail": true
     },
     {
       "id": "chemicals",

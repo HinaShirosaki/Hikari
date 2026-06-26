@@ -1,5 +1,5 @@
 import { initAgentChat } from '../modules/agent-chat/index.js';
-import { createPaperScopedAgentChatState } from '../modules/agent-chat/scoped-state.js';
+import { createScopedAgentChatState } from '../modules/agent-chat/scoped-state.js';
 
 function createPaperContextGetter(state, modules) {
   return () => {
@@ -22,6 +22,22 @@ function createPaperContextGetter(state, modules) {
   };
 }
 
+function createAgentRailScopeContextGetter(state, modules, rootDocument, views = {}) {
+  const getPaperContext = createPaperContextGetter(state, modules);
+  return () => {
+    const activeViewId = String(rootDocument?.body?.dataset?.activeView || '').trim();
+    if (activeViewId === views.BIOLOGY_NOTEBOOK) {
+      return modules?.biologyNotebook?.getAgentChatContext?.() || {
+        scopeType: 'notebook'
+      };
+    }
+    return {
+      ...getPaperContext(),
+      scopeType: 'paper'
+    };
+  };
+}
+
 export const agentChatRailManifest = {
   key: 'agentChatRail',
   init: initAgentChat,
@@ -39,8 +55,8 @@ export const agentChatRailManifest = {
   }) => ({
     idPrefix: 'agent-rail',
     loadPersistentSessions: false,
-    state: createPaperScopedAgentChatState(state, {
-      getPaperContext: createPaperContextGetter(state, modules)
+    state: createScopedAgentChatState(state, {
+      getScopeContext: createAgentRailScopeContextGetter(state, modules, rootDocument, views)
     }),
     persist,
     createId,
@@ -52,6 +68,10 @@ export const agentChatRailManifest = {
       rendererServices.protocol.handleProtocolsChanged();
       modules.protocol?.renderList?.();
     },
+    captureImageAttachment: () => (
+      modules?.papers?.startPaperScreenshotSelection?.()
+      || Promise.resolve({ ok: false, error: 'Open a paper before selecting a screenshot.' })
+    ),
     onOpenNotebookEntry: (entryId = '') => {
       showView(views.BIOLOGY_NOTEBOOK);
       modules.biologyNotebook?.openEntry?.(entryId);

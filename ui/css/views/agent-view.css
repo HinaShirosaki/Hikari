@@ -1140,11 +1140,24 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   gap: 10px;
 }
 
+.agent-composer-input-wrap {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
 .agent-composer-label > span {
   font-size: 0.76rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--theme-text-muted);
+}
+
+.agent-composer-label > .agent-composer-input-wrap {
+  font-size: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+  color: inherit;
 }
 
 .agent-composer-card textarea {
@@ -1162,6 +1175,10 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   font-size: 1rem;
   line-height: 1.58;
   color: var(--theme-text-strong);
+}
+
+.agent-composer-input-wrap textarea {
+  padding-right: 46px;
 }
 
 .agent-composer-card textarea:focus {
@@ -1185,6 +1202,31 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   background: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
   color: var(--theme-text-strong);
   font-size: 0.82rem;
+}
+
+.agent-attachment-thumb {
+  display: block;
+  flex: 0 0 auto;
+  width: 42px;
+  height: 34px;
+  border-radius: 6px;
+  object-fit: cover;
+  background: var(--theme-surface-elevated);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-border) 74%, transparent);
+}
+
+.agent-attachment-pill-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.agent-attachment-pill-meta span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .agent-attachment-pill.is-image {
@@ -1245,6 +1287,47 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   border-radius: 999px;
   font-size: 1.45rem;
   line-height: 1;
+}
+
+.agent-paper-screenshot-btn {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: var(--theme-text-muted);
+  background: transparent;
+}
+
+.agent-paper-screenshot-btn:hover,
+.agent-paper-screenshot-btn:focus-visible,
+.agent-paper-screenshot-btn.is-active {
+  color: var(--theme-text-strong);
+  background: color-mix(in srgb, var(--theme-accent-soft) 68%, transparent);
+}
+
+.agent-paper-screenshot-btn:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.agent-paper-screenshot-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .agent-composer-actions {

@@ -38,6 +38,7 @@ export function collectAgentChatDom(rootDocument, options = {}) {
     attachmentInput: byId(id('attachment-input')),
     attachmentList: byId(id('attachment-list')),
     attachBtn: byId(id('attach-btn')),
+    paperScreenshotBtn: byId(id('paper-screenshot-btn')),
     sendBtn: byId(id('send-btn')),
     stopBtn: byId(id('stop-btn')),
     clearBtn: byId(id('clear-btn')),

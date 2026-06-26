@@ -101,7 +101,9 @@ export function installProteinBuilderRowActions(ctx) {
         throw new Error(response?.error || 'Failed to search stored features.');
       }
 
-      state.featureSearchResults = Array.isArray(response.results) ? response.results : [];
+      state.featureSearchResults = (Array.isArray(response.results) ? response.results : [])
+        // Primers aren't useful as protein-builder blocks; hide primer/primer_bind features.
+        .filter((feature) => !/primer/i.test(String(feature?.type || '')));
       ctx.renderFeatureSearchResults();
       ctx.setFeatureSearchStatus(`Found ${state.featureSearchResults.length} matching feature${state.featureSearchResults.length === 1 ? '' : 's'}.`);
     } catch (error) {

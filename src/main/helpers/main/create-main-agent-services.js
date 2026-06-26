@@ -46,6 +46,7 @@ const { createAgentToolCallRuntime } = require('../agent/tools/agent-tool-execut
 const { createAgentToolProviderRuntime } = require('../agent/tools/agent-tool-provide.js');
 const { createAgentCommandLineRuntime } = require('../agent/tools/agent-command-line.js');
 const { createAgentSubAgentRuntime } = require('../agent/tools/agent-sub-agent.js');
+const { createAgentContainerRuntime } = require('../agent/tools/agent-container.js');
 const { createAgentMemoryRuntime } = require('../agent/context/agent-memory.js');
 const { createNotebookDraftRuntime } = require('../agent/tools/agent-notebook-draft.js');
 const { createWebSearchRuntime } = require('../agent/tools/agent-web-search.js');
@@ -415,6 +416,7 @@ function createMainAgentServices(deps = {}) {
     ...sharedAgentLlmDeps,
     runSubAgentTurn
   });
+  const containerRuntime = createAgentContainerRuntime({});
   const memoryRuntime = createAgentMemoryRuntime({
     ...sharedAgentLlmDeps,
     memoryFilePath: cleanText(getAgentMemoryFilePath(), 2400)
@@ -485,6 +487,7 @@ function createMainAgentServices(deps = {}) {
     notebookGenerationRuntime,
     agentAppApi,
     subAgentRuntime,
+    containerRuntime,
     memoryRuntime,
     paperDownloadRuntime,
     paperAnalysisRuntime,

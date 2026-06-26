@@ -115,6 +115,18 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'memory'), true);
       assert.deepEqual(toolCallCatalog.memory?.input_schema?.properties?.action?.enum, ['recall', 'remember', 'forget', 'list']);
     });
+    test('temporary container helper exports reusable runtime and short-id action contract', () => {
+      const containerSource = fs.readFileSync(agentPath('tools', 'agent-container.js'), 'utf8');
+      const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
+      const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
+
+      assert.match(containerSource, /const CONTAINER_ACTIONS = Object\.freeze/);
+      assert.match(containerSource, /function createAgentContainerRuntime\(deps = \{\}\)/);
+      assert.match(containerSource, /function allocateId\(\)/);
+      assert.match(containerSource, /function replaceRange\(input = \{\}\)/);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'container'), true);
+      assert.deepEqual(toolCallCatalog.container?.input_schema?.properties?.action?.enum, ['create', 'read', 'list', 'update', 'replace_range', 'rename', 'delete', 'clear']);
+    });
     test('agent chat log helper exports reusable session log runtime and renderer consumes session UI ids', () => {
       const helperSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
       const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'session-manager.js'), 'utf8');

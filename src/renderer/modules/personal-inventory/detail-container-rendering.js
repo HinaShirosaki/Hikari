@@ -92,6 +92,10 @@ export function createContainerDetailRenderer({
       <div class="container-inline-detail">
         <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
         <p class="small-note">${safeText(layout.helperText)}</p>
+        <div class="container-detail-toolbar">
+          <button type="button" class="ghost-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}">Import CSV</button>
+          <input type="file" accept=".csv,text/csv" data-container-import-input="${safeText(container.id)}" hidden />
+        </div>
         <div class="well-editor-shell">
           <div class="well-grid-column">
             <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">

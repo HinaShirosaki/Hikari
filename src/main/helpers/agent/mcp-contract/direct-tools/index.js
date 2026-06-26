@@ -41,6 +41,10 @@ const {
   callMemory
 } = require('./memory.js');
 const {
+  CONTAINER_MCP_TOOL,
+  callContainer
+} = require('./container.js');
+const {
   LITERATURE_SEARCH_MCP_TOOL,
   callLiteratureSearch
 } = require('./literature-search.js');
@@ -101,6 +105,10 @@ const DIRECT_MCP_TOOLS = Object.freeze([
   {
     definition: MEMORY_MCP_TOOL,
     handler: callMemory
+  },
+  {
+    definition: CONTAINER_MCP_TOOL,
+    handler: callContainer
   },
   {
     definition: LITERATURE_SEARCH_MCP_TOOL,

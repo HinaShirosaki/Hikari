@@ -571,6 +571,9 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
   const complementary = complementSequence(text);
   const sortedHighlights = normalizeHighlightSegments(highlightedSegments, text.length);
   const alignmentSequenceTrack = normalizeAlignmentSequenceTrack(options?.alignmentSequenceTrack, text.length);
+  // In alignment mode the cursor highlights a whole nt column (reference + aligned)
+  // instead of drawing a thin insertion line between bases.
+  const alignmentCursorActive = Boolean(alignmentSequenceTrack?.cells?.length);
 
   const lines = [];
 
@@ -611,8 +614,15 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
       charAdvancePx,
       lineFeatureOffsetPx
     );
-    const hasCursorOnLine = Number.isFinite(cursorBaseIndex) && cursorBaseIndex >= lineStart && cursorBaseIndex <= lineEnd;
-    const cursorLeftPx = hasCursorOnLine
+    const cursorBlockOnLine = alignmentCursorActive
+      && Number.isFinite(cursorBaseIndex)
+      && cursorBaseIndex >= lineStart
+      && cursorBaseIndex < lineEnd;
+    const showThinCursor = !alignmentCursorActive
+      && Number.isFinite(cursorBaseIndex)
+      && cursorBaseIndex >= lineStart
+      && cursorBaseIndex <= lineEnd;
+    const cursorLeftPx = (cursorBlockOnLine || showThinCursor)
       ? lineFeatureOffsetPx + ((cursorBaseIndex - lineStart) * charAdvancePx)
       : null;
     const cursorRowCount = alignmentQueryRow ? 3 : 2;
@@ -632,9 +642,11 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
         <span class="sequence-viewer-seq-coord"${coordStyle}>${(lineStart + 1).toLocaleString()}</span>
         <div class="sequence-viewer-strand-block">
           <div class="sequence-viewer-strand-pair"${strandPairStyle}>
-            ${hasCursorOnLine
-    ? `<span class="sequence-viewer-line-cursor" style="left:${cursorLeftPx.toFixed(3)}px;top:${restrictionTopPaddingPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;" aria-hidden="true"></span>`
-    : ''}
+            ${cursorBlockOnLine
+    ? `<span class="sequence-viewer-line-cursor sequence-viewer-line-cursor-block" style="left:${cursorLeftPx.toFixed(3)}px;top:${restrictionTopPaddingPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;width:${charAdvancePx.toFixed(3)}px;" aria-hidden="true"></span>`
+    : (showThinCursor
+      ? `<span class="sequence-viewer-line-cursor" style="left:${cursorLeftPx.toFixed(3)}px;top:${restrictionTopPaddingPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;" aria-hidden="true"></span>`
+      : '')}
             <div class="sequence-viewer-strand-row sequence-viewer-strand-row-top">
               <span class="sequence-viewer-strand-end">5'</span>
               <span class="sequence-viewer-seq-text sequence-viewer-seq-text-top">

@@ -1,12 +1,52 @@
 import * as renderingModule from './rendering.js';
 import { asArray, trimText } from './shared.js';
 
+const QUICK_PROMPT_PRESETS = {
+  paper: {
+    ariaLabel: 'Common paper prompts',
+    placeholder: 'Ask Hikari about this paper.',
+    prompts: [
+      {
+        label: 'Generate protocol',
+        prompt: 'Generate a step-by-step experimental protocol from this paper. Include materials, timing, controls, and key caveats.'
+      },
+      {
+        label: 'Summarize',
+        prompt: 'Summarize the main finding, evidence, and limitations of this paper.'
+      },
+      {
+        label: 'Extract methods',
+        prompt: 'Extract the methods that are directly reusable for my experiment.'
+      }
+    ]
+  },
+  notebook: {
+    ariaLabel: 'Common notebook prompts',
+    placeholder: 'Ask Hikari about this notebook page.',
+    prompts: [
+      {
+        label: 'Summarize page',
+        prompt: 'Summarize this notebook page and flag any missing experimental details.'
+      },
+      {
+        label: 'Next steps',
+        prompt: 'Suggest the next experimental steps based on this notebook page.'
+      },
+      {
+        label: 'Draft note',
+        prompt: 'Draft a concise follow-up note for this notebook page.'
+      }
+    ]
+  }
+};
+
 export function createAgentChatShellController({
   dom,
   state,
   persist,
   safeText,
-  runtime
+  runtime,
+  hasImageCapture = false
 }) {
   let sessionManager = null;
 
@@ -144,6 +184,46 @@ export function createAgentChatShellController({
     // Context summary UI has been removed from the agent rail.
   }
 
+  function getActiveScopeType() {
+    const context = state.agentChatContext && typeof state.agentChatContext === 'object'
+      ? state.agentChatContext
+      : {};
+    return trimText(context.scopeType, 80) === 'notebook' ? 'notebook' : 'paper';
+  }
+
+  function renderScopedComposer() {
+    const scopeType = getActiveScopeType();
+    const preset = QUICK_PROMPT_PRESETS[scopeType] || QUICK_PROMPT_PRESETS.paper;
+    if (dom.input) {
+      dom.input.placeholder = preset.placeholder;
+    }
+    if (dom.paperScreenshotBtn) {
+      dom.paperScreenshotBtn.hidden = !hasImageCapture || scopeType !== 'paper';
+    }
+    if (!dom.quickPrompts) {
+      return;
+    }
+    dom.quickPrompts.setAttribute?.('aria-label', preset.ariaLabel);
+    const doc = dom.quickPrompts.ownerDocument;
+    const buttons = Array.from(dom.quickPrompts.querySelectorAll?.('[data-agent-suggest-prompt]') || []);
+    while (buttons.length < preset.prompts.length && doc?.createElement) {
+      const button = doc.createElement('button');
+      button.type = 'button';
+      button.className = 'ghost-btn agent-rail-quick-prompt';
+      dom.quickPrompts.appendChild(button);
+      buttons.push(button);
+    }
+    buttons.forEach((button, index) => {
+      const prompt = preset.prompts[index];
+      button.hidden = !prompt;
+      if (!prompt) {
+        return;
+      }
+      button.dataset.agentSuggestPrompt = prompt.prompt;
+      button.textContent = prompt.label;
+    });
+  }
+
   function updateInFlightState(nextInFlight) {
     runtime.inFlight = nextInFlight;
     if (!runtime.inFlight) {
@@ -183,6 +263,7 @@ export function createAgentChatShellController({
     getStoragePath,
     renderContextSummary,
     renderHistoryView,
+    renderScopedComposer,
     renderProjectOptions,
     scrollHistoryToBottom,
     setSessionManager,
