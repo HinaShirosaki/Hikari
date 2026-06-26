@@ -53,9 +53,80 @@ export function bindWellSampleEvents(ctx) {
   const isChemicalSampleType = (...args) => ctx.isChemicalSampleType(...args);
   const normalizeStructureData = (...args) => ctx.normalizeStructureData(...args);
   const getPendingStructureKey = (...args) => ctx.getPendingStructureKey(...args);
+  // Persisted across renders on ctx so the drag-to-clone gesture survives the re-bind that happens after every renderSections().
+  const dragClone = ctx._dragClone || (ctx._dragClone = { active: false, visited: new Set(), count: 0, suppressClick: false });
+
+  function applyDragClone(button) {
+    const index = Number(button.dataset.wellIndex);
+    if (dragClone.visited.has(index)) {
+      return;
+    }
+    dragClone.visited.add(index);
+    const section = uiState.selectedContainer?.section;
+    const containerId = uiState.selectedContainer?.containerId;
+    const container = section && containerId ? helpers.getContainer(section, containerId) : null;
+    const sample = helpers.getSampleById(uiState.cloningSampleId);
+    if (!container || !sample || Number(sample.inventoryLink?.wellIndex) === index) {
+      return;
+    }
+    const clone = {
+      ...sample,
+      id: `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
+      inventoryLink: { section, containerId, wellIndex: index },
+      location: helpers.buildAutoLocationFromLink(section, container, index),
+      updatedAt: new Date().toISOString()
+    };
+    state.samples.push(clone);
+    dragClone.count += 1;
+  }
+
+  if (!ctx._dragCloneMouseupBound) {
+    ctx._dragCloneMouseupBound = true;
+    document.addEventListener('mouseup', () => {
+      if (!dragClone.active) {
+        return;
+      }
+      dragClone.active = false;
+      dragClone.suppressClick = true;
+      setTimeout(() => { dragClone.suppressClick = false; }, 0);
+      const sample = helpers.getSampleById(uiState.cloningSampleId);
+      uiState.cloningSampleId = null;
+      if (dragClone.count > 0) {
+        uiState.wellEditorStatus = `Cloned ${sample ? (sample.code || sample.name) : 'sample'} into ${dragClone.count} well${dragClone.count === 1 ? '' : 's'}.`;
+        persist();
+        notifySamplesChanged();
+      }
+      renderSections();
+    });
+  }
 
   inventorySections.querySelectorAll('[data-well-index]').forEach((button) => {
+    button.addEventListener('mousedown', (event) => {
+      if (!uiState.cloningSampleId) {
+        return;
+      }
+      const section = button.dataset.section;
+      const containerId = button.dataset.containerId;
+      if (!uiState.selectedContainer || uiState.selectedContainer.section !== section || uiState.selectedContainer.containerId !== containerId) {
+        return;
+      }
+      event.preventDefault();
+      dragClone.active = true;
+      dragClone.visited = new Set();
+      dragClone.count = 0;
+      applyDragClone(button);
+    });
+
+    button.addEventListener('mouseenter', () => {
+      if (dragClone.active) {
+        applyDragClone(button);
+      }
+    });
+
     button.addEventListener('click', () => {
+      if (dragClone.suppressClick) {
+        return;
+      }
       const section = button.dataset.section;
       const containerId = button.dataset.containerId;
       if (!uiState.selectedContainer || uiState.selectedContainer.section !== section || uiState.selectedContainer.containerId !== containerId) {
@@ -150,39 +221,18 @@ export function bindWellSampleEvents(ctx) {
 
   inventorySections.querySelectorAll('[data-well-sample-clone]').forEach((button) => {
     button.addEventListener('click', () => {
-      helpers.ensureSamples();
-      const section = uiState.selectedContainer?.section;
-      const containerId = uiState.selectedContainer?.containerId;
-      const container = section && containerId ? helpers.getContainer(section, containerId) : null;
       const sample = helpers.getSampleById(button.dataset.wellSampleClone);
-      if (!container || !sample) {
+      if (!sample) {
         return;
       }
-      const targetLabel = window.prompt(`Clone "${sample.code || sample.name}" to which well? (e.g. ${helpers.getWellLabel(container, 0)})`, '');
-      if (!targetLabel) {
-        return;
+      if (uiState.cloningSampleId === sample.id) {
+        uiState.cloningSampleId = null;
+        uiState.wellEditorStatus = 'Clone cancelled.';
+      } else {
+        helpers.ensureSamples();
+        uiState.cloningSampleId = sample.id;
+        uiState.wellEditorStatus = `Drag across wells to clone ${sample.code || sample.name}.`;
       }
-      const targetIndex = (container.wells || []).findIndex((_well, wellIndex) => (
-        helpers.getWellLabel(container, wellIndex).toLowerCase() === targetLabel.trim().toLowerCase()
-      ));
-      if (targetIndex < 0) {
-        uiState.wellEditorStatus = `No well named "${targetLabel}" in this container.`;
-        renderSections();
-        return;
-      }
-      const clone = {
-        ...sample,
-        id: `sample-${Date.now()}-${Math.random().toString(16).slice(2, 6)}`,
-        inventoryLink: { section, containerId, wellIndex: targetIndex },
-        location: helpers.buildAutoLocationFromLink(section, container, targetIndex),
-        updatedAt: new Date().toISOString()
-      };
-      state.samples.push(clone);
-      uiState.editingWellIndex = targetIndex;
-      uiState.editingSampleId = clone.id;
-      uiState.wellEditorStatus = `Cloned sample into ${helpers.getWellLabel(container, targetIndex)}.`;
-      persist();
-      notifySamplesChanged();
       renderSections();
     });
   });

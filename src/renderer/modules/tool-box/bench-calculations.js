@@ -9,16 +9,36 @@ import {
   volumeToL
 } from './molarity.js';
 
-const REACTION_CONCENTRATION_FACTORS = {
-  fM: 1e-15,
-  pM: 1e-12,
-  nM: 1e-9,
-  uM: 1e-6,
-  mM: 1e-3,
-  M: 1,
-  x: 1
+const BUFFER_MASS_FACTORS_G = {
+  ng: 1e-9,
+  ug: 1e-6,
+  mg: 1e-3,
+  g: 1,
+  kg: 1e3
 };
 
+const BUFFER_VOLUME_FACTORS_L = {
+  nL: 1e-9,
+  uL: 1e-6,
+  mL: 1e-3,
+  L: 1
+};
+
+const BUFFER_PKA_HINTS = [
+  { pattern: /\bmes\b/i, pKa: 6.15, label: 'MES' },
+  { pattern: /\bpipes\b/i, pKa: 6.8, label: 'PIPES' },
+  { pattern: /\bmops\b/i, pKa: 7.2, label: 'MOPS' },
+  { pattern: /\b(?:phosphate|hpo4|h2po4|kh2po4|na2hpo4|nah2po4)\b/i, pKa: 7.21, label: 'phosphate' },
+  { pattern: /\bhepes\b/i, pKa: 7.55, label: 'HEPES' },
+  { pattern: /\b(?:tris|tris-hcl)\b/i, pKa: 8.06, label: 'Tris' },
+  { pattern: /\btricine\b/i, pKa: 8.15, label: 'Tricine' },
+  { pattern: /\bbicine\b/i, pKa: 8.35, label: 'Bicine' },
+  { pattern: /\btaps\b/i, pKa: 8.4, label: 'TAPS' },
+  { pattern: /\bglycine\b/i, pKa: 9.78, label: 'Glycine' },
+  { pattern: /\bacetate\b/i, pKa: 4.76, label: 'acetate' }
+];
+
+const BUFFER_PH_ADJUSTMENT_MOLARITY = 6;
 const VOLUME_EPSILON_L = 1e-15;
 
 function isPositive(value) {
@@ -31,6 +51,341 @@ function cleanUnit(unit, fallback = '') {
 
 function cleanName(value, fallback) {
   return String(value || '').trim() || fallback;
+}
+
+function normalizeBufferUnitText(value) {
+  return String(value || '')
+    .replace(/[µμ]/g, 'u')
+    .replace(/\s+/g, '')
+    .trim();
+}
+
+function parseBufferNumericPrefix(value) {
+  const source = String(value ?? '').trim();
+  const match = source.match(/([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[-+]?\d+)?)/i);
+  if (!match) {
+    return null;
+  }
+  const numericValue = Number(match[1]);
+  if (!Number.isFinite(numericValue)) {
+    return null;
+  }
+  return {
+    value: numericValue,
+    unitText: source.slice(match.index + match[0].length).trim(),
+    source
+  };
+}
+
+function normalizeMolarityUnit(unitText, fallback = 'mM') {
+  const clean = normalizeBufferUnitText(unitText);
+  if (!clean) {
+    return fallback;
+  }
+  if (/^fm(?:olar)?$/i.test(clean)) {
+    return 'fM';
+  }
+  if (/^pm(?:olar)?$/i.test(clean)) {
+    return 'pM';
+  }
+  if (/^nm(?:olar)?$/i.test(clean)) {
+    return 'nM';
+  }
+  if (/^um(?:olar)?$/i.test(clean)) {
+    return 'uM';
+  }
+  if (/^mm(?:olar)?$/i.test(clean)) {
+    return 'mM';
+  }
+  if (/^(?:m|mol\/l|molar)$/i.test(clean)) {
+    return 'M';
+  }
+  return fallback;
+}
+
+function normalizeMassVolumeUnit(unitText, fallbackMassUnit = 'mg', fallbackVolumeUnit = 'mL') {
+  const clean = normalizeBufferUnitText(unitText).toLowerCase();
+  const match = clean.match(/(ng|ug|mg|g|kg)(?:\/|per)(nl|ul|ml|l)/i);
+  if (!match) {
+    return {
+      massUnit: fallbackMassUnit,
+      volumeUnit: fallbackVolumeUnit,
+      explicit: false
+    };
+  }
+  const volumeUnit = match[2] === 'nl'
+    ? 'nL'
+    : (match[2] === 'ul' ? 'uL' : (match[2] === 'ml' ? 'mL' : 'L'));
+  return {
+    massUnit: match[1] === 'ug' ? 'ug' : match[1],
+    volumeUnit,
+    explicit: true
+  };
+}
+
+function inferPercentKind(unitText, fallback = 'volume') {
+  const clean = normalizeBufferUnitText(unitText).toLowerCase();
+  if (/(?:m\/v|w\/v|mass\/volume|weight\/volume)/.test(clean)) {
+    return 'massVolume';
+  }
+  if (/(?:m\/m|w\/w|mass\/mass|weight\/weight)/.test(clean)) {
+    return 'massMass';
+  }
+  if (/(?:v\/v|volume\/volume)/.test(clean)) {
+    return 'volume';
+  }
+  return fallback;
+}
+
+function formatPercentUnit(kind) {
+  if (kind === 'massVolume') {
+    return '% m/v';
+  }
+  if (kind === 'massMass') {
+    return '% m/m';
+  }
+  return '% v/v';
+}
+
+function buildParsedBufferConcentration({
+  raw,
+  number,
+  kind,
+  unit,
+  value,
+  percentKind = '',
+  massUnit = '',
+  volumeUnit = '',
+  explicitUnit = false
+}) {
+  const displayUnit = unit || (
+    kind === 'percent'
+      ? formatPercentUnit(percentKind)
+      : (kind === 'fold' ? 'x' : '')
+  );
+  const text = displayUnit === 'x'
+    ? `${formatSigFig(number)}x`
+    : `${formatSigFig(number)}${displayUnit ? ` ${displayUnit}` : ''}`;
+  return {
+    raw: String(raw ?? '').trim(),
+    number,
+    kind,
+    unit: displayUnit,
+    value,
+    percentKind,
+    massUnit,
+    volumeUnit,
+    explicitUnit,
+    missing: false,
+    text
+  };
+}
+
+export function parseBufferConcentration(value, options = {}) {
+  const parsed = parseBufferNumericPrefix(value);
+  if (!parsed) {
+    return {
+      raw: String(value ?? '').trim(),
+      missing: true,
+      text: ''
+    };
+  }
+
+  const unitText = parsed.unitText;
+  const compactUnit = normalizeBufferUnitText(unitText);
+  const compactLower = compactUnit.toLowerCase();
+  const defaultKind = options.defaultKind || 'molar';
+  const explicitUnit = Boolean(compactUnit);
+
+  if (/[x×]$/i.test(compactLower) || compactLower === 'fold') {
+    return buildParsedBufferConcentration({
+      raw: parsed.source,
+      number: parsed.value,
+      kind: 'fold',
+      unit: 'x',
+      value: parsed.value,
+      explicitUnit: true
+    });
+  }
+
+  if (compactLower.includes('%') || /(?:v\/v|m\/v|w\/v|m\/m|w\/w|volume\/volume|mass\/volume|weight\/volume|mass\/mass|weight\/weight)/.test(compactLower)) {
+    const percentKind = inferPercentKind(unitText, options.defaultPercentKind || 'volume');
+    return buildParsedBufferConcentration({
+      raw: parsed.source,
+      number: parsed.value,
+      kind: 'percent',
+      unit: formatPercentUnit(percentKind),
+      value: parsed.value,
+      percentKind,
+      explicitUnit: true
+    });
+  }
+
+  const massVolumeUnit = normalizeMassVolumeUnit(
+    unitText,
+    options.defaultMassUnit || 'mg',
+    options.defaultVolumeUnit || 'mL'
+  );
+  if (massVolumeUnit.explicit) {
+    const massFactor = BUFFER_MASS_FACTORS_G[massVolumeUnit.massUnit] || 0;
+    const volumeFactor = BUFFER_VOLUME_FACTORS_L[massVolumeUnit.volumeUnit] || 0;
+    return buildParsedBufferConcentration({
+      raw: parsed.source,
+      number: parsed.value,
+      kind: 'massVolume',
+      unit: `${massVolumeUnit.massUnit}/${massVolumeUnit.volumeUnit}`,
+      value: volumeFactor ? (parsed.value * massFactor) / volumeFactor : 0,
+      massUnit: massVolumeUnit.massUnit,
+      volumeUnit: massVolumeUnit.volumeUnit,
+      explicitUnit: true
+    });
+  }
+
+  if (!explicitUnit && defaultKind === 'fold') {
+    return buildParsedBufferConcentration({
+      raw: parsed.source,
+      number: parsed.value,
+      kind: 'fold',
+      unit: 'x',
+      value: parsed.value,
+      explicitUnit: false
+    });
+  }
+
+  if (!explicitUnit && defaultKind === 'massVolume') {
+    const unit = normalizeMassVolumeUnit(
+      '',
+      options.defaultMassUnit || 'mg',
+      options.defaultVolumeUnit || 'mL'
+    );
+    const massFactor = BUFFER_MASS_FACTORS_G[unit.massUnit] || 0;
+    const volumeFactor = BUFFER_VOLUME_FACTORS_L[unit.volumeUnit] || 0;
+    return buildParsedBufferConcentration({
+      raw: parsed.source,
+      number: parsed.value,
+      kind: 'massVolume',
+      unit: `${unit.massUnit}/${unit.volumeUnit}`,
+      value: volumeFactor ? (parsed.value * massFactor) / volumeFactor : 0,
+      massUnit: unit.massUnit,
+      volumeUnit: unit.volumeUnit,
+      explicitUnit: false
+    });
+  }
+
+  if (!explicitUnit && defaultKind === 'percent') {
+    const percentKind = options.defaultPercentKind || 'volume';
+    return buildParsedBufferConcentration({
+      raw: parsed.source,
+      number: parsed.value,
+      kind: 'percent',
+      unit: formatPercentUnit(percentKind),
+      value: parsed.value,
+      percentKind,
+      explicitUnit: false
+    });
+  }
+
+  const unit = normalizeMolarityUnit(unitText, options.defaultUnit || 'mM');
+  return buildParsedBufferConcentration({
+    raw: parsed.source,
+    number: parsed.value,
+    kind: 'molar',
+    unit,
+    value: concentrationToM(parsed.value, unit),
+    explicitUnit
+  });
+}
+
+function bufferConcentrationDefaultsFrom(parsed, fallback = {}) {
+  if (!parsed || parsed.missing) {
+    return fallback;
+  }
+  if (parsed.kind === 'massVolume') {
+    return {
+      defaultKind: 'massVolume',
+      defaultMassUnit: parsed.massUnit || 'mg',
+      defaultVolumeUnit: parsed.volumeUnit || 'mL'
+    };
+  }
+  if (parsed.kind === 'percent') {
+    return {
+      defaultKind: 'percent',
+      defaultPercentKind: parsed.percentKind || fallback.defaultPercentKind || 'volume'
+    };
+  }
+  if (parsed.kind === 'fold') {
+    return { defaultKind: 'fold' };
+  }
+  if (parsed.kind === 'molar') {
+    return {
+      defaultKind: 'molar',
+      defaultUnit: parsed.unit || fallback.defaultUnit || 'mM'
+    };
+  }
+  return fallback;
+}
+
+function bufferDefaultsForForm(form) {
+  return String(form || '').trim() === 'liquid'
+    ? { defaultKind: 'percent', defaultPercentKind: 'volume' }
+    : { defaultKind: 'molar', defaultUnit: 'mM', defaultPercentKind: 'massVolume' };
+}
+
+function bufferConcentrationsCompatible(stock, final) {
+  if (!stock || stock.missing || !final || final.missing || stock.kind !== final.kind) {
+    return false;
+  }
+  if (stock.kind !== 'percent') {
+    return true;
+  }
+  return (stock.percentKind || 'volume') === (final.percentKind || 'volume');
+}
+
+function bufferConcentrationBaseValue(parsed) {
+  if (!parsed || parsed.missing) {
+    return 0;
+  }
+  return parsed.value;
+}
+
+function formatBufferVolumeMl(valueMl) {
+  const value = Number(valueMl);
+  if (!Number.isFinite(value) || value <= 0) {
+    return '0 uL';
+  }
+  if (value < 1) {
+    return `${formatSigFig(value * 1000)} uL`;
+  }
+  return `${formatSigFig(value)} mL`;
+}
+
+function formatBufferVolumeDual(valueMl) {
+  const value = Number(valueMl);
+  if (!Number.isFinite(value) || value <= 0) {
+    return '0 mL (0 uL)';
+  }
+  return `${formatSigFig(value)} mL (${formatSigFig(value * 1000)} uL)`;
+}
+
+function formatBufferMassDual(valueG) {
+  const grams = Number(valueG);
+  if (!Number.isFinite(grams) || grams <= 0) {
+    return '0 mg (0 g)';
+  }
+  const milligrams = grams * 1000;
+  if (milligrams >= 0.001) {
+    return `${formatSigFig(milligrams)} mg (${formatSigFig(grams)} g)`;
+  }
+  const micrograms = grams * 1e6;
+  if (micrograms >= 0.001) {
+    return `${formatSigFig(micrograms)} ug`;
+  }
+  return `${formatSigFig(grams * 1e9)} ng`;
+}
+
+function findBufferPkaHint(name) {
+  const source = String(name || '').trim();
+  return BUFFER_PKA_HINTS.find((hint) => hint.pattern.test(source)) || null;
 }
 
 function describeInput(value, unit, label) {
@@ -265,6 +620,8 @@ export function calculateBufferIngredient({
   name,
   form,
   molecularWeight,
+  stockConcentration,
+  finalConcentration,
   concentrationValue,
   volumeMl
 } = {}) {
@@ -272,55 +629,133 @@ export function calculateBufferIngredient({
   const resolvedName = cleanName(name === '__custom__' ? '' : name, compound?.name || 'Buffer ingredient');
   const resolvedForm = String(form || compound?.form || 'solid').trim() === 'liquid' ? 'liquid' : 'solid';
   const volume = withLabel(describeRawValue(volumeMl, 'mL', 'buffer volume'), 'buffer volume');
-  const concentrationLabel = resolvedForm === 'liquid' ? 'percent v/v' : 'concentration';
-  const concentrationUnit = resolvedForm === 'liquid' ? '% v/v' : 'mM';
-  const concentration = withLabel(describeRawValue(concentrationValue, concentrationUnit, concentrationLabel), concentrationLabel);
+  const defaults = bufferDefaultsForForm(resolvedForm);
+  const stockRaw = String(stockConcentration ?? '').trim();
+  const finalRaw = String(finalConcentration ?? concentrationValue ?? '').trim();
+  const stock = stockRaw ? parseBufferConcentration(stockRaw, defaults) : null;
+  const final = parseBufferConcentration(
+    finalRaw,
+    stock && !stock.missing ? bufferConcentrationDefaultsFrom(stock, defaults) : defaults
+  );
   const mw = withLabel(
     describeRawValue(molecularWeight || compound?.mw, 'g/mol', 'molecular weight'),
     'molecular weight'
   );
-  const missing = resolvedForm === 'liquid'
-    ? collectMissing(concentration, volume)
-    : collectMissing(concentration, volume, mw);
+  const missing = collectMissing(volume);
   let formulaText = '';
   let resultText = '';
+  let quantityText = '';
+  let addVolumeMl = 0;
+  let massG = 0;
+  let status = '';
 
-  if (resolvedForm === 'liquid') {
-    formulaText = `${resolvedName} volume = ${concentration.text} x ${volume.text}`;
-    if (!missing.length) {
-      const requiredMl = (concentration.value / 100) * volume.value;
-      resultText = `${resolvedName}: ${formatSigFig(requiredMl)} mL (${formatSigFig(requiredMl * 1000)} uL).`;
+  if (final.missing) {
+    formulaText = stock && !stock.missing
+      ? `${resolvedName} stock volume = [final concentration] x ${volume.text} / ${stock.text}`
+      : `${resolvedName} amount = [final concentration] x ${volume.text}`;
+    missing.push('final concentration');
+  } else if (stock && !stock.missing) {
+    formulaText = `${resolvedName} stock volume = ${final.text} x ${volume.text} / ${stock.text}`;
+    if (!bufferConcentrationsCompatible(stock, final)) {
+      status = 'warning';
+      resultText = `${resolvedName}: stock and final concentration units are not compatible.`;
+    } else if (!missing.length) {
+      const stockBaseValue = bufferConcentrationBaseValue(stock);
+      const finalBaseValue = bufferConcentrationBaseValue(final);
+      if (isPositive(stockBaseValue) && isPositive(finalBaseValue)) {
+        addVolumeMl = (finalBaseValue * volume.value) / stockBaseValue;
+        if (addVolumeMl > volume.value) {
+          status = 'warning';
+          resultText = `${resolvedName}: final concentration is higher than stock concentration.`;
+        } else {
+          quantityText = formatBufferVolumeDual(addVolumeMl);
+          resultText = `${resolvedName}: ${quantityText} stock.`;
+        }
+      } else {
+        missing.push('stock concentration');
+      }
     }
-  } else {
+  } else if (final.kind === 'molar') {
+    missing.push(...collectMissing(mw));
     const volumeLText = isPositive(volume.value) ? `${formatSigFig(volume.value / 1000)} L` : '[buffer volume L]';
-    formulaText = `${resolvedName} mass mg = ${concentration.text} x ${volumeLText} x ${mw.text}`;
+    formulaText = `${resolvedName} mass = ${final.text} x ${volumeLText} x ${mw.text}`;
     if (!missing.length) {
-      const grams = (concentration.value / 1000) * (volume.value / 1000) * mw.value;
-      resultText = `${resolvedName}: ${formatSigFig(grams * 1000)} mg (${formatSigFig(grams)} g).`;
+      massG = final.value * (volume.value / 1000) * mw.value;
+      quantityText = formatBufferMassDual(massG);
+      resultText = `${resolvedName}: ${quantityText}.`;
     }
+  } else if (final.kind === 'massVolume') {
+    const volumeLText = isPositive(volume.value) ? `${formatSigFig(volume.value / 1000)} L` : '[buffer volume L]';
+    formulaText = `${resolvedName} mass = ${final.text} x ${volumeLText}`;
+    if (!missing.length) {
+      massG = final.value * (volume.value / 1000);
+      quantityText = formatBufferMassDual(massG);
+      resultText = `${resolvedName}: ${quantityText}.`;
+    }
+  } else if (final.kind === 'percent' && final.percentKind === 'volume') {
+    formulaText = `${resolvedName} volume = ${final.text} x ${volume.text}`;
+    if (!missing.length) {
+      addVolumeMl = (final.value / 100) * volume.value;
+      quantityText = formatBufferVolumeDual(addVolumeMl);
+      resultText = `${resolvedName}: ${quantityText}.`;
+    }
+  } else if (final.kind === 'percent' && final.percentKind === 'massVolume') {
+    formulaText = `${resolvedName} mass = ${final.text} x ${volume.text}`;
+    if (!missing.length) {
+      massG = (final.value * volume.value) / 100;
+      quantityText = formatBufferMassDual(massG);
+      resultText = `${resolvedName}: ${quantityText}.`;
+    }
+  } else if (final.kind === 'percent' && final.percentKind === 'massMass') {
+    formulaText = `${resolvedName} mass = ${final.text} x total solution mass; density required for volume-based buffer prep`;
+    missing.push('solution density');
+  } else if (final.kind === 'fold') {
+    formulaText = `${resolvedName} stock volume = ${final.text} x ${volume.text} / [stock concentration]`;
+    missing.push('stock concentration');
   }
 
   return buildResult({
     type: 'buffer',
     mode: resolvedForm,
     title: `Buffer - ${resolvedName}`,
-    inputs: { name: resolvedName, form: resolvedForm, molecularWeight: molecularWeight || compound?.mw || '', concentrationValue, volumeMl },
+    inputs: {
+      name: resolvedName,
+      form: resolvedForm,
+      molecularWeight: molecularWeight || compound?.mw || '',
+      stockConcentration: stockRaw,
+      finalConcentration: finalRaw,
+      concentrationValue,
+      volumeMl
+    },
     resultText,
     formulaText,
-    missing
+    missing,
+    status,
+    details: [{
+      name: resolvedName,
+      form: resolvedForm,
+      stockConcentration: stock,
+      finalConcentration: final,
+      quantityText,
+      addVolumeMl,
+      massG
+    }]
   });
 }
 
 export function calculateBufferRecipe({
   volumeMl,
-  rows = []
+  pH,
+  rows = [],
+  solventName = 'Solvent'
 } = {}) {
   const activeRows = (Array.isArray(rows) ? rows : [])
     .filter((row) => row && typeof row === 'object')
     .filter((row) => (
       String(row.name || '').trim()
       || String(row.customName || '').trim()
-      || toNumber(row.concentrationValue) > 0
+      || String(row.stockConcentration || row.stockConcentrationValue || '').trim()
+      || String(row.finalConcentration || row.finalConcentrationValue || row.concentrationValue || '').trim()
       || toNumber(row.molecularWeight) > 0
     ));
   const sourceRows = activeRows.length ? activeRows : [{}];
@@ -328,48 +763,112 @@ export function calculateBufferRecipe({
     const rowName = String(row.name || '').trim() === '__custom__'
       ? String(row.customName || '').trim()
       : String(row.name || '').trim();
-    return calculateBufferIngredient({
+    const detail = calculateBufferIngredient({
       name: rowName || `Ingredient ${index + 1}`,
       form: row.form,
       molecularWeight: row.molecularWeight,
+      stockConcentration: row.stockConcentration ?? row.stockConcentrationValue,
+      finalConcentration: row.finalConcentration ?? row.finalConcentrationValue,
       concentrationValue: row.concentrationValue,
       volumeMl
     });
+    detail.rowIndex = row.rowIndex || index + 1;
+    return detail;
   });
+  const targetVolumeMl = toNumber(volumeMl);
+  const additiveVolumeMl = details.reduce((sum, detail) => {
+    const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
+    return sum + (Number(rowDetail?.addVolumeMl) || 0);
+  }, 0);
+  const phAdjustment = estimateBufferPhAdjustment({ details, pH, volumeMl: targetVolumeMl });
+  const solventMl = isPositive(targetVolumeMl)
+    ? Math.max(0, targetVolumeMl - additiveVolumeMl - phAdjustment.naohMl - phAdjustment.hclMl)
+    : 0;
+  const solventLabel = cleanName(solventName, 'Solvent');
+  const solventText = isPositive(targetVolumeMl)
+    ? `${solventLabel} to add: ${formatBufferVolumeDual(solventMl)}.`
+    : '';
+  const naohText = phAdjustment.naohText ? `6 M NaOH: ${phAdjustment.naohText}.` : '';
+  const hclText = phAdjustment.hclText ? `6 M HCl: ${phAdjustment.hclText}.` : '';
   const resultLines = details.map((detail) => detail.resultText).filter(Boolean);
   const formulaLines = details.map((detail) => detail.formulaText).filter(Boolean);
   const missing = details.flatMap((detail) => detail.missing || []);
-  return buildResult({
+  if (phAdjustment.missing) {
+    missing.push(phAdjustment.missing);
+  }
+  const result = buildResult({
     type: 'buffer',
     mode: 'recipe',
     title: 'Buffer Preparer',
-    inputs: { volumeMl, rows: activeRows },
-    resultText: resultLines.join('\n'),
-    formulaText: formulaLines.join('\n'),
+    inputs: { volumeMl, pH, solventName: solventLabel, rows: activeRows },
+    resultText: [...resultLines, solventText, naohText, hclText].filter(Boolean).join('\n'),
+    formulaText: [
+      ...formulaLines,
+      isPositive(targetVolumeMl) ? `${solventLabel} = final volume - stock/liquid additions - pH adjustment` : '',
+      phAdjustment.formulaText
+    ].filter(Boolean).join('\n'),
     details,
-    missing
+    missing,
+    status: details.some((detail) => detail.status === 'warning') ? 'warning' : ''
   });
+  result.solvent = {
+    name: solventLabel,
+    volumeMl: solventMl,
+    text: isPositive(targetVolumeMl) ? formatBufferVolumeDual(solventMl) : ''
+  };
+  result.phAdjustment = phAdjustment;
+  return result;
 }
 
-function parseReactionConcentration(value, unit) {
-  const numericValue = toNumber(value);
-  const cleanReactionUnit = cleanUnit(unit, 'mM');
-  if (!isPositive(numericValue)) {
-    return null;
-  }
-  if (cleanReactionUnit === 'x') {
+function estimateBufferPhAdjustment({ details = [], pH, volumeMl } = {}) {
+  const targetPh = toNumber(pH);
+  if (!isPositive(targetPh)) {
     return {
-      kind: 'fold',
-      value: numericValue
+      naohMl: 0,
+      hclMl: 0,
+      naohText: '',
+      hclText: '',
+      formulaText: ''
     };
   }
-  const factor = REACTION_CONCENTRATION_FACTORS[cleanReactionUnit];
-  if (!isPositive(factor)) {
-    return null;
+
+  const volumeL = toNumber(volumeMl) / 1000;
+  const candidate = (Array.isArray(details) ? details : []).map((detail) => {
+    const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
+    const concentration = rowDetail?.finalConcentration;
+    const pkaHint = findBufferPkaHint(rowDetail?.name || detail?.inputs?.name || detail?.title);
+    if (!pkaHint || concentration?.kind !== 'molar' || !isPositive(concentration.value)) {
+      return null;
+    }
+    return {
+      name: rowDetail?.name || pkaHint.label,
+      pkaHint,
+      concentrationM: concentration.value
+    };
+  }).find(Boolean);
+
+  if (!candidate || !isPositive(volumeL)) {
+    return {
+      naohMl: 0,
+      hclMl: 0,
+      naohText: 'estimate needs a buffer with known pKa',
+      hclText: 'estimate needs a buffer with known pKa',
+      formulaText: 'pH adjustment estimate needs a recognized buffering ingredient and target pH',
+      missing: 'buffer pKa'
+    };
   }
+
+  const targetBaseFraction = 1 / (1 + (10 ** (candidate.pkaHint.pKa - targetPh)));
+  const baseFractionAtPka = 0.5;
+  const deltaMoles = (targetBaseFraction - baseFractionAtPka) * candidate.concentrationM * volumeL;
+  const adjustmentMl = Math.abs(deltaMoles / BUFFER_PH_ADJUSTMENT_MOLARITY) * 1000;
+  const label = `${formatBufferVolumeMl(adjustmentMl)} estimated from ${candidate.pkaHint.label} pKa ${candidate.pkaHint.pKa}`;
   return {
-    kind: 'molar',
-    value: numericValue * factor
+    naohMl: deltaMoles > 0 ? adjustmentMl : 0,
+    hclMl: deltaMoles < 0 ? adjustmentMl : 0,
+    naohText: deltaMoles > 0 ? label : '0 uL',
+    hclText: deltaMoles < 0 ? label : '0 uL',
+    formulaText: `pH adjustment estimate uses ${candidate.pkaHint.label} pKa ${candidate.pkaHint.pKa} and 6 M acid/base`
   };
 }
 
@@ -377,10 +876,85 @@ export function roundNearZero(value) {
   return Math.abs(value) < VOLUME_EPSILON_L ? 0 : value;
 }
 
+function normalizeReactionVolumeUnit(unitText, fallback = 'uL') {
+  const clean = normalizeBufferUnitText(unitText);
+  if (/^ul$/i.test(clean)) {
+    return 'uL';
+  }
+  if (/^ml$/i.test(clean)) {
+    return 'mL';
+  }
+  if (/^l$/i.test(clean)) {
+    return 'L';
+  }
+  return cleanUnit(fallback, 'uL');
+}
+
+function describeReactionVolume(value, unit = 'uL', label = 'volume') {
+  const source = String(value ?? '').trim();
+  const parsed = parseBufferNumericPrefix(source);
+  const numericValue = parsed ? parsed.value : toNumber(value);
+  const parsedUnit = parsed?.unitText || '';
+  const resolvedUnit = normalizeReactionVolumeUnit(parsedUnit || unit, unit);
+  if (isPositive(numericValue)) {
+    return {
+      text: `${formatSigFig(numericValue)} ${resolvedUnit}`,
+      missing: false,
+      value: numericValue,
+      unit: resolvedUnit,
+      valueL: volumeToL(numericValue, resolvedUnit)
+    };
+  }
+  return {
+    text: `[${label}]`,
+    missing: true,
+    value: 0,
+    unit: resolvedUnit,
+    valueL: 0
+  };
+}
+
+function concentrationInputText(concentration, value, unit) {
+  const concentrationText = String(concentration ?? '').trim();
+  if (concentrationText) {
+    return concentrationText;
+  }
+  const valueText = String(value ?? '').trim();
+  if (!valueText) {
+    return '';
+  }
+  const unitText = cleanUnit(unit);
+  return unitText ? `${valueText} ${unitText}` : valueText;
+}
+
+function describeReactionConcentration({
+  concentration,
+  value,
+  unit,
+  label,
+  defaults = {}
+} = {}) {
+  const raw = concentrationInputText(concentration, value, unit);
+  const parsed = parseBufferConcentration(raw, {
+    defaultKind: 'molar',
+    defaultUnit: unit || 'mM',
+    ...defaults
+  });
+  if (parsed.missing) {
+    return {
+      ...parsed,
+      text: `[${label}]`
+    };
+  }
+  return parsed;
+}
+
 export function calculateFixedReactionReagent({
   name,
+  stockConcentration,
   stockValue,
   stockUnit = 'mM',
+  finalConcentration,
   finalValue,
   finalUnit = 'uM',
   manualVolumeValue,
@@ -389,42 +963,54 @@ export function calculateFixedReactionReagent({
   totalVolumeUnit = 'uL'
 } = {}) {
   const resolvedName = cleanName(name, 'Reagent');
-  const total = withLabel(describeRawValue(totalVolumeValue, totalVolumeUnit, 'total volume'), 'total volume');
-  const stock = withLabel(describeRawValue(stockValue, stockUnit, 'stock concentration'), 'stock concentration');
-  const finalConcentration = withLabel(describeRawValue(finalValue, finalUnit, 'final concentration'), 'final concentration');
-  const manualVolume = toNumber(manualVolumeValue);
+  const total = withLabel(describeReactionVolume(totalVolumeValue, totalVolumeUnit, 'total volume'), 'total volume');
+  const stock = withLabel(describeReactionConcentration({
+    concentration: stockConcentration,
+    value: stockValue,
+    unit: stockUnit,
+    label: 'stock concentration'
+  }), 'stock concentration');
+  const final = withLabel(describeReactionConcentration({
+    concentration: finalConcentration,
+    value: finalValue,
+    unit: finalUnit,
+    label: 'final concentration',
+    defaults: stock.missing ? {} : bufferConcentrationDefaultsFrom(stock, { defaultKind: 'molar', defaultUnit: finalUnit })
+  }), 'final concentration');
+  const manualVolume = describeReactionVolume(manualVolumeValue, manualVolumeUnit, 'manual volume');
 
-  if (isPositive(manualVolume)) {
-    const volumeL = volumeToL(manualVolume, manualVolumeUnit);
+  if (!manualVolume.missing) {
+    const volumeL = manualVolume.valueL;
     return buildResult({
       type: 'fixed-reaction',
       mode: 'manual-reagent',
       title: `Fixed Reaction - ${resolvedName}`,
       inputs: { name: resolvedName, manualVolumeValue, manualVolumeUnit },
-      resultText: `${resolvedName}: ${formatSigFig(manualVolume)} ${manualVolumeUnit}.`,
-      formulaText: `${resolvedName} volume = manual ${formatSigFig(manualVolume)} ${manualVolumeUnit}`,
-      details: [{ name: resolvedName, volumeL, knownVolume: true }],
+      resultText: `${resolvedName}: ${manualVolume.text}.`,
+      formulaText: `${resolvedName} volume = manual ${manualVolume.text}`,
+      details: [{ name: resolvedName, volumeL, knownVolume: true, quantityText: manualVolume.text }],
       missing: []
     });
   }
 
-  const missing = collectMissing(total, stock, finalConcentration);
-  const formulaText = `${resolvedName} volume = ${finalConcentration.text} x ${total.text} / ${stock.text}`;
+  const missing = collectMissing(total, stock, final);
+  const formulaText = `${resolvedName} volume = ${final.text} x ${total.text} / ${stock.text}`;
   let resultText = '';
   let status = '';
   let volumeL = null;
+  let quantityText = '';
   if (!missing.length) {
-    const parsedStock = parseReactionConcentration(stock.value, stockUnit);
-    const parsedFinal = parseReactionConcentration(finalConcentration.value, finalUnit);
-    if (!parsedStock || !parsedFinal || parsedStock.kind !== parsedFinal.kind) {
+    if (!bufferConcentrationsCompatible(stock, final)) {
       status = 'warning';
       resultText = `${resolvedName}: stock and final concentration must use matching unit types.`;
-    } else if (parsedFinal.value > parsedStock.value) {
+    } else if (bufferConcentrationBaseValue(final) > bufferConcentrationBaseValue(stock)) {
       status = 'warning';
       resultText = `${resolvedName}: final concentration cannot be higher than stock.`;
     } else {
-      volumeL = roundNearZero(volumeToL(total.value, totalVolumeUnit) * (parsedFinal.value / parsedStock.value));
-      resultText = `${resolvedName}: ${formatSigFig(volumeFromL(volumeL, manualVolumeUnit))} ${manualVolumeUnit}.`;
+      volumeL = roundNearZero(total.valueL * (bufferConcentrationBaseValue(final) / bufferConcentrationBaseValue(stock)));
+      const outputUnit = manualVolumeUnit || total.unit || 'uL';
+      quantityText = `${formatSigFig(volumeFromL(volumeL, outputUnit))} ${outputUnit}`;
+      resultText = `${resolvedName}: ${quantityText}.`;
     }
   }
 
@@ -432,10 +1018,28 @@ export function calculateFixedReactionReagent({
     type: 'fixed-reaction',
     mode: 'reagent',
     title: `Fixed Reaction - ${resolvedName}`,
-    inputs: { name: resolvedName, stockValue, stockUnit, finalValue, finalUnit, totalVolumeValue, totalVolumeUnit, outputUnit: manualVolumeUnit },
+    inputs: {
+      name: resolvedName,
+      stockConcentration: concentrationInputText(stockConcentration, stockValue, stockUnit),
+      finalConcentration: concentrationInputText(finalConcentration, finalValue, finalUnit),
+      stockValue,
+      stockUnit,
+      finalValue,
+      finalUnit,
+      totalVolumeValue,
+      totalVolumeUnit,
+      outputUnit: manualVolumeUnit
+    },
     resultText,
     formulaText,
-    details: [{ name: resolvedName, volumeL, knownVolume: volumeL !== null }],
+    details: [{
+      name: resolvedName,
+      volumeL,
+      knownVolume: volumeL !== null,
+      quantityText,
+      stockConcentration: stock,
+      finalConcentration: final
+    }],
     missing,
     status
   });
@@ -451,42 +1055,53 @@ export function calculateFixedReaction({
     .filter((row) => row && typeof row === 'object')
     .filter((row) => (
       String(row.name || '').trim()
-      || toNumber(row.stockValue) > 0
-      || toNumber(row.finalValue) > 0
-      || toNumber(row.manualVolumeValue) > 0
+      || String(row.stockConcentration || row.stockValue || '').trim()
+      || String(row.finalConcentration || row.finalValue || '').trim()
+      || String(row.manualVolumeValue || '').trim()
     ));
-  const details = activeReagents.map((row, index) => calculateFixedReactionReagent({
-    name: row.name || `Reagent ${index + 1}`,
-    stockValue: row.stockValue,
-    stockUnit: row.stockUnit,
-    finalValue: row.finalValue,
-    finalUnit: row.finalUnit,
-    manualVolumeValue: row.manualVolumeValue,
-    manualVolumeUnit: row.manualVolumeUnit || totalVolumeUnit,
-    totalVolumeValue,
-    totalVolumeUnit
-  }));
-  const total = withLabel(describeRawValue(totalVolumeValue, totalVolumeUnit, 'total volume'), 'total volume');
+  const details = activeReagents.map((row, index) => {
+    const detail = calculateFixedReactionReagent({
+      name: row.name || `Reagent ${index + 1}`,
+      stockConcentration: row.stockConcentration,
+      stockValue: row.stockValue,
+      stockUnit: row.stockUnit,
+      finalConcentration: row.finalConcentration,
+      finalValue: row.finalValue,
+      finalUnit: row.finalUnit,
+      manualVolumeValue: row.manualVolumeValue,
+      manualVolumeUnit: row.manualVolumeUnit || totalVolumeUnit,
+      totalVolumeValue,
+      totalVolumeUnit
+    });
+    detail.rowIndex = row.rowIndex || index + 1;
+    return detail;
+  });
+  const total = withLabel(describeReactionVolume(totalVolumeValue, totalVolumeUnit, 'total volume'), 'total volume');
   const knownVolumes = details
     .map((detail) => detail.details?.[0])
     .filter((detail) => detail?.knownVolume && Number.isFinite(detail.volumeL));
   const hasUnknownVolumes = knownVolumes.length !== details.length;
   let fillResult = '';
   let fillFormula = `${cleanName(fillName, 'Fill solution')} = ${total.text}`;
+  let fillVolumeL = null;
+  let fillText = '';
+  let fillStatus = '';
   if (details.length) {
     fillFormula += ` - ${details.map((detail) => {
       const rowDetail = detail.details?.[0] || {};
       return rowDetail.knownVolume
-        ? `${formatSigFig(volumeFromL(rowDetail.volumeL, totalVolumeUnit))} ${totalVolumeUnit}`
+        ? `${formatSigFig(volumeFromL(rowDetail.volumeL, total.unit))} ${total.unit}`
         : `[${rowDetail.name || 'reagent'} volume]`;
     }).join(' - ')}`;
   }
 
   if (!total.missing && !hasUnknownVolumes) {
     const assignedVolumeL = knownVolumes.reduce((sum, detail) => sum + detail.volumeL, 0);
-    const fillVolumeL = roundNearZero(volumeToL(total.value, totalVolumeUnit) - assignedVolumeL);
-    fillResult = `${cleanName(fillName, 'Fill solution')}: ${formatSigFig(volumeFromL(fillVolumeL, totalVolumeUnit))} ${totalVolumeUnit}.`;
+    fillVolumeL = roundNearZero(total.valueL - assignedVolumeL);
+    fillText = `${formatSigFig(volumeFromL(fillVolumeL, total.unit))} ${total.unit}`;
+    fillResult = `${cleanName(fillName, 'Fill solution')}: ${fillText}.`;
     if (fillVolumeL < -VOLUME_EPSILON_L) {
+      fillStatus = 'warning';
       fillResult = 'Assigned reagent volumes exceed the total volume.';
     }
   }
@@ -505,7 +1120,7 @@ export function calculateFixedReaction({
     missing.push('reagent volume');
   }
 
-  return buildResult({
+  const result = buildResult({
     type: 'fixed-reaction',
     mode: 'reaction',
     title: 'Fixed Volume Reaction',
@@ -513,6 +1128,15 @@ export function calculateFixedReaction({
     resultText: resultLines.join('\n'),
     formulaText: formulaLines.join('\n'),
     details,
-    missing
+    missing,
+    status: fillStatus || (details.some((detail) => detail.status === 'warning') ? 'warning' : '')
   });
+  result.fill = {
+    name: cleanName(fillName, 'Fill solution'),
+    volumeL: fillVolumeL,
+    text: fillText,
+    resultText: fillResult,
+    status: fillStatus
+  };
+  return result;
 }

@@ -4,14 +4,15 @@ import {
   calculateMolarity,
   resolveBufferCompound
 } from '../tool-box/bench-calculations.js';
+import { BUFFER_COMPOUNDS } from '../buffer-compounds.js';
 import {
   buildNotebookToolCalculationsHtml,
   formatNotebookToolCalculationLine,
   normalizeNotebookToolCalculations
 } from './tool-calculations.js';
 
-const BUFFER_ROW_COUNT = 4;
-const REACTION_ROW_COUNT = 4;
+const BUFFER_ROW_COUNT = 6;
+const REACTION_ROW_COUNT = 6;
 
 function getElement(doc, id) {
   return doc?.getElementById?.(id) || null;
@@ -63,6 +64,7 @@ export function createNotebookToolSidebarController({
   notesInput,
   stepsHost,
   calculationsHost,
+  getStoredCompounds = () => [],
   onAppendNote
 } = {}) {
   const sidebar = typeof doc?.querySelector === 'function'
@@ -91,6 +93,170 @@ export function createNotebookToolSidebarController({
   let activePlaceholderKey = '';
   let currentResult = null;
   let toolCalculations = [];
+
+  function extractCompoundMw(record) {
+    const source = record && typeof record === 'object' ? record : {};
+    const keys = ['mw', 'molecularWeight', 'molecular_weight', 'formulaWeight', 'formula_weight', 'formulaMass', 'molarMass', 'fw'];
+    for (const key of keys) {
+      const parsed = Number(source[key]);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+    return '';
+  }
+
+  function inferCompoundForm(record) {
+    const source = record && typeof record === 'object' ? record : {};
+    const formText = [
+      source.form,
+      source.physicalForm,
+      source.state,
+      source.type,
+      source.unitSize,
+      source.amountInStock
+    ].map((item) => String(item || '').toLowerCase()).join(' ');
+    return /\b(liquid|solution|ml|ul|l)\b/.test(formText) ? 'liquid' : 'solid';
+  }
+
+  function normalizeCandidateName(value) {
+    return String(value || '').trim().toLowerCase();
+  }
+
+  function buildBufferCandidates() {
+    const candidates = new Map();
+    function mergeCandidate(candidate) {
+      const name = String(candidate?.name || '').trim();
+      if (!name) {
+        return;
+      }
+      const key = normalizeCandidateName(name);
+      const existing = candidates.get(key);
+      if (!existing) {
+        candidates.set(key, {
+          ...candidate,
+          name
+        });
+        return;
+      }
+      if (candidate.source === 'Stored') {
+        candidates.set(key, {
+          ...existing,
+          ...candidate,
+          mw: candidate.mw || existing.mw,
+          form: candidate.form || existing.form,
+          category: candidate.category || existing.category
+        });
+        return;
+      }
+      candidates.set(key, {
+        ...existing,
+        mw: existing.mw || candidate.mw,
+        form: existing.form || candidate.form,
+        category: existing.category || candidate.category
+      });
+    }
+
+    (Array.isArray(getStoredCompounds?.()) ? getStoredCompounds() : []).forEach((record) => {
+      mergeCandidate({
+        source: 'Stored',
+        name: record?.name,
+        mw: extractCompoundMw(record),
+        form: inferCompoundForm(record),
+        category: record?.casNumber ? `CAS ${record.casNumber}` : 'Stored compound'
+      });
+    });
+    BUFFER_COMPOUNDS.forEach((compound) => {
+      mergeCandidate({
+        source: 'Tools',
+        name: compound.name,
+        mw: compound.mw,
+        form: compound.form === 'liquid' ? 'liquid' : 'solid',
+        category: compound.category || 'Buffer compound'
+      });
+    });
+    return [...candidates.values()].sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  function findBufferCandidate(name) {
+    const key = normalizeCandidateName(name);
+    if (!key) {
+      return null;
+    }
+    return buildBufferCandidates().find((candidate) => normalizeCandidateName(candidate.name) === key)
+      || resolveBufferCompound(name)
+      || null;
+  }
+
+  function bufferCandidateForm(name) {
+    const candidate = findBufferCandidate(name);
+    return candidate?.form === 'liquid' ? 'liquid' : 'solid';
+  }
+
+  function closeBufferSuggestions(index = null) {
+    for (let rowIndex = 1; rowIndex <= BUFFER_ROW_COUNT; rowIndex += 1) {
+      if (index && rowIndex !== index) {
+        continue;
+      }
+      const menu = getElement(doc, `biology-notebook-tool-buffer-suggestions-${rowIndex}`);
+      if (menu) {
+        menu.hidden = true;
+        menu.innerHTML = '';
+      }
+    }
+  }
+
+  function renderBufferSuggestions(index) {
+    const input = getElement(doc, `biology-notebook-tool-buffer-name-${index}`);
+    const menu = getElement(doc, `biology-notebook-tool-buffer-suggestions-${index}`);
+    if (!input || !menu) {
+      return;
+    }
+    const query = String(input.value || '').trim().toLowerCase();
+    const matches = buildBufferCandidates()
+      .filter((candidate) => {
+        if (!query) {
+          return true;
+        }
+        return candidate.name.toLowerCase().includes(query)
+          || String(candidate.category || '').toLowerCase().includes(query);
+      })
+      .slice(0, 8);
+    if (!matches.length) {
+      closeBufferSuggestions(index);
+      return;
+    }
+    const escapeText = typeof safeText === 'function' ? safeText : (value) => String(value || '');
+    menu.innerHTML = matches.map((candidate) => {
+      const meta = [
+        candidate.mw ? `${candidate.mw} g/mol` : '',
+        candidate.category,
+        candidate.source
+      ].filter(Boolean).join(' · ');
+      return `
+        <button type="button" class="biology-notebook-buffer-suggestion" data-buffer-candidate="${escapeText(candidate.name)}" role="option">
+          <strong>${escapeText(candidate.name)}</strong>
+          <span>${escapeText(meta)}</span>
+        </button>
+      `;
+    }).join('');
+    menu.hidden = false;
+  }
+
+  function selectBufferCandidate(index, candidateName) {
+    const candidate = findBufferCandidate(candidateName);
+    const nameInput = getElement(doc, `biology-notebook-tool-buffer-name-${index}`);
+    const mwInput = getElement(doc, `biology-notebook-tool-buffer-mw-${index}`);
+    if (!candidate || !nameInput) {
+      return;
+    }
+    nameInput.value = candidate.name;
+    if (mwInput && candidate.mw) {
+      mwInput.value = candidate.mw;
+    }
+    closeBufferSuggestions(index);
+    renderCurrentTool();
+  }
 
   function mountToolWorkspace() {
     if (!toolWorkspace || !toolBody || toolBody.parentElement === toolWorkspace) {
@@ -216,19 +382,15 @@ export function createNotebookToolSidebarController({
     return calculateMolarity(mode, inputs);
   }
 
-  function syncBufferCompound(index) {
+  function syncBufferCompound(index, { overwriteMw = false } = {}) {
     const nameInput = getElement(doc, `biology-notebook-tool-buffer-name-${index}`);
     const mwInput = getElement(doc, `biology-notebook-tool-buffer-mw-${index}`);
-    const formSelect = getElement(doc, `biology-notebook-tool-buffer-form-${index}`);
-    const compound = resolveBufferCompound(inputValue(nameInput));
+    const compound = findBufferCandidate(inputValue(nameInput));
     if (!compound) {
       return;
     }
-    if (mwInput && !String(mwInput.value || '').trim()) {
+    if (mwInput && compound.mw && (overwriteMw || !String(mwInput.value || '').trim())) {
       mwInput.value = compound.mw;
-    }
-    if (formSelect && compound.form === 'liquid') {
-      formSelect.value = 'liquid';
     }
   }
 
@@ -239,11 +401,14 @@ export function createNotebookToolSidebarController({
         continue;
       }
       syncBufferCompound(index);
+      const name = inputValue(getElement(doc, `biology-notebook-tool-buffer-name-${index}`));
       rows.push({
-        name: inputValue(getElement(doc, `biology-notebook-tool-buffer-name-${index}`)),
-        form: inputValue(getElement(doc, `biology-notebook-tool-buffer-form-${index}`)) || 'solid',
+        rowIndex: index,
+        name,
+        form: bufferCandidateForm(name),
         molecularWeight: inputValue(getElement(doc, `biology-notebook-tool-buffer-mw-${index}`)),
-        concentrationValue: inputValue(getElement(doc, `biology-notebook-tool-buffer-concentration-${index}`))
+        stockConcentration: inputValue(getElement(doc, `biology-notebook-tool-buffer-stock-${index}`)),
+        finalConcentration: inputValue(getElement(doc, `biology-notebook-tool-buffer-final-${index}`))
       });
     }
     return rows;
@@ -252,6 +417,7 @@ export function createNotebookToolSidebarController({
   function calculateCurrentBuffer() {
     return calculateBufferRecipe({
       volumeMl: inputValue(getElement(doc, 'biology-notebook-tool-buffer-volume')),
+      pH: inputValue(getElement(doc, 'biology-notebook-tool-buffer-ph')),
       rows: collectBufferRows()
     });
   }
@@ -263,13 +429,11 @@ export function createNotebookToolSidebarController({
         continue;
       }
       rows.push({
+        rowIndex: index,
         name: inputValue(getElement(doc, `biology-notebook-tool-reaction-name-${index}`)),
-        stockValue: inputValue(getElement(doc, `biology-notebook-tool-reaction-stock-${index}`)),
-        stockUnit: inputValue(getElement(doc, `biology-notebook-tool-reaction-stock-unit-${index}`)) || 'mM',
-        finalValue: inputValue(getElement(doc, `biology-notebook-tool-reaction-final-${index}`)),
-        finalUnit: inputValue(getElement(doc, `biology-notebook-tool-reaction-final-unit-${index}`)) || 'uM',
-        manualVolumeValue: inputValue(getElement(doc, `biology-notebook-tool-reaction-volume-${index}`)),
-        manualVolumeUnit: inputValue(getElement(doc, `biology-notebook-tool-reaction-volume-unit-${index}`)) || 'uL'
+        stockConcentration: inputValue(getElement(doc, `biology-notebook-tool-reaction-stock-${index}`)),
+        finalConcentration: inputValue(getElement(doc, `biology-notebook-tool-reaction-final-${index}`)),
+        manualVolumeValue: inputValue(getElement(doc, `biology-notebook-tool-reaction-volume-${index}`))
       });
     }
     return rows;
@@ -278,7 +442,7 @@ export function createNotebookToolSidebarController({
   function calculateCurrentReaction() {
     return calculateFixedReaction({
       totalVolumeValue: inputValue(getElement(doc, 'biology-notebook-tool-reaction-total-volume')),
-      totalVolumeUnit: inputValue(getElement(doc, 'biology-notebook-tool-reaction-total-unit')) || 'uL',
+      totalVolumeUnit: 'uL',
       fillName: inputValue(getElement(doc, 'biology-notebook-tool-reaction-fill-name')) || 'Water / buffer',
       reagents: collectReactionRows()
     });
@@ -294,9 +458,55 @@ export function createNotebookToolSidebarController({
     return calculateCurrentMolarity();
   }
 
+  function resultTextAfterName(text) {
+    const source = String(text || '').trim();
+    const match = source.match(/^[^:]+:\s*(.+?)\.?$/s);
+    return match ? match[1].trim() : source;
+  }
+
+  function renderBufferTableResult(result) {
+    for (let index = 1; index <= BUFFER_ROW_COUNT; index += 1) {
+      setText(getElement(doc, `biology-notebook-tool-buffer-output-${index}`), '');
+    }
+    (Array.isArray(result?.details) ? result.details : []).forEach((detail) => {
+      const rowIndex = Number(detail?.rowIndex) || 0;
+      const output = rowIndex ? getElement(doc, `biology-notebook-tool-buffer-output-${rowIndex}`) : null;
+      if (!output) {
+        return;
+      }
+      const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
+      const suffix = detail.resultText && /\bstock\./i.test(detail.resultText) ? ' stock' : '';
+      setText(output, rowDetail?.quantityText ? `${rowDetail.quantityText}${suffix}` : resultTextAfterName(detail.resultText));
+    });
+    setText(getElement(doc, 'biology-notebook-tool-buffer-solvent-output'), result?.solvent?.text || '');
+    setText(getElement(doc, 'biology-notebook-tool-buffer-naoh-output'), result?.phAdjustment?.naohText || '');
+    setText(getElement(doc, 'biology-notebook-tool-buffer-hcl-output'), result?.phAdjustment?.hclText || '');
+  }
+
+  function renderReactionTableResult(result) {
+    for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
+      setText(getElement(doc, `biology-notebook-tool-reaction-output-${index}`), '');
+    }
+    (Array.isArray(result?.details) ? result.details : []).forEach((detail) => {
+      const rowIndex = Number(detail?.rowIndex) || 0;
+      const output = rowIndex ? getElement(doc, `biology-notebook-tool-reaction-output-${rowIndex}`) : null;
+      if (!output) {
+        return;
+      }
+      const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
+      setText(output, rowDetail?.quantityText || resultTextAfterName(detail.resultText));
+    });
+    setText(getElement(doc, 'biology-notebook-tool-reaction-solvent-output'), result?.fill?.text || resultTextAfterName(result?.fill?.resultText || ''));
+  }
+
   function renderCurrentTool() {
     syncMolarityMode();
     currentResult = calculateActiveTool();
+    if (activeTool === 'buffer') {
+      renderBufferTableResult(currentResult);
+    } else if (activeTool === 'reaction') {
+      renderReactionTableResult(currentResult);
+    }
     const output = currentResult?.resultText || 'Use the formula below with bench values.';
     setText(outputEl, output);
     setText(formulaEl, currentResult?.formulaText || '');
@@ -453,6 +663,32 @@ export function createNotebookToolSidebarController({
   addListener(getElement(doc, 'biology-notebook-tool-reaction-add-row'), 'click', () => {
     revealNextRow('biology-notebook-tool-reaction-row', REACTION_ROW_COUNT);
   });
+  for (let index = 1; index <= BUFFER_ROW_COUNT; index += 1) {
+    const nameInput = getElement(doc, `biology-notebook-tool-buffer-name-${index}`);
+    const suggestions = getElement(doc, `biology-notebook-tool-buffer-suggestions-${index}`);
+    addListener(nameInput, 'focus', () => renderBufferSuggestions(index));
+    addListener(nameInput, 'input', () => {
+      syncBufferCompound(index, { overwriteMw: true });
+      renderBufferSuggestions(index);
+      renderCurrentTool();
+    });
+    addListener(nameInput, 'keydown', (event) => {
+      if (event?.key === 'Escape') {
+        closeBufferSuggestions(index);
+      }
+    });
+    addListener(suggestions, 'mousedown', (event) => {
+      event?.preventDefault?.();
+    });
+    addListener(suggestions, 'click', (event) => {
+      const button = event?.target?.closest?.('[data-buffer-candidate]')
+        || (event?.target?.dataset?.bufferCandidate ? event.target : null);
+      const candidateName = button?.dataset?.bufferCandidate || '';
+      if (candidateName) {
+        selectBufferCandidate(index, candidateName);
+      }
+    });
+  }
   addListener(recordBtn, 'click', recordCurrentCalculation);
   addListener(insertNotesBtn, 'click', insertCurrentIntoNotes);
   addListener(usePlaceholderBtn, 'click', useForActivePlaceholder);
@@ -493,27 +729,24 @@ export function createNotebookToolSidebarController({
     'biology-notebook-tool-dilution-volume-unit',
     'biology-notebook-tool-dilution-output-unit',
     'biology-notebook-tool-buffer-volume',
+    'biology-notebook-tool-buffer-ph',
     'biology-notebook-tool-reaction-total-volume',
-    'biology-notebook-tool-reaction-total-unit',
     'biology-notebook-tool-reaction-fill-name'
   ];
   for (let index = 1; index <= BUFFER_ROW_COUNT; index += 1) {
     interactiveIds.push(
       `biology-notebook-tool-buffer-name-${index}`,
-      `biology-notebook-tool-buffer-form-${index}`,
       `biology-notebook-tool-buffer-mw-${index}`,
-      `biology-notebook-tool-buffer-concentration-${index}`
+      `biology-notebook-tool-buffer-stock-${index}`,
+      `biology-notebook-tool-buffer-final-${index}`
     );
   }
   for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
     interactiveIds.push(
       `biology-notebook-tool-reaction-name-${index}`,
       `biology-notebook-tool-reaction-stock-${index}`,
-      `biology-notebook-tool-reaction-stock-unit-${index}`,
       `biology-notebook-tool-reaction-final-${index}`,
-      `biology-notebook-tool-reaction-final-unit-${index}`,
-      `biology-notebook-tool-reaction-volume-${index}`,
-      `biology-notebook-tool-reaction-volume-unit-${index}`
+      `biology-notebook-tool-reaction-volume-${index}`
     );
   }
   interactiveIds.forEach((id) => {

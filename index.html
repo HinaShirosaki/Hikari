@@ -806,78 +806,177 @@
             </section>
 
             <section id="biology-notebook-tool-panel-buffer" class="biology-notebook-tool-panel" data-notebook-tool-panel="buffer" hidden>
-              <label>Buffer Volume (mL) <input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" value="100" /></label>
               <div class="form-actions">
                 <button id="biology-notebook-tool-buffer-add-row" class="ghost-btn" type="button">Add Ingredient</button>
               </div>
-              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-1">
-                <input id="biology-notebook-tool-buffer-name-1" placeholder="Tris Base" value="Tris Base" />
-                <select id="biology-notebook-tool-buffer-form-1"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
-                <input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" value="121.14" />
-                <input id="biology-notebook-tool-buffer-concentration-1" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
-              </div>
-              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-2" hidden>
-                <input id="biology-notebook-tool-buffer-name-2" placeholder="NaCl" />
-                <select id="biology-notebook-tool-buffer-form-2"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
-                <input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" />
-                <input id="biology-notebook-tool-buffer-concentration-2" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
-              </div>
-              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-3" hidden>
-                <input id="biology-notebook-tool-buffer-name-3" placeholder="Tween 20" />
-                <select id="biology-notebook-tool-buffer-form-3"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
-                <input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" />
-                <input id="biology-notebook-tool-buffer-concentration-3" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
-              </div>
-              <div class="biology-notebook-tool-row" id="biology-notebook-tool-buffer-row-4" hidden>
-                <input id="biology-notebook-tool-buffer-name-4" placeholder="Ingredient" />
-                <select id="biology-notebook-tool-buffer-form-4"><option value="solid" selected>Solid</option><option value="liquid">Liquid</option></select>
-                <input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" />
-                <input id="biology-notebook-tool-buffer-concentration-4" type="number" min="0" step="0.001" placeholder="mM or % v/v" />
+              <div class="biology-notebook-buffer-sheet-wrap">
+                <table class="biology-notebook-buffer-sheet" aria-label="Buffer preparer table">
+                  <tbody>
+                    <tr class="biology-notebook-buffer-meta-row">
+                      <th scope="row">Volume</th>
+                      <td><input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" value="100" aria-label="Buffer volume in mL" /></td>
+                      <th scope="row">pH</th>
+                      <td><input id="biology-notebook-tool-buffer-ph" type="number" min="0" max="14" step="0.01" placeholder="7.4" aria-label="Target pH" /></td>
+                      <td></td>
+                    </tr>
+                    <tr class="biology-notebook-buffer-header-row">
+                      <th scope="col">Chemical</th>
+                      <th scope="col">MW</th>
+                      <th scope="col">Stock Conc.</th>
+                      <th scope="col">Final Conc.</th>
+                      <th scope="col">Mass/Volume</th>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-1">
+                      <th scope="row" class="biology-notebook-buffer-chemical-cell">
+                        <div class="biology-notebook-buffer-autocomplete">
+                          <input id="biology-notebook-tool-buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-1" />
+                          <div id="biology-notebook-tool-buffer-suggestions-1" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
+                        </div>
+                      </th>
+                      <td><input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" value="121.14" aria-label="Ingredient 1 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-1" placeholder="empty or 1 M" aria-label="Ingredient 1 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-1" placeholder="50 mM" aria-label="Ingredient 1 final concentration" /></td>
+                      <td><output id="biology-notebook-tool-buffer-output-1" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-2">
+                      <th scope="row" class="biology-notebook-buffer-chemical-cell">
+                        <div class="biology-notebook-buffer-autocomplete">
+                          <input id="biology-notebook-tool-buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-2" />
+                          <div id="biology-notebook-tool-buffer-suggestions-2" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
+                        </div>
+                      </th>
+                      <td><input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 2 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-2" placeholder="2000x" aria-label="Ingredient 2 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-2" placeholder="150 mM" aria-label="Ingredient 2 final concentration" /></td>
+                      <td><output id="biology-notebook-tool-buffer-output-2" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-3" hidden>
+                      <th scope="row" class="biology-notebook-buffer-chemical-cell">
+                        <div class="biology-notebook-buffer-autocomplete">
+                          <input id="biology-notebook-tool-buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-3" />
+                          <div id="biology-notebook-tool-buffer-suggestions-3" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
+                        </div>
+                      </th>
+                      <td><input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 3 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-3" placeholder="10% v/v" aria-label="Ingredient 3 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-3" placeholder="0.1% v/v" aria-label="Ingredient 3 final concentration" /></td>
+                      <td><output id="biology-notebook-tool-buffer-output-3" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-4" hidden>
+                      <th scope="row" class="biology-notebook-buffer-chemical-cell">
+                        <div class="biology-notebook-buffer-autocomplete">
+                          <input id="biology-notebook-tool-buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-4" />
+                          <div id="biology-notebook-tool-buffer-suggestions-4" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
+                        </div>
+                      </th>
+                      <td><input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 4 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-4" placeholder="stock" aria-label="Ingredient 4 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-4" placeholder="final" aria-label="Ingredient 4 final concentration" /></td>
+                      <td><output id="biology-notebook-tool-buffer-output-4" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-5" hidden>
+                      <th scope="row" class="biology-notebook-buffer-chemical-cell">
+                        <div class="biology-notebook-buffer-autocomplete">
+                          <input id="biology-notebook-tool-buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-5" />
+                          <div id="biology-notebook-tool-buffer-suggestions-5" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
+                        </div>
+                      </th>
+                      <td><input id="biology-notebook-tool-buffer-mw-5" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 5 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-5" placeholder="stock" aria-label="Ingredient 5 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-5" placeholder="final" aria-label="Ingredient 5 final concentration" /></td>
+                      <td><output id="biology-notebook-tool-buffer-output-5" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-6" hidden>
+                      <th scope="row" class="biology-notebook-buffer-chemical-cell">
+                        <div class="biology-notebook-buffer-autocomplete">
+                          <input id="biology-notebook-tool-buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-6" />
+                          <div id="biology-notebook-tool-buffer-suggestions-6" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
+                        </div>
+                      </th>
+                      <td><input id="biology-notebook-tool-buffer-mw-6" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 6 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-6" placeholder="stock" aria-label="Ingredient 6 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-6" placeholder="final" aria-label="Ingredient 6 final concentration" /></td>
+                      <td><output id="biology-notebook-tool-buffer-output-6" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-buffer-adjustment-row">
+                      <th scope="row">Solvent to add <output id="biology-notebook-tool-buffer-solvent-output" aria-live="polite"></output></th>
+                      <td></td>
+                      <th scope="row">6 M NaOH <output id="biology-notebook-tool-buffer-naoh-output" aria-live="polite"></output></th>
+                      <td></td>
+                      <th scope="row">6 M HCl <output id="biology-notebook-tool-buffer-hcl-output" aria-live="polite"></output></th>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </section>
 
             <section id="biology-notebook-tool-panel-reaction" class="biology-notebook-tool-panel" data-notebook-tool-panel="reaction" hidden>
-              <label>Total Volume <input id="biology-notebook-tool-reaction-total-volume" type="number" min="0" step="0.000001" value="100" /></label>
-              <select id="biology-notebook-tool-reaction-total-unit"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
-              <label>Fill Solution <input id="biology-notebook-tool-reaction-fill-name" value="Water / buffer" /></label>
               <div class="form-actions">
                 <button id="biology-notebook-tool-reaction-add-row" class="ghost-btn" type="button">Add Reagent</button>
               </div>
-              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-1">
-                <input id="biology-notebook-tool-reaction-name-1" placeholder="Reagent" />
-                <input id="biology-notebook-tool-reaction-stock-1" type="number" min="0" step="0.000001" placeholder="Stock" />
-                <select id="biology-notebook-tool-reaction-stock-unit-1"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
-                <input id="biology-notebook-tool-reaction-final-1" type="number" min="0" step="0.000001" placeholder="Final" />
-                <select id="biology-notebook-tool-reaction-final-unit-1"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
-                <input id="biology-notebook-tool-reaction-volume-1" type="number" min="0" step="0.000001" placeholder="Manual vol" />
-                <select id="biology-notebook-tool-reaction-volume-unit-1"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
-              </div>
-              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-2" hidden>
-                <input id="biology-notebook-tool-reaction-name-2" placeholder="Reagent" />
-                <input id="biology-notebook-tool-reaction-stock-2" type="number" min="0" step="0.000001" placeholder="Stock" />
-                <select id="biology-notebook-tool-reaction-stock-unit-2"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
-                <input id="biology-notebook-tool-reaction-final-2" type="number" min="0" step="0.000001" placeholder="Final" />
-                <select id="biology-notebook-tool-reaction-final-unit-2"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
-                <input id="biology-notebook-tool-reaction-volume-2" type="number" min="0" step="0.000001" placeholder="Manual vol" />
-                <select id="biology-notebook-tool-reaction-volume-unit-2"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
-              </div>
-              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-3" hidden>
-                <input id="biology-notebook-tool-reaction-name-3" placeholder="Reagent" />
-                <input id="biology-notebook-tool-reaction-stock-3" type="number" min="0" step="0.000001" placeholder="Stock" />
-                <select id="biology-notebook-tool-reaction-stock-unit-3"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
-                <input id="biology-notebook-tool-reaction-final-3" type="number" min="0" step="0.000001" placeholder="Final" />
-                <select id="biology-notebook-tool-reaction-final-unit-3"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
-                <input id="biology-notebook-tool-reaction-volume-3" type="number" min="0" step="0.000001" placeholder="Manual vol" />
-                <select id="biology-notebook-tool-reaction-volume-unit-3"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
-              </div>
-              <div class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-4" hidden>
-                <input id="biology-notebook-tool-reaction-name-4" placeholder="Reagent" />
-                <input id="biology-notebook-tool-reaction-stock-4" type="number" min="0" step="0.000001" placeholder="Stock" />
-                <select id="biology-notebook-tool-reaction-stock-unit-4"><option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="x">x</option></select>
-                <input id="biology-notebook-tool-reaction-final-4" type="number" min="0" step="0.000001" placeholder="Final" />
-                <select id="biology-notebook-tool-reaction-final-unit-4"><option value="nM">nM</option><option value="uM" selected>uM</option><option value="mM">mM</option><option value="x">x</option></select>
-                <input id="biology-notebook-tool-reaction-volume-4" type="number" min="0" step="0.000001" placeholder="Manual vol" />
-                <select id="biology-notebook-tool-reaction-volume-unit-4"><option value="uL" selected>uL</option><option value="mL">mL</option><option value="L">L</option></select>
+              <div class="biology-notebook-reaction-sheet-wrap">
+                <table class="biology-notebook-reaction-sheet" aria-label="Fixed volume reaction preparer">
+                  <colgroup>
+                    <col class="biology-notebook-reaction-item-col" />
+                    <col class="biology-notebook-reaction-stock-col" />
+                    <col class="biology-notebook-reaction-final-col" />
+                    <col class="biology-notebook-reaction-volume-col" />
+                  </colgroup>
+                  <tbody>
+                    <tr class="biology-notebook-reaction-meta-row">
+                      <th scope="row">Total volume:</th>
+                      <td colspan="3"><input id="biology-notebook-tool-reaction-total-volume" type="text" value="100 uL" placeholder="100 uL" aria-label="Total reaction volume" /></td>
+                    </tr>
+                    <tr class="biology-notebook-reaction-header-row">
+                      <th scope="col">Item</th>
+                      <th scope="col">Stock Conc.</th>
+                      <th scope="col">Final Conc</th>
+                      <th scope="col">Volume</th>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-1">
+                      <td><input id="biology-notebook-tool-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1" /></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-1" type="text" placeholder="10 mM" aria-label="Stock concentration for reaction item 1" /></td>
+                      <td><input id="biology-notebook-tool-reaction-final-1" type="text" placeholder="1 uM" aria-label="Final concentration for reaction item 1" /></td>
+                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-1" type="text" placeholder="auto" aria-label="Manual volume for reaction item 1" /><output id="biology-notebook-tool-reaction-output-1" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-2" hidden>
+                      <td><input id="biology-notebook-tool-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2" /></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-2" type="text" placeholder="2000x" aria-label="Stock concentration for reaction item 2" /></td>
+                      <td><input id="biology-notebook-tool-reaction-final-2" type="text" placeholder="1x" aria-label="Final concentration for reaction item 2" /></td>
+                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-2" type="text" placeholder="auto" aria-label="Manual volume for reaction item 2" /><output id="biology-notebook-tool-reaction-output-2" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-3" hidden>
+                      <td><input id="biology-notebook-tool-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3" /></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-3" type="text" placeholder="2%" aria-label="Stock concentration for reaction item 3" /></td>
+                      <td><input id="biology-notebook-tool-reaction-final-3" type="text" placeholder="0.1% v/v" aria-label="Final concentration for reaction item 3" /></td>
+                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-3" type="text" placeholder="auto" aria-label="Manual volume for reaction item 3" /><output id="biology-notebook-tool-reaction-output-3" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-4" hidden>
+                      <td><input id="biology-notebook-tool-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4" /></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-4" type="text" placeholder="1 mg/mL" aria-label="Stock concentration for reaction item 4" /></td>
+                      <td><input id="biology-notebook-tool-reaction-final-4" type="text" placeholder="100 ng/uL" aria-label="Final concentration for reaction item 4" /></td>
+                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-4" type="text" placeholder="auto" aria-label="Manual volume for reaction item 4" /><output id="biology-notebook-tool-reaction-output-4" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-5" hidden>
+                      <td><input id="biology-notebook-tool-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5" /></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-5" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 5" /></td>
+                      <td><input id="biology-notebook-tool-reaction-final-5" type="text" placeholder="Final" aria-label="Final concentration for reaction item 5" /></td>
+                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-5" type="text" placeholder="auto" aria-label="Manual volume for reaction item 5" /><output id="biology-notebook-tool-reaction-output-5" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-tool-row biology-notebook-tool-row--reaction" id="biology-notebook-tool-reaction-row-6" hidden>
+                      <td><input id="biology-notebook-tool-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6" /></td>
+                      <td><input id="biology-notebook-tool-reaction-stock-6" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 6" /></td>
+                      <td><input id="biology-notebook-tool-reaction-final-6" type="text" placeholder="Final" aria-label="Final concentration for reaction item 6" /></td>
+                      <td class="biology-notebook-reaction-volume-cell"><input id="biology-notebook-tool-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6" /><output id="biology-notebook-tool-reaction-output-6" aria-live="polite"></output></td>
+                    </tr>
+                    <tr class="biology-notebook-reaction-solvent-row">
+                      <th scope="row"><input id="biology-notebook-tool-reaction-fill-name" value="Solvent" aria-label="Reaction solvent name" /></th>
+                      <td></td>
+                      <td></td>
+                      <td><output id="biology-notebook-tool-reaction-solvent-output" aria-live="polite"></output></td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </section>
 
