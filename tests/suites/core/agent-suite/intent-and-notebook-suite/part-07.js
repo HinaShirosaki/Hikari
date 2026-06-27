@@ -5,10 +5,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart07(context = {}
     test('protocol notebook runtime can route protocol and notebook work through the agent sub-app API layer', async () => {
       const { createProtocolNotebookRuntime } = require(path.join(
         __dirname,
-        'src',
-        'main',
-        'helpers',
-        'agent',
+        'self-agent',
         'runtime',
         'agent-protocol-notebook.js'
       ));

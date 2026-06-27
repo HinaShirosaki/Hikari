@@ -51,7 +51,7 @@ So the shared executor now exposes the folder's full tool surface, not just a si
 | Tool name | File | What it does |
 | --- | --- | --- |
 | `inventory-lookup` | `tools/agent-inventory-lookup.js` | query local inventory with SQLite-first, snapshot-fallback behavior |
-| `record-lookup` | `tools/agent-record-lookup.js` | query project/protocol/notebook/workflow/assay/gel records |
+| `record-lookup` | `tools/agent-record-lookup.js` | query project/protocol/notebook/workflow/gel/paper records; Assay data stays in Assay rail context and dedicated assay tools |
 | `protocol-matching` | `tools/agent-protocol-matching.js` | rank local protocols and break close ties with an LLM when needed |
 | `notebook-generation` | `tools/agent-notebook-generation.js` | resolve placeholders and build a notebook payload from a selected protocol |
 | `notebook-draft` | `tools/agent-notebook-draft.js` | infer the next likely experiment and prepare a planned notebook draft |

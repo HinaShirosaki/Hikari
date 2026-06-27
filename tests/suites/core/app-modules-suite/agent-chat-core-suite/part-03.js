@@ -510,6 +510,18 @@ test('assay-scoped agent chat stores assay sessions and exposes hidden assay con
   const rootState = {
     paperAgentChatSessions: {}
   };
+  const longAssayRows = Array.from({ length: 260 }, (_item, index) => (
+    `A${index + 1}\tA\t${10000 - index}\t0.${String(index).padStart(3, '0')}`
+  )).join('\n');
+  const assayTableContext = [
+    'Active assay context:',
+    'Mapped wells: 32',
+    'Latest summary: treatment increased signal.',
+    'Assay result table (TSV; use these rows as the source for assay_table create) (261 rows):',
+    'well\tsample\tconcentration\tresult',
+    longAssayRows,
+    'D8\tD\t3000\t0.320'
+  ].join('\n');
   const scopedState = scopedStateModule.createScopedAgentChatState(rootState, {
     getScopeContext: () => ({
       scopeType: 'assay',
@@ -521,7 +533,7 @@ test('assay-scoped agent chat stores assay sessions and exposes hidden assay con
       hiddenContext: {
         kind: 'assay-page',
         label: 'Active assay: Atlas ELISA',
-        text: 'Active assay context:\nMapped wells: 2\nLatest summary: treatment increased signal.',
+        text: assayTableContext,
         assayId: 'assay-1',
         assayName: 'Atlas ELISA'
       }
@@ -534,6 +546,8 @@ test('assay-scoped agent chat stores assay sessions and exposes hidden assay con
   assert.match(scopedState.agentChatContext.sessionPrompt, /Hikari assay table and Plotly graph MCP tools/);
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].kind, 'assay-page');
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].assayId, 'assay-1');
+  assert.match(scopedState.agentChatContext.hiddenContexts[0].text, /D8\tD\t3000\t0\.320/);
+  assert.equal(scopedState.agentChatContext.hiddenContexts[0].text.length > 4000, true);
 
   const normalized = scopedStateModule.normalizePaperAgentChatSessions({
     'assay:assay-1': {
@@ -663,6 +677,18 @@ test('assay rail automatically carries active assay content as hidden agent cont
     'agent-chat',
     'payload-builder.js'
   ));
+  const longAssayRows = Array.from({ length: 260 }, (_item, index) => (
+    `A${index + 1}\tA\t${10000 - index}\t0.${String(index).padStart(3, '0')}`
+  )).join('\n');
+  const assayTableContext = [
+    'Active assay context:',
+    'Mapped wells: 32',
+    'Latest summary: treatment increased signal.',
+    'Assay result table (TSV; use these rows as the source for assay_table create) (261 rows):',
+    'well\tsample\tconcentration\tresult',
+    longAssayRows,
+    'D8\tD\t3000\t0.320'
+  ].join('\n');
   const state = {
     projects: [{ id: 'p1', name: 'Atlas' }],
     settings: {
@@ -676,7 +702,7 @@ test('assay rail automatically carries active assay content as hidden agent cont
       hiddenContext: {
         kind: 'assay-page',
         label: 'Active assay: Atlas ELISA',
-        text: 'Active assay context:\nMapped wells: 2\nLatest summary: treatment increased signal.',
+        text: assayTableContext,
         assayId: 'assay-1',
         assayName: 'Atlas ELISA'
       }
@@ -699,6 +725,8 @@ test('assay rail automatically carries active assay content as hidden agent cont
   assert.equal(agentFlags.hiddenContexts[0].kind, 'assay-page');
   assert.equal(agentFlags.hiddenContexts[0].assayId, 'assay-1');
   assert.match(agentFlags.hiddenContexts[0].text, /treatment increased signal/);
+  assert.match(agentFlags.hiddenContexts[0].text, /D8\tD\t3000\t0\.320/);
+  assert.equal(agentFlags.hiddenContexts[0].text.length > 4000, true);
   assert.equal(agentFlags.sessionPrompt, 'You are reading the active assay context.');
   assert.equal(agentFlags.paperSessionPrompt, undefined);
 

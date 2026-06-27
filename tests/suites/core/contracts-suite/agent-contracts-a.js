@@ -32,19 +32,30 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('agent registrar keeps intent-only lifecycle stages and replay IPC handlers', () => {
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
-      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
       const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
       const combinedSource = `${agentChatHandlerSource}\n${controllerCoreSource}\n${apiControllerSource}\n${logHandlersSource}`;
       assert.match(agentChatHandlerSource, /createLifecycleRecorder/);
       assert.match(agentChatHandlerSource, /recordLifecycleEvent/);
       assert.match(agentChatHandlerSource, /appendAgentChatLogEntry/);
       assert.match(controllerCoreSource, /controller_intent_only_selected/);
-      assert.match(controllerCoreSource, /require\('\.\/api-agent-controller'\)/);
+      // The self-implemented API agent was extracted to /self-agent and is no longer wired in.
+      assert.doesNotMatch(controllerCoreSource, /require\('\.\/api-agent-controller'\)/);
+      assert.match(controllerCoreSource, /controller_api_agent_disabled/);
       assert.match(apiControllerSource, /stage: 'controller_intent_only'/);
       assert.match(apiControllerSource, /stage: 'parser_completed'/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_LIST_REQUESTS/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_REPLAY/);
       assert.equal(/agent-validation-safety/.test(combinedSource), false);
+    });
+
+    test('agent controller preserves table-sized assay hidden context', () => {
+      const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
+      assert.match(controllerCoreSource, /kind === 'assay-page' \|\| kind === 'assay' \|\| cleanText\(source\.assayId, 220\)/);
+      assert.match(controllerCoreSource, /cleanText\(source\.text, textLimit\)/);
+      assert.match(controllerCoreSource, /cleanText\(hiddenContextText, 60000\)/);
+      assert.doesNotMatch(controllerCoreSource, /const text = cleanText\(source\.text, 4000\)/);
+      assert.doesNotMatch(controllerCoreSource, /cleanText\(hiddenContextText, 12000\)/);
     });
 
     test('agent no longer depends on a serialized io contract file', () => {
@@ -69,6 +80,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'inventory-lookup'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'record-lookup'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-lookup'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'python-sandbox'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'command-line'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'web-search'), true);
@@ -127,9 +139,9 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('agent registrar controller output returns parser payload and optional developer trace', () => {
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
-      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
-      const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
-      const openContextRuntimeSource = fs.readFileSync(agentRegistrarPath('agent-open-context-runtime.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
+      const dispatcherSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'), 'utf8');
+      const openContextRuntimeSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-open-context-runtime.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       assert.match(apiControllerSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
       assert.match(dispatcherSource, /createAgentOpenContextRuntime/);
@@ -200,8 +212,8 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('protocol runtimes preserve placeholder-fill and tie-break prompt guidance after extraction', () => {
-      const protocolNotebookSource = fs.readFileSync(agentPath('runtime', 'agent-protocol-notebook.js'), 'utf8');
-      const protocolNotebookContextSource = fs.readFileSync(agentPath('runtime', 'agent-protocol-notebook-context-control.js'), 'utf8');
+      const protocolNotebookSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'agent-protocol-notebook.js'), 'utf8');
+      const protocolNotebookContextSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'agent-protocol-notebook-context-control.js'), 'utf8');
       const protocolMatchingSource = fs.readFileSync(agentPath('tools', 'agent-protocol-matching.js'), 'utf8');
       const notebookGenerationSource = fs.readFileSync(agentPath('tools', 'agent-notebook-generation.js'), 'utf8');
       assert.match(protocolNotebookSource, /createProtocolNotebookContextControl/);
@@ -222,7 +234,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('agent registrar hard-errors when intent parser output is invalid', () => {
-      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
       assert.match(apiControllerSource, /if \(!rawParserResult\?\.ok \|\| !rawParserResult\?\.payload\)/);
       assert.match(apiControllerSource, /ok:\s*false/);
       assert.match(apiControllerSource, /Intent parser failed:/);
@@ -231,7 +243,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('science controller path is wired through the agent registrar and shared reasoning loop', () => {
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
+      const dispatcherSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'), 'utf8');
       assert.match(mainSource, /createMainAgentServices/);
       assert.match(mainAgentServicesSource, /createScienceReasoningLoopRuntime/);
       assert.match(mainAgentServicesSource, /continueAgentSessionWithUserMessage/);
@@ -246,7 +258,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('purchase recommendation runtime and external-link bridge are wired across main and renderer contracts', () => {
       const purchaseSource = fs.readFileSync(agentPath('tools', 'agent-purchase-recommendation.js'), 'utf8');
       const executorsSource = fs.readFileSync(agentPath('tools', 'register-agent-tool-executors.js'), 'utf8');
-      const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
+      const dispatcherSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'), 'utf8');
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const preloadSource = readPreloadSource();
@@ -355,14 +367,6 @@ module.exports = function registerAgentContractsA(context = {}) {
         ['shared', 'agent-controller-utils.js'],
         ['shared', 'agent-observability.js'],
         ['runtime', 'agent-lookup-runtime.js'],
-        ['runtime', 'agent-protocol-notebook.js'],
-        ['runtime', 'agent-protocol-notebook-context-control.js'],
-        ['runtime', 'science-reasoning-loop', 'index.js'],
-        ['runtime', 'science-reasoning-loop', 'input-clarification.js'],
-        ['runtime', 'science-reasoning-loop', 'final-synthesis.js'],
-        ['runtime', 'science-reasoning-loop', 'loop-exit-criteria.js'],
-        ['runtime', 'science-reasoning-loop', 'loop-exit-judge.js'],
-        ['runtime', 'science-reasoning-loop', 'support.js'],
         ['tools', 'Tools.json'],
         ['tools', 'Tool-call.json'],
         ['tools', 'agent-tool-provide.js'],
@@ -383,7 +387,6 @@ module.exports = function registerAgentContractsA(context = {}) {
         ['tools', 'agent-container.js'],
         ['tools', 'agent-assay-table.js'],
         ['tools', 'agent-plotly-graph.js'],
-        ['context', 'agent-context-management.js'],
         ['context', 'agent-memory.js'],
         ['context', 'agent-chat-log.js']
       ];

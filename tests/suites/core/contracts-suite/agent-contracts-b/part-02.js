@@ -24,7 +24,7 @@ module.exports = function registerAgentContractsBPart02(context = {}) {
     test('science runtimes use canonical catalog tools and main wires their schemas and executors', () => {
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const { SCIENCE_REASONING_INTENTS, getScienceReasoningPolicy } = require(agentPath('runtime', 'science-reasoning-loop', 'index.js'));
+      const { SCIENCE_REASONING_INTENTS, getScienceReasoningPolicy } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'index.js'));
       const { getToolInputSchemas } = require(agentPath('tools', 'agent-tool-loading.js'));
       const { REASONING_ENTRY_TOOL_SCOPES } = require(agentPath('tools', 'agent-tool-provide.js'));
       const catalogToolCount = getToolInputSchemas().length;

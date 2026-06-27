@@ -170,7 +170,11 @@ export function normalizePaperAgentChatSessions(source = {}) {
 
 function normalizeHiddenContext(context = {}) {
   const source = context && typeof context === 'object' ? context : {};
-  const text = trimText(source.text, 4000);
+  const kind = trimText(source.kind || 'selection', 80);
+  const textLimit = kind === 'assay-page' || kind === 'assay' || trimText(source.assayId, 220)
+    ? 40000
+    : 4000;
+  const text = trimText(source.text, textLimit);
   if (!text) {
     return null;
   }

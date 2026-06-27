@@ -3,7 +3,7 @@
 const { createAgentIntentDispatcher } = require('./agent-intent-dispatcher');
 const { createAgentOpenContextRuntime } = require('./agent-open-context-runtime');
 const { createSelectionInsightRuntime } = require('./selection-insight-runtime');
-const { throwIfAgentRequestAborted } = require('../../helpers/agent/shared/agent-request-context.js');
+const { throwIfAgentRequestAborted } = require('../../src/main/helpers/agent/shared/agent-request-context.js');
 
 function createApiAgentController({
   deps,

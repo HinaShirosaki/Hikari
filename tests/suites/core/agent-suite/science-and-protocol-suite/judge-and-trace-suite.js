@@ -4,7 +4,7 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
 
   with (scope) {
     test('science loop exit judge prompt checks sufficiency instead of reflexive conservatism', () => {
-      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
+      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
       const runtime = createScienceLoopExitJudgeRuntime();
       const systemPrompt = runtime.buildJudgeSystemPrompt();
 
@@ -16,7 +16,7 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
     });
 
     test('science loop exit judge message carries the last 20 supporting basis and context entries', () => {
-      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
+      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
       const runtime = createScienceLoopExitJudgeRuntime();
       const labels = Array.from({ length: 21 }, (_, index) => String(index + 1).padStart(2, '0'));
       const message = runtime.buildJudgeMessage({
@@ -59,7 +59,7 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
     });
 
     test('science loop exit judge fallback uses only supplied exit criteria as blocking requirements', () => {
-      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
+      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
       const runtime = createScienceLoopExitJudgeRuntime();
 
       const evaluation = runtime.buildFallbackEvaluation({
@@ -105,7 +105,7 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
     });
 
     test('science loop pre-synthesized answer runtime compacts the current best answer, basis, and gaps', () => {
-      const { createScienceLoopPreSynthesizedAnswerRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'pre-synthesized-answer.js'));
+      const { createScienceLoopPreSynthesizedAnswerRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'pre-synthesized-answer.js'));
       const runtime = createScienceLoopPreSynthesizedAnswerRuntime();
 
       const preSynthesizedAnswer = runtime.buildPreSynthesizedAnswer({
@@ -145,7 +145,7 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
     });
 
     test('science thinking trace runtime reuses per-step trace sentences without another llm call', async () => {
-      const { createScienceThinkingTraceRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'thinking-trace.js'));
+      const { createScienceThinkingTraceRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'thinking-trace.js'));
       const runtime = createScienceThinkingTraceRuntime();
 
       const trace = await runtime.generateThinkingTrace({
@@ -203,7 +203,7 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
     });
 
     test('science loop exit judge runtime uses a sub-agent to return an exit decision', async () => {
-      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
+      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
       const stages = [];
       const runtime = createScienceLoopExitJudgeRuntime({
         requestStructuredJsonPayload: async ({ stage, userPrompt }) => {

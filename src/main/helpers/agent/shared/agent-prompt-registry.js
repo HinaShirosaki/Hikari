@@ -5,14 +5,14 @@ const {
   DEFAULT_AGENT_SYNTHESIS_PROMPT_TEMPLATE,
   createAgentRuntimeSupport
 } = require('../runtime/agent-runtime-support.js');
-const { createAgentSessionRuntime } = require('../runtime/agent-session-runtime.js');
-const { createScienceLoopSupport } = require('../runtime/science-reasoning-loop/support.js');
-const { createScienceInputClarificationRuntime } = require('../runtime/science-reasoning-loop/input-clarification.js');
-const { createAgentRoutePlannerRuntime } = require('../runtime/science-reasoning-loop/agent-route-planner.js');
-const { createScienceLoopExitCriteriaRuntime } = require('../runtime/science-reasoning-loop/loop-exit-criteria.js');
-const { createScienceLoopExitJudgeRuntime } = require('../runtime/science-reasoning-loop/loop-exit-judge.js');
-const { createScienceThinkingTraceRuntime } = require('../runtime/science-reasoning-loop/thinking-trace.js');
-const { createScienceFinalSynthesisRuntime } = require('../runtime/science-reasoning-loop/final-synthesis.js');
+const { createAgentSessionRuntime } = require('../../../../../self-agent/runtime/agent-session-runtime.js');
+const { createScienceLoopSupport } = require('../../../../../self-agent/runtime/science-reasoning-loop/support.js');
+const { createScienceInputClarificationRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/input-clarification.js');
+const { createAgentRoutePlannerRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/agent-route-planner.js');
+const { createScienceLoopExitCriteriaRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/loop-exit-criteria.js');
+const { createScienceLoopExitJudgeRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/loop-exit-judge.js');
+const { createScienceThinkingTraceRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/thinking-trace.js');
+const { createScienceFinalSynthesisRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/final-synthesis.js');
 const agentIntentParser = require('../intent/agent-intent-parser.js');
 const agentToolLoading = require('../tools/agent-tool-loading.js');
 const { createProtocolMatchingRuntime } = require('../tools/agent-protocol-matching.js');
@@ -23,11 +23,11 @@ const { createPaperAnalysisRuntime } = require('../tools/agent-paper-analysis.js
 const STRUCTURED_JSON_ONLY_SYSTEM_PROMPT = 'Return valid JSON only.';
 
 const STRUCTURED_JSON_ONLY_SOURCES = Object.freeze([
-  'src/main/helpers/agent/runtime/science-reasoning-loop/input-clarification.js',
-  'src/main/helpers/agent/runtime/science-reasoning-loop/agent-route-planner.js',
-  'src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-criteria.js',
-  'src/main/helpers/agent/runtime/science-reasoning-loop/thinking-trace.js',
-  'src/main/helpers/agent/runtime/science-reasoning-loop/final-synthesis.js'
+  'self-agent/runtime/science-reasoning-loop/input-clarification.js',
+  'self-agent/runtime/science-reasoning-loop/agent-route-planner.js',
+  'self-agent/runtime/science-reasoning-loop/loop-exit-criteria.js',
+  'self-agent/runtime/science-reasoning-loop/thinking-trace.js',
+  'self-agent/runtime/science-reasoning-loop/final-synthesis.js'
 ]);
 
 function asArray(value) {
@@ -509,7 +509,7 @@ function getAgentPromptRegistry() {
       title: 'Codex Tool Loop Prompt',
       group: 'Core Agent',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/agent-session-runtime.js',
+      source: 'self-agent/runtime/agent-session-runtime.js',
       render: () => state.sessionRuntime.buildCodexToolLoopPrompt({
         systemPrompt: baseSystemPrompt,
         transcript: state.sampleConversation,
@@ -682,7 +682,7 @@ function getAgentPromptRegistry() {
       title: 'Science Session System Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/support.js',
+      source: 'self-agent/runtime/science-reasoning-loop/support.js',
       render: () => state.scienceSupportRuntime.buildScienceSessionSystemPrompt({
         baseSystemPrompt,
         intent: state.sampleRouting.intent,
@@ -703,7 +703,7 @@ function getAgentPromptRegistry() {
       title: 'Science Evaluator Feedback Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/support.js',
+      source: 'self-agent/runtime/science-reasoning-loop/support.js',
       render: () => state.scienceSupportRuntime.buildEvaluatorFeedback(
         state.sampleEvaluation,
         state.sampleRouting.intent
@@ -714,7 +714,7 @@ function getAgentPromptRegistry() {
       title: 'Science Input Clarification Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/input-clarification.js',
+      source: 'self-agent/runtime/science-reasoning-loop/input-clarification.js',
       render: () => state.inputClarificationRuntime.buildClarificationPrompt({
         intent: state.sampleRouting.intent,
         project: state.sampleProject,
@@ -729,7 +729,7 @@ function getAgentPromptRegistry() {
       title: 'Science Route Plan Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/agent-route-planner.js',
+      source: 'self-agent/runtime/science-reasoning-loop/agent-route-planner.js',
       render: () => state.routePlannerRuntime.buildRoutePlanPrompt({
         intent: state.sampleRouting.intent,
         reasoningEffort: state.sampleRouting.reasoning_effort,
@@ -747,7 +747,7 @@ function getAgentPromptRegistry() {
       title: 'Science Exit Criteria Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-criteria.js',
+      source: 'self-agent/runtime/science-reasoning-loop/loop-exit-criteria.js',
       render: () => state.exitCriteriaRuntime.buildExitCriteriaPrompt({
         intent: state.sampleRouting.intent,
         policy: state.samplePolicy,
@@ -764,7 +764,7 @@ function getAgentPromptRegistry() {
       title: 'Science Exit Judge System Prompt',
       group: 'Science Reasoning',
       kind: 'system',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-judge.js',
+      source: 'self-agent/runtime/science-reasoning-loop/loop-exit-judge.js',
       render: () => state.exitJudgeRuntime.buildJudgeSystemPrompt()
     },
     {
@@ -772,7 +772,7 @@ function getAgentPromptRegistry() {
       title: 'Science Exit Judge Message Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-judge.js',
+      source: 'self-agent/runtime/science-reasoning-loop/loop-exit-judge.js',
       render: () => state.exitJudgeRuntime.buildJudgeMessage({
         intent: state.sampleRouting.intent,
         exitCriteria: state.sampleExitCriteria,
@@ -794,7 +794,7 @@ function getAgentPromptRegistry() {
       title: 'Science Thinking Trace Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/thinking-trace.js',
+      source: 'self-agent/runtime/science-reasoning-loop/thinking-trace.js',
       render: () => state.thinkingTraceRuntime.buildThinkingTracePrompt({
         intent: state.sampleRouting.intent,
         originalMessage: state.sampleConversation[0].text,
@@ -824,7 +824,7 @@ function getAgentPromptRegistry() {
       title: 'Science Final Synthesis Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/final-synthesis.js',
+      source: 'self-agent/runtime/science-reasoning-loop/final-synthesis.js',
       render: () => state.finalSynthesisRuntime.buildSynthesisPrompt({
         intent: state.sampleRouting.intent,
         policy: state.samplePolicy,

@@ -82,6 +82,17 @@ function buildExecutorSummary(cleanText, toolName, items = [], emptyText) {
       320
     );
   }
+  if (cleanText(toolName, 120) === 'notebook-lookup') {
+    const preview = items
+      .slice(0, 2)
+      .map((item) => cleanText(item?.title || item?.protocolName || item?.id, 120))
+      .filter(Boolean)
+      .join('; ');
+    return cleanText(
+      `${cleanText(toolName, 120)} matched ${count} item${count === 1 ? '' : 's'}${preview ? `: ${preview}.` : '.'}`,
+      320
+    );
+  }
   return `${cleanText(toolName, 120) || 'Tool'} matched ${count} item${count === 1 ? '' : 's'}.`;
 }
 
@@ -305,6 +316,38 @@ function registerAgentToolExecutors(deps = {}) {
         'record-lookup',
         result?.items,
         'record-lookup returned no matches.'
+      )
+    };
+  });
+
+  genericAgentToolRuntime.registerToolExecutor('notebook-lookup', async ({ args, context }) => {
+    const parserPayload = resolveToolParserPayload(args, context);
+    const entities = ensureObject(parserPayload?.entities);
+    const result = await agentLookupRuntime.executeNotebookLookup({
+      message: cleanText(args?.query || context?.message, 3200),
+      parserPayload,
+      snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
+      dataFilePath: cleanText(context?.dataFilePath, 2000),
+      fallbackDataFilePath: cleanText(context?.fallbackDataFilePath, 2000),
+      limit: toIntegerInRange(args?.limit, 8),
+      projectId: cleanText(args?.project_id || args?.projectId || entities.project_id, 120),
+      projectName: cleanText(args?.project_name || args?.projectName || entities.project_name, 220),
+      protocolName: cleanText(args?.protocol_name || args?.protocolName || entities.protocol_name, 220)
+    });
+
+    return {
+      ...result,
+      citations: buildToolCitations(
+        cleanText,
+        result?.items,
+        'notebook-lookup',
+        'Matched notebook entries from local data.'
+      ),
+      summary: buildExecutorSummary(
+        cleanText,
+        'notebook-lookup',
+        result?.items,
+        'notebook-lookup returned no matches.'
       )
     };
   });
@@ -889,6 +932,7 @@ function registerAgentToolExecutors(deps = {}) {
   return [
     'inventory-lookup',
     'record-lookup',
+    'notebook-lookup',
     'protocol-matching',
     'notebook-generation',
     'notebook-draft',

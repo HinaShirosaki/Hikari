@@ -4,7 +4,7 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
 
   with (scope) {
     test('science loop exit criteria runtime generates structured criteria with llm output', async () => {
-      const { createScienceLoopExitCriteriaRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-criteria.js'));
+      const { createScienceLoopExitCriteriaRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'loop-exit-criteria.js'));
       const runtime = createScienceLoopExitCriteriaRuntime({
         requestStructuredJsonPayload: async ({ stage }) => {
           assert.equal(stage, 'science_loop_exit_criteria');
@@ -45,7 +45,7 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
     });
 
     test('science route planner runtime drafts a structured reference plan with tool ordering', async () => {
-      const { createAgentRoutePlannerRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'agent-route-planner.js'));
+      const { createAgentRoutePlannerRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'agent-route-planner.js'));
       const runtime = createAgentRoutePlannerRuntime({
         requestStructuredJsonPayload: async ({ stage }) => {
           assert.equal(stage, 'science_route_planner');
@@ -105,7 +105,7 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
     });
 
     test('science route planner normalizes literature query hints into keyword phrases', async () => {
-      const { createAgentRoutePlannerRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'agent-route-planner.js'));
+      const { createAgentRoutePlannerRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'agent-route-planner.js'));
       const runtime = createAgentRoutePlannerRuntime({
         requestStructuredJsonPayload: async ({ stage, userPrompt }) => {
           assert.equal(stage, 'science_route_planner');
@@ -156,7 +156,7 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
     });
 
     test('science route planner prompt and fallback preserve trailing allowed retrieval tools', () => {
-      const { createAgentRoutePlannerRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'agent-route-planner.js'));
+      const { createAgentRoutePlannerRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'agent-route-planner.js'));
       const runtime = createAgentRoutePlannerRuntime();
       const allowedToolNames = [
         'inventory-lookup',
@@ -194,7 +194,7 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
     });
 
     test('science exit criteria prompt and fallback preserve trailing allowed retrieval tools', () => {
-      const { createScienceLoopExitCriteriaRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-criteria.js'));
+      const { createScienceLoopExitCriteriaRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'loop-exit-criteria.js'));
       const runtime = createScienceLoopExitCriteriaRuntime();
       const allowedToolNames = [
         'inventory-lookup',

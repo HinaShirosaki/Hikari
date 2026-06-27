@@ -7,13 +7,8 @@ function createAgentControllerCore({
   cleanText,
   controllerUtils,
   observability,
-  protocolNotebookRuntime,
-  scienceReasoningLoopRuntime,
   codexAgentRuntime,
-  scienceMainUtils,
   agentToolRuntime,
-  executeInventoryLookup,
-  executeRecordLookup,
   agentChatLogRuntime,
   getAgentChatLogPath,
   getDefaultDataFilePath,
@@ -22,24 +17,10 @@ function createAgentControllerCore({
   lifecycleService
 } = {}) {
   const { normalizeJsonPayload, asArray } = lifecycleService;
-  const allowApiAgent = deps.ALLOW_API_AGENT !== false;
-  const apiAgentController = allowApiAgent
-    ? require('./api-agent-controller').createApiAgentController({
-      deps,
-      cleanText,
-      controllerUtils,
-      observability,
-      protocolNotebookRuntime,
-      scienceReasoningLoopRuntime,
-      scienceMainUtils,
-      agentToolRuntime,
-      executeInventoryLookup,
-      executeRecordLookup,
-      agentChatLogRuntime,
-      getDefaultDataFilePath,
-      lifecycleService
-    })
-    : null;
+  // The self-implemented (API) agent was extracted to /self-agent and is no longer wired in.
+  // Non-Codex providers now fall through to the disabled response below.
+  // ponytail: re-wire here if the standalone self-agent service is reintroduced.
+  const allowApiAgent = false;
 
   function normalizeAttachments(rawAttachments = []) {
     return asArray(rawAttachments).map((attachment) => {
@@ -58,12 +39,16 @@ function createAgentControllerCore({
   function normalizeHiddenContexts(rawContexts = []) {
     return asArray(rawContexts).map((context) => {
       const source = context && typeof context === 'object' ? context : {};
-      const text = cleanText(source.text, 4000);
+      const kind = cleanText(source.kind || 'selection', 80);
+      const textLimit = kind === 'assay-page' || kind === 'assay' || cleanText(source.assayId, 220)
+        ? 40000
+        : 4000;
+      const text = cleanText(source.text, textLimit);
       if (!text) {
         return null;
       }
       return {
-        kind: cleanText(source.kind || 'selection', 80),
+        kind,
         label: cleanText(source.label || 'Hidden context', 120),
         text,
         paperId: cleanText(source.paperId, 220),
@@ -113,7 +98,7 @@ function createAgentControllerCore({
 
   function composeAgentMessageWithHiddenContext(visibleMessage = '', hiddenContextText = '') {
     const visible = cleanText(visibleMessage, 3000);
-    const hidden = cleanText(hiddenContextText, 12000);
+    const hidden = cleanText(hiddenContextText, 60000);
     if (!hidden) {
       return visible;
     }
@@ -435,38 +420,17 @@ function createAgentControllerCore({
       return codexResult;
     }
 
-    if (!apiAgentController) {
-      observability.recordLifecycleEvent(lifecycleRecorder, {
-        stage: 'controller_api_agent_disabled',
-        status: 'failed',
-        message: 'API agent support is disabled by the application feature flag.'
-      });
-      return {
-        ok: false,
-        provider: deps.LLM_PROVIDERS.CODEX,
-        model: 'codex-default',
-        error: 'API agent support is disabled. This build uses the Codex agent only.'
-      };
-    }
-
-    return apiAgentController.run({
-      payload,
-      runtime,
-      provider,
-      endpoint,
-      apiKey,
-      model,
-      effectiveMessage,
-      promptConversation,
-      attachments,
-      snapshot,
-      executionFlags,
-      traceContext,
-      projectId,
-      projectName,
-      skillPromptPayload,
-      lifecycleRecorder
+    observability.recordLifecycleEvent(lifecycleRecorder, {
+      stage: 'controller_api_agent_disabled',
+      status: 'failed',
+      message: 'The self-implemented API agent has been extracted to /self-agent and is not wired in.'
     });
+    return {
+      ok: false,
+      provider: deps.LLM_PROVIDERS.CODEX,
+      model: 'codex-default',
+      error: 'API agent support is disabled. This build uses the Codex agent only.'
+    };
   }
 
   async function runAgentController(payload, runtime = {}) {

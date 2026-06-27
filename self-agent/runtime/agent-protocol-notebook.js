@@ -1,8 +1,8 @@
 'use strict';
 
-const { resolveAgentRuntimeFactory } = require('../shared/agent-runtime-registry.js');
-const { createProtocolMatchingRuntime } = require('../tools/agent-protocol-matching');
-const { createNotebookGenerationRuntime } = require('../tools/agent-notebook-generation');
+const { resolveAgentRuntimeFactory } = require('../../src/main/helpers/agent/shared/agent-runtime-registry.js');
+const { createProtocolMatchingRuntime } = require('../../src/main/helpers/agent/tools/agent-protocol-matching');
+const { createNotebookGenerationRuntime } = require('../../src/main/helpers/agent/tools/agent-notebook-generation');
 const { createProtocolNotebookContextControl } = require('./agent-protocol-notebook-context-control.js');
 
 function createProtocolNotebookRuntime(deps = {}) {

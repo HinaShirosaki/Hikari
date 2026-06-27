@@ -3,7 +3,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart02(context = {}
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
     test('intent dispatcher gathers notebook-draft evidence before terminal draft tool when papers are requested', async () => {
-      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'));
       const toolLoading = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-loading.js'));
       const lifecycleStages = [];
       const toolCalls = [];
@@ -173,7 +173,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart02(context = {}
       assert.equal(lifecycleStages.includes('notebook_draft_evidence_completed'), true);
     });
     test('intent dispatcher returns purchase clarification prompts without invoking the tool executor', async () => {
-      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'));
       let toolCallCount = 0;
       const dispatcher = createAgentIntentDispatcher({
         cleanText: (value, _maxLength = 2000) => {

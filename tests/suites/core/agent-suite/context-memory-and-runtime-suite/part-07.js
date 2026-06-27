@@ -270,10 +270,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart07(contex
     test('session runtime runs the tool loop through the unified requestText API', async () => {
       const { createAgentSessionRuntime } = require(path.join(
         __dirname,
-        'src',
-        'main',
-        'helpers',
-        'agent',
+        'self-agent',
         'runtime',
         'agent-session-runtime.js'
       ));

@@ -223,6 +223,9 @@ Direct tools:
 Table workflow:
 
 1. Start from the active assay context or user-provided data and create an original table with \`${ASSAY_TABLE_TOOL_NAME}\`.
+   - In the Assay right rail, the active assay context includes TSV blocks such as \`Assay result table (TSV...)\` and sometimes \`Latest analysis table (TSV)\`.
+   - Convert that TSV into explicit \`rows\` for \`create\`; do not call \`create\` with only \`source: "active_assay"\`.
+   - Preserve the columns \`well\`, \`sample\`, \`concentration\`, and \`result\` when they are present, because downstream calculations and Plotly traces often need them.
 2. Use \`derive\` or \`add_column\` for common calculations: \`+\`, \`-\`, \`*\`, \`/\`, \`max\`, \`min\`, \`avg\`, \`sd\`, \`median\`, \`count\`, \`log10\`, \`ln\`, and \`pow\`.
 3. Use row-wise \`operands\` when each row contains replicate columns. Example:
    \`{ "action": "derive", "source_table_id": "1", "include_source_columns": true, "columns": [{ "name": "avg_response", "op": "avg", "operands": ["rep1", "rep2", "rep3"] }, { "name": "sd_response", "op": "sd", "operands": ["rep1", "rep2", "rep3"] }] }\`

@@ -217,6 +217,24 @@ Input schema:
 }
 ```
 
+### `record_lookup`
+
+Direct MCP wrapper for stored Hikari records beyond specialized inventory, protocol, notebook, paper, or assay tools. Use it for projects, protocols, notebook pages, workflows, gels, papers, and linked historical context. Do not use it to provide active Assay data; active assay values come from the Assay rail context and `assay_table`.
+
+Input schema:
+
+```json
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "query": { "type": "string" },
+    "limit": { "type": "integer", "minimum": 1, "maximum": 25 },
+    "parser_payload": { "type": "object" }
+  }
+}
+```
+
 ### `protocol_lookup`
 
 Direct MCP convenience wrapper for local Hikari protocol records. It calls `protocol-matching` with the query as the protocol candidate and returns ranked protocol matches plus the selected protocol when available.
@@ -294,7 +312,7 @@ Input schema:
 
 ### `notebook_lookup`
 
-Direct MCP convenience wrapper for local Hikari notebook entries. It calls `record-lookup` and filters results to notebook records.
+Direct MCP convenience wrapper for local Hikari notebook entries. It calls the notebook-only app lookup executor and returns notebook records.
 
 Input schema:
 

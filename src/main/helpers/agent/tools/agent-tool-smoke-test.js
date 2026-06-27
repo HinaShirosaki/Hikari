@@ -353,6 +353,9 @@ function buildPreview(toolName, result) {
   if (toolName === 'record-lookup') {
     return cleanText(source.items?.[0]?.title || source.items?.[0]?.id, 220);
   }
+  if (toolName === 'notebook-lookup') {
+    return cleanText(source.items?.[0]?.title || source.items?.[0]?.protocolName || source.items?.[0]?.id, 220);
+  }
   if (toolName === 'protocol-matching') {
     return cleanText(source.selected_protocol?.name, 220);
   }
@@ -507,6 +510,32 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       summary: itemCount > 0
         ? `Found ${itemCount} record match${itemCount === 1 ? '' : 'es'} for ${cleanText(result.query || focusedQuery, 220)}.`
         : `No record matches found for ${cleanText(result.query || focusedQuery, 220)}.`
+    };
+  }
+
+  async function smokeNotebookLookup(snapshot, options = {}) {
+    const runtime = createAgentRecordLookupRuntime();
+    const requestMessage = resolveToolMessage(options.message, 'Find the Cell Prep notebook entry.');
+    const focusedQuery = resolveFocusedToolText(options.message, 'Cell Prep');
+    const result = await runtime.searchRecordIndex({
+      query: focusedQuery || requestMessage,
+      searchTerms: uniqueStrings([focusedQuery, requestMessage, 'Cell Prep'], 5),
+      snapshot,
+      recordTypes: ['notebook'],
+      limit: 5
+    });
+    const items = asArray(result.items);
+    const itemCount = items.length;
+    return {
+      status: itemCount ? 'matched' : 'no_match',
+      query: cleanText(result.query || focusedQuery, 220),
+      source: cleanText(result.source, 80) || 'fallback_json',
+      backfilled_sql: result.backfilledSql === true,
+      items,
+      ok: options.strict === true ? itemCount > 0 : true,
+      summary: itemCount > 0
+        ? `Found ${itemCount} notebook match${itemCount === 1 ? '' : 'es'} for ${cleanText(result.query || focusedQuery, 220)}.`
+        : `No notebook matches found for ${cleanText(result.query || focusedQuery, 220)}.`
     };
   }
 
@@ -1237,6 +1266,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   const smokeRunners = {
     'inventory-lookup': async (options = {}) => smokeInventoryLookup(buildSmokeSnapshot(), options),
     'record-lookup': async (options = {}) => smokeRecordLookup(buildSmokeSnapshot(), options),
+    'notebook-lookup': async (options = {}) => smokeNotebookLookup(buildSmokeSnapshot(), options),
     'protocol-matching': async (options = {}) => smokeProtocolMatching(buildSmokeSnapshot(), options),
     'notebook-generation': async (options = {}) => smokeNotebookGeneration(buildSmokeSnapshot(), options),
     'notebook-draft': async (options = {}) => smokeNotebookDraft(buildSmokeSnapshot(), options),

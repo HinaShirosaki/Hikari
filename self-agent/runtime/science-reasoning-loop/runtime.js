@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../../shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../src/main/helpers/agent/shared/agent-llm-utils.js');
 const { createAgentRoutePlannerRuntime } = require('./agent-route-planner.js');
 const { createScienceInputClarificationRuntime } = require('./input-clarification.js');
 const { createScienceFinalSynthesisRuntime } = require('./final-synthesis.js');
@@ -16,7 +16,7 @@ const {
   getDefaultScienceMaxRounds
 } = require('./policies.js');
 const { createScienceReasoningRoundHelpers } = require('./round-helpers.js');
-const { createAgentToolProviderRuntime } = require('../../tools/agent-tool-provide.js');
+const { createAgentToolProviderRuntime } = require('../../../src/main/helpers/agent/tools/agent-tool-provide.js');
 const { createScienceDirectAnswerRuntime } = require('./direct-answer.js');
 const { createScienceLoopPreSynthesisController } = require('./pre-synthesis-controller.js');
 const { createScienceToolRoundLoopRuntime } = require('./tool-round-loop.js');

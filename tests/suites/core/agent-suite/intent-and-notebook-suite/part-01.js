@@ -155,7 +155,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
       assert.equal(agentIntentParser.normalizeParserIntent('shopping-search'), 'purchase_recommendation');
     });
     test('science routing promotes unclear parser intent into deep general science reasoning', () => {
-      const { createAgentScienceMainUtils } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'agent-science-main-utils.js'));
+      const { createAgentScienceMainUtils } = require(path.join(__dirname, 'self-agent', 'runtime', 'agent-science-main-utils.js'));
       const utils = createAgentScienceMainUtils({
         asArray: (value) => (Array.isArray(value) ? value : []),
         cleanText: (value, _maxLength = 2000) => {
@@ -203,7 +203,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
       assert.equal(routing.classifier.fallbackUsed, true);
     });
     test('intent dispatcher routes unclear parser intents into general science execution', async () => {
-      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'));
       let receivedScienceInput = null;
       const dispatcher = createAgentIntentDispatcher({
         cleanText: (value, _maxLength = 2000) => {
@@ -302,7 +302,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
       assert.equal(result.general_science_question.status, 'completed');
     });
     test('intent dispatcher routes purchase recommendations through the tracked tool executor', async () => {
-      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-intent-dispatcher.js'));
+      const { createAgentIntentDispatcher } = require(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'));
       const lifecycleStages = [];
       const toolCalls = [];
       const dispatcher = createAgentIntentDispatcher({

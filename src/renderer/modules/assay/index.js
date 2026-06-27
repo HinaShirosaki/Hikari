@@ -318,6 +318,89 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     return assay.resultValues && typeof assay.resultValues === 'object' ? assay.resultValues : {};
   }
 
+  function cleanAgentTableCell(value, maxLength = 220) {
+    return compactAgentText(value, maxLength)
+      .replace(/[\t\r\n]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function buildAgentResultRows(layout = [], results = {}, maxRows = 384) {
+    const rows = [];
+    const seen = new Set();
+    const resultByWell = {};
+    Object.entries(results || {}).forEach(([rawWell, rawValue]) => {
+      const well = cleanAgentTableCell(rawWell, 40).toUpperCase();
+      if (well) {
+        resultByWell[well] = rawValue;
+      }
+    });
+    (Array.isArray(layout) ? layout : []).forEach((item) => {
+      const well = cleanAgentTableCell(item?.well, 40).toUpperCase();
+      if (!well || seen.has(well) || rows.length >= maxRows) {
+        return;
+      }
+      seen.add(well);
+      const hasResult = Object.prototype.hasOwnProperty.call(resultByWell, well);
+      const row = {
+        well,
+        sample: cleanAgentTableCell(item?.sampleId, 160),
+        concentration: cleanAgentTableCell(item?.concentration, 160),
+        result: hasResult ? cleanAgentTableCell(resultByWell[well], 220) : ''
+      };
+      if (row.sample || row.concentration || row.result) {
+        rows.push(row);
+      }
+    });
+    Object.entries(resultByWell).forEach(([well, rawValue]) => {
+      if (!well || seen.has(well) || rows.length >= maxRows) {
+        return;
+      }
+      seen.add(well);
+      rows.push({
+        well,
+        sample: '',
+        concentration: '',
+        result: cleanAgentTableCell(rawValue, 220)
+      });
+    });
+    return rows;
+  }
+
+  function formatAgentTsvSection(title = '', columns = [], rows = [], maxRows = 384) {
+    const safeColumns = (Array.isArray(columns) ? columns : [])
+      .map((column) => cleanAgentTableCell(column, 80))
+      .filter(Boolean);
+    const safeRows = Array.isArray(rows) ? rows : [];
+    if (!safeColumns.length || !safeRows.length) {
+      return [];
+    }
+    const visibleRows = safeRows.slice(0, maxRows);
+    const truncated = safeRows.length > visibleRows.length
+      ? `; showing first ${visibleRows.length}`
+      : '';
+    return [
+      `${title} (${safeRows.length} row${safeRows.length === 1 ? '' : 's'}${truncated}):`,
+      safeColumns.join('\t'),
+      ...visibleRows.map((row) => {
+        const source = Array.isArray(row) ? row : {};
+        return safeColumns.map((column, index) => (
+          Array.isArray(source)
+            ? cleanAgentTableCell(source[index], 220)
+            : cleanAgentTableCell(source[column], 220)
+        )).join('\t');
+      })
+    ];
+  }
+
+  function buildAgentAnalysisTableLines(latestAnalysis = null) {
+    const headers = Array.isArray(latestAnalysis?.headers)
+      ? latestAnalysis.headers.map((item) => cleanAgentTableCell(item, 120)).filter(Boolean)
+      : [];
+    const rows = Array.isArray(latestAnalysis?.rows) ? latestAnalysis.rows : [];
+    return formatAgentTsvSection('Latest analysis table (TSV)', headers, rows, 120);
+  }
+
   function buildAgentWellPreview(layout = [], results = {}, maxRows = 16) {
     const rows = (Array.isArray(layout) ? layout : [])
       .slice(0, maxRows)
@@ -352,6 +435,14 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
       ? assay.latestAnalysis
       : null;
     const analysisMethod = compactAgentText(elements.assayAnalysisMethodInput?.value || latestAnalysis?.method || '', 120);
+    const resultRows = buildAgentResultRows(layout, results);
+    const resultTableLines = formatAgentTsvSection(
+      'Assay result table (TSV; use these rows as the source for assay_table create)',
+      ['well', 'sample', 'concentration', 'result'],
+      resultRows,
+      384
+    );
+    const analysisTableLines = buildAgentAnalysisTableLines(latestAnalysis);
     const wellPreview = buildAgentWellPreview(layout, results);
     const lines = [
       `Active assay mode: ${runtime.assayMode === 'results' ? 'Results and analysis' : 'Plate setup'}`,
@@ -376,8 +467,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
         : '',
       elements.assayAnalysisErrorBarsInput?.checked ? 'Error bars: SD enabled' : '',
       latestAnalysis?.summary ? `Latest analysis summary: ${compactAgentText(latestAnalysis.summary, 700)}` : '',
-      wellPreview.length ? 'Well/result preview:' : '',
-      ...wellPreview
+      ...analysisTableLines,
+      ...resultTableLines,
+      resultTableLines.length ? '' : (wellPreview.length ? 'Well/result preview:' : ''),
+      ...(resultTableLines.length ? [] : wellPreview)
     ].filter(Boolean);
 
     return {

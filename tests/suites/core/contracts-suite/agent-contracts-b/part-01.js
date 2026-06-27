@@ -22,9 +22,9 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
     test('science reasoning helper exports shared loop runtime and renderer consumes science payloads', () => {
-      const helperSource = fs.readFileSync(agentPath('runtime', 'science-reasoning-loop', 'index.js'), 'utf8');
-      const policySource = fs.readFileSync(agentPath('runtime', 'science-reasoning-loop', 'policies.js'), 'utf8');
-      const runtimeSource = fs.readFileSync(agentPath('runtime', 'science-reasoning-loop', 'runtime.js'), 'utf8');
+      const helperSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'index.js'), 'utf8');
+      const policySource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'policies.js'), 'utf8');
+      const runtimeSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'runtime.js'), 'utf8');
       const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response.js'), 'utf8');
       const responseSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response.js'), 'utf8');
       assert.match(helperSource, /require\('\.\/policies\.js'\)/);
@@ -57,8 +57,8 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.deepEqual(toolCallCatalog['sub-agent']?.input_schema?.properties?.action?.enum, ['create', 'message', 'delete', 'get', 'list']);
     });
     test('context management and memory helpers export reusable runtimes with layered and action-based contracts', () => {
-      const contextSource = fs.readFileSync(agentPath('context', 'agent-context-management.js'), 'utf8');
-      const registrySource = fs.readFileSync(agentPath('context', 'agent-context-registry.js'), 'utf8');
+      const contextSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'context', 'agent-context-management.js'), 'utf8');
+      const registrySource = fs.readFileSync(path.join(__dirname, 'self-agent', 'context', 'agent-context-registry.js'), 'utf8');
       const memorySource = fs.readFileSync(agentPath('context', 'agent-memory.js'), 'utf8');
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
@@ -346,10 +346,10 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     test('main wires intent parser + observability paths for parser-only controller', () => {
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
-      const sessionRuntimeSource = fs.readFileSync(agentPath('runtime', 'agent-session-runtime.js'), 'utf8');
+      const sessionRuntimeSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'agent-session-runtime.js'), 'utf8');
       assert.match(mainSource, /createMainAgentServices/);
       assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/intent\/agent-intent-parser'\)/);
       assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-observability'\)/);

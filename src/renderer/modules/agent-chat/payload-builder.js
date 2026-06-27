@@ -10,9 +10,16 @@ export function createAgentPayloadBuilder({
 }) {
   let hiddenDraftContexts = [];
 
+  function getHiddenContextTextLimit(source = {}) {
+    const kind = trimText(source.kind || 'selection', 80);
+    return kind === 'assay-page' || kind === 'assay' || trimText(source.assayId, 220)
+      ? 40000
+      : 4000;
+  }
+
   function normalizeHiddenContext(context = {}) {
     const source = context && typeof context === 'object' ? context : {};
-    const text = trimText(source.text, 4000);
+    const text = trimText(source.text, getHiddenContextTextLimit(source));
     if (!text) {
       return null;
     }
