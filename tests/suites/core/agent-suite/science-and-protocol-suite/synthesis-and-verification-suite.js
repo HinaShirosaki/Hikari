@@ -4,7 +4,7 @@ module.exports = function registerSynthesisAndVerificationSuite(context = {}) {
 
   with (scope) {
     test('science final synthesis runtime requests plain assistant text and derives metadata locally', async () => {
-      const { createScienceFinalSynthesisRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'final-synthesis.js'));
+      const { createScienceFinalSynthesisRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'final-synthesis.js'));
       let capturedPrompt = '';
       let capturedStage = '';
       let capturedSystemPrompt = '';
@@ -62,7 +62,7 @@ module.exports = function registerSynthesisAndVerificationSuite(context = {}) {
     });
 
     test('science final synthesis prompt includes the last 20 tool outputs and context blocks', () => {
-      const { createScienceFinalSynthesisRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'final-synthesis.js'));
+      const { createScienceFinalSynthesisRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'final-synthesis.js'));
       const runtime = createScienceFinalSynthesisRuntime();
       const toolTrace = Array.from({ length: 21 }, (_, index) => {
         const label = String(index + 1).padStart(2, '0');
@@ -104,7 +104,7 @@ module.exports = function registerSynthesisAndVerificationSuite(context = {}) {
     });
 
     test('science logical verification runtime extracts context plus per-item logic and checks each item separately', async () => {
-      const { createScienceLoopLogicalVerificationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'logical-verification.js'));
+      const { createScienceLoopLogicalVerificationRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'logical-verification.js'));
       const stabilityPrompts = [];
       const runtime = createScienceLoopLogicalVerificationRuntime({
         requestStructuredJsonPayload: async ({ stage, userPrompt }) => {

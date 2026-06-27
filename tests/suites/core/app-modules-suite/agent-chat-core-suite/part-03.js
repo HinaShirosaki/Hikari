@@ -498,6 +498,67 @@ test('notebook-scoped agent chat stores page sessions and exposes hidden page co
   assert.equal(normalized['notebook:note-1'].messages.length, 1);
 });
 
+test('assay-scoped agent chat stores assay sessions and exposes hidden assay context', () => {
+  const scopedStateModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'scoped-state.js'
+  ));
+  const rootState = {
+    paperAgentChatSessions: {}
+  };
+  const longAssayRows = Array.from({ length: 260 }, (_item, index) => (
+    `A${index + 1}\tA\t${10000 - index}\t0.${String(index).padStart(3, '0')}`
+  )).join('\n');
+  const assayTableContext = [
+    'Active assay context:',
+    'Mapped wells: 32',
+    'Latest summary: treatment increased signal.',
+    'Assay result table (TSV; use these rows as the source for assay_table create) (261 rows):',
+    'well\tsample\tconcentration\tresult',
+    longAssayRows,
+    'D8\tD\t3000\t0.320'
+  ].join('\n');
+  const scopedState = scopedStateModule.createScopedAgentChatState(rootState, {
+    getScopeContext: () => ({
+      scopeType: 'assay',
+      assayId: 'assay-1',
+      assayName: 'Atlas ELISA',
+      assayMode: 'results',
+      projectId: 'p1',
+      projectName: 'Atlas',
+      hiddenContext: {
+        kind: 'assay-page',
+        label: 'Active assay: Atlas ELISA',
+        text: assayTableContext,
+        assayId: 'assay-1',
+        assayName: 'Atlas ELISA'
+      }
+    })
+  });
+
+  assert.equal(scopedState.agentChat.projectId, 'p1');
+  assert.equal(Object.keys(rootState.paperAgentChatSessions).join(','), 'assay:assay-1');
+  assert.match(scopedState.agentChatContext.sessionPrompt, /Assay right-rail/);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /Hikari assay table and Plotly graph MCP tools/);
+  assert.equal(scopedState.agentChatContext.hiddenContexts[0].kind, 'assay-page');
+  assert.equal(scopedState.agentChatContext.hiddenContexts[0].assayId, 'assay-1');
+  assert.match(scopedState.agentChatContext.hiddenContexts[0].text, /D8\tD\t3000\t0\.320/);
+  assert.equal(scopedState.agentChatContext.hiddenContexts[0].text.length > 4000, true);
+
+  const normalized = scopedStateModule.normalizePaperAgentChatSessions({
+    'assay:assay-1': {
+      projectId: 'p1',
+      messages: [{ id: 'm1', role: 'user', text: 'Graph this assay.' }]
+    }
+  });
+  assert.equal(normalized['assay:assay-1'].projectId, 'p1');
+  assert.equal(normalized['assay:assay-1'].messages.length, 1);
+});
+
 test('paper rail selected text is carried as hidden one-shot agent context', () => {
   const payloadModule = loadEsmStyleModule(path.join(
     __dirname,
@@ -515,6 +576,7 @@ test('paper rail selected text is carried as hidden one-shot agent context', () 
     },
     agentChat: { projectId: '', messages: [] },
     agentChatContext: {
+      scopeType: 'paper',
       sessionPrompt: 'You are reading the active paper markdown.',
       paperId: 'paper-1',
       paperTitle: 'Atlas Uploaded Paper',
@@ -606,16 +668,88 @@ test('notebook rail automatically carries active page content as hidden agent co
   assert.equal(payloadBuilder.getDraftRequest().hiddenContexts.length, 1);
 });
 
-test('paper rail quick prompts load a common prompt into the composer', () => {
+test('assay rail automatically carries active assay content as hidden agent context', () => {
+  const payloadModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'payload-builder.js'
+  ));
+  const longAssayRows = Array.from({ length: 260 }, (_item, index) => (
+    `A${index + 1}\tA\t${10000 - index}\t0.${String(index).padStart(3, '0')}`
+  )).join('\n');
+  const assayTableContext = [
+    'Active assay context:',
+    'Mapped wells: 32',
+    'Latest summary: treatment increased signal.',
+    'Assay result table (TSV; use these rows as the source for assay_table create) (261 rows):',
+    'well\tsample\tconcentration\tresult',
+    longAssayRows,
+    'D8\tD\t3000\t0.320'
+  ].join('\n');
+  const state = {
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    settings: {
+      llm: { provider: 'codex', model: 'gpt-5' },
+      agent: { developerMode: false }
+    },
+    agentChat: { projectId: 'p1', messages: [] },
+    agentChatContext: {
+      scopeType: 'assay',
+      sessionPrompt: 'You are reading the active assay context.',
+      hiddenContext: {
+        kind: 'assay-page',
+        label: 'Active assay: Atlas ELISA',
+        text: assayTableContext,
+        assayId: 'assay-1',
+        assayName: 'Atlas ELISA'
+      }
+    }
+  };
+  const input = { value: 'Make a graph.' };
+  const payloadBuilder = payloadModule.createAgentPayloadBuilder({
+    state,
+    input,
+    getComposerAttachments: () => [],
+    ensureAgentState: () => {}
+  });
+
+  const draft = payloadBuilder.getDraftRequest();
+  const agentFlags = payloadBuilder.buildAgentFlagsPayload({ hiddenContexts: draft.hiddenContexts });
+
+  assert.equal(draft.messageText, 'Make a graph.');
+  assert.doesNotMatch(draft.messageText, /treatment increased signal/);
+  assert.equal(agentFlags.hiddenContexts.length, 1);
+  assert.equal(agentFlags.hiddenContexts[0].kind, 'assay-page');
+  assert.equal(agentFlags.hiddenContexts[0].assayId, 'assay-1');
+  assert.match(agentFlags.hiddenContexts[0].text, /treatment increased signal/);
+  assert.match(agentFlags.hiddenContexts[0].text, /D8\tD\t3000\t0\.320/);
+  assert.equal(agentFlags.hiddenContexts[0].text.length > 4000, true);
+  assert.equal(agentFlags.sessionPrompt, 'You are reading the active assay context.');
+  assert.equal(agentFlags.paperSessionPrompt, undefined);
+
+  payloadBuilder.consumeHiddenContexts();
+  assert.equal(payloadBuilder.getDraftRequest().hiddenContexts.length, 1);
+});
+
+test('unscoped shared agent chat initializes with neutral composer prompts', () => {
   const document = createMockDocument([
     'agent-rail-chat-history',
     'agent-rail-message-input',
     'agent-rail-send-btn',
-    'agent-rail-quick-prompts'
+    'agent-rail-quick-prompts',
+    'agent-rail-paper-screenshot-btn'
   ]);
-  const prompt = 'Generate a step-by-step experimental protocol from this paper.';
   const quickPrompts = document.getElementById('agent-rail-quick-prompts');
+  quickPrompts.innerHTML = `
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+  `;
   const messageInput = document.getElementById('agent-rail-message-input');
+  const paperScreenshotBtn = document.getElementById('agent-rail-paper-screenshot-btn');
   const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
     document,
     window: {}
@@ -633,6 +767,60 @@ test('paper rail quick prompts load a common prompt into the composer', () => {
   });
 
   agent.render();
+  const buttons = quickPrompts.querySelectorAll('[data-agent-suggest-prompt]');
+
+  assert.equal(messageInput.placeholder, 'Ask Hikari about this workspace.');
+  assert.equal(quickPrompts.getAttribute('aria-label'), 'Common chat prompts');
+  assert.equal(buttons[0].textContent, 'Summarize context');
+  assert.match(buttons[0].dataset.agentSuggestPrompt, /workspace context/);
+  assert.doesNotMatch(buttons[0].dataset.agentSuggestPrompt, /this paper/i);
+  assert.equal(paperScreenshotBtn.hidden, true);
+});
+
+test('paper rail quick prompts initialize paper composer and load a common prompt', () => {
+  const document = createMockDocument([
+    'agent-rail-chat-history',
+    'agent-rail-message-input',
+    'agent-rail-send-btn',
+    'agent-rail-quick-prompts',
+    'agent-rail-paper-screenshot-btn'
+  ]);
+  const quickPrompts = document.getElementById('agent-rail-quick-prompts');
+  quickPrompts.innerHTML = `
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+  `;
+  const messageInput = document.getElementById('agent-rail-message-input');
+  const paperScreenshotBtn = document.getElementById('agent-rail-paper-screenshot-btn');
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window: {}
+  });
+  const agent = agentModule.initAgentChat({
+    idPrefix: 'agent-rail',
+    state: {
+      projects: [],
+      settings: {},
+      agentChat: { projectId: '', messages: [], sessions: [] },
+      agentChatContext: { scopeType: 'paper' }
+    },
+    persist: () => {},
+    createId: () => 'agent-msg-1',
+    safeText: shared.safeText,
+    captureImageAttachment: () => Promise.resolve({ ok: true })
+  });
+
+  agent.render();
+  const buttons = quickPrompts.querySelectorAll('[data-agent-suggest-prompt]');
+  const prompt = buttons[0].dataset.agentSuggestPrompt;
+
+  assert.equal(messageInput.placeholder, 'Ask Hikari about this paper.');
+  assert.equal(quickPrompts.getAttribute('aria-label'), 'Common paper prompts');
+  assert.equal(buttons[0].textContent, 'Generate protocol');
+  assert.match(prompt, /from this paper/);
+  assert.equal(paperScreenshotBtn.hidden, false);
+
   trigger(quickPrompts, 'click', {
     target: {
       dataset: { agentSuggestPrompt: prompt },
@@ -643,6 +831,169 @@ test('paper rail quick prompts load a common prompt into the composer', () => {
   });
 
   assert.equal(messageInput.value, prompt);
+});
+
+test('notebook rail quick prompts initialize notebook composer and load page prompts', () => {
+  const document = createMockDocument([
+    'agent-rail-chat-history',
+    'agent-rail-message-input',
+    'agent-rail-send-btn',
+    'agent-rail-status',
+    'agent-rail-quick-prompts',
+    'agent-rail-paper-screenshot-btn'
+  ]);
+  const quickPrompts = document.getElementById('agent-rail-quick-prompts');
+  quickPrompts.innerHTML = `
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+  `;
+  const messageInput = document.getElementById('agent-rail-message-input');
+  const status = document.getElementById('agent-rail-status');
+  const paperScreenshotBtn = document.getElementById('agent-rail-paper-screenshot-btn');
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window: {}
+  });
+  const agent = agentModule.initAgentChat({
+    idPrefix: 'agent-rail',
+    state: {
+      projects: [],
+      settings: {},
+      agentChat: { projectId: '', messages: [], sessions: [] },
+      agentChatContext: {
+        scopeType: 'notebook',
+        hiddenContext: {
+          kind: 'notebook-page',
+          text: 'Active biology notebook page:\nStep 1: Seed cells.'
+        }
+      }
+    },
+    persist: () => {},
+    createId: () => 'agent-msg-1',
+    safeText: shared.safeText,
+    captureImageAttachment: () => Promise.resolve({ ok: true })
+  });
+
+  agent.render();
+  const buttons = quickPrompts.querySelectorAll('[data-agent-suggest-prompt]');
+  const prompt = buttons[0].dataset.agentSuggestPrompt;
+
+  assert.equal(messageInput.placeholder, 'Ask Hikari about this notebook page.');
+  assert.equal(quickPrompts.getAttribute('aria-label'), 'Common notebook prompts');
+  assert.equal(buttons[0].textContent, 'Summarize page');
+  assert.match(prompt, /notebook page/);
+  assert.doesNotMatch(prompt, /this paper/i);
+  assert.equal(paperScreenshotBtn.hidden, true);
+
+  trigger(quickPrompts, 'click', {
+    target: {
+      dataset: { agentSuggestPrompt: prompt },
+      closest(selector) {
+        return selector === '[data-agent-suggest-prompt]' ? this : null;
+      }
+    }
+  });
+
+  assert.equal(messageInput.value, prompt);
+  assert.equal(status.textContent, 'Prompt ready.');
+});
+
+test('assay rail quick prompts initialize assay composer and load graph prompt', () => {
+  const document = createMockDocument([
+    'agent-rail-chat-history',
+    'agent-rail-message-input',
+    'agent-rail-send-btn',
+    'agent-rail-status',
+    'agent-rail-quick-prompts',
+    'agent-rail-paper-screenshot-btn'
+  ]);
+  const quickPrompts = document.getElementById('agent-rail-quick-prompts');
+  quickPrompts.innerHTML = `
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+    <button type="button" data-agent-suggest-prompt="old">Old</button>
+  `;
+  const messageInput = document.getElementById('agent-rail-message-input');
+  const status = document.getElementById('agent-rail-status');
+  const paperScreenshotBtn = document.getElementById('agent-rail-paper-screenshot-btn');
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window: {}
+  });
+  const agent = agentModule.initAgentChat({
+    idPrefix: 'agent-rail',
+    state: {
+      projects: [],
+      settings: {},
+      agentChat: { projectId: '', messages: [], sessions: [] },
+      agentChatContext: {
+        scopeType: 'assay',
+        hiddenContext: {
+          kind: 'assay-page',
+          text: 'Active assay context:\nMapped wells: 2.'
+        }
+      }
+    },
+    persist: () => {},
+    createId: () => 'agent-msg-1',
+    safeText: shared.safeText,
+    captureImageAttachment: () => Promise.resolve({ ok: true })
+  });
+
+  agent.render();
+  const buttons = quickPrompts.querySelectorAll('[data-agent-suggest-prompt]');
+  const prompt = buttons[1].dataset.agentSuggestPrompt;
+
+  assert.equal(messageInput.placeholder, 'Ask Hikari about this assay.');
+  assert.equal(quickPrompts.getAttribute('aria-label'), 'Common assay prompts');
+  assert.equal(buttons[1].textContent, 'Make graph');
+  assert.match(prompt, /Plotly graph/);
+  assert.doesNotMatch(prompt, /this paper/i);
+  assert.equal(paperScreenshotBtn.hidden, true);
+
+  trigger(quickPrompts, 'click', {
+    target: {
+      dataset: { agentSuggestPrompt: prompt },
+      closest(selector) {
+        return selector === '[data-agent-suggest-prompt]' ? this : null;
+      }
+    }
+  });
+
+  assert.equal(messageInput.value, prompt);
+  assert.equal(status.textContent, 'Prompt ready.');
+});
+
+test('unscoped session prompts do not masquerade as paper sessions', () => {
+  const payloadModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'payload-builder.js'
+  ));
+  const state = {
+    projects: [],
+    settings: { agent: { developerMode: false } },
+    agentChat: { projectId: '', messages: [] },
+    agentChatContext: {
+      sessionPrompt: 'You are reading shared workspace context.'
+    }
+  };
+  const payloadBuilder = payloadModule.createAgentPayloadBuilder({
+    state,
+    input: { value: 'What is relevant here?' },
+    getComposerAttachments: () => [],
+    ensureAgentState: () => {}
+  });
+
+  const agentFlags = payloadBuilder.buildAgentFlagsPayload({ hiddenContexts: [] });
+
+  assert.equal(agentFlags.sessionPrompt, 'You are reading shared workspace context.');
+  assert.equal(agentFlags.paperSessionPrompt, undefined);
+  assert.equal(agentFlags.paperSession, undefined);
 });
   }
 };

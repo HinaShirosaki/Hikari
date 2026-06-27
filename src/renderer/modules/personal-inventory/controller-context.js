@@ -32,7 +32,8 @@ export function createPersonalInventoryContext({
     wellEditorStatus: '',
     isAddContainerFormOpen: false,
     shouldAutoOpenContainer: true,
-    contextContainer: null
+    contextContainer: null,
+    cloningSampleId: null
   };
   const pendingStructureDrafts = new Map();
   const helpers = createPersonalInventoryStateHelpers({ state, safeText, uiState });

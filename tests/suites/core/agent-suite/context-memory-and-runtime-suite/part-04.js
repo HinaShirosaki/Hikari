@@ -139,7 +139,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart04(contex
               throw new Error('science runtime should not run in this test');
             }
           },
-          deepResearchRuntime: null,
           scienceMainUtils: {
             buildScienceRoutingFromParser() {
               return {
@@ -356,7 +355,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart04(contex
               throw new Error('result analysis should not run in this test');
             }
           },
-          deepResearchRuntime: null,
           scienceMainUtils: {
             buildScienceRoutingFromParser(parserPayload = {}) {
               routedParserPayload = parserPayload;

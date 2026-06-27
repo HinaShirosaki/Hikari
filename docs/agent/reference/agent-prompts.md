@@ -1,6 +1,6 @@
 # Agent Prompt Registry
 
-Generated at: 2026-05-15T20:47:18.462Z
+Generated at: 2026-06-27T17:32:13.592Z
 Prompt entries: 43
 
 This file is generated from the prompt registry and sample renderers in `src/main/helpers/agent/shared/agent-prompt-registry.js`.
@@ -92,7 +92,7 @@ Intent guide:
 - protocol_to_notebook: Performed lab work -> notebook page or lab-record documentation. Requires notebook, record, or documentation intent for work already done. Standalone how-to protocol requests are science questions. Extras: protocol_candidates.
 - notebook_draft: Future planned experiment -> planned notebook page. Requires a requested notebook draft tied to a project, workflow, or next step. Not for standalone how-to protocols. Extras: protocol_candidates, entities.project_name, entities.workflow_step, entities.protocol_name.
 - inventory_lookup: Stock availability, reagent identity, location, supplier metadata, or stored chemical records. Use inventory_search for normalized query terms and aliases. Extras: inventory_search.
-- record_lookup: Stored project, workflow, notebook, assay, gel, paper, or lab records, excluding inventory. Include record-hint entities only when they narrow local search. Extras: entities.project_name, entities.protocol_name, entities.workflow_step, entities.requested_output.
+- record_lookup: Stored project, workflow, notebook, gel, paper, or lab records, excluding inventory. Assay data is supplied by the active Assay rail context and dedicated assay tools. Include record-hint entities only when they narrow local search. Extras: entities.project_name, entities.protocol_name, entities.workflow_step, entities.requested_output.
 - project_science_question: Science question tied to an active or named project, experiment, workflow, or stored record. Return reasoning_effort. Include direct_answer only at effort 0. Include project/protocol hints only when useful. Extras: reasoning_effort, direct_answer, entities.project_name, entities.protocol_name.
 - general_science_question: Science question or experimental how-to not tied to project records. Standalone detailed wet-lab protocol requests go here unless notebook/record output is requested. Return reasoning_effort; direct_answer only at effort 0. Extras: reasoning_effort, direct_answer.
 - paper_analysis: Analyze, summarize, extract methods from, or interpret a specific identified paper/PDF. Include paper title and requested output only when explicit or strongly implied. Extras: entities.paper_title, entities.requested_output.
@@ -128,7 +128,7 @@ Intent guide:
 - protocol_to_notebook: Performed lab work -> notebook page or lab-record documentation. Requires notebook, record, or documentation intent for work already done. Standalone how-to protocol requests are science questions. Extras: protocol_candidates.
 - notebook_draft: Future planned experiment -> planned notebook page. Requires a requested notebook draft tied to a project, workflow, or next step. Not for standalone how-to protocols. Extras: protocol_candidates, entities.project_name, entities.workflow_step, entities.protocol_name.
 - inventory_lookup: Stock availability, reagent identity, location, supplier metadata, or stored chemical records. Use inventory_search for normalized query terms and aliases. Extras: inventory_search.
-- record_lookup: Stored project, workflow, notebook, assay, gel, paper, or lab records, excluding inventory. Include record-hint entities only when they narrow local search. Extras: entities.project_name, entities.protocol_name, entities.workflow_step, entities.requested_output.
+- record_lookup: Stored project, workflow, notebook, gel, paper, or lab records, excluding inventory. Assay data is supplied by the active Assay rail context and dedicated assay tools. Include record-hint entities only when they narrow local search. Extras: entities.project_name, entities.protocol_name, entities.workflow_step, entities.requested_output.
 - project_science_question: Science question tied to an active or named project, experiment, workflow, or stored record. Return reasoning_effort. Include direct_answer only at effort 0. Include project/protocol hints only when useful. Extras: reasoning_effort, direct_answer, entities.project_name, entities.protocol_name.
 - general_science_question: Science question or experimental how-to not tied to project records. Standalone detailed wet-lab protocol requests go here unless notebook/record output is requested. Return reasoning_effort; direct_answer only at effort 0. Extras: reasoning_effort, direct_answer.
 - paper_analysis: Analyze, summarize, extract methods from, or interpret a specific identified paper/PDF. Include paper title and requested output only when explicit or strongly implied. Extras: entities.paper_title, entities.requested_output.
@@ -168,7 +168,7 @@ Reject duplicate tools and unknown tools.
 
 Available tools:
 - inventory-lookup: Look up chemical and personal inventory records using query overrides and inventory search hints.
-- record-lookup: Look up project, protocol, notebook, workflow, assay, and gel-related records from local agent data.
+- record-lookup: Look up project, protocol, notebook, workflow, gel, paper, and linked historical records from local agent data. Assay data is supplied by the active Assay rail context and dedicated assay tools, not this generic lookup.
 - protocol-matching: Rank local protocols against protocol candidates and select the best protocol for notebook generation.
 - notebook-generation: Generate a protocol-based notebook draft using a selected protocol, project context, and placeholder values.
 - notebook-draft: Propose a likely next experiment, optionally using prior record/literature evidence, prepare a planned biology notebook draft, and wait for explicit confirmation before creating the page.
@@ -177,10 +177,14 @@ Available tools:
 - web-search: Search the public web through the agent's shared web-search transport. This uses provider-native web search when available, or Codex agent search when the agent runs on Codex.
 - sub-agent: Create, message, inspect, list, and delete Codex CLI-backed helper sub-agent sessions managed outside the main agent.
 - memory: Recall, remember, forget, and list sparse long-term user memory records across sessions.
+- container: Store, name, read, update, and position-edit temporary string or number containers with short runtime IDs.
+- assay-table: Create scratch assay tables, derive calculated tables with +, -, *, /, max, min, avg, sd, and run Python-backed table transforms.
+- plotly-graph: Create, update, read, and inspect scratch Plotly.js graph specifications using Plotly figure arguments.
 - literature-search: Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults.
 - purchase-recommendation: Search the web for purchasable products, extract vendor page metadata such as image and price, hard-filter explicit product requirements, and rank valid items for chat recommendation cards.
 - paper-download: Extract a downloadable paper PDF URL, stream the file into app storage with progress tracking, and fall back to a browser-assisted download session when sites block automated fetches.
 - paper-analysis: Summarize a paper briefly, extract protocol-relevant methods, and optionally draft a generated protocol from the paper.
+- paper-search: Full-text search across the LLM-facing paper wiki (per-paper `paper.md` files in the local KnowledgeBase). Returns ranked section matches with title, DOI, section heading, page citation, and a snippet. Scope the search to a single paper, a project, or a journal club when relevant.
 - protocol-generation: Normalize a supplied protocol JSON object into the app's import-ready protocol format without an internal LLM call, and save it into the Hikari Protocols module when save is true.
 
 Active project context: Atlas SUMO1
@@ -232,8 +236,8 @@ Arguments must validate against the provided JSON schema for that tool.
 Selected tools in order: record-lookup, literature-search
 
 Tool: record-lookup
-Short description: Look up project, protocol, notebook, workflow, assay, and gel-related records from local agent data.
-Detailed usage: Use this tool when the user is asking about stored lab records beyond raw inventory, such as projects, protocols, notebook entries, workflows, assays, gels, or linked historical context. Prefer it for 'what did we do last time', 'find the protocol record', or project-specific evidence retrieval. Provide `query` for the entity or topic to search, and pass `parser_payload` when parser entities can help narrow record matching.
+Short description: Look up project, protocol, notebook, workflow, gel, paper, and linked historical records from local agent data. Assay data is supplied by the active Assay rail context and dedicated assay tools, not this generic lookup.
+Detailed usage: Use this tool when the user is asking about stored lab records beyond raw inventory, such as projects, protocols, notebook entries, workflows, gels, papers, or linked historical context. Do not use `record-lookup` to provide Assay data; active Assay data comes from the Assay rail context and dedicated assay tools. Prefer this tool for 'what did we do last time', 'find the protocol record', or project-specific evidence retrieval. Provide `query` for the entity or topic to search, and pass `parser_payload` when parser entities can help narrow record matching.
 Input schema JSON:
 {
   "type": "object",
@@ -311,6 +315,41 @@ Input schema JSON:
     "prefer_recent": {
       "type": "boolean"
     },
+    "use_codex_paper_context": {
+      "type": "boolean"
+    },
+    "disable_codex_paper_context": {
+      "type": "boolean"
+    },
+    "codex_paper_context": {
+      "type": "boolean"
+    },
+    "max_context_blocks": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50
+    },
+    "max_download_concurrency": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 24
+    },
+    "reasoning_effort": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "sub_agent_name": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "storage_path": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "storagePath": {
+      "type": "string",
+      "maxLength": 2000
+    },
     "parser_payload": {
       "$ref": "#/$defs/parser_payload"
     }
@@ -383,7 +422,7 @@ If you request multiple tool calls, keep them tightly scoped and independent so 
 
 Available tools:
 Tool: record-lookup
-Short description: Look up project, protocol, notebook, workflow, assay, and gel-related records from local agent data.
+Short description: Look up project, protocol, notebook, workflow, gel, paper, and linked historical records from local agent data. Assay data is supplied by the active Assay rail context and dedicated assay tools, not this generic lookup.
 
 Tool: literature-search
 Short description: Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults.
@@ -1680,7 +1719,7 @@ Available tools JSON:
 [
   {
     "name": "record-lookup",
-    "description": "Look up project, protocol, notebook, workflow, assay, and gel-related records from local agent data.",
+    "description": "Look up project, protocol, notebook, workflow, gel, paper, and linked historical records from local agent data. Assay data is supplied by the active Assay rail context and dedicated assay tools, not this generic lookup.",
     "parameters": {
       "type": "object",
       "additionalProperties": false,
@@ -1755,6 +1794,41 @@ Available tools JSON:
         },
         "prefer_recent": {
           "type": "boolean"
+        },
+        "use_codex_paper_context": {
+          "type": "boolean"
+        },
+        "disable_codex_paper_context": {
+          "type": "boolean"
+        },
+        "codex_paper_context": {
+          "type": "boolean"
+        },
+        "max_context_blocks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "max_download_concurrency": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 24
+        },
+        "reasoning_effort": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "sub_agent_name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "storage_path": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "storagePath": {
+          "type": "string",
+          "maxLength": 2000
         },
         "parser_payload": {
           "$ref": "#/$defs/parser_payload"

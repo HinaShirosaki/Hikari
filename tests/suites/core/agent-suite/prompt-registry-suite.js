@@ -20,7 +20,6 @@ module.exports = function registerAgentPromptRegistrySuite(context = {}) {
       assert.equal(entries.length > 10, true);
       assert.equal(ids.includes('core.intent_parser_catalog_prompt'), true);
       assert.equal(ids.includes('science.final_synthesis_prompt'), true);
-      assert.equal(ids.includes('deep_research.step4_execution_prompt'), true);
 
       const markdown = promptRegistry.renderAgentPromptRegistryMarkdown({
         generatedAt: '2026-04-05T00:00:00.000Z'
@@ -29,7 +28,6 @@ module.exports = function registerAgentPromptRegistrySuite(context = {}) {
       assert.match(markdown, /## Core Agent/);
       assert.match(markdown, /## Science Reasoning/);
       assert.match(markdown, /Classify the lab-assistant user message\. Return compact JSON only\./);
-      assert.match(markdown, /You are executing Step 4 of a deep research workflow\./);
     });
 
     test('agent prompt export script writes a markdown file', () => {
@@ -43,7 +41,6 @@ module.exports = function registerAgentPromptRegistrySuite(context = {}) {
       const written = fs.readFileSync(outputPath, 'utf8');
       assert.match(written, /# Agent Prompt Registry/);
       assert.match(written, /### Codex Tool Loop Prompt/);
-      assert.match(written, /### Deep Research Completion Check Prompt/);
     });
   }
 };

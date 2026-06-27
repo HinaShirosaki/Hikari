@@ -265,13 +265,21 @@
 }
 
 .container-inline-detail h4 {
-  margin: 0 0 8px;
+  margin: 0;
+}
+
+.container-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
 }
 
 .container-detail-toolbar {
   display: flex;
   gap: 8px;
-  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
 .well-editor-shell {
@@ -690,6 +698,14 @@
   z-index: 1;
 }
 
+.well-clone-target {
+  cursor: copy;
+}
+
+.well-clone-target:hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--theme-accent) 50%, transparent);
+}
+
 .well-inline-editor {
   margin-top: 12px;
   padding-top: 10px;
@@ -723,6 +739,11 @@
   align-items: center;
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+
+.well-editor-actions .ghost-btn.is-active {
+  background: color-mix(in srgb, var(--theme-accent) 16%, transparent);
+  border-color: var(--theme-accent);
 }
 
 .inventory-sample-structure-control {

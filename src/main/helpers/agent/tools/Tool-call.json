@@ -343,7 +343,7 @@
     }
   },
   "record-lookup": {
-    "description": "Use this tool when the user is asking about stored lab records beyond raw inventory, such as projects, protocols, notebook entries, workflows, assays, gels, or linked historical context. Prefer it for 'what did we do last time', 'find the protocol record', or project-specific evidence retrieval. Provide `query` for the entity or topic to search, and pass `parser_payload` when parser entities can help narrow record matching.",
+    "description": "Use this tool when the user is asking about stored lab records beyond raw inventory, such as projects, protocols, notebook entries, workflows, gels, papers, or linked historical context. Do not use `record-lookup` to provide Assay data; active Assay data comes from the Assay rail context and dedicated assay tools. Prefer this tool for 'what did we do last time', 'find the protocol record', or project-specific evidence retrieval. Provide `query` for the entity or topic to search, and pass `parser_payload` when parser entities can help narrow record matching.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -355,6 +355,35 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 25
+        },
+        "parser_payload": {
+          "$ref": "#/$defs/parser_payload"
+        }
+      }
+    }
+  },
+  "notebook-lookup": {
+    "description": "Use this tool when the user is asking about local notebook entries, prior notebook results, notebook pages for a project, or notebook records tied to a protocol. Prefer `protocol-matching` for protocol lookup and the paper tools for paper lookup. Provide `query` for the notebook search text, and include project or protocol filters when known.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "protocol_name": {
+          "type": "string"
         },
         "parser_payload": {
           "$ref": "#/$defs/parser_payload"
@@ -754,6 +783,298 @@
         "replacement": {
           "type": "string",
           "maxLength": 120000
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        }
+      }
+    }
+  },
+  "assay-table": {
+    "description": "Use this tool for scratch assay data tables and derived calculation tables. Use `create` for original rows, `derive` to build a new table from an existing table, `add_column` for row-wise calculations, and `python` when +, -, *, /, max, min, avg, sd, median, count, log, or pow are not enough. For row-wise replicate summaries, set calculation columns such as `{ \"name\": \"avg\", \"op\": \"avg\", \"operands\": [\"rep1\", \"rep2\", \"rep3\"] }`. For grouped summaries, pass `group_by` and columns with `op` plus `source`, such as `{ \"name\": \"sd_response\", \"op\": \"sd\", \"source\": \"response\" }`. The Python action stages `input_table.json` and `tables.json`; code must write `output_table.json` containing `{ \"columns\": [...], \"rows\": [...] }` or a JSON array of row objects.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["create", "read", "list", "derive", "add_column", "python", "delete", "clear"]
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "table_id": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "source_table_id": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "output_name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "maxItems": 200
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "maxItems": 5000
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "array"
+              }
+            ]
+          },
+          "maxItems": 5000
+        },
+        "keep_columns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "maxItems": 200
+        },
+        "include_source_columns": {
+          "type": "boolean"
+        },
+        "calculations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "op": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "operation": {
+                "type": "string",
+                "maxLength": 40
+              },
+              "source": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "operands": {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  ]
+                },
+                "maxItems": 40
+              },
+              "scope": {
+                "type": "string",
+                "maxLength": 40
+              }
+            }
+          },
+          "maxItems": 200
+        },
+        "derived_columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "maxItems": 200
+        },
+        "group_by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "maxItems": 20
+        },
+        "column": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "calculation": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 40000
+        },
+        "output_path": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "python_executable": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "preferred_python": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 500,
+          "maximum": 120000
+        },
+        "max_rows": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        }
+      }
+    }
+  },
+  "plotly-graph": {
+    "description": "Use this tool to create and iteratively adjust scratch Plotly.js graph specifications. Pass regular Plotly figure arguments: `data` (or `traces`), `layout`, `config`, and optional `frames`, or wrap them in `figure`. Use `inspect` after `create` or `update` to review trace types, axis/title coverage, x/y length mismatches, and suggested adjustments before answering.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["create", "read", "list", "update", "inspect", "delete", "clear"]
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "graph_id": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "new_name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "figure": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "maxItems": 80
+        },
+        "traces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "maxItems": 80
+        },
+        "layout": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "frames": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "maxItems": 80
+        },
+        "replace": {
+          "type": "boolean"
         },
         "limit": {
           "type": "integer",

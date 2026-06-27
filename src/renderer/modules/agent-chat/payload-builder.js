@@ -10,9 +10,16 @@ export function createAgentPayloadBuilder({
 }) {
   let hiddenDraftContexts = [];
 
+  function getHiddenContextTextLimit(source = {}) {
+    const kind = trimText(source.kind || 'selection', 80);
+    return kind === 'assay-page' || kind === 'assay' || trimText(source.assayId, 220)
+      ? 40000
+      : 4000;
+  }
+
   function normalizeHiddenContext(context = {}) {
     const source = context && typeof context === 'object' ? context : {};
-    const text = trimText(source.text, 4000);
+    const text = trimText(source.text, getHiddenContextTextLimit(source));
     if (!text) {
       return null;
     }
@@ -27,7 +34,9 @@ export function createAgentPayloadBuilder({
         : 0,
       notebookEntryId: trimText(source.notebookEntryId, 220),
       projectName: trimText(source.projectName, 220),
-      protocolName: trimText(source.protocolName, 220)
+      protocolName: trimText(source.protocolName, 220),
+      assayId: trimText(source.assayId, 220),
+      assayName: trimText(source.assayName, 320)
     };
   }
 
@@ -103,7 +112,7 @@ export function createAgentPayloadBuilder({
       : {};
     const sessionPrompt = trimText(agentContext.sessionPrompt, 2400);
     const hiddenContexts = asArray(options.hiddenContexts).map(normalizeHiddenContext).filter(Boolean);
-    const isPaperSession = trimText(agentContext.scopeType, 80) !== 'notebook';
+    const isPaperSession = trimText(agentContext.scopeType, 80) === 'paper';
     return {
       developerMode: state.settings?.agent?.developerMode === true,
       externalSkillsEnabled: state.settings?.agent?.externalSkillsEnabled !== false,

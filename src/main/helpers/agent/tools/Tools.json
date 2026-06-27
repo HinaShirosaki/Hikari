@@ -5,7 +5,11 @@
   },
   {
     "name": "record-lookup",
-    "description": "Look up project, protocol, notebook, workflow, assay, and gel-related records from local agent data."
+    "description": "Look up project, protocol, notebook, workflow, gel, paper, and linked historical records from local agent data. Assay data is supplied by the active Assay rail context and dedicated assay tools, not this generic lookup."
+  },
+  {
+    "name": "notebook-lookup",
+    "description": "Look up local notebook entries by project, protocol, result text, or notebook identifier."
   },
   {
     "name": "protocol-matching",
@@ -42,6 +46,14 @@
   {
     "name": "container",
     "description": "Store, name, read, update, and position-edit temporary string or number containers with short runtime IDs."
+  },
+  {
+    "name": "assay-table",
+    "description": "Create scratch assay tables, derive calculated tables with +, -, *, /, max, min, avg, sd, and run Python-backed table transforms."
+  },
+  {
+    "name": "plotly-graph",
+    "description": "Create, update, read, and inspect scratch Plotly.js graph specifications using Plotly figure arguments."
   },
   {
     "name": "literature-search",

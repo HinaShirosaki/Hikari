@@ -45,7 +45,7 @@ These are the workspaces wired in `module-manifests/index.js`, grouped by manife
 | `protocol` | `PROTOCOL_MANAGEMENT` | `modules/protocol/index.js` | protocol CRUD, viewing, sharing, import |
 | `projectManagement` | `PROJECT_MANAGEMENT` | `modules/project-management/index.js` | projects plus linked notebook/paper rollups |
 | `agentChat` | `AGENT` | `modules/agent-chat/index.js` | chat UI, sessions, context |
-| `agentChatRail` | (rail, no view) | `modules/agent-chat/index.js` + `agent-chat/scoped-state.js` | scoped agent chat embedded as a side rail in Papers and Biology Notebook |
+| `agentChatRail` | (rail, no view) | `modules/agent-chat/index.js` + `agent-chat/scoped-state.js` | scoped agent chat embedded as a side rail in Papers, Biology Notebook, and Assay |
 | `workflowManagement` | `WORKFLOW_MANAGEMENT` | `modules/workflow/index.js` | workflow model, graph editor, list rendering, actions |
 | `papers` | `PAPERS` | `modules/papers/index.js` | library rail, PDF viewer, comments, LLM helpers |
 | `labCommonInventory` | `LAB_COMMON_INVENTORY` | `modules/lab-common-inventory/index.js` | shared chemical inventory ("Chemicals") |

@@ -147,10 +147,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart06(context = {}
     test('protocol notebook context control closes completed action context', () => {
       const { createProtocolNotebookContextControl } = require(path.join(
         __dirname,
-        'src',
-        'main',
-        'helpers',
-        'agent',
+        'self-agent',
         'runtime',
         'agent-protocol-notebook-context-control.js'
       ));
@@ -189,10 +186,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart06(context = {}
     test('protocol notebook runtime closes pending context after completed action', async () => {
       const { createProtocolNotebookRuntime } = require(path.join(
         __dirname,
-        'src',
-        'main',
-        'helpers',
-        'agent',
+        'self-agent',
         'runtime',
         'agent-protocol-notebook.js'
       ));

@@ -2,6 +2,24 @@ import * as renderingModule from './rendering.js';
 import { asArray, trimText } from './shared.js';
 
 const QUICK_PROMPT_PRESETS = {
+  workspace: {
+    ariaLabel: 'Common chat prompts',
+    placeholder: 'Ask Hikari about this workspace.',
+    prompts: [
+      {
+        label: 'Summarize context',
+        prompt: 'Summarize the current workspace context and call out useful next actions.'
+      },
+      {
+        label: 'Plan next step',
+        prompt: 'Suggest practical next steps from the current workspace context.'
+      },
+      {
+        label: 'Find gaps',
+        prompt: 'Flag missing details or follow-up questions from the current workspace context.'
+      }
+    ]
+  },
   paper: {
     ariaLabel: 'Common paper prompts',
     placeholder: 'Ask Hikari about this paper.',
@@ -35,6 +53,24 @@ const QUICK_PROMPT_PRESETS = {
       {
         label: 'Draft note',
         prompt: 'Draft a concise follow-up note for this notebook page.'
+      }
+    ]
+  },
+  assay: {
+    ariaLabel: 'Common assay prompts',
+    placeholder: 'Ask Hikari about this assay.',
+    prompts: [
+      {
+        label: 'Analyze results',
+        prompt: 'Analyze these assay results and identify patterns, outliers, and useful follow-up calculations.'
+      },
+      {
+        label: 'Make graph',
+        prompt: 'Create a clear Plotly graph for this assay result set and explain what should be adjusted.'
+      },
+      {
+        label: 'Build table',
+        prompt: 'Create a derived analysis table from this assay data with averages, standard deviations, and relevant ratios.'
       }
     ]
   }
@@ -188,12 +224,16 @@ export function createAgentChatShellController({
     const context = state.agentChatContext && typeof state.agentChatContext === 'object'
       ? state.agentChatContext
       : {};
-    return trimText(context.scopeType, 80) === 'notebook' ? 'notebook' : 'paper';
+    const scopeType = trimText(context.scopeType, 80);
+    if (scopeType === 'notebook' || scopeType === 'paper' || scopeType === 'assay') {
+      return scopeType;
+    }
+    return 'workspace';
   }
 
   function renderScopedComposer() {
     const scopeType = getActiveScopeType();
-    const preset = QUICK_PROMPT_PRESETS[scopeType] || QUICK_PROMPT_PRESETS.paper;
+    const preset = QUICK_PROMPT_PRESETS[scopeType] || QUICK_PROMPT_PRESETS.workspace;
     if (dom.input) {
       dom.input.placeholder = preset.placeholder;
     }

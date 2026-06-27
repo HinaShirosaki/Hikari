@@ -36,37 +36,6 @@ const REASONING_ENTRY_TOOL_SCOPES = Object.freeze({
       'web-search',
       'paper-analysis'
     ])
-  }),
-  deep_research_entry: Object.freeze({
-    general_science_question: freezeToolScope([
-      'literature-search',
-      'web-search',
-      'paper-download',
-      'paper-analysis',
-      'protocol-generation',
-      'sub-agent',
-      'python-sandbox'
-    ]),
-    project_science_question: freezeToolScope([
-      'record-lookup',
-      'inventory-lookup',
-      'literature-search',
-      'web-search',
-      'paper-download',
-      'paper-analysis',
-      'protocol-generation',
-      'sub-agent',
-      'python-sandbox'
-    ]),
-    result_analysis: freezeToolScope([
-      'python-sandbox',
-      'record-lookup',
-      'inventory-lookup',
-      'literature-search',
-      'web-search',
-      'paper-analysis',
-      'sub-agent'
-    ])
   })
 });
 

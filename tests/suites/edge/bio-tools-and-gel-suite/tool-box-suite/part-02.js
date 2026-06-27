@@ -151,6 +151,21 @@ test('[EDGE] bench tool calculations return instant results and substituted form
   assert.match(bufferResult.resultText, /NaCl: 8766 mg/i);
   assert.match(bufferResult.formulaText, /150 mM x 1 L x 58\.44 g\/mol/i);
 
+  const stockBufferResult = toolBox.calculateBufferRecipe({
+    volumeMl: 1000,
+    rows: [
+      { name: 'Tween 20', stockConcentration: '2000x', finalConcentration: '1x' },
+      { name: 'BSA', molecularWeight: 66430, finalConcentration: '100 ng/uL' }
+    ]
+  });
+  assert.match(stockBufferResult.resultText, /Tween 20: 0\.5 mL/i);
+  assert.match(stockBufferResult.resultText, /BSA: 100 mg/i);
+  assert.match(stockBufferResult.resultText, /Solvent to add: 999\.5 mL/i);
+
+  assert.equal(toolBox.parseBufferConcentration('2000x').kind, 'fold');
+  assert.equal(toolBox.parseBufferConcentration('100 ng/uL').kind, 'massVolume');
+  assert.equal(toolBox.parseBufferConcentration('0.1% m/v').percentKind, 'massVolume');
+
   const reactionResult = toolBox.calculateFixedReaction({
     totalVolumeValue: 100,
     totalVolumeUnit: 'uL',
@@ -162,6 +177,18 @@ test('[EDGE] bench tool calculations return instant results and substituted form
   assert.match(reactionResult.resultText, /ATP: 10 uL/i);
   assert.match(reactionResult.resultText, /Water: 90 uL/i);
   assert.match(reactionResult.formulaText, /ATP volume = 1 mM x 100 uL \/ 10 mM/i);
+
+  const typedReactionResult = toolBox.calculateFixedReaction({
+    totalVolumeValue: '100 uL',
+    fillName: 'Solvent',
+    reagents: [
+      { name: 'Enzyme', stockConcentration: '2000x', finalConcentration: '1x' },
+      { name: 'Carrier', stockConcentration: '1 mg/mL', finalConcentration: '100 ng/uL' }
+    ]
+  });
+  assert.match(typedReactionResult.resultText, /Enzyme: 0\.05 uL/i);
+  assert.match(typedReactionResult.resultText, /Carrier: 10 uL/i);
+  assert.match(typedReactionResult.resultText, /Solvent: 89\.95 uL/i);
 });
 test('[EDGE] sequence-viewer assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {
   const plan = sequenceViewerInternals.assembleCloningPlan({

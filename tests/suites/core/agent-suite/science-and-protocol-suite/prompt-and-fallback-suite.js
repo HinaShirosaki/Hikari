@@ -27,13 +27,13 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
     });
 
     test('science prompt builders render compact summaries instead of JSON payload blocks', () => {
-      const { createScienceLoopSupport } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'support.js'));
-      const { createScienceInputClarificationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'input-clarification.js'));
-      const { createAgentRoutePlannerRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'agent-route-planner.js'));
-      const { createScienceLoopExitCriteriaRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-criteria.js'));
-      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
-      const { createScienceFinalSynthesisRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'final-synthesis.js'));
-      const { createScienceThinkingTraceRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'thinking-trace.js'));
+      const { createScienceLoopSupport } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'support.js'));
+      const { createScienceInputClarificationRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'input-clarification.js'));
+      const { createAgentRoutePlannerRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'agent-route-planner.js'));
+      const { createScienceLoopExitCriteriaRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'loop-exit-criteria.js'));
+      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
+      const { createScienceFinalSynthesisRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'final-synthesis.js'));
+      const { createScienceThinkingTraceRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'thinking-trace.js'));
 
       const policy = {
         intent: 'general_science_question',
@@ -360,8 +360,8 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
     });
 
     test('science fallback exit criteria stay generic and do not inject intent-specific evidence requirements', () => {
-      const { createScienceLoopExitCriteriaRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-criteria.js'));
-      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
+      const { createScienceLoopExitCriteriaRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'loop-exit-criteria.js'));
+      const { createScienceLoopExitJudgeRuntime } = require(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'loop-exit-judge.js'));
 
       const criteriaRuntime = createScienceLoopExitCriteriaRuntime({
         requestStructuredJsonPayload: async () => ({ ok: false, error: 'force fallback' })

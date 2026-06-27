@@ -495,22 +495,22 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.equal(document.getElementById('biology-notebook-tool-workspace').hidden, false);
   document.getElementById('biology-notebook-tool-buffer-volume').value = '1000';
   document.getElementById('biology-notebook-tool-buffer-name-1').value = 'NaCl';
-  document.getElementById('biology-notebook-tool-buffer-form-1').value = 'solid';
   document.getElementById('biology-notebook-tool-buffer-mw-1').value = '58.44';
-  document.getElementById('biology-notebook-tool-buffer-concentration-1').value = '150';
-  trigger(document.getElementById('biology-notebook-tool-buffer-concentration-1'), 'input');
+  document.getElementById('biology-notebook-tool-buffer-stock-1').value = '';
+  document.getElementById('biology-notebook-tool-buffer-final-1').value = '150 mM';
+  trigger(document.getElementById('biology-notebook-tool-buffer-final-1'), 'input');
+  assert.match(document.getElementById('biology-notebook-tool-buffer-output-1').textContent, /8766 mg/i);
   trigger(document.getElementById('biology-notebook-tool-record-btn'), 'click');
 
   trigger(document.getElementById('biology-notebook-tool-tab-reaction'), 'click');
-  document.getElementById('biology-notebook-tool-reaction-total-volume').value = '100';
-  document.getElementById('biology-notebook-tool-reaction-total-unit').value = 'uL';
+  document.getElementById('biology-notebook-tool-reaction-total-volume').value = '100 uL';
   document.getElementById('biology-notebook-tool-reaction-fill-name').value = 'Water';
   document.getElementById('biology-notebook-tool-reaction-name-1').value = 'ATP';
-  document.getElementById('biology-notebook-tool-reaction-stock-1').value = '10';
-  document.getElementById('biology-notebook-tool-reaction-stock-unit-1').value = 'mM';
-  document.getElementById('biology-notebook-tool-reaction-final-1').value = '1';
-  document.getElementById('biology-notebook-tool-reaction-final-unit-1').value = 'mM';
+  document.getElementById('biology-notebook-tool-reaction-stock-1').value = '10 mM';
+  document.getElementById('biology-notebook-tool-reaction-final-1').value = '1 mM';
   trigger(document.getElementById('biology-notebook-tool-reaction-final-1'), 'input');
+  assert.match(document.getElementById('biology-notebook-tool-reaction-output-1').textContent, /10 uL/i);
+  assert.match(document.getElementById('biology-notebook-tool-reaction-solvent-output').textContent, /90 uL/i);
   trigger(document.getElementById('biology-notebook-tool-record-btn'), 'click');
 
   trigger(document.getElementById('save-biology-notebook-btn'), 'click');
@@ -521,12 +521,22 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.match(state.notebookEntries[0].result, /Molarity - Mass: Mass needed: 584\.4 mg/i);
   assert.match(state.notebookEntries[0].toolCalculations[1].result, /NaCl: 8766 mg/i);
   assert.match(state.notebookEntries[0].toolCalculations[2].result, /Water: 90 uL/i);
+  assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[1].table.headers), ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume']);
+  assert.equal(state.notebookEntries[0].toolCalculations[1].table.rows[0][0], 'NaCl');
+  assert.match(state.notebookEntries[0].toolCalculations[1].table.rows[0][4], /8766 mg/i);
+  assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[2].table.headers), ['Item', 'Stock Conc.', 'Final Conc.', 'Volume']);
+  assert.equal(state.notebookEntries[0].toolCalculations[2].table.rows[0][0], 'ATP');
+  assert.equal(state.notebookEntries[0].toolCalculations[2].table.footerRows[0][0], 'Water');
+  assert.match(state.notebookEntries[0].toolCalculations[2].table.footerRows[0][3], /90 uL/i);
 
   notebook.openEntry(state.notebookEntries[0].id);
   const renderedCalculations = document.getElementById('biology-notebook-tool-calculations').innerHTML;
   assert.match(renderedCalculations, /Molarity - Mass/);
   assert.match(renderedCalculations, /Buffer Preparer/);
   assert.match(renderedCalculations, /Fixed Volume Reaction/);
+  assert.match(renderedCalculations, /biology-notebook-tool-calculation-table/);
+  assert.doesNotMatch(renderedCalculations, /NaCl: 8766 mg/i);
+  assert.doesNotMatch(renderedCalculations, /Water: 90 uL/i);
   assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Tool calculations: 3 calculations/i);
 });
   }

@@ -22,9 +22,9 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
     test('science reasoning helper exports shared loop runtime and renderer consumes science payloads', () => {
-      const helperSource = fs.readFileSync(agentPath('runtime', 'science-reasoning-loop', 'index.js'), 'utf8');
-      const policySource = fs.readFileSync(agentPath('runtime', 'science-reasoning-loop', 'policies.js'), 'utf8');
-      const runtimeSource = fs.readFileSync(agentPath('runtime', 'science-reasoning-loop', 'runtime.js'), 'utf8');
+      const helperSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'index.js'), 'utf8');
+      const policySource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'policies.js'), 'utf8');
+      const runtimeSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'runtime.js'), 'utf8');
       const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response.js'), 'utf8');
       const responseSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response.js'), 'utf8');
       assert.match(helperSource, /require\('\.\/policies\.js'\)/);
@@ -46,39 +46,6 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(rendererSource, /project_science_question/);
       assert.match(rendererSource, /result_analysis/);
     });
-    test('deep research helper remains backend-routable without renderer UI wiring', () => {
-      const helperSource = fs.readFileSync(agentPath('deep-research', 'index.js'), 'utf8');
-      const step4Source = fs.readFileSync(agentPath('deep-research', 'step-4-execute-plan.js'), 'utf8');
-      const step5Source = fs.readFileSync(agentPath('deep-research', 'step-5-assemble-final-answer.js'), 'utf8');
-      const mainSource = readMainProcessSource();
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const agentRegistrarSource = fs.readFileSync(agentRegistrarPath('index.js'), 'utf8');
-      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
-      const rendererSource = [
-        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'event-bindings.js'), 'utf8'),
-        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'payload-builder.js'), 'utf8')
-      ].join('\n');
-      const sharedSource = [
-        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'app-state', 'defaults.js'), 'utf8'),
-        fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'app-state', 'state-normalizer.js'), 'utf8')
-      ].join('\n');
-      const agentViewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'agent-view.html'), 'utf8');
-
-      assert.match(helperSource, /const DEEP_RESEARCH_INTENTS = Object\.freeze/);
-      assert.match(helperSource, /function createDeepResearchRuntime\(deps = \{\}\)/);
-      assert.match(helperSource, /runStep1ClarifyQuestion/);
-      assert.match(helperSource, /runStep5AssembleFinalAnswer/);
-      assert.match(step4Source, /async function runStep4ExecutePlan\(input = \{\}, deps = \{\}\)/);
-      assert.match(step5Source, /async function runStep5AssembleFinalAnswer\(input = \{\}, deps = \{\}\)/);
-      assert.match(mainSource, /createMainAgentServices/);
-      assert.match(mainAgentServicesSource, /createDeepResearchRuntime/);
-      assert.match(mainAgentServicesSource, /const deepResearchRuntime = createDeepResearchRuntime/);
-      assert.match(agentRegistrarSource, /deepResearchRuntime: deps\.deepResearchRuntime/);
-      assert.match(apiControllerSource, /payload\?\.agent\?\.deepResearchEnabled === true/);
-      assert.doesNotMatch(rendererSource, /deepResearchEnabled/);
-      assert.doesNotMatch(sharedSource, /deepResearchEnabled/);
-      assert.doesNotMatch(agentViewSource, /agent-deep-research-toggle-btn/);
-    });
     test('sub-agent helper exports reusable runtime and action contract', () => {
       const source = fs.readFileSync(agentPath('tools', 'agent-sub-agent.js'), 'utf8');
       const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
@@ -90,8 +57,8 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.deepEqual(toolCallCatalog['sub-agent']?.input_schema?.properties?.action?.enum, ['create', 'message', 'delete', 'get', 'list']);
     });
     test('context management and memory helpers export reusable runtimes with layered and action-based contracts', () => {
-      const contextSource = fs.readFileSync(agentPath('context', 'agent-context-management.js'), 'utf8');
-      const registrySource = fs.readFileSync(agentPath('context', 'agent-context-registry.js'), 'utf8');
+      const contextSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'context', 'agent-context-management.js'), 'utf8');
+      const registrySource = fs.readFileSync(path.join(__dirname, 'self-agent', 'context', 'agent-context-registry.js'), 'utf8');
       const memorySource = fs.readFileSync(agentPath('context', 'agent-memory.js'), 'utf8');
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
@@ -126,6 +93,24 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(containerSource, /function replaceRange\(input = \{\}\)/);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'container'), true);
       assert.deepEqual(toolCallCatalog.container?.input_schema?.properties?.action?.enum, ['create', 'read', 'list', 'update', 'replace_range', 'rename', 'delete', 'clear']);
+    });
+    test('assay table and Plotly graph helpers expose reusable runtime action contracts', () => {
+      const assayTableSource = fs.readFileSync(agentPath('tools', 'agent-assay-table.js'), 'utf8');
+      const plotlyGraphSource = fs.readFileSync(agentPath('tools', 'agent-plotly-graph.js'), 'utf8');
+      const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
+      const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
+
+      assert.match(assayTableSource, /const ASSAY_TABLE_ACTIONS = Object\.freeze/);
+      assert.match(assayTableSource, /function createAgentAssayTableRuntime\(deps = \{\}\)/);
+      assert.match(assayTableSource, /function applyOperation\(operation = '', values = \[\]\)/);
+      assert.match(assayTableSource, /async function python\(input = \{\}\)/);
+      assert.match(plotlyGraphSource, /const PLOTLY_GRAPH_ACTIONS = Object\.freeze/);
+      assert.match(plotlyGraphSource, /function createAgentPlotlyGraphRuntime\(deps = \{\}\)/);
+      assert.match(plotlyGraphSource, /function inspectFigure\(figure = \{\}\)/);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'assay-table'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'plotly-graph'), true);
+      assert.deepEqual(toolCallCatalog['assay-table']?.input_schema?.properties?.action?.enum, ['create', 'read', 'list', 'derive', 'add_column', 'python', 'delete', 'clear']);
+      assert.deepEqual(toolCallCatalog['plotly-graph']?.input_schema?.properties?.action?.enum, ['create', 'read', 'list', 'update', 'inspect', 'delete', 'clear']);
     });
     test('agent chat log helper exports reusable session log runtime and renderer consumes session UI ids', () => {
       const helperSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
@@ -361,10 +346,10 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     test('main wires intent parser + observability paths for parser-only controller', () => {
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
-      const sessionRuntimeSource = fs.readFileSync(agentPath('runtime', 'agent-session-runtime.js'), 'utf8');
+      const sessionRuntimeSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'agent-session-runtime.js'), 'utf8');
       assert.match(mainSource, /createMainAgentServices/);
       assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/intent\/agent-intent-parser'\)/);
       assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-observability'\)/);

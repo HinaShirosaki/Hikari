@@ -505,8 +505,15 @@ function createAgentLookupRuntime(deps = {}) {
         const payload = sharedLookupDeps.ensureObject(entry);
         return {
           id: sharedLookupDeps.cleanText(payload.id, 120),
+          record_type: 'notebook',
+          title: sharedLookupDeps.cleanText(payload.title || payload.protocolName || payload.id, 220),
+          project_id: sharedLookupDeps.cleanText(payload.project_id || payload.projectId, 120),
+          project_name: sharedLookupDeps.cleanText(payload.project_name || payload.projectName, 220),
+          linked_protocol_id: sharedLookupDeps.cleanText(payload.linked_protocol_id || payload.protocolId, 120),
+          linked_protocol_name: sharedLookupDeps.cleanText(payload.linked_protocol_name || payload.protocolName, 220),
           protocolName: sharedLookupDeps.cleanText(payload.protocolName, 220),
           result: sharedLookupDeps.cleanText(payload.result, 500),
+          summary: sharedLookupDeps.cleanText(payload.summary || payload.result, 500),
           updatedAt: sharedLookupDeps.cleanText(payload.updatedAt || payload.createdAt, 80)
         };
       }).filter((item) => item.id || item.protocolName);
@@ -516,8 +523,15 @@ function createAgentLookupRuntime(deps = {}) {
       const payload = sharedLookupDeps.ensureObject(entry);
       return {
         id: sharedLookupDeps.cleanText(payload.id, 120),
+        record_type: 'notebook',
+        title: sharedLookupDeps.cleanText(payload.title || payload.protocolName || payload.id, 220),
+        project_id: sharedLookupDeps.cleanText(payload.project_id || payload.projectId, 120),
+        project_name: sharedLookupDeps.cleanText(payload.project_name || payload.projectName, 220),
+        linked_protocol_id: sharedLookupDeps.cleanText(payload.linked_protocol_id || payload.protocolId, 120),
+        linked_protocol_name: sharedLookupDeps.cleanText(payload.linked_protocol_name || payload.protocolName, 220),
         protocolName: sharedLookupDeps.cleanText(payload.protocolName, 220),
         result: sharedLookupDeps.cleanText(payload.result, 500),
+        summary: sharedLookupDeps.cleanText(payload.result, 500),
         updatedAt: sharedLookupDeps.cleanText(payload.updatedAt || payload.createdAt, 80),
         search_text: sharedLookupDeps.buildSearchText([
           payload.id,
@@ -541,10 +555,43 @@ function createAgentLookupRuntime(deps = {}) {
 
     return ranked.map((row) => ({
       id: sharedLookupDeps.cleanText(row.id, 120),
+      record_type: 'notebook',
+      title: sharedLookupDeps.cleanText(row.title || row.protocolName || row.id, 220),
+      project_id: sharedLookupDeps.cleanText(row.project_id, 120),
+      project_name: sharedLookupDeps.cleanText(row.project_name, 220),
+      linked_protocol_id: sharedLookupDeps.cleanText(row.linked_protocol_id, 120),
+      linked_protocol_name: sharedLookupDeps.cleanText(row.linked_protocol_name || row.protocolName, 220),
       protocolName: sharedLookupDeps.cleanText(row.protocolName, 220),
       result: sharedLookupDeps.cleanText(row.result, 500),
+      summary: sharedLookupDeps.cleanText(row.summary || row.result, 500),
       updatedAt: sharedLookupDeps.cleanText(row.updatedAt, 80)
     }));
+  }
+
+  function matchesOptionalTextFilter(value = '', expected = '', mode = 'equals') {
+    const normalizedValue = sharedLookupDeps.cleanText(value, 220).toLowerCase();
+    const normalizedExpected = sharedLookupDeps.cleanText(expected, 220).toLowerCase();
+    if (!normalizedExpected) {
+      return true;
+    }
+    if (!normalizedValue) {
+      return false;
+    }
+    return mode === 'includes'
+      ? normalizedValue.includes(normalizedExpected)
+      : normalizedValue === normalizedExpected;
+  }
+
+  function filterNotebookItems(items = [], { projectId = '', projectName = '', protocolName = '' } = {}) {
+    return sharedLookupDeps.asArray(items).filter((item) => (
+      matchesOptionalTextFilter(item?.project_id || item?.projectId, projectId)
+      && matchesOptionalTextFilter(item?.project_name || item?.projectName, projectName)
+      && matchesOptionalTextFilter(
+        item?.linked_protocol_name || item?.linkedProtocolName || item?.protocolName || item?.title,
+        protocolName,
+        'includes'
+      )
+    ));
   }
 
   async function searchProtocolsIndex({
@@ -566,7 +613,8 @@ function createAgentLookupRuntime(deps = {}) {
       query,
       limit: Math.max(requestedLimit * 6, 24),
       searchTerms: [query],
-      snapshot: context.hydratedSnapshot
+      snapshot: context.hydratedSnapshot,
+      recordTypes: ['protocol']
     });
 
     const protocolById = new Map(
@@ -616,7 +664,10 @@ function createAgentLookupRuntime(deps = {}) {
     fallbackDataFilePath = '',
     query = '',
     limit = 6,
-    snapshot = {}
+    snapshot = {},
+    projectId = '',
+    projectName = '',
+    protocolName = ''
   } = {}) {
     const requestedLimit = Math.max(1, Number(limit) || 6);
     const context = await sharedLookupDeps.buildLookupContext({
@@ -629,8 +680,9 @@ function createAgentLookupRuntime(deps = {}) {
       fallbackDataFilePath: context.fallbackDataFilePath,
       query,
       limit: Math.max(requestedLimit * 6, 24),
-      searchTerms: [query],
-      snapshot: context.hydratedSnapshot
+      searchTerms: sharedLookupDeps.uniqueStrings([query, protocolName, projectName], 8),
+      snapshot: context.hydratedSnapshot,
+      recordTypes: ['notebook']
     });
 
     const notebookById = new Map(
@@ -646,18 +698,26 @@ function createAgentLookupRuntime(deps = {}) {
         const entry = notebookById.get(sharedLookupDeps.cleanText(item?.id, 120)) || {};
         return {
           id: sharedLookupDeps.cleanText(item?.id, 120),
+          record_type: 'notebook',
+          title: sharedLookupDeps.cleanText(entry?.title || entry?.protocolName || item?.title || item?.id, 220),
+          project_id: sharedLookupDeps.cleanText(entry?.projectId || entry?.project_id || item?.project_id, 120),
+          project_name: sharedLookupDeps.cleanText(entry?.projectName || entry?.project_name || item?.project_name, 220),
+          linked_protocol_id: sharedLookupDeps.cleanText(entry?.protocolId || entry?.linked_protocol_id || item?.linked_protocol_id, 120),
+          linked_protocol_name: sharedLookupDeps.cleanText(entry?.protocolName || item?.linked_protocol_name || item?.title, 220),
           protocolName: sharedLookupDeps.cleanText(entry?.protocolName || item?.linked_protocol_name || item?.title, 220),
           result: sharedLookupDeps.cleanText(entry?.result || item?.summary, 500),
+          summary: sharedLookupDeps.cleanText(entry?.summary || entry?.result || item?.summary, 500),
           updatedAt: sharedLookupDeps.cleanText(entry?.updatedAt || entry?.createdAt || item?.updated_at, 80)
         };
       })
+      .filter((item) => filterNotebookItems([item], { projectId, projectName, protocolName }).length > 0)
       .slice(0, requestedLimit);
 
     if (!items.length) {
-      items = buildNotebookItemsFromSnapshot(context.hydratedSnapshot, {
+      items = filterNotebookItems(buildNotebookItemsFromSnapshot(context.hydratedSnapshot, {
         query,
         limit: requestedLimit
-      });
+      }), { projectId, projectName, protocolName });
     }
 
     return {
@@ -668,13 +728,60 @@ function createAgentLookupRuntime(deps = {}) {
     };
   }
 
+  async function executeNotebookLookup({
+    message = '',
+    parserPayload = {},
+    snapshot = {},
+    dataFilePath = '',
+    fallbackDataFilePath = '',
+    limit = 8,
+    projectId = '',
+    projectName = '',
+    protocolName = ''
+  } = {}) {
+    const parser = sharedLookupDeps.ensureObject(parserPayload);
+    const entities = sharedLookupDeps.ensureObject(parser.entities);
+    const query = sharedLookupDeps.cleanText(
+      message
+      || protocolName
+      || entities.protocol_name
+      || entities.notebook_name
+      || entities.project_name
+      || entities.activity_type
+      || entities.requested_output,
+      300
+    );
+    const resolvedProjectId = sharedLookupDeps.cleanText(projectId || entities.project_id, 120);
+    const resolvedProjectName = sharedLookupDeps.cleanText(projectName || entities.project_name, 220);
+    const resolvedProtocolName = sharedLookupDeps.cleanText(protocolName || entities.protocol_name, 220);
+    const searchResult = await searchNotebookEntriesIndex({
+      dataFilePath,
+      fallbackDataFilePath,
+      query,
+      limit,
+      snapshot,
+      projectId: resolvedProjectId,
+      projectName: resolvedProjectName,
+      protocolName: resolvedProtocolName
+    });
+    const items = sharedLookupDeps.asArray(searchResult.items).slice(0, Math.max(1, Number(limit) || 8));
+    return {
+      status: items.length ? 'matched' : 'no_match',
+      query,
+      source: sharedLookupDeps.cleanText(searchResult.source, 80) || 'fallback_json',
+      backfilled_sql: searchResult.backfilledSql === true,
+      items
+    };
+  }
+
   return {
     searchInventoryIndex: inventoryLookupRuntime.searchInventoryIndex,
     searchProtocolsIndex,
     searchNotebookEntriesIndex,
     searchRecordIndex: recordLookupRuntime.searchRecordIndex,
     executeInventoryLookup: inventoryLookupRuntime.executeInventoryLookup,
-    executeRecordLookup: recordLookupRuntime.executeRecordLookup
+    executeRecordLookup: recordLookupRuntime.executeRecordLookup,
+    executeNotebookLookup
   };
 }
 

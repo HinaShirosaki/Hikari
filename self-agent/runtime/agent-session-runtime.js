@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../src/main/helpers/agent/shared/agent-llm-utils.js');
 
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];

@@ -108,7 +108,7 @@ export const APP_REGISTRY = [
       "plate"
     ],
     "searchInputId": "",
-    "agentChatRail": false,
+    "agentChatRail": true,
     "hiddenFromNavigation": false
   },
   {

@@ -200,6 +200,8 @@ export function createAssayAnalysisView({
       onAnalysisRendered?.({
         method,
         summary: assayAnalysisSummary.textContent,
+        headers: Array.isArray(result.headers) ? result.headers.map((item) => String(item)) : [],
+        rows: Array.isArray(result.rows) ? result.rows : [],
         chartDataUrl: '',
         analyzedAt: new Date().toISOString()
       });
@@ -226,6 +228,8 @@ export function createAssayAnalysisView({
     onAnalysisRendered?.({
       method,
       summary: assayAnalysisSummary.textContent,
+      headers: Array.isArray(result.headers) ? result.headers.map((item) => String(item)) : [],
+      rows: Array.isArray(result.rows) ? result.rows : [],
       chartDataUrl: chartEngine.toDataUrl(),
       analyzedAt: new Date().toISOString()
     });

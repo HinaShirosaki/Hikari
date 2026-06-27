@@ -111,6 +111,30 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       assert.match(markdown, /## Sections/);
       assert.doesNotMatch(markdown, /^## Pages/m);
     });
+    test('pdf-to-md places each figure inline in the section that covers its page', () => {
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
+        metadata: { title: 'Paper with figures' },
+        extraction: {
+          ok: true,
+          page_count: 3,
+          sections: [
+            { label: 'Methods', start_page: 1, end_page: 1, text: 'We used X.' },
+            { label: 'Results', start_page: 2, end_page: 2, text: 'We found Y.' }
+          ]
+        },
+        figures: [
+          { page_number: 2, file_name: 'page-2-img-1.png', width: 400, height: 300 },
+          { page_number: 9, file_name: 'page-9-img-1.png' }
+        ]
+      });
+      // Figure on page 2 lands inside the Results section, after its body text.
+      assert.match(markdown, /We found Y\.[\s\S]*!\[Figure on page 2[^\]]*\]\(figures\/page-2-img-1\.png\)/);
+      // The Methods section (page 1) carries no figure.
+      assert.doesNotMatch(markdown, /We used X\.\n\n!\[Figure/);
+      // A figure on an uncovered page still appears under the trailing Figures list.
+      assert.match(markdown, /## Figures\n\n- !\[Figure on page 9\]\(figures\/page-9-img-1\.png\)/);
+    });
     test('pdf-to-md still emits Pages when explicitly requested even with sections present', () => {
       const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
       const markdown = pdfToMd.buildPdfMarkdownFromExtraction({

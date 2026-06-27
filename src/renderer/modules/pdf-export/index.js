@@ -357,6 +357,24 @@ function writeNotebookResultTable(ctx, table) {
   writePdfTable(ctx, headers, rows);
 }
 
+function writeNotebookToolCalculationTable(ctx, table) {
+  const source = table && typeof table === 'object' ? table : null;
+  if (!source) {
+    writeParagraph(ctx, '-');
+    return;
+  }
+  const headers = Array.isArray(source.headers)
+    ? source.headers.map((header) => safeValue(header))
+    : [];
+  const rows = [
+    ...(Array.isArray(source.metaRows) ? source.metaRows : []),
+    ...(Array.isArray(source.rows) ? source.rows : []),
+    ...(Array.isArray(source.footerRows) ? source.footerRows : [])
+  ].map((row) => (Array.isArray(row) ? row.map((cell) => String(cell ?? '').trim()) : []))
+    .filter((row) => row.some(Boolean));
+  writePdfTable(ctx, headers, rows);
+}
+
 function isWideNotebookResultTable(table) {
   const normalized = normalizeNotebookResultTable(table);
   if (!normalized) {
@@ -811,8 +829,13 @@ async function writeNotebookEntryBody(ctx, {
   if (toolCalculations.length) {
     writeMinorHeading(ctx, toolCalculations.length === 1 ? 'Tool Calculation' : 'Tool Calculations');
     toolCalculations.forEach((calculation) => {
-      writeParagraph(ctx, `${calculation.title}: ${safeValue(calculation.result || calculation.summary)}`);
-      if (calculation.formula) {
+      if (calculation.table) {
+        writeMinorHeading(ctx, calculation.title);
+        writeNotebookToolCalculationTable(ctx, calculation.table);
+      } else {
+        writeParagraph(ctx, `${calculation.title}: ${safeValue(calculation.result || calculation.summary)}`);
+      }
+      if (calculation.formula && !calculation.table) {
         writeParagraph(ctx, `Formula: ${calculation.formula}`);
       }
     });

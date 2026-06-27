@@ -46,7 +46,7 @@ export function createWellEditorRenderer({
           </div>
           <div class="well-editor-actions">
             <button type="button" class="primary-btn" data-well-sample-save="${safeText(activeSample.id)}">Save Sample</button>
-            <button type="button" class="ghost-btn" data-well-sample-clone="${safeText(activeSample.id)}">Clone to Well…</button>
+            <button type="button" class="ghost-btn${uiState.cloningSampleId === activeSample.id ? ' is-active' : ''}" data-well-sample-clone="${safeText(activeSample.id)}">${uiState.cloningSampleId === activeSample.id ? 'Drag wells to clone (click to cancel)' : 'Clone to Well…'}</button>
             <button type="button" class="ghost-btn" data-well-sample-unlink="${safeText(activeSample.id)}">Delete Sample</button>
           </div>
         </div>

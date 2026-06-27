@@ -32,12 +32,7 @@ const {
 const observability = require('../agent/shared/agent-observability');
 const { createAgentControllerUtils } = require('../agent/shared/agent-controller-utils');
 const { createAgentRuntimeRegistry } = require('../agent/shared/agent-runtime-registry.js');
-const { createProtocolNotebookRuntime } = require('../agent/runtime/agent-protocol-notebook');
 const { createAgentLookupRuntime } = require('../agent/runtime/agent-lookup-runtime');
-const { createScienceReasoningLoopRuntime } = require('../agent/runtime/science-reasoning-loop/index.js');
-const { createDeepResearchRuntime } = require('../agent/deep-research/index.js');
-const { createAgentSessionRuntime } = require('../agent/runtime/agent-session-runtime.js');
-const { createAgentScienceMainUtils } = require('../agent/runtime/agent-science-main-utils.js');
 const { createAgentToolSmokeTestRuntime } = require('../agent/tools/agent-tool-smoke-test');
 const { createAgentChatLogRuntime } = require('../agent/context/agent-chat-log.js');
 const { createAgentSkillRuntime } = require('../agent/skills/agent-skill-runtime.js');
@@ -47,6 +42,8 @@ const { createAgentToolProviderRuntime } = require('../agent/tools/agent-tool-pr
 const { createAgentCommandLineRuntime } = require('../agent/tools/agent-command-line.js');
 const { createAgentSubAgentRuntime } = require('../agent/tools/agent-sub-agent.js');
 const { createAgentContainerRuntime } = require('../agent/tools/agent-container.js');
+const { createAgentAssayTableRuntime } = require('../agent/tools/agent-assay-table.js');
+const { createAgentPlotlyGraphRuntime } = require('../agent/tools/agent-plotly-graph.js');
 const { createAgentMemoryRuntime } = require('../agent/context/agent-memory.js');
 const { createNotebookDraftRuntime } = require('../agent/tools/agent-notebook-draft.js');
 const { createWebSearchRuntime } = require('../agent/tools/agent-web-search.js');
@@ -345,40 +342,6 @@ function createMainAgentServices(deps = {}) {
     }
   };
 
-  const scienceMainUtils = createAgentScienceMainUtils({
-    asArray,
-    cleanText,
-    uniqueStrings,
-    clamp,
-    mapCanonicalIntentToExecutionIntent,
-    normalizeParserEntitiesToRoutingEntities,
-    normalizeRoutingPayload: agentRuntimeSupport.normalizeRoutingPayload,
-    normalizeNotebookDraftPayload: (value) => value && typeof value === 'object' ? value : null,
-    applyRoutingPlanPatch: (routing, patch = {}) => ({
-      ...agentRuntimeSupport.normalizeRoutingPayload(routing),
-      plan: {
-        ...(agentRuntimeSupport.normalizeRoutingPayload(routing).plan || {}),
-        ...(patch && typeof patch === 'object' ? patch : {})
-      }
-    }),
-    pickTopMatches: agentRuntimeSupport.pickTopMatches,
-    scoreByQuery: agentRuntimeSupport.scoreByQuery,
-    normalizeQuery: agentRuntimeSupport.normalizeQuery
-  });
-
-  const agentSessionRuntime = createAgentSessionRuntime({
-    ...sharedAgentLlmDeps
-  });
-
-  const protocolNotebookRuntime = createProtocolNotebookRuntime({
-    ...sharedAgentLlmDeps,
-    pickTopMatches: agentRuntimeSupport.pickTopMatches,
-    agentAppApi,
-    runTool: agentToolRuntime.runAgentTool,
-    recordLifecycleEvent: observability.recordLifecycleEvent,
-    getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory
-  });
-
   const notebookDraftRuntime = createNotebookDraftRuntime({
     ...sharedAgentLlmDeps,
     agentAppApi,
@@ -417,6 +380,11 @@ function createMainAgentServices(deps = {}) {
     runSubAgentTurn
   });
   const containerRuntime = createAgentContainerRuntime({});
+  const assayTableRuntime = createAgentAssayTableRuntime({
+    runPythonSandbox,
+    getSandboxRoot: getAgentPythonSandboxRoot
+  });
+  const plotlyGraphRuntime = createAgentPlotlyGraphRuntime({});
   const memoryRuntime = createAgentMemoryRuntime({
     ...sharedAgentLlmDeps,
     memoryFilePath: cleanText(getAgentMemoryFilePath(), 2400)
@@ -488,6 +456,8 @@ function createMainAgentServices(deps = {}) {
     agentAppApi,
     subAgentRuntime,
     containerRuntime,
+    assayTableRuntime,
+    plotlyGraphRuntime,
     memoryRuntime,
     paperDownloadRuntime,
     paperAnalysisRuntime,
@@ -497,31 +467,6 @@ function createMainAgentServices(deps = {}) {
     getAgentPythonSandboxRoot,
     hydrateSnapshotFromBundle,
     getDefaultDataFilePath
-  });
-
-  const scienceReasoningLoopRuntime = createScienceReasoningLoopRuntime({
-    ...sharedAgentLlmDeps,
-    clamp,
-    toolProvider: agentToolProviderRuntime,
-    startAgentSession: agentSessionRuntime.startAgentSession,
-    extractAgentSessionFunctionCalls: agentSessionRuntime.extractAgentSessionFunctionCalls,
-    extractAgentSessionSchemaRequests: agentSessionRuntime.extractAgentSessionSchemaRequests,
-    extractAgentSessionText: agentSessionRuntime.extractAgentSessionText,
-    continueAgentSessionWithToolOutputs: agentSessionRuntime.continueAgentSessionWithToolOutputs,
-    continueAgentSessionWithUserMessage: agentSessionRuntime.continueAgentSessionWithUserMessage,
-    runTool: agentToolRuntime.runAgentTool,
-    applyResponseLayerToOutput: scienceMainUtils.applyResponseLayerToOutput,
-    applyValidationGateToOutput: scienceMainUtils.applyValidationGateToOutput,
-    recordLifecycleEvent: observability.recordLifecycleEvent
-  });
-
-  const deepResearchRuntime = createDeepResearchRuntime({
-    ...sharedAgentLlmDeps,
-    clamp,
-    toolProvider: agentToolProviderRuntime,
-    applyResponseLayerToOutput: scienceMainUtils.applyResponseLayerToOutput,
-    applyValidationGateToOutput: scienceMainUtils.applyValidationGateToOutput,
-    recordLifecycleEvent: observability.recordLifecycleEvent
   });
 
   const agentToolSmokeTestRuntime = createAgentToolSmokeTestRuntime({
@@ -535,10 +480,6 @@ function createMainAgentServices(deps = {}) {
   return {
     observability,
     controllerUtils,
-    protocolNotebookRuntime,
-    scienceReasoningLoopRuntime,
-    deepResearchRuntime,
-    scienceMainUtils,
     agentToolRuntime,
     subAgentRuntime,
     agentSkillRuntime,

@@ -1,5 +1,7 @@
 'use strict';
 
+const RECORD_LOOKUP_EXCLUDED_TYPES = Object.freeze(new Set(['assay']));
+
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -213,11 +215,32 @@ function createAgentRecordLookupRuntime(deps = {}) {
     ? deps.agentAppApi
     : {};
 
+  function isRecordLookupTypeAllowed(recordType = '') {
+    return !RECORD_LOOKUP_EXCLUDED_TYPES.has(cleanText(recordType, 40).toLowerCase());
+  }
+
+  function normalizeRecordTypeFilter(recordTypes = []) {
+    return new Set(asArray(recordTypes)
+      .map((recordType) => cleanText(recordType, 40).toLowerCase())
+      .filter(Boolean));
+  }
+
+  function matchesRecordTypeFilter(recordType = '', recordTypeFilter = new Set()) {
+    if (!recordTypeFilter || !recordTypeFilter.size) {
+      return true;
+    }
+    return recordTypeFilter.has(cleanText(recordType, 40).toLowerCase());
+  }
+
   function appendApiRows(records, rows = [], defaultType = '') {
     asArray(rows).forEach((row) => {
       const payload = ensureObject(row);
+      const recordType = cleanText(payload.record_type || defaultType, 40);
+      if (!isRecordLookupTypeAllowed(recordType)) {
+        return;
+      }
       records.push({
-        record_type: cleanText(payload.record_type || defaultType, 40),
+        record_type: recordType,
         record_id: cleanText(payload.record_id || payload.id, 120),
         title: cleanText(payload.title || payload.name || payload.protocolName, 220),
         project_id: cleanText(payload.project_id, 120),
@@ -231,8 +254,9 @@ function createAgentRecordLookupRuntime(deps = {}) {
     });
   }
 
-  function buildRecordFallbackItems({ snapshot = {}, query = '', terms = [], limit = 8 }) {
+  function buildRecordFallbackItems({ snapshot = {}, query = '', terms = [], limit = 8, recordTypes = [] }) {
     const records = [];
+    const recordTypeFilter = normalizeRecordTypeFilter(recordTypes);
 
     if (typeof agentAppApi?.notebook?.listAgentRecords === 'function') {
       appendApiRows(records, agentAppApi.notebook.listAgentRecords({ snapshot, limit: 240 }), 'notebook');
@@ -285,34 +309,6 @@ function createAgentRecordLookupRuntime(deps = {}) {
         ])
       });
     });
-
-    if (typeof agentAppApi?.assay?.listAgentRecords === 'function') {
-      appendApiRows(records, agentAppApi.assay.listAgentRecords({ snapshot, limit: 240 }), 'assay');
-    } else {
-      asArray(snapshot?.assays).forEach((assay) => {
-        const payload = ensureObject(assay);
-        records.push({
-          record_type: 'assay',
-          record_id: cleanText(payload.id || payload.assay_number, 120),
-          title: cleanText(payload.name || payload.assay_number || payload.id, 220),
-          project_id: cleanText(payload.project_id || payload.projectId, 120),
-          project_name: cleanText(payload.project_name || payload.projectName, 220),
-          summary: cleanText(payload.notes || payload.notebook_entry_protocol_name || payload.name, 500),
-          linked_protocol_id: cleanText(payload.notebook_entry_protocol_id || payload.protocolId, 120),
-          linked_protocol_name: cleanText(payload.notebook_entry_protocol_name || payload.protocolName, 220),
-          updated_at: cleanText(payload.updated_at || payload.updatedAt || payload.created_at, 80),
-          search_text: buildSearchText([
-            payload.id,
-            payload.assay_number,
-            payload.name,
-            payload.notes,
-            payload.project_id,
-            payload.project_name,
-            payload.notebook_entry_protocol_name
-          ])
-        });
-      });
-    }
 
     if (typeof agentAppApi?.gel?.listAgentRecords === 'function') {
       appendApiRows(records, agentAppApi.gel.listAgentRecords({ snapshot, limit: 240 }), 'gel');
@@ -413,7 +409,7 @@ function createAgentRecordLookupRuntime(deps = {}) {
       });
     }
 
-    const ranked = rankRows(records, {
+    const ranked = rankRows(records.filter((row) => matchesRecordTypeFilter(row?.record_type, recordTypeFilter)), {
       terms,
       query,
       limit: Math.max(Number(limit) || 8, 80),
@@ -434,7 +430,8 @@ function createAgentRecordLookupRuntime(deps = {}) {
     }));
   }
 
-  async function searchRecordSqlite({ sqlitePath = '', query = '', searchTerms = [], limit = 8 }) {
+  async function searchRecordSqlite({ sqlitePath = '', query = '', searchTerms = [], limit = 8, recordTypes = [] }) {
+    const recordTypeFilter = normalizeRecordTypeFilter(recordTypes);
     const dbResult = await withSqliteDatabase(sqlitePath, async (db) => {
       const tables = readSqliteTables(db);
       const hasRecordIndex = tables.has('record_index');
@@ -483,7 +480,11 @@ function createAgentRecordLookupRuntime(deps = {}) {
         dedupeKey: (row) => `${cleanText(row.record_type, 40).toLowerCase()}::${cleanText(row.record_id, 120).toLowerCase()}`
       });
 
-      const ranked = rankRows(rows, {
+      const filteredRows = rows.filter((row) => (
+        isRecordLookupTypeAllowed(row?.record_type)
+        && matchesRecordTypeFilter(row?.record_type, recordTypeFilter)
+      ));
+      const ranked = rankRows(filteredRows, {
         terms,
         query,
         limit: Math.max(1, Number(limit) || 8),
@@ -546,7 +547,8 @@ function createAgentRecordLookupRuntime(deps = {}) {
     query = '',
     limit = 8,
     searchTerms = [],
-    snapshot = {}
+    snapshot = {},
+    recordTypes = []
   } = {}) {
     const context = await buildLookupContext({
       dataFilePath,
@@ -559,13 +561,15 @@ function createAgentRecordLookupRuntime(deps = {}) {
       sqlitePath: context.sqlitePath,
       query,
       searchTerms: termsUsed,
-      limit
+      limit,
+      recordTypes
     });
     const fallbackItems = buildRecordFallbackItems({
       snapshot: context.hydratedSnapshot,
       query,
       terms: termsUsed,
-      limit
+      limit,
+      recordTypes
     });
 
     let source = sqlResult.usedSqlite ? 'sqlite' : 'fallback_json';
@@ -597,7 +601,8 @@ function createAgentRecordLookupRuntime(deps = {}) {
         sqlitePath: context.sqlitePath,
         query,
         searchTerms: termsUsed,
-        limit
+        limit,
+        recordTypes
       });
       if (asArray(rerun.items).length) {
         items = mergeRowsByKey(
@@ -664,6 +669,7 @@ function createAgentRecordLookupRuntime(deps = {}) {
   return {
     buildRecordFallbackItems,
     searchRecordSqlite,
+    normalizeRecordTypeFilter,
     deriveRecordLookupQuery,
     searchRecordIndex,
     executeRecordLookup

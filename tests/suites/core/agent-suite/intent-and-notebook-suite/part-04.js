@@ -73,7 +73,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart04(context = {}
             throw new Error('Result-analysis runtime should not run for this general science follow-up.');
           }
         },
-        deepResearchRuntime: null,
         scienceMainUtils: {
           buildScienceRoutingFromParser: (parserPayload = {}) => ({
             intent: parserPayload.primary_intent,
@@ -254,7 +253,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart04(context = {}
             throw new Error('Result-analysis runtime should not run here.');
           }
         },
-        deepResearchRuntime: null,
         scienceMainUtils: {
           buildScienceRoutingFromParser: (parserPayload = {}) => ({
             intent: parserPayload.primary_intent,
@@ -387,7 +385,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart04(context = {}
           hasPendingSession: () => false
         },
         scienceReasoningLoopRuntime: {},
-        deepResearchRuntime: null,
         scienceMainUtils: {},
         agentToolRuntime: {
           normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),

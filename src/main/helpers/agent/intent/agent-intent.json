@@ -31,7 +31,7 @@
   },
   "record_lookup": {
     "name": "record_lookup",
-    "description": "Stored project, workflow, notebook, assay, gel, paper, or lab records, excluding inventory.",
+    "description": "Stored project, workflow, notebook, gel, paper, or lab records, excluding inventory. Assay data is supplied by the active Assay rail context and dedicated assay tools.",
     "rules": "Include record-hint entities only when they narrow local search.",
     "example_input": "What did we use last time for the antibody conjugation workflow?",
     "specific_output_append": {

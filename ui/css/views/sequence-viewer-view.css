@@ -389,18 +389,20 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   padding-left: var(--app-left-rail-padding-inline, 16px);
 }
 
-/* The toolbar shares the ghost-button surface (var(--theme-surface)), so the
-   default back button blends into it. Give the nav button a contrasting
-   surface + stronger border so it reads as a button in every theme. */
+/* The toolbar shares the ghost-button surface (var(--theme-surface)), and in
+   some themes surface-subtle is nearly identical to it, so a default back
+   button blends in. Tint with the accent + an accent border so it always reads
+   as a button regardless of theme. */
 .sequence-viewer-protein-builder-toolbar-nav .ghost-btn,
 .sequence-viewer-cloning-design-toolbar-nav .ghost-btn {
-  background: var(--theme-surface-subtle);
-  border-color: var(--theme-text-muted);
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+  border-color: var(--theme-accent);
+  color: var(--theme-text-strong);
 }
 
 .sequence-viewer-protein-builder-toolbar-nav .ghost-btn:hover,
 .sequence-viewer-cloning-design-toolbar-nav .ghost-btn:hover {
-  background: var(--theme-surface-elevated);
+  background: color-mix(in srgb, var(--theme-accent) 26%, var(--theme-surface-elevated));
 }
 
 .sequence-viewer-cloning-design-toolbar-copy {
@@ -1211,10 +1213,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 
 .sequence-viewer-controls {
-  border-radius: 8px;
-  border: 1px solid var(--theme-border);
-  background: var(--theme-surface);
-  padding: 12px;
+  padding: 12px 0;
 }
 
 .sequence-viewer-hidden-control[hidden],
@@ -2152,7 +2151,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 /* Extracted from ui/css/themes/modes.css */
 body.theme-night .sequence-viewer-protein-builder-toolbar,
 body.theme-night .sequence-viewer-cloning-design-toolbar,
-body.theme-night .sequence-viewer-controls,
 body.theme-night .sequence-viewer-protein-builder-panel,
 body.theme-night .sequence-viewer-cloning-design-panel,
 body.theme-night .sequence-viewer-cloning-design-result-section,

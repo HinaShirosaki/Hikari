@@ -32,19 +32,30 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('agent registrar keeps intent-only lifecycle stages and replay IPC handlers', () => {
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
-      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
       const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
       const combinedSource = `${agentChatHandlerSource}\n${controllerCoreSource}\n${apiControllerSource}\n${logHandlersSource}`;
       assert.match(agentChatHandlerSource, /createLifecycleRecorder/);
       assert.match(agentChatHandlerSource, /recordLifecycleEvent/);
       assert.match(agentChatHandlerSource, /appendAgentChatLogEntry/);
       assert.match(controllerCoreSource, /controller_intent_only_selected/);
-      assert.match(controllerCoreSource, /require\('\.\/api-agent-controller'\)/);
+      // The self-implemented API agent was extracted to /self-agent and is no longer wired in.
+      assert.doesNotMatch(controllerCoreSource, /require\('\.\/api-agent-controller'\)/);
+      assert.match(controllerCoreSource, /controller_api_agent_disabled/);
       assert.match(apiControllerSource, /stage: 'controller_intent_only'/);
       assert.match(apiControllerSource, /stage: 'parser_completed'/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_LIST_REQUESTS/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_REPLAY/);
       assert.equal(/agent-validation-safety/.test(combinedSource), false);
+    });
+
+    test('agent controller preserves table-sized assay hidden context', () => {
+      const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
+      assert.match(controllerCoreSource, /kind === 'assay-page' \|\| kind === 'assay' \|\| cleanText\(source\.assayId, 220\)/);
+      assert.match(controllerCoreSource, /cleanText\(source\.text, textLimit\)/);
+      assert.match(controllerCoreSource, /cleanText\(hiddenContextText, 60000\)/);
+      assert.doesNotMatch(controllerCoreSource, /const text = cleanText\(source\.text, 4000\)/);
+      assert.doesNotMatch(controllerCoreSource, /cleanText\(hiddenContextText, 12000\)/);
     });
 
     test('agent no longer depends on a serialized io contract file', () => {
@@ -69,6 +80,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'inventory-lookup'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'record-lookup'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-lookup'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'python-sandbox'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'command-line'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'web-search'), true);
@@ -77,6 +89,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'container'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'assay-table'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'plotly-graph'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
     });
 
@@ -125,9 +139,9 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('agent registrar controller output returns parser payload and optional developer trace', () => {
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
-      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
-      const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
-      const openContextRuntimeSource = fs.readFileSync(agentRegistrarPath('agent-open-context-runtime.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
+      const dispatcherSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'), 'utf8');
+      const openContextRuntimeSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-open-context-runtime.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       assert.match(apiControllerSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
       assert.match(dispatcherSource, /createAgentOpenContextRuntime/);
@@ -198,8 +212,8 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('protocol runtimes preserve placeholder-fill and tie-break prompt guidance after extraction', () => {
-      const protocolNotebookSource = fs.readFileSync(agentPath('runtime', 'agent-protocol-notebook.js'), 'utf8');
-      const protocolNotebookContextSource = fs.readFileSync(agentPath('runtime', 'agent-protocol-notebook-context-control.js'), 'utf8');
+      const protocolNotebookSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'agent-protocol-notebook.js'), 'utf8');
+      const protocolNotebookContextSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'agent-protocol-notebook-context-control.js'), 'utf8');
       const protocolMatchingSource = fs.readFileSync(agentPath('tools', 'agent-protocol-matching.js'), 'utf8');
       const notebookGenerationSource = fs.readFileSync(agentPath('tools', 'agent-notebook-generation.js'), 'utf8');
       assert.match(protocolNotebookSource, /createProtocolNotebookContextControl/);
@@ -220,7 +234,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('agent registrar hard-errors when intent parser output is invalid', () => {
-      const apiControllerSource = fs.readFileSync(agentRegistrarPath('api-agent-controller.js'), 'utf8');
+      const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
       assert.match(apiControllerSource, /if \(!rawParserResult\?\.ok \|\| !rawParserResult\?\.payload\)/);
       assert.match(apiControllerSource, /ok:\s*false/);
       assert.match(apiControllerSource, /Intent parser failed:/);
@@ -229,7 +243,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('science controller path is wired through the agent registrar and shared reasoning loop', () => {
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
+      const dispatcherSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'), 'utf8');
       assert.match(mainSource, /createMainAgentServices/);
       assert.match(mainAgentServicesSource, /createScienceReasoningLoopRuntime/);
       assert.match(mainAgentServicesSource, /continueAgentSessionWithUserMessage/);
@@ -244,7 +258,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('purchase recommendation runtime and external-link bridge are wired across main and renderer contracts', () => {
       const purchaseSource = fs.readFileSync(agentPath('tools', 'agent-purchase-recommendation.js'), 'utf8');
       const executorsSource = fs.readFileSync(agentPath('tools', 'register-agent-tool-executors.js'), 'utf8');
-      const dispatcherSource = fs.readFileSync(agentRegistrarPath('agent-intent-dispatcher.js'), 'utf8');
+      const dispatcherSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'), 'utf8');
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const preloadSource = readPreloadSource();
@@ -290,6 +304,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-analysis'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'assay-table'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'plotly-graph'), true);
       assert.equal(Boolean(toolCallCatalog['python-sandbox']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['command-line']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['web-search']?.input_schema), true);
@@ -302,6 +318,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(Boolean(toolCallCatalog['paper-analysis']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['notebook-draft']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
+      assert.equal(Boolean(toolCallCatalog['assay-table']?.input_schema), true);
+      assert.equal(Boolean(toolCallCatalog['plotly-graph']?.input_schema), true);
       assert.equal(typeof toolCallCatalog['inventory-lookup']?.description, 'string');
       assert.equal(typeof toolCallCatalog['command-line']?.description, 'string');
       assert.equal(typeof toolCallCatalog.memory?.description, 'string');
@@ -311,6 +329,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(typeof toolCallCatalog['paper-download']?.description, 'string');
       assert.equal(typeof toolCallCatalog['notebook-draft']?.description, 'string');
       assert.equal(typeof toolCallCatalog['protocol-generation']?.description, 'string');
+      assert.equal(typeof toolCallCatalog['assay-table']?.description, 'string');
+      assert.equal(typeof toolCallCatalog['plotly-graph']?.description, 'string');
       assert.match(executionSource, /const toolExecutors = new Map\(\);/);
       assert.match(executionSource, /function registerToolExecutor\(toolName, executor\)/);
       assert.match(executionSource, /function getToolExecutor\(toolName\)/);
@@ -328,6 +348,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(/["']sub-agent["']/.test(executionSource), false);
       assert.equal(/["']memory["']/.test(executionSource), false);
       assert.equal(/["']container["']/.test(executionSource), false);
+      assert.equal(/["']assay-table["']/.test(executionSource), false);
+      assert.equal(/["']plotly-graph["']/.test(executionSource), false);
       assert.equal(/["']literature-search["']/.test(executionSource), false);
       assert.equal(/["']purchase-recommendation["']/.test(executionSource), false);
       assert.equal(/["']paper-download["']/.test(executionSource), false);
@@ -345,24 +367,6 @@ module.exports = function registerAgentContractsA(context = {}) {
         ['shared', 'agent-controller-utils.js'],
         ['shared', 'agent-observability.js'],
         ['runtime', 'agent-lookup-runtime.js'],
-        ['runtime', 'agent-protocol-notebook.js'],
-        ['runtime', 'agent-protocol-notebook-context-control.js'],
-        ['runtime', 'science-reasoning-loop', 'index.js'],
-        ['runtime', 'science-reasoning-loop', 'input-clarification.js'],
-        ['runtime', 'science-reasoning-loop', 'final-synthesis.js'],
-        ['runtime', 'science-reasoning-loop', 'loop-exit-criteria.js'],
-        ['runtime', 'science-reasoning-loop', 'loop-exit-judge.js'],
-        ['runtime', 'science-reasoning-loop', 'support.js'],
-        ['deep-research', 'index.js'],
-        ['deep-research', 'step-1-clarify-question.js'],
-        ['deep-research', 'step-2-ask-targeted-follow-up.js'],
-        ['deep-research', 'step-3-draft-research-plan.js'],
-        ['deep-research', 'step-4-execute-plan.js'],
-        ['deep-research', 'step-5-assemble-final-answer.js'],
-        ['deep-research', 'context-control.js'],
-        ['deep-research', 'accuracy-preservation.js'],
-        ['deep-research', 'sub-agent-usage.js'],
-        ['deep-research', 'final-synthesis-quality.js'],
         ['tools', 'Tools.json'],
         ['tools', 'Tool-call.json'],
         ['tools', 'agent-tool-provide.js'],
@@ -381,7 +385,8 @@ module.exports = function registerAgentContractsA(context = {}) {
         ['tools', 'agent-python-sandbox.js'],
         ['tools', 'agent-sub-agent.js'],
         ['tools', 'agent-container.js'],
-        ['context', 'agent-context-management.js'],
+        ['tools', 'agent-assay-table.js'],
+        ['tools', 'agent-plotly-graph.js'],
         ['context', 'agent-memory.js'],
         ['context', 'agent-chat-log.js']
       ];

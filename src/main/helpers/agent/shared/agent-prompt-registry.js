@@ -5,14 +5,14 @@ const {
   DEFAULT_AGENT_SYNTHESIS_PROMPT_TEMPLATE,
   createAgentRuntimeSupport
 } = require('../runtime/agent-runtime-support.js');
-const { createAgentSessionRuntime } = require('../runtime/agent-session-runtime.js');
-const { createScienceLoopSupport } = require('../runtime/science-reasoning-loop/support.js');
-const { createScienceInputClarificationRuntime } = require('../runtime/science-reasoning-loop/input-clarification.js');
-const { createAgentRoutePlannerRuntime } = require('../runtime/science-reasoning-loop/agent-route-planner.js');
-const { createScienceLoopExitCriteriaRuntime } = require('../runtime/science-reasoning-loop/loop-exit-criteria.js');
-const { createScienceLoopExitJudgeRuntime } = require('../runtime/science-reasoning-loop/loop-exit-judge.js');
-const { createScienceThinkingTraceRuntime } = require('../runtime/science-reasoning-loop/thinking-trace.js');
-const { createScienceFinalSynthesisRuntime } = require('../runtime/science-reasoning-loop/final-synthesis.js');
+const { createAgentSessionRuntime } = require('../../../../../self-agent/runtime/agent-session-runtime.js');
+const { createScienceLoopSupport } = require('../../../../../self-agent/runtime/science-reasoning-loop/support.js');
+const { createScienceInputClarificationRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/input-clarification.js');
+const { createAgentRoutePlannerRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/agent-route-planner.js');
+const { createScienceLoopExitCriteriaRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/loop-exit-criteria.js');
+const { createScienceLoopExitJudgeRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/loop-exit-judge.js');
+const { createScienceThinkingTraceRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/thinking-trace.js');
+const { createScienceFinalSynthesisRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/final-synthesis.js');
 const agentIntentParser = require('../intent/agent-intent-parser.js');
 const agentToolLoading = require('../tools/agent-tool-loading.js');
 const { createProtocolMatchingRuntime } = require('../tools/agent-protocol-matching.js');
@@ -20,29 +20,14 @@ const { createNotebookGenerationRuntime } = require('../tools/agent-notebook-gen
 const { createNotebookDraftRuntime } = require('../tools/agent-notebook-draft.js');
 const { createProtocolGenerationRuntime } = require('../tools/agent-protocol-generation.js');
 const { createPaperAnalysisRuntime } = require('../tools/agent-paper-analysis.js');
-const { buildClarifyPrompt } = require('../deep-research/step-1-clarify-question.js');
-const { buildFollowUpPrompt } = require('../deep-research/step-2-ask-targeted-follow-up.js');
-const { buildResearchPlanPrompt } = require('../deep-research/step-3-draft-research-plan.js');
-const { buildExecutionActionPrompt } = require('../deep-research/step-4-execute-plan.js');
-const { buildOutlinePrompt, buildSectionPrompt } = require('../deep-research/step-5-assemble-final-answer.js');
-const {
-  buildSubAgentInstruction,
-  buildCompletionCheckPrompt
-} = require('../deep-research/sub-agent-usage.js');
-
 const STRUCTURED_JSON_ONLY_SYSTEM_PROMPT = 'Return valid JSON only.';
 
 const STRUCTURED_JSON_ONLY_SOURCES = Object.freeze([
-  'src/main/helpers/agent/deep-research/step-1-clarify-question.js',
-  'src/main/helpers/agent/deep-research/step-2-ask-targeted-follow-up.js',
-  'src/main/helpers/agent/deep-research/step-3-draft-research-plan.js',
-  'src/main/helpers/agent/deep-research/step-4-execute-plan.js',
-  'src/main/helpers/agent/runtime/science-reasoning-loop/input-clarification.js',
-  'src/main/helpers/agent/runtime/science-reasoning-loop/agent-route-planner.js',
-  'src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-criteria.js',
-  'src/main/helpers/agent/runtime/science-reasoning-loop/thinking-trace.js',
-  'src/main/helpers/agent/runtime/science-reasoning-loop/final-synthesis.js',
-  'src/main/helpers/agent/deep-research/sub-agent-usage.js'
+  'self-agent/runtime/science-reasoning-loop/input-clarification.js',
+  'self-agent/runtime/science-reasoning-loop/agent-route-planner.js',
+  'self-agent/runtime/science-reasoning-loop/loop-exit-criteria.js',
+  'self-agent/runtime/science-reasoning-loop/thinking-trace.js',
+  'self-agent/runtime/science-reasoning-loop/final-synthesis.js'
 ]);
 
 function asArray(value) {
@@ -439,7 +424,7 @@ function getAgentPromptRegistry() {
       kind: 'system',
       source: STRUCTURED_JSON_ONLY_SOURCES,
       content: STRUCTURED_JSON_ONLY_SYSTEM_PROMPT,
-      notes: 'Shared across structured-output deep-research and science-loop steps.'
+      notes: 'Shared across structured-output science-loop steps.'
     },
     {
       id: 'core.agent_system_template',
@@ -524,7 +509,7 @@ function getAgentPromptRegistry() {
       title: 'Codex Tool Loop Prompt',
       group: 'Core Agent',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/agent-session-runtime.js',
+      source: 'self-agent/runtime/agent-session-runtime.js',
       render: () => state.sessionRuntime.buildCodexToolLoopPrompt({
         systemPrompt: baseSystemPrompt,
         transcript: state.sampleConversation,
@@ -697,7 +682,7 @@ function getAgentPromptRegistry() {
       title: 'Science Session System Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/support.js',
+      source: 'self-agent/runtime/science-reasoning-loop/support.js',
       render: () => state.scienceSupportRuntime.buildScienceSessionSystemPrompt({
         baseSystemPrompt,
         intent: state.sampleRouting.intent,
@@ -718,7 +703,7 @@ function getAgentPromptRegistry() {
       title: 'Science Evaluator Feedback Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/support.js',
+      source: 'self-agent/runtime/science-reasoning-loop/support.js',
       render: () => state.scienceSupportRuntime.buildEvaluatorFeedback(
         state.sampleEvaluation,
         state.sampleRouting.intent
@@ -729,7 +714,7 @@ function getAgentPromptRegistry() {
       title: 'Science Input Clarification Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/input-clarification.js',
+      source: 'self-agent/runtime/science-reasoning-loop/input-clarification.js',
       render: () => state.inputClarificationRuntime.buildClarificationPrompt({
         intent: state.sampleRouting.intent,
         project: state.sampleProject,
@@ -744,7 +729,7 @@ function getAgentPromptRegistry() {
       title: 'Science Route Plan Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/agent-route-planner.js',
+      source: 'self-agent/runtime/science-reasoning-loop/agent-route-planner.js',
       render: () => state.routePlannerRuntime.buildRoutePlanPrompt({
         intent: state.sampleRouting.intent,
         reasoningEffort: state.sampleRouting.reasoning_effort,
@@ -762,7 +747,7 @@ function getAgentPromptRegistry() {
       title: 'Science Exit Criteria Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-criteria.js',
+      source: 'self-agent/runtime/science-reasoning-loop/loop-exit-criteria.js',
       render: () => state.exitCriteriaRuntime.buildExitCriteriaPrompt({
         intent: state.sampleRouting.intent,
         policy: state.samplePolicy,
@@ -779,7 +764,7 @@ function getAgentPromptRegistry() {
       title: 'Science Exit Judge System Prompt',
       group: 'Science Reasoning',
       kind: 'system',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-judge.js',
+      source: 'self-agent/runtime/science-reasoning-loop/loop-exit-judge.js',
       render: () => state.exitJudgeRuntime.buildJudgeSystemPrompt()
     },
     {
@@ -787,7 +772,7 @@ function getAgentPromptRegistry() {
       title: 'Science Exit Judge Message Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-judge.js',
+      source: 'self-agent/runtime/science-reasoning-loop/loop-exit-judge.js',
       render: () => state.exitJudgeRuntime.buildJudgeMessage({
         intent: state.sampleRouting.intent,
         exitCriteria: state.sampleExitCriteria,
@@ -809,7 +794,7 @@ function getAgentPromptRegistry() {
       title: 'Science Thinking Trace Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/thinking-trace.js',
+      source: 'self-agent/runtime/science-reasoning-loop/thinking-trace.js',
       render: () => state.thinkingTraceRuntime.buildThinkingTracePrompt({
         intent: state.sampleRouting.intent,
         originalMessage: state.sampleConversation[0].text,
@@ -839,7 +824,7 @@ function getAgentPromptRegistry() {
       title: 'Science Final Synthesis Prompt',
       group: 'Science Reasoning',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/runtime/science-reasoning-loop/final-synthesis.js',
+      source: 'self-agent/runtime/science-reasoning-loop/final-synthesis.js',
       render: () => state.finalSynthesisRuntime.buildSynthesisPrompt({
         intent: state.sampleRouting.intent,
         policy: state.samplePolicy,
@@ -854,131 +839,6 @@ function getAgentPromptRegistry() {
         accumulatedCitations: state.sampleCitations,
         toolTrace: state.sampleToolTrace,
         partial: false
-      })
-    },
-    {
-      id: 'deep_research.step1_clarify_prompt',
-      title: 'Deep Research Step 1 Clarify Prompt',
-      group: 'Deep Research',
-      kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/deep-research/step-1-clarify-question.js',
-      render: () => buildClarifyPrompt({
-        intent: state.sampleRouting.intent,
-        policy: state.samplePolicy,
-        parserPayload: state.sampleParserPayload,
-        routing: state.sampleRouting,
-        project: state.sampleProject,
-        message: state.sampleConversation[0].text
-      })
-    },
-    {
-      id: 'deep_research.step2_follow_up_prompt',
-      title: 'Deep Research Step 2 Follow-Up Prompt',
-      group: 'Deep Research',
-      kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/deep-research/step-2-ask-targeted-follow-up.js',
-      render: () => buildFollowUpPrompt({
-        intent: state.sampleRouting.intent,
-        clarifyResult: state.sampleClarification,
-        parserPayload: state.sampleParserPayload,
-        project: state.sampleProject,
-        message: state.sampleConversation[0].text
-      })
-    },
-    {
-      id: 'deep_research.step3_plan_prompt',
-      title: 'Deep Research Step 3 Research Plan Prompt',
-      group: 'Deep Research',
-      kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/deep-research/step-3-draft-research-plan.js',
-      render: () => buildResearchPlanPrompt({
-        intent: state.sampleRouting.intent,
-        clarifyResult: state.sampleClarification,
-        policy: state.samplePolicy,
-        project: state.sampleProject,
-        message: state.sampleConversation[0].text
-      })
-    },
-    {
-      id: 'deep_research.step4_execution_prompt',
-      title: 'Deep Research Step 4 Execution Prompt',
-      group: 'Deep Research',
-      kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/deep-research/step-4-execute-plan.js',
-      render: () => buildExecutionActionPrompt({
-        intent: state.sampleRouting.intent,
-        researchObjective: state.sampleResearchObjective,
-        researchPlan: state.sampleResearchPlan,
-        contextSnapshot: state.sampleContextSnapshot,
-        accuracySnapshot: state.sampleAccuracySnapshot,
-        completionCheck: state.sampleEvaluation,
-        toolTrace: state.sampleToolTrace,
-        toolDefinitions: state.sampleToolDefinitions,
-        roundsExecuted: 2,
-        maxRounds: 4
-      })
-    },
-    {
-      id: 'deep_research.step5_outline_prompt',
-      title: 'Deep Research Step 5 Outline Prompt',
-      group: 'Deep Research',
-      kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/deep-research/step-5-assemble-final-answer.js',
-      render: () => buildOutlinePrompt({
-        intent: state.sampleRouting.intent,
-        researchObjective: state.sampleResearchObjective,
-        researchPlan: state.sampleResearchPlan,
-        completionCheck: state.sampleEvaluation
-      })
-    },
-    {
-      id: 'deep_research.step5_section_prompt',
-      title: 'Deep Research Step 5 Section Prompt',
-      group: 'Deep Research',
-      kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/deep-research/step-5-assemble-final-answer.js',
-      render: () => buildSectionPrompt({
-        section: {
-          title: 'Direct Answer',
-          objective: 'State the best-supported cause of weak SUMO1 conjugation.'
-        },
-        researchObjective: state.sampleResearchObjective,
-        sectionEvidence: {
-          evidence: state.sampleCitations,
-          notes: ['Internal Atlas evidence and recent literature point in the same direction.']
-        },
-        contextSnapshot: state.sampleContextSnapshot,
-        accuracySnapshot: state.sampleAccuracySnapshot
-      })
-    },
-    {
-      id: 'deep_research.sub_agent_instruction_prompt',
-      title: 'Deep Research Sub-Agent Instruction Prompt',
-      group: 'Deep Research',
-      kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/deep-research/sub-agent-usage.js',
-      render: () => buildSubAgentInstruction({
-        researchObjective: state.sampleResearchObjective.research_goal,
-        subquestion: state.sampleResearchPlan.key_subquestions[1],
-        contextSnapshot: state.sampleContextSnapshot
-      })
-    },
-    {
-      id: 'deep_research.completion_check_prompt',
-      title: 'Deep Research Completion Check Prompt',
-      group: 'Deep Research',
-      kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/deep-research/sub-agent-usage.js',
-      render: () => buildCompletionCheckPrompt({
-        intent: state.sampleRouting.intent,
-        researchObjective: state.sampleResearchObjective,
-        researchPlan: state.sampleResearchPlan,
-        contextSnapshot: state.sampleContextSnapshot,
-        accuracySnapshot: state.sampleAccuracySnapshot,
-        toolTrace: state.sampleToolTrace,
-        citations: state.sampleCitations,
-        roundsExecuted: 2,
-        maxRounds: 4
       })
     }
   ];

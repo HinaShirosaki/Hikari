@@ -15,6 +15,8 @@ const PAPER_INTAKE_SEARCH_SUMMARIES_TOOL_NAME = buildHikariCodexMcpToolName('pap
 const PAPER_INTAKE_SEARCH_EXPERIMENTS_TOOL_NAME = buildHikariCodexMcpToolName('paper_intake_search_experiments');
 const PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME = buildHikariCodexMcpToolName('paper_intake_list_project_summaries');
 const CONTAINER_TOOL_NAME = buildHikariCodexMcpToolName('container');
+const ASSAY_TABLE_TOOL_NAME = buildHikariCodexMcpToolName('assay_table');
+const PLOTLY_GRAPH_TOOL_NAME = buildHikariCodexMcpToolName('plotly_graph');
 
 function buildSkillMarkdown({ id = '', name = '', description = '', body = '' } = {}) {
   return [
@@ -50,7 +52,7 @@ For the active \`<paper_id>\`, the following artifacts are written next to \`pap
 - \`paper.md\` — primary markdown rewrite of the paper (always read this first, end to end).
 - \`extracted.txt\` — raw text fallback when the markdown elides a section.
 - \`meta.json\` — title, authors, DOI, source PDF filename, page count.
-- \`figures/<page>.png|jpg\` — transformed images extracted per page; \`paper.md\` references them inline as \`![Figure on page N](figures/...)\`.
+- \`figures/page-<N>-img-<i>.png\` — images extracted from the PDF, one file per figure. \`paper.md\` references each one inline, at the section it belongs to, as \`![Figure on page N](figures/page-<N>-img-<i>.png)\`. The relative path in that link is the exact file on disk: open it directly to view that figure. Any figure on a page no section covered is listed under a trailing \`## Figures\` heading instead.
 - Original PDF — path is in \`meta.json.pdf_path\`; only open it when text+figures still leave a question unanswered.
 
 ## Step 1 — Classify the document
@@ -94,7 +96,7 @@ State the detected class explicitly at the top of your reply (e.g., \`Document t
 
 Stay in \`paper.md\` by default. Escalate only when you have a concrete question the markdown cannot answer:
 
-- Open a file under \`figures/\` when a figure caption is the only place a quantitative result or experimental condition is reported, when reading a panel label is required to attribute results to an experiment, or when the markdown explicitly shows the figure inline and you need to see it to describe the outcome.
+- Open a file under \`figures/\` when a figure caption is the only place a quantitative result or experimental condition is reported, when reading a panel label is required to attribute results to an experiment, or when the markdown explicitly shows the figure inline and you need to see it to describe the outcome. The inline \`![...](figures/...)\` link in \`paper.md\` already points at the exact image for that spot — read that path; you do not have to guess which file matches.
 - Open the original PDF (from \`meta.json.pdf_path\`) only when \`paper.md\` and \`extracted.txt\` both omit content you can see was present in the source (e.g., tables that were dropped, equations rendered as images without alt text, a supplementary section). Read the minimum page range needed.
 - Never paste figure pixels or PDF pages into the reply; cite them by path or page number.
 
@@ -198,6 +200,59 @@ String edit workflow:
 2. Count offsets using zero-based indexes; \`start\` is inclusive and \`end\` is exclusive.
 3. Call \`replace_range\`, for example \`{ "action": "replace_range", "id": "1", "start": 12, "end": 16, "replacement": "37 C" }\`.
 4. Read the returned \`container.value\` as the source of truth after the edit.
+`
+    })
+  }),
+  Object.freeze({
+    id: 'assay-plotly',
+    directory: 'hikari-assay-plotly',
+    content: buildSkillMarkdown({
+      id: 'assay-plotly',
+      name: 'hikari-assay-plotly',
+      description: `Use Hikari MCP ${ASSAY_TABLE_TOOL_NAME} and ${PLOTLY_GRAPH_TOOL_NAME} to turn assay data into calculated tables and inspectable Plotly.js graphs.`,
+      body: `
+# Hikari Assay Table and Plotly MCP
+
+Use this skill when the user asks to calculate, summarize, normalize, compare, graph, or re-plot assay data. It is especially useful inside the Assay right rail, where the active plate/results context is supplied automatically.
+
+Direct tools:
+
+- \`${ASSAY_TABLE_TOOL_NAME}\` — create scratch assay tables, derive calculated tables, add calculated columns, and run Python-backed table transforms.
+- \`${PLOTLY_GRAPH_TOOL_NAME}\` — create, update, read, and inspect Plotly.js graph specifications from regular Plotly figure arguments.
+
+Table workflow:
+
+1. Start from the active assay context or user-provided data and create an original table with \`${ASSAY_TABLE_TOOL_NAME}\`.
+   - In the Assay right rail, the active assay context includes TSV blocks such as \`Assay result table (TSV...)\` and sometimes \`Latest analysis table (TSV)\`.
+   - Convert that TSV into explicit \`rows\` for \`create\`; do not call \`create\` with only \`source: "active_assay"\`.
+   - Preserve the columns \`well\`, \`sample\`, \`concentration\`, and \`result\` when they are present, because downstream calculations and Plotly traces often need them.
+2. Use \`derive\` or \`add_column\` for common calculations: \`+\`, \`-\`, \`*\`, \`/\`, \`max\`, \`min\`, \`avg\`, \`sd\`, \`median\`, \`count\`, \`log10\`, \`ln\`, and \`pow\`.
+3. Use row-wise \`operands\` when each row contains replicate columns. Example:
+   \`{ "action": "derive", "source_table_id": "1", "include_source_columns": true, "columns": [{ "name": "avg_response", "op": "avg", "operands": ["rep1", "rep2", "rep3"] }, { "name": "sd_response", "op": "sd", "operands": ["rep1", "rep2", "rep3"] }] }\`
+4. Use \`group_by\` plus \`source\` for grouped summaries. Example:
+   \`{ "action": "derive", "source_table_id": "1", "group_by": ["condition", "dose"], "columns": [{ "name": "mean", "op": "avg", "source": "response" }, { "name": "sd", "op": "sd", "source": "response" }, { "name": "n", "op": "count", "source": "response" }] }\`
+5. Use the \`python\` action only when built-in calculations are not enough. The tool stages \`input_table.json\` and \`tables.json\`; your code must write \`output_table.json\` with \`{ "columns": [...], "rows": [...] }\` or a JSON array of row objects. Prefer \`python3\`; the runtime falls back to \`python\` when needed.
+
+Plotly workflow:
+
+1. Build the table first when calculations, grouping, normalization, or replicate summaries are needed.
+2. Call \`${PLOTLY_GRAPH_TOOL_NAME}\` with \`action: "create"\` and normal Plotly arguments: \`data\` (or \`traces\`), \`layout\`, \`config\`, and optional \`frames\`.
+3. Call \`inspect\` after every \`create\` or meaningful \`update\`. Treat returned \`issues\` and \`suggestions\` as the graph review loop.
+4. Use \`update\` to adjust titles, axes, trace names, colors, error bars, log axes, or hover labels before answering.
+5. In the final response, report the table id and graph id, and summarize the decisions made during inspection.
+
+Common Plotly settings:
+
+- Title: \`layout.title.text\`, with concise assay name and measurement.
+- Axes: \`layout.xaxis.title.text\`, \`layout.yaxis.title.text\`, and \`layout.yaxis.type: "log"\` only when log scaling is scientifically appropriate.
+- Scatter/line: \`{ "type": "scatter", "mode": "markers" }\`, \`"lines+markers"\` for trends, and \`marker.size\` around 8-11.
+- Bar: \`{ "type": "bar" }\`, \`layout.barmode: "group"\` for side-by-side groups, \`"stack"\` only for additive quantities.
+- Error bars: \`error_y: { "type": "data", "array": [...], "visible": true }\` for SD/SEM arrays.
+- Dose response: use numeric dose on x, response on y, clear units, and log x-axis only if the dose spacing is logarithmic.
+- Hover: set \`hovertemplate\` when well id, condition, dose, or replicate count matters.
+- Export/render config: use \`config: { "responsive": true, "displaylogo": false }\` unless the user asks otherwise.
+
+If these common settings are not enough, search the official Plotly.js documentation at the end of your reasoning loop, then return to \`${PLOTLY_GRAPH_TOOL_NAME}\` with the adjusted figure.
 `
     })
   }),

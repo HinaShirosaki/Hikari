@@ -79,7 +79,7 @@ export function createContainerDetailRenderer({
       const hasSamples = linkedSamples.length > 0;
       const sampleCount = linkedSamples.length;
       return `
-        <button type="button" class="well well-${safeText(layout.className)}${uiState.editingWellIndex === index ? ' well-selected' : ''}" data-well-index="${index}" data-section="${safeText(section)}" data-container-id="${safeText(container.id)}" title="${safeText(title)}">
+        <button type="button" class="well well-${safeText(layout.className)}${uiState.editingWellIndex === index ? ' well-selected' : ''}${uiState.cloningSampleId ? ' well-clone-target' : ''}" data-well-index="${index}" data-section="${safeText(section)}" data-container-id="${safeText(container.id)}" title="${safeText(title)}">
           <span class="well-number">${safeText(well.name)}</span>
           <span class="well-sample-dot${hasSamples ? ' has-sample' : ''}"${sampleDotFill ? ` style="--well-sample-fill:${sampleDotFill};"` : ''}></span>
           ${sampleCount > 1 ? `<span class="well-sample-count">${safeText(String(sampleCount))}</span>` : ''}
@@ -90,12 +90,14 @@ export function createContainerDetailRenderer({
 
     return `
       <div class="container-inline-detail">
-        <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
-        <p class="small-note">${safeText(layout.helperText)}</p>
-        <div class="container-detail-toolbar">
-          <button type="button" class="ghost-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}">Import CSV</button>
-          <input type="file" accept=".csv,text/csv" data-container-import-input="${safeText(container.id)}" hidden />
+        <div class="container-detail-header">
+          <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
+          <div class="container-detail-toolbar">
+            <button type="button" class="ghost-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}">Import CSV</button>
+            <input type="file" accept=".csv,text/csv" data-container-import-input="${safeText(container.id)}" hidden />
+          </div>
         </div>
+        <p class="small-note">${safeText(layout.helperText)}</p>
         <div class="well-editor-shell">
           <div class="well-grid-column">
             <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">

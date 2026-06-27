@@ -266,6 +266,8 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         assert.match(runtimeConfig, /required = true/);
         assert.match(runtimeConfig, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
         assert.match(runtimeConfig, /"container"/);
+        assert.match(runtimeConfig, /"assay_table"/);
+        assert.match(runtimeConfig, /"plotly_graph"/);
         assert.match(runtimeConfig, /default_tools_approval_mode = "approve"/);
         assert.match(runtimeConfig, /\[mcp_servers\.hikari\.tools\.protocol_generation\]/);
         assert.match(runtimeConfig, /approval_mode = "approve"/);
@@ -324,6 +326,8 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
       assert.match(configBlock, new RegExp(`command = ${JSON.stringify(process.execPath).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
       assert.match(configBlock, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
       assert.match(configBlock, /"container"/);
+      assert.match(configBlock, /"assay_table"/);
+      assert.match(configBlock, /"plotly_graph"/);
       assert.match(configBlock, /default_tools_approval_mode = "approve"/);
       assert.match(configBlock, /\[mcp_servers\.hikari\.tools\.protocol_generation\]/);
       assert.doesNotMatch(configBlock, /ELECTRON_RUN_AS_NODE/);

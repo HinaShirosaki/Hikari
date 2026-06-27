@@ -121,6 +121,32 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(result.items.some((item) => item.record_type === 'notebook'), true);
       assert.equal(result.items.some((item) => item.linked_protocol_name === 'Protein Purification'), true);
     });
+    test('record lookup runtime does not provide assay data', async () => {
+      const runtime = agentRecordLookup.createAgentRecordLookupRuntime();
+      const result = await runtime.executeRecordLookup({
+        message: 'Find viability assay records for Atlas.',
+        parserPayload: {
+          entities: {
+            project_name: 'Atlas',
+            activity_type: 'viability assay'
+          }
+        },
+        snapshot: {
+          assays: [
+            {
+              id: 'assay-1',
+              name: 'Viability Readout',
+              projectId: 'proj-1',
+              projectName: 'Atlas',
+              notes: 'This matching assay should stay out of record_lookup.'
+            }
+          ]
+        }
+      });
+
+      assert.equal(result.status, 'no_match');
+      assert.equal(result.items.some((item) => item.record_type === 'assay'), false);
+    });
     test('agent sub-app API exposes protocol, notebook, assay, gel, and paper records for agent use', () => {
       const { AGENT_SUB_APP_API_CATALOG, createAgentSubAppApi } = require(path.join(
         __dirname,
@@ -284,7 +310,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
     test('agent tool-call catalog stays in sync and prompt builders render tool metadata', () => {
       const toolNames = toolLoading.AGENT_TOOL_CATALOG.map((entry) => entry.name);
       const schemaNames = Object.keys(toolLoading.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
-      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'command-line', 'web-search', 'sub-agent', 'memory', 'container', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'paper-search', 'protocol-generation']);
+      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'notebook-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'command-line', 'web-search', 'sub-agent', 'memory', 'container', 'assay-table', 'plotly-graph', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'paper-search', 'protocol-generation']);
       assert.deepEqual(schemaNames, toolNames);
       const inventoryEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'inventory-lookup');
       const protocolEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'protocol-matching');
@@ -352,6 +378,8 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(scienceTools.tool_names.includes('record-lookup'), false);
       assert.equal(scienceTools.tool_names.includes('memory'), false);
       assert.equal(scienceTools.tool_names.includes('container'), false);
+      assert.equal(scienceTools.tool_names.includes('assay-table'), false);
+      assert.equal(scienceTools.tool_names.includes('plotly-graph'), false);
       assert.equal(scienceTools.tool_names.includes('command-line'), false);
       assert.equal(scienceTools.tool_names.includes('notebook-generation'), false);
       assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'literature-search'), true);
@@ -361,16 +389,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         '#/$defs/literature_source'
       );
 
-      const deepResearchTools = runtime.provideTools({
-        entryPoint: 'deep_research_entry',
-        intent: 'result_analysis'
-      });
-      assert.equal(deepResearchTools.tool_names.includes('python-sandbox'), true);
-      assert.equal(deepResearchTools.tool_names.includes('record-lookup'), true);
-      assert.equal(deepResearchTools.tool_names.includes('literature-search'), true);
-      assert.equal(deepResearchTools.tool_names.includes('sub-agent'), true);
-      assert.deepEqual(deepResearchTools.tool_definitions.map((tool) => tool.name), deepResearchTools.tool_names);
-
       const catalogTools = runtime.provideTools();
       assert.equal(catalogTools.tool_names.includes('inventory-lookup'), true);
       assert.equal(catalogTools.tool_names.includes('literature-search'), true);
@@ -378,6 +396,8 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(catalogTools.tool_names.includes('command-line'), true);
       assert.equal(catalogTools.tool_names.includes('purchase-recommendation'), true);
       assert.equal(catalogTools.tool_names.includes('container'), true);
+      assert.equal(catalogTools.tool_names.includes('assay-table'), true);
+      assert.equal(catalogTools.tool_names.includes('plotly-graph'), true);
       assert.equal(catalogTools.tool_names.includes('protocol-generation'), true);
     });
     test('command-line runtime executes focused commands and blocks mutating commands when write tools are disabled', async () => {
