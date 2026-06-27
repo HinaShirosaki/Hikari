@@ -126,6 +126,19 @@ test('notebook pdf export includes linked page content and omits notebook type p
         result: 'Mass needed: 584.4 mg.',
         formula: 'mass = 10 mM x 1 L x 58.44 g/mol',
         summary: 'Mass needed: 584.4 mg.'
+      }, {
+        id: 'calc-2',
+        type: 'buffer',
+        title: 'Buffer Preparer',
+        result: 'NaCl: 8766 mg (8.766 g).\nSolvent to add: 1000 mL (1.000e+6 uL).',
+        formula: 'NaCl mass = 150 mM x 1 L x 58.44 g/mol',
+        summary: 'NaCl: 8766 mg (8.766 g).',
+        table: {
+          metaRows: [['Volume', '1000 mL', 'pH', '7.4', '']],
+          headers: ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume'],
+          rows: [['NaCl', '58.44', '', '150 mM', '8766 mg (8.766 g)']],
+          footerRows: [['Solvent to add 1000 mL (1.000e+6 uL)', '', '6 M NaOH 0 uL', '', '6 M HCl 0 uL']]
+        }
       }],
       resultFiles: ['gel.png', 'assay.csv'],
       values: {
@@ -205,6 +218,11 @@ test('notebook pdf export includes linked page content and omits notebook type p
   assert.match(allText, /Tool Calculation/);
   assert.match(allText, /Molarity - Mass: Mass needed: 584\.4 mg\./);
   assert.match(allText, /Formula: mass = 10 mM x 1 L x 58\.44 g\/mol/);
+  assert.match(allText, /Buffer Preparer/);
+  assert.match(allText, /Chemical/);
+  assert.match(allText, /NaCl/);
+  assert.match(allText, /8766 mg/);
+  assert.doesNotMatch(allText, /Buffer Preparer: NaCl:/);
   assert.match(allText, /Result Table/);
   assert.doesNotMatch(allText, /Mapped Wells/);
   assert.doesNotMatch(allText, /Mapped Well Definitions/);

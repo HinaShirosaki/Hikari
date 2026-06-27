@@ -186,6 +186,8 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
         'sub-agent',
         'memory',
         'container',
+        'assay-table',
+        'plotly-graph',
         'literature-search',
         'paper-download',
         'paper-analysis',
@@ -298,6 +300,22 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
           },
           container: {
             description: 'container usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'assay-table': {
+            description: 'assay table usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'plotly-graph': {
+            description: 'plotly graph usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,
@@ -417,6 +435,22 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
           },
           container: {
             description: 'container usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'assay-table': {
+            description: 'assay table usage',
+            input_schema: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {}
+            }
+          },
+          'plotly-graph': {
+            description: 'plotly graph usage',
             input_schema: {
               type: 'object',
               additionalProperties: false,

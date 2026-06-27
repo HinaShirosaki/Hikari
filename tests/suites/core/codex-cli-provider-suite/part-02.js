@@ -135,7 +135,31 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         'tools',
         'agent-container.js'
       ));
+      const { createAgentAssayTableRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'agent-assay-table.js'
+      ));
+      const { createAgentPlotlyGraphRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'agent-plotly-graph.js'
+      ));
       const containerRuntime = createAgentContainerRuntime({
+        now: () => '2026-06-25T12:00:00.000Z'
+      });
+      const assayTableRuntime = createAgentAssayTableRuntime({
+        now: () => '2026-06-25T12:00:00.000Z'
+      });
+      const plotlyGraphRuntime = createAgentPlotlyGraphRuntime({
         now: () => '2026-06-25T12:00:00.000Z'
       });
       const calls = [];
@@ -148,6 +172,24 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
               ok: result.ok !== false,
               result,
               items: Array.isArray(result.items) ? result.items : (result.container ? [result.container] : []),
+              summary: result.summary
+            };
+          }
+          if (toolId === 'assay-table') {
+            const result = await assayTableRuntime.execute(args);
+            return {
+              ok: result.ok !== false,
+              result,
+              items: Array.isArray(result.items) ? result.items : (result.table ? [result.table] : []),
+              summary: result.summary
+            };
+          }
+          if (toolId === 'plotly-graph') {
+            const result = await plotlyGraphRuntime.execute(args);
+            return {
+              ok: result.ok !== false,
+              result,
+              items: Array.isArray(result.items) ? result.items : (result.graph ? [result.graph] : []),
               summary: result.summary
             };
           }
@@ -344,6 +386,8 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(mcpToolNames.includes('sub_agent'), false);
       assert.equal(mcpToolNames.includes('memory'), true);
       assert.equal(mcpToolNames.includes('container'), true);
+      assert.equal(mcpToolNames.includes('assay_table'), true);
+      assert.equal(mcpToolNames.includes('plotly_graph'), true);
       assert.equal(mcpToolNames.includes('ask_user'), true);
       assert.equal(mcpToolNames.includes('unknown_direct_tool'), false);
       assert.equal(mcpToolNames.includes('tool_info'), false);
@@ -354,6 +398,8 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       const protocolGenerationDefinition = mcpTools.find((tool) => tool.name === 'protocol_generation');
       const notebookDraftDefinition = mcpTools.find((tool) => tool.name === 'notebook_draft');
       const containerDefinition = mcpTools.find((tool) => tool.name === 'container');
+      const assayTableDefinition = mcpTools.find((tool) => tool.name === 'assay_table');
+      const plotlyGraphDefinition = mcpTools.find((tool) => tool.name === 'plotly_graph');
       const literatureSearchDefinition = mcpTools.find((tool) => tool.name === 'literature_search');
       const paperDownloadDefinition = mcpTools.find((tool) => tool.name === 'paper_download');
       assert.equal(askUserDefinition.annotations.readOnlyHint, true);
@@ -365,6 +411,10 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(notebookDraftDefinition.annotations.idempotentHint, false);
       assert.equal(containerDefinition.annotations.readOnlyHint, false);
       assert.equal(containerDefinition.inputSchema.properties.action.enum.includes('replace_range'), true);
+      assert.equal(assayTableDefinition.annotations.readOnlyHint, false);
+      assert.equal(assayTableDefinition.inputSchema.properties.action.enum.includes('python'), true);
+      assert.equal(plotlyGraphDefinition.annotations.readOnlyHint, false);
+      assert.equal(plotlyGraphDefinition.inputSchema.properties.action.enum.includes('inspect'), true);
       assert.equal(literatureSearchDefinition.annotations.openWorldHint, true);
       assert.equal(literatureSearchDefinition.inputSchema.type, 'object');
       assert.equal(literatureSearchDefinition.inputSchema.properties.use_codex_paper_context.type, 'boolean');
@@ -535,6 +585,64 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         end: 10,
         inserted_length: 5
       });
+
+      const assayTableResult = await gateway.callGatewayTool('assay_table', {
+        action: 'create',
+        name: 'replicate readings',
+        rows: [
+          { condition: 'control', rep1: 1, rep2: 3 },
+          { condition: 'treated', rep1: 4, rep2: 6 }
+        ]
+      }, {
+        requestId: 'req-assay-table'
+      });
+      assert.equal(assayTableResult.ok, true);
+      assert.equal(assayTableResult.status, 'created');
+      assert.equal(assayTableResult.table.id, '1');
+      assert.equal(assayTableResult.table.row_count, 2);
+      assert.equal(calls[calls.length - 1].toolId, 'assay-table');
+
+      const assayDerivedResult = await gateway.callGatewayTool('assay_table', {
+        action: 'derive',
+        source_table_id: '1',
+        include_source_columns: true,
+        columns: [{ name: 'mean', op: 'avg', operands: ['rep1', 'rep2'] }]
+      }, {
+        requestId: 'req-assay-table-derived'
+      });
+      assert.equal(assayDerivedResult.ok, true);
+      assert.equal(assayDerivedResult.status, 'derived');
+      assert.equal(assayDerivedResult.table.rows[0].mean, 2);
+      assert.equal(calls[calls.length - 1].toolId, 'assay-table');
+
+      const plotlyCreateResult = await gateway.callGatewayTool('plotly_graph', {
+        action: 'create',
+        name: 'assay bar',
+        data: [{ type: 'bar', x: ['control', 'treated'], y: [2, 5] }],
+        layout: {
+          title: { text: 'Assay response' },
+          xaxis: { title: { text: 'Condition' } },
+          yaxis: { title: { text: 'Response' } }
+        }
+      }, {
+        requestId: 'req-plotly-create'
+      });
+      assert.equal(plotlyCreateResult.ok, true);
+      assert.equal(plotlyCreateResult.status, 'created');
+      assert.equal(plotlyCreateResult.graph.id, '1');
+      assert.equal(plotlyCreateResult.graph.inspection.trace_count, 1);
+      assert.equal(calls[calls.length - 1].toolId, 'plotly-graph');
+
+      const plotlyInspectResult = await gateway.callGatewayTool('plotly_graph', {
+        action: 'inspect',
+        id: '1'
+      }, {
+        requestId: 'req-plotly-inspect'
+      });
+      assert.equal(plotlyInspectResult.ok, true);
+      assert.equal(plotlyInspectResult.status, 'inspected');
+      assert.equal(plotlyInspectResult.inspection.issues.length, 0);
+      assert.equal(calls[calls.length - 1].toolId, 'plotly-graph');
 
       const invalidResult = await gateway.callGatewayTool('record_lookup', {
         query: 'PEI',

@@ -2,6 +2,7 @@ import { asArray, trimText } from './shared.js';
 
 const DEFAULT_SCOPE_KEY = 'papers:library';
 const DEFAULT_NOTEBOOK_SCOPE_KEY = 'notebook:workspace';
+const DEFAULT_ASSAY_SCOPE_KEY = 'assay:workspace';
 
 function buildPaperAgentSessionPrompt(context = {}) {
   const paperId = trimText(context.paperId, 220);
@@ -57,6 +58,34 @@ function buildNotebookAgentSessionPrompt(context = {}) {
   return lines.join('\n');
 }
 
+function buildAssayAgentSessionPrompt(context = {}) {
+  const assayId = trimText(context.assayId, 220);
+  const assayName = trimText(context.assayName, 320);
+  const projectName = trimText(context.projectName, 220);
+  const assayMode = trimText(context.assayMode, 80);
+  if (!assayId && !assayName && !projectName && !assayMode) {
+    return '';
+  }
+  const lines = [
+    'You are in an Assay right-rail chat session. Treat the active assay plate, result table, and analysis output as the default subject when the user says "this assay", "this plate", "these results", or "this graph".',
+    'Use the hidden assay context supplied with each user question as the current assay state. It may include unsaved plate mappings, pasted result values, analysis settings, latest summaries, and a small well preview.',
+    'For derived tables and custom graphs, prefer the Hikari assay table and Plotly graph MCP tools when available.'
+  ];
+  if (assayName) {
+    lines.push(`Active assay name: ${assayName}`);
+  }
+  if (assayId) {
+    lines.push(`Active assay id: ${assayId}`);
+  }
+  if (projectName) {
+    lines.push(`Project: ${projectName}`);
+  }
+  if (assayMode) {
+    lines.push(`Assay mode: ${assayMode}`);
+  }
+  return lines.join('\n');
+}
+
 function normalizeAgentChatState(source = {}, defaults = {}) {
   const value = source && typeof source === 'object' ? source : {};
   const hasProjectId = Object.prototype.hasOwnProperty.call(value, 'projectId');
@@ -86,10 +115,25 @@ function normalizeNotebookScopeKey(context = {}) {
   return DEFAULT_NOTEBOOK_SCOPE_KEY;
 }
 
+function normalizeAssayScopeKey(context = {}) {
+  const assayId = trimText(context.assayId, 220);
+  if (assayId) {
+    return `assay:${assayId}`;
+  }
+  const projectId = trimText(context.projectId, 120);
+  if (projectId) {
+    return `assay:draft:${projectId}`;
+  }
+  return DEFAULT_ASSAY_SCOPE_KEY;
+}
+
 function normalizeScopeKey(context = {}) {
   const scopeType = trimText(context.scopeType, 80);
   if (scopeType === 'notebook') {
     return normalizeNotebookScopeKey(context);
+  }
+  if (scopeType === 'assay') {
+    return normalizeAssayScopeKey(context);
   }
   return normalizePaperScopeKey(context.paperId);
 }
@@ -99,7 +143,7 @@ function normalizeStoredScopeKey(value) {
   if (!raw || raw === DEFAULT_SCOPE_KEY) {
     return DEFAULT_SCOPE_KEY;
   }
-  if (raw === DEFAULT_NOTEBOOK_SCOPE_KEY || raw.startsWith('paper:') || raw.startsWith('notebook:')) {
+  if (raw === DEFAULT_NOTEBOOK_SCOPE_KEY || raw === DEFAULT_ASSAY_SCOPE_KEY || raw.startsWith('paper:') || raw.startsWith('notebook:') || raw.startsWith('assay:')) {
     return raw;
   }
   return normalizePaperScopeKey(raw);
@@ -141,7 +185,9 @@ function normalizeHiddenContext(context = {}) {
       : 0,
     notebookEntryId: trimText(source.notebookEntryId, 220),
     projectName: trimText(source.projectName, 220),
-    protocolName: trimText(source.protocolName, 220)
+    protocolName: trimText(source.protocolName, 220),
+    assayId: trimText(source.assayId, 220),
+    assayName: trimText(source.assayName, 320)
   };
 }
 
@@ -196,11 +242,44 @@ function normalizePaperAgentContext(context = {}) {
   };
 }
 
+function normalizeAssayAgentContext(context = {}) {
+  const assayId = trimText(context.assayId, 220);
+  const assayName = trimText(context.assayName, 320);
+  const projectName = trimText(context.projectName, 220);
+  const assayMode = trimText(context.assayMode, 80);
+  const hiddenContexts = asArray(context.hiddenContexts)
+    .map(normalizeHiddenContext)
+    .filter(Boolean);
+  const singleHiddenContext = normalizeHiddenContext(context.hiddenContext);
+  if (singleHiddenContext) {
+    hiddenContexts.unshift(singleHiddenContext);
+  }
+  return {
+    scopeType: 'assay',
+    assayId,
+    assayName,
+    assayMode,
+    projectId: trimText(context.projectId, 120),
+    projectName,
+    hiddenContexts: hiddenContexts.slice(0, 3),
+    sessionPrompt: buildAssayAgentSessionPrompt({
+      assayId,
+      assayName,
+      projectName,
+      assayMode
+    })
+  };
+}
+
 function normalizeScopeContext(context = {}) {
   const scopeType = trimText(context.scopeType, 80);
-  return scopeType === 'notebook'
-    ? normalizeNotebookAgentContext(context)
-    : normalizePaperAgentContext(context);
+  if (scopeType === 'notebook') {
+    return normalizeNotebookAgentContext(context);
+  }
+  if (scopeType === 'assay') {
+    return normalizeAssayAgentContext(context);
+  }
+  return normalizePaperAgentContext(context);
 }
 
 export function createScopedAgentChatState(rootState, options = {}) {
@@ -249,4 +328,4 @@ export function createScopedAgentChatState(rootState, options = {}) {
   });
 }
 
-export { buildNotebookAgentSessionPrompt, buildPaperAgentSessionPrompt };
+export { buildAssayAgentSessionPrompt, buildNotebookAgentSessionPrompt, buildPaperAgentSessionPrompt };

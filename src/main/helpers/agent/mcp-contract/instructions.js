@@ -20,6 +20,8 @@ const HIKARI_MCP_TOOL_NAMES = Object.freeze([
   'purchase_recommendation',
   'memory',
   'container',
+  'assay_table',
+  'plotly_graph',
   'ask_user'
 ]);
 
@@ -52,6 +54,8 @@ function buildHikariAgentMcpInstructionBodyLines() {
     `- \`${toolName('purchase_recommendation')}\`: search and rank purchasable products.`,
     `- \`${toolName('memory')}\`: recall, remember, forget, and list sparse long-term memory records.`,
     `- \`${toolName('container')}\`: store, name, read, copy, update, and position-edit temporary string or number containers with short runtime IDs.`,
+    `- \`${toolName('assay_table')}\`: create scratch assay tables, derive calculated tables, add calculated columns, and run Python-backed table transforms.`,
+    `- \`${toolName('plotly_graph')}\`: create, update, read, and inspect Plotly.js graph specifications from Plotly figure arguments.`,
     `- \`${toolName('ask_user')}\`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.`,
     '',
     'Tool-use rules:',
@@ -63,6 +67,8 @@ function buildHikariAgentMcpInstructionBodyLines() {
     `- Use \`${toolName('paper_intake_search_summaries')}\` or \`${toolName('paper_intake_search_experiments')}\` when already-ingested papers are enough and a full paper read is unnecessary.`,
     `- Use \`${toolName('paper_intake_list_project_summaries')}\` for a project-scoped roll-up of ingested paper summaries.`,
     `- Use \`${toolName('container')}\` for temporary exact string or number storage, especially when a value should be named, reused, copied, or edited by string position without turning it into long-term memory.`,
+    `- Use \`${toolName('assay_table')}\` when assay data should be transformed into a reusable table with arithmetic, summaries, grouped statistics, or Python-backed calculations.`,
+    `- Use \`${toolName('plotly_graph')}\` when the user asks for a graph, chart, or custom visualization; call \`inspect\` after create/update and adjust the Plotly figure before answering when inspection reports issues.`,
     `- Use direct \`${toolName('protocol_generation')}\` only after complete protocol JSON already exists.`,
     `- When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first, then call \`${toolName('protocol_generation')}\` with \`save: true\`, then summarize the review-ready protocol.`,
     `- When the user asks to save or add a generated protocol, call \`${toolName('protocol_generation')}\` once with \`save: true\`; Hikari will ask the user to approve or reject the generated protocol.`,

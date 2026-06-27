@@ -75,7 +75,9 @@ function createAgentControllerCore({
           : 0,
         notebookEntryId: cleanText(source.notebookEntryId, 220),
         projectName: cleanText(source.projectName, 220),
-        protocolName: cleanText(source.protocolName, 220)
+        protocolName: cleanText(source.protocolName, 220),
+        assayId: cleanText(source.assayId, 220),
+        assayName: cleanText(source.assayName, 320)
       };
     }).filter(Boolean).slice(0, 3);
   }
@@ -83,15 +85,21 @@ function createAgentControllerCore({
   function buildHiddenContextPrompt(hiddenContexts = []) {
     const rows = normalizeHiddenContexts(hiddenContexts).map((context, index) => {
       const isNotebookContext = context.kind === 'notebook-page' || Boolean(context.notebookEntryId);
+      const isAssayContext = context.kind === 'assay-page' || context.kind === 'assay' || Boolean(context.assayId);
+      const contentLabel = isNotebookContext
+        ? 'Notebook page content:'
+        : (isAssayContext ? 'Assay context:' : 'Selected text:');
       const sourceRows = [
         `Hidden context ${index + 1}: ${context.label}`,
         context.projectName ? `Project: ${context.projectName}` : '',
         context.protocolName ? `Protocol: ${context.protocolName}` : '',
         context.notebookEntryId ? `Notebook entry ID: ${context.notebookEntryId}` : '',
+        context.assayName ? `Assay: ${context.assayName}` : '',
+        context.assayId ? `Assay ID: ${context.assayId}` : '',
         context.paperTitle ? `Paper: ${context.paperTitle}` : '',
         context.pageNumber ? `Page: ${context.pageNumber}` : '',
         context.paperId ? `Paper ID: ${context.paperId}` : '',
-        isNotebookContext ? 'Notebook page content:' : 'Selected text:',
+        contentLabel,
         context.text
       ].filter(Boolean);
       return sourceRows.join('\n');

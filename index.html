@@ -582,18 +582,9 @@
       <div id="biology-notebook-layout" class="biology-notebook-layout left-rail-template">
         <aside id="biology-notebook-rail" class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="left-rail-template__pinned">
-            <div class="biology-notebook-rail-head">
-              <h2>Biology Notebook</h2>
-              <p class="small-note">Projects and notebook pages</p>
-            </div>
-
             <select id="biology-notebook-project-select" hidden aria-hidden="true" tabindex="-1">
               <option value="">Select project</option>
             </select>
-
-            <div class="biology-notebook-page-list-head">
-              <h3>Notebook Pages</h3>
-            </div>
           </div>
           <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
           <div id="biology-notebook-project-context-menu" class="biology-notebook-context-menu" hidden>
@@ -3898,15 +3889,15 @@
             <div class="agent-composer-shell universal-agent-chat-rail__composer">
               <div class="stack-form agent-composer-card">
                 <input id="agent-rail-attachment-input" type="file" multiple hidden />
-                <div id="agent-rail-quick-prompts" class="agent-rail-quick-prompts" aria-label="Common paper prompts">
-                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Generate a step-by-step experimental protocol from this paper. Include materials, timing, controls, and key caveats.">Generate protocol</button>
-                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Summarize the main finding, evidence, and limitations of this paper.">Summarize</button>
-                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Extract the methods that are directly reusable for my experiment.">Extract methods</button>
+                <div id="agent-rail-quick-prompts" class="agent-rail-quick-prompts" aria-label="Common chat prompts">
+                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Summarize the current workspace context and call out useful next actions.">Summarize context</button>
+                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Suggest practical next steps from the current workspace context.">Plan next step</button>
+                  <button type="button" class="ghost-btn agent-rail-quick-prompt" data-agent-suggest-prompt="Flag missing details or follow-up questions from the current workspace context.">Find gaps</button>
                 </div>
                 <label class="agent-composer-label">
                   <span>Message</span>
                   <span class="agent-composer-input-wrap">
-                    <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this paper."></textarea>
+                    <textarea id="agent-rail-message-input" rows="2" placeholder="Ask Hikari about this workspace."></textarea>
                     <button
                       type="button"
                       id="agent-rail-paper-screenshot-btn"

@@ -221,7 +221,46 @@ function buildExtractedTextFile(extraction = {}) {
   return String(extraction.text || '').trim();
 }
 
-function buildSectionMarkdown(sections = [], maxSectionChars = DEFAULT_MAX_SECTION_CHARS) {
+function normalizeFigureEntry(figure, figuresRelativeDir = 'figures') {
+  const source = ensureObject(figure);
+  const fileName = cleanText(source.file_name || source.fileName, 320);
+  if (!fileName) {
+    return null;
+  }
+  const relative = cleanText(source.relative_path || source.relativePath, 1200)
+    || `${figuresRelativeDir}/${fileName}`;
+  const pageNumber = Number(source.page_number || source.pageNumber) || 0;
+  const width = Number(source.width) || 0;
+  const height = Number(source.height) || 0;
+  return { fileName, relative, pageNumber, width, height };
+}
+
+function figureMarkdownLine(entry) {
+  const dimensions = entry.width && entry.height ? ` (${entry.width}×${entry.height} px)` : '';
+  const label = entry.pageNumber ? `Figure on page ${entry.pageNumber}${dimensions}` : `Figure${dimensions}`;
+  return `![${label}](${entry.relative})`;
+}
+
+// Claim each unused figure whose page falls in [startPage, endPage], so it is
+// rendered inline once next to the section/page text that references it.
+function takeFiguresForRange(figureState, startPage, endPage) {
+  if (!figureState || !startPage) {
+    return '';
+  }
+  const matched = [];
+  figureState.entries.forEach((entry) => {
+    if (figureState.used.has(entry) || !entry.pageNumber) {
+      return;
+    }
+    if (entry.pageNumber >= startPage && entry.pageNumber <= (endPage || startPage)) {
+      figureState.used.add(entry);
+      matched.push(entry);
+    }
+  });
+  return matched.map(figureMarkdownLine).join('\n\n');
+}
+
+function buildSectionMarkdown(sections = [], maxSectionChars = DEFAULT_MAX_SECTION_CHARS, figureState = null) {
   const rows = asArray(sections)
     .map((section) => {
       const text = limitBlock(section?.text, maxSectionChars);
@@ -230,17 +269,21 @@ function buildSectionMarkdown(sections = [], maxSectionChars = DEFAULT_MAX_SECTI
       }
       const label = normalizeMarkdownHeading(section?.label || section?.normalized_label || 'Section', 'Section');
       const body = formatMarkdownBodyText(text);
+      const startPage = Number(section?.start_page) || Number(section?.page_number) || 0;
+      const endPage = Number(section?.end_page) || startPage;
+      const figures = takeFiguresForRange(figureState, startPage, endPage);
       return [
         `### ${label} (${formatPageRange(section)})`,
         '',
-        body
+        body,
+        ...(figures ? ['', figures] : [])
       ].join('\n');
     })
     .filter(Boolean);
   return rows.join('\n\n');
 }
 
-function buildPageMarkdown(pages = [], maxPageChars = DEFAULT_MAX_PAGE_CHARS) {
+function buildPageMarkdown(pages = [], maxPageChars = DEFAULT_MAX_PAGE_CHARS, figureState = null) {
   return asArray(pages)
     .map((page) => {
       const pageNumber = Number(page?.page_number) || 0;
@@ -249,10 +292,12 @@ function buildPageMarkdown(pages = [], maxPageChars = DEFAULT_MAX_PAGE_CHARS) {
         return '';
       }
       const body = formatMarkdownBodyText(text);
+      const figures = takeFiguresForRange(figureState, pageNumber, pageNumber);
       return [
         `### Page ${pageNumber}`,
         '',
-        body
+        body,
+        ...(figures ? ['', figures] : [])
       ].join('\n');
     })
     .filter(Boolean)
@@ -282,22 +327,9 @@ function buildMetadataLines(metadata = {}, extraction = {}) {
 
 function buildFiguresMarkdown(figures = [], { figuresRelativeDir = 'figures' } = {}) {
   const rows = asArray(figures)
-    .map((figure) => {
-      const source = ensureObject(figure);
-      const fileName = cleanText(source.file_name || source.fileName, 320);
-      if (!fileName) {
-        return '';
-      }
-      const relative = cleanText(source.relative_path || source.relativePath, 1200)
-        || `${figuresRelativeDir}/${fileName}`;
-      const pageNumber = Number(source.page_number || source.pageNumber) || 0;
-      const width = Number(source.width) || 0;
-      const height = Number(source.height) || 0;
-      const dimensions = width && height ? ` (${width}×${height} px)` : '';
-      const label = pageNumber ? `Figure from page ${pageNumber}${dimensions}` : `Figure${dimensions}`;
-      return `- ![${label}](${relative})`;
-    })
-    .filter(Boolean);
+    .map((figure) => normalizeFigureEntry(figure, figuresRelativeDir))
+    .filter(Boolean)
+    .map((entry) => `- ${figureMarkdownLine(entry)}`);
   return rows.join('\n');
 }
 
@@ -322,21 +354,28 @@ function buildPdfMarkdownFromExtraction({
   }, normalizedExtraction, extractedText);
   const title = normalizeMarkdownHeading(normalizedMetadata.title);
   const authors = normalizedMetadata.authors.length ? normalizedMetadata.authors.join(', ') : '-';
-  const sectionMarkdown = buildSectionMarkdown(normalizedExtraction.sections, maxSectionChars);
+  const resolvedFigures = asArray(figures).length
+    ? asArray(figures)
+    : asArray(normalizedExtraction.figures);
+  const figureState = {
+    entries: resolvedFigures.map((figure) => normalizeFigureEntry(figure, figuresRelativeDir)).filter(Boolean),
+    used: new Set()
+  };
+  const sectionMarkdown = buildSectionMarkdown(normalizedExtraction.sections, maxSectionChars, figureState);
   const resolvedIncludePages = typeof includePages === 'boolean'
     ? includePages
     : !sectionMarkdown;
-  const pageMarkdown = resolvedIncludePages ? buildPageMarkdown(normalizedExtraction.pages, maxPageChars) : '';
+  const pageMarkdown = resolvedIncludePages ? buildPageMarkdown(normalizedExtraction.pages, maxPageChars, figureState) : '';
   const rawText = !sectionMarkdown && !pageMarkdown
     ? formatMarkdownBodyText(limitBlock(extractedText || normalizedExtraction.text, maxSectionChars))
     : '';
   const transformedLine = cleanText(transformedAt, 120)
     ? [`- Transformed at: ${cleanText(transformedAt, 120)}`]
     : [];
-  const resolvedFigures = asArray(figures).length
-    ? asArray(figures)
-    : asArray(normalizedExtraction.figures);
-  const figuresMarkdown = buildFiguresMarkdown(resolvedFigures, { figuresRelativeDir });
+  // Figures whose page never matched a rendered section/page still get listed,
+  // so nothing is silently dropped.
+  const leftoverFigures = figureState.entries.filter((entry) => !figureState.used.has(entry));
+  const figuresMarkdown = leftoverFigures.map((entry) => `- ${figureMarkdownLine(entry)}`).join('\n');
   const parts = [
     `# ${title}`,
     '',

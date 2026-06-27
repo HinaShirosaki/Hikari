@@ -31,6 +31,11 @@ function createAgentRailScopeContextGetter(state, modules, rootDocument, views =
         scopeType: 'notebook'
       };
     }
+    if (activeViewId === views.ASSAY) {
+      return modules?.assay?.getAgentChatContext?.() || {
+        scopeType: 'assay'
+      };
+    }
     return {
       ...getPaperContext(),
       scopeType: 'paper'

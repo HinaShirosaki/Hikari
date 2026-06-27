@@ -44,6 +44,14 @@
     "description": "Store, name, read, update, and position-edit temporary string or number containers with short runtime IDs."
   },
   {
+    "name": "assay-table",
+    "description": "Create scratch assay tables, derive calculated tables with +, -, *, /, max, min, avg, sd, and run Python-backed table transforms."
+  },
+  {
+    "name": "plotly-graph",
+    "description": "Create, update, read, and inspect scratch Plotly.js graph specifications using Plotly figure arguments."
+  },
+  {
     "name": "literature-search",
     "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults."
   },

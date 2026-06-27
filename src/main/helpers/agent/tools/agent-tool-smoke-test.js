@@ -14,6 +14,8 @@ const { runPythonSandbox } = require('./agent-python-sandbox.js');
 const { createAgentCommandLineRuntime } = require('./agent-command-line.js');
 const { createAgentSubAgentRuntime } = require('./agent-sub-agent.js');
 const { createAgentContainerRuntime } = require('./agent-container.js');
+const { createAgentAssayTableRuntime } = require('./agent-assay-table.js');
+const { createAgentPlotlyGraphRuntime } = require('./agent-plotly-graph.js');
 const { createAgentMemoryRuntime } = require('../context/agent-memory.js');
 const { createWebSearchRuntime } = require('./agent-web-search.js');
 const { createLiteratureSearchRuntime } = require('./agent-literature-search.js');
@@ -790,6 +792,112 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     };
   }
 
+  async function smokeAssayTable() {
+    const runtime = createAgentAssayTableRuntime({
+      now: (() => {
+        let index = 0;
+        const values = [
+          '2026-03-22T12:00:00.000Z',
+          '2026-03-22T12:00:01.000Z'
+        ];
+        return () => values[Math.min(index++, values.length - 1)];
+      })()
+    });
+    const created = await runtime.execute({
+      action: 'create',
+      name: 'raw assay values',
+      columns: ['condition', 'rep1', 'rep2', 'rep3'],
+      rows: [
+        ['control', 1.1, 1.2, 1.3],
+        ['treated', 2.1, 2.4, 2.2]
+      ],
+      source: 'direct_literal:smoke'
+    });
+    const derived = await runtime.execute({
+      action: 'derive',
+      source_table_id: created?.table?.id,
+      include_source_columns: true,
+      columns: [
+        { name: 'avg_response', op: 'avg', operands: ['rep1', 'rep2', 'rep3'] },
+        { name: 'sd_response', op: 'sd', operands: ['rep1', 'rep2', 'rep3'] }
+      ]
+    });
+    const ok = created?.ok !== false
+      && derived?.ok !== false
+      && derived?.table?.columns?.includes('avg_response')
+      && derived?.table?.columns?.includes('sd_response');
+    return {
+      ...derived,
+      ok,
+      status: ok ? 'completed' : 'error',
+      items: derived?.table ? [derived.table] : [],
+      summary: ok
+        ? `Assay table smoke test derived ${derived.table.id}.`
+        : 'Assay table smoke test failed.',
+      error: ok ? '' : uniqueStrings([
+        created?.error,
+        derived?.error
+      ], 4).join(' | ')
+    };
+  }
+
+  async function smokePlotlyGraph() {
+    const runtime = createAgentPlotlyGraphRuntime({
+      now: (() => {
+        let index = 0;
+        const values = [
+          '2026-03-22T12:00:00.000Z',
+          '2026-03-22T12:00:01.000Z'
+        ];
+        return () => values[Math.min(index++, values.length - 1)];
+      })()
+    });
+    const created = await runtime.execute({
+      action: 'create',
+      name: 'assay response',
+      data: [{
+        type: 'bar',
+        x: ['control', 'treated'],
+        y: [1.2, 2.23],
+        error_y: {
+          type: 'data',
+          array: [0.1, 0.15],
+          visible: true
+        }
+      }],
+      layout: {
+        title: { text: 'Assay response' },
+        xaxis: { title: { text: 'Condition' } },
+        yaxis: { title: { text: 'Response' } }
+      },
+      config: {
+        responsive: true,
+        displaylogo: false
+      }
+    });
+    const inspected = await runtime.execute({
+      action: 'inspect',
+      id: created?.graph?.id
+    });
+    const ok = created?.ok !== false
+      && inspected?.ok !== false
+      && inspected?.inspection?.trace_count === 1
+      && asArray(inspected?.inspection?.issues).length === 0;
+    return {
+      ...inspected,
+      ok,
+      status: ok ? 'completed' : 'error',
+      items: inspected?.graph ? [inspected.graph] : [],
+      summary: ok
+        ? `Plotly graph smoke test inspected ${inspected.id}.`
+        : 'Plotly graph smoke test failed.',
+      error: ok ? '' : uniqueStrings([
+        created?.error,
+        inspected?.error
+      ], 4).join(' | ')
+    };
+  }
+
   async function smokeLiteratureSearch(options = {}) {
     const runtime = createLiteratureSearchRuntime({
       searchPubMedRecords: async () => ([
@@ -1138,6 +1246,8 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     'sub-agent': async (options = {}) => smokeSubAgent(options),
     memory: async (options = {}) => smokeMemory(options),
     container: async (options = {}) => smokeContainer(options),
+    'assay-table': async (options = {}) => smokeAssayTable(options),
+    'plotly-graph': async (options = {}) => smokePlotlyGraph(options),
     'literature-search': async (options = {}) => smokeLiteratureSearch(options),
     'purchase-recommendation': async (options = {}) => smokePurchaseRecommendation(options),
     'paper-download': async (options = {}) => smokePaperDownload(options),

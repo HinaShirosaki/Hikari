@@ -34,6 +34,9 @@ Direct Hikari MCP tools:
 - `mcp__hikari__paper_intake_list_project_summaries`: list paper-intake summaries for papers attached to a project.
 - `mcp__hikari__purchase_recommendation`: search and rank purchasable products.
 - `mcp__hikari__memory`: recall, remember, forget, and list sparse long-term memory records.
+- `mcp__hikari__container`: store, name, read, copy, update, and position-edit temporary string or number containers with short runtime IDs.
+- `mcp__hikari__assay_table`: create scratch assay tables, derive calculated tables, add calculated columns, and run Python-backed table transforms.
+- `mcp__hikari__plotly_graph`: create, update, read, and inspect Plotly.js graph specifications from Plotly figure arguments.
 - `mcp__hikari__ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.
 
 Tool-use rules:
@@ -44,6 +47,9 @@ Tool-use rules:
 - Use `mcp__hikari__paper_analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.
 - Use `mcp__hikari__paper_intake_search_summaries` or `mcp__hikari__paper_intake_search_experiments` when already-ingested papers are enough and a full paper read is unnecessary.
 - Use `mcp__hikari__paper_intake_list_project_summaries` for a project-scoped roll-up of ingested paper summaries.
+- Use `mcp__hikari__container` for temporary exact string or number storage, especially when a value should be named, reused, copied, or edited by string position without turning it into long-term memory.
+- Use `mcp__hikari__assay_table` when assay data should be transformed into a reusable table with arithmetic, summaries, grouped statistics, or Python-backed calculations.
+- Use `mcp__hikari__plotly_graph` when the user asks for a graph, chart, or custom visualization; call `inspect` after create/update and adjust the Plotly figure before answering when inspection reports issues.
 - Use direct `mcp__hikari__protocol_generation` only after complete protocol JSON already exists.
 - When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first, then call `mcp__hikari__protocol_generation` with `save: true`, then summarize the review-ready protocol.
 - When the user asks to save or add a generated protocol, call `mcp__hikari__protocol_generation` once with `save: true`; Hikari will ask the user to approve or reject the generated protocol.

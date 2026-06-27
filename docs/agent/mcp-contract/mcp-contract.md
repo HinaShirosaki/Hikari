@@ -30,6 +30,9 @@ enabled_tools = [
   "paper_intake_list_project_summaries",
   "purchase_recommendation",
   "memory",
+  "container",
+  "assay_table",
+  "plotly_graph",
   "ask_user"
 ]
 default_tools_approval_mode = "approve"
@@ -133,6 +136,9 @@ The Hikari MCP surface is direct-tool-only. Agent providers call the named tools
 - `paper_intake_list_project_summaries`
 - `purchase_recommendation`
 - `memory`
+- `container`
+- `assay_table`
+- `plotly_graph`
 - `ask_user`
 
 Codex exposes the same server tools to the model with the server namespace prefix. Codex-facing instructions, skills, and model-facing examples should use:
@@ -153,6 +159,9 @@ Codex exposes the same server tools to the model with the server namespace prefi
 - `mcp__hikari__paper_intake_list_project_summaries`
 - `mcp__hikari__purchase_recommendation`
 - `mcp__hikari__memory`
+- `mcp__hikari__container`
+- `mcp__hikari__assay_table`
+- `mcp__hikari__plotly_graph`
 - `mcp__hikari__ask_user`
 
 Direct wrappers that delegate to app executors use the app tool schema and return this envelope:

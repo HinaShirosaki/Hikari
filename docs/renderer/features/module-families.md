@@ -36,7 +36,7 @@ Modules do **not** own their own persistence; `persist()` rebuilds the object gr
 
 Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), and a `bootOrder`. `module-runtime.js` initializes modules in `bootOrder`, which roughly runs `protocol` (10) → `projectManagement` (20) → `workflowManagement` (30) → `labCommonInventory` (40) → `biologyNotebook` (50) → `sampleRegistry` (60) → `assay` (70) → `gel` (80) → `settings` (90) → `homeDashboard` (100) → `papers` (110) → `agentChat` (120). Boot order is independent of the family grouping above.
 
-`agentChatRail` is special: it has no view of its own and mounts a scoped agent chat as a side rail in Papers and Biology Notebook.
+`agentChatRail` is special: it has no view of its own and mounts a scoped agent chat as a side rail in Papers, Biology Notebook, and Assay.
 
 ## A few wrinkles worth knowing
 

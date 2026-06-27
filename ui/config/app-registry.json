@@ -92,7 +92,8 @@
       "icon": "assay.svg",
       "placement": "dock",
       "aliases": ["assays", "plate"],
-      "searchInputId": ""
+      "searchInputId": "",
+      "agentChatRail": true
     },
     {
       "id": "gel",

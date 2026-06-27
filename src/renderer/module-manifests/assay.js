@@ -10,13 +10,17 @@ export const assayManifest = {
     persist,
     createId,
     safeText,
-    rendererServices
+    rendererServices,
+    modules
   }) => ({
     state,
     persist,
     createId,
     safeText,
-    onAssaysChanged: rendererServices.analysis.handleAssaysChanged
+    onAssaysChanged: rendererServices.analysis.handleAssaysChanged,
+    onActiveAssayChanged: () => {
+      modules?.agentChatRail?.render?.();
+    }
   }),
   render: ({ modules }) => modules.assay.render()
 };

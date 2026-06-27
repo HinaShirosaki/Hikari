@@ -225,6 +225,8 @@ function registerAgentToolExecutors(deps = {}) {
   const notebookGenerationRuntime = deps.notebookGenerationRuntime || {};
   const subAgentRuntime = deps.subAgentRuntime || {};
   const containerRuntime = deps.containerRuntime || {};
+  const assayTableRuntime = deps.assayTableRuntime || {};
+  const plotlyGraphRuntime = deps.plotlyGraphRuntime || {};
   const memoryRuntime = deps.memoryRuntime || {};
   const paperDownloadRuntime = deps.paperDownloadRuntime || {};
   const paperAnalysisRuntime = deps.paperAnalysisRuntime || {};
@@ -553,6 +555,46 @@ function registerAgentToolExecutors(deps = {}) {
     };
   });
 
+  genericAgentToolRuntime.registerToolExecutor('assay-table', async ({ args }) => {
+    if (!assayTableRuntime || typeof assayTableRuntime.execute !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Assay table runtime is not configured.',
+        summary: 'Assay table runtime is not configured.'
+      };
+    }
+    const result = await assayTableRuntime.execute(args);
+    return {
+      ...result,
+      items: Array.isArray(result?.items)
+        ? result.items
+        : (result?.table ? [result.table] : []),
+      summary: cleanText(result?.summary, 320)
+        || buildExecutorSummary(cleanText, 'assay-table', result?.items, 'assay-table returned no items.')
+    };
+  });
+
+  genericAgentToolRuntime.registerToolExecutor('plotly-graph', async ({ args }) => {
+    if (!plotlyGraphRuntime || typeof plotlyGraphRuntime.execute !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Plotly graph runtime is not configured.',
+        summary: 'Plotly graph runtime is not configured.'
+      };
+    }
+    const result = await plotlyGraphRuntime.execute(args);
+    return {
+      ...result,
+      items: Array.isArray(result?.items)
+        ? result.items
+        : (result?.graph ? [result.graph] : []),
+      summary: cleanText(result?.summary, 320)
+        || buildExecutorSummary(cleanText, 'plotly-graph', result?.items, 'plotly-graph returned no items.')
+    };
+  });
+
   genericAgentToolRuntime.registerToolExecutor('literature-search', async ({ args, context }) => {
     if (!literatureSearchRuntime || typeof literatureSearchRuntime.execute !== 'function') {
       return {
@@ -856,6 +898,8 @@ function registerAgentToolExecutors(deps = {}) {
     'sub-agent',
     'memory',
     'container',
+    'assay-table',
+    'plotly-graph',
     'literature-search',
     'purchase-recommendation',
     'paper-download',

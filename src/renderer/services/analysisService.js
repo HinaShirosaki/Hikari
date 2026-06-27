@@ -2,6 +2,7 @@ export function createAnalysisService(registry) {
   function handleAssaysChanged() {
     registry.get('biologyNotebook').renderLinkedPreviews?.();
     registry.get('workflowManagement').render?.();
+    registry.get('agentChatRail').render?.();
   }
 
   function handleGelAnalysesChanged() {

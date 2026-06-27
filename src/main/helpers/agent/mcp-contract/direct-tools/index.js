@@ -45,6 +45,14 @@ const {
   callContainer
 } = require('./container.js');
 const {
+  ASSAY_TABLE_MCP_TOOL,
+  callAssayTable
+} = require('./assay-table.js');
+const {
+  PLOTLY_GRAPH_MCP_TOOL,
+  callPlotlyGraph
+} = require('./plotly-graph.js');
+const {
   LITERATURE_SEARCH_MCP_TOOL,
   callLiteratureSearch
 } = require('./literature-search.js');
@@ -109,6 +117,14 @@ const DIRECT_MCP_TOOLS = Object.freeze([
   {
     definition: CONTAINER_MCP_TOOL,
     handler: callContainer
+  },
+  {
+    definition: ASSAY_TABLE_MCP_TOOL,
+    handler: callAssayTable
+  },
+  {
+    definition: PLOTLY_GRAPH_MCP_TOOL,
+    handler: callPlotlyGraph
   },
   {
     definition: LITERATURE_SEARCH_MCP_TOOL,

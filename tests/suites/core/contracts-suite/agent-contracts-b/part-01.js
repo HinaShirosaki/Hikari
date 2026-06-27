@@ -127,6 +127,24 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'container'), true);
       assert.deepEqual(toolCallCatalog.container?.input_schema?.properties?.action?.enum, ['create', 'read', 'list', 'update', 'replace_range', 'rename', 'delete', 'clear']);
     });
+    test('assay table and Plotly graph helpers expose reusable runtime action contracts', () => {
+      const assayTableSource = fs.readFileSync(agentPath('tools', 'agent-assay-table.js'), 'utf8');
+      const plotlyGraphSource = fs.readFileSync(agentPath('tools', 'agent-plotly-graph.js'), 'utf8');
+      const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
+      const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
+
+      assert.match(assayTableSource, /const ASSAY_TABLE_ACTIONS = Object\.freeze/);
+      assert.match(assayTableSource, /function createAgentAssayTableRuntime\(deps = \{\}\)/);
+      assert.match(assayTableSource, /function applyOperation\(operation = '', values = \[\]\)/);
+      assert.match(assayTableSource, /async function python\(input = \{\}\)/);
+      assert.match(plotlyGraphSource, /const PLOTLY_GRAPH_ACTIONS = Object\.freeze/);
+      assert.match(plotlyGraphSource, /function createAgentPlotlyGraphRuntime\(deps = \{\}\)/);
+      assert.match(plotlyGraphSource, /function inspectFigure\(figure = \{\}\)/);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'assay-table'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'plotly-graph'), true);
+      assert.deepEqual(toolCallCatalog['assay-table']?.input_schema?.properties?.action?.enum, ['create', 'read', 'list', 'derive', 'add_column', 'python', 'delete', 'clear']);
+      assert.deepEqual(toolCallCatalog['plotly-graph']?.input_schema?.properties?.action?.enum, ['create', 'read', 'list', 'update', 'inspect', 'delete', 'clear']);
+    });
     test('agent chat log helper exports reusable session log runtime and renderer consumes session UI ids', () => {
       const helperSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
       const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'session-manager.js'), 'utf8');

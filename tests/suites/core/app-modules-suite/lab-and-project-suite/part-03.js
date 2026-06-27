@@ -521,12 +521,22 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   assert.match(state.notebookEntries[0].result, /Molarity - Mass: Mass needed: 584\.4 mg/i);
   assert.match(state.notebookEntries[0].toolCalculations[1].result, /NaCl: 8766 mg/i);
   assert.match(state.notebookEntries[0].toolCalculations[2].result, /Water: 90 uL/i);
+  assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[1].table.headers), ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume']);
+  assert.equal(state.notebookEntries[0].toolCalculations[1].table.rows[0][0], 'NaCl');
+  assert.match(state.notebookEntries[0].toolCalculations[1].table.rows[0][4], /8766 mg/i);
+  assert.deepEqual(Array.from(state.notebookEntries[0].toolCalculations[2].table.headers), ['Item', 'Stock Conc.', 'Final Conc.', 'Volume']);
+  assert.equal(state.notebookEntries[0].toolCalculations[2].table.rows[0][0], 'ATP');
+  assert.equal(state.notebookEntries[0].toolCalculations[2].table.footerRows[0][0], 'Water');
+  assert.match(state.notebookEntries[0].toolCalculations[2].table.footerRows[0][3], /90 uL/i);
 
   notebook.openEntry(state.notebookEntries[0].id);
   const renderedCalculations = document.getElementById('biology-notebook-tool-calculations').innerHTML;
   assert.match(renderedCalculations, /Molarity - Mass/);
   assert.match(renderedCalculations, /Buffer Preparer/);
   assert.match(renderedCalculations, /Fixed Volume Reaction/);
+  assert.match(renderedCalculations, /biology-notebook-tool-calculation-table/);
+  assert.doesNotMatch(renderedCalculations, /NaCl: 8766 mg/i);
+  assert.doesNotMatch(renderedCalculations, /Water: 90 uL/i);
   assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Tool calculations: 3 calculations/i);
 });
   }

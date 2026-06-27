@@ -193,6 +193,8 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.match(runtimeConfig, /required = true/);
           assert.match(runtimeConfig, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
           assert.match(runtimeConfig, /"container"/);
+          assert.match(runtimeConfig, /"assay_table"/);
+          assert.match(runtimeConfig, /"plotly_graph"/);
           assert.match(runtimeConfig, /default_tools_approval_mode = "approve"/);
           assert.match(runtimeConfig, /HIKARI_AGENT_MCP_REQUEST_CONTEXT/);
           assert.match(runtimeConfig, /chat-request-env/);
@@ -258,6 +260,8 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.equal(fs.existsSync(paperRetrievalSkillPath), true);
           const containerSkillPath = path.join(projectDir, '.agents', 'skills', 'hikari-container', 'SKILL.md');
           assert.equal(fs.existsSync(containerSkillPath), true);
+          const assayPlotlySkillPath = path.join(projectDir, '.agents', 'skills', 'hikari-assay-plotly', 'SKILL.md');
+          assert.equal(fs.existsSync(assayPlotlySkillPath), true);
           const protocolSkillText = fs.readFileSync(protocolSkillPath, 'utf8');
           assert.match(protocolSkillText, /Placeholder usage:/);
           assert.match(protocolSkillText, /Use bracket placeholders/);
@@ -269,6 +273,11 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.match(containerSkillText, /mcp__hikari__container/);
           assert.match(containerSkillText, /short `id` such as `1`, `2`, or `3`/);
           assert.match(containerSkillText, /Direct literals are feasible/);
+          const assayPlotlySkillText = fs.readFileSync(assayPlotlySkillPath, 'utf8');
+          assert.match(assayPlotlySkillText, /mcp__hikari__assay_table/);
+          assert.match(assayPlotlySkillText, /mcp__hikari__plotly_graph/);
+          assert.match(assayPlotlySkillText, /Common Plotly settings:/);
+          assert.match(assayPlotlySkillText, /official Plotly\.js documentation/);
           assert.equal(fs.existsSync(path.join(projectDir, 'AGENTS.md')), false);
           assert.equal(fs.existsSync(path.join(captured.codexHome, 'AGENTS.md')), true);
           assert.equal(captured.args.includes('project_doc_fallback_filenames=["MEMORY.md"]'), true);

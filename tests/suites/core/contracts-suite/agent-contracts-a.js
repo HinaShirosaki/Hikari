@@ -77,6 +77,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-download'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'container'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'assay-table'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'plotly-graph'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
     });
 
@@ -290,6 +292,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'paper-analysis'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-draft'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'assay-table'), true);
+      assert.equal(toolsCatalog.some((entry) => entry?.name === 'plotly-graph'), true);
       assert.equal(Boolean(toolCallCatalog['python-sandbox']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['command-line']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['web-search']?.input_schema), true);
@@ -302,6 +306,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(Boolean(toolCallCatalog['paper-analysis']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['notebook-draft']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
+      assert.equal(Boolean(toolCallCatalog['assay-table']?.input_schema), true);
+      assert.equal(Boolean(toolCallCatalog['plotly-graph']?.input_schema), true);
       assert.equal(typeof toolCallCatalog['inventory-lookup']?.description, 'string');
       assert.equal(typeof toolCallCatalog['command-line']?.description, 'string');
       assert.equal(typeof toolCallCatalog.memory?.description, 'string');
@@ -311,6 +317,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(typeof toolCallCatalog['paper-download']?.description, 'string');
       assert.equal(typeof toolCallCatalog['notebook-draft']?.description, 'string');
       assert.equal(typeof toolCallCatalog['protocol-generation']?.description, 'string');
+      assert.equal(typeof toolCallCatalog['assay-table']?.description, 'string');
+      assert.equal(typeof toolCallCatalog['plotly-graph']?.description, 'string');
       assert.match(executionSource, /const toolExecutors = new Map\(\);/);
       assert.match(executionSource, /function registerToolExecutor\(toolName, executor\)/);
       assert.match(executionSource, /function getToolExecutor\(toolName\)/);
@@ -328,6 +336,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(/["']sub-agent["']/.test(executionSource), false);
       assert.equal(/["']memory["']/.test(executionSource), false);
       assert.equal(/["']container["']/.test(executionSource), false);
+      assert.equal(/["']assay-table["']/.test(executionSource), false);
+      assert.equal(/["']plotly-graph["']/.test(executionSource), false);
       assert.equal(/["']literature-search["']/.test(executionSource), false);
       assert.equal(/["']purchase-recommendation["']/.test(executionSource), false);
       assert.equal(/["']paper-download["']/.test(executionSource), false);
@@ -381,6 +391,8 @@ module.exports = function registerAgentContractsA(context = {}) {
         ['tools', 'agent-python-sandbox.js'],
         ['tools', 'agent-sub-agent.js'],
         ['tools', 'agent-container.js'],
+        ['tools', 'agent-assay-table.js'],
+        ['tools', 'agent-plotly-graph.js'],
         ['context', 'agent-context-management.js'],
         ['context', 'agent-memory.js'],
         ['context', 'agent-chat-log.js']

@@ -507,9 +507,18 @@ export function createNotebookToolSidebarController({
     } else if (activeTool === 'reaction') {
       renderReactionTableResult(currentResult);
     }
-    const output = currentResult?.resultText || 'Use the formula below with bench values.';
-    setText(outputEl, output);
-    setText(formulaEl, currentResult?.formulaText || '');
+    const hideSummaryOutput = activeTool === 'buffer';
+    if (toolOutput) {
+      toolOutput.hidden = hideSummaryOutput;
+    }
+    if (hideSummaryOutput) {
+      setText(outputEl, '');
+      setText(formulaEl, '');
+    } else {
+      const output = currentResult?.resultText || 'Use the formula below with bench values.';
+      setText(outputEl, output);
+      setText(formulaEl, currentResult?.formulaText || '');
+    }
     if (currentResult?.status === 'warning') {
       setStatus(currentResult.resultText || 'Check the input values.');
     } else if (currentResult?.missing?.length) {
@@ -528,6 +537,94 @@ export function createNotebookToolSidebarController({
     return `${result.title}: ${main}`.trim();
   }
 
+  function cleanCell(value) {
+    return String(value ?? '').trim();
+  }
+
+  function concentrationText(parsed, fallback = '') {
+    return cleanCell(parsed?.text || fallback);
+  }
+
+  function bufferCalculationTable(result) {
+    if (!result || result.type !== 'buffer' || result.mode !== 'recipe') {
+      return null;
+    }
+    const rowsByIndex = new Map((Array.isArray(result.inputs?.rows) ? result.inputs.rows : [])
+      .map((row) => [Number(row?.rowIndex) || 0, row]));
+    const rows = (Array.isArray(result.details) ? result.details : []).map((detail) => {
+      const rowIndex = Number(detail?.rowIndex) || 0;
+      const rowInput = rowsByIndex.get(rowIndex) || {};
+      const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
+      return [
+        cleanCell(rowDetail?.name || detail.inputs?.name || rowInput.name),
+        cleanCell(detail.inputs?.molecularWeight || rowInput.molecularWeight),
+        concentrationText(rowDetail?.stockConcentration, rowInput.stockConcentration),
+        concentrationText(rowDetail?.finalConcentration, rowInput.finalConcentration),
+        cleanCell(rowDetail?.quantityText || resultTextAfterName(detail.resultText))
+      ];
+    }).filter((row) => row.some(Boolean));
+    if (!rows.length) {
+      return null;
+    }
+    const footerRows = [[
+      ['Solvent to add', cleanCell(result.solvent?.text)].filter(Boolean).join(' '),
+      '',
+      ['6 M NaOH', cleanCell(result.phAdjustment?.naohText)].filter(Boolean).join(' '),
+      '',
+      ['6 M HCl', cleanCell(result.phAdjustment?.hclText)].filter(Boolean).join(' ')
+    ]];
+    const volumeValue = cleanCell(result.inputs?.volumeMl);
+    return {
+      caption: 'Buffer Preparer',
+      metaRows: [[
+        'Volume',
+        volumeValue ? `${volumeValue} mL` : '',
+        'pH',
+        cleanCell(result.inputs?.pH),
+        ''
+      ]],
+      headers: ['Chemical', 'MW', 'Stock Conc.', 'Final Conc.', 'Mass/Volume'],
+      rows,
+      footerRows
+    };
+  }
+
+  function reactionCalculationTable(result) {
+    if (!result || result.type !== 'fixed-reaction' || result.mode !== 'reaction') {
+      return null;
+    }
+    const rows = (Array.isArray(result.details) ? result.details : []).map((detail) => {
+      const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
+      return [
+        cleanCell(rowDetail?.name || detail.inputs?.name),
+        concentrationText(rowDetail?.stockConcentration, detail.inputs?.stockConcentration),
+        concentrationText(rowDetail?.finalConcentration, detail.inputs?.finalConcentration),
+        cleanCell(rowDetail?.quantityText || resultTextAfterName(detail.resultText))
+      ];
+    }).filter((row) => row.some(Boolean));
+    if (!rows.length && !result.fill?.text) {
+      return null;
+    }
+    const totalVolume = cleanCell(result.inputs?.totalVolumeValue);
+    const totalUnit = cleanCell(result.inputs?.totalVolumeUnit);
+    return {
+      caption: 'Fixed Volume Reaction',
+      metaRows: [[
+        'Total volume',
+        totalVolume && /\D/u.test(totalVolume) ? totalVolume : [totalVolume, totalUnit].filter(Boolean).join(' '),
+        '',
+        ''
+      ]],
+      headers: ['Item', 'Stock Conc.', 'Final Conc.', 'Volume'],
+      rows,
+      footerRows: [[cleanCell(result.fill?.name || result.inputs?.fillName || 'Solvent'), '', '', cleanCell(result.fill?.text || resultTextAfterName(result.fill?.resultText || ''))]]
+    };
+  }
+
+  function calculationTableForResult(result) {
+    return bufferCalculationTable(result) || reactionCalculationTable(result);
+  }
+
   function makeCalculationRecord() {
     const result = currentResult || calculateActiveTool();
     const main = result?.resultText || result?.formulaText || '';
@@ -541,6 +638,7 @@ export function createNotebookToolSidebarController({
       mode: result.mode,
       title: result.title,
       inputs: result.inputs || {},
+      table: calculationTableForResult(result),
       result: result.resultText || '',
       formula: result.formulaText || '',
       summary: main,
