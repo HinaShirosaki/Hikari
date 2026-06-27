@@ -79,7 +79,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
             throw new Error('Result-analysis runtime should be skipped for Codex-owned lifecycle.');
           }
         },
-        deepResearchRuntime: null,
         codexAgentRuntime: {
           async run(input = {}) {
             codexRunInput = input;
@@ -279,7 +278,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
           hasPendingSession: () => false
         },
         scienceReasoningLoopRuntime: {},
-        deepResearchRuntime: null,
         scienceMainUtils: {},
         agentToolRuntime: {
           normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
@@ -413,7 +411,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
           hasPendingSession: () => false
         },
         scienceReasoningLoopRuntime: {},
-        deepResearchRuntime: null,
         scienceMainUtils: {},
         agentToolRuntime: {
           normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),

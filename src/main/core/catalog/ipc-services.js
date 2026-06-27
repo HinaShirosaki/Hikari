@@ -78,7 +78,6 @@ function createIpcServiceDefinitions(context = {}) {
           setCodexCliReasoningEffort,
           protocolNotebookRuntime: agents.protocolNotebookRuntime,
           scienceReasoningLoopRuntime: agents.scienceReasoningLoopRuntime,
-          deepResearchRuntime: agents.deepResearchRuntime,
           codexAgentRuntime: agents.codexAgentRuntime,
           scienceMainUtils: agents.scienceMainUtils,
           agentToolRuntime: agents.agentToolRuntime,

@@ -49,7 +49,6 @@ export function getProgressRowKey(eventPayload = {}) {
   const stage = trimText(eventPayload?.stage, 80);
   const toolName = trimText(eventPayload?.tool_name, 120);
   const round = trimText(eventPayload?.meta?.round, 40);
-  const step = trimText(eventPayload?.meta?.step, 40);
   if (['tool_call_started', 'tool_call_completed', 'tool_call_failed'].includes(stage)) {
     return `tool:${toolName}`;
   }
@@ -59,17 +58,12 @@ export function getProgressRowKey(eventPayload = {}) {
   if (stage === 'science_evaluator_continue' || stage === 'science_evaluator_satisfied') {
     return `science-evaluator:${round || '0'}`;
   }
-  if (stage === 'deep_research_step_started' || stage === 'deep_research_step_completed') {
-    return `deep-research-step:${step || '0'}`;
-  }
   return stage;
 }
 
 export function getProgressRowText(eventPayload = {}) {
   const stage = trimText(eventPayload?.stage, 80);
   const round = trimText(eventPayload?.meta?.round, 40);
-  const step = trimText(eventPayload?.meta?.step, 40);
-  const stepTitle = trimText(eventPayload?.meta?.title, 160);
   const toolLabel = getToolActivityLabel(eventPayload?.tool_name);
   const stageLabels = {
     request_received: 'Request received',
@@ -104,8 +98,6 @@ export function getProgressRowText(eventPayload = {}) {
     science_evaluator_satisfied: round ? `Round ${round}: Evidence is sufficient` : 'Evidence is sufficient',
     science_budget_exhausted: round ? `Round ${round}: Reasoning budget exhausted` : 'Reasoning budget exhausted',
     science_intent_completed: 'Reasoning completed',
-    deep_research_started: 'Starting deep research',
-    deep_research_completed: 'Deep research completed',
     response_emitted: 'Final answer ready',
     controller_error: 'Request failed'
   };
@@ -120,14 +112,6 @@ export function getProgressRowText(eventPayload = {}) {
   }
   if (stage === 'science_round_started') {
     return round ? `Round ${round}: ${toolLabel}` : toolLabel;
-  }
-  if (stage === 'deep_research_step_started' || stage === 'deep_research_step_completed') {
-    if (step && stepTitle) {
-      return `Step ${step}: ${stepTitle}`;
-    }
-    if (step) {
-      return `Step ${step}`;
-    }
   }
   return stageLabels[stage] || trimText(eventPayload?.message, 240) || humanizeToken(stage) || 'Working on this';
 }

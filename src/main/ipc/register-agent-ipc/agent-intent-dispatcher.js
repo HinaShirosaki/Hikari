@@ -8,7 +8,6 @@ function createAgentIntentDispatcher({
   observability,
   protocolNotebookRuntime,
   scienceReasoningLoopRuntime,
-  deepResearchRuntime,
   scienceMainUtils,
   agentToolRuntime,
   executeInventoryLookup,
@@ -346,8 +345,7 @@ function createAgentIntentDispatcher({
       projectName,
       parserPayload,
       traceContext,
-      lifecycleRecorder,
-      deepResearchEnabled
+      lifecycleRecorder
     } = context;
 
     const trackedToolRunnerContext = {
@@ -578,9 +576,7 @@ function createAgentIntentDispatcher({
           : (parserIntent && parserIntent !== scienceIntent
             ? `Routing ${parserIntent} through ${scienceIntent} with reasoning_effort=${routingReasoningEffort || 0}.`
             : '')
-            || (deepResearchEnabled === true && deepResearchRuntime
-              ? `Dispatching ${scienceIntent} into the deep research pipeline.`
-              : `Dispatching ${scienceIntent} into the shared science reasoning loop.`)
+            || `Dispatching ${scienceIntent} into the shared science reasoning loop.`
       });
 
       if (parserDirectScienceAnswer) {
@@ -655,19 +651,10 @@ function createAgentIntentDispatcher({
               }
             }
           ),
-          runTool: async (toolName, args, options = {}) => runTrackedTool(toolName, args, options),
-          deepResearchEnabled
+          runTool: async (toolName, args, options = {}) => runTrackedTool(toolName, args, options)
         };
 
-        if (deepResearchEnabled === true && deepResearchRuntime) {
-          if (scienceIntent === 'general_science_question') {
-            result.general_science_question = await deepResearchRuntime.runGeneralScienceQuestion(scienceInput);
-          } else if (scienceIntent === 'project_science_question') {
-            result.project_science_question = await deepResearchRuntime.runProjectScienceQuestion(scienceInput);
-          } else {
-            result.result_analysis = await deepResearchRuntime.runResultAnalysis(scienceInput);
-          }
-        } else if (scienceIntent === 'general_science_question') {
+        if (scienceIntent === 'general_science_question') {
           result.general_science_question = await scienceReasoningLoopRuntime.runGeneralScienceQuestion(scienceInput);
         } else if (scienceIntent === 'project_science_question') {
           result.project_science_question = await scienceReasoningLoopRuntime.runProjectScienceQuestion(scienceInput);

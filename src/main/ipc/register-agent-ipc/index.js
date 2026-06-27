@@ -36,7 +36,6 @@ function registerAgentIpc(deps = {}) {
     observability: deps.observability || {},
     protocolNotebookRuntime: deps.protocolNotebookRuntime,
     scienceReasoningLoopRuntime: deps.scienceReasoningLoopRuntime,
-    deepResearchRuntime: deps.deepResearchRuntime,
     codexAgentRuntime: deps.codexAgentRuntime,
     scienceMainUtils: deps.scienceMainUtils || {},
     agentToolRuntime: deps.agentToolRuntime || {},

@@ -233,7 +233,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
             throw new Error('Result-analysis runtime should not run for unclear fallback.');
           }
         },
-        deepResearchRuntime: null,
         scienceMainUtils: {
           buildScienceRoutingFromParser: () => ({
             intent: 'general_science_question',
@@ -293,7 +292,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
           },
           traceContext: null,
           lifecycleRecorder: null,
-          deepResearchEnabled: false
         },
         result
       });
@@ -333,7 +331,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
             throw new Error('Result-analysis runtime should not run for purchase recommendations.');
           }
         },
-        deepResearchRuntime: null,
         scienceMainUtils: {
           buildScienceRoutingFromParser: () => ({
             intent: 'general_science_question',
@@ -424,7 +421,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
           },
           traceContext: null,
           lifecycleRecorder: null,
-          deepResearchEnabled: false
         },
         result
       });

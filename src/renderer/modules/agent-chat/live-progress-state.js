@@ -33,13 +33,6 @@ function buildLiveProgressSummary(eventPayload = {}) {
   if (stage === 'tool_call_failed') {
     return trimText(eventPayload?.message, 600) || `${getToolActivityLabel(toolName)} failed.`;
   }
-  if (stage === 'deep_research_step_started' || stage === 'deep_research_step_completed') {
-    const step = trimText(eventPayload?.meta?.step, 40);
-    const title = trimText(eventPayload?.meta?.title, 160);
-    if (step && title) {
-      return `Step ${step}: ${title}`;
-    }
-  }
   return trimText(eventPayload?.message, 600) || getProgressRowText(eventPayload) || 'Working on this...';
 }
 function upsertLiveProgressRows(rows = [], eventPayload = {}) {

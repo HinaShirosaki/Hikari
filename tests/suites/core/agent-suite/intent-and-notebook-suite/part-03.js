@@ -64,7 +64,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart03(context = {}
             throw new Error('Result-analysis runtime should not run for unresolved inventory follow-ups.');
           }
         },
-        deepResearchRuntime: null,
         scienceMainUtils: {
           buildScienceRoutingFromParser: () => ({
             intent: 'general_science_question',
@@ -226,7 +225,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart03(context = {}
             throw new Error('Result-analysis runtime should not run for unresolved record follow-ups.');
           }
         },
-        deepResearchRuntime: null,
         scienceMainUtils: {
           buildScienceRoutingFromParser: () => ({
             intent: 'general_science_question',

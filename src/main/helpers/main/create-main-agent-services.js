@@ -35,7 +35,6 @@ const { createAgentRuntimeRegistry } = require('../agent/shared/agent-runtime-re
 const { createProtocolNotebookRuntime } = require('../agent/runtime/agent-protocol-notebook');
 const { createAgentLookupRuntime } = require('../agent/runtime/agent-lookup-runtime');
 const { createScienceReasoningLoopRuntime } = require('../agent/runtime/science-reasoning-loop/index.js');
-const { createDeepResearchRuntime } = require('../agent/deep-research/index.js');
 const { createAgentSessionRuntime } = require('../agent/runtime/agent-session-runtime.js');
 const { createAgentScienceMainUtils } = require('../agent/runtime/agent-science-main-utils.js');
 const { createAgentToolSmokeTestRuntime } = require('../agent/tools/agent-tool-smoke-test');
@@ -524,15 +523,6 @@ function createMainAgentServices(deps = {}) {
     recordLifecycleEvent: observability.recordLifecycleEvent
   });
 
-  const deepResearchRuntime = createDeepResearchRuntime({
-    ...sharedAgentLlmDeps,
-    clamp,
-    toolProvider: agentToolProviderRuntime,
-    applyResponseLayerToOutput: scienceMainUtils.applyResponseLayerToOutput,
-    applyValidationGateToOutput: scienceMainUtils.applyValidationGateToOutput,
-    recordLifecycleEvent: observability.recordLifecycleEvent
-  });
-
   const agentToolSmokeTestRuntime = createAgentToolSmokeTestRuntime({
     runPythonSandbox,
     pythonSandboxRoot: getAgentPythonSandboxRoot()
@@ -546,7 +536,6 @@ function createMainAgentServices(deps = {}) {
     controllerUtils,
     protocolNotebookRuntime,
     scienceReasoningLoopRuntime,
-    deepResearchRuntime,
     scienceMainUtils,
     agentToolRuntime,
     subAgentRuntime,

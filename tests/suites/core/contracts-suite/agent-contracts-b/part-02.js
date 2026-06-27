@@ -25,7 +25,6 @@ module.exports = function registerAgentContractsBPart02(context = {}) {
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
       const { SCIENCE_REASONING_INTENTS, getScienceReasoningPolicy } = require(agentPath('runtime', 'science-reasoning-loop', 'index.js'));
-      const { DEEP_RESEARCH_POLICIES } = require(agentPath('deep-research', 'index.js'));
       const { getToolInputSchemas } = require(agentPath('tools', 'agent-tool-loading.js'));
       const { REASONING_ENTRY_TOOL_SCOPES } = require(agentPath('tools', 'agent-tool-provide.js'));
       const catalogToolCount = getToolInputSchemas().length;
@@ -37,20 +36,9 @@ module.exports = function registerAgentContractsBPart02(context = {}) {
         const resolved = getToolInputSchemas(policy.tool_scope);
         assert.equal(resolved.length > 0, true);
       });
-      Object.values(DEEP_RESEARCH_POLICIES).forEach((policy) => {
-        assert.equal(Array.isArray(policy.tool_scope), true);
-        assert.equal(policy.tool_scope.length > 0, true);
-        assert.equal(policy.tool_scope.length < catalogToolCount, true);
-        const resolved = getToolInputSchemas(policy.tool_scope);
-        assert.equal(resolved.length > 0, true);
-      });
       assert.deepEqual(
         getScienceReasoningPolicy('general_science_question').tool_scope,
         REASONING_ENTRY_TOOL_SCOPES.science_reasoning_entry.general_science_question
-      );
-      assert.deepEqual(
-        DEEP_RESEARCH_POLICIES.result_analysis.tool_scope,
-        REASONING_ENTRY_TOOL_SCOPES.deep_research_entry.result_analysis
       );
 
       assert.equal(mainSource.includes('createMainAgentServices'), true);

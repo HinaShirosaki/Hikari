@@ -33,7 +33,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart02(context = {}
             throw new Error('Result-analysis runtime should not run for hybrid notebook drafts.');
           }
         },
-        deepResearchRuntime: null,
         scienceMainUtils: {
           buildScienceRoutingFromParser: () => ({
             intent: 'general_science_question',
@@ -141,7 +140,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart02(context = {}
           },
           traceContext: null,
           lifecycleRecorder: null,
-          deepResearchEnabled: false
         },
         result
       });
@@ -201,7 +199,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart02(context = {}
             throw new Error('Result-analysis runtime should not run for purchase clarifications.');
           }
         },
-        deepResearchRuntime: null,
         scienceMainUtils: {
           buildScienceRoutingFromParser: () => ({
             intent: 'general_science_question',
@@ -261,7 +258,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart02(context = {}
           },
           traceContext: null,
           lifecycleRecorder: null,
-          deepResearchEnabled: false
         },
         result
       });
@@ -356,7 +352,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart02(context = {}
             throw new Error('Result-analysis runtime should not run for pending protocol follow-ups.');
           }
         },
-        deepResearchRuntime: null,
         scienceMainUtils: {
           buildScienceRoutingFromParser: () => ({
             intent: 'general_science_question',

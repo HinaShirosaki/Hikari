@@ -363,16 +363,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         '#/$defs/literature_source'
       );
 
-      const deepResearchTools = runtime.provideTools({
-        entryPoint: 'deep_research_entry',
-        intent: 'result_analysis'
-      });
-      assert.equal(deepResearchTools.tool_names.includes('python-sandbox'), true);
-      assert.equal(deepResearchTools.tool_names.includes('record-lookup'), true);
-      assert.equal(deepResearchTools.tool_names.includes('literature-search'), true);
-      assert.equal(deepResearchTools.tool_names.includes('sub-agent'), true);
-      assert.deepEqual(deepResearchTools.tool_definitions.map((tool) => tool.name), deepResearchTools.tool_names);
-
       const catalogTools = runtime.provideTools();
       assert.equal(catalogTools.tool_names.includes('inventory-lookup'), true);
       assert.equal(catalogTools.tool_names.includes('literature-search'), true);

@@ -118,8 +118,7 @@ function registerAgentLogHandlers({
     });
     const attachments = summarizeAttachments(normalizedPayload?.attachments);
     const agentFlags = {
-      developerMode: normalizedPayload?.agent?.developerMode === true,
-      deepResearchEnabled: normalizedPayload?.agent?.deepResearchEnabled === true
+      developerMode: normalizedPayload?.agent?.developerMode === true
     };
     const llmSummary = typeof controllerUtils.summarizeLlmForAgentLog === 'function'
       ? controllerUtils.summarizeLlmForAgentLog(normalizedPayload?.llm)
@@ -151,7 +150,6 @@ function registerAgentLogHandlers({
         executionFlags: {
           developerMode: agentFlags.developerMode
         },
-        deepResearchEnabled: agentFlags.deepResearchEnabled,
         projectId,
         projectName,
         skillPromptPayload,

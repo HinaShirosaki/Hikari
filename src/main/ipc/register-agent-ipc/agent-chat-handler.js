@@ -220,8 +220,7 @@ function registerAgentChatHandler({
           project_name: cleanText(normalizedPayload?.projectName, 180),
           allow_write_tools: normalizedPayload?.allowWriteTools === true,
           provider: cleanText(normalizedPayload?.llm?.provider, 80),
-          developer_mode: executionFlags.developerMode === true,
-          deep_research_enabled: normalizedPayload?.agent?.deepResearchEnabled === true
+          developer_mode: executionFlags.developerMode === true
         }
       });
       const requestLogEntry = {
@@ -241,8 +240,7 @@ function registerAgentChatHandler({
         conversation: controllerUtils.extractConversation(normalizedPayload?.conversation),
         llm: controllerUtils.summarizeLlmForAgentLog(normalizedPayload?.llm),
         agent: {
-          developerMode: executionFlags.developerMode === true,
-          deepResearchEnabled: normalizedPayload?.agent?.deepResearchEnabled === true
+          developerMode: executionFlags.developerMode === true
         }
       };
       await appendAgentChatLogEntry(logPath, controllerUtils.formatAgentChatLogEntry(requestLogEntry));
