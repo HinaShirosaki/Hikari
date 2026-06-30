@@ -4,10 +4,12 @@ const fsPromises = require('node:fs/promises');
 
 const {
   buildKnowledgeDatabasePaths,
-  buildLegacyKnowledgeDatabasePaths,
+  buildLegacyKnowledgeDatabasePaths
+} = require('./paper-knowledge-paths.js');
+const {
   openKnowledgeDatabase,
   queryRows
-} = require('./agent-paper-knowledge-database.js');
+} = require('./paper-knowledge-store.js');
 const { applyWikiChunkSchema } = require('./agent-paper-wiki-chunker.js');
 
 const MAX_LIMIT = 25;

@@ -6,12 +6,14 @@ const path = require('node:path');
 
 const {
   buildKnowledgeDatabasePaths,
-  buildLegacyKnowledgeDatabasePaths,
+  buildLegacyKnowledgeDatabasePaths
+} = require('./paper-knowledge-paths.js');
+const {
   openKnowledgeDatabase,
   persistKnowledgeDatabase,
   queryRows,
   runStatement
-} = require('./agent-paper-knowledge-database.js');
+} = require('./paper-knowledge-store.js');
 
 const SECTION_HEADING_REGEX = /^##\s+(.+?)\s*$/;
 const PAGE_CITATION_REGEX = /\(pp?\.\s*(\d+)(?:\s*[-–]\s*(\d+))?\)/g;

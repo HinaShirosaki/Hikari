@@ -11,25 +11,45 @@ const {
   buildExtractedTextFile,
   buildPdfMarkdownFromExtraction
 } = require('../../main/pdf-to-md.js');
-const { loadSqlJs } = require('../../main/storage-bundle/storage-utils.js');
+const {
+  KNOWLEDGE_BASE_FOLDER_NAME,
+  KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME,
+  KNOWLEDGE_DATABASE_FOLDER_NAME,
+  KNOWLEDGE_PAPERS_FOLDER_NAME,
+  LEGACY_KNOWLEDGE_DATABASE_FOLDER_NAME,
+  LEGACY_KNOWLEDGE_PAPERS_FOLDER_NAME,
+  KNOWLEDGE_INDEX_FILE_NAME,
+  KNOWLEDGE_JSON_INDEX_FILE_NAME,
+  normalizeDoi,
+  extractDoiFromText,
+  normalizeYear,
+  buildKnowledgePaperSlug,
+  ensurePathWithinRoot,
+  buildRelativePath,
+  resolveRelativeStoragePath,
+  resolveStoragePath,
+  buildKnowledgeDatabasePaths,
+  buildLegacyKnowledgeDatabasePaths,
+  getPaperScope
+} = require('./paper-knowledge-paths.js');
+const {
+  looksLikePdfBuffer,
+  sha256Buffer,
+  queryRows,
+  runStatement,
+  migratePaperColumns,
+  openKnowledgeDatabase,
+  persistKnowledgeDatabase,
+  findExistingPaperRow,
+  buildPaperId,
+  buildSearchText,
+  writeJsonFile,
+  pathExists,
+  updateJsonIndex,
+  chooseLocation
+} = require('./paper-knowledge-store.js');
 
-const KNOWLEDGE_BASE_FOLDER_NAME = 'KnowledgeBase';
-const KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME = 'papers.md';
-const LEGACY_KNOWLEDGE_DATABASE_FOLDER_NAME = 'KnowledgeDatabase';
-const LEGACY_KNOWLEDGE_PAPERS_FOLDER_NAME = 'PaperKnowledge';
-const KNOWLEDGE_DATABASE_FOLDER_NAME = KNOWLEDGE_BASE_FOLDER_NAME;
-const KNOWLEDGE_PAPERS_FOLDER_NAME = KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME;
-const KNOWLEDGE_INDEX_FILE_NAME = 'knowledge.index.sqlite';
-const KNOWLEDGE_JSON_INDEX_FILE_NAME = 'index.json';
 const DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT = 120000;
-
-function defaultCleanText(value, _maxLength = 4000) {
-  const text = String(value || '');
-  if (!text) {
-    return '';
-  }
-  return text;
-}
 
 function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -54,132 +74,6 @@ function cloneJson(value, fallback) {
   } catch {
     return fallback;
   }
-}
-
-function normalizeDoi(value) {
-  return String(value || '')
-    .trim()
-    .replace(/^doi:\s*/i, '')
-    .replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '')
-    .replace(/\s+/g, '');
-}
-
-function extractDoiFromText(value) {
-  const text = String(value || '');
-  const match = text.match(/\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+/i);
-  return normalizeDoi(match?.[0] ? match[0].replace(/[),.;\]]+$/g, '') : '');
-}
-
-function sanitizeStorageName(value, fallback = 'paper') {
-  const cleaned = String(value || '')
-    .trim()
-    .replace(/[<>:"/\\|?*\x00-\x1F]+/g, '_')
-    .replace(/\s+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 180);
-  return cleaned || fallback;
-}
-
-function buildKnowledgePaperSlug({ doi = '', title = '', pdfSha256 = '' } = {}) {
-  const normalizedDoi = normalizeDoi(doi);
-  if (normalizedDoi) {
-    return sanitizeStorageName(normalizedDoi.replace(/\//g, '_'), 'paper');
-  }
-  const titleSlug = sanitizeStorageName(title, '');
-  if (titleSlug) {
-    return titleSlug;
-  }
-  return sanitizeStorageName(pdfSha256 ? `paper-${String(pdfSha256).slice(0, 16)}` : 'paper', 'paper');
-}
-
-function ensurePathWithinRoot(rootPath, targetPath) {
-  const resolvedRoot = path.resolve(rootPath);
-  const resolvedTarget = path.resolve(targetPath);
-  if (resolvedTarget === resolvedRoot) {
-    return resolvedTarget;
-  }
-  const rootWithSep = resolvedRoot.endsWith(path.sep)
-    ? resolvedRoot
-    : `${resolvedRoot}${path.sep}`;
-  if (!resolvedTarget.startsWith(rootWithSep)) {
-    throw new Error('Target path must be inside the configured storage path.');
-  }
-  return resolvedTarget;
-}
-
-function buildRelativePath(rootPath, targetPath) {
-  return path.relative(path.resolve(rootPath), path.resolve(targetPath)).split(path.sep).join('/');
-}
-
-function resolveStoragePath(source, cleanText) {
-  return cleanText(source.storage_path || source.storagePath, 4000);
-}
-
-function buildKnowledgeDatabasePaths({
-  storagePath = '',
-  doi = '',
-  title = '',
-  pdfSha256 = '',
-  rootFolderName = KNOWLEDGE_BASE_FOLDER_NAME,
-  papersFolderName = KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME
-} = {}) {
-  const resolvedStoragePath = path.resolve(storagePath);
-  const rootPath = path.join(resolvedStoragePath, rootFolderName);
-  const papersPath = path.join(rootPath, papersFolderName);
-  const paperFolderName = buildKnowledgePaperSlug({ doi, title, pdfSha256 });
-  const paperFolderPath = path.join(papersPath, paperFolderName);
-  return {
-    storage_path: resolvedStoragePath,
-    root_path: rootPath,
-    papers_path: papersPath,
-    paper_folder_name: paperFolderName,
-    paper_folder_path: paperFolderPath,
-    markdown_path: path.join(paperFolderPath, 'paper.md'),
-    extracted_text_path: path.join(paperFolderPath, 'extracted.txt'),
-    meta_path: path.join(paperFolderPath, 'meta.json'),
-    figures_path: path.join(paperFolderPath, 'figures'),
-    sqlite_path: path.join(rootPath, KNOWLEDGE_INDEX_FILE_NAME),
-    json_index_path: path.join(rootPath, KNOWLEDGE_JSON_INDEX_FILE_NAME)
-  };
-}
-
-function buildLegacyKnowledgeDatabasePaths({ storagePath = '', doi = '', title = '', pdfSha256 = '' } = {}) {
-  return buildKnowledgeDatabasePaths({
-    storagePath,
-    doi,
-    title,
-    pdfSha256,
-    rootFolderName: LEGACY_KNOWLEDGE_DATABASE_FOLDER_NAME,
-    papersFolderName: LEGACY_KNOWLEDGE_PAPERS_FOLDER_NAME
-  });
-}
-
-function getPaperScope(linkedType = '') {
-  const normalized = String(linkedType || '').trim().toLowerCase().replace(/[\s_]+/g, '-');
-  if (normalized === 'project') {
-    return 'project';
-  }
-  if (normalized === 'journal-club' || normalized === 'literature-search') {
-    return 'journal-club';
-  }
-  return normalized || 'global';
-}
-
-function looksLikePdfBuffer(buffer) {
-  return Buffer.isBuffer(buffer) && buffer.length >= 5 && buffer.subarray(0, 5).toString('utf8') === '%PDF-';
-}
-
-function sha256Buffer(buffer) {
-  return crypto.createHash('sha256').update(buffer).digest('hex');
-}
-
-function normalizeYear(value) {
-  const direct = String(value || '').trim();
-  if (/^\d{4}$/.test(direct)) {
-    return direct;
-  }
-  const match = direct.match(/\b(19|20)\d{2}\b/);
-  return match?.[0] || '';
 }
 
 function isExplicitFalse(value) {
@@ -256,289 +150,6 @@ function normalizeMarkdown(markdown = '') {
     .replace(/\s*```$/i, '')
     .trim();
   return text;
-}
-
-function applyKnowledgeDatabaseSchema(db) {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS papers (
-      id TEXT PRIMARY KEY,
-      doi TEXT UNIQUE,
-      pmid TEXT,
-      pmcid TEXT,
-      title TEXT,
-      abstract TEXT,
-      authors_json TEXT,
-      journal TEXT,
-      year TEXT,
-      url TEXT,
-      pdf_sha256 TEXT UNIQUE,
-      added_at TEXT,
-      updated_at TEXT,
-      source TEXT,
-      wiki_status TEXT,
-      wiki_path TEXT,
-      extraction_status TEXT,
-      notes TEXT,
-      search_text TEXT
-    );
-    CREATE TABLE IF NOT EXISTS paper_locations (
-      id TEXT PRIMARY KEY,
-      paper_id TEXT NOT NULL,
-      scope TEXT,
-      container TEXT,
-      folder_path TEXT,
-      pdf_filename TEXT,
-      pdf_path TEXT,
-      discovered_at TEXT
-    );
-    CREATE TABLE IF NOT EXISTS paper_tags (
-      paper_id TEXT NOT NULL,
-      tag TEXT NOT NULL,
-      PRIMARY KEY (paper_id, tag)
-    );
-    CREATE TABLE IF NOT EXISTS paper_links (
-      from_paper_id TEXT NOT NULL,
-      to_paper_id TEXT NOT NULL,
-      relation TEXT,
-      PRIMARY KEY (from_paper_id, to_paper_id, relation)
-    );
-    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_title ON papers(title);
-    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_search ON papers(search_text);
-    CREATE INDEX IF NOT EXISTS idx_knowledge_locations_paper ON paper_locations(paper_id);
-    CREATE INDEX IF NOT EXISTS idx_knowledge_tags_tag ON paper_tags(tag);
-  `);
-  migratePaperColumns(db);
-  db.run(`
-    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_pmid ON papers(pmid);
-    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_pmcid ON papers(pmcid);
-  `);
-}
-
-/**
- * Add columns introduced after the original schema to pre-existing databases.
- * `CREATE TABLE IF NOT EXISTS` never alters an existing table, so identifier
- * columns added later (pmid, pmcid) must be backfilled with ALTER TABLE.
- */
-function migratePaperColumns(db) {
-  const existing = new Set(
-    queryRows(db, 'PRAGMA table_info(papers)').map((row) => String(row.name || ''))
-  );
-  if (!existing.has('pmid')) {
-    db.run('ALTER TABLE papers ADD COLUMN pmid TEXT');
-  }
-  if (!existing.has('pmcid')) {
-    db.run('ALTER TABLE papers ADD COLUMN pmcid TEXT');
-  }
-}
-
-function queryRows(db, sql, params = []) {
-  const stmt = db.prepare(sql);
-  const rows = [];
-  try {
-    stmt.bind(params);
-    while (stmt.step()) {
-      rows.push(stmt.getAsObject());
-    }
-  } finally {
-    stmt.free();
-  }
-  return rows;
-}
-
-function runStatement(db, sql, params = []) {
-  const stmt = db.prepare(sql);
-  try {
-    stmt.run(params);
-  } finally {
-    stmt.free();
-  }
-}
-
-async function openKnowledgeDatabase(sqlitePath) {
-  const SQL = await loadSqlJs();
-  let db = null;
-  try {
-    const bytes = await fsPromises.readFile(sqlitePath);
-    db = bytes.length ? new SQL.Database(new Uint8Array(bytes)) : new SQL.Database();
-  } catch (error) {
-    if (error?.code !== 'ENOENT') {
-      throw error;
-    }
-    db = new SQL.Database();
-  }
-  applyKnowledgeDatabaseSchema(db);
-  return db;
-}
-
-async function persistKnowledgeDatabase(sqlitePath, db) {
-  const bytes = db.export();
-  await fsPromises.mkdir(path.dirname(sqlitePath), { recursive: true });
-  await fsPromises.writeFile(sqlitePath, Buffer.from(bytes));
-}
-
-function findExistingPaperRow(db, { doi = '', pmid = '', pmcid = '', pdfSha256 = '', title = '' } = {}) {
-  const normalizedDoi = normalizeDoi(doi);
-  if (normalizedDoi) {
-    const rows = queryRows(db, 'SELECT * FROM papers WHERE lower(doi) = lower(?) LIMIT 1', [normalizedDoi]);
-    if (rows[0]) {
-      return rows[0];
-    }
-  }
-  const normalizedPmid = normalizePmid(pmid);
-  if (normalizedPmid) {
-    const rows = queryRows(db, 'SELECT * FROM papers WHERE pmid = ? LIMIT 1', [normalizedPmid]);
-    if (rows[0]) {
-      return rows[0];
-    }
-  }
-  const normalizedPmcid = normalizePmcid(pmcid);
-  if (normalizedPmcid) {
-    const rows = queryRows(db, 'SELECT * FROM papers WHERE pmcid = ? LIMIT 1', [normalizedPmcid]);
-    if (rows[0]) {
-      return rows[0];
-    }
-  }
-  if (pdfSha256) {
-    const rows = queryRows(db, 'SELECT * FROM papers WHERE pdf_sha256 = ? LIMIT 1', [pdfSha256]);
-    if (rows[0]) {
-      return rows[0];
-    }
-  }
-  const normalizedTitle = String(title || '').trim();
-  if (normalizedTitle) {
-    const rows = queryRows(db, 'SELECT * FROM papers WHERE lower(title) = lower(?) LIMIT 1', [normalizedTitle]);
-    if (rows[0]) {
-      return rows[0];
-    }
-  }
-  return null;
-}
-
-function buildPaperId({ existing = null, doi = '', pdfSha256 = '', title = '' } = {}) {
-  if (existing?.id) {
-    return String(existing.id);
-  }
-  const normalizedDoi = normalizeDoi(doi);
-  if (normalizedDoi) {
-    return `paper-doi-${sanitizeStorageName(normalizedDoi.replace(/\//g, '_'), 'paper')}`;
-  }
-  if (pdfSha256) {
-    return `paper-sha256-${String(pdfSha256).slice(0, 16)}`;
-  }
-  return `paper-title-${sanitizeStorageName(title, 'paper')}`;
-}
-
-function buildSearchText(metadata = {}) {
-  return [
-    metadata.title,
-    metadata.doi,
-    metadata.abstract,
-    metadata.journal,
-    metadata.year,
-    asArrayDefault(metadata.authors).join(' ')
-  ].filter(Boolean).join(' ').toLowerCase();
-}
-
-async function readJsonObject(filePath) {
-  try {
-    const raw = await fsPromises.readFile(filePath, 'utf8');
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-  } catch {
-    return {};
-  }
-}
-
-async function writeJsonFile(filePath, payload) {
-  await fsPromises.mkdir(path.dirname(filePath), { recursive: true });
-  await fsPromises.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
-}
-
-async function pathExists(targetPath) {
-  try {
-    await fsPromises.access(targetPath);
-    return true;
-  } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return false;
-    }
-    throw error;
-  }
-}
-
-function normalizeIndexEntry(entry = {}) {
-  return {
-    id: String(entry.id || ''),
-    doi: normalizeDoi(entry.doi),
-    title: String(entry.title || ''),
-    pdf_sha256: String(entry.pdf_sha256 || ''),
-    wiki_status: String(entry.wiki_status || ''),
-    wiki_path: String(entry.wiki_path || ''),
-    extraction_status: String(entry.extraction_status || ''),
-    updated_at: String(entry.updated_at || '')
-  };
-}
-
-async function updateJsonIndex(indexPath, paperRow = {}, locationRow = {}) {
-  const current = await readJsonObject(indexPath);
-  const papers = asArrayDefault(current.papers).map(normalizeIndexEntry).filter((entry) => entry.id);
-  const locations = asArrayDefault(current.locations)
-    .map((entry) => ({
-      id: String(entry.id || ''),
-      paper_id: String(entry.paper_id || ''),
-      scope: String(entry.scope || ''),
-      container: String(entry.container || ''),
-      folder_path: String(entry.folder_path || ''),
-      pdf_filename: String(entry.pdf_filename || ''),
-      pdf_path: String(entry.pdf_path || ''),
-      discovered_at: String(entry.discovered_at || '')
-    }))
-    .filter((entry) => entry.id);
-  const paperEntry = normalizeIndexEntry(paperRow);
-  const locationEntry = {
-    id: String(locationRow.id || ''),
-    paper_id: String(locationRow.paper_id || ''),
-    scope: String(locationRow.scope || ''),
-    container: String(locationRow.container || ''),
-    folder_path: String(locationRow.folder_path || ''),
-    pdf_filename: String(locationRow.pdf_filename || ''),
-    pdf_path: String(locationRow.pdf_path || ''),
-    discovered_at: String(locationRow.discovered_at || '')
-  };
-  const nextPapers = papers.filter((entry) => entry.id !== paperEntry.id);
-  if (paperEntry.id) {
-    nextPapers.push(paperEntry);
-  }
-  const nextLocations = locations.filter((entry) => entry.id !== locationEntry.id);
-  if (locationEntry.id) {
-    nextLocations.push(locationEntry);
-  }
-  await writeJsonFile(indexPath, {
-    version: 1,
-    updated_at: new Date().toISOString(),
-    papers: nextPapers,
-    locations: nextLocations
-  });
-}
-
-function resolveRelativeStoragePath(storagePath, maybeRelativePath) {
-  const source = String(maybeRelativePath || '').trim();
-  if (!source) {
-    return '';
-  }
-  if (path.isAbsolute(source)) {
-    return source;
-  }
-  return path.join(storagePath, source);
-}
-
-function chooseLocation(locations = [], scope = '', container = '') {
-  const normalizedScope = String(scope || '').trim().toLowerCase();
-  const normalizedContainer = String(container || '').trim().toLowerCase();
-  return asArrayDefault(locations).find((location) => (
-    String(location.scope || '').trim().toLowerCase() === normalizedScope
-    && String(location.container || '').trim().toLowerCase() === normalizedContainer
-  )) || asArrayDefault(locations)[0] || null;
 }
 
 function createPaperKnowledgeDatabaseRuntime(deps = {}) {
@@ -1219,6 +830,11 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
   };
 }
 
+// Path/slug helpers live in ./paper-knowledge-paths.js and the SQLite + index
+// layer in ./paper-knowledge-store.js. They are re-exported here so existing
+// importers (paper-markdown-import, tests) keep working against the original
+// module surface. ponytail: re-export shim during the strangler split; point
+// new code at the focused modules directly.
 module.exports = {
   KNOWLEDGE_BASE_FOLDER_NAME,
   KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME,
