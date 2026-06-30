@@ -1,5 +1,5 @@
 export function installChemicalForm(ctx) {
-  const { persist, state } = ctx;
+  const { createId, persist, state } = ctx;
   const {
     chemicalId,
     chemicalName,

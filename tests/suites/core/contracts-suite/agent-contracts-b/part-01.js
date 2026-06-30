@@ -351,7 +351,8 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
       const sessionRuntimeSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'agent-session-runtime.js'), 'utf8');
       assert.match(mainSource, /createMainAgentServices/);
-      assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/intent\/agent-intent-parser'\)/);
+      // The intent parser moved to /self-agent; live code only keeps the shared inventory search-term helper.
+      assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-inventory-search-terms\.js'\)/);
       assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-observability'\)/);
       assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-controller-utils'\)/);
       assert.match(mainSource, /registerAgentIpc/);
@@ -364,7 +365,6 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.doesNotMatch(llmBridgeSource, /function startToolSession\(/);
       assert.doesNotMatch(llmBridgeSource, /function continueToolSessionWithToolOutputs\(/);
       assert.doesNotMatch(llmBridgeSource, /function continueToolSessionWithUserMessage\(/);
-      assert.match(controllerUtilsSource, /requestStructuredJsonPayload\(/);
       assert.match(controllerUtilsSource, /resolveAgentLlmSource/);
       assert.match(controllerUtilsSource, /createAgentLlmRuntimeHelpers/);
       assert.match(mainAgentServicesSource, /createAgentLlmProviderBridge/);

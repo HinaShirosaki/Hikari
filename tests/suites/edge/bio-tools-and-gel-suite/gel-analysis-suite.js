@@ -52,6 +52,63 @@ test('[EDGE] gel-analysis viewer image selection handles empty input', () => {
   assert.equal(gelAnalysisInternals.selectViewerBaseImageData(null, { previewImageData: { tag: 'preview' } }), null);
 });
 
+test('[EDGE] gel-analysis crop rotation accepts arbitrary angle input', () => {
+  const cropModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'crop-controller.js'));
+  const rotationCalls = [];
+  const statuses = [];
+  const runtime = {
+    cropRotationDegrees: 0,
+    cropperActive: true,
+    cropperInstance: {
+      rotateTo(degrees) {
+        rotationCalls.push(degrees);
+      }
+    },
+    currentImage: { width: 120, height: 80 },
+    originalImage: { width: 120, height: 80 }
+  };
+  const elements = {
+    gelStartCropBtn: new MockElement('gel-start-crop-btn'),
+    gelCancelCropBtn: new MockElement('gel-cancel-crop-btn'),
+    gelResetCropBtn: new MockElement('gel-reset-crop-btn'),
+    gelRotateAngleRange: new MockElement('gel-rotate-angle-range'),
+    gelRotateAngleInput: new MockElement('gel-rotate-angle-input'),
+    gelResetRotationBtn: new MockElement('gel-reset-rotation-btn')
+  };
+  const controller = cropModule.createCropController({
+    runtime,
+    elements,
+    deps: {
+      renderCanvas() {},
+      renderOverrideStatus() {},
+      renderReport() {},
+      setStatus: (message) => statuses.push(message)
+    }
+  });
+
+  controller.setCropUiState();
+  assert.equal(elements.gelRotateAngleRange.disabled, false);
+  assert.equal(elements.gelRotateAngleInput.disabled, false);
+
+  elements.gelRotateAngleInput.value = '12.5';
+  controller.onRotationAngleInput({ target: elements.gelRotateAngleInput });
+  assert.deepEqual(rotationCalls, [12.5]);
+  assert.equal(runtime.cropRotationDegrees, 12.5);
+  assert.equal(elements.gelRotateAngleRange.value, '12.5');
+  assert.equal(elements.gelResetRotationBtn.disabled, false);
+  assert.match(statuses[statuses.length - 1], /12\.5 deg/);
+
+  elements.gelRotateAngleRange.value = '-7.2';
+  controller.onRotationAngleInput({ target: elements.gelRotateAngleRange });
+  assert.deepEqual(rotationCalls, [12.5, -7.2]);
+  assert.equal(elements.gelRotateAngleInput.value, '-7.2');
+
+  controller.onResetRotation();
+  assert.deepEqual(rotationCalls, [12.5, -7.2, 0]);
+  assert.equal(elements.gelRotateAngleRange.value, '0');
+  assert.equal(elements.gelResetRotationBtn.disabled, true);
+});
+
 test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divider alignment', () => {
   const runtime = {
     currentImage: { width: 600 },

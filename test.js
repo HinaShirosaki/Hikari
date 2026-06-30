@@ -51,7 +51,7 @@ const shared = {
 };
 
 const agentRouting = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-routing.js'));
-const agentIntentParser = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'intent', 'agent-intent-parser.js'));
+const agentIntentParser = require(path.join(__dirname, 'self-agent', 'intent', 'agent-intent-parser.js'));
 const agentTools = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tools.js'));
 const agentProtocolGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-protocol-generation.js'));
 const agentProtocolMatching = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-protocol-matching.js'));

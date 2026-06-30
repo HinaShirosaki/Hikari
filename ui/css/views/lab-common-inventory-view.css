@@ -90,6 +90,22 @@
   margin-top: 18px;
 }
 
+#lab-common-inventory-view #chemical-list .list-row {
+  grid-template-columns: minmax(180px, 1fr) minmax(72px, 96px) minmax(128px, 156px);
+  column-gap: 18px;
+}
+
+#lab-common-inventory-view #chemical-list .list-row > :first-child {
+  min-width: 0;
+}
+
+#lab-common-inventory-view #chemical-list .list-row > :nth-child(2),
+#lab-common-inventory-view #chemical-list .list-row > :nth-child(3) {
+  justify-self: start;
+  width: 100%;
+  text-align: left;
+}
+
 #lab-common-inventory-view #chemical-list .small-note {
   padding: 14px 0;
 }

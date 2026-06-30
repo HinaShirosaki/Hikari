@@ -74,7 +74,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart06(context = {}
       assert.equal(renderedPrompt.includes('User: "Where is the custom PEI bottle?"'), false);
     });
     test('intent parser catalog validation rejects malformed entries', () => {
-      const catalogPath = path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'intent', 'agent-intent.json');
+      const catalogPath = path.join(__dirname, 'self-agent', 'intent', 'agent-intent.json');
       const invalidCatalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
       delete invalidCatalog.inventory_lookup.specific_output_append;
       assert.throws(

@@ -1,59 +1,46 @@
-import { formatSigFig } from './common.js';
-import { volumeFromL, volumeToL } from './molarity.js';
-import { calculateFixedReactionReagent, roundNearZero } from './bench-calculations.js';
+import { calculateFixedReaction } from './bench-calculations.js';
 
-const CONCENTRATION_OPTIONS = ['fM', 'pM', 'nM', 'uM', 'mM', 'M', 'x'];
-const VOLUME_OPTIONS = ['uL', 'mL', 'L'];
-const VOLUME_EPSILON_L = 1e-15;
+const REACTION_ROW_COUNT = 6;
 
-function selectMarkup(options, selectedValue) {
-  return options.map((option) => {
-    const selected = option === selectedValue ? ' selected' : '';
-    return `<option value="${option}"${selected}>${option}</option>`;
-  }).join('');
+function getElement(doc, id) {
+  return doc?.getElementById?.(id) || null;
 }
 
-function describeVolume(valueL, unit) {
-  return `${formatSigFig(volumeFromL(valueL, unit))} ${unit}`;
+function addListener(element, eventName, handler) {
+  if (element && typeof element.addEventListener === 'function') {
+    element.addEventListener(eventName, handler);
+  }
 }
 
-function createReactionRow(rootDocument, rowId) {
-  const row = rootDocument.createElement('div');
-  row.className = 'reaction-mix-row';
-  row.dataset.rowId = String(rowId);
-  row.innerHTML = `
-    <label class="reaction-mix-cell">
-      <span class="reaction-mix-cell-label">Name</span>
-      <input class="reaction-mix-name" type="text" placeholder="e.g. ATP" />
-    </label>
-    <label class="reaction-mix-cell">
-      <span class="reaction-mix-cell-label">Stock Conc</span>
-      <div class="inline-row">
-        <input class="reaction-mix-stock-value" type="number" min="0" step="0.000001" placeholder="e.g. 10" />
-        <select class="reaction-mix-stock-unit">${selectMarkup(CONCENTRATION_OPTIONS, 'mM')}</select>
-      </div>
-    </label>
-    <label class="reaction-mix-cell">
-      <span class="reaction-mix-cell-label">Final Conc</span>
-      <div class="inline-row">
-        <input class="reaction-mix-final-value" type="number" min="0" step="0.000001" placeholder="e.g. 1" />
-        <select class="reaction-mix-final-unit">${selectMarkup(CONCENTRATION_OPTIONS, 'uM')}</select>
-      </div>
-    </label>
-    <label class="reaction-mix-cell reaction-mix-volume-cell">
-      <span class="reaction-mix-cell-label">Volume</span>
-      <div class="inline-row">
-        <input class="reaction-mix-volume-value" type="number" min="0" step="0.000001" placeholder="Leave blank to auto-calc" />
-        <select class="reaction-mix-volume-unit">${selectMarkup(VOLUME_OPTIONS, 'uL')}</select>
-      </div>
-      <div class="reaction-mix-row-note"></div>
-    </label>
-    <div class="reaction-mix-cell reaction-mix-action-cell">
-      <span class="reaction-mix-cell-label">Action</span>
-      <button type="button" class="ghost-btn reaction-mix-delete-btn">Delete</button>
-    </div>
-  `;
-  return row;
+function setText(element, value) {
+  if (element) {
+    element.textContent = String(value || '');
+  }
+}
+
+function inputValue(element) {
+  return element?.value ?? '';
+}
+
+function isHidden(element) {
+  return Boolean(element?.hidden);
+}
+
+function resultTextAfterName(text) {
+  const source = String(text || '').trim();
+  const match = source.match(/^[^:]+:\s*(.+?)\.?$/s);
+  return match ? match[1].trim() : source;
+}
+
+function revealNextRow(doc) {
+  for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
+    const row = getElement(doc, `fixed-reaction-row-${index}`);
+    if (row?.hidden) {
+      row.hidden = false;
+      return true;
+    }
+  }
+  return false;
 }
 
 export function initFixedReactionTool(options = {}) {
@@ -62,120 +49,83 @@ export function initFixedReactionTool(options = {}) {
     return;
   }
 
-  const rowsHost = rootDocument.getElementById('fixed-reaction-rows');
-  const addRowBtn = rootDocument.getElementById('fixed-reaction-add-row-btn');
-  const fillNameInput = rootDocument.getElementById('fixed-reaction-fill-name');
-  const fillVolumeOutput = rootDocument.getElementById('fixed-reaction-fill-volume');
-  const fillNote = rootDocument.getElementById('fixed-reaction-fill-note');
-  const totalVolumeInput = rootDocument.getElementById('fixed-reaction-total-volume');
-  const totalUnitSelect = rootDocument.getElementById('fixed-reaction-total-unit');
-  if (!rowsHost || !addRowBtn || !fillNameInput || !fillVolumeOutput || !fillNote || !totalVolumeInput || !totalUnitSelect) {
+  const rowsHost = getElement(rootDocument, 'fixed-reaction-rows');
+  const addRowBtn = getElement(rootDocument, 'fixed-reaction-add-row-btn');
+  const fillNameInput = getElement(rootDocument, 'fixed-reaction-fill-name');
+  const totalVolumeInput = getElement(rootDocument, 'fixed-reaction-total-volume');
+  if (!rowsHost || !addRowBtn || !fillNameInput || !totalVolumeInput) {
     return;
   }
 
-  let rowIdCounter = 0;
-
-  function addRow() {
-    rowIdCounter += 1;
-    rowsHost.appendChild(createReactionRow(rootDocument, rowIdCounter));
-  }
-
-  function calculateRowVolume(row, totalVolumeL) {
-    const name = String(row.querySelector('.reaction-mix-name')?.value || '').trim() || 'Reagent';
-    const volumeInput = row.querySelector('.reaction-mix-volume-value');
-    const volumeUnit = row.querySelector('.reaction-mix-volume-unit')?.value || 'uL';
-    const stockValue = row.querySelector('.reaction-mix-stock-value')?.value;
-    const stockUnit = row.querySelector('.reaction-mix-stock-unit')?.value || 'mM';
-    const finalValue = row.querySelector('.reaction-mix-final-value')?.value;
-    const finalUnit = row.querySelector('.reaction-mix-final-unit')?.value || 'uM';
-    const totalVolumeInputValue = volumeFromL(totalVolumeL, totalUnitSelect.value || 'uL');
-    const result = calculateFixedReactionReagent({
-      name,
-      stockValue,
-      stockUnit,
-      finalValue,
-      finalUnit,
-      manualVolumeValue: volumeInput?.value,
-      manualVolumeUnit: volumeUnit,
-      totalVolumeValue: totalVolumeInputValue,
-      totalVolumeUnit: totalUnitSelect.value || 'uL'
-    });
-    const detail = result.details?.[0] || {};
-    const calculatedVolumeL = detail.knownVolume ? detail.volumeL : 0;
-    const note = result.resultText || result.formulaText || 'Enter stock/final concentration or type a volume directly.';
-    return {
-      liters: calculatedVolumeL,
-      note,
-      status: result.status === 'warning' ? 'warning' : (result.resultText ? 'ok' : 'muted')
-    };
-  }
-
-  function applyRowFeedback(row, result) {
-    const note = row.querySelector('.reaction-mix-row-note');
-    if (!note) {
-      return;
+  function collectReactionRows() {
+    const rows = [];
+    for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
+      if (isHidden(getElement(rootDocument, `fixed-reaction-row-${index}`))) {
+        continue;
+      }
+      rows.push({
+        rowIndex: index,
+        name: inputValue(getElement(rootDocument, `fixed-reaction-name-${index}`)),
+        stockConcentration: inputValue(getElement(rootDocument, `fixed-reaction-stock-${index}`)),
+        finalConcentration: inputValue(getElement(rootDocument, `fixed-reaction-final-${index}`)),
+        manualVolumeValue: inputValue(getElement(rootDocument, `fixed-reaction-volume-${index}`))
+      });
     }
+    return rows;
+  }
 
-    note.textContent = result.note;
-    note.classList.toggle('is-warning', result.status === 'warning');
-    note.classList.toggle('is-ok', result.status === 'ok');
+  function renderReactionTableResult(result) {
+    for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
+      setText(getElement(rootDocument, `fixed-reaction-output-${index}`), '');
+    }
+    (Array.isArray(result?.details) ? result.details : []).forEach((detail) => {
+      const rowIndex = Number(detail?.rowIndex) || 0;
+      const output = rowIndex ? getElement(rootDocument, `fixed-reaction-output-${rowIndex}`) : null;
+      if (!output) {
+        return;
+      }
+      const rowDetail = Array.isArray(detail.details) ? detail.details[0] : null;
+      setText(output, rowDetail?.quantityText || resultTextAfterName(detail.resultText));
+    });
+    setText(getElement(rootDocument, 'fixed-reaction-solvent-output'), result?.fill?.text || resultTextAfterName(result?.fill?.resultText || ''));
   }
 
   function renderReaction() {
-    const totalVolumeL = volumeToL(totalVolumeInput.value, totalUnitSelect.value);
-    const totalUnit = totalUnitSelect.value || 'uL';
-    const rows = [...rowsHost.querySelectorAll('.reaction-mix-row')];
-
-    let assignedVolumeL = 0;
-
-    rows.forEach((row) => {
-      const result = calculateRowVolume(row, totalVolumeL);
-      assignedVolumeL += result.liters;
-      applyRowFeedback(row, result);
+    const result = calculateFixedReaction({
+      totalVolumeValue: inputValue(totalVolumeInput),
+      totalVolumeUnit: 'uL',
+      fillName: inputValue(fillNameInput) || 'Water / buffer',
+      reagents: collectReactionRows()
     });
-
-    const fillVolumeL = roundNearZero(totalVolumeL - assignedVolumeL);
-    fillVolumeOutput.textContent = totalVolumeL > 0 ? describeVolume(fillVolumeL, totalUnit) : `0 ${totalUnit}`;
-    fillVolumeOutput.classList.toggle('reaction-mix-static-warning', fillVolumeL < -VOLUME_EPSILON_L);
-
-    if (fillVolumeL < -VOLUME_EPSILON_L) {
-      fillNote.textContent = 'Assigned reagent volumes exceed the total volume.';
-      fillNote.classList.add('is-warning');
-      fillNote.classList.remove('is-ok');
-    } else {
-      fillNote.textContent = `${String(fillNameInput.value || 'Fill solution').trim() || 'Fill solution'} is auto-calculated to reach the total volume.`;
-      fillNote.classList.remove('is-warning');
-      fillNote.classList.add('is-ok');
-    }
-
+    renderReactionTableResult(result);
   }
 
   addRowBtn.addEventListener('click', () => {
-    addRow();
+    revealNextRow(rootDocument);
     renderReaction();
   });
 
-  rowsHost.addEventListener('click', (event) => {
-    const deleteButton = event.target.closest('.reaction-mix-delete-btn');
-    if (!deleteButton) {
-      return;
-    }
-
-    const row = deleteButton.closest('.reaction-mix-row');
-    if (!row) {
-      return;
-    }
-
-    row.remove();
-    renderReaction();
+  [
+    'fixed-reaction-total-volume',
+    'fixed-reaction-fill-name'
+  ].forEach((id) => {
+    const element = getElement(rootDocument, id);
+    addListener(element, 'input', renderReaction);
+    addListener(element, 'change', renderReaction);
   });
 
-  rowsHost.addEventListener('input', renderReaction);
-  rowsHost.addEventListener('change', renderReaction);
-  totalVolumeInput.addEventListener('input', renderReaction);
-  totalUnitSelect.addEventListener('change', renderReaction);
-  fillNameInput.addEventListener('input', renderReaction);
+  for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
+    [
+      `fixed-reaction-name-${index}`,
+      `fixed-reaction-stock-${index}`,
+      `fixed-reaction-final-${index}`,
+      `fixed-reaction-volume-${index}`
+    ].forEach((id) => {
+      const element = getElement(rootDocument, id);
+      addListener(element, 'input', renderReaction);
+      addListener(element, 'change', renderReaction);
+    });
+  }
 
-  addRow();
   renderReaction();
 }

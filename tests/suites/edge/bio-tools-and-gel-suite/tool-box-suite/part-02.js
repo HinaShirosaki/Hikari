@@ -190,6 +190,69 @@ test('[EDGE] bench tool calculations return instant results and substituted form
   assert.match(typedReactionResult.resultText, /Carrier: 10 uL/i);
   assert.match(typedReactionResult.resultText, /Solvent: 89\.95 uL/i);
 });
+test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () => {
+  const ids = [
+    'buffer-volume-ml', 'buffer-ph', 'buffer-rows', 'add-buffer-chemical-btn', 'buffer-total-result',
+    'buffer-solvent-output', 'buffer-naoh-output', 'buffer-hcl-output',
+    'fixed-reaction-rows', 'fixed-reaction-add-row-btn', 'fixed-reaction-fill-name',
+    'fixed-reaction-total-volume', 'fixed-reaction-solvent-output'
+  ];
+  for (let index = 1; index <= 6; index += 1) {
+    ids.push(
+      `buffer-row-${index}`,
+      `buffer-name-${index}`,
+      `buffer-mw-${index}`,
+      `buffer-stock-${index}`,
+      `buffer-final-${index}`,
+      `buffer-output-${index}`,
+      `buffer-suggestions-${index}`,
+      `fixed-reaction-row-${index}`,
+      `fixed-reaction-name-${index}`,
+      `fixed-reaction-stock-${index}`,
+      `fixed-reaction-final-${index}`,
+      `fixed-reaction-volume-${index}`,
+      `fixed-reaction-output-${index}`
+    );
+  }
+  const document = createMockDocument(ids);
+  for (let index = 3; index <= 6; index += 1) {
+    document.getElementById(`buffer-row-${index}`).hidden = true;
+  }
+  for (let index = 2; index <= 6; index += 1) {
+    document.getElementById(`fixed-reaction-row-${index}`).hidden = true;
+  }
+
+  document.getElementById('buffer-volume-ml').value = '1000';
+  document.getElementById('buffer-name-1').value = 'NaCl';
+  document.getElementById('buffer-mw-1').value = '58.44';
+  document.getElementById('buffer-final-1').value = '150 mM';
+  document.getElementById('buffer-name-2').value = 'Tween 20';
+  document.getElementById('buffer-stock-2').value = '2000x';
+  document.getElementById('buffer-final-2').value = '1x';
+  document.getElementById('fixed-reaction-total-volume').value = '100 uL';
+  document.getElementById('fixed-reaction-fill-name').value = 'Water';
+  document.getElementById('fixed-reaction-name-1').value = 'Carrier';
+  document.getElementById('fixed-reaction-stock-1').value = '1 mg/mL';
+  document.getElementById('fixed-reaction-final-1').value = '100 ng/uL';
+
+  const bufferUi = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box', 'buffer-ui.js'));
+  const reactionUi = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box', 'fixed-reaction-ui.js'));
+  bufferUi.initBufferTool({
+    document,
+    getStoredCompounds: () => [{ name: 'Stored Salt', molecularWeight: 111.1, casNumber: '1-2-3' }]
+  });
+  reactionUi.initFixedReactionTool({ document });
+
+  assert.match(document.getElementById('buffer-output-1').textContent, /8766 mg/i);
+  assert.match(document.getElementById('buffer-output-2').textContent, /0\.5 mL/i);
+  assert.match(document.getElementById('buffer-solvent-output').textContent, /999\.5 mL/i);
+  assert.match(document.getElementById('fixed-reaction-output-1').textContent, /10 uL/i);
+  assert.match(document.getElementById('fixed-reaction-solvent-output').textContent, /90 uL/i);
+
+  document.getElementById('buffer-name-1').value = 'Stored';
+  trigger(document.getElementById('buffer-name-1'), 'input');
+  assert.match(document.getElementById('buffer-suggestions-1').innerHTML, /Stored Salt/);
+});
 test('[EDGE] sequence-viewer assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {
   const plan = sequenceViewerInternals.assembleCloningPlan({
     hostVectors: [

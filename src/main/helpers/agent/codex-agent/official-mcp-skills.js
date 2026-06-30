@@ -223,9 +223,12 @@ Direct tools:
 Table workflow:
 
 1. Start from the active assay context or user-provided data and create an original table with \`${ASSAY_TABLE_TOOL_NAME}\`.
-   - In the Assay right rail, the active assay context includes TSV blocks such as \`Assay result table (TSV...)\` and sometimes \`Latest analysis table (TSV)\`.
+   - In the Assay right rail, the active assay context includes TSV blocks such as \`Assay plate data (TSV...)\` and sometimes \`Latest analysis table (TSV)\`.
+   - To retrieve the data in a chat turn, find the \`Assay plate data (TSV...)\` block in the hidden context, read the header line, then parse each following non-empty TSV row until the next blank line or section. Each row becomes one object for \`create\`.
    - Convert that TSV into explicit \`rows\` for \`create\`; do not call \`create\` with only \`source: "active_assay"\`.
-   - Preserve the columns \`well\`, \`sample\`, \`concentration\`, and \`result\` when they are present, because downstream calculations and Plotly traces often need them.
+   - Preserve the columns \`well\`, \`row\`, \`column\`, \`sample\`, \`concentration\`, and \`result\` when they are present, because downstream calculations and Plotly traces often need the plate location as well as values.
+   - If the block says rows exist but no body rows are present, do not use \`record_lookup\`; say the active assay context omitted the row data and ask for a refreshed context.
+   - Do not use \`record_lookup\` to fetch the active assay plate data; the current plate data must come from the right-rail context TSV or from user-provided rows.
 2. Use \`derive\` or \`add_column\` for common calculations: \`+\`, \`-\`, \`*\`, \`/\`, \`max\`, \`min\`, \`avg\`, \`sd\`, \`median\`, \`count\`, \`log10\`, \`ln\`, and \`pow\`.
 3. Use row-wise \`operands\` when each row contains replicate columns. Example:
    \`{ "action": "derive", "source_table_id": "1", "include_source_columns": true, "columns": [{ "name": "avg_response", "op": "avg", "operands": ["rep1", "rep2", "rep3"] }, { "name": "sd_response", "op": "sd", "operands": ["rep1", "rep2", "rep3"] }] }\`

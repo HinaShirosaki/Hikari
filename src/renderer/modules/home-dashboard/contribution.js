@@ -231,7 +231,7 @@ export function initContributionWidget({ state, safeText, elements }) {
       formatContributionPart(day.bucket.completedProtocols, 'completed protocol'),
       formatContributionPart(day.bucket.dataUploads, 'data upload'),
       formatContributionPart(day.bucket.analysisNotes, 'analysis note'),
-      formatContributionPart(day.bucket.quickLogs, 'quick log')
+      formatContributionPart(day.bucket.quickLogs, 'experiment')
     ].filter(Boolean);
     return `${total} logged activit${total === 1 ? 'y' : 'ies'} on ${dateLabel}: ${parts.join(', ')}`;
   }

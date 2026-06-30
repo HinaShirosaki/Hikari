@@ -21,14 +21,7 @@ const {
   runPythonSandbox,
   createManagedPythonSandboxRuntime
 } = require('../agent/tools/agent-python-sandbox.js');
-const {
-  INTENT_PARSER_RESPONSE_SCHEMA,
-  normalizeIntentParserPayload,
-  buildIntentParserPrompt,
-  buildInventorySearchTerms,
-  mapCanonicalIntentToExecutionIntent,
-  normalizeParserEntitiesToRoutingEntities
-} = require('../agent/intent/agent-intent-parser');
+const { buildInventorySearchTerms } = require('../agent/shared/agent-inventory-search-terms.js');
 const observability = require('../agent/shared/agent-observability');
 const { createAgentControllerUtils } = require('../agent/shared/agent-controller-utils');
 const { createAgentRuntimeRegistry } = require('../agent/shared/agent-runtime-registry.js');
@@ -38,7 +31,6 @@ const { createAgentChatLogRuntime } = require('../agent/context/agent-chat-log.j
 const { createAgentSkillRuntime } = require('../agent/skills/agent-skill-runtime.js');
 const { normalizeToolInvocationArgs } = require('../agent/tools/agent-tool-loading.js');
 const { createAgentToolCallRuntime } = require('../agent/tools/agent-tool-execution.js');
-const { createAgentToolProviderRuntime } = require('../agent/tools/agent-tool-provide.js');
 const { createAgentCommandLineRuntime } = require('../agent/tools/agent-command-line.js');
 const { createAgentSubAgentRuntime } = require('../agent/tools/agent-sub-agent.js');
 const { createAgentContainerRuntime } = require('../agent/tools/agent-container.js');
@@ -70,7 +62,7 @@ const {
   createDirectLlmModuleRegistry,
   registerDefaultDirectLlmModules
 } = require('./llm/direct-llm-module-registry.js');
-const { asArray, clamp, createUniqueStrings } = require('./data/value-utils.js');
+const { asArray, createUniqueStrings } = require('./data/value-utils.js');
 const { STORAGE } = require('../../../shared/ipc/channels');
 
 function renderPromptTemplate(template, vars = {}) {
@@ -203,9 +195,6 @@ function createMainAgentServices(deps = {}) {
     asArray,
     cleanText,
     appendAgentChatLogEntry,
-    buildIntentParserPrompt,
-    normalizeIntentParserPayload,
-    INTENT_PARSER_RESPONSE_SCHEMA,
     llmProviderBridge
   });
   llmTraceRecorderRef.current = controllerUtils.recordAgentLlmTrace;
@@ -278,9 +267,6 @@ function createMainAgentServices(deps = {}) {
 
   const genericAgentToolRuntime = createAgentToolCallRuntime({
     asArray,
-    cleanText
-  });
-  const agentToolProviderRuntime = createAgentToolProviderRuntime({
     cleanText
   });
   agentToolRuntime = {

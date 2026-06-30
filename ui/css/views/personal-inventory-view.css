@@ -52,11 +52,15 @@
   text-align: left;
 }
 
+/* ponytail: border only on keyboard focus; .active/:hover drop it to kill the card-in-card seam line */
+.inventory-location-btn:focus-visible {
+  border-color: var(--theme-border-soft);
+}
+
 .inventory-location-btn:hover,
 .inventory-location-btn:focus-visible,
 .inventory-location-btn.active {
-  border-color: var(--theme-border-soft);
-  background: color-mix(in srgb, var(--theme-surface-subtle) 70%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 62%, transparent);
 }
 
 .inventory-location-group {
@@ -114,7 +118,8 @@
   padding: 7px 9px;
   border: 1px solid transparent;
   border-radius: 11px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 40%, transparent);
+  /* match the section-header fill so nested cards read as one shade, not a color step */
+  background: color-mix(in srgb, var(--theme-surface-subtle) 62%, transparent);
   color: inherit;
   text-align: left;
 }
@@ -206,11 +211,22 @@
 
 
 
-.inventory-add-form {
-  margin-bottom: 12px;
-  padding: 12px;
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
+.inventory-add-container-dialog.app-dialog-surface {
+  --app-dialog-width: 440px;
+  --app-dialog-padding: 18px;
+  --app-dialog-gap: 14px;
+}
+
+.inventory-add-container-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  grid-column: 1 / -1;
+}
+
+.inventory-add-container-dialog .form-actions {
+  grid-column: 1 / -1;
 }
 
 .inventory-custom-grid-fields {

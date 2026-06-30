@@ -13,7 +13,7 @@ const { createScienceLoopExitCriteriaRuntime } = require('../../../../../self-ag
 const { createScienceLoopExitJudgeRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/loop-exit-judge.js');
 const { createScienceThinkingTraceRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/thinking-trace.js');
 const { createScienceFinalSynthesisRuntime } = require('../../../../../self-agent/runtime/science-reasoning-loop/final-synthesis.js');
-const agentIntentParser = require('../intent/agent-intent-parser.js');
+const agentIntentParser = require('../../../../../self-agent/intent/agent-intent-parser.js');
 const agentToolLoading = require('../tools/agent-tool-loading.js');
 const { createProtocolMatchingRuntime } = require('../tools/agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('../tools/agent-notebook-generation.js');
@@ -463,7 +463,7 @@ function getAgentPromptRegistry() {
       title: 'Intent Parser Catalog Prompt',
       group: 'Core Agent',
       kind: 'static_prompt',
-      source: 'src/main/helpers/agent/intent/agent-intent-parser.js',
+      source: 'self-agent/intent/agent-intent-parser.js',
       content: agentIntentParser.INTENT_PARSER_PROMPT
     },
     {
@@ -471,7 +471,7 @@ function getAgentPromptRegistry() {
       title: 'Intent Parser Runtime Prompt',
       group: 'Core Agent',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/intent/agent-intent-parser.js',
+      source: 'self-agent/intent/agent-intent-parser.js',
       render: () => agentIntentParser.buildIntentParserPrompt({
         message: state.sampleConversation[0].text,
         conversation: state.sampleConversation,

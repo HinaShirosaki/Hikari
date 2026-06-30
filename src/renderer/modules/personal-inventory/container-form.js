@@ -3,6 +3,8 @@ import { createDefaultWells, normalizeCustomGridDimensions } from './constants.j
 export function installContainerForm(ctx) {
   const { createId, helpers, persist, safeText, state, uiState } = ctx;
   const {
+    addContainerBtn,
+    addContainerOverlay,
     addContainerForm,
     addContainerLocationSelect,
     addContainerTypeSelect,
@@ -14,8 +16,11 @@ export function installContainerForm(ctx) {
 
 function setAddContainerFormOpen(nextOpen) {
   uiState.isAddContainerFormOpen = Boolean(nextOpen);
-  if (addContainerForm) {
-    addContainerForm.hidden = !uiState.isAddContainerFormOpen;
+  if (addContainerOverlay) {
+    addContainerOverlay.hidden = !uiState.isAddContainerFormOpen;
+  }
+  if (addContainerBtn) {
+    addContainerBtn.setAttribute('aria-expanded', uiState.isAddContainerFormOpen ? 'true' : 'false');
   }
   if (uiState.isAddContainerFormOpen) {
     ctx.renderAddContainerTypeFields();

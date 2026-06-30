@@ -83,5 +83,77 @@ test('assay-analysis log-concentration methods skip non-positive concentration p
   });
 });
 
+test('assay result paste notifies the agent rail context immediately', () => {
+  const { createAssayResultsManager } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'results-manager.js'
+  ));
+  const runtime = {
+    currentLayout: [
+      { well: 'A1', sampleId: 'A', concentration: '10000' },
+      { well: 'A2', sampleId: 'A', concentration: '9000' }
+    ],
+    currentResults: {},
+    resultPasteAnchor: { rowIndex: 0, columnIndex: 0 }
+  };
+  let refreshCount = 0;
+  let prevented = false;
+  const manager = createAssayResultsManager({
+    runtime,
+    elements: {
+      assayResultTable: { innerHTML: '' }
+    },
+    TabulatorLib: null,
+    isMappedWell: (well) => well === 'A1' || well === 'A2',
+    getCurrentDefinition: () => ({ rows: 1, columns: 2 }),
+    getSampleAxis: () => 'row',
+    filterAndNormalizeResults: (results) => ({ ...results }),
+    setResultStatus: () => {},
+    clearAnalysisOutput: () => {},
+    onAnalysisConfigChange: () => {},
+    parseResultImportFile: null,
+    persistResultAttachment: null,
+    onResultImportApplied: null,
+    onResultsChanged: () => {
+      refreshCount += 1;
+    }
+  });
+
+  manager.onResultTablePaste({
+    target: {
+      closest: (selector) => (selector === '#assay-result-table' ? {} : null)
+    },
+    clipboardData: {
+      getData: () => '0.11\t0.22'
+    },
+    preventDefault: () => {
+      prevented = true;
+    }
+  });
+
+  assert.equal(prevented, true);
+  assert.equal(JSON.stringify(runtime.currentResults), JSON.stringify({ A1: '0.11', A2: '0.22' }));
+  assert.equal(refreshCount, 1);
+});
+
+test('assay agent TSV formatter preserves object-row cells', () => {
+  const source = fs.readFileSync(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'agent',
+    'context.js'
+  ), 'utf8');
+
+  assert.match(source, /row && typeof row === 'object' \? row : \{\}/);
+  assert.doesNotMatch(source, /const source = Array\.isArray\(row\) \? row : \{\};/);
+});
+
   }
 };

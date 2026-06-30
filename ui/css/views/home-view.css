@@ -191,7 +191,8 @@ body.theme-night #home-view {
 #home-view .home-tile-scroll,
 #home-view .dashboard-timer-active-list {
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding-right: 4px;
   overscroll-behavior: contain;
 }

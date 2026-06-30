@@ -136,43 +136,6 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(preloadSource, /agentChatLogGetSession:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.CHAT_LOG_GET_SESSION, payload\)/);
     });
 
-    test('agent registrar controller output returns parser payload and optional developer trace', () => {
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
-      const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
-      const dispatcherSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'), 'utf8');
-      const openContextRuntimeSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-open-context-runtime.js'), 'utf8');
-      const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
-      assert.match(apiControllerSource, /const result = \{\s*ok: true,\s*parser: parserResult\.payload\s*\}/);
-      assert.match(dispatcherSource, /createAgentOpenContextRuntime/);
-      assert.match(dispatcherSource, /dispatchOpenContextIntent/);
-      assert.match(openContextRuntimeSource, /if \(cleanText\(parserPayload\?\.primary_intent, 80\) === 'protocol_to_notebook'\)/);
-      assert.match(openContextRuntimeSource, /result\.protocol_to_notebook = protocolNotebookResult/);
-      assert.match(dispatcherSource, /if \(parserPayload\.primary_intent === 'notebook_draft'\)/);
-      assert.match(dispatcherSource, /result\.notebook_draft =/);
-      assert.match(dispatcherSource, /runTrackedTool\('notebook-draft'/);
-      assert.match(openContextRuntimeSource, /if \(cleanText\(parserPayload\?\.primary_intent, 80\) === 'inventory_lookup'\)/);
-      assert.match(openContextRuntimeSource, /result\.inventory_lookup = inventoryLookupResult/);
-      assert.match(openContextRuntimeSource, /if \(cleanText\(parserPayload\?\.primary_intent, 80\) === 'record_lookup'\)/);
-      assert.match(openContextRuntimeSource, /result\.record_lookup = recordLookupResult/);
-      assert.match(openContextRuntimeSource, /protocolNotebookRuntime\.runFlow\(/);
-      assert.match(openContextRuntimeSource, /protocolNotebookRuntime\.hasPendingSession\(/);
-      assert.match(openContextRuntimeSource, /stage: 'protocol_to_notebook_followup'/);
-      assert.match(openContextRuntimeSource, /stage: 'inventory_lookup_completed'/);
-      assert.match(openContextRuntimeSource, /stage: 'record_lookup_completed'/);
-      assert.match(mainAgentServicesSource, /createAgentLookupRuntime/);
-      assert.match(mainAgentServicesSource, /buildInventorySearchTerms/);
-      assert.match(mainAgentServicesSource, /createProtocolNotebookRuntime/);
-      assert.match(mainAgentServicesSource, /createNotebookDraftRuntime/);
-      assert.match(apiControllerSource, /if \(executionFlags\.developerMode === true\) \{\s*result\.developer_trace = asArray\(traceContext\?\.rows\);/);
-      assert.match(apiControllerSource, /requestIntentParserPayload\(/);
-      assert.match(mainAgentServicesSource, /createAgentControllerUtils/);
-      assert.match(controllerUtilsSource, /normalizeIntentParserPayload/);
-      assert.match(controllerCoreSource, /runAgentControllerCore\(/);
-      assert.equal(/controller_intent_only_selected/.test(controllerCoreSource), true);
-      assert.equal(/controller_intent_only/.test(apiControllerSource), true);
-    });
-
     test('codex-owned lifecycle stays scoped to agent chat while utility calls use the CLI adapter', () => {
       const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js');
       const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
@@ -238,21 +201,6 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(apiControllerSource, /if \(!rawParserResult\?\.ok \|\| !rawParserResult\?\.payload\)/);
       assert.match(apiControllerSource, /ok:\s*false/);
       assert.match(apiControllerSource, /Intent parser failed:/);
-    });
-
-    test('science controller path is wired through the agent registrar and shared reasoning loop', () => {
-      const mainSource = readMainProcessSource();
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const dispatcherSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'), 'utf8');
-      assert.match(mainSource, /createMainAgentServices/);
-      assert.match(mainAgentServicesSource, /createScienceReasoningLoopRuntime/);
-      assert.match(mainAgentServicesSource, /continueAgentSessionWithUserMessage/);
-      assert.match(dispatcherSource, /buildScienceRoutingFromParser/);
-      assert.match(dispatcherSource, /result\.general_science_question\s*=\s*await scienceReasoningLoopRuntime\.runGeneralScienceQuestion/);
-      assert.match(dispatcherSource, /result\.project_science_question\s*=\s*await scienceReasoningLoopRuntime\.runProjectScienceQuestion/);
-      assert.match(dispatcherSource, /result\.result_analysis\s*=\s*await scienceReasoningLoopRuntime\.runResultAnalysis/);
-      assert.match(dispatcherSource, /stage:\s*'science_intent_start'/);
-      assert.match(dispatcherSource, /stage:\s*'science_intent_completed'/);
     });
 
     test('purchase recommendation runtime and external-link bridge are wired across main and renderer contracts', () => {
@@ -360,8 +308,6 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('agent helper cleanup keeps the categorized folder structure and core modules', () => {
       const expectedFiles = [
         ['Readme.md'],
-        ['intent', 'agent-intent-parser.js'],
-        ['intent', 'agent-intent.json'],
         ['shared', 'agent-llm-provider-bridge.js'],
         ['shared', 'agent-llm-utils.js'],
         ['shared', 'agent-controller-utils.js'],

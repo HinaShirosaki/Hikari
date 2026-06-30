@@ -3,7 +3,9 @@ import { initToolBox } from '../modules/tool-box.js';
 export const toolBoxManifest = {
   key: 'toolBox',
   init: initToolBox,
-  createOptions: ({ rendererServices }) => ({
-    onOpenSequenceViewer: rendererServices.sequence.openFromToolBox
+  createOptions: ({ rendererServices, state, safeText }) => ({
+    onOpenSequenceViewer: rendererServices.sequence.openFromToolBox,
+    safeText,
+    getStoredCompounds: () => (Array.isArray(state.labInventory?.chemicals) ? state.labInventory.chemicals : [])
   })
 };

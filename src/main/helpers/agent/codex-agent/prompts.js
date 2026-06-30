@@ -109,6 +109,8 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
   const selectionInsight = ensureObject(input.selectionInsight);
   const paperAgentSessionBlock = buildPaperAgentSessionBlock(input, cleanText);
   const protocolGenerationTool = buildHikariCodexMcpToolName('protocol_generation');
+  const assayTableTool = buildHikariCodexMcpToolName('assay_table');
+  const plotlyGraphTool = buildHikariCodexMcpToolName('plotly_graph');
   const blocks = [
     '# Hikari Codex Chat Turn',
     '',
@@ -119,6 +121,8 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     'Hikari provides rendering and the MCP server. Use your Codex session context for continuity, tool choice, intent parsing, synthesis, and normal assistant prose for Hikari to render. Use native Codex search for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
     '',
     `Protocol generation handoff: when the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, first author complete protocol JSON from the evidence, then call \`${protocolGenerationTool}\` with \`{ protocol, save: true }\`. After the tool call, summarize that the generated protocol is ready for review.`,
+    '',
+    `Assay context handoff: when this chat turn contains hidden assay context, retrieve the active assay data by reading the \`Assay plate data (TSV...)\` block inside this same prompt. Parse the TSV lines after the header \`well\\trow\\tcolumn\\tsample\\tconcentration\\tresult\` into explicit row objects, then call \`${assayTableTool}\` with \`action: "create"\` when calculations, regression, derived tables, or graphing are needed. Do not call or expect \`record_lookup\` for active assay plate data. If the TSV title says rows exist but the body rows are absent, report that the assay context was supplied without row data instead of trying record lookup. Use \`${plotlyGraphTool}\` only after the table or calculation data exists.`,
     '',
     projectId || projectName
       ? `Selected project:\n${JSON.stringify({ id: projectId, name: projectName }, null, 2)}`

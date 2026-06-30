@@ -109,28 +109,83 @@
 }
 
 .assay-browser-item {
-  display: grid;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 10px;
   padding: 12px 0;
 }
 
 .assay-browser-item-copy {
+  flex: 1 1 auto;
+  min-width: 0;
   display: grid;
   gap: 4px;
 }
 
 .assay-browser-item-title {
   margin: 0;
-}
-
-.assay-browser-item-title {
   color: var(--theme-text-strong);
   font-size: 0.94rem;
   font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .assay-browser-item-actions {
-  gap: 6px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.assay-browser-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  cursor: pointer;
+}
+
+.assay-browser-icon-btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.assay-browser-icon-btn:hover,
+.assay-browser-icon-btn:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-accent) 44%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
+.assay-browser-icon-btn:focus-visible {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 28%, transparent);
+}
+
+.assay-browser-icon-btn-danger {
+  color: var(--theme-danger);
+}
+
+.assay-browser-icon-btn-danger:hover,
+.assay-browser-icon-btn-danger:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-danger) 38%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-danger) 9%, var(--theme-surface));
+  color: var(--theme-danger);
 }
 
 .assay-results-controls-panel {
