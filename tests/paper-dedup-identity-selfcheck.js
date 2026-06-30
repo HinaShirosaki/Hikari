@@ -27,6 +27,9 @@ const {
 const {
   splitMarkdownIntoSections
 } = require(path.join(root, 'src/main/helpers/agent/tools/agent-paper-context-loader.js'));
+const {
+  createPaperContextText
+} = require(path.join(root, 'src/main/helpers/agent/tools/paper-context-text.js'));
 
 // Mock fetch that records requested URLs and returns one Europe PMC record,
 // optionally empty when the URL carries a given journal clause (to exercise the
@@ -170,6 +173,30 @@ async function main() {
   // content under the title heading is retained (authors/year line)
   assert.ok(mdSections.some((s) => s.text.includes('Authors')), 'pre-Methods content retained');
   assert.deepEqual(splitMarkdownIntoSections(''), [], 'empty markdown yields no sections');
+
+  // --- extracted context-text factory still parses correctly -----------------
+  const cleanText = (value, max = 4000) => {
+    const text = String(value == null ? '' : value).trim();
+    return max > 0 ? text.slice(0, max) : text;
+  };
+  const asArray = (v) => (Array.isArray(v) ? v : []);
+  const uniqueStrings = (vals, max = 50) => [...new Set(asArray(vals).filter(Boolean))].slice(0, max);
+  const ctx = createPaperContextText({ cleanText, asArray, uniqueStrings });
+
+  const pm = ctx.parsePubMedAbstractSections(
+    '<Abstract><AbstractText Label="RESULTS">We saw an effect.</AbstractText></Abstract>'
+  );
+  assert.equal(pm[0].label, 'RESULTS');
+  assert.ok(pm[0].text.includes('effect'), 'PubMed abstract text parsed');
+
+  const meta = ctx.parseEuropePmcMetadata({ pmcid: 'PMC123', abstract: '<p>Hello</p>' });
+  assert.equal(meta.pmcid, 'PMC123');
+  assert.ok(meta.abstract_sections[0].text.includes('Hello'), 'EPMC abstract stripped of HTML');
+  assert.ok(meta.pdf_urls.some((u) => u.includes('PMC123')), 'EPMC pdf url derived from pmcid');
+
+  const chunks = ctx.chunkSectionText('word '.repeat(800), 1500, 200);
+  assert.ok(chunks.length > 1, 'long text chunked');
+  assert.ok(ctx.scoreTextAgainstQuery('kinase', 'a kinase study', 'Results') > 0, 'scoring matches query token');
 
   console.log('PASS paper-dedup-identity-selfcheck');
 }
