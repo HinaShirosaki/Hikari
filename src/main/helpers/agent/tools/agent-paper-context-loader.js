@@ -181,6 +181,40 @@ function looksLikePdfUrl(value) {
     .test(String(value || '').trim());
 }
 
+/**
+ * Split a paper.md rewrite into `{ label, text }` sections keyed by Markdown
+ * headings. Content before the first heading is kept under "Full text", and
+ * inline figure links (`![...](figures/...)`) are preserved verbatim so the
+ * agent can still locate the referenced figure files.
+ */
+function splitMarkdownIntoSections(markdown, maxSectionChars = 12000) {
+  const text = String(markdown || '');
+  if (!text.trim()) {
+    return [];
+  }
+  const sections = [];
+  let label = 'Full text';
+  let buffer = [];
+  const flush = () => {
+    const body = buffer.join('\n').trim();
+    if (body) {
+      sections.push({ label, text: body.length > maxSectionChars ? body.slice(0, maxSectionChars) : body });
+    }
+    buffer = [];
+  };
+  text.split(/\r?\n/).forEach((line) => {
+    const heading = line.match(/^#{1,6}\s+(.+?)\s*$/);
+    if (heading) {
+      flush();
+      label = heading[1].trim().slice(0, 160) || 'Section';
+    } else {
+      buffer.push(line);
+    }
+  });
+  flush();
+  return sections;
+}
+
 function createPaperContextLoaderRuntime(deps = {}) {
   const {
     asArray,
@@ -463,8 +497,35 @@ function createPaperContextLoaderRuntime(deps = {}) {
       pmid: cleanText(source.pmid, 120),
       pmcid: cleanText(source.pmcid, 120),
       source: cleanText(source.source, 80),
+      markdown_path: cleanText(
+        source.markdown_path
+        || source.knowledge_markdown_path
+        || source.knowledge_markdown_file_path,
+        4000
+      ),
       pdf_urls: uniqueStrings(asArray(source.pdf_urls).map((entry) => safeUrl(entry)).filter(Boolean), 8)
     };
+  }
+
+  /**
+   * Read a previously-ingested paper.md from disk and split it into sections.
+   * This is the canonical reuse path: a paper already in the knowledge database
+   * loads its saved full-paper markdown instead of falling back to an abstract.
+   * Returns [] when no path is given or the file cannot be read.
+   */
+  async function readLocalMarkdownSections(markdownPath) {
+    const normalizedPath = cleanText(markdownPath, 4000);
+    if (!normalizedPath) {
+      return [];
+    }
+    try {
+      const markdown = await fsPromises.readFile(normalizedPath, 'utf8');
+      return splitMarkdownIntoSections(markdown)
+        .map((section) => ({ label: cleanText(section.label, 160), text: cleanText(section.text, 12000) }))
+        .filter((section) => section.text);
+    } catch {
+      return [];
+    }
   }
 
   function buildPaperPdfUrls(record = {}) {
@@ -558,6 +619,19 @@ function createPaperContextLoaderRuntime(deps = {}) {
 
   async function readPaperContext(item = {}) {
     const normalized = normalizePaperItem(item);
+
+    // Reuse the locally-saved paper.md when available before any network call;
+    // this is the full-paper context the dedup step is trying to reuse.
+    const localMarkdownSections = await readLocalMarkdownSections(normalized.markdown_path);
+    if (localMarkdownSections.length) {
+      return {
+        ...normalized,
+        pdf_urls: buildPaperPdfUrls(normalized),
+        read_source: 'local_markdown',
+        sections: localMarkdownSections
+      };
+    }
+
     const europePmcMetadata = await fetchEuropePmcMetadataForItem(normalized);
     const merged = {
       ...normalized,
@@ -1456,5 +1530,6 @@ module.exports = {
   PAPER_FIGURE_REVIEW_SCHEMA,
   PAPER_PDF_EXCERPT_SELECTION_SCHEMA,
   PAPER_PDF_TEXT_EXCERPT_SELECTION_SCHEMA,
+  splitMarkdownIntoSections,
   createPaperContextLoaderRuntime
 };

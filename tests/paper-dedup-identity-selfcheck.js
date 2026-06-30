@@ -24,6 +24,9 @@ const {
 const {
   createLiteratureSearchRuntime
 } = require(path.join(root, 'src/main/helpers/agent/tools/agent-literature-search.js'));
+const {
+  splitMarkdownIntoSections
+} = require(path.join(root, 'src/main/helpers/agent/tools/agent-paper-context-loader.js'));
 
 // Mock fetch that records requested URLs and returns one Europe PMC record,
 // optionally empty when the URL carries a given journal clause (to exercise the
@@ -144,6 +147,29 @@ async function main() {
   });
   assert.equal(resC.items.length, 0, 'no fallback when opted out');
   assert.equal(resC.journal_filter_relaxed, false);
+
+  // --- reused papers load saved markdown, not abstracts ----------------------
+  // splitMarkdownIntoSections is what turns a reused paper.md back into readable
+  // sections; figure links must survive so the agent can still find figures.
+  const md = [
+    '# A Title',
+    '**Authors:** X   **Year:** 2020',
+    '',
+    '## Methods',
+    'We did a western blot.',
+    '![Figure on page 2](figures/page-2-img-1.png)',
+    '',
+    '## Key results',
+    'It worked.'
+  ].join('\n');
+  const mdSections = splitMarkdownIntoSections(md);
+  const labels = mdSections.map((s) => s.label);
+  assert.ok(labels.includes('Methods') && labels.includes('Key results'), 'sections split by heading');
+  const methods = mdSections.find((s) => s.label === 'Methods');
+  assert.ok(methods.text.includes('figures/page-2-img-1.png'), 'figure links preserved in section text');
+  // content under the title heading is retained (authors/year line)
+  assert.ok(mdSections.some((s) => s.text.includes('Authors')), 'pre-Methods content retained');
+  assert.deepEqual(splitMarkdownIntoSections(''), [], 'empty markdown yields no sections');
 
   console.log('PASS paper-dedup-identity-selfcheck');
 }

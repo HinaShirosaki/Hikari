@@ -513,6 +513,11 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       // Only reuse when the markdown actually exists on disk; a stale index row
       // whose paper.md is gone should be re-ingested, not silently skipped.
       if (lookup?.ok === true && lookup.status === 'found' && lookup.paper?.wiki_exists === true) {
+        const markdownPath = cleanText(lookup.paper.wiki_file_path, 4000);
+        // Annotate the candidate so the (non-Codex) context loader reads the
+        // saved paper.md instead of falling back to the abstract. `item` is the
+        // same object the reader receives in workflowCandidates.
+        item.markdown_path = markdownPath;
         reused.push({
           paper_id: cleanText(item.paper_id, 120),
           paper_title: cleanText(item.title, 320),
@@ -520,7 +525,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
           status: 'reused',
           knowledge_paper_id: cleanText(lookup.paper.id, 180),
           knowledge_markdown_relative_path: cleanText(lookup.paper.wiki_path, 2000),
-          knowledge_markdown_path: cleanText(lookup.paper.wiki_file_path, 4000),
+          knowledge_markdown_path: markdownPath,
           error: ''
         });
       } else {
