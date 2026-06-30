@@ -239,6 +239,10 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
   const paperDownloadRuntime = deps.paperDownloadRuntime && typeof deps.paperDownloadRuntime === 'object'
     ? deps.paperDownloadRuntime
     : null;
+  const paperKnowledgeDatabaseRuntime = deps.paperKnowledgeDatabaseRuntime
+    && typeof deps.paperKnowledgeDatabaseRuntime === 'object'
+    ? deps.paperKnowledgeDatabaseRuntime
+    : null;
   const createSubAgentRuntime = typeof deps.createSubAgentRuntime === 'function'
     ? deps.createSubAgentRuntime
     : createAgentSubAgentRuntime;
@@ -470,6 +474,62 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     return downloadedPapers;
   }
 
+  /**
+   * Split selected candidates into those already present in the local knowledge
+   * database (reuse the existing record, skip the download) and those that are
+   * new and must be downloaded + ingested. Dedup is best-effort: if the
+   * knowledge runtime or a storage path is unavailable, or the caller opts out
+   * with `skip_local_dedup`, every candidate is treated as novel — preserving
+   * the previous download-everything behavior.
+   *
+   * ponytail: one lookupPaper call per candidate (≤24). Batch into a single DB
+   * open if the candidate count ever grows past a couple dozen.
+   */
+  async function partitionByLocalKnowledge(candidates = [], storagePath = '', input = {}) {
+    const list = asArray(candidates);
+    const source = defaultEnsureObject(input);
+    if (
+      !paperKnowledgeDatabaseRuntime
+      || typeof paperKnowledgeDatabaseRuntime.lookupPaper !== 'function'
+      || !cleanText(storagePath, 2000)
+      || source.skip_local_dedup === true
+      || source.skipLocalDedup === true
+    ) {
+      return { novel: list, reused: [] };
+    }
+
+    const novel = [];
+    const reused = [];
+    for (const candidate of list) {
+      const item = defaultEnsureObject(candidate);
+      const lookup = await paperKnowledgeDatabaseRuntime.lookupPaper({
+        storage_path: storagePath,
+        doi: cleanText(item.doi, 180),
+        pmid: cleanText(item.pmid, 120),
+        pmcid: cleanText(item.pmcid, 120),
+        title: cleanText(item.title, 320)
+      }).catch(() => null);
+
+      // Only reuse when the markdown actually exists on disk; a stale index row
+      // whose paper.md is gone should be re-ingested, not silently skipped.
+      if (lookup?.ok === true && lookup.status === 'found' && lookup.paper?.wiki_exists === true) {
+        reused.push({
+          paper_id: cleanText(item.paper_id, 120),
+          paper_title: cleanText(item.title, 320),
+          ok: true,
+          status: 'reused',
+          knowledge_paper_id: cleanText(lookup.paper.id, 180),
+          knowledge_markdown_relative_path: cleanText(lookup.paper.wiki_path, 2000),
+          knowledge_markdown_path: cleanText(lookup.paper.wiki_file_path, 4000),
+          error: ''
+        });
+      } else {
+        novel.push(item);
+      }
+    }
+    return { novel, reused };
+  }
+
   async function readSelectedPapers(items = [], input = {}) {
     if (!paperContextLoaderRuntime || typeof paperContextLoaderRuntime.loadPaperContexts !== 'function') {
       return {
@@ -635,7 +695,15 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       ...source,
       storage_path: copiedContext.storage_path
     };
-    const downloadPromise = downloadSelectedPapers(workflowCandidates, downloadInput, linkedName);
+    // Compare against the local knowledge database before downloading so papers
+    // already ingested are reused instead of re-fetched, re-parsed, and
+    // re-summarized. Only the novel candidates are downloaded.
+    const { novel: novelCandidates, reused: reusedPapers } = await partitionByLocalKnowledge(
+      workflowCandidates,
+      copiedContext.storage_path,
+      source
+    );
+    const downloadPromise = downloadSelectedPapers(novelCandidates, downloadInput, linkedName);
     const useCodexPaperContext = Boolean(codexSubAgentRuntime)
       && shouldUseCodexPaperContextWorkflow(source);
     let downloadedPapers = [];
@@ -643,7 +711,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     let paperContextSubAgent = null;
 
     if (useCodexPaperContext) {
-      downloadedPapers = await downloadPromise;
+      downloadedPapers = reusedPapers.concat(asArray(await downloadPromise));
       paperContextSubAgent = await runCodexPaperContextSubAgent({
         subAgentRuntime: codexSubAgentRuntime,
         query,
@@ -700,17 +768,20 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
         downloadPromise
       });
       [downloadedPapers, readResult] = await Promise.all([downloadPromise, readPromise]);
+      downloadedPapers = reusedPapers.concat(asArray(downloadedPapers));
     }
 
     const contextBlockCount = asArray(readResult.loaded_context_blocks).length;
-    const downloadCount = downloadedPapers.filter((paper) => paper.ok === true).length;
+    const reusedCount = downloadedPapers.filter((paper) => paper.status === 'reused').length;
+    const downloadCount = downloadedPapers.filter((paper) => paper.ok === true && paper.status !== 'reused').length;
     const candidateCount = asArray(rawSearchResult.items).length;
     const summary = [
       candidateCount ? `Found ${candidateCount} candidate paper${candidateCount === 1 ? '' : 's'}.` : 'No candidate papers were found.',
       selectedPapers.length ? `Selected ${selectedPapers.length} paper${selectedPapers.length === 1 ? '' : 's'} for deeper reading.` : 'No papers were selected for deeper reading.',
-      downloadCount ? `Downloaded ${downloadCount} selected PDF${downloadCount === 1 ? '' : 's'} into the literature-search folder.` : 'No paper PDFs were downloaded.',
+      reusedCount ? `Reused ${reusedCount} paper${reusedCount === 1 ? '' : 's'} already in the local knowledge database.` : '',
+      downloadCount ? `Downloaded ${downloadCount} selected PDF${downloadCount === 1 ? '' : 's'} into the literature-search folder.` : 'No new paper PDFs were downloaded.',
       contextBlockCount ? `Loaded ${contextBlockCount} bounded context block${contextBlockCount === 1 ? '' : 's'} from the selected papers.` : 'No bounded context blocks were loaded.'
-    ].join(' ');
+    ].filter(Boolean).join(' ');
 
     return {
       ok: true,

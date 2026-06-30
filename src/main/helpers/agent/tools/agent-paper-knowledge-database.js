@@ -5,6 +5,7 @@ const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { normalizePmid, normalizePmcid } = require('../shared/paper-identity.js');
 const { createIntakePipeline } = require('../paper-intake/intake-pipeline.js');
 const {
   buildExtractedTextFile,
@@ -262,6 +263,8 @@ function applyKnowledgeDatabaseSchema(db) {
     CREATE TABLE IF NOT EXISTS papers (
       id TEXT PRIMARY KEY,
       doi TEXT UNIQUE,
+      pmid TEXT,
+      pmcid TEXT,
       title TEXT,
       abstract TEXT,
       authors_json TEXT,
@@ -304,6 +307,28 @@ function applyKnowledgeDatabaseSchema(db) {
     CREATE INDEX IF NOT EXISTS idx_knowledge_locations_paper ON paper_locations(paper_id);
     CREATE INDEX IF NOT EXISTS idx_knowledge_tags_tag ON paper_tags(tag);
   `);
+  migratePaperColumns(db);
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_pmid ON papers(pmid);
+    CREATE INDEX IF NOT EXISTS idx_knowledge_papers_pmcid ON papers(pmcid);
+  `);
+}
+
+/**
+ * Add columns introduced after the original schema to pre-existing databases.
+ * `CREATE TABLE IF NOT EXISTS` never alters an existing table, so identifier
+ * columns added later (pmid, pmcid) must be backfilled with ALTER TABLE.
+ */
+function migratePaperColumns(db) {
+  const existing = new Set(
+    queryRows(db, 'PRAGMA table_info(papers)').map((row) => String(row.name || ''))
+  );
+  if (!existing.has('pmid')) {
+    db.run('ALTER TABLE papers ADD COLUMN pmid TEXT');
+  }
+  if (!existing.has('pmcid')) {
+    db.run('ALTER TABLE papers ADD COLUMN pmcid TEXT');
+  }
 }
 
 function queryRows(db, sql, params = []) {
@@ -351,10 +376,24 @@ async function persistKnowledgeDatabase(sqlitePath, db) {
   await fsPromises.writeFile(sqlitePath, Buffer.from(bytes));
 }
 
-function findExistingPaperRow(db, { doi = '', pdfSha256 = '', title = '' } = {}) {
+function findExistingPaperRow(db, { doi = '', pmid = '', pmcid = '', pdfSha256 = '', title = '' } = {}) {
   const normalizedDoi = normalizeDoi(doi);
   if (normalizedDoi) {
     const rows = queryRows(db, 'SELECT * FROM papers WHERE lower(doi) = lower(?) LIMIT 1', [normalizedDoi]);
+    if (rows[0]) {
+      return rows[0];
+    }
+  }
+  const normalizedPmid = normalizePmid(pmid);
+  if (normalizedPmid) {
+    const rows = queryRows(db, 'SELECT * FROM papers WHERE pmid = ? LIMIT 1', [normalizedPmid]);
+    if (rows[0]) {
+      return rows[0];
+    }
+  }
+  const normalizedPmcid = normalizePmcid(pmcid);
+  if (normalizedPmcid) {
+    const rows = queryRows(db, 'SELECT * FROM papers WHERE pmcid = ? LIMIT 1', [normalizedPmcid]);
     if (rows[0]) {
       return rows[0];
     }
@@ -600,6 +639,8 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     );
     return {
       doi,
+      pmid: normalizePmid(source.pmid || source.paper_pmid || source.paperPmid),
+      pmcid: normalizePmcid(source.pmcid || source.paper_pmcid || source.paperPmcid),
       title,
       abstract: cleanText(source.abstract || source.paper_abstract || source.paperAbstract, 12000),
       authors,
@@ -704,6 +745,8 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     try {
       const existing = findExistingPaperRow(db, {
         doi: metadata.doi,
+        pmid: metadata.pmid,
+        pmcid: metadata.pmcid,
         pdfSha256: metadata.pdf_sha256,
         title: metadata.title
       });
@@ -733,11 +776,13 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       };
       runStatement(db, `
         INSERT INTO papers (
-          id, doi, title, abstract, authors_json, journal, year, url, pdf_sha256,
+          id, doi, pmid, pmcid, title, abstract, authors_json, journal, year, url, pdf_sha256,
           added_at, updated_at, source, wiki_status, wiki_path, extraction_status, notes, search_text
-        ) VALUES (?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, NULLIF(?, ''), NULLIF(?, ''), NULLIF(?, ''), ?, ?, ?, ?, ?, ?, NULLIF(?, ''), ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           doi = COALESCE(excluded.doi, papers.doi),
+          pmid = COALESCE(excluded.pmid, papers.pmid),
+          pmcid = COALESCE(excluded.pmcid, papers.pmcid),
           title = excluded.title,
           abstract = excluded.abstract,
           authors_json = excluded.authors_json,
@@ -755,6 +800,8 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       `, [
         resolvedPaperId,
         metadata.doi,
+        metadata.pmid,
+        metadata.pmcid,
         metadata.title,
         metadata.abstract,
         JSON.stringify(metadata.authors || []),
@@ -1087,6 +1134,8 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       indexAvailable = true;
       const paper = findExistingPaperRow(db, {
         doi: source.doi || source.paper_doi || source.paperDoi,
+        pmid: source.pmid || source.paper_pmid || source.paperPmid,
+        pmcid: source.pmcid || source.paper_pmcid || source.paperPmcid,
         title: source.title || source.paper_title || source.paperTitle
       });
       if (!paper) {
@@ -1120,6 +1169,8 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
         paper: {
           id: cleanText(paper.id, 180),
           doi: cleanText(paper.doi, 180),
+          pmid: cleanText(paper.pmid, 120),
+          pmcid: cleanText(paper.pmcid, 120),
           title: cleanText(paper.title, 320),
           wiki_status: cleanText(paper.wiki_status, 80),
           wiki_path: cleanText(paper.wiki_path, 2000),
@@ -1184,6 +1235,8 @@ module.exports = {
   createPaperKnowledgeDatabaseRuntime,
   openKnowledgeDatabase,
   persistKnowledgeDatabase,
+  migratePaperColumns,
+  findExistingPaperRow,
   queryRows,
   runStatement
 };

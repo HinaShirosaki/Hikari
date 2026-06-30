@@ -411,6 +411,7 @@ function createMainAgentServices(deps = {}) {
     literatureSearchRuntime,
     paperContextLoaderRuntime,
     paperDownloadRuntime,
+    paperKnowledgeDatabaseRuntime,
     subAgentRuntime
   });
   const purchaseRecommendationRuntime = createPurchaseRecommendationRuntime({
