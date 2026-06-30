@@ -57,7 +57,7 @@
   },
   {
     "name": "literature-search",
-    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults."
+    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, or generic web results with scholarly-first auto fallback. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults. To restrict the search to specific journals, pass `journals` (an array of journal names, e.g. [\"Nature\", \"Cell\"]); this hard-scopes the PubMed, Crossref, and Europe PMC queries and relaxes to an unfiltered search only when nothing matches."
   },
   {
     "name": "purchase-recommendation",

@@ -21,6 +21,26 @@ const {
   queryRows,
   runStatement
 } = require(path.join(root, 'src/main/helpers/agent/tools/agent-paper-knowledge-database.js'));
+const {
+  createLiteratureSearchRuntime
+} = require(path.join(root, 'src/main/helpers/agent/tools/agent-literature-search.js'));
+
+// Mock fetch that records requested URLs and returns one Europe PMC record,
+// optionally empty when the URL carries a given journal clause (to exercise the
+// unfiltered fallback).
+function makeEuropePmcFetch({ emptyWhenIncludes = null } = {}) {
+  const urls = [];
+  const fetch = async (url) => {
+    urls.push(String(url));
+    const decoded = decodeURIComponent(String(url));
+    const empty = emptyWhenIncludes && decoded.includes(emptyWhenIncludes);
+    const result = empty
+      ? []
+      : [{ id: '1', title: 'A kinase paper', journalTitle: 'Nature', pubYear: '2020', doi: '10.1/x' }];
+    return { ok: true, status: 200, json: async () => ({ resultList: { result } }) };
+  };
+  return { fetch, urls };
+}
 
 async function main() {
   // --- identity normalization ------------------------------------------------
@@ -81,6 +101,49 @@ async function main() {
   runStatement(legacy, "UPDATE papers SET pmid = '555' WHERE id = 'old1'");
   assert.equal(findExistingPaperRow(legacy, { pmid: '555' })?.id, 'old1', 'lookup works after migration');
   legacy.close();
+
+  // --- journal filter is pushed into the provider query ----------------------
+  const scoped = makeEuropePmcFetch();
+  const runtimeA = createLiteratureSearchRuntime({ fetch: scoped.fetch });
+  const resA = await runtimeA.searchLiteratureCandidates({
+    query: 'kinase',
+    source: 'europe_pmc',
+    journals: ['Nature'],
+    allow_web_fallback: false
+  });
+  assert.ok(resA.ok && resA.items.length > 0, 'scoped search returns results');
+  assert.deepEqual(resA.journal_filter, ['Nature']);
+  assert.equal(resA.journal_filter_relaxed, false);
+  assert.ok(
+    scoped.urls.some((url) => decodeURIComponent(url).includes('JOURNAL:"Nature"')),
+    'Europe PMC query must carry the JOURNAL clause'
+  );
+
+  // --- empty filtered result relaxes to an unfiltered search -----------------
+  const relaxed = makeEuropePmcFetch({ emptyWhenIncludes: 'JOURNAL:"Obscure Journal"' });
+  const runtimeB = createLiteratureSearchRuntime({ fetch: relaxed.fetch });
+  const resB = await runtimeB.searchLiteratureCandidates({
+    query: 'kinase',
+    source: 'europe_pmc',
+    journals: ['Obscure Journal'],
+    allow_web_fallback: false
+  });
+  assert.equal(resB.journal_filter_relaxed, true, 'must relax when filter matches nothing');
+  assert.ok(resB.items.length > 0, 'unfiltered fallback returns results');
+  assert.equal(relaxed.urls.length, 2, 'one filtered call, then one unfiltered retry');
+
+  // --- opt out of relaxation -------------------------------------------------
+  const strict = makeEuropePmcFetch({ emptyWhenIncludes: 'JOURNAL:"Obscure Journal"' });
+  const runtimeC = createLiteratureSearchRuntime({ fetch: strict.fetch });
+  const resC = await runtimeC.searchLiteratureCandidates({
+    query: 'kinase',
+    source: 'europe_pmc',
+    journals: ['Obscure Journal'],
+    allow_web_fallback: false,
+    allow_unfiltered_fallback: false
+  });
+  assert.equal(resC.items.length, 0, 'no fallback when opted out');
+  assert.equal(resC.journal_filter_relaxed, false);
 
   console.log('PASS paper-dedup-identity-selfcheck');
 }

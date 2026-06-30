@@ -245,6 +245,46 @@ function createLiteratureSearchRuntime(deps = {}) {
     return uniqueStrings(extractKeywordPhrases(buildLiteratureQuery(input), 50), 50);
   }
 
+  /**
+   * Resolve an explicit, hard journal filter from the request. Only the
+   * `journals` / `journal_filter` fields are treated as a restriction; the
+   * settings-level `preferred_journal` stays a soft re-rank handled by the
+   * workflow, so this never silently narrows a search the user did not scope.
+   * Returns a deduped list of journal names (max 6), quotes stripped so they
+   * can be embedded in provider query syntax.
+   */
+  function resolveJournalFilter(input = {}) {
+    const source = ensureObject(input);
+    const raw = source.journals
+      ?? source.journal_filter
+      ?? source.journalFilter;
+    let list = [];
+    if (Array.isArray(raw)) {
+      list = raw;
+    } else if (typeof raw === 'string') {
+      list = raw.split(/[;,\n]/);
+    }
+    return uniqueStrings(
+      list.map((value) => cleanText(value, 180).replace(/"/g, '').trim()).filter(Boolean),
+      6
+    );
+  }
+
+  function buildJournalScopedTerm(sourceName, query, journals = []) {
+    if (!journals.length) {
+      return query;
+    }
+    if (sourceName === LITERATURE_SOURCES.PUBMED) {
+      return `${query} AND (${journals.map((journal) => `"${journal}"[Journal]`).join(' OR ')})`;
+    }
+    if (sourceName === LITERATURE_SOURCES.EUROPE_PMC) {
+      return `${query} AND (${journals.map((journal) => `JOURNAL:"${journal}"`).join(' OR ')})`;
+    }
+    // Crossref scopes via a separate URL parameter; UniProt and web do not
+    // support journal scoping, so the query is returned unchanged.
+    return query;
+  }
+
   function buildLiteratureQuery(input = {}) {
     return cleanText(buildKeywordStyleLiteratureQuery(input, {
       maxLength: 600
@@ -411,13 +451,14 @@ function createLiteratureSearchRuntime(deps = {}) {
     };
   }
 
-  async function searchPubMedRecords(query, limit = 5) {
+  async function searchPubMedRecords(query, limit = 5, journals = []) {
     if (searchPubMedRecordsOverride) {
-      return normalizeResultList(LITERATURE_SOURCES.PUBMED, await searchPubMedRecordsOverride({ query, limit }));
+      return normalizeResultList(LITERATURE_SOURCES.PUBMED, await searchPubMedRecordsOverride({ query, limit, journals }));
     }
 
+    const term = buildJournalScopedTerm(LITERATURE_SOURCES.PUBMED, query, journals);
     const idPayload = await fetchJson(
-      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=${encodeURIComponent(limit)}&term=${encodeURIComponent(query)}`
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=${encodeURIComponent(limit)}&term=${encodeURIComponent(term)}`
     );
     const ids = uniqueStrings(asArray(idPayload?.esearchresult?.idlist), limit);
     if (!ids.length) {
@@ -446,13 +487,16 @@ function createLiteratureSearchRuntime(deps = {}) {
     }).filter((item) => item.title);
   }
 
-  async function searchCrossrefRecords(query, limit = 5) {
+  async function searchCrossrefRecords(query, limit = 5, journals = []) {
     if (searchCrossrefRecordsOverride) {
-      return normalizeResultList(LITERATURE_SOURCES.CROSSREF, await searchCrossrefRecordsOverride({ query, limit }));
+      return normalizeResultList(LITERATURE_SOURCES.CROSSREF, await searchCrossrefRecordsOverride({ query, limit, journals }));
     }
 
+    const journalParam = journals.length
+      ? `&query.container-title=${encodeURIComponent(journals.join(' '))}`
+      : '';
     const payload = await fetchJson(
-      `https://api.crossref.org/works?rows=${encodeURIComponent(limit)}&query.bibliographic=${encodeURIComponent(query)}`
+      `https://api.crossref.org/works?rows=${encodeURIComponent(limit)}&query.bibliographic=${encodeURIComponent(query)}${journalParam}`
     );
     return asArray(payload?.message?.items).slice(0, limit).map((record) => {
       const source = ensureObject(record);
@@ -506,13 +550,14 @@ function createLiteratureSearchRuntime(deps = {}) {
     }).filter((item) => item.title || item.accession);
   }
 
-  async function searchEuropePmcRecords(query, limit = 5) {
+  async function searchEuropePmcRecords(query, limit = 5, journals = []) {
     if (searchEuropePmcRecordsOverride) {
-      return normalizeResultList(LITERATURE_SOURCES.EUROPE_PMC, await searchEuropePmcRecordsOverride({ query, limit }));
+      return normalizeResultList(LITERATURE_SOURCES.EUROPE_PMC, await searchEuropePmcRecordsOverride({ query, limit, journals }));
     }
 
+    const scopedQuery = buildJournalScopedTerm(LITERATURE_SOURCES.EUROPE_PMC, query, journals);
     const payload = await fetchJson(
-      `https://www.ebi.ac.uk/europepmc/webservices/rest/search?format=json&pageSize=${encodeURIComponent(limit)}&query=${encodeURIComponent(query)}`
+      `https://www.ebi.ac.uk/europepmc/webservices/rest/search?format=json&pageSize=${encodeURIComponent(limit)}&query=${encodeURIComponent(scopedQuery)}`
     );
     return asArray(payload?.resultList?.result).slice(0, limit).map((record) => {
       const source = ensureObject(record);
@@ -584,21 +629,21 @@ function createLiteratureSearchRuntime(deps = {}) {
     throw new Error('Literature web search requires provider-layer web search support.');
   }
 
-  async function searchSource(sourceName, query, limit, input = {}) {
+  async function searchSource(sourceName, query, limit, input = {}, journals = []) {
     if (sourceName === LITERATURE_SOURCES.WEB) {
       return searchWebRecords(query, limit, input);
     }
     if (sourceName === LITERATURE_SOURCES.PUBMED) {
-      return searchPubMedRecords(query, limit);
+      return searchPubMedRecords(query, limit, journals);
     }
     if (sourceName === LITERATURE_SOURCES.CROSSREF) {
-      return searchCrossrefRecords(query, limit);
+      return searchCrossrefRecords(query, limit, journals);
     }
     if (sourceName === LITERATURE_SOURCES.UNIPROT) {
       return searchUniProtRecords(query, limit);
     }
     if (sourceName === LITERATURE_SOURCES.EUROPE_PMC) {
-      return searchEuropePmcRecords(query, limit);
+      return searchEuropePmcRecords(query, limit, journals);
     }
     return [];
   }
@@ -619,24 +664,54 @@ function createLiteratureSearchRuntime(deps = {}) {
     const limit = clampInteger(source.limit, 8, 1, 25);
     const perSourceLimit = clampInteger(source.max_per_source, Math.min(limit, 5), 1, 25);
     const preferRecent = source.prefer_recent !== false;
-    const executedSources = [];
-    const sourceCounts = {};
-    const sourceErrors = {};
-    const results = [];
+    const journalFilter = resolveJournalFilter(source);
+    const allowUnfilteredFallback = source.allow_unfiltered_fallback !== false
+      && source.allowUnfilteredFallback !== false;
+    let journalFilterRelaxed = false;
+    let executedSources = [];
+    let sourceCounts = {};
+    let sourceErrors = {};
+    let results = [];
 
-    for (const sourceName of resolvedSources) {
-      executedSources.push(sourceName);
-      try {
-        const items = await searchSource(sourceName, query, Math.min(perSourceLimit, limit), source);
-        sourceCounts[sourceName] = items.length;
-        results.push(...items);
-      } catch (error) {
-        if (isAgentRequestAbortError(error)) {
-          throw error;
+    async function runResolvedSources(journals) {
+      const execed = [];
+      const counts = {};
+      const errors = {};
+      const collected = [];
+      for (const sourceName of resolvedSources) {
+        execed.push(sourceName);
+        try {
+          const items = await searchSource(sourceName, query, Math.min(perSourceLimit, limit), source, journals);
+          counts[sourceName] = items.length;
+          collected.push(...items);
+        } catch (error) {
+          if (isAgentRequestAbortError(error)) {
+            throw error;
+          }
+          counts[sourceName] = 0;
+          errors[sourceName] = cleanText(error?.message, 600) || `${SOURCE_LABELS[sourceName] || sourceName} search failed.`;
         }
-        sourceCounts[sourceName] = 0;
-        sourceErrors[sourceName] = cleanText(error?.message, 600) || `${SOURCE_LABELS[sourceName] || sourceName} search failed.`;
       }
+      return { execed, counts, errors, collected };
+    }
+
+    let run = await runResolvedSources(journalFilter);
+    executedSources = run.execed;
+    sourceCounts = run.counts;
+    sourceErrors = run.errors;
+    results = run.collected;
+
+    // A strict journal filter that matched nothing degrades to an unfiltered
+    // search (then the workflow's soft journal re-rank still applies), unless
+    // the caller forbids it. This avoids handing back zero results purely
+    // because the scoped-journal syntax was too narrow for a provider.
+    if (journalFilter.length && results.length === 0 && allowUnfilteredFallback) {
+      journalFilterRelaxed = true;
+      run = await runResolvedSources([]);
+      executedSources = run.execed;
+      sourceCounts = run.counts;
+      sourceErrors = run.errors;
+      results = run.collected;
     }
 
     const shouldTryWebFallback = requestedSource !== LITERATURE_SOURCES.WEB
@@ -677,9 +752,18 @@ function createLiteratureSearchRuntime(deps = {}) {
       papers_read_count: 0,
       source_counts: cloneJson(sourceCounts, {}),
       source_errors: cloneJson(sourceErrors, {}),
-      summary: items.length
-        ? `Found ${items.length} literature result${items.length === 1 ? '' : 's'} (${sourceSummary}).`
-        : `No literature results found (${sourceSummary || 'no sources executed'}).`
+      journal_filter: journalFilter,
+      journal_filter_relaxed: journalFilterRelaxed,
+      summary: [
+        items.length
+          ? `Found ${items.length} literature result${items.length === 1 ? '' : 's'} (${sourceSummary}).`
+          : `No literature results found (${sourceSummary || 'no sources executed'}).`,
+        journalFilter.length
+          ? (journalFilterRelaxed
+            ? `Journal filter [${journalFilter.join(', ')}] matched nothing; relaxed to an unfiltered search.`
+            : `Restricted to journal(s): ${journalFilter.join(', ')}.`)
+          : ''
+      ].filter(Boolean).join(' ')
     };
   }
 
