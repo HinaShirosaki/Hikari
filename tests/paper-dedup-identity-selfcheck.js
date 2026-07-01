@@ -42,6 +42,11 @@ const {
   selectPaperCandidates
 } = require(path.join(root, 'src/main/helpers/agent/literature-search/literature-candidates.js'));
 const {
+  normalizeLineRanges,
+  readLineRangesFromText,
+  inferMarkdownSectionLabel
+} = require(path.join(root, 'src/main/helpers/agent/literature-search/paper-line-ranges.js'));
+const {
   createPaperContextText
 } = require(path.join(root, 'src/main/helpers/agent/tools/paper-context-text.js'));
 
@@ -385,6 +390,28 @@ async function main() {
   assert.equal(picked.length, 2, 'deduped by DOI (2 distinct)');
   assert.equal(picked[0].doi, '10.1/a', 'top-ranked is the kinase match');
   assert.ok(!('__score' in picked[0]), 'internal scoring fields stripped');
+
+  // --- codex line-range hydration (extracted module) -------------------------
+  // adjacent/overlapping ranges merge; string "3-4, 6" parses; 1-based clamp
+  assert.deepEqual(
+    normalizeLineRanges([{ start_line: 3, end_line: 4 }, { start_line: 5, end_line: 5 }]),
+    [{ start_line: 3, end_line: 5 }],
+    'adjacent ranges merge'
+  );
+  assert.deepEqual(normalizeLineRanges('3-4, 6'), [{ start_line: 3, end_line: 4 }, { start_line: 6, end_line: 6 }], 'string ranges parse');
+
+  const codexMd = '# Title\nintro line\n## Methods\nwe ran a blot\nand a gel\n## Results\nit worked';
+  const hydrated = readLineRangesFromText(codexMd, [{ start_line: 4, end_line: 5 }]);
+  assert.equal(hydrated.parts.length, 1);
+  assert.equal(hydrated.parts[0].text, 'we ran a blot\nand a gel', 'verbatim lines pulled by 1-based range');
+  assert.equal(
+    inferMarkdownSectionLabel(codexMd.split('\n'), 4, 'fallback'),
+    'Methods',
+    'section label inferred from nearest heading above'
+  );
+  // out-of-range clamps instead of throwing
+  const clamped = readLineRangesFromText('only one line', [{ start_line: 5, end_line: 9 }]);
+  assert.equal(clamped.parts[0].text, 'only one line', 'ranges clamp to available lines');
 
   console.log('PASS paper-dedup-identity-selfcheck');
 }
