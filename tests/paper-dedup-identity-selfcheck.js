@@ -333,6 +333,34 @@ async function main() {
   assert.equal(pdfOut.loaded_context_blocks[0].source, 'llm_pdf_text_read', 'PDF-text selection path exercised');
   assert.equal(pdfOut.loaded_context_blocks[0].section_label, 'Results');
 
+  // PDF-binary excerpt path + figure-review path (no pdfTextExtractionRuntime,
+  // so the attached-PDF branch runs; a figure-oriented query triggers review)
+  const binDir = fs.mkdtempSync(path.join(os.tmpdir(), 'paper-parity-bin-'));
+  const binPdf = path.join(binDir, 'p1.pdf');
+  fs.writeFileSync(binPdf, Buffer.from('%PDF-1.4 fake', 'utf8'));
+  const binFigLlm = async ({ stage }) => {
+    if (stage === 'paper_context_selection_pdf') {
+      return { ok: true, payload: { excerpts: [{ section_label: 'Figure 2', excerpt: 'The blot shows a clear band.', relevance_reason: 'binary pdf' }] } };
+    }
+    if (stage === 'paper_figure_review') {
+      return { ok: true, payload: { useful: true, figure_summary: 'Figure 2 shows a strong band at 55 kDa.', relevance_reason: 'figure evidence' } };
+    }
+    return { ok: true, payload: { selected_blocks: [], figure_review_requests: [] } };
+  };
+  const binRt = createPaperContextLoaderRuntime({ cleanText, asArray, uniqueStrings, requestStructuredJsonPayload: binFigLlm });
+  const binOut = await binRt.loadPaperContexts({
+    query: 'what does the western blot figure show',
+    items: [{ paper_id: 'p1', title: 'Paper One', summary: 'A blot study.', pdf_urls: ['https://example.org/p1.pdf'] }],
+    downloaded_papers: [{ ok: true, paper_id: 'p1', file_path: binPdf }]
+  });
+  fs.rmSync(binDir, { recursive: true, force: true });
+  const binSources = binOut.loaded_context_blocks.map((b) => b.source);
+  assert.ok(binSources.includes('llm_pdf_read'), 'PDF-binary excerpt path exercised');
+  assert.ok(binSources.includes('figure_review'), 'figure-review path exercised');
+  const figBlock = binOut.loaded_context_blocks.find((b) => b.source === 'figure_review');
+  assert.equal(figBlock.evidence_kind, 'figure_review');
+  assert.equal(figBlock.section_label, 'Figures');
+
   console.log('PASS paper-dedup-identity-selfcheck');
 }
 
