@@ -5,6 +5,8 @@
 // Run: node tests/paper-dedup-identity-selfcheck.js
 const assert = require('node:assert/strict');
 const path = require('node:path');
+const fs = require('node:fs');
+const os = require('node:os');
 
 const root = path.resolve(__dirname, '..');
 const {
@@ -28,7 +30,8 @@ const {
   normalizeToolArgumentsPayload
 } = require(path.join(root, 'src/main/helpers/agent/tools/agent-tool-loading.js'));
 const {
-  splitMarkdownIntoSections
+  splitMarkdownIntoSections,
+  createPaperContextLoaderRuntime
 } = require(path.join(root, 'src/main/helpers/agent/tools/agent-paper-context-loader.js'));
 const {
   createPaperContextSelection
@@ -286,6 +289,49 @@ async function main() {
   );
   assert.ok(merged.length <= 3, 'merge honors maxBlocks');
   assert.equal(merged[0].block_id, 'pdf1', 'pdf blocks take precedence');
+
+  // --- loadPaperContexts orchestration parity (guards the LLM-orchestration
+  //     extraction: same inputs must yield the same emitted context blocks) ---
+  const pickFirstBlockLlm = async ({ userPrompt }) => {
+    const m = String(userPrompt).match(/Block ID: (\S+)/);
+    return { ok: true, payload: { selected_blocks: m ? [{ block_id: m[1], relevance_reason: 'fake reason' }] : [], figure_review_requests: [] } };
+  };
+  const orchRt = createPaperContextLoaderRuntime({ cleanText, asArray, uniqueStrings, requestStructuredJsonPayload: pickFirstBlockLlm });
+  const orch = await orchRt.loadPaperContexts({
+    query: 'kinase inhibitor resistance',
+    items: [
+      { paper_id: 'p1', title: 'Paper One', summary: 'A study of kinase inhibitor resistance mechanisms in tumor cells.' },
+      { paper_id: 'p2', title: 'Paper Two', summary: 'Unrelated work on plant photosynthesis pathways.' }
+    ]
+  });
+  assert.equal(orch.papers_read_count, 2, 'both papers read');
+  assert.equal(orch.loaded_context_blocks.length, 1, 'one block selected (non-PDF path)');
+  assert.equal(orch.loaded_context_blocks[0].paper_id, 'p1');
+  assert.equal(orch.loaded_context_blocks[0].source, 'search_result_summary');
+  assert.equal(orch.loaded_context_blocks[0].relevance_reason, 'fake reason');
+
+  // PDF-text selection path
+  const pdfDir = fs.mkdtempSync(path.join(os.tmpdir(), 'paper-parity-'));
+  const pdfPath = path.join(pdfDir, 'p1.pdf');
+  fs.writeFileSync(pdfPath, Buffer.from('%PDF-1.4 fake', 'utf8'));
+  const pdfTextExtractionRuntime = {
+    async extractText() {
+      return { ok: true, text: 'Results: the drug worked.', sections: [{ label: 'Results', normalized_label: 'results', text: 'The drug worked in 9/10 mice.' }], page_count: 3 };
+    }
+  };
+  const pdfTextLlm = async ({ stage }) => (stage === 'paper_context_selection_pdf_text'
+    ? { ok: true, payload: { excerpts: [{ section_label: 'Results', excerpt: 'The drug worked in 9/10 mice.', relevance_reason: 'direct result' }], request_pdf_review: false, pdf_review_reason: '' } }
+    : { ok: true, payload: { selected_blocks: [], figure_review_requests: [] } });
+  const pdfRt = createPaperContextLoaderRuntime({ cleanText, asArray, uniqueStrings, requestStructuredJsonPayload: pdfTextLlm, pdfTextExtractionRuntime });
+  const pdfOut = await pdfRt.loadPaperContexts({
+    query: 'did the drug work',
+    items: [{ paper_id: 'p1', title: 'Paper One', summary: 'A drug study.' }],
+    downloaded_papers: [{ ok: true, paper_id: 'p1', file_path: pdfPath }]
+  });
+  fs.rmSync(pdfDir, { recursive: true, force: true });
+  assert.equal(pdfOut.loaded_context_blocks.length, 1, 'one PDF-text block');
+  assert.equal(pdfOut.loaded_context_blocks[0].source, 'llm_pdf_text_read', 'PDF-text selection path exercised');
+  assert.equal(pdfOut.loaded_context_blocks[0].section_label, 'Results');
 
   console.log('PASS paper-dedup-identity-selfcheck');
 }
