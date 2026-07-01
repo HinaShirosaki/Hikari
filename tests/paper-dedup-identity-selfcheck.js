@@ -37,6 +37,11 @@ const {
   createPaperContextSelection
 } = require(path.join(root, 'src/main/helpers/agent/tools/paper-context-selection.js'));
 const {
+  normalizePreferredJournal,
+  scorePaperCandidate,
+  selectPaperCandidates
+} = require(path.join(root, 'src/main/helpers/agent/literature-search/literature-candidates.js'));
+const {
   createPaperContextText
 } = require(path.join(root, 'src/main/helpers/agent/tools/paper-context-text.js'));
 
@@ -360,6 +365,26 @@ async function main() {
   const figBlock = binOut.loaded_context_blocks.find((b) => b.source === 'figure_review');
   assert.equal(figBlock.evidence_kind, 'figure_review');
   assert.equal(figBlock.section_label, 'Figures');
+
+  // --- literature candidate ranking/dedup (extracted module) -----------------
+  assert.deepEqual(normalizePreferredJournal('Nature'), { url: '', name: 'nature' }, 'plain name -> soft name');
+  assert.ok(normalizePreferredJournal('https://www.nature.com').url, 'URL preference -> url');
+
+  const relevant = scorePaperCandidate({ title: 'kinase inhibitor resistance', source: 'pubmed' }, 'kinase inhibitor resistance');
+  const irrelevant = scorePaperCandidate({ title: 'plant photosynthesis', source: 'web' }, 'kinase inhibitor resistance');
+  assert.ok(relevant > irrelevant, 'query-matching pubmed candidate outranks unrelated web one');
+  const withJournal = scorePaperCandidate({ title: 'kinase study', journal: 'Nature' }, 'kinase', normalizePreferredJournal('Nature'));
+  const noJournal = scorePaperCandidate({ title: 'kinase study', journal: 'Other J' }, 'kinase', normalizePreferredJournal('Nature'));
+  assert.ok(withJournal > noJournal, 'preferred-journal bonus applied');
+
+  const picked = selectPaperCandidates([
+    { title: 'kinase A', doi: '10.1/a', source: 'pubmed' },
+    { title: 'kinase A dup', doi: '10.1/a', source: 'crossref' },
+    { title: 'unrelated', doi: '10.1/b', source: 'web' }
+  ], 'kinase', 5);
+  assert.equal(picked.length, 2, 'deduped by DOI (2 distinct)');
+  assert.equal(picked[0].doi, '10.1/a', 'top-ranked is the kinase match');
+  assert.ok(!('__score' in picked[0]), 'internal scoring fields stripped');
 
   console.log('PASS paper-dedup-identity-selfcheck');
 }
