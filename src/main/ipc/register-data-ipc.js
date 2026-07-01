@@ -5,7 +5,7 @@ const {
   parseAssayResultImportFile,
   parseChemicalImportFile
 } = require('../helpers/main/chemical-import-parser');
-const { transformPaperPdfToMarkdown } = require('../helpers/main/paper-markdown-import');
+const { transformPaperPdfToMarkdown } = require('../papers/parse/paper-markdown-import.js');
 const {
   STORAGE,
   ASSAY,

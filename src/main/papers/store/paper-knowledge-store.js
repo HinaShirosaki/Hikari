@@ -13,9 +13,9 @@ const crypto = require('node:crypto');
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 
-const { loadSqlJs } = require('../../main/storage-bundle/storage-utils.js');
+const { loadSqlJs } = require('../../helpers/main/storage-bundle/storage-utils.js');
 const { normalizeDoi, sanitizeStorageName } = require('./paper-knowledge-paths.js');
-const { normalizePmid, normalizePmcid } = require('../shared/paper-identity.js');
+const { normalizePmid, normalizePmcid } = require('../identity/paper-identity.js');
 
 function asArrayDefault(value) {
   return Array.isArray(value) ? value : [];

@@ -1,7 +1,7 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
-const { createProtocolGenerationRuntime } = require('./agent-protocol-generation.js');
+const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/agent-llm-utils.js');
+const { createProtocolGenerationRuntime } = require('../../helpers/agent/tools/agent-protocol-generation.js');
 
 function createPaperAnalysisRuntime(deps = {}) {
   const {

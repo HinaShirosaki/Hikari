@@ -1,13 +1,13 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/agent-llm-utils.js');
 const { cloneJson, normalizeRelatedComments } = require('../shared/paper-comment-context.js');
-const { createAgentSubAgentRuntime } = require('../tools/agent-sub-agent.js');
+const { createAgentSubAgentRuntime } = require('../../helpers/agent/tools/agent-sub-agent.js');
 const {
   normalizePreferredJournal,
   scorePaperCandidate,
   selectPaperCandidates
-} = require('./literature-candidates.js');
+} = require('../search/literature-candidates.js');
 const {
   runCodexPaperContextSubAgent,
   shouldUseCodexPaperContextWorkflow

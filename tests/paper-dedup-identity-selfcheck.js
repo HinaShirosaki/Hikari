@@ -15,51 +15,51 @@ const {
   normalizePmcid,
   buildPaperIdentity,
   identitiesMatch
-} = require(path.join(root, 'src/main/helpers/agent/shared/paper-identity.js'));
+} = require(path.join(root, 'src/main/papers/identity/paper-identity.js'));
 const {
   openKnowledgeDatabase,
   migratePaperColumns,
   findExistingPaperRow,
   queryRows,
   runStatement
-} = require(path.join(root, 'src/main/helpers/agent/tools/agent-paper-knowledge-database.js'));
+} = require(path.join(root, 'src/main/papers/store/agent-paper-knowledge-database.js'));
 const {
   createLiteratureSearchRuntime
-} = require(path.join(root, 'src/main/helpers/agent/tools/agent-literature-search.js'));
+} = require(path.join(root, 'src/main/papers/search/agent-literature-search.js'));
 const {
   normalizeToolArgumentsPayload
 } = require(path.join(root, 'src/main/helpers/agent/tools/agent-tool-loading.js'));
 const {
   splitMarkdownIntoSections,
   createPaperContextLoaderRuntime
-} = require(path.join(root, 'src/main/helpers/agent/tools/agent-paper-context-loader.js'));
+} = require(path.join(root, 'src/main/papers/retrieve/agent-paper-context-loader.js'));
 const {
   createPaperContextSelection
-} = require(path.join(root, 'src/main/helpers/agent/tools/paper-context-selection.js'));
+} = require(path.join(root, 'src/main/papers/retrieve/paper-context-selection.js'));
 const {
   normalizePreferredJournal,
   scorePaperCandidate,
   selectPaperCandidates
-} = require(path.join(root, 'src/main/helpers/agent/literature-search/literature-candidates.js'));
+} = require(path.join(root, 'src/main/papers/search/literature-candidates.js'));
 const {
   normalizeLineRanges,
   readLineRangesFromText,
   inferMarkdownSectionLabel
-} = require(path.join(root, 'src/main/helpers/agent/literature-search/paper-line-ranges.js'));
+} = require(path.join(root, 'src/main/papers/workflow/paper-line-ranges.js'));
 const {
   parseJsonObjectFromText,
   normalizeSelectedPaper,
   normalizeCodexPaperLinePayload
-} = require(path.join(root, 'src/main/helpers/agent/literature-search/codex-payload.js'));
+} = require(path.join(root, 'src/main/papers/workflow/codex-payload.js'));
 const {
   createPaperContextText
-} = require(path.join(root, 'src/main/helpers/agent/tools/paper-context-text.js'));
+} = require(path.join(root, 'src/main/papers/retrieve/paper-context-text.js'));
 const {
   tokenize: wikiTokenize,
   scoreRow: wikiScoreRow,
   buildSnippet: wikiBuildSnippet,
   buildPageCitation: wikiBuildPageCitation
-} = require(path.join(root, 'src/main/helpers/agent/tools/wiki-search-scoring.js'));
+} = require(path.join(root, 'src/main/papers/retrieve/wiki-search-scoring.js'));
 
 // Mock fetch that records requested URLs and returns one Europe PMC record,
 // optionally empty when the URL carries a given journal clause (to exercise the

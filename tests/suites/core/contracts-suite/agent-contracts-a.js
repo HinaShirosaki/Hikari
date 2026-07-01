@@ -323,11 +323,7 @@ module.exports = function registerAgentContractsA(context = {}) {
         ['tools', 'agent-notebook-draft.js'],
         ['tools', 'agent-protocol-matching.js'],
         ['tools', 'agent-protocol-generation.js'],
-        ['tools', 'agent-literature-search.js'],
         ['tools', 'agent-purchase-recommendation.js'],
-        ['tools', 'agent-paper-context-loader.js'],
-        ['tools', 'agent-paper-download.js'],
-        ['tools', 'agent-paper-analysis.js'],
         ['tools', 'agent-python-sandbox.js'],
         ['tools', 'agent-sub-agent.js'],
         ['tools', 'agent-container.js'],
@@ -340,6 +336,20 @@ module.exports = function registerAgentContractsA(context = {}) {
         assert.equal(fs.existsSync(agentPath(...parts)), true, `Expected ${parts.join('/')} in agent helpers.`);
       });
       assert.equal(fs.existsSync(agentPath('agent-python.js')), false);
+
+      // Paper logic lives under src/main/papers/ (consolidated out of agent helpers).
+      const papersPath = (...parts) => path.join(__dirname, 'src', 'main', 'papers', ...parts);
+      [
+        ['search', 'agent-literature-search.js'],
+        ['retrieve', 'agent-paper-context-loader.js'],
+        ['download', 'agent-paper-download.js'],
+        ['analysis', 'agent-paper-analysis.js'],
+        ['store', 'agent-paper-knowledge-database.js'],
+        ['store', 'intake', 'mcp-tools.js'],
+        ['workflow', 'agent-literature-search-workflow.js']
+      ].forEach((parts) => {
+        assert.equal(fs.existsSync(papersPath(...parts)), true, `Expected papers/${parts.join('/')}.`);
+      });
 
       const mainSource = readMainProcessSource();
       assert.equal(/agent-routing/.test(mainSource), false);

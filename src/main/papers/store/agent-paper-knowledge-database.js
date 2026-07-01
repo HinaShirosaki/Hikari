@@ -4,13 +4,13 @@ const crypto = require('node:crypto');
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 
-const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
-const { normalizePmid, normalizePmcid } = require('../shared/paper-identity.js');
-const { createIntakePipeline } = require('../paper-intake/intake-pipeline.js');
+const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/agent-llm-utils.js');
+const { normalizePmid, normalizePmcid } = require('../identity/paper-identity.js');
+const { createIntakePipeline } = require('./intake/intake-pipeline.js');
 const {
   buildExtractedTextFile,
   buildPdfMarkdownFromExtraction
-} = require('../../main/pdf-to-md.js');
+} = require('../parse/pdf-to-md.js');
 const {
   KNOWLEDGE_BASE_FOLDER_NAME,
   KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME,

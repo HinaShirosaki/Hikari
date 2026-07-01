@@ -1,7 +1,7 @@
 'use strict';
 
 const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
-const { normalizePaperAnnotationSnapshot } = require('../shared/paper-comment-context.js');
+const { normalizePaperAnnotationSnapshot } = require('../../../papers/shared/paper-comment-context.js');
 const { normalizeChemicalStorePayload } = require('../../main/data/data-snapshot-utils.js');
 
 const DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE =

@@ -293,8 +293,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
       }
     });
     test('pdf-to-md helper renders extracted PDF pages as markdown and the pdf text tool can include it', async () => {
-      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
-      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-pdf-text-extraction.js'));
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-to-md.js'));
+      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'agent-pdf-text-extraction.js'));
       const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
         metadata: {
           title: 'Engineered MAPK Study',
@@ -428,7 +428,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
       assert.doesNotMatch(sectionMarkdown, /^## Pages/m);
     });
     test('pdf text extraction keeps long detected sections within the overall extraction budget by default', async () => {
-      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-pdf-text-extraction.js'));
+      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'agent-pdf-text-extraction.js'));
       const longBody = (label) => `${label} ${'x'.repeat(19000)}`;
       const pageLabels = ['page-alpha', 'page-beta', 'page-gamma', 'page-delta', 'page-omega-tail-marker'];
       const runtime = pdfTextExtraction.createPdfTextExtractionRuntime({
@@ -464,7 +464,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
       assert.ok(result.sections[0].text.length > 80000);
     });
     test('pdf joinTextItems merges position-adjacent items without inserting stray ligature spaces', () => {
-      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-text-layout.js'));
       // Three text items on the same baseline whose x-ranges touch — the old
       // joiner would insert a space between each ("con fi rmed"); the new joiner
       // should merge them into a single word.
@@ -477,7 +477,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
       assert.equal(text, 'confirmed');
     });
     test('pdf joinTextItems inserts spaces between items separated by a font-sized gap', () => {
-      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-text-layout.js'));
       const items = [
         { str: 'alpha', transform: [1, 0, 0, 1, 10, 100], width: 30, height: 10 },
         { str: 'beta', transform: [1, 0, 0, 1, 50, 100], width: 25, height: 10, hasEOL: true }
@@ -486,7 +486,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
       assert.equal(text, 'alpha beta');
     });
     test('pdf joinTextItems emits a markdown table when a Table caption is followed by aligned rows', () => {
-      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-text-layout.js'));
       // Lines are differentiated by y. Within each line, items at consistent
       // x-positions form columns separated by gaps larger than 2x the font size.
       const fontSize = 10;
@@ -525,7 +525,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
       assert.match(text, /^Narrative text follows\.$/m);
     });
     test('pdf-figure-extraction round-trips an embedded RGB image into a PNG file', async () => {
-      const pdfFigureExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-figure-extraction.js'));
+      const pdfFigureExtraction = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-figure-extraction.js'));
       const zlib = require('node:zlib');
 
       // Sanity-check the pure encoder: a 2x2 RGB block decodes back to the same pixels.
@@ -605,8 +605,8 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
       }
     });
     test('pdfTextExtractionRuntime threads figures_output_dir into the result', async () => {
-      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-pdf-text-extraction.js'));
-      const pdfFigureExtraction = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-figure-extraction.js'));
+      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'agent-pdf-text-extraction.js'));
+      const pdfFigureExtraction = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-figure-extraction.js'));
 
       const width = 40;
       const height = 32;

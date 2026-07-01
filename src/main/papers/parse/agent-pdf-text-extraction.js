@@ -3,9 +3,9 @@
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 const { Buffer } = require('node:buffer');
-const { buildPdfMarkdownFromExtraction } = require('../../main/pdf-to-md.js');
-const { joinTextItems, stripRunningHeadersAndFooters } = require('../../main/pdf-text-layout.js');
-const { extractFiguresFromPdfDocument } = require('../../main/pdf-figure-extraction.js');
+const { buildPdfMarkdownFromExtraction } = require('./pdf-to-md.js');
+const { joinTextItems, stripRunningHeadersAndFooters } = require('./pdf-text-layout.js');
+const { extractFiguresFromPdfDocument } = require('./pdf-figure-extraction.js');
 
 const PDF_TEXT_EXTRACTION_ACTIONS = Object.freeze({
   EXTRACT: 'extract'

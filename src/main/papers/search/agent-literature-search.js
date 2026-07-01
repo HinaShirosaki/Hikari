@@ -1,12 +1,12 @@
 'use strict';
 
-const { isAgentRequestAbortError } = require('../shared/agent-request-context.js');
-const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
-const { buildKeywordStyleLiteratureQuery, extractKeywordPhrases } = require('../shared/agent-literature-query-utils.js');
+const { isAgentRequestAbortError } = require('../../helpers/agent/shared/agent-request-context.js');
+const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/agent-llm-utils.js');
+const { buildKeywordStyleLiteratureQuery, extractKeywordPhrases } = require('./agent-literature-query-utils.js');
 const {
   prependPreferredValue,
   prioritizePreferredWebSource
-} = require('../shared/agent-search-source-preferences.js');
+} = require('./agent-search-source-preferences.js');
 
 const LITERATURE_SOURCES = Object.freeze({
   AUTO: 'auto',

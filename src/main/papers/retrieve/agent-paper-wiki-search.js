@@ -5,11 +5,11 @@ const fsPromises = require('node:fs/promises');
 const {
   buildKnowledgeDatabasePaths,
   buildLegacyKnowledgeDatabasePaths
-} = require('./paper-knowledge-paths.js');
+} = require('../store/paper-knowledge-paths.js');
 const {
   openKnowledgeDatabase,
   queryRows
-} = require('./paper-knowledge-store.js');
+} = require('../store/paper-knowledge-store.js');
 const { applyWikiChunkSchema } = require('./agent-paper-wiki-chunker.js');
 const {
   MAX_QUERY_CHARS,

@@ -19,7 +19,7 @@ const { createProtocolMatchingRuntime } = require('../tools/agent-protocol-match
 const { createNotebookGenerationRuntime } = require('../tools/agent-notebook-generation.js');
 const { createNotebookDraftRuntime } = require('../tools/agent-notebook-draft.js');
 const { createProtocolGenerationRuntime } = require('../tools/agent-protocol-generation.js');
-const { createPaperAnalysisRuntime } = require('../tools/agent-paper-analysis.js');
+const { createPaperAnalysisRuntime } = require('../../../papers/analysis/agent-paper-analysis.js');
 const STRUCTURED_JSON_ONLY_SYSTEM_PROMPT = 'Return valid JSON only.';
 
 const STRUCTURED_JSON_ONLY_SOURCES = Object.freeze([
@@ -658,7 +658,7 @@ function getAgentPromptRegistry() {
       title: 'Paper Analysis System Prompt',
       group: 'Notebook And Protocol',
       kind: 'system',
-      source: 'src/main/helpers/agent/tools/agent-paper-analysis.js',
+      source: 'src/main/papers/analysis/agent-paper-analysis.js',
       render: () => state.paperAnalysisRuntime.PAPER_ANALYSIS_SYSTEM_PROMPT
     },
     {
@@ -666,7 +666,7 @@ function getAgentPromptRegistry() {
       title: 'Paper Analysis Rules',
       group: 'Notebook And Protocol',
       kind: 'rules',
-      source: 'src/main/helpers/agent/tools/agent-paper-analysis.js',
+      source: 'src/main/papers/analysis/agent-paper-analysis.js',
       render: () => state.paperAnalysisRuntime.PAPER_ANALYSIS_RULES
     },
     {
@@ -674,7 +674,7 @@ function getAgentPromptRegistry() {
       title: 'Paper Analysis Prompt',
       group: 'Notebook And Protocol',
       kind: 'dynamic_sample',
-      source: 'src/main/helpers/agent/tools/agent-paper-analysis.js',
+      source: 'src/main/papers/analysis/agent-paper-analysis.js',
       render: () => state.paperAnalysisRuntime.buildPrompt(state.samplePaperContext)
     },
     {

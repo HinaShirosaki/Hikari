@@ -2,7 +2,7 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { transformPaperRecordsToMarkdown } = require('../paper-markdown-import');
+const { transformPaperRecordsToMarkdown } = require('../../../papers/parse/paper-markdown-import.js');
 const { resolveStorageRootLayout } = require('./storage-paths');
 const {
   asArray, cleanText, ensureObject, normalizeFileTimestamp, sanitizeFolderName, toPosixRelative

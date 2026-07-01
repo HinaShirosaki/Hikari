@@ -3,7 +3,7 @@
 const { Buffer } = require('node:buffer');
 const fsPromises = require('node:fs/promises');
 
-const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/agent-llm-utils.js');
 const {
   attachRelatedCommentsToContextBlocks,
   buildPaperAnnotationContext,

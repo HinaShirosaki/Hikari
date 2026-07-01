@@ -132,10 +132,10 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     });
     test('literature, paper context, paper analysis, and protocol generation helpers expose reusable runtimes and registered tools', () => {
       const webSearchSource = fs.readFileSync(agentPath('tools', 'agent-web-search.js'), 'utf8');
-      const literatureSource = fs.readFileSync(agentPath('tools', 'agent-literature-search.js'), 'utf8');
-      const paperContextSource = fs.readFileSync(agentPath('tools', 'agent-paper-context-loader.js'), 'utf8');
-      const paperDownloadSource = fs.readFileSync(agentPath('tools', 'agent-paper-download.js'), 'utf8');
-      const paperSource = fs.readFileSync(agentPath('tools', 'agent-paper-analysis.js'), 'utf8');
+      const literatureSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'search', 'agent-literature-search.js'), 'utf8');
+      const paperContextSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'retrieve', 'agent-paper-context-loader.js'), 'utf8');
+      const paperDownloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'download', 'agent-paper-download.js'), 'utf8');
+      const paperSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'analysis', 'agent-paper-analysis.js'), 'utf8');
       const protocolSource = fs.readFileSync(agentPath('tools', 'agent-protocol-generation.js'), 'utf8');
       const llmUtilsSource = fs.readFileSync(agentPath('shared', 'agent-llm-utils.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
@@ -160,7 +160,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(paperContextSource, /async function loadPaperContexts\(input = \{\}\)/);
       assert.equal(paperContextSource.includes('paper-download'), false);
       assert.equal(paperContextSource.includes('storage_path'), false);
-      assert.equal(readSource('src/main/helpers/agent/tools/agent-literature-search.js').includes("require('../shared/agent-llm-utils.js')"), true);
+      assert.equal(readSource('src/main/papers/search/agent-literature-search.js').includes("require('../../helpers/agent/shared/agent-llm-utils.js')"), true);
       assert.match(paperDownloadSource, /const PAPER_DOWNLOAD_ACTIONS = Object\.freeze/);
       assert.match(paperDownloadSource, /function createPaperDownloadRuntime\(deps = \{\}\)/);
       assert.match(paperDownloadSource, /function extractPaperDownloadTargets\(input = \{\}\)/);
@@ -195,7 +195,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(mainAgentServicesSource, /webSearchRuntime,/);
       assert.match(mainAgentServicesSource, /createPaperContextLoaderRuntime/);
       assert.match(mainAgentServicesSource, /paperContextLoaderRuntime/);
-      assert.equal(readSource('src/main/helpers/agent/tools/agent-paper-analysis.js').includes("require('../shared/agent-llm-utils.js')"), true);
+      assert.equal(readSource('src/main/papers/analysis/agent-paper-analysis.js').includes("require('../../helpers/agent/shared/agent-llm-utils.js')"), true);
       assert.equal(readSource('src/main/helpers/agent/tools/agent-protocol-generation.js').includes("require('../shared/agent-llm-utils.js')"), false);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'web-search'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);

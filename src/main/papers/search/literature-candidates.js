@@ -13,7 +13,7 @@
 const {
   normalizePreferredWebSource,
   preferredWebSourceMatches
-} = require('../shared/agent-search-source-preferences.js');
+} = require('./agent-search-source-preferences.js');
 
 const PAPER_TOKEN_STOPWORDS = new Set([
   'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'in', 'into',
