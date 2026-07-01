@@ -31,6 +31,9 @@ const {
   splitMarkdownIntoSections
 } = require(path.join(root, 'src/main/helpers/agent/tools/agent-paper-context-loader.js'));
 const {
+  createPaperContextSelection
+} = require(path.join(root, 'src/main/helpers/agent/tools/paper-context-selection.js'));
+const {
   createPaperContextText
 } = require(path.join(root, 'src/main/helpers/agent/tools/paper-context-text.js'));
 
@@ -243,6 +246,46 @@ async function main() {
   });
   assert.equal(relaxed2.journal_filter_relaxed, true, 'empty filtered result relaxes');
   assert.ok(relaxed2.sources.includes('uniprot'), 'UniProt runs in the relaxed (unfiltered) pass');
+
+  // --- deterministic selection algebra (extracted factory) -------------------
+  const sel = createPaperContextSelection({
+    cleanText,
+    asArray,
+    ensureObject: (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {}),
+    normalizeRelatedComments: () => [],
+    maxBlocks: 3,
+    maxBlocksPerPaper: 2,
+    maxBlocksPerPaperWithPdf: 4,
+    maxFigureReviews: 2
+  });
+  assert.equal(sel.messageLikelyNeedsFigureReview('see the western blot'), true);
+  assert.equal(sel.messageLikelyNeedsFigureReview('summarize the abstract'), false);
+
+  const candidates = [
+    { block_id: 'a1', paper_id: 'p1', rank_score: 5, excerpt: 'x' },
+    { block_id: 'a2', paper_id: 'p1', rank_score: 4, excerpt: 'x' },
+    { block_id: 'a3', paper_id: 'p1', rank_score: 3, excerpt: 'x' }
+  ];
+  const fb = sel.buildFallbackSelection(candidates, 'topic');
+  assert.equal(fb.selected_blocks.length, 2, 'per-paper cap (2) enforced in fallback');
+  assert.deepEqual(fb.selected_blocks.map((b) => b.block_id), ['a1', 'a2'], 'sorted by rank_score');
+
+  const normSel = sel.normalizeSelectionResult(
+    { selected_blocks: [{ block_id: 'a1', relevance_reason: 'why' }], figure_review_requests: [{ paper_id: 'p1', reason: 'r' }] },
+    candidates,
+    'topic'
+  );
+  assert.equal(normSel.selected_blocks[0].excerpt, 'x', 'normalized block hydrated from candidate');
+  assert.equal(normSel.figure_review_requests.length, 1, 'figure request kept (paper is in selection)');
+
+  // maxBlocks cap honored across merge
+  const merged = sel.mergeSelectedBlocksWithPdf(
+    [{ block_id: 'n1', paper_id: 'p2' }, { block_id: 'n2', paper_id: 'p3' }],
+    [{ block_id: 'pdf1', paper_id: 'p1' }],
+    new Set(['p1'])
+  );
+  assert.ok(merged.length <= 3, 'merge honors maxBlocks');
+  assert.equal(merged[0].block_id, 'pdf1', 'pdf blocks take precedence');
 
   console.log('PASS paper-dedup-identity-selfcheck');
 }
