@@ -20,7 +20,7 @@ const REASONING_ENTRY_TOOL_SCOPES = Object.freeze({
       'python-sandbox'
     ]),
     project_science_question: freezeToolScope([
-      'record-lookup',
+      'notebook-lookup',
       'inventory-lookup',
       'literature-search',
       'web-search',
@@ -30,7 +30,7 @@ const REASONING_ENTRY_TOOL_SCOPES = Object.freeze({
     ]),
     result_analysis: freezeToolScope([
       'python-sandbox',
-      'record-lookup',
+      'notebook-lookup',
       'inventory-lookup',
       'literature-search',
       'web-search',

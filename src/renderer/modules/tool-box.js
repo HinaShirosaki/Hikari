@@ -120,7 +120,9 @@ export function initToolBox(options = {}) {
   });
 
   const sharedOptions = {
-    document: rootDocument
+    document: rootDocument,
+    safeText: options?.safeText,
+    getStoredCompounds: options?.getStoredCompounds
   };
 
   initMolarityTool(sharedOptions);

@@ -51,7 +51,7 @@ const shared = {
 };
 
 const agentRouting = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-routing.js'));
-const agentIntentParser = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'intent', 'agent-intent-parser.js'));
+const agentIntentParser = require(path.join(__dirname, 'self-agent', 'intent', 'agent-intent-parser.js'));
 const agentTools = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tools.js'));
 const agentProtocolGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-protocol-generation.js'));
 const agentProtocolMatching = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-protocol-matching.js'));
@@ -67,12 +67,12 @@ const agentToolCall = optionalRequire(path.join(__dirname, 'src', 'main', 'helpe
 const agentToolLoading = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-loading.js'));
 const agentToolExecution = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-execution.js'));
 const agentProjectRetrieval = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-project-retrieval.js'));
-const agentLiteratureSearch = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-literature-search.js'));
-const agentLiteratureSearchWorkflow = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'literature-search', 'agent-literature-search-workflow.js'));
-const agentPaperContextLoader = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-context-loader.js'));
-const agentPaperDownload = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-download.js'));
-const agentPaperKnowledgeDatabase = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-knowledge-database.js'));
-const agentPaperAnalysis = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-paper-analysis.js'));
+const agentLiteratureSearch = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'search', 'agent-literature-search.js'));
+const agentLiteratureSearchWorkflow = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'workflow', 'agent-literature-search-workflow.js'));
+const agentPaperContextLoader = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'retrieve', 'agent-paper-context-loader.js'));
+const agentPaperDownload = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'download', 'agent-paper-download.js'));
+const agentPaperKnowledgeDatabase = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'store', 'agent-paper-knowledge-database.js'));
+const agentPaperAnalysis = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'analysis', 'agent-paper-analysis.js'));
 const agentScienceReasoningLoop = optionalRequire(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'index.js'));
 const agentToolSmokeTest = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-smoke-test.js'));
 const agentResponseLayer = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-response-layer.js'));

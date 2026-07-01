@@ -71,7 +71,7 @@ const {
 const {
   PAPER_INTAKE_DIRECT_MCP_TOOLS,
   PAPER_INTAKE_DIRECT_MCP_TOOL_NAMES
-} = require('../../paper-intake/mcp-tools.js');
+} = require('../../../../papers/store/intake/mcp-tools.js');
 
 const DIRECT_MCP_TOOLS = Object.freeze([
   {

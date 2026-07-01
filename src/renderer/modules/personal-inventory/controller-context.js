@@ -15,6 +15,7 @@ export function createPersonalInventoryContext({
     containerContextMenu: document.getElementById('inventory-container-context-menu'),
     inventorySummaryCard: document.getElementById('inventory-summary-card'),
     addContainerBtn: document.getElementById('inventory-add-container-btn'),
+    addContainerOverlay: document.getElementById('inventory-add-container-overlay'),
     addContainerForm: document.getElementById('inventory-add-container-form'),
     addContainerNameInput: document.getElementById('inventory-add-container-name'),
     addContainerLocationSelect: document.getElementById('inventory-add-container-location'),
@@ -22,6 +23,7 @@ export function createPersonalInventoryContext({
     addContainerGridFields: document.getElementById('inventory-add-container-grid-fields'),
     addContainerRowsInput: document.getElementById('inventory-add-container-rows'),
     addContainerColsInput: document.getElementById('inventory-add-container-cols'),
+    addContainerCloseBtn: document.getElementById('inventory-add-container-close'),
     addContainerCancelBtn: document.getElementById('inventory-add-container-cancel')
   };
   const uiState = {

@@ -18,10 +18,10 @@ const { createAgentAssayTableRuntime } = require('./agent-assay-table.js');
 const { createAgentPlotlyGraphRuntime } = require('./agent-plotly-graph.js');
 const { createAgentMemoryRuntime } = require('../context/agent-memory.js');
 const { createWebSearchRuntime } = require('./agent-web-search.js');
-const { createLiteratureSearchRuntime } = require('./agent-literature-search.js');
+const { createLiteratureSearchRuntime } = require('../../../papers/search/agent-literature-search.js');
 const { createPurchaseRecommendationRuntime } = require('./agent-purchase-recommendation.js');
-const { createPaperDownloadRuntime } = require('./agent-paper-download.js');
-const { createPaperAnalysisRuntime } = require('./agent-paper-analysis.js');
+const { createPaperDownloadRuntime } = require('../../../papers/download/agent-paper-download.js');
+const { createPaperAnalysisRuntime } = require('../../../papers/analysis/agent-paper-analysis.js');
 const { createProtocolGenerationRuntime } = require('./agent-protocol-generation.js');
 const { createProtocolSaveRuntime } = require('./agent-protocol-save.js');
 const {

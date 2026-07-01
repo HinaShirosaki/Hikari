@@ -487,6 +487,29 @@
   color: var(--gel-active-text);
 }
 
+.gel-rotate-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: min(100%, 300px);
+  padding: 5px 8px;
+  border: 1px solid var(--gel-chart-border);
+  border-radius: 6px;
+  background: var(--gel-chart-surface);
+}
+
+.gel-rotate-control .small-note {
+  white-space: nowrap;
+}
+
+.gel-rotate-angle-range {
+  width: clamp(110px, 18vw, 180px);
+}
+
+.gel-rotate-angle-input {
+  width: 70px;
+}
+
 .gel-tool-panel {
   min-width: 0;
 }

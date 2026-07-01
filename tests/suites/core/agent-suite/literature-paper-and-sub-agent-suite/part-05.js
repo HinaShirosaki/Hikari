@@ -3,7 +3,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
     test('pdf joinTextItems reconstructs a markdown table when the header wraps across multiple lines', () => {
-      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-text-layout.js'));
       const fontSize = 10;
       const mk = (y, list) => list.map((item, idx) => ({
         str: item.str,
@@ -64,7 +64,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       assert.match(text, /^Narrative text follows\.$/m);
     });
     test('pdf-text-layout strips running headers/footers that repeat at the same head/tail position across pages', () => {
-      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-text-layout.js'));
       const footer = (n) => [
         'ACS Central Science Research Article',
         'https://doi.org/10.1021/foo',
@@ -89,7 +89,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       assert.match(stripped[2].text, /Another body line/);
     });
     test('pdf-text-layout leaves pages untouched when fewer than three repetitions are found', () => {
-      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-text-layout.js'));
+      const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-text-layout.js'));
       const pages = [
         { page_number: 1, text: 'Body one\nRepeated footer\n1' },
         { page_number: 2, text: 'Body two\nRepeated footer\n2' }
@@ -98,7 +98,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       assert.deepStrictEqual(stripped, pages);
     });
     test('pdf-to-md drops the redundant Pages dump by default when sections cover the body', () => {
-      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-to-md.js'));
       const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
         metadata: { title: 'Paper with sections' },
         extraction: {
@@ -112,7 +112,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       assert.doesNotMatch(markdown, /^## Pages/m);
     });
     test('pdf-to-md places each figure inline in the section that covers its page', () => {
-      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-to-md.js'));
       const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
         metadata: { title: 'Paper with figures' },
         extraction: {
@@ -136,7 +136,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       assert.match(markdown, /## Figures\n\n- !\[Figure on page 9\]\(figures\/page-9-img-1\.png\)/);
     });
     test('pdf-to-md still emits Pages when explicitly requested even with sections present', () => {
-      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-to-md.js'));
       const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
         metadata: { title: 'Paper with sections' },
         extraction: {
@@ -151,7 +151,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       assert.match(markdown, /## Pages/);
     });
     test('pdf-to-md keeps complete section text by default for stored paper markdown', () => {
-      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-to-md.js'));
       const longSection = `${'A'.repeat(65000)} complete tail marker`;
       const markdown = pdfToMd.buildPdfMarkdownFromExtraction({
         metadata: { title: 'Long paper section' },
@@ -166,7 +166,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       assert.doesNotMatch(markdown, /\[\.\.\. truncated \.\.\.\]/);
     });
     test('pdf-to-md formatMarkdownBodyText preserves markdown tables across paragraph joining', () => {
-      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'pdf-to-md.js'));
+      const pdfToMd = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-to-md.js'));
       const input = [
         'Intro paragraph that',
         'wraps across two lines.',
@@ -184,7 +184,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       assert.match(formatted, /Closing sentence\./);
     });
     test('paper markdown import helper updates imported paper records with knowledge markdown paths', async () => {
-      const { transformPaperPdfToMarkdown } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'paper-markdown-import.js'));
+      const { transformPaperPdfToMarkdown } = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'paper-markdown-import.js'));
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-markdown-import-'));
       const pdfPath = path.join(storageRoot, 'Papers', 'Atlas', 'mapk.pdf');
       try {

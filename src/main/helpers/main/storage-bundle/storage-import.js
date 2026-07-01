@@ -7,7 +7,7 @@ const {
   hydrateSamplesRootFromStoragePath,
   hydrateSnapshotFromBundle
 } = require('./storage-hydration');
-const { transformPaperRecordsToMarkdown } = require('../paper-markdown-import');
+const { transformPaperRecordsToMarkdown } = require('../../../papers/parse/paper-markdown-import.js');
 const { collectManifestEntries, isBundleCandidateName, isSqliteBundleCandidateName, looksLikeHikariSnapshot, normalizeBundleSummary, STORAGE_MANIFEST_FILE_NAME, toPosixRelative } = require('./storage-manifest');
 const { getBundlePaths, getBundlePathsFromSqlitePath, resolveProtocolBundlePaths, resolveStorageRootLayout, SAMPLES_FILE_NAME, SAMPLES_ROOT_FOLDER_NAME } = require('./storage-paths');
 const { summarizeSequenceLibrary } = require('./sequence-library-summary');

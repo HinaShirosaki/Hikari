@@ -18,7 +18,7 @@ const path = require('node:path');
 const {
   KNOWLEDGE_BASE_ROOT_FOLDER_NAME,
   PAPER_MARKDOWN_ROOT_FOLDER_NAME
-} = require('../../main/storage-bundle/storage-paths.js');
+} = require('../../../helpers/main/storage-bundle/storage-paths.js');
 
 const INTAKE_SCHEMA_VERSION = 1;
 const INTAKE_FILE_NAME = 'intake.json';

@@ -389,6 +389,10 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.match(calls[0].prompt, /call `mcp__hikari__protocol_generation` with/);
       assert.match(calls[0].prompt, /summarize that the generated protocol is ready for review/);
       assert.match(calls[0].prompt, /mcp__hikari__protocol_generation/);
+      assert.match(calls[0].prompt, /Assay context handoff:/);
+      assert.match(calls[0].prompt, /Assay plate data \(TSV/);
+      assert.match(calls[0].prompt, /retrieve the active assay data by reading/);
+      assert.match(calls[0].prompt, /Do not call or expect `record_lookup` for active assay plate data/);
       assert.doesNotMatch(calls[0].prompt, /initially visible tool list/);
       assert.doesNotMatch(calls[0].prompt, /Do not answer only with markdown or prose/);
       assert.doesNotMatch(calls[0].prompt, /Recent conversation:/);

@@ -362,6 +362,8 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         assert.match(firstContent, /literature_search/);
         assert.match(firstContent, /paper_download/);
         assert.match(firstContent, /load bounded paper context blocks/);
+        assert.match(firstContent, /retrieve the active assay data by parsing its `Assay plate data \(TSV\.\.\.\)` block directly from the chat prompt/);
+        assert.match(firstContent, /Never call or expect `mcp__hikari__record_lookup` for active Assay plate\/result rows/);
 
         fs.writeFileSync(agentsPath, `${firstContent}\nLocal note stays here.\n`, 'utf8');
         await provider.ensureCodexCliAgentsFile(workspaceDir);

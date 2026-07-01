@@ -396,7 +396,6 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(mainSource, /registerAgentIpc/);
       assert.match(mainSource, /registerSystemIpc/);
       assert.match(mainAgentServicesSource, /createAgentToolCallRuntime/);
-      assert.match(mainAgentServicesSource, /createAgentToolProviderRuntime/);
       assert.match(mainAgentServicesSource, /agent-tool-loading\.js/);
       assert.match(mainAgentServicesSource, /agent-tool-execution\.js/);
       assert.match(mainAgentServicesSource, /createAgentRuntimeSupport/);

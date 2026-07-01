@@ -1,6 +1,5 @@
 'use strict';
 
-const { isAgentRequestAbortError } = require('./agent-request-context.js');
 const { createAgentLlmRuntimeHelpers } = require('./agent-llm-utils.js');
 
 function createAgentControllerUtils(deps = {}) {
@@ -46,15 +45,6 @@ function createAgentControllerUtils(deps = {}) {
   const appendAgentChatLogEntry = typeof deps.appendAgentChatLogEntry === 'function'
     ? deps.appendAgentChatLogEntry
     : (async () => {});
-  const buildIntentParserPrompt = typeof deps.buildIntentParserPrompt === 'function'
-    ? deps.buildIntentParserPrompt
-    : (() => '');
-  const normalizeIntentParserPayload = typeof deps.normalizeIntentParserPayload === 'function'
-    ? deps.normalizeIntentParserPayload
-    : (() => ({ ok: false, error: 'Intent parser normalization is unavailable.' }));
-  const INTENT_PARSER_RESPONSE_SCHEMA = deps.INTENT_PARSER_RESPONSE_SCHEMA && typeof deps.INTENT_PARSER_RESPONSE_SCHEMA === 'object'
-    ? deps.INTENT_PARSER_RESPONSE_SCHEMA
-    : {};
 
   function extractConversation(rawConversation) {
     return asArray(rawConversation)
@@ -602,45 +592,6 @@ function createAgentControllerUtils(deps = {}) {
     };
   }
 
-  async function requestIntentParserPayload({
-    message,
-    conversation,
-    projectName,
-    traceContext = null
-  }) {
-    const prompt = buildIntentParserPrompt({
-      message,
-      conversation,
-      projectName
-    });
-
-    try {
-      const result = await llmHelpers.requestStructuredJsonPayload({
-        stage: 'intent_parser',
-        systemPrompt: 'Return valid JSON only.',
-        userPrompt: prompt,
-        schema: INTENT_PARSER_RESPONSE_SCHEMA,
-        traceContext,
-        defaultError: 'Intent parser provider is not configured.'
-      });
-      if (!result?.ok) {
-        return {
-          ok: false,
-          error: cleanText(result?.error, 240) || 'Intent parser request failed.'
-        };
-      }
-      return normalizeIntentParserPayload(result.payload || result.raw);
-    } catch (error) {
-      if (isAgentRequestAbortError(error)) {
-        throw error;
-      }
-      return {
-        ok: false,
-        error: cleanText(error?.message || error, 240) || 'Intent parser request failed.'
-      };
-    }
-  }
-
   return {
     extractConversation,
     buildAgentLogRequestId,
@@ -656,8 +607,7 @@ function createAgentControllerUtils(deps = {}) {
     resolveAgentModel,
     resolveAgentLlmSource,
     requestText: llmHelpers.requestText,
-    requestWebSearch: llmHelpers.requestWebSearch,
-    requestIntentParserPayload
+    requestWebSearch: llmHelpers.requestWebSearch
   };
 }
 

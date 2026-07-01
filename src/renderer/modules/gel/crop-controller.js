@@ -1,6 +1,33 @@
 import { createEmptyManualOverrides } from './shared.js';
 
+const MIN_ROTATION_DEGREES = -180;
+const MAX_ROTATION_DEGREES = 180;
+
+function normalizeRotationDegrees(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  const rounded = Math.round(numeric * 10) / 10;
+  return Math.min(MAX_ROTATION_DEGREES, Math.max(MIN_ROTATION_DEGREES, rounded));
+}
+
+function formatRotationDegrees(value) {
+  const normalized = normalizeRotationDegrees(value);
+  return Number.isInteger(normalized) ? String(normalized) : normalized.toFixed(1);
+}
+
 export function createCropController({ runtime, elements, deps }) {
+  function renderRotationUi() {
+    const value = formatRotationDegrees(runtime.cropRotationDegrees);
+    if (elements.gelRotateAngleRange) {
+      elements.gelRotateAngleRange.value = value;
+    }
+    if (elements.gelRotateAngleInput) {
+      elements.gelRotateAngleInput.value = value;
+    }
+  }
+
   function destroyCropper() {
     if (runtime.cropperInstance && typeof runtime.cropperInstance.destroy === 'function') {
       runtime.cropperInstance.destroy();
@@ -20,6 +47,8 @@ export function createCropController({ runtime, elements, deps }) {
       elements.gelCanvas.style.display = 'block';
     }
     runtime.cropDisplaySize = null;
+    runtime.cropRotationDegrees = 0;
+    renderRotationUi();
   }
 
   function captureCurrentGelDisplaySize() {
@@ -75,6 +104,8 @@ export function createCropController({ runtime, elements, deps }) {
       minContainerHeight: runtime.cropDisplaySize?.height || 200
     });
     runtime.cropperActive = true;
+    runtime.cropRotationDegrees = 0;
+    renderRotationUi();
     return true;
   }
 
@@ -92,29 +123,45 @@ export function createCropController({ runtime, elements, deps }) {
     if (elements.gelResetCropBtn) {
       elements.gelResetCropBtn.disabled = !runtime.originalImage;
     }
-    if (elements.gelRotateLeftBtn) {
-      elements.gelRotateLeftBtn.disabled = !isCropping;
+    if (elements.gelRotateAngleRange) {
+      elements.gelRotateAngleRange.disabled = !isCropping;
     }
-    if (elements.gelRotateRightBtn) {
-      elements.gelRotateRightBtn.disabled = !isCropping;
+    if (elements.gelRotateAngleInput) {
+      elements.gelRotateAngleInput.disabled = !isCropping;
     }
+    if (elements.gelResetRotationBtn) {
+      elements.gelResetRotationBtn.disabled = !isCropping || normalizeRotationDegrees(runtime.cropRotationDegrees) === 0;
+    }
+    renderRotationUi();
   }
 
-  function rotateBy(degrees) {
+  function setRotationDegrees(degrees) {
     if (!runtime.cropperActive || !runtime.cropperInstance) {
       deps.setStatus('Start crop mode first to rotate.');
       return;
     }
-    runtime.cropperInstance.rotate(degrees);
-    deps.setStatus(`Rotated ${degrees > 0 ? 'clockwise' : 'counterclockwise'} ${Math.abs(degrees)}°. Adjust selection then Apply Crop.`);
+    const current = normalizeRotationDegrees(runtime.cropRotationDegrees);
+    const next = normalizeRotationDegrees(degrees);
+    if (typeof runtime.cropperInstance.rotateTo === 'function') {
+      runtime.cropperInstance.rotateTo(next);
+    } else if (typeof runtime.cropperInstance.rotate === 'function') {
+      runtime.cropperInstance.rotate(next - current);
+    } else {
+      deps.setStatus('Cropper rotation is unavailable.');
+      return;
+    }
+    runtime.cropRotationDegrees = next;
+    renderRotationUi();
+    setCropUiState();
+    deps.setStatus(`Rotated to ${formatRotationDegrees(next)} deg. Adjust selection then Apply Crop.`);
   }
 
-  function onRotateLeft() {
-    rotateBy(-90);
+  function onRotationAngleInput(event) {
+    setRotationDegrees(event?.target?.value);
   }
 
-  function onRotateRight() {
-    rotateBy(90);
+  function onResetRotation() {
+    setRotationDegrees(0);
   }
 
   function leaveCropMode() {
@@ -217,8 +264,8 @@ export function createCropController({ runtime, elements, deps }) {
     onCancelCrop,
     onCropAction,
     onResetCrop,
-    onRotateLeft,
-    onRotateRight,
+    onResetRotation,
+    onRotationAngleInput,
     onStartCrop,
     setCropUiState
   };

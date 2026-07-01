@@ -25,7 +25,7 @@
  * transformed markdown.
  */
 
-const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../helpers/agent/shared/agent-llm-utils.js');
 const { createIntakeStore, DOC_TYPES } = require('./intake-store.js');
 
 const DEFAULT_MARKDOWN_CHAR_LIMIT = 24000;

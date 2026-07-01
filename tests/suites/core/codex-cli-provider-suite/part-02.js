@@ -347,9 +347,9 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
-        'agent',
-        'paper-intake',
+        'papers',
+        'store',
+        'intake',
         'mcp-tools.js'
       ));
       assert.deepEqual(

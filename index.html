@@ -96,7 +96,7 @@
         <section class="home-tile home-tile-notebook-pages" aria-labelledby="dashboard-notebook-pages-heading">
           <div class="home-tile-head">
             <div class="home-tile-titles">
-              <h2 id="dashboard-notebook-pages-heading">Recent notebook pages</h2>
+              <h2 id="dashboard-notebook-pages-heading">Quick Add Notes</h2>
               <p id="dashboard-notebook-pages-status" class="sr-only">Tap a page to add a note.</p>
             </div>
             <button type="button" id="dashboard-notebook-open-btn" class="home-link-btn">View all →</button>
@@ -109,12 +109,12 @@
         <section class="home-tile home-tile-quicklog" aria-labelledby="dashboard-quicklog-heading">
           <div class="home-tile-head">
             <div class="home-tile-titles">
-              <h2 id="dashboard-quicklog-heading">Quick log</h2>
+              <h2 id="dashboard-quicklog-heading">Add Experiments</h2>
               <p class="small-note">Bench note &rarr; notebook</p>
             </div>
           </div>
           <div class="home-quicklog-body">
-            <div class="home-quicklog-chips" aria-label="Quick log shortcuts">
+            <div class="home-quicklog-chips" aria-label="Add Experiments shortcuts">
               <button type="button" class="home-chip" data-dashboard-quicklog-chip="Passage">&#xFF0B; Passage</button>
               <button type="button" class="home-chip" data-dashboard-quicklog-chip="Western blot">&#xFF0B; Western blot</button>
               <button type="button" class="home-chip" data-dashboard-quicklog-chip="Order reagent">&#xFF0B; Order reagent</button>
@@ -132,7 +132,7 @@
                 type="button"
                 id="dashboard-quick-log-save-btn"
                 class="home-icon-btn"
-                aria-label="Save quick log"
+                aria-label="Save experiment"
               >
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
                   <path d="m5 12.5 4.2 4.1L19 7" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -142,7 +142,7 @@
                 type="button"
                 id="dashboard-quick-log-agent-btn"
                 class="home-icon-btn home-icon-btn-send"
-                aria-label="Save quick log and send to Assistant"
+                aria-label="Save experiment and send to Assistant"
               >
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
                   <path d="M12 17V7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path>
@@ -1018,7 +1018,7 @@
       <div class="personal-inventory-layout left-rail-template">
         <aside class="inventory-rail-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="inventory-rail-stack app-left-rail-section">
-            <button id="inventory-add-container-btn" type="button" class="primary-btn">Add Container</button>
+            <button id="inventory-add-container-btn" type="button" class="primary-btn" aria-controls="inventory-add-container-overlay" aria-expanded="false">Add Container</button>
             <div id="inventory-location-nav" class="inventory-location-nav"></div>
             <div id="inventory-container-context-menu" class="personal-inventory-context-menu" hidden></div>
           </div>
@@ -1026,44 +1026,60 @@
         </aside>
 
         <div class="panel inventory-main-panel left-rail-template__main">
-          <form id="inventory-add-container-form" class="form-grid inventory-add-form" hidden>
-            <label>
-              Container Name
-              <input id="inventory-add-container-name" placeholder="e.g. Box A" required />
-            </label>
-            <label>
-              Location
-              <select id="inventory-add-container-location" required>
-                <option value="">Select location</option>
-              </select>
-            </label>
-            <label>
-              Type
-              <select id="inventory-add-container-type">
-                <option value="box81">81-well cube box</option>
-                <option value="customGrid">Custom grid box</option>
-                <option value="plate96">96-well plate</option>
-                <option value="single">Single container (tube/bottle)</option>
-              </select>
-            </label>
-            <div id="inventory-add-container-grid-fields" class="inventory-custom-grid-fields" hidden>
-              <label>
-                Rows
-                <input id="inventory-add-container-rows" type="number" min="1" max="24" step="1" value="9" />
-              </label>
-              <label>
-                Columns
-                <input id="inventory-add-container-cols" type="number" min="1" max="24" step="1" value="9" />
-              </label>
-              <p class="small-note inventory-custom-grid-note">Custom grid boxes reuse the same visual style as the 81-well box.</p>
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="primary-btn">Save Container</button>
-              <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
-            </div>
-          </form>
           <div id="inventory-sections" class="inventory-sections"></div>
         </div>
+      </div>
+
+      <div id="inventory-add-container-overlay" class="inventory-add-container-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+        <form
+          id="inventory-add-container-form"
+          class="form-grid inventory-add-form inventory-add-container-dialog app-dialog-surface"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="inventory-add-container-title"
+        >
+          <div class="app-dialog-head inventory-add-container-head">
+            <div>
+              <h3 id="inventory-add-container-title">Add Container</h3>
+              <p class="small-note">Create a storage box, plate, tube, or custom grid.</p>
+            </div>
+            <button id="inventory-add-container-close" type="button" class="ghost-btn" aria-label="Close add container dialog">Close</button>
+          </div>
+          <label>
+            Container Name
+            <input id="inventory-add-container-name" placeholder="e.g. Box A" required />
+          </label>
+          <label>
+            Location
+            <select id="inventory-add-container-location" required>
+              <option value="">Select location</option>
+            </select>
+          </label>
+          <label>
+            Type
+            <select id="inventory-add-container-type">
+              <option value="box81">81-well cube box</option>
+              <option value="customGrid">Custom grid box</option>
+              <option value="plate96">96-well plate</option>
+              <option value="single">Single container (tube/bottle)</option>
+            </select>
+          </label>
+          <div id="inventory-add-container-grid-fields" class="inventory-custom-grid-fields" hidden>
+            <label>
+              Rows
+              <input id="inventory-add-container-rows" type="number" min="1" max="24" step="1" value="9" />
+            </label>
+            <label>
+              Columns
+              <input id="inventory-add-container-cols" type="number" min="1" max="24" step="1" value="9" />
+            </label>
+            <p class="small-note inventory-custom-grid-note">Custom grid boxes reuse the same visual style as the 81-well box.</p>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Save Container</button>
+            <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
+          </div>
+        </form>
       </div>
     </section>
 
@@ -1336,22 +1352,6 @@
               step="any"
               placeholder="factor e.g. 10"
             />
-            <input
-              type="text"
-              id="assay-fill-start"
-              class="assay-conc-unit-input"
-              placeholder="start"
-              autocomplete="off"
-              hidden
-            />
-            <input
-              type="text"
-              id="assay-fill-end"
-              class="assay-conc-unit-input"
-              placeholder="end"
-              autocomplete="off"
-              hidden
-            />
             <button type="button" id="assay-dilution-fill-btn" class="ghost-btn">Fill</button>
             <button type="button" id="assay-clear-mappings-btn" class="ghost-btn">Clear All Mappings</button>
             <button type="button" id="assay-serial-dilution-btn" class="ghost-btn">Serial Dilution</button>
@@ -1569,8 +1569,13 @@
                   <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
                   <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
                   <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
-                  <button type="button" id="gel-rotate-left-btn" class="ghost-btn" disabled title="Rotate 90° counterclockwise">↺ Rotate</button>
-                  <button type="button" id="gel-rotate-right-btn" class="ghost-btn" disabled title="Rotate 90° clockwise">Rotate ↻</button>
+                  <div class="gel-rotate-control" role="group" aria-label="Free rotate gel image">
+                    <label for="gel-rotate-angle-range" class="small-note">Angle</label>
+                    <input id="gel-rotate-angle-range" class="gel-rotate-angle-range" type="range" min="-180" max="180" step="0.1" value="0" disabled />
+                    <input id="gel-rotate-angle-input" class="gel-rotate-angle-input" type="number" min="-180" max="180" step="0.1" value="0" disabled aria-label="Rotation angle in degrees" />
+                    <span class="small-note" aria-hidden="true">deg</span>
+                    <button type="button" id="gel-reset-rotation-btn" class="ghost-btn" disabled title="Reset rotation">Reset</button>
+                  </div>
                   <button type="button" id="gel-process-image-btn" class="ghost-btn">Process Image</button>
                   <button type="button" id="gel-view-original-btn" class="ghost-btn" aria-pressed="true">View Original</button>
                 </div>
@@ -2861,81 +2866,182 @@
 
       <div id="tool-buffer-view" class="panel tool-subview" hidden>
         <h3>Buffer Preparer</h3>
-        <div class="stack-form">
-          <label>
-            Buffer Volume (mL)
-            <input id="buffer-volume-ml" type="number" min="0" step="0.001" value="1000" />
-          </label>
+        <div class="stack-form tool-box-sheet-shell">
           <div class="form-actions">
-            <button id="add-buffer-chemical-btn" type="button" class="ghost-btn">Add Chemical</button>
+            <button id="add-buffer-chemical-btn" type="button" class="ghost-btn">Add Ingredient</button>
           </div>
-          <div id="buffer-rows" class="buffer-rows"></div>
+          <div class="tool-box-buffer-sheet-wrap">
+            <table class="tool-box-buffer-sheet" aria-label="Buffer preparer table">
+              <tbody id="buffer-rows">
+                <tr class="tool-box-buffer-meta-row">
+                  <th scope="row">Volume</th>
+                  <td><input id="buffer-volume-ml" type="number" min="0" step="0.001" value="1000" aria-label="Buffer volume in mL" /></td>
+                  <th scope="row">pH</th>
+                  <td><input id="buffer-ph" type="number" min="0" max="14" step="0.01" placeholder="7.4" aria-label="Target pH" /></td>
+                  <td></td>
+                </tr>
+                <tr class="tool-box-buffer-header-row">
+                  <th scope="col">Chemical</th>
+                  <th scope="col">MW</th>
+                  <th scope="col">Stock Conc.</th>
+                  <th scope="col">Final Conc.</th>
+                  <th scope="col">Mass/Volume</th>
+                </tr>
+                <tr class="tool-box-buffer-row" id="buffer-row-1">
+                  <th scope="row" class="tool-box-buffer-chemical-cell">
+                    <div class="tool-box-buffer-autocomplete">
+                      <input id="buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-1" />
+                      <div id="buffer-suggestions-1" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    </div>
+                  </th>
+                  <td><input id="buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" value="121.14" aria-label="Ingredient 1 molecular weight" /></td>
+                  <td><input id="buffer-stock-1" placeholder="empty or 1 M" aria-label="Ingredient 1 stock concentration" /></td>
+                  <td><input id="buffer-final-1" placeholder="50 mM" aria-label="Ingredient 1 final concentration" /></td>
+                  <td><output id="buffer-output-1" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-buffer-row" id="buffer-row-2">
+                  <th scope="row" class="tool-box-buffer-chemical-cell">
+                    <div class="tool-box-buffer-autocomplete">
+                      <input id="buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-2" />
+                      <div id="buffer-suggestions-2" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    </div>
+                  </th>
+                  <td><input id="buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 2 molecular weight" /></td>
+                  <td><input id="buffer-stock-2" placeholder="2000x" aria-label="Ingredient 2 stock concentration" /></td>
+                  <td><input id="buffer-final-2" placeholder="150 mM" aria-label="Ingredient 2 final concentration" /></td>
+                  <td><output id="buffer-output-2" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-buffer-row" id="buffer-row-3" hidden>
+                  <th scope="row" class="tool-box-buffer-chemical-cell">
+                    <div class="tool-box-buffer-autocomplete">
+                      <input id="buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-3" />
+                      <div id="buffer-suggestions-3" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    </div>
+                  </th>
+                  <td><input id="buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 3 molecular weight" /></td>
+                  <td><input id="buffer-stock-3" placeholder="10% v/v" aria-label="Ingredient 3 stock concentration" /></td>
+                  <td><input id="buffer-final-3" placeholder="0.1% v/v" aria-label="Ingredient 3 final concentration" /></td>
+                  <td><output id="buffer-output-3" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-buffer-row" id="buffer-row-4" hidden>
+                  <th scope="row" class="tool-box-buffer-chemical-cell">
+                    <div class="tool-box-buffer-autocomplete">
+                      <input id="buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-4" />
+                      <div id="buffer-suggestions-4" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    </div>
+                  </th>
+                  <td><input id="buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 4 molecular weight" /></td>
+                  <td><input id="buffer-stock-4" placeholder="stock" aria-label="Ingredient 4 stock concentration" /></td>
+                  <td><input id="buffer-final-4" placeholder="final" aria-label="Ingredient 4 final concentration" /></td>
+                  <td><output id="buffer-output-4" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-buffer-row" id="buffer-row-5" hidden>
+                  <th scope="row" class="tool-box-buffer-chemical-cell">
+                    <div class="tool-box-buffer-autocomplete">
+                      <input id="buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-5" />
+                      <div id="buffer-suggestions-5" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    </div>
+                  </th>
+                  <td><input id="buffer-mw-5" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 5 molecular weight" /></td>
+                  <td><input id="buffer-stock-5" placeholder="stock" aria-label="Ingredient 5 stock concentration" /></td>
+                  <td><input id="buffer-final-5" placeholder="final" aria-label="Ingredient 5 final concentration" /></td>
+                  <td><output id="buffer-output-5" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-buffer-row" id="buffer-row-6" hidden>
+                  <th scope="row" class="tool-box-buffer-chemical-cell">
+                    <div class="tool-box-buffer-autocomplete">
+                      <input id="buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-6" />
+                      <div id="buffer-suggestions-6" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    </div>
+                  </th>
+                  <td><input id="buffer-mw-6" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 6 molecular weight" /></td>
+                  <td><input id="buffer-stock-6" placeholder="stock" aria-label="Ingredient 6 stock concentration" /></td>
+                  <td><input id="buffer-final-6" placeholder="final" aria-label="Ingredient 6 final concentration" /></td>
+                  <td><output id="buffer-output-6" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-buffer-adjustment-row">
+                  <th scope="row">Solvent to add <output id="buffer-solvent-output" aria-live="polite"></output></th>
+                  <td></td>
+                  <th scope="row">6 M NaOH <output id="buffer-naoh-output" aria-live="polite"></output></th>
+                  <td></td>
+                  <th scope="row">6 M HCl <output id="buffer-hcl-output" aria-live="polite"></output></th>
+                </tr>
+              </tbody>
+            </table>
+          </div>
           <p id="buffer-total-result" class="calc-output" hidden></p>
         </div>
       </div>
 
       <div id="tool-fixed-reaction-view" class="panel tool-subview" hidden>
         <h3>Fixed Volume Reaction</h3>
-        <div class="stack-form reaction-mix-shell">
+        <div class="stack-form tool-box-sheet-shell">
           <div class="form-actions">
             <button id="fixed-reaction-add-row-btn" type="button" class="ghost-btn">Add Reagent</button>
           </div>
-          <div class="reaction-mix-table">
-            <div id="fixed-reaction-rows" class="reaction-mix-rows"></div>
-
-            <div class="reaction-mix-row reaction-mix-row-special">
-              <label class="reaction-mix-cell">
-                <span class="reaction-mix-cell-label">Fill Solution</span>
-                <input id="fixed-reaction-fill-name" type="text" value="Water / buffer" placeholder="e.g. Water" />
-              </label>
-              <div class="reaction-mix-cell">
-                <span class="reaction-mix-cell-label">Stock Conc</span>
-                <div class="reaction-mix-static">Auto</div>
-              </div>
-              <div class="reaction-mix-cell">
-                <span class="reaction-mix-cell-label">Final Conc</span>
-                <div class="reaction-mix-static">Auto</div>
-              </div>
-              <div class="reaction-mix-cell reaction-mix-volume-cell">
-                <span class="reaction-mix-cell-label">Volume</span>
-                <div id="fixed-reaction-fill-volume" class="reaction-mix-static">0 uL</div>
-                <div id="fixed-reaction-fill-note" class="reaction-mix-row-note">Auto-calculated to reach the total volume.</div>
-              </div>
-              <div class="reaction-mix-cell reaction-mix-action-cell">
-                <span class="reaction-mix-cell-label">Action</span>
-                <div class="reaction-mix-static">Locked</div>
-              </div>
-            </div>
-
-            <div class="reaction-mix-row reaction-mix-row-special">
-              <div class="reaction-mix-cell">
-                <span class="reaction-mix-cell-label">Total Volume</span>
-                <div class="reaction-mix-static">Reaction total</div>
-              </div>
-              <div class="reaction-mix-cell">
-                <span class="reaction-mix-cell-label">Stock Conc</span>
-                <div class="reaction-mix-static">-</div>
-              </div>
-              <div class="reaction-mix-cell">
-                <span class="reaction-mix-cell-label">Final Conc</span>
-                <div class="reaction-mix-static">-</div>
-              </div>
-              <label class="reaction-mix-cell reaction-mix-volume-cell">
-                <span class="reaction-mix-cell-label">Volume</span>
-                <div class="inline-row">
-                  <input id="fixed-reaction-total-volume" type="number" min="0" step="0.000001" value="100" placeholder="e.g. 100" />
-                  <select id="fixed-reaction-total-unit">
-                    <option value="uL" selected>uL</option>
-                    <option value="mL">mL</option>
-                    <option value="L">L</option>
-                  </select>
-                </div>
-              </label>
-              <div class="reaction-mix-cell reaction-mix-action-cell">
-                <span class="reaction-mix-cell-label">Action</span>
-                <div class="reaction-mix-static">Locked</div>
-              </div>
-            </div>
+          <div class="tool-box-reaction-sheet-wrap">
+            <table class="tool-box-reaction-sheet" aria-label="Fixed volume reaction preparer">
+              <colgroup>
+                <col class="tool-box-reaction-item-col" />
+                <col class="tool-box-reaction-stock-col" />
+                <col class="tool-box-reaction-final-col" />
+                <col class="tool-box-reaction-volume-col" />
+              </colgroup>
+              <tbody id="fixed-reaction-rows">
+                <tr class="tool-box-reaction-meta-row">
+                  <th scope="row">Total volume:</th>
+                  <td colspan="3"><input id="fixed-reaction-total-volume" type="text" value="100 uL" placeholder="100 uL" aria-label="Total reaction volume" /></td>
+                </tr>
+                <tr class="tool-box-reaction-header-row">
+                  <th scope="col">Item</th>
+                  <th scope="col">Stock Conc.</th>
+                  <th scope="col">Final Conc</th>
+                  <th scope="col">Volume</th>
+                </tr>
+                <tr class="tool-box-reaction-row" id="fixed-reaction-row-1">
+                  <td><input id="fixed-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1" /></td>
+                  <td><input id="fixed-reaction-stock-1" type="text" placeholder="10 mM" aria-label="Stock concentration for reaction item 1" /></td>
+                  <td><input id="fixed-reaction-final-1" type="text" placeholder="1 uM" aria-label="Final concentration for reaction item 1" /></td>
+                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-1" type="text" placeholder="auto" aria-label="Manual volume for reaction item 1" /><output id="fixed-reaction-output-1" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-reaction-row" id="fixed-reaction-row-2" hidden>
+                  <td><input id="fixed-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2" /></td>
+                  <td><input id="fixed-reaction-stock-2" type="text" placeholder="2000x" aria-label="Stock concentration for reaction item 2" /></td>
+                  <td><input id="fixed-reaction-final-2" type="text" placeholder="1x" aria-label="Final concentration for reaction item 2" /></td>
+                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-2" type="text" placeholder="auto" aria-label="Manual volume for reaction item 2" /><output id="fixed-reaction-output-2" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-reaction-row" id="fixed-reaction-row-3" hidden>
+                  <td><input id="fixed-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3" /></td>
+                  <td><input id="fixed-reaction-stock-3" type="text" placeholder="2%" aria-label="Stock concentration for reaction item 3" /></td>
+                  <td><input id="fixed-reaction-final-3" type="text" placeholder="0.1% v/v" aria-label="Final concentration for reaction item 3" /></td>
+                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-3" type="text" placeholder="auto" aria-label="Manual volume for reaction item 3" /><output id="fixed-reaction-output-3" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-reaction-row" id="fixed-reaction-row-4" hidden>
+                  <td><input id="fixed-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4" /></td>
+                  <td><input id="fixed-reaction-stock-4" type="text" placeholder="1 mg/mL" aria-label="Stock concentration for reaction item 4" /></td>
+                  <td><input id="fixed-reaction-final-4" type="text" placeholder="100 ng/uL" aria-label="Final concentration for reaction item 4" /></td>
+                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-4" type="text" placeholder="auto" aria-label="Manual volume for reaction item 4" /><output id="fixed-reaction-output-4" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-reaction-row" id="fixed-reaction-row-5" hidden>
+                  <td><input id="fixed-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5" /></td>
+                  <td><input id="fixed-reaction-stock-5" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 5" /></td>
+                  <td><input id="fixed-reaction-final-5" type="text" placeholder="Final" aria-label="Final concentration for reaction item 5" /></td>
+                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-5" type="text" placeholder="auto" aria-label="Manual volume for reaction item 5" /><output id="fixed-reaction-output-5" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-reaction-row" id="fixed-reaction-row-6" hidden>
+                  <td><input id="fixed-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6" /></td>
+                  <td><input id="fixed-reaction-stock-6" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 6" /></td>
+                  <td><input id="fixed-reaction-final-6" type="text" placeholder="Final" aria-label="Final concentration for reaction item 6" /></td>
+                  <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6" /><output id="fixed-reaction-output-6" aria-live="polite"></output></td>
+                </tr>
+                <tr class="tool-box-reaction-solvent-row">
+                  <th scope="row"><input id="fixed-reaction-fill-name" value="Solvent" aria-label="Reaction solvent name" /></th>
+                  <td></td>
+                  <td></td>
+                  <td><output id="fixed-reaction-solvent-output" aria-live="polite"></output></td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

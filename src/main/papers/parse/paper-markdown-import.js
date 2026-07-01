@@ -3,12 +3,12 @@
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 
-const { createPdfTextExtractionRuntime } = require('../agent/tools/agent-pdf-text-extraction.js');
+const { createPdfTextExtractionRuntime } = require('./agent-pdf-text-extraction.js');
 const {
   buildKnowledgeDatabasePaths,
   createPaperKnowledgeDatabaseRuntime,
   normalizeDoi
-} = require('../agent/tools/agent-paper-knowledge-database.js');
+} = require('../store/agent-paper-knowledge-database.js');
 
 function cleanText(value, maxLength = 4000) {
   const text = String(value || '').trim();

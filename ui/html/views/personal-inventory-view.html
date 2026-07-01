@@ -2,7 +2,7 @@
       <div class="personal-inventory-layout left-rail-template">
         <aside class="inventory-rail-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
           <div class="inventory-rail-stack app-left-rail-section">
-            <button id="inventory-add-container-btn" type="button" class="primary-btn">Add Container</button>
+            <button id="inventory-add-container-btn" type="button" class="primary-btn" aria-controls="inventory-add-container-overlay" aria-expanded="false">Add Container</button>
             <div id="inventory-location-nav" class="inventory-location-nav"></div>
             <div id="inventory-container-context-menu" class="personal-inventory-context-menu" hidden></div>
           </div>
@@ -10,43 +10,59 @@
         </aside>
 
         <div class="panel inventory-main-panel left-rail-template__main">
-          <form id="inventory-add-container-form" class="form-grid inventory-add-form" hidden>
-            <label>
-              Container Name
-              <input id="inventory-add-container-name" placeholder="e.g. Box A" required />
-            </label>
-            <label>
-              Location
-              <select id="inventory-add-container-location" required>
-                <option value="">Select location</option>
-              </select>
-            </label>
-            <label>
-              Type
-              <select id="inventory-add-container-type">
-                <option value="box81">81-well cube box</option>
-                <option value="customGrid">Custom grid box</option>
-                <option value="plate96">96-well plate</option>
-                <option value="single">Single container (tube/bottle)</option>
-              </select>
-            </label>
-            <div id="inventory-add-container-grid-fields" class="inventory-custom-grid-fields" hidden>
-              <label>
-                Rows
-                <input id="inventory-add-container-rows" type="number" min="1" max="24" step="1" value="9" />
-              </label>
-              <label>
-                Columns
-                <input id="inventory-add-container-cols" type="number" min="1" max="24" step="1" value="9" />
-              </label>
-              <p class="small-note inventory-custom-grid-note">Custom grid boxes reuse the same visual style as the 81-well box.</p>
-            </div>
-            <div class="form-actions">
-              <button type="submit" class="primary-btn">Save Container</button>
-              <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
-            </div>
-          </form>
           <div id="inventory-sections" class="inventory-sections"></div>
         </div>
+      </div>
+
+      <div id="inventory-add-container-overlay" class="inventory-add-container-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+        <form
+          id="inventory-add-container-form"
+          class="form-grid inventory-add-form inventory-add-container-dialog app-dialog-surface"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="inventory-add-container-title"
+        >
+          <div class="app-dialog-head inventory-add-container-head">
+            <div>
+              <h3 id="inventory-add-container-title">Add Container</h3>
+              <p class="small-note">Create a storage box, plate, tube, or custom grid.</p>
+            </div>
+            <button id="inventory-add-container-close" type="button" class="ghost-btn" aria-label="Close add container dialog">Close</button>
+          </div>
+          <label>
+            Container Name
+            <input id="inventory-add-container-name" placeholder="e.g. Box A" required />
+          </label>
+          <label>
+            Location
+            <select id="inventory-add-container-location" required>
+              <option value="">Select location</option>
+            </select>
+          </label>
+          <label>
+            Type
+            <select id="inventory-add-container-type">
+              <option value="box81">81-well cube box</option>
+              <option value="customGrid">Custom grid box</option>
+              <option value="plate96">96-well plate</option>
+              <option value="single">Single container (tube/bottle)</option>
+            </select>
+          </label>
+          <div id="inventory-add-container-grid-fields" class="inventory-custom-grid-fields" hidden>
+            <label>
+              Rows
+              <input id="inventory-add-container-rows" type="number" min="1" max="24" step="1" value="9" />
+            </label>
+            <label>
+              Columns
+              <input id="inventory-add-container-cols" type="number" min="1" max="24" step="1" value="9" />
+            </label>
+            <p class="small-note inventory-custom-grid-note">Custom grid boxes reuse the same visual style as the 81-well box.</p>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="primary-btn">Save Container</button>
+            <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
+          </div>
+        </form>
       </div>
     </section>

@@ -25,6 +25,7 @@ export function initGelAnalysis({
     createId,
     cropApplied: false,
     cropDisplaySize: null,
+    cropRotationDegrees: 0,
     cropperActive: false,
     cropperInstance: null,
     currentImage: null,
@@ -170,8 +171,9 @@ export function initGelAnalysis({
   elements.gelStartCropBtn?.addEventListener('click', cropController.onCropAction);
   elements.gelCancelCropBtn?.addEventListener('click', cropController.onCancelCrop);
   elements.gelResetCropBtn?.addEventListener('click', cropController.onResetCrop);
-  elements.gelRotateLeftBtn?.addEventListener('click', cropController.onRotateLeft);
-  elements.gelRotateRightBtn?.addEventListener('click', cropController.onRotateRight);
+  elements.gelRotateAngleRange?.addEventListener('input', cropController.onRotationAngleInput);
+  elements.gelRotateAngleInput?.addEventListener('input', cropController.onRotationAngleInput);
+  elements.gelResetRotationBtn?.addEventListener('click', cropController.onResetRotation);
   elements.gelCanvas?.addEventListener('click', manualWorkflow.onCanvasClick);
   elements.gelCanvas?.addEventListener('contextmenu', manualWorkflow.onCanvasContextMenu);
   elements.gelCanvas?.addEventListener('mousedown', manualWorkflow.onCanvasMouseDown);

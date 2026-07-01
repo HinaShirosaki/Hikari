@@ -357,7 +357,7 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
       assert.equal(executedTools[0].args.code, 'print("trend")');
       assert.match(result.answer, /Ready after 1 computation step/i);
       assert.equal(capturedToolNames.includes('python-sandbox'), true);
-      assert.equal(capturedToolNames.includes('record-lookup'), true);
+      assert.equal(capturedToolNames.includes('notebook-lookup'), true);
       assert.equal(capturedToolNames.includes('literature-search'), true);
     });
 

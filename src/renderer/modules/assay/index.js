@@ -14,11 +14,10 @@ import {
   normalizeManualWellOverrideMap,
   normalizeResults
 } from './plate-model.js';
-import {
-  axisLabel,
-  notebookLabel,
-  oppositeAxis
-} from './shared.js';
+import { oppositeAxis } from './shared.js';
+import { createAssayAgentContext } from './agent/context.js';
+import { bindAssayEvents } from './ui/event-bindings.js';
+import { createAssayBrowserView } from './ui/browser-view.js';
 import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
 
 export function initAssay({ state, persist, createId, safeText, onAssaysChanged, onActiveAssayChanged }) {
@@ -53,6 +52,14 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     return (state.assays || []).find((item) => item.id === assayId);
   }
 
+  const {
+    selectNotebookOption,
+    renderProjectOptions,
+    renderNotebookOptions,
+    renderResultsAssayOptions,
+    renderList
+  } = createAssayBrowserView({ elements, state, safeText, runtime, ensureState });
+
   function getCreateDraftSnapshot() {
     return serializeDraftSnapshot({
       controls: snapshotFormControls(elements.assayForm),
@@ -79,6 +86,10 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
 
   function markResultsDraftSaved() {
     savedResultsDraftSnapshot = getResultsDraftSnapshot();
+  }
+
+  function hasUnsavedResultsDraft() {
+    return Boolean(savedResultsDraftSnapshot && getResultsDraftSnapshot() !== savedResultsDraftSnapshot);
   }
 
   function arraysEqual(left, right) {
@@ -119,24 +130,6 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
         assayIds: nextIds
       };
     });
-  }
-
-  function selectNotebookOption(value) {
-    if (!elements.assayNotebookEntryInput) {
-      return;
-    }
-    const targetValue = String(value || '').trim();
-    if (!targetValue) {
-      elements.assayNotebookEntryInput.value = '';
-      return;
-    }
-    if (!Array.from(elements.assayNotebookEntryInput.options).some((option) => option.value === targetValue)) {
-      const option = document.createElement('option');
-      option.value = targetValue;
-      option.textContent = `${targetValue} (missing notebook page)`;
-      elements.assayNotebookEntryInput.append(option);
-    }
-    elements.assayNotebookEntryInput.value = targetValue;
   }
 
   function assayDefinitionChanged(existing, nextRecord) {
@@ -182,6 +175,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
       onAssaysChanged();
     }
     void artifactStorage.persistAssayArtifacts(assay.id);
+    notifyActiveAssayChanged();
   }
 
   function setCsvStatus(message) {
@@ -218,277 +212,9 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     elements.assayActiveAssayInfo.textContent = '';
   }
 
-  function renderProjectOptions() {
-    if (!elements.assayProjectInput) {
-      return;
-    }
-    const selected = elements.assayProjectInput.value;
-    const options = ['<option value="">Select project</option>'];
-    (state.projects || []).forEach((project) => {
-      const isSelected = selected === project.id ? ' selected' : '';
-      options.push(`<option value="${project.id}"${isSelected}>${safeText(project.name)}</option>`);
-    });
-    elements.assayProjectInput.innerHTML = options.join('');
-    if (selected && (state.projects || []).some((project) => project.id === selected)) {
-      elements.assayProjectInput.value = selected;
-    }
-  }
-
-  function renderNotebookOptions() {
-    if (!elements.assayNotebookEntryInput) {
-      return;
-    }
-    const selected = elements.assayNotebookEntryInput.value;
-    const projectId = elements.assayProjectInput?.value || '';
-    const entries = (state.notebookEntries || [])
-      .filter((entry) => !projectId || entry.projectId === projectId)
-      .sort((a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || ''));
-    const options = ['<option value="">Not linked</option>'];
-    entries.forEach((entry) => {
-      options.push(`<option value="${entry.id}">${safeText(notebookLabel(entry))}</option>`);
-    });
-    elements.assayNotebookEntryInput.innerHTML = options.join('');
-
-    if (selected && entries.some((entry) => entry.id === selected)) {
-      elements.assayNotebookEntryInput.value = selected;
-      return;
-    }
-
-    if (selected && !entries.some((entry) => entry.id === selected)) {
-      elements.assayNotebookEntryInput.innerHTML += `<option value="${safeText(selected)}">${safeText(`${selected} (missing notebook page)`)}</option>`;
-      elements.assayNotebookEntryInput.value = selected;
-    }
-  }
-
   function getActiveResultsAssay() {
     const assayId = runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '';
     return assayId ? getAssayById(assayId) : null;
-  }
-
-  function compactAgentText(value, maxLength = 220) {
-    const text = String(value ?? '').trim();
-    return maxLength > 0 ? text.slice(0, maxLength) : text;
-  }
-
-  function getSelectedProjectForAgentContext(assay = null) {
-    const projectId = compactAgentText(
-      elements.assayProjectInput?.value
-        || assay?.projectId
-        || '',
-      120
-    );
-    const project = projectId
-      ? (state.projects || []).find((item) => item.id === projectId)
-      : null;
-    return {
-      projectId,
-      projectName: compactAgentText(project?.name || assay?.projectName || '', 220)
-    };
-  }
-
-  function getActiveAssayForAgentContext() {
-    const activeId = compactAgentText(
-      runtime.activeResultsAssayId
-        || elements.assayResultsAssaySelect?.value
-        || elements.assayIdInput?.value
-        || '',
-      220
-    );
-    return activeId ? getAssayById(activeId) : null;
-  }
-
-  function getAgentLayoutForContext(assay = null) {
-    const runtimeLayout = Array.isArray(runtime.currentLayout) ? runtime.currentLayout : [];
-    if (runtimeLayout.length || !assay) {
-      return runtimeLayout;
-    }
-    return Array.isArray(assay.wellLayout) ? assay.wellLayout : [];
-  }
-
-  function getAgentResultsForContext(assay = null) {
-    if (runtime.assayMode === 'results') {
-      resultsManager?.syncCurrentResultsFromGrid?.();
-    }
-    const runtimeResults = runtime.currentResults && typeof runtime.currentResults === 'object'
-      ? runtime.currentResults
-      : {};
-    if (Object.keys(runtimeResults).length || !assay) {
-      return runtimeResults;
-    }
-    return assay.resultValues && typeof assay.resultValues === 'object' ? assay.resultValues : {};
-  }
-
-  function cleanAgentTableCell(value, maxLength = 220) {
-    return compactAgentText(value, maxLength)
-      .replace(/[\t\r\n]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-  }
-
-  function buildAgentResultRows(layout = [], results = {}, maxRows = 384) {
-    const rows = [];
-    const seen = new Set();
-    const resultByWell = {};
-    Object.entries(results || {}).forEach(([rawWell, rawValue]) => {
-      const well = cleanAgentTableCell(rawWell, 40).toUpperCase();
-      if (well) {
-        resultByWell[well] = rawValue;
-      }
-    });
-    (Array.isArray(layout) ? layout : []).forEach((item) => {
-      const well = cleanAgentTableCell(item?.well, 40).toUpperCase();
-      if (!well || seen.has(well) || rows.length >= maxRows) {
-        return;
-      }
-      seen.add(well);
-      const hasResult = Object.prototype.hasOwnProperty.call(resultByWell, well);
-      const row = {
-        well,
-        sample: cleanAgentTableCell(item?.sampleId, 160),
-        concentration: cleanAgentTableCell(item?.concentration, 160),
-        result: hasResult ? cleanAgentTableCell(resultByWell[well], 220) : ''
-      };
-      if (row.sample || row.concentration || row.result) {
-        rows.push(row);
-      }
-    });
-    Object.entries(resultByWell).forEach(([well, rawValue]) => {
-      if (!well || seen.has(well) || rows.length >= maxRows) {
-        return;
-      }
-      seen.add(well);
-      rows.push({
-        well,
-        sample: '',
-        concentration: '',
-        result: cleanAgentTableCell(rawValue, 220)
-      });
-    });
-    return rows;
-  }
-
-  function formatAgentTsvSection(title = '', columns = [], rows = [], maxRows = 384) {
-    const safeColumns = (Array.isArray(columns) ? columns : [])
-      .map((column) => cleanAgentTableCell(column, 80))
-      .filter(Boolean);
-    const safeRows = Array.isArray(rows) ? rows : [];
-    if (!safeColumns.length || !safeRows.length) {
-      return [];
-    }
-    const visibleRows = safeRows.slice(0, maxRows);
-    const truncated = safeRows.length > visibleRows.length
-      ? `; showing first ${visibleRows.length}`
-      : '';
-    return [
-      `${title} (${safeRows.length} row${safeRows.length === 1 ? '' : 's'}${truncated}):`,
-      safeColumns.join('\t'),
-      ...visibleRows.map((row) => {
-        const source = Array.isArray(row) ? row : {};
-        return safeColumns.map((column, index) => (
-          Array.isArray(source)
-            ? cleanAgentTableCell(source[index], 220)
-            : cleanAgentTableCell(source[column], 220)
-        )).join('\t');
-      })
-    ];
-  }
-
-  function buildAgentAnalysisTableLines(latestAnalysis = null) {
-    const headers = Array.isArray(latestAnalysis?.headers)
-      ? latestAnalysis.headers.map((item) => cleanAgentTableCell(item, 120)).filter(Boolean)
-      : [];
-    const rows = Array.isArray(latestAnalysis?.rows) ? latestAnalysis.rows : [];
-    return formatAgentTsvSection('Latest analysis table (TSV)', headers, rows, 120);
-  }
-
-  function buildAgentWellPreview(layout = [], results = {}, maxRows = 16) {
-    const rows = (Array.isArray(layout) ? layout : [])
-      .slice(0, maxRows)
-      .map((item) => {
-        const well = compactAgentText(item?.well, 40).toUpperCase();
-        if (!well) {
-          return '';
-        }
-        const result = compactAgentText(results?.[well], 80);
-        return `- ${well}: sample=${compactAgentText(item?.sampleId, 120) || '-'}; concentration=${compactAgentText(item?.concentration, 120) || '-'}; result=${result || '-'}`;
-      })
-      .filter(Boolean);
-    if (rows.length) {
-      return rows;
-    }
-    return Object.entries(results || {})
-      .slice(0, maxRows)
-      .map(([well, value]) => `- ${compactAgentText(well, 40).toUpperCase()}: result=${compactAgentText(value, 80) || '-'}`);
-  }
-
-  function getAgentChatContext() {
-    const assay = getActiveAssayForAgentContext();
-    const { projectId, projectName } = getSelectedProjectForAgentContext(assay);
-    const assayId = compactAgentText(assay?.id || elements.assayIdInput?.value || '', 220);
-    const assayName = compactAgentText(elements.assayNameInput?.value || assay?.name || '', 320);
-    const assayNumber = compactAgentText(assay?.assayNumber || elements.assayNumberDisplay?.textContent || '', 120);
-    const plateDef = getPlateDefinition(elements.assayPlateTypeInput?.value || assay?.plateType || '96');
-    const layout = getAgentLayoutForContext(assay);
-    const results = getAgentResultsForContext(assay);
-    const resultCount = Object.keys(results || {}).length;
-    const latestAnalysis = assay?.latestAnalysis && typeof assay.latestAnalysis === 'object'
-      ? assay.latestAnalysis
-      : null;
-    const analysisMethod = compactAgentText(elements.assayAnalysisMethodInput?.value || latestAnalysis?.method || '', 120);
-    const resultRows = buildAgentResultRows(layout, results);
-    const resultTableLines = formatAgentTsvSection(
-      'Assay result table (TSV; use these rows as the source for assay_table create)',
-      ['well', 'sample', 'concentration', 'result'],
-      resultRows,
-      384
-    );
-    const analysisTableLines = buildAgentAnalysisTableLines(latestAnalysis);
-    const wellPreview = buildAgentWellPreview(layout, results);
-    const lines = [
-      `Active assay mode: ${runtime.assayMode === 'results' ? 'Results and analysis' : 'Plate setup'}`,
-      assayName ? `Assay name: ${assayName}` : '',
-      assayNumber ? `Assay number: ${assayNumber}` : '',
-      assayId ? `Assay ID: ${assayId}` : 'Assay ID: unsaved draft',
-      projectName ? `Project: ${projectName}` : '',
-      `Plate: ${plateDef.label || plateDef.value}`,
-      `Sample axis: ${axisLabel(elements.assaySampleAxisInput?.value || assay?.sampleAxis || 'row')}`,
-      `Concentration axis: ${axisLabel(elements.assayConcentrationAxisInput?.value || assay?.concentrationAxis || 'column')}`,
-      compactAgentText(layoutManager.getConcentrationUnit?.() || assay?.concentrationUnit || '', 80)
-        ? `Concentration unit: ${compactAgentText(layoutManager.getConcentrationUnit?.() || assay?.concentrationUnit || '', 80)}`
-        : '',
-      `Mapped wells: ${layout.length}`,
-      `Result values: ${resultCount}`,
-      analysisMethod ? `Analysis method: ${analysisMethod}` : '',
-      compactAgentText(elements.assayAnalysisRowGroupsInput?.value, 500)
-        ? `Row groups: ${compactAgentText(elements.assayAnalysisRowGroupsInput.value, 500)}`
-        : '',
-      compactAgentText(elements.assayAnalysisColumnGroupsInput?.value, 500)
-        ? `Column groups: ${compactAgentText(elements.assayAnalysisColumnGroupsInput.value, 500)}`
-        : '',
-      elements.assayAnalysisErrorBarsInput?.checked ? 'Error bars: SD enabled' : '',
-      latestAnalysis?.summary ? `Latest analysis summary: ${compactAgentText(latestAnalysis.summary, 700)}` : '',
-      ...analysisTableLines,
-      ...resultTableLines,
-      resultTableLines.length ? '' : (wellPreview.length ? 'Well/result preview:' : ''),
-      ...(resultTableLines.length ? [] : wellPreview)
-    ].filter(Boolean);
-
-    return {
-      scopeType: 'assay',
-      assayId,
-      assayName: assayName || assayNumber,
-      assayMode: runtime.assayMode,
-      projectId,
-      projectName,
-      hiddenContext: {
-        kind: 'assay-page',
-        label: assayName ? `Active assay: ${assayName}` : 'Active assay',
-        text: lines.join('\n'),
-        assayId,
-        assayName: assayName || assayNumber,
-        projectName
-      }
-    };
   }
 
   function notifyActiveAssayChanged() {
@@ -551,6 +277,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
       onAssaysChanged();
     }
     await artifactStorage.persistAssayArtifacts(assay.id);
+    markResultsDraftSaved();
+    notifyActiveAssayChanged();
   }
 
   const layoutManager = createAssayLayoutManager({
@@ -579,7 +307,8 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     onAnalysisConfigChange: () => analysisView?.onAnalysisConfigChange(),
     parseResultImportFile: parseAssayResultImport,
     persistResultAttachment: artifactStorage.persistAssayResultAttachment,
-    onResultImportApplied: onAssayResultImportApplied
+    onResultImportApplied: onAssayResultImportApplied,
+    onResultsChanged: () => notifyActiveAssayChanged()
   });
 
   analysisView = createAssayAnalysisView({
@@ -602,96 +331,15 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     }
   });
 
-  function sortedAssaysByUpdated() {
-    return (state.assays || [])
-      .slice()
-      .sort((a, b) => Date.parse(b.updatedAt || '') - Date.parse(a.updatedAt || ''));
-  }
-
-  function renderResultsAssayOptions(preferredId = '') {
-    if (!elements.assayResultsAssaySelect) {
-      return;
-    }
-    const rows = sortedAssaysByUpdated();
-    const options = ['<option value="">Select assay plate</option>'];
-    rows.forEach((assay) => {
-      const label = assay.name || assay.id;
-      options.push(`<option value="${assay.id}">${safeText(label)}</option>`);
-    });
-    elements.assayResultsAssaySelect.innerHTML = options.join('');
-    const candidate = preferredId || runtime.activeResultsAssayId;
-    if (candidate && rows.some((assay) => assay.id === candidate)) {
-      elements.assayResultsAssaySelect.value = candidate;
-      return;
-    }
-    if (rows.length) {
-      elements.assayResultsAssaySelect.value = rows[0].id;
-    }
-  }
-
-  function linkedNotebookLabel(assay) {
-    if (!assay.notebookEntryId) {
-      return '-';
-    }
-    const linked = (state.notebookEntries || []).find((entry) => entry.id === assay.notebookEntryId);
-    if (!linked) {
-      return `${assay.notebookEntryId} (missing)`;
-    }
-    const type = linked.notebookType === 'biology' ? 'Biology' : 'Synthesis';
-    return `${type}: ${linked.protocolName || linked.id}`;
-  }
-
-  function matchesSearch(assay, term) {
-    if (!term) {
-      return true;
-    }
-    const haystack = [
-      assay.assayNumber,
-      assay.name,
-      assay.projectName,
-      assay.plateLabel,
-      assay.wellCount,
-      axisLabel(assay.sampleAxis),
-      axisLabel(assay.concentrationAxis),
-      assay.notebookEntryProtocolName,
-      linkedNotebookLabel(assay),
-      assay.notes
-    ].join(' ').toLowerCase();
-    return haystack.includes(term);
-  }
-
-  function renderList() {
-    if (!elements.assayList) {
-      return;
-    }
-    ensureState();
-    const term = String(elements.assaySearchInput?.value || '').trim().toLowerCase();
-    const assays = sortedAssaysByUpdated();
-    const rows = assays.filter((item) => matchesSearch(item, term));
-    if (elements.assayBrowserCount) {
-      elements.assayBrowserCount.textContent = term ? `${rows.length}/${assays.length}` : String(assays.length);
-    }
-
-    if (!rows.length) {
-      elements.assayList.innerHTML = '<p class="small-note assay-browser-empty">No assays found.</p>';
-      return;
-    }
-
-    elements.assayList.innerHTML = rows.map((assay) => {
-      const title = assay.name || assay.assayNumber || assay.id || 'Untitled assay';
-      return `
-        <article class="assay-browser-item">
-          <div class="assay-browser-item-copy">
-            <p class="assay-browser-item-title">${safeText(title)}</p>
-          </div>
-          <div class="card-actions assay-browser-item-actions">
-            <button type="button" class="ghost-btn" data-assay-edit="${assay.id}">Edit</button>
-            <button type="button" class="danger-btn" data-assay-delete="${assay.id}">Delete</button>
-          </div>
-        </article>
-      `;
-    }).join('');
-  }
+  const { getAgentChatContext } = createAssayAgentContext({
+    runtime,
+    elements,
+    state,
+    getAssayById,
+    getLayoutManager: () => layoutManager,
+    getResultsManager: () => resultsManager,
+    hasUnsavedResultsDraft
+  });
 
   function loadAssayForResults(assayId) {
     const assay = getAssayById(assayId);
@@ -1054,72 +702,23 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
       : 'Create a new linked assay.');
   }
 
-  elements.assayForm?.addEventListener('submit', onSubmit);
-  elements.assayCancelBtn?.addEventListener('click', resetForm);
-  elements.assayModeCreateBtn?.addEventListener('click', () => setAssayMode('create'));
-  elements.assayModeResultsBtn?.addEventListener('click', () => setAssayMode('results'));
-  elements.assayProjectInput?.addEventListener('change', renderNotebookOptions);
-  elements.assayPlateTypeInput?.addEventListener('change', () => {
-    layoutManager.onPlateTypeChange();
-    renderAssayNumberDisplay();
+  bindAssayEvents({
+    elements,
+    layoutManager,
+    resultsManager,
+    analysisView,
+    handlers: {
+      onSubmit,
+      resetForm,
+      setAssayMode,
+      renderNotebookOptions,
+      renderAssayNumberDisplay,
+      onResultsAssaySelected,
+      onSaveResults,
+      renderList,
+      onListClick
+    }
   });
-  elements.assaySampleAxisInput?.addEventListener('change', () => {
-    layoutManager.syncAxisDisplay();
-    layoutManager.setLayoutFromAxisAndOverrides();
-    layoutManager.renderPlatePreview();
-    resultsManager.renderResultTable();
-  });
-  elements.assaySampleAxisRowBtn?.addEventListener('click', () => layoutManager.setSampleAxis('row'));
-  elements.assaySampleAxisColumnBtn?.addEventListener('click', () => layoutManager.setSampleAxis('column'));
-  elements.assayConcentrationAxisInput?.addEventListener('change', () => {
-    layoutManager.setConcentrationAxis(elements.assayConcentrationAxisInput?.value);
-  });
-  elements.assayConcentrationAxisRowBtn?.addEventListener('click', () => layoutManager.setConcentrationAxis('row'));
-  elements.assayConcentrationAxisColumnBtn?.addEventListener('click', () => layoutManager.setConcentrationAxis('column'));
-  elements.assayPlateFieldSampleBtn?.addEventListener('click', () => layoutManager.setPlateEditField('sampleId'));
-  elements.assayPlateFieldConcentrationBtn?.addEventListener('click', () => layoutManager.setPlateEditField('concentration'));
-  elements.assayConcentrationUnitInput?.addEventListener('input', layoutManager.onConcentrationUnitInput);
-  elements.assayFillModeInput?.addEventListener('change', layoutManager.syncFillModeInputs);
-  elements.assayDilutionFillBtn?.addEventListener('click', layoutManager.onFillConcentrations);
-  layoutManager.syncFillModeInputs();
-  elements.assayClearMappingsBtn?.addEventListener('click', layoutManager.onClearWellMappings);
-  elements.assaySerialDilutionBtn?.addEventListener('click', layoutManager.openSerialDilutionDialog);
-  elements.assaySerialDilutionCloseBtn?.addEventListener('click', layoutManager.closeSerialDilutionDialog);
-  elements.assaySerialDilutionOverlay?.addEventListener('click', layoutManager.onSerialDilutionOverlayClick);
-  elements.assaySerialDilutionOverlay?.addEventListener('input', layoutManager.onSerialDilutionDialogInput);
-  elements.assaySearchInput?.addEventListener('input', renderList);
-  elements.assayExportTemplateBtn?.addEventListener('click', layoutManager.exportCsvTemplate);
-  elements.assayImportTemplateBtn?.addEventListener('click', () => elements.assayImportFile?.click());
-  elements.assayImportFile?.addEventListener('change', layoutManager.onImportCsv);
-  elements.assayResultsAssaySelect?.addEventListener('change', onResultsAssaySelected);
-  elements.assayAnalysisMethodInput?.addEventListener('change', analysisView.onAnalysisMethodChange);
-  elements.assayAnalysisRowGroupsInput?.addEventListener('input', analysisView.onAnalysisConfigChange);
-  elements.assayAnalysisColumnGroupsInput?.addEventListener('input', analysisView.onAnalysisConfigChange);
-  elements.assayAnalysisErrorBarsInput?.addEventListener('change', analysisView.onAnalysisConfigChange);
-  elements.assayAnalysisAddRowGroupBtn?.addEventListener('click', resultsManager.onAddSelectedRowGroup);
-  elements.assayAnalysisAddColumnGroupBtn?.addEventListener('click', resultsManager.onAddSelectedColumnGroup);
-  elements.assayAnalysisClearGroupsBtn?.addEventListener('click', resultsManager.onClearAnalysisGroups);
-  elements.assayAttachResultFileBtn?.addEventListener('click', resultsManager.onAttachResultFileClick);
-  elements.assayResultFileInput?.addEventListener('change', resultsManager.onResultFileChange);
-  elements.assayResultImportOverlay?.addEventListener('click', resultsManager.onResultImportOverlayClick);
-  elements.assayResultImportCandidates?.addEventListener('click', resultsManager.onResultImportCandidateClick);
-  elements.assayResultImportCloseBtn?.addEventListener('click', resultsManager.closeResultImportDialog);
-  elements.assayResultImportCancelBtn?.addEventListener('click', resultsManager.closeResultImportDialog);
-  elements.assayResultImportApplyBtn?.addEventListener('click', resultsManager.applySelectedResultImportCandidate);
-  elements.assaySaveResultsBtn?.addEventListener('click', onSaveResults);
-  elements.assayClearResultsBtn?.addEventListener('click', resultsManager.onClearResults);
-  elements.assayAnalyzeResultsBtn?.addEventListener('click', analysisView.onAnalyzeResults);
-  elements.assayResultTable?.addEventListener('paste', resultsManager.onResultTablePaste);
-  elements.assayPlatePreview?.addEventListener('input', layoutManager.onPlatePreviewInput);
-  elements.assayPlatePreview?.addEventListener('change', layoutManager.onPlatePreviewChange);
-  elements.assayPlatePreview?.addEventListener('focusin', layoutManager.onPlatePreviewFocusIn);
-  elements.assayPlatePreview?.addEventListener('click', layoutManager.onPlatePreviewClick);
-  elements.assayPlatePreview?.addEventListener('keydown', layoutManager.onPlatePreviewKeyDown);
-  elements.assayPlatePreview?.addEventListener('contextmenu', layoutManager.onPlatePreviewContextMenu);
-  elements.assayPlatePreview?.addEventListener('scroll', layoutManager.onPlatePreviewScroll, true);
-  elements.assayList?.addEventListener('click', onListClick);
-  globalThis.addEventListener?.('pointerdown', layoutManager.onGlobalPointerDown);
-  globalThis.addEventListener?.('keydown', layoutManager.onGlobalKeyDown);
 
   return {
     hasUnsavedChanges: () => (

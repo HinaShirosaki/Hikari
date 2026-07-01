@@ -21,14 +21,7 @@ const {
   runPythonSandbox,
   createManagedPythonSandboxRuntime
 } = require('../agent/tools/agent-python-sandbox.js');
-const {
-  INTENT_PARSER_RESPONSE_SCHEMA,
-  normalizeIntentParserPayload,
-  buildIntentParserPrompt,
-  buildInventorySearchTerms,
-  mapCanonicalIntentToExecutionIntent,
-  normalizeParserEntitiesToRoutingEntities
-} = require('../agent/intent/agent-intent-parser');
+const { buildInventorySearchTerms } = require('../agent/shared/agent-inventory-search-terms.js');
 const observability = require('../agent/shared/agent-observability');
 const { createAgentControllerUtils } = require('../agent/shared/agent-controller-utils');
 const { createAgentRuntimeRegistry } = require('../agent/shared/agent-runtime-registry.js');
@@ -38,7 +31,6 @@ const { createAgentChatLogRuntime } = require('../agent/context/agent-chat-log.j
 const { createAgentSkillRuntime } = require('../agent/skills/agent-skill-runtime.js');
 const { normalizeToolInvocationArgs } = require('../agent/tools/agent-tool-loading.js');
 const { createAgentToolCallRuntime } = require('../agent/tools/agent-tool-execution.js');
-const { createAgentToolProviderRuntime } = require('../agent/tools/agent-tool-provide.js');
 const { createAgentCommandLineRuntime } = require('../agent/tools/agent-command-line.js');
 const { createAgentSubAgentRuntime } = require('../agent/tools/agent-sub-agent.js');
 const { createAgentContainerRuntime } = require('../agent/tools/agent-container.js');
@@ -47,18 +39,18 @@ const { createAgentPlotlyGraphRuntime } = require('../agent/tools/agent-plotly-g
 const { createAgentMemoryRuntime } = require('../agent/context/agent-memory.js');
 const { createNotebookDraftRuntime } = require('../agent/tools/agent-notebook-draft.js');
 const { createWebSearchRuntime } = require('../agent/tools/agent-web-search.js');
-const { createLiteratureSearchRuntime } = require('../agent/tools/agent-literature-search.js');
-const { createLiteratureSearchWorkflowRuntime } = require('../agent/literature-search/agent-literature-search-workflow.js');
+const { createLiteratureSearchRuntime } = require('../../papers/search/agent-literature-search.js');
+const { createLiteratureSearchWorkflowRuntime } = require('../../papers/workflow/agent-literature-search-workflow.js');
 const { createPurchaseRecommendationRuntime } = require('../agent/tools/agent-purchase-recommendation.js');
 const { createProtocolGenerationRuntime } = require('../agent/tools/agent-protocol-generation.js');
 const { createProtocolSaveRuntime } = require('../agent/tools/agent-protocol-save.js');
-const { createPaperAnalysisRuntime } = require('../agent/tools/agent-paper-analysis.js');
-const { createPaperContextLoaderRuntime } = require('../agent/tools/agent-paper-context-loader.js');
-const { createPaperDownloadRuntime } = require('../agent/tools/agent-paper-download.js');
-const { createPaperKnowledgeDatabaseRuntime } = require('../agent/tools/agent-paper-knowledge-database.js');
-const { createPaperWikiChunkerRuntime } = require('../agent/tools/agent-paper-wiki-chunker.js');
-const { createPaperWikiSearchRuntime } = require('../agent/tools/agent-paper-wiki-search.js');
-const { createPdfTextExtractionRuntime } = require('../agent/tools/agent-pdf-text-extraction.js');
+const { createPaperAnalysisRuntime } = require('../../papers/analysis/agent-paper-analysis.js');
+const { createPaperContextLoaderRuntime } = require('../../papers/retrieve/agent-paper-context-loader.js');
+const { createPaperDownloadRuntime } = require('../../papers/download/agent-paper-download.js');
+const { createPaperKnowledgeDatabaseRuntime } = require('../../papers/store/agent-paper-knowledge-database.js');
+const { createPaperWikiChunkerRuntime } = require('../../papers/retrieve/agent-paper-wiki-chunker.js');
+const { createPaperWikiSearchRuntime } = require('../../papers/retrieve/agent-paper-wiki-search.js');
+const { createPdfTextExtractionRuntime } = require('../../papers/parse/agent-pdf-text-extraction.js');
 const { createProtocolMatchingRuntime } = require('../agent/tools/agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('../agent/tools/agent-notebook-generation.js');
 const { createAgentInventoryLookupRuntime } = require('../agent/tools/agent-inventory-lookup.js');
@@ -70,7 +62,7 @@ const {
   createDirectLlmModuleRegistry,
   registerDefaultDirectLlmModules
 } = require('./llm/direct-llm-module-registry.js');
-const { asArray, clamp, createUniqueStrings } = require('./data/value-utils.js');
+const { asArray, createUniqueStrings } = require('./data/value-utils.js');
 const { STORAGE } = require('../../../shared/ipc/channels');
 
 function renderPromptTemplate(template, vars = {}) {
@@ -203,9 +195,6 @@ function createMainAgentServices(deps = {}) {
     asArray,
     cleanText,
     appendAgentChatLogEntry,
-    buildIntentParserPrompt,
-    normalizeIntentParserPayload,
-    INTENT_PARSER_RESPONSE_SCHEMA,
     llmProviderBridge
   });
   llmTraceRecorderRef.current = controllerUtils.recordAgentLlmTrace;
@@ -278,9 +267,6 @@ function createMainAgentServices(deps = {}) {
 
   const genericAgentToolRuntime = createAgentToolCallRuntime({
     asArray,
-    cleanText
-  });
-  const agentToolProviderRuntime = createAgentToolProviderRuntime({
     cleanText
   });
   agentToolRuntime = {
@@ -425,6 +411,7 @@ function createMainAgentServices(deps = {}) {
     literatureSearchRuntime,
     paperContextLoaderRuntime,
     paperDownloadRuntime,
+    paperKnowledgeDatabaseRuntime,
     subAgentRuntime
   });
   const purchaseRecommendationRuntime = createPurchaseRecommendationRuntime({
