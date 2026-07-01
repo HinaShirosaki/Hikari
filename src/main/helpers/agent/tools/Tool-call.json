@@ -1119,6 +1119,17 @@
           "type": "string",
           "maxLength": 240
         },
+        "journals": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 180
+          },
+          "maxItems": 6
+        },
+        "allow_unfiltered_fallback": {
+          "type": "boolean"
+        },
         "limit": {
           "type": "integer",
           "minimum": 1,

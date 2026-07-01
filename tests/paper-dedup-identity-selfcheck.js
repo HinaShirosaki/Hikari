@@ -25,6 +25,9 @@ const {
   createLiteratureSearchRuntime
 } = require(path.join(root, 'src/main/helpers/agent/tools/agent-literature-search.js'));
 const {
+  normalizeToolArgumentsPayload
+} = require(path.join(root, 'src/main/helpers/agent/tools/agent-tool-loading.js'));
+const {
   splitMarkdownIntoSections
 } = require(path.join(root, 'src/main/helpers/agent/tools/agent-paper-context-loader.js'));
 const {
@@ -197,6 +200,49 @@ async function main() {
   const chunks = ctx.chunkSectionText('word '.repeat(800), 1500, 200);
   assert.ok(chunks.length > 1, 'long text chunked');
   assert.ok(ctx.scoreTextAgainstQuery('kinase', 'a kinase study', 'Results') > 0, 'scoring matches query token');
+
+  // --- journals survives the tool contract (not stripped by normalization) ---
+  const norm = normalizeToolArgumentsPayload(
+    { tool_calls: [{ tool_name: 'literature-search', arguments: { query: 'k', journals: ['Nature'], allow_unfiltered_fallback: false } }] },
+    { selectedToolNames: ['literature-search'] }
+  );
+  assert.ok(norm.ok, 'literature-search args normalize');
+  assert.deepEqual(norm.payload.tool_calls[0].arguments.journals, ['Nature'], 'journals reaches the runtime');
+
+  // --- journal filter never runs UniProt (no leak, no suppressed retry) ------
+  let uniprotCalls = 0;
+  const leakRt = createLiteratureSearchRuntime({
+    searchUniProtRecords: async () => { uniprotCalls += 1; return [{ title: 'A protein', accession: 'P1' }]; },
+    searchEuropePmcRecords: async () => [{ title: 'Journal paper', doi: '10.1/x', journal: 'Nature' }],
+    searchPubMedRecords: async () => [],
+    searchCrossrefRecords: async () => []
+  });
+  const leak = await leakRt.searchLiteratureCandidates({
+    query: 'kinase protein receptor',
+    sources: ['uniprot', 'europe_pmc'],
+    journals: ['Nature'],
+    allow_web_fallback: false
+  });
+  assert.equal(leak.journal_filter_relaxed, false, 'journal-capable results present -> no relax');
+  assert.equal(uniprotCalls, 0, 'UniProt is not queried under a journal filter (no leak)');
+  assert.ok(!leak.sources.includes('uniprot'), 'UniProt excluded from the filtered pass');
+  assert.ok(leak.items.length > 0 && leak.items.every((it) => it.source !== 'uniprot'), 'no UniProt items leak through');
+
+  // when journal-capable sources return nothing, the retry runs (incl. UniProt)
+  const relaxRt = createLiteratureSearchRuntime({
+    searchUniProtRecords: async () => [{ title: 'A protein', accession: 'P1' }],
+    searchEuropePmcRecords: async () => [],
+    searchPubMedRecords: async () => [],
+    searchCrossrefRecords: async () => []
+  });
+  const relaxed2 = await relaxRt.searchLiteratureCandidates({
+    query: 'kinase protein receptor',
+    sources: ['uniprot', 'europe_pmc'],
+    journals: ['Nature'],
+    allow_web_fallback: false
+  });
+  assert.equal(relaxed2.journal_filter_relaxed, true, 'empty filtered result relaxes');
+  assert.ok(relaxed2.sources.includes('uniprot'), 'UniProt runs in the relaxed (unfiltered) pass');
 
   console.log('PASS paper-dedup-identity-selfcheck');
 }

@@ -25,6 +25,15 @@ const LITERATURE_SOURCE_ORDER = Object.freeze([
   LITERATURE_SOURCES.WEB
 ]);
 
+// Sources whose native query syntax can honor a journal filter. Others
+// (UniProt, web) cannot, so they are excluded from a journal-scoped pass to
+// avoid leaking unfiltered hits and to keep the "empty -> relax" retry correct.
+const JOURNAL_FILTERABLE_SOURCES = Object.freeze(new Set([
+  LITERATURE_SOURCES.PUBMED,
+  LITERATURE_SOURCES.EUROPE_PMC,
+  LITERATURE_SOURCES.CROSSREF
+]));
+
 const SOURCE_LABELS = Object.freeze({
   [LITERATURE_SOURCES.WEB]: 'web',
   [LITERATURE_SOURCES.PUBMED]: 'PubMed',
@@ -678,7 +687,13 @@ function createLiteratureSearchRuntime(deps = {}) {
       const counts = {};
       const errors = {};
       const collected = [];
-      for (const sourceName of resolvedSources) {
+      // When a hard journal filter is active, only query sources that can honor
+      // it; UniProt/web would otherwise return journal-blind hits that both leak
+      // into the "filtered" result and suppress the unfiltered retry.
+      const sourcesToRun = journals.length
+        ? resolvedSources.filter((sourceName) => JOURNAL_FILTERABLE_SOURCES.has(sourceName))
+        : resolvedSources;
+      for (const sourceName of sourcesToRun) {
         execed.push(sourceName);
         try {
           const items = await searchSource(sourceName, query, Math.min(perSourceLimit, limit), source, journals);
