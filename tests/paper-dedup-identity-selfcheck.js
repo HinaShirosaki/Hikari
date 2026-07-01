@@ -49,6 +49,12 @@ const {
 const {
   createPaperContextText
 } = require(path.join(root, 'src/main/helpers/agent/tools/paper-context-text.js'));
+const {
+  tokenize: wikiTokenize,
+  scoreRow: wikiScoreRow,
+  buildSnippet: wikiBuildSnippet,
+  buildPageCitation: wikiBuildPageCitation
+} = require(path.join(root, 'src/main/helpers/agent/tools/wiki-search-scoring.js'));
 
 // Mock fetch that records requested URLs and returns one Europe PMC record,
 // optionally empty when the URL carries a given journal clause (to exercise the
@@ -412,6 +418,24 @@ async function main() {
   // out-of-range clamps instead of throwing
   const clamped = readLineRangesFromText('only one line', [{ start_line: 5, end_line: 9 }]);
   assert.equal(clamped.parts[0].text, 'only one line', 'ranges clamp to available lines');
+
+  // --- wiki-search scoring (extracted module) --------------------------------
+  assert.deepEqual(wikiTokenize('The KINASE inhibitor'), ['kinase', 'inhibitor'], 'tokenize lowercases + drops stopwords');
+  const hitRow = { body_lower: 'a kinase inhibitor study of kinase', section_heading: 'Results', char_length: 40 };
+  const missRow = { body_lower: 'plant photosynthesis', section_heading: 'Intro', char_length: 40 };
+  const terms = wikiTokenize('kinase inhibitor');
+  assert.ok(wikiScoreRow(hitRow, terms, 'kinase inhibitor') > wikiScoreRow(missRow, terms, 'kinase inhibitor'), 'matching row outscores non-matching');
+  assert.equal(wikiScoreRow(missRow, terms, 'kinase inhibitor'), 0, 'no term hit -> zero score');
+  // heading hit is boosted vs a plain body hit of equal raw count
+  const headingRow = { body_lower: 'x', section_heading: 'kinase', char_length: 10 };
+  const bodyRow = { body_lower: 'kinase', section_heading: 'x', char_length: 10 };
+  assert.ok(wikiScoreRow(headingRow, ['kinase'], '') > wikiScoreRow(bodyRow, ['kinase'], ''), 'heading match boosted');
+
+  const snippet = wikiBuildSnippet('lorem ipsum kinase inhibitor dolor sit amet', ['kinase'], '');
+  assert.ok(snippet.includes('kinase'), 'snippet centers on the matched term');
+  assert.equal(wikiBuildPageCitation({ page_start: 4, page_end: 5 }), 'pp. 4-5');
+  assert.equal(wikiBuildPageCitation({ page_start: 7, page_end: 7 }), 'p. 7');
+  assert.equal(wikiBuildPageCitation({}), '', 'no pages -> empty citation');
 
   console.log('PASS paper-dedup-identity-selfcheck');
 }
