@@ -47,6 +47,11 @@ const {
   inferMarkdownSectionLabel
 } = require(path.join(root, 'src/main/helpers/agent/literature-search/paper-line-ranges.js'));
 const {
+  parseJsonObjectFromText,
+  normalizeSelectedPaper,
+  normalizeCodexPaperLinePayload
+} = require(path.join(root, 'src/main/helpers/agent/literature-search/codex-payload.js'));
+const {
   createPaperContextText
 } = require(path.join(root, 'src/main/helpers/agent/tools/paper-context-text.js'));
 const {
@@ -436,6 +441,26 @@ async function main() {
   assert.equal(wikiBuildPageCitation({ page_start: 4, page_end: 5 }), 'pp. 4-5');
   assert.equal(wikiBuildPageCitation({ page_start: 7, page_end: 7 }), 'p. 7');
   assert.equal(wikiBuildPageCitation({}), '', 'no pages -> empty citation');
+
+  // --- codex payload parsing/normalization (extracted module) ----------------
+  assert.deepEqual(parseJsonObjectFromText('```json\n{"a":1}\n```'), { a: 1 }, 'JSON extracted from a code fence');
+  assert.deepEqual(parseJsonObjectFromText('prose before {"b":2} prose after'), { b: 2 }, 'JSON extracted from surrounding prose');
+  assert.equal(parseJsonObjectFromText('no json here'), null, 'no JSON -> null');
+  assert.equal(parseJsonObjectFromText('[1,2,3]'), null, 'top-level array -> null (object expected)');
+
+  const linePayload = normalizeCodexPaperLinePayload({
+    selected_line_ranges: [{ line_ranges: '4-5', section_label: 'Methods', reason: 'r' }],
+    notes: ['ok']
+  }, {});
+  assert.equal(linePayload.ok, true);
+  assert.equal(linePayload.selected_line_ranges.length, 1);
+  assert.deepEqual(linePayload.selected_line_ranges[0].line_ranges, [{ start_line: 4, end_line: 5 }], 'line ranges normalized');
+  assert.equal(normalizeCodexPaperLinePayload({ ok: false, error: 'boom' }, {}).ok, false, 'ok:false honored');
+
+  const paper = normalizeSelectedPaper({ paperId: 'p1', title: 'T', score: '3' }, { doi: '10.1/x' });
+  assert.equal(paper.paper_id, 'p1');
+  assert.equal(paper.doi, '10.1/x', 'fallback fields merged');
+  assert.equal(paper.score, 3, 'numeric score coerced');
 
   console.log('PASS paper-dedup-identity-selfcheck');
 }
