@@ -463,5 +463,54 @@ module.exports = function registerMainServiceLifecycleSuite(context = {}) {
         ['request', { cwd: '/tmp/project' }]
       ]);
     });
+
+    test('Codex sub-agent MCP context does not inject a stale default data file path', async () => {
+      const { createMainCodexService } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'core',
+        'services',
+        'create-codex-service.js'
+      ));
+      const calls = [];
+      const service = createMainCodexService({
+        cleanText: (value, maxLength = 2000) => String(value || '').trim().slice(0, maxLength),
+        requestCodexCliText: async (input) => {
+          calls.push(['request', input]);
+          return 'sub-agent ok';
+        },
+        getCodexCliWorkingDirectory: () => '/tmp/codex-cwd',
+        getDefaultDataFilePath: () => '/tmp/hikari-data.json',
+        getCodexCliHomePath: () => '/tmp/codex-home',
+        getBundlePaths: () => ({ storageRootPath: '/tmp/storage' }),
+        syncBundleFromSnapshot: async () => ({ bundlePaths: { storageRootPath: '/tmp/storage' } }),
+        mcpService: {
+          initialize: async (input) => {
+            calls.push(['mcp', input]);
+            return { ok: true };
+          }
+        },
+        agentFoundation: {
+          controllerUtils: { recordAgentLlmTrace: async () => {} },
+          observability: { recordLifecycleEvent() {} },
+          agentToolRuntime: { runAgentTool: async () => ({ ok: true }) }
+        },
+        processObject: { env: {} }
+      });
+
+      const result = await service.runSubAgentTurn({
+        message: 'Run a delegated paper check.',
+        agent: { name: 'paper-check' }
+      });
+      assert.equal(result.assistant_message, 'sub-agent ok');
+      const mcpCall = calls.find((entry) => entry[0] === 'mcp');
+      assert.ok(mcpCall);
+      const requestContext = JSON.parse(mcpCall[1].envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT);
+      assert.equal(requestContext.dataFilePath, '');
+      assert.equal(requestContext.fallbackDataFilePath, '');
+      assert.deepEqual(requestContext.snapshot, {});
+      assert.doesNotMatch(JSON.stringify(requestContext), /hikari-data\.json/);
+    });
   }
 };

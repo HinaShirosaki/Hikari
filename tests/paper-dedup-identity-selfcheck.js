@@ -38,6 +38,7 @@ const {
 } = require(path.join(root, 'src/main/papers/retrieve/paper-context-selection.js'));
 const {
   normalizePreferredJournal,
+  normalizePreferredJournals,
   scorePaperCandidate,
   selectPaperCandidates
 } = require(path.join(root, 'src/main/papers/search/literature-candidates.js'));
@@ -385,6 +386,11 @@ async function main() {
   // --- literature candidate ranking/dedup (extracted module) -----------------
   assert.deepEqual(normalizePreferredJournal('Nature'), { url: '', name: 'nature' }, 'plain name -> soft name');
   assert.ok(normalizePreferredJournal('https://www.nature.com').url, 'URL preference -> url');
+  assert.deepEqual(
+    normalizePreferredJournals(['Nature', 'Cell', 'Nature']).map((item) => item.name || item.url),
+    ['nature', 'cell'],
+    'preferred journal list dedupes values'
+  );
 
   const relevant = scorePaperCandidate({ title: 'kinase inhibitor resistance', source: 'pubmed' }, 'kinase inhibitor resistance');
   const irrelevant = scorePaperCandidate({ title: 'plant photosynthesis', source: 'web' }, 'kinase inhibitor resistance');
@@ -392,6 +398,12 @@ async function main() {
   const withJournal = scorePaperCandidate({ title: 'kinase study', journal: 'Nature' }, 'kinase', normalizePreferredJournal('Nature'));
   const noJournal = scorePaperCandidate({ title: 'kinase study', journal: 'Other J' }, 'kinase', normalizePreferredJournal('Nature'));
   assert.ok(withJournal > noJournal, 'preferred-journal bonus applied');
+  const withSecondJournal = scorePaperCandidate(
+    { title: 'kinase study', journal: 'Cell' },
+    'kinase',
+    normalizePreferredJournals(['Nature', 'Cell'])
+  );
+  assert.ok(withSecondJournal > noJournal, 'preferred-journal list bonus applied');
 
   const picked = selectPaperCandidates([
     { title: 'kinase A', doi: '10.1/a', source: 'pubmed' },

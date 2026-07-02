@@ -288,12 +288,10 @@ function createMainAgentServices(deps = {}) {
         options?.dataFilePath || options?.data_file_path,
         1600
       );
-      const defaultDataFilePath = cleanText(getDefaultDataFilePath(), 1600);
-      const dataFilePath = snapshotDataFilePath || optionDataFilePath || defaultDataFilePath;
+      const dataFilePath = snapshotDataFilePath || optionDataFilePath;
       const fallbackDataFilePath = cleanText(
         options?.fallbackDataFilePath
           || options?.fallback_data_file_path
-          || defaultDataFilePath
           || dataFilePath,
         1600
       );

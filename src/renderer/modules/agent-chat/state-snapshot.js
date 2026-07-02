@@ -76,6 +76,12 @@ export function buildStateSnapshot(state, projectId) {
   const personalSections = Object.entries(state?.inventory || {});
   const personalItemCount = personalSections.reduce((count, [, items]) => count + asArray(items).length, 0);
   const chemicalCount = asArray(state?.labInventory?.chemicals).length;
+  const preferredJournals = asArray(state.settings?.preferredJournals)
+    .map((item) => trimText(item, 240))
+    .filter(Boolean);
+  const preferredJournal = preferredJournals.length
+    ? preferredJournals.join('; ')
+    : trimText(state.settings?.preferredJournal, 1200);
   return {
     projects,
     workflows,
@@ -115,7 +121,8 @@ export function buildStateSnapshot(state, projectId) {
     data_file_path: '',
     settings: {
       storagePath: trimText(state.settings?.storagePath, 1200),
-      preferredJournal: trimText(state.settings?.preferredJournal, 1200),
+      preferredJournals,
+      preferredJournal,
       agent: {
         externalSkillsEnabled: state.settings?.agent?.externalSkillsEnabled !== false,
         disabledExternalSkillNames: asArray(state.settings?.agent?.disabledExternalSkillNames)

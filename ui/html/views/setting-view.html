@@ -173,16 +173,17 @@
 
             <section class="settings-section" data-settings-panel="preferred-journal" hidden>
               <div class="settings-section-head">
-                <h3>Preferred Journal</h3>
-                <p class="small-note">Set the journal you most often submit to or browse. Enter a journal name (e.g. <em>Nature Chemistry</em>) or a URL (e.g. <em>https://www.nature.com/nchem/</em>).</p>
+                <h3>Preferred Journals</h3>
+                <p class="small-note">Set the journals you most often submit to or browse. Enter journal names (e.g. <em>Nature Chemistry</em>) or URLs (e.g. <em>https://www.nature.com/nchem/</em>).</p>
               </div>
               <form id="preferred-journal-form" class="stack-form">
                 <label>
                   Journal Name or URL
                   <input id="setting-preferred-journal" placeholder="Journal name or https://..." />
                 </label>
+                <div id="setting-preferred-journal-list" class="stack-form"></div>
                 <div class="form-actions">
-                  <button type="submit" class="primary-btn">Save Preferred Journal</button>
+                  <button type="submit" class="primary-btn">Add Journal</button>
                   <button type="button" id="clear-preferred-journal-btn" class="ghost-btn">Clear</button>
                 </div>
               </form>

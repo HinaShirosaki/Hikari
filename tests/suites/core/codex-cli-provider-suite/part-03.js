@@ -348,7 +348,8 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         snapshot: {
           data_file_path: '/tmp/hikari-data.json',
           settings: {
-            storagePath: '/tmp/hikari-storage'
+            storagePath: '/tmp/hikari-storage',
+            preferredJournals: ['Nature Biotechnology', 'Cell']
           },
           activePaper: {
             id: 'paper-1',
@@ -413,6 +414,9 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.equal(mcpContext.activePaper.title, 'Atlas SUMO1 pilot paper');
       assert.equal(mcpContext.paperAgent.transformed_markdown_relative_path, 'KnowledgeBase/papers.md/atlas-sumo1/paper.md');
       assert.equal(mcpContext.paperAgent.transformed_markdown_path, '/tmp/hikari-storage/KnowledgeBase/papers.md/atlas-sumo1/paper.md');
+      assert.deepEqual(mcpContext.snapshot.settings.preferredJournals, ['Nature Biotechnology', 'Cell']);
+      assert.equal(mcpContext.snapshot.settings.storagePath, '/tmp/hikari-storage');
+      assert.equal(mcpContext.snapshot.data_file_path, '/tmp/hikari-data.json');
       assert.equal(mcpContext.dataFilePath, '/tmp/hikari-data.json');
       assert.deepEqual(
         JSON.parse(calls[0].envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT),

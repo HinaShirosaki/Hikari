@@ -77,6 +77,15 @@ function buildCandidateKey(item = {}) {
 }
 
 function normalizePreferredJournal(value) {
+  const source = ensureObject(value);
+  if (source.url || source.name) {
+    const normalizedUrl = normalizePreferredWebSource(source.url);
+    if (normalizedUrl) {
+      return { url: normalizedUrl, name: '' };
+    }
+    const normalizedName = String(source.name || '').trim().toLowerCase();
+    return normalizedName ? { url: '', name: normalizedName } : { url: '', name: '' };
+  }
   const raw = String(value || '').trim();
   if (!raw) {
     return { url: '', name: '' };
@@ -93,7 +102,27 @@ function normalizePreferredJournal(value) {
   return { url: '', name: raw.toLowerCase() };
 }
 
-function preferredJournalBonus(item, preferred) {
+function normalizePreferredJournals(value) {
+  const candidates = Array.isArray(value)
+    ? value
+    : String(value || '').split(/[;\n]+/);
+  const seen = new Set();
+  const normalized = [];
+  candidates.forEach((candidate) => {
+    const preferred = normalizePreferredJournal(candidate);
+    const key = preferred.url
+      ? `url:${preferred.url}`
+      : (preferred.name ? `name:${preferred.name}` : '');
+    if (!key || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    normalized.push(preferred);
+  });
+  return normalized.slice(0, 12);
+}
+
+function preferredJournalEntryBonus(item, preferred) {
   if (!preferred || (!preferred.url && !preferred.name)) {
     return 0;
   }
@@ -116,6 +145,16 @@ function preferredJournalBonus(item, preferred) {
     return 3;
   }
   return 0;
+}
+
+function preferredJournalBonus(item, preferred) {
+  const preferences = Array.isArray(preferred)
+    ? preferred.map((entry) => normalizePreferredJournal(entry))
+    : [normalizePreferredJournal(preferred)];
+  return preferences.reduce(
+    (bestScore, preference) => Math.max(bestScore, preferredJournalEntryBonus(item, preference)),
+    0
+  );
 }
 
 function scorePaperCandidate(item = {}, query = '', preferredJournal = null) {
@@ -202,6 +241,7 @@ module.exports = {
   tokenizeQuery,
   buildCandidateKey,
   normalizePreferredJournal,
+  normalizePreferredJournals,
   preferredJournalBonus,
   scorePaperCandidate,
   selectPaperCandidates

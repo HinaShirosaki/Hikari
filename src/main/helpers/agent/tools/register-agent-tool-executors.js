@@ -104,6 +104,10 @@ function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function hasOwn(value, key) {
+  return Boolean(value && typeof value === 'object' && Object.prototype.hasOwnProperty.call(value, key));
+}
+
 function resolveContextProject(args = {}, context = {}) {
   const argsProject = ensureObject(args?.project);
   if (Object.keys(argsProject).length) {
@@ -659,7 +663,7 @@ function registerAgentToolExecutors(deps = {}) {
       || snapshot?.storagePath,
       2000
     );
-    return literatureSearchRuntime.execute({
+    const input = {
       ...args,
       provider: cleanText(args?.provider || context?.provider, 80),
       model: cleanText(args?.model || context?.model, 120),
@@ -678,10 +682,15 @@ function registerAgentToolExecutors(deps = {}) {
       project,
       storage_path: storagePath,
       storagePath,
-      parser_payload: resolveToolParserPayload(args, context),
-      limit: toIntegerInRange(args?.limit, 8),
-      max_per_source: toIntegerInRange(args?.max_per_source, 5, 1, 10)
-    });
+      parser_payload: resolveToolParserPayload(args, context)
+    };
+    if (hasOwn(args, 'limit')) {
+      input.limit = toIntegerInRange(args?.limit, 8);
+    }
+    if (hasOwn(args, 'max_per_source')) {
+      input.max_per_source = toIntegerInRange(args?.max_per_source, 5, 1, 10);
+    }
+    return literatureSearchRuntime.execute(input);
   });
 
   genericAgentToolRuntime.registerToolExecutor('paper-download', async ({ args, context }) => {

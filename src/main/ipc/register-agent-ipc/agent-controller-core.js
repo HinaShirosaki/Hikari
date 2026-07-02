@@ -11,7 +11,6 @@ function createAgentControllerCore({
   agentToolRuntime,
   agentChatLogRuntime,
   getAgentChatLogPath,
-  getDefaultDataFilePath,
   setCodexCliModel,
   setCodexCliReasoningEffort,
   lifecycleService
@@ -194,17 +193,12 @@ function createAgentControllerCore({
       throw new Error('Message is required.');
     }
     const rawSnapshot = normalizeJsonPayload(payload?.stateSnapshot, {});
-    const defaultDataFilePath = cleanText(
-      typeof getDefaultDataFilePath === 'function' ? getDefaultDataFilePath() : '',
+    const snapshotDataFilePath = cleanText(rawSnapshot?.data_file_path || rawSnapshot?.dataFilePath, 1600);
+    const snapshotFallbackDataFilePath = cleanText(
+      rawSnapshot?.fallback_data_file_path || rawSnapshot?.fallbackDataFilePath || snapshotDataFilePath,
       1600
     );
-    const snapshotInput = {
-      ...rawSnapshot,
-      ...(!cleanText(rawSnapshot?.data_file_path || rawSnapshot?.dataFilePath, 1600) && defaultDataFilePath
-        ? { data_file_path: defaultDataFilePath }
-        : {})
-    };
-    const snapshot = agentToolRuntime.normalizeAgentSnapshot(snapshotInput);
+    const snapshot = agentToolRuntime.normalizeAgentSnapshot(rawSnapshot);
     const workspaceDir = process.cwd();
     const skillRuntimeInput = {
       workspaceDir,
@@ -399,8 +393,8 @@ function createAgentControllerCore({
         conversation: [],
         attachments,
         snapshot,
-        dataFilePath: cleanText(snapshot?.data_file_path || defaultDataFilePath, 1600),
-        fallbackDataFilePath: defaultDataFilePath,
+        ...(snapshotDataFilePath ? { dataFilePath: snapshotDataFilePath } : {}),
+        ...(snapshotFallbackDataFilePath ? { fallbackDataFilePath: snapshotFallbackDataFilePath } : {}),
         executionFlags,
         traceContext,
         projectId,

@@ -16,13 +16,11 @@ function createMainMcpService({
   const mcpHost = createMcpHost({
     runTool: agentToolRuntime?.runAgentTool,
     env: processObject.env,
-    getSnapshot: () => ({
-      data_file_path: cleanText(getDefaultDataFilePath(), 2000)
-    }),
+    getSnapshot: () => ({}),
     getContextDefaults: () => ({
       cwd: getCodexCliWorkingDirectory(),
-      dataFilePath: cleanText(getDefaultDataFilePath(), 2000),
-      fallbackDataFilePath: cleanText(getDefaultDataFilePath(), 2000)
+      dataFilePath: '',
+      fallbackDataFilePath: ''
     })
   });
   const initializer = createMcpInitializer({

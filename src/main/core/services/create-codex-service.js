@@ -195,7 +195,36 @@ function createMainCodexService({
         160
       )
     };
-    const defaultDataFilePath = cleanText(getDefaultDataFilePath(), 2000);
+    const sourceSnapshot = ensurePlainObject(
+      turnInput.snapshot
+        || turnInput.stateSnapshot
+        || turnInput.state_snapshot
+        || turnMetadata.snapshot
+        || turnMetadata.stateSnapshot
+        || turnMetadata.state_snapshot
+        || agentMetadata.snapshot
+        || agentMetadata.stateSnapshot
+        || agentMetadata.state_snapshot
+    );
+    const dataFilePath = cleanText(
+      turnMetadata.data_file_path
+        || turnMetadata.dataFilePath
+        || agentMetadata.data_file_path
+        || agentMetadata.dataFilePath
+        || sourceSnapshot.data_file_path
+        || sourceSnapshot.dataFilePath,
+      2000
+    );
+    const fallbackDataFilePath = cleanText(
+      turnMetadata.fallback_data_file_path
+        || turnMetadata.fallbackDataFilePath
+        || agentMetadata.fallback_data_file_path
+        || agentMetadata.fallbackDataFilePath
+        || sourceSnapshot.fallback_data_file_path
+        || sourceSnapshot.fallbackDataFilePath
+        || dataFilePath,
+      2000
+    );
     const mcpContextJson = JSON.stringify(buildCodexMcpContext({
       cwd,
       model,
@@ -222,11 +251,9 @@ function createMainCodexService({
           || agentMetadata.projectName,
         220
       ),
-      dataFilePath: defaultDataFilePath,
-      fallbackDataFilePath: defaultDataFilePath,
-      snapshot: {
-        data_file_path: defaultDataFilePath
-      },
+      ...(dataFilePath ? { dataFilePath } : {}),
+      ...(fallbackDataFilePath ? { fallbackDataFilePath } : {}),
+      snapshot: sourceSnapshot,
       traceContext
     }, { cleanText }));
     const envOverrides = {

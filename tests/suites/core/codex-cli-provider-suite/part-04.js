@@ -497,6 +497,103 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         await server.close();
       }
     });
+    test('agent MCP stdio server front-loads literature-search paper workflow fields', async () => {
+      const { createAgentMcpStdioServer } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'mcp-contract',
+        'stdio-server.js'
+      ));
+      const { Client } = require('@modelcontextprotocol/sdk/client/index.js');
+      const { InMemoryTransport } = require('@modelcontextprotocol/sdk/inMemory.js');
+      const bulkyItems = Array.from({ length: 20 }, (_unused, index) => ({
+        title: `Raw candidate ${index + 1}`,
+        source: 'crossref',
+        summary: 'x'.repeat(1600)
+      }));
+      const gatewayResult = {
+        ok: true,
+        status: 'completed',
+        mcp_tool: 'literature_search',
+        app_tool: 'literature-search',
+        output: {
+          ok: true,
+          status: 'completed',
+          query: 'EGFR kinase inhibitor resistance',
+          summary: 'Found 20 candidates and selected 1 paper.',
+          items: bulkyItems,
+          source_counts: { crossref: 20 },
+          source_errors: {},
+          selected_papers: [{
+            paper_id: 'paper-1',
+            paper_title: 'EGFR resistance mechanisms',
+            source: 'pubmed',
+            doi: '10.1000/egfr',
+            url: 'https://example.org/egfr',
+            summary: 'A focused paper on EGFR inhibitor resistance.'
+          }],
+          downloaded_papers: [{
+            paper_id: 'paper-1',
+            paper_title: 'EGFR resistance mechanisms',
+            ok: true,
+            status: 'downloaded',
+            relative_path: 'KnowledgeBase/papers.md/paper-1/paper.pdf',
+            knowledge_markdown_relative_path: 'KnowledgeBase/papers.md/paper-1/paper.md'
+          }],
+          loaded_context_blocks: [{
+            paper_id: 'paper-1',
+            paper_title: 'EGFR resistance mechanisms',
+            section_label: 'Results',
+            source: 'llm_pdf_text_read',
+            excerpt: 'EGFR secondary mutations and bypass signaling were associated with acquired resistance.',
+            relevance_reason: 'Directly supports the requested resistance mechanism.'
+          }],
+          papers_read_count: 1
+        }
+      };
+
+      const { server, connect } = createAgentMcpStdioServer({
+        gateway: {
+          async callGatewayTool() {
+            return gatewayResult;
+          }
+        }
+      });
+
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      await connect(serverTransport);
+      const client = new Client(
+        { name: 'hikari-test-client', version: '0.0.1' },
+        { capabilities: {} }
+      );
+      await client.connect(clientTransport);
+
+      try {
+        const response = await client.callTool({
+          name: 'literature_search',
+          arguments: { query: 'EGFR kinase inhibitor resistance', limit: 4 }
+        });
+        const textPayload = JSON.parse(response.content[0].text);
+
+        assert.equal(response.isError, false);
+        assert.equal(textPayload.app_tool, 'literature-search');
+        assert.equal(textPayload.counts.candidate_count, 20);
+        assert.equal(textPayload.counts.selected_count, 1);
+        assert.equal(textPayload.counts.context_block_count, 1);
+        assert.equal(textPayload.selected_papers[0].paper_title, 'EGFR resistance mechanisms');
+        assert.equal(textPayload.downloaded_papers[0].knowledge_markdown_relative_path, 'KnowledgeBase/papers.md/paper-1/paper.md');
+        assert.equal(textPayload.loaded_context_blocks[0].section_label, 'Results');
+        assert.equal(Object.prototype.hasOwnProperty.call(textPayload, 'items'), false);
+        assert.equal(response.structuredContent.output.items.length, 20);
+        assert.ok(response.content[0].text.length < JSON.stringify(gatewayResult, null, 2).length / 2);
+      } finally {
+        await client.close();
+        await server.close();
+      }
+    });
     test('agent MCP stdio server registers paper-intake direct tools', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-paper-intake-'));
       const paperId = 'continuous_evolution_glue_tags';
@@ -586,6 +683,89 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         await server.close();
         fs.rmSync(workspaceDir, { recursive: true, force: true });
       }
+    });
+    test('agent MCP app host executes app tools through the SDK streamable HTTP bridge', async () => {
+      const env = {};
+      const calls = [];
+      const { createAgentMcpHost } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'mcp-contract',
+        'host.js'
+      ));
+      const {
+        createAgentMcpHostToolRunner,
+        resolveAgentMcpEndpointUrl
+      } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'mcp-contract',
+        'host-client.js'
+      ));
+      const host = createAgentMcpHost({
+        env,
+        token: 'test-sdk-token',
+        getSnapshot: () => ({
+          source: 'default-snapshot'
+        }),
+        getContextDefaults: () => ({
+          cwd: '/workspace',
+          dataFilePath: '/workspace/hikari-data.json',
+          fallbackDataFilePath: '/workspace/hikari-data.json'
+        }),
+        runTool: async (toolId, args, snapshot, context) => {
+          calls.push({
+            toolId,
+            args,
+            snapshot,
+            context
+          });
+          return {
+            ok: true,
+            status: 'completed',
+            echo: args.query
+          };
+        }
+      });
+
+      try {
+        const started = await host.ensureStarted();
+        assert.match(started.url, /\/mcp$/);
+        assert.equal(env.HIKARI_AGENT_MCP_HOST, started.url);
+        assert.equal(String(resolveAgentMcpEndpointUrl('http://127.0.0.1:43123')), 'http://127.0.0.1:43123/mcp');
+
+        const runTool = createAgentMcpHostToolRunner({ env });
+        const output = await runTool(
+          'literature-search',
+          { query: 'MG-PACE' },
+          {},
+          { traceRequestId: 'req-sdk-bridge' }
+        );
+
+        assert.equal(calls.length, 1);
+        assert.equal(calls[0].toolId, 'literature-search');
+        assert.deepEqual(calls[0].args, { query: 'MG-PACE' });
+        assert.deepEqual(calls[0].snapshot, { source: 'default-snapshot' });
+        assert.equal(calls[0].context.cwd, '/workspace');
+        assert.equal(calls[0].context.traceRequestId, 'req-sdk-bridge');
+        assert.equal(calls[0].context.agentMcp, true);
+        assert.equal(output.ok, true);
+        assert.equal(output.echo, 'MG-PACE');
+      } finally {
+        await host.close();
+      }
+    });
+    test('packaged MCP runtime unpacks paper modules required by direct paper tools', () => {
+      const forgeConfigSource = fs.readFileSync(path.join(__dirname, 'forge.config.js'), 'utf8');
+      assert.match(forgeConfigSource, /src\/main\/helpers\/agent/);
+      assert.match(forgeConfigSource, /src\/main\/papers/);
+      assert.match(forgeConfigSource, /node_modules\/@modelcontextprotocol\/sdk/);
     });
     test('codex agent MCP config includes the app host callback when available', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-mcp-config-'));
@@ -728,6 +908,8 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         });
 
         const result = await initializer.initialize({
+          dataFilePath,
+          fallbackDataFilePath: dataFilePath,
           envOverrides: {
             HIKARI_AGENT_MCP_REQUEST_CONTEXT: '{"traceRequestId":"req-init"}'
           }
@@ -762,6 +944,57 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       } finally {
         fs.rmSync(workspaceDir, { recursive: true, force: true });
         fs.rmSync(storageRoot, { recursive: true, force: true });
+      }
+    });
+    test('agent MCP initializer does not inject default hikari data path without request context', async () => {
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-init-no-default-'));
+      let runtimeWrite = null;
+      try {
+        const { createAgentMcpInitializer } = require(path.join(
+          __dirname,
+          'src',
+          'main',
+          'helpers',
+          'main',
+          'agent-mcp-initializer.js'
+        ));
+        const initializer = createAgentMcpInitializer({
+          cleanText: (value, maxLength = 2000) => {
+            const text = String(value || '').trim();
+            return maxLength > 0 ? text.slice(0, maxLength) : text;
+          },
+          mcpHost: {
+            ensureStarted: async () => ({
+              url: 'http://127.0.0.1:49877',
+              token: 'initializer-token'
+            })
+          },
+          getCodexCliWorkingDirectory: () => workspaceDir,
+          getDefaultDataFilePath: () => path.join(workspaceDir, 'hikari-data.json'),
+          getBundlePaths: () => ({}),
+          ensureCodexCliRuntimeHome: async (cwd, options = {}) => {
+            runtimeWrite = { cwd, options };
+            return path.join(workspaceDir, 'Config', 'codex-cli-home');
+          },
+          releaseOfficialMcpSkillsForWorkspace: async () => []
+        });
+
+        const result = await initializer.initialize({
+          envOverrides: {
+            HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify({
+              provider: 'codex',
+              snapshot: {}
+            })
+          }
+        });
+
+        assert.equal(result.data_file_path, '');
+        assert.equal(result.storage_path, '');
+        assert.equal(runtimeWrite.options.dataFilePath, '');
+        assert.equal(runtimeWrite.options.envOverrides.HIKARI_AGENT_DATA_FILE, undefined);
+        assert.doesNotMatch(JSON.stringify(runtimeWrite), /hikari-data\.json/);
+      } finally {
+        fs.rmSync(workspaceDir, { recursive: true, force: true });
       }
     });
   }

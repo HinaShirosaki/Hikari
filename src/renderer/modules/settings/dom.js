@@ -43,6 +43,7 @@ export function getSettingsElements(rootDocument = globalThis?.document || null)
     sampleTypeLabelList: getById('setting-sample-type-label-list'),
     preferredJournalForm: getById('preferred-journal-form'),
     settingPreferredJournal: getById('setting-preferred-journal'),
+    preferredJournalList: getById('setting-preferred-journal-list'),
     clearPreferredJournalBtn: getById('clear-preferred-journal-btn')
   };
 }
