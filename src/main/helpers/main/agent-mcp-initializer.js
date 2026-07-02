@@ -24,6 +24,14 @@ function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
+function parseJsonObject(value = '') {
+  try {
+    return ensureObject(JSON.parse(String(value || '')));
+  } catch {
+    return {};
+  }
+}
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -147,9 +155,6 @@ function createAgentMcpInitializer(deps = {}) {
   const getCodexCliWorkingDirectory = typeof deps.getCodexCliWorkingDirectory === 'function'
     ? deps.getCodexCliWorkingDirectory
     : (() => process.cwd());
-  const getDefaultDataFilePath = typeof deps.getDefaultDataFilePath === 'function'
-    ? deps.getDefaultDataFilePath
-    : (() => '');
   const getBundlePaths = typeof deps.getBundlePaths === 'function' ? deps.getBundlePaths : null;
   const mcpHost = deps.mcpHost && typeof deps.mcpHost === 'object' ? deps.mcpHost : null;
   const ensureRuntimeHome = typeof deps.ensureCodexCliRuntimeHome === 'function'
@@ -167,6 +172,14 @@ function createAgentMcpInitializer(deps = {}) {
       return inputSnapshot;
     }
     return readJsonObject(dataFilePath);
+  }
+
+  function resolveRequestContext(input = {}) {
+    const envOverrides = ensureObject(input.envOverrides);
+    return parseJsonObject(
+      envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT
+        || envOverrides.HIKARI_CODEX_REQUEST_CONTEXT
+    );
   }
 
   function resolveBundlePaths(snapshot = {}, dataFilePath = '', fallbackDataFilePath = '') {
@@ -187,10 +200,26 @@ function createAgentMcpInitializer(deps = {}) {
 
   async function runInitialization(input = {}) {
     const cwd = cleanText(input.cwd || getCodexCliWorkingDirectory(), 2400);
-    const dataFilePath = cleanText(input.dataFilePath || input.data_file_path || getDefaultDataFilePath(), 2400);
+    const requestContext = resolveRequestContext(input);
+    const contextSnapshot = ensureObject(requestContext.snapshot);
+    const inputSnapshot = ensureObject(input.snapshot);
+    const snapshotSeed = Object.keys(inputSnapshot).length ? inputSnapshot : contextSnapshot;
+    const dataFilePath = cleanText(
+      input.dataFilePath
+        || input.data_file_path
+        || requestContext.dataFilePath
+        || requestContext.data_file_path
+        || snapshotSeed.data_file_path
+        || snapshotSeed.dataFilePath,
+      2400
+    );
     const fallbackDataFilePath = cleanText(
       input.fallbackDataFilePath
         || input.fallback_data_file_path
+        || requestContext.fallbackDataFilePath
+        || requestContext.fallback_data_file_path
+        || snapshotSeed.fallback_data_file_path
+        || snapshotSeed.fallbackDataFilePath
         || dataFilePath,
       2400
     );
@@ -199,7 +228,10 @@ function createAgentMcpInitializer(deps = {}) {
       : {};
     const hostUrl = cleanText(host?.url || mcpHost?.getHostUrl?.(), 2400);
     const token = cleanText(host?.token || mcpHost?.getToken?.(), 4000);
-    const snapshot = await loadSnapshot(input, dataFilePath);
+    const snapshot = await loadSnapshot({
+      ...input,
+      snapshot: snapshotSeed
+    }, dataFilePath);
     const bundlePaths = resolveBundlePaths(snapshot, dataFilePath, fallbackDataFilePath);
     const storagePath = resolveStoragePath({
       snapshot,

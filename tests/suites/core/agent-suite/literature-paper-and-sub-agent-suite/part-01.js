@@ -147,6 +147,66 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart01(con
       assert.equal(result.source_counts.europe_pmc, 1);
       assert.equal(result.source_counts.uniprot, 1);
     });
+    test('literature search runtime auto mode runs web search alongside scholarly APIs', async () => {
+      const calls = [];
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        searchPubMedRecords: async () => {
+          calls.push('pubmed');
+          return [
+            {
+              pmid: '100',
+              title: 'EGFR inhibitor resistance PubMed paper',
+              summary: 'PubMed result about EGFR inhibitor resistance.',
+              url: 'https://pubmed.ncbi.nlm.nih.gov/100/'
+            }
+          ];
+        },
+        searchEuropePmcRecords: async () => {
+          calls.push('europe_pmc');
+          return [
+            {
+              pmcid: 'PMC100',
+              title: 'EGFR inhibitor resistance Europe PMC paper',
+              summary: 'Europe PMC result about EGFR inhibitor resistance.',
+              url: 'https://europepmc.org/article/PMC/PMC100'
+            }
+          ];
+        },
+        searchCrossrefRecords: async () => {
+          calls.push('crossref');
+          return [
+            {
+              doi: '10.1000/egfr',
+              title: 'EGFR inhibitor resistance Crossref paper',
+              summary: 'Crossref result about EGFR inhibitor resistance.',
+              url: 'https://doi.org/10.1000/egfr'
+            }
+          ];
+        },
+        searchWebResults: async () => {
+          calls.push('web');
+          return [
+            {
+              title: 'EGFR inhibitor resistance web-discovered paper',
+              summary: 'Provider web search result about EGFR inhibitor resistance.',
+              url: 'https://www.nature.com/articles/egfr-resistance',
+              source_domain: 'www.nature.com'
+            }
+          ];
+        }
+      });
+
+      const result = await runtime.execute({
+        query: 'EGFR inhibitor resistance',
+        source: 'auto'
+      });
+
+      assert.equal(result.ok, true);
+      assert.deepEqual(calls, ['pubmed', 'europe_pmc', 'crossref', 'web']);
+      assert.deepEqual(result.sources, ['pubmed', 'europe_pmc', 'crossref', 'web']);
+      assert.equal(result.source_counts.web, 1);
+      assert.equal(result.items.some((item) => item.source === 'web' && item.source_domain === 'www.nature.com'), true);
+    });
     test('literature search runtime compresses sentence prompts into keyword-style paper queries', async () => {
       const capturedQueries = [];
       const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({

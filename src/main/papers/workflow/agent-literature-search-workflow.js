@@ -4,7 +4,7 @@ const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/age
 const { cloneJson, normalizeRelatedComments } = require('../shared/paper-comment-context.js');
 const { createAgentSubAgentRuntime } = require('../../helpers/agent/tools/agent-sub-agent.js');
 const {
-  normalizePreferredJournal,
+  normalizePreferredJournals,
   scorePaperCandidate,
   selectPaperCandidates
 } = require('../search/literature-candidates.js');
@@ -101,11 +101,21 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       source: cleanText(source.source, 80),
       sources: uniqueStrings(asArray(source.sources).map((item) => cleanText(item, 80)), 8),
       preferred_literature_source: cleanText(
-        source.preferred_literature_source || source.preferredLiteratureSource,
+        source.preferred_literature_source
+        || source.preferredLiteratureSource
+        || settings.preferred_literature_source
+        || settings.preferredLiteratureSource
+        || snapshot.preferred_literature_source
+        || snapshot.preferredLiteratureSource,
         80
       ),
       preferred_web_source: cleanText(
-        source.preferred_web_source || source.preferredWebSource,
+        source.preferred_web_source
+        || source.preferredWebSource
+        || settings.preferred_web_source
+        || settings.preferredWebSource
+        || snapshot.preferred_web_source
+        || snapshot.preferredWebSource,
         240
       ),
       project: {
@@ -126,6 +136,12 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
         || snapshot.preferredJournal,
         1200
       ),
+      preferred_journals: uniqueStrings(asArray(
+        source.preferred_journals
+        || source.preferredJournals
+        || settings.preferredJournals
+        || snapshot.preferredJournals
+      ).map((item) => cleanText(item, 240)), 12),
       parser_payload: parserPayload,
       snapshot_summary: {
         project_count: asArray(snapshot.projects).length,
@@ -138,12 +154,16 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
   }
 
   function buildSubAgentSystemPrompt(context = {}) {
-    const preferredJournal = cleanText(
-      defaultEnsureObject(context).preferred_journal,
-      1200
+    const contextSource = defaultEnsureObject(context);
+    const preferredJournals = uniqueStrings(
+      asArray(contextSource.preferred_journals).map((item) => cleanText(item, 240)),
+      12
     );
+    const preferredJournal = preferredJournals.length
+      ? preferredJournals.join('; ')
+      : cleanText(contextSource.preferred_journal, 1200);
     const preferredJournalLine = preferredJournal
-      ? `The user has set a preferred journal: "${preferredJournal}". When candidate quality is comparable, prefer papers from this journal (match by URL host or by journal name). Do not exclude other journals; treat it as a soft preference, not a filter.`
+      ? `The user has set preferred journals: "${preferredJournal}". When candidate quality is comparable, prefer papers from these journals (match by URL host or by journal name). Do not exclude other journals; treat them as soft preferences, not filters.`
       : '';
     return [
       'You are a delegated literature search sub-agent.',
@@ -476,21 +496,39 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
         error: 'Literature search runtime is not configured.'
       };
     }
+    const preferredLiteratureSource = cleanText(
+      source.preferred_literature_source
+      || source.preferredLiteratureSource
+      || copiedContext.preferred_literature_source,
+      80
+    );
+    const preferredWebSource = cleanText(
+      source.preferred_web_source
+      || source.preferredWebSource
+      || copiedContext.preferred_web_source,
+      240
+    );
+    const searchInput = {
+      ...source,
+      ...(preferredLiteratureSource ? { preferred_literature_source: preferredLiteratureSource } : {}),
+      ...(preferredWebSource ? { preferred_web_source: preferredWebSource } : {}),
+      query,
+      limit: searchLimit,
+      max_per_source: searchMaxPerSource
+    };
 
     const rawSearchResult = candidateResult && candidateResult.ok === true
       ? candidateResult
-      : await searchFn({
-        ...source,
-        query,
-        limit: searchLimit,
-        max_per_source: searchMaxPerSource
-      });
+      : await searchFn(searchInput);
 
     if (!rawSearchResult?.ok) {
       return rawSearchResult;
     }
 
-    const preferredJournal = normalizePreferredJournal(copiedContext.preferred_journal);
+    const preferredJournalList = normalizePreferredJournals(copiedContext.preferred_journals);
+    const preferredJournal = preferredJournalList.length
+      ? preferredJournalList
+      : normalizePreferredJournals(copiedContext.preferred_journal);
     const selectedCandidates = selectPaperCandidates(
       asArray(rawSearchResult.items),
       query,

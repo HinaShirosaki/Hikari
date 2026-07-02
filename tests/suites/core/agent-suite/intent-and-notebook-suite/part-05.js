@@ -4,6 +4,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
   with (scope) {
     test('controller core routes Codex provider through the Codex-owned agent runtime', async () => {
       const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
+      const { createAgentRuntimeSupport } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'agent-runtime-support.js'));
+      const runtimeSupport = createAgentRuntimeSupport({});
       let parserCallCount = 0;
       let codexRunInput = null;
       let setModelValue = '';
@@ -114,7 +116,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
         },
         scienceMainUtils: {},
         agentToolRuntime: {
-          normalizeAgentSnapshot: (snapshot) => (snapshot && typeof snapshot === 'object' ? snapshot : {}),
+          normalizeAgentSnapshot: runtimeSupport.normalizeAgentSnapshot,
           listSkills: () => [],
           parseSkillInvocation: () => ({
             type: 'none',
@@ -133,7 +135,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
           throw new Error('Record lookup should not run before Codex agent runtime.');
         },
         getAgentChatLogPath: () => '',
-        getDefaultDataFilePath: () => '',
+        getDefaultDataFilePath: () => '/tmp/hikari-data.json',
         setCodexCliModel: (model) => {
           setModelValue = model;
         },
@@ -182,8 +184,9 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
           }
         },
         stateSnapshot: {
-          data_file_path: '/tmp/hikari-data.json',
           settings: {
+            storagePath: '/tmp/hikari-storage',
+            preferredJournals: ['Nature Biotechnology', 'Cell'],
             agent: {
               developerMode: true
             }
@@ -217,6 +220,12 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
       assert.deepEqual(codexRunInput.conversation, []);
       assert.equal(codexRunInput.chatSessionId, 'hikari-chat-1');
       assert.equal(codexRunInput.codexSessionId, 'codex-chat-session-1');
+      assert.deepEqual(codexRunInput.snapshot.settings.preferredJournals, ['Nature Biotechnology', 'Cell']);
+      assert.equal(codexRunInput.snapshot.settings.preferredJournal, 'Nature Biotechnology; Cell');
+      assert.equal(codexRunInput.snapshot.settings.storagePath, '/tmp/hikari-storage');
+      assert.equal(codexRunInput.snapshot.data_file_path, '');
+      assert.equal(Object.prototype.hasOwnProperty.call(codexRunInput, 'dataFilePath'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(codexRunInput, 'fallbackDataFilePath'), false);
       assert.equal(lifecycleStages.includes('controller_codex_agent'), true);
       assert.equal(lifecycleStages.includes('controller_intent_only'), false);
     });

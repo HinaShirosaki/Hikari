@@ -196,6 +196,27 @@ function createAgentRuntimeSupport(deps = {}) {
     );
     const paperAgentSessionPrompt = cleanText(paperAgentSource.session_prompt || paperAgentSource.sessionPrompt, 2400);
     const hasPaperAgentContext = Boolean(activePaper || paperAgentSessionPrompt || transformedMarkdownRelativePath);
+    const settingsSource = snapshot.settings && typeof snapshot.settings === 'object'
+      ? snapshot.settings
+      : {};
+    const preferredJournals = asArray(
+      settingsSource.preferredJournals
+        || settingsSource.preferred_journals
+        || snapshot.preferredJournals
+        || snapshot.preferred_journals
+    )
+      .map((journal) => cleanText(journal, 240))
+      .filter(Boolean)
+      .slice(0, 12);
+    const preferredJournal = preferredJournals.length
+      ? preferredJournals.join('; ')
+      : cleanText(
+        settingsSource.preferredJournal
+          || settingsSource.preferred_journal
+          || snapshot.preferredJournal
+          || snapshot.preferred_journal,
+        1200
+      );
     const normalizedSnapshot = {
       projects: asArray(snapshot.projects).slice(0, 40),
       protocols: asArray(snapshot.protocols).slice(0, 100),
@@ -245,7 +266,9 @@ function createAgentRuntimeSupport(deps = {}) {
         },
       labInventory: normalizeChemicalStorePayload(snapshot.labInventory),
       settings: {
-        storagePath: cleanText(snapshot?.settings?.storagePath || snapshot?.storagePath, 1200)
+        storagePath: cleanText(settingsSource.storagePath || snapshot?.storagePath, 1200),
+        preferredJournals,
+        preferredJournal
       },
       data_file_path: cleanText(snapshot.data_file_path || snapshot.dataFilePath, 1600),
       timestamp: cleanText(snapshot.timestamp, 80)

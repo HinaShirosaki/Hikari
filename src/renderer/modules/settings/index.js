@@ -74,6 +74,7 @@ export function initSettings({
     sampleTypeLabelList,
     preferredJournalForm,
     settingPreferredJournal,
+    preferredJournalList,
     clearPreferredJournalBtn
   } = getSettingsElements(document);
   let telegramConfig = {
@@ -168,6 +169,8 @@ export function initSettings({
   sampleInventoryLocationAddBtn?.addEventListener('click', sampleInventoryController.onAddSampleInventoryLocation);
   sampleTypeLabelsForm?.addEventListener('submit', sampleInventoryController.onSaveSampleTypeLabels);
   preferredJournalForm?.addEventListener('submit', onSavePreferredJournal);
+  preferredJournalList?.addEventListener('click', onPreferredJournalListClick);
+  preferredJournalList?.addEventListener('keydown', onPreferredJournalListKeydown);
   clearPreferredJournalBtn?.addEventListener('click', onClearPreferredJournal);
   window.addEventListener('focus', () => {
     if (activeLlmProvider === 'codex') {
@@ -693,22 +696,121 @@ export function initSettings({
     if (!settingPreferredJournal) {
       return;
     }
-    settingPreferredJournal.value = String(state.settings.preferredJournal || '').trim();
+    settingPreferredJournal.value = '';
+    if (!preferredJournalList) {
+      return;
+    }
+    const journals = getPreferredJournalSettings();
+    preferredJournalList.innerHTML = journals.length
+      ? journals.map((journal, index) => `
+          <div class="settings-edit-row settings-preferred-journal-row" data-preferred-journal-row="${index}">
+            <input value="${escapeHtml(journal)}" data-preferred-journal-input="${index}" aria-label="Preferred journal ${index + 1}" />
+            <button type="button" class="ghost-btn" data-preferred-journal-save="${index}">Save</button>
+            <button type="button" class="danger-btn" data-preferred-journal-delete="${index}">Delete</button>
+          </div>
+        `).join('')
+      : '<p class="small-note">No preferred journals configured.</p>';
   }
 
   function onSavePreferredJournal(event) {
     event.preventDefault();
-    state.settings.preferredJournal = String(settingPreferredJournal?.value || '').trim();
+    const nextJournal = String(settingPreferredJournal?.value || '').trim();
+    if (!nextJournal) {
+      return;
+    }
+    setPreferredJournalSettings([...getPreferredJournalSettings(), nextJournal]);
     persist();
     renderPreferredJournal();
   }
 
   function onClearPreferredJournal() {
-    if (settingPreferredJournal) {
-      settingPreferredJournal.value = '';
-    }
-    state.settings.preferredJournal = '';
+    setPreferredJournalSettings([]);
     persist();
+    renderPreferredJournal();
+  }
+
+  function onPreferredJournalListClick(event) {
+    const target = event.target;
+    if (!target || typeof target.closest !== 'function') {
+      return;
+    }
+    const saveButton = target.closest('[data-preferred-journal-save]');
+    if (saveButton) {
+      const index = Number(saveButton.dataset.preferredJournalSave);
+      const input = preferredJournalList?.querySelector(`[data-preferred-journal-input="${index}"]`);
+      savePreferredJournalAt(index, input?.value || '');
+      return;
+    }
+    const deleteButton = target.closest('[data-preferred-journal-delete]');
+    if (deleteButton) {
+      deletePreferredJournalAt(Number(deleteButton.dataset.preferredJournalDelete));
+    }
+  }
+
+  function onPreferredJournalListKeydown(event) {
+    if (event.key !== 'Enter') {
+      return;
+    }
+    const input = event.target?.closest?.('[data-preferred-journal-input]');
+    if (!input) {
+      return;
+    }
+    event.preventDefault();
+    savePreferredJournalAt(Number(input.dataset.preferredJournalInput), input.value);
+  }
+
+  function savePreferredJournalAt(index, value) {
+    const journals = getPreferredJournalSettings();
+    if (!Number.isInteger(index) || index < 0 || index >= journals.length) {
+      return;
+    }
+    journals[index] = String(value || '').trim();
+    setPreferredJournalSettings(journals);
+    persist();
+    renderPreferredJournal();
+  }
+
+  function deletePreferredJournalAt(index) {
+    const journals = getPreferredJournalSettings();
+    if (!Number.isInteger(index) || index < 0 || index >= journals.length) {
+      return;
+    }
+    journals.splice(index, 1);
+    setPreferredJournalSettings(journals);
+    persist();
+    renderPreferredJournal();
+  }
+
+  function getPreferredJournalSettings() {
+    const list = Array.isArray(state.settings?.preferredJournals)
+      ? state.settings.preferredJournals
+      : [];
+    const legacy = String(state.settings?.preferredJournal || '').trim();
+    return normalizePreferredJournalList([
+      ...list,
+      ...(list.length ? [] : legacy.split(/[;\n]+/))
+    ]);
+  }
+
+  function setPreferredJournalSettings(journals) {
+    const normalized = normalizePreferredJournalList(journals);
+    state.settings.preferredJournals = normalized;
+    state.settings.preferredJournal = normalized.join('; ');
+  }
+
+  function normalizePreferredJournalList(journals) {
+    const seen = new Set();
+    const normalized = [];
+    (Array.isArray(journals) ? journals : []).forEach((item) => {
+      const journal = String(item || '').trim();
+      const key = journal.toLowerCase();
+      if (!journal || seen.has(key)) {
+        return;
+      }
+      seen.add(key);
+      normalized.push(journal);
+    });
+    return normalized.slice(0, 12);
   }
 
   async function refreshTelegramBotStatus() {

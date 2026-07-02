@@ -206,6 +206,11 @@ function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {})
       }, cleanText)
     }
     : null;
+  const contextSnapshot = {
+    ...snapshot,
+    ...(dataFilePath ? { data_file_path: dataFilePath } : {}),
+    ...(fallbackDataFilePath ? { fallback_data_file_path: fallbackDataFilePath } : {})
+  };
   return {
     provider: 'codex',
     model: cleanText(input.model, 120),
@@ -222,6 +227,7 @@ function buildCodexMcpContext(input = {}, { cleanText = defaultCleanText } = {})
     projectName: cleanText(input.projectName, 220),
     activePaper: Object.keys(activePaper).length ? activePaper : null,
     paperAgent: paperAgentContext,
+    snapshot: contextSnapshot,
     dataFilePath,
     fallbackDataFilePath,
     traceRequestId: cleanText(input.traceContext?.requestId, 120)

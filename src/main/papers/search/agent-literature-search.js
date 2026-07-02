@@ -336,7 +336,7 @@ function createLiteratureSearchRuntime(deps = {}) {
     if (queryLooksProteinFocused(query, source)) {
       defaults.unshift(LITERATURE_SOURCES.UNIPROT);
     }
-    return prependPreferredValue(uniqueStrings(defaults, 8), preferredSource)
+    return prependPreferredValue(uniqueStrings([...defaults, LITERATURE_SOURCES.WEB], 8), preferredSource)
       .filter((item) => item !== LITERATURE_SOURCES.AUTO)
       .slice(0, 8);
   }

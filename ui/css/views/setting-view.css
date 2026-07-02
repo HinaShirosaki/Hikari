@@ -132,6 +132,10 @@
   min-width: 0;
 }
 
+#setting-view .settings-preferred-journal-row {
+  grid-template-columns: minmax(180px, 1fr) auto auto;
+}
+
 #setting-view .settings-sample-type-label-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));

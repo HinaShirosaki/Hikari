@@ -451,7 +451,7 @@ Direct lookup result shape:
 
 ## App-side callback host
 
-The stdio MCP server calls the app-side host for live tool execution.
+The stdio MCP server calls the app-side host for live tool execution through the MCP SDK Streamable HTTP transport.
 
 Health:
 
@@ -468,15 +468,15 @@ Response:
 }
 ```
 
-Direct tool execution:
+MCP endpoint:
 
 ```http
-POST /tool-call
+POST /mcp
 Authorization: Bearer <HIKARI_AGENT_MCP_TOKEN>
 Content-Type: application/json
 ```
 
-Body:
+The private app host exposes one SDK tool, `hikari_app_tool_call`, for relay into the live Hikari tool runtime. Its `tools/call` arguments are:
 
 ```json
 {

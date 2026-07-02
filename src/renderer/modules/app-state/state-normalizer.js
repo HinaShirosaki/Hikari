@@ -50,6 +50,29 @@ function normalizeLlmSettings(rawLlm) {
   };
 }
 
+function normalizePreferredJournals(rawSettings) {
+  const rawList = Array.isArray(rawSettings.preferredJournals)
+    ? rawSettings.preferredJournals
+    : [];
+  const legacyValue = String(rawSettings.preferredJournal || '').trim();
+  const candidates = [
+    ...rawList,
+    ...(legacyValue ? legacyValue.split(/[;\n]+/) : [])
+  ];
+  const seen = new Set();
+  const journals = [];
+  candidates.forEach((candidate) => {
+    const journal = String(candidate || '').trim();
+    const key = journal.toLowerCase();
+    if (!journal || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    journals.push(journal);
+  });
+  return journals.slice(0, 12);
+}
+
 function normalizeSettings(source) {
   const rawSettings = asObject(source.settings);
   const rawPersonalInfo = asObject(rawSettings.personalInfo);
@@ -62,6 +85,7 @@ function normalizeSettings(source) {
   const rawDisabledExternalSkillNames = Array.isArray(rawAgent.disabledExternalSkillNames)
     ? rawAgent.disabledExternalSkillNames
     : (Array.isArray(rawAgent.disabled_external_skill_names) ? rawAgent.disabled_external_skill_names : null);
+  const preferredJournals = normalizePreferredJournals(rawSettings);
 
   return {
     ...structuredClone(defaultState.settings),
@@ -127,7 +151,8 @@ function normalizeSettings(source) {
       : defaultState.settings.inventoryLocations,
     sampleInventoryLocations: normalizeSampleInventoryLocations(rawSettings.sampleInventoryLocations),
     sampleTypeLabels: normalizeSampleTypeLabels(rawSettings.sampleTypeLabels),
-    preferredJournal: String(rawSettings.preferredJournal || '').trim()
+    preferredJournals,
+    preferredJournal: preferredJournals.join('; ')
   };
 }
 

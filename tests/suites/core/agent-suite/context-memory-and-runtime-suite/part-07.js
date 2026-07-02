@@ -267,6 +267,61 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart07(contex
       assert.equal(calls[0].snapshot.settings.storagePath, '/tmp/hikari-storage');
       assert.equal(calls[0].parser_payload.primary_intent, 'literature_search');
     });
+    test('registerAgentToolExecutors does not add literature-search caps when omitted', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+
+      const executors = new Map();
+      const calls = [];
+      registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, handler) {
+            executors.set(name, handler);
+          }
+        },
+        literatureSearchRuntime: {
+          execute: async (input = {}) => {
+            calls.push(JSON.parse(JSON.stringify(input)));
+            return {
+              ok: true,
+              status: 'completed',
+              items: [],
+              citations: [],
+              loaded_context_blocks: [],
+              papers_read_count: 0,
+              summary: 'Found 0 literature results.'
+            };
+          }
+        }
+      });
+
+      await executors.get('literature-search')({
+        args: {
+          query: 'EGFR inhibitor resistance'
+        },
+        context: {
+          provider: 'codex',
+          model: 'gpt-5.4-mini',
+          message: 'Find EGFR papers.',
+          snapshot: {
+            settings: {
+              storagePath: '/tmp/hikari-storage'
+            }
+          }
+        }
+      });
+
+      assert.equal(calls.length, 1);
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'limit'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'max_per_source'), false);
+    });
     test('session runtime runs the tool loop through the unified requestText API', async () => {
       const { createAgentSessionRuntime } = require(path.join(
         __dirname,
