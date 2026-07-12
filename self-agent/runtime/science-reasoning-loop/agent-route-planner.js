@@ -122,10 +122,10 @@ function createAgentRoutePlannerRuntime(deps = {}) {
 
   function defaultToolReason(toolName, intent) {
     const normalizedTool = cleanText(toolName, 120);
-    if (normalizedTool === 'record-lookup') {
+    if (normalizedTool === 'notebook-lookup') {
       return intent === 'project_science_question'
-        ? 'Use local project evidence when it is the most targeted way to ground the answer.'
-        : 'Use local records when they can narrow the search space or ground the answer.'
+        ? 'Use local notebook evidence when it is the most targeted way to ground the answer.'
+        : 'Use local notebook entries when they can narrow the search space or ground the answer.'
     }
     if (normalizedTool === 'literature-search') {
       return 'Use targeted literature retrieval when citation-backed external grounding is the most direct next step.'
@@ -141,7 +141,7 @@ function createAgentRoutePlannerRuntime(deps = {}) {
 
   function defaultQueryHint(toolName, input = {}) {
     const clarifiedInput = cleanText(input.clarifiedInput || input.message, 320);
-    if (toolName === 'record-lookup' && input.project?.name) {
+    if (toolName === 'notebook-lookup' && input.project?.name) {
       return `${cleanText(input.project.name, 120)} ${clarifiedInput}`.trim();
     }
     if (toolName === 'literature-search') {

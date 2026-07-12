@@ -48,22 +48,22 @@ module.exports = function registerAgentIntentAndNotebookSuitePart02(context = {}
         executeInventoryLookup: async () => {
           throw new Error('Inventory lookup should not run for notebook drafts.');
         },
-        executeRecordLookup: async () => {
-          throw new Error('Record lookup should not run directly for notebook drafts.');
+        executeNotebookLookup: async () => {
+          throw new Error('Notebook lookup should not run directly for notebook drafts.');
         },
         getDefaultDataFilePath: () => '',
         lifecycleService: {
           asArray: (value) => (Array.isArray(value) ? value : []),
           createLifecycleToolRunner: () => async (toolName, args, options) => {
             toolCalls.push({ toolName, args, options });
-            if (toolName === 'record-lookup') {
+            if (toolName === 'notebook-lookup') {
               return {
                 ok: true,
-                summary: 'Local records show the expression run completed and purification is next.',
+                summary: 'Local notebooks show the expression run completed and purification is next.',
                 result: {
                   status: 'matched',
-                  summary: 'Local records show the expression run completed and purification is next.',
-                  items: [{ id: 'record-1' }]
+                  summary: 'Local notebooks show the expression run completed and purification is next.',
+                  items: [{ id: 'note-1' }]
                 }
               };
             }
@@ -144,14 +144,14 @@ module.exports = function registerAgentIntentAndNotebookSuitePart02(context = {}
         result
       });
 
-      assert.deepEqual(toolCalls.map((call) => call.toolName), ['record-lookup', 'literature-search', 'notebook-draft']);
+      assert.deepEqual(toolCalls.map((call) => call.toolName), ['notebook-lookup', 'literature-search', 'notebook-draft']);
       const evidenceArgsValidation = toolLoading.normalizeToolArgumentsPayload({
         tool_calls: toolCalls.slice(0, 2).map((call) => ({
           tool_name: call.toolName,
           arguments: call.args
         }))
       }, {
-        selectedToolNames: ['record-lookup', 'literature-search']
+        selectedToolNames: ['notebook-lookup', 'literature-search']
       });
       assert.equal(evidenceArgsValidation.ok, true);
       const draftArgsValidation = toolLoading.normalizeToolArgumentsPayload({
@@ -165,6 +165,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart02(context = {}
       assert.equal(draftArgsValidation.ok, true);
       assert.equal(toolCalls[0].args.query.includes('Atlas'), true);
       assert.equal(toolCalls[1].args.prefer_recent, true);
+      assert.equal(Object.prototype.hasOwnProperty.call(toolCalls[1].args, 'limit'), false);
+      assert.equal(Object.prototype.hasOwnProperty.call(toolCalls[1].args, 'max_per_source'), false);
       assert.equal(toolCalls[2].args.evidence_context.length, 2);
       assert.match(toolCalls[2].args.evidence_context[1].summary, /Recent papers/i);
       assert.equal(result.notebook_draft.status, 'proposal_ready');
@@ -216,8 +218,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart02(context = {}
         executeInventoryLookup: async () => {
           throw new Error('Inventory lookup should not run for purchase clarifications.');
         },
-        executeRecordLookup: async () => {
-          throw new Error('Record lookup should not run for purchase clarifications.');
+        executeNotebookLookup: async () => {
+          throw new Error('Notebook lookup should not run for purchase clarifications.');
         },
         getDefaultDataFilePath: () => '',
         lifecycleService: {

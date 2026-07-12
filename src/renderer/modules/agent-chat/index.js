@@ -31,7 +31,8 @@ export function initAgentChat({
   onNotebookEntriesChanged,
   onOpenNotebookEntry = () => {},
   onProtocolsChanged = () => {},
-  captureImageAttachment = null
+  captureImageAttachment = null,
+  onPlotlyGraphArtifact = () => {}
 }) {
   const api = windowObject?.hikariApi || null;
   const dom = collectAgentChatDom(rootDocument, { idPrefix });
@@ -236,6 +237,7 @@ export function initAgentChat({
     developerToolTestController,
     historyController,
     captureImageAttachment,
+    onPlotlyGraphArtifact,
     renderDeveloperToolHint: developerToolUi.renderDeveloperToolHint
   });
 

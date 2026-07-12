@@ -242,6 +242,7 @@ function buildPapersManagementHarness({ comments = [], promptResponses = [], con
   return {
     document,
     state,
+    window,
     papers,
     viewerFactory,
     get persistCalls() {
@@ -423,6 +424,174 @@ test('papers module renames a journal club folder from the library context menu'
   assert.equal(harness.state.journalClubs[0].name, 'Weekly Biochem JC');
   assert.match(journalClubList.innerHTML, /Weekly Biochem JC/);
   assert.equal(/data-folder-rename-input/.test(journalClubList.innerHTML), false);
+});
+test('papers viewer imports and opens a PDF dropped on the viewer workspace', async () => {
+  const harness = buildPapersManagementHarness();
+  const viewerShell = harness.document.getElementById('paper-viewer-shell');
+  const storeCalls = [];
+  const pdfBytes = new Uint8Array([37, 80, 68, 70]);
+  const droppedFile = {
+    name: 'viewer-drop.pdf',
+    type: 'application/pdf',
+    arrayBuffer: async () => pdfBytes.buffer
+  };
+  const dropEvent = {
+    dataTransfer: {
+      files: [droppedFile],
+      types: ['Files'],
+      dropEffect: ''
+    }
+  };
+
+  harness.state.settings.storagePath = '/tmp/hikari-storage';
+  harness.window.hikariApi.storeImportedFile = async (payload) => {
+    storeCalls.push(payload);
+    return {
+      ok: true,
+      fileName: payload.fileName,
+      filePath: '/tmp/hikari-storage/Project/Cancer_Study/Papers/viewer-drop.pdf',
+      relativePath: 'Project/Cancer_Study/Papers/viewer-drop.pdf',
+      knowledgeMarkdownRelativePath: 'Project/Cancer_Study/Papers/viewer-drop/paper.md',
+      knowledgeExtractedTextRelativePath: 'Project/Cancer_Study/Papers/viewer-drop/extracted.txt',
+      knowledgeMetaRelativePath: 'Project/Cancer_Study/Papers/viewer-drop/meta.json',
+      knowledgeStatus: 'ready'
+    };
+  };
+
+  trigger(viewerShell, 'dragenter', dropEvent);
+  assert.equal(viewerShell.classList.contains('is-file-drop-active'), true);
+
+  trigger(viewerShell, 'drop', dropEvent);
+  await flushAsync();
+  await flushAsync();
+
+  const importedPaper = harness.state.papers.find((paper) => paper.fileName === 'viewer-drop.pdf');
+  assert.equal(storeCalls.length, 1);
+  assert.equal(storeCalls[0].fileName, 'viewer-drop.pdf');
+  assert.equal(storeCalls[0].targetFolder, '/tmp/hikari-storage/Project/Cancer_Study/Papers');
+  assert.equal(storeCalls[0].dataBytes.byteLength, 4);
+  assert.equal(importedPaper.title, 'viewer-drop');
+  assert.equal(importedPaper.storedRelativePath, 'Project/Cancer_Study/Papers/viewer-drop.pdf');
+  assert.equal(harness.viewerFactory.controller.activePaperId, importedPaper.id);
+  assert.equal(viewerShell.classList.contains('is-file-drop-active'), false);
+});
+test('papers module drags a paper between folders and moves the stored PDF', async () => {
+  const harness = buildPapersManagementHarness();
+  const paper = harness.state.papers.find((item) => item.id === 'paper-1');
+  const moveCalls = [];
+  const transferData = {};
+  const dataTransfer = {
+    effectAllowed: '',
+    dropEffect: '',
+    setData(type, value) {
+      transferData[type] = String(value || '');
+    },
+    getData(type) {
+      return transferData[type] || '';
+    }
+  };
+  const dragClassList = {
+    add() {},
+    remove() {}
+  };
+  const dropClassList = {
+    active: false,
+    add(token) {
+      if (token === 'is-paper-drop-target') {
+        this.active = true;
+      }
+    },
+    remove(token) {
+      if (token === 'is-paper-drop-target') {
+        this.active = false;
+      }
+    }
+  };
+
+  harness.state.settings.storagePath = '/tmp/hikari-storage';
+  harness.state.journalClubs.push({
+    id: 'club-1',
+    name: 'Reading Club',
+    description: ''
+  });
+  paper.pdfDataUrl = '';
+  paper.storedFilePath = '/tmp/hikari-storage/Project/Cancer_Study/Papers/atlas.pdf';
+  paper.storedRelativePath = 'Project/Cancer_Study/Papers/atlas.pdf';
+  harness.window.hikariApi.moveStoredFile = async (payload) => {
+    moveCalls.push(payload);
+    return {
+      ok: true,
+      fileName: 'atlas.pdf',
+      filePath: '/tmp/hikari-storage/Papers/Reading_Club/atlas.pdf',
+      relativePath: 'Papers/Reading_Club/atlas.pdf',
+      previousRelativePath: 'Project/Cancer_Study/Papers/atlas.pdf',
+      moved: true
+    };
+  };
+  harness.papers.render();
+
+  assert.match(harness.document.getElementById('journal-club-list').innerHTML, /data-paper-drag="paper-1"/);
+  assert.match(harness.document.getElementById('journal-club-list').innerHTML, /data-folder-drop="journal-club:club-1"/);
+
+  const journalClubList = harness.document.getElementById('journal-club-list');
+  trigger(journalClubList, 'dragstart', {
+    dataTransfer,
+    target: {
+      closest(selector) {
+        if (selector === '[data-paper-drag]') {
+          return {
+            dataset: { paperDrag: 'paper-1' },
+            classList: dragClassList
+          };
+        }
+        return null;
+      }
+    }
+  });
+  trigger(journalClubList, 'dragover', {
+    dataTransfer,
+    target: {
+      closest(selector) {
+        if (selector === '[data-folder-drop]') {
+          return {
+            dataset: { folderDrop: 'journal-club:club-1' },
+            classList: dropClassList
+          };
+        }
+        return null;
+      }
+    }
+  });
+  assert.equal(dataTransfer.dropEffect, 'move');
+  assert.equal(dropClassList.active, true);
+
+  trigger(journalClubList, 'drop', {
+    dataTransfer,
+    target: {
+      closest(selector) {
+        if (selector === '[data-folder-drop]') {
+          return {
+            dataset: { folderDrop: 'journal-club:club-1' },
+            classList: dropClassList
+          };
+        }
+        return null;
+      }
+    }
+  });
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(moveCalls.length, 1);
+  assert.equal(moveCalls[0].sourcePath, '/tmp/hikari-storage/Project/Cancer_Study/Papers/atlas.pdf');
+  assert.equal(moveCalls[0].targetFolder, '/tmp/hikari-storage/Papers/Reading_Club');
+  assert.equal(moveCalls[0].fileName, 'atlas.pdf');
+  assert.equal(paper.linkedType, 'journal-club');
+  assert.equal(paper.linkedId, 'club-1');
+  assert.equal(paper.linkedName, 'Reading Club');
+  assert.equal(paper.storedFilePath, '/tmp/hikari-storage/Papers/Reading_Club/atlas.pdf');
+  assert.equal(paper.storedRelativePath, 'Papers/Reading_Club/atlas.pdf');
+  assert.match(harness.document.getElementById('journal-club-list').innerHTML, /Reading Club/);
 });
   }
 };

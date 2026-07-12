@@ -1,6 +1,6 @@
 # Main Helper Walkthrough
 
-This doc set covers `src/main/helpers/main`, the main-process helper surface. `main.js` is now a thin entry that defers to `src/main/core/start-hikari-main-core.js`, and IPC registrars have moved to `src/main/ipc/` (covered here because they are the boot boundary into these helpers).
+This doc set covers `src/main/helpers/main`, the main-process helper surface. `main.js` is now a thin entry that defers to `src/main/core/main-services.js`, and IPC registrars have moved to `src/main/ipc/` (covered here because they are the boot boundary into these helpers).
 
 If `docs/agent/` explains the agent subsystem, this folder explains the rest of the main-process helper surface:
 
@@ -34,7 +34,7 @@ The IPC registrars that expose these helpers to the renderer now live in `src/ma
 
 ## Where it sits in boot
 
-`src/main/main.js` is a 5-line entry. `src/main/core/start-hikari-main-core.js` runs the generic service lifecycle declared by `src/main/core/main-service-catalog.js`, which:
+`src/main/main.js` is a 5-line entry. `src/main/core/main-services.js` constructs every main-process service in dependency order and registers all IPC. It:
 
 - creates the data helpers (`createMainDataHelpers(...)`) and app paths (`createMainAppPaths(...)`)
 - imports the storage-bundle and sequence-library APIs

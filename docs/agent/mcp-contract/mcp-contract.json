@@ -10,10 +10,10 @@
     "codex_runtime_files": "src/main/helpers/agent/codex-agent/runtime-files.js",
     "paper_intake_direct_tools": "src/main/helpers/agent/paper-intake/mcp-tools.js"
   },
-  "agent_mcp_instructions": "# Hikari Agent MCP Instructions\n\nThis MCP server is the Hikari app contract. Codex exposes this server's tools with the `mcp__hikari__` prefix. Use the prefixed Codex tool names for local Hikari data, protocols, notebooks, inventory, papers, memory, and structured app actions.\n\nUse the first-class prefixed MCP tools below as the complete Hikari app tool surface for this server.\n\nDirect Hikari MCP tools:\n- `mcp__hikari__inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.\n- `mcp__hikari__chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.\n- `mcp__hikari__record_lookup`: search local projects, protocols, notebooks, workflows, gels, papers, and linked historical records; do not use it to provide active Assay data.\n- `mcp__hikari__protocol_lookup`: search local protocols through Hikari protocol matching.\n- `mcp__hikari__protocol_generation`: normalize a complete protocol JSON object into the app import format; set `save: true` in the same call to queue Hikari user approval for adding it to the Protocols module.\n- `mcp__hikari__notebook_draft`: prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.\n- `mcp__hikari__notebook_generation`: generate a protocol-based notebook draft from selected protocol and project context.\n- `mcp__hikari__notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.\n- `mcp__hikari__literature_search`: find papers, download selected PDFs when possible, write paper markdown, and load bounded paper context blocks.\n- `mcp__hikari__paper_download`: download a paper PDF into Hikari storage.\n- `mcp__hikari__paper_analysis`: summarize or extract methods from a specific paper.\n- `mcp__hikari__paper_intake_search_summaries`: search one-sentence summaries in the paper-intake knowledge base.\n- `mcp__hikari__paper_intake_search_experiments`: search structured experiment entries extracted during paper intake.\n- `mcp__hikari__paper_intake_list_project_summaries`: list paper-intake summaries for papers attached to a project.\n- `mcp__hikari__purchase_recommendation`: search and rank purchasable products.\n- `mcp__hikari__memory`: recall, remember, forget, and list sparse long-term memory records.\n- `mcp__hikari__container`: store, name, read, copy, update, and position-edit temporary string or number containers with short runtime IDs.\n- `mcp__hikari__assay_table`: create scratch assay tables, derive calculated tables, add calculated columns, and run Python-backed table transforms.\n- `mcp__hikari__plotly_graph`: create, update, read, and inspect Plotly.js graph specifications from Plotly figure arguments.\n- `mcp__hikari__ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.\n\nTool-use rules:\n- Prefer local Hikari records through direct MCP tools before guessing from conversation context.\n- Use `mcp__hikari__record_lookup` when local lookup needs records beyond the specialized inventory, protocol, notebook, paper, or assay tools; active Assay data comes from Assay rail context and `mcp__hikari__assay_table`, not record lookup.\n- Use `mcp__hikari__literature_search` for finding papers, references, recent literature, or external scientific evidence.\n- Use `mcp__hikari__paper_download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.\n- Use `mcp__hikari__paper_analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use `mcp__hikari__paper_intake_search_summaries` or `mcp__hikari__paper_intake_search_experiments` when already-ingested papers are enough and a full paper read is unnecessary.\n- Use `mcp__hikari__paper_intake_list_project_summaries` for a project-scoped roll-up of ingested paper summaries.\n- Use `mcp__hikari__container` for temporary exact string or number storage, especially when a value should be named, reused, copied, or edited by string position without turning it into long-term memory.\n- Use `mcp__hikari__assay_table` when assay data should be transformed into a reusable table with arithmetic, summaries, grouped statistics, or Python-backed calculations.\n- Use `mcp__hikari__plotly_graph` when the user asks for a graph, chart, or custom visualization; call `inspect` after create/update and adjust the Plotly figure before answering when inspection reports issues.\n- Use direct `mcp__hikari__protocol_generation` only after complete protocol JSON already exists.\n- When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first, then call `mcp__hikari__protocol_generation` with `save: true`, then summarize the review-ready protocol.\n- When the user asks to save or add a generated protocol, call `mcp__hikari__protocol_generation` once with `save: true`; Hikari will ask the user to approve or reject the generated protocol.\n- Use direct `mcp__hikari__notebook_draft` for planned next-experiment notebook drafts.\n\nClarification rule:\nWhen one blocking user answer is required, call `mcp__hikari__ask_user`. It returns a renderable `final_response` payload. Do not wait inside MCP for the human answer; the host app renders the options and sends the user answer as the next turn.\n\nVerification rule:\nSeparate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.",
+  "agent_mcp_instructions": "# Hikari Agent MCP Instructions\n\nThis MCP server is the Hikari app contract. Codex exposes this server's tools with the `mcp__hikari__` prefix. Use the prefixed Codex tool names for local Hikari data, protocols, notebooks, inventory, papers, memory, and structured app actions.\n\nUse the first-class prefixed MCP tools below as the complete Hikari app tool surface for this server.\n\nDirect Hikari MCP tools:\n- `mcp__hikari__inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.\n- `mcp__hikari__chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.\n- `mcp__hikari__notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.\n- `mcp__hikari__protocol_lookup`: search local protocols through Hikari protocol matching.\n- `mcp__hikari__protocol_generation`: normalize a complete protocol JSON object into the app import format; set `save: true` in the same call to queue Hikari user approval for adding it to the Protocols module.\n- `mcp__hikari__notebook_draft`: prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.\n- `mcp__hikari__notebook_generation`: generate a protocol-based notebook draft from selected protocol and project context.\n- `mcp__hikari__literature_search`: find papers, rank selected candidates, return download-ready metadata, and load bounded context from abstracts or already-ingested paper markdown without starting new PDF downloads automatically.\n- `mcp__hikari__paper_download`: download a paper PDF into Hikari storage.\n- `mcp__hikari__paper_analysis`: summarize or extract methods from a specific paper.\n- `mcp__hikari__paper_intake_search_summaries`: search one-sentence summaries in the paper-intake knowledge base.\n- `mcp__hikari__paper_intake_search_experiments`: search structured experiment entries extracted during paper intake.\n- `mcp__hikari__paper_intake_list_project_summaries`: list paper-intake summaries for papers attached to a project.\n- `mcp__hikari__purchase_recommendation`: search and rank purchasable products.\n- `mcp__hikari__memory`: recall, remember, forget, and list sparse long-term memory records.\n- `mcp__hikari__container`: store, name, read, copy, update, and position-edit temporary string or number containers with short runtime IDs.\n- `mcp__hikari__assay_table`: create scratch assay tables, derive calculated tables, add calculated columns, and run Python-backed table transforms.\n- `mcp__hikari__plotly_graph`: create, update, read, and inspect Plotly.js graph specifications from Plotly figure arguments.\n- `mcp__hikari__ask_user`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.\n\nTool-use rules:\n- Use active chat/view context before lookup tools. If the current turn includes hidden Assay context, retrieve the active assay data by parsing its `Assay plate data (TSV...)` block directly from the chat prompt.\n- Do not use local lookup tools for active Assay plate/result rows; if assay rows are missing from the hidden TSV, treat it as missing UI context and ask for or await refreshed context.\n- Use `mcp__hikari__notebook_lookup` when local lookup needs notebook entries by project, protocol, result text, or identifier.\n- Use `mcp__hikari__literature_search` for finding papers, references, recent literature, or external scientific evidence.\n- `mcp__hikari__literature_search` is search-first: do not expect it to open publisher pages or download new PDFs. The user can click the paper download button, or you can use `mcp__hikari__paper_download` only when the user explicitly asks to download a paper.\n- For `mcp__hikari__literature_search`, saved Preferred Journals from the current Hikari settings are already available in the request context. Treat them as soft ranking preferences, do not call `mcp__hikari__memory` just to rediscover them, and do not pass a hard `journals` filter unless the user explicitly asks for one.\n- Use `mcp__hikari__paper_download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.\n- Use `mcp__hikari__paper_analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.\n- Use `mcp__hikari__paper_intake_search_summaries` or `mcp__hikari__paper_intake_search_experiments` when already-ingested papers are enough and a full paper read is unnecessary.\n- Use `mcp__hikari__paper_intake_list_project_summaries` for a project-scoped roll-up of ingested paper summaries.\n- Use `mcp__hikari__container` for temporary exact string or number storage, especially when a value should be named, reused, copied, or edited by string position without turning it into long-term memory.\n- Use `mcp__hikari__assay_table` when assay data should be transformed into a reusable table with arithmetic, summaries, grouped statistics, or Python-backed calculations.\n- Use `mcp__hikari__plotly_graph` when the user asks for a graph, chart, or custom visualization; call `inspect` after create/update and adjust the Plotly figure before answering when inspection reports issues.\n- Use direct `mcp__hikari__protocol_generation` only after complete protocol JSON already exists.\n- When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first, then call `mcp__hikari__protocol_generation` with `save: true`, then summarize the review-ready protocol.\n- When the user asks to save or add a generated protocol, call `mcp__hikari__protocol_generation` once with `save: true`; Hikari will ask the user to approve or reject the generated protocol.\n- Use direct `mcp__hikari__notebook_draft` for planned next-experiment notebook drafts.\n\nClarification rule:\nWhen one blocking user answer is required, call `mcp__hikari__ask_user`. It returns a renderable `final_response` payload. Do not wait inside MCP for the human answer; the host app renders the options and sends the user answer as the next turn.\n\nVerification rule:\nSeparate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.",
   "provider_examples": {
     "codex_cli": {
-      "config_template": "# HIKARI_MCP_CONFIG_START\n[mcp_servers.hikari]\nenabled = true\nrequired = true\ncommand = \"/absolute/path/to/node\"\nargs = [\"/Users/shiyifan/Projects/Enana/src/main/helpers/agent/mcp-contract/stdio-server.js\"]\nenabled_tools = [\"inventory_lookup\", \"chemical_lookup\", \"record_lookup\", \"protocol_lookup\", \"protocol_generation\", \"notebook_draft\", \"notebook_generation\", \"notebook_lookup\", \"literature_search\", \"paper_download\", \"paper_analysis\", \"paper_intake_search_summaries\", \"paper_intake_search_experiments\", \"paper_intake_list_project_summaries\", \"purchase_recommendation\", \"memory\", \"container\", \"assay_table\", \"plotly_graph\", \"ask_user\"]\ndefault_tools_approval_mode = \"approve\"\nstartup_timeout_sec = 30\ntool_timeout_sec = 120\nenv = { HIKARI_AGENT_MCP = \"1\", HIKARI_CODEX_MCP = \"1\", HIKARI_AGENT_DATA_FILE = \"/path/to/hikari-data.json\", HIKARI_AGENT_STORAGE_PATH = \"/path/to/storage\" }\n\n[mcp_servers.hikari.tools.protocol_generation]\napproval_mode = \"approve\"\n# HIKARI_MCP_CONFIG_END",
+      "config_template": "# HIKARI_MCP_CONFIG_START\n[mcp_servers.hikari]\nenabled = true\nrequired = true\ncommand = \"/absolute/path/to/node\"\nargs = [\"/Users/shiyifan/Projects/Enana/src/main/helpers/agent/mcp-contract/stdio-server.js\"]\nenabled_tools = [\"inventory_lookup\", \"chemical_lookup\", \"notebook_lookup\", \"protocol_lookup\", \"protocol_generation\", \"notebook_draft\", \"notebook_generation\", \"literature_search\", \"paper_download\", \"paper_analysis\", \"paper_intake_search_summaries\", \"paper_intake_search_experiments\", \"paper_intake_list_project_summaries\", \"purchase_recommendation\", \"memory\", \"container\", \"assay_table\", \"plotly_graph\", \"ask_user\"]\ndefault_tools_approval_mode = \"approve\"\nstartup_timeout_sec = 30\ntool_timeout_sec = 300\nenv = { HIKARI_AGENT_MCP = \"1\", HIKARI_CODEX_MCP = \"1\", HIKARI_AGENT_DATA_FILE = \"/path/to/hikari-data.json\", HIKARI_AGENT_STORAGE_PATH = \"/path/to/storage\" }\n\n[mcp_servers.hikari.tools.protocol_generation]\napproval_mode = \"approve\"\n# HIKARI_MCP_CONFIG_END",
       "stdio_server_path": "/absolute/path/to/Hikari/src/main/helpers/agent/mcp-contract/stdio-server.js"
     }
   },
@@ -120,6 +120,44 @@
               "type": "string"
             },
             "supplier": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      {
+        "name": "notebook_lookup",
+        "description": "Look up local Hikari notebook entries by project, protocol, result text, or entry identifier.",
+        "annotations": {
+          "title": "Notebook lookup",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 25
+            },
+            "project_id": {
+              "type": "string"
+            },
+            "project_name": {
+              "type": "string"
+            },
+            "protocol_name": {
               "type": "string"
             }
           }
@@ -384,203 +422,6 @@
         }
       },
       {
-        "name": "notebook_lookup",
-        "description": "Look up local Hikari notebook entries by project, protocol, result text, or entry identifier.",
-        "annotations": {
-          "title": "Notebook lookup",
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        },
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "query"
-          ],
-          "properties": {
-            "query": {
-              "type": "string",
-              "minLength": 1
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 25
-            },
-            "project_id": {
-              "type": "string"
-            },
-            "project_name": {
-              "type": "string"
-            },
-            "protocol_name": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      {
-        "name": "ask_user",
-        "description": "Prepare one blocking user clarification question with suggested options and optional custom text input for Hikari to render.",
-        "annotations": {
-          "title": "Ask user clarification",
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        },
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "question",
-            "options"
-          ],
-          "properties": {
-            "question": {
-              "type": "string",
-              "minLength": 1
-            },
-            "context": {
-              "type": "string"
-            },
-            "options": {
-              "type": "array",
-              "minItems": 1,
-              "maxItems": 6,
-              "items": {
-                "anyOf": [
-                  {
-                    "type": "string"
-                  },
-                  {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "required": [
-                      "label"
-                    ],
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "label": {
-                        "type": "string",
-                        "minLength": 1
-                      },
-                      "value": {
-                        "type": "string"
-                      },
-                      "description": {
-                        "type": "string"
-                      }
-                    }
-                  }
-                ]
-              }
-            },
-            "allow_custom": {
-              "type": "boolean"
-            },
-            "placeholder": {
-              "type": "string"
-            },
-            "submit_label": {
-              "type": "string"
-            }
-          }
-        }
-      },
-      {
-        "name": "record_lookup",
-        "description": "Use this tool when the user is asking about stored lab records beyond raw inventory, such as projects, protocols, notebook entries, workflows, gels, papers, or linked historical context. Do not use `record-lookup` to provide Assay data; active Assay data comes from the Assay rail context and dedicated assay tools. Prefer this tool for 'what did we do last time', 'find the protocol record', or project-specific evidence retrieval. Provide `query` for the entity or topic to search, and pass `parser_payload` when parser entities can help narrow record matching.",
-        "annotations": {
-          "title": "Record Lookup",
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        },
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "query": {
-              "type": "string"
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 25
-            },
-            "parser_payload": {
-              "$ref": "#/$defs/parser_payload"
-            }
-          },
-          "$defs": {
-            "parser_payload": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "primary_intent": {
-                  "type": "string"
-                },
-                "needs_clarification": {
-                  "type": "boolean"
-                },
-                "clarification_reason": {
-                  "type": "string"
-                },
-                "reasoning_summary": {
-                  "type": "string"
-                },
-                "entities": {
-                  "type": "object",
-                  "additionalProperties": true
-                },
-                "inventory_search": {
-                  "$ref": "#/$defs/inventory_search"
-                },
-                "protocol_candidates": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 8
-                }
-              }
-            },
-            "inventory_search": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "normalized_query": {
-                  "type": "string"
-                },
-                "candidate_terms": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 10
-                },
-                "aliases": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 10
-                },
-                "search_mode": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
-      {
         "name": "notebook_generation",
         "description": "Use this tool after protocol selection to generate a structured notebook draft from a selected protocol, project context, and known placeholder values. It fills placeholders conservatively, keeps unresolved placeholders visible, and can return follow-up questions when key details are missing. Provide `selected_protocol` when already known, `project` when a project has been resolved, and `pending_values` for explicit user-supplied placeholder answers.",
         "annotations": {
@@ -701,6 +542,654 @@
                     }
                   },
                   "maxItems": 60
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "literature_search",
+        "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+        "annotations": {
+          "title": "Literature Search",
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "query": {
+              "type": "string",
+              "maxLength": 600
+            },
+            "topic": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 1200
+            },
+            "source": {
+              "$ref": "#/$defs/literature_source"
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/literature_source"
+              },
+              "maxItems": 6
+            },
+            "preferred_literature_source": {
+              "$ref": "#/$defs/literature_source"
+            },
+            "preferred_web_source": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "journals": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "maxLength": 180
+              },
+              "maxItems": 6
+            },
+            "allow_unfiltered_fallback": {
+              "type": "boolean"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 25
+            },
+            "max_papers": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 24
+            },
+            "max_per_source": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "allow_web_fallback": {
+              "type": "boolean"
+            },
+            "prefer_recent": {
+              "type": "boolean"
+            },
+            "use_codex_paper_context": {
+              "type": "boolean"
+            },
+            "disable_codex_paper_context": {
+              "type": "boolean"
+            },
+            "codex_paper_context": {
+              "type": "boolean"
+            },
+            "max_context_blocks": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "max_download_concurrency": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 24
+            },
+            "reasoning_effort": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "sub_agent_name": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "storage_path": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "storagePath": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "parser_payload": {
+              "$ref": "#/$defs/parser_payload"
+            }
+          },
+          "$defs": {
+            "literature_source": {
+              "type": "string",
+              "enum": [
+                "auto",
+                "web",
+                "pubmed",
+                "crossref",
+                "uniprot",
+                "europe_pmc"
+              ]
+            },
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "paper_download",
+        "description": "Use this tool when the user wants a paper PDF downloaded into app storage. `download` performs the full flow in one call, first extracting candidate PDF URLs from the provided fields and then streaming the PDF with progress tracking. `start` begins the download in the background so the caller can poll with `status`. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
+        "annotations": {
+          "title": "Paper Download",
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "action": {
+              "type": "string",
+              "enum": [
+                "download",
+                "start",
+                "status"
+              ]
+            },
+            "download_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "paper_pdf_url": {
+              "type": "string"
+            },
+            "doi": {
+              "type": "string"
+            },
+            "pdf_url": {
+              "type": "string"
+            },
+            "page_url": {
+              "type": "string"
+            },
+            "candidate_urls": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 24
+            },
+            "page_html": {
+              "type": "string",
+              "maxLength": 400000
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 12000
+            },
+            "paper_title": {
+              "type": "string"
+            },
+            "file_name": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "linked_type": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "linked_name": {
+              "type": "string",
+              "maxLength": 220
+            },
+            "storage_path": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "timeout_ms": {
+              "type": "integer",
+              "minimum": 1000,
+              "maximum": 120000
+            },
+            "use_browser_fallback": {
+              "type": "boolean"
+            },
+            "simulate_one_click": {
+              "type": "boolean"
+            },
+            "request_headers": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "paper_analysis",
+        "description": "Use this tool when the user asks to summarize a paper, extract the important findings, explain methods, or pull a protocol candidate out of paper text. Provide the richest available paper context through `paper`, `paper_summary`, `paper_abstract`, or `paper_text`. Set `extract_protocol` when the user explicitly wants procedural extraction, and set `generate_protocol` when the extracted methods should also be converted into an import-ready protocol JSON record.",
+        "annotations": {
+          "title": "Paper Analysis",
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "paper": {
+              "$ref": "#/$defs/paper_record"
+            },
+            "paper_title": {
+              "type": "string"
+            },
+            "paper_summary": {
+              "type": "string"
+            },
+            "paper_abstract": {
+              "type": "string"
+            },
+            "paper_text": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "extract_protocol": {
+              "type": "boolean"
+            },
+            "generate_protocol": {
+              "type": "boolean"
+            },
+            "protocol_title_hint": {
+              "type": "string"
+            }
+          },
+          "$defs": {
+            "paper_record": {
+              "type": "object",
+              "additionalProperties": true,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "paper_title": {
+                  "type": "string"
+                },
+                "summary": {
+                  "type": "string"
+                },
+                "abstract": {
+                  "type": "string"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "full_text": {
+                  "type": "string"
+                },
+                "methods": {
+                  "type": "array",
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "object",
+                        "additionalProperties": true
+                      }
+                    ]
+                  },
+                  "maxItems": 40
+                },
+                "key_findings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 20
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "paper_intake_search_summaries",
+        "description": "Keyword search across one-sentence paper summaries (and titles) in the paper-intake KB. Scores titles slightly higher than summaries and rewards verbatim phrase matches. Use this when the user wants to find a paper by topic, finding, or concept without reading every summary. Optionally constrain to a single project or to specific document types (research_paper, review, book, ...).",
+        "annotations": {
+          "title": "Paper Intake — Search Summaries",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "project_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "project_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            },
+            "doc_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "research_paper",
+                  "review",
+                  "book",
+                  "book_chapter",
+                  "other"
+                ]
+              },
+              "maxItems": 5
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        }
+      },
+      {
+        "name": "paper_intake_search_experiments",
+        "description": "Keyword search across structured experiment entries in the paper-intake KB. Each result is a single experiment (title, technique, variables, figure_ref, outcome) attached to a paper, scored against title, technique, and variable fields. Use this when the user is hunting for a specific assay, condition, or outcome (\"who did western blot on knockouts in HEK293?\"). Only papers with doc_type=research_paper carry experiments; reviews and books return no entries.",
+        "annotations": {
+          "title": "Paper Intake — Search Experiments",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "query"
+          ],
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 300
+            },
+            "project_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "project_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            },
+            "technique": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          }
+        }
+      },
+      {
+        "name": "paper_intake_list_project_summaries",
+        "description": "List one-sentence summaries for every paper currently attached to a Hikari project. Uses the paper-intake summary knowledge base produced by the `hikari-paper-intake` skill after each PDF is transferred into `KnowledgeBase/papers.md/<paper_id>/paper.md`. Returns title, DOI, document type, and the count of recorded experiments for each paper. Use this when the user asks what papers a project contains or wants a roll-up of recent reading.",
+        "annotations": {
+          "title": "Paper Intake — List Project Summaries",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "project_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+            },
+            "project_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 240
+            },
+            "doc_types": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "research_paper",
+                  "review",
+                  "book",
+                  "book_chapter",
+                  "other"
+                ]
+              },
+              "maxItems": 5
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "anyOf": [
+            {
+              "required": [
+                "project_id"
+              ]
+            },
+            {
+              "required": [
+                "project_name"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "name": "purchase_recommendation",
+        "description": "Use this tool when the user wants products they can purchase from external vendors. Provide a compact product query, explicit `required_terms` and `excluded_terms` when known, and a `budget_preference` such as `cheap` when price sensitivity matters. The tool searches generic web results, extracts product metadata from vendor pages, rejects incomplete results, and returns chat-card-ready items with image, vendor, price, and destination URL.",
+        "annotations": {
+          "title": "Purchase Recommendation",
+          "readOnlyHint": true,
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "query": {
+              "type": "string",
+              "maxLength": 600
+            },
+            "message": {
+              "type": "string",
+              "maxLength": 1200
+            },
+            "required_terms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 12
+            },
+            "excluded_terms": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 12
+            },
+            "budget_preference": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            },
+            "search_limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 16
+            },
+            "parser_payload": {
+              "$ref": "#/$defs/parser_payload"
+            }
+          },
+          "$defs": {
+            "parser_payload": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "primary_intent": {
+                  "type": "string"
+                },
+                "needs_clarification": {
+                  "type": "boolean"
+                },
+                "clarification_reason": {
+                  "type": "string"
+                },
+                "reasoning_summary": {
+                  "type": "string"
+                },
+                "entities": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "inventory_search": {
+                  "$ref": "#/$defs/inventory_search"
+                },
+                "protocol_candidates": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 8
+                }
+              }
+            },
+            "inventory_search": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "normalized_query": {
+                  "type": "string"
+                },
+                "candidate_terms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "maxItems": 10
+                },
+                "search_mode": {
+                  "type": "string"
                 }
               }
             }
@@ -1269,638 +1758,72 @@
         }
       },
       {
-        "name": "literature_search",
-        "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. The literature workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads selected paper context back into the main agent; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+        "name": "ask_user",
+        "description": "Prepare one blocking user clarification question with suggested options and optional custom text input for Hikari to render.",
         "annotations": {
-          "title": "Literature Search",
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
-          "openWorldHint": true
-        },
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "query": {
-              "type": "string",
-              "maxLength": 600
-            },
-            "topic": {
-              "type": "string",
-              "maxLength": 240
-            },
-            "message": {
-              "type": "string",
-              "maxLength": 1200
-            },
-            "source": {
-              "$ref": "#/$defs/literature_source"
-            },
-            "sources": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/literature_source"
-              },
-              "maxItems": 6
-            },
-            "preferred_literature_source": {
-              "$ref": "#/$defs/literature_source"
-            },
-            "preferred_web_source": {
-              "type": "string",
-              "maxLength": 240
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 25
-            },
-            "max_papers": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 24
-            },
-            "max_per_source": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 10
-            },
-            "allow_web_fallback": {
-              "type": "boolean"
-            },
-            "prefer_recent": {
-              "type": "boolean"
-            },
-            "use_codex_paper_context": {
-              "type": "boolean"
-            },
-            "disable_codex_paper_context": {
-              "type": "boolean"
-            },
-            "codex_paper_context": {
-              "type": "boolean"
-            },
-            "max_context_blocks": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50
-            },
-            "max_download_concurrency": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 24
-            },
-            "reasoning_effort": {
-              "type": "string",
-              "maxLength": 40
-            },
-            "sub_agent_name": {
-              "type": "string",
-              "maxLength": 160
-            },
-            "storage_path": {
-              "type": "string",
-              "maxLength": 2000
-            },
-            "storagePath": {
-              "type": "string",
-              "maxLength": 2000
-            },
-            "parser_payload": {
-              "$ref": "#/$defs/parser_payload"
-            }
-          },
-          "$defs": {
-            "literature_source": {
-              "type": "string",
-              "enum": [
-                "auto",
-                "web",
-                "pubmed",
-                "crossref",
-                "uniprot",
-                "europe_pmc"
-              ]
-            },
-            "parser_payload": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "primary_intent": {
-                  "type": "string"
-                },
-                "needs_clarification": {
-                  "type": "boolean"
-                },
-                "clarification_reason": {
-                  "type": "string"
-                },
-                "reasoning_summary": {
-                  "type": "string"
-                },
-                "entities": {
-                  "type": "object",
-                  "additionalProperties": true
-                },
-                "inventory_search": {
-                  "$ref": "#/$defs/inventory_search"
-                },
-                "protocol_candidates": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 8
-                }
-              }
-            },
-            "inventory_search": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "normalized_query": {
-                  "type": "string"
-                },
-                "candidate_terms": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 10
-                },
-                "aliases": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 10
-                },
-                "search_mode": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "purchase_recommendation",
-        "description": "Use this tool when the user wants products they can purchase from external vendors. Provide a compact product query, explicit `required_terms` and `excluded_terms` when known, and a `budget_preference` such as `cheap` when price sensitivity matters. The tool searches generic web results, extracts product metadata from vendor pages, rejects incomplete results, and returns chat-card-ready items with image, vendor, price, and destination URL.",
-        "annotations": {
-          "title": "Purchase Recommendation",
+          "title": "Ask user clarification",
           "readOnlyHint": true,
           "destructiveHint": false,
           "idempotentHint": true,
-          "openWorldHint": true
+          "openWorldHint": false
         },
         "inputSchema": {
           "type": "object",
           "additionalProperties": false,
+          "required": [
+            "question",
+            "options"
+          ],
           "properties": {
-            "query": {
+            "question": {
               "type": "string",
-              "maxLength": 600
+              "minLength": 1
             },
-            "message": {
-              "type": "string",
-              "maxLength": 1200
+            "context": {
+              "type": "string"
             },
-            "required_terms": {
+            "options": {
               "type": "array",
+              "minItems": 1,
+              "maxItems": 6,
               "items": {
-                "type": "string"
-              },
-              "maxItems": 12
-            },
-            "excluded_terms": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "maxItems": 12
-            },
-            "budget_preference": {
-              "type": "string",
-              "maxLength": 80
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 6
-            },
-            "search_limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 16
-            },
-            "parser_payload": {
-              "$ref": "#/$defs/parser_payload"
-            }
-          },
-          "$defs": {
-            "parser_payload": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "primary_intent": {
-                  "type": "string"
-                },
-                "needs_clarification": {
-                  "type": "boolean"
-                },
-                "clarification_reason": {
-                  "type": "string"
-                },
-                "reasoning_summary": {
-                  "type": "string"
-                },
-                "entities": {
-                  "type": "object",
-                  "additionalProperties": true
-                },
-                "inventory_search": {
-                  "$ref": "#/$defs/inventory_search"
-                },
-                "protocol_candidates": {
-                  "type": "array",
-                  "items": {
+                "anyOf": [
+                  {
                     "type": "string"
                   },
-                  "maxItems": 8
-                }
-              }
-            },
-            "inventory_search": {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "normalized_query": {
-                  "type": "string"
-                },
-                "candidate_terms": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 10
-                },
-                "aliases": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 10
-                },
-                "search_mode": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "paper_download",
-        "description": "Use this tool when the user wants a paper PDF downloaded into app storage. `download` performs the full flow in one call, first extracting candidate PDF URLs from the provided fields and then streaming the PDF with progress tracking. `start` begins the download in the background so the caller can poll with `status`. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
-        "annotations": {
-          "title": "Paper Download",
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
-          "openWorldHint": true
-        },
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "action": {
-              "type": "string",
-              "enum": [
-                "download",
-                "start",
-                "status"
-              ]
-            },
-            "download_id": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 160
-            },
-            "paper_pdf_url": {
-              "type": "string"
-            },
-            "doi": {
-              "type": "string"
-            },
-            "pdf_url": {
-              "type": "string"
-            },
-            "page_url": {
-              "type": "string"
-            },
-            "candidate_urls": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "maxItems": 24
-            },
-            "page_html": {
-              "type": "string",
-              "maxLength": 400000
-            },
-            "message": {
-              "type": "string",
-              "maxLength": 12000
-            },
-            "paper_title": {
-              "type": "string"
-            },
-            "file_name": {
-              "type": "string",
-              "maxLength": 240
-            },
-            "linked_type": {
-              "type": "string",
-              "maxLength": 80
-            },
-            "linked_name": {
-              "type": "string",
-              "maxLength": 220
-            },
-            "storage_path": {
-              "type": "string",
-              "maxLength": 2000
-            },
-            "timeout_ms": {
-              "type": "integer",
-              "minimum": 1000,
-              "maximum": 120000
-            },
-            "use_browser_fallback": {
-              "type": "boolean"
-            },
-            "simulate_one_click": {
-              "type": "boolean"
-            },
-            "request_headers": {
-              "type": "object",
-              "additionalProperties": {
-                "type": "string"
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "paper_analysis",
-        "description": "Use this tool when the user asks to summarize a paper, extract the important findings, explain methods, or pull a protocol candidate out of paper text. Provide the richest available paper context through `paper`, `paper_summary`, `paper_abstract`, or `paper_text`. Set `extract_protocol` when the user explicitly wants procedural extraction, and set `generate_protocol` when the extracted methods should also be converted into an import-ready protocol JSON record.",
-        "annotations": {
-          "title": "Paper Analysis",
-          "readOnlyHint": false,
-          "destructiveHint": false,
-          "idempotentHint": false,
-          "openWorldHint": true
-        },
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "paper": {
-              "$ref": "#/$defs/paper_record"
-            },
-            "paper_title": {
-              "type": "string"
-            },
-            "paper_summary": {
-              "type": "string"
-            },
-            "paper_abstract": {
-              "type": "string"
-            },
-            "paper_text": {
-              "type": "string"
-            },
-            "message": {
-              "type": "string"
-            },
-            "extract_protocol": {
-              "type": "boolean"
-            },
-            "generate_protocol": {
-              "type": "boolean"
-            },
-            "protocol_title_hint": {
-              "type": "string"
-            }
-          },
-          "$defs": {
-            "paper_record": {
-              "type": "object",
-              "additionalProperties": true,
-              "properties": {
-                "id": {
-                  "type": "string"
-                },
-                "title": {
-                  "type": "string"
-                },
-                "paper_title": {
-                  "type": "string"
-                },
-                "summary": {
-                  "type": "string"
-                },
-                "abstract": {
-                  "type": "string"
-                },
-                "content": {
-                  "type": "string"
-                },
-                "full_text": {
-                  "type": "string"
-                },
-                "methods": {
-                  "type": "array",
-                  "items": {
-                    "anyOf": [
-                      {
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "label"
+                    ],
+                    "properties": {
+                      "id": {
                         "type": "string"
                       },
-                      {
-                        "type": "object",
-                        "additionalProperties": true
+                      "label": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "value": {
+                        "type": "string"
+                      },
+                      "description": {
+                        "type": "string"
                       }
-                    ]
-                  },
-                  "maxItems": 40
-                },
-                "key_findings": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  },
-                  "maxItems": 20
-                }
+                    }
+                  }
+                ]
               }
-            }
-          }
-        }
-      },
-      {
-        "name": "paper_intake_list_project_summaries",
-        "description": "List one-sentence summaries for every paper currently attached to a Hikari project. Uses the paper-intake summary knowledge base produced by the `hikari-paper-intake` skill after each PDF is transferred into `KnowledgeBase/papers.md/<paper_id>/paper.md`. Returns title, DOI, document type, and the count of recorded experiments for each paper. Use this when the user asks what papers a project contains or wants a roll-up of recent reading.",
-        "annotations": {
-          "title": "Paper Intake — List Project Summaries",
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        },
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "project_id": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200
             },
-            "project_name": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 240
+            "allow_custom": {
+              "type": "boolean"
             },
-            "doc_types": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "research_paper",
-                  "review",
-                  "book",
-                  "book_chapter",
-                  "other"
-                ]
-              },
-              "maxItems": 5
+            "placeholder": {
+              "type": "string"
             },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50
-            }
-          },
-          "anyOf": [
-            {
-              "required": [
-                "project_id"
-              ]
-            },
-            {
-              "required": [
-                "project_name"
-              ]
-            }
-          ]
-        }
-      },
-      {
-        "name": "paper_intake_search_summaries",
-        "description": "Keyword search across one-sentence paper summaries (and titles) in the paper-intake KB. Scores titles slightly higher than summaries and rewards verbatim phrase matches. Use this when the user wants to find a paper by topic, finding, or concept without reading every summary. Optionally constrain to a single project or to specific document types (research_paper, review, book, ...).",
-        "annotations": {
-          "title": "Paper Intake — Search Summaries",
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        },
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "query"
-          ],
-          "properties": {
-            "query": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 300
-            },
-            "project_id": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200
-            },
-            "project_name": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 240
-            },
-            "doc_types": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "enum": [
-                  "research_paper",
-                  "review",
-                  "book",
-                  "book_chapter",
-                  "other"
-                ]
-              },
-              "maxItems": 5
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50
-            }
-          }
-        }
-      },
-      {
-        "name": "paper_intake_search_experiments",
-        "description": "Keyword search across structured experiment entries in the paper-intake KB. Each result is a single experiment (title, technique, variables, figure_ref, outcome) attached to a paper, scored against title, technique, and variable fields. Use this when the user is hunting for a specific assay, condition, or outcome (\"who did western blot on knockouts in HEK293?\"). Only papers with doc_type=research_paper carry experiments; reviews and books return no entries.",
-        "annotations": {
-          "title": "Paper Intake — Search Experiments",
-          "readOnlyHint": true,
-          "destructiveHint": false,
-          "idempotentHint": true,
-          "openWorldHint": false
-        },
-        "inputSchema": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "query"
-          ],
-          "properties": {
-            "query": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 300
-            },
-            "project_id": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200
-            },
-            "project_name": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 240
-            },
-            "technique": {
-              "type": "string",
-              "minLength": 1,
-              "maxLength": 200
-            },
-            "limit": {
-              "type": "integer",
-              "minimum": 1,
-              "maximum": 50
+            "submit_label": {
+              "type": "string"
             }
           }
         }
@@ -1945,7 +1868,7 @@
           "x-hikari-codex-mcp-token: <token>"
         ],
         "body": {
-          "tool_id": "record-lookup",
+          "tool_id": "notebook-lookup",
           "args": {},
           "snapshot": {},
           "context": {}

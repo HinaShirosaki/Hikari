@@ -20,12 +20,12 @@ This doc set explains how `src/main/helpers/agent` is assembled, how requests mo
 - intent parsing
 - runtime dispatch
 - protocol and notebook generation flows
-- inventory and record lookup
+- inventory and notebook lookup
 - science-question orchestration
 - chat-log persistence and lifecycle logging
 - reusable tool/runtime helpers
 
-The package is heavily dependency-injected. `src/main/core/main-service-catalog.js` builds the provider-neutral agent foundation via `createMainAgentServices(...)`, then constructs MCP and Codex as separate services before exposing a completed controller facade to the agent IPC adapter. The agent registrar itself lives in `src/main/ipc/register-agent-ipc/`.
+The package is heavily dependency-injected. `src/main/core/main-services.js` builds the provider-neutral agent foundation via `createMainAgentServices(...)`, then constructs MCP and Codex as separate services before wiring them into the agent IPC registrar. The agent registrar itself lives in `src/main/ipc/register-agent-ipc/`.
 
 ## High-level flow
 
@@ -35,7 +35,7 @@ The package is heavily dependency-injected. `src/main/core/main-service-catalog.
 4. The controller dispatches to one of the intent-specific paths:
    - protocol-to-notebook
    - inventory lookup
-   - record lookup
+   - notebook lookup
    - notebook draft
    - science reasoning loop
    - deep research
@@ -64,7 +64,7 @@ The agent IPC registrar (`agent:chat` and the chat-log/log endpoints) lives sepa
 These are worth knowing before reading the file-by-file map:
 
 - There are two top-level controller paths. When the provider resolves to Codex (`LLM_PROVIDERS.CODEX`), `agent-controller-core.js` selects the Codex-owned path and runs `codexAgentRuntime.run(...)`. Otherwise it uses the parser-first intent path, where every request runs through `agent-intent-parser.js` before hitting a specialized runtime.
-- The `inventory_lookup` and `record_lookup` *intents* call the lookup runtime directly from the controller, but `inventory-lookup` and `record-lookup` are also registered as tools for the science/deep-research loops.
+- The `inventory_lookup` and `notebook_lookup` *intents* call the lookup runtime directly from the controller, but `inventory-lookup` and `notebook-lookup` are also registered as tools for the science/deep-research loops.
 - The shared `createAgentToolCallRuntime()` instance now has the full tool suite registered via `register-agent-tool-executors.js` (lookups, protocol matching, notebook generation/draft, web search, sub-agent, memory, literature search, paper download/search/analysis, purchase recommendation, protocol generation, python sandbox, command line) — not just `notebook-draft`.
 - `createCodexAgentRuntime()` owns the Codex whole-turn lifecycle and is dispatched on the Codex provider path, while `mcp-contract/` is shared by any provider integration that can use Hikari MCP tools.
 - `agent-memory.js` is now wired into the chat flow as the `memory` tool. `agent-context-management.js` is still a real runtime that is not connected to the main `agent:chat` flow — closer to scaffolding or a future integration point today.

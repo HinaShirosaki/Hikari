@@ -65,23 +65,6 @@ function buildExecutorSummary(cleanText, toolName, items = [], emptyText) {
       320
     );
   }
-  if (cleanText(toolName, 120) === 'record-lookup') {
-    const preview = items
-      .slice(0, 2)
-      .map((item) => {
-        const label = cleanText(item?.title || item?.id, 120);
-        const recordType = cleanText(item?.record_type, 40);
-        return label
-          ? `${recordType ? `${recordType}: ` : ''}${label}`
-          : '';
-      })
-      .filter(Boolean)
-      .join('; ');
-    return cleanText(
-      `${cleanText(toolName, 120)} matched ${count} item${count === 1 ? '' : 's'}${preview ? `: ${preview}.` : '.'}`,
-      320
-    );
-  }
   if (cleanText(toolName, 120) === 'notebook-lookup') {
     const preview = items
       .slice(0, 2)
@@ -293,33 +276,6 @@ function registerAgentToolExecutors(deps = {}) {
         'inventory-lookup',
         result?.items,
         'inventory-lookup returned no matches.'
-      )
-    };
-  });
-
-  genericAgentToolRuntime.registerToolExecutor('record-lookup', async ({ args, context }) => {
-    const result = await agentLookupRuntime.executeRecordLookup({
-      message: cleanText(args?.query || context?.message, 3200),
-      parserPayload: resolveToolParserPayload(args, context),
-      snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
-      dataFilePath: cleanText(context?.dataFilePath, 2000),
-      fallbackDataFilePath: cleanText(context?.fallbackDataFilePath, 2000),
-      limit: toIntegerInRange(args?.limit, 8)
-    });
-
-    return {
-      ...result,
-      citations: buildToolCitations(
-        cleanText,
-        result?.items,
-        'record-lookup',
-        'Matched internal lab records from project data.'
-      ),
-      summary: buildExecutorSummary(
-        cleanText,
-        'record-lookup',
-        result?.items,
-        'record-lookup returned no matches.'
       )
     };
   });
@@ -676,6 +632,8 @@ function registerAgentToolExecutors(deps = {}) {
       ),
       cwd: cleanText(args?.cwd || context?.cwd, 2400),
       traceContext: context?.traceContext || null,
+      defer_web_search_to_codex: context?.agentMcp === true
+        && cleanText(context?.provider, 80).toLowerCase() === 'codex',
       query: cleanText(args?.query, 600),
       message: cleanText(args?.message || context?.message, 1200),
       snapshot,
@@ -940,7 +898,6 @@ function registerAgentToolExecutors(deps = {}) {
 
   return [
     'inventory-lookup',
-    'record-lookup',
     'notebook-lookup',
     'protocol-matching',
     'notebook-generation',

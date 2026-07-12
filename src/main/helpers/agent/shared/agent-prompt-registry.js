@@ -159,7 +159,7 @@ function buildSampleState() {
     can_exit_with_limitations_when: [
       'Remaining uncertainty is disclosed explicitly.'
     ],
-    preferred_next_tools: ['record-lookup', 'literature-search'],
+    preferred_next_tools: ['notebook-lookup', 'literature-search'],
     reasoning_notes: 'Prefer one internal and one external source before synthesis.'
   };
   const sampleCitations = [
@@ -176,7 +176,7 @@ function buildSampleState() {
   ];
   const sampleToolTrace = [
     {
-      tool_name: 'record-lookup',
+      tool_name: 'notebook-lookup',
       ok: true,
       summary: 'Found Atlas notebook AT-14 with low UBC9 signal after transfection.',
       assistant_after_tool: 'Internal evidence suggests enzyme availability may be limiting.'
@@ -226,7 +226,7 @@ function buildSampleState() {
       'What internal project evidence explains the weak conjugation phenotype?',
       'What do recent external sources say about UBC9 availability and SUMOylation efficiency?'
     ],
-    possible_tools_or_sources: ['record-lookup', 'literature-search', 'sub-agent']
+    possible_tools_or_sources: ['notebook-lookup', 'literature-search', 'sub-agent']
   };
   const sampleContextSnapshot = {
     sections: [
@@ -260,7 +260,7 @@ function buildSampleState() {
     ],
     tool_call_suggestions: [
       {
-        tool_name: 'record-lookup',
+        tool_name: 'notebook-lookup',
         rationale: 'Internal project evidence should come first.',
         priority: 1
       },
@@ -354,7 +354,7 @@ function buildSampleState() {
   };
 
   const preferredToolNames = uniqueStrings([
-    'record-lookup',
+    'notebook-lookup',
     'literature-search',
     ...asArray(agentToolLoading.AGENT_TOOL_CATALOG).slice(0, 4).map((tool) => tool?.name)
   ]).filter((name) => asArray(agentToolLoading.AGENT_TOOL_CATALOG).some((tool) => tool?.name === name));

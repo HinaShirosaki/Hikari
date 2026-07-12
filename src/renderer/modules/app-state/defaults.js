@@ -128,7 +128,8 @@ export const defaultState = {
     startup: {
       defaultViewId: VIEWS.HOME,
       rememberLastView: false
-    }
+    },
+    plugins: []
   },
   inventory: {
     'Room Temp': [],

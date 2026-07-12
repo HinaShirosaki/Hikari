@@ -252,8 +252,8 @@ function createAgentControllerUtils(deps = {}) {
     const inventoryLookup = source.inventory_lookup && typeof source.inventory_lookup === 'object'
       ? source.inventory_lookup
       : null;
-    const recordLookup = source.record_lookup && typeof source.record_lookup === 'object'
-      ? source.record_lookup
+    const notebookLookup = source.notebook_lookup && typeof source.notebook_lookup === 'object'
+      ? source.notebook_lookup
       : null;
     const purchaseRecommendation = source.purchase_recommendation && typeof source.purchase_recommendation === 'object'
       ? source.purchase_recommendation
@@ -384,13 +384,13 @@ function createAgentControllerUtils(deps = {}) {
           item_count: asArray(inventoryLookup.items).length
         }
         : null,
-      record_lookup: recordLookup
+      notebook_lookup: notebookLookup
         ? {
-          status: cleanText(recordLookup.status, 40),
-          query: cleanText(recordLookup.query, 320),
-          source: cleanText(recordLookup.source, 80),
-          backfilled_sql: recordLookup.backfilled_sql === true,
-          item_count: asArray(recordLookup.items).length
+          status: cleanText(notebookLookup.status, 40),
+          query: cleanText(notebookLookup.query, 320),
+          source: cleanText(notebookLookup.source, 80),
+          backfilled_sql: notebookLookup.backfilled_sql === true,
+          item_count: asArray(notebookLookup.items).length
         }
         : null,
       purchase_recommendation: purchaseRecommendation

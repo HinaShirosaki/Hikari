@@ -42,6 +42,7 @@ function getCodexJsonEventDescriptor(source = {}) {
       || invocation.tool
       || invocation.name
       || item.name
+      || item.tool
       || item.tool_name
       || call.name,
     160

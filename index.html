@@ -279,7 +279,16 @@
           aria-labelledby="dashboard-timer-dialog-title"
         >
           <div class="home-dialog-form">
-            <h3 id="dashboard-timer-dialog-title">Start timer</h3>
+            <div class="app-dialog-head home-timer-dialog-head">
+              <h3 id="dashboard-timer-dialog-title">Start timer</h3>
+              <button
+                type="button"
+                id="dashboard-timer-dialog-close-btn"
+                class="app-dialog-close-btn"
+                aria-label="Close start timer dialog"
+                title="Close"
+              ><span aria-hidden="true">&times;</span></button>
+            </div>
             <form id="dashboard-timer-dialog-form" class="home-timer-form-row">
               <input
                 id="dashboard-timer-name-input"
@@ -468,7 +477,7 @@
                   <span class="protocol-detail-mode">Import</span>
                   <h3 id="protocol-json-import-title">Import Protocol JSON</h3>
                 </div>
-                <button type="button" id="protocol-json-import-close-btn" class="ghost-btn">Close</button>
+                <button type="button" id="protocol-json-import-close-btn" class="app-dialog-close-btn" aria-label="Close protocol import dialog" title="Close"><span aria-hidden="true">&times;</span></button>
               </div>
               <div class="stack-form">
                 <label>
@@ -495,7 +504,7 @@
                     <span class="protocol-detail-mode">Generate</span>
                     <h3 id="protocol-generate-input-title">Generate Protocol</h3>
                   </div>
-                  <button type="button" id="protocol-generate-close-btn" class="ghost-btn">Close</button>
+                  <button type="button" id="protocol-generate-close-btn" class="app-dialog-close-btn" aria-label="Close protocol generation dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
 
                 <div class="agent-composer-shell protocol-generate-composer-shell">
@@ -528,7 +537,7 @@
                     <span class="protocol-detail-mode">Generate</span>
                     <h3 id="protocol-generate-title">Generated Protocol</h3>
                   </div>
-                  <button type="button" id="protocol-generate-result-close-btn" class="ghost-btn">Close</button>
+                  <button type="button" id="protocol-generate-result-close-btn" class="app-dialog-close-btn" aria-label="Close generated protocol dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div id="protocol-generate-result-preview" class="protocol-polish-preview stack-form"></div>
                 <p id="protocol-generate-status" class="small-note" hidden></p>
@@ -560,7 +569,7 @@
                       <span class="protocol-detail-mode">After</span>
                       <h3 id="protocol-polish-title">Polished Protocol</h3>
                     </div>
-                    <button type="button" id="protocol-polish-close-btn" class="ghost-btn">Close</button>
+                    <button type="button" id="protocol-polish-close-btn" class="app-dialog-close-btn" aria-label="Close protocol polish dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                   </div>
                   <div id="protocol-polish-result-preview" class="protocol-polish-preview stack-form"></div>
                   <p id="protocol-polish-status" class="small-note" hidden></p>
@@ -993,7 +1002,7 @@
               <h3 id="biology-notebook-project-dialog-title">Add a project</h3>
               <p class="small-note">Create a project folder for notebook pages and linked work.</p>
             </div>
-            <button id="biology-notebook-project-dialog-close-btn" class="ghost-btn" type="button" aria-label="Close add project dialog">Close</button>
+            <button id="biology-notebook-project-dialog-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close add project dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <form id="biology-notebook-project-form" class="stack-form">
             <label>
@@ -1041,9 +1050,9 @@
           <div class="app-dialog-head inventory-add-container-head">
             <div>
               <h3 id="inventory-add-container-title">Add Container</h3>
-              <p class="small-note">Create a storage box, plate, tube, or custom grid.</p>
+              <p id="inventory-add-container-note" class="small-note">Create a storage box, plate, tube, or custom grid.</p>
             </div>
-            <button id="inventory-add-container-close" type="button" class="ghost-btn" aria-label="Close add container dialog">Close</button>
+            <button id="inventory-add-container-close" type="button" class="app-dialog-close-btn" aria-label="Close add container dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <label>
             Container Name
@@ -1453,7 +1462,7 @@
         <div class="assay-serial-dilution-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
           <div class="assay-header-row assay-serial-dilution-head app-dialog-head">
             <h3 id="assay-serial-dilution-title">Serial Dilution</h3>
-            <button type="button" id="assay-serial-dilution-close-btn" class="ghost-btn" aria-label="Close serial dilution dialog">Close</button>
+            <button type="button" id="assay-serial-dilution-close-btn" class="app-dialog-close-btn" aria-label="Close serial dilution dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <p class="small-note">Use the current mapped plate to calculate a constant final volume per well, with the last active dilution well discarding the final carryover volume.</p>
           <div class="assay-serial-dilution-controls">
@@ -1474,7 +1483,7 @@
               <h3 id="assay-result-import-title">Select Result Matrix</h3>
               <p id="assay-result-import-status" class="small-note"></p>
             </div>
-            <button type="button" id="assay-result-import-close-btn" class="ghost-btn" aria-label="Close result import dialog">Close</button>
+            <button type="button" id="assay-result-import-close-btn" class="app-dialog-close-btn" aria-label="Close result import dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <div class="assay-result-import-body">
             <div id="assay-result-import-candidates" class="assay-result-import-candidates" role="listbox" aria-label="Detected result matrices"></div>
@@ -1686,7 +1695,7 @@
                   <h3 id="gel-peak-editor-title">Lane Peak Area</h3>
                   <div id="gel-peak-editor-summary" class="small-note"></div>
                 </div>
-                <button type="button" id="gel-peak-editor-close-btn" class="ghost-btn">Close</button>
+                <button type="button" id="gel-peak-editor-close-btn" class="app-dialog-close-btn" aria-label="Close lane peak area dialog" title="Close"><span aria-hidden="true">&times;</span></button>
               </header>
               <div class="gel-peak-editor-toolbar" role="toolbar" aria-label="Peak area tools">
                 <label class="gel-peak-editor-lane-picker small-note">
@@ -1751,7 +1760,7 @@
         </aside>
 
         <div class="chemical-main left-rail-template__main">
-          <div class="panel chemical-list-panel">
+          <div class="chemical-list-panel">
             <div class="chemical-panel-head">
               <div class="chemical-panel-copy">
                 <h2>Chemicals</h2>
@@ -1762,10 +1771,10 @@
             <div id="chemical-list" class="list-table"></div>
           </div>
 
-          <div id="chemical-detail-panel" class="panel chemical-detail-panel" hidden>
+          <div id="chemical-detail-panel" class="chemical-detail-panel" hidden>
             <h3 id="chemical-detail-title">Chemical Details</h3>
             <div id="chemical-detail-content" class="stack-form"></div>
-            <div class="card-actions">
+            <div class="chemical-detail-actions">
               <button type="button" id="chemical-detail-edit-btn" class="ghost-btn">Edit</button>
               <button type="button" id="chemical-detail-delete-btn" class="danger-btn">Delete</button>
             </div>
@@ -1780,7 +1789,7 @@
               <h3 id="chemical-dialog-title">Add Chemical</h3>
               <p class="small-note">Create or update a chemical record.</p>
             </div>
-            <button type="button" id="chemical-dialog-close-btn" class="ghost-btn" aria-label="Close chemical dialog">Close</button>
+            <button type="button" id="chemical-dialog-close-btn" class="app-dialog-close-btn" aria-label="Close chemical dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
 
           <form id="chemical-form" class="form-grid">
@@ -1873,8 +1882,8 @@
               <small>Storage locations and type names</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="preferred-journal">
-              <span>Preferred Journal</span>
-              <small>Default journal name or URL</small>
+              <span>Preferred Journals</span>
+              <small>Default journal names or URLs</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="llm">
               <span>LLM Model &amp; Access</span>
@@ -1883,6 +1892,10 @@
             <button type="button" class="settings-nav-item" data-settings-target="skills">
               <span>External Skills</span>
               <small>Agent skill files</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="plugins">
+              <span>Plugins</span>
+              <small>User plugin folders</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="telegram">
               <span>Telegram Bot</span>
@@ -2020,7 +2033,7 @@
               </div>
               <form id="preferred-journal-form" class="stack-form">
                 <label>
-                  Journal Name or URL
+                  Journal Names or URLs
                   <input id="setting-preferred-journal" placeholder="Journal name or https://..." />
                 </label>
                 <div id="setting-preferred-journal-list" class="stack-form"></div>
@@ -2091,6 +2104,21 @@
                 <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn">Refresh Skills</button>
               </div>
               <div id="setting-external-skills-list" class="settings-skill-list" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <section class="settings-section" data-settings-panel="plugins" hidden>
+            <div class="settings-section-head">
+              <h3>Plugins</h3>
+              <p class="small-note">Add a plugin folder containing index.html (plus its own JS and CSS). Enabled plugins appear in app navigation after a reload.</p>
+            </div>
+            <div class="stack-form">
+              <div class="form-actions">
+                <button type="button" id="setting-plugins-add-btn" class="primary-btn">Add Plugin Folder</button>
+                <button type="button" id="setting-plugins-reload-btn" class="ghost-btn">Reload App</button>
+              </div>
+              <p id="setting-plugins-status" class="small-note" aria-live="polite"></p>
+              <div id="setting-plugins-list" class="settings-skill-list" aria-live="polite"></div>
             </div>
           </section>
 
@@ -2604,7 +2632,7 @@
                     <h3 id="agent-review-title">Review Generated Drafts</h3>
                     <p class="small-note">Approve or reject generated protocol and notebook pages before they are added.</p>
                   </div>
-                  <button type="button" id="agent-review-close-btn" class="ghost-btn">Close</button>
+                  <button type="button" id="agent-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                 </header>
                 <div id="agent-review-track" class="agent-review-track" tabindex="0" aria-live="polite"></div>
                 <footer class="agent-review-footer">
@@ -3514,7 +3542,7 @@
                   <h4 id="sequence-viewer-protein-builder-assembly-title">Assemble Plasmid</h4>
                   <p id="sequence-viewer-protein-builder-assembly-subtitle" class="small-note">Select a stored backbone to combine with the current DNA build.</p>
                 </div>
-                <button id="sequence-viewer-protein-builder-assembly-close-btn" type="button" class="ghost-btn" aria-label="Close stored backbone selector">Close</button>
+                <button id="sequence-viewer-protein-builder-assembly-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close stored backbone selector" title="Close"><span aria-hidden="true">&times;</span></button>
               </div>
 
               <div class="sequence-viewer-backbone-dialog-grid">
@@ -3758,7 +3786,7 @@
           <form id="sequence-viewer-feature-editor-form" class="sequence-viewer-feature-editor app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-feature-editor-head app-dialog-head">
               <h4 id="sequence-viewer-feature-editor-title">Add Feature</h4>
-              <button id="sequence-viewer-feature-editor-close" type="button" class="ghost-btn">Close</button>
+              <button id="sequence-viewer-feature-editor-close" type="button" class="app-dialog-close-btn" aria-label="Close feature editor dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <p id="sequence-viewer-feature-editor-note" class="small-note">Choose the feature metadata for the selected range.</p>
 
@@ -3804,7 +3832,7 @@
           <section class="sequence-viewer-primer-design-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-design-title">
             <div class="result-card-head sequence-viewer-primer-design-head app-dialog-head">
               <h4 id="sequence-viewer-primer-design-title">Designed Primers</h4>
-              <button id="sequence-viewer-primer-design-close" type="button" class="ghost-btn">Close</button>
+              <button id="sequence-viewer-primer-design-close" type="button" class="app-dialog-close-btn" aria-label="Close designed primers dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <p id="sequence-viewer-primer-design-note" class="small-note">Primer details will appear here.</p>
             <div id="sequence-viewer-primer-design-result" class="sequence-viewer-primer-design-result calc-output"></div>
@@ -3818,7 +3846,7 @@
           <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
               <h4 id="sequence-viewer-sequence-edit-title">Edit Bases</h4>
-              <button id="sequence-viewer-sequence-edit-close" type="button" class="ghost-btn">Close</button>
+              <button id="sequence-viewer-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <p id="sequence-viewer-sequence-edit-note" class="small-note">Type the bases to apply.</p>
 
@@ -3842,7 +3870,7 @@
                 <h4 id="sequence-viewer-backbone-dialog-title">Backbone / Insert Candidates</h4>
                 <p id="sequence-viewer-backbone-dialog-subtitle" class="small-note">Review promoter and ORF candidates before applying a backbone/insert interpretation.</p>
               </div>
-              <button id="sequence-viewer-backbone-dialog-close-btn" type="button" class="ghost-btn" aria-label="Close backbone recognition dialog">Close</button>
+              <button id="sequence-viewer-backbone-dialog-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close backbone recognition dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
 
             <div class="sequence-viewer-backbone-dialog-mode-switch" role="tablist" aria-label="Recognition mode">
@@ -3885,9 +3913,6 @@
 
       <div id="sequence-viewer-cloning-design-workspace" class="sequence-viewer-cloning-design-workspace" hidden>
         <div class="sequence-viewer-cloning-design-toolbar">
-          <div class="sequence-viewer-cloning-design-toolbar-nav">
-            <button id="sequence-viewer-cloning-design-back-btn" type="button" class="ghost-btn">Back to Sequence</button>
-          </div>
           <div class="sequence-viewer-cloning-design-toolbar-copy">
             <h2>Cloning Design</h2>
             <span id="sequence-viewer-cloning-design-status" class="small-note">Edit the active sequence to enable cloning design.</span>
@@ -3899,11 +3924,15 @@
 
         <div class="sequence-viewer-cloning-design-grid left-rail-template">
           <aside class="sequence-viewer-cloning-design-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+            <section class="sequence-viewer-cloning-design-rail-nav">
+              <button id="sequence-viewer-cloning-design-back-btn" type="button" class="ghost-btn">&larr; Back to Sequence</button>
+            </section>
+
             <section class="sequence-viewer-cloning-design-panel">
               <div class="result-card-head">
                 <h4>Route</h4>
               </div>
-              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-mode-switch sequence-viewer-cloning-design-strategy-list" role="tablist" aria-label="Cloning design route"></div>
+              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-cloning-design-strategy-list" role="tablist" aria-label="Cloning design route"></div>
             </section>
 
             <section class="sequence-viewer-cloning-design-panel">
@@ -3942,7 +3971,7 @@
 
       <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace app-dialog-overlay app-dialog-overlay--top" hidden>
         <div class="sequence-viewer-alignment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-label="Alignment">
-          <button id="sequence-viewer-alignment-close-btn" type="button" class="sequence-viewer-alignment-close-icon" aria-label="Close alignment dialog">×</button>
+          <button id="sequence-viewer-alignment-close-btn" type="button" class="app-dialog-close-btn app-dialog-close-btn--floating" aria-label="Close alignment dialog" title="Close"><span aria-hidden="true">&times;</span></button>
 
           <section class="result-card sequence-viewer-alignment-panel">
             <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Alignment query input mode">

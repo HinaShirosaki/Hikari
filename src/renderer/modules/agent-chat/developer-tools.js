@@ -51,7 +51,7 @@ function hasAgentResultShape(source) {
       || source.protocol_generation
       || source.codex_agent
       || source.inventory_lookup
-      || source.record_lookup
+      || source.notebook_lookup
       || source.purchase_recommendation
       || source.general_science_question
       || source.project_science_question

@@ -293,7 +293,7 @@ _No internal API calls captured._
   "max_rounds": 2,
   "tool_sequence": [
     "inventory-lookup",
-    "record-lookup",
+    "notebook-lookup",
     "protocol-matching",
     "notebook-generation",
     "notebook-draft",
@@ -603,7 +603,7 @@ _No internal API calls captured._
   "max_rounds": 2,
   "tool_sequence": [
     "inventory-lookup",
-    "record-lookup",
+    "notebook-lookup",
     "protocol-matching",
     "notebook-generation",
     "notebook-draft",
@@ -705,7 +705,7 @@ _No internal API calls captured._
         "step_label": "step-2",
         "objective": "LLM Response",
         "suggested_tools": [
-          "record-lookup"
+          "notebook-lookup"
         ],
         "reason": "LLM Response"
       },
@@ -727,7 +727,7 @@ _No internal API calls captured._
         "query_hint": "LLM Response"
       },
       {
-        "tool_name": "record-lookup",
+        "tool_name": "notebook-lookup",
         "priority": 2,
         "when_to_use": "LLM Response",
         "reason": "LLM Response",
@@ -784,7 +784,7 @@ _No internal API calls captured._
     ],
     "preferred_next_tools": [
       "inventory-lookup",
-      "record-lookup",
+      "notebook-lookup",
       "protocol-matching",
       "notebook-generation",
       "notebook-draft",
@@ -908,7 +908,7 @@ _No internal API calls captured._
         },
         {
           "action_type": "read",
-          "tool_name": "record-lookup",
+          "tool_name": "notebook-lookup",
           "risk_level": "low",
           "reason": "LLM Response"
         },
@@ -1118,7 +1118,7 @@ Selection mode: `random`
 
 ```json
 {
-  "system_prompt": "You are a debug-only Hikari agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | record-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.\n3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
+  "system_prompt": "You are a debug-only Hikari agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | notebook-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.\n3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
   "message": "LLM Response",
   "feedback_message": "",
   "conversation": [
@@ -1149,8 +1149,8 @@ Selection mode: `random`
       }
     },
     {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
+      "name": "notebook-lookup",
+      "description": "Debug-only tool definition for notebook-lookup.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -1364,7 +1364,7 @@ Selection mode: `random`
 
 ```json
 {
-  "system_prompt": "You are a debug-only Hikari agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | record-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.\n3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
+  "system_prompt": "You are a debug-only Hikari agent runtime.\n\nIntent: general_science_question\n\nReasoning effort: 2\n\nExecution hints:\n- Retrieval preference: literature_first_web_last.\n- Use an external citation when the clarified request depends on freshness or recency.\n- Make at least one evidence-gathering attempt before answering.\n- A limitation-qualified answer is acceptable after a best-effort evidence attempt.\n- Loop goal: LLM Response\n- Route summary: LLM Response\n- Preferred tools: inventory-lookup | notebook-lookup | protocol-matching\n- Route suggestions are guidance only.\n- Objective: LLM Response\n- Exit when: LLM Response\n\nThe clarified execution request is provided separately as the session message.\n\n1. You are inside a deterministic science reasoning loop.\n2. At each assistant turn, either call one or more independent tools or answer directly if you already have sufficient evidence.\n3. If multiple tool calls would help, keep them tightly scoped and independent so they can be executed in parallel as one evidence round.\n4. Prefer tools in the listed priority order and explain the answer only after sufficient evidence exists.\n5. When you give the final answer, include enough detail to explain the conclusion, supporting evidence, and material caveats.\n6. Do not compress the final answer to one or two sentences unless the user explicitly asked for brevity.\n7. Treat any route plan as non-binding guidance; adapt when the actual evidence suggests a better next step.\n8. If a tool result is weak or empty, choose a more targeted next tool or tool batch on the following turn.\n9. Do not fabricate project records, literature results, or computation outputs.\n10. For general science questions, prefer the most targeted citation-backed evidence path available.",
   "message": "LLM Response",
   "feedback_message": "",
   "conversation": [
@@ -1391,8 +1391,8 @@ Selection mode: `random`
       }
     },
     {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
+      "name": "notebook-lookup",
+      "description": "Debug-only tool definition for notebook-lookup.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -1752,8 +1752,8 @@ Selection mode: `random`
       }
     },
     {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
+      "name": "notebook-lookup",
+      "description": "Debug-only tool definition for notebook-lookup.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -1994,8 +1994,8 @@ Selection mode: `random`
       }
     },
     {
-      "name": "record-lookup",
-      "description": "Debug-only tool definition for record-lookup.",
+      "name": "notebook-lookup",
+      "description": "Debug-only tool definition for notebook-lookup.",
       "parameters": {
         "type": "object",
         "additionalProperties": false,
@@ -2553,7 +2553,7 @@ Require external citation when freshness matters: yes
 Require retrieval attempt before answer: yes
 Allow limitation-qualified answer after evidence attempt: yes
 
-Allowed tools: inventory-lookup | record-lookup | protocol-matching | notebook-generation | notebook-draft | python-sandbox
+Allowed tools: inventory-lookup | notebook-lookup | protocol-matching | notebook-generation | notebook-draft | python-sandbox
 
 Return JSON only.
 ```
@@ -2577,7 +2577,7 @@ Return JSON only.
       "step_label": "step-2",
       "objective": "LLM Response",
       "suggested_tools": [
-        "record-lookup"
+        "notebook-lookup"
       ],
       "reason": "LLM Response"
     },
@@ -2599,7 +2599,7 @@ Return JSON only.
       "query_hint": "LLM Response"
     },
     {
-      "tool_name": "record-lookup",
+      "tool_name": "notebook-lookup",
       "priority": 2,
       "when_to_use": "LLM Response",
       "reason": "LLM Response",
@@ -2665,7 +2665,7 @@ Require external citation when freshness matters: yes
 Require retrieval attempt before answer: yes
 Allow limitation-qualified answer after evidence attempt: yes
 
-Allowed tools: inventory-lookup | record-lookup | protocol-matching | notebook-generation | notebook-draft | python-sandbox
+Allowed tools: inventory-lookup | notebook-lookup | protocol-matching | notebook-generation | notebook-draft | python-sandbox
 
 Return JSON only.
 ```
@@ -2689,7 +2689,7 @@ Return JSON only.
   ],
   "preferred_next_tools": [
     "inventory-lookup",
-    "record-lookup",
+    "notebook-lookup",
     "protocol-matching",
     "notebook-generation"
   ],
@@ -2719,7 +2719,7 @@ Execution hints:
 - A limitation-qualified answer is acceptable after a best-effort evidence attempt.
 - Loop goal: LLM Response
 - Route summary: LLM Response
-- Preferred tools: inventory-lookup | record-lookup | protocol-matching
+- Preferred tools: inventory-lookup | notebook-lookup | protocol-matching
 - Route suggestions are guidance only.
 - Objective: LLM Response
 - Exit when: LLM Response
@@ -2780,8 +2780,8 @@ LLM Response
     }
   },
   {
-    "name": "record-lookup",
-    "description": "Debug-only tool definition for record-lookup.",
+    "name": "notebook-lookup",
+    "description": "Debug-only tool definition for notebook-lookup.",
     "parameters": {
       "type": "object",
       "additionalProperties": false,
@@ -3110,7 +3110,7 @@ Can exit with limitations when:
 - LLM Response
 - A best-effort answer is allowed when the main remaining gaps are stated explicitly.
 - Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
+Preferred next tools: inventory-lookup | notebook-lookup | protocol-matching
 
 Pre-synthesized question:
 Current best answer: LLM Response
@@ -3286,7 +3286,7 @@ Can exit with limitations when:
 - LLM Response
 - A best-effort answer is allowed when the main remaining gaps are stated explicitly.
 - Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
+Preferred next tools: inventory-lookup | notebook-lookup | protocol-matching
 
 Pre-synthesized question:
 Current best answer: LLM Response
@@ -3394,7 +3394,7 @@ Require external citation when freshness matters: yes
 Require retrieval attempt before answer: yes
 Allow limitation-qualified answer after evidence attempt: yes
 
-Allowed tools: inventory-lookup | record-lookup | protocol-matching | notebook-generation | notebook-draft | python-sandbox
+Allowed tools: inventory-lookup | notebook-lookup | protocol-matching | notebook-generation | notebook-draft | python-sandbox
 
 Return JSON only.
 ```
@@ -3432,7 +3432,7 @@ Require external citation when freshness matters: yes
 Require retrieval attempt before answer: yes
 Allow limitation-qualified answer after evidence attempt: yes
 
-Allowed tools: inventory-lookup | record-lookup | protocol-matching | notebook-generation | notebook-draft | python-sandbox
+Allowed tools: inventory-lookup | notebook-lookup | protocol-matching | notebook-generation | notebook-draft | python-sandbox
 
 Return JSON only.
 ```
@@ -3457,7 +3457,7 @@ Execution hints:
 - A limitation-qualified answer is acceptable after a best-effort evidence attempt.
 - Loop goal: LLM Response
 - Route summary: LLM Response
-- Preferred tools: inventory-lookup | record-lookup | protocol-matching
+- Preferred tools: inventory-lookup | notebook-lookup | protocol-matching
 - Route suggestions are guidance only.
 - Objective: LLM Response
 - Exit when: LLM Response
@@ -3514,8 +3514,8 @@ LLM Response
     }
   },
   {
-    "name": "record-lookup",
-    "description": "Debug-only tool definition for record-lookup.",
+    "name": "notebook-lookup",
+    "description": "Debug-only tool definition for notebook-lookup.",
     "parameters": {
       "type": "object",
       "additionalProperties": false,
@@ -3827,7 +3827,7 @@ Can exit with limitations when:
 - LLM Response
 - A best-effort answer is allowed when the main remaining gaps are stated explicitly.
 - Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
+Preferred next tools: inventory-lookup | notebook-lookup | protocol-matching
 
 Pre-synthesized question:
 Current best answer: LLM Response
@@ -3900,8 +3900,8 @@ Please continue with the next best tool call or tightly scoped parallel tool bat
     }
   },
   {
-    "name": "record-lookup",
-    "description": "Debug-only tool definition for record-lookup.",
+    "name": "notebook-lookup",
+    "description": "Debug-only tool definition for notebook-lookup.",
     "parameters": {
       "type": "object",
       "additionalProperties": false,
@@ -4213,7 +4213,7 @@ Can exit with limitations when:
 - LLM Response
 - A best-effort answer is allowed when the main remaining gaps are stated explicitly.
 - Stable background questions can be answered without a fresh citation when the answer is already well grounded and any freshness limits are stated.
-Preferred next tools: inventory-lookup | record-lookup | protocol-matching
+Preferred next tools: inventory-lookup | notebook-lookup | protocol-matching
 
 Pre-synthesized question:
 Current best answer: LLM Response

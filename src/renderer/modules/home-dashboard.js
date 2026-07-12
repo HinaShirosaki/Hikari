@@ -87,6 +87,7 @@ export function initHomeDashboard({
     timerActiveList: document.getElementById('dashboard-timer-active-list'),
     timerOpenBtn: document.getElementById('dashboard-timer-open-btn'),
     timerDialogOverlay: document.getElementById('dashboard-timer-dialog-overlay'),
+    timerDialogCloseBtn: document.getElementById('dashboard-timer-dialog-close-btn'),
     timerDialogForm: document.getElementById('dashboard-timer-dialog-form'),
     timerNameInput: document.getElementById('dashboard-timer-name-input'),
     timerMinutesInput: document.getElementById('dashboard-timer-minutes-input'),

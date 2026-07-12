@@ -131,8 +131,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
         executeInventoryLookup: async () => {
           throw new Error('Inventory lookup should not run before Codex agent runtime.');
         },
-        executeRecordLookup: async () => {
-          throw new Error('Record lookup should not run before Codex agent runtime.');
+        executeNotebookLookup: async () => {
+          throw new Error('Notebook lookup should not run before Codex agent runtime.');
         },
         getAgentChatLogPath: () => '',
         getDefaultDataFilePath: () => '/tmp/hikari-data.json',

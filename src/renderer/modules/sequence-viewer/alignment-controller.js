@@ -25,6 +25,47 @@ function buildReferenceSignature(record) {
   ].join('|');
 }
 
+export function resolveStoredAlignmentForReference(session, referenceRecord) {
+  const safeSession = session && typeof session === 'object' ? session : null;
+  const safeReference = referenceRecord && typeof referenceRecord === 'object' ? referenceRecord : null;
+  const queryRecord = safeSession?.queryRecord && typeof safeSession.queryRecord === 'object'
+    ? safeSession.queryRecord
+    : null;
+  const storedResult = safeSession?.result && typeof safeSession.result === 'object'
+    ? safeSession.result
+    : null;
+  const referenceRecordKey = buildReferenceRecordKey(safeReference);
+  const storedReferenceRecordKey = String(safeSession?.referenceRecordKey || '').trim();
+
+  if (!safeSession || !safeReference?.sequence?.length || !queryRecord?.sequence?.length) {
+    return {
+      session: safeSession,
+      result: storedResult,
+      wasRealigned: false
+    };
+  }
+
+  if (storedResult && storedReferenceRecordKey && storedReferenceRecordKey === referenceRecordKey) {
+    return {
+      session: safeSession,
+      result: storedResult,
+      wasRealigned: false
+    };
+  }
+
+  const result = alignSequenceToReference(safeReference, queryRecord);
+  return {
+    session: {
+      ...safeSession,
+      referenceRecordKey,
+      referenceRecordName: String(safeReference.name || '').trim() || 'reference',
+      result
+    },
+    result,
+    wasRealigned: true
+  };
+}
+
 export function createSequenceViewerAlignmentController(config = {}) {
   const elements = config?.elements || {};
   const viewerState = config?.viewerState || {};
@@ -453,15 +494,25 @@ export function createSequenceViewerAlignmentController(config = {}) {
       return null;
     }
 
-    const queryRecord = session.queryRecord && typeof session.queryRecord === 'object'
-      ? cloneJson(session.queryRecord, session.queryRecord)
+    const referenceRecord = getSelectedRecord('reference') || getSelectedReferenceRecord();
+    const resolved = resolveStoredAlignmentForReference(session, referenceRecord);
+    const resolvedSession = resolved.session || session;
+    const queryRecord = resolvedSession.queryRecord && typeof resolvedSession.queryRecord === 'object'
+      ? cloneJson(resolvedSession.queryRecord, resolvedSession.queryRecord)
       : null;
-    const result = session.result && typeof session.result === 'object'
-      ? cloneJson(session.result, session.result)
+    const result = resolved.result && typeof resolved.result === 'object'
+      ? cloneJson(resolved.result, resolved.result)
       : null;
 
+    if (resolved.wasRealigned) {
+      viewerState.alignmentSessions = upsertAlignmentSessionInList(
+        viewerState.alignmentSessions,
+        resolvedSession
+      );
+    }
+
     state.result = result;
-    state.query.sourceSessionId = String(session.id || '').trim();
+    state.query.sourceSessionId = String(resolvedSession.id || '').trim();
 
     if (options.populateQuery === true) {
       state.query = {
@@ -485,19 +536,22 @@ export function createSequenceViewerAlignmentController(config = {}) {
     }
 
     applyAlignmentToViewer({
-      ...session,
+      ...resolvedSession,
       queryRecord: queryRecord || null,
       result
     }, { enableView: options.enableView !== false });
 
     if (options.silent !== true) {
-      const sessionName = session.name || queryRecord?.name || 'alignment';
-      setAlignmentStatus(`Loaded stored alignment ${sessionName}.`);
-      setStatus(`Loaded stored alignment ${sessionName}.`);
+      const sessionName = resolvedSession.name || queryRecord?.name || 'alignment';
+      const status = resolved.wasRealigned
+        ? `Re-aligned stored read ${sessionName} to the current reference.`
+        : `Loaded stored alignment ${sessionName}.`;
+      setAlignmentStatus(status);
+      setStatus(status);
     }
     render();
     return {
-      ...session,
+      ...resolvedSession,
       queryRecord,
       result
     };

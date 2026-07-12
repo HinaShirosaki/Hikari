@@ -42,7 +42,8 @@ export function createSampleLinkMenuController({
   getInventory,
   getSettings,
   safeText,
-  onSelect
+  onSelect,
+  onAddTable
 } = {}) {
   let menu = null;
   let menuState = null;
@@ -55,6 +56,7 @@ export function createSampleLinkMenuController({
     menu.className = 'biology-notebook-sample-link-menu';
     menu.setAttribute('role', 'menu');
     menu.hidden = true;
+    menu.addEventListener('click', onMenuClick);
     doc.body?.append(menu);
     return menu;
   }
@@ -129,11 +131,22 @@ export function createSampleLinkMenuController({
     onSelect(sample, menuState);
   }
 
+  function onMenuClick(event) {
+    const action = event.target.closest('[data-placeholder-add-table]');
+    if (!action || !menuState) {
+      return;
+    }
+    event.preventDefault?.();
+    onAddTable?.(menuState);
+    close();
+  }
+
   function open({ wrap, token, x, y }) {
     const key = String(token?.dataset?.nbKeyRef || '').trim();
     const placeholderName = String(wrap?.dataset?.placeholderName || '').trim();
     const placeholderType = String(wrap?.dataset?.samplePlaceholderType || '').trim();
-    if (!key || !placeholderType) {
+    const hiddenValue = wrap?.querySelector?.('[data-nb-key]');
+    if (!key) {
       return;
     }
     const menuEl = ensureMenu();
@@ -145,13 +158,18 @@ export function createSampleLinkMenuController({
       key,
       placeholderName,
       placeholderType,
+      value: String(hiddenValue?.value || '').trim(),
       query: ''
     };
     menuEl.innerHTML = `
       <div class="biology-notebook-sample-link-menu-head">
-        <strong>Link ${safeText(getSampleTypeLabel(placeholderType, typeof getSettings === 'function' ? getSettings() : {}))}</strong>
+        <strong>Placeholder variable</strong>
         <span class="small-note">${safeText(placeholderName || 'Placeholder')}</span>
       </div>
+      <button type="button" class="ghost-btn biology-notebook-placeholder-table-action" data-placeholder-add-table>
+        Add table from this variable
+      </button>
+      ${placeholderType ? `
       <input
         type="search"
         class="biology-notebook-sample-link-search"
@@ -160,6 +178,7 @@ export function createSampleLinkMenuController({
         aria-label="Search samples"
       />
       <div class="biology-notebook-sample-link-results" data-sample-link-results></div>
+      ` : ''}
     `;
     const searchInput = menuEl.querySelector('[data-sample-link-search]');
     searchInput?.addEventListener('input', () => {
@@ -170,7 +189,9 @@ export function createSampleLinkMenuController({
       renderResults();
     });
     menuEl.querySelector('[data-sample-link-results]')?.addEventListener('click', onResultsClick);
-    renderResults();
+    if (placeholderType) {
+      renderResults();
+    }
     position(x, y);
     menuEl.hidden = false;
     searchInput?.focus();

@@ -5,7 +5,7 @@ function createAgentOpenContextRuntime({
   observability,
   protocolNotebookRuntime,
   executeInventoryLookup,
-  executeRecordLookup,
+  executeNotebookLookup,
   getDefaultDataFilePath,
   agentChatLogRuntime
 } = {}) {
@@ -212,13 +212,13 @@ function createAgentOpenContextRuntime({
         };
       }
       if (
-        previousIntent === 'record_lookup'
-        && cleanText(assistantMeta?.record_lookup?.status, 40) === 'needs_more_info'
+        previousIntent === 'notebook_lookup'
+        && cleanText(assistantMeta?.notebook_lookup?.status, 40) === 'needs_more_info'
       ) {
         return {
           ok: true,
           payload: buildLookupContinuationParserPayload(previousIntent),
-          message: 'Skipped intent parser because the record_lookup context is still open.',
+          message: 'Skipped intent parser because the notebook_lookup context is still open.',
           meta: {
             skipped: true,
             resumed_from_pending: false
@@ -435,15 +435,15 @@ function createAgentOpenContextRuntime({
       return true;
     }
 
-    if (cleanText(parserPayload?.primary_intent, 80) === 'record_lookup') {
+    if (cleanText(parserPayload?.primary_intent, 80) === 'notebook_lookup') {
       observability.recordLifecycleEvent(lifecycleRecorder, {
-        stage: 'record_lookup_started',
+        stage: 'notebook_lookup_started',
         status: 'started',
-        routing_intent: 'record_lookup',
-        message: 'Executing project record lookup runtime.'
+        routing_intent: 'notebook_lookup',
+        message: 'Executing notebook lookup runtime.'
       });
       if (parserPayload?.needs_clarification === true) {
-        result.record_lookup = {
+        result.notebook_lookup = {
           status: 'needs_more_info',
           query: '',
           source: 'parser_only',
@@ -451,11 +451,11 @@ function createAgentOpenContextRuntime({
           items: [],
           follow_up_questions: [
             cleanText(parserPayload?.clarification_reason, 280)
-              || 'Please provide what record you want to search (project/protocol/notebook/assay/gel).'
+              || 'Please provide what notebook entry, project, protocol, or result text you want to search.'
           ]
         };
       } else {
-        const recordLookupResult = await executeRecordLookup({
+        const notebookLookupResult = await executeNotebookLookup({
           message,
           parserPayload,
           snapshot,
@@ -463,25 +463,25 @@ function createAgentOpenContextRuntime({
           fallbackDataFilePath: getDefaultDataFilePath(),
           limit: 8
         });
-        result.record_lookup = recordLookupResult;
-        if (recordLookupResult?.backfilled_sql === true) {
+        result.notebook_lookup = notebookLookupResult;
+        if (notebookLookupResult?.backfilled_sql === true) {
           observability.recordLifecycleEvent(lifecycleRecorder, {
-            stage: 'record_lookup_backfilled',
+            stage: 'notebook_lookup_backfilled',
             status: 'ok',
-            routing_intent: 'record_lookup',
-            message: 'SQLite record index was backfilled from hydrated snapshot.'
+            routing_intent: 'notebook_lookup',
+            message: 'Notebook lookup index was backfilled from hydrated snapshot.'
           });
         }
       }
       observability.recordLifecycleEvent(lifecycleRecorder, {
-        stage: 'record_lookup_completed',
-        status: cleanText(result?.record_lookup?.status, 40) === 'matched' ? 'ok' : 'pending',
-        routing_intent: 'record_lookup',
-        message: `Record lookup status=${cleanText(result?.record_lookup?.status, 40) || 'unknown'}.`,
+        stage: 'notebook_lookup_completed',
+        status: cleanText(result?.notebook_lookup?.status, 40) === 'matched' ? 'ok' : 'pending',
+        routing_intent: 'notebook_lookup',
+        message: `Notebook lookup status=${cleanText(result?.notebook_lookup?.status, 40) || 'unknown'}.`,
         meta: {
-          source: cleanText(result?.record_lookup?.source, 80),
-          item_count: Array.isArray(result?.record_lookup?.items) ? result.record_lookup.items.length : 0,
-          backfilled_sql: result?.record_lookup?.backfilled_sql === true
+          source: cleanText(result?.notebook_lookup?.source, 80),
+          item_count: Array.isArray(result?.notebook_lookup?.items) ? result.notebook_lookup.items.length : 0,
+          backfilled_sql: result?.notebook_lookup?.backfilled_sql === true
         }
       });
       return true;

@@ -182,10 +182,10 @@ function buildDefaultToolPool(intent) {
     intent: normalizedIntent
   });
   const fallback = normalizedIntent === 'project_science_question'
-    ? ['record-lookup', 'literature-search', 'web-search']
+    ? ['notebook-lookup', 'literature-search', 'web-search']
     : (normalizedIntent === 'result_analysis'
-      ? ['python-sandbox', 'record-lookup', 'literature-search']
-      : ['literature-search', 'web-search', 'record-lookup']);
+      ? ['python-sandbox', 'notebook-lookup', 'literature-search']
+      : ['literature-search', 'web-search', 'notebook-lookup']);
   return uniqueStrings(resolved.length ? resolved : fallback, 40);
 }
 

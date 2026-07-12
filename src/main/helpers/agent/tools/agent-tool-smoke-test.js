@@ -6,7 +6,7 @@ const path = require('node:path');
 
 const { AGENT_TOOL_CATALOG } = require('./agent-tool-loading.js');
 const { createAgentInventoryLookupRuntime } = require('./agent-inventory-lookup.js');
-const { createAgentRecordLookupRuntime } = require('./agent-record-lookup.js');
+const { createAgentLookupRuntime } = require('../runtime/agent-lookup-runtime.js');
 const { createProtocolMatchingRuntime } = require('./agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('./agent-notebook-generation.js');
 const { createNotebookDraftRuntime } = require('./agent-notebook-draft.js');
@@ -350,9 +350,6 @@ function buildPreview(toolName, result) {
   if (toolName === 'inventory-lookup') {
     return cleanText(source.items?.[0]?.name || source.items?.[0]?.id, 220);
   }
-  if (toolName === 'record-lookup') {
-    return cleanText(source.items?.[0]?.title || source.items?.[0]?.id, 220);
-  }
   if (toolName === 'notebook-lookup') {
     return cleanText(source.items?.[0]?.title || source.items?.[0]?.protocolName || source.items?.[0]?.id, 220);
   }
@@ -488,40 +485,19 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
     };
   }
 
-  async function smokeRecordLookup(snapshot, options = {}) {
-    const runtime = createAgentRecordLookupRuntime();
-    const requestMessage = resolveToolMessage(options.message, 'Find the Cell Prep protocol.');
+  async function smokeNotebookLookup(snapshot, options = {}) {
+    const runtime = createAgentLookupRuntime();
+    const requestMessage = resolveToolMessage(options.message, 'Find the Cell Prep notebook entry.');
     const focusedQuery = resolveFocusedToolText(options.message, 'Cell Prep');
-    const result = await runtime.executeRecordLookup({
-      message: requestMessage,
+    const result = await runtime.executeNotebookLookup({
+      message: focusedQuery || requestMessage,
       parserPayload: {
         entities: {
           protocol_name: focusedQuery,
-          requested_output: null
+          requested_output: 'notebook_lookup'
         }
       },
       snapshot,
-      limit: 5
-    });
-    const itemCount = asArray(result.items).length;
-    return {
-      ...result,
-      ok: options.strict === true ? itemCount > 0 : cleanText(result.status, 80) !== 'error',
-      summary: itemCount > 0
-        ? `Found ${itemCount} record match${itemCount === 1 ? '' : 'es'} for ${cleanText(result.query || focusedQuery, 220)}.`
-        : `No record matches found for ${cleanText(result.query || focusedQuery, 220)}.`
-    };
-  }
-
-  async function smokeNotebookLookup(snapshot, options = {}) {
-    const runtime = createAgentRecordLookupRuntime();
-    const requestMessage = resolveToolMessage(options.message, 'Find the Cell Prep notebook entry.');
-    const focusedQuery = resolveFocusedToolText(options.message, 'Cell Prep');
-    const result = await runtime.searchRecordIndex({
-      query: focusedQuery || requestMessage,
-      searchTerms: uniqueStrings([focusedQuery, requestMessage, 'Cell Prep'], 5),
-      snapshot,
-      recordTypes: ['notebook'],
       limit: 5
     });
     const items = asArray(result.items);
@@ -530,7 +506,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
       status: itemCount ? 'matched' : 'no_match',
       query: cleanText(result.query || focusedQuery, 220),
       source: cleanText(result.source, 80) || 'fallback_json',
-      backfilled_sql: result.backfilledSql === true,
+      backfilled_sql: result.backfilled_sql === true,
       items,
       ok: options.strict === true ? itemCount > 0 : true,
       summary: itemCount > 0
@@ -1265,7 +1241,6 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
 
   const smokeRunners = {
     'inventory-lookup': async (options = {}) => smokeInventoryLookup(buildSmokeSnapshot(), options),
-    'record-lookup': async (options = {}) => smokeRecordLookup(buildSmokeSnapshot(), options),
     'notebook-lookup': async (options = {}) => smokeNotebookLookup(buildSmokeSnapshot(), options),
     'protocol-matching': async (options = {}) => smokeProtocolMatching(buildSmokeSnapshot(), options),
     'notebook-generation': async (options = {}) => smokeNotebookGeneration(buildSmokeSnapshot(), options),

@@ -58,7 +58,6 @@ const agentProtocolMatching = optionalRequire(path.join(__dirname, 'src', 'main'
 const agentNotebookGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-notebook-generation.js'));
 const agentNotebookDraft = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-notebook-draft.js'));
 const agentInventoryLookup = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-inventory-lookup.js'));
-const agentRecordLookup = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-record-lookup.js'));
 const agentSubAgent = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-sub-agent.js'));
 const agentChatLog = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'context', 'agent-chat-log.js'));
 const agentContextManagement = optionalRequire(path.join(__dirname, 'self-agent', 'context', 'agent-context-management.js'));
@@ -297,7 +296,6 @@ const suiteScope = {
   agentNotebookGeneration,
   agentNotebookDraft,
   agentInventoryLookup,
-  agentRecordLookup,
   agentSubAgent,
   agentChatLog,
   agentContextManagement,
@@ -348,6 +346,33 @@ const suiteScope = {
 
 registerCoreSuite({ __dirname, scope: suiteScope });
 registerEdgeSuite({ __dirname, scope: suiteScope });
+
+test('plugin system: inspect-plugin-folder validates and normalizes plugin folders', async () => {
+  const { inspectPluginFolder } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'inspect-plugin-folder.js'));
+  const dir = path.join(__dirname, 'tmp', 'plugin-fixture');
+  await fsPromises.rm(dir, { recursive: true, force: true });
+  await fsPromises.mkdir(dir, { recursive: true });
+
+  const relative = await inspectPluginFolder({ fs: fsPromises, folderPath: 'relative/path' });
+  assert.equal(relative.ok, false);
+
+  const missingEntry = await inspectPluginFolder({ fs: fsPromises, folderPath: dir });
+  assert.equal(missingEntry.ok, false);
+
+  await fsPromises.writeFile(path.join(dir, 'index.html'), '<!DOCTYPE html><title>x</title>');
+  await fsPromises.writeFile(path.join(dir, 'plugin.json'), JSON.stringify({ name: 'My Plugin!', description: 'demo' }));
+  const result = await inspectPluginFolder({ fs: fsPromises, folderPath: dir });
+  assert.equal(result.ok, true);
+  assert.equal(result.id, 'my-plugin');
+  assert.equal(result.name, 'My Plugin!');
+  assert.equal(result.description, 'demo');
+  assert.ok(result.entryUrl.startsWith('file://'));
+  assert.ok(result.entryUrl.endsWith('/index.html'));
+
+  await fsPromises.writeFile(path.join(dir, 'plugin.json'), '{not json');
+  const badManifest = await inspectPluginFolder({ fs: fsPromises, folderPath: dir });
+  assert.equal(badManifest.ok, false);
+});
 
 async function run() {
   let passed = 0;

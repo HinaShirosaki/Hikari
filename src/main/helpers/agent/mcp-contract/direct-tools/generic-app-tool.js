@@ -15,7 +15,6 @@ const {
 } = require('./shared.js');
 
 const READ_ONLY_APP_TOOL_IDS = Object.freeze(new Set([
-  'record-lookup',
   'purchase-recommendation'
 ]));
 

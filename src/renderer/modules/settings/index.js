@@ -7,6 +7,7 @@ import {
   normalizeAgentLlmProvider as normalizeLlmProvider
 } from '../llm-provider-config.generated.js';
 import { createExternalSkillsController } from './external-skills-controller.js';
+import { createPluginsController } from './plugins-controller.js';
 import {
   createLlmModelCatalog,
   normalizeCodexLoginStatus
@@ -19,6 +20,7 @@ import {
   applyAppearanceToDocument,
   normalizeAppearanceMode
 } from '../app-state/appearance.js';
+import { normalizePreferredJournalList } from '../preferred-journals.js';
 
 
 export function initSettings({
@@ -60,6 +62,10 @@ export function initSettings({
     settingExternalSkillsStatus,
     settingExternalSkillsRefreshBtn,
     settingExternalSkillsList,
+    pluginsAddBtn,
+    pluginsReloadBtn,
+    pluginsStatus,
+    pluginsList,
     telegramForm,
     settingTelegramToken,
     settingTelegramStatus,
@@ -103,6 +109,14 @@ export function initSettings({
     enabledInput: settingAgentExternalSkillsEnabled,
     statusElement: settingExternalSkillsStatus,
     listElement: settingExternalSkillsList,
+    escapeHtml
+  });
+  const pluginsController = createPluginsController({
+    state,
+    persist,
+    api: window.hikariApi || null,
+    statusElement: pluginsStatus,
+    listElement: pluginsList,
     escapeHtml
   });
   const sampleInventoryController = createSampleInventorySettingsController({
@@ -162,6 +176,12 @@ export function initSettings({
   settingAgentExternalSkillsEnabled?.addEventListener('change', externalSkillsController.onGlobalEnabledChanged);
   settingExternalSkillsRefreshBtn?.addEventListener('click', () => {
     void externalSkillsController.refresh();
+  });
+  pluginsAddBtn?.addEventListener('click', () => {
+    void pluginsController.onAddPlugin();
+  });
+  pluginsReloadBtn?.addEventListener('click', () => {
+    window.location.reload();
   });
   telegramForm?.addEventListener('submit', onSaveTelegramToken);
   clearTelegramTokenBtn?.addEventListener('click', onClearTelegramToken);
@@ -340,6 +360,7 @@ export function initSettings({
     }
     renderCodexStatus();
     externalSkillsController.render();
+    pluginsController.render();
     renderTelegramStatus();
     sampleInventoryController.renderLocationList();
     sampleInventoryController.renderSampleInventoryLocationList();
@@ -785,32 +806,18 @@ export function initSettings({
     const list = Array.isArray(state.settings?.preferredJournals)
       ? state.settings.preferredJournals
       : [];
+    const snakeList = Array.isArray(state.settings?.preferred_journals)
+      ? state.settings.preferred_journals
+      : [];
     const legacy = String(state.settings?.preferredJournal || '').trim();
-    return normalizePreferredJournalList([
-      ...list,
-      ...(list.length ? [] : legacy.split(/[;\n]+/))
-    ]);
+    const snakeLegacy = String(state.settings?.preferred_journal || '').trim();
+    return normalizePreferredJournalList([list, snakeList, legacy, snakeLegacy]);
   }
 
   function setPreferredJournalSettings(journals) {
     const normalized = normalizePreferredJournalList(journals);
     state.settings.preferredJournals = normalized;
     state.settings.preferredJournal = normalized.join('; ');
-  }
-
-  function normalizePreferredJournalList(journals) {
-    const seen = new Set();
-    const normalized = [];
-    (Array.isArray(journals) ? journals : []).forEach((item) => {
-      const journal = String(item || '').trim();
-      const key = journal.toLowerCase();
-      if (!journal || seen.has(key)) {
-        return;
-      }
-      seen.add(key);
-      normalized.push(journal);
-    });
-    return normalized.slice(0, 12);
   }
 
   async function refreshTelegramBotStatus() {

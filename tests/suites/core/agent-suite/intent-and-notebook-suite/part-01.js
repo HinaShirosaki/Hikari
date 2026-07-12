@@ -150,7 +150,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
       assert.equal(agentIntentParser.normalizeParserIntent('data_analysis_or_coding'), 'result_analysis');
       assert.equal(agentIntentParser.normalizeParserIntent('coding-data-analysis'), 'result_analysis');
       assert.equal(agentIntentParser.normalizeParserIntent('inventory_loopup'), 'inventory_lookup');
-      assert.equal(agentIntentParser.normalizeParserIntent('record_loopup'), 'record_lookup');
+      assert.equal(agentIntentParser.normalizeParserIntent('notebook_loopup'), 'notebook_lookup');
       assert.equal(agentIntentParser.normalizeParserIntent('product_recommendation'), 'purchase_recommendation');
       assert.equal(agentIntentParser.normalizeParserIntent('shopping-search'), 'purchase_recommendation');
     });
@@ -250,8 +250,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
         executeInventoryLookup: async () => {
           throw new Error('Inventory lookup should not run for unclear fallback.');
         },
-        executeRecordLookup: async () => {
-          throw new Error('Record lookup should not run for unclear fallback.');
+        executeNotebookLookup: async () => {
+          throw new Error('Notebook lookup should not run for unclear fallback.');
         },
         getDefaultDataFilePath: () => '',
         lifecycleService: {
@@ -348,8 +348,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
         executeInventoryLookup: async () => {
           throw new Error('Inventory lookup should not run for purchase recommendations.');
         },
-        executeRecordLookup: async () => {
-          throw new Error('Record lookup should not run for purchase recommendations.');
+        executeNotebookLookup: async () => {
+          throw new Error('Notebook lookup should not run for purchase recommendations.');
         },
         getDefaultDataFilePath: () => '',
         lifecycleService: {

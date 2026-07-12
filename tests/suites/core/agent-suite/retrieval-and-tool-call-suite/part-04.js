@@ -123,7 +123,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart04(context =
     test('agent tool-call runtime passes normalized context and helper services into injected executors', async () => {
       const runtime = toolExecution.createAgentToolCallRuntime({
         toolExecutors: {
-          'record-lookup': async ({ toolName, args, context, services }) => ({
+          'notebook-lookup': async ({ toolName, args, context, services }) => ({
             status: 'handled',
             summary: `${toolName} received ${args.query}.`,
             items: [
@@ -137,7 +137,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart04(context =
         }
       });
       const result = await runtime.executeToolCall({
-        tool_name: 'record-lookup',
+        tool_name: 'notebook-lookup',
         arguments: {
           query: 'Protein Purification'
         }
@@ -151,7 +151,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart04(context =
         }
       });
       assert.equal(result.ok, true);
-      assert.equal(result.tool_name, 'record-lookup');
+      assert.equal(result.tool_name, 'notebook-lookup');
       assert.equal(result.result.status, 'handled');
       assert.equal(result.result.items[0].message, 'Find protein purification records for Atlas.');
       assert.equal(result.result.items[0].projectName, 'Atlas');

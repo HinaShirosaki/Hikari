@@ -101,6 +101,58 @@ function buildPaperAgentSessionBlock(input = {}, cleanText = defaultCleanText) {
   ].join('\n');
 }
 
+function normalizePreferredJournalNames(value, cleanText = defaultCleanText) {
+  const candidates = [];
+  function pushCandidate(candidate) {
+    if (Array.isArray(candidate)) {
+      candidate.forEach(pushCandidate);
+      return;
+    }
+    if (candidate && typeof candidate === 'object') {
+      pushCandidate(candidate.name || candidate.url || candidate.href || '');
+      return;
+    }
+    String(candidate || '')
+      .split(/[;\n]+/u)
+      .map((item) => cleanText(item, 240).trim())
+      .filter(Boolean)
+      .forEach((item) => candidates.push(item));
+  }
+  pushCandidate(value);
+  return candidates
+    .filter((item, index, list) => {
+      const key = item.toLowerCase();
+      return key && list.findIndex((candidate) => candidate.toLowerCase() === key) === index;
+    })
+    .slice(0, 12);
+}
+
+function buildSavedSettingsBlock(input = {}, cleanText = defaultCleanText) {
+  const snapshot = ensureObject(input.snapshot);
+  const settings = ensureObject(snapshot.settings);
+  const preferredJournals = normalizePreferredJournalNames([
+    settings.preferredJournals,
+    settings.preferred_journals,
+    snapshot.preferredJournals,
+    snapshot.preferred_journals,
+    settings.preferredJournal,
+    settings.preferred_journal,
+    snapshot.preferredJournal,
+    snapshot.preferred_journal
+  ], cleanText);
+  if (!preferredJournals.length) {
+    return '';
+  }
+  return [
+    'Saved Hikari settings:',
+    JSON.stringify({
+      preferred_journals: preferredJournals
+    }, null, 2),
+    '',
+    'For literature-search requests, these saved preferred journals are already available to the Hikari MCP tools through the request context. Treat them as soft ranking preferences, including when the user says "from my preferred journals" or asks to use saved preferences. Do not call memory just to rediscover these saved settings. Do not pass a hard `journals` filter unless the current request explicitly names a restrictive filter such as "only" or "exclusively" those journals.'
+  ].join('\n');
+}
+
 function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}) {
   const message = cleanText(input.message, 24000);
   const attachmentText = summarizeAttachments(cleanText, input.attachments);
@@ -108,6 +160,7 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
   const projectName = cleanText(input.projectName, 220);
   const selectionInsight = ensureObject(input.selectionInsight);
   const paperAgentSessionBlock = buildPaperAgentSessionBlock(input, cleanText);
+  const savedSettingsBlock = buildSavedSettingsBlock(input, cleanText);
   const protocolGenerationTool = buildHikariCodexMcpToolName('protocol_generation');
   const assayTableTool = buildHikariCodexMcpToolName('assay_table');
   const plotlyGraphTool = buildHikariCodexMcpToolName('plotly_graph');
@@ -120,9 +173,11 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     '',
     'Hikari provides rendering and the MCP server. Use your Codex session context for continuity, tool choice, intent parsing, synthesis, and normal assistant prose for Hikari to render. Use native Codex search for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
     '',
+    'For a paper request that needs both literature APIs and Codex web discovery, call Hikari literature_search once with API sources only (`pubmed`, `crossref`, and `europe_pmc`), then use native Codex web search separately. Do not include `web` in the Hikari call: that source would start a nested Codex CLI request and stall the current turn.',
+    '',
     `Protocol generation handoff: when the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, first author complete protocol JSON from the evidence, then call \`${protocolGenerationTool}\` with \`{ protocol, save: true }\`. After the tool call, summarize that the generated protocol is ready for review.`,
     '',
-    `Assay context handoff: when this chat turn contains hidden assay context, retrieve the active assay data by reading the \`Assay plate data (TSV...)\` block inside this same prompt. Parse the TSV lines after the header \`well\\trow\\tcolumn\\tsample\\tconcentration\\tresult\` into explicit row objects, then call \`${assayTableTool}\` with \`action: "create"\` when calculations, regression, derived tables, or graphing are needed. Do not call or expect \`record_lookup\` for active assay plate data. If the TSV title says rows exist but the body rows are absent, report that the assay context was supplied without row data instead of trying record lookup. Use \`${plotlyGraphTool}\` only after the table or calculation data exists.`,
+    `Assay context handoff: when this chat turn contains hidden assay context, retrieve the active assay data by reading the \`Assay plate data (TSV...)\` block inside this same prompt. Parse the TSV lines after the header \`well\\trow\\tcolumn\\tsample\\tconcentration\\tresult\` into explicit row objects, then call \`${assayTableTool}\` with \`action: "create"\` when calculations, regression, derived tables, or graphing are needed. Do not use local lookup tools for active assay plate data. If the TSV title says rows exist but the body rows are absent, report that the assay context was supplied without row data instead of trying lookup fallback paths. Use \`${plotlyGraphTool}\` only after the table or calculation data exists.`,
     '',
     projectId || projectName
       ? `Selected project:\n${JSON.stringify({ id: projectId, name: projectName }, null, 2)}`
@@ -131,6 +186,7 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
     selectionInsight.actionType || selectionInsight.selectedText
       ? `Selection insight context:\n${JSON.stringify(selectionInsight, null, 2)}`
       : '',
+    savedSettingsBlock,
     paperAgentSessionBlock,
     attachmentText ? `Attachments supplied by Hikari:\n${attachmentText}` : '',
     '',

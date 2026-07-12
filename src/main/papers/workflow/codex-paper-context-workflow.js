@@ -186,7 +186,9 @@ function buildCodexPaperContextMessage(input = {}, helpers = {}) {
     '- Work on this paper only. Because the task is one-paper scoped, do not include paper_id, paper title, or file path in the response.',
     '- Choose only context that directly helps answer the main-agent request.',
     `- Return at most ${maxBlocks} selected line-range objects for this paper.`,
-    '- Use 1-based line numbers exactly as shown by your file reader for paper.md.',
+    '- Read paper.md with a true line-numbered command such as `nl -ba`, or an equivalent reader that shows physical file line numbers.',
+    '- Use those 1-based physical line numbers exactly. Do not count visual line wrapping as additional lines.',
+    '- Before returning, verify that every start line exists in paper.md.',
     '- Use multiple `line_ranges` in one object when the same evidence is split across non-contiguous lines.',
     '- Keep each range narrow enough for prompt context; prefer paragraphs or compact table rows over whole sections.',
     '- Return only line numbers and reasons. Do not include excerpt, text, content, quotes, paper_id, or file path. Hikari retrieves source text.',
@@ -269,6 +271,7 @@ async function hydrateLineSelectionsForPaper({
   const paperId = cleanText(paperTarget.paper_id || paperTarget.paperId, 120);
   const paperTitle = cleanText(paperTarget.paper_title || paperTarget.paperTitle || paperTarget.title, 320);
   const relativePath = getKnowledgeMarkdownRelativePath(paperTarget);
+  const notes = [];
   const blocks = asArray(linePayload.selected_line_ranges)
     .slice(0, DEFAULT_MAX_CONTEXT_BLOCKS)
     .map((selection, index) => {
@@ -277,6 +280,11 @@ async function hydrateLineSelectionsForPaper({
         return null;
       }
       const hydrated = readLineRangesFromText(markdown, lineRanges);
+      if (hydrated.rejected_ranges.length) {
+        notes.push(
+          `Ignored ${hydrated.rejected_ranges.length} line range(s) beyond the ${hydrated.line_count}-line paper.md for ${paperTitle || paperId || 'paper'}.`
+        );
+      }
       if (!hydrated.excerpt) {
         return null;
       }
@@ -295,6 +303,7 @@ async function hydrateLineSelectionsForPaper({
           start_line: part.start_line,
           end_line: part.end_line
         })),
+        source_lines: hydrated.source_lines,
         source_line_count: hydrated.line_count,
         ...(relativePath ? { source_path: relativePath } : {}),
         ...(markdownPath ? { source_absolute_path: markdownPath } : {})
@@ -304,7 +313,7 @@ async function hydrateLineSelectionsForPaper({
 
   return {
     blocks: attachRelatedCommentsToContextBlocks(blocks, annotationContext, { asArray, cleanText }),
-    notes: []
+    notes
   };
 }
 

@@ -20,6 +20,9 @@ export function installContainerContextMenu(ctx) {
       return;
     }
     containerContextMenu.innerHTML = `
+      <button type="button" class="personal-inventory-context-item" data-container-context-add-child>
+        Add Subcontainer
+      </button>
       <button type="button" class="personal-inventory-context-item" data-container-context-rename>
         Rename
       </button>
@@ -27,6 +30,13 @@ export function installContainerContextMenu(ctx) {
         Delete
       </button>
     `;
+    containerContextMenu.querySelector('[data-container-context-add-child]')?.addEventListener('click', () => {
+      const target = uiState.contextContainer;
+      hideContainerContextMenu();
+      if (target) {
+        ctx.beginAddSubcontainer?.(target.section, target.containerId);
+      }
+    });
     containerContextMenu.querySelector('[data-container-context-rename]')?.addEventListener('click', () => {
       enterRenameMode(uiState.contextContainer);
     });

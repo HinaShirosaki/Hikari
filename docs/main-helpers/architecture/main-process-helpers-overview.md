@@ -4,7 +4,7 @@
 
 ## Assembly pattern
 
-`main.js` is a 5-line entry. `src/main/core/start-hikari-main-core.js` is a generic lifecycle shell over the static definitions in `src/main/core/main-service-catalog.js`. The catalog:
+`main.js` is a 5-line entry. `src/main/core/main-services.js` constructs every service in dependency order and registers all IPC. It:
 
 - creates the data persistence facade with `createMainDataHelpers(...)` and paths with `createMainAppPaths(...)`
 - imports concrete storage, sequence-library, and LLM operations
@@ -65,8 +65,7 @@ See [sequence-library.md](../sequences/sequence-library.md).
 
 Shortest reading path:
 
-1. `src/main/core/start-hikari-main-core.js` — generic lifecycle facade
-2. `src/main/core/main-service-catalog.js` — dependency and IPC composition
-3. `src/main/ipc/register-data-ipc.js` — the external API surface
+1. `src/main/core/main-services.js` — service construction and IPC composition
+2. `src/main/ipc/register-data-ipc.js` — the external API surface
 4. `data/data-helpers.js` and `storage-bundle/index.js` — save/load semantics
 5. `sequence-library/index.js` — only after that; it is effectively its own storage subsystem

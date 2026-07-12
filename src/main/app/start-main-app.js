@@ -5,7 +5,7 @@ const path = require('path');
 const fs = require('node:fs/promises');
 
 const { createMainWindow } = require('../windows/create-main-window');
-const { createHikariMainCore } = require('../core/start-hikari-main-core');
+const { createMainServices } = require('../core/main-services');
 const { SYSTEM } = require('../../shared/ipc/channels');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
@@ -16,7 +16,7 @@ function startMainApp() {
   let closeRequestPending = false;
   let appQuitPending = false;
   let closeResponseTimer = null;
-  const mainCore = createHikariMainCore({
+  const mainServices = createMainServices({
     app,
     BrowserWindow,
     dialog,
@@ -38,7 +38,7 @@ function startMainApp() {
       BrowserWindow,
       path,
       projectRoot: PROJECT_ROOT,
-      appIconPath: mainCore.appIconPath,
+      appIconPath: mainServices.appIconPath,
       preloadPath: path.join(__dirname, '..', 'preload.js'),
       onCloseRequested: (event, window) => {
         if (allowWindowClose || window.webContents?.isDestroyed?.()) {
@@ -116,16 +116,14 @@ function startMainApp() {
     }
   });
 
-  mainCore.registerIpcHandlers();
-
   app.whenReady()
     .then(async () => {
       if (process.platform === 'darwin' && app.dock) {
-        app.dock.setIcon(mainCore.appIconPath);
+        app.dock.setIcon(mainServices.appIconPath);
       }
 
       createWindow();
-      await mainCore.onAppReady();
+      await mainServices.start();
 
       app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -151,7 +149,7 @@ function startMainApp() {
       mainWindow.close();
       return;
     }
-    void mainCore.shutdown().catch((error) => {
+    void mainServices.shutdown().catch((error) => {
       console.error('Failed to stop Hikari main services:', error);
     });
   });

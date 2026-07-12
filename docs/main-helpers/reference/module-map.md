@@ -2,7 +2,7 @@
 
 This is a quick lookup map for `src/main/helpers/main`.
 
-> The main process was reorganized: IPC registrars now live in `src/main/ipc/` (not in this folder), and `main.js` is a thin entry that defers to `src/main/core/start-hikari-main-core.js`. Many former single files are now folders.
+> The main process was reorganized: IPC registrars now live in `src/main/ipc/` (not in this folder), and `main.js` is a thin entry that defers to `src/main/core/main-services.js`. Many former single files are now folders.
 
 ## Legend
 
@@ -103,10 +103,9 @@ IPC registration no longer lives in this folder. See [ipc-registrars.md](../ipc/
 
 If you want to read the code after this doc set, start here:
 
-1. `src/main/core/start-hikari-main-core.js` (generic lifecycle)
-2. `src/main/core/main-service-catalog.js` (service and IPC composition)
-3. `src/main/ipc/register-data-ipc.js`
-4. `src/main/helpers/main/data/data-helpers.js`
-5. `src/main/helpers/main/storage-bundle/index.js`
+1. `src/main/core/main-services.js` (service construction and IPC composition)
+2. `src/main/ipc/register-data-ipc.js`
+3. `src/main/helpers/main/data/data-helpers.js`
+4. `src/main/helpers/main/storage-bundle/index.js`
 
 Then move to `sequence-library/` only if you need the biology-specific library behavior.

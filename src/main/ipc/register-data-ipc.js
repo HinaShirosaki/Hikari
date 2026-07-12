@@ -10,8 +10,10 @@ const {
   STORAGE,
   ASSAY,
   INVENTORY,
+  PLUGINS,
   SEQUENCE_LIBRARY
 } = require('../../shared/ipc/channels');
+const { inspectPluginFolder } = require('../helpers/main/inspect-plugin-folder');
 
 function registerDataIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
@@ -208,6 +210,73 @@ function registerDataIpc(deps = {}) {
     };
   }
 
+  function resolveStorageFilePath(storagePath, sourcePath = '', sourceRelativePath = '') {
+    const resolvedStoragePath = path.resolve(storagePath);
+    const directPath = String(sourcePath || '').trim();
+    const relativePath = String(sourceRelativePath || '').trim();
+    const candidate = directPath
+      ? (path.isAbsolute(directPath) ? path.resolve(directPath) : path.resolve(resolvedStoragePath, directPath))
+      : path.resolve(resolvedStoragePath, relativePath);
+    return ensurePathWithinRoot(resolvedStoragePath, candidate);
+  }
+
+  async function moveStoredFile(payload) {
+    const storagePath = String(payload?.storagePath || '').trim();
+    const targetFolderInput = String(payload?.targetFolder || '').trim();
+
+    if (!storagePath) {
+      throw new Error('Missing storage path.');
+    }
+    if (!targetFolderInput) {
+      throw new Error('Missing target folder.');
+    }
+
+    const resolvedStoragePath = path.resolve(storagePath);
+    const sourceFilePath = resolveStorageFilePath(
+      resolvedStoragePath,
+      payload?.sourcePath,
+      payload?.sourceRelativePath
+    );
+    const sourceStat = await fs.stat(sourceFilePath);
+    if (!sourceStat.isFile()) {
+      throw new Error('Source path is not a file.');
+    }
+
+    const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
+    await fs.mkdir(resolvedTargetFolder, { recursive: true });
+
+    const targetFileName = sanitizeImportedFileName(payload?.fileName || path.basename(sourceFilePath));
+    const directTargetPath = path.join(resolvedTargetFolder, targetFileName);
+    if (path.resolve(directTargetPath) === sourceFilePath) {
+      return {
+        moved: false,
+        filePath: sourceFilePath,
+        fileName: path.basename(sourceFilePath),
+        relativePath: path.relative(resolvedStoragePath, sourceFilePath).split(path.sep).join('/'),
+        previousRelativePath: path.relative(resolvedStoragePath, sourceFilePath).split(path.sep).join('/')
+      };
+    }
+
+    const targetFilePath = await getUniqueFilePath(resolvedTargetFolder, targetFileName);
+    try {
+      await fs.rename(sourceFilePath, targetFilePath);
+    } catch (error) {
+      if (error?.code !== 'EXDEV') {
+        throw error;
+      }
+      await fs.copyFile(sourceFilePath, targetFilePath);
+      await fs.unlink(sourceFilePath);
+    }
+
+    return {
+      moved: true,
+      filePath: targetFilePath,
+      fileName: path.basename(targetFilePath),
+      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/'),
+      previousRelativePath: path.relative(resolvedStoragePath, sourceFilePath).split(path.sep).join('/')
+    };
+  }
+
   async function appendNotebookPageLog(payload) {
     const storagePath = String(payload?.storagePath || '').trim();
     const targetFolderInput = String(payload?.storageFolder || '').trim();
@@ -330,6 +399,15 @@ function registerDataIpc(deps = {}) {
     return { ok: true, path: result.filePaths[0] };
   });
 
+  ipcMain.handle(PLUGINS.INSPECT_FOLDER, async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    try {
+      return await inspectPluginFolder({ fs, folderPath: normalizedPayload?.path });
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
   ipcMain.handle(STORAGE.ENSURE_DIRECTORY, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
@@ -349,6 +427,15 @@ function registerDataIpc(deps = {}) {
     try {
       const stored = await storeImportedFile(normalizeJsonPayload(payload, {}));
       return { ok: true, ...stored };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle(STORAGE.MOVE_STORED_FILE, async (_event, payload) => {
+    try {
+      const moved = await moveStoredFile(normalizeJsonPayload(payload, {}));
+      return { ok: true, ...moved };
     } catch (error) {
       return { ok: false, error: String(error?.message || error) };
     }

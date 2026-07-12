@@ -7,15 +7,10 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
-      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
-      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
       readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'app', 'agent-log-runtime.js')
     ].join('\n');
     const readPreloadStorageSource = () => [
@@ -164,6 +159,60 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         assert.equal(result.filePath, '');
         assert.equal(syncedDataFilePath, '');
         await assert.rejects(fsPromises.access(staleDataPath));
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
+    test('storage move-stored-file IPC moves a file inside the storage root', async () => {
+      const { registerDataIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'));
+      const { STORAGE } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-move-paper-file-'));
+      const handlers = new Map();
+      const ipcMain = {
+        handle(channel, handler) {
+          handlers.set(channel, handler);
+        }
+      };
+      try {
+        const sourceFolder = path.join(tempDir, 'Project', 'Atlas', 'Papers');
+        const targetFolder = path.join(tempDir, 'Papers', 'Reading_Club');
+        const sourcePath = path.join(sourceFolder, 'atlas.pdf');
+        await fsPromises.mkdir(sourceFolder, { recursive: true });
+        await fsPromises.writeFile(sourcePath, Buffer.from('%PDF-1.4\n'));
+
+        registerDataIpc({
+          ipcMain,
+          fs: fsPromises,
+          dialog: {},
+          shell: {},
+          mainDataHelpers: {},
+          importStorageRoot: async () => ({}),
+          discoverPapersFromStorageRoot: async () => ({}),
+          syncSqliteBundleFromSnapshot: async () => ({}),
+          listSequenceEntries: async () => ({}),
+          getSequenceEntry: async () => ({}),
+          upsertSequenceEntry: async () => ({}),
+          promoteSequenceEntry: async () => ({}),
+          deleteSequenceEntry: async () => ({}),
+          annotateSequenceRecord: async () => ({}),
+          searchSequenceFeatures: async () => ({}),
+          listRecognizedBackbones: async () => ({}),
+          upsertRecognizedBackbone: async () => ({}),
+          recognizeSequenceBackbone: async () => ({})
+        });
+
+        const result = await handlers.get(STORAGE.MOVE_STORED_FILE)(null, {
+          storagePath: tempDir,
+          sourceRelativePath: 'Project/Atlas/Papers/atlas.pdf',
+          targetFolder,
+          fileName: 'atlas.pdf'
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.moved, true);
+        assert.equal(result.relativePath, 'Papers/Reading_Club/atlas.pdf');
+        await assert.rejects(fsPromises.access(sourcePath));
+        assert.equal(await fsPromises.readFile(path.join(targetFolder, 'atlas.pdf'), 'utf8'), '%PDF-1.4\n');
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
@@ -393,13 +442,13 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         assert.equal(inventorySearch.usedSqlite, true);
         assert.equal(inventorySearch.items.some((item) => item.kind === 'personal_sample'), true);
 
-        const recordSearch = await lookupRuntime.searchRecordIndex({ dataFilePath, snapshot: compactSnapshot, query: 'Protein Purification', searchTerms: ['protein', 'purification'], limit: 6 });
-        assert.equal(recordSearch.usedSqlite, true);
-        assert.equal(recordSearch.items.length > 0, true);
-        assert.equal(recordSearch.items.some((item) => item.record_type === 'protocol'), true);
+        const protocolSearch = await lookupRuntime.searchProtocolsIndex({ dataFilePath, snapshot: compactSnapshot, query: 'Protein Purification', limit: 6 });
+        assert.equal(protocolSearch.usedSqlite, false);
+        assert.equal(protocolSearch.items.length > 0, true);
+        assert.equal(protocolSearch.items.some((item) => item.name === 'Protein Purification'), true);
 
-        const calculationSearch = await lookupRuntime.searchRecordIndex({ dataFilePath, snapshot: compactSnapshot, query: '584.4 mg', searchTerms: ['584.4', 'mg'], limit: 6 });
-        assert.equal(calculationSearch.usedSqlite, true);
+        const calculationSearch = await lookupRuntime.searchNotebookEntriesIndex({ dataFilePath, snapshot: compactSnapshot, query: '584.4 mg', limit: 6 });
+        assert.equal(calculationSearch.usedSqlite, false);
         assert.equal(calculationSearch.items.some((item) => item.record_type === 'notebook'), true);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });

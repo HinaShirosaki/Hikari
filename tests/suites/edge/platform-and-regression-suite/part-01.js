@@ -154,6 +154,16 @@ test('[P1] normalizeState preserves explicit inventory locations array', () => {
   const normalized = shared.normalizeState({ settings: { inventoryLocations: ['Freezer A', 'Fridge B'] } });
   assert.deepEqual(normalized.settings.inventoryLocations, ['Freezer A', 'Fridge B']);
 });
+test('[P1] normalizeState normalizes multiple preferred journals from list and legacy strings', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      preferredJournals: ['Nature Biotechnology; Cell', ' nature biotechnology '],
+      preferredJournal: 'Science\nCell'
+    }
+  });
+  assert.deepEqual(normalized.settings.preferredJournals, ['Nature Biotechnology', 'Cell', 'Science']);
+  assert.equal(normalized.settings.preferredJournal, 'Nature Biotechnology; Cell; Science');
+});
 test('[P0] normalizeState keeps default sample inventory locations when invalid', () => {
   const normalized = shared.normalizeState({ settings: { sampleInventoryLocations: 'bad' } });
   assert.deepEqual(

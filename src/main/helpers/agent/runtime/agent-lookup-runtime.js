@@ -4,7 +4,6 @@ const fs = require('fs/promises');
 const path = require('path');
 const { resolveAgentRuntimeFactory } = require('../shared/agent-runtime-registry.js');
 const { createAgentInventoryLookupRuntime } = require('../tools/agent-inventory-lookup');
-const { createAgentRecordLookupRuntime } = require('../tools/agent-record-lookup.js');
 
 let SQLJS_WASM_JS_PATH = '';
 try {
@@ -409,7 +408,6 @@ function createAgentLookupRuntime(deps = {}) {
     : (({ fallbackQuery = '' } = {}) => sharedLookupDeps.uniqueStrings([fallbackQuery], 10));
 
   const inventoryLookupFactory = resolveAgentRuntimeFactory(deps, 'inventory-lookup');
-  const recordLookupFactory = resolveAgentRuntimeFactory(deps, 'record-lookup');
   const inventoryLookupRuntime = typeof inventoryLookupFactory === 'function'
     ? inventoryLookupFactory({
       ...sharedLookupDeps,
@@ -419,9 +417,6 @@ function createAgentLookupRuntime(deps = {}) {
       ...sharedLookupDeps,
       buildInventorySearchTerms
     });
-  const recordLookupRuntime = typeof recordLookupFactory === 'function'
-    ? recordLookupFactory(sharedLookupDeps)
-    : createAgentRecordLookupRuntime(sharedLookupDeps);
 
   function buildProtocolItemsFromSnapshot(snapshot, { query = '', limit = 6 } = {}) {
     const protocolApi = sharedLookupDeps.agentAppApi?.protocol;
@@ -540,7 +535,12 @@ function createAgentLookupRuntime(deps = {}) {
           payload.projectId,
           payload.projectName,
           payload.result,
-          payload.updatedAt
+          payload.updatedAt,
+          // Tool-calculation output is searchable content too (e.g. "584.4 mg").
+          ...sharedLookupDeps.asArray(payload.toolCalculations).map((calc) => {
+            const entry = sharedLookupDeps.ensureObject(calc);
+            return [entry.title, entry.result, entry.summary, entry.formula].filter(Boolean).join(' ');
+          })
         ])
       };
     });
@@ -607,55 +607,16 @@ function createAgentLookupRuntime(deps = {}) {
       fallbackDataFilePath,
       snapshot
     });
-    const searchResult = await recordLookupRuntime.searchRecordIndex({
-      dataFilePath: context.dataFilePath,
-      fallbackDataFilePath: context.fallbackDataFilePath,
+    const items = buildProtocolItemsFromSnapshot(context.hydratedSnapshot, {
       query,
-      limit: Math.max(requestedLimit * 6, 24),
-      searchTerms: [query],
-      snapshot: context.hydratedSnapshot,
-      recordTypes: ['protocol']
+      limit: requestedLimit
     });
-
-    const protocolById = new Map(
-      sharedLookupDeps.asArray(context.hydratedSnapshot?.protocols).map((protocol) => {
-        const payload = sharedLookupDeps.ensureObject(protocol);
-        return [sharedLookupDeps.cleanText(payload.id, 120), payload];
-      })
-    );
-
-    let items = sharedLookupDeps.asArray(searchResult.items)
-      .filter((item) => sharedLookupDeps.cleanText(item?.record_type, 40) === 'protocol')
-      .map((item) => {
-        const protocol = protocolById.get(sharedLookupDeps.cleanText(item?.id, 120)) || {};
-        const steps = sharedLookupDeps.asArray(protocol?.steps).map((step) => {
-          if (typeof step === 'string') {
-            return sharedLookupDeps.cleanText(step, 220);
-          }
-          const stepPayload = sharedLookupDeps.ensureObject(step);
-          return sharedLookupDeps.cleanText(stepPayload.text || stepPayload.instruction || stepPayload.action, 220);
-        }).filter(Boolean).slice(0, 8);
-        return {
-          id: sharedLookupDeps.cleanText(item?.id, 120),
-          name: sharedLookupDeps.cleanText(protocol?.name || item?.title, 220),
-          category: sharedLookupDeps.cleanText(protocol?.category, 80),
-          steps
-        };
-      })
-      .slice(0, requestedLimit);
-
-    if (!items.length) {
-      items = buildProtocolItemsFromSnapshot(context.hydratedSnapshot, {
-        query,
-        limit: requestedLimit
-      });
-    }
 
     return {
       items,
-      usedSqlite: searchResult.usedSqlite === true,
-      source: sharedLookupDeps.cleanText(searchResult.source, 80) || 'fallback_json',
-      backfilledSql: searchResult.backfilledSql === true
+      usedSqlite: false,
+      source: 'fallback_json',
+      backfilledSql: false
     };
   }
 
@@ -675,56 +636,16 @@ function createAgentLookupRuntime(deps = {}) {
       fallbackDataFilePath,
       snapshot
     });
-    const searchResult = await recordLookupRuntime.searchRecordIndex({
-      dataFilePath: context.dataFilePath,
-      fallbackDataFilePath: context.fallbackDataFilePath,
+    const items = filterNotebookItems(buildNotebookItemsFromSnapshot(context.hydratedSnapshot, {
       query,
-      limit: Math.max(requestedLimit * 6, 24),
-      searchTerms: sharedLookupDeps.uniqueStrings([query, protocolName, projectName], 8),
-      snapshot: context.hydratedSnapshot,
-      recordTypes: ['notebook']
-    });
-
-    const notebookById = new Map(
-      sharedLookupDeps.asArray(context.hydratedSnapshot?.notebookEntries).map((entry) => {
-        const payload = sharedLookupDeps.ensureObject(entry);
-        return [sharedLookupDeps.cleanText(payload.id, 120), payload];
-      })
-    );
-
-    let items = sharedLookupDeps.asArray(searchResult.items)
-      .filter((item) => sharedLookupDeps.cleanText(item?.record_type, 40) === 'notebook')
-      .map((item) => {
-        const entry = notebookById.get(sharedLookupDeps.cleanText(item?.id, 120)) || {};
-        return {
-          id: sharedLookupDeps.cleanText(item?.id, 120),
-          record_type: 'notebook',
-          title: sharedLookupDeps.cleanText(entry?.title || entry?.protocolName || item?.title || item?.id, 220),
-          project_id: sharedLookupDeps.cleanText(entry?.projectId || entry?.project_id || item?.project_id, 120),
-          project_name: sharedLookupDeps.cleanText(entry?.projectName || entry?.project_name || item?.project_name, 220),
-          linked_protocol_id: sharedLookupDeps.cleanText(entry?.protocolId || entry?.linked_protocol_id || item?.linked_protocol_id, 120),
-          linked_protocol_name: sharedLookupDeps.cleanText(entry?.protocolName || item?.linked_protocol_name || item?.title, 220),
-          protocolName: sharedLookupDeps.cleanText(entry?.protocolName || item?.linked_protocol_name || item?.title, 220),
-          result: sharedLookupDeps.cleanText(entry?.result || item?.summary, 500),
-          summary: sharedLookupDeps.cleanText(entry?.summary || entry?.result || item?.summary, 500),
-          updatedAt: sharedLookupDeps.cleanText(entry?.updatedAt || entry?.createdAt || item?.updated_at, 80)
-        };
-      })
-      .filter((item) => filterNotebookItems([item], { projectId, projectName, protocolName }).length > 0)
-      .slice(0, requestedLimit);
-
-    if (!items.length) {
-      items = filterNotebookItems(buildNotebookItemsFromSnapshot(context.hydratedSnapshot, {
-        query,
-        limit: requestedLimit
-      }), { projectId, projectName, protocolName });
-    }
+      limit: Math.max(requestedLimit * 3, requestedLimit)
+    }), { projectId, projectName, protocolName }).slice(0, requestedLimit);
 
     return {
       items,
-      usedSqlite: searchResult.usedSqlite === true,
-      source: sharedLookupDeps.cleanText(searchResult.source, 80) || 'fallback_json',
-      backfilledSql: searchResult.backfilledSql === true
+      usedSqlite: false,
+      source: 'fallback_json',
+      backfilledSql: false
     };
   }
 
@@ -742,12 +663,12 @@ function createAgentLookupRuntime(deps = {}) {
     const parser = sharedLookupDeps.ensureObject(parserPayload);
     const entities = sharedLookupDeps.ensureObject(parser.entities);
     const query = sharedLookupDeps.cleanText(
-      message
-      || protocolName
+      protocolName
       || entities.protocol_name
       || entities.notebook_name
       || entities.project_name
       || entities.activity_type
+      || message
       || entities.requested_output,
       300
     );
@@ -778,9 +699,7 @@ function createAgentLookupRuntime(deps = {}) {
     searchInventoryIndex: inventoryLookupRuntime.searchInventoryIndex,
     searchProtocolsIndex,
     searchNotebookEntriesIndex,
-    searchRecordIndex: recordLookupRuntime.searchRecordIndex,
     executeInventoryLookup: inventoryLookupRuntime.executeInventoryLookup,
-    executeRecordLookup: recordLookupRuntime.executeRecordLookup,
     executeNotebookLookup
   };
 }

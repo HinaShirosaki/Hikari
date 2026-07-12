@@ -23,7 +23,7 @@ const ICONS = {
   bold: () => makeIcon('0 0 16 16', (svg) => {
     const t = svgEl('text', {
       x: '8', y: '12', 'text-anchor': 'middle',
-      'font-family': 'serif', 'font-weight': '900', 'font-size': '13', fill: 'currentColor'
+      'font-family': 'sans-serif', 'font-weight': '900', 'font-size': '13', fill: 'currentColor'
     });
     t.textContent = 'B';
     svg.appendChild(t);
@@ -31,7 +31,7 @@ const ICONS = {
   italic: () => makeIcon('0 0 16 16', (svg) => {
     const t = svgEl('text', {
       x: '8', y: '12', 'text-anchor': 'middle',
-      'font-family': 'serif', 'font-style': 'italic', 'font-size': '13', fill: 'currentColor'
+      'font-family': 'sans-serif', 'font-style': 'italic', 'font-size': '13', fill: 'currentColor'
     });
     t.textContent = 'I';
     svg.appendChild(t);
@@ -39,7 +39,7 @@ const ICONS = {
   underline: () => makeIcon('0 0 16 16', (svg) => {
     const t = svgEl('text', {
       x: '8', y: '11', 'text-anchor': 'middle',
-      'font-family': 'serif', 'font-size': '12', fill: 'currentColor'
+      'font-family': 'sans-serif', 'font-size': '12', fill: 'currentColor'
     });
     t.textContent = 'U';
     svg.appendChild(t);

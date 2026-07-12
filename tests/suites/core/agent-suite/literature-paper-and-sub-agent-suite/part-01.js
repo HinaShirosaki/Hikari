@@ -207,6 +207,112 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart01(con
       assert.equal(result.source_counts.web, 1);
       assert.equal(result.items.some((item) => item.source === 'web' && item.source_domain === 'www.nature.com'), true);
     });
+    test('literature search defers web discovery to the outer Codex agent during an MCP request', async () => {
+      const calls = [];
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        searchPubMedRecords: async () => {
+          calls.push('pubmed');
+          return [{
+            pmid: '101',
+            title: 'Molecular glue degrader PubMed paper',
+            url: 'https://pubmed.ncbi.nlm.nih.gov/101/'
+          }];
+        },
+        searchWebResults: async () => {
+          calls.push('web');
+          throw new Error('Nested Codex web search should not run.');
+        }
+      });
+
+      const result = await runtime.searchLiteratureCandidates({
+        query: 'molecular glue degraders',
+        sources: ['pubmed', 'web'],
+        defer_web_search_to_codex: true
+      });
+
+      assert.equal(result.ok, true);
+      assert.deepEqual(calls, ['pubmed']);
+      assert.deepEqual(result.sources, ['pubmed', 'web']);
+      assert.equal(result.source_counts.pubmed, 1);
+      assert.equal(result.source_counts.web, 0);
+      assert.match(String(result.source_errors.web || ''), /deferred to the active Codex agent/i);
+    });
+    test('literature search runtime uses private internal sizing without a public query limit', async () => {
+      const calls = [];
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        searchPubMedRecords: async ({ query, limit }) => {
+          calls.push({ query, limit });
+          return Array.from({ length: limit }, (_unused, index) => ({
+            pmid: String(1000 + index),
+            title: `Molecular glue degrader candidate ${index + 1}`,
+            summary: 'Candidate paper found through PubMed.',
+            url: `https://pubmed.ncbi.nlm.nih.gov/${1000 + index}/`
+          }));
+        }
+      });
+
+      const result = await runtime.searchLiteratureCandidates({
+        query: 'molecular glue degraders',
+        source: 'pubmed',
+        _internal_limit: 12,
+        _internal_max_per_source: 12
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].query, 'molecular glue degraders');
+      assert.equal(calls[0].limit, 12);
+      assert.equal(result.items.length, 12);
+      assert.equal(result.source_counts.pubmed, 12);
+    });
+    test('literature search runtime leaves sources unbounded when the caller omits caps', async () => {
+      const calls = [];
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        searchPubMedRecords: async ({ limit }) => {
+          calls.push(limit);
+          return Array.from({ length: 13 }, (_unused, index) => ({
+            pmid: String(2000 + index),
+            title: `Molecular glue degrader candidate ${index + 1}`
+          }));
+        }
+      });
+
+      const result = await runtime.searchLiteratureCandidates({
+        query: 'molecular glue degraders',
+        source: 'pubmed'
+      });
+
+      assert.equal(result.ok, true);
+      assert.deepEqual(calls, [0]);
+      assert.equal(result.items.length, 13);
+      assert.equal(result.source_counts.pubmed, 13);
+    });
+    test('literature search canonicalizes supplementary DOI results to the parent article URL', async () => {
+      const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({
+        searchCrossrefRecords: async () => ([
+          {
+            doi: '10.1021/acs.jmedchem.5c01681.s001',
+            title: 'Molecular glue degrader study',
+            url: 'https://doi.org/10.1021/acs.jmedchem.5c01681.s001'
+          },
+          {
+            doi: '10.1021/acs.jmedchem.5c01681.s002',
+            title: 'Molecular glue degrader study supplement',
+            url: 'https://doi.org/10.1021/acs.jmedchem.5c01681.s002'
+          }
+        ])
+      });
+
+      const result = await runtime.searchLiteratureCandidates({
+        query: 'molecular glue degraders',
+        source: 'crossref'
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.items.length, 1);
+      assert.equal(result.items[0].doi, '10.1021/acs.jmedchem.5c01681');
+      assert.equal(result.items[0].url, 'https://doi.org/10.1021%2Facs.jmedchem.5c01681');
+    });
     test('literature search runtime compresses sentence prompts into keyword-style paper queries', async () => {
       const capturedQueries = [];
       const runtime = agentLiteratureSearch.createLiteratureSearchRuntime({

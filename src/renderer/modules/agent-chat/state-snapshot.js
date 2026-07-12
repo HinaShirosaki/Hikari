@@ -6,6 +6,7 @@ import {
   mapWorkflow,
   trimText
 } from './shared.js';
+import { normalizePreferredJournalList } from '../preferred-journals.js';
 
 export { mapExperimentDataToLlmJson };
 
@@ -76,12 +77,13 @@ export function buildStateSnapshot(state, projectId) {
   const personalSections = Object.entries(state?.inventory || {});
   const personalItemCount = personalSections.reduce((count, [, items]) => count + asArray(items).length, 0);
   const chemicalCount = asArray(state?.labInventory?.chemicals).length;
-  const preferredJournals = asArray(state.settings?.preferredJournals)
-    .map((item) => trimText(item, 240))
-    .filter(Boolean);
-  const preferredJournal = preferredJournals.length
-    ? preferredJournals.join('; ')
-    : trimText(state.settings?.preferredJournal, 1200);
+  const preferredJournals = normalizePreferredJournalList([
+    state.settings?.preferredJournals,
+    state.settings?.preferred_journals,
+    state.settings?.preferredJournal,
+    state.settings?.preferred_journal
+  ]).map((item) => trimText(item, 240)).filter(Boolean);
+  const preferredJournal = preferredJournals.join('; ');
   return {
     projects,
     workflows,

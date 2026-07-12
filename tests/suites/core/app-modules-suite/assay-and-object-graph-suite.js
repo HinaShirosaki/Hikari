@@ -155,5 +155,32 @@ test('assay agent TSV formatter preserves object-row cells', () => {
   assert.doesNotMatch(source, /const source = Array\.isArray\(row\) \? row : \{\};/);
 });
 
+test('assay analysis accepts agent Plotly graph artifacts for workspace rendering', () => {
+  const analysisViewModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'analysis-view.js'
+  ));
+  const artifact = analysisViewModule.normalizeAgentPlotlyGraphArtifact({
+    graph: {
+      id: 'g1',
+      figure: {
+        data: [{ type: 'bar', x: ['A1', 'A2'], y: [0.2, 0.7], name: 'Result' }],
+        layout: { title: { text: 'Filled assay plate' } },
+        config: { responsive: true }
+      },
+      inspection: { issues: [] }
+    }
+  });
+
+  assert.equal(artifact.id, 'g1');
+  assert.equal(artifact.name, 'Filled assay plate');
+  assert.equal(artifact.figure.data[0].type, 'bar');
+  assert.equal(artifact.figure.layout.title.text, 'Filled assay plate');
+});
+
   }
 };

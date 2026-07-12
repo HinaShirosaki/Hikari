@@ -298,5 +298,92 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
   assert.equal(openedNotebookEntryId, state.notebookEntries[0].id);
   assert.equal(status.textContent, 'Opened planned notebook page.');
 });
+test('agent-chat releases the composer immediately when cancellation is acknowledged', async () => {
+  const requestControllerModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'agent-request-controller.js'
+  ));
+  let resolveAgentChat = null;
+  const state = { agentChat: { messages: [] } };
+  const runtime = {
+    inFlight: false,
+    liveAssistantMessage: null,
+    activeClientRequestId: '',
+    inFlightClientRequestId: '',
+    stopRequested: false,
+    stopInProgress: false
+  };
+  const inFlightUpdates = [];
+  const statuses = [];
+  const controller = requestControllerModule.createAgentRequestController({
+    api: {
+      agentChat: () => new Promise((resolve) => {
+        resolveAgentChat = resolve;
+      }),
+      agentChatCancel: async () => ({ ok: true, canceled: true })
+    },
+    state,
+    runtime,
+    input: { value: 'Find papers on molecular glue degraders.' },
+    createId: (() => {
+      let index = 0;
+      return () => `request-message-${index += 1}`;
+    })(),
+    persist: () => {},
+    payloadBuilder: {
+      getDraftRequest: () => ({
+        rawMessageText: 'Find papers on molecular glue degraders.',
+        attachments: [],
+        messageText: 'Find papers on molecular glue degraders.',
+        hiddenContexts: []
+      }),
+      getCurrentProjectDetails: () => ({ projectId: '', projectName: '' }),
+      buildAgentLlmPayload: () => ({}),
+      buildAgentFlagsPayload: () => ({})
+    },
+    attachmentsController: { reset: () => {} },
+    sessionManager: {
+      ensureCurrentChatSession: async () => 'chat-1',
+      renderSessionList: () => {},
+      upsertSessionSummary: () => {},
+      refreshPersistentSessions: async () => {}
+    },
+    buildSyncedStateSnapshot: async () => ({}),
+    ensureAgentState: () => {},
+    renderContextSummary: () => {},
+    renderHistoryView: () => {},
+    setStatus: (value) => statuses.push(value),
+    syncComposerHeight: () => {},
+    updateInFlightState: (value) => {
+      runtime.inFlight = value;
+      inFlightUpdates.push(value);
+    },
+    onNotebookEntriesChanged: () => {}
+  });
+
+  const pendingSend = controller.sendMessage();
+  await flushAsync();
+  await flushAsync();
+  assert.equal(typeof resolveAgentChat, 'function');
+  assert.equal(runtime.inFlight, true);
+
+  await controller.stopMessage();
+
+  assert.deepEqual(inFlightUpdates, [true, false]);
+  assert.equal(runtime.inFlight, false);
+  assert.equal(runtime.activeClientRequestId, '');
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.equal(state.agentChat.messages[1].text, 'Agent stopped.');
+  assert.equal(statuses.at(-1), 'Stopped.');
+
+  resolveAgentChat({ ok: false, canceled: true, error: 'Agent request stopped by user.' });
+  await pendingSend;
+  assert.equal(state.agentChat.messages.length, 2);
+  assert.deepEqual(inFlightUpdates, [true, false]);
+});
   }
 };

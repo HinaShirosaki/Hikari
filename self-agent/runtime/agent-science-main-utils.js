@@ -172,7 +172,7 @@ function createAgentScienceMainUtils(deps = {}) {
       ? [{
         statement: answerExcerpt,
         support_level: normalizedCitations.length
-          ? (normalizedCitations.some((citation) => ['project', 'protocol', 'notebook_entry', 'workflow', 'assay', 'gel_analysis', 'paper', 'python_sandbox', 'python-sandbox', 'record-lookup'].includes(cleanText(citation?.source, 120).toLowerCase()))
+          ? (normalizedCitations.some((citation) => ['project', 'protocol', 'notebook_entry', 'workflow', 'assay', 'gel_analysis', 'paper', 'python_sandbox', 'python-sandbox', 'notebook-lookup'].includes(cleanText(citation?.source, 120).toLowerCase()))
             ? 'direct'
             : 'indirect')
           : 'none',

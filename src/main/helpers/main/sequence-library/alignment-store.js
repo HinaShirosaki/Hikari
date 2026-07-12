@@ -19,6 +19,10 @@ const {
   normalizeAlignmentSourceKind,
   normalizeAlignmentTimestamp
 } = require('./alignment-normalize');
+const {
+  discoverAlignmentSourceSessions,
+  hydrateAlignmentSessionFromSource
+} = require('./alignment-source-read');
 
 function resolveAlignmentStoragePaths(entryDir) {
   const alignmentsDir = path.join(entryDir, ALIGNMENTS_DIR_NAME);
@@ -50,24 +54,61 @@ function normalizeStoredAlignmentSession(session) {
   };
 }
 
-async function readAlignmentManifest(entryDir) {
+function appendNormalizedSession(sessions, seenIds, session) {
+  const normalized = normalizeStoredAlignmentSession(session);
+  if (!normalized) {
+    return false;
+  }
+  const key = normalized.id.toLowerCase();
+  if (seenIds.has(key)) {
+    return false;
+  }
+  seenIds.add(key);
+  sessions.push(normalized);
+  return true;
+}
+
+async function readAlignmentManifest(entryDir, libraryRoot = '') {
   const paths = resolveAlignmentStoragePaths(entryDir);
+  let manifestSessions = [];
   try {
     const raw = await fs.readFile(paths.manifestPath, 'utf8');
     const parsed = JSON.parse(raw);
-    const sessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
-    return sessions.map((session) => normalizeStoredAlignmentSession(session)).filter(Boolean);
+    manifestSessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
   } catch (error) {
-    if (error?.code === 'ENOENT') {
-      return [];
+    if (error?.code !== 'ENOENT') {
+      throw error;
     }
-    throw error;
   }
+
+  const sessions = [];
+  const seenIds = new Set();
+  for (let index = 0; index < manifestSessions.length; index += 1) {
+    const manifestSession = manifestSessions[index];
+    if (appendNormalizedSession(sessions, seenIds, manifestSession)) {
+      continue;
+    }
+    const hydratedSession = await hydrateAlignmentSessionFromSource({
+      alignmentsDir: paths.alignmentsDir,
+      libraryRoot,
+      session: manifestSession,
+      index
+    });
+    appendNormalizedSession(sessions, seenIds, hydratedSession);
+  }
+
+  const discoveredSessions = await discoverAlignmentSourceSessions({
+    alignmentsDir: paths.alignmentsDir,
+    libraryRoot,
+    existingSessionIds: [...seenIds]
+  });
+  discoveredSessions.forEach((session) => appendNormalizedSession(sessions, seenIds, session));
+  return sessions;
 }
 
 async function writeAlignmentManifest(entryDir, inputSessions = [], libraryRoot) {
   const paths = resolveAlignmentStoragePaths(entryDir);
-  const existingSessions = await readAlignmentManifest(entryDir);
+  const existingSessions = await readAlignmentManifest(entryDir, libraryRoot);
   const existingById = new Map(existingSessions.map((session) => [session.id, session]));
   const nextSessions = [];
 

@@ -54,7 +54,6 @@ const { createPdfTextExtractionRuntime } = require('../../papers/parse/agent-pdf
 const { createProtocolMatchingRuntime } = require('../agent/tools/agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('../agent/tools/agent-notebook-generation.js');
 const { createAgentInventoryLookupRuntime } = require('../agent/tools/agent-inventory-lookup.js');
-const { createAgentRecordLookupRuntime } = require('../agent/tools/agent-record-lookup.js');
 const { createAgentRuntimeSupport } = require('../agent/runtime/agent-runtime-support.js');
 const { createAgentSubAppApi } = require('../agent/runtime/agent-sub-app-api.js');
 const { registerAgentToolExecutors } = require('../agent/tools/register-agent-tool-executors.js');
@@ -227,7 +226,6 @@ function createMainAgentServices(deps = {}) {
     cleanText
   });
   agentRuntimeRegistry.registerRuntimeFactory('inventory-lookup', createAgentInventoryLookupRuntime);
-  agentRuntimeRegistry.registerRuntimeFactory('record-lookup', createAgentRecordLookupRuntime);
   agentRuntimeRegistry.registerRuntimeFactory('protocol-matching', createProtocolMatchingRuntime);
   agentRuntimeRegistry.registerRuntimeFactory('notebook-generation', createNotebookGenerationRuntime);
 
@@ -401,6 +399,7 @@ function createMainAgentServices(deps = {}) {
   const paperDownloadRuntime = createPaperDownloadRuntime({
     ...sharedAgentLlmDeps,
     fetch: typeof globalThis.fetch === 'function' ? globalThis.fetch.bind(globalThis) : null,
+    enableDefaultBrowserSession: true,
     BrowserWindow: deps.BrowserWindow || deps.electron?.BrowserWindow || null,
     paperKnowledgeDatabaseRuntime
   });

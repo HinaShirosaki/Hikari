@@ -201,7 +201,16 @@
           aria-labelledby="dashboard-timer-dialog-title"
         >
           <div class="home-dialog-form">
-            <h3 id="dashboard-timer-dialog-title">Start timer</h3>
+            <div class="app-dialog-head home-timer-dialog-head">
+              <h3 id="dashboard-timer-dialog-title">Start timer</h3>
+              <button
+                type="button"
+                id="dashboard-timer-dialog-close-btn"
+                class="app-dialog-close-btn"
+                aria-label="Close start timer dialog"
+                title="Close"
+              ><span aria-hidden="true">&times;</span></button>
+            </div>
             <form id="dashboard-timer-dialog-form" class="home-timer-form-row">
               <input
                 id="dashboard-timer-name-input"

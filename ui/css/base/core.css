@@ -1,39 +1,23 @@
 @font-face {
-  font-family: "Source Serif 4";
-  src: url("../../../assets/fonts/SourceSerif4-400.ttf") format("truetype");
+  font-family: "Inter";
+  src: url("../../../assets/fonts/InterVariable.woff2") format("woff2-variations");
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 900;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Source Serif 4";
-  src: url("../../../assets/fonts/SourceSerif4-500.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Source Serif 4";
-  src: url("../../../assets/fonts/SourceSerif4-600.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Source Serif 4";
-  src: url("../../../assets/fonts/SourceSerif4-700.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 700;
+  font-family: "Inter";
+  src: url("../../../assets/fonts/InterVariable-Italic.woff2") format("woff2-variations");
+  font-style: italic;
+  font-weight: 100 900;
   font-display: swap;
 }
 
 :root {
   color-scheme: light;
   --app-font-size: 16px;
-  --font-app: "Source Serif 4", serif;
+  --font-app: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --shared-left-rail-min: 240px;
   --shared-left-rail-width: 280px;
   --shared-left-rail-max: 400px;
@@ -837,6 +821,19 @@ body.has-agent-chat-rail-expanded .universal-agent-chat-rail__header {
 body.has-shared-left-rail-view .workspace-main > .view.is-active {
   min-height: 0;
   height: 100%;
+}
+
+.plugin-view.is-active {
+  display: flex;
+  height: 100%;
+  min-height: 100%;
+}
+
+.plugin-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: transparent;
 }
 
 #lab-management-view > .panel:first-child > h2,

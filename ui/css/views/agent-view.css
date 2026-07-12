@@ -643,31 +643,53 @@ body.agent-view-fixed-scroll .workspace-main {
 
 .agent-thinking-trace {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
-  padding-left: 16px;
-  border-left: 2px solid color-mix(in srgb, var(--theme-accent) 24%, var(--theme-border));
 }
 
 .agent-thinking-trace-summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   margin: 0;
   cursor: pointer;
+  user-select: none;
   font-size: 0.74rem;
   line-height: 1.2;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--theme-text-muted);
+  list-style: none;
+}
+
+.agent-thinking-trace-summary:hover {
+  color: var(--theme-text-strong);
 }
 
 .agent-thinking-trace-summary::marker,
 .agent-thinking-trace-summary::-webkit-details-marker {
-  color: var(--theme-text-muted);
+  display: none;
+}
+
+.agent-thinking-trace-summary::before {
+  content: '';
+  flex: none;
+  width: 0.5em;
+  height: 0.5em;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform 160ms ease;
+}
+
+details.agent-thinking-trace[open] > .agent-thinking-trace-summary::before {
+  transform: rotate(45deg);
 }
 
 .agent-thinking-trace-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 2px 0;
   display: grid;
   gap: 8px;
 }
@@ -1508,12 +1530,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .agent-thinking-trace {
-  padding: 14px 0 0 16px;
-  border-left: 2px solid color-mix(in srgb, var(--theme-accent) 34%, var(--theme-border));
-}
-
-.agent-thinking-trace-summary {
-  color: var(--theme-text-strong);
+  margin: 0 0 12px;
 }
 
 .agent-thinking-trace-item {
@@ -1759,25 +1776,21 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   }
 }
 
-.agent-stream-output-text {
-  --agent-stream-output-duration: 1200ms;
-  --agent-stream-output-steps: 18;
+.agent-stream-live > :last-child::after {
+  content: '';
   display: inline-block;
-  max-width: 100%;
-  overflow: hidden;
-  white-space: pre-wrap;
-  vertical-align: baseline;
-  clip-path: inset(0 100% 0 0);
-  animation:
-    agent-stream-output-reveal var(--agent-stream-output-duration) steps(var(--agent-stream-output-steps), end) both;
+  width: 2px;
+  height: 1em;
+  margin-left: 3px;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  background: var(--theme-accent);
+  animation: agent-stream-cursor-blink 1s steps(2, jump-none) infinite;
 }
 
-.agent-stream-output-text [data-agent-stream-word] {
-  display: inline;
-  opacity: 0;
-  transform: translateY(0.12em);
-  animation: agent-stream-word-appear 220ms ease-out both;
-  animation-delay: var(--agent-stream-word-delay, 0ms);
+.agent-stream-activity {
+  margin-top: 10px;
+  font-size: 0.85rem;
 }
 
 @keyframes agent-chat-pulse {
@@ -1802,42 +1815,20 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   }
 }
 
-@keyframes agent-stream-output-reveal {
+@keyframes agent-stream-cursor-blink {
   0% {
-    clip-path: inset(0 100% 0 0);
-  }
-
-  100% {
-    clip-path: inset(0 0 0 0);
-  }
-}
-
-@keyframes agent-stream-word-appear {
-  0% {
-    opacity: 0;
-    transform: translateY(0.12em);
-  }
-
-  100% {
     opacity: 1;
-    transform: translateY(0);
+  }
+
+  100% {
+    opacity: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .agent-progress-flow-text,
-  .agent-stream-output-text,
-  .agent-stream-output-text [data-agent-stream-word] {
+  .agent-stream-live > :last-child::after {
     animation: none;
-  }
-
-  .agent-stream-output-text {
-    clip-path: none;
-  }
-
-  .agent-stream-output-text [data-agent-stream-word] {
-    opacity: 1;
-    transform: none;
   }
 }
 

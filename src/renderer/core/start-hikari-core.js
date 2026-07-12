@@ -21,6 +21,7 @@ import {
   normalizeViewId
 } from '../app/navigation-shell.js';
 import { createStorageImportController } from '../app/storage-import.js';
+import { installPlugins } from '../app/plugin-loader.js';
 import {
   buildSearchScopeMap,
   buildViewAliasMap,
@@ -97,6 +98,9 @@ export function startHikariCore({
   windowObject = window
 } = {}) {
   const state = loadState();
+  // Plugin views and registry entries must exist before the navigation shell
+  // and search maps below snapshot APP_REGISTRY and the `.view` sections.
+  installPlugins({ state, documentObject, appRegistry: APP_REGISTRY });
   const normalizeAppViewId = (viewId) => normalizeViewId(VIEWS, viewId);
   const globalViewAliases = buildViewAliasMap({
     apps: APP_REGISTRY,

@@ -117,6 +117,11 @@ function extractLiveResponseCandidate(eventPayload = {}) {
   const stage = trimText(eventPayload?.stage, 80);
   if (stage === 'codex_cli_display') {
     const displayText = extractLiveCodexCliDisplayText(eventPayload);
+    const meta = eventPayload?.meta && typeof eventPayload.meta === 'object' ? eventPayload.meta : {};
+    const displayKind = trimText(meta.codex_display_kind || meta.codexDisplayKind, 80);
+    if (displayKind && displayKind !== 'assistant' && displayKind !== 'message') {
+      return '';
+    }
     if (!displayText || isInternalCodexPromptText(displayText) || isGenericToolProgressText(displayText)) {
       return '';
     }

@@ -60,7 +60,7 @@ This is one of the clearest “workflow runtimes” in the package.
 This runtime is a thin composition layer over the two lookup tools:
 
 - `tools/agent-inventory-lookup.js`
-- `tools/agent-record-lookup.js`
+- `tools/agent-lookup-runtime.js`
 
 It centralizes the shared mechanics:
 
@@ -69,7 +69,7 @@ It centralizes the shared mechanics:
 - hydrate snapshots when SQLite is missing or stale
 - backfill search indexes into SQLite when fallback JSON had to be used
 
-It returns direct controller-ready methods like `executeInventoryLookup(...)` and `executeRecordLookup(...)`.
+It returns direct controller-ready methods like `executeInventoryLookup(...)` and `executeNotebookLookup(...)`.
 
 ## `runtime/science-reasoning-loop/`
 

@@ -19,8 +19,8 @@ The runtime narrows tool scope by intent:
 | Intent | Tool scope |
 | --- | --- |
 | `general_science_question` | `literature-search`, `sub-agent` |
-| `project_science_question` | `record-lookup`, `literature-search`, `sub-agent` |
-| `result_analysis` | `python-sandbox`, `record-lookup`, `literature-search`, `sub-agent` |
+| `project_science_question` | `notebook-lookup`, `literature-search`, `sub-agent` |
+| `result_analysis` | `python-sandbox`, `notebook-lookup`, `literature-search`, `sub-agent` |
 
 That policy table is much closer to the concrete tool catalog than the older shared science loop.
 
@@ -95,7 +95,7 @@ The return payload keeps more internal structure than the shared science loop, i
 
 ## Important wiring note
 
-The deep-research architecture relies on the shared `runTool(...)` adapter supplied by the controller. The shared generic tool executor now has the full tool suite registered (via `register-agent-tool-executors.js`) — inventory/record lookup, protocol matching, notebook generation/draft, web search, sub-agent, memory, literature search, paper download/search/analysis, purchase recommendation, protocol generation, python sandbox, and command line.
+The deep-research architecture relies on the shared `runTool(...)` adapter supplied by the controller. The shared generic tool executor now has the full tool suite registered (via `register-agent-tool-executors.js`) — inventory/notebook lookup, protocol matching, notebook generation/draft, web search, sub-agent, memory, literature search, paper download/search/analysis, purchase recommendation, protocol generation, python sandbox, and command line.
 
 So when you read the deep-research code, keep in mind:
 

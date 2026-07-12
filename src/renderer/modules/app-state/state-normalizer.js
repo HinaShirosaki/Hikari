@@ -10,6 +10,7 @@ import {
 } from '../sample-inventory-settings.js';
 import { defaultState, STARTUP_DEFAULT_VIEW_IDS } from './defaults.js';
 import { normalizeAppearanceMode } from './appearance.js';
+import { normalizePreferredJournalList } from '../preferred-journals.js';
 import {
   normalizeDashboardActiveTimers,
   normalizeDashboardIncubationLocations,
@@ -51,26 +52,38 @@ function normalizeLlmSettings(rawLlm) {
 }
 
 function normalizePreferredJournals(rawSettings) {
-  const rawList = Array.isArray(rawSettings.preferredJournals)
-    ? rawSettings.preferredJournals
-    : [];
-  const legacyValue = String(rawSettings.preferredJournal || '').trim();
-  const candidates = [
-    ...rawList,
-    ...(legacyValue ? legacyValue.split(/[;\n]+/) : [])
-  ];
-  const seen = new Set();
-  const journals = [];
-  candidates.forEach((candidate) => {
-    const journal = String(candidate || '').trim();
-    const key = journal.toLowerCase();
-    if (!journal || seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    journals.push(journal);
-  });
-  return journals.slice(0, 12);
+  return normalizePreferredJournalList([
+    rawSettings.preferredJournals,
+    rawSettings.preferred_journals,
+    rawSettings.preferredJournal,
+    rawSettings.preferred_journal
+  ]);
+}
+
+function normalizePluginEntries(rawPlugins) {
+  if (!Array.isArray(rawPlugins)) {
+    return [];
+  }
+  const seenIds = new Set();
+  return rawPlugins
+    .map((entry) => {
+      const raw = asObject(entry);
+      return {
+        id: String(raw.id || '').trim(),
+        name: String(raw.name || '').trim(),
+        description: String(raw.description || '').trim(),
+        path: String(raw.path || '').trim(),
+        entryUrl: String(raw.entryUrl || '').trim(),
+        enabled: raw.enabled !== false
+      };
+    })
+    .filter((entry) => {
+      if (!entry.id || !entry.entryUrl || seenIds.has(entry.id)) {
+        return false;
+      }
+      seenIds.add(entry.id);
+      return true;
+    });
 }
 
 function normalizeSettings(source) {
@@ -152,7 +165,8 @@ function normalizeSettings(source) {
     sampleInventoryLocations: normalizeSampleInventoryLocations(rawSettings.sampleInventoryLocations),
     sampleTypeLabels: normalizeSampleTypeLabels(rawSettings.sampleTypeLabels),
     preferredJournals,
-    preferredJournal: preferredJournals.join('; ')
+    preferredJournal: preferredJournals.join('; '),
+    plugins: normalizePluginEntries(rawSettings.plugins)
   };
 }
 

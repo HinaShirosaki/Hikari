@@ -112,6 +112,29 @@ export function createDefaultNotebookResultTable(createId, {
   };
 }
 
+export function createNotebookResultTableFromPlaceholder(createId, {
+  name = '',
+  value = ''
+} = {}) {
+  const variableColumn = {
+    field: buildFieldId(createId, 'variable', 0),
+    title: 'Variable'
+  };
+  const valueColumn = {
+    field: buildFieldId(createId, 'value', 1),
+    title: 'Value'
+  };
+  const row = {
+    id: buildFieldId(createId, 'row', 0),
+    [variableColumn.field]: String(name ?? '').trim(),
+    [valueColumn.field]: String(value ?? '').trim()
+  };
+  return {
+    columns: [variableColumn, valueColumn],
+    rows: [row]
+  };
+}
+
 export function addNotebookResultTableRow(rawTable, createId) {
   const table = normalizeNotebookResultTable(rawTable);
   if (!table) {

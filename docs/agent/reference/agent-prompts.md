@@ -1,7 +1,7 @@
 # Agent Prompt Registry
 
-Generated at: 2026-06-27T17:32:13.592Z
-Prompt entries: 43
+Generated at: 2026-07-02T17:04:32.185Z
+Prompt entries: 35
 
 This file is generated from the prompt registry and sample renderers in `src/main/helpers/agent/shared/agent-prompt-registry.js`.
 
@@ -11,8 +11,8 @@ This file is generated from the prompt registry and sample renderers in `src/mai
 
 ID: `shared.structured_json_only_system_prompt`
 Kind: `system`
-Source: `src/main/helpers/agent/deep-research/step-1-clarify-question.js`, `src/main/helpers/agent/deep-research/step-2-ask-targeted-follow-up.js`, `src/main/helpers/agent/deep-research/step-3-draft-research-plan.js`, `src/main/helpers/agent/deep-research/step-4-execute-plan.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/input-clarification.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/agent-route-planner.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-criteria.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/thinking-trace.js`, `src/main/helpers/agent/runtime/science-reasoning-loop/final-synthesis.js`, `src/main/helpers/agent/deep-research/sub-agent-usage.js`
-Notes: Shared across structured-output deep-research and science-loop steps.
+Source: `self-agent/runtime/science-reasoning-loop/input-clarification.js`, `self-agent/runtime/science-reasoning-loop/agent-route-planner.js`, `self-agent/runtime/science-reasoning-loop/loop-exit-criteria.js`, `self-agent/runtime/science-reasoning-loop/thinking-trace.js`, `self-agent/runtime/science-reasoning-loop/final-synthesis.js`
+Notes: Shared across structured-output science-loop steps.
 
 ```text
 Return valid JSON only.
@@ -72,11 +72,11 @@ Return JSON matching the expected response schema exactly. If evidence is missin
 
 ID: `core.intent_parser_catalog_prompt`
 Kind: `static_prompt`
-Source: `src/main/helpers/agent/intent/agent-intent-parser.js`
+Source: `self-agent/intent/agent-intent-parser.js`
 
 ```text
 Classify the lab-assistant user message. Return compact JSON only.
-Allowed intents: protocol_to_notebook, notebook_draft, inventory_lookup, record_lookup, project_science_question, general_science_question, paper_analysis, literature_search, purchase_recommendation, result_analysis, mixed_request, unclear
+Allowed intents: protocol_to_notebook, notebook_draft, inventory_lookup, notebook_lookup, project_science_question, general_science_question, paper_analysis, literature_search, purchase_recommendation, result_analysis, mixed_request, unclear
 Base JSON: { "primary_intent": "one allowed intent" }
 Add only the extra fields listed for the chosen intent. Omit all other keys and empty placeholders.
 If you include entities, include only listed entities.* keys.
@@ -92,7 +92,7 @@ Intent guide:
 - protocol_to_notebook: Performed lab work -> notebook page or lab-record documentation. Requires notebook, record, or documentation intent for work already done. Standalone how-to protocol requests are science questions. Extras: protocol_candidates.
 - notebook_draft: Future planned experiment -> planned notebook page. Requires a requested notebook draft tied to a project, workflow, or next step. Not for standalone how-to protocols. Extras: protocol_candidates, entities.project_name, entities.workflow_step, entities.protocol_name.
 - inventory_lookup: Stock availability, reagent identity, location, supplier metadata, or stored chemical records. Use inventory_search for normalized query terms and aliases. Extras: inventory_search.
-- record_lookup: Stored project, workflow, notebook, gel, paper, or lab records, excluding inventory. Assay data is supplied by the active Assay rail context and dedicated assay tools. Include record-hint entities only when they narrow local search. Extras: entities.project_name, entities.protocol_name, entities.workflow_step, entities.requested_output.
+- notebook_lookup: Stored notebook entries, prior notebook results, notebook pages for a project, or notebook records tied to a protocol. Use protocol, project, and result-text hints only when they narrow notebook search. Prefer protocol lookup for protocol records and paper tools for paper records. Extras: entities.project_name, entities.protocol_name, entities.notebook_name, entities.requested_output.
 - project_science_question: Science question tied to an active or named project, experiment, workflow, or stored record. Return reasoning_effort. Include direct_answer only at effort 0. Include project/protocol hints only when useful. Extras: reasoning_effort, direct_answer, entities.project_name, entities.protocol_name.
 - general_science_question: Science question or experimental how-to not tied to project records. Standalone detailed wet-lab protocol requests go here unless notebook/record output is requested. Return reasoning_effort; direct_answer only at effort 0. Extras: reasoning_effort, direct_answer.
 - paper_analysis: Analyze, summarize, extract methods from, or interpret a specific identified paper/PDF. Include paper title and requested output only when explicit or strongly implied. Extras: entities.paper_title, entities.requested_output.
@@ -108,11 +108,11 @@ Return JSON only.
 
 ID: `core.intent_parser_runtime_prompt`
 Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/intent/agent-intent-parser.js`
+Source: `self-agent/intent/agent-intent-parser.js`
 
 ```text
 Classify the lab-assistant user message. Return compact JSON only.
-Allowed intents: protocol_to_notebook, notebook_draft, inventory_lookup, record_lookup, project_science_question, general_science_question, paper_analysis, literature_search, purchase_recommendation, result_analysis, mixed_request, unclear
+Allowed intents: protocol_to_notebook, notebook_draft, inventory_lookup, notebook_lookup, project_science_question, general_science_question, paper_analysis, literature_search, purchase_recommendation, result_analysis, mixed_request, unclear
 Base JSON: { "primary_intent": "one allowed intent" }
 Add only the extra fields listed for the chosen intent. Omit all other keys and empty placeholders.
 If you include entities, include only listed entities.* keys.
@@ -128,7 +128,7 @@ Intent guide:
 - protocol_to_notebook: Performed lab work -> notebook page or lab-record documentation. Requires notebook, record, or documentation intent for work already done. Standalone how-to protocol requests are science questions. Extras: protocol_candidates.
 - notebook_draft: Future planned experiment -> planned notebook page. Requires a requested notebook draft tied to a project, workflow, or next step. Not for standalone how-to protocols. Extras: protocol_candidates, entities.project_name, entities.workflow_step, entities.protocol_name.
 - inventory_lookup: Stock availability, reagent identity, location, supplier metadata, or stored chemical records. Use inventory_search for normalized query terms and aliases. Extras: inventory_search.
-- record_lookup: Stored project, workflow, notebook, gel, paper, or lab records, excluding inventory. Assay data is supplied by the active Assay rail context and dedicated assay tools. Include record-hint entities only when they narrow local search. Extras: entities.project_name, entities.protocol_name, entities.workflow_step, entities.requested_output.
+- notebook_lookup: Stored notebook entries, prior notebook results, notebook pages for a project, or notebook records tied to a protocol. Use protocol, project, and result-text hints only when they narrow notebook search. Prefer protocol lookup for protocol records and paper tools for paper records. Extras: entities.project_name, entities.protocol_name, entities.notebook_name, entities.requested_output.
 - project_science_question: Science question tied to an active or named project, experiment, workflow, or stored record. Return reasoning_effort. Include direct_answer only at effort 0. Include project/protocol hints only when useful. Extras: reasoning_effort, direct_answer, entities.project_name, entities.protocol_name.
 - general_science_question: Science question or experimental how-to not tied to project records. Standalone detailed wet-lab protocol requests go here unless notebook/record output is requested. Return reasoning_effort; direct_answer only at effort 0. Extras: reasoning_effort, direct_answer.
 - paper_analysis: Analyze, summarize, extract methods from, or interpret a specific identified paper/PDF. Include paper title and requested output only when explicit or strongly implied. Extras: entities.paper_title, entities.requested_output.
@@ -168,7 +168,7 @@ Reject duplicate tools and unknown tools.
 
 Available tools:
 - inventory-lookup: Look up chemical and personal inventory records using query overrides and inventory search hints.
-- record-lookup: Look up project, protocol, notebook, workflow, gel, paper, and linked historical records from local agent data. Assay data is supplied by the active Assay rail context and dedicated assay tools, not this generic lookup.
+- notebook-lookup: Look up local notebook entries by project, protocol, result text, or notebook identifier.
 - protocol-matching: Rank local protocols against protocol candidates and select the best protocol for notebook generation.
 - notebook-generation: Generate a protocol-based notebook draft using a selected protocol, project context, and placeholder values.
 - notebook-draft: Propose a likely next experiment, optionally using prior record/literature evidence, prepare a planned biology notebook draft, and wait for explicit confirmation before creating the page.
@@ -180,7 +180,7 @@ Available tools:
 - container: Store, name, read, update, and position-edit temporary string or number containers with short runtime IDs.
 - assay-table: Create scratch assay tables, derive calculated tables with +, -, *, /, max, min, avg, sd, and run Python-backed table transforms.
 - plotly-graph: Create, update, read, and inspect scratch Plotly.js graph specifications using Plotly figure arguments.
-- literature-search: Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, use preferred source hints when you want one literature database or web domain ranked ahead of the defaults, and leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap.
+- literature-search: Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads bounded context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. To restrict the search to specific journals, pass `journals` (an array of journal names, e.g. ["Nature", "Cell"]); this hard-scopes the PubMed, Crossref, and Europe PMC queries and relaxes to an unfiltered search only when nothing matches.
 - purchase-recommendation: Search the web for purchasable products, extract vendor page metadata such as image and price, hard-filter explicit product requirements, and rank valid items for chat recommendation cards.
 - paper-download: Extract a downloadable paper PDF URL, stream the file into app storage with progress tracking, and fall back to a browser-assisted download session when sites block automated fetches.
 - paper-analysis: Summarize a paper briefly, extract protocol-relevant methods, and optionally draft a generated protocol from the paper.
@@ -233,11 +233,11 @@ Return JSON only in the shape {"tool_calls":[{"tool_name":"<tool-name>","argumen
 
 Arguments must validate against the provided JSON schema for that tool.
 
-Selected tools in order: record-lookup, literature-search
+Selected tools in order: notebook-lookup, literature-search
 
-Tool: record-lookup
-Short description: Look up project, protocol, notebook, workflow, gel, paper, and linked historical records from local agent data. Assay data is supplied by the active Assay rail context and dedicated assay tools, not this generic lookup.
-Detailed usage: Use this tool when the user is asking about stored lab records beyond raw inventory, such as projects, protocols, notebook entries, workflows, gels, papers, or linked historical context. Do not use `record-lookup` to provide Assay data; active Assay data comes from the Assay rail context and dedicated assay tools. Prefer this tool for 'what did we do last time', 'find the protocol record', or project-specific evidence retrieval. Provide `query` for the entity or topic to search, and pass `parser_payload` when parser entities can help narrow record matching.
+Tool: notebook-lookup
+Short description: Look up local notebook entries by project, protocol, result text, or notebook identifier.
+Detailed usage: Use this tool when the user is asking about local notebook entries, prior notebook results, notebook pages for a project, or notebook records tied to a protocol. Prefer `protocol-matching` for protocol lookup and the paper tools for paper lookup. Provide `query` for the notebook search text, and include project or protocol filters when known.
 Input schema JSON:
 {
   "type": "object",
@@ -251,6 +251,15 @@ Input schema JSON:
       "minimum": 1,
       "maximum": 25
     },
+    "project_id": {
+      "type": "string"
+    },
+    "project_name": {
+      "type": "string"
+    },
+    "protocol_name": {
+      "type": "string"
+    },
     "parser_payload": {
       "$ref": "#/$defs/parser_payload"
     }
@@ -258,8 +267,8 @@ Input schema JSON:
 }
 
 Tool: literature-search
-Short description: Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, use preferred source hints when you want one literature database or web domain ranked ahead of the defaults, and leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap.
-Detailed usage: Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. The literature workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads selected paper context back into the main agent; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.
+Short description: Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads bounded context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. To restrict the search to specific journals, pass `journals` (an array of journal names, e.g. ["Nature", "Cell"]); this hard-scopes the PubMed, Crossref, and Europe PMC queries and relaxes to an unfiltered search only when nothing matches.
+Detailed usage: Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.
 Input schema JSON:
 {
   "type": "object",
@@ -293,6 +302,17 @@ Input schema JSON:
     "preferred_web_source": {
       "type": "string",
       "maxLength": 240
+    },
+    "journals": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 180
+      },
+      "maxItems": 6
+    },
+    "allow_unfiltered_fallback": {
+      "type": "boolean"
     },
     "limit": {
       "type": "integer",
@@ -391,7 +411,7 @@ Parser payload JSON:
 
 ID: `core.codex_tool_loop_prompt`
 Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/runtime/agent-session-runtime.js`
+Source: `self-agent/runtime/agent-session-runtime.js`
 
 ```text
 You are Lab Agent, an AI assistant for a research lab app. Help users retrieve lab information, reason carefully about scientific questions, and stay explicit about uncertainty.
@@ -421,11 +441,11 @@ After the selected schema is returned in the transcript, use that exact schema t
 If you request multiple tool calls, keep them tightly scoped and independent so they can run in parallel as one round.
 
 Available tools:
-Tool: record-lookup
-Short description: Look up project, protocol, notebook, workflow, gel, paper, and linked historical records from local agent data. Assay data is supplied by the active Assay rail context and dedicated assay tools, not this generic lookup.
+Tool: notebook-lookup
+Short description: Look up local notebook entries by project, protocol, result text, or notebook identifier.
 
 Tool: literature-search
-Short description: Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, use preferred source hints when you want one literature database or web domain ranked ahead of the defaults, and leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap.
+Short description: Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads bounded context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. To restrict the search to specific journals, pass `journals` (an array of journal names, e.g. ["Nature", "Cell"]); this hard-scopes the PubMed, Crossref, and Europe PMC queries and relaxes to an unfiltered search only when nothing matches.
 
 Transcript:
 1. user: Can you figure out why the Atlas HEK293 SUMO1 pilot had weak conjugation and compare it with recent literature?
@@ -896,7 +916,7 @@ Return JSON with protocol { name, purpose, materials, steps, troubleshooting } a
 
 ID: `protocol.paper_analysis_system`
 Kind: `system`
-Source: `src/main/helpers/agent/tools/agent-paper-analysis.js`
+Source: `src/main/papers/analysis/agent-paper-analysis.js`
 
 ```text
 You analyze a scientific paper for a lab assistant. Produce a short, faithful summary based only on the supplied paper context. If the user asks for protocol extraction, extract one concise procedure candidate when supported by the evidence. Return JSON only.
@@ -906,7 +926,7 @@ You analyze a scientific paper for a lab assistant. Produce a short, faithful su
 
 ID: `protocol.paper_analysis_rules`
 Kind: `rules`
-Source: `src/main/helpers/agent/tools/agent-paper-analysis.js`
+Source: `src/main/papers/analysis/agent-paper-analysis.js`
 
 ```text
 Write a brief_summary of 2 to 4 sentences.
@@ -920,7 +940,7 @@ Do not invent missing methods, concentrations, temperatures, or timings.
 
 ID: `protocol.paper_analysis_prompt`
 Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/tools/agent-paper-analysis.js`
+Source: `src/main/papers/analysis/agent-paper-analysis.js`
 
 ```text
 Analyze the paper context below and return a brief lab-useful summary.
@@ -958,7 +978,7 @@ Return JSON with brief_summary, key_findings, method_overview, protocol_candidat
 
 ID: `science.session_system_prompt`
 Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/runtime/science-reasoning-loop/support.js`
+Source: `self-agent/runtime/science-reasoning-loop/support.js`
 
 ```text
 You are Lab Agent, an AI assistant for a research lab app. Help users retrieve lab information, reason carefully about scientific questions, and stay explicit about uncertainty.
@@ -971,7 +991,7 @@ Execution hints:
 - Project: Atlas SUMO1 (atlas-sumo1)
 - Loop goal: Resolve the most likely cause of weak conjugation.
 - Route summary: Start with internal Atlas records, then validate with recent external evidence.
-- Preferred tools: record-lookup | literature-search
+- Preferred tools: notebook-lookup | literature-search
 - Exit when: A grounded explanation links the weak conjugation phenotype to a specific limiting factor.
 - Required evidence: At least one internal project record supports the answer.
 - Continue when: Internal evidence and external evidence conflict materially.
@@ -994,7 +1014,7 @@ The clarified execution request is provided separately as the session message.
 
 ID: `science.evaluator_feedback_prompt`
 Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/runtime/science-reasoning-loop/support.js`
+Source: `self-agent/runtime/science-reasoning-loop/support.js`
 
 ```text
 Evaluator feedback for project_science_question: the previous result is not sufficient yet.
@@ -1010,7 +1030,7 @@ Please continue with the next best tool call or tightly scoped parallel tool bat
 
 ID: `science.input_clarification_prompt`
 Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/runtime/science-reasoning-loop/input-clarification.js`
+Source: `self-agent/runtime/science-reasoning-loop/input-clarification.js`
 
 ```text
 Clarify the user request for the science reasoning loop.
@@ -1043,7 +1063,7 @@ Return JSON only.
 
 ID: `science.route_plan_prompt`
 Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/runtime/science-reasoning-loop/agent-route-planner.js`
+Source: `self-agent/runtime/science-reasoning-loop/agent-route-planner.js`
 
 ```text
 Draft a reference route plan for the science reasoning loop.
@@ -1084,7 +1104,7 @@ Return JSON only.
 
 ID: `science.exit_criteria_prompt`
 Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-criteria.js`
+Source: `self-agent/runtime/science-reasoning-loop/loop-exit-criteria.js`
 
 ```text
 Generate exit criteria for a science reasoning loop.
@@ -1115,7 +1135,7 @@ Return JSON only.
 
 ID: `science.exit_judge_system_prompt`
 Kind: `system`
-Source: `src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-judge.js`
+Source: `self-agent/runtime/science-reasoning-loop/loop-exit-judge.js`
 
 ```text
 You are a specialized sub-agent that judges whether a science reasoning loop should exit.
@@ -1141,7 +1161,7 @@ Return JSON only and do not invent evidence.
 
 ID: `science.exit_judge_message_prompt`
 Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/runtime/science-reasoning-loop/loop-exit-judge.js`
+Source: `self-agent/runtime/science-reasoning-loop/loop-exit-judge.js`
 
 ```text
 Judge whether the reasoning loop should stop now or continue.
@@ -1161,7 +1181,7 @@ Continue when:
 - Internal evidence and external evidence conflict materially.
 Can exit with limitations when:
 - Remaining uncertainty is disclosed explicitly.
-Preferred next tools: record-lookup | literature-search
+Preferred next tools: notebook-lookup | literature-search
 
 Pre-synthesized answer:
 Current best answer: Low UBC9 expression is the most likely driver of weak SUMO1 conjugation in the Atlas HEK293 pilot.
@@ -1180,7 +1200,7 @@ Return JSON only.
 
 ID: `science.thinking_trace_prompt`
 Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/runtime/science-reasoning-loop/thinking-trace.js`
+Source: `self-agent/runtime/science-reasoning-loop/thinking-trace.js`
 
 ```text
 Generate short workflow-thinking sentences for this science reasoning run.
@@ -1268,7 +1288,7 @@ Route plan JSON:
   ],
   "tool_call_suggestions": [
     {
-      "tool_name": "record-lookup",
+      "tool_name": "notebook-lookup",
       "rationale": "Internal project evidence should come first.",
       "priority": 1
     },
@@ -1296,7 +1316,7 @@ Exit criteria JSON:
     "Remaining uncertainty is disclosed explicitly."
   ],
   "preferred_next_tools": [
-    "record-lookup",
+    "notebook-lookup",
     "literature-search"
   ],
   "reasoning_notes": "Prefer one internal and one external source before synthesis."
@@ -1307,13 +1327,13 @@ Tool rounds JSON:
   {
     "round": 1,
     "assistant_before_tool": "I should inspect Atlas records first.",
-    "tool_name": "record-lookup",
+    "tool_name": "notebook-lookup",
     "tool_arguments": {
       "query": "sample query"
     },
     "tool_calls": [
       {
-        "tool_name": "record-lookup",
+        "tool_name": "notebook-lookup",
         "tool_arguments": {
           "query": "sample query"
         },
@@ -1390,7 +1410,7 @@ Return JSON only.
 
 ID: `science.final_synthesis_prompt`
 Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/runtime/science-reasoning-loop/final-synthesis.js`
+Source: `self-agent/runtime/science-reasoning-loop/final-synthesis.js`
 
 ```text
 You are the final answer synthesizer for a science reasoning loop.
@@ -1443,541 +1463,6 @@ Citations:
 - pubmed: PMID:12345678 - A recent SUMOylation study links low UBC9 availability to reduced conjugation efficiency.
 
 Recent tool outputs:
-- record-lookup (ok) | summary: Found Atlas notebook AT-14 with low UBC9 signal after transfection.
+- notebook-lookup (ok) | summary: Found Atlas notebook AT-14 with low UBC9 signal after transfection.
 - literature-search (ok) | summary: Found a recent paper connecting UBC9 levels to SUMOylation efficiency in HEK293.
-```
-
-## Deep Research
-
-### Deep Research Step 1 Clarify Prompt
-
-ID: `deep_research.step1_clarify_prompt`
-Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/deep-research/step-1-clarify-question.js`
-
-```text
-Clarify the user request into a research objective for the deep research agent.
-
-Identify the core goal, the scope boundaries, any missing constraints, and the expected answer style.
-
-Ask for follow-up only if the missing detail is truly blocking.
-
-Intent: project_science_question
-
-Resolved project JSON:
-{
-  "id": "atlas-sumo1",
-  "name": "Atlas SUMO1",
-  "resolution_source": "parser"
-}
-
-Parser payload JSON:
-{
-  "primary_intent": "project_science_question",
-  "reasoning_effort": 2,
-  "needs_clarification": false,
-  "clarification_reason": null,
-  "entities": {
-    "project_name": "Atlas SUMO1",
-    "protocol_name": "SUMO1 Purification",
-    "activity_type": "mechanism review",
-    "cell_line": "HEK293"
-  },
-  "inventory_search": {
-    "normalized_query": null,
-    "candidate_terms": [],
-    "aliases": [],
-    "search_mode": null
-  },
-  "protocol_candidates": [
-    "SUMO1 Purification"
-  ],
-  "reasoning_summary": "Needs project evidence plus recent literature."
-}
-
-Routing JSON:
-{
-  "intent": "project_science_question",
-  "reasoning_effort": 2,
-  "response_mode": "science_loop",
-  "entities": {
-    "project": "Atlas SUMO1",
-    "protocol": "SUMO1 Purification",
-    "activity": "mechanism review"
-  }
-}
-
-User message:
-Can you figure out why the Atlas HEK293 SUMO1 pilot had weak conjugation and compare it with recent literature?
-
-Return JSON only.
-```
-
-### Deep Research Step 2 Follow-Up Prompt
-
-ID: `deep_research.step2_follow_up_prompt`
-Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/deep-research/step-2-ask-targeted-follow-up.js`
-
-```text
-Decide whether the deep research agent must ask one targeted follow-up question before starting work.
-
-Ask only if the missing detail is truly blocking. Return one question at most.
-
-Intent: project_science_question
-
-Clarification JSON:
-{
-  "clarified_input": "Explain the most likely cause of weak SUMO1 conjugation in the Atlas HEK293 pilot and compare that explanation with recent literature.",
-  "analysis_goal": "Find the most grounded cause of weak conjugation.",
-  "important_constraints": [
-    "Use internal project evidence before recent external literature."
-  ],
-  "missing_information": [],
-  "should_ask_follow_up": false,
-  "follow_up_question": "",
-  "follow_up_reason": "The request is specific enough to continue."
-}
-
-Parser payload JSON:
-{
-  "primary_intent": "project_science_question",
-  "reasoning_effort": 2,
-  "needs_clarification": false,
-  "clarification_reason": null,
-  "entities": {
-    "project_name": "Atlas SUMO1",
-    "protocol_name": "SUMO1 Purification",
-    "activity_type": "mechanism review",
-    "cell_line": "HEK293"
-  },
-  "inventory_search": {
-    "normalized_query": null,
-    "candidate_terms": [],
-    "aliases": [],
-    "search_mode": null
-  },
-  "protocol_candidates": [
-    "SUMO1 Purification"
-  ],
-  "reasoning_summary": "Needs project evidence plus recent literature."
-}
-
-Resolved project JSON:
-{
-  "id": "atlas-sumo1",
-  "name": "Atlas SUMO1",
-  "resolution_source": "parser"
-}
-
-User message:
-Can you figure out why the Atlas HEK293 SUMO1 pilot had weak conjugation and compare it with recent literature?
-
-Return JSON only.
-```
-
-### Deep Research Step 3 Research Plan Prompt
-
-ID: `deep_research.step3_plan_prompt`
-Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/deep-research/step-3-draft-research-plan.js`
-
-```text
-Draft a deep research plan before execution.
-
-Include key subquestions, search directions, evidence types, likely tools/sources, risks, synthesis checkpoints, answer sections, and success criteria.
-
-Intent: project_science_question
-
-Clarification JSON:
-{
-  "clarified_input": "Explain the most likely cause of weak SUMO1 conjugation in the Atlas HEK293 pilot and compare that explanation with recent literature.",
-  "analysis_goal": "Find the most grounded cause of weak conjugation.",
-  "important_constraints": [
-    "Use internal project evidence before recent external literature."
-  ],
-  "missing_information": [],
-  "should_ask_follow_up": false,
-  "follow_up_question": "",
-  "follow_up_reason": "The request is specific enough to continue."
-}
-
-Policy JSON:
-{
-  "intent": "project_science_question",
-  "require_project_resolution": true,
-  "require_internal_citation": true,
-  "require_retrieval_attempt": true
-}
-
-Resolved project JSON:
-{
-  "id": "atlas-sumo1",
-  "name": "Atlas SUMO1",
-  "resolution_source": "parser"
-}
-
-User message:
-Can you figure out why the Atlas HEK293 SUMO1 pilot had weak conjugation and compare it with recent literature?
-
-Return JSON only.
-```
-
-### Deep Research Step 4 Execution Prompt
-
-ID: `deep_research.step4_execution_prompt`
-Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/deep-research/step-4-execute-plan.js`
-
-```text
-You are executing Step 4 of a deep research workflow.
-
-Choose exactly one next action: either call one tool or stop and hand off to synthesis.
-
-Prefer the minimum next action that meaningfully advances the research plan.
-
-Use sub-agent only if the sub-question is independent and parallel work clearly helps.
-
-Intent: project_science_question
-
-Research objective JSON:
-{
-  "research_goal": "Explain the weak SUMO1 conjugation seen in the Atlas HEK293 pilot and compare that explanation with recent literature.",
-  "scope_boundaries": [
-    "Use Atlas project evidence first.",
-    "Prefer recent external evidence."
-  ]
-}
-
-Research plan JSON:
-{
-  "key_subquestions": [
-    "What internal project evidence explains the weak conjugation phenotype?",
-    "What do recent external sources say about UBC9 availability and SUMOylation efficiency?"
-  ],
-  "possible_tools_or_sources": [
-    "record-lookup",
-    "literature-search",
-    "sub-agent"
-  ]
-}
-
-Context snapshot JSON:
-{
-  "sections": [
-    {
-      "id": "internal-evidence",
-      "summary": "Atlas notebook evidence points to low UBC9 after transfection."
-    }
-  ]
-}
-
-Accuracy snapshot JSON:
-{
-  "claims": [
-    {
-      "text": "Low UBC9 is the leading explanation.",
-      "support_count": 2
-    }
-  ],
-  "contradictions": []
-}
-
-Latest completion check JSON:
-{
-  "satisfied": false,
-  "reason": "The answer still needs one recent external citation that speaks directly to SUMO1 conjugation efficiency.",
-  "missing_requirements": [
-    "One recent external citation about SUMO1 conjugation efficiency."
-  ],
-  "should_continue": true,
-  "next_tool_hint": {
-    "tool_name": "literature-search",
-    "query": "SUMO1 conjugation UBC9 HEK293 2024 2025",
-    "reason": "Gather one recent citation that directly addresses the likely limiting factor."
-  },
-  "can_answer_with_limitations": false
-}
-
-Tool trace JSON:
-[
-  {
-    "tool_name": "record-lookup",
-    "ok": true,
-    "summary": "Found Atlas notebook AT-14 with low UBC9 signal after transfection.",
-    "assistant_after_tool": "Internal evidence suggests enzyme availability may be limiting."
-  },
-  {
-    "tool_name": "literature-search",
-    "ok": true,
-    "summary": "Found a recent paper connecting UBC9 levels to SUMOylation efficiency in HEK293.",
-    "assistant_after_tool": "External evidence points in the same direction."
-  }
-]
-
-Available tools JSON:
-[
-  {
-    "name": "record-lookup",
-    "description": "Look up project, protocol, notebook, workflow, gel, paper, and linked historical records from local agent data. Assay data is supplied by the active Assay rail context and dedicated assay tools, not this generic lookup.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "query": {
-          "type": "string"
-        },
-        "limit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 25
-        },
-        "parser_payload": {
-          "$ref": "#/$defs/parser_payload"
-        }
-      }
-    }
-  },
-  {
-    "name": "literature-search",
-    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, use preferred source hints when you want one literature database or web domain ranked ahead of the defaults, and leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap.",
-    "parameters": {
-      "type": "object",
-      "additionalProperties": false,
-      "properties": {
-        "query": {
-          "type": "string",
-          "maxLength": 600
-        },
-        "topic": {
-          "type": "string",
-          "maxLength": 240
-        },
-        "message": {
-          "type": "string",
-          "maxLength": 1200
-        },
-        "source": {
-          "$ref": "#/$defs/literature_source"
-        },
-        "sources": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/literature_source"
-          },
-          "maxItems": 6
-        },
-        "preferred_literature_source": {
-          "$ref": "#/$defs/literature_source"
-        },
-        "preferred_web_source": {
-          "type": "string",
-          "maxLength": 240
-        },
-        "limit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 25
-        },
-        "max_papers": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 24
-        },
-        "max_per_source": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 10
-        },
-        "allow_web_fallback": {
-          "type": "boolean"
-        },
-        "prefer_recent": {
-          "type": "boolean"
-        },
-        "use_codex_paper_context": {
-          "type": "boolean"
-        },
-        "disable_codex_paper_context": {
-          "type": "boolean"
-        },
-        "codex_paper_context": {
-          "type": "boolean"
-        },
-        "max_context_blocks": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 50
-        },
-        "max_download_concurrency": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 24
-        },
-        "reasoning_effort": {
-          "type": "string",
-          "maxLength": 40
-        },
-        "sub_agent_name": {
-          "type": "string",
-          "maxLength": 160
-        },
-        "storage_path": {
-          "type": "string",
-          "maxLength": 2000
-        },
-        "storagePath": {
-          "type": "string",
-          "maxLength": 2000
-        },
-        "parser_payload": {
-          "$ref": "#/$defs/parser_payload"
-        }
-      }
-    }
-  }
-]
-
-Rounds executed: 2/4
-
-Return JSON only.
-```
-
-### Deep Research Step 5 Outline Prompt
-
-ID: `deep_research.step5_outline_prompt`
-Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/deep-research/step-5-assemble-final-answer.js`
-
-```text
-Prompt render failed: buildOutlinePrompt is not a function
-```
-
-### Deep Research Step 5 Section Prompt
-
-ID: `deep_research.step5_section_prompt`
-Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/deep-research/step-5-assemble-final-answer.js`
-
-```text
-Prompt render failed: buildSectionPrompt is not a function
-```
-
-### Deep Research Sub-Agent Instruction Prompt
-
-ID: `deep_research.sub_agent_instruction_prompt`
-Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/deep-research/sub-agent-usage.js`
-
-```text
-Review one independent sub-question for the deep research agent.
-
-Research objective: Explain the weak SUMO1 conjugation seen in the Atlas HEK293 pilot and compare that explanation with recent literature.
-
-Assigned sub-question: What do recent external sources say about UBC9 availability and SUMOylation efficiency?
-
-Context snapshot JSON:
-{
-  "sections": [
-    {
-      "id": "internal-evidence",
-      "summary": "Atlas notebook evidence points to low UBC9 after transfection."
-    }
-  ]
-}
-
-Return a concise evidence-grounded summary, note any contradictions, and avoid inventing sources.
-```
-
-### Deep Research Completion Check Prompt
-
-ID: `deep_research.completion_check_prompt`
-Kind: `dynamic_sample`
-Source: `src/main/helpers/agent/deep-research/sub-agent-usage.js`
-
-```text
-You are the completion checker for a deep research run.
-
-Decide whether the current evidence satisfies the research plan enough to move to final synthesis.
-
-If evidence is still weak, explain the main missing requirement and suggest one next action.
-
-Intent: project_science_question
-
-Research objective JSON:
-{
-  "research_goal": "Explain the weak SUMO1 conjugation seen in the Atlas HEK293 pilot and compare that explanation with recent literature.",
-  "scope_boundaries": [
-    "Use Atlas project evidence first.",
-    "Prefer recent external evidence."
-  ]
-}
-
-Research plan JSON:
-{
-  "key_subquestions": [
-    "What internal project evidence explains the weak conjugation phenotype?",
-    "What do recent external sources say about UBC9 availability and SUMOylation efficiency?"
-  ],
-  "possible_tools_or_sources": [
-    "record-lookup",
-    "literature-search",
-    "sub-agent"
-  ]
-}
-
-Context snapshot JSON:
-{
-  "sections": [
-    {
-      "id": "internal-evidence",
-      "summary": "Atlas notebook evidence points to low UBC9 after transfection."
-    }
-  ]
-}
-
-Accuracy snapshot JSON:
-{
-  "claims": [
-    {
-      "text": "Low UBC9 is the leading explanation.",
-      "support_count": 2
-    }
-  ],
-  "contradictions": []
-}
-
-Tool trace JSON:
-[
-  {
-    "tool_name": "record-lookup",
-    "ok": true,
-    "summary": "Found Atlas notebook AT-14 with low UBC9 signal after transfection.",
-    "assistant_after_tool": "Internal evidence suggests enzyme availability may be limiting."
-  },
-  {
-    "tool_name": "literature-search",
-    "ok": true,
-    "summary": "Found a recent paper connecting UBC9 levels to SUMOylation efficiency in HEK293.",
-    "assistant_after_tool": "External evidence points in the same direction."
-  }
-]
-
-Citations JSON:
-[
-  {
-    "source": "project",
-    "pointer": "Notebook AT-14",
-    "reason": "The Atlas pilot recorded weak conjugation after transfection."
-  },
-  {
-    "source": "pubmed",
-    "pointer": "PMID:12345678",
-    "reason": "A recent SUMOylation study links low UBC9 availability to reduced conjugation efficiency."
-  }
-]
-
-Rounds executed: 2/4
-
-Return JSON only.
 ```

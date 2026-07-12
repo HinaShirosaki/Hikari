@@ -87,17 +87,42 @@ export function createContainerDetailRenderer({
       `;
     }).join('');
     const gridStyle = `--well-grid-cols:${safeText(String(layout.cols))}; --well-grid-rows:${safeText(String(layout.rows))}; --well-grid-aspect-x:${safeText(String(layout.cols))}; --well-grid-aspect-y:${safeText(String(layout.rows))};`;
+    const activeWellSamples = Number.isInteger(uiState.editingWellIndex) && uiState.editingWellIndex >= 0
+      ? getLinkedSamples(section, container.id, uiState.editingWellIndex)
+      : [];
+    const activeSample = activeWellSamples.find((item) => item.id === uiState.editingSampleId) || activeWellSamples[0] || null;
+    const isFillingWells = activeSample && uiState.cloningSampleId === activeSample.id;
+    const fillWellsLabel = isFillingWells ? 'Filling Wells' : 'Fill Wells';
+    const fillWellsTitle = isFillingWells
+      ? 'Click to stop filling wells with this sample.'
+      : 'Fill more wells with the selected sample.';
 
     return `
       <div class="container-inline-detail">
-        <div class="container-detail-header">
-          <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
-          <div class="container-detail-toolbar">
-            <button type="button" class="ghost-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}">Import CSV</button>
-            <input type="file" accept=".csv,text/csv" data-container-import-input="${safeText(container.id)}" hidden />
+        <div class="container-detail-sticky">
+          <div class="container-detail-header">
+            <div class="container-detail-title">
+              <h4>${safeText(section)} / ${safeText(container.name)} (${getContainerTypeLabel(container)})</h4>
+              <p class="small-note">${safeText(layout.helperText)}</p>
+            </div>
+            <div class="container-detail-toolbar">
+              ${activeSample
+                ? `
+                  <button type="button" class="ghost-btn inventory-fill-wells-btn${isFillingWells ? ' is-active' : ''}" data-well-sample-clone="${safeText(activeSample.id)}" aria-label="${safeText(fillWellsTitle)}" title="${safeText(fillWellsTitle)}">
+                    <svg class="inventory-fill-wells-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <rect x="8" y="8" width="11" height="11" rx="2"></rect>
+                      <path d="M5 16V7a2 2 0 0 1 2-2h9"></path>
+                    </svg>
+                    <span>${safeText(fillWellsLabel)}</span>
+                  </button>
+                `
+                : ''}
+              <button type="button" class="ghost-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}">Import CSV</button>
+              <button type="button" class="ghost-btn" data-container-export-csv="${safeText(container.id)}" data-section="${safeText(section)}">Export CSV</button>
+              <input type="file" accept=".csv,text/csv" data-container-import-input="${safeText(container.id)}" hidden />
+            </div>
           </div>
         </div>
-        <p class="small-note">${safeText(layout.helperText)}</p>
         <div class="well-editor-shell">
           <div class="well-grid-column">
             <div class="well-grid-panel well-grid-panel-${safeText(layout.className)}">

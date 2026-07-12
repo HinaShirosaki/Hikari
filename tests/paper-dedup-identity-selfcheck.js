@@ -30,6 +30,9 @@ const {
   normalizeToolArgumentsPayload
 } = require(path.join(root, 'src/main/helpers/agent/tools/agent-tool-loading.js'));
 const {
+  createAgentRuntimeSupport
+} = require(path.join(root, 'src/main/helpers/agent/runtime/agent-runtime-support.js'));
+const {
   splitMarkdownIntoSections,
   createPaperContextLoaderRuntime
 } = require(path.join(root, 'src/main/papers/retrieve/agent-paper-context-loader.js'));
@@ -39,6 +42,8 @@ const {
 const {
   normalizePreferredJournal,
   normalizePreferredJournals,
+  normalizePaperDoi,
+  buildCandidateKey,
   scorePaperCandidate,
   selectPaperCandidates
 } = require(path.join(root, 'src/main/papers/search/literature-candidates.js'));
@@ -53,8 +58,14 @@ const {
   normalizeCodexPaperLinePayload
 } = require(path.join(root, 'src/main/papers/workflow/codex-payload.js'));
 const {
+  runCodexPaperContextSubAgent
+} = require(path.join(root, 'src/main/papers/workflow/codex-paper-context-workflow.js'));
+const {
   createPaperContextText
 } = require(path.join(root, 'src/main/papers/retrieve/paper-context-text.js'));
+const {
+  buildMcpToolResponseContent
+} = require(path.join(root, 'src/main/helpers/agent/mcp-contract/stdio-server.js'));
 const {
   tokenize: wikiTokenize,
   scoreRow: wikiScoreRow,
@@ -387,9 +398,9 @@ async function main() {
   assert.deepEqual(normalizePreferredJournal('Nature'), { url: '', name: 'nature' }, 'plain name -> soft name');
   assert.ok(normalizePreferredJournal('https://www.nature.com').url, 'URL preference -> url');
   assert.deepEqual(
-    normalizePreferredJournals(['Nature', 'Cell', 'Nature']).map((item) => item.name || item.url),
+    normalizePreferredJournals(['Nature; Cell', 'Nature']).map((item) => item.name || item.url),
     ['nature', 'cell'],
-    'preferred journal list dedupes values'
+    'preferred journal list splits and dedupes values'
   );
 
   const relevant = scorePaperCandidate({ title: 'kinase inhibitor resistance', source: 'pubmed' }, 'kinase inhibitor resistance');
@@ -404,6 +415,12 @@ async function main() {
     normalizePreferredJournals(['Nature', 'Cell'])
   );
   assert.ok(withSecondJournal > noJournal, 'preferred-journal list bonus applied');
+  const withSecondJournalFromLegacy = scorePaperCandidate(
+    { title: 'kinase study', journal: 'Cell' },
+    'kinase',
+    'Nature; Cell'
+  );
+  assert.ok(withSecondJournalFromLegacy > noJournal, 'legacy preferred-journal string can match any listed journal');
 
   const picked = selectPaperCandidates([
     { title: 'kinase A', doi: '10.1/a', source: 'pubmed' },
@@ -413,9 +430,44 @@ async function main() {
   assert.equal(picked.length, 2, 'deduped by DOI (2 distinct)');
   assert.equal(picked[0].doi, '10.1/a', 'top-ranked is the kinase match');
   assert.ok(!('__score' in picked[0]), 'internal scoring fields stripped');
+  assert.equal(
+    normalizePaperDoi('https://doi.org/10.1021/acs.jmedchem.5c01681.s001'),
+    '10.1021/acs.jmedchem.5c01681',
+    'supporting-information DOI resolves to the parent article DOI'
+  );
+  assert.equal(
+    buildCandidateKey({ doi: '10.1021/acs.jmedchem.5c01681.s001' }),
+    buildCandidateKey({ doi: '10.1021/acs.jmedchem.5c01681.s002' }),
+    'supporting-information DOI variants share one search candidate key'
+  );
+  const supplementaryDeduped = selectPaperCandidates([
+    { title: 'Molecular glue degrader article', doi: '10.1021/acs.jmedchem.5c01681.s001', source: 'crossref' },
+    { title: 'Molecular glue degrader article supplemental file', doi: '10.1021/acs.jmedchem.5c01681.s002', source: 'crossref' },
+    { title: 'A separate molecular glue degrader article', doi: '10.1021/jacs.5c09857', source: 'crossref' }
+  ], 'molecular glue degrader', 0);
+  assert.equal(supplementaryDeduped.length, 2, 'supporting-information results dedupe to one parent article');
+  assert.equal(supplementaryDeduped[0].doi, '10.1021/acs.jmedchem.5c01681', 'selected paper exposes the parent DOI');
+
+  const runtimeSupport = createAgentRuntimeSupport({});
+  const normalizedSnapshot = runtimeSupport.normalizeAgentSnapshot({
+    settings: {
+      preferredJournals: ['Science; Cell'],
+      preferredJournal: 'Nature Biotechnology\ncell'
+    }
+  });
+  assert.deepEqual(
+    normalizedSnapshot.settings.preferredJournals,
+    ['Science', 'Cell', 'Nature Biotechnology'],
+    'agent runtime snapshot normalizes preferred journal lists'
+  );
+  assert.equal(
+    normalizedSnapshot.settings.preferredJournal,
+    'Science; Cell; Nature Biotechnology',
+    'agent runtime keeps legacy preferredJournal compatibility string'
+  );
 
   // --- codex line-range hydration (extracted module) -------------------------
-  // adjacent/overlapping ranges merge; string "3-4, 6" parses; 1-based clamp
+  // adjacent/overlapping ranges merge; string "3-4, 6" parses; source lines stay exact
   assert.deepEqual(
     normalizeLineRanges([{ start_line: 3, end_line: 4 }, { start_line: 5, end_line: 5 }]),
     [{ start_line: 3, end_line: 5 }],
@@ -427,14 +479,113 @@ async function main() {
   const hydrated = readLineRangesFromText(codexMd, [{ start_line: 4, end_line: 5 }]);
   assert.equal(hydrated.parts.length, 1);
   assert.equal(hydrated.parts[0].text, 'we ran a blot\nand a gel', 'verbatim lines pulled by 1-based range');
+  assert.deepEqual(hydrated.source_lines, [
+    { line_number: 4, content: 'we ran a blot' },
+    { line_number: 5, content: 'and a gel' }
+  ], 'application maps selected line numbers to exact Markdown content');
   assert.equal(
     inferMarkdownSectionLabel(codexMd.split('\n'), 4, 'fallback'),
     'Methods',
     'section label inferred from nearest heading above'
   );
-  // out-of-range clamps instead of throwing
-  const clamped = readLineRangesFromText('only one line', [{ start_line: 5, end_line: 9 }]);
-  assert.equal(clamped.parts[0].text, 'only one line', 'ranges clamp to available lines');
+  const rejected = readLineRangesFromText('only one line', [{ start_line: 5, end_line: 9 }]);
+  assert.deepEqual(rejected.parts, [], 'a sub-agent range starting beyond EOF is not remapped to another line');
+  assert.equal(rejected.rejected_ranges[0].reason, 'start_line_out_of_range');
+  const shortened = readLineRangesFromText('first\nsecond', [{ start_line: 2, end_line: 9 }]);
+  assert.deepEqual(shortened.source_lines, [{ line_number: 2, content: 'second' }], 'a valid range end is shortened at EOF');
+
+  const modelPaperPayload = JSON.parse(buildMcpToolResponseContent('literature_search', {
+    ok: true,
+    output: {
+      status: 'completed',
+      loaded_context_blocks: [{
+        paper_id: 'paper-1',
+        paper_title: 'A paper',
+        excerpt: 'we ran a blot\nand a gel',
+        line_ranges: [{ start_line: 4, end_line: 5 }],
+        source_lines: hydrated.source_lines,
+        source_line_count: 7,
+        source_path: 'KnowledgeBase/papers.md/paper-1/paper.md',
+        related_comments: [{
+          id: 'comment-1',
+          text: 'Check this result.',
+          author: 'Local user',
+          highlight_text: 'and a gel',
+          relation: 'highlight_overlap'
+        }]
+      }]
+    }
+  }));
+  assert.deepEqual(modelPaperPayload.loaded_context_blocks[0].source_lines, hydrated.source_lines, 'MCP model payload preserves exact numbered source lines');
+  assert.equal(modelPaperPayload.loaded_context_blocks[0].line_ranges[0].start_line, 4, 'MCP model payload preserves selected ranges');
+  assert.equal(modelPaperPayload.loaded_context_blocks[0].related_comments[0].text, 'Check this result.', 'MCP model payload preserves local comments');
+
+  const lineWorkflowRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-paper-lines-'));
+  try {
+    const markdownPath = path.join(lineWorkflowRoot, 'paper.md');
+    fs.writeFileSync(markdownPath, codexMd, 'utf8');
+    let delegatedMessage = '';
+    const assistantMessage = JSON.stringify({
+      ok: true,
+      status: 'completed',
+      selected_line_ranges: [{
+        line_ranges: [{ start_line: 4, end_line: 5 }],
+        relevance_reason: 'Relevant method.',
+        excerpt: 'FABRICATED SUB-AGENT TEXT'
+      }],
+      notes: [],
+      summary: 'Selected one range.'
+    });
+    const agent = {
+      id: 'paper-line-test-agent',
+      name: 'paper-reader',
+      status: 'active',
+      messages: [],
+      last_response: { assistant_message: assistantMessage },
+      metadata: {}
+    };
+    const workflowResult = await runCodexPaperContextSubAgent({
+      query: 'blot method',
+      message: 'Find the experimental method.',
+      selectedPapers: [{ paper_id: 'paper-1', paper_title: 'A paper', doi: '10.1/test' }],
+      downloadedPapers: [{
+        paper_id: 'paper-1',
+        ok: true,
+        status: 'reused',
+        knowledge_markdown_path: markdownPath,
+        knowledge_markdown_relative_path: 'KnowledgeBase/papers.md/paper-1/paper.md'
+      }],
+      snapshot: {
+        papers: [{
+          id: 'paper-1',
+          title: 'A paper',
+          doi: '10.1/test',
+          highlights: [{ id: 'highlight-1', pageNumber: 1, text: 'we ran a blot' }],
+          comments: [{
+            id: 'comment-1',
+            text: 'Verify the blot conditions.',
+            author: 'Local user',
+            highlightId: 'highlight-1'
+          }]
+        }]
+      },
+      subAgentRuntime: {
+        createSubAgent: async (input = {}) => {
+          delegatedMessage = input.message;
+          return { ok: true, status: 'created', agent };
+        },
+        getSubAgent: () => ({ ok: true, agent }),
+        completeSubAgentTask: () => ({ ok: true })
+      }
+    });
+    const workflowBlock = workflowResult.loaded_context_blocks[0];
+    assert.equal(delegatedMessage.includes('nl -ba'), true, 'sub-agent is told to use physical line numbers');
+    assert.deepEqual(workflowBlock.source_lines, hydrated.source_lines, 'workflow hydrates only application-read Markdown lines');
+    assert.equal(JSON.stringify(workflowBlock).includes('FABRICATED SUB-AGENT TEXT'), false, 'sub-agent-authored excerpt text is ignored');
+    assert.equal(workflowBlock.related_comments[0].relation, 'highlight_overlap', 'matching local comment is attached to extracted lines');
+  } finally {
+    fs.rmSync(lineWorkflowRoot, { recursive: true, force: true });
+  }
 
   // --- wiki-search scoring (extracted module) --------------------------------
   assert.deepEqual(wikiTokenize('The KINASE inhibitor'), ['kinase', 'inhibitor'], 'tokenize lowercases + drops stopwords');

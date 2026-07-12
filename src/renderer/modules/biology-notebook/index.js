@@ -181,7 +181,11 @@ export function initLabNotebook({
     getInventory: () => (state.inventory || {}),
     getSettings: () => state.settings || {},
     safeText,
-    onSelect: (sample, menuState) => inlinePlaceholders.linkSample({ menuState, sample })
+    onSelect: (sample, menuState) => inlinePlaceholders.linkSample({ menuState, sample }),
+    onAddTable: (menuState) => resultTableController.onAddFromPlaceholder({
+      name: menuState?.placeholderName,
+      value: menuState?.value
+    })
   });
 
   const inlinePlaceholders = createInlinePlaceholderController({

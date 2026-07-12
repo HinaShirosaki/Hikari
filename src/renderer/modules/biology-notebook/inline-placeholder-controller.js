@@ -116,7 +116,7 @@ export function createInlinePlaceholderController({
       return;
     }
     const wrap = token.closest('[data-inline-placeholder]');
-    if (!wrap?.dataset?.samplePlaceholderType) {
+    if (!wrap) {
       return;
     }
     event.preventDefault();

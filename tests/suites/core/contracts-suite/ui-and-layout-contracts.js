@@ -7,15 +7,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
-      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
-      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
       readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
     const readPreloadSource = () => [
@@ -77,6 +72,17 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const css = readLocalSource('ui', 'css', 'overrides', 'universal-left-rail-lists.css');
       assert.match(css, /body\s*\{[\s\S]*--hikari-left-rail-list-selected:\s*color-mix\(in srgb, var\(--theme-surface-subtle\) 78%, transparent\);/);
       assert.doesNotMatch(css, /:root\s*\{[\s\S]*--hikari-left-rail-list-selected:/);
+    });
+
+    test('biology notebook rail flattens hidden pinned controls and keeps its scrollbar at the rail edge', () => {
+      const css = readLocalSource('ui', 'css', 'overrides', 'left-rail-template.css');
+      const railRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\);[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const pinnedRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\s*>\s*\.left-rail-template__pinned\s*\{[^}]*display:\s*contents;[^}]*\}/s;
+      const listRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\s*>\s*\.biology-notebook-page-list\.left-rail-template__scroll\s*\{[^}]*padding-inline-end:\s*0;[^}]*scrollbar-gutter:\s*auto;[^}]*\}/s;
+
+      assert.match(css, railRule);
+      assert.match(css, pinnedRule);
+      assert.match(css, listRule);
     });
 
     test('gel tools omit manual steps and keep ladder MW in analysis controls', () => {

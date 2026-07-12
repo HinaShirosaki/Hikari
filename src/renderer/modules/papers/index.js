@@ -5,6 +5,7 @@ import { createPapersCommentController } from './comments.js';
 import { createPapersLibraryController } from './library.js';
 import { ensurePaperHighlights } from './model.js';
 import { normalizePaperSummary } from './normalizers.js';
+import { bindFileDropTarget } from '../file-drop.js';
 import {
   boxesToPdfQuadPoints,
   normalizeHighlightBoxes,
@@ -781,6 +782,21 @@ export function initPapersManagement({
       printPdfBytes(bytes, { title: getPaperDisplayTitle(activePaper) || 'Paper' });
     } catch (error) {
       windowRef?.alert?.(String(error?.message || error || 'Failed to open the PDF for printing.'));
+    }
+  });
+
+  bindFileDropTarget({
+    target: elements.paperViewerShell,
+    accept: elements.paperPdfInput?.getAttribute?.('accept') || 'application/pdf,.pdf',
+    multiple: false,
+    onFiles: async (files) => {
+      await actions.uploadAndViewPaperFile(files[0]);
+    },
+    onRejected: () => {
+      windowRef?.alert?.('Drop one PDF file to import and view it.');
+    },
+    onError: (error) => {
+      windowRef?.alert?.(String(error?.message || error || 'Failed to open dropped PDF.'));
     }
   });
 

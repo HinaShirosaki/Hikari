@@ -4,6 +4,7 @@ import {
   cloneNotebookResultTable,
   cloneNotebookResultTables,
   createDefaultNotebookResultTable,
+  createNotebookResultTableFromPlaceholder,
   normalizeNotebookResultTable,
   normalizeNotebookResultTables,
   summarizeNotebookResultTables,
@@ -232,6 +233,12 @@ export function createResultTableController({
     renderEditor(tables, { activeIndex: tables.length - 1 });
   }
 
+  function onAddFromPlaceholder({ name = '', value = '' } = {}) {
+    const tables = syncDraftFromGrid();
+    tables.push(createNotebookResultTableFromPlaceholder(createId, { name, value }));
+    renderEditor(tables, { activeIndex: tables.length - 1 });
+  }
+
   function onAddRow() {
     const tables = syncDraftFromGrid();
     const targetIndex = clampActiveIndex(activeTableIndex, tables);
@@ -286,6 +293,7 @@ export function createResultTableController({
     getCurrent,
     getCurrentTables,
     onAdd,
+    onAddFromPlaceholder,
     onAddRow,
     onAddColumn,
     onRemove

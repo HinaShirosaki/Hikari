@@ -32,6 +32,32 @@ function createAgentRuntimeSupport(deps = {}) {
     return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   }
 
+  function normalizePreferredJournalNames(value) {
+    const candidates = [];
+    function pushCandidate(candidate) {
+      if (Array.isArray(candidate)) {
+        candidate.forEach(pushCandidate);
+        return;
+      }
+      if (candidate && typeof candidate === 'object') {
+        pushCandidate(candidate.name || candidate.url || candidate.href || '');
+        return;
+      }
+      String(candidate || '')
+        .split(/[;\n]+/)
+        .map((item) => cleanText(item, 240).trim())
+        .filter(Boolean)
+        .forEach((item) => candidates.push(item));
+    }
+    pushCandidate(value);
+    return asArray(candidates)
+      .filter((item, index, list) => {
+        const key = item.toLowerCase();
+        return key && list.findIndex((candidate) => candidate.toLowerCase() === key) === index;
+      })
+      .slice(0, 12);
+  }
+
   function buildProjectRecordIndex({ snapshot } = {}) {
     const source = snapshot && typeof snapshot === 'object' ? snapshot : {};
     const projects = asArray(source.projects);
@@ -199,24 +225,17 @@ function createAgentRuntimeSupport(deps = {}) {
     const settingsSource = snapshot.settings && typeof snapshot.settings === 'object'
       ? snapshot.settings
       : {};
-    const preferredJournals = asArray(
-      settingsSource.preferredJournals
-        || settingsSource.preferred_journals
-        || snapshot.preferredJournals
-        || snapshot.preferred_journals
-    )
-      .map((journal) => cleanText(journal, 240))
-      .filter(Boolean)
-      .slice(0, 12);
-    const preferredJournal = preferredJournals.length
-      ? preferredJournals.join('; ')
-      : cleanText(
-        settingsSource.preferredJournal
-          || settingsSource.preferred_journal
-          || snapshot.preferredJournal
-          || snapshot.preferred_journal,
-        1200
-      );
+    const preferredJournals = normalizePreferredJournalNames([
+      settingsSource.preferredJournals,
+      settingsSource.preferred_journals,
+      snapshot.preferredJournals,
+      snapshot.preferred_journals,
+      settingsSource.preferredJournal,
+      settingsSource.preferred_journal,
+      snapshot.preferredJournal,
+      snapshot.preferred_journal
+    ]);
+    const preferredJournal = preferredJournals.join('; ');
     const normalizedSnapshot = {
       projects: asArray(snapshot.projects).slice(0, 40),
       protocols: asArray(snapshot.protocols).slice(0, 100),

@@ -1378,8 +1378,14 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   background: var(--theme-surface-elevated);
 }
 
-#biology-notebook-view .inline-placeholder-token.is-sample-placeholder {
+#biology-notebook-view .inline-placeholder-token {
   cursor: context-menu;
+}
+
+.biology-notebook-placeholder-table-action {
+  width: 100%;
+  justify-content: flex-start;
+  margin: 0 0 2px;
 }
 
 #biology-notebook-view .inline-placeholder-token.is-linked-sample {

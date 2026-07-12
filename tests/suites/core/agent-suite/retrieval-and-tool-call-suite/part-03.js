@@ -177,7 +177,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
     test('agent tool-call catalog validators reject malformed catalog data', () => {
       const missingDescriptionCatalog = toolLoading.AGENT_TOOL_CATALOG.filter((entry) => [
         'inventory-lookup',
-        'record-lookup',
+        'notebook-lookup',
         'protocol-matching',
         'notebook-generation',
         'notebook-draft',
@@ -221,7 +221,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
             }
           }
         }, toolLoading.AGENT_TOOL_CATALOG),
-        /missing schema for "record-lookup"/i
+        /missing schema for "notebook-lookup"/i
       );
 
       assert.throws(
@@ -234,7 +234,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
               properties: {}
             }
           },
-          'record-lookup': {
+          'notebook-lookup': {
             description: 'record usage',
             input_schema: {
               type: 'object',
@@ -369,7 +369,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
               properties: {}
             }
           },
-          'record-lookup': {
+          'notebook-lookup': {
             description: 'record usage',
             input_schema: {
               type: 'object',

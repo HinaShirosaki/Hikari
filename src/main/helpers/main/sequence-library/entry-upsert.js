@@ -136,7 +136,7 @@ function upsertEntryRow(db, row) {
 async function resolveNextAlignmentSessions({ alignmentSessions, entryId, paths }) {
   const entryDir = path.join(paths.entriesRoot, entryId);
   if (alignmentSessions === null) {
-    return attachAlignmentSourcePaths(await readAlignmentManifest(entryDir), paths.libraryRoot);
+    return attachAlignmentSourcePaths(await readAlignmentManifest(entryDir, paths.libraryRoot), paths.libraryRoot);
   }
   return attachAlignmentSourcePaths(
     await writeAlignmentManifest(entryDir, alignmentSessions, paths.libraryRoot),

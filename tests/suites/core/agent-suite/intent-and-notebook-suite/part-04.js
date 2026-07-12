@@ -88,8 +88,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart04(context = {}
         executeInventoryLookup: async () => {
           throw new Error('Inventory lookup should not run for direct skill commands.');
         },
-        executeRecordLookup: async () => {
-          throw new Error('Record lookup should not run for direct skill commands.');
+        executeNotebookLookup: async () => {
+          throw new Error('Notebook lookup should not run for direct skill commands.');
         },
         getAgentChatLogPath: () => '',
         getDefaultDataFilePath: () => '',

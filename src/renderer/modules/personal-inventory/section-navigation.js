@@ -17,6 +17,34 @@ function openContainer(section, containerId) {
   ctx.renderSections();
 }
 
+function renderContainerNode(section, container, renderedIds) {
+  const containerId = String(container?.id || '');
+  if (!containerId || renderedIds.has(containerId)) {
+    return '';
+  }
+  renderedIds.add(containerId);
+  const isActive = uiState.selectedContainer
+    && uiState.selectedContainer.section === section
+    && uiState.selectedContainer.containerId === container.id;
+  const childMarkup = (helpers.getContainerChildren?.(section, container.id) || [])
+    .map((child) => renderContainerNode(section, child, renderedIds))
+    .filter(Boolean)
+    .join('');
+  return `
+    <div class="inventory-container-tree-node" data-container-node="${safeText(container.id)}">
+      <div class="inventory-container-item">
+        <button type="button" class="inventory-container-btn${isActive ? ' active' : ''}" data-container-open="${safeText(container.id)}" data-section="${safeText(section)}">
+          <span class="inventory-container-name">${safeText(container.name)}</span>
+        </button>
+        <button type="button" class="inventory-container-add-child-btn" data-container-add-child="${safeText(container.id)}" data-section="${safeText(section)}" aria-label="Add subcontainer inside ${safeText(container.name)}" title="Add subcontainer">
+          <span aria-hidden="true">+</span>
+        </button>
+      </div>
+      ${childMarkup ? `<div class="inventory-container-children">${childMarkup}</div>` : ''}
+    </div>
+  `;
+}
+
 function renderSectionNavigation(activeSection) {
   if (!inventoryLocationNav) {
     return;
@@ -27,19 +55,16 @@ function renderSectionNavigation(activeSection) {
     const containerCount = helpers.getSectionContainerCount(section);
     const sampleCount = helpers.getSectionSampleCount(section);
     const containers = state.inventory?.[section] || [];
+    const renderedContainerIds = new Set();
+    const rootContainers = helpers.getRootContainers?.(section) || containers;
+    const containerTree = (rootContainers.length ? rootContainers : containers)
+      .map((container) => renderContainerNode(section, container, renderedContainerIds))
+      .filter(Boolean)
+      .join('');
     const containerMarkup = section === activeSection
       ? `
         <div class="inventory-container-nav">
-          ${containers.length ? containers.map((container) => {
-            const isActive = uiState.selectedContainer && uiState.selectedContainer.section === section && uiState.selectedContainer.containerId === container.id;
-            return `
-              <div class="inventory-container-item">
-                <button type="button" class="inventory-container-btn${isActive ? ' active' : ''}" data-container-open="${safeText(container.id)}" data-section="${safeText(section)}">
-                  <span class="inventory-container-name">${safeText(container.name)}</span>
-                </button>
-              </div>
-            `;
-          }).join('') : '<p class="small-note inventory-container-nav-empty">No containers in this section yet.</p>'}
+          ${containers.length ? `<div class="inventory-container-tree">${containerTree}</div>` : '<p class="small-note inventory-container-nav-empty">No containers in this section yet.</p>'}
         </div>
       `
       : '';
@@ -65,7 +90,8 @@ function renderSectionNavigation(activeSection) {
       uiState.editingWellIndex = -1;
       uiState.editingSampleId = '';
       uiState.wellEditorStatus = '';
-      const firstContainer = (state.inventory?.[section] || [])[0];
+      const rootContainers = helpers.getRootContainers?.(section) || [];
+      const firstContainer = (rootContainers.length ? rootContainers : state.inventory?.[section] || [])[0];
       if (firstContainer) {
         ctx.openContainer(section, firstContainer.id);
         return;
@@ -85,6 +111,15 @@ function renderSectionNavigation(activeSection) {
         button.dataset.section,
         button.dataset.containerOpen
       );
+    });
+  });
+
+  inventoryLocationNav.querySelectorAll('[data-container-add-child]').forEach((button) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault?.();
+      event.stopPropagation?.();
+      ctx.hideContainerContextMenu?.();
+      ctx.beginAddSubcontainer?.(button.dataset.section, button.dataset.containerAddChild);
     });
   });
 }

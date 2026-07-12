@@ -44,7 +44,7 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
           missing_requirements: ['A clearer interpretation is still needed.'],
           should_continue: true,
           next_tool_hint: {
-            tool_name: 'record-lookup',
+            tool_name: 'notebook-lookup',
             query: 'previous similar assay',
             reason: 'Need contextual interpretation.'
           },

@@ -1,5 +1,6 @@
 import { trimText } from './shared.js';
 import { applyLiveProgressEvent } from './live-progress-state.js';
+import { extractPlotlyGraphArtifactFromProgressEvent } from './plotly-artifacts.js';
 
 export function bindAgentChatEvents({
   dom,
@@ -17,6 +18,7 @@ export function bindAgentChatEvents({
   developerToolTestController,
   historyController,
   captureImageAttachment,
+  onPlotlyGraphArtifact = () => {},
   renderDeveloperToolHint
 }) {
   function applySuggestedPrompt(event) {
@@ -189,6 +191,10 @@ export function bindAgentChatEvents({
       return;
     }
     runtime.liveAssistantMessage = applyLiveProgressEvent(runtime.liveAssistantMessage, payload);
+    const plotlyGraphArtifact = extractPlotlyGraphArtifactFromProgressEvent(payload);
+    if (plotlyGraphArtifact?.figure?.data?.length) {
+      onPlotlyGraphArtifact(plotlyGraphArtifact, payload);
+    }
     shell.renderHistoryView();
     shell.setStatus(trimText(runtime.liveAssistantMessage?.text, 320) || 'Working on this...');
   });

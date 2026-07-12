@@ -4,12 +4,12 @@
  * Direct Hikari MCP tools for the paper-intake summary KB.
  *
  * Three tools, all read-only:
- *   1. paper_intake_list_project_summaries — list one-sentence summaries for
- *      every paper attached to a given project.
- *   2. paper_intake_search_summaries — keyword search across one-sentence
+ *   1. paper_intake_search_summaries — keyword search across one-sentence
  *      summaries (and titles).
- *   3. paper_intake_search_experiments — keyword search across structured
+ *   2. paper_intake_search_experiments — keyword search across structured
  *      experiment entries.
+ *   3. paper_intake_list_project_summaries — list one-sentence summaries for
+ *      every paper attached to a given project.
  *
  * These mirror the `definition` + `handler` shape used by the other entries in
  * `mcp-contract/direct-tools/` and are registered by that index.
@@ -446,16 +446,16 @@ async function callSearchExperiments(input = {}, context = {}, deps = {}) {
 
 const PAPER_INTAKE_DIRECT_MCP_TOOLS = Object.freeze([
   Object.freeze({
-    definition: LIST_PROJECT_SUMMARIES_DEFINITION,
-    handler: callListProjectSummaries
-  }),
-  Object.freeze({
     definition: SEARCH_SUMMARIES_DEFINITION,
     handler: callSearchSummaries
   }),
   Object.freeze({
     definition: SEARCH_EXPERIMENTS_DEFINITION,
     handler: callSearchExperiments
+  }),
+  Object.freeze({
+    definition: LIST_PROJECT_SUMMARIES_DEFINITION,
+    handler: callListProjectSummaries
   })
 ]);
 

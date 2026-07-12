@@ -53,11 +53,11 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart02(contex
           result: {
             ok: true,
             parser: {
-              primary_intent: 'record_lookup',
+              primary_intent: 'notebook_lookup',
               needs_clarification: false,
-              reasoning_summary: 'Matched record lookup.'
+              reasoning_summary: 'Matched notebook lookup.'
             },
-            record_lookup: {
+            notebook_lookup: {
               status: 'matched',
               query: 'Atlas binder',
               items: [
@@ -71,20 +71,20 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart02(contex
               ]
             },
             thinking_trace: {
-              intent_parse_question: 'This is a record lookup request.',
+              intent_parse_question: 'This is a notebook lookup request.',
               question_clarifier: 'I am narrowing the lookup to the Atlas binder notebook.',
-              criteria_generate: 'I am checking whether one clear record match is enough.',
+              criteria_generate: 'I am checking whether one clear notebook match is enough.',
               tool_rounds: [
                 {
                   round: 1,
-                  tool_selection: 'I am choosing record lookup first.',
-                  tool_call: 'I want to use record-lookup to investigate "Atlas binder".',
+                  tool_selection: 'I am choosing notebook lookup first.',
+                  tool_call: 'I want to use notebook-lookup to investigate "Atlas binder".',
                   tool_results: 'Based on the tool result, it seems I found the notebook entry.'
                 }
               ],
               pre_synthesize_answer: 'Based on the evidence so far, the Atlas Binder Notebook is the likely match.',
-              judge: 'I have enough evidence to answer with one record match.',
-              final_synthesize: 'I am summarizing the matched record for the user.',
+              judge: 'I have enough evidence to answer with one notebook match.',
+              final_synthesize: 'I am summarizing the matched notebook for the user.',
               final_synthesized_question: 'Where is the Atlas binder notebook?'
             },
             developer_trace: []
@@ -93,7 +93,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart02(contex
           messageId: 'assistant-fixed-1',
           timestamp: '2026-03-22T15:00:02.000Z'
         });
-        assert.match(assistantMessage.text, /Found 1 record match/);
+        assert.match(assistantMessage.text, /Found 1 notebook match/);
         assert.match(assistantMessage.text, /notebook: Atlas Binder Notebook/i);
         assert.match(assistantMessage.text, /project Atlas/i);
         assert.match(assistantMessage.text, /protocol Binder Purification/i);
@@ -188,14 +188,14 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart02(contex
             request_direction: 'app->llm',
             response_direction: 'llm->app',
             request_payload: { prompt: 'Where is the Atlas binder notebook?' },
-            response_payload: { primary_intent: 'record_lookup' }
+            response_payload: { primary_intent: 'notebook_lookup' }
           },
           {
             type: 'agent-chat-result',
             session_id: created.session.id,
             requestId: 'req-1',
             timestamp: '2026-03-22T15:00:01.900Z',
-            response_type: 'record_lookup',
+            response_type: 'notebook_lookup',
             ok: true
           },
           {
@@ -227,8 +227,8 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart02(contex
         assert.equal(loaded.messages.length, 2);
         assert.equal(loaded.messages[0].role, 'user');
         assert.equal(loaded.messages[1].role, 'assistant');
-        assert.match(String(loaded.messages[1].text || ''), /Found 1 record match/);
-        assert.equal(loaded.messages[1].meta.record_lookup.status, 'matched');
+        assert.match(String(loaded.messages[1].text || ''), /Found 1 notebook match/);
+        assert.equal(loaded.messages[1].meta.notebook_lookup.status, 'matched');
         assert.equal(loaded.rows.some((row) => row.type === 'agent-lifecycle'), true);
         assert.equal(loaded.rows.some((row) => row.type === 'agent-llm-trace'), true);
 

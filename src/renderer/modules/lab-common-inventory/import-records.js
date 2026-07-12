@@ -6,6 +6,7 @@ export function installImportRecords(ctx) {
   const assignLocationCode = (...args) => ctx.assignLocationCode(...args);
   const parseLocationCode = (...args) => ctx.parseLocationCode(...args);
   const appendBlock = (...args) => ctx.appendBlock(...args);
+  const ensureLabInventoryShape = (...args) => ctx.ensureLabInventoryShape(...args);
 
 function cleanImportCell(value) {
   return String(value ?? '').trim();

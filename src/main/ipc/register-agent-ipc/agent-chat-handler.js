@@ -296,8 +296,8 @@ function registerAgentChatHandler({
                 ? 'purchase_recommendation'
               : (result?.inventory_lookup
                 ? 'inventory_lookup'
-                : (result?.record_lookup
-                  ? 'record_lookup'
+                : (result?.notebook_lookup
+                  ? 'notebook_lookup'
                   : (result?.general_science_question
                     ? 'general_science_question'
                     : (result?.project_science_question

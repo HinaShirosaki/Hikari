@@ -6,6 +6,9 @@ const {
   HIKARI_APP_MCP_ENDPOINT_PATH,
   HIKARI_APP_TOOL_CALL_TOOL_NAME
 } = require('./host.js');
+const {
+  HIKARI_MCP_TOOL_TIMEOUT_MS
+} = require('./constants.js');
 
 function cleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -19,7 +22,7 @@ function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
-const DEFAULT_REQUEST_TIMEOUT_MS = 60_000;
+const DEFAULT_REQUEST_TIMEOUT_MS = HIKARI_MCP_TOOL_TIMEOUT_MS;
 
 function resolveAgentMcpEndpointUrl(rawUrl = '') {
   const endpoint = cleanText(rawUrl, 2000).replace(/\/+$/u, '');

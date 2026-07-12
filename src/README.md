@@ -2,7 +2,7 @@
 
 `src/` is split by runtime boundary:
 
-- `main/`: Electron main process. `main.js` starts the generic lifecycle in `core/`; `core/catalog/` declares services; `ipc/` exposes adapters; `helpers/` contains domain implementations.
+- `main/`: Electron main process. `main.js` defers to `core/main-services.js`, which constructs services and registers IPC; `ipc/` exposes registrars; `helpers/` contains domain implementations.
 - `renderer/`: browser-side application. `core/` boots the shell, `module-manifests/` declares feature wiring, `modules/<feature>/` owns each workspace, and `services/` handles cross-feature fan-out.
 - `shared/`: process-neutral contracts used across runtime boundaries, such as IPC channel names.
 
@@ -18,8 +18,7 @@ renderer ─┘
 
 ## Useful entry points
 
-- Main boot: `main/main.js` → `main/core/start-hikari-main-core.js`
-- Main composition: `main/core/main-service-catalog.js` → `main/core/catalog/`
+- Main boot: `main/main.js` → `main/app/start-main-app.js` → `main/core/main-services.js`
 - Renderer boot: `renderer/renderer.js` → `renderer/core/start-hikari-core.js`
 - Renderer feature wiring: `renderer/module-manifests/index.js`
 - Renderer state: `renderer/modules/app-state.js` → `renderer/modules/app-state/`

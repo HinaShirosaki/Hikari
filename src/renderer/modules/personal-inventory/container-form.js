@@ -6,6 +6,8 @@ export function installContainerForm(ctx) {
     addContainerBtn,
     addContainerOverlay,
     addContainerForm,
+    addContainerTitle,
+    addContainerNote,
     addContainerLocationSelect,
     addContainerTypeSelect,
     addContainerGridFields,
@@ -13,6 +15,52 @@ export function installContainerForm(ctx) {
     addContainerColsInput,
     addContainerNameInput
   } = ctx.elements;
+
+function getAddContainerParent() {
+  const parent = uiState.addContainerParent;
+  if (!parent?.section || !parent?.containerId) {
+    return null;
+  }
+  const container = helpers.getContainer(parent.section, parent.containerId);
+  if (!container) {
+    uiState.addContainerParent = null;
+    return null;
+  }
+  return { ...parent, container };
+}
+
+function setAddContainerParent(parentTarget = null) {
+  if (
+    parentTarget?.section
+    && parentTarget?.containerId
+    && helpers.getContainer(parentTarget.section, parentTarget.containerId)
+  ) {
+    uiState.addContainerParent = {
+      section: parentTarget.section,
+      containerId: parentTarget.containerId
+    };
+    return;
+  }
+  uiState.addContainerParent = null;
+}
+
+function renderAddContainerDialogMode() {
+  const parent = getAddContainerParent();
+  if (addContainerTitle) {
+    addContainerTitle.textContent = parent ? 'Add Subcontainer' : 'Add Container';
+  }
+  if (addContainerNote) {
+    addContainerNote.textContent = parent
+      ? `Create a container inside ${parent.container.name || 'this container'}.`
+      : 'Create a storage box, plate, tube, or custom grid.';
+  }
+  if (addContainerLocationSelect) {
+    addContainerLocationSelect.disabled = Boolean(parent);
+    if (parent) {
+      addContainerLocationSelect.value = parent.section;
+    }
+  }
+}
 
 function setAddContainerFormOpen(nextOpen) {
   uiState.isAddContainerFormOpen = Boolean(nextOpen);
@@ -24,6 +72,7 @@ function setAddContainerFormOpen(nextOpen) {
   }
   if (uiState.isAddContainerFormOpen) {
     ctx.renderAddContainerTypeFields();
+    renderAddContainerDialogMode();
   }
 }
 
@@ -44,9 +93,13 @@ function renderAddContainerTypeFields() {
   });
 }
 
-function resetAddContainerForm() {
+function resetAddContainerForm(options = {}) {
+  if (!options.keepParent) {
+    uiState.addContainerParent = null;
+  }
   addContainerForm?.reset();
   if (addContainerLocationSelect) {
+    addContainerLocationSelect.disabled = false;
     addContainerLocationSelect.value = '';
   }
   if (addContainerTypeSelect) {
@@ -59,6 +112,7 @@ function resetAddContainerForm() {
     addContainerColsInput.value = '9';
   }
   ctx.renderAddContainerTypeFields();
+  renderAddContainerDialogMode();
 }
 
 function renderAddContainerLocationOptions() {
@@ -72,10 +126,12 @@ function renderAddContainerLocationOptions() {
     options.push(`<option value="${safeText(section)}"${isSelected}>${safeText(section)}</option>`);
   });
   addContainerLocationSelect.innerHTML = options.join('');
+  renderAddContainerDialogMode();
 }
 
 function addContainerFromForm() {
-  const section = addContainerLocationSelect?.value || '';
+  const parent = getAddContainerParent();
+  const section = parent?.section || addContainerLocationSelect?.value || '';
   const name = addContainerNameInput?.value.trim() || '';
   if (!section || !name) {
     return;
@@ -90,6 +146,7 @@ function addContainerFromForm() {
   const container = {
     id: createId(),
     name,
+    ...(parent ? { parentContainerId: parent.containerId } : {}),
     ...containerShape,
     wells: createDefaultWells(containerShape),
     singleContent: type === 'single' ? '' : undefined
@@ -109,11 +166,27 @@ function addContainerFromForm() {
   ctx.renderSections();
 }
 
+function beginAddContainer() {
+  ctx.renderAddContainerLocationOptions();
+  ctx.resetAddContainerForm();
+  ctx.setAddContainerFormOpen(true);
+}
+
+function beginAddSubcontainer(section, containerId) {
+  setAddContainerParent({ section, containerId });
+  ctx.renderAddContainerLocationOptions();
+  ctx.resetAddContainerForm({ keepParent: true });
+  ctx.setAddContainerFormOpen(true);
+  addContainerNameInput?.focus();
+}
+
   Object.assign(ctx, {
     setAddContainerFormOpen,
     renderAddContainerTypeFields,
     resetAddContainerForm,
     renderAddContainerLocationOptions,
-    addContainerFromForm
+    addContainerFromForm,
+    beginAddContainer,
+    beginAddSubcontainer
   });
 }

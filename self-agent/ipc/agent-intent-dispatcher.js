@@ -11,7 +11,7 @@ function createAgentIntentDispatcher({
   scienceMainUtils,
   agentToolRuntime,
   executeInventoryLookup,
-  executeRecordLookup,
+  executeNotebookLookup,
   getDefaultDataFilePath,
   lifecycleService
 } = {}) {
@@ -21,7 +21,7 @@ function createAgentIntentDispatcher({
     observability,
     protocolNotebookRuntime,
     executeInventoryLookup,
-    executeRecordLookup,
+    executeNotebookLookup,
     getDefaultDataFilePath
   });
 
@@ -219,7 +219,7 @@ function createAgentIntentDispatcher({
     return {
       evidence_required: true,
       required_first_tools: [
-        'record-lookup',
+        'notebook-lookup',
         'literature-search',
         ...(wantsPaperAnalysis ? ['paper-analysis'] : [])
       ],
@@ -294,7 +294,7 @@ function createAgentIntentDispatcher({
     const evidence = [];
     for (const toolName of asArray(plan.required_first_tools)) {
       let args = {};
-      if (toolName === 'record-lookup') {
+      if (toolName === 'notebook-lookup') {
         args = {
           query,
           limit: 6,
@@ -305,9 +305,7 @@ function createAgentIntentDispatcher({
           query,
           message: cleanText(message, 1200),
           parser_payload: toolParserPayload,
-          prefer_recent: true,
-          limit: 6,
-          max_per_source: 4
+          prefer_recent: true
         };
       } else if (toolName === 'paper-analysis') {
         args = {

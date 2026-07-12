@@ -31,7 +31,7 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 | --- | --- | --- |
 | `runtime/agent-runtime-support.js` | Support | snapshot normalization, prompt templates, fuzzy match helpers |
 | `runtime/agent-session-runtime.js` | Support | provider-agnostic multi-round session adapter |
-| `runtime/agent-lookup-runtime.js` | Main path | controller-facing inventory/record lookup coordinator |
+| `runtime/agent-lookup-runtime.js` | Main path | controller-facing inventory/notebook lookup coordinator |
 | `runtime/agent-protocol-notebook.js` | Main path | protocol-to-notebook coordinator with pending-session state |
 | `runtime/agent-science-main-utils.js` | Support | science response shaping, project/paper evidence helpers |
 | `runtime/science-reasoning-loop/` | Main path | non-deep-research science loop (folder; entry `index.js`) |
@@ -50,7 +50,7 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 | `tools/agent-tool-call.js` | Support | compatibility wrapper that re-exports the split loading/execution helpers |
 | `tools/register-agent-tool-executors.js` | Main path | registers the full tool suite on the shared `genericAgentToolRuntime` during assembly |
 | `tools/agent-inventory-lookup.js` | Main path | concrete inventory lookup logic |
-| `tools/agent-record-lookup.js` | Main path | concrete record lookup logic |
+| `tools/agent-lookup-runtime.js` | Main path | concrete notebook lookup logic |
 | `tools/agent-protocol-matching.js` | Support | protocol ranking and tie-break selection |
 | `tools/agent-notebook-generation.js` | Support | placeholder resolution and notebook payload generation |
 | `tools/agent-notebook-draft.js` | Main path | planned notebook proposal flow; explicitly registered during agent-service assembly (`create-main-agent-services.js`) |
@@ -99,6 +99,6 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 If you want to read the code itself after this document set:
 
 1. `src/main/ipc/register-agent-ipc/` (the `agent:chat` registrar folder)
-2. `src/main/core/start-hikari-main-core.js` (assembly via `createMainAgentServices(...)`)
+2. `src/main/core/main-services.js` (assembly via `createMainAgentServices(...)`)
 
 Those show how the pieces from `src/main/helpers/agent` are actually composed into the application's live request path.

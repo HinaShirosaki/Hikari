@@ -103,7 +103,7 @@ async function buildEntryPayload({ paths, entry, includeGbk, includeHtml, includ
   }
   if (includeAlignments) {
     const entryDir = path.join(paths.entriesRoot, entry.id);
-    result.alignments = attachAlignmentSourcePaths(await readAlignmentManifest(entryDir), paths.libraryRoot);
+    result.alignments = attachAlignmentSourcePaths(await readAlignmentManifest(entryDir, paths.libraryRoot), paths.libraryRoot);
   }
   return result;
 }

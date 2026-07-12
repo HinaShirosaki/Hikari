@@ -15,7 +15,7 @@ function createApiAgentController({
   scienceMainUtils,
   agentToolRuntime,
   executeInventoryLookup,
-  executeRecordLookup,
+  executeNotebookLookup,
   agentChatLogRuntime,
   getDefaultDataFilePath,
   lifecycleService
@@ -26,7 +26,7 @@ function createApiAgentController({
     observability,
     protocolNotebookRuntime,
     executeInventoryLookup,
-    executeRecordLookup,
+    executeNotebookLookup,
     getDefaultDataFilePath,
     agentChatLogRuntime
   });
@@ -39,7 +39,7 @@ function createApiAgentController({
     scienceMainUtils,
     agentToolRuntime,
     executeInventoryLookup,
-    executeRecordLookup,
+    executeNotebookLookup,
     getDefaultDataFilePath,
     lifecycleService
   });

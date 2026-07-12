@@ -77,6 +77,13 @@ export const agentChatRailManifest = {
       modules?.papers?.startPaperScreenshotSelection?.()
       || Promise.resolve({ ok: false, error: 'Open a paper before selecting a screenshot.' })
     ),
+    onPlotlyGraphArtifact: (artifact, payload) => {
+      const activeViewId = String(rootDocument?.body?.dataset?.activeView || '').trim();
+      if (activeViewId !== views.ASSAY) {
+        return false;
+      }
+      return modules?.assay?.renderAgentPlotlyGraph?.(artifact, payload) === true;
+    },
     onOpenNotebookEntry: (entryId = '') => {
       showView(views.BIOLOGY_NOTEBOOK);
       modules.biologyNotebook?.openEntry?.(entryId);

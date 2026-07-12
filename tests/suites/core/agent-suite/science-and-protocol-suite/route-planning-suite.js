@@ -19,7 +19,7 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
               required_evidence: ['One computation-backed evidence step is required.'],
               continue_when: ['The requested computation has not been executed yet.'],
               can_exit_with_limitations_when: ['A best-effort answer is acceptable if the missing context is stated explicitly.'],
-              preferred_next_tools: ['python-sandbox', 'record-lookup'],
+              preferred_next_tools: ['python-sandbox', 'notebook-lookup'],
               reasoning_notes: 'Prefer computation before interpretation.',
               trace_sentence: 'I am defining what evidence must exist before the reasoning loop can stop.'
             }
@@ -32,7 +32,7 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
         message: 'Fit this assay and explain the outliers.',
         clarifiedInput: 'Fit this assay, quantify the outliers, and explain whether they are likely technical or biological.',
         policy: {
-          tool_scope: ['python-sandbox', 'record-lookup']
+          tool_scope: ['python-sandbox', 'notebook-lookup']
         }
       });
 
@@ -160,7 +160,7 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
       const runtime = createAgentRoutePlannerRuntime();
       const allowedToolNames = [
         'inventory-lookup',
-        'record-lookup',
+        'notebook-lookup',
         'protocol-matching',
         'notebook-generation',
         'notebook-draft',
@@ -185,7 +185,7 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
 
       assert.match(
         prompt,
-        /Allowed tools: inventory-lookup \| record-lookup \| protocol-matching \| notebook-generation \| notebook-draft \| python-sandbox \| web-search \| literature-search/
+        /Allowed tools: inventory-lookup \| notebook-lookup \| protocol-matching \| notebook-generation \| notebook-draft \| python-sandbox \| web-search \| literature-search/
       );
       assert.deepEqual(
         fallback.tool_call_suggestions.map((item) => item.tool_name),
@@ -198,7 +198,7 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
       const runtime = createScienceLoopExitCriteriaRuntime();
       const allowedToolNames = [
         'inventory-lookup',
-        'record-lookup',
+        'notebook-lookup',
         'protocol-matching',
         'notebook-generation',
         'notebook-draft',
@@ -222,7 +222,7 @@ module.exports = function registerRoutePlanningSuite(context = {}) {
 
       assert.match(
         prompt,
-        /Allowed tools: inventory-lookup \| record-lookup \| protocol-matching \| notebook-generation \| notebook-draft \| python-sandbox \| web-search \| literature-search/
+        /Allowed tools: inventory-lookup \| notebook-lookup \| protocol-matching \| notebook-generation \| notebook-draft \| python-sandbox \| web-search \| literature-search/
       );
       assert.deepEqual(fallback.preferred_next_tools, allowedToolNames);
     });

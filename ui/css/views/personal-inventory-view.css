@@ -17,6 +17,12 @@
   margin-top: 0;
 }
 
+.personal-inventory-layout > .inventory-main-panel.panel {
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top: 0;
+}
+
 .inventory-rail-stack {
   display: grid;
   gap: 12px;
@@ -72,6 +78,50 @@
   display: grid;
   gap: 6px;
   padding-left: 8px;
+}
+
+.inventory-container-tree,
+.inventory-container-tree-node,
+.inventory-container-children {
+  display: grid;
+}
+
+.inventory-container-tree,
+.inventory-container-tree-node {
+  gap: 0.25rem;
+}
+
+.inventory-container-children {
+  gap: 0.25rem;
+  margin-left: 1rem;
+  padding-left: 0.5rem;
+  border-left: 1px solid var(--theme-border-soft);
+}
+
+.inventory-container-children .inventory-container-btn {
+  background: transparent;
+}
+
+.inventory-container-add-child-btn {
+  inline-size: 1.75rem;
+  aspect-ratio: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  font: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.inventory-container-add-child-btn:hover,
+.inventory-container-add-child-btn:focus-visible {
+  color: var(--theme-text-strong);
+  border-color: var(--theme-border-soft);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 70%, transparent);
 }
 
 .inventory-location-icon {
@@ -242,10 +292,10 @@
 }
 
 .inventory-section {
-  border-radius: 12px;
-  padding: 12px;
+  border-radius: 0;
+  padding: 0 0 12px;
   border: 0;
-  background: color-mix(in srgb, var(--theme-surface) 72%, transparent);
+  background: transparent;
   box-shadow: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -272,8 +322,8 @@
 
 
 .container-inline-detail {
-  margin: 8px 0 12px;
-  padding: 12px;
+  margin: 0 0 12px;
+  padding: 0;
   width: 100%;
   border-radius: 0;
   border: 0;
@@ -284,18 +334,57 @@
   margin: 0;
 }
 
+.container-detail-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  padding: 0 0 10px;
+  margin-bottom: 12px;
+  background: var(--theme-background);
+}
+
 .container-detail-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
+}
+
+.container-detail-title {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
 }
 
 .container-detail-toolbar {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.inventory-fill-wells-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inventory-fill-wells-btn.is-active {
+  border-color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 16%, transparent);
+}
+
+.inventory-fill-wells-icon {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: 0 0 auto;
 }
 
 .well-editor-shell {
@@ -827,5 +916,14 @@
 
   .well-editor-shell {
     grid-template-columns: 1fr;
+  }
+
+  .container-detail-header {
+    flex-direction: column;
+  }
+
+  .container-detail-toolbar {
+    width: 100%;
+    justify-content: flex-start;
   }
 }

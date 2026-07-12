@@ -365,6 +365,49 @@ test('[EDGE] sequence-viewer builds AB1 chromatogram rows for the inline alignme
   assert.doesNotMatch(traceHtml, /sequence-viewer-alignment-trace-svg/);
   assert.doesNotMatch(traceHtml, /sequence-viewer-trace-base-call/);
 });
+test('[EDGE] sequence-viewer anchors inline chromatogram calls to their reference columns', () => {
+  const track = sequenceViewerInternals.buildAlignmentSequenceTrack(
+    {
+      alignmentViewEnabled: true,
+      activeAlignmentQueryRecord: {
+        name: 'offset_trace',
+        sourceFormat: 'ab1',
+        sequence: 'ACGT',
+        quality: 'IIII',
+        trace: {
+          positions: [10, 20, 30, 40],
+          channels: [
+            { base: 'A', values: Array.from({ length: 51 }, (_item, index) => (index === 10 ? 100 : 0)) },
+            { base: 'C', values: Array.from({ length: 51 }, (_item, index) => (index === 20 ? 100 : 0)) },
+            { base: 'G', values: Array.from({ length: 51 }, (_item, index) => (index === 30 ? 100 : 0)) },
+            { base: 'T', values: Array.from({ length: 51 }, (_item, index) => (index === 40 ? 100 : 0)) }
+          ]
+        }
+      },
+      activeAlignmentResult: {
+        queryName: 'offset_trace',
+        queryFormat: 'ab1',
+        orientation: 'forward',
+        alignedReference: 'ACGT',
+        alignedQuery: 'ACGT',
+        referenceSpan: { start: 4, end: 8, wraps: false },
+        identityPercent: 100,
+        queryCoveragePercent: 100,
+        differences: []
+      }
+    },
+    makeAlignmentRecord('NNNNACGT'),
+    {
+      lineLength: 8,
+      charAdvancePx: 10
+    }
+  );
+  const traceHtml = track.traceLines['0'];
+
+  assert.match(traceHtml, /data-alignment-anchor-count="4"/);
+  assert.match(traceHtml, /data-alignment-first-base-x="45"/);
+  assert.match(traceHtml, /data-alignment-last-base-x="75"/);
+});
 test('[EDGE] sequence-viewer alignSequenceToReference finds an exact forward hit', () => {
   const result = sequenceViewerInternals.alignSequenceToReference(
     makeAlignmentRecord('GGGACGTACGTCCC', { name: 'ref', sourceFormat: 'genbank' }),

@@ -411,7 +411,7 @@ function createScienceLoopSupport(deps = {}) {
   function hasInternalCitation(citations) {
     return asArray(citations).some((citation) => {
       const source = cleanText(citation?.source, 120).toLowerCase();
-      return ['project', 'protocol', 'notebook_entry', 'workflow', 'assay', 'gel_analysis', 'paper', 'python_sandbox', 'python-sandbox', 'record-lookup'].includes(source);
+      return ['project', 'protocol', 'notebook_entry', 'workflow', 'assay', 'gel_analysis', 'paper', 'python_sandbox', 'python-sandbox', 'notebook-lookup'].includes(source);
     });
   }
 

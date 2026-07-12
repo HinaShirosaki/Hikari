@@ -5,11 +5,17 @@ const http = require('node:http');
 const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
 const { StreamableHTTPServerTransport } = require('@modelcontextprotocol/sdk/server/streamableHttp.js');
 const { z } = require('zod');
+const {
+  HIKARI_MCP_HEADERS_TIMEOUT_MS,
+  HIKARI_MCP_KEEP_ALIVE_TIMEOUT_MS,
+  HIKARI_MCP_TOOL_TIMEOUT_MS
+} = require('./constants.js');
 
 const SERVER_NAME = 'hikari-agent-mcp-app-host';
 const SERVER_VERSION = '0.1.0';
 const HIKARI_APP_MCP_ENDPOINT_PATH = '/mcp';
 const HIKARI_APP_TOOL_CALL_TOOL_NAME = 'hikari_app_tool_call';
+const LITERATURE_SEARCH_REQUEST_TTL_MS = HIKARI_MCP_TOOL_TIMEOUT_MS;
 
 function cleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -62,6 +68,32 @@ function createAgentMcpHost(deps = {}) {
   let server = null;
   let started = null;
   let hostUrl = '';
+  const literatureSearchRequestIds = new Map();
+
+  function claimLiteratureSearchRequest(context = {}) {
+    const source = ensureObject(context);
+    const requestId = cleanText(
+      source.traceRequestId
+        || source.trace_request_id
+        || source.requestId
+        || source.request_id,
+      160
+    );
+    if (!requestId) {
+      return true;
+    }
+    const now = Date.now();
+    literatureSearchRequestIds.forEach((createdAt, key) => {
+      if (now - createdAt > LITERATURE_SEARCH_REQUEST_TTL_MS) {
+        literatureSearchRequestIds.delete(key);
+      }
+    });
+    if (literatureSearchRequestIds.has(requestId)) {
+      return false;
+    }
+    literatureSearchRequestIds.set(requestId, now);
+    return true;
+  }
 
   function writeJson(response, statusCode, payload = {}, headers = {}) {
     const body = JSON.stringify(ensureObject(payload));
@@ -123,19 +155,28 @@ function createAgentMcpHost(deps = {}) {
       const liveSnapshot = Object.keys(providedSnapshot).length
         ? providedSnapshot
         : ensureObject(getSnapshot());
+      const normalizedToolId = cleanText(toolId, 160);
+      if (normalizedToolId === 'literature-search' && !claimLiteratureSearchRequest(mergedContext)) {
+        return toolResult({
+          ok: false,
+          status: 'rejected',
+          tool_id: normalizedToolId,
+          error: 'This Codex turn already completed one literature_search request. Use its structured result to answer, or ask the user to start a refinement turn.'
+        });
+      }
       try {
-        const output = await runTool(cleanText(toolId, 160), ensureObject(args), liveSnapshot, mergedContext);
+        const output = await runTool(normalizedToolId, ensureObject(args), liveSnapshot, mergedContext);
         return toolResult({
           ok: output?.ok !== false,
           status: output?.ok === false ? 'failed' : 'completed',
-          tool_id: cleanText(toolId, 160),
+          tool_id: normalizedToolId,
           output
         });
       } catch (error) {
         return toolResult({
           ok: false,
           status: 'failed',
-          tool_id: cleanText(toolId, 160),
+          tool_id: normalizedToolId,
           error: cleanText(error?.message || error, 1200) || 'Hikari MCP tool execution failed.'
         });
       }
@@ -205,9 +246,9 @@ function createAgentMcpHost(deps = {}) {
     const localServer = http.createServer((request, response) => {
       void handleRequest(request, response);
     });
-    localServer.headersTimeout = 65_000;
-    localServer.requestTimeout = 60_000;
-    localServer.keepAliveTimeout = 5_000;
+    localServer.headersTimeout = HIKARI_MCP_HEADERS_TIMEOUT_MS;
+    localServer.requestTimeout = HIKARI_MCP_TOOL_TIMEOUT_MS;
+    localServer.keepAliveTimeout = HIKARI_MCP_KEEP_ALIVE_TIMEOUT_MS;
     server = localServer;
     started = new Promise((resolve, reject) => {
       const failStart = (error) => {

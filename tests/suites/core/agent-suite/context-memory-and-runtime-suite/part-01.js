@@ -251,7 +251,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart01(contex
             summary: 'Fetch both runs before answering.'
           }
         ],
-        skills: ['record-lookup'],
+        skills: ['notebook-lookup'],
         workflow_state: {
           stage: 'comparison'
         }
@@ -267,10 +267,10 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart01(contex
 
       assert.equal(envelope.layers.immediate.current_user_request, 'Compare Atlas run 7 versus Atlas run 8 and explain the largest difference.');
       assert.equal(envelope.registry_selection.reasoning.evaluation_feedback[0].summary, 'Fetch both runs before answering.');
-      assert.equal(envelope.registry_selection.system.skills.includes('record-lookup'), true);
+      assert.equal(envelope.registry_selection.system.skills.includes('notebook-lookup'), true);
       assert.match(String(envelope.prompt_blocks.verification || ''), /Verification feedback:/);
       assert.match(String(envelope.prompt_blocks.verification || ''), /Fetch both runs before answering\./);
-      assert.match(String(envelope.prompt_blocks.session_memory || ''), /Skills: record-lookup/);
+      assert.match(String(envelope.prompt_blocks.session_memory || ''), /Skills: notebook-lookup/);
     });
     test('memory runtime remembers, updates, recalls, lists, and forgets long-term memory', async () => {
       const runtime = agentMemory.createAgentMemoryRuntime({

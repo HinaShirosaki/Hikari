@@ -457,10 +457,13 @@ test('papers PDF loading prefers stored bytes and compacts embedded PDF state', 
   const resolveBytesBlock = actionsSource.slice(actionsSource.indexOf('async function resolvePaperPdfBytes'));
 
   assert.match(storageApiSource, /readFileBytes:\s*\(path\) => ipcRenderer\.invoke\(STORAGE\.READ_FILE_BYTES/);
+  assert.match(storageApiSource, /moveStoredFile:\s*\(payload\) => ipcRenderer\.invoke\(STORAGE\.MOVE_STORED_FILE, payload\)/);
   assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.READ_FILE_BYTES/);
+  assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.MOVE_STORED_FILE/);
   assert.match(dataRegistrarSource, /bytes\.buffer\.slice\(bytes\.byteOffset,\s*bytes\.byteOffset \+ bytes\.byteLength\)/);
   assert.match(dataRegistrarSource, /normalizeImportedDataBytes/);
   assert.match(dataRegistrarSource, /dataBytes\?\.byteLength \? dataBytes : Buffer\.from\(dataBase64, 'base64'\)/);
+  assert.match(actionsSource, /async function movePaperToFolder\(paperId, folderKey\)/);
   assert.match(actionsSource, /const pdfBytes = await fileToBytes\(file\)/);
   assert.match(actionsSource, /dataBytes:\s*pdfBytes\.buffer\.slice/);
   assert.match(actionsSource, /pdfDataUrl:\s*''/);

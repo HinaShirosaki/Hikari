@@ -29,10 +29,6 @@ const {
   callAskUser
 } = require('./ask-user.js');
 const {
-  RECORD_LOOKUP_MCP_TOOL,
-  callRecordLookup
-} = require('./record-lookup.js');
-const {
   NOTEBOOK_GENERATION_MCP_TOOL,
   callNotebookGeneration
 } = require('./notebook-generation.js');
@@ -83,6 +79,10 @@ const DIRECT_MCP_TOOLS = Object.freeze([
     handler: callChemicalLookup
   },
   {
+    definition: NOTEBOOK_LOOKUP_MCP_TOOL,
+    handler: callNotebookLookup
+  },
+  {
     definition: PROTOCOL_LOOKUP_MCP_TOOL,
     handler: callProtocolLookup
   },
@@ -95,20 +95,25 @@ const DIRECT_MCP_TOOLS = Object.freeze([
     handler: callNotebookDraft
   },
   {
-    definition: NOTEBOOK_LOOKUP_MCP_TOOL,
-    handler: callNotebookLookup
-  },
-  {
-    definition: ASK_USER_MCP_TOOL,
-    handler: callAskUser
-  },
-  {
-    definition: RECORD_LOOKUP_MCP_TOOL,
-    handler: callRecordLookup
-  },
-  {
     definition: NOTEBOOK_GENERATION_MCP_TOOL,
     handler: callNotebookGeneration
+  },
+  {
+    definition: LITERATURE_SEARCH_MCP_TOOL,
+    handler: callLiteratureSearch
+  },
+  {
+    definition: PAPER_DOWNLOAD_MCP_TOOL,
+    handler: callPaperDownload
+  },
+  {
+    definition: PAPER_ANALYSIS_MCP_TOOL,
+    handler: callPaperAnalysis
+  },
+  ...PAPER_INTAKE_DIRECT_MCP_TOOLS,
+  {
+    definition: PURCHASE_RECOMMENDATION_MCP_TOOL,
+    handler: callPurchaseRecommendation
   },
   {
     definition: MEMORY_MCP_TOOL,
@@ -127,22 +132,9 @@ const DIRECT_MCP_TOOLS = Object.freeze([
     handler: callPlotlyGraph
   },
   {
-    definition: LITERATURE_SEARCH_MCP_TOOL,
-    handler: callLiteratureSearch
-  },
-  {
-    definition: PURCHASE_RECOMMENDATION_MCP_TOOL,
-    handler: callPurchaseRecommendation
-  },
-  {
-    definition: PAPER_DOWNLOAD_MCP_TOOL,
-    handler: callPaperDownload
-  },
-  {
-    definition: PAPER_ANALYSIS_MCP_TOOL,
-    handler: callPaperAnalysis
-  },
-  ...PAPER_INTAKE_DIRECT_MCP_TOOLS
+    definition: ASK_USER_MCP_TOOL,
+    handler: callAskUser
+  }
 ]);
 
 const DIRECT_MCP_TOOL_NAMES = Object.freeze(

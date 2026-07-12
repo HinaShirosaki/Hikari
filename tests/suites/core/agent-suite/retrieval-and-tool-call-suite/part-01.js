@@ -68,17 +68,25 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(result.items.find((item) => item.name === 'Atlas construct')?.location, 'Shelf 3 / A7');
       assert.equal(result.terms_used.includes('Atlas construct'), true);
     });
-    test('record lookup runtime is reusable with fallback snapshot search', async () => {
-      const runtime = agentRecordLookup.createAgentRecordLookupRuntime();
-      const result = await runtime.executeRecordLookup({
-        message: 'Find protein purification records for Atlas.',
+    test('notebook lookup runtime is reusable with fallback snapshot search', async () => {
+      const { createAgentLookupRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-lookup-runtime.js'
+      ));
+      const runtime = createAgentLookupRuntime();
+      const result = await runtime.executeNotebookLookup({
+        message: 'Find protein purification notebook for Atlas.',
         parserPayload: {
           entities: {
             project_name: 'Atlas',
             protocol_name: 'Protein Purification',
-            workflow_step: null,
-            requested_output: 'yield',
-            activity_type: 'purification'
+            notebook_name: null,
+            requested_output: 'yield'
           }
         },
         snapshot: {
@@ -92,39 +100,27 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
               result: 'Yield improved by 20%.',
               updatedAt: '2026-03-20T10:00:00.000Z'
             }
-          ],
-          protocols: [
-            {
-              id: 'prot-1',
-              name: 'Protein Purification',
-              purpose: 'Affinity purification flow.',
-              steps: ['Bind sample', 'Wash', 'Elute']
-            }
-          ],
-          workflows: [
-            {
-              id: 'wf-1',
-              name: 'Atlas purification workflow',
-              description: 'Chromatography handoff',
-              projectId: 'proj-1',
-              projectName: 'Atlas',
-              blocks: [
-                { text: 'Bind lysate to resin' }
-              ]
-            }
           ]
         }
       });
       assert.equal(result.status, 'matched');
       assert.equal(result.source, 'fallback_json');
-      assert.equal(result.items.some((item) => item.record_type === 'protocol'), true);
       assert.equal(result.items.some((item) => item.record_type === 'notebook'), true);
       assert.equal(result.items.some((item) => item.linked_protocol_name === 'Protein Purification'), true);
     });
-    test('record lookup runtime does not provide assay data', async () => {
-      const runtime = agentRecordLookup.createAgentRecordLookupRuntime();
-      const result = await runtime.executeRecordLookup({
-        message: 'Find viability assay records for Atlas.',
+    test('notebook lookup runtime does not provide assay data', async () => {
+      const { createAgentLookupRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-lookup-runtime.js'
+      ));
+      const runtime = createAgentLookupRuntime();
+      const result = await runtime.executeNotebookLookup({
+        message: 'Find viability assay notebook for Atlas.',
         parserPayload: {
           entities: {
             project_name: 'Atlas',
@@ -138,7 +134,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
               name: 'Viability Readout',
               projectId: 'proj-1',
               projectName: 'Atlas',
-              notes: 'This matching assay should stay out of record_lookup.'
+              notes: 'This matching assay should stay out of notebook lookup.'
             }
           ]
         }
@@ -236,23 +232,28 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(typeof api.protocol.matchForNotebook, 'function');
       assert.equal(typeof api.notebook.generateFromProtocol, 'function');
     });
-    test('record lookup runtime can source paper fallback results through the agent sub-app API layer', async () => {
-      const runtime = agentRecordLookup.createAgentRecordLookupRuntime({
+    test('notebook lookup runtime can source fallback results through the agent sub-app API layer', async () => {
+      const { createAgentLookupRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-lookup-runtime.js'
+      ));
+      const runtime = createAgentLookupRuntime({
         agentAppApi: {
-          papers: {
-            listAgentRecords() {
+          notebook: {
+            listAgentEntries() {
               return [
                 {
-                  record_type: 'paper',
-                  record_id: 'paper-1',
-                  title: 'Atlas SUMO1 pilot',
-                  project_id: 'proj-1',
-                  project_name: 'Atlas',
-                  summary: 'Weak conjugation paper.',
-                  linked_protocol_id: '',
-                  linked_protocol_name: '',
-                  updated_at: '2026-03-22T10:00:00.000Z',
-                  search_text: 'atlas sumo1 pilot weak conjugation paper'
+                  id: 'note-api-1',
+                  protocolName: 'Protein Purification',
+                  projectId: 'proj-1',
+                  projectName: 'Atlas',
+                  result: 'API-backed notebook result.',
+                  updatedAt: '2026-03-22T10:00:00.000Z'
                 }
               ];
             }
@@ -260,12 +261,12 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         }
       });
 
-      const result = await runtime.executeRecordLookup({
-        message: 'Find the Atlas weak conjugation paper.',
+      const result = await runtime.executeNotebookLookup({
+        message: 'Find the Atlas protein purification notebook.',
         parserPayload: {
           entities: {
             project_name: 'Atlas',
-            requested_output: 'paper'
+            protocol_name: 'Protein Purification'
           }
         },
         snapshot: {}
@@ -273,12 +274,21 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
 
       assert.equal(result.status, 'matched');
       assert.equal(result.source, 'fallback_json');
-      assert.equal(result.items.some((item) => item.record_type === 'paper'), true);
-      assert.equal(result.items.find((item) => item.record_type === 'paper')?.title, 'Atlas SUMO1 pilot');
+      assert.equal(result.items.some((item) => item.record_type === 'notebook'), true);
+      assert.equal(result.items.find((item) => item.record_type === 'notebook')?.id, 'note-api-1');
     });
-    test('lookup query derivation prefers the searched entity over requested output hints', () => {
+    test('lookup query derivation prefers the searched entity over requested output hints', async () => {
       const inventoryRuntime = agentInventoryLookup.createAgentInventoryLookupRuntime();
-      const recordRuntime = agentRecordLookup.createAgentRecordLookupRuntime();
+      const { createAgentLookupRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'helpers',
+        'agent',
+        'runtime',
+        'agent-lookup-runtime.js'
+      ));
+      const lookupRuntime = createAgentLookupRuntime();
 
       assert.equal(
         inventoryRuntime.deriveInventoryLookupQuery({
@@ -293,24 +303,32 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         'Do we have acetic acid?'
       );
 
-      assert.equal(
-        recordRuntime.deriveRecordLookupQuery({
-          message: 'Find protein purification records for Atlas.',
-          parserPayload: {
-            entities: {
-              protocol_name: 'Protein Purification',
-              project_name: 'Atlas',
-              requested_output: 'yield'
-            }
+      const notebookResult = await lookupRuntime.executeNotebookLookup({
+        message: '',
+        parserPayload: {
+          entities: {
+            protocol_name: 'Protein Purification',
+            project_name: 'Atlas',
+            requested_output: 'yield'
           }
-        }),
-        'Protein Purification'
-      );
+        },
+        snapshot: {
+          notebookEntries: [
+            {
+              id: 'note-1',
+              protocolName: 'Protein Purification',
+              projectName: 'Atlas',
+              result: 'Yield improved by 20%.'
+            }
+          ]
+        }
+      });
+      assert.equal(notebookResult.query, 'Protein Purification');
     });
     test('agent tool-call catalog stays in sync and prompt builders render tool metadata', () => {
       const toolNames = toolLoading.AGENT_TOOL_CATALOG.map((entry) => entry.name);
       const schemaNames = Object.keys(toolLoading.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
-      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'notebook-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'command-line', 'web-search', 'sub-agent', 'memory', 'container', 'assay-table', 'plotly-graph', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'paper-search', 'protocol-generation']);
+      assert.deepEqual(toolNames, ['inventory-lookup', 'notebook-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'command-line', 'web-search', 'sub-agent', 'memory', 'container', 'assay-table', 'plotly-graph', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'paper-search', 'protocol-generation']);
       assert.deepEqual(schemaNames, toolNames);
       const inventoryEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'inventory-lookup');
       const protocolEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'protocol-matching');
@@ -375,7 +393,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(scienceTools.tool_names.includes('literature-search'), true);
       assert.equal(scienceTools.tool_names.includes('web-search'), true);
       assert.equal(scienceTools.tool_names.includes('python-sandbox'), true);
-      assert.equal(scienceTools.tool_names.includes('record-lookup'), false);
+      assert.equal(scienceTools.tool_names.includes('notebook-lookup'), false);
       assert.equal(scienceTools.tool_names.includes('memory'), false);
       assert.equal(scienceTools.tool_names.includes('container'), false);
       assert.equal(scienceTools.tool_names.includes('assay-table'), false);

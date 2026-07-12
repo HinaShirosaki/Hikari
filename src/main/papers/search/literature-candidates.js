@@ -1,5 +1,7 @@
 'use strict';
 
+const { normalizeDoi } = require('../identity/paper-identity.js');
+
 /**
  * Candidate ranking and de-duplication for the literature-search workflow.
  *
@@ -63,9 +65,19 @@ function tokenizeQuery(value) {
     .filter((token) => token.length > 2 && !PAPER_TOKEN_STOPWORDS.has(token));
 }
 
+function normalizePaperDoi(value) {
+  const doi = normalizeDoi(value);
+  if (!doi) {
+    return '';
+  }
+  // ACS and similar publishers assign a separate DOI to each supporting
+  // information file. Search results should represent the parent article.
+  return doi.replace(/\.s\d{3,4}$/i, '');
+}
+
 function buildCandidateKey(item = {}) {
   return String(
-    item.doi
+    normalizePaperDoi(item.doi)
     || item.pmid
     || item.pmcid
     || item.url
@@ -102,13 +114,31 @@ function normalizePreferredJournal(value) {
   return { url: '', name: raw.toLowerCase() };
 }
 
+function expandPreferredJournalCandidates(value) {
+  const candidates = [];
+  function pushCandidate(candidate) {
+    if (Array.isArray(candidate)) {
+      candidate.forEach(pushCandidate);
+      return;
+    }
+    if (candidate && typeof candidate === 'object') {
+      candidates.push(candidate);
+      return;
+    }
+    String(candidate || '')
+      .split(/[;\n]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .forEach((item) => candidates.push(item));
+  }
+  pushCandidate(value);
+  return candidates;
+}
+
 function normalizePreferredJournals(value) {
-  const candidates = Array.isArray(value)
-    ? value
-    : String(value || '').split(/[;\n]+/);
   const seen = new Set();
   const normalized = [];
-  candidates.forEach((candidate) => {
+  expandPreferredJournalCandidates(value).forEach((candidate) => {
     const preferred = normalizePreferredJournal(candidate);
     const key = preferred.url
       ? `url:${preferred.url}`
@@ -148,9 +178,7 @@ function preferredJournalEntryBonus(item, preferred) {
 }
 
 function preferredJournalBonus(item, preferred) {
-  const preferences = Array.isArray(preferred)
-    ? preferred.map((entry) => normalizePreferredJournal(entry))
-    : [normalizePreferredJournal(preferred)];
+  const preferences = normalizePreferredJournals(preferred);
   return preferences.reduce(
     (bestScore, preference) => Math.max(bestScore, preferredJournalEntryBonus(item, preference)),
     0
@@ -196,7 +224,7 @@ function scorePaperCandidate(item = {}, query = '', preferredJournal = null) {
   return score;
 }
 
-function selectPaperCandidates(items = [], query = '', limit = 12, preferredJournal = null) {
+function selectPaperCandidates(items = [], query = '', limit = 0, preferredJournal = null) {
   const ranked = (Array.isArray(items) ? items : [])
     .map((item, index) => ({
       ...ensureObject(item),
@@ -223,9 +251,16 @@ function selectPaperCandidates(items = [], query = '', limit = 12, preferredJour
       return left.__index - right.__index;
     });
 
-  return uniqueByKey(ranked, buildCandidateKey, Math.max(1, Number(limit) || 12))
+  const requestedLimit = Number(limit);
+  const maxItems = Number.isFinite(requestedLimit) && requestedLimit > 0
+    ? Math.floor(requestedLimit)
+    : Number.MAX_SAFE_INTEGER;
+  return uniqueByKey(ranked, buildCandidateKey, maxItems)
     .map((item) => {
       const normalized = { ...item };
+      if (normalized.doi) {
+        normalized.doi = normalizePaperDoi(normalized.doi);
+      }
       delete normalized.__index;
       delete normalized.__score;
       delete normalized.__published_at;
@@ -239,9 +274,11 @@ module.exports = {
   parseDateToTimestamp,
   uniqueByKey,
   tokenizeQuery,
+  normalizePaperDoi,
   buildCandidateKey,
   normalizePreferredJournal,
   normalizePreferredJournals,
+  expandPreferredJournalCandidates,
   preferredJournalBonus,
   scorePaperCandidate,
   selectPaperCandidates

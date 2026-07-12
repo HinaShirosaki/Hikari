@@ -1,11 +1,24 @@
 import { escapeHtml } from '../tool-box/common.js';
 import { assembleCloningPlan } from './cloning-assembly.js';
+import { buildMegaprimerRestrictionPlan } from './cloning-assembly/megaprimer-restriction.js';
+import { buildQ5KldPlan } from './cloning-assembly/q5-kld-mutagenesis.js';
+import { buildGoldenGatePlan } from './cloning-assembly/golden-gate.js';
 import { cleanText, clamp, normalizeSequenceText } from './shared.js';
 import { copyPrimerValueFromEvent, renderPrimerCopyButton } from './primer-copy.js';
 
 const STRATEGY_WHOLE_PLASMID = 'whole-plasmid';
+const STRATEGY_Q5_KLD = 'q5-kld';
 const STRATEGY_TWO_STEP_LIGATION = 'two-step-ligation';
+const STRATEGY_GOLDEN_GATE = 'golden-gate';
 const STRATEGY_GIBSON = 'gibson';
+const STRATEGY_IN_FUSION = 'in-fusion';
+
+const IN_FUSION_PROCEDURE = Object.freeze([
+  { title: 'Linearize the vector', details: 'Linearize the backbone by PCR or a single restriction cut at the insertion point, then purify.' },
+  { title: 'Amplify insert with 15 bp overlaps', details: "PCR the insert with primers whose 5' extensions match the flanking vector ends (the overlaps designed above)." },
+  { title: 'In-Fusion reaction', details: 'Combine the linearized vector and insert with In-Fusion enzyme (15 min, 50 C); it fuses the homologous 15 bp ends.' },
+  { title: 'Transform and screen', details: 'Transform competent cells and confirm both junctions by colony PCR and sequencing.' }
+]);
 
 const STRATEGIES = Object.freeze([
   {
@@ -14,14 +27,29 @@ const STRATEGIES = Object.freeze([
     shortLabel: 'Whole plasmid PCR'
   },
   {
+    id: STRATEGY_Q5_KLD,
+    label: 'Q5 / KLD Site-Directed Mutagenesis',
+    shortLabel: 'Q5/KLD SDM'
+  },
+  {
     id: STRATEGY_TWO_STEP_LIGATION,
     label: 'Two-Step PCR + Digestion Ligation',
     shortLabel: 'Two-step ligation'
   },
   {
+    id: STRATEGY_GOLDEN_GATE,
+    label: 'Golden Gate (Type IIS)',
+    shortLabel: 'Golden Gate'
+  },
+  {
     id: STRATEGY_GIBSON,
     label: 'Gibson Assembly',
     shortLabel: 'Gibson assembly'
+  },
+  {
+    id: STRATEGY_IN_FUSION,
+    label: 'In-Fusion Cloning',
+    shortLabel: 'In-Fusion'
   }
 ]);
 
@@ -331,10 +359,9 @@ function collectWarnings(...plans) {
   return warnings;
 }
 
-function buildDisplayPlan({ strategy, source, record, range }) {
-  const wholePlasmidPlan = buildWholePlasmidPlan(source, record);
-
+export function buildDisplayPlan({ strategy, source, record, range }) {
   if (strategy === STRATEGY_WHOLE_PLASMID) {
+    const wholePlasmidPlan = buildWholePlasmidPlan(source, record);
     return {
       strategy,
       feasible: Boolean(wholePlasmidPlan?.feasible),
@@ -348,20 +375,57 @@ function buildDisplayPlan({ strategy, source, record, range }) {
     };
   }
 
-  const assemblyPlan = buildInsertAssemblyPlan(source, record, range, strategy);
+  if (strategy === STRATEGY_Q5_KLD) {
+    return {
+      strategy,
+      ...buildQ5KldPlan({
+        originalSequence: source?.originalSequence,
+        editedSequence: record?.sequence || source?.editedSequence,
+        editRequest: source?.editRequest,
+        recordName: source?.recordName || record?.name,
+        topology: record?.topology
+      })
+    };
+  }
+
   if (strategy === STRATEGY_TWO_STEP_LIGATION) {
     return {
       strategy,
-      feasible: Boolean(wholePlasmidPlan?.feasible && assemblyPlan?.feasible),
-      plans: [
-        { label: 'Mutagenesis PCR', plan: wholePlasmidPlan },
-        { label: 'Digestion ligation', plan: assemblyPlan }
-      ],
-      primers: [
-        ...planPrimers(wholePlasmidPlan, 'Mutagenesis PCR'),
-        ...planPrimers(assemblyPlan, 'Digestion ligation')
-      ],
-      warnings: collectWarnings(wholePlasmidPlan, assemblyPlan),
+      ...buildMegaprimerRestrictionPlan({
+        originalSequence: source?.originalSequence,
+        editedSequence: record?.sequence || source?.editedSequence,
+        editRequest: source?.editRequest,
+        recordName: source?.recordName || record?.name,
+        topology: record?.topology
+      })
+    };
+  }
+
+  if (strategy === STRATEGY_GOLDEN_GATE) {
+    return {
+      strategy,
+      ...buildGoldenGatePlan({
+        sequence: record?.sequence || source?.editedSequence,
+        range,
+        recordName: source?.recordName || record?.name,
+        topology: record?.topology
+      })
+    };
+  }
+
+  // In-Fusion reuses the Gibson homology-overlap primers; only the bench
+  // procedure differs (one In-Fusion reaction vs. exonuclease + ligase).
+  if (strategy === STRATEGY_IN_FUSION) {
+    const inFusionAssembly = buildInsertAssemblyPlan(source, record, range, STRATEGY_GIBSON);
+    const plan = inFusionAssembly
+      ? { ...inFusionAssembly, stepByStepProcedure: IN_FUSION_PROCEDURE }
+      : inFusionAssembly;
+    return {
+      strategy,
+      feasible: Boolean(plan?.feasible),
+      plans: [{ label: 'In-Fusion assembly', plan }],
+      primers: planPrimers(plan, 'In-Fusion'),
+      warnings: collectWarnings(plan),
       summary: {
         templateLength: normalizeSequenceText(source?.originalSequence || '').length,
         resultLength: normalizeSequenceText(record?.sequence || source?.editedSequence || '').length,
@@ -370,6 +434,7 @@ function buildDisplayPlan({ strategy, source, record, range }) {
     };
   }
 
+  const assemblyPlan = buildInsertAssemblyPlan(source, record, range, strategy);
   return {
     strategy,
     feasible: Boolean(assemblyPlan?.feasible),
@@ -387,7 +452,7 @@ function buildDisplayPlan({ strategy, source, record, range }) {
 function renderPlanSummary(displayPlan = {}, source = {}, range = {}) {
   const edit = source?.editRequest || {};
   const summary = displayPlan?.summary || {};
-  const rangeText = displayPlan.strategy === STRATEGY_WHOLE_PLASMID
+  const rangeText = displayPlan.strategy === STRATEGY_WHOLE_PLASMID || displayPlan.strategy === STRATEGY_Q5_KLD
     ? 'whole plasmid'
     : `${(Math.max(0, Number(range?.start) || 0) + 1).toLocaleString()}..${Math.max(0, Number(range?.end) || 0).toLocaleString()}`;
   const planRows = asArray(displayPlan?.plans).map((entry) => {
@@ -713,7 +778,9 @@ export function createSequenceViewerCloningDesignController(config = {}) {
   function syncControls() {
     const designState = getDesignState();
     const hasSource = hasDesignSource();
-    const usesRange = designState.strategy !== STRATEGY_WHOLE_PLASMID;
+    const usesRange = designState.strategy === STRATEGY_GIBSON
+      || designState.strategy === STRATEGY_IN_FUSION
+      || designState.strategy === STRATEGY_GOLDEN_GATE;
     if (elements.cloningDesignRangePanel) {
       elements.cloningDesignRangePanel.hidden = !usesRange;
     }

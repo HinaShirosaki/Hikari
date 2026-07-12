@@ -14,11 +14,28 @@ const {
 } = require('./codex-paper-context-workflow.js');
 
 const SEARCH_BATCH_SIZE = 8;
-const DEFAULT_MAX_CANDIDATE_PAPERS = 12;
 const DEFAULT_DOWNLOAD_CONCURRENCY = 4;
 
 function defaultEnsureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function toPositiveInteger(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.floor(parsed);
+}
+
+function firstPositiveInteger(values = [], fallback = 0) {
+  for (const value of values) {
+    const parsed = toPositiveInteger(value, 0);
+    if (parsed > 0) {
+      return parsed;
+    }
+  }
+  return fallback;
 }
 
 function chunkArray(items, size) {
@@ -47,6 +64,10 @@ function buildDoiUrl(value) {
     return '';
   }
   return `https://doi.org/${encodeURIComponent(doi).replace(/%2F/gi, '/')}`;
+}
+
+function isExplicitTrue(value) {
+  return value === true || String(value || '').trim().toLowerCase() === 'true';
 }
 
 function createLiteratureSearchWorkflowRuntime(deps = {}) {
@@ -78,6 +99,27 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
   const subAgentStore = deps.subAgentStore instanceof Map ? deps.subAgentStore : new Map();
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
 
+  function normalizePreferredJournalNames(value) {
+    const candidates = [];
+    function pushCandidate(candidate) {
+      if (Array.isArray(candidate)) {
+        candidate.forEach(pushCandidate);
+        return;
+      }
+      if (candidate && typeof candidate === 'object') {
+        pushCandidate(candidate.name || candidate.url || candidate.href || '');
+        return;
+      }
+      String(candidate || '')
+        .split(/[;\n]+/)
+        .map((item) => cleanText(item, 240).trim())
+        .filter(Boolean)
+        .forEach((item) => candidates.push(item));
+    }
+    pushCandidate(value);
+    return uniqueStrings(candidates, 12);
+  }
+
   function getCandidateSearchRuntime() {
     if (literatureSearchRuntime && typeof literatureSearchRuntime.searchLiteratureCandidates === 'function') {
       return literatureSearchRuntime.searchLiteratureCandidates.bind(literatureSearchRuntime);
@@ -94,6 +136,20 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     const project = defaultEnsureObject(source.project || snapshot.project);
     const settings = defaultEnsureObject(snapshot.settings);
     const parserPayload = defaultEnsureObject(source.parser_payload || source.parserPayload);
+    const preferredJournals = normalizePreferredJournalNames([
+      source.preferred_journals,
+      source.preferredJournals,
+      settings.preferred_journals,
+      settings.preferredJournals,
+      snapshot.preferred_journals,
+      snapshot.preferredJournals,
+      source.preferred_journal,
+      source.preferredJournal,
+      settings.preferred_journal,
+      settings.preferredJournal,
+      snapshot.preferred_journal,
+      snapshot.preferredJournal
+    ]);
     return {
       message: cleanText(source.message, 1200),
       query: cleanText(query || source.query, 600),
@@ -129,19 +185,8 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
         || snapshot.storagePath,
         2000
       ),
-      preferred_journal: cleanText(
-        source.preferred_journal
-        || source.preferredJournal
-        || settings.preferredJournal
-        || snapshot.preferredJournal,
-        1200
-      ),
-      preferred_journals: uniqueStrings(asArray(
-        source.preferred_journals
-        || source.preferredJournals
-        || settings.preferredJournals
-        || snapshot.preferredJournals
-      ).map((item) => cleanText(item, 240)), 12),
+      preferred_journal: preferredJournals.join('; '),
+      preferred_journals: preferredJournals,
       parser_payload: parserPayload,
       snapshot_summary: {
         project_count: asArray(snapshot.projects).length,
@@ -155,10 +200,10 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
 
   function buildSubAgentSystemPrompt(context = {}) {
     const contextSource = defaultEnsureObject(context);
-    const preferredJournals = uniqueStrings(
-      asArray(contextSource.preferred_journals).map((item) => cleanText(item, 240)),
-      12
-    );
+    const preferredJournals = normalizePreferredJournalNames([
+      contextSource.preferred_journals,
+      contextSource.preferred_journal
+    ]);
     const preferredJournal = preferredJournals.length
       ? preferredJournals.join('; ')
       : cleanText(contextSource.preferred_journal, 1200);
@@ -167,7 +212,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       : '';
     return [
       'You are a delegated literature search sub-agent.',
-      'Use the copied main-agent context to search for candidate papers, select the most useful ones, download selected PDFs into the literature-search folder when possible, and read the selected papers in batches.',
+      'Use the copied main-agent context to search for candidate papers, select the most useful ones, and read selected paper abstracts or already-ingested paper markdown in batches.',
       'Return only grounded context that can be loaded back into the main agent.',
       'Never invent citations or claim that a download succeeded unless the download tool reported success.',
       preferredJournalLine
@@ -179,8 +224,8 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       'Search literature for the current request and prepare main-agent context to load.',
       `Copied context JSON:\n${JSON.stringify(context, null, 2)}`,
       'Use the search results, abstracts, and returned lists to choose the papers that should be fully read.',
-      'Download selected papers into the literature-search folder under the configured storage root when a storage path is available.',
-      'Read selected papers in batches and return the resulting context blocks, selected paper list, download outcomes, and any useful notes.'
+      'Do not start new PDF downloads automatically; the user downloads selected papers later with the paper download button or explicit paper-download action.',
+      'Read selected papers in batches and return the resulting context blocks, selected paper list, any existing local paper records, and useful notes.'
     ].join('\n\n');
   }
 
@@ -410,6 +455,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
         max_papers: batch.length,
         items: batch,
         snapshot: input.snapshot || null,
+        downloaded_papers: asArray(input.downloaded_papers),
         download_promise: input.downloadPromise || null
       }).catch((error) => ({
         ok: false,
@@ -464,6 +510,12 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
 
   async function runLiteratureWorkflow(input = {}, copiedContext = {}, candidateResult = null) {
     const source = defaultEnsureObject(input);
+    const autoDownloadSelectedPapers = isExplicitTrue(
+      source.download_selected_papers
+      || source.downloadSelectedPapers
+      || source.auto_download_selected_papers
+      || source.autoDownloadSelectedPapers
+    );
     const query = cleanText(
       source.query
       || source.topic
@@ -472,22 +524,14 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       || '',
       600
     );
-    const desiredSelectionCount = Math.max(
-      1,
-      Math.min(
-        Number.isFinite(Number(source.max_papers)) ? Number(source.max_papers) : DEFAULT_MAX_CANDIDATE_PAPERS,
-        24
-      )
-    );
-    const candidateLimit = Math.max(
-      desiredSelectionCount,
-      Math.max(1, Number(source.limit) || DEFAULT_MAX_CANDIDATE_PAPERS)
-    );
-    const searchLimit = Math.min(25, candidateLimit);
-    const searchMaxPerSource = Math.min(
-      10,
-      Math.max(1, Number(source.max_per_source) || Math.min(searchLimit, 5))
-    );
+    const explicitMaxPapers = firstPositiveInteger([source.max_papers, source.maxPapers], 0);
+    const explicitLimit = firstPositiveInteger([source.limit], 0);
+    const explicitMaxPerSource = firstPositiveInteger([source.max_per_source, source.maxPerSource], 0);
+    // Omitted limits stay omitted all the way through to the source runtimes.
+    // A caller can still explicitly bound discovery or selection when needed.
+    const desiredSelectionCount = explicitMaxPapers || explicitLimit;
+    const searchLimit = explicitLimit || explicitMaxPapers;
+    const searchMaxPerSource = explicitMaxPerSource || searchLimit;
     const searchFn = getCandidateSearchRuntime();
     if (!searchFn) {
       return {
@@ -512,10 +556,34 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       ...source,
       ...(preferredLiteratureSource ? { preferred_literature_source: preferredLiteratureSource } : {}),
       ...(preferredWebSource ? { preferred_web_source: preferredWebSource } : {}),
-      query,
-      limit: searchLimit,
-      max_per_source: searchMaxPerSource
+      query
     };
+    if (searchLimit) {
+      searchInput._internal_limit = searchLimit;
+    }
+    if (searchMaxPerSource) {
+      searchInput._internal_max_per_source = searchMaxPerSource;
+    }
+    if (desiredSelectionCount) {
+      searchInput._internal_max_papers = desiredSelectionCount;
+    }
+    if (explicitLimit) {
+      searchInput.limit = searchLimit;
+    } else {
+      delete searchInput.limit;
+    }
+    if (explicitMaxPerSource) {
+      searchInput.max_per_source = searchMaxPerSource;
+    } else {
+      delete searchInput.max_per_source;
+      delete searchInput.maxPerSource;
+    }
+    if (explicitMaxPapers) {
+      searchInput.max_papers = desiredSelectionCount;
+    } else {
+      delete searchInput.max_papers;
+      delete searchInput.maxPapers;
+    }
 
     const rawSearchResult = candidateResult && candidateResult.ok === true
       ? candidateResult
@@ -551,12 +619,15 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       paper_id: cleanText(candidate.paper_id, 120),
       paper_title: cleanText(candidate.title, 320),
       source: cleanText(candidate.source, 80),
+      journal: cleanText(candidate.journal || candidate.journal_name || candidate.journalName, 220),
       summary: cleanText(candidate.summary || candidate.snippet, 1200),
       url: cleanText(candidate.url, 1200),
       doi: cleanText(candidate.doi, 180),
       pmid: cleanText(candidate.pmid, 120),
       pmcid: cleanText(candidate.pmcid, 120),
       pdf_urls: uniqueStrings(asArray(candidate.pdf_urls), 8),
+      download_available: Boolean(candidate.url || candidate.doi || asArray(candidate.pdf_urls).length),
+      download_status: 'not_requested',
       published_at: cleanText(candidate.published_at, 80),
       score: scorePaperCandidate(candidate, query, preferredJournal)
     }));
@@ -572,10 +643,19 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       copiedContext.storage_path,
       source
     );
-    const downloadPromise = downloadSelectedPapers(novelCandidates, downloadInput, linkedName);
+    const reusedPaperIds = new Set(reusedPapers.map((paper) => cleanText(paper.paper_id, 120)).filter(Boolean));
+    selectedPapers.forEach((paper) => {
+      if (reusedPaperIds.has(cleanText(paper.paper_id, 120))) {
+        paper.download_status = 'already_ingested';
+      }
+    });
+    const downloadPromise = autoDownloadSelectedPapers
+      ? downloadSelectedPapers(novelCandidates, downloadInput, linkedName)
+      : Promise.resolve([]);
     const useCodexPaperContext = Boolean(codexSubAgentRuntime)
-      && shouldUseCodexPaperContextWorkflow(source);
-    let downloadedPapers = [];
+      && shouldUseCodexPaperContextWorkflow(source)
+      && (autoDownloadSelectedPapers || reusedPapers.length > 0);
+    let downloadedPapers = reusedPapers.slice();
     let readResult = null;
     let paperContextSubAgent = null;
 
@@ -634,10 +714,16 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       const readPromise = readSelectedPapers(workflowCandidates, {
         ...source,
         query,
-        downloadPromise
+        downloaded_papers: downloadedPapers,
+        downloadPromise: autoDownloadSelectedPapers ? downloadPromise : null
       });
-      [downloadedPapers, readResult] = await Promise.all([downloadPromise, readPromise]);
-      downloadedPapers = reusedPapers.concat(asArray(downloadedPapers));
+      if (autoDownloadSelectedPapers) {
+        const [newDownloadedPapers, loadedReadResult] = await Promise.all([downloadPromise, readPromise]);
+        downloadedPapers = reusedPapers.concat(asArray(newDownloadedPapers));
+        readResult = loadedReadResult;
+      } else {
+        readResult = await readPromise;
+      }
     }
 
     const contextBlockCount = asArray(readResult.loaded_context_blocks).length;
@@ -648,7 +734,9 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       candidateCount ? `Found ${candidateCount} candidate paper${candidateCount === 1 ? '' : 's'}.` : 'No candidate papers were found.',
       selectedPapers.length ? `Selected ${selectedPapers.length} paper${selectedPapers.length === 1 ? '' : 's'} for deeper reading.` : 'No papers were selected for deeper reading.',
       reusedCount ? `Reused ${reusedCount} paper${reusedCount === 1 ? '' : 's'} already in the local knowledge database.` : '',
-      downloadCount ? `Downloaded ${downloadCount} selected PDF${downloadCount === 1 ? '' : 's'} into the literature-search folder.` : 'No new paper PDFs were downloaded.',
+      autoDownloadSelectedPapers
+        ? (downloadCount ? `Downloaded ${downloadCount} selected PDF${downloadCount === 1 ? '' : 's'} into the literature-search folder.` : 'No new paper PDFs were downloaded.')
+        : 'New PDF downloads were not started automatically; use the paper download button or explicit paper-download action to download selected papers.',
       contextBlockCount ? `Loaded ${contextBlockCount} bounded context block${contextBlockCount === 1 ? '' : 's'} from the selected papers.` : 'No bounded context blocks were loaded.'
     ].filter(Boolean).join(' ');
 
@@ -868,7 +956,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
           metadata: {
             query,
             selected_count: asArray(workflowResult.selected_papers).length,
-            downloaded_count: asArray(workflowResult.downloaded_papers).filter((item) => item?.ok === true).length,
+            downloaded_count: asArray(workflowResult.downloaded_papers).filter((item) => item?.ok === true && item?.status !== 'reused').length,
             context_block_count: asArray(workflowResult.loaded_context_blocks).length
           }
         });

@@ -74,14 +74,14 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
         },
         toolTrace: [
           {
-            tool_name: 'record-lookup',
+            tool_name: 'notebook-lookup',
             ok: true,
             summary: 'Loaded the assay record and attached notes.'
           }
         ],
         latestToolResult: {
           ok: true,
-          tool_name: 'record-lookup',
+          tool_name: 'notebook-lookup',
           summary: 'Loaded the assay record and attached notes.'
         },
         preSynthesizedAnswer: {
@@ -112,7 +112,7 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
         latestAssistantText: 'The assay trend looks directionally real, but the answer is still provisional.',
         latestToolResult: {
           ok: false,
-          tool_name: 'record-lookup',
+          tool_name: 'notebook-lookup',
           summary: 'Located the assay record, but the computation step has not run yet.',
           error: 'Python fit has not been executed yet.',
           items: [{ id: 'assay-1' }],
@@ -129,7 +129,7 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
         },
         toolTrace: [
           {
-            tool_name: 'record-lookup',
+            tool_name: 'notebook-lookup',
             ok: false,
             summary: 'Located the assay record, but the computation step has not run yet.',
             error: 'Python fit has not been executed yet.'
@@ -255,14 +255,14 @@ module.exports = function registerJudgeAndTraceSuite(context = {}) {
         },
         latestToolResult: {
           ok: true,
-          tool_name: 'record-lookup',
+          tool_name: 'notebook-lookup',
           summary: 'Located the assay record and raw values.',
           items: [{ id: 'assay-1' }],
           citations: [{ source: 'assay', pointer: 'assay-1', reason: 'Loaded assay data for fitting.' }]
         },
         toolTrace: [
           {
-            tool_name: 'record-lookup',
+            tool_name: 'notebook-lookup',
             ok: true,
             summary: 'Located the assay record and raw values.'
           }

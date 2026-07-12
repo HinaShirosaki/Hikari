@@ -4,10 +4,6 @@
     "description": "Look up chemical and personal inventory records using query overrides and inventory search hints."
   },
   {
-    "name": "record-lookup",
-    "description": "Look up project, protocol, notebook, workflow, gel, paper, and linked historical records from local agent data. Assay data is supplied by the active Assay rail context and dedicated assay tools, not this generic lookup."
-  },
-  {
     "name": "notebook-lookup",
     "description": "Look up local notebook entries by project, protocol, result text, or notebook identifier."
   },
@@ -57,7 +53,7 @@
   },
   {
     "name": "literature-search",
-    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads bounded paper context; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. To restrict the search to specific journals, pass `journals` (an array of journal names, e.g. [\"Nature\", \"Cell\"]); this hard-scopes the PubMed, Crossref, and Europe PMC queries and relaxes to an unfiltered search only when nothing matches."
+    "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads bounded context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. To restrict the search to specific journals, pass `journals` (an array of journal names, e.g. [\"Nature\", \"Cell\"]); this hard-scopes the PubMed, Crossref, and Europe PMC queries and relaxes to an unfiltered search only when nothing matches."
   },
   {
     "name": "purchase-recommendation",

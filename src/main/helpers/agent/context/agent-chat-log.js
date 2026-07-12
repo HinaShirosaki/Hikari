@@ -203,8 +203,8 @@ function summarizeInventoryLookup(lookup) {
   return '';
 }
 
-// Build a concise assistant-facing summary from record lookup results.
-function summarizeRecordLookup(lookup) {
+// Build a concise assistant-facing summary from notebook lookup results.
+function summarizeNotebookLookup(lookup) {
   const payload = lookup && typeof lookup === 'object' ? lookup : {};
   const status = cleanText(payload.status, 40);
   if (!status) {
@@ -212,7 +212,7 @@ function summarizeRecordLookup(lookup) {
   }
   if (status === 'needs_more_info') {
     return asArray(payload.follow_up_questions).map((item) => cleanText(item, 280)).filter(Boolean).join(' ')
-      || 'I need more details to run record lookup.';
+      || 'I need more details to run notebook lookup.';
   }
   const query = cleanText(payload.query, 220);
   const items = asArray(payload.items);
@@ -236,13 +236,13 @@ function summarizeRecordLookup(lookup) {
       .filter(Boolean);
     const extraCount = Math.max(0, items.length - previewLines.length);
     return [
-      `Found ${items.length} record match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.`,
+      `Found ${items.length} notebook match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.`,
       ...previewLines,
       extraCount ? `${extraCount} more match${extraCount === 1 ? '' : 'es'} not shown.` : ''
     ].filter(Boolean).join('\n');
   }
   if (status === 'no_match') {
-    return `No record matches found${query ? ` for "${query}"` : ''}.`;
+    return `No notebook matches found${query ? ` for "${query}"` : ''}.`;
   }
   return '';
 }
@@ -444,8 +444,8 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     inventory_lookup: payload.inventory_lookup && typeof payload.inventory_lookup === 'object'
       ? cloneJson(payload.inventory_lookup, null)
       : null,
-    record_lookup: payload.record_lookup && typeof payload.record_lookup === 'object'
-      ? cloneJson(payload.record_lookup, null)
+    notebook_lookup: payload.notebook_lookup && typeof payload.notebook_lookup === 'object'
+      ? cloneJson(payload.notebook_lookup, null)
       : null,
     general_science_question: payload.general_science_question && typeof payload.general_science_question === 'object'
       ? cloneJson(payload.general_science_question, null)
@@ -480,8 +480,8 @@ function buildAssistantTextFromResult(result) {
   const inventoryLookup = payload.inventory_lookup && typeof payload.inventory_lookup === 'object'
     ? payload.inventory_lookup
     : null;
-  const recordLookup = payload.record_lookup && typeof payload.record_lookup === 'object'
-    ? payload.record_lookup
+  const notebookLookup = payload.notebook_lookup && typeof payload.notebook_lookup === 'object'
+    ? payload.notebook_lookup
     : null;
   const purchaseRecommendation = payload.purchase_recommendation && typeof payload.purchase_recommendation === 'object'
     ? payload.purchase_recommendation
@@ -510,7 +510,7 @@ function buildAssistantTextFromResult(result) {
     12000
   );
   const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
-  const recordSummaryText = summarizeRecordLookup(recordLookup);
+  const notebookSummaryText = summarizeNotebookLookup(notebookLookup);
   const purchaseRecommendationText = summarizePurchaseRecommendation(purchaseRecommendation);
   const codexAgentText = summarizeCodexAgent(codexAgent);
   const skillCommandText = summarizeSkillCommand(skillCommand);
@@ -542,7 +542,7 @@ function buildAssistantTextFromResult(result) {
     || skillCommandText
     || purchaseRecommendationText
     || inventorySummaryText
-    || recordSummaryText
+    || notebookSummaryText
     || cleanText(parser.reasoning_summary, 12000)
     || 'Intent parsing completed.';
 }
@@ -591,7 +591,7 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
       codex_agent: null,
       purchase_recommendation: null,
       inventory_lookup: null,
-      record_lookup: null,
+      notebook_lookup: null,
       general_science_question: null,
       project_science_question: null,
       result_analysis: null,

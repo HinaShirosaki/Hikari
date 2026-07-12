@@ -413,6 +413,121 @@ test('biology-notebook saves and reopens multiple result tables with Tabulator',
   assert.match(document.getElementById('biology-notebook-result-table-status').textContent, /2 tables/i);
   assert.ok(persistCalls >= 1);
 });
+
+test('biology-notebook creates a result table from a placeholder variable', () => {
+  const document = createMockDocument([
+    'biology-notebook-result-table-wrap',
+    'biology-notebook-result-table',
+    'biology-notebook-result-table-status',
+    'biology-notebook-add-table-btn',
+    'biology-notebook-add-table-row-btn',
+    'biology-notebook-add-table-column-btn',
+    'biology-notebook-remove-table-btn'
+  ]);
+
+  class MockTabulator {
+    static instances = [];
+
+    constructor(host, options = {}) {
+      this.host = host;
+      this.data = Array.isArray(options.data) ? options.data.map((row) => ({ ...row })) : [];
+      this.columns = Array.isArray(options.columns) ? options.columns.map((column) => ({ ...column })) : [];
+      MockTabulator.instances.push(this);
+    }
+
+    destroy() {}
+
+    getData() {
+      return this.data.map((row) => ({ ...row }));
+    }
+
+    getColumns() {
+      return this.columns.map((column) => ({
+        getField: () => column.field,
+        getDefinition: () => ({ ...column })
+      }));
+    }
+  }
+
+  const resultTableModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'result-table-controller.js'), {});
+  const resultTableController = resultTableModule.createResultTableController({
+    host: document.getElementById('biology-notebook-result-table'),
+    statusEl: document.getElementById('biology-notebook-result-table-status'),
+    wrapEl: document.getElementById('biology-notebook-result-table-wrap'),
+    addBtn: document.getElementById('biology-notebook-add-table-btn'),
+    addRowBtn: document.getElementById('biology-notebook-add-table-row-btn'),
+    addColBtn: document.getElementById('biology-notebook-add-table-column-btn'),
+    removeBtn: document.getElementById('biology-notebook-remove-table-btn'),
+    createId: (() => {
+      let index = 0;
+      return () => `placeholder-${index += 1}`;
+    })(),
+    TabulatorLib: MockTabulator
+  });
+
+  resultTableController.onAddFromPlaceholder({
+    name: 'Incubation temperature',
+    value: '37 °C'
+  });
+
+  const table = resultTableController.getCurrentTables()[0];
+  assert.equal(table.columns.map((column) => column.title).join('|'), 'Variable|Value');
+  assert.equal(table.rows.length, 1);
+  assert.equal(table.rows[0][table.columns[0].field], 'Incubation temperature');
+  assert.equal(table.rows[0][table.columns[1].field], '37 °C');
+  assert.equal(MockTabulator.instances.length, 1);
+});
+
+test('biology-notebook placeholder context menu exposes the table action for regular variables', () => {
+  const action = {
+    closest(selector) {
+      return selector === '[data-placeholder-add-table]' ? action : null;
+    }
+  };
+  const menu = {
+    hidden: true,
+    style: {},
+    listeners: {},
+    setAttribute() {},
+    addEventListener(type, handler) {
+      this.listeners[type] = handler;
+    },
+    querySelector(selector) {
+      return selector === '[data-placeholder-add-table]' ? action : null;
+    }
+  };
+  const document = {
+    documentElement: { clientWidth: 800, clientHeight: 600 },
+    body: { append() {} },
+    createElement() {
+      return menu;
+    }
+  };
+  const menuModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'sample-link-menu.js'), {});
+  let receivedState = null;
+  const controller = menuModule.createSampleLinkMenuController({
+    doc: document,
+    win: { innerWidth: 800, innerHeight: 600 },
+    safeText: shared.safeText,
+    onAddTable: (state) => { receivedState = state; }
+  });
+  const wrap = {
+    dataset: { placeholderName: 'Incubation temperature' },
+    querySelector: () => ({ value: '37 °C' })
+  };
+  const token = { dataset: { nbKeyRef: 'step-1:temperature' } };
+
+  controller.open({ wrap, token, x: 100, y: 100 });
+  menu.listeners.click({
+    target: action,
+    preventDefault() {}
+  });
+
+  assert.equal(receivedState.key, 'step-1:temperature');
+  assert.equal(receivedState.placeholderName, 'Incubation temperature');
+  assert.equal(receivedState.value, '37 °C');
+  assert.equal(menu.hidden, true);
+});
 test('biology-notebook sidebar records bench calculations and inserts readable notes', async () => {
   const document = createMockDocument([
     'biology-notebook-project-select',

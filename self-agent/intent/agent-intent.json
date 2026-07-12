@@ -29,16 +29,16 @@
       "inventory_search": "Populate normalized_query, candidate_terms, aliases, and search_mode for inventory search."
     }
   },
-  "record_lookup": {
-    "name": "record_lookup",
-    "description": "Stored project, workflow, notebook, gel, paper, or lab records, excluding inventory. Assay data is supplied by the active Assay rail context and dedicated assay tools.",
-    "rules": "Include record-hint entities only when they narrow local search.",
-    "example_input": "What did we use last time for the antibody conjugation workflow?",
+  "notebook_lookup": {
+    "name": "notebook_lookup",
+    "description": "Stored notebook entries, prior notebook results, notebook pages for a project, or notebook records tied to a protocol.",
+    "rules": "Use protocol, project, and result-text hints only when they narrow notebook search. Prefer protocol lookup for protocol records and paper tools for paper records.",
+    "example_input": "What did we write last time in the notebook for antibody conjugation?",
     "specific_output_append": {
       "entities.project_name": "Populate when the request is scoped to a project.",
       "entities.protocol_name": "Populate when the request names a protocol.",
-      "entities.workflow_step": "Populate when the request names a workflow stage or process.",
-      "entities.requested_output": "Populate when the user asks for a specific record type or output."
+      "entities.notebook_name": "Populate when the request names a notebook page or entry.",
+      "entities.requested_output": "Populate when the user asks for a specific notebook result or output."
     }
   },
   "project_science_question": {

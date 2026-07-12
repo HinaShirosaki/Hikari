@@ -16,12 +16,11 @@ args = ["/absolute/path/to/src/main/helpers/agent/mcp-contract/stdio-server.js"]
 enabled_tools = [
   "inventory_lookup",
   "chemical_lookup",
-  "record_lookup",
+  "notebook_lookup",
   "protocol_lookup",
   "protocol_generation",
   "notebook_draft",
   "notebook_generation",
-  "notebook_lookup",
   "literature_search",
   "paper_download",
   "paper_analysis",
@@ -37,7 +36,7 @@ enabled_tools = [
 ]
 default_tools_approval_mode = "approve"
 startup_timeout_sec = 30
-tool_timeout_sec = 120
+tool_timeout_sec = 300
 env = {
   HIKARI_AGENT_MCP = "1",
   HIKARI_AGENT_MCP_WORKSPACE = "/runtime/workspace",
@@ -122,12 +121,11 @@ The Hikari MCP surface is direct-tool-only. Agent providers call the named tools
 
 - `inventory_lookup`
 - `chemical_lookup`
-- `record_lookup`
+- `notebook_lookup`
 - `protocol_lookup`
 - `protocol_generation`
 - `notebook_draft`
 - `notebook_generation`
-- `notebook_lookup`
 - `literature_search`
 - `paper_download`
 - `paper_analysis`
@@ -145,12 +143,11 @@ Codex exposes the same server tools to the model with the server namespace prefi
 
 - `mcp__hikari__inventory_lookup`
 - `mcp__hikari__chemical_lookup`
-- `mcp__hikari__record_lookup`
+- `mcp__hikari__notebook_lookup`
 - `mcp__hikari__protocol_lookup`
 - `mcp__hikari__protocol_generation`
 - `mcp__hikari__notebook_draft`
 - `mcp__hikari__notebook_generation`
-- `mcp__hikari__notebook_lookup`
 - `mcp__hikari__literature_search`
 - `mcp__hikari__paper_download`
 - `mcp__hikari__paper_analysis`
@@ -170,8 +167,8 @@ Direct wrappers that delegate to app executors use the app tool schema and retur
 {
   "ok": true,
   "status": "completed",
-  "mcp_tool": "record_lookup",
-  "app_tool": "record-lookup",
+  "mcp_tool": "notebook_lookup",
+  "app_tool": "notebook-lookup",
   "output": {}
 }
 ```
@@ -217,9 +214,9 @@ Input schema:
 }
 ```
 
-### `record_lookup`
+### `notebook_lookup`
 
-Direct MCP wrapper for stored Hikari records beyond specialized inventory, protocol, notebook, paper, or assay tools. Use it for projects, protocols, notebook pages, workflows, gels, papers, and linked historical context. Do not use it to provide active Assay data; active assay values come from the Assay rail context and `assay_table`.
+Direct MCP convenience wrapper for local Hikari notebook entries. It calls the app `notebook-lookup` executor and returns matched notebook entries by project, protocol, result text, or identifier.
 
 Input schema:
 
@@ -227,10 +224,13 @@ Input schema:
 {
   "type": "object",
   "additionalProperties": false,
+  "required": ["query"],
   "properties": {
-    "query": { "type": "string" },
+    "query": { "type": "string", "minLength": 1 },
     "limit": { "type": "integer", "minimum": 1, "maximum": 25 },
-    "parser_payload": { "type": "object" }
+    "project_id": { "type": "string" },
+    "project_name": { "type": "string" },
+    "protocol_name": { "type": "string" }
   }
 }
 ```
@@ -306,27 +306,6 @@ Input schema:
     "persist": { "type": "boolean" },
     "overwrite": { "type": "boolean" },
     "upsert": { "type": "boolean" }
-  }
-}
-```
-
-### `notebook_lookup`
-
-Direct MCP convenience wrapper for local Hikari notebook entries. It calls the notebook-only app lookup executor and returns notebook records.
-
-Input schema:
-
-```json
-{
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["query"],
-  "properties": {
-    "query": { "type": "string", "minLength": 1 },
-    "limit": { "type": "integer", "minimum": 1, "maximum": 25 },
-    "project_id": { "type": "string" },
-    "project_name": { "type": "string" },
-    "protocol_name": { "type": "string" }
   }
 }
 ```
@@ -480,7 +459,7 @@ The private app host exposes one SDK tool, `hikari_app_tool_call`, for relay int
 
 ```json
 {
-  "tool_id": "record-lookup",
+  "tool_id": "notebook-lookup",
   "args": {},
   "snapshot": {},
   "context": {}
@@ -504,7 +483,7 @@ Response:
 {
   "ok": true,
   "status": "completed",
-  "tool_id": "record-lookup",
+  "tool_id": "notebook-lookup",
   "output": {}
 }
 ```
@@ -513,6 +492,6 @@ Unauthorized calls return HTTP 401 with `status: "unauthorized"`. Missing execut
 
 ## Direct tool files
 
-The MCP surface is allow-listed by `src/main/helpers/agent/mcp-contract/direct-tools/index.js`. Most direct wrappers live under `direct-tools/`; the paper-intake tools are grouped in `src/main/helpers/agent/paper-intake/mcp-tools.js` and folded into the same allow-list. Hyphenated app tool ids are available only when a direct tool wrapper exists, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `record-lookup` as `record_lookup`.
+The MCP surface is allow-listed by `src/main/helpers/agent/mcp-contract/direct-tools/index.js`. Most direct wrappers live under `direct-tools/`; the paper-intake tools are grouped in `src/main/helpers/agent/paper-intake/mcp-tools.js` and folded into the same allow-list. Hyphenated app tool ids are available only when a direct tool wrapper exists, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `notebook-lookup` as `notebook_lookup`.
 
 See `mcp-contract.json` next to this file for the exact generated MCP tool definitions and input schemas.

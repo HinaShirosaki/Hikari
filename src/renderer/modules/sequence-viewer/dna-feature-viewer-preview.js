@@ -2,7 +2,6 @@ import { escapeHtml } from '../tool-box/common.js';
 import {
   assignFeatureLanes,
   buildFeatureLocationText,
-  getContrastTextColor,
   hashTypeToColor
 } from './feature-model.js';
 import { clamp, normalizeRecordName, normalizeSequenceText } from './shared.js';
@@ -12,7 +11,7 @@ import { clamp, normalizeRecordName, normalizeSequenceText } from './shared.js';
 // Hikari only keeps the standalone HTML/SVG plasmid-preview path.
 
 const BACKBONE_RADIUS = 290;
-const BACKBONE_WIDTH = 16;
+const BACKBONE_WIDTH = 5;
 const FEATURE_START_GAP = 18;
 const FEATURE_BAND_WIDTH = 18;
 const FEATURE_LANE_GAP = 12;
@@ -27,6 +26,22 @@ const LABEL_SIDE_BALANCE_THRESHOLD = 0.55;
 const LABEL_BOX_HORIZONTAL_PADDING = 12;
 const PREVIEW_TOOLTIP_OFFSET_PX = 12;
 const VIEWBOX_PADDING = 32;
+const PREVIEW_FONT_FACE_CSS = `
+    @font-face {
+      font-family: "Inter";
+      src: url("./assets/fonts/InterVariable.woff2") format("woff2-variations");
+      font-style: normal;
+      font-weight: 100 900;
+      font-display: block;
+    }
+    @font-face {
+      font-family: "Inter";
+      src: url("./assets/fonts/InterVariable-Italic.woff2") format("woff2-variations");
+      font-style: italic;
+      font-weight: 100 900;
+      font-display: block;
+    }
+`;
 
 function parseHexColor(color) {
   const normalized = String(color || '').trim();
@@ -420,21 +435,41 @@ function buildColumnLabelLayout(features, sequenceLength, ringOuterRadius) {
   };
 }
 
-function buildTickMarkup(cx, cy, radius, sequenceLength) {
-  const tickCount = sequenceLength >= 8000 ? 24 : sequenceLength >= 4000 ? 16 : 12;
-  const ticks = [];
+function niceTickStep(sequenceLength) {
+  const target = 6;
+  const rough = Math.max(1, sequenceLength / target);
+  const pow = 10 ** Math.floor(Math.log10(rough));
+  return [1, 2, 2.5, 5, 10]
+    .map((multiplier) => multiplier * pow)
+    .find((candidate) => sequenceLength / candidate <= target + 2) ?? 10 * pow;
+}
 
-  for (let index = 0; index < tickCount; index += 1) {
-    const ratio = index / tickCount;
-    const theta = ratioToTheta(ratio);
-    const inner = polarPoint(cx, cy, radius - 12, theta);
-    const outer = polarPoint(cx, cy, radius + 12, theta);
-    ticks.push(
-      `<line class="circular-preview__tick" x1="${inner.x.toFixed(2)}" y1="${inner.y.toFixed(2)}" x2="${outer.x.toFixed(2)}" y2="${outer.y.toFixed(2)}"></line>`
+// bp ruler: numbered major ticks + faint minor ticks inside the backbone.
+function buildTickMarkup(cx, cy, radius, sequenceLength) {
+  const step = niceTickStep(sequenceLength);
+  const minorStep = step / 5;
+  const parts = [];
+
+  for (let bp = 0; bp < sequenceLength; bp += minorStep) {
+    const theta = ratioToTheta(bp / sequenceLength);
+    const isMajor = Math.abs((bp / step) - Math.round(bp / step)) < 1e-6;
+    const reach = isMajor ? 7 : 3.5;
+    const inner = polarPoint(cx, cy, radius - reach, theta);
+    const outer = polarPoint(cx, cy, radius + reach, theta);
+    parts.push(
+      `<line class="circular-preview__tick${isMajor ? ' circular-preview__tick--major' : ''}" x1="${inner.x.toFixed(2)}" y1="${inner.y.toFixed(2)}" x2="${outer.x.toFixed(2)}" y2="${outer.y.toFixed(2)}"></line>`
     );
+
+    if (isMajor) {
+      const label = polarPoint(cx, cy, radius - 20, theta);
+      const text = bp === 0 ? '1' : String(Math.round(bp));
+      parts.push(
+        `<text class="circular-preview__ruler-label" x="${label.x.toFixed(2)}" y="${label.y.toFixed(2)}">${text}</text>`
+      );
+    }
   }
 
-  return ticks.join('');
+  return parts.join('');
 }
 
 function buildFeatureTooltip(feature, sequenceLength) {
@@ -469,7 +504,6 @@ function buildCenterMarkup(recordName, sequenceLength, featureCount, cx, cy) {
   const subtitle = escapeHtml(`${formatBpCount(sequenceLength)} · ${featureCount} feature${featureCount === 1 ? '' : 's'}`);
   return `
     <g class="circular-preview__center">
-      <circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(BACKBONE_RADIUS - 56).toFixed(2)}" class="circular-preview__center-disc"></circle>
       <text x="${cx.toFixed(2)}" y="${(cy - 14).toFixed(2)}" class="circular-preview__title">${safeName}</text>
       <text x="${cx.toFixed(2)}" y="${(cy + 18).toFixed(2)}" class="circular-preview__subtitle">${subtitle}</text>
     </g>
@@ -697,9 +731,9 @@ function buildEmptyPreviewHtml(recordName) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${safeName}</title>
-  <style>
+  <style>${PREVIEW_FONT_FACE_CSS}
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #ffffff; }
-    body { font-family: "Playfair Display", serif; color: #15314d; overflow: hidden; }
+    body { font-family: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #15314d; overflow: hidden; }
     .preview-shell {
       width: 100%;
       height: 100%;
@@ -747,7 +781,7 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
         }
 
         const fill = hashTypeToColor(feature?.type === 'restriction_site' ? `${feature.type}:${feature.name}` : feature?.type);
-        const labelFill = lightenHexColor(fill, 0.86);
+        const labelFill = lightenHexColor(fill, 0.9);
         const labelLines = normalizeLabelLines(feature?.name || feature?.type || 'Feature');
         return {
           ...feature,
@@ -756,7 +790,8 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
           fill,
           stroke: darkenHexColor(fill, 0.18),
           labelFill,
-          labelTextColor: getContrastTextColor(labelFill),
+          labelStroke: lightenHexColor(fill, 0.5),
+          labelTextColor: darkenHexColor(fill, 0.5),
           labelLines,
           anchorPosition: computeFeatureAnchorPosition({ segments }, sequenceLength)
         };
@@ -872,10 +907,10 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
             y="${boxY.toFixed(2)}"
             width="${labelWidthPx.toFixed(2)}"
             height="${labelHeightPx.toFixed(2)}"
-            rx="10"
-            ry="10"
+            rx="9"
+            ry="9"
             fill="${feature.labelFill}"
-            stroke="${feature.stroke}"></rect>
+            stroke="${feature.labelStroke}"></rect>
           ${feature.labelLines.map((line, lineIndex) => `
             <text
               class="circular-preview__label-text"
@@ -896,14 +931,12 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(recordName)}</title>
-  <style>
+  <style>${PREVIEW_FONT_FACE_CSS}
     :root {
       color-scheme: light;
       --preview-ink: #16314c;
       --preview-muted: #5a7592;
       --preview-backbone: #7e99ba;
-      --preview-center-ring: #d8e4f2;
-      --preview-center-disc: #f9fbfe;
       --preview-tick: #8ca5c5;
     }
     * { box-sizing: border-box; }
@@ -915,7 +948,7 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       background: #ffffff;
     }
     body {
-      font-family: "Playfair Display", serif;
+      font-family: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       color: var(--preview-ink);
       overflow: hidden;
     }
@@ -939,20 +972,21 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       stroke: var(--preview-backbone);
       stroke-width: ${BACKBONE_WIDTH};
     }
-    .circular-preview__center-ring {
-      fill: none;
-      stroke: var(--preview-center-ring);
-      stroke-width: 2;
-    }
-    .circular-preview__center-disc {
-      fill: var(--preview-center-disc);
-      stroke: var(--preview-center-ring);
-      stroke-width: 2;
-    }
     .circular-preview__tick {
       stroke: var(--preview-tick);
+      stroke-width: 1;
+      opacity: 0.5;
+    }
+    .circular-preview__tick--major {
       stroke-width: 1.5;
       opacity: 0.9;
+    }
+    .circular-preview__ruler-label {
+      fill: var(--preview-muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-anchor: middle;
+      dominant-baseline: middle;
     }
     .circular-preview__feature {
       stroke-width: 1.5;
@@ -966,7 +1000,8 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       opacity: 0.82;
     }
     .circular-preview__label-box {
-      stroke-width: 1.2;
+      stroke-width: 1;
+      filter: url(#previewLabelShadow);
     }
     .circular-preview__label-text {
       font-size: ${LABEL_FONT_SIZE}px;
@@ -1030,8 +1065,12 @@ export function buildDnaFeatureViewerCircularPreviewHtmlDocument(record) {
       role="img"
       aria-label="${escapeHtml(`${recordName} circular plasmid preview`)}">
       <desc>Standalone circular plasmid preview for ${escapeHtml(recordName)}.</desc>
+      <defs>
+        <filter id="previewLabelShadow" x="-30%" y="-50%" width="160%" height="200%">
+          <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#16314c" flood-opacity="0.16"></feDropShadow>
+        </filter>
+      </defs>
       <g class="circular-preview__scene">
-        <circle class="circular-preview__center-ring" cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${(BACKBONE_RADIUS - 32).toFixed(2)}"></circle>
         <circle class="circular-preview__backbone" cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${BACKBONE_RADIUS.toFixed(2)}"></circle>
         ${tickMarkup}
         ${featureMarkup.join('')}

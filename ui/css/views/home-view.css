@@ -864,9 +864,13 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
   width: min(100%, 380px);
 }
 
+#home-view .home-timer-dialog-head {
+  align-items: center;
+}
+
 #home-view .home-timer-form-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(120px, 0.8fr) auto;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr) auto;
   gap: 10px;
 }
 
@@ -882,6 +886,17 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
   min-height: 0;
   overflow: auto;
   padding-right: 4px;
+}
+
+@media (max-width: 480px) {
+  #home-view .home-timer-form-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  #home-view .home-timer-form-row .ghost-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
 }
 
 #home-view .home-timer-template-row {

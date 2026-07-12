@@ -3,6 +3,8 @@ export function createAgentChatRuntimeState() {
     inFlight: false,
     liveAssistantMessage: null,
     activeClientRequestId: '',
+    inFlightClientRequestId: '',
+    canceledClientRequestIds: new Set(),
     stopRequested: false,
     stopInProgress: false,
     developerResponseSimulatorFolded: false,

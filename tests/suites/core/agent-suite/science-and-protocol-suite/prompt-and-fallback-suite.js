@@ -406,7 +406,7 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
           continue_when: ['A blocking evidence gap still prevents a grounded answer.'],
           preferred_next_tools: ['literature-search']
         },
-        toolTrace: [{ tool_name: 'record-lookup', ok: true }],
+        toolTrace: [{ tool_name: 'notebook-lookup', ok: true }],
         citations: [],
         roundsExecuted: 1,
         maxRounds: 4
@@ -419,9 +419,9 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
         exitCriteria: {
           required_evidence: [],
           continue_when: ['A blocking evidence gap still prevents a grounded answer.'],
-          preferred_next_tools: ['record-lookup']
+          preferred_next_tools: ['notebook-lookup']
         },
-        toolTrace: [{ tool_name: 'record-lookup', ok: true }],
+        toolTrace: [{ tool_name: 'notebook-lookup', ok: true }],
         citations: [],
         roundsExecuted: 1,
         maxRounds: 4
@@ -434,9 +434,9 @@ module.exports = function registerPromptAndFallbackSuite(context = {}) {
         exitCriteria: {
           required_evidence: [],
           continue_when: ['A blocking evidence gap still prevents a grounded answer.'],
-          preferred_next_tools: ['record-lookup']
+          preferred_next_tools: ['notebook-lookup']
         },
-        toolTrace: [{ tool_name: 'record-lookup', ok: true }],
+        toolTrace: [{ tool_name: 'notebook-lookup', ok: true }],
         citations: [],
         roundsExecuted: 1,
         maxRounds: 4

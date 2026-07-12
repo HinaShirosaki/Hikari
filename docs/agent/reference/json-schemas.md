@@ -366,8 +366,8 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
       }
     }
   },
-  "record-lookup": {
-    "description": "Use this tool when the user is asking about stored lab records beyond raw inventory, such as projects, protocols, notebook entries, workflows, gels, papers, or linked historical context. Do not use `record-lookup` to provide Assay data; active Assay data comes from the Assay rail context and dedicated assay tools. Prefer this tool for 'what did we do last time', 'find the protocol record', or project-specific evidence retrieval. Provide `query` for the entity or topic to search, and pass `parser_payload` when parser entities can help narrow record matching.",
+  "notebook-lookup": {
+    "description": "Use this tool when the user is asking about local notebook entries, prior notebook results, notebook pages for a project, or notebook records tied to a protocol. Prefer `protocol-matching` for protocol lookup and the paper tools for paper lookup. Provide `query` for the notebook search text, and include project or protocol filters when known.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -751,7 +751,7 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
     }
   },
   "literature-search": {
-    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. The literature workflow searches candidates, downloads selected PDFs, writes LLM-facing paper markdown, and loads selected paper context back into the main agent; when the caller is Codex, the markdown-reading and context-selection step runs in a real Codex sub-agent session. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -1133,7 +1133,7 @@ Source: `src/main/helpers/agent/intent/agent-intent-parser.js`
         "protocol_to_notebook",
         "notebook_draft",
         "inventory_lookup",
-        "record_lookup",
+        "notebook_lookup",
         "project_science_question",
         "general_science_question",
         "paper_analysis",

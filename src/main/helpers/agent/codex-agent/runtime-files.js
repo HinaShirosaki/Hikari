@@ -11,6 +11,9 @@ const {
 const {
   HIKARI_MCP_TOOL_NAMES
 } = require('../mcp-contract/instructions.js');
+const {
+  HIKARI_MCP_TOOL_TIMEOUT_SEC
+} = require('../mcp-contract/constants.js');
 
 const CODEX_AGENTS_FILE = 'AGENTS.md';
 const HIKARI_MCP_CONFIG_START = '# HIKARI_MCP_CONFIG_START';
@@ -250,7 +253,7 @@ function buildHikariCodexMcpConfigBlock(options = {}) {
     `enabled_tools = ${tomlStringArray(HIKARI_MCP_TOOL_NAMES)}`,
     'default_tools_approval_mode = "approve"',
     'startup_timeout_sec = 30',
-    'tool_timeout_sec = 120',
+    `tool_timeout_sec = ${HIKARI_MCP_TOOL_TIMEOUT_SEC}`,
     `env = { ${envText} }`,
     '',
     '[mcp_servers.hikari.tools.protocol_generation]',

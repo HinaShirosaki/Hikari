@@ -153,6 +153,73 @@ test('[EDGE] sequence-viewer alignment button opens the workspace, auto-loads th
   assert.match(sequenceHost.innerHTML, /sequence-viewer-seq-highlight-alignment/);
   assert.match(sequenceHost.innerHTML, /sequence-viewer-alignment-query-row/);
 });
+test('[EDGE] sequence-viewer keeps saved alignment folders selectable after reference signature drift', () => {
+  const detailAlignment = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'detail-alignment.js')
+  );
+  const sessions = detailAlignment.getAlignmentSessionsForRecord({
+    activeEntryId: 'seq_1780364564919_53a4b390',
+    alignmentSessions: [
+      {
+        id: 'same_entry_legacy_key',
+        referenceRecordKey: 'ref_5702_legacy',
+        storedSourceRelPath: 'entries/seq_1780364564919_53a4b390/alignments/same_entry_legacy_key/read.ab1',
+        queryRecord: { name: 'same_entry', sequence: 'ACGT' }
+      },
+      {
+        id: 'other_entry_legacy_key',
+        referenceRecordKey: 'ref_5702_legacy',
+        storedSourceRelPath: 'entries/other_entry/alignments/other_entry_legacy_key/read.ab1',
+        queryRecord: { name: 'other_entry', sequence: 'ACGT' }
+      }
+    ]
+  }, {
+    name: 'pETDuet-1-NdeI-F',
+    sequence: 'ACGTACGT',
+    topology: 'circular',
+    sourceFormat: 'genbank'
+  });
+
+  assert.deepEqual(sessions.map((session) => session.id), ['same_entry_legacy_key']);
+});
+test('[EDGE] sequence-viewer re-aligns a saved read before rendering when its reference key is stale', () => {
+  const alignmentController = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'alignment-controller.js')
+  );
+  const reference = {
+    name: 'Current reference',
+    sequence: 'AACCGGTT',
+    topology: 'linear',
+    sourceFormat: 'genbank'
+  };
+  const staleSession = {
+    id: 'legacy_read',
+    name: 'legacy read',
+    referenceRecordKey: 'ref_10_outdated',
+    referenceRecordName: 'Previous reference',
+    queryRecord: {
+      name: 'read',
+      sequence: 'AACCGGTT',
+      topology: 'linear',
+      sourceFormat: 'ab1'
+    },
+    result: {
+      identityPercent: 0,
+      queryCoveragePercent: 0,
+      alignedReference: 'TTTTTTTT',
+      alignedQuery: 'AACCGGTT',
+      referenceSpan: { start: 0, end: 8, wraps: false }
+    }
+  };
+
+  const resolved = alignmentController.resolveStoredAlignmentForReference(staleSession, reference);
+
+  assert.equal(resolved.wasRealigned, true);
+  assert.equal(resolved.session.referenceRecordKey.startsWith('ref_8_'), true);
+  assert.equal(resolved.result.alignedReference, 'AACCGGTT');
+  assert.equal(resolved.result.alignedQuery, 'AACCGGTT');
+  assert.equal(resolved.result.identityPercent, 100);
+});
 test('[EDGE] sequence-viewer detail view no longer includes the standalone alignment trace panel', () => {
   const detailViewSource = readSource('ui/html/views/sequence-viewer-detail-view.html');
   const publicApiSource = readSource('src/renderer/modules/sequence-viewer/public-api.js');
@@ -224,11 +291,15 @@ test('[EDGE] sequence-viewer shows the AB1 chromatogram inline for an active seq
   assert.doesNotMatch(sequenceHost.innerHTML, /sequence-viewer-trace-diff-mismatch/);
   assert.equal((sequenceHost.innerHTML.match(/sequence-viewer-inline-trace-row/g) || []).length > 1, true);
   assert.match(sequenceHost.innerHTML, /sequence-viewer-trace-line-a/);
+  assert.match(sequenceHost.innerHTML, /sequence-viewer-alignment-reference-row/);
+  assert.match(sequenceHost.innerHTML, /sequence-viewer-alignment-guide-row/);
   assert.match(sequenceHost.innerHTML, /sequence-viewer-alignment-query-base-mismatch/);
   const topIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-strand-row-top');
   const traceIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-inline-trace-row');
+  const referenceIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-alignment-reference-row');
+  const guideIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-alignment-guide-row');
   const queryIndex = sequenceHost.innerHTML.indexOf('sequence-viewer-alignment-query-row');
-  assert.equal(topIndex < traceIndex && traceIndex < queryIndex, true);
+  assert.equal(topIndex < traceIndex && traceIndex < referenceIndex && referenceIndex < guideIndex && guideIndex < queryIndex, true);
 });
   }
 };

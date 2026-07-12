@@ -8,8 +8,8 @@ export function summarizeInventoryLookup(lookup) {
   return responseModule.summarizeInventoryLookup(lookup);
 }
 
-export function summarizeRecordLookup(lookup) {
-  return responseModule.summarizeRecordLookup(lookup);
+export function summarizeNotebookLookup(lookup) {
+  return responseModule.summarizeNotebookLookup(lookup);
 }
 
 export function summarizeScienceResult(payload) {

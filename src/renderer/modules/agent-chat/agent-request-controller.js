@@ -45,6 +45,17 @@ export function createAgentRequestController(deps) {
     runtime.activeClientRequestId = '';
   }
 
+  function getCanceledRequestIds() {
+    if (!(runtime.canceledClientRequestIds instanceof Set)) {
+      runtime.canceledClientRequestIds = new Set();
+    }
+    return runtime.canceledClientRequestIds;
+  }
+
+  function wasRequestCanceled(clientRequestId) {
+    return getCanceledRequestIds().has(clientRequestId);
+  }
+
   function collectTraceRows() {
     const progress = runtime.liveAssistantMessage?.meta?.live_progress || {};
     return {
@@ -105,7 +116,9 @@ export function createAgentRequestController(deps) {
     renderHistoryView({ forceScroll: true });
 
     const clientRequestId = `agent-request-${trimText(createId(), 120) || Date.now().toString(36)}`;
+    getCanceledRequestIds().delete(clientRequestId);
     runtime.activeClientRequestId = clientRequestId;
+    runtime.inFlightClientRequestId = clientRequestId;
     runtime.liveAssistantMessage = buildLiveAssistantPlaceholder(clientRequestId, messageText, createId);
     renderHistoryView({ forceScroll: true });
     updateInFlightState(true);
@@ -128,6 +141,9 @@ export function createAgentRequestController(deps) {
         llm: payloadBuilder.buildAgentLlmPayload(),
         agent: payloadBuilder.buildAgentFlagsPayload({ hiddenContexts })
       });
+      if (wasRequestCanceled(clientRequestId)) {
+        return;
+      }
       if (!result?.ok) {
         if (result?.canceled === true) {
           appendStoppedAssistantMessage(messageText, result?.error || 'Agent request stopped.');
@@ -162,6 +178,9 @@ export function createAgentRequestController(deps) {
       }
       setStatus('Complete.');
     } catch (error) {
+      if (wasRequestCanceled(clientRequestId)) {
+        return;
+      }
       if (isLocalStopError(error)) {
         appendStoppedAssistantMessage(messageText, error?.message || 'Agent request stopped.');
         setStatus('Stopped.');
@@ -172,7 +191,11 @@ export function createAgentRequestController(deps) {
       persistAssistantMessage(buildAssistantErrorMessage({ createId, error, traceRows, messageText }));
       setStatus('Error.');
     } finally {
-      updateInFlightState(false);
+      getCanceledRequestIds().delete(clientRequestId);
+      if (runtime.inFlightClientRequestId === clientRequestId) {
+        runtime.inFlightClientRequestId = '';
+        updateInFlightState(false);
+      }
     }
   }
 
@@ -180,6 +203,11 @@ export function createAgentRequestController(deps) {
     if (!runtime.inFlight) {
       return;
     }
+    const clientRequestId = runtime.activeClientRequestId;
+    const requestText = trimText(
+      runtime.liveAssistantMessage?.meta?.live_progress?.request_text,
+      3000
+    );
     runtime.stopRequested = true;
     runtime.stopInProgress = true;
     if (deps.dom?.stopBtn) {
@@ -187,11 +215,19 @@ export function createAgentRequestController(deps) {
       deps.dom.stopBtn.textContent = 'Stopping...';
     }
     setStatus('Stopping...');
-    if (!api?.agentChatCancel || !runtime.activeClientRequestId) {
+    if (!api?.agentChatCancel || !clientRequestId) {
       return;
     }
     try {
-      await api.agentChatCancel({ clientRequestId: runtime.activeClientRequestId });
+      const canceled = await api.agentChatCancel({ clientRequestId });
+      if (canceled?.ok === true && canceled?.canceled === true
+        && runtime.activeClientRequestId === clientRequestId) {
+        getCanceledRequestIds().add(clientRequestId);
+        appendStoppedAssistantMessage(requestText, 'Agent request stopped by user.');
+        runtime.inFlightClientRequestId = '';
+        updateInFlightState(false);
+        setStatus('Stopped.');
+      }
     } catch {
       // The active request will still unwind locally once the current step completes.
     }

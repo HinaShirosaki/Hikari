@@ -10,15 +10,10 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
-      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
-      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
       readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
     test('science reasoning helper exports shared loop runtime and renderer consumes science payloads', () => {
@@ -304,7 +299,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     test('direct LLM module registry is wired through main IPC and preload', () => {
       const channelsSource = readLocalSource('src', 'shared', 'ipc', 'channels.js');
       const preloadSource = readLocalSource('src', 'main', 'preload', 'api', 'llm-api.js');
-      const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js');
+      const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'main-services.js');
       const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
       const systemRegistrarSource = readLocalSource('src', 'main', 'ipc', 'register-system-ipc.js');
       const directLlmSource = readLocalSource('src', 'renderer', 'modules', 'direct-llm.js');
@@ -374,15 +369,16 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.equal(/agent-sqlite-index/.test(mainSource), false);
       assert.equal(/agent-phase89-runtime/.test(mainSource), false);
     });
-    test('agent lookup runtime composes reusable inventory and record helpers', () => {
+    test('agent lookup runtime composes reusable inventory helper and notebook lookup methods', () => {
       const source = readSource('src/main/helpers/agent/runtime/agent-lookup-runtime.js');
+      const retiredLookupFile = ['agent', 'record', 'lookup'].join('-');
       assert.match(source, /resolveAgentRuntimeFactory/);
       assert.match(source, /require\('\.\.\/tools\/agent-inventory-lookup'\)/);
-      assert.match(source, /require\('\.\.\/tools\/agent-record-lookup\.js'\)/);
+      assert.equal(source.includes(retiredLookupFile), false);
       assert.match(source, /createAgentInventoryLookupRuntime\(\{/);
-      assert.match(source, /createAgentRecordLookupRuntime\(sharedLookupDeps\)/);
       assert.match(source, /searchInventoryIndex:\s*inventoryLookupRuntime\.searchInventoryIndex/);
-      assert.match(source, /searchRecordIndex:\s*recordLookupRuntime\.searchRecordIndex/);
+      assert.match(source, /searchNotebookEntriesIndex/);
+      assert.match(source, /executeNotebookLookup/);
     });
     test('agent runtime registry registers and resolves named runtime factories', () => {
       const { createAgentRuntimeRegistry, resolveAgentRuntimeFactory } = require(agentPath('shared', 'agent-runtime-registry.js'));
@@ -412,32 +408,38 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
               }
             });
           }
-          if (runtimeName === 'record-lookup') {
-            return () => ({
-              async searchRecordIndex({ query } = {}) {
-                return { status: 'matched', source: 'registry_record', items: [{ id: 'rec-1', name: String(query || '') }] };
-              },
-              async executeRecordLookup() {
-                return { status: 'matched', items: [] };
-              }
-            });
-          }
           return null;
         }
       });
 
       const inventorySearch = await lookupRuntime.searchInventoryIndex({ query: 'Atlas construct' });
-      const recordSearch = await lookupRuntime.searchRecordIndex({ query: 'Protein Purification' });
+      const notebookSearch = await lookupRuntime.searchNotebookEntriesIndex({
+        query: 'Protein Purification',
+        snapshot: {
+          notebookEntries: [
+            {
+              id: 'note-1',
+              protocolName: 'Protein Purification',
+              projectName: 'Atlas',
+              result: 'Yield improved.'
+            }
+          ]
+        }
+      });
 
-      assert.deepEqual(requestedFactories, ['inventory-lookup', 'record-lookup']);
+      assert.deepEqual(requestedFactories, ['inventory-lookup']);
       assert.equal(inventorySearch.source, 'registry_inventory');
-      assert.equal(recordSearch.source, 'registry_record');
+      assert.equal(notebookSearch.source, 'fallback_json');
+      assert.equal(notebookSearch.items[0]?.record_type, 'notebook');
     });
     test('main registers shared agent runtime factories before composing higher-level runtimes', () => {
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
+      const retiredToolName = ['record', 'lookup'].join('-');
+      const retiredFactoryName = ['createAgent', 'LookupRuntime'].join('Record');
       assert.match(mainAgentServicesSource, /createAgentRuntimeRegistry/);
       assert.match(mainAgentServicesSource, /registerRuntimeFactory\('inventory-lookup', createAgentInventoryLookupRuntime\)/);
-      assert.match(mainAgentServicesSource, /registerRuntimeFactory\('record-lookup', createAgentRecordLookupRuntime\)/);
+      assert.equal(mainAgentServicesSource.includes(retiredToolName), false);
+      assert.equal(mainAgentServicesSource.includes(retiredFactoryName), false);
       assert.match(mainAgentServicesSource, /registerRuntimeFactory\('protocol-matching', createProtocolMatchingRuntime\)/);
       assert.match(mainAgentServicesSource, /registerRuntimeFactory\('notebook-generation', createNotebookGenerationRuntime\)/);
       assert.match(mainAgentServicesSource, /createAgentSubAppApi/);

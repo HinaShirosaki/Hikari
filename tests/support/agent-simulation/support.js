@@ -29,7 +29,7 @@ function createAgentSimulationSupport(deps = {}) {
       const source = String(text || '').toLowerCase();
       if (/\b(compare .+ vs|extract methods?|extract reagents?|key figures?)\b/.test(source)) return 'paper_analysis';
       if (/\b(mw|molecular weight|inventory|stock|where is|cas)\b/.test(source)) return 'inventory_lookup';
-      if (/\b(last time|history|record|workflow step)\b/.test(source)) return 'record_lookup';
+      if (/\b(last time|history|notebook|workflow step)\b/.test(source)) return 'notebook_lookup';
       if (/\bproject\b/.test(source)) return 'project_science_question';
       if (/\bpaper|pdf|journal|literature|publication\b/.test(source)) return 'paper_analysis';
       if (/\bpython|csv|plot|compute|code|script\b/.test(source)) return 'result_analysis';

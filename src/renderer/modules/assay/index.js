@@ -729,6 +729,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     renderProjectOptions,
     renderNotebookOptions,
     renderList,
+    renderAgentPlotlyGraph: (artifact) => analysisView?.renderAgentPlotlyGraph?.(artifact) === true,
     saveUnsavedChanges: async () => {
       if (savedResultsDraftSnapshot && getResultsDraftSnapshot() !== savedResultsDraftSnapshot) {
         if (!onSaveResults()) {

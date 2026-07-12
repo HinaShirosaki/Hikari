@@ -414,7 +414,10 @@ test('paper-scoped agent chat snapshot includes the active transformed markdown 
     gelAnalyses: [],
     inventory: {},
     labInventory: { chemicals: [] },
-    settings: { storagePath: '/tmp/hikari-storage' },
+    settings: {
+      storagePath: '/tmp/hikari-storage',
+      preferredJournal: 'Nature Biotechnology; Cell'
+    },
     papers: [{
       id: 'paper-1',
       title: 'Atlas Uploaded Paper',
@@ -448,6 +451,8 @@ test('paper-scoped agent chat snapshot includes the active transformed markdown 
   assert.equal(snapshot.paper_agent.transformed_markdown_relative_path, 'KnowledgeBase/papers.md/atlas-uploaded-paper/paper.md');
   assert.equal(snapshot.paper_agent.has_transformed_markdown, true);
   assert.match(snapshot.paper_agent.session_prompt, /read the transformed markdown/i);
+  assert.deepEqual(snapshot.settings.preferredJournals, ['Nature Biotechnology', 'Cell']);
+  assert.equal(snapshot.settings.preferredJournal, 'Nature Biotechnology; Cell');
 });
 
 test('notebook-scoped agent chat stores page sessions and exposes hidden page context', () => {
@@ -544,7 +549,7 @@ test('assay-scoped agent chat stores assay sessions and exposes hidden assay con
   assert.equal(Object.keys(rootState.paperAgentChatSessions).join(','), 'assay:assay-1');
   assert.match(scopedState.agentChatContext.sessionPrompt, /Assay right-rail/);
   assert.match(scopedState.agentChatContext.sessionPrompt, /parse the TSV rows in that hidden context after the header/);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /Do not use record_lookup for active assay plate\/result data/);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /Do not use local lookup tools for active assay plate\/result data/);
   assert.match(scopedState.agentChatContext.sessionPrompt, /Hikari assay table and Plotly graph MCP tools/);
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].kind, 'assay-page');
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].assayId, 'assay-1');

@@ -266,16 +266,8 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
               summary: 'Planned notebook draft ready.'
             };
           }
-          if (toolId === 'record-lookup') {
+          if (toolId === 'notebook-lookup') {
             const items = [
-              {
-                record_type: 'protocol',
-                id: 'prot-1',
-                title: 'Protein purification',
-                project_id: 'proj-1',
-                project_name: 'Atlas',
-                summary: 'Purify His-tagged protein.'
-              },
               {
                 record_type: 'notebook',
                 id: 'nb-1',
@@ -294,7 +286,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
                 items
               },
               items,
-              summary: 'Record lookup completed.'
+              summary: 'Notebook lookup completed.'
             };
           }
           const items = [
@@ -359,11 +351,11 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.deepEqual(mcpToolNames.slice(0, 7), [
         'inventory_lookup',
         'chemical_lookup',
+        'notebook_lookup',
         'protocol_lookup',
         'protocol_generation',
         'notebook_draft',
-        'notebook_lookup',
-        'ask_user'
+        'notebook_generation'
       ]);
       assert.equal(mcpToolNames.includes('inventory_lookup'), true);
       assert.equal(mcpToolNames.includes('chemical_lookup'), true);
@@ -372,7 +364,8 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(mcpToolNames.includes('protocol_save'), false);
       assert.equal(mcpToolNames.includes('notebook_draft'), true);
       assert.equal(mcpToolNames.includes('notebook_lookup'), true);
-      assert.equal(mcpToolNames.includes('record_lookup'), true);
+      const retiredDirectToolName = ['record', 'lookup'].join('_');
+      assert.equal(mcpToolNames.includes(retiredDirectToolName), false);
       assert.equal(mcpToolNames.includes('literature_search'), true);
       assert.equal(mcpToolNames.includes('paper_download'), true);
       assert.equal(mcpToolNames.includes('paper_analysis'), true);
@@ -430,7 +423,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(hiddenSearchResult.ok, false);
       assert.match(hiddenSearchResult.error, /Unknown Hikari MCP gateway tool/);
 
-      const callResult = await gateway.callGatewayTool('record_lookup', {
+      const callResult = await gateway.callGatewayTool('notebook_lookup', {
         query: 'Protein purification',
         limit: 3
       }, {
@@ -439,10 +432,10 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       });
       assert.equal(callResult.ok, true);
       assert.equal(callResult.status, 'matched');
-      assert.equal(callResult.mcp_tool, 'record_lookup');
-      assert.equal(callResult.app_tool, 'record-lookup');
+      assert.equal(callResult.mcp_tool, 'notebook_lookup');
+      assert.equal(callResult.app_tool, 'notebook-lookup');
       assert.equal(calls.length, 1);
-      assert.equal(calls[0].toolId, 'record-lookup');
+      assert.equal(calls[0].toolId, 'notebook-lookup');
       assert.equal(calls[0].args.query, 'Protein purification');
       assert.equal(calls[0].snapshot.inventory.length, 0);
       assert.equal(calls[0].context.requestId, 'req-1');
@@ -644,12 +637,12 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(plotlyInspectResult.inspection.issues.length, 0);
       assert.equal(calls[calls.length - 1].toolId, 'plotly-graph');
 
-      const invalidResult = await gateway.callGatewayTool('record_lookup', {
+      const removedLegacyLookupResult = await gateway.callGatewayTool(retiredDirectToolName, {
         query: 'PEI',
-        limit: 'many'
+        limit: 3
       });
-      assert.equal(invalidResult.ok, false);
-      assert.equal(invalidResult.status, 'invalid_arguments');
+      assert.equal(removedLegacyLookupResult.ok, false);
+      assert.match(removedLegacyLookupResult.error, /Unknown Hikari MCP gateway tool/);
     });
   }
 };

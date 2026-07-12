@@ -8,6 +8,7 @@ const {
 } = require('../../helpers/agent/codex-agent/runtime-files.js');
 const {
   CODEX_CONFIG_FILE,
+  CODEX_MODELS_CACHE_FILE,
   CODEX_RUNTIME_HOME_DIRS,
   CODEX_RUNTIME_HOME_FILES
 } = require('./constants');
@@ -23,6 +24,62 @@ const {
   resolveCodexCliRuntimeHomeDirectory,
   resolveWorkingDirectory
 } = require('./paths');
+
+const SUPPORTED_CODEX_CLI_REASONING_EFFORTS = new Set([
+  'none', 'minimal', 'low', 'medium', 'high', 'xhigh'
+]);
+
+function normalizeCodexCliModelsCache(rawValue = '') {
+  try {
+    const parsed = JSON.parse(String(rawValue || ''));
+    if (!Array.isArray(parsed?.models)) {
+      return String(rawValue || '');
+    }
+    let changed = false;
+    const models = parsed.models.map((entry) => {
+      if (!entry || typeof entry !== 'object' || !Array.isArray(entry.supported_reasoning_levels)) {
+        return entry;
+      }
+      const supportedReasoningLevels = entry.supported_reasoning_levels.filter((level) => (
+        SUPPORTED_CODEX_CLI_REASONING_EFFORTS.has(String(level?.effort || '').trim().toLowerCase())
+      ));
+      if (supportedReasoningLevels.length === entry.supported_reasoning_levels.length) {
+        return entry;
+      }
+      changed = true;
+      const nextEntry = {
+        ...entry,
+        supported_reasoning_levels: supportedReasoningLevels
+      };
+      const defaultReasoningEffort = String(entry.default_reasoning_level || '').trim().toLowerCase();
+      if (!SUPPORTED_CODEX_CLI_REASONING_EFFORTS.has(defaultReasoningEffort)) {
+        nextEntry.default_reasoning_level = String(supportedReasoningLevels.at(-1)?.effort || '');
+      }
+      return nextEntry;
+    });
+    return changed
+      ? `${JSON.stringify({ ...parsed, models }, null, 2)}\n`
+      : String(rawValue || '');
+  } catch {
+    return String(rawValue || '');
+  }
+}
+
+async function copyCompatibleCodexCliModelsCache(sourcePath = '', targetPath = '') {
+  try {
+    const source = await fs.readFile(sourcePath, 'utf8');
+    const compatible = normalizeCodexCliModelsCache(source);
+    const current = await fs.readFile(targetPath, 'utf8').catch(() => '');
+    if (current === compatible) {
+      return false;
+    }
+    await fs.mkdir(path.dirname(targetPath), { recursive: true });
+    await fs.writeFile(targetPath, compatible, 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 async function syncCodexCliRuntimePluginCacheEntry(sourcePath = '', targetPath = '', depth = 0) {
   const sourceStats = await getPathStats(sourcePath, { followSymlink: true });
@@ -111,12 +168,18 @@ async function ensureCodexCliRuntimeHome(cwd = '', options = {}) {
     return runtimeHome;
   }
 
-  await Promise.all(CODEX_RUNTIME_HOME_FILES.map((fileName) => (
+  await Promise.all(CODEX_RUNTIME_HOME_FILES
+    .filter((fileName) => fileName !== CODEX_MODELS_CACHE_FILE)
+    .map((fileName) => (
     copyFileIfChanged(
       path.join(resolvedSource, fileName),
       path.join(resolvedTarget, fileName)
     )
   )));
+  await copyCompatibleCodexCliModelsCache(
+    path.join(resolvedSource, CODEX_MODELS_CACHE_FILE),
+    path.join(resolvedTarget, CODEX_MODELS_CACHE_FILE)
+  );
   await syncCodexCliRuntimePluginCache(resolvedSource, resolvedTarget);
   await writeRuntimeGuidance(runtimeHome, cwd, options);
   return runtimeHome;
@@ -137,7 +200,9 @@ async function buildCodexCommandEnv(cwd = '', options = {}) {
 
 module.exports = {
   buildCodexCommandEnv,
+  copyCompatibleCodexCliModelsCache,
   ensureCodexCliRuntimeHome,
+  normalizeCodexCliModelsCache,
   syncCodexCliRuntimePluginCache,
   syncCodexCliRuntimePluginCacheEntry
 };

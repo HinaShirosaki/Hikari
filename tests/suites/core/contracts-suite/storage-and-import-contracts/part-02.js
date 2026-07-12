@@ -7,15 +7,10 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
-      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
-      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
       readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'app', 'agent-log-runtime.js')
     ].join('\n');
     const readPreloadStorageSource = () => [
@@ -196,8 +191,7 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'app-paths.js'), 'utf8');
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
-      const catalogConstants = require(path.join(__dirname, 'src', 'main', 'core', 'catalog', 'constants.js'));
-      assert.equal(catalogConstants.AGENT_CHAT_LOG_FILE_NAME, 'agent-chat.log');
+      assert.match(mainSource, /AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log'/);
       assert.match(mainSource, /agentLogRuntime\.ensureAgentChatLogFile\([^)]*getAgentChatLogPath\(\)\)/);
       assert.match(mainSource, /createMainAppPaths/);
       assert.match(appPathsSource, /HIKARI_AGENT_CHAT_LOG_PATH/);

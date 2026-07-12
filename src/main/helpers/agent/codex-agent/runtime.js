@@ -151,7 +151,14 @@ function createCodexAgentRuntime(deps = {}) {
       streamProgress.emitStreamProgress({ accumulated_text: streamState.lastStreamText }, { force: true });
       streamState = streamProgress.getStreamState();
     }
+    const streamedFinalAnswerText = cleanText(streamState.streamedFinalAnswerText, 120000);
     const codexAgent = normalizeCodexAgentPayload(parsed || {}, rawText, { cleanText });
+    if (streamedFinalAnswerText && codexAgent.status !== 'needs_more_info') {
+      codexAgent.answer = streamedFinalAnswerText;
+      if (!codexAgent.reasoning_summary || cleanText(codexAgent.reasoning_summary, 4000) === cleanText(codexAgent.answer, 4000)) {
+        codexAgent.reasoning_summary = 'Codex synthesized the final answer from streamed tool and reasoning events.';
+      }
+    }
     if (
       streamState.streamedAskUserPayload?.user_question?.question
       && codexAgent.status !== 'needs_more_info'
@@ -195,12 +202,19 @@ function createCodexAgentRuntime(deps = {}) {
       reasoningEffort,
       cleanText
     });
+    const completedResponsePayload = streamedFinalAnswerText
+      ? {
+        status: codexAgent.status,
+        assistant_text: streamedFinalAnswerText,
+        ...(parsed ? { raw_response_payload: parsed } : { raw_response_text: rawText })
+      }
+      : (parsed || rawText);
     await recordAgentLlmTrace(traceContext, {
       stage: 'codex_agent_completed',
       provider: 'codex',
       model,
       summary: 'Codex-owned agent lifecycle completed.',
-      response_payload: parsed || rawText,
+      response_payload: completedResponsePayload,
       metadata: {
         codex_session_id: codexSessionId,
         resumed_codex_session_id: cleanText(codexAgent.resumed_codex_session_id, 240),

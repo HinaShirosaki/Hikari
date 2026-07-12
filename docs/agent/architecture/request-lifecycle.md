@@ -1,6 +1,6 @@
 # Request Lifecycle
 
-This is the shortest path to understanding the agent package: start at `src/main/core/main-service-catalog.js`, then follow the `agent-foundation`, `mcp`, `codex`, `agent-controllers`, and `agent-ipc` definitions.
+This is the shortest path to understanding the agent package: start at `src/main/core/main-services.js`, then follow the agent foundation, MCP, and Codex construction into `registerAgentIpc`.
 
 ## Assembly in the service catalog
 
@@ -57,7 +57,7 @@ renderer state normalization and main-process routing both force the Codex path.
 | --- | --- | --- |
 | `protocol_to_notebook` | dedicated flow | `runtime/agent-protocol-notebook.js` |
 | `inventory_lookup` | direct lookup | `runtime/agent-lookup-runtime.js` |
-| `record_lookup` | direct lookup | `runtime/agent-lookup-runtime.js` |
+| `notebook_lookup` | direct lookup | `runtime/agent-lookup-runtime.js` |
 | `notebook_draft` | shared tool wrapper calling one registered executor | `tools/agent-notebook-draft.js` |
 | `general_science_question` | science mode | `runtime/science-reasoning-loop/index.js` or `deep-research/index.js` |
 | `project_science_question` | science mode | `runtime/science-reasoning-loop/index.js` or `deep-research/index.js` |
@@ -81,7 +81,7 @@ This is why follow-up answers can continue a notebook-generation thread without 
 
 ## Lookup paths
 
-`inventory_lookup` and `record_lookup` do not use the generic tool runtime in the main controller. They call `agentLookupRuntime.executeInventoryLookup(...)` and `agentLookupRuntime.executeRecordLookup(...)` directly.
+`inventory_lookup` and `notebook_lookup` do not use the generic tool runtime in the main controller. They call `agentLookupRuntime.executeInventoryLookup(...)` and `agentLookupRuntime.executeNotebookLookup(...)` directly.
 
 Both paths:
 

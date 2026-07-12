@@ -156,6 +156,7 @@ function createAgentToolCallRuntime(deps = {}) {
         dataFilePath: cleanText(context.dataFilePath || snapshot.data_file_path, 2000),
         fallbackDataFilePath: cleanText(context.fallbackDataFilePath, 2000),
         traceContext: context.traceContext || null,
+        agentMcp: context.agentMcp === true,
         lifecycleRecorder: context.lifecycleRecorder || null,
         project: ensureObject(context.project),
         sandboxRoot: cleanText(context.sandboxRoot, 2000),

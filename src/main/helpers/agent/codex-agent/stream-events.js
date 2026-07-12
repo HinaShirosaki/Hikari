@@ -7,6 +7,13 @@ const {
   extractNotebookDraftArtifactFromToolEvent,
   extractProtocolGenerationArtifactFromToolEvent
 } = require('./artifacts.js');
+const {
+  extractPlotlyGraphArtifactFromToolEvent
+} = require('../plotly-graph-artifacts.js');
+
+const FINAL_ANSWER_TEXT_LIMIT = 120000;
+const LIVE_DISPLAY_TEXT_LIMIT = 1200;
+const LIVE_FINAL_DISPLAY_TEXT_LIMIT = 8000;
 
 function createCodexStreamProgressHandler({
   cleanText,
@@ -15,6 +22,7 @@ function createCodexStreamProgressHandler({
   recordLifecycleEvent = () => {}
 } = {}) {
   let lastStreamText = '';
+  let streamedFinalAnswerText = '';
   let streamedAskUserPayload = null;
   let streamedNotebookDraftPayload = null;
   const streamedProtocolGenerationPayloads = [];
@@ -43,16 +51,29 @@ function createCodexStreamProgressHandler({
       }
     }
     if (eventType === 'codex_cli_display') {
-      const displayText = cleanText(
+      const rawDisplayText = cleanText(
         streamEvent.display_text
           || streamEvent.displayText
           || streamEvent.text
           || streamEvent.message,
-        4000
+        FINAL_ANSWER_TEXT_LIMIT
       );
-      if (!displayText) {
+      if (!rawDisplayText) {
         return;
       }
+      const codexEventType = cleanText(streamEvent.event_type || streamEvent.eventType, 120);
+      const displayKind = cleanText(streamEvent.display_kind || streamEvent.displayKind, 80);
+      const isFinalAnswer = (
+        /(?:^|:)final_answer$/u.test(codexEventType)
+        && (!displayKind || displayKind === 'assistant' || displayKind === 'message')
+      );
+      if (isFinalAnswer) {
+        streamedFinalAnswerText = rawDisplayText;
+      }
+      const displayText = cleanText(
+        rawDisplayText,
+        isFinalAnswer ? LIVE_FINAL_DISPLAY_TEXT_LIMIT : LIVE_DISPLAY_TEXT_LIMIT
+      );
       publishCodexProgress({
         stage: 'codex_cli_display',
         status: cleanText(streamEvent.status, 40) || 'streaming',
@@ -61,9 +82,9 @@ function createCodexStreamProgressHandler({
         message: displayText,
         meta: {
           codex_display_text: displayText,
-          codex_display_kind: cleanText(streamEvent.display_kind || streamEvent.displayKind, 80),
+          codex_display_kind: displayKind,
           codex_display_stream: cleanText(streamEvent.display_stream || streamEvent.displayStream, 40),
-          codex_event_type: cleanText(streamEvent.event_type || streamEvent.eventType, 120)
+          codex_event_type: codexEventType
         }
       });
       return;
@@ -108,6 +129,15 @@ function createCodexStreamProgressHandler({
       const status = rawStatus === 'failed' || rawStatus === 'error'
         ? 'failed'
         : (rawStatus === 'completed' || rawStatus === 'done' || rawStatus === 'ok' ? 'completed' : 'started');
+      const plotlyGraphArtifact = extractPlotlyGraphArtifactFromToolEvent(streamEvent);
+      const meta = {
+        tool_call_text: toolCallText,
+        thinking_trace: toolCallText,
+        codex_event_type: cleanText(streamEvent.event_type || streamEvent.eventType, 120)
+      };
+      if (plotlyGraphArtifact?.figure?.data?.length) {
+        meta.plotly_graph_artifact = plotlyGraphArtifact;
+      }
       emitAgentProgress({
         stage: status === 'failed'
           ? 'tool_call_failed'
@@ -116,11 +146,7 @@ function createCodexStreamProgressHandler({
         routing_intent: 'codex_agent',
         tool_name: toolName,
         message: toolCallText,
-        meta: {
-          tool_call_text: toolCallText,
-          thinking_trace: toolCallText,
-          codex_event_type: cleanText(streamEvent.event_type || streamEvent.eventType, 120)
-        }
+        meta
       });
       return;
     }
@@ -151,6 +177,7 @@ function createCodexStreamProgressHandler({
   function getStreamState() {
     return {
       lastStreamText,
+      streamedFinalAnswerText,
       streamedAskUserPayload,
       streamedNotebookDraftPayload,
       streamedProtocolGenerationPayloads

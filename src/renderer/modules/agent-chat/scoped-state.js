@@ -70,7 +70,7 @@ function buildAssayAgentSessionPrompt(context = {}) {
     'You are in an Assay right-rail chat session. Treat the active assay plate, result table, and analysis output as the default subject when the user says "this assay", "this plate", "these results", or "this graph".',
     'Use the hidden assay context supplied with each user question as the current assay state. It may include unsaved plate mappings, pasted result values, analysis settings, latest summaries, and an `Assay plate data (TSV...)` block.',
     'To retrieve active assay data, parse the TSV rows in that hidden context after the header `well\trow\tcolumn\tsample\tconcentration\tresult`, then create an `assay_table` from those rows for calculations or graphing.',
-    'Do not use record_lookup for active assay plate/result data; it is not the source for the current assay.',
+    'Do not use local lookup tools for active assay plate/result data; they are not the source for the current assay.',
     'For derived tables and custom graphs, prefer the Hikari assay table and Plotly graph MCP tools when available.'
   ];
   if (assayName) {

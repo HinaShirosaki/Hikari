@@ -98,6 +98,20 @@
   scrollbar-gutter: stable;
 }
 
+.left-rail-template.biology-notebook-layout > .biology-notebook-rail.left-rail-template__rail--pinned {
+  grid-template-rows: minmax(0, 1fr);
+  scrollbar-gutter: auto !important;
+}
+
+.left-rail-template.biology-notebook-layout > .biology-notebook-rail > .left-rail-template__pinned {
+  display: contents;
+}
+
+.left-rail-template.biology-notebook-layout > .biology-notebook-rail > .biology-notebook-page-list.left-rail-template__scroll {
+  padding-inline-end: 0;
+  scrollbar-gutter: auto;
+}
+
 .papers-layout > .papers-main.left-rail-template__main {
   overflow-x: hidden;
   overflow-y: hidden;

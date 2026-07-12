@@ -13,7 +13,7 @@ const PARSER_CANONICAL_INTENTS = Object.freeze([
   'protocol_to_notebook',
   'notebook_draft',
   'inventory_lookup',
-  'record_lookup',
+  'notebook_lookup',
   'project_science_question',
   'general_science_question',
   'paper_analysis',
@@ -29,7 +29,7 @@ const PARSER_INTENT_ALIASES = Object.freeze({
   data_analysis_or_coding: 'result_analysis',
   coding_data_analysis: 'result_analysis',
   inventory_loopup: 'inventory_lookup',
-  record_loopup: 'record_lookup',
+  notebook_loopup: 'notebook_lookup',
   product_recommendation: 'purchase_recommendation',
   shopping_recommendation: 'purchase_recommendation',
   shopping_search: 'purchase_recommendation'

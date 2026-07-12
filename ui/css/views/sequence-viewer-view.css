@@ -375,10 +375,27 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   background: var(--theme-surface);
   padding: 12px;
   display: grid;
-  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   row-gap: 10px;
   column-gap: var(--left-rail-main-gap, 24px);
+}
+
+/* Return control at the top of the cloning-design left rail. */
+.sequence-viewer-cloning-design-rail-nav {
+  display: flex;
+}
+
+.sequence-viewer-cloning-design-rail-nav .ghost-btn {
+  width: 100%;
+  text-align: left;
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+  border-color: var(--theme-accent);
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-cloning-design-rail-nav .ghost-btn:hover {
+  background: color-mix(in srgb, var(--theme-accent) 26%, var(--theme-surface-elevated));
 }
 
 .sequence-viewer-cloning-design-toolbar-nav {
@@ -456,7 +473,19 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-cloning-design-strategy-list .sequence-viewer-mode-btn {
+  width: 100%;
   text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+}
+
+.sequence-viewer-cloning-design-strategy-list .sequence-viewer-mode-btn:hover {
+  border-color: var(--theme-accent);
+}
+
+.sequence-viewer-cloning-design-strategy-list .sequence-viewer-mode-btn-active {
+  border-color: var(--theme-accent);
 }
 
 .sequence-viewer-cloning-design-edit-summary {
@@ -1146,27 +1175,6 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   gap: 12px;
 }
 
-.sequence-viewer-alignment-close-icon {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  background: var(--theme-danger);
-  color: var(--theme-text-on-accent);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.78rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-
-
 .sequence-viewer-alignment-panel {
   margin: 0;
   display: grid;
@@ -1505,8 +1513,32 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   color: var(--theme-text-strong);
 }
 
+.sequence-viewer-alignment-comparison {
+  display: grid;
+  gap: 1px;
+}
+
+.sequence-viewer-alignment-reference-row {
+  color: var(--theme-text-muted);
+}
+
 .sequence-viewer-alignment-query-row .sequence-viewer-seq-text-content {
   user-select: none;
+}
+
+.sequence-viewer-alignment-reference-row .sequence-viewer-seq-text-content,
+.sequence-viewer-alignment-guide-row .sequence-viewer-seq-text-content {
+  user-select: none;
+}
+
+.sequence-viewer-alignment-row-label {
+  color: var(--theme-text-muted);
+  font-family: var(--font-app);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-align: left;
 }
 
 .sequence-viewer-alignment-query-end {
@@ -1540,6 +1572,34 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 
 .sequence-viewer-alignment-query-base-empty {
   color: transparent;
+}
+
+.sequence-viewer-alignment-reference-base-empty,
+.sequence-viewer-alignment-guide-base-empty {
+  color: transparent;
+}
+
+.sequence-viewer-alignment-reference-base-mismatch,
+.sequence-viewer-alignment-reference-base-deletion {
+  background: color-mix(in srgb, var(--sequence-viewer-mismatch-bg) 64%, transparent);
+  color: var(--sequence-viewer-mismatch-ink);
+  box-shadow: inset 0 -1px 0 var(--sequence-viewer-mismatch-shadow);
+}
+
+.sequence-viewer-alignment-guide-row {
+  color: var(--theme-text-muted);
+  font-size: 0.7rem;
+  line-height: 0.82;
+}
+
+.sequence-viewer-alignment-guide-base-match {
+  color: color-mix(in srgb, var(--theme-success) 72%, var(--theme-text-muted));
+}
+
+.sequence-viewer-alignment-guide-base-mismatch,
+.sequence-viewer-alignment-guide-base-deletion {
+  color: var(--theme-danger);
+  font-weight: 800;
 }
 
 .sequence-viewer-alignment-query-base-mismatch,

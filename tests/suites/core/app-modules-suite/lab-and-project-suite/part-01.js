@@ -297,9 +297,19 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
   trigger(wellBtn, 'click');
 
   assert.match(inventorySections.innerHTML, /well-editor-shell/);
+  assert.match(inventorySections.innerHTML, /container-detail-sticky/);
+  assert.match(inventorySections.innerHTML, /data-container-import-csv="box-1"/);
+  assert.match(inventorySections.innerHTML, /data-container-export-csv="box-1"/);
+  assert.match(inventorySections.innerHTML, /data-well-sample-clone="sample-1"/);
+  assert.match(inventorySections.innerHTML, /Fill Wells/);
+  assert.doesNotMatch(inventorySections.innerHTML, /Clone to Well/);
   assert.match(inventorySections.innerHTML, /data-well-sample-save="sample-1"/);
   assert.match(inventorySections.innerHTML, /value="chemical">Chemical/);
   assert.doesNotMatch(inventorySections.innerHTML, />Compound</);
+
+  trigger(inventorySections.querySelector('[data-well-sample-clone]'), 'click');
+  assert.match(inventorySections.innerHTML, /Filling Wells/);
+  assert.match(inventorySections.innerHTML, /Drag across wells to fill with S-001/);
 
   const existingStructurePasteBtn = inventorySections.querySelector('[data-inventory-sample-structure-paste]');
   assert.equal(Boolean(existingStructurePasteBtn.hidden), true);
@@ -427,15 +437,27 @@ test('personal-inventory removes the saved-sample card and deletes containers fr
     'inventory-container-context-menu',
     'container-detail',
     'inventory-add-container-btn',
+    'inventory-add-container-overlay',
     'inventory-add-container-form',
+    'inventory-add-container-title',
+    'inventory-add-container-note',
     'inventory-add-container-name',
     'inventory-add-container-location',
     'inventory-add-container-type',
+    'inventory-add-container-grid-fields',
+    'inventory-add-container-rows',
+    'inventory-add-container-cols',
+    'inventory-add-container-close',
     'inventory-add-container-cancel'
   ]);
   const inventorySections = document.getElementById('inventory-sections');
   const inventoryLocationNav = document.getElementById('inventory-location-nav');
   const containerContextMenu = document.getElementById('inventory-container-context-menu');
+  const addContainerOverlay = document.getElementById('inventory-add-container-overlay');
+  const addContainerTitle = document.getElementById('inventory-add-container-title');
+  const addContainerNameInput = document.getElementById('inventory-add-container-name');
+  const addContainerLocationSelect = document.getElementById('inventory-add-container-location');
+  const addContainerForm = document.getElementById('inventory-add-container-form');
   const inventoryModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'personal-inventory', 'index.js'), {
     document
   });
@@ -491,6 +513,7 @@ test('personal-inventory removes the saved-sample card and deletes containers fr
   assert.doesNotMatch(inventorySections.innerHTML, /Saved Samples/);
   assert.doesNotMatch(inventorySections.innerHTML, /data-saved-sample-drag/);
   assert.doesNotMatch(inventorySections.innerHTML, /data-container-delete/);
+  assert.match(inventoryLocationNav.innerHTML, /data-container-add-child="box-context"/);
   assert.match(inventorySections.innerHTML, /Select one cell to edit well and sample information/);
 
   const containerBtn = inventoryLocationNav.querySelectorAll('[data-container-open]')[0];
@@ -500,13 +523,53 @@ test('personal-inventory removes the saved-sample card and deletes containers fr
   assert.equal(containerContextMenu.style.left, '80px');
   assert.equal(containerContextMenu.style.top, '120px');
 
+  assert.ok(containerContextMenu.querySelector('[data-container-context-add-child]'));
+  const addChildBtn = inventoryLocationNav.querySelector('[data-container-add-child]');
+  addChildBtn.dataset.section = '-20 Degree';
+  trigger(addChildBtn, 'click');
+  assert.equal(containerContextMenu.hidden, true);
+  assert.equal(addContainerOverlay.hidden, false);
+  assert.equal(addContainerTitle.textContent, 'Add Subcontainer');
+  assert.equal(addContainerLocationSelect.value, '-20 Degree');
+  assert.equal(addContainerLocationSelect.disabled, true);
+
+  addContainerNameInput.value = 'Nested Box';
+  trigger(addContainerForm, 'submit');
+
+  const nestedContainer = state.inventory['-20 Degree'].find((container) => container.id === 'container-context');
+  assert.equal(nestedContainer.name, 'Nested Box');
+  assert.equal(nestedContainer.parentContainerId, 'box-context');
+  assert.match(inventoryLocationNav.innerHTML, /inventory-container-children/);
+  assert.match(inventoryLocationNav.innerHTML, /Nested Box/);
+
+  state.samples.push({
+    id: 'sample-child',
+    code: 'S-CHILD',
+    name: 'Child Sample',
+    type: 'protein',
+    location: null,
+    inventoryLink: {
+      section: '-20 Degree',
+      containerId: 'container-context',
+      wellIndex: null
+    },
+    chemicalLinks: [],
+    updatedAt: '2026-03-01T00:00:00.000Z'
+  });
+
+  const parentBtn = inventoryLocationNav.querySelectorAll('[data-container-open]')
+    .find((button) => button.dataset.containerOpen === 'box-context');
+  parentBtn.dataset.section = '-20 Degree';
+  trigger(parentBtn, 'contextmenu', { clientX: 80, clientY: 120 });
+
   const deleteBtn = containerContextMenu.querySelector('[data-container-context-delete]');
   trigger(deleteBtn, 'click');
 
   assert.equal(state.inventory['-20 Degree'].length, 0);
   assert.equal(state.samples[0].inventoryLink, null);
-  assert.equal(persistCalls, 1);
-  assert.equal(inventoryChangedCalls, 1);
+  assert.equal(state.samples[1].inventoryLink, null);
+  assert.equal(persistCalls, 2);
+  assert.equal(inventoryChangedCalls, 2);
   assert.equal(containerContextMenu.hidden, true);
 });
 test('personal-inventory previews a copied structure image before saving a chemical sample', async () => {

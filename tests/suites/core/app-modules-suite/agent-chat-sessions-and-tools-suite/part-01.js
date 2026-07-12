@@ -98,7 +98,7 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
               createdAt: '2026-03-22T17:00:05.000Z',
               meta: {
                 parser: {
-                  primary_intent: 'record_lookup',
+                  primary_intent: 'notebook_lookup',
                   needs_clarification: false,
                   entities: {},
                   inventory_search: {
@@ -110,7 +110,7 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
                   protocol_candidates: [],
                   reasoning_summary: 'Loaded from disk.'
                 },
-                record_lookup: {
+                notebook_lookup: {
                   status: 'matched',
                   query: 'Atlas notebook'
                 }

@@ -10,15 +10,10 @@ module.exports = function registerAgentContractsA(context = {}) {
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
-      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
-      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
       readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'app', 'main-runtime.js'),
       readLocalSource('src', 'main', 'ipc', 'index.js')
     ].join('\n');
     const readPreloadSource = () => [
@@ -79,7 +74,6 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('generic agent tool catalog keeps key retrieval and execution tools', () => {
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'inventory-lookup'), true);
-      assert.equal(toolsCatalog.some((entry) => entry?.name === 'record-lookup'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'notebook-lookup'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'python-sandbox'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'command-line'), true);
@@ -137,7 +131,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('codex-owned lifecycle stays scoped to agent chat while utility calls use the CLI adapter', () => {
-      const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js');
+      const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'main-services.js');
       const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
       const codexServiceSource = readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
@@ -289,7 +283,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(wrapperSource, /agent-tool-execution\.js/);
       assert.equal(executionSource.includes('createDefaultAgentToolBindingBundle'), false);
       assert.equal(/["']inventory-lookup["']/.test(executionSource), false);
-      assert.equal(/["']record-lookup["']/.test(executionSource), false);
+      assert.equal(/["']notebook-lookup["']/.test(executionSource), false);
       assert.equal(/["']protocol-matching["']/.test(executionSource), false);
       assert.equal(/["']notebook-generation["']/.test(executionSource), false);
       assert.equal(/["']python-sandbox["']/.test(executionSource), false);
