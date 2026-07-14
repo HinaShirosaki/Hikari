@@ -84,8 +84,14 @@ export function initAgentChat({
     api,
     state,
     persist,
+    createId,
     safeText,
+    sessionRail: dom.sessionRail,
     sessionList: dom.sessionList,
+    sessionContextMenu: dom.sessionContextMenu,
+    contextNewFolderBtn: dom.contextNewFolderBtn,
+    contextRenameFolderBtn: dom.contextRenameFolderBtn,
+    contextDeleteFolderBtn: dom.contextDeleteFolderBtn,
     ensureAgentState: shell.ensureAgentState,
     getStoragePath: shell.getStoragePath,
     renderProjectOptions: shell.renderProjectOptions,
@@ -93,9 +99,14 @@ export function initAgentChat({
     renderHistory: shell.renderHistoryView,
     setStatus: shell.setStatus,
     setSessionStatus: shell.setSessionStatus,
-    isInteractionLocked: () => runtime.inFlight
+    isInteractionLocked: () => runtime.inFlight,
+    onProjectScopeChanged: () => {
+      developerContextController?.invalidate();
+      developerContextController?.render();
+    }
   });
   shell.setSessionManager(sessionManager);
+  sessionManager.bindEvents();
 
   const questionController = createAssistantQuestionController({
     api,

@@ -4,25 +4,12 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "normalized_query": {
-          "type": "string"
-        },
         "candidate_terms": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "maxItems": 10
-        },
-        "aliases": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 10
-        },
-        "search_mode": {
-          "type": "string"
         }
       }
     },
@@ -160,7 +147,9 @@
     "python_sandbox_file": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["path"],
+      "required": [
+        "path"
+      ],
       "properties": {
         "path": {
           "type": "string",
@@ -257,10 +246,10 @@
         "id": {
           "type": "string"
         },
-        "title": {
+        "doi": {
           "type": "string"
         },
-        "paper_title": {
+        "title": {
           "type": "string"
         },
         "summary": {
@@ -270,9 +259,6 @@
           "type": "string"
         },
         "content": {
-          "type": "string"
-        },
-        "full_text": {
           "type": "string"
         },
         "methods": {
@@ -316,7 +302,14 @@
     },
     "literature_source": {
       "type": "string",
-      "enum": ["auto", "web", "pubmed", "crossref", "uniprot", "europe_pmc"]
+      "enum": [
+        "auto",
+        "web",
+        "pubmed",
+        "crossref",
+        "uniprot",
+        "europe_pmc"
+      ]
     }
   },
   "inventory-lookup": {
@@ -343,7 +336,7 @@
     }
   },
   "notebook-lookup": {
-    "description": "Use this tool when the user is asking about local notebook entries, prior notebook results, notebook pages for a project, or notebook records tied to a protocol. Prefer `protocol-matching` for protocol lookup and the paper tools for paper lookup. Provide `query` for the notebook search text, and include project or protocol filters when known.",
+    "description": "Use this tool to search local notebook pages by text, project, protocol, or state. Prefer `protocol-matching` for protocol lookup and paper tools for paper lookup. Search results include storage coverage and permission status.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -356,14 +349,25 @@
           "minimum": 1,
           "maximum": 25
         },
-        "project_id": {
-          "type": "string"
-        },
         "project_name": {
           "type": "string"
         },
         "protocol_name": {
           "type": "string"
+        },
+        "notebook_state": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "executed"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "enum": [
+            "summary",
+            "full"
+          ]
         },
         "parser_payload": {
           "$ref": "#/$defs/parser_payload"
@@ -468,10 +472,14 @@
       "additionalProperties": false,
       "anyOf": [
         {
-          "required": ["code"]
+          "required": [
+            "code"
+          ]
         },
         {
-          "required": ["sub_agent_id"]
+          "required": [
+            "sub_agent_id"
+          ]
         }
       ],
       "properties": {
@@ -523,7 +531,9 @@
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["command"],
+      "required": [
+        "command"
+      ],
       "properties": {
         "command": {
           "type": "string",
@@ -602,11 +612,19 @@
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action"],
+      "required": [
+        "action"
+      ],
       "properties": {
         "action": {
           "type": "string",
-          "enum": ["create", "message", "delete", "get", "list"]
+          "enum": [
+            "create",
+            "message",
+            "delete",
+            "get",
+            "list"
+          ]
         },
         "agent_id": {
           "type": "string",
@@ -640,11 +658,18 @@
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action"],
+      "required": [
+        "action"
+      ],
       "properties": {
         "action": {
           "type": "string",
-          "enum": ["recall", "remember", "forget", "list"]
+          "enum": [
+            "recall",
+            "remember",
+            "forget",
+            "list"
+          ]
         },
         "id": {
           "type": "string",
@@ -715,15 +740,26 @@
     }
   },
   "container": {
-    "description": "Use this tool for temporary exact string or number containers. Create a container with a human-readable name and an exact copied value when possible; the tool returns short IDs such as `1` or `2`. Use `read` or `list` to refresh IDs, `update` to replace a value, and `replace_range` to edit a string by zero-based start/end offsets. Direct literal values are allowed when no safer copy source exists.",
+    "description": "Use this tool for temporary exact string or number containers. Create a container with a human-readable name and an exact copied value when possible; the tool returns short IDs such as `1` or `2`. Use `read` or `list` to refresh IDs, `update` to replace a value, and `replace_range` to edit a string by zero-based start/end offsets.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action"],
+      "required": [
+        "action"
+      ],
       "properties": {
         "action": {
           "type": "string",
-          "enum": ["create", "read", "list", "update", "replace_range", "rename", "delete", "clear"]
+          "enum": [
+            "create",
+            "read",
+            "list",
+            "update",
+            "replace_range",
+            "rename",
+            "delete",
+            "clear"
+          ]
         },
         "id": {
           "type": "string",
@@ -748,10 +784,6 @@
             }
           ]
         },
-        "source": {
-          "type": "string",
-          "maxLength": 1200
-        },
         "start": {
           "type": "integer",
           "minimum": 0
@@ -763,11 +795,6 @@
         "replacement": {
           "type": "string",
           "maxLength": 120000
-        },
-        "limit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 50
         }
       }
     }
@@ -777,21 +804,24 @@
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action"],
+      "required": [
+        "action"
+      ],
       "properties": {
         "action": {
           "type": "string",
-          "enum": ["create", "read", "list", "derive", "add_column", "python", "delete", "clear"]
-        },
-        "id": {
-          "type": "string",
-          "maxLength": 40
+          "enum": [
+            "create",
+            "read",
+            "list",
+            "derive",
+            "add_column",
+            "python",
+            "delete",
+            "clear"
+          ]
         },
         "table_id": {
-          "type": "string",
-          "maxLength": 40
-        },
-        "source_table_id": {
           "type": "string",
           "maxLength": 40
         },
@@ -802,10 +832,6 @@
         "output_name": {
           "type": "string",
           "maxLength": 160
-        },
-        "source": {
-          "type": "string",
-          "maxLength": 1200
         },
         "columns": {
           "type": "array",
@@ -854,21 +880,6 @@
           },
           "maxItems": 5000
         },
-        "data": {
-          "type": "array",
-          "items": {
-            "anyOf": [
-              {
-                "type": "object",
-                "additionalProperties": true
-              },
-              {
-                "type": "array"
-              }
-            ]
-          },
-          "maxItems": 5000
-        },
         "keep_columns": {
           "type": "array",
           "items": {
@@ -880,62 +891,6 @@
         "include_source_columns": {
           "type": "boolean"
         },
-        "calculations": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true,
-            "properties": {
-              "name": {
-                "type": "string",
-                "maxLength": 120
-              },
-              "op": {
-                "type": "string",
-                "maxLength": 40
-              },
-              "operation": {
-                "type": "string",
-                "maxLength": 40
-              },
-              "source": {
-                "type": "string",
-                "maxLength": 120
-              },
-              "operands": {
-                "type": "array",
-                "items": {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    },
-                    {
-                      "type": "object",
-                      "additionalProperties": true
-                    }
-                  ]
-                },
-                "maxItems": 40
-              },
-              "scope": {
-                "type": "string",
-                "maxLength": 40
-              }
-            }
-          },
-          "maxItems": 200
-        },
-        "derived_columns": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "maxItems": 200
-        },
         "group_by": {
           "type": "array",
           "items": {
@@ -944,62 +899,33 @@
           },
           "maxItems": 20
         },
-        "column": {
-          "type": "object",
-          "additionalProperties": true
-        },
-        "calculation": {
-          "type": "object",
-          "additionalProperties": true
-        },
         "code": {
           "type": "string",
           "maxLength": 40000
-        },
-        "output_path": {
-          "type": "string",
-          "maxLength": 240
-        },
-        "python_executable": {
-          "type": "string",
-          "maxLength": 240
-        },
-        "preferred_python": {
-          "type": "string",
-          "maxLength": 240
-        },
-        "timeout_ms": {
-          "type": "integer",
-          "minimum": 500,
-          "maximum": 120000
-        },
-        "max_rows": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 5000
-        },
-        "limit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 50
         }
       }
     }
   },
   "plotly-graph": {
-    "description": "Use this tool to create and iteratively adjust scratch Plotly.js graph specifications. Pass regular Plotly figure arguments: `data` (or `traces`), `layout`, `config`, and optional `frames`, or wrap them in `figure`. Use `inspect` after `create` or `update` to review trace types, axis/title coverage, x/y length mismatches, and suggested adjustments before answering.",
+    "description": "Use this tool to create and iteratively adjust scratch Plotly.js graphs from `data` (the traces) and `layout`. Use `inspect` after `create` or `update` to review trace types, axis/title coverage, and x/y length mismatches before answering.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["action"],
+      "required": [
+        "action"
+      ],
       "properties": {
         "action": {
           "type": "string",
-          "enum": ["create", "read", "list", "update", "inspect", "delete", "clear"]
-        },
-        "id": {
-          "type": "string",
-          "maxLength": 40
+          "enum": [
+            "create",
+            "read",
+            "list",
+            "update",
+            "inspect",
+            "delete",
+            "clear"
+          ]
         },
         "graph_id": {
           "type": "string",
@@ -1009,27 +935,7 @@
           "type": "string",
           "maxLength": 160
         },
-        "new_name": {
-          "type": "string",
-          "maxLength": 160
-        },
-        "source": {
-          "type": "string",
-          "maxLength": 1200
-        },
-        "figure": {
-          "type": "object",
-          "additionalProperties": true
-        },
         "data": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "maxItems": 80
-        },
-        "traces": {
           "type": "array",
           "items": {
             "type": "object",
@@ -1041,31 +947,14 @@
           "type": "object",
           "additionalProperties": true
         },
-        "config": {
-          "type": "object",
-          "additionalProperties": true
-        },
-        "frames": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "additionalProperties": true
-          },
-          "maxItems": 80
-        },
         "replace": {
           "type": "boolean"
-        },
-        "limit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 50
         }
       }
     }
   },
   "literature-search": {
-    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `source` for one source, `sources` for an explicit multi-source batch, or leave them empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. `preferred_literature_source` biases auto mode toward one literature database first, and `preferred_web_source` prefers one web domain when web results are used. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `sources` to name specific databases, or leave it empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -1074,17 +963,6 @@
           "type": "string",
           "maxLength": 600
         },
-        "topic": {
-          "type": "string",
-          "maxLength": 240
-        },
-        "message": {
-          "type": "string",
-          "maxLength": 1200
-        },
-        "source": {
-          "$ref": "#/$defs/literature_source"
-        },
         "sources": {
           "type": "array",
           "items": {
@@ -1092,82 +970,15 @@
           },
           "maxItems": 6
         },
-        "preferred_literature_source": {
-          "$ref": "#/$defs/literature_source"
-        },
-        "preferred_web_source": {
-          "type": "string",
-          "maxLength": 240
-        },
         "journals": {
           "type": "array",
           "items": {
             "type": "string",
             "maxLength": 180
-          },
-          "maxItems": 6
-        },
-        "allow_unfiltered_fallback": {
-          "type": "boolean"
-        },
-        "limit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 25
-        },
-        "max_papers": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 24
-        },
-        "max_per_source": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 10
-        },
-        "allow_web_fallback": {
-          "type": "boolean"
+          }
         },
         "prefer_recent": {
           "type": "boolean"
-        },
-        "use_codex_paper_context": {
-          "type": "boolean"
-        },
-        "disable_codex_paper_context": {
-          "type": "boolean"
-        },
-        "codex_paper_context": {
-          "type": "boolean"
-        },
-        "max_context_blocks": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 50
-        },
-        "max_download_concurrency": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 24
-        },
-        "reasoning_effort": {
-          "type": "string",
-          "maxLength": 40
-        },
-        "sub_agent_name": {
-          "type": "string",
-          "maxLength": 160
-        },
-        "storage_path": {
-          "type": "string",
-          "maxLength": 2000
-        },
-        "storagePath": {
-          "type": "string",
-          "maxLength": 2000
-        },
-        "parser_payload": {
-          "$ref": "#/$defs/parser_payload"
         }
       }
     }
@@ -1181,10 +992,6 @@
         "query": {
           "type": "string",
           "maxLength": 600
-        },
-        "message": {
-          "type": "string",
-          "maxLength": 1200
         },
         "required_terms": {
           "type": "array",
@@ -1208,43 +1015,17 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 6
-        },
-        "search_limit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 16
-        },
-        "parser_payload": {
-          "$ref": "#/$defs/parser_payload"
         }
       }
     }
   },
   "paper-download": {
-    "description": "Use this tool when the user wants a paper PDF downloaded into app storage. `download` performs the full flow in one call, first extracting candidate PDF URLs from the provided fields and then streaming the PDF with progress tracking. `start` begins the download in the background so the caller can poll with `status`. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
+    "description": "Use this tool when the user wants a paper PDF downloaded into app storage. It extracts candidate PDF URLs from the provided fields and streams the PDF with progress tracking in one call. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "action": {
-          "type": "string",
-          "enum": ["download", "start", "status"]
-        },
-        "download_id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 160
-        },
-        "paper_pdf_url": {
-          "type": "string"
-        },
         "doi": {
-          "type": "string"
-        },
-        "pdf_url": {
-          "type": "string"
-        },
-        "page_url": {
           "type": "string"
         },
         "candidate_urls": {
@@ -1254,85 +1035,21 @@
           },
           "maxItems": 24
         },
-        "page_html": {
-          "type": "string",
-          "maxLength": 400000
-        },
-        "message": {
-          "type": "string",
-          "maxLength": 12000
-        },
-        "paper_title": {
-          "type": "string"
-        },
-        "file_name": {
-          "type": "string",
-          "maxLength": 240
-        },
-        "linked_type": {
-          "type": "string",
-          "maxLength": 80
-        },
         "linked_name": {
           "type": "string",
           "maxLength": 220
-        },
-        "storage_path": {
-          "type": "string",
-          "maxLength": 2000
-        },
-        "timeout_ms": {
-          "type": "integer",
-          "minimum": 1000,
-          "maximum": 120000
-        },
-        "use_browser_fallback": {
-          "type": "boolean"
-        },
-        "simulate_one_click": {
-          "type": "boolean"
-        },
-        "request_headers": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
         }
       }
     }
   },
   "paper-analysis": {
-    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, explain methods, or pull a protocol candidate out of paper text. Provide the richest available paper context through `paper`, `paper_summary`, `paper_abstract`, or `paper_text`. Set `extract_protocol` when the user explicitly wants procedural extraction, and set `generate_protocol` when the extracted methods should also be converted into an import-ready protocol JSON record.",
+    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, or explain its methods. Reference a locally-ingested paper by its `paper.id` or `paper.doi` and Hikari loads the paper markdown for you; only pass paper text fields when the paper is not in the local KnowledgeBase. To turn extracted methods into a saved protocol, follow up with `protocol_generation`.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "paper": {
           "$ref": "#/$defs/paper_record"
-        },
-        "paper_title": {
-          "type": "string"
-        },
-        "paper_summary": {
-          "type": "string"
-        },
-        "paper_abstract": {
-          "type": "string"
-        },
-        "paper_text": {
-          "type": "string"
-        },
-        "message": {
-          "type": "string"
-        },
-        "extract_protocol": {
-          "type": "boolean"
-        },
-        "generate_protocol": {
-          "type": "boolean"
-        },
-        "protocol_title_hint": {
-          "type": "string"
         }
       }
     }
@@ -1342,7 +1059,9 @@
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["query"],
+      "required": [
+        "query"
+      ],
       "properties": {
         "query": {
           "type": "string",
@@ -1360,7 +1079,11 @@
         },
         "scope": {
           "type": "string",
-          "enum": ["project", "journal-club", "global"]
+          "enum": [
+            "project",
+            "journal-club",
+            "global"
+          ]
         },
         "container": {
           "type": "string",
@@ -1378,12 +1101,17 @@
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["protocol"],
+      "required": [
+        "protocol"
+      ],
       "properties": {
         "protocol": {
           "type": "object",
           "additionalProperties": true,
-          "required": ["name", "steps"],
+          "required": [
+            "name",
+            "steps"
+          ],
           "properties": {
             "id": {
               "type": "string"
@@ -1440,9 +1168,6 @@
           "type": "string"
         },
         "save": {
-          "type": "boolean"
-        },
-        "persist": {
           "type": "boolean"
         },
         "overwrite": {

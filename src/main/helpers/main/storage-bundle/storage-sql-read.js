@@ -220,6 +220,21 @@ async function readSqliteBundleIndex(sqlitePath) {
         inventoryMeta: {}
       };
     }
+    if (error?.code === 'EPERM' || error?.code === 'EACCES') {
+      return {
+        exists: false,
+        permissionDenied: true,
+        warning: `Permission denied reading SQLite bundle index: ${String(error?.message || error)}`,
+        inventoryChemicals: [],
+        inventoryPersonal: [],
+        inventorySamples: [],
+        protocolRows: [],
+        notebookRows: [],
+        paperRows: [],
+        recordRows: [],
+        inventoryMeta: {}
+      };
+    }
     throw error;
   }
 }

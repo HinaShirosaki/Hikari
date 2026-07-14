@@ -1,7 +1,18 @@
 'use strict';
 
+const fsPromises = require('node:fs/promises');
+
 const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/agent-llm-utils.js');
 const { createProtocolGenerationRuntime } = require('../../helpers/agent/tools/agent-protocol-generation.js');
+const {
+  buildKnowledgeDatabasePaths,
+  buildLegacyKnowledgeDatabasePaths,
+  resolveRelativeStoragePath
+} = require('../store/paper-knowledge-paths.js');
+const {
+  openKnowledgeDatabase,
+  queryRows
+} = require('../store/paper-knowledge-store.js');
 
 function createPaperAnalysisRuntime(deps = {}) {
   const {
@@ -9,6 +20,74 @@ function createPaperAnalysisRuntime(deps = {}) {
     cleanText,
     requestStructuredJsonPayload
   } = createAgentLlmRuntimeHelpers(deps);
+
+  // Load a previously-ingested paper's LLM-facing markdown from the local KnowledgeBase
+  // by id, doi, or title, so the agent can reference a paper instead of pasting its text.
+  async function defaultLoadPaperFromKnowledge({ storagePath = '', paperId = '', doi = '', title = '' } = {}) {
+    const resolved = cleanText(storagePath, 4000);
+    const id = cleanText(paperId, 200);
+    const normDoi = cleanText(doi, 200);
+    const normTitle = cleanText(title, 400);
+    const clauses = [];
+    const params = [];
+    if (id) { clauses.push('id = ?'); params.push(id); }
+    if (normDoi) { clauses.push('lower(doi) = lower(?)'); params.push(normDoi); }
+    if (normTitle) { clauses.push('lower(title) = lower(?)'); params.push(normTitle); }
+    if (!resolved || !clauses.length) {
+      return null;
+    }
+
+    let sqlitePath = '';
+    try {
+      const primary = buildKnowledgeDatabasePaths({ storagePath: resolved });
+      await fsPromises.access(primary.sqlite_path);
+      sqlitePath = primary.sqlite_path;
+    } catch {
+      try {
+        const legacy = buildLegacyKnowledgeDatabasePaths({ storagePath: resolved });
+        await fsPromises.access(legacy.sqlite_path);
+        sqlitePath = legacy.sqlite_path;
+      } catch {
+        return null;
+      }
+    }
+
+    let db = null;
+    try {
+      db = await openKnowledgeDatabase(sqlitePath);
+      const rows = queryRows(
+        db,
+        `SELECT id, title, abstract, doi, wiki_path FROM papers WHERE ${clauses.join(' OR ')} LIMIT 1`,
+        params
+      );
+      const row = rows && rows[0];
+      const wikiPath = cleanText(row?.wiki_path, 4000);
+      if (!wikiPath) {
+        return null;
+      }
+      const markdown = await fsPromises.readFile(resolveRelativeStoragePath(resolved, wikiPath), 'utf8').catch(() => '');
+      if (!cleanText(markdown, 10)) {
+        return null;
+      }
+      return {
+        title: cleanText(row.title, 220),
+        abstract: cleanText(row.abstract, 3000),
+        content: markdown
+      };
+    } catch {
+      return null;
+    } finally {
+      try {
+        if (db && typeof db.close === 'function') {
+          db.close();
+        }
+      } catch { /* ignore close failures */ }
+    }
+  }
+
+  const loadPaperFromKnowledge = typeof deps.loadPaperFromKnowledge === 'function'
+    ? deps.loadPaperFromKnowledge
+    : defaultLoadPaperFromKnowledge;
 
   const PAPER_ANALYSIS_RESPONSE_SCHEMA = {
     type: 'object',
@@ -168,12 +247,28 @@ function createPaperAnalysisRuntime(deps = {}) {
   async function analyzePaper(input = {}) {
     const source = input && typeof input === 'object' ? input : {};
     const context = buildPaperContext(source);
+    // Reference-by-id: when no paper text was passed, load the ingested paper.md from
+    // the local KnowledgeBase using the supplied id / doi / title.
+    if (!cleanText(context.content, 10)) {
+      const paper = source.paper && typeof source.paper === 'object' ? source.paper : {};
+      const loaded = await loadPaperFromKnowledge({
+        storagePath: source.storage_path || source.storagePath,
+        paperId: paper.id || source.paper_id || source.id,
+        doi: paper.doi || source.doi,
+        title: context.title || paper.title
+      });
+      if (loaded) {
+        context.title = context.title || loaded.title;
+        context.abstract = context.abstract || loaded.abstract;
+        context.content = cleanText(loaded.content, 12000);
+      }
+    }
     const evidenceText = [context.title, context.summary, context.abstract, context.methods, context.content].filter(Boolean).join(' ');
     if (!evidenceText) {
       return {
         ok: false,
         status: 'error',
-        error: 'Paper analysis requires paper title, summary, abstract, methods, or paper text.'
+        error: 'Paper analysis requires a paper reference (id, doi, or title) for a locally ingested paper, or paper text.'
       };
     }
 

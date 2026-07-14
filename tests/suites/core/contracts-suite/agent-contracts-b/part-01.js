@@ -240,6 +240,13 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.equal(registry.listModules().some((entry) => entry.id === 'inventory'), true);
       assert.equal(
         registry.listModules().some((entry) => (
+          entry.id === 'notebook'
+          && entry.tasks.some((task) => task.id === 'page-name')
+        )),
+        true
+      );
+      assert.equal(
+        registry.listModules().some((entry) => (
           entry.id === 'protocol'
           && entry.tasks.some((task) => task.id === 'protocol-generation')
         )),
@@ -369,16 +376,17 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.equal(/agent-sqlite-index/.test(mainSource), false);
       assert.equal(/agent-phase89-runtime/.test(mainSource), false);
     });
-    test('agent lookup runtime composes reusable inventory helper and notebook lookup methods', () => {
-      const source = readSource('src/main/helpers/agent/runtime/agent-lookup-runtime.js');
+    test('inventory and notebook lookups use individual runtimes with shared storage support', () => {
+      const supportSource = readSource('src/main/helpers/agent/tools/agent-lookup-support.js');
+      const inventorySource = readSource('src/main/helpers/agent/tools/agent-inventory-lookup.js');
+      const notebookSource = readSource('src/main/helpers/agent/tools/agent-notebook-lookup.js');
       const retiredLookupFile = ['agent', 'record', 'lookup'].join('-');
-      assert.match(source, /resolveAgentRuntimeFactory/);
-      assert.match(source, /require\('\.\.\/tools\/agent-inventory-lookup'\)/);
-      assert.equal(source.includes(retiredLookupFile), false);
-      assert.match(source, /createAgentInventoryLookupRuntime\(\{/);
-      assert.match(source, /searchInventoryIndex:\s*inventoryLookupRuntime\.searchInventoryIndex/);
-      assert.match(source, /searchNotebookEntriesIndex/);
-      assert.match(source, /executeNotebookLookup/);
+      assert.equal(supportSource.includes(retiredLookupFile), false);
+      assert.match(supportSource, /createAgentLookupSupport/);
+      assert.match(inventorySource, /createAgentInventoryLookupRuntime/);
+      assert.match(notebookSource, /createAgentNotebookLookupRuntime/);
+      assert.match(notebookSource, /searchNotebookEntries/);
+      assert.match(notebookSource, /async function execute\(/);
     });
     test('agent runtime registry registers and resolves named runtime factories', () => {
       const { createAgentRuntimeRegistry, resolveAgentRuntimeFactory } = require(agentPath('shared', 'agent-runtime-registry.js'));
@@ -392,28 +400,10 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.equal(registry.unregisterRuntimeFactory('notebook-generation'), true);
       assert.equal(registry.hasRuntimeFactory('notebook-generation'), false);
     });
-    test('agent lookup runtime can use registry-provided helper factories', async () => {
-      const { createAgentLookupRuntime } = require(agentPath('runtime', 'agent-lookup-runtime.js'));
-      const requestedFactories = [];
-      const lookupRuntime = createAgentLookupRuntime({
-        getAgentRuntimeFactory: (runtimeName) => {
-          requestedFactories.push(runtimeName);
-          if (runtimeName === 'inventory-lookup') {
-            return () => ({
-              async searchInventoryIndex({ query } = {}) {
-                return { status: 'matched', source: 'registry_inventory', items: [{ id: 'inv-1', name: String(query || '') }] };
-              },
-              async executeInventoryLookup() {
-                return { status: 'matched', items: [] };
-              }
-            });
-          }
-          return null;
-        }
-      });
-
-      const inventorySearch = await lookupRuntime.searchInventoryIndex({ query: 'Atlas construct' });
-      const notebookSearch = await lookupRuntime.searchNotebookEntriesIndex({
+    test('notebook lookup runtime executes independently from inventory lookup', async () => {
+      const { createAgentNotebookLookupRuntime } = require(agentPath('tools', 'agent-notebook-lookup.js'));
+      const notebookRuntime = createAgentNotebookLookupRuntime();
+      const notebookSearch = await notebookRuntime.searchNotebookEntries({
         query: 'Protein Purification',
         snapshot: {
           notebookEntries: [
@@ -427,8 +417,6 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
         }
       });
 
-      assert.deepEqual(requestedFactories, ['inventory-lookup']);
-      assert.equal(inventorySearch.source, 'registry_inventory');
       assert.equal(notebookSearch.source, 'fallback_json');
       assert.equal(notebookSearch.items[0]?.record_type, 'notebook');
     });
@@ -445,6 +433,10 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(mainAgentServicesSource, /createAgentSubAppApi/);
       assert.match(mainAgentServicesSource, /agentAppApi/);
       assert.match(mainAgentServicesSource, /getAgentRuntimeFactory:\s*agentRuntimeRegistry\.getRuntimeFactory/);
+      assert.match(mainAgentServicesSource, /createAgentLookupSupport/);
+      assert.match(mainAgentServicesSource, /createAgentInventoryLookupRuntime/);
+      assert.match(mainAgentServicesSource, /createAgentNotebookLookupRuntime/);
+      assert.doesNotMatch(mainAgentServicesSource, /createAgentLookupRuntime/);
     });
   }
 };

@@ -6,10 +6,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
       const raw = {
         primary_intent: 'inventory_lookup',
         inventory_search: {
-          normalized_query: 'Tris-HCl',
-          candidate_terms: ['Tris-HCl', 'tris', 'Tris-HCl'],
-          aliases: ['tris(hydroxymethyl)aminomethane'],
-          search_mode: 'exact_then_alias_then_fuzzy'
+          candidate_terms: ['Tris-HCl', 'tris', 'Tris-HCl']
         }
       };
 
@@ -19,9 +16,10 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
       assert.equal(result.payload.reasoning_effort, 0);
       assert.equal(result.payload.needs_clarification, false);
       assert.deepEqual(result.payload.entities, {});
-      assert.equal(result.payload.inventory_search.normalized_query, 'Tris-HCl');
+      assert.equal(result.payload.inventory_search.normalized_query, undefined);
       assert.equal(Array.isArray(result.payload.inventory_search.candidate_terms), true);
       assert.equal(result.payload.inventory_search.candidate_terms.length >= 2, true);
+      assert.equal(result.payload.inventory_search.candidate_terms.includes('Tris-HCl'), true);
       assert.deepEqual(result.payload.protocol_candidates, []);
       assert.match(result.payload.reasoning_summary, /inventory_lookup/i);
     });
@@ -140,10 +138,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart01(context = {}
       assert.equal(result.payload.entities.budget_preference, 'cheap');
       assert.deepEqual(result.payload.protocol_candidates, []);
       assert.deepEqual(result.payload.inventory_search, {
-        normalized_query: null,
-        candidate_terms: [],
-        aliases: [],
-        search_mode: null
+        candidate_terms: []
       });
     });
     test('intent parser maps aliases and typo variants to canonical intents', () => {

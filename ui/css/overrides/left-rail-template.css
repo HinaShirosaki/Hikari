@@ -55,23 +55,6 @@
   scrollbar-gutter: stable;
 }
 
-.left-rail-template.biology-notebook-layout {
-  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr) 56px;
-  gap: 24px;
-}
-
-.left-rail-template.biology-notebook-layout.is-tool-sidebar-collapsed {
-  grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr) 44px;
-}
-
-.left-rail-template.biology-notebook-layout > .biology-notebook-viewer-column.left-rail-template__main {
-  padding-left: 0;
-}
-
-.left-rail-template.biology-notebook-layout > .biology-notebook-tool-sidebar {
-  align-self: stretch;
-}
-
 .left-rail-template > .left-rail-template__rail--pinned.left-rail-template__rail {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -96,26 +79,6 @@
   overscroll-behavior: contain;
   padding-right: var(--app-left-rail-padding-inline, 16px);
   scrollbar-gutter: stable;
-}
-
-.left-rail-template.biology-notebook-layout > .biology-notebook-rail.left-rail-template__rail--pinned {
-  grid-template-rows: minmax(0, 1fr);
-  scrollbar-gutter: auto !important;
-}
-
-.left-rail-template.biology-notebook-layout > .biology-notebook-rail > .left-rail-template__pinned {
-  display: contents;
-}
-
-.left-rail-template.biology-notebook-layout > .biology-notebook-rail > .biology-notebook-page-list.left-rail-template__scroll {
-  padding-inline-end: 0;
-  scrollbar-gutter: auto;
-}
-
-.papers-layout > .papers-main.left-rail-template__main {
-  overflow-x: hidden;
-  overflow-y: hidden;
-  scrollbar-gutter: auto;
 }
 
 body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail.app-left-rail,
@@ -143,156 +106,13 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
 }
 
 
-#papers-view.view.is-active,
-#biology-notebook-view.view.is-active {
-  align-content: stretch;
-  grid-auto-rows: minmax(0, 1fr);
-}
-
-.personal-inventory-layout,
-.workflow-editor-layout,
-.agent-chat-layout {
-  --left-rail-main-gap: 18px;
-}
-
-.assay-create-layout,
-.assay-results-layout {
-  --left-rail-main-gap: 20px;
-}
-
-.papers-layout {
-  --left-rail-main-gap: 22px;
-}
-
-.biology-notebook-layout,
-.gel-workspace,
-.tool-layout {
-  --left-rail-main-gap: 24px;
-}
-
-.protocol-workspace,
-.sample-layout,
-.chemical-layout {
-  --left-rail-main-gap: 28px;
-}
-
-@media (max-width: 720px) {
-  .left-rail-template.agent-chat-layout {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
-    min-height: 100%;
-  }
-
-  .left-rail-template.agent-chat-layout > .agent-session-rail.left-rail-template__rail {
-    height: auto;
-    min-height: 0;
-    max-height: min(42vh, 360px);
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    padding: 14px 0 12px 16px !important;
-    border-right: 0 !important;
-    border-bottom: 1px solid var(--app-left-rail-divider) !important;
-  }
-
-  .left-rail-template.agent-chat-layout > .left-rail-template__main {
-    padding-left: 0;
-    overflow: hidden;
-  }
-
-  .left-rail-template.agent-chat-layout .agent-session-panel {
-    min-height: 0;
-  }
-
-  .left-rail-template.agent-chat-layout > .agent-session-rail.left-rail-template__rail--pinned {
-    overflow: hidden !important;
-  }
-}
-
-.sample-main-grid {
-  display: grid;
-  grid-template-columns: minmax(300px, 0.9fr) minmax(320px, 1fr);
-  gap: 28px;
-  align-items: start;
-  min-width: 0;
-}
-
-.papers-layout .papers-stage {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(248px, var(--papers-comments-width));
-  gap: 22px;
-  align-items: stretch;
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  overflow: hidden;
-}
-
-.papers-layout.is-comments-collapsed .papers-stage {
-  grid-template-columns: minmax(0, 1fr) var(--papers-comments-collapsed-width);
-}
-
-.gel-main-grid {
-  display: grid;
-  gap: 24px;
-  min-width: 0;
-  align-items: start;
-}
-
-.left-rail-template__rail .sample-cell-passage-fields,
-.left-rail-template__rail .sample-compound-fields {
-  margin-top: 4px;
-  padding: 12px 0 0 !important;
-  border: 0 !important;
-  border-top: 1px solid var(--theme-border-soft) !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.left-rail-template__rail .workflow-card {
-  border: 0 !important;
-  border-top: 1px solid var(--theme-border-soft) !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.left-rail-template__rail .workflow-card:first-child {
-  border-top: 0 !important;
-}
-
-@media (min-width: 1100px) {
-  .gel-main-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
-    align-items: stretch;
-  }
-}
-
-@media (max-width: 1380px) {
-  .sample-main-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
 @media (max-width: 980px) {
-  .left-rail-template.biology-notebook-layout,
-  .left-rail-template.biology-notebook-layout.is-tool-sidebar-collapsed {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 18px;
-  }
-
-  .left-rail-template.biology-notebook-layout > .biology-notebook-viewer-column.left-rail-template__main {
-    height: auto;
-    padding-top: 18px;
-    overflow: visible;
-  }
-
-  .left-rail-template:not(.papers-layout) {
+  .left-rail-template:not(.left-rail-template--preserve-columns-on-narrow) {
     grid-template-columns: 1fr;
   }
 
-  .left-rail-template:not(.papers-layout) > .left-rail-template__rail.app-left-rail,
-.left-rail-template:not(.papers-layout) > .left-rail-template__rail {
+  .left-rail-template:not(.left-rail-template--preserve-columns-on-narrow) > .left-rail-template__rail.app-left-rail,
+  .left-rail-template:not(.left-rail-template--preserve-columns-on-narrow) > .left-rail-template__rail {
     max-height: none;
     padding: 0 0 18px !important;
     border-right: 0 !important;
@@ -300,16 +120,11 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
     background: transparent !important;
   }
 
-  .left-rail-template:not(.papers-layout) > .left-rail-template__main {
+  .left-rail-template:not(.left-rail-template--preserve-columns-on-narrow) > .left-rail-template__main {
     height: auto;
     padding-left: 0;
     padding-top: 18px;
     overflow: visible;
   }
 
-  .sample-main-grid,
-.gel-main-grid {
-    grid-template-columns: minmax(0, 1fr) !important;
-    gap: 18px;
-  }
 }

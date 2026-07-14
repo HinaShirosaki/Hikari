@@ -295,10 +295,7 @@ function createAgentControllerUtils(deps = {}) {
           return acc;
         }, {}),
         inventory_search: {
-          normalized_query: cleanText(inventorySearch.normalized_query, 220) || null,
-          candidate_terms: asArray(inventorySearch.candidate_terms).map((item) => cleanText(item, 180)).filter(Boolean),
-          aliases: asArray(inventorySearch.aliases).map((item) => cleanText(item, 180)).filter(Boolean),
-          search_mode: cleanText(inventorySearch.search_mode, 80) || null
+          candidate_terms: asArray(inventorySearch.candidate_terms).map((item) => cleanText(item, 180)).filter(Boolean)
         },
         protocol_candidates: asArray(parser.protocol_candidates).map((item) => cleanText(item, 220)).filter(Boolean),
         reasoning_summary: cleanText(parser.reasoning_summary, 1200)

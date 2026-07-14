@@ -338,7 +338,6 @@ function createNotebookGenerationRuntime(deps = {}) {
       .slice(0, 3);
 
     const candidateQueries = uniqueStrings([
-      cleanText(inventorySearch.normalized_query, 220),
       ...asArray(inventorySearch.candidate_terms).slice(0, 4),
       cleanText(entities.inventory_item, 220),
       cleanText(entities.compound_name, 220),
@@ -373,9 +372,7 @@ function createNotebookGenerationRuntime(deps = {}) {
     const args = {
       query,
       limit: 5,
-      normalized_query: query,
-      search_terms: [query],
-      search_mode: 'exact_then_alias_then_fuzzy'
+      search_terms: [query]
     };
     try {
       const toolResult = await runTool('search_inventory', args, snapshot, {

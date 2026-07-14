@@ -1,6 +1,6 @@
 # Agent Prompt Registry
 
-Generated at: 2026-07-02T17:04:32.185Z
+Generated at: 2026-07-12T01:56:02.170Z
 Prompt entries: 35
 
 This file is generated from the prompt registry and sample renderers in `src/main/helpers/agent/shared/agent-prompt-registry.js`.
@@ -84,14 +84,14 @@ Rules:
 - Choose exactly one primary_intent.
 - Science reasoning_effort: 0=stable direct answer; 1=default careful answer or light retrieval; 2=broad synthesis, recent literature, or multi-step evidence gathering. If unsure, choose 1.
 - Include direct_answer only for science intents at reasoning_effort=0.
-- inventory_search shape: {normalized_query, candidate_terms, aliases, search_mode}.
+- inventory_search shape: {candidate_terms}.
 - protocol_candidates: 1 to 3 likely protocol names; do not invent obscure aliases.
 - needs_clarification and clarification_reason only when routing is blocked.
 - Standalone instructional wet-lab protocol requests, such as "how to express X" or "give me a detailed protocol", are science questions unless the user asks for a notebook page, notebook draft, lab record, or documentation of work they performed.
 Intent guide:
 - protocol_to_notebook: Performed lab work -> notebook page or lab-record documentation. Requires notebook, record, or documentation intent for work already done. Standalone how-to protocol requests are science questions. Extras: protocol_candidates.
 - notebook_draft: Future planned experiment -> planned notebook page. Requires a requested notebook draft tied to a project, workflow, or next step. Not for standalone how-to protocols. Extras: protocol_candidates, entities.project_name, entities.workflow_step, entities.protocol_name.
-- inventory_lookup: Stock availability, reagent identity, location, supplier metadata, or stored chemical records. Use inventory_search for normalized query terms and aliases. Extras: inventory_search.
+- inventory_lookup: Stock availability, reagent identity, location, supplier metadata, or stored chemical records. Use inventory_search.candidate_terms for alternate search terms. Extras: inventory_search.
 - notebook_lookup: Stored notebook entries, prior notebook results, notebook pages for a project, or notebook records tied to a protocol. Use protocol, project, and result-text hints only when they narrow notebook search. Prefer protocol lookup for protocol records and paper tools for paper records. Extras: entities.project_name, entities.protocol_name, entities.notebook_name, entities.requested_output.
 - project_science_question: Science question tied to an active or named project, experiment, workflow, or stored record. Return reasoning_effort. Include direct_answer only at effort 0. Include project/protocol hints only when useful. Extras: reasoning_effort, direct_answer, entities.project_name, entities.protocol_name.
 - general_science_question: Science question or experimental how-to not tied to project records. Standalone detailed wet-lab protocol requests go here unless notebook/record output is requested. Return reasoning_effort; direct_answer only at effort 0. Extras: reasoning_effort, direct_answer.
@@ -120,14 +120,14 @@ Rules:
 - Choose exactly one primary_intent.
 - Science reasoning_effort: 0=stable direct answer; 1=default careful answer or light retrieval; 2=broad synthesis, recent literature, or multi-step evidence gathering. If unsure, choose 1.
 - Include direct_answer only for science intents at reasoning_effort=0.
-- inventory_search shape: {normalized_query, candidate_terms, aliases, search_mode}.
+- inventory_search shape: {candidate_terms}.
 - protocol_candidates: 1 to 3 likely protocol names; do not invent obscure aliases.
 - needs_clarification and clarification_reason only when routing is blocked.
 - Standalone instructional wet-lab protocol requests, such as "how to express X" or "give me a detailed protocol", are science questions unless the user asks for a notebook page, notebook draft, lab record, or documentation of work they performed.
 Intent guide:
 - protocol_to_notebook: Performed lab work -> notebook page or lab-record documentation. Requires notebook, record, or documentation intent for work already done. Standalone how-to protocol requests are science questions. Extras: protocol_candidates.
 - notebook_draft: Future planned experiment -> planned notebook page. Requires a requested notebook draft tied to a project, workflow, or next step. Not for standalone how-to protocols. Extras: protocol_candidates, entities.project_name, entities.workflow_step, entities.protocol_name.
-- inventory_lookup: Stock availability, reagent identity, location, supplier metadata, or stored chemical records. Use inventory_search for normalized query terms and aliases. Extras: inventory_search.
+- inventory_lookup: Stock availability, reagent identity, location, supplier metadata, or stored chemical records. Use inventory_search.candidate_terms for alternate search terms. Extras: inventory_search.
 - notebook_lookup: Stored notebook entries, prior notebook results, notebook pages for a project, or notebook records tied to a protocol. Use protocol, project, and result-text hints only when they narrow notebook search. Prefer protocol lookup for protocol records and paper tools for paper records. Extras: entities.project_name, entities.protocol_name, entities.notebook_name, entities.requested_output.
 - project_science_question: Science question tied to an active or named project, experiment, workflow, or stored record. Return reasoning_effort. Include direct_answer only at effort 0. Include project/protocol hints only when useful. Extras: reasoning_effort, direct_answer, entities.project_name, entities.protocol_name.
 - general_science_question: Science question or experimental how-to not tied to project records. Standalone detailed wet-lab protocol requests go here unless notebook/record output is requested. Return reasoning_effort; direct_answer only at effort 0. Extras: reasoning_effort, direct_answer.
@@ -168,7 +168,7 @@ Reject duplicate tools and unknown tools.
 
 Available tools:
 - inventory-lookup: Look up chemical and personal inventory records using query overrides and inventory search hints.
-- notebook-lookup: Look up local notebook entries by project, protocol, result text, or notebook identifier.
+- notebook-lookup: Search notebook pages or retrieve one page by stable entry id with agent-safe content and storage-access status.
 - protocol-matching: Rank local protocols against protocol candidates and select the best protocol for notebook generation.
 - notebook-generation: Generate a protocol-based notebook draft using a selected protocol, project context, and placeholder values.
 - notebook-draft: Propose a likely next experiment, optionally using prior record/literature evidence, prepare a planned biology notebook draft, and wait for explicit confirmation before creating the page.
@@ -208,10 +208,7 @@ Parser payload JSON:
     "cell_line": "HEK293"
   },
   "inventory_search": {
-    "normalized_query": null,
-    "candidate_terms": [],
-    "aliases": [],
-    "search_mode": null
+    "candidate_terms": []
   },
   "protocol_candidates": [
     "SUMO1 Purification"
@@ -236,13 +233,23 @@ Arguments must validate against the provided JSON schema for that tool.
 Selected tools in order: notebook-lookup, literature-search
 
 Tool: notebook-lookup
-Short description: Look up local notebook entries by project, protocol, result text, or notebook identifier.
-Detailed usage: Use this tool when the user is asking about local notebook entries, prior notebook results, notebook pages for a project, or notebook records tied to a protocol. Prefer `protocol-matching` for protocol lookup and the paper tools for paper lookup. Provide `query` for the notebook search text, and include project or protocol filters when known.
+Short description: Search notebook pages or retrieve one page by stable entry id with agent-safe content and storage-access status.
+Detailed usage: Use this tool to search local notebook pages or retrieve one complete page by stable entry id. Prefer `protocol-matching` for protocol lookup and paper tools for paper lookup. Search results include storage coverage and permission status; use `action: get` with `entry_id` when exact page content is needed.
 Input schema JSON:
 {
   "type": "object",
   "additionalProperties": false,
   "properties": {
+    "action": {
+      "type": "string",
+      "enum": [
+        "search",
+        "get"
+      ]
+    },
+    "entry_id": {
+      "type": "string"
+    },
     "query": {
       "type": "string"
     },
@@ -257,8 +264,25 @@ Input schema JSON:
     "project_name": {
       "type": "string"
     },
+    "protocol_id": {
+      "type": "string"
+    },
     "protocol_name": {
       "type": "string"
+    },
+    "notebook_state": {
+      "type": "string",
+      "enum": [
+        "planned",
+        "executed"
+      ]
+    },
+    "detail": {
+      "type": "string",
+      "enum": [
+        "summary",
+        "full"
+      ]
     },
     "parser_payload": {
       "$ref": "#/$defs/parser_payload"
@@ -395,10 +419,7 @@ Parser payload JSON:
     "cell_line": "HEK293"
   },
   "inventory_search": {
-    "normalized_query": null,
-    "candidate_terms": [],
-    "aliases": [],
-    "search_mode": null
+    "candidate_terms": []
   },
   "protocol_candidates": [
     "SUMO1 Purification"
@@ -442,7 +463,7 @@ If you request multiple tool calls, keep them tightly scoped and independent so 
 
 Available tools:
 Tool: notebook-lookup
-Short description: Look up local notebook entries by project, protocol, result text, or notebook identifier.
+Short description: Search notebook pages or retrieve one page by stable entry id with agent-safe content and storage-access status.
 
 Tool: literature-search
 Short description: Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads bounded context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. To restrict the search to specific journals, pass `journals` (an array of journal names, e.g. ["Nature", "Cell"]); this hard-scopes the PubMed, Crossref, and Europe PMC queries and relaxes to an unfiltered search only when nothing matches.
@@ -630,10 +651,7 @@ Parser JSON:
     "cell_line": "HEK293"
   },
   "inventory_search": {
-    "normalized_query": null,
-    "candidate_terms": [],
-    "aliases": [],
-    "search_mode": null
+    "candidate_terms": []
   },
   "protocol_candidates": [
     "SUMO1 Purification"
@@ -796,10 +814,7 @@ Parser JSON:
     "cell_line": "HEK293"
   },
   "inventory_search": {
-    "normalized_query": null,
-    "candidate_terms": [],
-    "aliases": [],
-    "search_mode": null
+    "candidate_terms": []
   },
   "protocol_candidates": [
     "SUMO1 Purification"
@@ -1248,10 +1263,7 @@ Parser payload JSON:
     "cell_line": "HEK293"
   },
   "inventory_search": {
-    "normalized_query": null,
-    "candidate_terms": [],
-    "aliases": [],
-    "search_mode": null
+    "candidate_terms": []
   },
   "protocol_candidates": [
     "SUMO1 Purification"

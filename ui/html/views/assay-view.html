@@ -177,14 +177,9 @@
               </select>
             </label>
             <div class="assay-analysis-controls">
-              <label>
-                Row Groups (optional)
-                <textarea id="assay-analysis-row-groups" rows="2" placeholder="Control: A,B; Treated: C,D"></textarea>
-              </label>
-              <label>
-                Column Groups (optional)
-                <textarea id="assay-analysis-column-groups" rows="2" placeholder="Early: 1,2; Late: 3,4"></textarea>
-              </label>
+              <input id="assay-analysis-row-groups" type="hidden" />
+              <input id="assay-analysis-column-groups" type="hidden" />
+              <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
               <label class="assay-analysis-checkbox">
                 <input id="assay-analysis-error-bars" type="checkbox" />
                 Show SD error bars (for Row/Column Summary)

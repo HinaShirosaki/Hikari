@@ -18,7 +18,6 @@ const ASK_USER_MCP_TOOL = Object.freeze({
     required: ['question', 'options'],
     properties: {
       question: { type: 'string', minLength: 1 },
-      context: { type: 'string' },
       options: {
         type: 'array',
         minItems: 1,
@@ -31,18 +30,14 @@ const ASK_USER_MCP_TOOL = Object.freeze({
               additionalProperties: false,
               required: ['label'],
               properties: {
-                id: { type: 'string' },
                 label: { type: 'string', minLength: 1 },
-                value: { type: 'string' },
                 description: { type: 'string' }
               }
             }
           ]
         }
       },
-      allow_custom: { type: 'boolean' },
-      placeholder: { type: 'string' },
-      submit_label: { type: 'string' }
+      allow_custom: { type: 'boolean' }
     }
   }
 });

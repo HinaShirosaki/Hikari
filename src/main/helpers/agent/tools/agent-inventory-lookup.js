@@ -201,11 +201,7 @@ function createAgentInventoryLookupRuntime(deps = {}) {
       const source = ensureObject(inventorySearch);
       return buildTerms({
         query: fallbackQuery,
-        terms: [
-          source.normalized_query,
-          ...asArray(source.candidate_terms),
-          ...asArray(source.aliases)
-        ],
+        terms: asArray(source.candidate_terms),
         maxTerms
       });
     });
@@ -293,7 +289,7 @@ function createAgentInventoryLookupRuntime(deps = {}) {
     return parts.join(' / ');
   }
 
-  function buildInventoryFallbackItems({ snapshot = {}, query = '', searchTerms = [], limit = 8 }) {
+  function buildInventoryFallbackItems({ snapshot = {}, query = '', searchTerms = [], limit = 8, kinds = [] }) {
     const containerMap = buildContainerMapFromSnapshot(snapshot);
     const chemicalItems = asArray(snapshot?.labInventory?.chemicals).map((chemical) => {
       const payload = ensureObject(chemical);
@@ -391,8 +387,14 @@ function createAgentInventoryLookupRuntime(deps = {}) {
       };
     }).filter((sample) => sample.id || sample.name);
 
+    // Scope to the requested kinds before ranking so one kind cannot crowd out another.
+    const kindSet = asArray(kinds).map((kind) => cleanText(kind, 40)).filter(Boolean);
+    const allItems = [...chemicalItems, ...personalContainerItems, ...sampleItems];
+    const scopedItems = kindSet.length
+      ? allItems.filter((row) => kindSet.includes(cleanText(row?.kind, 40)))
+      : allItems;
     const ranked = rankRows(
-      [...chemicalItems, ...personalContainerItems, ...sampleItems],
+      scopedItems,
       {
         terms: searchTerms,
         query,
@@ -433,7 +435,7 @@ function createAgentInventoryLookupRuntime(deps = {}) {
     };
   }
 
-  async function searchInventorySqlite({ sqlitePath = '', query = '', searchTerms = [], limit = 8 }) {
+  async function searchInventorySqlite({ sqlitePath = '', query = '', searchTerms = [], limit = 8, kinds = [] }) {
     const dbResult = await withSqliteDatabase(sqlitePath, async (db) => {
       const tables = readSqliteTables(db);
       const hasChemicals = tables.has('inventory_chemicals');
@@ -526,8 +528,14 @@ function createAgentInventoryLookupRuntime(deps = {}) {
         dedupeKey: (row) => `sample::${cleanText(row.id || row.sample_code, 120).toLowerCase()}`
       });
 
+      // Scope to the requested kinds before ranking so one kind cannot crowd out another.
+      const kindSet = asArray(kinds).map((kind) => cleanText(kind, 40)).filter(Boolean);
+      const allRows = [...chemicalRows, ...personalRows, ...sampleRows];
+      const scopedRows = kindSet.length
+        ? allRows.filter((row) => kindSet.includes(cleanText(row?.kind, 40)))
+        : allRows;
       const ranked = rankRows(
-        [...chemicalRows, ...personalRows, ...sampleRows],
+        scopedRows,
         {
           terms,
           query,
@@ -592,7 +600,7 @@ function createAgentInventoryLookupRuntime(deps = {}) {
     const entities = ensureObject(parser.entities);
     const inventorySearch = ensureObject(parser.inventory_search);
     return cleanText(
-      inventorySearch.normalized_query
+      asArray(inventorySearch.candidate_terms)[0]
       || entities.inventory_item
       || entities.compound_name
       || message
@@ -607,13 +615,20 @@ function createAgentInventoryLookupRuntime(deps = {}) {
     query = '',
     limit = 8,
     searchTerms = [],
-    snapshot = {}
+    snapshot = {},
+    kinds = []
   } = {}) {
     const context = await buildLookupContext({
       dataFilePath,
       fallbackDataFilePath,
       snapshot
     });
+
+    // Optional kind scope (e.g. chemical_lookup passes ['chemical']); empty means all kinds.
+    const kindSet = asArray(kinds).map((kind) => cleanText(kind, 40)).filter(Boolean);
+    const scopeItems = (rows) => (kindSet.length
+      ? asArray(rows).filter((row) => kindSet.includes(cleanText(row?.kind, 40)))
+      : asArray(rows));
 
     const termsUsed = buildTerms({
       query,
@@ -625,21 +640,26 @@ function createAgentInventoryLookupRuntime(deps = {}) {
       sqlitePath: context.sqlitePath,
       query,
       searchTerms: termsUsed,
-      limit
+      limit,
+      kinds: kindSet
     });
     const fallbackResult = buildInventoryFallbackItems({
       snapshot: context.hydratedSnapshot,
       query,
       searchTerms: termsUsed,
-      limit
+      limit,
+      kinds: kindSet
     });
 
-    let source = sqlResult.usedSqlite ? 'sqlite' : 'fallback_json';
-    let items = asArray(sqlResult.items).slice(0, Math.max(1, Number(limit) || 8));
+    const sqlItems = scopeItems(sqlResult.items);
+    const fallbackItems = scopeItems(fallbackResult.items);
 
-    if (!items.length && fallbackResult.items.length) {
+    let source = sqlResult.usedSqlite ? 'sqlite' : 'fallback_json';
+    let items = sqlItems.slice(0, Math.max(1, Number(limit) || 8));
+
+    if (!items.length && fallbackItems.length) {
       source = 'fallback_json';
-      items = fallbackResult.items.slice(0, Math.max(1, Number(limit) || 8));
+      items = fallbackItems.slice(0, Math.max(1, Number(limit) || 8));
     }
 
     const hasSnapshotSamples = asArray(context.hydratedSnapshot?.samples).length > 0;
@@ -651,7 +671,7 @@ function createAgentInventoryLookupRuntime(deps = {}) {
       && (
         !sqlResult.usedSqlite
         || (hasSnapshotSamples && (!sqlSampleTableExists || sqlSampleRowCount === 0))
-        || (source === 'fallback_json' && fallbackResult.items.length > 0)
+        || (source === 'fallback_json' && fallbackItems.length > 0)
       )
     );
 
@@ -667,16 +687,18 @@ function createAgentInventoryLookupRuntime(deps = {}) {
         sqlitePath: context.sqlitePath,
         query,
         searchTerms: termsUsed,
-        limit
+        limit,
+        kinds: kindSet
       });
-      if (asArray(rerun.items).length) {
+      const rerunItems = scopeItems(rerun.items);
+      if (rerunItems.length) {
         const merged = mergeRowsByKey(
-          rerun.items,
-          fallbackResult.items,
+          rerunItems,
+          fallbackItems,
           (row) => `${cleanText(row?.kind, 40)}::${cleanText(row?.zone, 120)}::${cleanText(row?.id, 120)}`
         );
         items = merged.slice(0, Math.max(1, Number(limit) || 8));
-        source = merged.length > asArray(rerun.items).length ? 'sqlite+fallback' : 'sqlite';
+        source = merged.length > rerunItems.length ? 'sqlite+fallback' : 'sqlite';
       }
     }
 
@@ -696,7 +718,8 @@ function createAgentInventoryLookupRuntime(deps = {}) {
     snapshot = {},
     dataFilePath = '',
     fallbackDataFilePath = '',
-    limit = 8
+    limit = 8,
+    kinds = []
   } = {}) {
     const parser = ensureObject(parserPayload);
     const query = deriveInventoryLookupQuery({ message, parserPayload: parser });
@@ -712,7 +735,8 @@ function createAgentInventoryLookupRuntime(deps = {}) {
       query,
       limit,
       searchTerms: termsUsed,
-      snapshot
+      snapshot,
+      kinds
     });
 
     const items = asArray(searchResult.items).slice(0, Math.max(1, Number(limit) || 8));

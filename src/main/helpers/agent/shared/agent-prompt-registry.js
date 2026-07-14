@@ -112,10 +112,7 @@ function buildSampleState() {
       cell_line: 'HEK293'
     },
     inventory_search: {
-      normalized_query: null,
-      candidate_terms: [],
-      aliases: [],
-      search_mode: null
+      candidate_terms: []
     },
     protocol_candidates: ['SUMO1 Purification'],
     reasoning_summary: 'Needs project evidence plus recent literature.'

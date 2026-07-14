@@ -152,10 +152,7 @@ export function buildDeveloperMockAgentResult({
           : null,
         entities: {},
         inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
+          candidate_terms: []
         },
         protocol_candidates: [],
         reasoning_summary: trimText(parsed.reasoning_summary, 1200)
@@ -186,10 +183,7 @@ export function buildDeveloperMockAgentResult({
       clarification_reason: null,
       entities: {},
       inventory_search: {
-        normalized_query: null,
-        candidate_terms: [],
-        aliases: [],
-        search_mode: null
+        candidate_terms: []
       },
       protocol_candidates: [],
       reasoning_summary: raw || 'Developer mock response.'

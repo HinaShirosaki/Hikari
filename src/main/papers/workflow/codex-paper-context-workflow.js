@@ -48,18 +48,11 @@ function normalizeProvider(value = '') {
 
 function shouldUseCodexPaperContextWorkflow(input = {}) {
   const source = ensureObject(input);
-  if (
-    source.use_codex_paper_context === true
-    || source.useCodexPaperContext === true
-    || source.codex_paper_context === true
-    || source.codexPaperContext === true
-  ) {
+  // Single tristate flag: true forces on, false forces off, absent falls back to the provider default.
+  if (source.codex_paper_context === true || source.codexPaperContext === true) {
     return true;
   }
-  if (
-    source.disable_codex_paper_context === true
-    || source.disableCodexPaperContext === true
-  ) {
+  if (source.codex_paper_context === false || source.codexPaperContext === false) {
     return false;
   }
   const provider = normalizeProvider(

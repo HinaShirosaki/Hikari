@@ -11,8 +11,8 @@ test('protocol-management keeps saved protocols unselected until the user opens 
     'protocol-view-title',
     'protocol-view-content',
     'protocol-list',
-    'protocol-sort-field-btn',
-    'protocol-sort-order-btn'
+    'protocol-sort-menu-btn',
+    'protocol-sort-menu'
   ]);
 
   const state = {
@@ -121,8 +121,8 @@ test('protocol-management generates a protocol from the create editor overlay', 
     'protocol-share-link-panel',
     'protocol-share-link-output',
     'protocol-list',
-    'protocol-sort-field-btn',
-    'protocol-sort-order-btn'
+    'protocol-sort-menu-btn',
+    'protocol-sort-menu'
   ]);
 
   const protocolForm = document.getElementById('protocol-form');
@@ -320,8 +320,8 @@ test('protocol-management import accepts external title/action schema without id
     'protocol-share-link-panel',
     'protocol-share-link-output',
     'protocol-list',
-    'protocol-sort-field-btn',
-    'protocol-sort-order-btn'
+    'protocol-sort-menu-btn',
+    'protocol-sort-menu'
   ]);
 
   const protocolForm = document.getElementById('protocol-form');

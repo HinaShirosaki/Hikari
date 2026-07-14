@@ -1,5 +1,6 @@
 import * as renderingModule from './rendering.js';
 import { asArray, trimText } from './shared.js';
+import { ensureAgentChatFolderState } from './session-folders.js';
 
 const QUICK_PROMPT_PRESETS = {
   workspace: {
@@ -93,12 +94,14 @@ export function createAgentChatShellController({
   function ensureAgentState() {
     if (!state.agentChat || typeof state.agentChat !== 'object') {
       state.agentChat = { projectId: '', currentSessionId: '', sessions: [], messages: [] };
+      ensureAgentChatFolderState(state.agentChat);
       return;
     }
     state.agentChat.projectId = String(state.agentChat.projectId || '');
     state.agentChat.currentSessionId = String(state.agentChat.currentSessionId || '');
     state.agentChat.sessions = asArray(state.agentChat.sessions);
     state.agentChat.messages = asArray(state.agentChat.messages);
+    ensureAgentChatFolderState(state.agentChat);
   }
 
   function setStatus(text) {

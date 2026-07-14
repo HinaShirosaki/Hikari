@@ -500,17 +500,18 @@ function createAgentAssayTableRuntime(deps = {}) {
     if (!sourceTable) {
       return missingTable(input);
     }
-    const columnSpec = {
-      ...ensureObject(input.column),
-      ...ensureObject(input.calculation),
-      name: normalizeColumnName(input.name || ensureObject(input.column).name || ensureObject(input.calculation).name, 'calculation')
-    };
+    const specs = asArray(input.columns).map((spec) => ensureObject(spec));
+    // A single added column may take its name from a top-level `name`.
+    if (specs.length === 1 && cleanText(input.name, 120)) {
+      specs[0] = { ...specs[0], name: input.name };
+    }
+    const label = normalizeColumnName(ensureObject(specs[0]).name || input.name, 'calculation');
     return derive({
       ...input,
       source_table_id: sourceTable.id,
       include_source_columns: true,
-      columns: [columnSpec],
-      output_name: input.output_name || input.outputName || `${sourceTable.name || sourceTable.id} plus ${columnSpec.name}`
+      columns: specs,
+      output_name: input.output_name || input.outputName || `${sourceTable.name || sourceTable.id} plus ${label}`
     });
   }
 

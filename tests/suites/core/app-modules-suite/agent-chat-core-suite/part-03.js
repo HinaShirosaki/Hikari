@@ -327,6 +327,10 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.stateSnapshot.protocols[0].name, 'Cell Prep');
   assert.equal(payloadSeen.stateSnapshot.protocols[0].steps.length, 2);
   assert.equal(payloadSeen.stateSnapshot.notebookEntries.length, 0);
+  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.version, 1);
+  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.complete, true);
+  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.entries.length, 1);
+  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.entries[0].id, 'n1');
   assert.equal(payloadSeen.stateSnapshot.context_counts.protocols, 1);
   assert.equal(payloadSeen.stateSnapshot.context_counts.notebookEntries, 1);
   assert.equal(payloadSeen.stateSnapshot.workflows.length, 1);

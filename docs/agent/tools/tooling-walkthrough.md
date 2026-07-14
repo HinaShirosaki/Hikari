@@ -42,7 +42,7 @@ This is the most important practical detail in the whole tools layer:
 
 - the agent-service assembly (`create-main-agent-services.js`) creates one shared `genericAgentToolRuntime`
 - it then calls `registerAgentToolExecutors(...)` (`tools/register-agent-tool-executors.js`), which registers the full tool suite on that shared instance: `inventory-lookup`, `notebook-lookup`, `protocol-matching`, `notebook-generation`, `notebook-draft`, `web-search`, `sub-agent`, `memory`, `literature-search`, `paper-download`, `paper-search`, `paper-analysis`, `purchase-recommendation`, `protocol-generation`, `python-sandbox`, and `command-line`
-- the `inventory_lookup` and `notebook_lookup` *intents* still call `agent-lookup-runtime` directly from the controller, but the same lookups are also registered as tools for the science/deep-research loops to call
+- the `inventory-lookup` and `notebook-lookup` executors call their individual tool runtimes directly; no aggregate lookup coordinator sits between MCP and the owning implementation
 
 So the shared executor now exposes the folder's full tool surface, not just a single tool.
 
@@ -51,7 +51,7 @@ So the shared executor now exposes the folder's full tool surface, not just a si
 | Tool name | File | What it does |
 | --- | --- | --- |
 | `inventory-lookup` | `tools/agent-inventory-lookup.js` | query local inventory with SQLite-first, snapshot-fallback behavior |
-| `notebook-lookup` | `tools/agent-lookup-runtime.js` | query local notebook entries by project, protocol, result text, or entry identifier |
+| `notebook-lookup` | `tools/agent-notebook-lookup.js` | search notebook pages or retrieve one structured page by stable id, with storage-access coverage |
 | `protocol-matching` | `tools/agent-protocol-matching.js` | rank local protocols and break close ties with an LLM when needed |
 | `notebook-generation` | `tools/agent-notebook-generation.js` | resolve placeholders and build a notebook payload from a selected protocol |
 | `notebook-draft` | `tools/agent-notebook-draft.js` | infer the next likely experiment and prepare a planned notebook draft |
@@ -67,7 +67,7 @@ So the shared executor now exposes the folder's full tool surface, not just a si
 
 ## Lookup tools
 
-`agent-inventory-lookup.js` and `agent-lookup-runtime.js` are deterministic and data-local. They are the best examples of tools that are production-useful even without a fully wired generic executor because the controller can call them directly.
+`agent-inventory-lookup.js` and `agent-notebook-lookup.js` are deterministic and data-local. They share storage primitives but own their lookup behavior independently.
 
 Both tools:
 

@@ -24,8 +24,8 @@ test('protocol-management keeps legacy string steps editable and viewable', () =
     'placeholder-name',
     'protocol-share-status',
     'protocol-list',
-    'protocol-sort-field-btn',
-    'protocol-sort-order-btn'
+    'protocol-sort-menu-btn',
+    'protocol-sort-menu'
   ]);
   const protocolForm = document.getElementById('protocol-form');
   const protocolName = document.getElementById('protocol-name');
@@ -92,6 +92,80 @@ test('protocol-management keeps legacy string steps editable and viewable', () =
   const viewBtn = protocolList.querySelectorAll('[data-protocol-view]')[0];
   trigger(viewBtn, 'click');
   assert.match(document.getElementById('protocol-view-content').innerHTML, /Add buffer/);
+});
+test('protocol-management applies a selected combined sort option from the icon menu', () => {
+  const document = createMockDocument([
+    'protocol-list',
+    'protocol-sort-menu-btn',
+    'protocol-sort-menu'
+  ]);
+  const protocolSortMenu = document.getElementById('protocol-sort-menu');
+  protocolSortMenu.hidden = true;
+  const state = {
+    protocols: [
+      {
+        id: 'protocol-zulu',
+        name: 'Zulu Protocol',
+        purpose: '',
+        materials: [],
+        steps: [],
+        troubleshooting: '',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z'
+      },
+      {
+        id: 'protocol-alpha',
+        name: 'Alpha Protocol',
+        purpose: '',
+        materials: [],
+        steps: [],
+        troubleshooting: '',
+        createdAt: '2026-01-03T00:00:00.000Z',
+        updatedAt: '2026-01-03T00:00:00.000Z'
+      }
+    ],
+    notebookEntries: [],
+    workflows: [],
+    workflowTemplates: [],
+    assays: [],
+    gelAnalyses: [],
+    messages: [],
+    members: [],
+    settings: { personalInfo: { hikariEmail: '' } }
+  };
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
+    document,
+    TextEncoder,
+    btoa: btoaPolyfill
+  });
+  const protocol = protocolModule.initProtocolManagement({
+    state,
+    persist: () => {},
+    createId: () => 'generated-id',
+    safeText: shared.safeText,
+    onProtocolsChanged: () => {},
+    trackGrowthEvent: () => {}
+  });
+
+  const sortMenuBtn = document.getElementById('protocol-sort-menu-btn');
+  trigger(sortMenuBtn, 'click');
+  assert.equal(protocolSortMenu.hidden, false);
+  assert.equal(sortMenuBtn.getAttribute('aria-expanded'), 'true');
+
+  trigger(protocolSortMenu, 'click', { target: { dataset: { protocolSort: 'name:asc' } } });
+  const protocolList = document.getElementById('protocol-list');
+  assert.ok(protocolList.innerHTML.indexOf('Alpha Protocol') < protocolList.innerHTML.indexOf('Zulu Protocol'));
+  assert.equal(protocolSortMenu.hidden, true);
+  assert.equal(sortMenuBtn.getAttribute('aria-expanded'), 'false');
+
+  trigger(protocolSortMenu, 'click', { target: { dataset: { protocolSort: 'time:desc' } } });
+  assert.ok(protocolList.innerHTML.indexOf('Alpha Protocol') < protocolList.innerHTML.indexOf('Zulu Protocol'));
+
+  trigger(protocolSortMenu, 'click', { target: { dataset: { protocolSort: 'time:asc' } } });
+  assert.ok(protocolList.innerHTML.indexOf('Zulu Protocol') < protocolList.innerHTML.indexOf('Alpha Protocol'));
+
+  trigger(protocolSortMenu, 'click', { target: { dataset: { protocolSort: 'name:desc' } } });
+  assert.ok(protocolList.innerHTML.indexOf('Zulu Protocol') < protocolList.innerHTML.indexOf('Alpha Protocol'));
 });
 test('protocol polish sends sectioned draft text to the LLM instead of a protocol JSON envelope', async () => {
   const polishModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'polish.js'));

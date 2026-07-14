@@ -39,6 +39,7 @@ export function getAssayElements(root = document) {
     assayAnalysisRowGroupsInput: root.getElementById('assay-analysis-row-groups'),
     assayAnalysisColumnGroupsInput: root.getElementById('assay-analysis-column-groups'),
     assayAnalysisErrorBarsInput: root.getElementById('assay-analysis-error-bars'),
+    assayAnalysisGroupVisualization: root.getElementById('assay-analysis-group-visualization'),
     assayAnalysisGroupNameInput: root.getElementById('assay-analysis-group-name'),
     assayAnalysisAddRowGroupBtn: root.getElementById('assay-analysis-add-row-group-btn'),
     assayAnalysisAddColumnGroupBtn: root.getElementById('assay-analysis-add-column-group-btn'),

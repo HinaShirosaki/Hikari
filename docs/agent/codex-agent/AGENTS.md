@@ -18,13 +18,12 @@ This MCP server is the Hikari app contract. Codex exposes this server's tools wi
 Use the first-class prefixed MCP tools below as the complete Hikari app tool surface for this server.
 
 Direct Hikari MCP tools:
-- `mcp__hikari__inventory_lookup`: search local inventory items, chemicals, personal containers, and samples.
+- `mcp__hikari__inventory_lookup`: search local personal inventory: personal containers and samples (use `mcp__hikari__chemical_lookup` for chemical stock).
 - `mcp__hikari__chemical_lookup`: search local chemical records by name, CAS, supplier, or storage hint.
-- `mcp__hikari__notebook_lookup`: search local notebook entries by project, protocol, result text, or identifier.
+- `mcp__hikari__notebook_lookup`: search local notebook pages by text, project, protocol, or state, with agent-safe content and storage-access status.
 - `mcp__hikari__protocol_lookup`: search local protocols through Hikari protocol matching.
 - `mcp__hikari__protocol_generation`: normalize a complete protocol JSON object into the app import format; set `save: true` in the same call to queue Hikari user approval for adding it to the Protocols module.
-- `mcp__hikari__notebook_draft`: prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.
-- `mcp__hikari__notebook_generation`: generate a protocol-based notebook draft from selected protocol and project context.
+- `mcp__hikari__notebook_draft`: select a protocol from candidates, fill known placeholder values, and prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.
 - `mcp__hikari__literature_search`: find papers, rank selected candidates, return download-ready metadata, and load bounded context from abstracts or already-ingested paper markdown without starting new PDF downloads automatically.
 - `mcp__hikari__paper_download`: download a paper PDF into Hikari storage.
 - `mcp__hikari__paper_analysis`: summarize or extract methods from a specific paper.
@@ -32,7 +31,6 @@ Direct Hikari MCP tools:
 - `mcp__hikari__paper_intake_search_experiments`: search structured experiment entries extracted during paper intake.
 - `mcp__hikari__paper_intake_list_project_summaries`: list paper-intake summaries for papers attached to a project.
 - `mcp__hikari__purchase_recommendation`: search and rank purchasable products.
-- `mcp__hikari__memory`: recall, remember, forget, and list sparse long-term memory records.
 - `mcp__hikari__container`: store, name, read, copy, update, and position-edit temporary string or number containers with short runtime IDs.
 - `mcp__hikari__assay_table`: create scratch assay tables, derive calculated tables, add calculated columns, and run Python-backed table transforms.
 - `mcp__hikari__plotly_graph`: create, update, read, and inspect Plotly.js graph specifications from Plotly figure arguments.
@@ -41,10 +39,10 @@ Direct Hikari MCP tools:
 Tool-use rules:
 - Use active chat/view context before lookup tools. If the current turn includes hidden Assay context, retrieve the active assay data by parsing its `Assay plate data (TSV...)` block directly from the chat prompt.
 - Do not use local lookup tools for active Assay plate/result rows; if assay rows are missing from the hidden TSV, treat it as missing UI context and ask for or await refreshed context.
-- Use `mcp__hikari__notebook_lookup` when local lookup needs notebook entries by project, protocol, result text, or identifier.
+- Use `mcp__hikari__notebook_lookup` to discover notebook pages by text, project, protocol, or state. Treat `access.complete: false` as incomplete evidence, follow `access.user_action` for permission recovery, and never turn a partial lookup into a definitive no-match claim.
 - Use `mcp__hikari__literature_search` for finding papers, references, recent literature, or external scientific evidence.
 - `mcp__hikari__literature_search` is search-first: do not expect it to open publisher pages or download new PDFs. The user can click the paper download button, or you can use `mcp__hikari__paper_download` only when the user explicitly asks to download a paper.
-- For `mcp__hikari__literature_search`, saved Preferred Journals from the current Hikari settings are already available in the request context. Treat them as soft ranking preferences, do not call `mcp__hikari__memory` just to rediscover them, and do not pass a hard `journals` filter unless the user explicitly asks for one.
+- For `mcp__hikari__literature_search`, saved Preferred Journals from the current Hikari settings are already available in the request context. Treat them as soft ranking preferences, and do not pass a hard `journals` filter unless the user explicitly asks for one.
 - Use `mcp__hikari__paper_download` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.
 - Use `mcp__hikari__paper_analysis` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.
 - Use `mcp__hikari__paper_intake_search_summaries` or `mcp__hikari__paper_intake_search_experiments` when already-ingested papers are enough and a full paper read is unnecessary.

@@ -13,29 +13,20 @@ const {
   toIntegerInRange
 } = require('./shared.js');
 
-const PROJECT_FILTER_SCHEMA = Object.freeze({
-  project_id: { type: 'string' },
-  project_name: { type: 'string' }
-});
-
 const PROTOCOL_LOOKUP_MCP_TOOL = Object.freeze({
   name: 'protocol_lookup',
   description: 'Look up local Hikari protocol records by protocol name, purpose, category, or step text.',
   annotations: buildReadOnlyToolAnnotations('Protocol lookup'),
-  inputSchema: buildCommonLookupInputSchema(PROJECT_FILTER_SCHEMA)
+  inputSchema: buildCommonLookupInputSchema()
 });
 
 async function callProtocolLookup(input = {}, context = {}, deps = {}) {
   const query = normalizeLookupQuery(input, context);
   const limit = toIntegerInRange(input.limit, 8, 1, 25);
-  const projectId = cleanText(input.project_id || input.projectId, 120);
-  const projectName = cleanText(input.project_name || input.projectName, 220);
   const parserPayload = normalizeParserPayload(input.parser_payload || context.parserPayload, {
     primary_intent: 'protocol_to_notebook',
     entities: {
       protocol_name: query,
-      project_id: projectId,
-      project_name: projectName,
       requested_output: 'protocol_lookup'
     },
     protocol_candidates: [query]
@@ -49,12 +40,7 @@ async function callProtocolLookup(input = {}, context = {}, deps = {}) {
     context: {
       ...context,
       message: query || context.message,
-      parserPayload,
-      project: {
-        ...(context.project && typeof context.project === 'object' ? context.project : {}),
-        ...(projectId ? { id: projectId } : {}),
-        ...(projectName ? { name: projectName } : {})
-      }
+      parserPayload
     }
   });
   const envelope = normalizeToolEnvelope(result);

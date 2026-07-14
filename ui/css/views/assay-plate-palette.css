@@ -42,6 +42,10 @@
   --assay-plate-well-number: rgba(20, 57, 84, 0.78);
   --assay-plate-sample-fallback: #718096;
   --assay-plate-sample-count-bg: rgba(18, 49, 73, 0.88);
+  --assay-plate-analysis-group-1: var(--theme-accent);
+  --assay-plate-analysis-group-2: var(--theme-success);
+  --assay-plate-analysis-group-3: var(--theme-warning);
+  --assay-plate-analysis-group-4: var(--theme-danger);
   --assay-plate-selected-fill-start: #fff5d8;
   --assay-plate-selected-fill-end: #f0d98a;
   --assay-plate-selected-border: rgba(170, 122, 32, 0.85);

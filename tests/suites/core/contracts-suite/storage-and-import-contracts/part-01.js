@@ -339,11 +339,52 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
+    test('storage hydration keeps notebook fallback data when the shared SQLite index is permission denied', async () => {
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-sqlite-permission-'));
+      const dataFilePath = path.join(tempDir, 'hikari-data.json');
+      const sqlitePath = path.join(tempDir, 'Protocol', 'protocol.index.sqlite');
+      const originalReadFile = fsPromises.readFile;
+      try {
+        await fsPromises.mkdir(path.dirname(sqlitePath), { recursive: true });
+        const snapshot = {
+          settings: { storagePath: tempDir },
+          notebookEntries: [{
+            id: 'note-1',
+            projectId: 'proj-1',
+            projectName: 'Atlas',
+            protocolName: 'Protein Purification',
+            result: 'Readable fallback notebook content.'
+          }]
+        };
+        fsPromises.readFile = async (targetPath, ...args) => {
+          if (path.resolve(String(targetPath || '')) === path.resolve(sqlitePath)) {
+            const error = new Error(`EPERM: operation not permitted, open '${sqlitePath}'`);
+            error.code = 'EPERM';
+            throw error;
+          }
+          return originalReadFile.call(fsPromises, targetPath, ...args);
+        };
+
+        const hydrated = await bundleHelpers.hydrateSnapshotFromBundle({
+          dataFilePath,
+          snapshot
+        });
+
+        assert.equal(hydrated.snapshot.notebookEntries[0].id, 'note-1');
+        assert.equal(hydrated.migration.warnings.some((warning) => /Permission denied reading SQLite bundle index/.test(warning)), true);
+      } finally {
+        fsPromises.readFile = originalReadFile;
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
     test('storage bundle helper sync + hydrate roundtrip restores protocols notebook inventory and samples from folders/sqlite', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
-      const { createAgentLookupRuntime } = require(agentPath('runtime', 'agent-lookup-runtime.js'));
+      const { createAgentLookupSupport } = require(agentPath('tools', 'agent-lookup-support.js'));
+      const { createAgentInventoryLookupRuntime } = require(agentPath('tools', 'agent-inventory-lookup.js'));
+      const { createAgentNotebookLookupRuntime } = require(agentPath('tools', 'agent-notebook-lookup.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-bundle-roundtrip-'));
       const dataFilePath = path.join(tempDir, 'example.ena.json');
       try {
@@ -433,22 +474,18 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         assert.equal(hydrated.migration.applied.includes('samples_folder'), true);
         assert.equal(hydrated.snapshot?.settings?.appearance?.uiStyle, 'classic');
 
-        const lookupRuntime = createAgentLookupRuntime({
+        const lookupSupport = createAgentLookupSupport({
           getBundlePaths: bundleHelpers.getBundlePaths,
           hydrateSnapshotFromBundle: bundleHelpers.hydrateSnapshotFromBundle,
           syncBundleFromSnapshot: bundleHelpers.syncBundleFromSnapshot
         });
-        const inventorySearch = await lookupRuntime.searchInventoryIndex({ dataFilePath, snapshot: compactSnapshot, query: 'Atlas construct', searchTerms: ['atlas', 'construct'], limit: 6 });
+        const inventoryRuntime = createAgentInventoryLookupRuntime(lookupSupport);
+        const notebookRuntime = createAgentNotebookLookupRuntime(lookupSupport);
+        const inventorySearch = await inventoryRuntime.searchInventoryIndex({ dataFilePath, snapshot: compactSnapshot, query: 'Atlas construct', searchTerms: ['atlas', 'construct'], limit: 6 });
         assert.equal(inventorySearch.usedSqlite, true);
         assert.equal(inventorySearch.items.some((item) => item.kind === 'personal_sample'), true);
 
-        const protocolSearch = await lookupRuntime.searchProtocolsIndex({ dataFilePath, snapshot: compactSnapshot, query: 'Protein Purification', limit: 6 });
-        assert.equal(protocolSearch.usedSqlite, false);
-        assert.equal(protocolSearch.items.length > 0, true);
-        assert.equal(protocolSearch.items.some((item) => item.name === 'Protein Purification'), true);
-
-        const calculationSearch = await lookupRuntime.searchNotebookEntriesIndex({ dataFilePath, snapshot: compactSnapshot, query: '584.4 mg', limit: 6 });
-        assert.equal(calculationSearch.usedSqlite, false);
+        const calculationSearch = await notebookRuntime.searchNotebookEntries({ dataFilePath, snapshot: compactSnapshot, query: '584.4 mg', limit: 6 });
         assert.equal(calculationSearch.items.some((item) => item.record_type === 'notebook'), true);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });

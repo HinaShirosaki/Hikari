@@ -193,6 +193,105 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
   assert.match(history.innerHTML, /Atlas notebook entry/);
   assert.equal(status.textContent, 'Ready.');
 });
+test('agent-chat creates project folders, custom folders, and project-scoped chats', async () => {
+  const document = createMockDocument([
+    'agent-project-select',
+    'agent-session-rail',
+    'agent-session-status',
+    'agent-session-list',
+    'agent-new-chat-btn',
+    'agent-session-context-menu',
+    'agent-context-new-folder',
+    'agent-context-rename-folder',
+    'agent-context-delete-folder',
+    'agent-chat-history',
+    'agent-message-input',
+    'agent-send-btn',
+    'agent-clear-btn',
+    'agent-status'
+  ]);
+  const sessionList = document.getElementById('agent-session-list');
+  const state = {
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    protocols: [],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    workflows: [],
+    papers: [],
+    inventory: {},
+    labInventory: { chemicals: [] },
+    settings: {
+      storagePath: '/tmp/hikari-storage',
+      agent: { developerMode: false }
+    },
+    agentChat: {
+      projectId: '',
+      currentSessionId: '',
+      sessions: [],
+      messages: []
+    }
+  };
+  let createPayload = null;
+  const window = {
+    hikariApi: {
+      agentChatLogListSessions: async () => ({ ok: true, items: [] }),
+      agentChatLogGetSession: async () => ({ ok: false, error: 'not used' }),
+      agentChatLogCreateSession: async (payload) => {
+        createPayload = payload;
+        return {
+          ok: true,
+          session: {
+            id: 'chat-project',
+            title: 'New Chat',
+            project_id: payload.projectId,
+            project_name: payload.projectName,
+            created_at: '2026-07-11T12:00:00.000Z',
+            updated_at: '2026-07-11T12:00:00.000Z'
+          }
+        };
+      }
+    }
+  };
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window
+  });
+  const agent = agentModule.initAgentChat({
+    state,
+    persist: () => {},
+    createId: () => 'folder-1',
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  agent.render();
+  await flushAsync();
+  assert.match(sessionList.innerHTML, /data-agent-folder-id="project:p1"/);
+  assert.match(sessionList.innerHTML, />Atlas</);
+
+  const projectFolder = sessionList.querySelectorAll('[data-agent-folder-id]')
+    .find((item) => item.dataset.agentFolderId === 'project:p1');
+  projectFolder.closest = (selector) => selector === '[data-agent-folder-id]' ? projectFolder : null;
+  trigger(sessionList, 'click', { target: projectFolder });
+
+  trigger(document.getElementById('agent-new-chat-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+  assert.equal(createPayload.projectId, 'p1');
+  assert.equal(createPayload.projectName, 'Atlas');
+  assert.equal(state.agentChat.sessionFolderIds['chat-project'], 'project:p1');
+
+  trigger(document.getElementById('agent-context-new-folder'), 'click');
+  assert.equal(state.agentChat.folders.length, 1);
+  assert.equal(state.agentChat.folders[0].name, 'New Folder');
+  assert.match(sessionList.innerHTML, /data-agent-folder-rename-input="custom:folder-1"/);
+
+  state.projects.push({ id: 'p2', name: 'Second Study' });
+  agent.render();
+  assert.match(sessionList.innerHTML, /data-agent-folder-id="project:p2"/);
+  assert.match(sessionList.innerHTML, />Second Study</);
+});
 test('agent-chat session switching honors nested click targets and replays the latest click after an in-flight load', async () => {
   const document = createMockDocument([
     'agent-project-select',

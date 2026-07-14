@@ -20,7 +20,6 @@ enabled_tools = [
   "protocol_lookup",
   "protocol_generation",
   "notebook_draft",
-  "notebook_generation",
   "literature_search",
   "paper_download",
   "paper_analysis",
@@ -28,7 +27,6 @@ enabled_tools = [
   "paper_intake_search_experiments",
   "paper_intake_list_project_summaries",
   "purchase_recommendation",
-  "memory",
   "container",
   "assay_table",
   "plotly_graph",
@@ -147,7 +145,6 @@ Codex exposes the same server tools to the model with the server namespace prefi
 - `mcp__hikari__protocol_lookup`
 - `mcp__hikari__protocol_generation`
 - `mcp__hikari__notebook_draft`
-- `mcp__hikari__notebook_generation`
 - `mcp__hikari__literature_search`
 - `mcp__hikari__paper_download`
 - `mcp__hikari__paper_analysis`
@@ -155,7 +152,6 @@ Codex exposes the same server tools to the model with the server namespace prefi
 - `mcp__hikari__paper_intake_search_experiments`
 - `mcp__hikari__paper_intake_list_project_summaries`
 - `mcp__hikari__purchase_recommendation`
-- `mcp__hikari__memory`
 - `mcp__hikari__container`
 - `mcp__hikari__assay_table`
 - `mcp__hikari__plotly_graph`
@@ -216,7 +212,7 @@ Input schema:
 
 ### `notebook_lookup`
 
-Direct MCP convenience wrapper for local Hikari notebook entries. It calls the app `notebook-lookup` executor and returns matched notebook entries by project, protocol, result text, or identifier.
+Read-only notebook-agent bridge. It calls the app `notebook-lookup` executor to search pages or retrieve one exact saved page. The runtime merges persisted notebook storage with a bounded live notebook index from the thin app snapshot. Results include stable entry/project/protocol identity, an app `ui_target`, optional structured page content, source coverage, and an `access` block. When `access.complete` is false, the result is incomplete evidence rather than a definitive no-match.
 
 Input schema:
 
@@ -224,16 +220,22 @@ Input schema:
 {
   "type": "object",
   "additionalProperties": false,
-  "required": ["query"],
   "properties": {
+    "action": { "type": "string", "enum": ["search", "get"] },
+    "entry_id": { "type": "string" },
     "query": { "type": "string", "minLength": 1 },
     "limit": { "type": "integer", "minimum": 1, "maximum": 25 },
     "project_id": { "type": "string" },
     "project_name": { "type": "string" },
-    "protocol_name": { "type": "string" }
+    "protocol_id": { "type": "string" },
+    "protocol_name": { "type": "string" },
+    "notebook_state": { "type": "string", "enum": ["planned", "executed"] },
+    "detail": { "type": "string", "enum": ["summary", "full"] }
   }
 }
 ```
+
+`action` defaults to `search`. Search requires `query` or at least one scope filter. `get` requires `entry_id` and returns `detail: "full"`. Permission failures return `status: "partial"` or `status: "permission_denied"`, with recovery guidance in `access.user_action`.
 
 ### `protocol_lookup`
 

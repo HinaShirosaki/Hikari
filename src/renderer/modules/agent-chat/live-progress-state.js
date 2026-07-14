@@ -10,6 +10,12 @@ import {
   progressStatusRank
 } from './live-progress-text.js';
 
+// Codex sometimes emits a tool result as `tool_name: {json}` (or `[...]`). That is
+// tool activity, not assistant prose, and must never surface as the live message text.
+function looksLikeToolDisplayJson(value = '') {
+  return /^[a-z][a-z0-9_]*\s*:\s*[{[]/i.test(trimText(value, 120));
+}
+
 function buildLiveProgressSummary(eventPayload = {}) {
   const streamText = extractLiveStreamText(eventPayload);
   if (streamText) {
@@ -21,6 +27,18 @@ function buildLiveProgressSummary(eventPayload = {}) {
   }
   const stage = trimText(eventPayload?.stage, 80);
   const toolName = trimText(eventPayload?.tool_name, 120);
+  if (stage === 'codex_cli_display') {
+    const meta = eventPayload?.meta && typeof eventPayload.meta === 'object' ? eventPayload.meta : {};
+    const displayKind = trimText(meta.codex_display_kind || meta.codexDisplayKind, 80);
+    const displayText = extractLiveCodexCliDisplayText(eventPayload);
+    // Tool-display payloads (explicit tool kind, or Codex prefixing the JSON with a tool
+    // name like `literature_search: {...}`) are activity, never user-facing prose.
+    if ((displayKind && displayKind !== 'assistant' && displayKind !== 'message')
+      || looksLikeToolDisplayJson(displayText)) {
+      return 'Working on this...';
+    }
+    return displayText || 'Working on this...';
+  }
   if (stage === 'tool_call_started') {
     return `${getToolActivityLabel(toolName)}...`;
   }

@@ -25,7 +25,6 @@ const { buildInventorySearchTerms } = require('../agent/shared/agent-inventory-s
 const observability = require('../agent/shared/agent-observability');
 const { createAgentControllerUtils } = require('../agent/shared/agent-controller-utils');
 const { createAgentRuntimeRegistry } = require('../agent/shared/agent-runtime-registry.js');
-const { createAgentLookupRuntime } = require('../agent/runtime/agent-lookup-runtime');
 const { createAgentToolSmokeTestRuntime } = require('../agent/tools/agent-tool-smoke-test');
 const { createAgentChatLogRuntime } = require('../agent/context/agent-chat-log.js');
 const { createAgentSkillRuntime } = require('../agent/skills/agent-skill-runtime.js');
@@ -54,6 +53,8 @@ const { createPdfTextExtractionRuntime } = require('../../papers/parse/agent-pdf
 const { createProtocolMatchingRuntime } = require('../agent/tools/agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('../agent/tools/agent-notebook-generation.js');
 const { createAgentInventoryLookupRuntime } = require('../agent/tools/agent-inventory-lookup.js');
+const { createAgentNotebookLookupRuntime } = require('../agent/tools/agent-notebook-lookup.js');
+const { createAgentLookupSupport } = require('../agent/tools/agent-lookup-support.js');
 const { createAgentRuntimeSupport } = require('../agent/runtime/agent-runtime-support.js');
 const { createAgentSubAppApi } = require('../agent/runtime/agent-sub-app-api.js');
 const { registerAgentToolExecutors } = require('../agent/tools/register-agent-tool-executors.js');
@@ -251,15 +252,20 @@ function createMainAgentServices(deps = {}) {
     ...sharedAgentLlmDeps
   });
 
-  const agentLookupRuntime = createAgentLookupRuntime({
+  const lookupSupport = createAgentLookupSupport({
     asArray,
     cleanText,
     uniqueStrings,
     getBundlePaths,
     hydrateSnapshotFromBundle,
-    syncBundleFromSnapshot,
-    buildInventorySearchTerms,
-    getAgentRuntimeFactory: agentRuntimeRegistry.getRuntimeFactory,
+    syncBundleFromSnapshot
+  });
+  const inventoryLookupRuntime = createAgentInventoryLookupRuntime({
+    ...lookupSupport,
+    buildInventorySearchTerms
+  });
+  const notebookLookupRuntime = createAgentNotebookLookupRuntime({
+    ...lookupSupport,
     agentAppApi
   });
 
@@ -428,7 +434,8 @@ function createMainAgentServices(deps = {}) {
   registerAgentToolExecutors({
     cleanText,
     genericAgentToolRuntime,
-    agentLookupRuntime,
+    inventoryLookupRuntime,
+    notebookLookupRuntime,
     webSearchRuntime,
     literatureSearchRuntime: literatureSearchWorkflowRuntime,
     purchaseRecommendationRuntime,
@@ -470,7 +477,8 @@ function createMainAgentServices(deps = {}) {
     agentChatLogRuntime,
     agentToolSmokeTestRuntime,
     protocolGenerationRuntime,
-    agentLookupRuntime,
+    inventoryLookupRuntime,
+    notebookLookupRuntime,
     agentAppApi,
     webSearchRuntime,
     paperDownloadRuntime,

@@ -143,7 +143,8 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
             executors.set(name, executor);
           }
         },
-        agentLookupRuntime: {},
+        inventoryLookupRuntime: {},
+        notebookLookupRuntime: {},
         agentAppApi: {
           protocol: {
             async matchForNotebook(input) {

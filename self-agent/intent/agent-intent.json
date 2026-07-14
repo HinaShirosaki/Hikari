@@ -23,10 +23,10 @@
   "inventory_lookup": {
     "name": "inventory_lookup",
     "description": "Stock availability, reagent identity, location, supplier metadata, or stored chemical records.",
-    "rules": "Use inventory_search for normalized query terms and aliases.",
+    "rules": "Use inventory_search.candidate_terms for alternate search terms.",
     "example_input": "Do we have PEI in stock, and where is it?",
     "specific_output_append": {
-      "inventory_search": "Populate normalized_query, candidate_terms, aliases, and search_mode for inventory search."
+      "inventory_search": "Populate candidate_terms with alternate search terms for inventory search."
     }
   },
   "notebook_lookup": {

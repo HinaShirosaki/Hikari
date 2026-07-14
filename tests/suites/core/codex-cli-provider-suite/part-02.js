@@ -274,13 +274,18 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
                 title: 'Protein purification run 1',
                 project_id: 'proj-1',
                 project_name: 'Atlas',
-                summary: 'Yield was low.'
+                summary: 'Yield was low.',
+                ...(args.detail === 'full' ? {
+                  content: { result: 'Yield was low.', values: { batch: 'A1' } }
+                } : {})
               }
             ];
             return {
               ok: true,
               result: {
                 status: 'matched',
+                action: args.action || 'search',
+                detail: args.detail || 'summary',
                 source: 'fallback_json',
                 query: args.query,
                 items
@@ -348,14 +353,13 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         [...mcpToolNames].sort(),
         [...directToolFileNames, ...PAPER_INTAKE_DIRECT_MCP_TOOL_NAMES].sort()
       );
-      assert.deepEqual(mcpToolNames.slice(0, 7), [
+      assert.deepEqual(mcpToolNames.slice(0, 6), [
         'inventory_lookup',
         'chemical_lookup',
         'notebook_lookup',
         'protocol_lookup',
         'protocol_generation',
-        'notebook_draft',
-        'notebook_generation'
+        'notebook_draft'
       ]);
       assert.equal(mcpToolNames.includes('inventory_lookup'), true);
       assert.equal(mcpToolNames.includes('chemical_lookup'), true);
@@ -377,7 +381,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(mcpToolNames.includes('python_sandbox'), false);
       assert.equal(mcpToolNames.includes('command_line'), false);
       assert.equal(mcpToolNames.includes('sub_agent'), false);
-      assert.equal(mcpToolNames.includes('memory'), true);
+      assert.equal(mcpToolNames.includes('memory'), false);
       assert.equal(mcpToolNames.includes('container'), true);
       assert.equal(mcpToolNames.includes('assay_table'), true);
       assert.equal(mcpToolNames.includes('plotly_graph'), true);
@@ -390,6 +394,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       const askUserDefinition = mcpTools.find((tool) => tool.name === 'ask_user');
       const protocolGenerationDefinition = mcpTools.find((tool) => tool.name === 'protocol_generation');
       const notebookDraftDefinition = mcpTools.find((tool) => tool.name === 'notebook_draft');
+      const notebookLookupDefinition = mcpTools.find((tool) => tool.name === 'notebook_lookup');
       const containerDefinition = mcpTools.find((tool) => tool.name === 'container');
       const assayTableDefinition = mcpTools.find((tool) => tool.name === 'assay_table');
       const plotlyGraphDefinition = mcpTools.find((tool) => tool.name === 'plotly_graph');
@@ -402,6 +407,12 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(protocolGenerationDefinition.annotations.destructiveHint, false);
       assert.equal(notebookDraftDefinition.annotations.readOnlyHint, true);
       assert.equal(notebookDraftDefinition.annotations.idempotentHint, false);
+      assert.equal(notebookLookupDefinition.annotations.readOnlyHint, true);
+      assert.equal(notebookLookupDefinition.inputSchema.properties.action, undefined);
+      assert.equal(notebookLookupDefinition.inputSchema.properties.entry_id, undefined);
+      assert.deepEqual(notebookLookupDefinition.inputSchema.properties.notebook_state.enum, ['planned', 'executed']);
+      assert.deepEqual(notebookLookupDefinition.inputSchema.properties.detail.enum, ['summary', 'full']);
+      assert.deepEqual(notebookLookupDefinition.inputSchema.required, []);
       assert.equal(containerDefinition.annotations.readOnlyHint, false);
       assert.equal(containerDefinition.inputSchema.properties.action.enum.includes('replace_range'), true);
       assert.equal(assayTableDefinition.annotations.readOnlyHint, false);
@@ -410,10 +421,15 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(plotlyGraphDefinition.inputSchema.properties.action.enum.includes('inspect'), true);
       assert.equal(literatureSearchDefinition.annotations.openWorldHint, true);
       assert.equal(literatureSearchDefinition.inputSchema.type, 'object');
-      assert.equal(literatureSearchDefinition.inputSchema.properties.use_codex_paper_context.type, 'boolean');
-      assert.equal(literatureSearchDefinition.inputSchema.properties.max_context_blocks.maximum, 50);
-      assert.equal(literatureSearchDefinition.inputSchema.properties.max_download_concurrency.maximum, 24);
-      assert.equal(literatureSearchDefinition.inputSchema.properties.storage_path.maxLength, 2000);
+      assert.deepEqual(Object.keys(literatureSearchDefinition.inputSchema.properties).sort(), [
+        'journals', 'prefer_recent', 'query', 'sources'
+      ]);
+      assert.equal(literatureSearchDefinition.inputSchema.properties.source, undefined);
+      assert.equal(literatureSearchDefinition.inputSchema.properties.limit, undefined);
+      assert.equal(literatureSearchDefinition.inputSchema.properties.codex_paper_context, undefined);
+      assert.equal(literatureSearchDefinition.inputSchema.properties.storage_path, undefined);
+      assert.equal(literatureSearchDefinition.inputSchema.properties.parser_payload, undefined);
+      assert.equal(literatureSearchDefinition.inputSchema.properties.preferred_literature_source, undefined);
       assert.equal(paperDownloadDefinition.annotations.readOnlyHint, false);
       assert.equal(paperDownloadDefinition.annotations.openWorldHint, true);
 
@@ -450,12 +466,12 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(chemicalResult.status, 'matched');
       assert.deepEqual(chemicalResult.items.map((item) => item.kind), ['chemical']);
       assert.equal(calls[calls.length - 1].toolId, 'inventory-lookup');
-      assert.equal(calls[calls.length - 1].args.limit, 8);
+      assert.equal(calls[calls.length - 1].args.limit, 2);
+      assert.deepEqual(calls[calls.length - 1].args.kinds, ['chemical']);
 
       const protocolResult = await gateway.callGatewayTool('protocol_lookup', {
         query: 'protein purification',
-        limit: 2,
-        project_id: 'proj-1'
+        limit: 2
       }, {
         requestId: 'req-protocol'
       });
@@ -467,7 +483,6 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(calls[calls.length - 1].toolId, 'protocol-matching');
       assert.deepEqual(calls[calls.length - 1].args.protocol_candidates, ['protein purification']);
       assert.equal(calls[calls.length - 1].context.parserPayload.primary_intent, 'protocol_to_notebook');
-      assert.equal(calls[calls.length - 1].context.project.id, 'proj-1');
 
       const protocolGenerationResult = await gateway.callGatewayTool('protocol_generation', {
         protocol: {
@@ -510,9 +525,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
 
       const notebookDraftResult = await gateway.callGatewayTool('notebook_draft', {
         project_name: 'Atlas',
-        workflow_id: 'wf-1',
-        protocol_candidates: ['Protein purification'],
-        message: 'Plan the next purification notebook draft.'
+        protocol_candidates: ['Protein purification']
       }, {
         requestId: 'req-notebook-draft',
         provider: 'codex'
@@ -531,7 +544,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       const askUserResult = await gateway.callGatewayTool('ask_user', {
         question: 'Which project should I use?',
         options: [
-          { label: 'Atlas', value: 'Use Atlas.', description: 'Continue in the current project.' },
+          { label: 'Atlas', description: 'Continue in the current project.' },
           'All projects'
         ],
         allow_custom: true
@@ -548,8 +561,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       const containerCreateResult = await gateway.callGatewayTool('container', {
         action: 'create',
         name: 'copied phrase',
-        value: 'alpha beta',
-        source: 'direct_literal:test'
+        value: 'alpha beta'
       }, {
         requestId: 'req-container-create'
       });
@@ -597,7 +609,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
 
       const assayDerivedResult = await gateway.callGatewayTool('assay_table', {
         action: 'derive',
-        source_table_id: '1',
+        table_id: '1',
         include_source_columns: true,
         columns: [{ name: 'mean', op: 'avg', operands: ['rep1', 'rep2'] }]
       }, {
@@ -628,7 +640,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
 
       const plotlyInspectResult = await gateway.callGatewayTool('plotly_graph', {
         action: 'inspect',
-        id: '1'
+        graph_id: '1'
       }, {
         requestId: 'req-plotly-inspect'
       });

@@ -303,8 +303,6 @@ function createAgentIntentDispatcher({
       } else if (toolName === 'literature-search') {
         args = {
           query,
-          message: cleanText(message, 1200),
-          parser_payload: toolParserPayload,
           prefer_recent: true
         };
       } else if (toolName === 'paper-analysis') {

@@ -39,12 +39,6 @@ const PARSER_INTENT_ALIASES = Object.freeze({
 const PARSER_ALLOWED_INTENTS = PARSER_CANONICAL_INTENTS;
 
 // Supported strategies for ordering inventory search terms during lookup.
-const PARSER_SEARCH_MODES = Object.freeze([
-  'exact_then_alias_then_fuzzy',
-  'exact_only',
-  'alias_then_fuzzy'
-]);
-
 // Science-question intents classify how much routing effort is needed before answering.
 const PARSER_REASONING_EFFORT_LEVELS = Object.freeze([0, 1, 2]);
 
@@ -77,22 +71,11 @@ const INTENT_PARSER_OPTIONAL_PROPERTY_SCHEMAS = Object.freeze({
   inventory_search: {
     type: 'object',
     additionalProperties: false,
-    required: ['normalized_query', 'candidate_terms', 'aliases', 'search_mode'],
+    required: ['candidate_terms'],
     properties: {
-      normalized_query: { anyOf: [{ type: 'string' }, { type: 'null' }] },
       candidate_terms: {
         type: 'array',
         items: { type: 'string' }
-      },
-      aliases: {
-        type: 'array',
-        items: { type: 'string' }
-      },
-      search_mode: {
-        anyOf: [
-          { type: 'string', enum: PARSER_SEARCH_MODES },
-          { type: 'null' }
-        ]
       }
     }
   },
@@ -193,10 +176,7 @@ function normalizeEntityKey(rawKey) {
 
 function createEmptyInventorySearch() {
   return {
-    normalized_query: null,
-    candidate_terms: [],
-    aliases: [],
-    search_mode: null
+    candidate_terms: []
   };
 }
 
@@ -246,15 +226,9 @@ function normalizeInventorySearch(rawInventorySearch) {
   if (!isObject(rawInventorySearch)) {
     return null;
   }
-  const normalizedQuery = cleanText(rawInventorySearch.normalized_query, 220) || null;
   const candidateTerms = uniqueStrings(rawInventorySearch.candidate_terms, 12);
-  const aliases = uniqueStrings(rawInventorySearch.aliases, 12);
-  const searchMode = cleanText(rawInventorySearch.search_mode, 60);
   return {
-    normalized_query: normalizedQuery,
-    candidate_terms: candidateTerms,
-    aliases,
-    search_mode: PARSER_SEARCH_MODES.includes(searchMode) ? searchMode : null
+    candidate_terms: candidateTerms
   };
 }
 
@@ -376,10 +350,7 @@ function normalizeIntentParserPayload(rawValue) {
   // Only preserve inventory hints when the chosen intent is actually an inventory lookup.
   const normalizedInventorySearch = primaryIntent === 'inventory_lookup'
     ? {
-      normalized_query: inventorySearchRaw.normalized_query,
-      candidate_terms: inventorySearchRaw.candidate_terms,
-      aliases: inventorySearchRaw.aliases,
-      search_mode: inventorySearchRaw.search_mode || 'exact_then_alias_then_fuzzy'
+      candidate_terms: inventorySearchRaw.candidate_terms
     }
     : createEmptyInventorySearch();
 
@@ -517,7 +488,7 @@ function buildIntentCatalogPrompt(catalog = []) {
     '- Choose exactly one primary_intent.',
     `- ${buildScienceReasoningEffortRubric()}`,
     '- Include direct_answer only for science intents at reasoning_effort=0.',
-    '- inventory_search shape: {normalized_query, candidate_terms, aliases, search_mode}.',
+    '- inventory_search shape: {candidate_terms}.',
     '- protocol_candidates: 1 to 3 likely protocol names; do not invent obscure aliases.',
     '- needs_clarification and clarification_reason only when routing is blocked.',
     '- Standalone instructional wet-lab protocol requests, such as "how to express X" or "give me a detailed protocol", are science questions unless the user asks for a notebook page, notebook draft, lab record, or documentation of work they performed.',
@@ -640,34 +611,19 @@ function buildIntentParserPrompt({ message, conversation = [], projectName = '' 
   ].filter(Boolean).join('\n\n');
 }
 
-// Build the ordered list of inventory search terms according to the parser-selected search mode.
+// Build the deduped list of inventory search terms from candidate terms plus the fallback query.
 function buildInventorySearchTerms({
   inventorySearch = {},
   fallbackQuery = '',
   maxTerms = 10
 }) {
-  // Normalize all inventory-search ingredients before ordering them by search strategy.
-  const normalizedQuery = cleanText(inventorySearch?.normalized_query, 220);
   const candidateTerms = uniqueStrings(inventorySearch?.candidate_terms, maxTerms);
-  const aliases = uniqueStrings(inventorySearch?.aliases, maxTerms);
-  const searchMode = cleanText(inventorySearch?.search_mode, 60) || 'exact_then_alias_then_fuzzy';
   const baseFallback = cleanText(fallbackQuery, 220);
 
-  const exactTerms = uniqueStrings([
-    normalizedQuery,
+  return uniqueStrings([
     ...candidateTerms,
     baseFallback
   ], maxTerms);
-  const aliasTerms = uniqueStrings(aliases, maxTerms);
-
-  // Respect the parser-selected search order when combining exact terms and aliases.
-  if (searchMode === 'exact_only') {
-    return uniqueStrings(exactTerms, maxTerms);
-  }
-  if (searchMode === 'alias_then_fuzzy') {
-    return uniqueStrings([...aliasTerms, ...exactTerms], maxTerms);
-  }
-  return uniqueStrings([...exactTerms, ...aliasTerms], maxTerms);
 }
 
 // Public module export exposing parser constants, prompt builders, and normalization helpers.
@@ -675,7 +631,6 @@ module.exports = {
   PARSER_CANONICAL_INTENTS,
   PARSER_ALLOWED_INTENTS,
   PARSER_INTENT_ALIASES,
-  PARSER_SEARCH_MODES,
   PARSER_REASONING_EFFORT_LEVELS,
   INTENT_PARSER_CATALOG,
   INTENT_PARSER_OUTPUT_TEMPLATE,

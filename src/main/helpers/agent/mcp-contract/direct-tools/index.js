@@ -29,14 +29,6 @@ const {
   callAskUser
 } = require('./ask-user.js');
 const {
-  NOTEBOOK_GENERATION_MCP_TOOL,
-  callNotebookGeneration
-} = require('./notebook-generation.js');
-const {
-  MEMORY_MCP_TOOL,
-  callMemory
-} = require('./memory.js');
-const {
   CONTAINER_MCP_TOOL,
   callContainer
 } = require('./container.js');
@@ -95,10 +87,6 @@ const DIRECT_MCP_TOOLS = Object.freeze([
     handler: callNotebookDraft
   },
   {
-    definition: NOTEBOOK_GENERATION_MCP_TOOL,
-    handler: callNotebookGeneration
-  },
-  {
     definition: LITERATURE_SEARCH_MCP_TOOL,
     handler: callLiteratureSearch
   },
@@ -114,10 +102,6 @@ const DIRECT_MCP_TOOLS = Object.freeze([
   {
     definition: PURCHASE_RECOMMENDATION_MCP_TOOL,
     handler: callPurchaseRecommendation
-  },
-  {
-    definition: MEMORY_MCP_TOOL,
-    handler: callMemory
   },
   {
     definition: CONTAINER_MCP_TOOL,

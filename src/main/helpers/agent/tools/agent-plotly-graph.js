@@ -323,7 +323,7 @@ function createAgentPlotlyGraphRuntime(deps = {}) {
     if (asArray(input.frames || input.figure?.frames).length || replace) {
       graph.frames = figure.frames;
     }
-    graph.name = cleanText(input.new_name || input.newName || graph.name, MAX_NAME_LENGTH);
+    graph.name = cleanText(input.name || input.new_name || input.newName || graph.name, MAX_NAME_LENGTH);
     graph.source = cleanText(input.source || graph.source, MAX_SOURCE_LENGTH);
     graph.updated_at = now();
     return {

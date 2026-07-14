@@ -64,6 +64,12 @@ import { bindFileDropTarget, mergeFilesIntoInput } from '../file-drop.js';
 import { printElement } from '../print/index.js';
 import { serializeDraftSnapshot } from '../unsaved-draft.js';
 import { flattenNotebookResultTablesText } from '../notebook-result-table.js';
+import {
+  areAllNotebookPlaceholdersFilled,
+  generateNotebookPageName,
+  normalizeNotebookExperimentNameSource,
+  resolveNotebookExperimentNameSource
+} from './page-name-generator.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({
@@ -86,11 +92,20 @@ export function initLabNotebook({
   const notebookProjectSelect = document.getElementById('biology-notebook-project-select');
   const notebookProtocolSearchInput = document.getElementById('biology-notebook-protocol-search');
   const notebookProtocolSelect = document.getElementById('biology-notebook-protocol-select');
+  const notebookNewExperimentBtn = document.getElementById('biology-notebook-new-experiment-btn');
+  const notebookExperimentDialogOverlay = document.getElementById('biology-notebook-experiment-dialog-overlay');
+  const notebookExperimentForm = document.getElementById('biology-notebook-experiment-form');
+  const notebookExperimentDialogCloseBtn = document.getElementById('biology-notebook-experiment-dialog-close-btn');
+  const notebookExperimentCancelBtn = document.getElementById('biology-notebook-experiment-cancel-btn');
+  const notebookExperimentStartBtn = document.getElementById('biology-notebook-experiment-start-btn');
+  const notebookExperimentDialogStatus = document.getElementById('biology-notebook-experiment-dialog-status');
+  const notebookExperimentProtocolResults = document.getElementById('biology-notebook-protocol-search-results');
   const notebookPageStarter = document.getElementById('biology-notebook-page-starter');
   const notebookPageStarterProject = document.getElementById('biology-notebook-page-starter-project');
   const notebookRail = document.getElementById('biology-notebook-rail');
   const notebookProjectContextMenu = document.getElementById('biology-notebook-project-context-menu');
   const notebookAddProjectBtn = document.getElementById('biology-notebook-add-project-btn');
+  const notebookHeaderAddProjectBtn = document.getElementById('biology-notebook-header-add-project-btn');
   const notebookProjectDialogOverlay = document.getElementById('biology-notebook-project-dialog-overlay');
   const notebookProjectForm = document.getElementById('biology-notebook-project-form');
   const notebookProjectNameInput = document.getElementById('biology-notebook-project-name');
@@ -138,9 +153,21 @@ export function initLabNotebook({
   let sampleLinkDrafts = new Map();
   let pendingDroppedResultFiles = [];
   let savedDraftSnapshot = '';
+  let experimentDialogPreviousSelection = null;
+  let experimentDialogWorkspaceProjectId = '';
+  let experimentNameSourceDraft = 'protocol';
+  let experimentNameGeneratedAtDraft = '';
+  let experimentNameGeneratedModelDraft = '';
+  let pageNameGenerationRevision = 0;
+  let pageNameGenerationPendingRevision = -1;
+  let pageNameGenerationPromise = null;
+  let notebookTitleRenameStartValue = '';
 
   if (notebookProjectDashboard) {
     notebookProjectDashboard.hidden = true;
+  }
+  if (notebookExperimentDialogOverlay) {
+    notebookExperimentDialogOverlay.hidden = true;
   }
 
   const previewImageLoader = createLinkedPreviewImageLoader({
@@ -198,7 +225,8 @@ export function initLabNotebook({
     onOpenSampleLinkMenu: (params) => sampleLinkMenu.open(params),
     onCloseSampleLinkMenu: () => sampleLinkMenu.close(),
     onAppendResultLine: appendNotebookResultLine,
-    onPersistSampleLinks: persistActiveEntrySampleLinks
+    onPersistSampleLinks: persistActiveEntrySampleLinks,
+    onValueCommitted: () => { void maybeGenerateNotebookPageName(); }
   });
 
   const entryListRenderer = createEntryListRenderer({
@@ -235,6 +263,7 @@ export function initLabNotebook({
     railEl: notebookRail,
     contextMenuEl: notebookProjectContextMenu,
     addProjectBtn: notebookAddProjectBtn,
+    headerAddProjectBtn: notebookHeaderAddProjectBtn,
     dialogOverlay: notebookProjectDialogOverlay,
     dialogForm: notebookProjectForm,
     projectNameInput: notebookProjectNameInput,
@@ -309,9 +338,9 @@ export function initLabNotebook({
     }
   }
 
-  function setPageStarterVisible(isVisible) {
+  function setPageStarterVisible() {
     if (notebookPageStarter) {
-      notebookPageStarter.hidden = !isVisible;
+      notebookPageStarter.hidden = true;
     }
   }
 
@@ -366,6 +395,166 @@ export function initLabNotebook({
 
   function findSelectedProtocol() {
     return state.protocols.find((item) => item.id === notebookProtocolSelect.value) || null;
+  }
+
+  function isExperimentDialogOpen() {
+    return Boolean(notebookExperimentDialogOverlay && !notebookExperimentDialogOverlay.hidden);
+  }
+
+  function setExperimentDialogStatus(message = '', { error = false } = {}) {
+    if (!notebookExperimentDialogStatus) {
+      return;
+    }
+    notebookExperimentDialogStatus.textContent = String(message || '');
+    notebookExperimentDialogStatus.classList.toggle('is-error', Boolean(error));
+  }
+
+  function syncExperimentDialogControls() {
+    const project = findSelectedProject();
+    const protocol = findSelectedProtocol();
+    if (notebookExperimentStartBtn) {
+      notebookExperimentStartBtn.disabled = !project || !protocol;
+    }
+    if (!isExperimentDialogOpen()) {
+      return;
+    }
+    if (!project) {
+      setExperimentDialogStatus('Choose a project to see available protocols.');
+      return;
+    }
+    if (!protocol) {
+      const fromWorkspace = project.id === experimentDialogWorkspaceProjectId;
+      setExperimentDialogStatus(
+        fromWorkspace
+          ? `Using ${project.name} from the current workspace. Choose a protocol.`
+          : 'Choose a protocol to start the experiment.'
+      );
+      return;
+    }
+    setExperimentDialogStatus('');
+  }
+
+  function renderExperimentProtocolResults() {
+    if (!notebookExperimentProtocolResults) {
+      return;
+    }
+    const project = findSelectedProject();
+    if (!project) {
+      notebookExperimentProtocolResults.innerHTML = '';
+      return;
+    }
+    const searchTerm = String(notebookProtocolSearchInput?.value || '').trim().toLowerCase();
+    const selectedProtocolId = String(notebookProtocolSelect?.value || '');
+    const matches = state.protocols
+      .filter((protocol) => String(protocol?.name || '').toLowerCase().includes(searchTerm))
+      .slice(0, 60);
+    if (!matches.length) {
+      notebookExperimentProtocolResults.innerHTML = '<p class="biology-notebook-protocol-search-empty">No matching protocols.</p>';
+      return;
+    }
+    notebookExperimentProtocolResults.innerHTML = matches.map((protocol) => {
+      const id = String(protocol?.id || '').trim();
+      const selected = id === selectedProtocolId ? ' is-selected' : '';
+      return `<button type="button" class="biology-notebook-protocol-search-result${selected}" data-notebook-experiment-protocol-id="${safeText(id)}" role="option" aria-selected="${id === selectedProtocolId ? 'true' : 'false'}">${safeText(protocol?.name || 'Untitled protocol')}</button>`;
+    }).join('');
+  }
+
+  function restoreExperimentDialogSelection() {
+    const previous = experimentDialogPreviousSelection;
+    if (!previous || !notebookProjectSelect || !notebookProtocolSelect) {
+      return;
+    }
+    notebookProjectSelect.value = previous.projectId;
+    if (notebookProtocolSearchInput) {
+      notebookProtocolSearchInput.value = previous.protocolSearch;
+    }
+    dropdownRenderer.renderProtocolOptions(previous.protocolId, { triggerChange: false });
+    renderExperimentProtocolResults();
+    syncPageStarterProject();
+  }
+
+  function closeExperimentDialog({ restoreSelection = true, returnFocus = true } = {}) {
+    if (!isExperimentDialogOpen()) {
+      return;
+    }
+    if (restoreSelection) {
+      restoreExperimentDialogSelection();
+    }
+    notebookExperimentDialogOverlay.hidden = true;
+    if (notebookExperimentProtocolResults) {
+      notebookExperimentProtocolResults.innerHTML = '';
+    }
+    setExperimentDialogStatus('');
+    experimentDialogPreviousSelection = null;
+    experimentDialogWorkspaceProjectId = '';
+    if (returnFocus) {
+      notebookNewExperimentBtn?.focus?.();
+    }
+  }
+
+  function openExperimentDialog() {
+    if (!notebookExperimentDialogOverlay || !notebookProjectSelect || !notebookProtocolSelect) {
+      return;
+    }
+    experimentDialogPreviousSelection = {
+      projectId: String(notebookProjectSelect.value || ''),
+      protocolId: String(notebookProtocolSelect.value || ''),
+      protocolSearch: String(notebookProtocolSearchInput?.value || '')
+    };
+    experimentDialogWorkspaceProjectId = String(activeProjectDashboardId || notebookProjectSelect.value || '');
+
+    dropdownRenderer.renderProjectOptions();
+    const hasWorkspaceProject = state.projects.some((project) => project.id === experimentDialogWorkspaceProjectId);
+    notebookProjectSelect.value = hasWorkspaceProject ? experimentDialogWorkspaceProjectId : '';
+    notebookProtocolSelect.value = '';
+    if (notebookProtocolSearchInput) {
+      notebookProtocolSearchInput.value = '';
+    }
+    dropdownRenderer.renderProtocolOptions('', { triggerChange: false });
+    notebookExperimentDialogOverlay.hidden = false;
+    renderExperimentProtocolResults();
+    syncExperimentDialogControls();
+
+    const focusProject = () => notebookProjectSelect.focus?.();
+    if (typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(focusProject);
+    } else {
+      focusProject();
+    }
+  }
+
+  function onExperimentProjectChange() {
+    if (notebookProtocolSelect) {
+      notebookProtocolSelect.value = '';
+    }
+    dropdownRenderer.renderProtocolOptions('', { triggerChange: false });
+    renderExperimentProtocolResults();
+    syncExperimentDialogControls();
+  }
+
+  function onExperimentProtocolSearch() {
+    dropdownRenderer.renderProtocolOptions('', { triggerChange: false });
+    renderExperimentProtocolResults();
+    syncExperimentDialogControls();
+  }
+
+  function startExperiment(event) {
+    event?.preventDefault?.();
+    const project = findSelectedProject();
+    const protocol = findSelectedProtocol();
+    if (!project || !protocol) {
+      setExperimentDialogStatus('Choose both a project and a protocol before starting.', { error: true });
+      if (!project) {
+        notebookProjectSelect?.focus?.();
+      } else {
+        notebookProtocolSelect?.focus?.();
+      }
+      return;
+    }
+
+    closeExperimentDialog({ restoreSelection: false, returnFocus: false });
+    editingEntryId = null;
+    onProtocolChange();
   }
 
   function resolveViewerProject(entry = null) {
@@ -489,10 +678,151 @@ export function initLabNotebook({
     notebookProtocolTitle.textContent = experimentName || fallbackName;
   }
 
+  function resetNotebookNameGenerationState(entry = null, protocol = null) {
+    experimentNameSourceDraft = resolveNotebookExperimentNameSource(entry, protocol);
+    experimentNameGeneratedAtDraft = experimentNameSourceDraft === 'generated'
+      ? String(entry?.experimentNameGeneratedAt || '').trim()
+      : '';
+    experimentNameGeneratedModelDraft = experimentNameSourceDraft === 'generated'
+      ? String(entry?.experimentNameGeneratedModel || '').trim()
+      : '';
+    pageNameGenerationRevision += 1;
+    pageNameGenerationPendingRevision = -1;
+    pageNameGenerationPromise = null;
+  }
+
+  function markNotebookNameAsUserRenamed() {
+    experimentNameSourceDraft = 'user';
+    experimentNameGeneratedAtDraft = '';
+    experimentNameGeneratedModelDraft = '';
+    pageNameGenerationRevision += 1;
+    pageNameGenerationPendingRevision = -1;
+    pageNameGenerationPromise = null;
+  }
+
+  function applyGeneratedNotebookPageName(generated, protocol) {
+    const name = String(generated?.name || '').trim();
+    if (!name || experimentNameSourceDraft !== 'protocol') {
+      return null;
+    }
+    const hadUnsavedChanges = Boolean(
+      savedDraftSnapshot
+      && getCurrentDraftSnapshot() !== savedDraftSnapshot
+    );
+    const generatedAt = new Date().toISOString();
+    experimentNameSourceDraft = 'generated';
+    experimentNameGeneratedAtDraft = generatedAt;
+    experimentNameGeneratedModelDraft = String(generated?.model || '').trim();
+    if (notebookExperimentName) {
+      notebookExperimentName.value = name;
+    }
+    syncNotebookTitle(protocol);
+
+    const activeEntry = getActiveEntry();
+    if (!activeEntry) {
+      return null;
+    }
+    const nextEntry = updateNotebookEntryRecord(activeEntry.id, (currentEntry) => ({
+      ...currentEntry,
+      experimentName: name,
+      experimentNameSource: 'generated',
+      experimentNameGeneratedAt: generatedAt,
+      experimentNameGeneratedModel: experimentNameGeneratedModelDraft,
+      updatedAt: generatedAt
+    }));
+    if (!nextEntry) {
+      return null;
+    }
+    logNotebookPageEvent({
+      entry: nextEntry,
+      storagePath: state.settings?.storagePath,
+      action: 'name-generate',
+      summary: `Generated notebook page name "${name}"`,
+      details: {
+        model: experimentNameGeneratedModelDraft,
+        provider: String(generated?.provider || '').trim()
+      }
+    });
+    entryListRenderer.renderEntries();
+    if (typeof onNotebookEntriesChanged === 'function') {
+      onNotebookEntriesChanged();
+    }
+    notifyActiveNotebookPageChanged();
+    if (!hadUnsavedChanges) {
+      markDraftSaved();
+    }
+    return nextEntry;
+  }
+
+  function maybeGenerateNotebookPageName({ protocol: protocolOverride = null, values: valuesOverride = null } = {}) {
+    if (!window.hikariApi?.runDirectLlmPrompt || experimentNameSourceDraft !== 'protocol') {
+      return Promise.resolve(null);
+    }
+    const entry = getActiveEntry();
+    const protocol = protocolOverride || resolveViewerProtocol(entry);
+    if (!protocol) {
+      return Promise.resolve(null);
+    }
+    const values = valuesOverride || pruneNotebookValuesForProtocol(
+      mergeNotebookValues(entry?.values, collectNotebookValues()),
+      protocol
+    );
+    if (!areAllNotebookPlaceholdersFilled(protocol, values)) {
+      return Promise.resolve(null);
+    }
+
+    const revision = pageNameGenerationRevision;
+    if (pageNameGenerationPendingRevision === revision && pageNameGenerationPromise) {
+      return pageNameGenerationPromise;
+    }
+    const expectedEntryId = String(entry?.id || '').trim();
+    const expectedProtocolId = String(protocol?.id || '').trim();
+    pageNameGenerationPendingRevision = revision;
+    const request = (async () => {
+      try {
+        const generated = await generateNotebookPageName({
+          llm: state.settings?.llm || {},
+          protocol,
+          values
+        });
+        const currentEntry = getActiveEntry();
+        const currentProtocol = resolveViewerProtocol(currentEntry);
+        if (
+          revision !== pageNameGenerationRevision
+          || experimentNameSourceDraft !== 'protocol'
+          || String(currentEntry?.id || '').trim() !== expectedEntryId
+          || String(currentProtocol?.id || '').trim() !== expectedProtocolId
+        ) {
+          return null;
+        }
+        applyGeneratedNotebookPageName(generated, currentProtocol || protocol);
+        return generated;
+      } catch (error) {
+        console.warn('Failed to generate notebook page name:', error);
+        return null;
+      } finally {
+        if (pageNameGenerationPendingRevision === revision) {
+          pageNameGenerationPendingRevision = -1;
+          pageNameGenerationPromise = null;
+        }
+      }
+    })();
+    pageNameGenerationPromise = request;
+    return request;
+  }
+
+  function onNotebookPlaceholderInput(event) {
+    if (!event?.target?.dataset?.nbKey) {
+      return;
+    }
+    void maybeGenerateNotebookPageName();
+  }
+
   function beginNotebookTitleRename() {
     if (!notebookExperimentName || !notebookProtocolTitle || notebookProtocolArea?.hidden) {
       return;
     }
+    notebookTitleRenameStartValue = String(notebookExperimentName.value || '').trim();
     notebookProtocolTitle.hidden = true;
     notebookExperimentName.hidden = false;
     notebookExperimentName.focus?.();
@@ -508,10 +838,16 @@ export function initLabNotebook({
     if (!cancel) {
       const cleanName = String(notebookExperimentName.value || '').trim();
       notebookExperimentName.value = cleanName || String(activeProtocol?.name || '').trim();
+      if (notebookExperimentName.value !== notebookTitleRenameStartValue) {
+        markNotebookNameAsUserRenamed();
+      }
+    } else {
+      notebookExperimentName.value = notebookTitleRenameStartValue;
     }
     syncNotebookTitle(activeProtocol);
     notebookExperimentName.hidden = true;
     notebookProtocolTitle.hidden = false;
+    notebookTitleRenameStartValue = '';
   }
 
   function collectNotebookValues() {
@@ -850,6 +1186,7 @@ export function initLabNotebook({
       mergeNotebookValues(editingEntry?.values, collectNotebookValues()),
       protocol
     );
+    await maybeGenerateNotebookPageName({ protocol, values });
     const entryId = editingEntry?.id || createId();
     const selectedResultFiles = getSelectedNotebookResultFiles();
     const existingResultFiles = Array.isArray(editingEntry?.resultFiles)
@@ -892,7 +1229,7 @@ export function initLabNotebook({
     });
     const resultTables = resultTableController.getCurrentTables();
 
-    const entry = buildSaveableNotebookEntry({
+    const baseEntry = buildSaveableNotebookEntry({
       editingEntry,
       project,
       protocol,
@@ -910,6 +1247,13 @@ export function initLabNotebook({
       currentExperimentName: String(notebookExperimentName?.value || '').trim(),
       nowIso: new Date().toISOString()
     });
+    const experimentNameSource = normalizeNotebookExperimentNameSource(experimentNameSourceDraft) || 'protocol';
+    const entry = {
+      ...baseEntry,
+      experimentNameSource,
+      experimentNameGeneratedAt: experimentNameSource === 'generated' ? experimentNameGeneratedAtDraft : '',
+      experimentNameGeneratedModel: experimentNameSource === 'generated' ? experimentNameGeneratedModelDraft : ''
+    };
 
     const index = editingEntry
       ? state.notebookEntries.findIndex((item) => item.id === editingEntry.id)
@@ -1044,7 +1388,7 @@ export function initLabNotebook({
 
     notebookLinkedResults.innerHTML = parts.length
       ? parts.join('')
-      : '<p class="small-note biology-notebook-linked-empty">Linked gel, assay, and plot previews will appear here after you save them to this page.</p>';
+      : '';
   }
 
   async function ensureNotebookEntryForLinkedWork() {
@@ -1162,6 +1506,7 @@ export function initLabNotebook({
       notebookExperimentName.value = String(experimentNameOverride || '').trim() || resolveEntryExperimentName(entry, protocol);
       notebookExperimentName.hidden = true;
     }
+    resetNotebookNameGenerationState(entry, protocol);
     if (notebookProtocolTitle) {
       notebookProtocolTitle.hidden = false;
     }
@@ -1206,6 +1551,7 @@ export function initLabNotebook({
       markDraftSaved();
     }
     notifyActiveNotebookPageChanged();
+    void maybeGenerateNotebookPageName();
   }
 
   function hideProjectDashboard() {
@@ -1299,6 +1645,7 @@ export function initLabNotebook({
       notebookProtocolTitle.textContent = '';
       notebookProtocolTitle.hidden = false;
     }
+    resetNotebookNameGenerationState(null, null);
     notebookProtocolMeta.textContent = 'Select a notebook page or start a new one.';
     editingEntryId = null;
     protocolEditor.syncControls(null, null);
@@ -1473,14 +1820,62 @@ export function initLabNotebook({
   }
 
   function onDocumentKeydownForSampleLinkMenu(event) {
+    if (event.key === 'Escape' && isExperimentDialogOpen()) {
+      closeExperimentDialog();
+      return;
+    }
     if (event.key === 'Escape' && sampleLinkMenu.isOpen()) {
       sampleLinkMenu.close();
     }
   }
 
-  notebookProjectSelect.addEventListener('change', onProjectChange);
-  notebookProtocolSearchInput?.addEventListener('input', () => dropdownRenderer.renderProtocolOptions());
-  notebookProtocolSelect.addEventListener('change', onProtocolChange);
+  function onExperimentDialogOverlayClick(event) {
+    if (event?.target === notebookExperimentDialogOverlay) {
+      closeExperimentDialog();
+    }
+  }
+
+  function onExperimentProtocolResultClick(event) {
+    const option = event?.target?.closest?.('[data-notebook-experiment-protocol-id]')
+      || (event?.target?.dataset?.notebookExperimentProtocolId ? event.target : null);
+    const protocolId = String(option?.dataset?.notebookExperimentProtocolId || '').trim();
+    if (!protocolId || !state.protocols.some((protocol) => protocol.id === protocolId)) {
+      return;
+    }
+    notebookProtocolSelect.value = protocolId;
+    dropdownRenderer.renderProtocolOptions(protocolId, { triggerChange: false });
+    renderExperimentProtocolResults();
+    syncExperimentDialogControls();
+  }
+
+  notebookProjectSelect.addEventListener('change', () => {
+    if (isExperimentDialogOpen()) {
+      onExperimentProjectChange();
+      return;
+    }
+    onProjectChange();
+  });
+  notebookProtocolSearchInput?.addEventListener('input', () => {
+    if (isExperimentDialogOpen()) {
+      onExperimentProtocolSearch();
+      return;
+    }
+    dropdownRenderer.renderProtocolOptions();
+  });
+  notebookProtocolSelect.addEventListener('change', () => {
+    if (isExperimentDialogOpen()) {
+      renderExperimentProtocolResults();
+      syncExperimentDialogControls();
+      return;
+    }
+    onProtocolChange();
+  });
+  notebookNewExperimentBtn?.addEventListener('click', openExperimentDialog);
+  notebookExperimentForm?.addEventListener('submit', startExperiment);
+  notebookExperimentDialogCloseBtn?.addEventListener('click', () => closeExperimentDialog());
+  notebookExperimentCancelBtn?.addEventListener('click', () => closeExperimentDialog());
+  notebookExperimentDialogOverlay?.addEventListener('click', onExperimentDialogOverlayClick);
+  notebookExperimentProtocolResults?.addEventListener('click', onExperimentProtocolResultClick);
   notebookEditProtocolBtn?.addEventListener('click', beginProtocolEdit);
   notebookApplyProtocolEditBtn?.addEventListener('click', applyProtocolEdit);
   notebookCancelProtocolEditBtn?.addEventListener('click', cancelProtocolEdit);
@@ -1525,6 +1920,7 @@ export function initLabNotebook({
     }
   });
   inlinePlaceholders.bindEvents();
+  notebookSteps?.addEventListener('input', onNotebookPlaceholderInput);
   if (typeof document.addEventListener === 'function') {
     document.addEventListener('click', onDocumentClickForSampleLinkMenu);
     document.addEventListener('keydown', onDocumentKeydownForSampleLinkMenu);
@@ -1556,6 +1952,7 @@ export function initLabNotebook({
       && getCurrentDraftSnapshot() !== savedDraftSnapshot
     ),
     openEntry: editEntry,
+    openExperimentDialog,
     openProjectDashboard: showProjectDashboard,
     getAgentChatContext,
     renderProjectOptions: dropdownRenderer.renderProjectOptions,

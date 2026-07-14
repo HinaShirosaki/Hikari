@@ -40,7 +40,11 @@ export const defaultState = {
     projectId: '',
     currentSessionId: '',
     sessions: [],
-    messages: []
+    messages: [],
+    folders: [],
+    sessionFolderIds: {},
+    selectedFolderId: 'general',
+    expandedFolderIds: []
   },
   messages: [],
   growthMetrics: {

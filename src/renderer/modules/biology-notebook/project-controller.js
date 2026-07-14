@@ -7,6 +7,7 @@ export function createNotebookProjectController({
   railEl,
   contextMenuEl,
   addProjectBtn,
+  headerAddProjectBtn,
   dialogOverlay,
   dialogForm,
   projectNameInput,
@@ -143,6 +144,7 @@ export function createNotebookProjectController({
   railEl?.addEventListener?.('contextmenu', onRailContextMenu);
   contextMenuEl?.addEventListener?.('click', (event) => event?.stopPropagation?.());
   addProjectBtn?.addEventListener?.('click', openProjectDialog);
+  headerAddProjectBtn?.addEventListener?.('click', openProjectDialog);
   dialogForm?.addEventListener?.('submit', onDialogSubmit);
   dialogCloseBtn?.addEventListener?.('click', closeProjectDialog);
   dialogCancelBtn?.addEventListener?.('click', closeProjectDialog);

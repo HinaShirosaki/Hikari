@@ -551,6 +551,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
       elements.assayAnalysisGroupNameInput.value = '';
     }
     resultsManager.setAnalysisSelectionStatus('');
+    resultsManager.refreshAnalysisGroupDisplay();
     setCsvStatus('');
     setLayoutStatus('');
     if (elements.assaySampleAxisInput) {

@@ -1,7 +1,7 @@
 #papers-view.view.is-active {
   display: grid;
   gap: 16px;
-  align-content: start;
+  align-content: stretch;
   min-width: 0;
   min-height: 0;
   height: 100%;
@@ -9,16 +9,18 @@
   margin-left: calc(-1 * var(--papers-edge-bleed-left, 0px));
   margin-right: calc(-1 * var(--papers-edge-bleed-right, 0px));
   overflow: hidden;
+  grid-auto-rows: minmax(0, 1fr);
 }
 
 #papers-view .panel {
   margin-top: 0;
 }
 
-.papers-layout {
+.left-rail-template.papers-layout {
   --papers-comments-width: 336px;
   --papers-comments-collapsed-width: 30px;
   --app-left-rail-bleed: 22px;
+  --left-rail-main-gap: 22px;
   display: grid;
   grid-template-columns: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width)) minmax(0, 1fr);
   gap: 22px;
@@ -43,6 +45,12 @@
 .papers-main {
   min-width: 0;
   min-height: 0;
+}
+
+.papers-layout > .papers-main.left-rail-template__main {
+  overflow-x: hidden;
+  overflow-y: hidden;
+  scrollbar-gutter: auto;
 }
 
 .papers-stage {
@@ -81,6 +89,30 @@
   overflow: auto;
   scrollbar-gutter: stable;
   padding: 2px 18px 12px 0;
+}
+
+.left-rail-template.papers-layout > .papers-library-rail.left-rail-template__rail--pinned {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  gap: 0;
+  padding: 0 !important;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+  background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+}
+
+.left-rail-template.papers-layout > .papers-library-rail > .papers-library-pinned.left-rail-template__pinned {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
+  border-bottom: 1px solid var(--app-left-rail-divider);
+}
+
+.left-rail-template.papers-layout > .papers-library-rail > .papers-library-scroll.left-rail-template__scroll {
+  padding: 8px var(--app-left-rail-padding-inline, 16px);
+  scrollbar-gutter: stable;
 }
 
 .papers-library-topbar {

@@ -147,13 +147,13 @@ export function createAssayBrowserView({ elements, state, safeText, runtime, ens
             <p class="assay-browser-item-title">${safeTitle}</p>
           </div>
           <div class="card-actions assay-browser-item-actions">
-            <button type="button" class="assay-browser-icon-btn" data-assay-edit="${safeId}" aria-label="Edit ${safeTitle}" title="Edit">
+            <button type="button" class="row-action-icon-btn" data-assay-edit="${safeId}" aria-label="Edit ${safeTitle}" title="Edit">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M12 20h9" />
                 <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
               </svg>
             </button>
-            <button type="button" class="assay-browser-icon-btn assay-browser-icon-btn-danger" data-assay-delete="${safeId}" aria-label="Delete ${safeTitle}" title="Delete">
+            <button type="button" class="row-action-icon-btn row-action-icon-btn-danger" data-assay-delete="${safeId}" aria-label="Delete ${safeTitle}" title="Delete">
               <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                 <path d="M3 6h18" />
                 <path d="M8 6V4h8v2" />

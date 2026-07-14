@@ -32,10 +32,8 @@ async function callChemicalLookup(input = {}, context = {}, deps = {}) {
   const supplier = cleanText(input.supplier || input.vendor, 180);
   const query = uniqueStrings([baseQuery, cas, supplier], 4).join(' ');
   const limit = toIntegerInRange(input.limit, 8, 1, 25);
-  const appLimit = Math.min(25, Math.max(limit * 4, limit));
   const inventorySearch = sanitizeInventorySearch({
     ...(input.inventory_search || input.inventorySearch || {}),
-    normalized_query: query,
     candidate_terms: uniqueStrings([baseQuery, cas, supplier], 10)
   });
   const parserPayload = normalizeParserPayload(input.parser_payload || context.parserPayload, {
@@ -54,13 +52,15 @@ async function callChemicalLookup(input = {}, context = {}, deps = {}) {
     toolId: 'inventory-lookup',
     args: compactObject({
       query,
-      limit: appLimit,
+      limit,
       inventory_search: inventorySearch,
-      parser_payload: parserPayload
+      parser_payload: parserPayload,
+      kinds: ['chemical']
     }),
     context
   });
   const envelope = normalizeToolEnvelope(result);
+  // App tool already scopes to kinds; filter again defensively in case a caller ignores it.
   const chemicalItems = filterInventoryItemsByKind(envelope.items, ['chemical']).slice(0, limit);
 
   return buildLookupResponse({

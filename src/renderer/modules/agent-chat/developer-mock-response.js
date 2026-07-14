@@ -113,7 +113,7 @@ export function createDeveloperMockResponseController({
             needs_clarification: true,
             clarification_reason: 'developer_mock_error',
             entities: {},
-            inventory_search: { normalized_query: null, candidate_terms: [], aliases: [], search_mode: null },
+            inventory_search: { candidate_terms: [] },
             protocol_candidates: [],
             reasoning_summary: `Developer mock response failed: ${String(error?.message || error)}`
           },

@@ -11,10 +11,7 @@ function createAgentOpenContextRuntime({
 } = {}) {
   function buildEmptyInventorySearch() {
     return {
-      normalized_query: null,
-      candidate_terms: [],
-      aliases: [],
-      search_mode: null
+      candidate_terms: []
     };
   }
 

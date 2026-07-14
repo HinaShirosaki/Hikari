@@ -123,14 +123,6 @@ export function createSequenceViewerHomeController(config = {}) {
     });
   }
 
-  function setFeatureSearchStatus(message, isError = false) {
-    if (!elements.featureSearchStatus) {
-      return;
-    }
-    elements.featureSearchStatus.textContent = message;
-    elements.featureSearchStatus.style.color = isError ? 'var(--theme-danger)' : '';
-  }
-
   function applyPreviewFrameSurfaceBridge(frame) {
     const previewDocument = frame?.contentDocument || frame?.contentWindow?.document || null;
     const previewHead = previewDocument?.head || previewDocument?.querySelector?.('head') || null;
@@ -230,11 +222,8 @@ export function createSequenceViewerHomeController(config = {}) {
     getLibraryTemporaryFilterButtons().forEach((button) => {
       button.disabled = !hasStorage;
     });
-    if (elements.featureSearchInput) {
-      elements.featureSearchInput.disabled = !hasStorage || Boolean(state.isSearchingFeatures);
-    }
-    if (elements.featureSearchBtn) {
-      elements.featureSearchBtn.disabled = !hasStorage || Boolean(state.isSearchingFeatures);
+    if (elements.librarySearchInput) {
+      elements.librarySearchInput.disabled = !hasStorage;
     }
   }
 
@@ -317,77 +306,6 @@ export function createSequenceViewerHomeController(config = {}) {
     }, 120);
   }
 
-  function buildFeatureSequencePreview(sequence) {
-    const text = cleanText(String(sequence || '').toUpperCase(), 1200);
-    if (text.length <= 42) {
-      return text || '-';
-    }
-    return `${text.slice(0, 18)}...${text.slice(-18)}`;
-  }
-
-  function buildHostLocationLabel(host) {
-    const locations = Array.isArray(host?.locations) ? host.locations : [];
-    if (!locations.length) {
-      return 'Stored vector';
-    }
-
-    const first = locations[0];
-    const firstLabel = `${first.startPos}-${first.endPos} (${first.strand === -1 ? '-' : '+'})`;
-    if (locations.length === 1) {
-      return firstLabel;
-    }
-    return `${firstLabel} +${locations.length - 1} more`;
-  }
-
-  function renderFeatureSearchResults() {
-    if (!elements.featureSearchResults) {
-      return;
-    }
-
-    const query = cleanText(state.featureSearchQuery, 600);
-    const results = Array.isArray(state.featureSearchResults) ? state.featureSearchResults : [];
-    if (!query) {
-      elements.featureSearchResults.innerHTML = '<p class="small-note">Search by feature name, full sequence, or partial sequence.</p>';
-      return;
-    }
-    if (!results.length) {
-      elements.featureSearchResults.innerHTML = `<p class="small-note">No stored features matched "${escapeHtml(query)}".</p>`;
-      return;
-    }
-
-    elements.featureSearchResults.innerHTML = results
-      .map((feature) => {
-        const hostCount = Math.max(0, Number(feature?.hostCount) || 0);
-        const hosts = Array.isArray(feature?.hosts) ? feature.hosts : [];
-        return `
-          <article class="sequence-viewer-feature-search-item">
-            <div class="sequence-viewer-feature-search-head">
-              <div>
-                <span class="sequence-viewer-feature-search-name">${escapeHtml(feature?.name || 'feature')}</span>
-                <span class="sequence-viewer-feature-search-type">${escapeHtml(feature?.type || 'misc_feature')}</span>
-              </div>
-              <span class="small-note">${escapeHtml(`${hostCount} vector${hostCount === 1 ? '' : 's'}`)}</span>
-            </div>
-            <p class="sequence-viewer-feature-search-sequence">${escapeHtml(buildFeatureSequencePreview(feature?.sequence))}</p>
-            <div class="sequence-viewer-feature-search-hosts">
-              ${hosts.map((host) => `
-                <button
-                  type="button"
-                  class="sequence-viewer-feature-search-host"
-                  data-feature-host-entry-id="${escapeHtml(host?.hostVectorId || '')}"
-                  data-feature-host-status="${escapeHtml(host?.hostVectorStatus || '')}"
-                >
-                  <span class="sequence-viewer-feature-search-host-name">${escapeHtml(host?.hostVectorName || 'vector')}</span>
-                  <span class="sequence-viewer-feature-search-host-meta">${escapeHtml(buildHostLocationLabel(host))}</span>
-                </button>
-              `).join('')}
-            </div>
-          </article>
-        `;
-      })
-      .join('');
-  }
-
   function renderLibraryList() {
     const libraryLists = getLibraryListElements();
     if (!libraryLists.length) {
@@ -403,7 +321,18 @@ export function createSequenceViewerHomeController(config = {}) {
       return;
     }
 
-    const html = entries
+    const query = cleanText(state.librarySearchQuery, 200).toLowerCase();
+    const visibleEntries = query
+      ? entries.filter((entry) => String(entry?.name || '').toLowerCase().includes(query))
+      : entries;
+    if (!visibleEntries.length) {
+      libraryLists.forEach((libraryList) => {
+        libraryList.innerHTML = `<p class="small-note">No sequences match "${escapeHtml(query)}".</p>`;
+      });
+      return;
+    }
+
+    const html = visibleEntries
       .map((entry) => {
         const active = cleanText(entry.id, 200) === cleanText(state.selectedLibraryEntryId, 200);
         return `
@@ -464,13 +393,9 @@ export function createSequenceViewerHomeController(config = {}) {
     if (!storagePath) {
       state.libraryEntries = [];
       state.selectedLibraryEntryId = '';
-      state.featureSearchResults = [];
-      state.featureSearchQuery = '';
       renderLibraryList();
-      renderFeatureSearchResults();
       renderPreviewFromHtml(null, '');
       setHomeStatus('Use New or Open to continue. Set Storage Folder Path in Settings to enable the saved/unsaved library.');
-      setFeatureSearchStatus('Set Storage Folder Path in Settings to search stored features.');
       return;
     }
 
@@ -502,9 +427,6 @@ export function createSequenceViewerHomeController(config = {}) {
       await loadSelectedLibraryPreview();
       if (!options.silent) {
         setHomeStatus(`Loaded ${entries.length} ${state.libraryFilter} sequence entr${entries.length === 1 ? 'y' : 'ies'}.`);
-      }
-      if (!state.featureSearchQuery) {
-        setFeatureSearchStatus('Search stored features and open the host vector directly.');
       }
     } catch (error) {
       state.libraryEntries = [];
@@ -560,77 +482,6 @@ export function createSequenceViewerHomeController(config = {}) {
     setRecords(parsed, statusPrefix);
     navigateToDetail();
     await onParsedRecordsOpened(parsed);
-  }
-
-  async function runFeatureSearch(options = {}) {
-    const query = cleanText(options?.query ?? elements.featureSearchInput?.value, 600);
-    state.featureSearchQuery = query;
-    if (elements.featureSearchInput) {
-      elements.featureSearchInput.value = query;
-    }
-
-    const storagePath = getStoragePath();
-    if (!storagePath) {
-      state.featureSearchResults = [];
-      renderFeatureSearchResults();
-      setFeatureSearchStatus('Set Storage Folder Path in Settings to search stored features.', true);
-      return;
-    }
-
-    if (query.length < 2) {
-      state.featureSearchResults = [];
-      renderFeatureSearchResults();
-      setFeatureSearchStatus('Enter at least 2 characters to search stored features.');
-      return;
-    }
-
-    const bridge = getBridge();
-    if (!bridge?.sequenceLibrarySearchFeatures) {
-      setFeatureSearchStatus('Feature search API unavailable.', true);
-      return;
-    }
-
-    state.isSearchingFeatures = true;
-    syncHomeControlsState();
-    setFeatureSearchStatus(`Searching for "${query}"...`);
-
-    try {
-      const response = await bridge.sequenceLibrarySearchFeatures({
-        storagePath,
-        query,
-        limit: 30
-      });
-      if (!response?.ok) {
-        throw new Error(response?.error || 'Failed to search stored features.');
-      }
-
-      state.featureSearchResults = Array.isArray(response.results) ? response.results : [];
-      renderFeatureSearchResults();
-      setFeatureSearchStatus(`Found ${state.featureSearchResults.length} matching feature${state.featureSearchResults.length === 1 ? '' : 's'}.`);
-    } catch (error) {
-      state.featureSearchResults = [];
-      renderFeatureSearchResults();
-      setFeatureSearchStatus(error?.message || 'Failed to search stored features.', true);
-    } finally {
-      state.isSearchingFeatures = false;
-      syncHomeControlsState();
-    }
-  }
-
-  async function openFeatureHostVector(entryId, status = '') {
-    const resolvedEntryId = cleanText(entryId, 200);
-    if (!resolvedEntryId) {
-      return;
-    }
-
-    if (status === libraryStatusSaved || status === libraryStatusTemporary) {
-      setLibraryFilter(status);
-      await refreshLibraryEntries({ selectedId: resolvedEntryId, silent: true });
-    } else {
-      await setSelectedLibraryEntry(resolvedEntryId);
-    }
-
-    await openLibraryEntryInDetail(resolvedEntryId);
   }
 
   async function openLibraryEntryInDetail(entryId) {
@@ -897,26 +748,9 @@ export function createSequenceViewerHomeController(config = {}) {
       }
     });
 
-    elements.featureSearchBtn?.addEventListener('click', () => {
-      void runFeatureSearch();
-    });
-
-    elements.featureSearchInput?.addEventListener('keydown', (event) => {
-      if (String(event?.key || '') !== 'Enter') {
-        return;
-      }
-      event.preventDefault?.();
-      void runFeatureSearch();
-    });
-
-    elements.featureSearchResults?.addEventListener('click', (event) => {
-      const trigger = event?.target?.closest?.('[data-feature-host-entry-id]');
-      const entryId = cleanText(trigger?.dataset?.featureHostEntryId, 200);
-      if (!entryId) {
-        return;
-      }
-      const status = cleanText(trigger?.dataset?.featureHostStatus, 40);
-      void openFeatureHostVector(entryId, status);
+    elements.librarySearchInput?.addEventListener('input', () => {
+      state.librarySearchQuery = cleanText(elements.librarySearchInput.value, 200);
+      renderLibraryList();
     });
   }
 

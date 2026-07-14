@@ -175,7 +175,7 @@ export function buildNotebookToolCalculationsHtml({
   const escapeText = typeof safeText === 'function' ? safeText : (value) => String(value || '');
   const normalized = normalizeNotebookToolCalculations(calculations);
   if (!normalized.length) {
-    return '<p class="small-note biology-notebook-tool-calculation-empty">Recorded bench calculations will appear here.</p>';
+    return '';
   }
 
   return normalized.map((calculation) => {

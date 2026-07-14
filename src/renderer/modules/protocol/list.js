@@ -17,12 +17,21 @@ export function createProtocolListController({
   syncSelectionAfterMutation
 }) {
   function updateSortButtonLabels() {
-    if (ui.protocolSortFieldBtn) {
-      ui.protocolSortFieldBtn.textContent = `Sort: ${localState.protocolSortField === 'time' ? 'Time' : 'Name'}`;
+    const fieldLabel = localState.protocolSortField === 'time' ? 'Time' : 'Name';
+    const orderLabel = localState.protocolSortOrder === 'asc' ? 'Low to High' : 'High to Low';
+    const activeSort = `${localState.protocolSortField}:${localState.protocolSortOrder}`;
+
+    if (ui.protocolSortMenuBtn) {
+      const label = `Sort protocols: ${fieldLabel}, ${orderLabel}`;
+      ui.protocolSortMenuBtn.setAttribute('aria-label', label);
+      ui.protocolSortMenuBtn.title = label;
     }
-    if (ui.protocolSortOrderBtn) {
-      ui.protocolSortOrderBtn.textContent = `Order: ${localState.protocolSortOrder === 'asc' ? 'Low to High' : 'High to Low'}`;
-    }
+
+    ui.protocolSortMenu?.querySelectorAll?.('[data-protocol-sort]').forEach((option) => {
+      const isActive = option.dataset.protocolSort === activeSort;
+      option.classList.toggle('is-active', isActive);
+      option.setAttribute('aria-checked', String(isActive));
+    });
   }
 
   function ensureProtocolTimestamps() {
@@ -119,7 +128,7 @@ export function createProtocolListController({
     const sortedProtocols = [...state.protocols].sort(compareProtocols);
     ui.protocolList.innerHTML = sortedProtocols.map((protocol) => `
       <article
-        class="list-row protocol-list-row${localState.activeShareProtocolId === protocol.id ? ' protocol-list-row-share-open' : ''}${localState.activeProtocolId === protocol.id ? ' protocol-list-row-selected list-row-selected' : ''}"
+        class="list-row protocol-list-row${localState.activeShareProtocolId === protocol.id ? ' protocol-list-row-share-open' : ''}${localState.activeMenuProtocolId === protocol.id ? ' protocol-list-row-menu-open' : ''}${localState.activeProtocolId === protocol.id ? ' protocol-list-row-selected list-row-selected' : ''}"
         data-protocol-select="${protocol.id}"
         tabindex="0"
       >

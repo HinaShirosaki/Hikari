@@ -581,15 +581,50 @@ export function initProtocolManagement({
       if (placeholder) addInteractivePlaceholderToken(placeholder);
     });
   });
-  ui.protocolSortFieldBtn?.addEventListener('click', () => {
-    localState.protocolSortField = localState.protocolSortField === 'time' ? 'name' : 'time';
-    listController.updateSortButtonLabels();
+  function closeProtocolSortMenu() {
+    if (ui.protocolSortMenu) {
+      ui.protocolSortMenu.hidden = true;
+    }
+    ui.protocolSortMenuBtn?.setAttribute('aria-expanded', 'false');
+  }
+
+  function applyProtocolSort(sortValue) {
+    const [field, order] = String(sortValue || '').split(':');
+    if (!['time', 'name'].includes(field) || !['asc', 'desc'].includes(order)) {
+      return;
+    }
+
+    localState.protocolSortField = field;
+    localState.protocolSortOrder = order;
+    closeProtocolSortMenu();
     listController.renderList();
+  }
+
+  ui.protocolSortMenuBtn?.addEventListener('click', () => {
+    if (!ui.protocolSortMenu) {
+      return;
+    }
+    const willOpen = ui.protocolSortMenu.hidden;
+    ui.protocolSortMenu.hidden = !willOpen;
+    ui.protocolSortMenuBtn.setAttribute('aria-expanded', String(willOpen));
   });
-  ui.protocolSortOrderBtn?.addEventListener('click', () => {
-    localState.protocolSortOrder = localState.protocolSortOrder === 'asc' ? 'desc' : 'asc';
-    listController.updateSortButtonLabels();
-    listController.renderList();
+  ui.protocolSortMenu?.addEventListener('click', (event) => {
+    const option = event.target?.closest?.('[data-protocol-sort]') || event.target;
+    applyProtocolSort(option?.dataset?.protocolSort);
+  });
+  documentRef?.addEventListener?.('click', (event) => {
+    if (ui.protocolSortMenu?.hidden) {
+      return;
+    }
+    if (ui.protocolSortMenu?.contains?.(event.target) || ui.protocolSortMenuBtn?.contains?.(event.target)) {
+      return;
+    }
+    closeProtocolSortMenu();
+  });
+  documentRef?.addEventListener?.('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeProtocolSortMenu();
+    }
   });
   ui.protocolExportPdfBtn?.addEventListener('click', onExportViewedProtocolPdf);
   ui.protocolPrintBtn?.addEventListener('click', onPrintViewedProtocol);

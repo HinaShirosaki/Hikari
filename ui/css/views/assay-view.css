@@ -5,6 +5,21 @@
   margin-top: 8px;
 }
 
+.assay-results-actions > .ghost-btn {
+  border-color: transparent;
+  background: transparent;
+}
+
+.assay-results-actions > .ghost-btn:hover,
+.assay-results-actions > .ghost-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
+}
+
+.assay-results-actions > .primary-btn {
+  border-color: transparent;
+}
+
 .assay-header-row {
   display: flex;
   align-items: center;
@@ -21,8 +36,9 @@
   align-self: stretch;
 }
 
-.assay-create-layout {
+.left-rail-template.assay-create-layout {
   --app-left-rail-bleed: 20px;
+  --left-rail-main-gap: 20px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 20px;
@@ -34,8 +50,9 @@
   min-width: 0;
 }
 
-.assay-results-layout {
+.left-rail-template.assay-results-layout {
   --app-left-rail-bleed: 20px;
+  --left-rail-main-gap: 20px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 20px;
@@ -138,54 +155,6 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-}
-
-.assay-browser-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 1px solid var(--theme-border);
-  border-radius: 8px;
-  background: var(--theme-surface);
-  color: var(--theme-text);
-  cursor: pointer;
-}
-
-.assay-browser-icon-btn svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.assay-browser-icon-btn:hover,
-.assay-browser-icon-btn:focus-visible {
-  border-color: color-mix(in srgb, var(--theme-accent) 44%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
-  color: var(--theme-text-strong);
-  outline: none;
-}
-
-.assay-browser-icon-btn:focus-visible {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-accent) 28%, transparent);
-}
-
-.assay-browser-icon-btn-danger {
-  color: var(--theme-danger);
-}
-
-.assay-browser-icon-btn-danger:hover,
-.assay-browser-icon-btn-danger:focus-visible {
-  border-color: color-mix(in srgb, var(--theme-danger) 38%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-danger) 9%, var(--theme-surface));
-  color: var(--theme-danger);
 }
 
 .assay-results-controls-panel {
@@ -920,9 +889,140 @@
   margin: 6px 0 4px;
 }
 
-.assay-analysis-controls textarea {
-  resize: vertical;
-  min-height: 52px;
+.assay-analysis-group-visualization {
+  display: grid;
+  gap: 10px;
+  padding: 10px 0 4px;
+}
+
+.assay-analysis-group-visualization > .small-note {
+  margin: 0;
+}
+
+.assay-analysis-group-section {
+  display: grid;
+  gap: 6px;
+}
+
+.assay-analysis-group-section-label {
+  color: var(--theme-text-muted);
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.assay-analysis-group-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.assay-analysis-group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--assay-analysis-group-color) 10%, var(--theme-surface));
+  box-shadow: inset 3px 0 var(--assay-analysis-group-color);
+  color: var(--theme-text);
+  font-size: 0.82rem;
+}
+
+.assay-analysis-group-chip strong {
+  color: var(--theme-text-strong);
+}
+
+.assay-analysis-group-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--assay-analysis-group-color);
+}
+
+.assay-analysis-group-color-1 {
+  --assay-analysis-group-color: var(--assay-plate-analysis-group-1);
+}
+
+.assay-analysis-group-color-2 {
+  --assay-analysis-group-color: var(--assay-plate-analysis-group-2);
+}
+
+.assay-analysis-group-color-3 {
+  --assay-analysis-group-color: var(--assay-plate-analysis-group-3);
+}
+
+.assay-analysis-group-color-4 {
+  --assay-analysis-group-color: var(--assay-plate-analysis-group-4);
+}
+
+.assay-analysis-row-group-color-1 {
+  --assay-analysis-row-group-color: var(--assay-plate-analysis-group-1);
+}
+
+.assay-analysis-row-group-color-2 {
+  --assay-analysis-row-group-color: var(--assay-plate-analysis-group-2);
+}
+
+.assay-analysis-row-group-color-3 {
+  --assay-analysis-row-group-color: var(--assay-plate-analysis-group-3);
+}
+
+.assay-analysis-row-group-color-4 {
+  --assay-analysis-row-group-color: var(--assay-plate-analysis-group-4);
+}
+
+.assay-analysis-column-group-color-1 {
+  --assay-analysis-column-group-color: var(--assay-plate-analysis-group-1);
+}
+
+.assay-analysis-column-group-color-2 {
+  --assay-analysis-column-group-color: var(--assay-plate-analysis-group-2);
+}
+
+.assay-analysis-column-group-color-3 {
+  --assay-analysis-column-group-color: var(--assay-plate-analysis-group-3);
+}
+
+.assay-analysis-column-group-color-4 {
+  --assay-analysis-column-group-color: var(--assay-plate-analysis-group-4);
+}
+
+.assay-tabulator .tabulator-cell.assay-analysis-row-group-cell {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--assay-analysis-row-group-color) 10%, transparent),
+    color-mix(in srgb, var(--assay-analysis-row-group-color) 10%, transparent)
+  );
+}
+
+.assay-tabulator .tabulator-cell.assay-analysis-row-group-cell[tabulator-field="rowLabel"] {
+  box-shadow: inset 4px 0 var(--assay-analysis-row-group-color);
+}
+
+.assay-tabulator .tabulator-cell.assay-analysis-column-group-cell {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--assay-analysis-column-group-color) 10%, transparent),
+    color-mix(in srgb, var(--assay-analysis-column-group-color) 10%, transparent)
+  );
+}
+
+.assay-tabulator .tabulator-cell.assay-analysis-row-group-cell.assay-analysis-column-group-cell {
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, var(--assay-analysis-row-group-color) 8%, transparent),
+      color-mix(in srgb, var(--assay-analysis-row-group-color) 8%, transparent)
+    ),
+    linear-gradient(
+      color-mix(in srgb, var(--assay-analysis-column-group-color) 8%, transparent),
+      color-mix(in srgb, var(--assay-analysis-column-group-color) 8%, transparent)
+    );
+}
+
+.assay-tabulator .tabulator-col.assay-analysis-column-group-header {
+  box-shadow: inset 0 -4px var(--assay-analysis-column-group-color);
 }
 
 .assay-analysis-checkbox {

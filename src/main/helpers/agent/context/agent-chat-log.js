@@ -577,10 +577,7 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
         clarification_reason: 'agent_error',
         entities: {},
         inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
+          candidate_terms: []
         },
         protocol_candidates: [],
         reasoning_summary: `Agent failed: ${message}`

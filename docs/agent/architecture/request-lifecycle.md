@@ -56,8 +56,8 @@ renderer state normalization and main-process routing both force the Codex path.
 | Parser intent | Handler path | Main runtime |
 | --- | --- | --- |
 | `protocol_to_notebook` | dedicated flow | `runtime/agent-protocol-notebook.js` |
-| `inventory_lookup` | direct lookup | `runtime/agent-lookup-runtime.js` |
-| `notebook_lookup` | direct lookup | `runtime/agent-lookup-runtime.js` |
+| `inventory_lookup` | direct MCP tool | `tools/agent-inventory-lookup.js` |
+| `notebook_lookup` | direct MCP tool | `tools/agent-notebook-lookup.js` |
 | `notebook_draft` | shared tool wrapper calling one registered executor | `tools/agent-notebook-draft.js` |
 | `general_science_question` | science mode | `runtime/science-reasoning-loop/index.js` or `deep-research/index.js` |
 | `project_science_question` | science mode | `runtime/science-reasoning-loop/index.js` or `deep-research/index.js` |
@@ -81,15 +81,16 @@ This is why follow-up answers can continue a notebook-generation thread without 
 
 ## Lookup paths
 
-`inventory_lookup` and `notebook_lookup` do not use the generic tool runtime in the main controller. They call `agentLookupRuntime.executeInventoryLookup(...)` and `agentLookupRuntime.executeNotebookLookup(...)` directly.
+`inventory_lookup` and `notebook_lookup` are registered independently on the generic tool runtime. The executors call `inventoryLookupRuntime.executeInventoryLookup(...)` and `notebookLookupRuntime.execute(...)` directly; there is no aggregate lookup runtime.
 
 Both paths:
 
 - derive a query from parser entities plus the raw message
-- search SQLite when available
-- fall back to hydrated snapshot JSON
-- optionally backfill the SQLite index from the snapshot
-- return compact result envelopes with `status`, `source`, `backfilled_sql`, and `items`
+- hydrate the relevant storage sources and search normalized snapshot records
+- preserve readable sources when another storage source is permission denied
+- return structured result envelopes with source coverage and access status
+
+The direct `notebook_lookup` MCP wrapper adds a two-step agent bridge over the notebook-owned runtime: `action: "search"` returns compact page matches and `action: "get"` with `entry_id` returns structured saved page content. The renderer also supplies a bounded `notebook_lookup_bridge` index in the otherwise thin request snapshot, so current in-memory pages remain searchable when disk access is degraded. Its `access` block distinguishes complete, degraded, and permission-denied coverage so callers do not interpret an incomplete search as a definitive no-match.
 
 ## Notebook-draft path
 

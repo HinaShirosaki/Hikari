@@ -309,6 +309,19 @@ div {
   display: none;
 }
 
+@media (min-width: 961px) and (max-width: 1180px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .topbar-tools {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    justify-self: stretch;
+  }
+}
+
 .topbar-search-suggestion {
   display: flex;
   align-items: center;
@@ -962,6 +975,45 @@ a.ghost-btn {
   border-color: color-mix(in srgb, var(--theme-danger) 35%, var(--theme-border));
   color: var(--theme-danger);
   background: var(--theme-surface);
+}
+
+.row-action-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--theme-text);
+}
+
+.row-action-icon-btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.row-action-icon-btn:hover,
+.row-action-icon-btn:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
+  color: var(--theme-text-strong);
+}
+
+.row-action-icon-btn-danger {
+  color: var(--theme-danger);
+}
+
+.row-action-icon-btn-danger:hover,
+.row-action-icon-btn-danger:focus-visible {
+  background: color-mix(in srgb, var(--theme-danger) 9%, var(--theme-surface));
+  color: var(--theme-danger);
 }
 
 button:disabled {

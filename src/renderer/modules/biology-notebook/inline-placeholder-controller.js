@@ -16,7 +16,8 @@ export function createInlinePlaceholderController({
   onOpenSampleLinkMenu,
   onCloseSampleLinkMenu,
   onAppendResultLine,
-  onPersistSampleLinks
+  onPersistSampleLinks,
+  onValueCommitted
 } = {}) {
   function refreshTokenFromValue(wrap) {
     const hiddenValue = wrap?.querySelector('[data-nb-key]');
@@ -74,6 +75,7 @@ export function createInlinePlaceholderController({
     refreshTokenFromValue(wrap);
     onAppendResultLine?.(buildNotebookSampleNote(link, 'Linked', typeof getSettings === 'function' ? getSettings() : {}));
     onPersistSampleLinks?.();
+    onValueCommitted?.({ key, value: hiddenValue.value });
     onCloseSampleLinkMenu?.();
   }
 
@@ -108,6 +110,7 @@ export function createInlinePlaceholderController({
     if (removedSampleLink) {
       onPersistSampleLinks?.();
     }
+    onValueCommitted?.({ key, value: cleanValue });
   }
 
   function onContextMenu(event) {

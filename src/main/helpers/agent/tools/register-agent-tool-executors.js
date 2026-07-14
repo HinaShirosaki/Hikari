@@ -212,7 +212,8 @@ function cleanTextValue(value, _maxLength = 500) {
 function registerAgentToolExecutors(deps = {}) {
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const genericAgentToolRuntime = deps.genericAgentToolRuntime;
-  const agentLookupRuntime = deps.agentLookupRuntime || {};
+  const inventoryLookupRuntime = deps.inventoryLookupRuntime || {};
+  const notebookLookupRuntime = deps.notebookLookupRuntime || {};
   const webSearchRuntime = deps.webSearchRuntime || {};
   const literatureSearchRuntime = deps.literatureSearchRuntime || {};
   const purchaseRecommendationRuntime = deps.purchaseRecommendationRuntime || {};
@@ -254,13 +255,14 @@ function registerAgentToolExecutors(deps = {}) {
         ? args.inventory_search
         : undefined
     });
-    const result = await agentLookupRuntime.executeInventoryLookup({
+    const result = await inventoryLookupRuntime.executeInventoryLookup({
       message: cleanText(args?.query || context?.message, 3200),
       parserPayload,
       snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
       dataFilePath: cleanText(context?.dataFilePath, 2000),
       fallbackDataFilePath: cleanText(context?.fallbackDataFilePath, 2000),
-      limit: toIntegerInRange(args?.limit, 8)
+      limit: toIntegerInRange(args?.limit, 8),
+      kinds: Array.isArray(args?.kinds) ? args.kinds : []
     });
 
     return {
@@ -283,7 +285,7 @@ function registerAgentToolExecutors(deps = {}) {
   genericAgentToolRuntime.registerToolExecutor('notebook-lookup', async ({ args, context }) => {
     const parserPayload = resolveToolParserPayload(args, context);
     const entities = ensureObject(parserPayload?.entities);
-    const result = await agentLookupRuntime.executeNotebookLookup({
+    const result = await notebookLookupRuntime.execute({
       message: cleanText(args?.query || context?.message, 3200),
       parserPayload,
       snapshot: context?.snapshot && typeof context.snapshot === 'object' ? context.snapshot : {},
@@ -292,7 +294,10 @@ function registerAgentToolExecutors(deps = {}) {
       limit: toIntegerInRange(args?.limit, 8),
       projectId: cleanText(args?.project_id || args?.projectId || entities.project_id, 120),
       projectName: cleanText(args?.project_name || args?.projectName || entities.project_name, 220),
-      protocolName: cleanText(args?.protocol_name || args?.protocolName || entities.protocol_name, 220)
+      protocolId: cleanText(args?.protocol_id || args?.protocolId || entities.protocol_id, 120),
+      protocolName: cleanText(args?.protocol_name || args?.protocolName || entities.protocol_name, 220),
+      notebookState: cleanText(args?.notebook_state || args?.notebookState || entities.notebook_state, 80),
+      detail: cleanText(args?.detail, 40)
     });
 
     return {
@@ -730,6 +735,13 @@ function registerAgentToolExecutors(deps = {}) {
       apiKey: cleanText(context?.apiKey, 400),
       model: cleanText(context?.model, 120),
       message: cleanText(args?.message || context?.message, 2400),
+      storage_path: cleanText(
+        args?.storage_path
+        || context?.storagePath
+        || context?.snapshot?.settings?.storagePath
+        || context?.snapshot?.storagePath,
+        2000
+      ),
       traceContext: context?.traceContext || null
     });
   });
@@ -794,10 +806,7 @@ function registerAgentToolExecutors(deps = {}) {
         summary: 'Protocol generation runtime is not configured.'
       };
     }
-    const shouldSave = args?.save === true
-      || args?.persist === true
-      || args?.save_to_protocol_module === true
-      || args?.saveToProtocolModule === true;
+    const shouldSave = args?.save === true;
     if (shouldSave) {
       if (!protocolSaveRuntime || typeof protocolSaveRuntime.saveProtocol !== 'function') {
         return {
@@ -890,6 +899,8 @@ function registerAgentToolExecutors(deps = {}) {
         : (context?.project && typeof context.project === 'object' ? context.project : {}),
       workflowId: cleanText(args?.workflow_id, 120),
       protocolCandidates: Array.isArray(args?.protocol_candidates) ? args.protocol_candidates : [],
+      pendingValues: args?.pending_values && typeof args.pending_values === 'object' ? args.pending_values : {},
+      stepEdits: Array.isArray(args?.step_edits) ? args.step_edits : [],
       evidenceContext: Array.isArray(args?.evidence_context) ? args.evidence_context : [],
       traceContext: context?.traceContext || null,
       lifecycleRecorder: context?.lifecycleRecorder || null

@@ -630,6 +630,56 @@ function buildPreviewMeasurementScriptMarkup() {
         });
       }
 
+      function enableWheelZoom() {
+        const shell = document.querySelector('.preview-shell');
+        const svg = shell?.querySelector('svg');
+        if (!shell || !svg || svg.dataset.wheelZoomBound === 'true') {
+          return;
+        }
+        svg.dataset.wheelZoomBound = 'true';
+        svg.style.transformOrigin = '0 0';
+        shell.style.touchAction = 'none';
+
+        const MIN_SCALE = 1;
+        const MAX_SCALE = 12;
+        let scale = 1;
+        let translateX = 0;
+        let translateY = 0;
+
+        function apply() {
+          svg.style.transform = 'translate(' + translateX.toFixed(2) + 'px, ' + translateY.toFixed(2) + 'px) scale(' + scale.toFixed(4) + ')';
+        }
+
+        shell.addEventListener('wheel', (event) => {
+          event.preventDefault();
+          const rect = shell.getBoundingClientRect();
+          const pointerX = event.clientX - rect.left;
+          const pointerY = event.clientY - rect.top;
+          const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+          const nextScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
+          if (nextScale === scale) {
+            return;
+          }
+          // keep the point under the cursor fixed while scaling
+          const ratio = nextScale / scale;
+          translateX = pointerX - ((pointerX - translateX) * ratio);
+          translateY = pointerY - ((pointerY - translateY) * ratio);
+          scale = nextScale;
+          if (scale <= MIN_SCALE + 1e-3) {
+            translateX = 0;
+            translateY = 0;
+          }
+          apply();
+        }, { passive: false });
+
+        svg.addEventListener('dblclick', () => {
+          scale = 1;
+          translateX = 0;
+          translateY = 0;
+          apply();
+        });
+      }
+
       function fitAnnotationBoxes() {
         const svg = document.querySelector('.preview-shell svg');
         const scene = svg?.querySelector('.circular-preview__scene');
@@ -701,9 +751,11 @@ function buildPreviewMeasurementScriptMarkup() {
 
       function scheduleFit() {
         bindFeatureHoverCards();
+        enableWheelZoom();
         window.requestAnimationFrame(() => {
           fitAnnotationBoxes();
           bindFeatureHoverCards();
+          enableWheelZoom();
           window.setTimeout(fitAnnotationBoxes, 48);
         });
       }

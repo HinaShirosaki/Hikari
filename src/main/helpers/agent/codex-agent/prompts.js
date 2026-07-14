@@ -216,10 +216,7 @@ function buildCodexAgentParserPayload(codexAgent = {}, {
       project_name: cleanText(projectName, 220)
     },
     inventory_search: {
-      normalized_query: null,
-      candidate_terms: [],
-      aliases: [],
-      search_mode: null
+      candidate_terms: []
     },
     protocol_candidates: [],
     reasoning_summary: cleanText(codexAgent.reasoning_summary, 1200)

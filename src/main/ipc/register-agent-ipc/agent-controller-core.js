@@ -123,10 +123,7 @@ function createAgentControllerCore({
         command_tool: cleanText(toolName, 120)
       },
       inventory_search: {
-        normalized_query: null,
-        candidate_terms: [],
-        aliases: [],
-        search_mode: null
+        candidate_terms: []
       },
       protocol_candidates: [],
       reasoning_summary: cleanText(reasoningSummary, 1200) || 'Handled as a direct skill command.'

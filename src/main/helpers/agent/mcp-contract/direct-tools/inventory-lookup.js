@@ -15,25 +15,18 @@ const {
 
 const INVENTORY_LOOKUP_MCP_TOOL = Object.freeze({
   name: 'inventory_lookup',
-  description: 'Look up local Hikari inventory items, including chemicals, personal containers, and samples.',
+  description: 'Look up local Hikari personal inventory items: personal containers and samples. For chemical stock, use chemical_lookup.',
   annotations: buildReadOnlyToolAnnotations('Inventory lookup'),
   inputSchema: buildCommonLookupInputSchema({
     inventory_search: {
       type: 'object',
       additionalProperties: false,
       properties: {
-        normalized_query: { type: 'string' },
         candidate_terms: {
           type: 'array',
           items: { type: 'string' },
           maxItems: 10
-        },
-        aliases: {
-          type: 'array',
-          items: { type: 'string' },
-          maxItems: 10
-        },
-        search_mode: { type: 'string' }
+        }
       }
     }
   })
@@ -47,7 +40,7 @@ async function callInventoryLookup(input = {}, context = {}, deps = {}) {
     primary_intent: 'inventory_lookup',
     inventory_search: Object.keys(inventorySearch).length
       ? inventorySearch
-      : { normalized_query: query },
+      : { candidate_terms: [query] },
     entities: {
       inventory_item: query,
       requested_output: 'inventory_lookup'
@@ -57,7 +50,8 @@ async function callInventoryLookup(input = {}, context = {}, deps = {}) {
     query,
     limit,
     inventory_search: inventorySearch,
-    parser_payload: parserPayload
+    parser_payload: parserPayload,
+    kinds: ['personal_container', 'personal_sample']
   });
   const result = await runAppTool({
     runTool: deps.runTool,

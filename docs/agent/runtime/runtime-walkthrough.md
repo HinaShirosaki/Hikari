@@ -55,21 +55,21 @@ Key behavior:
 
 This is one of the clearest “workflow runtimes” in the package.
 
-## `agent-lookup-runtime.js`
+## Lookup tool support
 
-This runtime is a thin composition layer over the two lookup tools:
+Inventory and notebook lookup are individual tool runtimes:
 
 - `tools/agent-inventory-lookup.js`
-- `tools/agent-lookup-runtime.js`
+- `tools/agent-notebook-lookup.js`
 
-It centralizes the shared mechanics:
+They share storage-only primitives from `tools/agent-lookup-support.js`:
 
 - build lookup context from snapshot plus storage paths
 - open SQLite if it exists
 - hydrate snapshots when SQLite is missing or stale
 - backfill search indexes into SQLite when fallback JSON had to be used
 
-It returns direct controller-ready methods like `executeInventoryLookup(...)` and `executeNotebookLookup(...)`.
+There is no aggregate lookup runtime or controller-facing lookup coordinator. Each registered executor calls its owning tool runtime directly.
 
 ## `runtime/science-reasoning-loop/`
 

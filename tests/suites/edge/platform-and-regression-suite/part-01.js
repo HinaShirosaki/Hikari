@@ -130,6 +130,11 @@ test('[P0] normalizeState normalizes agentChat defaults', () => {
   assert.equal(normalized.agentChat.sessions.length, 0);
   assert.equal(Array.isArray(normalized.agentChat.messages), true);
   assert.equal(normalized.agentChat.messages.length, 0);
+  assert.equal(Array.isArray(normalized.agentChat.folders), true);
+  assert.equal(Object.keys(normalized.agentChat.sessionFolderIds).length, 0);
+  assert.equal(normalized.agentChat.selectedFolderId, 'general');
+  assert.equal(Array.isArray(normalized.agentChat.expandedFolderIds), true);
+  assert.equal(normalized.agentChat.expandedFolderIds.length, 0);
 });
 test('[P1] normalizeState preserves provided agentChat messages array', () => {
   const payload = [{ id: 'm1', role: 'user', text: 'hello' }];
@@ -138,12 +143,20 @@ test('[P1] normalizeState preserves provided agentChat messages array', () => {
       projectId: 'p1',
       currentSessionId: 'chat-1',
       sessions: [{ id: 'chat-1', title: 'Saved Chat' }],
+      folders: [{ id: 'folder-1', name: 'Planning' }],
+      sessionFolderIds: { 'chat-1': 'custom:folder-1' },
+      selectedFolderId: 'custom:folder-1',
+      expandedFolderIds: ['custom:folder-1'],
       messages: payload
     }
   });
   assert.equal(normalized.agentChat.projectId, 'p1');
   assert.equal(normalized.agentChat.currentSessionId, 'chat-1');
   assert.equal(normalized.agentChat.sessions.length, 1);
+  assert.equal(normalized.agentChat.folders.length, 1);
+  assert.equal(normalized.agentChat.sessionFolderIds['chat-1'], 'custom:folder-1');
+  assert.equal(normalized.agentChat.selectedFolderId, 'custom:folder-1');
+  assert.equal(normalized.agentChat.expandedFolderIds[0], 'custom:folder-1');
   assert.deepEqual(normalized.agentChat.messages, payload);
 });
 test('[P0] normalizeState keeps default inventory locations when invalid', () => {

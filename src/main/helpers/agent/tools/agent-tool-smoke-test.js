@@ -6,7 +6,7 @@ const path = require('node:path');
 
 const { AGENT_TOOL_CATALOG } = require('./agent-tool-loading.js');
 const { createAgentInventoryLookupRuntime } = require('./agent-inventory-lookup.js');
-const { createAgentLookupRuntime } = require('../runtime/agent-lookup-runtime.js');
+const { createAgentNotebookLookupRuntime } = require('./agent-notebook-lookup.js');
 const { createProtocolMatchingRuntime } = require('./agent-protocol-matching.js');
 const { createNotebookGenerationRuntime } = require('./agent-notebook-generation.js');
 const { createNotebookDraftRuntime } = require('./agent-notebook-draft.js');
@@ -466,10 +466,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
           compound_name: null
         },
         inventory_search: {
-          normalized_query: focusedQuery,
-          candidate_terms: uniqueStrings([focusedQuery, requestMessage, 'Atlas construct sample', 'atlas'], 5),
-          aliases: ['construct'],
-          search_mode: 'exact_then_alias_then_fuzzy'
+          candidate_terms: uniqueStrings([focusedQuery, requestMessage, 'Atlas construct sample', 'atlas', 'construct'], 5)
         }
       },
       snapshot,
@@ -486,10 +483,10 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
   }
 
   async function smokeNotebookLookup(snapshot, options = {}) {
-    const runtime = createAgentLookupRuntime();
+    const runtime = createAgentNotebookLookupRuntime();
     const requestMessage = resolveToolMessage(options.message, 'Find the Cell Prep notebook entry.');
     const focusedQuery = resolveFocusedToolText(options.message, 'Cell Prep');
-    const result = await runtime.executeNotebookLookup({
+    const result = await runtime.execute({
       message: focusedQuery || requestMessage,
       parserPayload: {
         entities: {
@@ -565,10 +562,7 @@ function createAgentToolSmokeTestRuntime(deps = {}) {
           requested_output: 'notebook page'
         },
         inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
+          candidate_terms: []
         }
       },
       selectedProtocol: protocol,

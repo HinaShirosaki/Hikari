@@ -109,15 +109,6 @@ export function bindAgentChatEvents({
     shell.scrollHistoryToBottom(true);
   });
 
-  dom.sessionList?.addEventListener('click', (event) => {
-    const sessionCard = sessionManager.findSessionCard(event?.target);
-    const sessionId = trimText(sessionCard?.dataset?.sessionId, 120);
-    if (!sessionId || runtime.inFlight) {
-      return;
-    }
-    void sessionManager.loadChatSession(sessionId);
-  });
-
   dom.input.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' || event.shiftKey) {
       return;

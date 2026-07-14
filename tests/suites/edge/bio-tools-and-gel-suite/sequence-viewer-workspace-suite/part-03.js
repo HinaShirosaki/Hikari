@@ -2,7 +2,7 @@ module.exports = function registerEdgeSequenceViewerWorkspaceSuitePart03(context
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-test('[EDGE] sequence-viewer feature search can trace a stored feature back to its host vector', async () => {
+test('[EDGE] sequence-viewer library search filters the library list by name', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
     'sequence-viewer-detail-workspace',
@@ -10,98 +10,28 @@ test('[EDGE] sequence-viewer feature search can trace a stored feature back to i
     'sequence-viewer-library-filter-saved',
     'sequence-viewer-library-filter-temporary',
     'sequence-viewer-library-list',
+    'sequence-viewer-library-search-input',
     'sequence-viewer-preview-host',
-    'sequence-viewer-feature-search-input',
-    'sequence-viewer-feature-search-btn',
-    'sequence-viewer-feature-search-status',
-    'sequence-viewer-feature-search-results',
     'sequence-viewer-home-paste-btn',
     'sequence-viewer-home-open-btn',
     'sequence-viewer-home-open-input',
-    'sequence-viewer-save-btn',
-    'sequence-viewer-save-name',
-    'sequence-viewer-mode-paste',
-    'sequence-viewer-mode-file',
-    'sequence-viewer-paste-panel',
-    'sequence-viewer-file-panel',
-    'sequence-viewer-textarea',
-    'sequence-viewer-file-input',
-    'sequence-viewer-file-choose',
-    'sequence-viewer-file-name',
-    'sequence-viewer-load-btn',
-    'sequence-viewer-annotate-btn',
-    'sequence-viewer-clear-btn',
     'sequence-viewer-status',
     'sequence-viewer-messages',
-    'sequence-viewer-record-select',
-    'sequence-viewer-stat-format',
-    'sequence-viewer-stat-length',
-    'sequence-viewer-stat-topology',
-    'sequence-viewer-stat-gc',
-    'sequence-viewer-stat-ambiguous',
-    'sequence-viewer-stat-quality',
-    'sequence-viewer-stat-features',
-    'sequence-viewer-stat-restriction-sites',
-    'sequence-viewer-feature-rail-host',
-    'sequence-viewer-feature-detail',
-    'sequence-viewer-sequence-host'
+    'sequence-viewer-record-select'
   ];
-  const entry = {
-    id: 'entry_1',
-    name: 'Entry One',
-    status: 'saved',
-    sourceFormat: 'GENBANK',
-    topology: 'circular',
-    sequenceLength: 12,
-    featureCount: 1,
-    updatedAt: '2026-03-01T00:00:00.000Z'
-  };
-  const searchCalls = [];
+  const entries = [
+    { id: 'entry_1', name: 'Alpha Vector', status: 'saved' },
+    { id: 'entry_2', name: 'Beta Plasmid', status: 'saved' }
+  ];
   const document = createMockDocument(ids);
   const window = {
     hikariApi: {
-      sequenceLibraryList: async () => ({ ok: true, entries: [entry] }),
-      sequenceLibraryGet: async (payload) => {
-        if (payload?.includeGbk) {
-          return {
-            ok: true,
-            entry,
-            gbkText: `
-LOCUS       ENTRYONE        12 bp    DNA     circular SYN 01-JAN-2026
-FEATURES             Location/Qualifiers
-     promoter        1..6
-                     /label="shared_prom"
-ORIGIN
-        1 atgcgatttaaa
-//
-`
-          };
-        }
-        return { ok: true, entry, htmlText: '<html><body>preview</body></html>' };
-      },
-      sequenceLibrarySearchFeatures: async (payload) => {
-        searchCalls.push(payload);
-        return {
-          ok: true,
-          results: [
-            {
-              id: 'feature_1',
-              name: 'shared_prom',
-              type: 'promoter',
-              sequence: 'ATGCGA',
-              hostCount: 1,
-              hosts: [
-                {
-                  hostVectorId: 'entry_1',
-                  hostVectorName: 'Entry One',
-                  hostVectorStatus: 'saved',
-                  locations: [{ startPos: 1, endPos: 6, strand: 1 }]
-                }
-              ]
-            }
-          ]
-        };
-      }
+      sequenceLibraryList: async () => ({ ok: true, entries }),
+      sequenceLibraryGet: async () => ({
+        ok: true,
+        entry: entries[0],
+        htmlText: '<html><body>preview</body></html>'
+      })
     }
   };
   const localStorage = {
@@ -118,30 +48,25 @@ ORIGIN
   );
   moduleWithDom.initSequenceViewer();
   await flushAsync();
-
-  const searchInput = document.getElementById('sequence-viewer-feature-search-input');
-  const searchResults = document.getElementById('sequence-viewer-feature-search-results');
-  searchInput.value = 'shared_prom';
-  trigger(document.getElementById('sequence-viewer-feature-search-btn'), 'click');
-  await flushAsync();
   await flushAsync();
 
-  assert.equal(searchCalls.length, 1);
-  assert.equal(searchCalls[0].query, 'shared_prom');
-  assert.equal(searchResults.innerHTML.includes('shared_prom'), true);
-  assert.equal(searchResults.innerHTML.includes('Entry One'), true);
+  const libraryList = document.getElementById('sequence-viewer-library-list');
+  assert.equal(libraryList.innerHTML.includes('Alpha Vector'), true);
+  assert.equal(libraryList.innerHTML.includes('Beta Plasmid'), true);
 
-  const clickTarget = {
-    closest() {
-      return { dataset: { featureHostEntryId: 'entry_1', featureHostStatus: 'saved' } };
-    }
-  };
-  trigger(searchResults, 'click', { target: clickTarget });
-  await flushAsync();
+  const searchInput = document.getElementById('sequence-viewer-library-search-input');
+  searchInput.value = 'beta';
+  trigger(searchInput, 'input');
   await flushAsync();
 
-  const detailWorkspace = document.getElementById('sequence-viewer-detail-workspace');
-  assert.equal(Boolean(detailWorkspace.hidden), false);
+  assert.equal(libraryList.innerHTML.includes('Beta Plasmid'), true);
+  assert.equal(libraryList.innerHTML.includes('Alpha Vector'), false);
+
+  searchInput.value = 'nothing-here';
+  trigger(searchInput, 'input');
+  await flushAsync();
+
+  assert.equal(libraryList.innerHTML.includes('No sequences match'), true);
 });
 test('[EDGE] sequence-viewer protein builder searches stored features and adds translated blocks to the chain', async () => {
   const ids = [

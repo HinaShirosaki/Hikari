@@ -686,7 +686,8 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
 
       const { server, connect } = createAgentMcpStdioServer({
         env: {
-          HIKARI_AGENT_MCP_WORKSPACE: workspaceDir
+          HIKARI_AGENT_MCP_WORKSPACE: workspaceDir,
+          HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify({ project: { id: 'project-1' } })
         }
       });
       const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -726,7 +727,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
 
         const projectResponse = await client.callTool({
           name: 'paper_intake_list_project_summaries',
-          arguments: { project_id: 'project-1', limit: 3 }
+          arguments: { limit: 3 }
         });
         const projectResult = JSON.parse(projectResponse.content[0].text);
         assert.equal(projectResponse.isError, false);

@@ -140,6 +140,57 @@ test('assay result paste notifies the agent rail context immediately', () => {
   assert.equal(refreshCount, 1);
 });
 
+test('assay analysis grouping hides manual specs and renders visible drag-created groups', () => {
+  const { createAssayResultsManager } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'results-manager.js'
+  ));
+  const rowGroups = new MockElement('assay-analysis-row-groups');
+  const columnGroups = new MockElement('assay-analysis-column-groups');
+  const groupVisualization = new MockElement('assay-analysis-group-visualization');
+  rowGroups.value = 'Control: A,B';
+  columnGroups.value = 'Early: 1,2';
+
+  const manager = createAssayResultsManager({
+    runtime: { currentLayout: [], currentResults: {}, resultPasteAnchor: { rowIndex: 0, columnIndex: 0 } },
+    elements: {
+      assayAnalysisRowGroupsInput: rowGroups,
+      assayAnalysisColumnGroupsInput: columnGroups,
+      assayAnalysisGroupVisualization: groupVisualization,
+      assayResultTable: { innerHTML: '' }
+    },
+    TabulatorLib: null,
+    isMappedWell: () => true,
+    getCurrentDefinition: () => ({ rows: 8, columns: 12 }),
+    getSampleAxis: () => 'row',
+    filterAndNormalizeResults: (results) => ({ ...results }),
+    setResultStatus: () => {},
+    clearAnalysisOutput: () => {},
+    onAnalysisConfigChange: () => {},
+    parseResultImportFile: null,
+    persistResultAttachment: null,
+    onResultImportApplied: null,
+    onResultsChanged: () => {}
+  });
+
+  manager.refreshAnalysisGroupDisplay();
+  assert.match(groupVisualization.innerHTML, /Row groups/);
+  assert.match(groupVisualization.innerHTML, /Control/);
+  assert.match(groupVisualization.innerHTML, /A, B/);
+  assert.match(groupVisualization.innerHTML, /Column groups/);
+  assert.match(groupVisualization.innerHTML, /Early/);
+  assert.match(groupVisualization.innerHTML, /1, 2/);
+
+  const viewSource = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'assay-view.html'), 'utf8');
+  assert.match(viewSource, /id="assay-analysis-row-groups" type="hidden"/);
+  assert.match(viewSource, /id="assay-analysis-column-groups" type="hidden"/);
+  assert.doesNotMatch(viewSource, /<textarea[^>]+id="assay-analysis-(?:row|column)-groups"/);
+});
+
 test('assay agent TSV formatter preserves object-row cells', () => {
   const source = fs.readFileSync(path.join(
     __dirname,

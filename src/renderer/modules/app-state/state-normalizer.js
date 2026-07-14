@@ -207,7 +207,13 @@ export function normalizeState(parsed) {
       projectId: String(source.agentChat?.projectId || ''),
       currentSessionId: String(source.agentChat?.currentSessionId || ''),
       sessions: Array.isArray(source.agentChat?.sessions) ? source.agentChat.sessions : [],
-      messages: Array.isArray(source.agentChat?.messages) ? source.agentChat.messages : []
+      messages: Array.isArray(source.agentChat?.messages) ? source.agentChat.messages : [],
+      folders: Array.isArray(source.agentChat?.folders) ? source.agentChat.folders : [],
+      sessionFolderIds: source.agentChat?.sessionFolderIds && typeof source.agentChat.sessionFolderIds === 'object' && !Array.isArray(source.agentChat.sessionFolderIds)
+        ? source.agentChat.sessionFolderIds
+        : {},
+      selectedFolderId: String(source.agentChat?.selectedFolderId || 'general'),
+      expandedFolderIds: Array.isArray(source.agentChat?.expandedFolderIds) ? source.agentChat.expandedFolderIds : []
     },
     paperAgentChatSessions: normalizePaperAgentChatSessions(source.paperAgentChatSessions),
     notebookEntries: Array.isArray(source.notebookEntries) ? source.notebookEntries : [],

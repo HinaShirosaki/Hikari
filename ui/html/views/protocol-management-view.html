@@ -1,20 +1,36 @@
 <section id="protocol-management-view" class="view">
       <div class="protocol-workspace left-rail-template">
-        <div id="protocol-list-panel" class="protocol-list-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="protocol-list-head">
-            <div class="inline-row protocol-sort-controls">
-              <button type="button" id="create-protocol-btn" class="primary-btn">Create Protocol</button>
-              <button type="button" id="protocol-sort-field-btn" class="ghost-btn">Sort: Time</button>
-              <button type="button" id="protocol-sort-order-btn" class="ghost-btn">Order: Low to High</button>
+        <div id="protocol-list-panel" class="protocol-list-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="protocol-list-pinned left-rail-template__pinned">
+            <div class="protocol-list-head">
+              <div class="inline-row protocol-sort-controls">
+                <button type="button" id="create-protocol-btn" class="primary-btn">Create Protocol</button>
+                <div class="protocol-sort-menu">
+                  <button type="button" id="protocol-sort-menu-btn" class="ghost-btn protocol-sort-menu-btn" aria-label="Sort protocols" aria-haspopup="menu" aria-expanded="false" title="Sort protocols">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h10M4 12h16M4 17h7"></path>
+                      <path d="m17 5 2 2-2 2M14 15l2 2 2-2"></path>
+                    </svg>
+                  </button>
+                  <div id="protocol-sort-menu" class="protocol-sort-menu-popup" role="menu" hidden>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="true" data-protocol-sort="time:asc">Time: Low to High</button>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="time:desc">Time: High to Low</button>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="name:asc">Name: Low to High</button>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="name:desc">Name: High to Low</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p id="protocol-share-status" class="small-note" hidden></p>
+            <div id="protocol-share-link-panel" class="protocol-preview-block" hidden>
+              <h4>Portable Share Link</h4>
+              <p class="small-note">Paste this link into chat or email. Recipients can import it from Collaborations.</p>
+              <textarea id="protocol-share-link-output" rows="3" readonly></textarea>
             </div>
           </div>
-          <p id="protocol-share-status" class="small-note" hidden></p>
-          <div id="protocol-share-link-panel" class="protocol-preview-block" hidden>
-            <h4>Portable Share Link</h4>
-            <p class="small-note">Paste this link into chat or email. Recipients can import it from Collaborations.</p>
-            <textarea id="protocol-share-link-output" rows="3" readonly></textarea>
+          <div class="protocol-list-scroll left-rail-template__scroll">
+            <div id="protocol-list" class="list-table"></div>
           </div>
-          <div id="protocol-list" class="list-table"></div>
         </div>
 
         <div id="protocol-detail-panel" class="panel protocol-detail-panel left-rail-template__main">

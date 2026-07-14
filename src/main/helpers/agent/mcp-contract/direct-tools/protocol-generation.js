@@ -24,9 +24,7 @@ const PROTOCOL_GENERATION_MCP_TOOL = Object.freeze({
         additionalProperties: true,
         required: ['steps'],
         properties: {
-          id: { type: 'string' },
           name: { type: 'string' },
-          title: { type: 'string' },
           purpose: { type: 'string' },
           materials: {
             type: 'array',
@@ -43,16 +41,12 @@ const PROTOCOL_GENERATION_MCP_TOOL = Object.freeze({
                   additionalProperties: true,
                   properties: {
                     text: { type: 'string' },
-                    instruction: { type: 'string' },
-                    action: { type: 'string' },
-                    step_number: { type: 'integer' },
                     placeholders: {
                       type: 'array',
                       items: {
                         type: 'object',
                         additionalProperties: true,
                         properties: {
-                          id: { type: 'string' },
                           name: { type: 'string' }
                         }
                       },
@@ -63,21 +57,11 @@ const PROTOCOL_GENERATION_MCP_TOOL = Object.freeze({
               ]
             },
             maxItems: 120
-          },
-          troubleshooting: {
-            anyOf: [
-              { type: 'string' },
-              { type: 'array' }
-            ]
-          },
-          createdAt: { type: 'string' },
-          updatedAt: { type: 'string' }
+          }
         }
       },
       result_summary: { type: 'string' },
       save: { type: 'boolean' },
-      persist: { type: 'boolean' },
-      save_to_protocol_module: { type: 'boolean' },
       overwrite: { type: 'boolean' },
       upsert: { type: 'boolean' }
     }
@@ -127,7 +111,7 @@ function resolveProtocolGenerationPayload(result = {}) {
 async function callProtocolGeneration(input = {}, context = {}, deps = {}) {
   const rawProtocol = ensureObject(input.protocol);
   const protocol = normalizeProtocolForApp(rawProtocol);
-  const shouldSave = input.save === true || input.persist === true || input.save_to_protocol_module === true;
+  const shouldSave = input.save === true;
   const requestedId = cleanText(rawProtocol.id || rawProtocol.protocol_id || rawProtocol.protocolId, 220);
   if (shouldSave && requestedId) {
     protocol.id = requestedId;

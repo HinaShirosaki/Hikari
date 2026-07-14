@@ -25,8 +25,9 @@ const DEFAULT_DIRECT_LLM_MODULES = Object.freeze([
   {
     id: 'notebook',
     label: 'Notebook',
-    description: 'Notebook note cleanup before persistence.',
+    description: 'Notebook naming and note cleanup before persistence.',
     tasks: [
+      { id: 'page-name', label: 'Page name', requestKind: 'text' },
       { id: 'note-clarify', label: 'Clarify note', requestKind: 'text' }
     ]
   },

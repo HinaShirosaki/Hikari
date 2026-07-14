@@ -39,10 +39,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart04(context =
               query: 'PEI',
               limit: 5,
               inventory_search: {
-                normalized_query: 'PEI',
-                candidate_terms: ['PEI'],
-                aliases: [],
-                search_mode: 'exact_then_alias_then_fuzzy'
+                candidate_terms: ['PEI']
               }
             }
           }

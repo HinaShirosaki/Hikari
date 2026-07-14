@@ -19,25 +19,12 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "normalized_query": {
-          "type": "string"
-        },
         "candidate_terms": {
           "type": "array",
           "items": {
             "type": "string"
           },
           "maxItems": 10
-        },
-        "aliases": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "maxItems": 10
-        },
-        "search_mode": {
-          "type": "string"
         }
       }
     },
@@ -274,10 +261,10 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
         "id": {
           "type": "string"
         },
-        "title": {
+        "doi": {
           "type": "string"
         },
-        "paper_title": {
+        "title": {
           "type": "string"
         },
         "summary": {
@@ -287,9 +274,6 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
           "type": "string"
         },
         "content": {
-          "type": "string"
-        },
-        "full_text": {
           "type": "string"
         },
         "methods": {
@@ -367,7 +351,7 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
     }
   },
   "notebook-lookup": {
-    "description": "Use this tool when the user is asking about local notebook entries, prior notebook results, notebook pages for a project, or notebook records tied to a protocol. Prefer `protocol-matching` for protocol lookup and the paper tools for paper lookup. Provide `query` for the notebook search text, and include project or protocol filters when known.",
+    "description": "Use this tool to search local notebook pages by text, project, protocol, or state. Prefer `protocol-matching` for protocol lookup and paper tools for paper lookup. Search results include storage coverage and permission status.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -379,6 +363,20 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
           "type": "integer",
           "minimum": 1,
           "maximum": 25
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "protocol_name": {
+          "type": "string"
+        },
+        "notebook_state": {
+          "type": "string",
+          "enum": ["planned", "executed"]
+        },
+        "detail": {
+          "type": "string",
+          "enum": ["summary", "full"]
         },
         "parser_payload": {
           "$ref": "#/$defs/parser_payload"
@@ -760,17 +758,6 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
           "type": "string",
           "maxLength": 600
         },
-        "topic": {
-          "type": "string",
-          "maxLength": 240
-        },
-        "message": {
-          "type": "string",
-          "maxLength": 1200
-        },
-        "source": {
-          "$ref": "#/$defs/literature_source"
-        },
         "sources": {
           "type": "array",
           "items": {
@@ -778,71 +765,8 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
           },
           "maxItems": 6
         },
-        "preferred_literature_source": {
-          "$ref": "#/$defs/literature_source"
-        },
-        "preferred_web_source": {
-          "type": "string",
-          "maxLength": 240
-        },
-        "limit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 25
-        },
-        "max_papers": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 24
-        },
-        "max_per_source": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 10
-        },
-        "allow_web_fallback": {
-          "type": "boolean"
-        },
         "prefer_recent": {
           "type": "boolean"
-        },
-        "use_codex_paper_context": {
-          "type": "boolean"
-        },
-        "disable_codex_paper_context": {
-          "type": "boolean"
-        },
-        "codex_paper_context": {
-          "type": "boolean"
-        },
-        "max_context_blocks": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 50
-        },
-        "max_download_concurrency": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 24
-        },
-        "reasoning_effort": {
-          "type": "string",
-          "maxLength": 40
-        },
-        "sub_agent_name": {
-          "type": "string",
-          "maxLength": 160
-        },
-        "storage_path": {
-          "type": "string",
-          "maxLength": 2000
-        },
-        "storagePath": {
-          "type": "string",
-          "maxLength": 2000
-        },
-        "parser_payload": {
-          "$ref": "#/$defs/parser_payload"
         }
       }
     }
@@ -856,10 +780,6 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
         "query": {
           "type": "string",
           "maxLength": 600
-        },
-        "message": {
-          "type": "string",
-          "maxLength": 1200
         },
         "required_terms": {
           "type": "array",
@@ -883,14 +803,6 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
           "type": "integer",
           "minimum": 1,
           "maximum": 6
-        },
-        "search_limit": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 16
-        },
-        "parser_payload": {
-          "$ref": "#/$defs/parser_payload"
         }
       }
     }
@@ -901,29 +813,7 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "action": {
-          "type": "string",
-          "enum": [
-            "download",
-            "start",
-            "status"
-          ]
-        },
-        "download_id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 160
-        },
-        "paper_pdf_url": {
-          "type": "string"
-        },
         "doi": {
-          "type": "string"
-        },
-        "pdf_url": {
-          "type": "string"
-        },
-        "page_url": {
           "type": "string"
         },
         "candidate_urls": {
@@ -933,85 +823,21 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
           },
           "maxItems": 24
         },
-        "page_html": {
-          "type": "string",
-          "maxLength": 400000
-        },
-        "message": {
-          "type": "string",
-          "maxLength": 12000
-        },
-        "paper_title": {
-          "type": "string"
-        },
-        "file_name": {
-          "type": "string",
-          "maxLength": 240
-        },
-        "linked_type": {
-          "type": "string",
-          "maxLength": 80
-        },
         "linked_name": {
           "type": "string",
           "maxLength": 220
-        },
-        "storage_path": {
-          "type": "string",
-          "maxLength": 2000
-        },
-        "timeout_ms": {
-          "type": "integer",
-          "minimum": 1000,
-          "maximum": 120000
-        },
-        "use_browser_fallback": {
-          "type": "boolean"
-        },
-        "simulate_one_click": {
-          "type": "boolean"
-        },
-        "request_headers": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          }
         }
       }
     }
   },
   "paper-analysis": {
-    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, explain methods, or pull a protocol candidate out of paper text. Provide the richest available paper context through `paper`, `paper_summary`, `paper_abstract`, or `paper_text`. Set `extract_protocol` when the user explicitly wants procedural extraction, and set `generate_protocol` when the extracted methods should also be converted into an import-ready protocol JSON record.",
+    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, or explain its methods. Reference a locally-ingested paper by its `paper.id` or `paper.doi` and Hikari loads the paper markdown for you; only pass paper text fields when the paper is not in the local KnowledgeBase. To turn extracted methods into a saved protocol, follow up with `protocol_generation`.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "paper": {
           "$ref": "#/$defs/paper_record"
-        },
-        "paper_title": {
-          "type": "string"
-        },
-        "paper_summary": {
-          "type": "string"
-        },
-        "paper_abstract": {
-          "type": "string"
-        },
-        "paper_text": {
-          "type": "string"
-        },
-        "message": {
-          "type": "string"
-        },
-        "extract_protocol": {
-          "type": "boolean"
-        },
-        "generate_protocol": {
-          "type": "boolean"
-        },
-        "protocol_title_hint": {
-          "type": "string"
         }
       }
     }
@@ -1088,9 +914,6 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
           "type": "string"
         },
         "save": {
-          "type": "boolean"
-        },
-        "persist": {
           "type": "boolean"
         },
         "overwrite": {
@@ -1278,48 +1101,14 @@ Source: `src/main/helpers/agent/intent/agent-intent-parser.js`
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "normalized_query",
-        "candidate_terms",
-        "aliases",
-        "search_mode"
+        "candidate_terms"
       ],
       "properties": {
-        "normalized_query": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        },
         "candidate_terms": {
           "type": "array",
           "items": {
             "type": "string"
           }
-        },
-        "aliases": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "search_mode": {
-          "anyOf": [
-            {
-              "type": "string",
-              "enum": [
-                "exact_then_alias_then_fuzzy",
-                "exact_only",
-                "alias_then_fuzzy"
-              ]
-            },
-            {
-              "type": "null"
-            }
-          ]
         }
       }
     },

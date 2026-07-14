@@ -74,15 +74,117 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(css, /:root\s*\{[\s\S]*--hikari-left-rail-list-selected:/);
     });
 
-    test('biology notebook rail flattens hidden pinned controls and keeps its scrollbar at the rail edge', () => {
-      const css = readLocalSource('ui', 'css', 'overrides', 'left-rail-template.css');
-      const railRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*minmax\(0,\s*1fr\);[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
-      const pinnedRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\s*>\s*\.left-rail-template__pinned\s*\{[^}]*display:\s*contents;[^}]*\}/s;
-      const listRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\s*>\s*\.biology-notebook-page-list\.left-rail-template__scroll\s*\{[^}]*padding-inline-end:\s*0;[^}]*scrollbar-gutter:\s*auto;[^}]*\}/s;
+    test('agent chat folders keep the shared two-pixel rail rhythm', () => {
+      const css = readLocalSource('ui', 'css', 'overrides', 'universal-left-rail-lists.css');
+      assert.match(css, /:is\([\s\S]*\.agent-session-list,[\s\S]*\.agent-session-folder-children[\s\S]*\)\s*\{\s*gap:\s*2px !important;/);
+    });
+
+    test('agent chat rail pins its toolbar above the sole gutter-aligned scroller', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'agent-view.css');
+      const railRule = /.left-rail-template\.agent-chat-layout\s*>\s*\.agent-session-rail\.left-rail-template__rail\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const toolbarRule = /\.agent-session-toolbar\s*\{[^}]*padding:\s*14px\s+calc\(var\(--app-left-rail-padding-inline,\s*16px\)\s*\+\s*var\(--theme-scrollbar-size,\s*8px\)\)\s+12px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*border-bottom:\s*1px\s+solid\s+var\(--app-left-rail-divider\);[^}]*\}/s;
+      const listRule = /\.left-rail-template\.agent-chat-layout\s*>\s*\.agent-session-rail\s*>\s*\.agent-session-list\.left-rail-template__scroll\s*\{[^}]*padding:\s*8px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*scrollbar-gutter:\s*stable;[^}]*\}/s;
+
+      assert.match(css, railRule);
+      assert.match(css, toolbarRule);
+      assert.match(css, listRule);
+    });
+
+    test('biology notebook rail pins New Experiment above the sole gutter-aligned scroller', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
+      const railRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const pinnedRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\s*>\s*\.left-rail-template__pinned\s*\{[^}]*display:\s*grid;[^}]*padding:\s*14px\s+calc\(var\(--app-left-rail-padding-inline,\s*16px\)\s*\+\s*var\(--theme-scrollbar-size,\s*8px\)\)\s+12px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*border-bottom:\s*1px\s+solid\s+var\(--app-left-rail-divider\);[^}]*\}/s;
+      const listRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\s*>\s*\.biology-notebook-page-list\.left-rail-template__scroll\s*\{[^}]*padding:\s*8px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*scrollbar-gutter:\s*stable;[^}]*\}/s;
 
       assert.match(css, railRule);
       assert.match(css, pinnedRule);
       assert.match(css, listRule);
+    });
+
+    test('biology notebook page header stays fixed above its detail scroller', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
+      const viewerRule = /\.biology-notebook-viewer\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*height:\s*100%;[^}]*min-height:\s*0;[^}]*overflow:\s*hidden;/s;
+      const scrollRule = /\.biology-notebook-viewer-scroll\s*\{[^}]*display:\s*grid;[^}]*min-height:\s*0;[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;[^}]*scrollbar-gutter:\s*stable;/s;
+
+      assert.match(html, /class="biology-notebook-viewer-head"[\s\S]*?<\/div>\s*<div class="biology-notebook-viewer-scroll">[\s\S]*?<details class="biology-notebook-viewer-section"/);
+      assert.match(css, viewerRule);
+      assert.match(css, scrollRule);
+    });
+
+    test('biology notebook New Experiment dialog owns project and protocol selection', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
+      assert.match(html, /id="biology-notebook-new-experiment-btn"[\s\S]*New Experiment/);
+      assert.match(html, /id="biology-notebook-experiment-dialog-overlay"[\s\S]*id="biology-notebook-project-select"[\s\S]*Search &amp; Select Protocol[\s\S]*id="biology-notebook-protocol-search"[\s\S]*id="biology-notebook-protocol-search-results"[\s\S]*id="biology-notebook-protocol-select" hidden aria-hidden="true" tabindex="-1"[\s\S]*id="biology-notebook-experiment-start-btn"/);
+    });
+
+    test('protocol rail pins its actions above the sole scrolling protocol list', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
+      const railRule = /\.left-rail-template\.protocol-workspace\s*>\s*\.protocol-list-panel\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const pinnedRule = /\.left-rail-template\.protocol-workspace\s*>\s*\.protocol-list-panel\s*>\s*\.protocol-list-pinned\.left-rail-template__pinned\s*\{[^}]*padding:\s*14px\s+calc\(var\(--app-left-rail-padding-inline,\s*16px\)\s*\+\s*var\(--theme-scrollbar-size,\s*8px\)\)\s+12px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*border-bottom:\s*1px\s+solid\s+var\(--app-left-rail-divider\);[^}]*\}/s;
+      const listRule = /\.left-rail-template\.protocol-workspace\s*>\s*\.protocol-list-panel\s*>\s*\.protocol-list-scroll\.left-rail-template__scroll\s*\{[^}]*padding:\s*8px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*scrollbar-gutter:\s*stable;[^}]*\}/s;
+
+      assert.match(html, /class="protocol-list-panel[^"]*left-rail-template__rail--pinned[^"]*"[\s\S]*class="protocol-list-pinned left-rail-template__pinned"[\s\S]*class="protocol-list-scroll left-rail-template__scroll"[\s\S]*id="protocol-list"/);
+      assert.match(css, railRule);
+      assert.match(css, pinnedRule);
+      assert.match(css, listRule);
+    });
+
+    test('protocol rail uses one borderless icon menu for its four sort combinations', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
+
+      assert.match(html, /id="protocol-sort-menu-btn"[^>]*aria-label="Sort protocols"[\s\S]*<svg[\s\S]*id="protocol-sort-menu"[\s\S]*data-protocol-sort="time:asc"[\s\S]*data-protocol-sort="time:desc"[\s\S]*data-protocol-sort="name:asc"[\s\S]*data-protocol-sort="name:desc"/);
+      assert.doesNotMatch(html, /id="protocol-sort-(?:field|order)-btn"/);
+      assert.match(css, /\.protocol-sort-menu-btn\.ghost-btn\s*\{[^}]*border:\s*0;/s);
+    });
+
+    test('protocol row action menus stay inside the rail above neighboring rows', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const list = readLocalSource('src', 'renderer', 'modules', 'protocol', 'list.js');
+
+      assert.match(list, /protocol-list-row-menu-open/);
+      assert.match(css, /\.protocol-list-row-menu-open\s*\{[^}]*z-index:\s*2;/s);
+      assert.match(css, /\.protocol-action-menu\s*\{[^}]*right:\s*0;[^}]*top:\s*calc\(100%\s*\+\s*8px\);[^}]*z-index:\s*3;/s);
+      assert.doesNotMatch(css, /\.protocol-action-menu\s*\{[^}]*left:\s*calc\(100%/s);
+    });
+
+    test('Workflow and Sequence Viewer pin their rail actions above their only rail scroller', () => {
+      const workflowHtml = readLocalSource('ui', 'html', 'views', 'workflow-management-view.html');
+      const workflowCss = readLocalSource('ui', 'css', 'views', 'workflow-management-view.css');
+      const sequenceHomeHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-view.html');
+      const sequenceDetailHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-detail-view.html');
+      const sequenceCss = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
+
+      assert.match(workflowHtml, /class="workflow-editor-sidebar[^\"]*left-rail-template__rail--pinned[^\"]*"[\s\S]*class="workflow-editor-sidebar-pinned left-rail-template__pinned"[\s\S]*id="workflow-entry-view-btn"[\s\S]*class="workflow-editor-sidebar-scroll left-rail-template__scroll"[\s\S]*id="workflow-list"/);
+      assert.match(workflowCss, /#workflow-management-view\s+\.left-rail-template\.workflow-editor-layout\s*>\s*\.workflow-editor-sidebar\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s);
+
+      assert.match(sequenceHomeHtml, /class="sequence-viewer-home-sidebar[^\"]*left-rail-template__rail--pinned[^\"]*"[\s\S]*class="sequence-viewer-home-sidebar-pinned left-rail-template__pinned"[\s\S]*id="sequence-viewer-home-paste-btn"[\s\S]*class="sequence-viewer-home-sidebar-scroll left-rail-template__scroll"[\s\S]*id="sequence-viewer-library-list"/);
+      assert.match(sequenceHomeHtml, /class="sequence-viewer-protein-builder-sidebar[^\"]*left-rail-template__rail--pinned[^\"]*"[\s\S]*class="sequence-viewer-protein-builder-sidebar-pinned left-rail-template__pinned"[\s\S]*id="sequence-viewer-protein-builder-form"[\s\S]*class="sequence-viewer-protein-builder-sidebar-scroll left-rail-template__scroll"[\s\S]*id="sequence-viewer-protein-builder-feature-search-results"/);
+      assert.match(sequenceDetailHtml, /class="sequence-viewer-detail-sidebar[^\"]*left-rail-template__rail--pinned[^\"]*"[\s\S]*class="sequence-viewer-detail-sidebar-pinned left-rail-template__pinned"[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*class="sequence-viewer-detail-sidebar-scroll left-rail-template__scroll"[\s\S]*id="sequence-viewer-detail-library-list"/);
+      assert.match(sequenceDetailHtml, /class="sequence-viewer-cloning-design-toolbar"[\s\S]*class="sequence-viewer-cloning-design-toolbar-nav"[\s\S]*id="sequence-viewer-cloning-design-back-btn"[\s\S]*class="sequence-viewer-cloning-design-toolbar-main"[\s\S]*id="sequence-viewer-cloning-design-run-btn"/);
+      assert.match(sequenceCss, /\.sequence-viewer-cloning-design-toolbar\s*\{[^}]*grid-template-columns:\s*var\(--layout-left-panel-width\)\s+minmax\(0,\s*1fr\);[^}]*\}/s);
+      assert.match(sequenceCss, /\.sequence-viewer-cloning-design-toolbar-main\s*\{[^}]*grid-column:\s*2;[^}]*display:\s*flex;[^}]*justify-content:\s*flex-start;[^}]*\}/s);
+      assert.match(sequenceCss, /#sequence-viewer-view\s+\.left-rail-template\.sequence-viewer-home-layout\s*>\s*\.sequence-viewer-home-sidebar\.left-rail-template__rail--pinned,[^}]*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s);
+    });
+
+    test('Papers rail pins Upload PDF above the sole scrolling library list', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'papers-view.css');
+      const html = readLocalSource('ui', 'html', 'views', 'papers-view.html');
+      const railRule = /\.left-rail-template\.papers-layout\s*>\s*\.papers-library-rail\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const pinnedRule = /\.left-rail-template\.papers-layout\s*>\s*\.papers-library-rail\s*>\s*\.papers-library-pinned\.left-rail-template__pinned\s*\{[^}]*padding:\s*14px\s+calc\(var\(--app-left-rail-padding-inline,\s*16px\)\s*\+\s*var\(--theme-scrollbar-size,\s*8px\)\)\s+12px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*border-bottom:\s*1px\s+solid\s+var\(--app-left-rail-divider\);[^}]*\}/s;
+      const listRule = /\.left-rail-template\.papers-layout\s*>\s*\.papers-library-rail\s*>\s*\.papers-library-scroll\.left-rail-template__scroll\s*\{[^}]*padding:\s*8px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*scrollbar-gutter:\s*stable;[^}]*\}/s;
+
+      assert.match(html, /class="papers-library-rail[^"]*left-rail-template__rail--pinned[^"]*"[\s\S]*class="papers-library-pinned left-rail-template__pinned"[\s\S]*id="paper-upload-trigger"[\s\S]*class="papers-library-scroll left-rail-template__scroll"[\s\S]*id="journal-club-list"/);
+      assert.match(css, railRule);
+      assert.match(css, pinnedRule);
+      assert.match(css, listRule);
+    });
+
+    test('the shared left-rail template contains only structural selectors', () => {
+      const css = readLocalSource('ui', 'css', 'overrides', 'left-rail-template.css');
+      assert.doesNotMatch(css, /\b(?:agent|assay|biology|chemical|gel|inventory|papers|protocol|sample|tool|workflow)\b/i);
     });
 
     test('gel tools omit manual steps and keep ladder MW in analysis controls', () => {

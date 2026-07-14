@@ -171,8 +171,8 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
     'protocol-share-link-panel',
     'protocol-share-link-output',
     'protocol-list',
-    'protocol-sort-field-btn',
-    'protocol-sort-order-btn'
+    'protocol-sort-menu-btn',
+    'protocol-sort-menu'
   ]);
   const protocolForm = document.getElementById('protocol-form');
   const protocolName = document.getElementById('protocol-name');
@@ -399,8 +399,8 @@ test('protocol-management opens JSON import in an overlay on create and hides th
     'protocol-share-link-panel',
     'protocol-share-link-output',
     'protocol-list',
-    'protocol-sort-field-btn',
-    'protocol-sort-order-btn'
+    'protocol-sort-menu-btn',
+    'protocol-sort-menu'
   ]);
 
   const protocolForm = document.getElementById('protocol-form');

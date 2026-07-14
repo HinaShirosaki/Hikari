@@ -740,6 +740,33 @@ function createNotebookDraftRuntime(deps = {}) {
     return clonedNotebook;
   }
 
+  // Apply small per-draft step edits to a clone so the saved protocol is never mutated.
+  // Each edit either replaces an existing step's text by 1-based step_number, or (no
+  // valid step_number) appends a new step.
+  function applyStepEdits(protocol, stepEdits) {
+    const edits = asArray(stepEdits).filter((edit) => edit && typeof edit === 'object');
+    if (!edits.length) {
+      return protocol;
+    }
+    const clone = cloneJson(protocol, {}) || {};
+    const steps = asArray(clone.steps).slice();
+    edits.forEach((edit) => {
+      const text = cleanText(edit.text, 2000);
+      if (!text) {
+        return;
+      }
+      const num = Number(edit.step_number);
+      if (Number.isInteger(num) && num >= 1 && num <= steps.length) {
+        const existing = steps[num - 1];
+        steps[num - 1] = existing && typeof existing === 'object' ? { ...existing, text } : text;
+      } else {
+        steps.push({ text });
+      }
+    });
+    clone.steps = steps;
+    return clone;
+  }
+
   async function generateNotebookDraft({
     provider,
     endpoint,
@@ -752,6 +779,8 @@ function createNotebookDraftRuntime(deps = {}) {
     project: selectedProject = {},
     workflowId = '',
     protocolCandidates = [],
+    pendingValues = {},
+    stepEdits = [],
     evidenceContext = [],
     traceContext = null,
     lifecycleRecorder = null
@@ -929,6 +958,7 @@ function createNotebookDraftRuntime(deps = {}) {
       }
     });
 
+    const draftProtocol = applyStepEdits(selectedProtocol, stepEdits);
     const generationResult = await generateNotebookFromProtocol({
       provider,
       endpoint,
@@ -942,9 +972,9 @@ function createNotebookDraftRuntime(deps = {}) {
       conversation,
       snapshot,
       parserPayload,
-      selectedProtocol,
+      selectedProtocol: draftProtocol,
       project: resolvedProject,
-      pendingValues: {},
+      pendingValues: pendingValues && typeof pendingValues === 'object' ? pendingValues : {},
       traceContext,
       lifecycleRecorder
     });

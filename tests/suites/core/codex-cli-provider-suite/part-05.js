@@ -384,7 +384,7 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.equal(displayEvents.some((event) => event.display_text === 'Checking project context.' && event.display_kind === 'thinking'), true);
           assert.equal(displayEvents.some((event) => event.display_text === 'I am checking inventory.' && event.display_kind === 'assistant'), true);
           assert.equal(displayEvents.some((event) => event.display_text === 'I am checking inventory.' && event.display_kind === 'thinking'), false);
-          assert.equal(displayEvents.some((event) => event.display_kind === 'tool' && /inventory_lookup/.test(event.display_text) && /SUMO1/.test(event.display_text)), true);
+          assert.equal(displayEvents.some((event) => event.display_kind === 'tool' && /inventory[ _]lookup/i.test(event.display_text) && /SUMO1/.test(event.display_text)), true);
           assert.equal(displayEvents.some((event) => event.display_kind === 'assistant' && event.display_text === 'Final response from Codex.'), true);
           assert.equal(displayEvents.some((event) => /^\s*\{/.test(event.display_text || '')), false);
         } finally {

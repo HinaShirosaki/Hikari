@@ -654,10 +654,19 @@ async function hydrateSnapshotFromBundle({
   }
 
   let commonSqliteData = await readSqliteBundleIndex(bundlePaths.sqlitePath);
+  if (commonSqliteData.warning) {
+    migration.warnings.push(commonSqliteData.warning);
+  }
   if (!commonSqliteData.exists) {
     commonSqliteData = await readSqliteBundleIndex(getLegacySqlitePath(bundlePaths));
+    if (commonSqliteData.warning) {
+      migration.warnings.push(commonSqliteData.warning);
+    }
   }
   let chemicalSqliteData = await readSqliteBundleIndex(bundlePaths.chemicalsSqlitePath);
+  if (chemicalSqliteData.warning) {
+    migration.warnings.push(chemicalSqliteData.warning);
+  }
   if (!chemicalSqliteData.exists && commonSqliteData.exists) {
     chemicalSqliteData = commonSqliteData;
   }

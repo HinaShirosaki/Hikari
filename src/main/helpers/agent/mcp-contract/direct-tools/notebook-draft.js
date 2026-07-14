@@ -13,7 +13,7 @@ const {
 
 const NOTEBOOK_DRAFT_MCP_TOOL = Object.freeze({
   name: 'notebook_draft',
-  description: 'Prepare a planned Hikari biology notebook draft for explicit user confirmation before any notebook page is created.',
+  description: 'Select a protocol from candidates, fill known placeholder values from pending_values, and optionally apply small per-draft step_edits (replace a step by step_number, or append a step), then prepare a planned Hikari biology notebook draft on a copy — never the saved protocol — for explicit user confirmation before any notebook page is created. Unresolved placeholders are returned as follow-up questions.',
   annotations: Object.freeze({
     title: 'Notebook draft',
     readOnlyHint: true,
@@ -25,71 +25,36 @@ const NOTEBOOK_DRAFT_MCP_TOOL = Object.freeze({
     type: 'object',
     additionalProperties: false,
     properties: {
-      message: { type: 'string' },
-      project: {
-        type: 'object',
-        additionalProperties: true,
-        properties: {
-          id: { type: 'string' },
-          name: { type: 'string' },
-          project_id: { type: 'string' },
-          project_name: { type: 'string' }
-        }
-      },
-      project_id: { type: 'string' },
       project_name: { type: 'string' },
-      workflow_id: { type: 'string', maxLength: 160 },
-      workflowId: { type: 'string', maxLength: 160 },
-      protocol_name: { type: 'string' },
-      protocolName: { type: 'string' },
       protocol_candidates: {
         type: 'array',
         items: { type: 'string' },
         maxItems: 5
       },
-      protocolCandidates: {
-        type: 'array',
-        items: { type: 'string' },
-        maxItems: 5
+      pending_values: {
+        type: 'object',
+        additionalProperties: { type: 'string' }
       },
-      evidence_context: {
+      step_edits: {
         type: 'array',
+        maxItems: 60,
         items: {
           type: 'object',
-          additionalProperties: true
-        },
-        maxItems: 8
-      },
-      evidenceContext: {
-        type: 'array',
-        items: {
-          type: 'object',
-          additionalProperties: true
-        },
-        maxItems: 8
-      },
-      parser_payload: {
-        type: 'object',
-        additionalProperties: true
-      },
-      parserPayload: {
-        type: 'object',
-        additionalProperties: true
+          additionalProperties: false,
+          properties: {
+            step_number: { type: 'integer', minimum: 1 },
+            text: { type: 'string' }
+          }
+        }
       }
     }
   }
 });
 
 function normalizeProject(input = {}, context = {}) {
-  const inputProject = ensureObject(input.project);
   const contextProject = ensureObject(context.project);
   const projectId = cleanText(
-    input.project_id
-      || input.projectId
-      || inputProject.id
-      || inputProject.project_id
-      || inputProject.projectId
-      || context.projectId
+    context.projectId
       || contextProject.id
       || contextProject.project_id
       || contextProject.projectId,
@@ -97,11 +62,6 @@ function normalizeProject(input = {}, context = {}) {
   );
   const projectName = cleanText(
     input.project_name
-      || input.projectName
-      || inputProject.name
-      || inputProject.project_name
-      || inputProject.projectName
-      || inputProject.title
       || context.projectName
       || contextProject.name
       || contextProject.project_name
@@ -112,15 +72,8 @@ function normalizeProject(input = {}, context = {}) {
   return compactObject({
     id: projectId,
     name: projectName,
-    resolution_source: cleanText(inputProject.resolution_source || inputProject.resolutionSource || contextProject.resolution_source || contextProject.resolutionSource, 120)
+    resolution_source: cleanText(contextProject.resolution_source || contextProject.resolutionSource, 120)
   });
-}
-
-function normalizeEvidenceContext(input = {}) {
-  return asArray(input.evidence_context || input.evidenceContext)
-    .map((entry) => cloneJson(entry, null))
-    .filter((entry) => entry && typeof entry === 'object' && !Array.isArray(entry))
-    .slice(0, 8);
 }
 
 function resolveNotebookDraftPayload(result = {}) {
@@ -138,21 +91,14 @@ function resolveNotebookDraftPayload(result = {}) {
 
 async function callNotebookDraft(input = {}, context = {}, deps = {}) {
   const project = normalizeProject(input, context);
-  const workflowId = cleanText(input.workflow_id || input.workflowId, 160);
-  const protocolCandidates = uniqueStrings([
-    ...asArray(input.protocol_candidates || input.protocolCandidates),
-    input.protocol_name,
-    input.protocolName
-  ], 5);
-  const evidenceContext = normalizeEvidenceContext(input);
-  const message = cleanText(input.message || context.message, 3200);
-  const parserPayload = normalizeParserPayload(input.parser_payload || input.parserPayload || context.parserPayload, {
+  const protocolCandidates = uniqueStrings(asArray(input.protocol_candidates), 5);
+  const pendingValues = ensureObject(input.pending_values);
+  const message = cleanText(context.message, 3200);
+  const parserPayload = normalizeParserPayload(context.parserPayload, {
     primary_intent: 'notebook_draft',
     entities: {
       project_id: cleanText(project.id || project.project_id, 120),
       project_name: cleanText(project.name || project.project_name, 220),
-      workflow_id: workflowId,
-      workflow_step: workflowId,
       protocol_name: protocolCandidates[0],
       requested_output: 'notebook_draft'
     },
@@ -164,9 +110,9 @@ async function callNotebookDraft(input = {}, context = {}, deps = {}) {
     toolId: 'notebook-draft',
     args: compactObject({
       project,
-      workflow_id: workflowId,
       protocol_candidates: protocolCandidates,
-      evidence_context: evidenceContext
+      pending_values: pendingValues,
+      step_edits: asArray(input.step_edits)
     }),
     context: {
       ...context,

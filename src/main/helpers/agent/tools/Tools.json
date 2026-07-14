@@ -5,7 +5,7 @@
   },
   {
     "name": "notebook-lookup",
-    "description": "Look up local notebook entries by project, protocol, result text, or notebook identifier."
+    "description": "Search notebook pages or retrieve one page by stable entry id with agent-safe content and storage-access status."
   },
   {
     "name": "protocol-matching",

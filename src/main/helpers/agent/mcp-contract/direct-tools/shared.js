@@ -108,10 +108,7 @@ function buildCommonLookupInputSchema(extraProperties = {}) {
 function sanitizeInventorySearch(value = {}) {
   const source = ensureObject(value);
   return compactObject({
-    normalized_query: cleanText(source.normalized_query || source.normalizedQuery, 300),
-    candidate_terms: uniqueStrings(source.candidate_terms || source.candidateTerms, 10),
-    aliases: uniqueStrings(source.aliases, 10),
-    search_mode: cleanText(source.search_mode || source.searchMode, 80)
+    candidate_terms: uniqueStrings(source.candidate_terms || source.candidateTerms, 10)
   });
 }
 
@@ -212,6 +209,12 @@ function normalizeToolEnvelope(rawResult = {}) {
     summary: cleanText(payload.summary || envelope.summary, 800),
     error: cleanText(payload.error || envelope.error, 1200),
     termsUsed: uniqueStrings(payload.terms_used || payload.termsUsed || envelope.terms_used || envelope.termsUsed, 10),
+    action: cleanText(payload.action || envelope.action, 40),
+    detail: cleanText(payload.detail || envelope.detail, 40),
+    sources: uniqueStrings(payload.sources || envelope.sources, 10),
+    scope: ensureObject(payload.scope || envelope.scope),
+    counts: ensureObject(payload.counts || envelope.counts),
+    access: ensureObject(payload.access || envelope.access),
     items,
     citations,
     raw: envelope
@@ -288,7 +291,7 @@ function buildLookupResponse({
   return compactObject({
     ok,
     status: ok
-      ? (resultItems.length ? 'matched' : 'no_match')
+      ? (normalizedEnvelope.status || (resultItems.length ? 'matched' : 'no_match'))
       : (normalizedEnvelope.status || 'failed'),
     mcp_tool: cleanText(mcpToolName, 120),
     app_tool: cleanText(appToolId, 120),
@@ -296,6 +299,12 @@ function buildLookupResponse({
     source: cleanText(source || normalizedEnvelope.source, 120),
     backfilled_sql: normalizedEnvelope.backfilledSql === true,
     terms_used: normalizedEnvelope.termsUsed,
+    action: normalizedEnvelope.action,
+    detail: normalizedEnvelope.detail,
+    sources: normalizedEnvelope.sources,
+    scope: normalizedEnvelope.scope,
+    counts: normalizedEnvelope.counts,
+    access: normalizedEnvelope.access,
     summary,
     items: cloneJson(resultItems, []),
     citations: buildLookupCitations(resultItems, mcpToolName, citationReason),

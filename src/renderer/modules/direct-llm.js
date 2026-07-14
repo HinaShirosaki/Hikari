@@ -24,7 +24,8 @@ async function requestDirectLlm({
   attachments = [],
   expectJson = false,
   schema = null,
-  systemPrompt = ''
+  systemPrompt = '',
+  maxOutputTokens = undefined
 }) {
   const api = getDirectLlmApi();
   if (!api?.runDirectLlmPrompt) {
@@ -42,6 +43,7 @@ async function requestDirectLlm({
     expectJson,
     ...(schema && typeof schema === 'object' ? { schema } : {}),
     ...(systemPrompt ? { systemPrompt } : {}),
+    ...(Number.isFinite(Number(maxOutputTokens)) ? { maxOutputTokens: Number(maxOutputTokens) } : {}),
     llm: buildDirectLlmSettings(llm)
   });
   if (!result?.ok) {

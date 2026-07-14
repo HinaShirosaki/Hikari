@@ -98,8 +98,11 @@ export function createAgentRequestController(deps) {
     runtime.stopRequested = false;
     runtime.stopInProgress = false;
 
-    const { projectId, projectName } = payloadBuilder.getCurrentProjectDetails();
+    // Ensure the session first: on the first message from a selected project folder it
+    // syncs the active project scope from that folder, so the project details captured
+    // below (and sent with this request) reflect the folder, not the previous/empty scope.
     const currentSessionId = await sessionManager.ensureCurrentChatSession(messageText);
+    const { projectId, projectName } = payloadBuilder.getCurrentProjectDetails();
     state.agentChat.messages.push({
       id: createId(),
       role: 'user',

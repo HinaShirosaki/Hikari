@@ -25,32 +25,19 @@ function uniqueStrings(values, max = 20) {
   return out;
 }
 
-// Build the ordered list of inventory search terms according to the parser-selected search mode.
+// Build the deduped list of inventory search terms from candidate terms plus the fallback query.
 function buildInventorySearchTerms({
   inventorySearch = {},
   fallbackQuery = '',
   maxTerms = 10
 }) {
-  const normalizedQuery = cleanText(inventorySearch?.normalized_query, 220);
   const candidateTerms = uniqueStrings(inventorySearch?.candidate_terms, maxTerms);
-  const aliases = uniqueStrings(inventorySearch?.aliases, maxTerms);
-  const searchMode = cleanText(inventorySearch?.search_mode, 60) || 'exact_then_alias_then_fuzzy';
   const baseFallback = cleanText(fallbackQuery, 220);
 
-  const exactTerms = uniqueStrings([
-    normalizedQuery,
+  return uniqueStrings([
     ...candidateTerms,
     baseFallback
   ], maxTerms);
-  const aliasTerms = uniqueStrings(aliases, maxTerms);
-
-  if (searchMode === 'exact_only') {
-    return uniqueStrings(exactTerms, maxTerms);
-  }
-  if (searchMode === 'alias_then_fuzzy') {
-    return uniqueStrings([...aliasTerms, ...exactTerms], maxTerms);
-  }
-  return uniqueStrings([...exactTerms, ...aliasTerms], maxTerms);
 }
 
 module.exports = {

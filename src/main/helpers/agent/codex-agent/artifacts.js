@@ -207,7 +207,7 @@ function textNamesDirectProtocolGenerationTool(rawText = '') {
 }
 
 function textRequestsProtocolSave(rawText = '') {
-  return /(?:\bsave\b|\bpersist\b|\bsave_to_protocol_module\b|\bsaveToProtocolModule\b)\s*(?::|=)?\s*true\b/i.test(String(rawText || ''));
+  return /\bsave\b\s*(?::|=)?\s*true\b/i.test(String(rawText || ''));
 }
 
 function protocolHasSteps(protocol = {}) {
@@ -233,13 +233,7 @@ function buildDirectProtocolGenerationFallbackArgs(rawMessage = '', { cleanText 
   if (resultSummary) {
     args.result_summary = resultSummary;
   }
-  if (
-    source.save === true
-    || source.persist === true
-    || source.save_to_protocol_module === true
-    || source.saveToProtocolModule === true
-    || textRequestsProtocolSave(rawMessage)
-  ) {
+  if (source.save === true || textRequestsProtocolSave(rawMessage)) {
     args.save = true;
   }
   if (source.overwrite === true) {
