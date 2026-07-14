@@ -1,6 +1,6 @@
 'use strict';
 
-const { throwIfAgentRequestAborted } = require('../shared/agent-request-context.js');
+const { throwIfAgentRequestAborted } = require('../../../lib/llm/request-context.js');
 const {
   asArray,
   defaultCleanText,

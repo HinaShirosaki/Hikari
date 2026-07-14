@@ -6,7 +6,7 @@ import {
   formatRelativePaperTime
 } from './model.js';
 import { getPaperDisplayTitle } from './pdf-metadata.js';
-import { bindFileDropTarget } from '../file-drop.js';
+import { bindFileDropTarget } from '../../lib/file-drop.js';
 
 const PAPER_DRAG_MIME = 'application/x-hikari-paper-id';
 

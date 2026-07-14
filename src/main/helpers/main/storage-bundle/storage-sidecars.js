@@ -4,9 +4,6 @@ const fs = require('fs/promises');
 const path = require('path');
 const { getBundlePaths } = require('./storage-paths');
 const {
-  releaseOfficialMcpSkillsForWorkspace
-} = require('../../agent/codex-agent/official-mcp-skills.js');
-const {
   CODEX_AGENTS_FOLDER_NAME,
   CODEX_SKILLS_FOLDER_NAME,
   MEMORY_FILE_NAME,
@@ -169,7 +166,7 @@ async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt) {
   return writtenPaths;
 }
 
-async function writeProjectMemoryFiles(storageRootPath, snapshot) {
+async function writeProjectMemoryFiles(storageRootPath, snapshot, releaseOfficialSkills) {
   if (!storageRootPath) {
     return [];
   }
@@ -182,7 +179,7 @@ async function writeProjectMemoryFiles(storageRootPath, snapshot) {
     const filePath = path.join(folderPath, MEMORY_FILE_NAME);
     await fs.mkdir(folderPath, { recursive: true });
     await fs.mkdir(path.join(folderPath, CODEX_AGENTS_FOLDER_NAME, CODEX_SKILLS_FOLDER_NAME), { recursive: true });
-    await releaseOfficialMcpSkillsForWorkspace(folderPath);
+    await releaseOfficialSkills(folderPath);
     await fs.writeFile(filePath, buildProjectMemoryMarkdown(projectRecord), 'utf8');
     writtenPaths.push(filePath);
   }
@@ -205,7 +202,8 @@ async function writeSamplesFile(samplesPath, snapshot, updatedAt) {
 async function syncBundleFromSnapshot({
   dataFilePath,
   snapshot,
-  fallbackDataFilePath = ''
+  fallbackDataFilePath = '',
+  releaseOfficialMcpSkillsForWorkspace = async () => {}
 } = {}) {
   const safeSnapshot = ensureObject(snapshot);
   const bundlePaths = getBundlePaths({
@@ -239,7 +237,11 @@ async function syncBundleFromSnapshot({
     ? await writeNotebookPageFolders(bundlePaths.storageRootPath, safeSnapshot, updatedAt)
     : [];
   const projectMemoryFilePaths = bundlePaths.storageRootPath
-    ? await writeProjectMemoryFiles(bundlePaths.storageRootPath, safeSnapshot)
+    ? await writeProjectMemoryFiles(
+      bundlePaths.storageRootPath,
+      safeSnapshot,
+      releaseOfficialMcpSkillsForWorkspace
+    )
     : [];
   await fs.rm(bundlePaths.notebookPagesPath, { force: true }).catch(() => {});
   const samplesPath = await writeSamplesFile(bundlePaths.samplesPath, safeSnapshot, updatedAt);

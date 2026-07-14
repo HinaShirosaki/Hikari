@@ -13,8 +13,7 @@ module.exports = function registerAgentContractsBPart02(context = {}) {
       readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
-      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'ipc', 'index.js')
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js')
     ].join('\n');
     test('main no longer wires legacy routing and phase orchestration helpers', () => {
       const mainSource = readMainProcessSource();

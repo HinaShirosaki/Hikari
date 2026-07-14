@@ -1,7 +1,7 @@
 'use strict';
 
 const { createAgentMcpHost } = require('../../helpers/agent/mcp-contract/host.js');
-const { createAgentMcpInitializer } = require('../../helpers/main/agent-mcp-initializer.js');
+const { createAgentMcpInitializer } = require('./create-agent-mcp-initializer.js');
 
 function createMainMcpService({
   cleanText,

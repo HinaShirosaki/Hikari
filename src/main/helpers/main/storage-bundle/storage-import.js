@@ -7,7 +7,6 @@ const {
   hydrateSamplesRootFromStoragePath,
   hydrateSnapshotFromBundle
 } = require('./storage-hydration');
-const { transformPaperRecordsToMarkdown } = require('../../../papers/parse/paper-markdown-import.js');
 const { collectManifestEntries, isBundleCandidateName, isSqliteBundleCandidateName, looksLikeHikariSnapshot, normalizeBundleSummary, STORAGE_MANIFEST_FILE_NAME, toPosixRelative } = require('./storage-manifest');
 const { getBundlePaths, getBundlePathsFromSqlitePath, resolveProtocolBundlePaths, resolveStorageRootLayout, SAMPLES_FILE_NAME, SAMPLES_ROOT_FOLDER_NAME } = require('./storage-paths');
 const { summarizeSequenceLibrary } = require('./sequence-library-summary');
@@ -107,7 +106,7 @@ async function importProtocolRoot({ storagePath = '' } = {}) {
   };
 }
 
-async function importStorageRoot({ storagePath = '' } = {}) {
+async function importStorageRoot({ storagePath = '', transformPaperRecordsToMarkdown = null } = {}) {
   const resolvedStoragePath = path.resolve(cleanText(storagePath, 2400));
   if (!resolvedStoragePath) {
     throw new Error('Missing storage path.');
@@ -365,11 +364,13 @@ async function importStorageRoot({ storagePath = '' } = {}) {
   statePatch.assays = [...assayMap.values()];
   statePatch.gelAnalyses = [...gelAnalysisMap.values()];
 
-  const paperMarkdown = await transformPaperRecordsToMarkdown({
-    storagePath: resolvedStoragePath,
-    papers: statePatch.papers,
-    source: 'storage_import'
-  });
+  const paperMarkdown = typeof transformPaperRecordsToMarkdown === 'function'
+    ? await transformPaperRecordsToMarkdown({
+        storagePath: resolvedStoragePath,
+        papers: statePatch.papers,
+        source: 'storage_import'
+      })
+    : { ok: false, status: 'unavailable', warnings: [] };
 
   const sequenceLibrary = await summarizeSequenceLibrary(resolvedStoragePath);
   const workflowPaths = resolveWorkflowStoragePaths(resolvedStoragePath);

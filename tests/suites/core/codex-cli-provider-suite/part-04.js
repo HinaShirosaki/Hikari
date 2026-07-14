@@ -991,9 +991,9 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
           __dirname,
           'src',
           'main',
-          'helpers',
-          'main',
-          'agent-mcp-initializer.js'
+          'core',
+          'services',
+          'create-agent-mcp-initializer.js'
         ));
         const initializer = createAgentMcpInitializer({
           cleanText: (value, maxLength = 2000) => {
@@ -1072,9 +1072,9 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
           __dirname,
           'src',
           'main',
-          'helpers',
-          'main',
-          'agent-mcp-initializer.js'
+          'core',
+          'services',
+          'create-agent-mcp-initializer.js'
         ));
         const initializer = createAgentMcpInitializer({
           cleanText: (value, maxLength = 2000) => {

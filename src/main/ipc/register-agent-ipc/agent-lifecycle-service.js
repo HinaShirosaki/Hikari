@@ -1,6 +1,6 @@
 'use strict';
 
-const { isAgentRequestAbortError } = require('../../helpers/agent/shared/agent-request-context.js');
+const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
 const {
   extractPlotlyGraphArtifactFromToolOutput
 } = require('../../helpers/agent/plotly-graph-artifacts.js');

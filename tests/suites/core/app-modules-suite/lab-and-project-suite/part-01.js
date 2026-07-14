@@ -151,69 +151,6 @@ test('adding a dashboard passage reminder does not create an inventory sample', 
   widget.render();
   assert.match(list.innerHTML, /HEK293 \(P12\)/);
 });
-test('lab-management supports member create, edit, and delete lifecycle', () => {
-  const document = createMockDocument([
-    'member-form',
-    'member-id',
-    'member-name',
-    'member-institution-email',
-    'member-position',
-    'member-hikari-email',
-    'member-cancel-btn',
-    'member-cards'
-  ]);
-  const memberForm = document.getElementById('member-form');
-  const memberId = document.getElementById('member-id');
-  const memberName = document.getElementById('member-name');
-  const memberInstitutionEmail = document.getElementById('member-institution-email');
-  const memberPosition = document.getElementById('member-position');
-  const memberHikariEmail = document.getElementById('member-hikari-email');
-  const memberCards = document.getElementById('member-cards');
-  wireFormReset(memberForm, [memberName, memberInstitutionEmail, memberPosition, memberHikariEmail]);
-
-  let persistCalls = 0;
-  const state = { members: [] };
-  const labManagementModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'lab-management.js'), {
-    document
-  });
-  const labManagement = labManagementModule.initLabManagement({
-    state,
-    persist: () => {
-      persistCalls += 1;
-    },
-    createId: () => 'member-1',
-    safeText: shared.safeText
-  });
-
-  memberName.value = '  Alice <Admin>  ';
-  memberInstitutionEmail.value = 'alice@example.edu';
-  memberPosition.value = 'PI';
-  memberHikariEmail.value = 'alice@hikari.test';
-  trigger(memberForm, 'submit');
-
-  assert.equal(state.members.length, 1);
-  assert.equal(state.members[0].id, 'member-1');
-  assert.equal(state.members[0].name, 'Alice <Admin>');
-  assert.equal(persistCalls, 1);
-  assert.equal(memberId.value, '');
-  assert.match(memberCards.innerHTML, /Alice &lt;Admin&gt;/);
-
-  const editBtn = memberCards.querySelectorAll('[data-member-edit]')[0];
-  trigger(editBtn, 'click');
-  assert.equal(memberId.value, 'member-1');
-  assert.equal(memberPosition.value, 'PI');
-
-  memberPosition.value = 'Lab Director';
-  trigger(memberForm, 'submit');
-  assert.equal(state.members.length, 1);
-  assert.equal(state.members[0].position, 'Lab Director');
-
-  labManagement.render();
-  const deleteBtn = memberCards.querySelectorAll('[data-member-delete]')[0];
-  trigger(deleteBtn, 'click');
-  assert.equal(state.members.length, 0);
-  assert.match(memberCards.innerHTML, /No members yet/);
-});
 test('personal-inventory shows right-side sample editor and saves linked sample fields', () => {
   const document = createMockDocument([
     'inventory-sections',
@@ -721,7 +658,7 @@ test('sample-registry applies pasted SMILES, MOL/SDF, and copied images without 
   assert.match(imageCtx.dom.sampleCompoundStatus.textContent, /Structure image pasted/);
 });
 test('chemical structure clipboard helper extracts CDXML, MOL/SDF, SMILES, and images', async () => {
-  const clipboardModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'chemical-structure-clipboard.js'));
+  const clipboardModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'services', 'chemical-structure-clipboard.js'));
   const molfile = [
     'ethanol',
     '  Hikari',

@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../../../src/main/helpers/agent/shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../src/main/lib/llm/runtime-helpers.js');
 const { createAgentRoutePlannerRuntime } = require('./agent-route-planner.js');
 const { createScienceInputClarificationRuntime } = require('./input-clarification.js');
 const { createScienceFinalSynthesisRuntime } = require('./final-synthesis.js');

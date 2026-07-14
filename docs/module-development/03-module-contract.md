@@ -166,7 +166,7 @@ The services are defined in [src/renderer/services/](../../src/renderer/services
 - `projectService.js` — `handleProjectsChanged`
 - `inventoryService.js` — `handleSamplesChanged`, `openSampleSearch`
 - `analysisService.js` — `handleAssaysChanged`, `handleGelAnalysesChanged`, `openAssayForNotebook`, `openGelForNotebook`
-- `sequenceService.js` — `openFromToolBox`
+- `modules/sequence-viewer/service.js` — `openFromToolBox` (destination-owned handoff service)
 
 Add a new service file for a new feature area. The shape is mechanical — see [src/renderer/services/protocolService.js](../../src/renderer/services/protocolService.js):
 

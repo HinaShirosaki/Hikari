@@ -7,8 +7,8 @@
 `main.js` is a 5-line entry. `src/main/core/main-services.js` constructs every service in dependency order and registers all IPC. It:
 
 - creates the data persistence facade with `createMainDataHelpers(...)` and paths with `createMainAppPaths(...)`
-- imports concrete storage, sequence-library, and LLM operations
-- builds the provider-neutral agent foundation with `create-main-agent-services.js`
+- imports concrete storage and LLM operations plus the feature-owned Sequence Viewer library API
+- builds the provider-neutral agent foundation with `src/main/core/services/create-agent-services.js`
 - creates MCP and Codex as separate dependency-ordered services
 - registers `registerDataIpc`, `registerAgentIpc`, and `registerSystemIpc` through dedicated IPC adapter definitions
 
@@ -21,12 +21,13 @@ That gives the folder a consistent shape:
 | persistence facade | `data/data-helpers.js` |
 | compact snapshot serialization | `data/data-snapshot-utils.js` |
 | bundle sidecars, SQLite, storage import | `storage-bundle/` (folder) |
-| sequence storage, search, annotation | `sequence-library/` (folder) |
-| sequence inference (shared algorithm) | `sequence/` (folder) |
+| sequence storage, search, annotation | `src/renderer/modules/sequence-viewer/main-process/sequence-library/` |
+| sequence inference and parsing | `src/renderer/modules/sequence-viewer/` |
 | LLM provider runtime + chat-log transform | `llm/` (folder) |
-| provider-neutral agent wiring | `create-main-agent-services.js` |
-| MCP and Codex integration | `src/main/core/services/`, `agent-mcp-initializer.js` |
-| PDF/paper/chemical import | `pdf-to-md.js`, `paper-markdown-import.js`, `chemical-import-parser.js`, ... |
+| provider-neutral agent wiring | `src/main/core/services/create-agent-services.js` |
+| MCP and Codex integration | `src/main/core/services/` |
+| PDF and paper import | `src/main/papers/parse/` |
+| chemical import | `chemical-import-parser.js` |
 | renderer-facing IPC | `src/main/ipc/` (data / system / agent registrars) |
 
 ## Three-registrar model
@@ -35,7 +36,7 @@ The renderer-facing surface is still dominated by three registrars under `src/ma
 
 | Registrar | Primary audience | What it exposes |
 | --- | --- | --- |
-| `register-data-ipc.js` | renderer data and storage flows | save/load, storage-root helpers, sequence library, import parsers |
+| `register-data-ipc.js` + `register-data-ipc/` | renderer data and storage flows | save/load, storage-root helpers, grouped sequence endpoints, import parsers |
 | `register-agent-ipc/` | renderer chat/assistant flows | `agent:chat`, chat-log session helpers, developer tool tests, log replay |
 | `register-system-ipc.js` | renderer settings/system panels | Codex CLI + direct LLM, Telegram config, open-external-url |
 
@@ -55,9 +56,9 @@ The primary JSON file is intentionally not the whole truth: it is the small top-
 
 The sequence feature set is its own subdomain under the storage root, not mixed into the general snapshot:
 
-- `sequence-library/` manages a dedicated SQLite database (`SequenceViewer/sequence-library.sqlite`) plus per-entry files
-- `sequence-library/backbone-service.js` runs the process-neutral recognition algorithm from `src/renderer/modules/sequence-viewer/algorithms/` against the stored library
-- `register-data-ipc.js` exposes both through `sequence-library:*` endpoints
+- `src/renderer/modules/sequence-viewer/main-process/sequence-library/` manages a dedicated SQLite database (`SequenceViewer/sequence-library.sqlite`) plus per-entry files
+- `src/renderer/modules/sequence-viewer/main-process/sequence-library/backbone-service.js` runs the process-neutral recognition algorithm from its sibling `algorithms/` folder against the stored library
+- `register-data-ipc/register-sequence-library-ipc.js` exposes both through `sequence-library:*` endpoints
 
 See [sequence-library.md](../sequences/sequence-library.md).
 
@@ -66,6 +67,6 @@ See [sequence-library.md](../sequences/sequence-library.md).
 Shortest reading path:
 
 1. `src/main/core/main-services.js` — service construction and IPC composition
-2. `src/main/ipc/register-data-ipc.js` — the external API surface
-4. `data/data-helpers.js` and `storage-bundle/index.js` — save/load semantics
-5. `sequence-library/index.js` — only after that; it is effectively its own storage subsystem
+2. `src/main/ipc/register-data-ipc.js` and its `register-data-ipc/` endpoint groups — the external API surface
+3. `data/data-helpers.js` and `storage-bundle/index.js` — save/load semantics
+4. `src/renderer/modules/sequence-viewer/main-process/sequence-library/index.js` — only after that; it is effectively its own storage subsystem

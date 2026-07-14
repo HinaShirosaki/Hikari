@@ -31,6 +31,7 @@ The rest of the folder is split by responsibility:
 - `rendering-time.js`: timestamp formatting.
 - `rendering-trace.js`, `rendering-trace-rows.js`, `rendering-trace-normalizers.js`: generated trace rendering and row normalization.
 - `response.js`: agent result normalization and assistant text summaries.
+- `public-api.js`: deliberate response-helper surface for other renderer features.
 - `session-manager.js`: persistent chat session list, load, create, and refresh logic.
 - `shared.js`: common text, array, mapping, and tool-label helpers.
 - `state-snapshot.js`: thin Hikari state snapshot and experiment-data mapping.

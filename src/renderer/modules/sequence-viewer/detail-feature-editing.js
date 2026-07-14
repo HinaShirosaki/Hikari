@@ -1,4 +1,4 @@
-import { escapeHtml } from '../tool-box/common.js';
+import { escapeHtml } from '../../lib/html.js';
 import { designPcrPrimerPair } from './cloning-assembly.js';
 import {
   COMMON_SEQUENCE_FEATURE_TYPES,

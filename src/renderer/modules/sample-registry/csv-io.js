@@ -1,5 +1,5 @@
-import { escapeCsv } from '../assay/shared.js';
-import { createDefaultWells, isMultiWellContainer } from '../personal-inventory/constants.js';
+import { escapeCsv } from '../../lib/csv.js';
+import { createDefaultWells, isMultiWellContainer } from '../../lib/inventory-containers.js';
 import { buildLocationFromInventoryLink } from './inventory-links.js';
 
 // Flat sample columns + container placement, so a whole box round-trips.

@@ -12,14 +12,14 @@ export {
   computeLaneConfidence,
   interpretLane,
   linearRegression
-} from './analysis-core.js';
+} from './analysis/analysis-core.js';
 
 export {
   buildGaussianKernel,
   computeHistogramPercentiles,
   gaussianBlur2d,
   normalizeArrayRange
-} from './image-processing.js';
+} from './analysis/image-processing.js';
 
 export {
   clamp,

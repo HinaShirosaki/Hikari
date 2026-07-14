@@ -18,7 +18,7 @@ import { oppositeAxis } from './shared.js';
 import { createAssayAgentContext } from './agent/context.js';
 import { bindAssayEvents } from './ui/event-bindings.js';
 import { createAssayBrowserView } from './ui/browser-view.js';
-import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
+import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
 
 export function initAssay({ state, persist, createId, safeText, onAssaysChanged, onActiveAssayChanged }) {
   const TabulatorLib = window.Tabulator || null;

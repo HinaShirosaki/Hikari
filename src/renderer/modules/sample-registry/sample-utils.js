@@ -3,7 +3,7 @@ import {
   getEditableSampleTypeEntries,
   getSampleTypeLabel,
   normalizeSampleType
-} from '../sample-inventory-settings.js';
+} from '../../lib/inventory-settings.js';
 
 export function ensureSampleState(ctx) {
   if (!Array.isArray(ctx.state.samples)) {

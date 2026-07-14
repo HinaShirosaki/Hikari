@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../../../src/main/helpers/agent/shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../src/main/lib/llm/runtime-helpers.js');
 const { buildKeywordStyleLiteratureQuery } = require('../../../src/main/papers/search/agent-literature-query-utils.js');
 
 const SCIENCE_ROUTE_PLAN_SCHEMA = {

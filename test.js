@@ -72,6 +72,7 @@ const agentPaperContextLoader = optionalRequire(path.join(__dirname, 'src', 'mai
 const agentPaperDownload = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'download', 'agent-paper-download.js'));
 const agentPaperKnowledgeDatabase = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'store', 'agent-paper-knowledge-database.js'));
 const agentPaperAnalysis = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'analysis', 'agent-paper-analysis.js'));
+const paperMarkdownImport = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'paper-markdown-import.js'));
 const agentScienceReasoningLoop = optionalRequire(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'index.js'));
 const agentToolSmokeTest = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-smoke-test.js'));
 const agentResponseLayer = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-response-layer.js'));
@@ -84,7 +85,15 @@ const agentPythonCodegen = agentPython;
 const agentWebFallback = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-web-fallback.js'));
 const phase89Runtime = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-phase89-runtime.js'));
 const agentSqliteIndex = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-sqlite-index.js'));
-const sequenceLibrary = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sequence', 'sequence-library.js'));
+const sequenceLibrary = require(path.join(
+  __dirname,
+  'src',
+  'renderer',
+  'modules',
+  'sequence-viewer',
+  'main-process',
+  'sequence-library'
+));
 const toolBox = loadEsmStyleModule(
   path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box.js'),
   {},
@@ -190,7 +199,7 @@ const gelAnalysisInternals = loadEsmStyleModule(
   ]
 );
 const gelLaneTableInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'lane-table.js')
+  path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering', 'lane-table.js')
 );
 const papersManagementInternals = loadEsmStyleModule(
   path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'normalizers.js'),
@@ -198,10 +207,19 @@ const papersManagementInternals = loadEsmStyleModule(
   ['normalizePaperSummary']
 );
 const papersPdfViewerInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+  path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js')
 );
 const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'assay', 'analysis', 'index.js'));
 const mainUtils = require(path.join(__dirname, 'src', 'main', 'lib', 'main-utils.js'));
+const sequenceMainUtils = require(path.join(
+  __dirname,
+  'src',
+  'renderer',
+  'modules',
+  'sequence-viewer',
+  'main-process',
+  'sequence-input.js'
+));
 const telegramBot = require(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
@@ -310,6 +328,7 @@ const suiteScope = {
   agentPaperDownload,
   agentPaperKnowledgeDatabase,
   agentPaperAnalysis,
+  paperMarkdownImport,
   agentScienceReasoningLoop,
   agentToolSmokeTest,
   agentResponseLayer,
@@ -331,6 +350,7 @@ const suiteScope = {
   papersPdfViewerInternals,
   assayAnalysis,
   mainUtils,
+  sequenceMainUtils,
   telegramBot,
   forgeConfig,
   packageManifest,

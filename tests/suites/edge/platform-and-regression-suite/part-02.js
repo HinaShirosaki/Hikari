@@ -53,11 +53,11 @@ const normalizedArrayKeys = [
   ['中文', 'plasmid']
 ].forEach(([input, expected], idx) => {
   test(`[P1] sanitizeOutputName default fallback case ${idx + 1}`, () => {
-    assert.equal(mainUtils.sanitizeOutputName(input), expected);
+    assert.equal(sequenceMainUtils.sanitizeOutputName(input), expected);
   });
 });
 test('[P1] sanitizeOutputName uses custom fallback when normalized output is empty', () => {
-  assert.equal(mainUtils.sanitizeOutputName('***', 'fallback_name'), 'fallback_name');
+  assert.equal(sequenceMainUtils.sanitizeOutputName('***', 'fallback_name'), 'fallback_name');
 });
 [
   [' _pL ann!* ', '_pLann'],
@@ -70,7 +70,7 @@ test('[P1] sanitizeOutputName uses custom fallback when normalized output is emp
   ['"quoted"', 'quoted']
 ].forEach(([input, expected], idx) => {
   test(`[P1] sanitizeSuffix case ${idx + 1}`, () => {
-    assert.equal(mainUtils.sanitizeSuffix(input), expected);
+    assert.equal(sequenceMainUtils.sanitizeSuffix(input), expected);
   });
 });
 [
@@ -86,7 +86,7 @@ test('[P1] sanitizeOutputName uses custom fallback when normalized output is emp
   ['a'.repeat(160), `>sequence\n${'A'.repeat(80)}\n${'A'.repeat(80)}\n`]
 ].forEach(([input, expected], idx) => {
   test(`[P0] normalizeSequenceInput case ${idx + 1}`, () => {
-    assert.equal(mainUtils.normalizeSequenceInput(input), expected);
+    assert.equal(sequenceMainUtils.normalizeSequenceInput(input), expected);
   });
 });
 
@@ -95,14 +95,12 @@ const moduleExportContracts = [
   ['src/renderer/modules/assay/index.js', 'initAssay', 'function'],
   ['src/renderer/modules/assay/analysis/index.js', 'analyzeAssayData', 'function'],
   ['src/renderer/modules/biology-notebook/index.js', 'initLabNotebook', 'function'],
-  ['src/renderer/modules/buffer-compounds.js', 'BUFFER_COMPOUNDS', 'object'],
-  ['src/renderer/modules/collaboration-management/index.js', 'initCollaborationManagement', 'function'],
+  ['src/renderer/lib/chemistry/buffer-compounds.js', 'BUFFER_COMPOUNDS', 'object'],
   ['src/renderer/modules/gel/index.js', 'initGelAnalysis', 'function'],
   ['src/renderer/modules/lab-common-inventory/index.js', 'initLabCommonInventory', 'function'],
-  ['src/renderer/modules/lab-management.js', 'initLabManagement', 'function'],
   ['src/renderer/modules/papers/index.js', 'initPapersManagement', 'function'],
   ['src/renderer/modules/personal-inventory/index.js', 'initPersonalInventory', 'function'],
-  ['src/renderer/modules/biology-notebook/project-controller.js', 'createNotebookProjectController', 'function'],
+  ['src/renderer/modules/biology-notebook/project/project-controller.js', 'createNotebookProjectController', 'function'],
   ['src/renderer/modules/protocol/index.js', 'initProtocolManagement', 'function'],
   ['src/renderer/modules/sample-registry/index.js', 'initSampleRegistry', 'function'],
   ['src/renderer/modules/settings/index.js', 'initSettings', 'function'],
@@ -118,26 +116,40 @@ moduleExportContracts.forEach(([relativePath, exportName, expectedType], idx) =>
 
 test('[P0] main-process modules do not import renderer UI or controller implementation files', () => {
   const rendererRoot = path.join(__dirname, 'src', 'renderer');
+  const rendererSequenceViewerRoot = path.join(rendererRoot, 'modules', 'sequence-viewer');
+  const mainProcessSequenceViewerRoot = path.join(rendererSequenceViewerRoot, 'main-process');
   const sequenceViewerAlgorithmsRoot = path.join(
-    rendererRoot,
-    'modules',
-    'sequence-viewer',
+    rendererSequenceViewerRoot,
     'algorithms'
   );
+  const sequenceViewerParserPath = path.join(rendererSequenceViewerRoot, 'parsing.js');
   const violations = [];
-  listJavaScriptFiles(path.join(__dirname, 'src', 'main')).forEach((filePath) => {
+  const inspectedFiles = [
+    ...listJavaScriptFiles(path.join(__dirname, 'src', 'main')),
+    ...listJavaScriptFiles(mainProcessSequenceViewerRoot)
+  ];
+  inspectedFiles.forEach((filePath) => {
     const source = fs.readFileSync(filePath, 'utf8');
     const specifiers = [
       ...source.matchAll(/\bfrom\s+['"]([^'"]+)['"]/g),
       ...source.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]\s*\)/g),
-      ...source.matchAll(/\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g)
+      ...source.matchAll(/\brequire\s*\(\s*['"]([^'"]+)['"]\s*\)/g),
+      ...source.matchAll(/\bpath\.resolve\(\s*__dirname\s*,\s*['"]([^'"]+)['"]\s*\)/g)
     ].map((match) => match[1]).filter((specifier) => specifier.startsWith('.'));
     specifiers.forEach((specifier) => {
       const resolved = path.resolve(path.dirname(filePath), specifier);
-      const isSequenceViewerAlgorithm = resolved === sequenceViewerAlgorithmsRoot
-        || resolved.startsWith(`${sequenceViewerAlgorithmsRoot}${path.sep}`);
+      const isMainProcessSequenceViewerFile = filePath === mainProcessSequenceViewerRoot
+        || filePath.startsWith(`${mainProcessSequenceViewerRoot}${path.sep}`);
+      const isMainProcessSequenceViewerTarget = resolved === mainProcessSequenceViewerRoot
+        || resolved.startsWith(`${mainProcessSequenceViewerRoot}${path.sep}`);
+      const isAllowedSequenceViewerDomainDependency = isMainProcessSequenceViewerFile && (
+        resolved === sequenceViewerParserPath
+        || resolved === sequenceViewerAlgorithmsRoot
+        || resolved.startsWith(`${sequenceViewerAlgorithmsRoot}${path.sep}`)
+      );
       if (
-        !isSequenceViewerAlgorithm
+        !isMainProcessSequenceViewerTarget
+        && !isAllowedSequenceViewerDomainDependency
         && (resolved === rendererRoot || resolved.startsWith(`${rendererRoot}${path.sep}`))
       ) {
         violations.push(`${path.relative(__dirname, filePath)} -> ${specifier}`);
@@ -145,6 +157,22 @@ test('[P0] main-process modules do not import renderer UI or controller implemen
     });
   });
   assert.deepEqual(violations, []);
+});
+
+test('[P1] Sequence Viewer main-process code has no generic-helper compatibility folders', () => {
+  assert.equal(fs.existsSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sequence')), false);
+  assert.equal(fs.existsSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sequence-library')), false);
+  assert.equal(fs.existsSync(path.join(__dirname, 'src', 'main', 'sequence-viewer')), false);
+  assert.equal(fs.existsSync(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'sequence-viewer',
+    'main-process',
+    'sequence-library',
+    'index.js'
+  )), true);
 });
 
 test('[P1] renderer folder modules have no obsolete top-level compatibility entries', () => {
@@ -156,6 +184,15 @@ test('[P1] renderer folder modules have no obsolete top-level compatibility entr
     'sequence-viewer.js'
   ].forEach((fileName) => {
     assert.equal(fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', fileName)), false);
+  });
+  [
+    ['src', 'renderer', 'modules', 'collaboration-management'],
+    ['src', 'renderer', 'modules', 'lab-management.js'],
+    ['src', 'renderer', 'modules', 'common-promoters.js'],
+    ['src', 'main', 'helpers', 'main', 'render-html-to-pdf.js'],
+    ['src', 'main', 'ipc', 'index.js']
+  ].forEach((parts) => {
+    assert.equal(fs.existsSync(path.join(__dirname, ...parts)), false);
   });
 });
 
@@ -312,7 +349,7 @@ normalizedArrayKeys.forEach((key) => {
 for (let length = 1; length <= 120; length += 3) {
   test(`[EDGE] normalizeSequenceInput wrap behavior len ${length}`, () => {
     const source = 'acgt'.repeat(Math.ceil(length / 4)).slice(0, length);
-    const output = mainUtils.normalizeSequenceInput(source);
+    const output = sequenceMainUtils.normalizeSequenceInput(source);
     const lines = output.trim().split('\n');
     assert.equal(lines[0], '>sequence');
     const seq = lines.slice(1).join('');
@@ -330,7 +367,7 @@ for (let length = 1; length <= 120; length += 3) {
   ['>\nACGT', '>\nACGT']
 ].forEach(([input, expected], idx) => {
   test(`[EDGE] normalizeSequenceInput fasta passthrough case ${idx + 1}`, () => {
-    assert.equal(mainUtils.normalizeSequenceInput(input), expected);
+    assert.equal(sequenceMainUtils.normalizeSequenceInput(input), expected);
   });
 });
   }

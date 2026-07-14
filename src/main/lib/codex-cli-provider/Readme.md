@@ -3,6 +3,11 @@
 `../codex-cli-provider.js` is the public facade. Keep imports from the rest of
 the app pointed there unless a test needs a narrow internal helper.
 
+This package is the transport half of the Codex Agent integration. It lives in
+`main/lib` because the composition services consume its public request and
+account APIs, but its runtime guidance, skill synchronization, and event
+artifacts belong to the same ownership boundary as `helpers/agent/codex-agent`.
+
 - `args.js`: Codex `exec` and `exec resume` argv construction.
 - `attachments.js`: prompt attachment staging and output-file paths.
 - `auth-profile.js`, `login*.js`: auth file parsing, login launch, login status, and stored-login clearing.

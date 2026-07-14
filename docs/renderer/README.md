@@ -16,7 +16,7 @@ If `doc/main-helpers/` explains the main-process bridge, this folder explains th
 
 `src/renderer` is not just a pile of view scripts. It owns the full renderer runtime:
 
-- app-shell boot in `renderer.js`, `app/start-renderer-app.js`, and `core/start-hikari-core.js`
+- app-shell boot in `renderer.js` and `core/start-hikari-core.js`
 - renderer-local state load, normalization, persistence, and appearance
 - dock navigation, topbar search/result routing, startup-view resolution, and Telegram command routing
 - feature controllers for inventory, notebooks, protocols, workflows, papers, assays, gels, agent chat, sequence viewing, and bench tools

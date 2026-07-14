@@ -1,3 +1,7 @@
+import { escapeCsv } from '../../lib/csv.js';
+
+export { escapeCsv };
+
 export function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
 }
@@ -704,12 +708,4 @@ export function safeFilePart(raw, fallback) {
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
   return cleaned || fallback;
-}
-
-export function escapeCsv(value) {
-  const text = String(value ?? '');
-  if (/[",\r\n]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
 }

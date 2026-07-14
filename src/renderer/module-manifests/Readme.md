@@ -2,7 +2,7 @@
 
 This folder holds renderer module declarations for Hikari's manifest-driven module runtime.
 
-A manifest owns one module's init function, registry key, options factory, optional view routes, and optional boot render order. `module-runtime.js` consumes the full manifest list, supplies the shared runtime context, and builds registration plus render dispatch from these declarations.
+A manifest owns one module's init function, registry key, options factory, optional view routes, and optional boot render order. `../core/module-runtime.js` consumes the full manifest list, supplies the shared runtime context, and builds registration plus render dispatch from these declarations.
 
 Current manifest groups:
 

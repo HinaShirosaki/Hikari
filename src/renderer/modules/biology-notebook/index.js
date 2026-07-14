@@ -5,8 +5,8 @@
 // - populate inline placeholder editors from protocol step definitions
 // - save notebook entries plus imported result files into app state
 // - support editing existing entries and exporting them to PDF
-import { findLatestLinkedRecord } from '../notebook-linked-previews.js';
-import { buildClarifiedNotebookNote, clarifyNotebookNote, showTransientNotice } from '../notebook-note-tools.js';
+import { findLatestLinkedRecord } from '../../services/notebook-linked-previews.js';
+import { buildClarifiedNotebookNote, clarifyNotebookNote, showTransientNotice } from '../../services/notebook-note-tools.js';
 import {
   buildNotebookFolderPath,
   cloneProtocolSnapshot,
@@ -19,57 +19,57 @@ import {
   resolveEntryProject,
   resolveEntryProtocol,
   shouldSyncExperimentNameWithProtocol
-} from './entry-helpers.js';
+} from './entry/entry-helpers.js';
 import {
   buildSamplePlaceholderTypeAliases,
   formatSampleLinkValue,
   normalizeNotebookSampleLink,
   normalizeNotebookSampleLinks
-} from './sample-helpers.js';
+} from './samples/sample-helpers.js';
 import {
   ensureStorageFolderExists,
   persistImportedNotebookFiles
-} from './file-import.js';
+} from './storage/file-import.js';
 import {
   buildLinkedAssayPreviewHtml,
   buildLinkedGelPreviewHtml,
   createLinkedPreviewImageLoader
-} from './linked-previews-renderer.js';
-import { createResultTableController } from './result-table-controller.js';
-import { createSampleLinkMenuController } from './sample-link-menu.js';
-import { createInlinePlaceholderController } from './inline-placeholder-controller.js';
-import { createEntryListRenderer } from './entry-list-renderer.js';
-import { createDropdownRenderer } from './dropdown-renderer.js';
-import { createProtocolSnapshotEditor } from './protocol-snapshot-editor.js';
-import { createLinkedWorkActions } from './linked-work-actions.js';
-import { createProjectDashboardRenderer } from './project-dashboard-renderer.js';
-import { createNotebookProjectController } from './project-controller.js';
-import { createNotebookToolSidebarController } from './tool-sidebar.js';
+} from './results/linked-previews-renderer.js';
+import { createResultTableController } from './results/result-table-controller.js';
+import { createSampleLinkMenuController } from './samples/sample-link-menu.js';
+import { createInlinePlaceholderController } from './protocol/inline-placeholder-controller.js';
+import { createEntryListRenderer } from './entry/entry-list-renderer.js';
+import { createDropdownRenderer } from './entry/dropdown-renderer.js';
+import { createProtocolSnapshotEditor } from './protocol/protocol-snapshot-editor.js';
+import { createLinkedWorkActions } from './results/linked-work-actions.js';
+import { createProjectDashboardRenderer } from './project/project-dashboard-renderer.js';
+import { createNotebookProjectController } from './project/project-controller.js';
+import { createNotebookToolSidebarController } from './tools/tool-sidebar.js';
 import {
   buildProtocolStepsHtml,
   buildViewerMeta
-} from './viewer-renderer.js';
+} from './entry/viewer-renderer.js';
 import {
   buildSaveableNotebookEntry,
   mergeImportedResultFiles
-} from './entry-record-builder.js';
-import { registerNotebookSelectionInsightsHost } from './selection-insights-host.js';
-import { isPathInsideRoot } from '../storage-path-normalizer.js';
+} from './entry/entry-record-builder.js';
+import { registerNotebookSelectionInsightsHost } from './results/selection-insights-host.js';
+import { isPathInsideRoot } from '../../lib/storage-paths.js';
 import {
   changedFieldList,
   describeNotebookEntryChanges,
   logNotebookPageEvent
-} from './page-log.js';
-import { bindFileDropTarget, mergeFilesIntoInput } from '../file-drop.js';
+} from './storage/page-log.js';
+import { bindFileDropTarget, mergeFilesIntoInput } from '../../lib/file-drop.js';
 import { printElement } from '../print/index.js';
-import { serializeDraftSnapshot } from '../unsaved-draft.js';
-import { flattenNotebookResultTablesText } from '../notebook-result-table.js';
+import { serializeDraftSnapshot } from '../../lib/unsaved-draft.js';
+import { flattenNotebookResultTablesText } from '../../lib/notebook-result-tables.js';
 import {
   areAllNotebookPlaceholdersFilled,
   generateNotebookPageName,
   normalizeNotebookExperimentNameSource,
   resolveNotebookExperimentNameSource
-} from './page-name-generator.js';
+} from './entry/page-name-generator.js';
 
 // Initialize the biology notebook module and wire it to app state plus DOM controls.
 export function initLabNotebook({

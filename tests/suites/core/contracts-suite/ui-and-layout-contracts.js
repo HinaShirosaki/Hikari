@@ -10,8 +10,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
-      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'ipc', 'index.js')
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js'),
+      readLocalSource('src', 'main', 'ipc', 'register-data-ipc.js'),
+      readLocalSource('src', 'main', 'ipc', 'register-agent-ipc', 'index.js'),
+      readLocalSource('src', 'main', 'ipc', 'register-system-ipc.js')
     ].join('\n');
     const readPreloadSource = () => [
       readLocalSource('src', 'main', 'preload.js'),
@@ -24,14 +26,14 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       readLocalSource('src', 'main', 'preload', 'api', 'telegram-api.js')
     ].join('\n');
     const readRendererShellSource = () => [
-      readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'renderer.js'),
       readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
       readLocalSource('src', 'renderer', 'app', 'navigation-shell.js'),
       readLocalSource('src', 'renderer', 'app', 'topbar-open-handlers.js'),
       readLocalSource('src', 'renderer', 'app', 'topbar-search.js')
     ].join('\n');
     const readRendererModuleRuntimeSource = () => [
-      readLocalSource('src', 'renderer', 'module-runtime.js'),
+      readLocalSource('src', 'renderer', 'core', 'module-runtime.js'),
       ...fs.readdirSync(path.join(__dirname, 'src', 'renderer', 'module-manifests'))
         .filter((fileName) => fileName.endsWith('.js'))
         .sort()
@@ -396,11 +398,11 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
     test('papers PDF text layer keeps native browser selection stable during drag', () => {
       const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
-      const pageRecordsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-records.js');
-      const renderingSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-rendering.js');
-      const selectionMenuSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-selection-menu-controller.js');
-      const eventsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-events-controller.js');
-      const selectionSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-text-selection.js');
+      const pageRecordsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-page-records.js');
+      const renderingSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-rendering.js');
+      const selectionMenuSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-selection-menu-controller.js');
+      const eventsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-events-controller.js');
+      const selectionSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-text-selection.js');
       assert.match(pageRecordsSource, /className\s*=\s*'papers-viewer-text-layer textLayer'/);
       assert.match(pageRecordsSource, /textSelectionCleanup/);
       assert.match(renderingSource, /bindPdfTextLayerSelection/);
@@ -420,8 +422,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('papers PDF first-load sizing stays inside the app shell', () => {
       const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
       const papersCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
-      const domSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-dom-controller.js');
-      const navigationSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-navigation-controller.js');
+      const domSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-dom-controller.js');
+      const navigationSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-page-navigation-controller.js');
       assert.match(coreCss, /html\s*\{[\s\S]*height:\s*100%;[\s\S]*overflow:\s*hidden;/);
       assert.match(coreCss, /body\s*\{[\s\S]*height:\s*100%;[\s\S]*overflow:\s*hidden;/);
       assert.match(papersCss, /\.papers-viewer-workspace\s*\{[\s\S]*overflow:\s*hidden;/);
@@ -489,8 +491,11 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const agentPath = (...parts) => path.join(agentDir, ...parts);
       const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
       const mainSource = readMainProcessSource();
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8');
+      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
+      const dataRegistrarSource = [
+        fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8'),
+        fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc', 'register-sequence-library-ipc.js'), 'utf8')
+      ].join('\n');
       const agentRegistrarSource = fs.readFileSync(agentRegistrarPath('index.js'), 'utf8');
       const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
       const toolLoadingSource = fs.readFileSync(agentPath('tools', 'agent-tool-loading.js'), 'utf8');
@@ -525,7 +530,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('agent shared text helpers no longer clip long prompts by default', () => {
       const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
-      const llmUtilsSource = fs.readFileSync(agentPath('shared', 'agent-llm-utils.js'), 'utf8');
+      const llmUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'llm', 'runtime-helpers.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
       const chatLogSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
       const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
@@ -556,16 +561,19 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('main and preload expose sequence library IPC bridge through the data registrar', () => {
-      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8');
+      const dataRegistrarSource = fs.readFileSync(
+        path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc', 'register-sequence-library-ipc.js'),
+        'utf8'
+      );
       const preloadSource = readPreloadSource();
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.LIST/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.GET/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.UPSERT/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.PROMOTE/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.DELETE/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.SEARCH_FEATURES/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.ANNOTATE/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.RECOGNIZE_BACKBONE/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.LIST/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.GET/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.UPSERT/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.PROMOTE/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.DELETE/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.SEARCH_FEATURES/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.ANNOTATE/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.RECOGNIZE_BACKBONE/);
       assert.match(preloadSource, /sequenceLibraryList:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.LIST, payload\)/);
       assert.match(preloadSource, /sequenceLibraryGet:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.GET, payload\)/);
       assert.match(preloadSource, /sequenceLibraryUpsert:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.UPSERT, payload\)/);

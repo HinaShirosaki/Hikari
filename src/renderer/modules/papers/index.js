@@ -1,16 +1,16 @@
-import { createPapersPdfViewer } from './pdf-viewer.js';
+import { createPapersPdfViewer } from './pdf-viewer/index.js';
 import { printPdfBytes } from '../print/index.js';
 import { createPapersActions } from './actions.js';
 import { createPapersCommentController } from './comments.js';
 import { createPapersLibraryController } from './library.js';
 import { ensurePaperHighlights } from './model.js';
 import { normalizePaperSummary } from './normalizers.js';
-import { bindFileDropTarget } from '../file-drop.js';
+import { bindFileDropTarget } from '../../lib/file-drop.js';
 import {
   boxesToPdfQuadPoints,
   normalizeHighlightBoxes,
   normalizePageDimension
-} from './pdf-viewer-geometry.js';
+} from './pdf-viewer/pdf-viewer-geometry.js';
 import {
   getPaperDisplayTitle,
   hasPaperPdfMetadata,

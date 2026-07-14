@@ -1,7 +1,7 @@
 'use strict';
 
-const { isAgentRequestAbortError } = require('../../helpers/agent/shared/agent-request-context.js');
-const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/agent-llm-utils.js');
+const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
+const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
 const { buildKeywordStyleLiteratureQuery, extractKeywordPhrases } = require('./agent-literature-query-utils.js');
 const {
   prependPreferredValue,

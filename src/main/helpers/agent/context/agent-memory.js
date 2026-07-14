@@ -5,7 +5,7 @@ const path = require('node:path');
 const {
   defaultAsArray,
   defaultCleanText
-} = require('../shared/agent-llm-utils.js');
+} = require('../../../lib/llm/runtime-helpers.js');
 
 const MEMORY_ACTIONS = Object.freeze({
   RECALL: 'recall',

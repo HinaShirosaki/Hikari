@@ -1,4 +1,4 @@
-import { reverseComplementDna } from '../../tool-box/sequence.js';
+import { reverseComplementDna } from '../calculations/sequence.js';
 import { clamp, normalizeSequenceText } from '../shared.js';
 
 export function normalizeRecordSegments(segments, sequenceLength) {

@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../lib/llm/runtime-helpers.js');
 const { normalizePaperAnnotationSnapshot } = require('../../../papers/shared/paper-comment-context.js');
 const { normalizeChemicalStorePayload } = require('../../main/data/data-snapshot-utils.js');
 

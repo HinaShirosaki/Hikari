@@ -1,4 +1,4 @@
-import { escapeHtml } from '../tool-box/common.js';
+import { escapeHtml } from '../../lib/html.js';
 import {
   DEFAULT_SEQUENCE_LINE_LENGTH,
   DEFAULT_STRAND_COLUMN_GAP_PX,

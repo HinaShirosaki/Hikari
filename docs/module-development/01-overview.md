@@ -26,12 +26,12 @@ config/
 src/renderer/
   bootstrap/index-shell.js # pre-app loading cover, theme application
   renderer.js              # entry point: imports startRendererApp()
-  app/start-renderer-app.js # compatibility wrapper into renderer core
+  renderer.js              # browser entry; calls the core directly
   core/start-hikari-core.js # state, services, modules, navigation, search boot
   app/navigation-shell.js  # dock, view switching, page title
   app/topbar-open-handlers.js # search result open routing
   app/topbar-search.js
-  module-runtime.js        # manifest composition plus shared render dispatch
+  core/module-runtime.js   # manifest composition plus shared render dispatch
   module-manifests/        # per-module init/render declarations
   modules/                 # per-feature controllers
   services/                # cross-module fan-out (registry + services)
@@ -63,7 +63,7 @@ Once Electron loads `index.html`:
 4. `startRendererApp()` delegates to `startHikariCore()` ([src/renderer/core/start-hikari-core.js](../../src/renderer/core/start-hikari-core.js)):
    - `loadState()` from localStorage (key `hikari_state_v1`).
    - Creates the **module registry** (a `Map`-based bus) and the **renderer services** (cross-module fan-out helpers).
-   - Calls `createRendererModuleRuntime({...})` ([src/renderer/module-runtime.js](../../src/renderer/module-runtime.js)) which initializes manifest-declared modules from [src/renderer/module-manifests/](../../src/renderer/module-manifests/), registers each module with the registry, and builds route/boot render dispatch from manifest metadata.
+   - Calls `createRendererModuleRuntime({...})` ([src/renderer/core/module-runtime.js](../../src/renderer/core/module-runtime.js)) which initializes manifest-declared modules from [src/renderer/module-manifests/](../../src/renderer/module-manifests/), registers each module with the registry, and builds route/boot render dispatch from manifest metadata.
    - Creates the **navigation shell**, which renders the dock from `APP_REGISTRY` and wires `showView()`.
    - Hydrates extra state from `window.hikariApi` if a storage path is set, runs `renderAll()`, then activates the startup view.
    - Dispatches `hikari:app-ready`. The bootstrap cover fades out.
@@ -75,7 +75,7 @@ Every entry in `APP_REGISTRY` corresponds to one view fragment and one controlle
 - looks up its DOM nodes by ID inside its own `<section id="...-view">`,
 - attaches event listeners,
 - exposes a small render API (e.g. `render()`, `renderList()`, `renderEntries()`),
-- returns that API so [src/renderer/module-runtime.js](../../src/renderer/module-runtime.js) can call it during `renderAll()` and `renderView(viewId)`.
+- returns that API so [src/renderer/core/module-runtime.js](../../src/renderer/core/module-runtime.js) can call it during `renderAll()` and `renderView(viewId)`.
 
 A module owns the DOM inside its `<section>`. It must not reach into another module's view. Cross-module communication happens through:
 

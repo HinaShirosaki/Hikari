@@ -21,6 +21,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart03(con
       }));
       try {
         const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
           literatureSearchRuntime: {
             buildLiteratureQuery: () => 'MAPK resistance mechanism',
             searchLiteratureCandidates: async (input = {}) => {
@@ -175,6 +176,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart03(con
           url: `https://example.org/glue-${index + 1}`
         }));
         const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
           literatureSearchRuntime: {
             searchLiteratureCandidates: async (input = {}) => {
               searchCalls.push(JSON.parse(JSON.stringify(input)));
@@ -257,6 +259,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart03(con
       const loadCalls = [];
       try {
         const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
           literatureSearchRuntime: {
             searchLiteratureCandidates: async () => ({
               ok: true,
@@ -362,6 +365,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart03(con
       const searchCalls = [];
       try {
         const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
           literatureSearchRuntime: {
             buildLiteratureQuery: () => 'molecular glue degraders',
             searchLiteratureCandidates: async (input = {}) => {

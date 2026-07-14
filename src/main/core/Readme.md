@@ -18,7 +18,7 @@ Electron lifecycle concerns stay in `src/main/app/`. `start-main-app.js` calls `
 4. LLM prompts
 5. npm update checks
 6. Telegram
-7. provider-neutral agent foundation (`helpers/main/create-main-agent-services.js`)
+7. provider-neutral agent foundation (`core/services/create-agent-services.js`)
 8. MCP host and workspace initializer
 9. Codex runtime
 10. data, agent, and system IPC registration

@@ -66,7 +66,7 @@ const normalizedArrayKeys = [
   ['A/B\\C:D*E?F"G<H>I|J', 'A_B_C_D_E_F_G_H_I_J']
 ].forEach(([input, expected], idx) => {
   test(`[EDGE] sanitizeOutputName extended case ${idx + 1}`, () => {
-    assert.equal(mainUtils.sanitizeOutputName(input), expected);
+    assert.equal(sequenceMainUtils.sanitizeOutputName(input), expected);
   });
 });
 [
@@ -83,7 +83,7 @@ const normalizedArrayKeys = [
   [Symbol.for('x'), 'Symbolx']
 ].forEach(([input, expected], idx) => {
   test(`[EDGE] sanitizeSuffix extended case ${idx + 1}`, () => {
-    assert.equal(mainUtils.sanitizeSuffix(input), expected);
+    assert.equal(sequenceMainUtils.sanitizeSuffix(input), expected);
   });
 });
   }

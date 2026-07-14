@@ -28,19 +28,25 @@ const {
   defaultLlmEndpointForProvider,
   defaultAgentModelForProvider
 } = require('../generated/llm-provider-config.generated.js');
-const { defaultCleanText } = require('../helpers/agent/shared/agent-llm-utils.js');
+const { defaultCleanText } = require('../lib/llm/runtime-helpers.js');
 const { appendLogWithRotation } = require('../helpers/agent/shared/agent-observability');
 const { createMainAppPaths } = require('../helpers/main/app-paths.js');
-const { createMainAgentServices } = require('../helpers/main/create-main-agent-services.js');
+const { createMainAgentServices } = require('./services/create-agent-services.js');
 const { createMainDataHelpers } = require('../helpers/main/data/data-helpers');
 const {
   discoverPapersFromStorageRoot,
   getBundlePaths,
-  syncBundleFromSnapshot,
+  syncBundleFromSnapshot: syncBundleFromSnapshotBase,
   syncSqliteBundleFromSnapshot,
   hydrateSnapshotFromBundle,
   importStorageRoot
 } = require('../helpers/main/storage-bundle/index.js');
+const {
+  releaseOfficialMcpSkillsForWorkspace
+} = require('../helpers/agent/codex-agent/official-mcp-skills.js');
+const {
+  transformPaperRecordsToMarkdown
+} = require('../papers/parse/paper-markdown-import.js');
 const {
   listSequenceEntries,
   getSequenceEntry,
@@ -52,12 +58,12 @@ const {
   listRecognizedBackbones,
   upsertRecognizedBackbone,
   recognizeSequenceBackbone
-} = require('../helpers/main/sequence-library');
+} = require('../../renderer/modules/sequence-viewer/main-process/sequence-library');
 const { buildCompactIndexedSnapshot } = require('../helpers/main/data/data-snapshot-utils');
 const { createChatLogTransformMonitor } = require('../helpers/main/llm/chat-log-transformer.js');
-const { createAgentLogRuntime } = require('../app/agent-log-runtime');
-const { createLlmPromptsRuntime } = require('../app/llm-prompts-runtime');
-const { createTelegramRuntime } = require('../app/telegram-runtime');
+const { createAgentLogService } = require('./services/create-agent-log-service');
+const { createLlmPromptsService } = require('./services/create-llm-prompts-service');
+const { createTelegramService } = require('./services/create-telegram-service');
 const { createNpmUpdaterService } = require('./services/create-npm-updater-service');
 const { createMainMcpService } = require('./services/create-mcp-service');
 const { createMainCodexService } = require('./services/create-codex-service');
@@ -99,6 +105,10 @@ function createMainServices(context = {}) {
     agentChatLogFileName: AGENT_CHAT_LOG_FILE_NAME
   });
   const appIconPath = path.join(projectRoot, 'assets', 'icon.png');
+  const syncBundleFromSnapshot = (input = {}) => syncBundleFromSnapshotBase({
+    ...input,
+    releaseOfficialMcpSkillsForWorkspace
+  });
 
   // Storage.
   const mainDataHelpers = createMainDataHelpers({
@@ -121,7 +131,7 @@ function createMainServices(context = {}) {
 
   // Agent logging and chat-log monitoring.
   const chatLogTransformMonitor = createChatLogTransformMonitor({ fs, path, cleanText });
-  const agentLogRuntime = createAgentLogRuntime({ fs, path, appendLogWithRotation });
+  const agentLogService = createAgentLogService({ fs, path, appendLogWithRotation });
   const getAgentChatSessionStoragePath = (payload) => {
     const storagePath = appPaths.getAgentChatSessionStoragePath(payload);
     if (storagePath) {
@@ -130,14 +140,14 @@ function createMainServices(context = {}) {
     return storagePath;
   };
 
-  const prompts = createLlmPromptsRuntime({
+  const prompts = createLlmPromptsService({
     fs,
     promptsFilePath: path.join(projectRoot, 'data', 'llm-prompts.json')
   });
 
   const npmUpdater = createNpmUpdaterService({ app, dialog, shell, getMainWindow });
 
-  const telegram = createTelegramRuntime({
+  const telegram = createTelegramService({
     fs,
     path,
     processObject,
@@ -160,7 +170,7 @@ function createMainServices(context = {}) {
     defaultLlmEndpointForProvider,
     defaultAgentModelForProvider,
     cleanText,
-    appendAgentChatLogEntry: agentLogRuntime.appendAgentChatLogEntry,
+    appendAgentChatLogEntry: agentLogService.appendAgentChatLogEntry,
     requestCodexCliText,
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
@@ -210,9 +220,15 @@ function createMainServices(context = {}) {
     DEFAULT_DATA_FILE_NAME,
     hasSupportedDataExtension,
     mainDataHelpers,
-    discoverPapersFromStorageRoot,
+    discoverPapersFromStorageRoot: (input = {}) => discoverPapersFromStorageRoot({
+      ...input,
+      transformPaperRecordsToMarkdown
+    }),
     syncSqliteBundleFromSnapshot,
-    importStorageRoot,
+    importStorageRoot: (input = {}) => importStorageRoot({
+      ...input,
+      transformPaperRecordsToMarkdown
+    }),
     listSequenceEntries,
     getSequenceEntry,
     upsertSequenceEntry,
@@ -242,7 +258,7 @@ function createMainServices(context = {}) {
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     getAgentChatLogPath: appPaths.getAgentChatLogPath,
     getAgentChatSessionStoragePath,
-    appendAgentChatLogEntry: agentLogRuntime.appendAgentChatLogEntry
+    appendAgentChatLogEntry: agentLogService.appendAgentChatLogEntry
   });
 
   registerSystemIpc({
@@ -278,7 +294,7 @@ function createMainServices(context = {}) {
 
   async function start() {
     await bestEffort('agent-logging', async () => {
-      await agentLogRuntime.ensureAgentChatLogFile(appPaths.getAgentChatLogPath());
+      await agentLogService.ensureAgentChatLogFile(appPaths.getAgentChatLogPath());
       const defaultDataFilePath = cleanText(appPaths.getDefaultDataFilePath(), 2400);
       chatLogTransformMonitor.start({
         storagePaths: defaultDataFilePath ? [path.dirname(defaultDataFilePath)] : []

@@ -8,7 +8,8 @@ Several files in `shared/` act like the runtime substrate:
 
 | File | Role |
 | --- | --- |
-| `shared/agent-llm-utils.js` | provider-agnostic helpers for text extraction, retries, and structured JSON prompting |
+| `src/main/lib/llm/runtime-helpers.js` | provider-neutral helpers for text extraction and structured JSON prompting |
+| `src/main/lib/llm/request-context.js` | request cancellation and AsyncLocalStorage context shared with Papers and provider transports |
 | `shared/agent-controller-utils.js` | controller glue: provider/model resolution, trace-context creation, log formatting, parser requests |
 | `shared/agent-runtime-registry.js` | small registry that lets the agent-service assembly swap runtime factories by name |
 | `shared/agent-observability.js` | lifecycle event recording, log rotation, replay, and failure classification |

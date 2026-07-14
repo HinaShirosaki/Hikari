@@ -1,5 +1,5 @@
 import { parseJsonFromText } from './normalizers.js';
-import { requestDirectLlmText } from '../direct-llm.js';
+import { requestDirectLlmText } from '../../services/direct-llm.js';
 
 const LLM_PROMPTS_PATH = './data/llm-prompts.json';
 const DEFAULT_LLM_PROMPTS = {

@@ -2,7 +2,7 @@ import {
   rowLabelToIndex,
   wellIdFor
 } from './plate-model.js';
-import { bindFileDropTarget } from '../file-drop.js';
+import { bindFileDropTarget } from '../../lib/file-drop.js';
 import { parseDimensionGroupSpec } from './analysis/shared.js';
 import { createResultImportController } from './results/result-import.js';
 import { createResultGridModel } from './results/grid-model.js';

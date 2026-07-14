@@ -20,7 +20,7 @@ import {
   applyAppearanceToDocument,
   normalizeAppearanceMode
 } from '../app-state/appearance.js';
-import { normalizePreferredJournalList } from '../preferred-journals.js';
+import { normalizePreferredJournalList } from '../../lib/preferred-journals.js';
 
 
 export function initSettings({

@@ -24,11 +24,6 @@ This folder splits those responsibilities into smaller modules so each part is e
   - Coordinates request logging, lifecycle recording, session persistence, and final response shaping.
 - `agent-controller-core.js`
   - Validates controller inputs, resolves agent-provider configuration, and owns the Codex route.
-- `api-agent-controller.js`
-  - Lazily loaded development module for API-backed parser and intent-dispatch flows.
-  - It is unavailable when generated `ALLOW_API_AGENT` is `false`.
-- `agent-intent-dispatcher.js`
-  - Contains the intent-specific branching for notebook, lookup, and science flows.
 - `agent-session-service.js`
   - Wraps chat-session creation/appending and keeps session row ordering logic in one place.
 - `agent-lifecycle-service.js`
@@ -38,6 +33,7 @@ This folder splits those responsibilities into smaller modules so each part is e
 
 ## Design notes
 
-- The public import surface stays stable through `src/main/helpers/main/register-agent-ipc.js`, which now forwards to this folder.
-- Dependency injection is preserved so existing `main.js` wiring does not need to change.
+- The public import surface is `src/main/ipc/register-agent-ipc/index.js`, composed by `src/main/core/main-services.js`.
+- The retired self-implemented API agent remains isolated under `/self-agent`; production IPC routes use the Codex controller path.
+- Dependency injection keeps provider, persistence, and tool runtimes outside the IPC adapter.
 - Shared helpers live close to the agent IPC boundary instead of being duplicated across route handlers.

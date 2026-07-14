@@ -2,8 +2,7 @@
 
 const fsPromises = require('node:fs/promises');
 
-const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/agent-llm-utils.js');
-const { createProtocolGenerationRuntime } = require('../../helpers/agent/tools/agent-protocol-generation.js');
+const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
 const {
   buildKnowledgeDatabasePaths,
   buildLegacyKnowledgeDatabasePaths,
@@ -238,11 +237,13 @@ function createPaperAnalysisRuntime(deps = {}) {
     ].join('\n\n');
   }
 
-  const protocolGenerationRuntime = deps.protocolGenerationRuntime
-    || createProtocolGenerationRuntime({
-      ...deps,
-      requestStructuredJsonPayload
-    });
+  const protocolGenerationRuntime = deps.protocolGenerationRuntime || {
+    generateProtocol: async () => ({
+      ok: false,
+      status: 'error',
+      error: 'Protocol generation is not configured for this paper-analysis runtime.'
+    })
+  };
 
   async function analyzePaper(input = {}) {
     const source = input && typeof input === 'object' ? input : {};

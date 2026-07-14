@@ -1,4 +1,4 @@
-import { requestDirectLlmText } from '../direct-llm.js';
+import { requestDirectLlmText } from '../../services/direct-llm.js';
 
 function trimText(value, maxLength = 5000) {
   const text = String(value || '').trim();

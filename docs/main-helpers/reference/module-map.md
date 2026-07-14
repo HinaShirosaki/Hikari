@@ -26,7 +26,7 @@ Sidecar-path derivation, bundle sync, hydration, storage-root import, and SQLite
 | --- | --- | --- |
 | `storage-bundle/index.js` | Main path | re-export surface: `getBundlePaths`, `syncBundleFromSnapshot`, `hydrateSnapshotFromBundle`, `importStorageRoot`, `discoverPapersFromStorageRoot`, workflow-root sync |
 | `storage-bundle/storage-paths.js` | Support | sidecar/bundle path derivation |
-| `storage-bundle/storage-sidecars.js` | Support | sidecar JSON read/write |
+| `storage-bundle/storage-sidecars.js` | Support | sidecar JSON read/write; agent-owned skill release is injected by `main-services.js` |
 | `storage-bundle/storage-manifest.js` | Support | manifest generation (`STORAGE_MANIFEST_FILE_NAME`) |
 | `storage-bundle/storage-memory.js` | Support | in-memory bundle state |
 | `storage-bundle/storage-hydration.js` | Main path | snapshot hydration from a bundle |
@@ -37,23 +37,11 @@ Sidecar-path derivation, bundle sync, hydration, storage-root import, and SQLite
 | `storage-bundle/paper-discovery.js` | Support | discover papers under the storage root |
 | `storage-bundle/sequence-library-summary.js` | Support | summarizes the sequence library for bundles |
 
-## Sequence library — `sequence-library/` and `sequence/`
+## Sequence Viewer library — moved out of generic helpers
 
-The biology-specific local library: SQLite/file storage, entry CRUD, feature search, annotation, alignment, and backbone recognition. Now split into ~22 focused modules.
+The biology-specific local library is owned by `src/renderer/modules/sequence-viewer/main-process/sequence-library/`, inside the existing Sequence Viewer feature. Its `index.js` is the only public Node entrypoint; generic helpers no longer provide a sequence compatibility package.
 
-| File | Status | Notes |
-| --- | --- | --- |
-| `sequence-library/index.js` | Specialized | public API: `listSequenceEntries`, `getSequenceEntry`, `upsertSequenceEntry`, `promoteSequenceEntry`, `deleteSequenceEntry`, `annotateSequenceRecord`, `searchSequenceFeatures`, `recognizeSequenceBackbone`, ... |
-| `sequence-library/database.js`, `paths.js`, `constants.js` | Support | SQLite handle, library paths, status constants |
-| `sequence-library/entry-read.js`, `entry-upsert.js` | Support | entry read and upsert |
-| `sequence-library/feature-store.js`, `feature-search.js`, `feature-normalize.js` | Support | feature persistence and search |
-| `sequence-library/annotation-service.js`, `annotation-candidates.js`, `annotation-matches.js` | Support | annotation matching pipeline |
-| `sequence-library/alignment-store.js`, `alignment-normalize.js` | Support | alignment persistence |
-| `sequence-library/backbone-service.js`, `recognized-service.js`, `recognized-store.js`, `recognized-utils.js` | Support | backbone recognition and recognized-store CRUD |
-| `sequence-library/orf-scanner.js`, `protein-utils.js`, `sequence-geometry.js`, `utils.js` | Support | ORF scanning and sequence math |
-| `sequence/sequence-library.js` | Specialized | compatibility entry into the library API |
-| `sequence/sequence-backbone-recognition.js` | Specialized | heuristic backbone/insertion recognition |
-| `sequence/circular-plasmid-annotation.js` | Support | circular plasmid annotation helpers |
+See [Sequence library](../sequences/sequence-library.md) and `src/renderer/modules/sequence-viewer/main-process/README.md` for the storage, search, annotation, alignment, and backbone-recognition map.
 
 ## LLM runtime — `llm/`
 
@@ -67,18 +55,14 @@ The biology-specific local library: SQLite/file storage, entry CRUD, feature sea
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `create-main-agent-services.js` | Main path | builds the provider-neutral agent foundation (LLM bridge, tools, controllers) |
-| `agent-mcp-initializer.js` | Support | initializes runtime configuration and official skills for the separate MCP service |
+| `src/main/core/services/create-agent-services.js` | Main path | composition root for the provider-neutral agent foundation (LLM bridge, tools, controllers) |
+| `src/main/core/services/create-agent-mcp-initializer.js` | Main path | composes runtime configuration and official skill release for the MCP service |
 
-## PDF, paper, and chemical import
+## Paper and chemical import
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `pdf-to-md.js` | Support | converts extracted PDF text to Markdown |
-| `pdf-text-layout.js` | Support | PDF text-layout helpers (table-line detection, etc.) |
-| `pdf-figure-extraction.js` | Support | extracts figures from PDFs |
-| `paper-markdown-import.js` | Support | imports a paper PDF into Markdown via the PDF text-extraction runtime |
-| `render-html-to-pdf.js` | Support | renders HTML to PDF (`renderHtmlToPdf`) |
+| `src/main/papers/parse/` | Specialized | PDF text extraction, layout cleanup, figure extraction, Markdown conversion, and paper import |
 | `chemical-import-parser.js` | Support | parses chemical-inventory import tables (incl. gzip) |
 
 ## Path utilities
@@ -94,10 +78,10 @@ IPC registration no longer lives in this folder. See [ipc-registrars.md](../ipc/
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `ipc/index.js` | Compatibility | retains the three-registrar aggregator; the main service catalog invokes each registrar directly |
-| `ipc/register-data-ipc.js` | Main path | renderer data/storage/sequence endpoints |
+| `ipc/register-data-ipc.js` | Main path | renderer data/storage/import composition |
+| `ipc/register-data-ipc/register-sequence-library-ipc.js` | Main path | grouped Sequence Viewer IPC endpoints |
 | `ipc/register-system-ipc.js` | Main path | Codex CLI and Telegram configuration endpoints |
-| `ipc/register-agent-ipc/` | Main path | agent IPC subsystem (chat handler, session/lifecycle services, intent dispatcher); runtime documented in [agent/](../../agent/README.md) |
+| `ipc/register-agent-ipc/` | Main path | agent IPC subsystem (chat handler, session/lifecycle services, Codex controller); runtime documented in [agent/](../../agent/README.md) |
 
 ## Good entry points
 
@@ -108,4 +92,4 @@ If you want to read the code after this doc set, start here:
 3. `src/main/helpers/main/data/data-helpers.js`
 4. `src/main/helpers/main/storage-bundle/index.js`
 
-Then move to `sequence-library/` only if you need the biology-specific library behavior.
+Then move to `src/renderer/modules/sequence-viewer/main-process/sequence-library/` only if you need the biology-specific library behavior.

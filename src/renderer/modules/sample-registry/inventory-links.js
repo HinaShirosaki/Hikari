@@ -1,4 +1,4 @@
-import { getWellName, isMultiWellContainer } from '../personal-inventory/constants.js';
+import { getWellName, isMultiWellContainer } from '../../lib/inventory-containers.js';
 import { escapeHtml, setMultiSelectValues } from './sample-utils.js';
 
 export function buildInventoryContainerOptions(ctx) {

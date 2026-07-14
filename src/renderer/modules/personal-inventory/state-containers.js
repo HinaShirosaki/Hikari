@@ -1,5 +1,5 @@
 import { getWellName } from './constants.js';
-import { getSampleInventoryLocationNames } from '../sample-inventory-settings.js';
+import { getSampleInventoryLocationNames } from '../../lib/inventory-settings.js';
 
 export function createContainerStateHelpers({ state, uiState }) {
   function getWellLabel(container, index) {

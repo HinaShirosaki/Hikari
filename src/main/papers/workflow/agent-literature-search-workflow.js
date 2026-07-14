@@ -1,8 +1,7 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
 const { cloneJson, normalizeRelatedComments } = require('../shared/paper-comment-context.js');
-const { createAgentSubAgentRuntime } = require('../../helpers/agent/tools/agent-sub-agent.js');
 const {
   normalizePreferredJournals,
   scorePaperCandidate,
@@ -92,7 +91,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
     : null;
   const createSubAgentRuntime = typeof deps.createSubAgentRuntime === 'function'
     ? deps.createSubAgentRuntime
-    : createAgentSubAgentRuntime;
+    : null;
   const codexSubAgentRuntime = deps.subAgentRuntime && typeof deps.subAgentRuntime === 'object'
     ? deps.subAgentRuntime
     : null;
@@ -831,6 +830,15 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
         codex_paper_context: true,
         summary: cleanText(workflowResult.summary, 600)
           || `Completed delegated literature search for ${query}.`
+      };
+    }
+    if (!createSubAgentRuntime) {
+      return {
+        ok: false,
+        status: 'error',
+        query,
+        error: 'Literature workflow requires a sub-agent runtime from the application composition layer.',
+        summary: `Literature search could not start for ${query}.`
       };
     }
     const subAgentRuntime = createSubAgentRuntime({

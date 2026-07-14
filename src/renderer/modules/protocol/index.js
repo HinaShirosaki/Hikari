@@ -1,7 +1,7 @@
 import { exportProtocolPdf } from '../pdf-export/index.js';
 import { printElement } from '../print/index.js';
-import { requestLlmText } from '../direct-llm.js';
-import { parseJsonFromText } from '../papers/normalizers.js';
+import { requestLlmText } from '../../services/direct-llm.js';
+import { parseJsonFromText } from '../../lib/json.js';
 import { DEFAULT_PROTOCOL_JSON_IMPORT_STATUS, DEFAULT_SHARE_STATUS, PLACEHOLDER_TOKEN_REGEX } from './constants.js';
 import { getProtocolDom } from './dom.js';
 import { createProtocolDraftHelpers } from './draft-utils.js';
@@ -12,7 +12,7 @@ import { createProtocolListController } from './list.js';
 import { createProtocolPolishController } from './polish.js';
 import { createProtocolGenerationController } from './generation.js';
 import { createProtocolEditorHelpers } from './editor-utils.js';
-import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
+import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
 
 export function initProtocolManagement({
   state,

@@ -1,4 +1,4 @@
-import { escapeHtml } from '../../tool-box/common.js';
+import { escapeHtml } from '../../../lib/html.js';
 import { buildDnaConstruct } from './dna-construct.js';
 
 export function installProteinBuilderDnaRendering(ctx) {

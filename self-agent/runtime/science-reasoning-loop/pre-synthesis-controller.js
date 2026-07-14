@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../../../src/main/helpers/agent/shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../src/main/lib/llm/runtime-helpers.js');
 const { createScienceLoopExitJudgeRuntime } = require('./loop-exit-judge.js');
 const { createScienceLoopPreSynthesizedAnswerRuntime } = require('./pre-synthesized-answer.js');
 const {

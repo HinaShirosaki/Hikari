@@ -1,4 +1,4 @@
-import { escapeHtml } from '../tool-box/common.js';
+import { escapeHtml } from '../../lib/html.js';
 import { assembleCloningPlan } from './cloning-assembly.js';
 import { buildMegaprimerRestrictionPlan } from './cloning-assembly/megaprimer-restriction.js';
 import { buildQ5KldPlan } from './cloning-assembly/q5-kld-mutagenesis.js';

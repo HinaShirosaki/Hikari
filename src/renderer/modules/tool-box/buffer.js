@@ -1,4 +1,4 @@
-import { BUFFER_COMPOUNDS } from '../buffer-compounds.js';
+import { BUFFER_COMPOUNDS } from '../../lib/chemistry/buffer-compounds.js';
 
 export function renderChemicalOptions() {
   const options = BUFFER_COMPOUNDS.map(

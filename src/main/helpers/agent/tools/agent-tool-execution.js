@@ -1,6 +1,6 @@
 'use strict';
 
-const { isAgentRequestAbortError } = require('../shared/agent-request-context.js');
+const { isAgentRequestAbortError } = require('../../../lib/llm/request-context.js');
 
 const {
   normalizeToolArgumentsPayload,

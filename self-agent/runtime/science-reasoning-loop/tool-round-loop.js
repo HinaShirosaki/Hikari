@@ -1,7 +1,7 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../../../src/main/helpers/agent/shared/agent-llm-utils.js');
-const { isAgentRequestAbortError } = require('../../../src/main/helpers/agent/shared/agent-request-context.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../src/main/lib/llm/runtime-helpers.js');
+const { isAgentRequestAbortError } = require('../../../src/main/lib/llm/request-context.js');
 const { createScienceToolRoundSatisfactionRuntime } = require('./tool-round-satisfaction.js');
 
 function createScienceToolRoundLoopRuntime(deps = {}) {

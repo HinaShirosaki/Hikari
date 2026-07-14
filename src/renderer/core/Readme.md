@@ -10,8 +10,8 @@ Domain-specific external events should be delegated at the boundary. For example
 
 Current flow:
 
-1. `src/renderer/renderer.js` calls `startRendererApp()`.
-2. `src/renderer/app/start-renderer-app.js` remains a compatibility wrapper.
-3. `startHikariCore()` in `start-hikari-core.js` boots state, services, manifest-declared modules, storage, navigation, and search.
+1. `src/renderer/renderer.js` calls `startHikariCore()` directly.
+2. `startHikariCore()` boots state, services, manifest-declared modules, storage, navigation, and search.
+3. `module-runtime.js` composes feature manifests while `app/` owns navigation and shared shell behavior.
 
 Module registration and route metadata live in `src/renderer/module-manifests/`; the core does not maintain a second feature switchboard.

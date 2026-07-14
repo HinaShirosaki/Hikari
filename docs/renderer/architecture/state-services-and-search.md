@@ -95,7 +95,7 @@ That gives the renderer a light dependency-injection layer without requiring dir
 | `projectService.js` | rerender all project-bound views when projects change |
 | `inventoryService.js` | rerender sample registry and route dashboard sample-search handoffs |
 | `analysisService.js` | update project notebook rollups after assay/gel changes |
-| `sequenceService.js` | hand off external payloads into the sequence viewer and open the detail view |
+| `modules/sequence-viewer/service.js` | hand off external payloads into the sequence viewer and open the detail view |
 
 The key design choice is that services do not own separate stores. They usually translate "feature X changed" into "which other views need to refresh?", and when they do mutate state, such as the protocol service merging an externally saved protocol, they use the shared renderer state plus `persist()` callback injected by the core.
 

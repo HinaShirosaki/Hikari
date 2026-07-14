@@ -849,9 +849,7 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
   background: transparent;
 }
 
-#lab-management-view > .panel:first-child > h2,
 #protocol-management-view > .panel:first-child > h2,
-#collaboration-management-view > .panel:first-child > h2,
 #synthesis-notebook-view > .panel:first-child > h2,
 #biology-notebook-view > .panel:first-child > h2,
 #lab-common-inventory-view > .panel:first-child > h2,

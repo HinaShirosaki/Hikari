@@ -1,4 +1,4 @@
-import { translateDnaCodon } from '../tool-box/sequence.js';
+import { translateDnaCodon } from './calculations/sequence.js';
 import * as sharedOrfFeatures from './algorithms/orf-features.js';
 import {
   DEFAULT_MIN_ORF_AA_LENGTH,

@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../../../src/main/helpers/agent/shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../src/main/lib/llm/runtime-helpers.js');
 
 function createScienceToolRoundSatisfactionRuntime(deps = {}) {
   const { asArray, cleanText } = createAgentLlmRuntimeHelpers(deps);

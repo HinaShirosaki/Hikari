@@ -1,4 +1,4 @@
-import { reverseTranslateProteinSequence } from '../../tool-box/sequence.js';
+import { reverseTranslateProteinSequence } from '../calculations/sequence.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import { alignDnaToProteinSequence, normalizeProteinBuildSequence } from './sequence-utils.js';
 import { buildConstruct } from './protein-construct.js';

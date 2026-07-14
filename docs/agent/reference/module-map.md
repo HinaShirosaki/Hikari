@@ -20,7 +20,8 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `shared/agent-llm-utils.js` | Support | backoff, provider adapters, structured JSON request helper |
+| `src/main/lib/llm/runtime-helpers.js` | Shared support | provider-neutral structured request helpers shared by Agent and Papers |
+| `src/main/lib/llm/request-context.js` | Shared support | abort and AsyncLocalStorage request context shared across main-process domains |
 | `shared/agent-controller-utils.js` | Main path | provider/model resolution, trace context, parser request, log formatting |
 | `shared/agent-observability.js` | Main path | lifecycle recorder, replay, failure classification |
 | `shared/agent-runtime-registry.js` | Support | small runtime-factory registry used during assembly |
@@ -53,7 +54,7 @@ This file is a quick lookup index for `src/main/helpers/agent`.
 | `tools/agent-notebook-lookup.js` | Main path | concrete notebook search/get bridge logic |
 | `tools/agent-protocol-matching.js` | Support | protocol ranking and tie-break selection |
 | `tools/agent-notebook-generation.js` | Support | placeholder resolution and notebook payload generation |
-| `tools/agent-notebook-draft.js` | Main path | planned notebook proposal flow; explicitly registered during agent-service assembly (`create-main-agent-services.js`) |
+| `tools/agent-notebook-draft.js` | Main path | planned notebook proposal flow; explicitly registered during agent-service assembly (`src/main/core/services/create-agent-services.js`) |
 | `tools/agent-literature-search.js` | Main path | retrieval tool; registered as `literature-search` |
 | `tools/agent-paper-download.js` | Main path | action-based paper acquisition; registered as `paper-download` |
 | `tools/agent-paper-analysis.js` | Main path | paper summarization and protocol extraction; registered as `paper-analysis` |

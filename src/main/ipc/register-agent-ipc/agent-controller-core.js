@@ -1,6 +1,6 @@
 'use strict';
 
-const { throwIfAgentRequestAborted } = require('../../helpers/agent/shared/agent-request-context.js');
+const { throwIfAgentRequestAborted } = require('../../lib/llm/request-context.js');
 
 function createAgentControllerCore({
   deps,

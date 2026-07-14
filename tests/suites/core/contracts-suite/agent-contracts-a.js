@@ -13,8 +13,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
-      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'ipc', 'index.js')
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js')
     ].join('\n');
     const readPreloadSource = () => [
       readLocalSource('src', 'main', 'preload.js'),
@@ -90,7 +89,7 @@ module.exports = function registerAgentContractsA(context = {}) {
 
     test('agent log replay and developer tool smoke-test IPC bridges remain wired without contract file', () => {
       const mainSource = readMainProcessSource();
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
+      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
       const preloadSource = readPreloadSource();
@@ -116,7 +115,7 @@ module.exports = function registerAgentContractsA(context = {}) {
 
     test('agent chat session log IPC bridges are wired through agent registrar and preload', () => {
       const mainSource = readMainProcessSource();
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
+      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
       const preloadSource = readPreloadSource();
       assert.match(mainSource, /createMainAgentServices/);
@@ -132,12 +131,12 @@ module.exports = function registerAgentContractsA(context = {}) {
 
     test('codex-owned lifecycle stays scoped to agent chat while utility calls use the CLI adapter', () => {
       const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'main-services.js');
-      const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
+      const mainAgentServicesSource = readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js');
       const codexServiceSource = readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
       const systemRegistrarSource = readLocalSource('src', 'main', 'ipc', 'register-system-ipc.js');
       const protocolPolishSource = readLocalSource('src', 'renderer', 'modules', 'protocol', 'polish.js');
-      const directLlmSource = readLocalSource('src', 'renderer', 'modules', 'direct-llm.js');
+      const directLlmSource = readLocalSource('src', 'renderer', 'services', 'direct-llm.js');
       const papersLlmSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'llm.js');
 
       assert.match(controllerCoreSource, /codexAgentRuntime\.run\(/);
@@ -154,7 +153,7 @@ module.exports = function registerAgentContractsA(context = {}) {
 
     test('main agent logs persist redacted llm traces and replay wiring', () => {
       const mainSource = readMainProcessSource();
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
+      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       const observabilitySource = fs.readFileSync(agentPath('shared', 'agent-observability.js'), 'utf8');
       assert.match(mainSource, /createMainAgentServices/);
@@ -202,7 +201,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       const executorsSource = fs.readFileSync(agentPath('tools', 'register-agent-tool-executors.js'), 'utf8');
       const dispatcherSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'), 'utf8');
       const mainSource = readMainProcessSource();
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
+      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const preloadSource = readPreloadSource();
       const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
 
@@ -303,7 +302,6 @@ module.exports = function registerAgentContractsA(context = {}) {
       const expectedFiles = [
         ['Readme.md'],
         ['shared', 'agent-llm-provider-bridge.js'],
-        ['shared', 'agent-llm-utils.js'],
         ['shared', 'agent-controller-utils.js'],
         ['shared', 'agent-observability.js'],
         ['tools', 'agent-lookup-support.js'],
@@ -330,6 +328,11 @@ module.exports = function registerAgentContractsA(context = {}) {
       expectedFiles.forEach((parts) => {
         assert.equal(fs.existsSync(agentPath(...parts)), true, `Expected ${parts.join('/')} in agent helpers.`);
       });
+      assert.equal(
+        fs.existsSync(path.join(__dirname, 'src', 'main', 'lib', 'llm', 'runtime-helpers.js')),
+        true,
+        'Expected provider-neutral LLM runtime helpers under main/lib/llm.'
+      );
       assert.equal(fs.existsSync(agentPath('agent-python.js')), false);
 
       // Paper logic lives under src/main/papers/ (consolidated out of agent helpers).

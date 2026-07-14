@@ -32,7 +32,7 @@ Splitting those pieces makes the storage pipeline easier to navigate and safer t
 - `storage-sql-read.js`
   - SQLite read helpers and row-to-snapshot fallback readers.
 - `storage-sidecars.js`
-  - Protocol folder, notebook page folder, sample JSON, and SQLite writers used by `syncBundleFromSnapshot`.
+  - Protocol folder, notebook page folder, sample JSON, and SQLite writers used by `syncBundleFromSnapshot`. Agent-owned workspace skill release is supplied by the main composition root instead of imported here.
 - `storage-hydration.js`
   - Snapshot hydration from protocol folders, notebook folders, sample JSON, SQLite fallback data, and legacy sidecars.
 - `storage-import.js`
@@ -51,3 +51,8 @@ Splitting those pieces makes the storage pipeline easier to navigate and safer t
   - `syncBundleFromSnapshot`
   - `hydrateSnapshotFromBundle`
   - `importStorageRoot`
+
+Production callers use the decorated `syncBundleFromSnapshot` assembled in
+`src/main/core/main-services.js`. Narrow storage tests may inject
+`releaseOfficialMcpSkillsForWorkspace` explicitly when they need to verify
+Codex skill sidecars.

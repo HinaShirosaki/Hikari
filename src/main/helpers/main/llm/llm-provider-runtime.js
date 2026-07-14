@@ -5,7 +5,7 @@ const {
   getAgentRequestAbortSignal,
   isAgentRequestAbortError,
   throwIfAgentRequestAborted
-} = require('../../agent/shared/agent-request-context.js');
+} = require('../../../lib/llm/request-context.js');
 
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];

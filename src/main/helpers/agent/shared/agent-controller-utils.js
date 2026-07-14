@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('./agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../lib/llm/runtime-helpers.js');
 
 function createAgentControllerUtils(deps = {}) {
   const LLM_PROVIDERS = deps.LLM_PROVIDERS && typeof deps.LLM_PROVIDERS === 'object'

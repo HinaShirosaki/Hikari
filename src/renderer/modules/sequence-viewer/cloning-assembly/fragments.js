@@ -1,4 +1,4 @@
-import { reverseComplementDna } from '../../tool-box/sequence.js';
+import { reverseComplementDna } from '../calculations/sequence.js';
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import {
   buildStableFragmentId,

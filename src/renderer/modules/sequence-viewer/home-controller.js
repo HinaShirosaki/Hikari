@@ -1,8 +1,8 @@
-import { escapeHtml } from '../tool-box/common.js';
+import { escapeHtml } from '../../lib/html.js';
 import { DEFAULT_MAX_RECORDS } from './constants.js';
 import { parseInputRecords } from './parsing.js';
 import { cleanText } from './shared.js';
-import { bindFileDropTarget } from '../file-drop.js';
+import { bindFileDropTarget } from '../../lib/file-drop.js';
 
 export function createSequenceViewerHomeController(config = {}) {
   const rootDocument = config?.rootDocument || globalThis?.document || null;

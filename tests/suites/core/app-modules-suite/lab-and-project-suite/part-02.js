@@ -28,6 +28,7 @@ test('biology-notebook project context menu creates a project', async () => {
     'renderer',
     'modules',
     'biology-notebook',
+    'project',
     'project-controller.js'
   ));
   projectControllerModule.createNotebookProjectController({
@@ -94,6 +95,7 @@ test('biology-notebook project tree renders projects before they have pages', ()
     'renderer',
     'modules',
     'biology-notebook',
+    'entry',
     'entry-list-renderer.js'
   ));
   const renderer = entryListModule.createEntryListRenderer({

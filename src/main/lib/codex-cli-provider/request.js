@@ -1,7 +1,7 @@
 'use strict';
 
 const fs = require('node:fs/promises');
-const { throwIfAgentRequestAborted } = require('../../helpers/agent/shared/agent-request-context.js');
+const { throwIfAgentRequestAborted } = require('../llm/request-context.js');
 const { DEFAULT_TIMEOUT_MS } = require('./constants');
 const {
   buildCodexCliExecArgs,

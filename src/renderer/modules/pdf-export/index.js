@@ -1,8 +1,8 @@
 import {
   normalizeNotebookResultTable,
   normalizeNotebookResultTables
-} from '../notebook-result-table.js';
-import { normalizeNotebookToolCalculations } from '../biology-notebook/tool-calculations.js';
+} from '../../lib/notebook-result-tables.js';
+import { normalizeNotebookToolCalculations } from '../../lib/notebook-tool-calculations.js';
 
 const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
 

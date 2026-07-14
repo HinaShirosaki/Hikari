@@ -4,7 +4,7 @@ import { createNotebookService } from './notebookService.js';
 import { createProjectService } from './projectService.js';
 import { createInventoryService } from './inventoryService.js';
 import { createAnalysisService } from './analysisService.js';
-import { createSequenceService } from './sequenceService.js';
+import { createSequenceService } from '../modules/sequence-viewer/service.js';
 import { createUndoService } from './undoService.js';
 import { createUnsavedChangesService } from './unsavedChangesService.js';
 

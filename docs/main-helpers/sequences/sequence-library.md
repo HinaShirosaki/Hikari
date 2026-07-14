@@ -1,6 +1,6 @@
 # Sequence Library
 
-The `sequence-library/` folder (≈22 modules behind `index.js`) and the `sequence/` folder form a self-contained sequence-storage subsystem inside `src/main/helpers/main`. The public API is `sequence-library/index.js`; storage, search, annotation, alignment, and recognition each have their own modules (`database.js`, `entry-read.js`/`entry-upsert.js`, `feature-store.js`/`feature-search.js`, `annotation-service.js`, `alignment-store.js`, `backbone-service.js`, ...).
+`src/renderer/modules/sequence-viewer/main-process/sequence-library/` is a self-contained Node-only storage subsystem inside the existing Sequence Viewer feature, with focused modules behind `index.js`. Storage, search, annotation, alignment, and recognition each have their own modules (`database.js`, `entry-read.js`/`entry-upsert.js`, `feature-store.js`/`feature-search.js`, `annotation-service.js`, `alignment-store.js`, `backbone-service.js`, ...).
 
 ## Storage layout
 
@@ -19,7 +19,7 @@ The SQLite database stores metadata, features, and feature occurrences for searc
 
 ## Entry lifecycle
 
-`sequence-library/index.js` exposes the CRUD-style API:
+`src/renderer/modules/sequence-viewer/main-process/sequence-library/index.js` exposes the CRUD-style API:
 
 - `listSequenceEntries(...)`
 - `getSequenceEntry(...)`
@@ -71,7 +71,7 @@ It returns features plus their host-vector occurrences, which makes it a richer 
 
 ## Backbone recognition
 
-`recognizeSequenceBackbone(...)` is orchestrated by `sequence-library/backbone-service.js`. The process-neutral matcher lives in `src/renderer/modules/sequence-viewer/algorithms/sequence-backbone-recognition/`, alongside its circular-annotation, ORF, and restriction-feature dependencies.
+`recognizeSequenceBackbone(...)` is orchestrated by `src/renderer/modules/sequence-viewer/main-process/sequence-library/backbone-service.js`. The process-neutral matcher lives in the sibling `algorithms/sequence-backbone-recognition/` folder, alongside its circular-annotation, ORF, and restriction-feature dependencies.
 
 At a high level it:
 

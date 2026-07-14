@@ -1,4 +1,4 @@
-import { escapeHtml } from '../../tool-box/common.js';
+import { escapeHtml } from '../../../lib/html.js';
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { cleanText } from '../shared.js';
 import { getBlockTypeLabel } from './constants.js';

@@ -1,4 +1,4 @@
-import { escapeHtml } from '../../tool-box/common.js';
+import { escapeHtml } from '../../../lib/html.js';
 import { readStoragePathFromLocalState } from '../storage.js';
 import { clamp } from '../shared.js';
 

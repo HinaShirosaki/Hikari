@@ -1,4 +1,4 @@
-import { escapeHtml } from '../tool-box/common.js';
+import { escapeHtml } from '../../lib/html.js';
 import { cleanText } from './shared.js';
 
 const COPY_ICON_MARKUP = `

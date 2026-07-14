@@ -12,7 +12,7 @@ import { startNotebookSampleCapture } from './notebook-workflow.js';
 import { renderList } from './sample-list.js';
 import { onSubmit } from './sample-form.js';
 import { ensureSampleState, renderSampleTypeOptions } from './sample-utils.js';
-import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
+import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
 
 export function initSampleRegistry({ state, persist, safeText, onNotebookSampleCaptured }) {
   const ctx = {

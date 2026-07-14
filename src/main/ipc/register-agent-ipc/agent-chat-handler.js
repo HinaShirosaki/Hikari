@@ -5,7 +5,7 @@ const {
   createAgentRequestAbortError,
   isAgentRequestAbortError,
   runWithAgentRequestContext
-} = require('../../helpers/agent/shared/agent-request-context.js');
+} = require('../../lib/llm/request-context.js');
 const { AGENT, AGENT_PROGRESS_EVENT } = require('../../../shared/ipc/channels');
 
 function registerAgentChatHandler({

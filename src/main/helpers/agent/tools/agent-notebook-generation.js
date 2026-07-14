@@ -1,8 +1,8 @@
 'use strict';
 
-const { isAgentRequestAbortError } = require('../shared/agent-request-context.js');
+const { isAgentRequestAbortError } = require('../../../lib/llm/request-context.js');
 
-const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../lib/llm/runtime-helpers.js');
 
 function createNotebookGenerationRuntime(deps = {}) {
   const {

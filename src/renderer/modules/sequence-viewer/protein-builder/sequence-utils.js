@@ -1,4 +1,4 @@
-import { cleanProteinSequence, translateDnaSequence } from '../../tool-box/sequence.js';
+import { cleanProteinSequence, translateDnaSequence } from '../calculations/sequence.js';
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { normalizeSequenceText } from '../shared.js';
 import { DNA_ALPHABET } from './constants.js';

@@ -1,4 +1,4 @@
-import { oligoTm } from '../../tool-box/oligo.js';
+import { oligoTm } from '../calculations/oligo.js';
 import {
   CLONING_PRIMER_TM_THRESHOLDS,
   DEFAULT_CLONING_PREFERENCES,

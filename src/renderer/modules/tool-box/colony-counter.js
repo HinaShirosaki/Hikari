@@ -12,7 +12,7 @@ import {
 import {
   bindFileDropTarget,
   mergeFilesIntoInput
-} from '../file-drop.js';
+} from '../../lib/file-drop.js';
 import {
   countColoniesWithModel
 } from './colony-counter-model.js';

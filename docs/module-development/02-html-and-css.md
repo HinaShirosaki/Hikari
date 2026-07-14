@@ -82,7 +82,7 @@ Most workspaces use a left rail for navigation/filters and a main content area. 
 
 What this buys you for free:
 
-- Resizable rail width persisted across views, driven by `src/renderer/shared-left-rail.js`. Add `data-sync-left-rail` on the `<aside>` to participate.
+- Resizable rail width persisted across views, driven by `src/renderer/app/shared-left-rail.js`. Add `data-sync-left-rail` on the `<aside>` to participate.
 - Consistent rail/main borders, scrollbar gutters, padding tokens.
 - Per-view `body.has-shared-left-rail-view` toggling for shell chrome alignment, handled by `navigation-shell.js`.
 

@@ -6,7 +6,7 @@ This is the shortest path to understanding the agent package: start at `src/main
 
 `main.js` is a thin 5-line entry. The main service catalog assembles the agent backend by:
 
-- calling `createMainAgentServices(...)` (`src/main/helpers/main/create-main-agent-services.js`), which builds provider-neutral helpers such as `controllerUtils`, `observability`, `agentRuntimeRegistry`, and `agentRuntimeSupport`
+- calling `createMainAgentServices(...)` (`src/main/core/services/create-agent-services.js`), which composes provider-neutral helpers such as `controllerUtils`, `observability`, `agentRuntimeRegistry`, and `agentRuntimeSupport`
 - creating intent-specific runtimes such as lookup, protocol-notebook, notebook-draft, science-loop, and deep-research
 - creating the generic tool-call runtime and exposing it as `agentToolRuntime`
 - constructing MCP from the shared tool executor

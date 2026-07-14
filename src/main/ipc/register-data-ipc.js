@@ -10,10 +10,12 @@ const {
   STORAGE,
   ASSAY,
   INVENTORY,
-  PLUGINS,
-  SEQUENCE_LIBRARY
+  PLUGINS
 } = require('../../shared/ipc/channels');
 const { inspectPluginFolder } = require('../helpers/main/inspect-plugin-folder');
+const {
+  registerSequenceLibraryIpc
+} = require('./register-data-ipc/register-sequence-library-ipc');
 
 function registerDataIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
@@ -615,215 +617,20 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle(SEQUENCE_LIBRARY.LIST, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      const status = cleanText(normalizedPayload?.status, 40);
-      const result = await listSequenceEntries({ storagePath, status });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.GET, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      const id = cleanText(normalizedPayload?.id, 200);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (!id) {
-        return { ok: false, error: 'Missing sequence entry id.' };
-      }
-      const result = await getSequenceEntry({
-        storagePath,
-        id,
-        includeGbk: normalizedPayload?.includeGbk === true,
-        includeHtml: normalizedPayload?.includeHtml === true,
-        includeAlignments: normalizedPayload?.includeAlignments === true
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.UPSERT, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      const result = await upsertSequenceEntry({
-        storagePath,
-        id: cleanText(normalizedPayload?.id, 200),
-        name: cleanText(normalizedPayload?.name, 140),
-        status: cleanText(normalizedPayload?.status, 40),
-        sourceFormat: cleanText(normalizedPayload?.sourceFormat, 80),
-        topology: cleanText(normalizedPayload?.topology, 40),
-        sequenceLength: Number(normalizedPayload?.sequenceLength),
-        featureCount: Number(normalizedPayload?.featureCount),
-        sequence: String(normalizedPayload?.sequence || ''),
-        features: Array.isArray(normalizedPayload?.features) ? normalizedPayload.features : [],
-        gbkText: String(normalizedPayload?.gbkText || ''),
-        htmlText: String(normalizedPayload?.htmlText || ''),
-        alignmentSessions: Array.isArray(normalizedPayload?.alignmentSessions)
-          ? normalizedPayload.alignmentSessions
-          : null
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.PROMOTE, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      const id = cleanText(normalizedPayload?.id, 200);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (!id) {
-        return { ok: false, error: 'Missing sequence entry id.' };
-      }
-      const result = await promoteSequenceEntry({
-        storagePath,
-        id,
-        name: cleanText(normalizedPayload?.name, 140)
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.DELETE, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      const id = cleanText(normalizedPayload?.id, 200);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (!id) {
-        return { ok: false, error: 'Missing sequence entry id.' };
-      }
-      const result = await deleteSequenceEntry({ storagePath, id });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.SEARCH_FEATURES, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      const result = await searchSequenceFeatures({
-        storagePath,
-        query: cleanText(normalizedPayload?.query, 600),
-        limit: Number(normalizedPayload?.limit)
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.LIST_BACKBONES, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (typeof listRecognizedBackbones !== 'function') {
-        throw new Error('Stored backbone API unavailable.');
-      }
-      const result = await listRecognizedBackbones({
-        storagePath,
-        query: cleanText(normalizedPayload?.query, 600),
-        limit: Number(normalizedPayload?.limit)
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.UPSERT_BACKBONE, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (typeof upsertRecognizedBackbone !== 'function') {
-        throw new Error('Stored backbone API unavailable.');
-      }
-      const result = await upsertRecognizedBackbone({
-        storagePath,
-        backbone: normalizedPayload?.backbone || normalizedPayload?.data || {}
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.ANNOTATE, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (typeof annotateSequenceRecord !== 'function') {
-        throw new Error('Sequence annotation API unavailable.');
-      }
-      const result = await annotateSequenceRecord({
-        storagePath,
-        sequence: String(normalizedPayload?.sequence || ''),
-        topology: cleanText(normalizedPayload?.topology, 40),
-        excludeEntryId: cleanText(normalizedPayload?.excludeEntryId, 200)
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.RECOGNIZE_BACKBONE, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (typeof recognizeSequenceBackbone !== 'function') {
-        throw new Error('Backbone recognition API unavailable.');
-      }
-      const result = await recognizeSequenceBackbone({
-        storagePath,
-        sequence: String(normalizedPayload?.sequence || ''),
-        excludeEntryId: cleanText(normalizedPayload?.excludeEntryId, 200)
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
+  registerSequenceLibraryIpc({
+    ipcMain,
+    cleanText,
+    normalizeJsonPayload,
+    listSequenceEntries,
+    getSequenceEntry,
+    upsertSequenceEntry,
+    promoteSequenceEntry,
+    deleteSequenceEntry,
+    annotateSequenceRecord,
+    searchSequenceFeatures,
+    listRecognizedBackbones,
+    upsertRecognizedBackbone,
+    recognizeSequenceBackbone
   });
 
 }

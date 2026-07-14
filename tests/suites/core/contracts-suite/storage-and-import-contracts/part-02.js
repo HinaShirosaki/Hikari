@@ -10,8 +10,8 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
-      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'app', 'agent-log-runtime.js')
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-log-service.js')
     ].join('\n');
     const readPreloadStorageSource = () => [
       readLocalSource('src', 'main', 'preload.js'),
@@ -19,7 +19,7 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       readLocalSource('src', 'main', 'preload', 'api', 'storage-api.js')
     ].join('\n');
     const readRendererStorageSource = () => [
-      readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'renderer.js'),
       readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
       readLocalSource('src', 'renderer', 'app', 'storage-import.js')
     ].join('\n');
@@ -192,7 +192,7 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       assert.match(mainSource, /AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log'/);
-      assert.match(mainSource, /agentLogRuntime\.ensureAgentChatLogFile\([^)]*getAgentChatLogPath\(\)\)/);
+      assert.match(mainSource, /agentLogService\.ensureAgentChatLogFile\([^)]*getAgentChatLogPath\(\)\)/);
       assert.match(mainSource, /createMainAppPaths/);
       assert.match(appPathsSource, /HIKARI_AGENT_CHAT_LOG_PATH/);
       assert.match(controllerUtilsSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);

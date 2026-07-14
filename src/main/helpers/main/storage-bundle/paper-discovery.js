@@ -2,7 +2,6 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { transformPaperRecordsToMarkdown } = require('../../../papers/parse/paper-markdown-import.js');
 const { resolveStorageRootLayout } = require('./storage-paths');
 const {
   asArray, cleanText, ensureObject, normalizeFileTimestamp, sanitizeFolderName, toPosixRelative
@@ -232,7 +231,8 @@ async function discoverPapersFromStorageRoot({
   storagePath = '',
   knownPapers = [],
   projects = [],
-  journalClubs = []
+  journalClubs = [],
+  transformPaperRecordsToMarkdown = null
 } = {}) {
   const storageRootPath = cleanText(storagePath, 2400);
   if (!storageRootPath) {
@@ -282,11 +282,13 @@ async function discoverPapersFromStorageRoot({
     }
   }
 
-  const paperMarkdown = await transformPaperRecordsToMarkdown({
-    storagePath: storageRootPath,
-    papers: discoveredPapers,
-    source: 'storage_scan'
-  });
+  const paperMarkdown = typeof transformPaperRecordsToMarkdown === 'function'
+    ? await transformPaperRecordsToMarkdown({
+        storagePath: storageRootPath,
+        papers: discoveredPapers,
+        source: 'storage_scan'
+      })
+    : { ok: false, status: 'unavailable', warnings: [] };
   warnings.push(...asArray(paperMarkdown.warnings));
 
   return {

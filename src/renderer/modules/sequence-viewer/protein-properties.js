@@ -1,4 +1,4 @@
-import { translateDnaCodon } from '../tool-box/sequence.js';
+import { translateDnaCodon } from './calculations/sequence.js';
 import {
   clamp,
   normalizeSequenceText,

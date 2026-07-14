@@ -6,7 +6,7 @@ import { VIEWS } from '../views.js';
 import {
   DEFAULT_SAMPLE_INVENTORY_LOCATIONS,
   DEFAULT_SAMPLE_TYPE_LABELS
-} from '../sample-inventory-settings.js';
+} from '../../lib/inventory-settings.js';
 
 export const STARTUP_DEFAULT_VIEW_IDS = new Set([
   VIEWS.HOME,

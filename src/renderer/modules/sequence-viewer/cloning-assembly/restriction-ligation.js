@@ -1,5 +1,5 @@
-import { reverseComplementDna } from '../../tool-box/sequence.js';
-import { matchesIupacPattern, normalizeIupacPattern } from '../../tool-box/crispr.js';
+import { reverseComplementDna } from '../calculations/sequence.js';
+import { matchesIupacPattern, normalizeIupacPattern } from '../calculations/crispr.js';
 import { buildCommercialRestrictionFeatures } from '../restriction-analysis.js';
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { asArray, normalizeSequence } from './sequence-utils.js';

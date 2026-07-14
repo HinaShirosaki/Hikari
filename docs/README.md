@@ -7,7 +7,7 @@ These are the internal architecture docs for Hikari, the local-first Electron la
 Hikari is an Electron app with two processes plus an agent backend:
 
 - **Renderer** (`src/renderer/`) — the browser-side single-page app. Feature workspaces are **folder modules** (`modules/<feature>/index.js`) registered through `module-manifests/`, glued together by a generated app registry, the renderer core, and a thin module runtime. Renderer state lives in `localStorage`; saves and storage-root hydration go through the `window.hikariApi` bridge.
-- **Main process** (`src/main/`) — `main.js` is a thin entry that defers to `core/main-services.js`, which constructs services in dependency order and registers all IPC. It owns persistence (compact snapshot + storage bundle + SQLite), the sequence library, the LLM runtime, paper/PDF/chemical import, and the Telegram bot. IPC registrars live in `src/main/ipc/` and are invoked from `core/main-services.js`. Channel names are centralized in `src/shared/ipc/channels.js`.
+- **Main process** (`src/main/`) — `main.js` is a thin entry that defers to `core/main-services.js`, which constructs services in dependency order and registers all IPC. Papers owns its Node services under `src/main/papers/`; the Sequence Viewer keeps its Node-only storage half inside its existing module at `src/renderer/modules/sequence-viewer/main-process/`. Generic persistence and runtime helpers remain under `helpers/main/`. IPC registrars live in `src/main/ipc/` and are invoked from `core/main-services.js`. Channel names are centralized in `src/shared/ipc/channels.js`.
 - **Agent backend** (`src/main/helpers/agent/`) — the main-process assistant. Assembled by `createMainAgentServices(...)` and exposed through `src/main/ipc/register-agent-ipc/`. It is parser-first for most providers, with a dedicated Codex provider path, and a full tool suite registered on a shared executor.
 
 ## Doc sets
@@ -15,7 +15,7 @@ Hikari is an Electron app with two processes plus an agent backend:
 | Doc set | What it covers |
 | --- | --- |
 | [renderer/](renderer/README.md) | Browser-side boot and shell, renderer state/services/search, module families, the heavyweight subsystems, and a file map |
-| [main-helpers/](main-helpers/README.md) | Main-process persistence, storage bundles, the sequence library, LLM runtime, IPC registrars, and a file map |
+| [main-helpers/](main-helpers/README.md) | Main-process persistence, storage bundles, LLM runtime, IPC registrars, and links to feature-owned Node services |
 | [agent/](agent/README.md) | The agent backend: request lifecycle, runtimes, tools, context/observability, deep research, and the MCP contract |
 | [module-development/](module-development/README.md) | How to add a new renderer feature module from scratch (the build pipeline, the `init*()` contract, and the wiring checklist) |
 | [plugins/](plugins/plugin-system.md) | The user plugin system: plugin folder format, Settings-based install flow, boot internals, sandboxing, and limitations |

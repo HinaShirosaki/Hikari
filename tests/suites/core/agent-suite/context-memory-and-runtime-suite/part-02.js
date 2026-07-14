@@ -245,10 +245,9 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart02(contex
         __dirname,
         'src',
         'main',
-        'helpers',
-        'agent',
-        'shared',
-        'agent-llm-utils.js'
+        'lib',
+        'llm',
+        'runtime-helpers.js'
       ));
       const longText = 'full-text-'.repeat(800);
       assert.equal(defaultCleanText(longText, 40), longText);

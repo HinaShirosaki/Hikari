@@ -260,7 +260,7 @@ test('agent-chat renders assistant markdown with emphasis, tables, and escaped H
   assert.doesNotMatch(history.innerHTML, /<script>/);
 });
 test('agent-chat normalizes Codex agent answer envelopes', () => {
-  const responseModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat-response.js'));
+  const responseModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'public-api.js'));
   const completed = responseModule.normalizeAgentResponse({
     parser: {
       primary_intent: 'codex_agent',

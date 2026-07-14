@@ -13,8 +13,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
-      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'ipc', 'index.js')
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js')
     ].join('\n');
     test('science reasoning helper exports shared loop runtime and renderer consumes science payloads', () => {
       const helperSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'index.js'), 'utf8');
@@ -132,13 +131,13 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       const paperDownloadSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'download', 'agent-paper-download.js'), 'utf8');
       const paperSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'papers', 'analysis', 'agent-paper-analysis.js'), 'utf8');
       const protocolSource = fs.readFileSync(agentPath('tools', 'agent-protocol-generation.js'), 'utf8');
-      const llmUtilsSource = fs.readFileSync(agentPath('shared', 'agent-llm-utils.js'), 'utf8');
+      const llmUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'llm', 'runtime-helpers.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
       const codexAgentProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'codex-agent-provider.js'), 'utf8');
       const openAiProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'openai-provider.js'), 'utf8');
       const claudeProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'claude-provider.js'), 'utf8');
       const geminiProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'gemini-provider.js'), 'utf8');
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
+      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
 
@@ -155,14 +154,15 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(paperContextSource, /async function loadPaperContexts\(input = \{\}\)/);
       assert.equal(paperContextSource.includes('paper-download'), false);
       assert.equal(paperContextSource.includes('storage_path'), false);
-      assert.equal(readSource('src/main/papers/search/agent-literature-search.js').includes("require('../../helpers/agent/shared/agent-llm-utils.js')"), true);
+      assert.equal(readSource('src/main/papers/search/agent-literature-search.js').includes("require('../../lib/llm/runtime-helpers.js')"), true);
       assert.match(paperDownloadSource, /const PAPER_DOWNLOAD_ACTIONS = Object\.freeze/);
       assert.match(paperDownloadSource, /function createPaperDownloadRuntime\(deps = \{\}\)/);
       assert.match(paperDownloadSource, /function extractPaperDownloadTargets\(input = \{\}\)/);
       assert.match(paperDownloadSource, /async function downloadPaper\(input = \{\}\)/);
       assert.match(paperDownloadSource, /browser-assisted download session/i);
       assert.match(paperSource, /function createPaperAnalysisRuntime\(deps = \{\}\)/);
-      assert.match(paperSource, /createProtocolGenerationRuntime/);
+      assert.match(paperSource, /protocolGenerationRuntime/);
+      assert.doesNotMatch(paperSource, /helpers\/agent\/tools\/agent-protocol-generation/);
       assert.match(paperSource, /async function analyzePaper\(input = \{\}\)/);
       assert.match(protocolSource, /function createProtocolGenerationRuntime\(deps = \{\}\)/);
       assert.match(protocolSource, /async function generateProtocol\(input = \{\}\)/);
@@ -190,7 +190,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(mainAgentServicesSource, /webSearchRuntime,/);
       assert.match(mainAgentServicesSource, /createPaperContextLoaderRuntime/);
       assert.match(mainAgentServicesSource, /paperContextLoaderRuntime/);
-      assert.equal(readSource('src/main/papers/analysis/agent-paper-analysis.js').includes("require('../../helpers/agent/shared/agent-llm-utils.js')"), true);
+      assert.equal(readSource('src/main/papers/analysis/agent-paper-analysis.js').includes("require('../../lib/llm/runtime-helpers.js')"), true);
       assert.equal(readSource('src/main/helpers/agent/tools/agent-protocol-generation.js').includes("require('../shared/agent-llm-utils.js')"), false);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'web-search'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'literature-search'), true);
@@ -307,9 +307,9 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       const channelsSource = readLocalSource('src', 'shared', 'ipc', 'channels.js');
       const preloadSource = readLocalSource('src', 'main', 'preload', 'api', 'llm-api.js');
       const mainRuntimeSource = readLocalSource('src', 'main', 'core', 'main-services.js');
-      const mainAgentServicesSource = readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js');
+      const mainAgentServicesSource = readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js');
       const systemRegistrarSource = readLocalSource('src', 'main', 'ipc', 'register-system-ipc.js');
-      const directLlmSource = readLocalSource('src', 'renderer', 'modules', 'direct-llm.js');
+      const directLlmSource = readLocalSource('src', 'renderer', 'services', 'direct-llm.js');
       const papersLlmSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'llm.js');
       const protocolGenerationSource = readLocalSource('src', 'renderer', 'modules', 'protocol', 'generation.js');
       const chemicalImportMappingSource = readLocalSource('src', 'renderer', 'modules', 'lab-common-inventory', 'import-header-mapping.js');
@@ -347,16 +347,16 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
     });
     test('main wires intent parser + observability paths for parser-only controller', () => {
       const mainSource = readMainProcessSource();
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
+      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
       const sessionRuntimeSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'agent-session-runtime.js'), 'utf8');
       assert.match(mainSource, /createMainAgentServices/);
       // The intent parser moved to /self-agent; live code only keeps the shared inventory search-term helper.
-      assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-inventory-search-terms\.js'\)/);
-      assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-observability'\)/);
-      assert.match(mainAgentServicesSource, /require\('\.\.\/agent\/shared\/agent-controller-utils'\)/);
+      assert.match(mainAgentServicesSource, /require\('\.\.\/\.\.\/helpers\/agent\/shared\/agent-inventory-search-terms\.js'\)/);
+      assert.match(mainAgentServicesSource, /require\('\.\.\/\.\.\/helpers\/agent\/shared\/agent-observability'\)/);
+      assert.match(mainAgentServicesSource, /require\('\.\.\/\.\.\/helpers\/agent\/shared\/agent-controller-utils'\)/);
       assert.match(mainSource, /registerAgentIpc/);
       assert.match(apiControllerSource, /requestIntentParserPayload\(/);
       assert.match(llmBridgeSource, /function createAgentLlmProviderBridge\(deps = \{\}\)/);
@@ -421,7 +421,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.equal(notebookSearch.items[0]?.record_type, 'notebook');
     });
     test('main registers shared agent runtime factories before composing higher-level runtimes', () => {
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
+      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const retiredToolName = ['record', 'lookup'].join('-');
       const retiredFactoryName = ['createAgent', 'LookupRuntime'].join('Record');
       assert.match(mainAgentServicesSource, /createAgentRuntimeRegistry/);

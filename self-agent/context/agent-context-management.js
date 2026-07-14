@@ -9,7 +9,7 @@
 const {
   defaultAsArray,
   defaultCleanText
-} = require('../../src/main/helpers/agent/shared/agent-llm-utils.js');
+} = require('../../src/main/lib/llm/runtime-helpers.js');
 const { createAgentContextRegistryRuntime } = require('./agent-context-registry.js');
 
 // Stable identifiers for the context layers that may be exposed to other modules.

@@ -2,7 +2,7 @@ import {
   buildClarifiedNotebookNote,
   clarifyNotebookNote,
   showTransientNotice
-} from '../notebook-note-tools.js';
+} from '../../services/notebook-note-tools.js';
 import { formatNotebookTimestamp, notebookPageLabel } from './utils.js';
 
 // Recent notebook pages widget — surfaces the six most-recently-updated

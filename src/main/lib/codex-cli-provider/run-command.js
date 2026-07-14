@@ -7,7 +7,7 @@ const {
   isAgentRequestAbortError,
   onAgentRequestAbort,
   throwIfAgentRequestAborted
-} = require('../../helpers/agent/shared/agent-request-context.js');
+} = require('../llm/request-context.js');
 const { DEFAULT_TIMEOUT_MS } = require('./constants');
 const { summarizeCodexCommandFailure } = require('./event-failure');
 const { looksLikeJsonLine } = require('./event-values');

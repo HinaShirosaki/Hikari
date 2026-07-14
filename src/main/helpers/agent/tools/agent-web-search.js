@@ -1,7 +1,7 @@
 'use strict';
 
-const { createAgentLlmRuntimeHelpers } = require('../shared/agent-llm-utils.js');
-const { isAgentRequestAbortError } = require('../shared/agent-request-context.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../lib/llm/runtime-helpers.js');
+const { isAgentRequestAbortError } = require('../../../lib/llm/request-context.js');
 
 function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};

@@ -322,7 +322,7 @@ What each piece buys you:
   scrolling behavior shared by all rail views.
 - `data-sync-left-rail` on the `<aside>` — opts into the **shared, draggable,
   persisted rail width** driven by
-  [`src/renderer/shared-left-rail.js`](../../src/renderer/shared-left-rail.js)
+  [`src/renderer/app/shared-left-rail.js`](../../src/renderer/app/shared-left-rail.js)
   (CSS variables `--shared-left-rail-width/min/max`). Every participating
   view resizes together.
 - The navigation shell toggles `body.has-shared-left-rail-view` when the

@@ -315,7 +315,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       }
     });
     test('main agent services enable the default browser download session for packaged paper downloads', async () => {
-      const { createMainAgentServices } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'));
+      const { createMainAgentServices } = require(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'));
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-main-browser-'));
       const openedUrls = [];
       const createdWindows = [];
@@ -407,6 +407,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       const downloadCalls = [];
       try {
         const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
           literatureSearchRuntime: {
             buildLiteratureQuery: () => 'ncAA incorporation',
             searchLiteratureCandidates: async () => ({
@@ -501,6 +502,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
       const downloadCalls = [];
       try {
         const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
           literatureSearchRuntime: {
             buildLiteratureQuery: () => 'kinase inhibitor resistance',
             searchLiteratureCandidates: async (input = {}) => {

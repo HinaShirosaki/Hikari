@@ -1,6 +1,6 @@
 import { DEFAULT_LADDER_STANDARDS } from './constants.js';
 import { createBandsCsv, downloadTextFile } from './export.js';
-import { normalizeEnhancementSettings } from './image-processing.js';
+import { normalizeEnhancementSettings } from './analysis/image-processing.js';
 import { clamp, createEmptyManualOverrides, normalizeManualOverrides, safeFilePart } from './shared.js';
 
 export function createRecordsManager({ runtime, elements, deps }) {

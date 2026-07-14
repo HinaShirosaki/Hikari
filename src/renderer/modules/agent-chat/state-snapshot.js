@@ -1,4 +1,4 @@
-import { mapExperimentDataToLlmJson } from '../experiment-llm-mapper.js';
+import { mapExperimentDataToLlmJson } from '../../services/experiment-llm-mapper.js';
 import {
   asArray,
   mapPaper,
@@ -6,7 +6,7 @@ import {
   mapWorkflow,
   trimText
 } from './shared.js';
-import { normalizePreferredJournalList } from '../preferred-journals.js';
+import { normalizePreferredJournalList } from '../../lib/preferred-journals.js';
 
 export { mapExperimentDataToLlmJson };
 

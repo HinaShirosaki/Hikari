@@ -3,7 +3,7 @@ import {
   getSampleInventoryLocationNames,
   normalizeSampleInventoryLocations,
   normalizeSampleTypeLabels
-} from '../sample-inventory-settings.js';
+} from '../../lib/inventory-settings.js';
 
 export function createSampleInventorySettingsController({
   state,

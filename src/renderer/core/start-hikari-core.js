@@ -6,15 +6,15 @@ import {
   trackGrowthEvent
 } from '../modules/app-state.js';
 import { APP_DOCK_ORDER, APP_REGISTRY } from '../modules/app-registry.generated.js';
-import { createRendererModuleRuntime } from '../module-runtime.js';
+import { createRendererModuleRuntime } from './module-runtime.js';
 import {
   createModuleRegistry,
   createRendererServices,
   createUndoService,
   createUnsavedChangesService
 } from '../services/index.js';
-import { initSharedLeftRailResizers } from '../shared-left-rail.js';
-import { normalizeStateStoragePaths } from '../modules/storage-path-normalizer.js';
+import { initSharedLeftRailResizers } from '../app/shared-left-rail.js';
+import { normalizeStateStoragePaths } from '../modules/app-state/storage-path-normalizer.js';
 import {
   applyAppearanceSnapshot,
   createNavigationShell,

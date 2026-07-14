@@ -235,10 +235,9 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
-        'agent',
-        'shared',
-        'agent-llm-utils.js'
+        'lib',
+        'llm',
+        'runtime-helpers.js'
       ));
 
       const calls = [];
@@ -292,10 +291,9 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
-        'agent',
-        'shared',
-        'agent-llm-utils.js'
+        'lib',
+        'llm',
+        'runtime-helpers.js'
       ));
 
       const calls = [];

@@ -10,7 +10,7 @@ registerAgentIpc(agentDependencies);
 registerSystemIpc(systemDependencies);
 ```
 
-`ipc/index.js` retains `registerMainIpc({ data, agent, system })` as a compatibility aggregator.
+There is no compatibility aggregator. `src/main/core/main-services.js` imports each registrar directly so dependency wiring remains explicit.
 
 ## Channel source of truth
 
@@ -36,13 +36,13 @@ The non-agent application data API. Channels come from the `STORAGE`, `SEQUENCE_
 - `inventory:parse-chemical-import` → `chemical-import-parser.js`
 - `assay:parse-result-import` → assay result-import detection
 
-**Sequence library (`SEQUENCE_LIBRARY.*`):**
+**Sequence library (`register-data-ipc/register-sequence-library-ipc.js`, `SEQUENCE_LIBRARY.*`):**
 
 - `sequence-library:list`, `:get`, `:upsert`, `:promote`, `:delete`
 - `sequence-library:search-features`, `:annotate`
 - `sequence-library:list-backbones`, `:upsert-backbone`, `:recognize-backbone`
 
-This is a clean example of the registrar pattern: the IPC file mostly validates payloads, while the domain logic lives in `helpers/main/sequence-library/`.
+The sequence endpoint group has its own registrar file so the top-level data registrar stays readable. It validates payloads while domain logic lives in `src/renderer/modules/sequence-viewer/main-process/sequence-library/`.
 
 ## `register-system-ipc.js`
 
@@ -82,7 +82,7 @@ Now a folder (`src/main/ipc/register-agent-ipc/`), not a single file. It is the 
 
 When adding a renderer-facing capability, the first question is “which registrar owns this family?”:
 
-- data / storage / sequence / import parsers → `register-data-ipc.js`
+- data / storage / import parsers → `register-data-ipc.js`; sequence endpoints → its `register-data-ipc/` child package
 - chat / assistant / log replay → `register-agent-ipc/`
 - Codex CLI, direct LLM, Telegram, or open-external-url → `register-system-ipc.js`
 

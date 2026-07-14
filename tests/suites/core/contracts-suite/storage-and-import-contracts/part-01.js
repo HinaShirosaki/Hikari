@@ -3,6 +3,21 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
   const __dirname = context.__dirname || process.cwd();
 
   with (scope) {
+    const { releaseOfficialMcpSkillsForWorkspace } = require(path.join(
+      __dirname,
+      'src',
+      'main',
+      'helpers',
+      'agent',
+      'codex-agent',
+      'official-mcp-skills.js'
+    ));
+    const syncBundleWithOfficialSkills = (bundleHelpers, input = {}) => (
+      bundleHelpers.syncBundleFromSnapshot({
+        ...input,
+        releaseOfficialMcpSkillsForWorkspace
+      })
+    );
     const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
@@ -10,8 +25,8 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
-      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'app', 'agent-log-runtime.js')
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-log-service.js')
     ].join('\n');
     const readPreloadStorageSource = () => [
       readLocalSource('src', 'main', 'preload.js'),
@@ -19,7 +34,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       readLocalSource('src', 'main', 'preload', 'api', 'storage-api.js')
     ].join('\n');
     const readRendererStorageSource = () => [
-      readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'renderer.js'),
       readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
       readLocalSource('src', 'renderer', 'app', 'storage-import.js')
     ].join('\n');
@@ -70,7 +85,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
           hasSupportedDataExtension: mainUtils.hasSupportedDataExtension,
           normalizeDataFilePath: mainUtils.normalizeDataFilePath,
           hydrateSnapshotFromBundle: bundleHelpers.hydrateSnapshotFromBundle,
-          syncBundleFromSnapshot: bundleHelpers.syncBundleFromSnapshot,
+          syncBundleFromSnapshot: (input) => syncBundleWithOfficialSkills(bundleHelpers, input),
           writeSnapshot: async () => {},
           getDefaultDataFilePath: () => dataFilePath
         });
@@ -222,7 +237,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-project-skills-'));
       const dataFilePath = path.join(tempDir, 'example.ena.json');
       try {
-        await bundleHelpers.syncBundleFromSnapshot({
+        await syncBundleWithOfficialSkills(bundleHelpers, {
           dataFilePath,
           snapshot: {
             projects: [{ id: 'project-1', name: 'Atlas', description: 'Project-specific Codex context.' }],
@@ -433,7 +448,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
           }],
           settings: { appearance: { uiStyle: 'classic', themeColor: '#336699' } }
         };
-        await bundleHelpers.syncBundleFromSnapshot({ dataFilePath, snapshot: sourceSnapshot });
+        await syncBundleWithOfficialSkills(bundleHelpers, { dataFilePath, snapshot: sourceSnapshot });
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', 'MEMORY.md'));
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills'));
         await fsPromises.access(path.join(tempDir, 'Project', 'Atlas', '.agents', 'skills', 'hikari-protocol-generation', 'SKILL.md'));
@@ -477,7 +492,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         const lookupSupport = createAgentLookupSupport({
           getBundlePaths: bundleHelpers.getBundlePaths,
           hydrateSnapshotFromBundle: bundleHelpers.hydrateSnapshotFromBundle,
-          syncBundleFromSnapshot: bundleHelpers.syncBundleFromSnapshot
+          syncBundleFromSnapshot: (input) => syncBundleWithOfficialSkills(bundleHelpers, input)
         });
         const inventoryRuntime = createAgentInventoryLookupRuntime(lookupSupport);
         const notebookRuntime = createAgentNotebookLookupRuntime(lookupSupport);
@@ -506,13 +521,16 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
           settings: { storagePath: tempDir }
         };
 
-        await bundleHelpers.syncBundleFromSnapshot({ snapshot: sourceSnapshot });
+        await syncBundleWithOfficialSkills(bundleHelpers, { snapshot: sourceSnapshot });
         await fsPromises.access(path.join(tempDir, 'Protocol', 'protocol.index.sqlite'));
         await fsPromises.access(path.join(tempDir, 'Samples', 'samples.json'));
         await fsPromises.access(path.join(tempDir, 'KnowledgeBase', 'papers.md'));
         await assert.rejects(fsPromises.access(path.join(tempDir, 'hikari-data.json')));
 
-        const imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        const imported = await bundleHelpers.importStorageRoot({
+          storagePath: tempDir,
+          transformPaperRecordsToMarkdown: paperMarkdownImport.transformPaperRecordsToMarkdown
+        });
         assert.equal(imported.statePatch.protocols.some((protocol) => protocol.id === 'protocol-1'), true);
         assert.equal(imported.statePatch.notebookEntries.some((entry) => entry.id === 'note-1'), true);
         assert.equal(imported.statePatch.samples.some((sample) => sample.id === 'sample-1'), true);
@@ -562,7 +580,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
           settings: { storagePath: tempDir }
         };
 
-        await bundleHelpers.syncBundleFromSnapshot({ dataFilePath, snapshot: sourceSnapshot });
+        await syncBundleWithOfficialSkills(bundleHelpers, { dataFilePath, snapshot: sourceSnapshot });
         const bundlePaths = bundleHelpers.getBundlePaths({ dataFilePath, storagePath: tempDir });
         await fsPromises.rm(bundlePaths.notebookPagesPath, { force: true });
 
@@ -634,7 +652,10 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
           }]
         }, null, 2), 'utf8');
 
-        const imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        const imported = await bundleHelpers.importStorageRoot({
+          storagePath: tempDir,
+          transformPaperRecordsToMarkdown: paperMarkdownImport.transformPaperRecordsToMarkdown
+        });
         assert.equal(imported.statePatch.projects.length, 1);
         assert.equal(imported.statePatch.projects[0].id, 'project-1');
         assert.equal(imported.statePatch.projects[0].name, 'Atlas');
@@ -704,7 +725,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
           settings: { storagePath: tempDir }
         };
 
-        await bundleHelpers.syncBundleFromSnapshot({ dataFilePath, snapshot });
+        await syncBundleWithOfficialSkills(bundleHelpers, { dataFilePath, snapshot });
 
         const folderLayout = workflowStorage.buildWorkflowFolderLayout({ storagePath: tempDir, template: snapshot.workflowTemplates[0], workflow: snapshot.workflows[0] });
         const notebookFolder = path.join(
@@ -732,7 +753,10 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         assert.equal(hydrated.snapshot.papers[0].pdfDataUrl, '');
         assert.equal(hydrated.snapshot.notebookEntries[0].storageFolder.includes(`${path.sep}Workflow${path.sep}`), true);
 
-        const imported = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        const imported = await bundleHelpers.importStorageRoot({
+          storagePath: tempDir,
+          transformPaperRecordsToMarkdown: paperMarkdownImport.transformPaperRecordsToMarkdown
+        });
         assert.equal(imported.summary.workflowTemplates, 1);
         assert.equal(imported.summary.workflows, 1);
         assert.equal(imported.summary.papers, 1);
@@ -750,7 +774,10 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-import-fixture-'));
       try {
         await fsPromises.cp(fixtureRoot, tempDir, { recursive: true });
-        const result = await bundleHelpers.importStorageRoot({ storagePath: tempDir });
+        const result = await bundleHelpers.importStorageRoot({
+          storagePath: tempDir,
+          transformPaperRecordsToMarkdown: paperMarkdownImport.transformPaperRecordsToMarkdown
+        });
         assert.equal(result.summary.protocols > 0, true);
         assert.equal(result.summary.notebookEntries > 0, true);
         assert.equal(result.summary.sequenceEntries > 0, true);

@@ -3,14 +3,14 @@ import {
   normalizeAgentLlmProvider,
   normalizeReasoningEffort
 } from '../llm-provider-config.generated.js';
-import { normalizePaperAgentChatSessions } from '../agent-chat/scoped-state.js';
+import { normalizePaperAgentChatSessions } from './agent-chat-normalizer.js';
 import {
   normalizeSampleInventoryLocations,
   normalizeSampleTypeLabels
-} from '../sample-inventory-settings.js';
+} from '../../lib/inventory-settings.js';
 import { defaultState, STARTUP_DEFAULT_VIEW_IDS } from './defaults.js';
 import { normalizeAppearanceMode } from './appearance.js';
-import { normalizePreferredJournalList } from '../preferred-journals.js';
+import { normalizePreferredJournalList } from '../../lib/preferred-journals.js';
 import {
   normalizeDashboardActiveTimers,
   normalizeDashboardIncubationLocations,

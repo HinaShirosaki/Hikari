@@ -129,7 +129,7 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
     // --- Q5 / KLD site-directed mutagenesis route ---
     test('[EDGE] cloning buildQ5KldPlan uses non-overlapping primers and a KLD finish', () => {
       const q5 = loadEsmStyleModule(path.join(cloningAssemblyPath, 'q5-kld-mutagenesis.js'));
-      const sequence = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'tool-box', 'sequence.js'));
+      const sequence = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'calculations', 'sequence.js'));
       const filler = 'ACAGTCATGACTTGACATGTCAGTACGT'.repeat(4);
       const original = `${filler}GGTACCTATTGACCATG${filler}`;
       const editIndex = filler.length + 6; // the T

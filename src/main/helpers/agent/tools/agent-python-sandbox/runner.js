@@ -9,7 +9,7 @@ const {
   createAgentRequestAbortError,
   getAgentRequestAbortSignal,
   throwIfAgentRequestAborted
-} = require('../../shared/agent-request-context.js');
+} = require('../../../../lib/llm/request-context.js');
 const {
   SANDBOX_DEFAULT_TIMEOUT_MS,
   SANDBOX_MIN_TIMEOUT_MS,

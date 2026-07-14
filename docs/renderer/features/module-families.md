@@ -43,21 +43,21 @@ Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), a
 - `personalInventory` and `sampleRegistry` intentionally share one workspace. The shell treats `sample-registry-view` as a composite view and renders both on open (see [boot-and-shell.md](../architecture/boot-and-shell.md)).
 - The wet-lab notebook entry export is still named `initLabNotebook` even though it now lives in `modules/biology-notebook/`. There is no separate synthesis notebook anymore.
 - `Projects` is registered but hidden from primary navigation; it is reached through links from other records.
-- `modules/collaboration-management/` and `modules/lab-management.js` exist in the tree but are not registered in any manifest and have no static importers — treat them as legacy/unwired.
+- Legacy Collaboration Management and Lab Management source was removed because neither workspace was registered in a manifest or navigation surface.
 
-## Root-level support and adapter files
+## Shared libraries and adapter services
 
 | File / folder | Purpose |
 | --- | --- |
 | `views.js`, `app-state.js`, `utils.js` | renderer-wide constants, default state, normalization, persistence helpers, and small shared utilities |
-| `object-graph.js` | derived relationship graph builder and query helpers |
-| `storage-path-normalizer.js` | normalizes storage paths across state on load |
-| `file-drop.js` | reusable drag-and-drop file-target binding |
-| `direct-llm.js` | direct (non-agent) LLM request helper |
-| `notebook-result-table.js`, `notebook-linked-previews.js`, `notebook-note-tools.js` | shared notebook table / preview / note helpers |
-| `experiment-llm-mapper.js` | compact LLM-facing mapper for notebook, assay, and gel data |
+| `modules/app-state/` | state defaults, normalization, appearance, persistence, and storage-path hydration |
+| `lib/file-drop.js`, `lib/unsaved-draft.js` | reusable DOM-independent interaction/state helpers |
+| `lib/notebook-result-tables.js` | pure notebook result-table model |
+| `services/direct-llm.js` | direct (non-agent) LLM request adapter |
+| `services/notebook-linked-previews.js`, `services/notebook-note-tools.js` | cross-feature notebook preview and note integrations |
+| `services/experiment-llm-mapper.js` | compact LLM-facing mapper for notebook, assay, and gel data |
 | `pdf-export/`, `print/`, `selection-insights/` | shared export, print, and selection-insight helpers |
-| `buffer-compounds.js`, `common-promoters.js` | reference datasets for toolbox and sequence features |
+| `lib/chemistry/buffer-compounds.js` | reference dataset shared by Toolbox and notebook calculations |
 | `app-registry.generated.js`, `llm-provider-config.generated.js` | generated shell configuration and LLM provider catalog |
 
 The generated commercial restriction-enzyme catalog and process-neutral restriction detection live inside `src/renderer/modules/sequence-viewer/`.

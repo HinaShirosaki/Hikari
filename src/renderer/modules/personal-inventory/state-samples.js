@@ -4,7 +4,7 @@ import {
 import {
   getSampleTypeLabels,
   normalizeConfiguredSampleType
-} from '../sample-inventory-settings.js';
+} from '../../lib/inventory-settings.js';
 
 export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
   function ensureSamples() {

@@ -40,7 +40,7 @@ It does not know how to run any concrete tool by itself. It only runs what has b
 
 This is the most important practical detail in the whole tools layer:
 
-- the agent-service assembly (`create-main-agent-services.js`) creates one shared `genericAgentToolRuntime`
+- the agent-service assembly (`src/main/core/services/create-agent-services.js`) creates one shared `genericAgentToolRuntime`
 - it then calls `registerAgentToolExecutors(...)` (`tools/register-agent-tool-executors.js`), which registers the full tool suite on that shared instance: `inventory-lookup`, `notebook-lookup`, `protocol-matching`, `notebook-generation`, `notebook-draft`, `web-search`, `sub-agent`, `memory`, `literature-search`, `paper-download`, `paper-search`, `paper-analysis`, `purchase-recommendation`, `protocol-generation`, `python-sandbox`, and `command-line`
 - the `inventory-lookup` and `notebook-lookup` executors call their individual tool runtimes directly; no aggregate lookup coordinator sits between MCP and the owning implementation
 

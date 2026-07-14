@@ -296,7 +296,7 @@ test('biology-notebook page naming uses a small model once and skips generated o
   assert.equal(directCalls.length, 2);
 });
 test('biology-notebook page naming recognizes completion and legacy rename state', () => {
-  const namingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'page-name-generator.js'), {});
+  const namingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'entry', 'page-name-generator.js'), {});
   const protocol = {
     name: 'Expression',
     steps: [
@@ -662,7 +662,7 @@ test('biology-notebook creates a result table from a placeholder variable', () =
     }
   }
 
-  const resultTableModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'result-table-controller.js'), {});
+  const resultTableModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'results', 'result-table-controller.js'), {});
   const resultTableController = resultTableModule.createResultTableController({
     host: document.getElementById('biology-notebook-result-table'),
     statusEl: document.getElementById('biology-notebook-result-table-status'),
@@ -716,7 +716,7 @@ test('biology-notebook placeholder context menu exposes the table action for reg
       return menu;
     }
   };
-  const menuModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'sample-link-menu.js'), {});
+  const menuModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'samples', 'sample-link-menu.js'), {});
   let receivedState = null;
   const controller = menuModule.createSampleLinkMenuController({
     doc: document,
