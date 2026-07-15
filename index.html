@@ -438,7 +438,7 @@
                 <textarea id="protocol-purpose" rows="3" placeholder="Describe the purpose"></textarea>
               </label>
               <label>
-                Materials (start each material with a bullet point)
+                Materials
                 <textarea id="protocol-materials" rows="5" placeholder="• Material 1&#10;• Material 2"></textarea>
               </label>
               <label>
@@ -446,12 +446,12 @@
                 <div class="protocol-steps-toolbar">
                   <span class="protocol-steps-toolbar-label">Interactive bars</span>
                   <div class="protocol-placeholder-presets" role="toolbar" aria-label="Protocol step placeholder presets">
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="plasmid">plasmid</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="protein">protein</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="volume">volume</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="buffer">buffer</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="temperature">temperature</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="time">time</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="plasmid" aria-pressed="false">plasmid</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="protein" aria-pressed="false">protein</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="volume" aria-pressed="false">volume</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="buffer" aria-pressed="false">buffer</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="temperature" aria-pressed="false">temperature</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="time" aria-pressed="false">time</button>
                   </div>
                 </div>
                 <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
@@ -1414,10 +1414,28 @@
               </select>
             </label>
             <div class="form-actions assay-results-actions">
-              <button type="button" id="assay-attach-result-file-btn" class="ghost-btn">Attach Result File</button>
+              <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" title="Attach result file">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
+                </svg>
+              </button>
               <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-              <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
-              <button type="button" id="assay-clear-results-btn" class="ghost-btn">Clear Results</button>
+              <button type="button" id="assay-save-results-btn" class="primary-btn assay-results-icon-btn assay-results-save-icon-btn" aria-label="Save results" title="Save results">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 3h12l3 3v15H4V3Z"></path>
+                  <path d="M8 3v6h8V3"></path>
+                  <path d="M8 21v-7h8v7"></path>
+                </svg>
+              </button>
+              <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M3 6h18"></path>
+                  <path d="M8 6V4h8v2"></path>
+                  <path d="m19 6-1 14H6L5 6"></path>
+                  <path d="M10 11v5"></path>
+                  <path d="M14 11v5"></path>
+                </svg>
+              </button>
             </div>
             <div id="assay-active-assay-info" class="small-note"></div>
             <div id="assay-result-status" class="small-note"></div>
@@ -3467,7 +3485,7 @@
             </div>
             <div class="sequence-viewer-protein-builder-toolbar-copy">
               <h2>Protein Builder</h2>
-              <p class="small-note">Build a linear fusion from tags, stored features, linkers, cleavage sites, and a POI block.</p>
+              <p class="small-note">Build a linear fusion from tags, stored features, linkers, cleavage sites, and the active DNA coding sequence.</p>
               <span id="sequence-viewer-protein-builder-status" class="small-note">Linear chain: each block accepts one upstream and one downstream connection.</span>
             </div>
             <div class="form-actions sequence-viewer-protein-builder-toolbar-actions">
@@ -3481,28 +3499,13 @@
                 <div class="sequence-viewer-protein-builder-sidebar-pinned left-rail-template__pinned">
                 <section class="sequence-viewer-protein-builder-panel">
                   <form id="sequence-viewer-protein-builder-form" class="stack-form sequence-viewer-protein-builder-controls" autocomplete="off">
-                    <div class="form-grid">
-                      <label>
-                        Construct Name
-                        <input id="sequence-viewer-protein-builder-name" placeholder="e.g. His6-TEV-POI-TwinStrep" />
-                      </label>
-                      <label>
-                        POI Name
-                        <input id="sequence-viewer-protein-builder-poi-name" placeholder="e.g. EGFR kinase domain" />
-                      </label>
-                    </div>
                     <label>
-                      Protein of Interest Sequence
-                      <textarea
-                        id="sequence-viewer-protein-builder-poi-sequence"
-                        rows="5"
-                        placeholder="Paste amino-acid sequence (A-Z, optional *)"
-                      ></textarea>
+                      Construct Name
+                      <input id="sequence-viewer-protein-builder-name" placeholder="e.g. His6-TEV-CurrentDNA-TwinStrep" />
                     </label>
                     <div class="form-actions">
                       <button id="sequence-viewer-protein-builder-reset-btn" type="button" class="ghost-btn">Reset Default Chain</button>
                       <button id="sequence-viewer-protein-builder-add-custom-btn" type="button" class="ghost-btn">Add Custom Block</button>
-                      <button id="sequence-viewer-protein-builder-add-poi-btn" type="button" class="ghost-btn">Add POI Block</button>
                     </div>
                   </form>
                 </section>

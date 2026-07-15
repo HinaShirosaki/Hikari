@@ -24,8 +24,8 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       readLocalSource('src', 'renderer', 'app', 'storage-import.js')
     ].join('\n');
     test('chemical bundle hydration/import no longer depends on legacy chemical json fallback', () => {
-      const hydrationSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-hydration.js'), 'utf8');
-      const importSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-import.js'), 'utf8');
+      const hydrationSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'storage', 'storage-hydration.js'), 'utf8');
+      const importSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'storage', 'storage-import.js'), 'utf8');
       const mainSource = readMainProcessSource();
       assert.equal(hydrationSource.includes('legacyChemicalsPath'), false);
       assert.equal(hydrationSource.includes('hydrateFromLegacyChemicals'), false);
@@ -184,11 +184,11 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       assert.equal(telegramLoggingSource.includes('telegram-messages.log'), false);
     });
     test('main agent chat logging records request/result/error with redacted API key metadata', () => {
-      const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
+      const agentDir = path.join(__dirname, 'src', 'main', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
       const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
       const mainSource = readMainProcessSource();
-      const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'app-paths.js'), 'utf8');
+      const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'app-paths.js'), 'utf8');
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       assert.match(mainSource, /AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log'/);

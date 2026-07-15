@@ -4,7 +4,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
   with (scope) {
     test('controller core routes Codex provider through the Codex-owned agent runtime', async () => {
       const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
-      const { createAgentRuntimeSupport } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'agent-runtime-support.js'));
+      const { createAgentRuntimeSupport } = require(path.join(__dirname, 'src', 'main', 'agent', 'runtime', 'agent-runtime-support.js'));
       const runtimeSupport = createAgentRuntimeSupport({});
       let parserCallCount = 0;
       let codexRunInput = null;

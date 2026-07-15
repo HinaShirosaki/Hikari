@@ -343,7 +343,6 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime-files.js'
@@ -357,7 +356,6 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         'app.asar',
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'stdio-server.js'

@@ -313,17 +313,10 @@ function describeSourceArea(filePath) {
     };
   }
 
-  if (relativePath.startsWith('src/main/helpers/agent/')) {
+  if (relativePath.startsWith('src/main/agent/')) {
     return {
       area: 'main-agent',
       family: 'agent'
-    };
-  }
-
-  if (relativePath.startsWith('src/main/helpers/main/')) {
-    return {
-      area: 'main-helper',
-      family: 'main'
     };
   }
 

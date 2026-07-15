@@ -242,8 +242,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
       : {};
     const pdfUrls = uniqueStrings([
       ...asArray(source.pdf_urls),
-      ...asArray(metadata.pdf_urls),
-      source.url
+      ...asArray(metadata.pdf_urls)
     ], 8);
     const abstractSections = asArray(metadata.abstract_sections);
     const summary = cleanText(
@@ -806,7 +805,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
           sub_agent_id: cleanText(workflowResult.sub_agent_id, 160),
           sub_agent: workflowResult.sub_agent || null,
           sub_agent_context: workflowResult.sub_agent_context || copiedContext,
-          codex_paper_context: true,
+          codex_paper_context: workflowResult.codex_paper_context === true,
           summary: cleanText(workflowResult.summary || workflowResult.error, 600)
             || `Literature search failed for ${query}.`
         };
@@ -827,7 +826,7 @@ function createLiteratureSearchWorkflowRuntime(deps = {}) {
         sub_agent_id: cleanText(workflowResult.sub_agent_id, 160),
         sub_agent: workflowResult.sub_agent || null,
         sub_agent_context: workflowResult.sub_agent_context || copiedContext,
-        codex_paper_context: true,
+        codex_paper_context: workflowResult.codex_paper_context === true,
         summary: cleanText(workflowResult.summary, 600)
           || `Completed delegated literature search for ${query}.`
       };

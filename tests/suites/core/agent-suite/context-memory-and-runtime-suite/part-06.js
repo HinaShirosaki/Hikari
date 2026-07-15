@@ -7,7 +7,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'register-agent-tool-executors.js'
@@ -86,7 +85,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'shared',
         'agent-llm-provider-bridge.js'
@@ -129,7 +127,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'shared',
         'agent-llm-provider-bridge.js'
@@ -181,7 +178,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'shared',
         'agent-llm-provider-bridge.js'
@@ -226,7 +222,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'shared',
         'agent-llm-provider-bridge.js'
@@ -282,7 +277,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'shared',
         'agent-llm-provider-bridge.js'
@@ -338,7 +332,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-web-search.js'
@@ -381,7 +374,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'register-agent-tool-executors.js'

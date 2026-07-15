@@ -839,8 +839,7 @@ body.agent-view-fixed-scroll .workspace-main {
 }
 
 .agent-user-question-custom textarea:focus {
-  outline: 2px solid color-mix(in srgb, var(--theme-accent) 34%, transparent);
-  outline-offset: 2px;
+  outline: none;
   border-color: color-mix(in srgb, var(--theme-accent) 48%, var(--theme-border));
 }
 

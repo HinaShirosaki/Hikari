@@ -78,7 +78,7 @@ test('biology-notebook New Experiment keeps the workspace project and starts onl
   assert.equal(overlay.hidden, false);
   assert.equal(projectSelect.value, 'p2');
   assert.equal(startBtn.disabled, true);
-  assert.match(document.getElementById('biology-notebook-experiment-dialog-status').textContent, /current workspace/);
+  assert.equal(document.getElementById('biology-notebook-experiment-dialog-status').textContent, '');
 
   protocolSearch.value = 'transform';
   trigger(protocolSearch, 'input');

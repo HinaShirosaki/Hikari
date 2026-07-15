@@ -1,6 +1,6 @@
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { cleanText } from '../shared.js';
-import { cloneLibraryRow, createCustomRow, createFeatureRow, createPoiRow } from './row-factory.js';
+import { cloneLibraryRow, createCustomRow, createFeatureRow } from './row-factory.js';
 
 export function installProteinBuilderRowActions(ctx) {
   const { elements, state } = ctx;
@@ -23,16 +23,6 @@ export function installProteinBuilderRowActions(ctx) {
   ctx.removeRow = function removeRow(rowId) {
     state.rows = state.rows.filter((row) => row.id !== rowId);
     ctx.invalidateDnaConstruct();
-  };
-
-  ctx.addPoiRow = function addPoiRow() {
-    if (state.rows.some((row) => row.type === 'poi')) {
-      ctx.setBuilderStatus('POI block already exists in the chain.');
-      return;
-    }
-    ctx.appendRow(createPoiRow(state.nextRowId++), { insertBeforePoi: false });
-    ctx.invalidateDnaConstruct();
-    ctx.render();
   };
 
   ctx.addCustomRow = function addCustomRow() {

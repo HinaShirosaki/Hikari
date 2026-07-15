@@ -402,9 +402,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart02(contex
           __dirname,
           'src',
           'main',
-          'helpers',
-          'main',
-          'llm',
+          'lib', 'llm',
           'chat-log-transformer.js'
         ));
         const runtime = createChatLogTransformRuntime({

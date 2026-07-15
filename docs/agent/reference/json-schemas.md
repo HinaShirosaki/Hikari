@@ -1,16 +1,16 @@
 # Agent JSON Schemas
 
-This document consolidates the explicit input and output JSON-schema definitions used by `src/main/helpers/agent`.
+This document consolidates the explicit input and output JSON-schema definitions used by `src/main/agent`.
 
 Scope notes:
 
-- Tool input schemas are centralized in `src/main/helpers/agent/tools/Tool-call.json`.
+- Tool input schemas are centralized in `src/main/agent/tools/Tool-call.json`.
 - Output schemas below are the explicit schema constants used for structured LLM payloads.
 - Some runtime return envelopes are normalized in code but do not have a dedicated schema constant. Those are not invented here.
 
 ## Input schemas
 
-Source: `src/main/helpers/agent/tools/Tool-call.json`
+Source: `src/main/agent/tools/Tool-call.json`
 
 ```json
 {
@@ -932,7 +932,7 @@ Source: `src/main/helpers/agent/tools/Tool-call.json`
 
 ### Intent parser
 
-Source: `src/main/helpers/agent/intent/agent-intent-parser.js`
+Source: `src/main/agent/intent/agent-intent-parser.js`
 
 #### `INTENT_PARSER_RESPONSE_SCHEMA`
 
@@ -1130,12 +1130,12 @@ Source: `src/main/helpers/agent/intent/agent-intent-parser.js`
 
 Source group:
 
-- `src/main/helpers/agent/deep-research/step-1-clarify-question.js`
-- `src/main/helpers/agent/deep-research/step-2-ask-targeted-follow-up.js`
-- `src/main/helpers/agent/deep-research/step-3-draft-research-plan.js`
-- `src/main/helpers/agent/deep-research/step-4-execute-plan.js`
-- `src/main/helpers/agent/deep-research/step-5-assemble-final-answer.js`
-- `src/main/helpers/agent/deep-research/sub-agent-usage.js`
+- `src/main/agent/deep-research/step-1-clarify-question.js`
+- `src/main/agent/deep-research/step-2-ask-targeted-follow-up.js`
+- `src/main/agent/deep-research/step-3-draft-research-plan.js`
+- `src/main/agent/deep-research/step-4-execute-plan.js`
+- `src/main/agent/deep-research/step-5-assemble-final-answer.js`
+- `src/main/agent/deep-research/sub-agent-usage.js`
 
 #### `CLARIFY_SCHEMA`
 
@@ -1484,12 +1484,12 @@ Source group:
 
 Source group:
 
-- `src/main/helpers/agent/runtime/agent-science-input-clarification.js`
-- `src/main/helpers/agent/runtime/agent-science-loop-exit-criteria.js`
-- `src/main/helpers/agent/runtime/agent-science-loop-exit-judge.js`
-- `src/main/helpers/agent/runtime/agent-science-final-synthesis.js`
-- `src/main/helpers/agent/runtime/science-reasoning-loop/thinking-trace.js`
-- `src/main/helpers/agent/runtime/agent-science-reasoning-loop.js`
+- `src/main/agent/runtime/agent-science-input-clarification.js`
+- `src/main/agent/runtime/agent-science-loop-exit-criteria.js`
+- `src/main/agent/runtime/agent-science-loop-exit-judge.js`
+- `src/main/agent/runtime/agent-science-final-synthesis.js`
+- `src/main/agent/runtime/science-reasoning-loop/thinking-trace.js`
+- `src/main/agent/runtime/agent-science-reasoning-loop.js`
 
 #### `SCIENCE_INPUT_CLARIFICATION_SCHEMA`
 
@@ -1883,11 +1883,11 @@ Note: this currently matches the exit-judgement shape used in the reasoning loop
 
 Source group:
 
-- `src/main/helpers/agent/tools/agent-notebook-draft.js`
-- `src/main/helpers/agent/tools/agent-notebook-generation.js`
-- `src/main/helpers/agent/tools/agent-protocol-matching.js`
-- `src/main/helpers/agent/tools/agent-protocol-generation.js`
-- `src/main/helpers/agent/tools/agent-paper-analysis.js`
+- `src/main/agent/tools/agent-notebook-draft.js`
+- `src/main/agent/tools/agent-notebook-generation.js`
+- `src/main/agent/tools/agent-protocol-matching.js`
+- `src/main/agent/tools/agent-protocol-generation.js`
+- `src/main/agent/tools/agent-paper-analysis.js`
 
 #### `NOTEBOOK_DRAFT_SELECTION_SCHEMA`
 

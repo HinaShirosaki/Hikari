@@ -259,8 +259,8 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
           htmlText: '<html><body>protein vector</body></html>'
         });
 
-        const { loadSqlJs } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-utils.js'));
-        const { readSqlRows } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-sql-read.js'));
+        const { loadSqlJs } = require(path.join(__dirname, 'src', 'main', 'storage', 'storage-utils.js'));
+        const { readSqlRows } = require(path.join(__dirname, 'src', 'main', 'storage', 'storage-sql-read.js'));
         const sqlitePath = path.join(storageRoot, 'SequenceViewer', 'sequence-library.sqlite');
         const bytes = await fsPromises.readFile(sqlitePath);
         const SQL = await loadSqlJs();

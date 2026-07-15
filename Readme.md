@@ -253,9 +253,10 @@ Packaging notes:
 ## Project Layout
 
 - `src/main/main.js`: Electron main process, window lifecycle, IPC wiring, LLM integration, and Telegram lifecycle.
-- `src/main/helpers/main/`: persistence, storage-bundle import/export, sequence-library logic, and main-process IPC registrars.
-- `src/main/helpers/agent/`: agent backend, tool execution, runtime orchestration, and deep-research pipeline.
-- `src/main/lib/`: process-level integrations such as the Telegram bot and Codex agent launcher.
+- `src/main/storage/`: storage-bundle import/export, persistence, and sequence-library summary logic.
+- `src/main/data/`: primary snapshot and data-helper utilities.
+- `src/main/agent/`: agent backend, tool execution, runtime orchestration, and deep-research pipeline.
+- `src/main/lib/`: process-level integrations and shared utilities (Telegram bot, Codex agent launcher, LLM runtime, app-paths).
 - `src/renderer/`: renderer shell, feature modules, shared state, and service layer.
 - `ui/html/` and `ui/css/`: source fragments used to generate the shipped `index.html` and `styles.css`.
 - `ui/config/`: source-of-truth ordering and app-registry config for generated UI assets.
@@ -268,7 +269,7 @@ If you are onboarding to the codebase, start with the docs index and then the ar
 
 - [`docs/README.md`](./docs/README.md) — internal docs index and architecture overview
 - [`docs/renderer/README.md`](./docs/renderer/README.md)
-- [`docs/main-helpers/README.md`](./docs/main-helpers/README.md)
+- [`docs/main-platform/README.md`](./docs/main-platform/README.md)
 - [`docs/agent/README.md`](./docs/agent/README.md)
 - [`docs/module-development/README.md`](./docs/module-development/README.md) — how to add a new module
 - [`tests/README.md`](./tests/README.md)

@@ -9,17 +9,19 @@ import {
   parseNumericResult
 } from './shared.js';
 import {
-  createChartEngine,
   createDefaultChartStyle,
   normalizeChartStyle
-} from '../../lib/chart-engine/index.js';
-import { buildAnalysisChartModel } from './analysis-chart-renderer.js';
+} from './plotly/chart-style-model.js';
+import { createChartStyleStore } from './plotly/chart-style-store.js';
+import { mountChartControls } from './plotly/chart-controls.js';
+import { createAssayPlotlyRenderer } from './plotly/plotly-renderer.js';
+import { buildAnalysisChartModel } from './analysis-chart-model.js';
 
 export {
   CHART_STYLE_OPTIONS,
   createDefaultChartStyle,
   normalizeChartStyle
-} from '../../lib/chart-engine/index.js';
+} from './plotly/chart-style-model.js';
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -146,11 +148,9 @@ export function createAssayAnalysisView({
     runtime.chartStyle = normalizeChartStyle(runtime.chartStyle);
   }
 
-  const chartEngine = createChartEngine({
-    getChartTarget: () => assayAnalysisTable?.querySelector('[data-assay-analysis-chart]'),
-    controlsTarget: assayChartStyleMount,
+  const plotlyRenderer = createAssayPlotlyRenderer();
+  const chartStyleStore = createChartStyleStore({
     initialStyle: runtime.chartStyle,
-    safeText,
     onChange: (style) => {
       runtime.chartStyle = style;
       if (typeof onChartStyleChanged === 'function') {
@@ -159,18 +159,40 @@ export function createAssayAnalysisView({
       onAnalysisConfigChange();
     }
   });
+  const chartControls = assayChartStyleMount
+    ? mountChartControls(assayChartStyleMount, { store: chartStyleStore, safeText })
+    : null;
+
+  function setChartContext(context) {
+    chartStyleStore.setContext(context);
+    chartControls?.refresh();
+  }
+
+  function unmountAnalysisChart() {
+    plotlyRenderer.unmount();
+  }
+
+  function renderAnalysisChart(model) {
+    const target = assayAnalysisTable?.querySelector('[data-assay-analysis-chart]');
+    if (!target || !model) {
+      return { seriesLabels: [] };
+    }
+    return plotlyRenderer.render(target, model, chartStyleStore.getStyle());
+  }
 
   function getChartStyle() {
-    return chartEngine.getStyle();
+    return chartStyleStore.getStyle();
   }
 
   function loadChartStyle(style) {
-    runtime.chartStyle = chartEngine.loadStyle(style);
+    chartStyleStore.setStyleSilent(style);
+    chartControls?.refresh();
+    runtime.chartStyle = chartStyleStore.getStyle();
     return runtime.chartStyle;
   }
 
   function refreshChartControls() {
-    chartEngine.refreshControls();
+    chartControls?.refresh();
   }
 
   function getPlotlyRuntime() {
@@ -261,13 +283,13 @@ export function createAssayAnalysisView({
     if (assayAnalysisSummary) {
       assayAnalysisSummary.textContent = '';
     }
-    chartEngine.unmount();
+    unmountAnalysisChart();
     purgeAgentPlotly();
     if (assayAnalysisTable) {
       assayAnalysisTable.innerHTML = '';
     }
     lastAnalysisContext = { headers: [], seriesLabels: [], method: '' };
-    chartEngine.setContext(lastAnalysisContext);
+    setChartContext(lastAnalysisContext);
   }
 
   function renderAnalysis() {
@@ -275,7 +297,7 @@ export function createAssayAnalysisView({
       return;
     }
 
-    chartEngine.unmount();
+    unmountAnalysisChart();
     purgeAgentPlotly();
     syncCurrentResultsFromGrid();
     const method = String(assayAnalysisMethodInput?.value || 'grouped_summary');
@@ -328,20 +350,19 @@ export function createAssayAnalysisView({
         </div>
       `
       : tableHtml;
-    const model = result.chartModel || buildAnalysisChartModel(result, method, chartEngine.getStyle());
-    chartEngine.setData(model);
-    const chartInfo = chartEngine.render();
+    const model = result.chartModel || buildAnalysisChartModel(result, method, getChartStyle());
+    const chartInfo = renderAnalysisChart(model);
     lastAnalysisContext = {
       ...lastAnalysisContext,
       seriesLabels: chartInfo.seriesLabels
     };
-    chartEngine.setContext(lastAnalysisContext);
+    setChartContext(lastAnalysisContext);
     onAnalysisRendered?.({
       method,
       summary: assayAnalysisSummary.textContent,
       headers: Array.isArray(result.headers) ? result.headers.map((item) => String(item)) : [],
       rows: Array.isArray(result.rows) ? result.rows : [],
-      chartDataUrl: chartEngine.toDataUrl(),
+      chartDataUrl: plotlyRenderer.captureDataUrl(),
       analyzedAt: new Date().toISOString()
     });
   }
@@ -361,7 +382,7 @@ export function createAssayAnalysisView({
       return false;
     }
 
-    chartEngine.unmount();
+    unmountAnalysisChart();
     purgeAgentPlotly();
     const traceNames = normalized.figure.data
       .map((trace, index) => String(trace?.name || `Trace ${index + 1}`).trim())
@@ -419,7 +440,7 @@ export function createAssayAnalysisView({
         seriesLabels: traceNames,
         method: 'agent_plotly'
       };
-      chartEngine.setContext(lastAnalysisContext);
+      setChartContext(lastAnalysisContext);
       return true;
     } catch (error) {
       assayAnalysisSummary.textContent = String(error?.message || error || 'Unable to render Plotly graph.');
@@ -463,6 +484,10 @@ export function createAssayAnalysisView({
     loadChartStyle,
     refreshChartControls,
     renderAgentPlotlyGraph,
-    destroy: () => chartEngine.destroy()
+    destroy() {
+      chartControls?.destroy();
+      unmountAnalysisChart();
+      purgeAgentPlotly();
+    }
   };
 }

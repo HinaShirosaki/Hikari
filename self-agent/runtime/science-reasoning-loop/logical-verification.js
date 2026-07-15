@@ -1,7 +1,7 @@
 'use strict';
 
 const { createAgentLlmRuntimeHelpers } = require('../../../src/main/lib/llm/runtime-helpers.js');
-const { createAgentSubAgentRuntime } = require('../../../src/main/helpers/agent/tools/agent-sub-agent.js');
+const { createAgentSubAgentRuntime } = require('../../../src/main/agent/tools/agent-sub-agent.js');
 
 const SCIENCE_LOOP_LOGIC_ITEM_SCHEMA = {
   type: 'object',

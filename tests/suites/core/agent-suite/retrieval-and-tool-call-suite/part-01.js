@@ -73,7 +73,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-notebook-lookup.js'
@@ -115,7 +114,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-notebook-lookup.js'
@@ -157,7 +155,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-notebook-lookup.js'
@@ -219,7 +216,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-notebook-lookup.js'
@@ -254,7 +250,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'runtime',
         'agent-sub-app-api.js'
@@ -343,7 +338,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-notebook-lookup.js'
@@ -389,7 +383,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-notebook-lookup.js'
@@ -489,7 +482,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(Object.prototype.hasOwnProperty.call(pythonSchema.input_schema.properties, 'max_repair_attempts'), true);
     });
     test('agent tool provider resolves reasoning entry tools from the catalog schemas', () => {
-      const toolProvider = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-provide.js'));
+      const toolProvider = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-provide.js'));
       const runtime = toolProvider.createAgentToolProviderRuntime();
 
       const scienceTools = runtime.provideTools({
@@ -525,7 +518,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(catalogTools.tool_names.includes('protocol-generation'), true);
     });
     test('command-line runtime executes focused commands and blocks mutating commands when write tools are disabled', async () => {
-      const { createAgentCommandLineRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-command-line.js'));
+      const { createAgentCommandLineRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-command-line.js'));
       const runtime = createAgentCommandLineRuntime({
         defaultCwd: __dirname
       });
@@ -548,7 +541,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(fs.existsSync(blockedTarget), false);
     });
     test('skill runtime loads OpenClaw-style SKILL.md files with workspace precedence and direct tool dispatch metadata', async () => {
-      const { createAgentSkillRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'skills', 'agent-skill-runtime.js'));
+      const { createAgentSkillRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'skills', 'agent-skill-runtime.js'));
       const tempRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-skills-'));
       const homeDir = path.join(tempRoot, 'home');
       const workspaceDir = path.join(tempRoot, 'workspace');

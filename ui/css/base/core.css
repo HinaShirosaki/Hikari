@@ -940,9 +940,13 @@ button:hover {
   background: var(--theme-surface-subtle);
 }
 
-input:focus-visible,
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='button']):not([type='submit']):not([type='reset']):focus-visible,
 textarea:focus-visible,
-select:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--theme-focus);
+}
+
 button:focus-visible {
   outline: 2px solid var(--theme-focus);
   outline-offset: 2px;

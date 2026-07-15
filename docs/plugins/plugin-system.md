@@ -169,7 +169,7 @@ The renderer cannot touch the filesystem, so folder validation is an IPC call:
 - Handler: registered in
   [`register-data-ipc.js`](../../src/main/ipc/register-data-ipc.js), thin
   wrapper around
-  [`inspect-plugin-folder.js`](../../src/main/helpers/main/inspect-plugin-folder.js)
+  [`inspect-plugin-folder.js`](../../src/main/lib/inspect-plugin-folder.js)
 - Preload: `window.hikariApi.inspectPluginFolder(path)` in
   [`system-api.js`](../../src/main/preload/api/system-api.js)
 
@@ -335,11 +335,11 @@ rail with its own CSS if it wants one.
 ### 8.3 Registering MCP tools
 
 Agent-facing tools live in the provider-neutral MCP contract at
-`src/main/helpers/agent/mcp-contract/`. To register a new direct tool:
+`src/main/agent/mcp-contract/`. To register a new direct tool:
 
 1. **Create the tool module**
-   `src/main/helpers/agent/mcp-contract/direct-tools/<my-tool>.js`, modeled
-   on [`ask-user.js`](../../src/main/helpers/agent/mcp-contract/direct-tools/ask-user.js).
+   `src/main/agent/mcp-contract/direct-tools/<my-tool>.js`, modeled
+   on [`ask-user.js`](../../src/main/agent/mcp-contract/direct-tools/ask-user.js).
    Export a frozen definition and an async handler:
 
    ```js
@@ -356,13 +356,13 @@ Agent-facing tools live in the provider-neutral MCP contract at
    ```
 
 2. **Register it** in
-   [`direct-tools/index.js`](../../src/main/helpers/agent/mcp-contract/direct-tools/index.js):
+   [`direct-tools/index.js`](../../src/main/agent/mcp-contract/direct-tools/index.js):
    import the pair and append `{ definition: MY_TOOL_MCP_TOOL, handler: callMyTool }`
    to `DIRECT_MCP_TOOLS`. Everything downstream (the stdio MCP server, the
    tool router, definition listing) picks it up from that array.
 
 3. **Expose it to Codex** in
-   [`mcp-contract/instructions.js`](../../src/main/helpers/agent/mcp-contract/instructions.js):
+   [`mcp-contract/instructions.js`](../../src/main/agent/mcp-contract/instructions.js):
    add `'my_tool'` to `HIKARI_MCP_TOOL_NAMES` (this list becomes
    `enabled_tools` in the Codex `config.toml` block written by
    `codex-agent/runtime-files.js`) and add a
@@ -376,7 +376,7 @@ Agent-facing tools live in the provider-neutral MCP contract at
 
 Two shortcuts worth knowing: tools already declared in the app tool catalog
 can be bridged through
-[`generic-app-tool.js`](../../src/main/helpers/agent/mcp-contract/direct-tools/generic-app-tool.js)
+[`generic-app-tool.js`](../../src/main/agent/mcp-contract/direct-tools/generic-app-tool.js)
 instead of hand-writing a definition; and a module can own a whole tool
 *group* in its own tree and spread it into the registry — the papers module
 does this with `PAPER_INTAKE_DIRECT_MCP_TOOLS` from
@@ -390,7 +390,7 @@ agent when and how to use a capability. There are two kinds:
 
 **Official (module-owned) skills** ship with the app and travel with the MCP
 tools they describe. They are defined in code, in `OFFICIAL_MCP_SKILLS` in
-[`official-mcp-skills.js`](../../src/main/helpers/agent/codex-agent/official-mcp-skills.js).
+[`official-mcp-skills.js`](../../src/main/agent/codex-agent/official-mcp-skills.js).
 To add one for your module:
 
 1. Append an entry to `OFFICIAL_MCP_SKILLS` with a unique `id`, a
@@ -413,7 +413,7 @@ after a PDF is ingested.
 `<folder>/SKILL.md` under `~/.hikari/skills`, `~/.agents/skills`,
 `<workspace>/.agents/skills`, or `<workspace>/skills` is discovered at
 runtime by
-[`agent-skill-runtime.js`](../../src/main/helpers/agent/skills/agent-skill-runtime.js)
+[`agent-skill-runtime.js`](../../src/main/agent/skills/agent-skill-runtime.js)
 and toggled per-skill in **Settings → External Skills**. Frontmatter fields
 (all optional except `name`/`description`):
 

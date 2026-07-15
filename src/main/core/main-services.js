@@ -29,10 +29,10 @@ const {
   defaultAgentModelForProvider
 } = require('../generated/llm-provider-config.generated.js');
 const { defaultCleanText } = require('../lib/llm/runtime-helpers.js');
-const { appendLogWithRotation } = require('../helpers/agent/shared/agent-observability');
-const { createMainAppPaths } = require('../helpers/main/app-paths.js');
+const { appendLogWithRotation } = require('../agent/shared/agent-observability');
+const { createMainAppPaths } = require('../lib/app-paths.js');
 const { createMainAgentServices } = require('./services/create-agent-services.js');
-const { createMainDataHelpers } = require('../helpers/main/data/data-helpers');
+const { createMainDataHelpers } = require('../data/data-helpers');
 const {
   discoverPapersFromStorageRoot,
   getBundlePaths,
@@ -40,10 +40,10 @@ const {
   syncSqliteBundleFromSnapshot,
   hydrateSnapshotFromBundle,
   importStorageRoot
-} = require('../helpers/main/storage-bundle/index.js');
+} = require('../storage/index.js');
 const {
   releaseOfficialMcpSkillsForWorkspace
-} = require('../helpers/agent/codex-agent/official-mcp-skills.js');
+} = require('../agent/codex-agent/official-mcp-skills.js');
 const {
   transformPaperRecordsToMarkdown
 } = require('../papers/parse/paper-markdown-import.js');
@@ -59,8 +59,8 @@ const {
   upsertRecognizedBackbone,
   recognizeSequenceBackbone
 } = require('../../renderer/modules/sequence-viewer/main-process/sequence-library');
-const { buildCompactIndexedSnapshot } = require('../helpers/main/data/data-snapshot-utils');
-const { createChatLogTransformMonitor } = require('../helpers/main/llm/chat-log-transformer.js');
+const { buildCompactIndexedSnapshot } = require('../data/data-snapshot-utils');
+const { createChatLogTransformMonitor } = require('../lib/llm/chat-log-transformer.js');
 const { createAgentLogService } = require('./services/create-agent-log-service');
 const { createLlmPromptsService } = require('./services/create-llm-prompts-service');
 const { createTelegramService } = require('./services/create-telegram-service');

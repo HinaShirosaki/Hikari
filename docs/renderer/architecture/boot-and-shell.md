@@ -96,7 +96,7 @@ Key boot-time or shell-level calls include:
 - `onProtocolRecordSaved(handler)` — subscribes to externally saved protocols (delegated to the protocol service)
 - `onTelegramCommand(handler)` — subscribes to Telegram command events
 
-Renderer state itself is loaded from `localStorage` (`loadState()` in `modules/app-state.js`), not from a bridge call — there is no `loadEnaFile`/`autoLoadDataFile` on `window.hikariApi`. The full bridge surface is assembled in `src/main/preload/create-preload-api.js` from the per-domain `api/*.js` modules. For the main-process side of those calls, use [doc/main-helpers/README.md](../../main-helpers/README.md).
+Renderer state itself is loaded from `localStorage` (`loadState()` in `modules/app-state.js`), not from a bridge call — there is no `loadEnaFile`/`autoLoadDataFile` on `window.hikariApi`. The full bridge surface is assembled in `src/main/preload/create-preload-api.js` from the per-domain `api/*.js` modules. For the main-process side of those calls, use [doc/main-platform/README.md](../../main-platform/README.md).
 
 ## Renderer-global hooks
 

@@ -4,12 +4,10 @@ module.exports = function registerAgentSuite(context = {}) {
   const registerAgentScienceAndProtocolSuite = require('./agent-suite/science-and-protocol-suite.js');
   const registerAgentLiteraturePaperAndSubAgentSuite = require('./agent-suite/literature-paper-and-sub-agent-suite.js');
   const registerAgentContextMemoryAndRuntimeSuite = require('./agent-suite/context-memory-and-runtime-suite.js');
-  const registerAgentPromptRegistrySuite = require('./agent-suite/prompt-registry-suite.js');
 
   registerAgentIntentAndNotebookSuite(context);
   registerAgentRetrievalAndToolCallSuite(context);
   registerAgentScienceAndProtocolSuite(context);
   registerAgentLiteraturePaperAndSubAgentSuite(context);
   registerAgentContextMemoryAndRuntimeSuite(context);
-  registerAgentPromptRegistrySuite(context);
 };

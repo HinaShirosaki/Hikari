@@ -643,8 +643,7 @@
 
 .biology-notebook-buffer-sheet input:focus,
 .biology-notebook-reaction-sheet input:focus {
-  outline: 2px solid color-mix(in srgb, var(--theme-accent) 72%, transparent);
-  outline-offset: -2px;
+  outline: none;
   background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
 }
 
@@ -1290,8 +1289,8 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 }
 
 .biology-notebook-result-table-select:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--theme-focus) 72%, transparent);
-  outline-offset: 3px;
+  outline: none;
+  border-color: var(--theme-focus) !important;
 }
 
 .biology-notebook-result-table {

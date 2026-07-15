@@ -1,7 +1,7 @@
 'use strict';
 const fs = require('fs/promises');
 const path = require('path');
-const { resolveSqlJsWasmJsPath } = require('../../../../../main/helpers/main/sqljs-path.js');
+const { resolveSqlJsWasmJsPath } = require('../../../../../main/lib/sqljs-path.js');
 const {
   cleanText,
   normalizeStatus

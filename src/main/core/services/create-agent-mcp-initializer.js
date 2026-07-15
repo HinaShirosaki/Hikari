@@ -4,13 +4,13 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const {
   releaseOfficialMcpSkillsForWorkspace
-} = require('../../helpers/agent/codex-agent/official-mcp-skills.js');
+} = require('../../agent/codex-agent/official-mcp-skills.js');
 const {
   ensureCodexCliRuntimeHome
 } = require('../../lib/codex-cli-provider/runtime-home.js');
 const {
   sanitizeProjectMemoryFolderName
-} = require('../../helpers/main/storage-bundle/storage-memory.js');
+} = require('../../storage/storage-memory.js');
 
 function defaultCleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();

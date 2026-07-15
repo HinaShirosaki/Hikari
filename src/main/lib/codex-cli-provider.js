@@ -2,7 +2,7 @@
 
 const {
   buildHikariCodexAgentsInstructions
-} = require('../helpers/agent/codex-agent/agent-instructions.js');
+} = require('../agent/codex-agent/agent-instructions.js');
 const { OPENAI_CODEX_LOGIN_URL } = require('./codex-cli-provider/constants');
 const {
   buildCodexCliExecArgs,

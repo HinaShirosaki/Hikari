@@ -63,19 +63,19 @@ export function getPoiSourcePriority(candidate) {
   return 4;
 }
 
-export function resolvePoiDnaFromRecord(proteinSequence, record, selectedFeature = null) {
-  const targetProtein = normalizeProteinBuildSequence(proteinSequence);
-  if (!targetProtein.length || !record?.sequence?.length) {
-    return null;
+function collectRecordSequenceCandidates(record, selectedFeature = null, targetProtein = '') {
+  if (!record?.sequence?.length) {
+    return [];
   }
 
+  const normalizedTarget = normalizeProteinBuildSequence(targetProtein);
   const dedupe = new Set();
   const candidates = [];
   const pushCandidate = (candidate) => {
     if (!candidate?.dnaSequence || !candidate?.proteinSequence) {
       return;
     }
-    if (!proteinsEquivalent(candidate.proteinSequence, targetProtein)) {
+    if (normalizedTarget.length && !proteinsEquivalent(candidate.proteinSequence, normalizedTarget)) {
       return;
     }
     const key = [
@@ -98,30 +98,37 @@ export function resolvePoiDnaFromRecord(proteinSequence, record, selectedFeature
   });
 
   buildOrfFeatures(record.sequence, record.topology, {
-    minAaLength: Math.max(1, stripTerminalStop(targetProtein).length)
+    minAaLength: Math.max(1, stripTerminalStop(normalizedTarget).length)
   }).forEach((orfFeature) => {
     pushCandidate(buildRecordSequenceCandidate(record, orfFeature, 'record_orf'));
   });
 
-  if (!candidates.length) {
-    return null;
-  }
+  return candidates;
+}
 
-  candidates.sort((left, right) => {
+function sortRecordSequenceCandidates(candidates, targetProtein = '') {
+  const normalizedTarget = normalizeProteinBuildSequence(targetProtein);
+  return [...candidates].sort((left, right) => {
     const leftPriority = getPoiSourcePriority(left);
     const rightPriority = getPoiSourcePriority(right);
     if (leftPriority !== rightPriority) {
       return leftPriority - rightPriority;
     }
-    const leftLengthDelta = Math.abs(stripTerminalStop(left.proteinSequence).length - stripTerminalStop(targetProtein).length);
-    const rightLengthDelta = Math.abs(stripTerminalStop(right.proteinSequence).length - stripTerminalStop(targetProtein).length);
-    if (leftLengthDelta !== rightLengthDelta) {
-      return leftLengthDelta - rightLengthDelta;
+    if (normalizedTarget.length) {
+      const leftLengthDelta = Math.abs(stripTerminalStop(left.proteinSequence).length - stripTerminalStop(normalizedTarget).length);
+      const rightLengthDelta = Math.abs(stripTerminalStop(right.proteinSequence).length - stripTerminalStop(normalizedTarget).length);
+      if (leftLengthDelta !== rightLengthDelta) {
+        return leftLengthDelta - rightLengthDelta;
+      }
+    } else if (left.proteinSequence.length !== right.proteinSequence.length) {
+      return right.proteinSequence.length - left.proteinSequence.length;
     }
     return cleanText(left.label, 140).localeCompare(cleanText(right.label, 140));
   });
+}
 
-  const best = candidates[0];
+function describeRecordSequenceSource(candidate) {
+  const best = candidate || {};
   const sourceLabel = cleanText(best?.label, 140) || 'current vector';
   const sourceType = cleanText(best?.type, 120).toLowerCase();
   const sourceDescription = sourceType === 'cds'
@@ -130,9 +137,50 @@ export function resolvePoiDnaFromRecord(proteinSequence, record, selectedFeature
       ? `current vector ORF ${sourceLabel}`
       : `current vector feature ${sourceLabel}`);
 
+  return { sourceLabel, sourceDescription };
+}
+
+export function resolvePoiSourceFromRecord(record, selectedFeature = null) {
+  const candidates = sortRecordSequenceCandidates(
+    collectRecordSequenceCandidates(record, selectedFeature)
+  );
+  if (!candidates.length) {
+    return null;
+  }
+
+  const best = candidates[0];
+  const { sourceLabel, sourceDescription } = describeRecordSequenceSource(best);
+
+  return {
+    label: sourceLabel,
+    proteinSequence: best.proteinSequence,
+    dnaSequence: best.dnaSequence,
+    note: `Uses DNA from ${sourceDescription}.`,
+    reusedSource: `Reused active DNA from ${sourceDescription}.`,
+    sourceLabel
+  };
+}
+
+export function resolvePoiDnaFromRecord(proteinSequence, record, selectedFeature = null) {
+  const targetProtein = normalizeProteinBuildSequence(proteinSequence);
+  if (!targetProtein.length) {
+    return null;
+  }
+
+  const candidates = sortRecordSequenceCandidates(
+    collectRecordSequenceCandidates(record, selectedFeature, targetProtein),
+    targetProtein
+  );
+  if (!candidates.length) {
+    return null;
+  }
+
+  const best = candidates[0];
+  const { sourceLabel, sourceDescription } = describeRecordSequenceSource(best);
+
   return {
     dnaSequence: alignDnaToProteinSequence(best.dnaSequence, proteinSequence),
-    note: `Reused POI DNA from ${sourceDescription}.`,
+    note: `Reused active DNA from ${sourceDescription}.`,
     sourceLabel
   };
 }

@@ -6,7 +6,7 @@ the app pointed there unless a test needs a narrow internal helper.
 This package is the transport half of the Codex Agent integration. It lives in
 `main/lib` because the composition services consume its public request and
 account APIs, but its runtime guidance, skill synchronization, and event
-artifacts belong to the same ownership boundary as `helpers/agent/codex-agent`.
+artifacts belong to the same ownership boundary as `agent/codex-agent`.
 
 - `args.js`: Codex `exec` and `exec resume` argv construction.
 - `attachments.js`: prompt attachment staging and output-file paths.

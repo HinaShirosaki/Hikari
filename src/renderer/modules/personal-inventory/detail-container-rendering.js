@@ -117,8 +117,20 @@ export function createContainerDetailRenderer({
                   </button>
                 `
                 : ''}
-              <button type="button" class="ghost-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}">Import CSV</button>
-              <button type="button" class="ghost-btn" data-container-export-csv="${safeText(container.id)}" data-section="${safeText(section)}">Export CSV</button>
+              <button type="button" class="ghost-btn container-csv-icon-btn" data-container-import-csv="${safeText(container.id)}" data-section="${safeText(section)}" aria-label="Import CSV" title="Import CSV">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 15V3"></path>
+                  <path d="m7 8 5-5 5 5"></path>
+                  <path d="M4 14v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5"></path>
+                </svg>
+              </button>
+              <button type="button" class="ghost-btn container-csv-icon-btn" data-container-export-csv="${safeText(container.id)}" data-section="${safeText(section)}" aria-label="Export CSV" title="Export CSV">
+                <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M12 3v12"></path>
+                  <path d="m7 10 5 5 5-5"></path>
+                  <path d="M4 19v1a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-1"></path>
+                </svg>
+              </button>
               <input type="file" accept=".csv,text/csv" data-container-import-input="${safeText(container.id)}" hidden />
             </div>
           </div>

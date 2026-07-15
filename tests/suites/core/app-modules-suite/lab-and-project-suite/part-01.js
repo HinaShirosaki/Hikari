@@ -237,6 +237,8 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
   assert.match(inventorySections.innerHTML, /container-detail-sticky/);
   assert.match(inventorySections.innerHTML, /data-container-import-csv="box-1"/);
   assert.match(inventorySections.innerHTML, /data-container-export-csv="box-1"/);
+  assert.match(inventorySections.innerHTML, /data-container-import-csv="box-1"[^>]*aria-label="Import CSV"/);
+  assert.match(inventorySections.innerHTML, /data-container-export-csv="box-1"[^>]*aria-label="Export CSV"/);
   assert.match(inventorySections.innerHTML, /data-well-sample-clone="sample-1"/);
   assert.match(inventorySections.innerHTML, /Fill Wells/);
   assert.doesNotMatch(inventorySections.innerHTML, /Clone to Well/);

@@ -5,7 +5,7 @@ const path = require('node:path');
 const {
   ensureHikariCodexAgentsFile,
   ensureHikariCodexMcpConfig
-} = require('../../helpers/agent/codex-agent/runtime-files.js');
+} = require('../../agent/codex-agent/runtime-files.js');
 const {
   CODEX_CONFIG_FILE,
   CODEX_MODELS_CACHE_FILE,

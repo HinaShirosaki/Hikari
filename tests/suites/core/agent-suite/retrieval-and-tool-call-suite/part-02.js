@@ -9,7 +9,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart02(context =
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
     test('purchase recommendation runtime extracts JSON-LD products and ranks cheaper matches first', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const pages = {
         'https://vendor-a.test/filter': `
           <html>
@@ -82,7 +82,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart02(context =
       assert.equal(result.items[0].matched_requirements.includes('endotoxin-free'), true);
     });
     test('purchase recommendation runtime uses provider-layer web search when available', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const searchedQueries = [];
       const runtime = createPurchaseRecommendationRuntime({
         requestWebSearch: async ({ query, maxResults }) => {
@@ -138,7 +138,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart02(context =
       assert.equal(result.items[0].title, 'Vendor A Syringe Filter');
     });
     test('purchase recommendation runtime uses the Codex agent web-search surface for fast search mode', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const webSearchCalls = [];
       let structuredCalls = 0;
       const runtime = createPurchaseRecommendationRuntime({
@@ -198,7 +198,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart02(context =
       assert.equal(result.diagnostics.reasoning_rounds[0].planner, 'fast_codex_heuristic');
     });
     test('purchase recommendation runtime does not fall back to direct bing search when provider-layer search is unavailable', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const runtime = createPurchaseRecommendationRuntime({
         requestWebSearch: async () => ({
           ok: false,
@@ -219,7 +219,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart02(context =
       assert.equal(result.diagnostics.search_result_count, 0);
     });
     test('purchase recommendation runtime falls back to Open Graph metadata and rejects incomplete results', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const pages = {
         'https://vendor-a.test/filter': `
           <html>
@@ -267,7 +267,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart02(context =
       assert.equal(result.items[0].product_url, 'https://vendor-a.test/filter');
     });
     test('purchase recommendation runtime rejects article pages with non-price meta fields and keeps real products', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const pages = {
         'https://microbenotes.test/plasmids': `
           <html>
@@ -321,7 +321,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart02(context =
       assert.equal(result.items[0].candidate_reasoning?.product_gate?.is_product, true);
     });
     test('purchase recommendation runtime extracts deeper product details from shallow vendor pages', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const runtime = createPurchaseRecommendationRuntime({
         searchWebResults: async () => ([
           { title: 'Serological Pipettes', url: 'https://vendor-b.test/catalog/serological-pipettes' }
@@ -359,7 +359,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart02(context =
       assert.equal(result.items[0].candidate_reasoning?.product_gate?.signals.includes('commerce_page_cues'), true);
     });
     test('purchase recommendation runtime ignores product-category echoes in required terms while keeping explicit attributes', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const runtime = createPurchaseRecommendationRuntime({
         searchWebResults: async () => ([
           { title: 'Vendor result', url: 'https://vendor-a.test/plasmid-kit' }
@@ -402,7 +402,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart02(context =
       assert.equal(result.items[0].title, 'Endotoxin-Free Plasmid Maxi Kit');
     });
     test('purchase recommendation runtime returns closest complete matches when strict attributes cannot all be verified', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const runtime = createPurchaseRecommendationRuntime({
         searchWebResults: async () => ([
           { title: 'Vendor result', url: 'https://vendor-a.test/plasmid-kit' }
@@ -448,7 +448,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart02(context =
       assert.deepEqual(result.items[0].unverified_requirements, ['endotoxin-free']);
     });
     test('purchase recommendation runtime surfaces fetch failures instead of masking them as plain no-match results', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const runtime = createPurchaseRecommendationRuntime({
         searchWebResults: async () => ([
           { title: 'Vendor result', url: 'https://vendor-a.test/plasmid-kit' }

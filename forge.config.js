@@ -33,7 +33,7 @@ if (process.platform === 'linux') {
 module.exports = {
   packagerConfig: {
     asar: {
-      unpackDir: '{src/main/helpers/agent,src/main/helpers/main,src/main/lib,src/main/papers,vendor/sqljs,vendor/onnxruntime,vendor/colony-counter,node_modules/@modelcontextprotocol/sdk,node_modules/zod,node_modules/ajv,node_modules/ajv-formats,node_modules/json-schema-typed,node_modules/zod-to-json-schema}'
+      unpackDir: '{src/main/agent,src/main/storage,src/main/data,src/main/lib,src/main/papers,vendor/sqljs,vendor/onnxruntime,vendor/colony-counter,node_modules/@modelcontextprotocol/sdk,node_modules/zod,node_modules/ajv,node_modules/ajv-formats,node_modules/json-schema-typed,node_modules/zod-to-json-schema}'
     },
     prune: true,
     ignore: [
@@ -62,7 +62,6 @@ module.exports = {
       /^\/idea($|\/)/,
       /^\/skills($|\/)/,
       /^\/test\.js$/,
-      /^\/agent-context-debug\.md$/,
       /^\/\.gitignore$/,
       /^\/\.npmignore$/,
       /^\/Readme\.md$/,

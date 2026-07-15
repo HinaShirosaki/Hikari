@@ -3,7 +3,7 @@
 const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
 const {
   extractPlotlyGraphArtifactFromToolOutput
-} = require('../../helpers/agent/plotly-graph-artifacts.js');
+} = require('../../agent/plotly-graph-artifacts.js');
 
 function createAgentLifecycleService({
   cleanText,

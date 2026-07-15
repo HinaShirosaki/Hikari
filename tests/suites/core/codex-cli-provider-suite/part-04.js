@@ -150,7 +150,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -228,7 +227,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -275,7 +273,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -314,7 +311,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -427,7 +423,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -474,7 +469,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'stdio-server.js'
@@ -540,7 +534,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'stdio-server.js'
@@ -676,7 +669,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'stdio-server.js'
@@ -747,7 +739,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'host.js'
@@ -759,7 +750,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'host-client.js'
@@ -770,7 +760,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'constants.js'
@@ -834,7 +823,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'host.js'
@@ -843,7 +831,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'host-client.js'
@@ -880,7 +867,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
     });
     test('packaged MCP runtime unpacks paper modules required by direct paper tools', () => {
       const forgeConfigSource = fs.readFileSync(path.join(__dirname, 'forge.config.js'), 'utf8');
-      assert.match(forgeConfigSource, /src\/main\/helpers\/agent/);
+      assert.match(forgeConfigSource, /src\/main\/agent/);
       assert.match(forgeConfigSource, /src\/main\/papers/);
       assert.match(forgeConfigSource, /node_modules\/@modelcontextprotocol\/sdk/);
     });

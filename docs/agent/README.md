@@ -1,6 +1,6 @@
 # Agent Helper Walkthrough
 
-This doc set explains how `src/main/helpers/agent` is assembled, how requests move through it, and which parts are fully on the current IPC path versus more loosely wired helper modules.
+This doc set explains how `src/main/agent` is assembled, how requests move through it, and which parts are fully on the current IPC path versus more loosely wired helper modules.
 
 ## Recommended reading order
 
@@ -11,11 +11,10 @@ This doc set explains how `src/main/helpers/agent` is assembled, how requests mo
 5. [Deep research pipeline](./deep-research/pipeline.md)
 6. [Agent MCP contract](./mcp-contract/mcp-contract.md)
 7. [Module map](./reference/module-map.md)
-8. [Reading the context debug export](./reference/agent-context-debug-guide.md)
 
 ## What this package owns
 
-`src/main/helpers/agent` is the main-process agent backend for Hikari. It is responsible for:
+`src/main/agent` is the main-process agent backend for Hikari. It is responsible for:
 
 - intent parsing
 - runtime dispatch

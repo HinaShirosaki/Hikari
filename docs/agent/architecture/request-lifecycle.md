@@ -13,7 +13,7 @@ This is the shortest path to understanding the agent package: start at `src/main
 - constructing Codex from the MCP service and shared agent foundation
 - passing the completed dependency bag directly to `registerAgentIpc(...)` from the `agent-ipc` adapter service
 
-That means `src/main/helpers/agent` is best read as a set of factories plus helper modules, not as a single monolithic controller.
+That means `src/main/agent` is best read as a set of factories plus helper modules, not as a single monolithic controller.
 
 ## Entry point: `agent:chat`
 

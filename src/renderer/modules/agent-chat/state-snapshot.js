@@ -106,12 +106,15 @@ export function buildStateSnapshot(state, projectId) {
   const personalSections = Object.entries(state?.inventory || {});
   const personalItemCount = personalSections.reduce((count, [, items]) => count + asArray(items).length, 0);
   const chemicalCount = asArray(state?.labInventory?.chemicals).length;
-  const preferredJournals = normalizePreferredJournalList([
-    state.settings?.preferredJournals,
-    state.settings?.preferred_journals,
-    state.settings?.preferredJournal,
-    state.settings?.preferred_journal
-  ]).map((item) => trimText(item, 240)).filter(Boolean);
+  const preferredJournals = Array.from(
+    normalizePreferredJournalList([
+      state.settings?.preferredJournals,
+      state.settings?.preferred_journals,
+      state.settings?.preferredJournal,
+      state.settings?.preferred_journal
+    ]),
+    (item) => trimText(item, 240)
+  ).filter(Boolean);
   const preferredJournal = preferredJournals.join('; ');
   return {
     projects,

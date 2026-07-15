@@ -7,7 +7,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart07(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-tool-loading.js'
@@ -16,7 +15,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart07(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'register-agent-tool-executors.js'
@@ -195,7 +193,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart07(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'register-agent-tool-executors.js'
@@ -272,7 +269,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart07(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'register-agent-tool-executors.js'
@@ -322,105 +318,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart07(contex
       assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'limit'), false);
       assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'max_per_source'), false);
     });
-    test('session runtime runs the tool loop through the unified requestText API', async () => {
-      const { createAgentSessionRuntime } = require(path.join(
-        __dirname,
-        'self-agent',
-        'runtime',
-        'agent-session-runtime.js'
-      ));
-      const callLog = [];
-      let turnCount = 0;
-      const runtime = createAgentSessionRuntime({
-        requestText: async (input = {}) => {
-          callLog.push(input);
-          turnCount += 1;
-          if (turnCount === 1) {
-            return {
-              ok: true,
-              text: JSON.stringify({
-                assistant_text: 'starting turn',
-                tool_call: {
-                  call_id: 'codex-call-1',
-                  name: 'literature-search',
-                  arguments: {
-                    query: 'ncAA incorporation'
-                  }
-                }
-              })
-            };
-          }
-          if (turnCount === 2) {
-            return {
-              ok: true,
-              text: JSON.stringify({
-                assistant_text: 'after tool output',
-                tool_calls: []
-              })
-            };
-          }
-          return {
-            ok: true,
-            text: JSON.stringify({
-              assistant_text: 'feedback: Please be more specific.',
-              tool_calls: []
-            })
-          };
-        }
-      });
-
-      const started = await runtime.startAgentSession({
-        provider: 'codex',
-        model: 'gpt-5.4-mini',
-        systemPrompt: 'Be grounded.',
-        message: 'Search for ncAA incorporation papers.',
-        toolDefinitions: [
-          {
-            type: 'function',
-            name: 'literature-search',
-            description: 'Search papers.',
-            parameters: {
-              type: 'object',
-              properties: {
-                query: { type: 'string' }
-              },
-              required: ['query'],
-              additionalProperties: false
-            }
-          }
-        ]
-      });
-      assert.equal(callLog.length, 1);
-      assert.equal(callLog[0].provider, 'codex');
-      assert.match(callLog[0].userPrompt, /Search for ncAA incorporation papers\./);
-      assert.match(callLog[0].userPrompt, /literature-search/);
-      assert.match(callLog[0].userPrompt, /tool_schema_requests/);
-      assert.doesNotMatch(callLog[0].userPrompt, /Input schema JSON:/);
-      assert.equal(runtime.extractAgentSessionText(started), 'starting turn');
-      assert.equal(runtime.extractAgentSessionFunctionCalls(started).length, 1);
-      assert.equal(runtime.extractFunctionCalls('{"tool_call":{"name":"literature-search","arguments":{}}}').length, 1);
-      assert.deepEqual(
-        runtime.extractSchemaRequests('{"tool_schema_requests":["literature-search"]}').map((entry) => entry.name),
-        ['literature-search']
-      );
-
-      const afterTool = await runtime.continueAgentSessionWithToolOutputs(
-        started,
-        [{ callId: 'codex-call-1', name: 'literature-search', output: '{"ok":true}' }],
-        { trace_id: 'trace-1' }
-      );
-      assert.equal(callLog[1].traceContext.trace_id, 'trace-1');
-      assert.match(callLog[1].userPrompt, /"ok":true/);
-      assert.equal(runtime.extractAgentSessionText(afterTool), 'after tool output');
-
-      const afterUser = await runtime.continueAgentSessionWithUserMessage(
-        afterTool,
-        'Please be more specific.',
-        { trace_id: 'trace-2' }
-      );
-      assert.equal(callLog[2].traceContext.trace_id, 'trace-2');
-      assert.match(callLog[2].userPrompt, /Please be more specific\./);
-      assert.equal(runtime.extractAgentSessionText(afterUser), 'feedback: Please be more specific.');
-    });
+    // The session-runtime tool-loop test moved out with /self-agent when it was isolated.
   }
 };

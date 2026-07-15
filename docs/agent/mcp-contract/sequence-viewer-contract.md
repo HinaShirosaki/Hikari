@@ -237,7 +237,7 @@ group`, and always echoes the requested contract `strategy` while exposing the r
 
 ## Where it slots in (for later implementation)
 
-- New direct tools: `src/main/helpers/agent/mcp-contract/direct-tools/sequence-viewer.js`
+- New direct tools: `src/main/agent/mcp-contract/direct-tools/sequence-viewer.js`
   and `sequence-edit.js`, registered in `direct-tools/index.js`.
 - **Strategy adapter:** `cloning-strategy-adapter.js` (renderer side) wrapping the
   `buildDisplayPlan` dispatch and emitting the normalized `design_cloning` shape.

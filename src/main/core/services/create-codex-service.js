@@ -4,13 +4,13 @@ const path = require('node:path');
 const {
   buildCodexMcpContext,
   createCodexAgentRuntime
-} = require('../../helpers/agent/codex-agent/runtime.js');
+} = require('../../agent/codex-agent/runtime.js');
 const {
   buildCodexSubAgentPrompt
-} = require('../../helpers/agent/tools/agent-sub-agent.js');
+} = require('../../agent/tools/agent-sub-agent.js');
 const {
   sanitizeProjectMemoryFolderName
-} = require('../../helpers/main/storage-bundle/storage-memory.js');
+} = require('../../storage/storage-memory.js');
 const {
   resolveCodexCliRuntimeHomeDirectory
 } = require('../../lib/codex-cli-provider');

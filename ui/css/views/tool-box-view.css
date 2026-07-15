@@ -160,8 +160,8 @@
 
 .tool-box-buffer-sheet input:focus,
 .tool-box-reaction-sheet input:focus {
-  outline: 2px solid color-mix(in srgb, var(--theme-accent) 48%, transparent);
-  outline-offset: -2px;
+  outline: none;
+  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
 }
 
 .tool-box-buffer-sheet output,

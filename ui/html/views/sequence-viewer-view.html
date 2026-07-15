@@ -65,7 +65,7 @@
             </div>
             <div class="sequence-viewer-protein-builder-toolbar-copy">
               <h2>Protein Builder</h2>
-              <p class="small-note">Build a linear fusion from tags, stored features, linkers, cleavage sites, and a POI block.</p>
+              <p class="small-note">Build a linear fusion from tags, stored features, linkers, cleavage sites, and the active DNA coding sequence.</p>
               <span id="sequence-viewer-protein-builder-status" class="small-note">Linear chain: each block accepts one upstream and one downstream connection.</span>
             </div>
             <div class="form-actions sequence-viewer-protein-builder-toolbar-actions">
@@ -79,28 +79,13 @@
                 <div class="sequence-viewer-protein-builder-sidebar-pinned left-rail-template__pinned">
                 <section class="sequence-viewer-protein-builder-panel">
                   <form id="sequence-viewer-protein-builder-form" class="stack-form sequence-viewer-protein-builder-controls" autocomplete="off">
-                    <div class="form-grid">
-                      <label>
-                        Construct Name
-                        <input id="sequence-viewer-protein-builder-name" placeholder="e.g. His6-TEV-POI-TwinStrep" />
-                      </label>
-                      <label>
-                        POI Name
-                        <input id="sequence-viewer-protein-builder-poi-name" placeholder="e.g. EGFR kinase domain" />
-                      </label>
-                    </div>
                     <label>
-                      Protein of Interest Sequence
-                      <textarea
-                        id="sequence-viewer-protein-builder-poi-sequence"
-                        rows="5"
-                        placeholder="Paste amino-acid sequence (A-Z, optional *)"
-                      ></textarea>
+                      Construct Name
+                      <input id="sequence-viewer-protein-builder-name" placeholder="e.g. His6-TEV-CurrentDNA-TwinStrep" />
                     </label>
                     <div class="form-actions">
                       <button id="sequence-viewer-protein-builder-reset-btn" type="button" class="ghost-btn">Reset Default Chain</button>
                       <button id="sequence-viewer-protein-builder-add-custom-btn" type="button" class="ghost-btn">Add Custom Block</button>
-                      <button id="sequence-viewer-protein-builder-add-poi-btn" type="button" class="ghost-btn">Add POI Block</button>
                     </div>
                   </form>
                 </section>

@@ -6,10 +6,10 @@
 
 .left-rail-template.protocol-workspace {
   --app-left-rail-bleed: 28px;
-  --left-rail-main-gap: 28px;
+  --left-rail-main-gap: 20px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
-  gap: 28px;
+  gap: 0;
   align-items: stretch;
   min-height: var(--shared-left-rail-layout-height);
 }
@@ -395,6 +395,21 @@
 .protocol-placeholder-preset:hover,
 .protocol-placeholder-preset:focus-visible {
   background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface-subtle));
+}
+
+.protocol-placeholder-preset.is-active,
+.protocol-placeholder-preset[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--theme-accent) 72%, var(--theme-border));
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+}
+
+.protocol-placeholder-preset.is-active:hover,
+.protocol-placeholder-preset.is-active:focus-visible,
+.protocol-placeholder-preset[aria-pressed="true"]:hover,
+.protocol-placeholder-preset[aria-pressed="true"]:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong) 12%);
+  color: var(--theme-text-on-accent);
 }
 
 #placeholder-name {

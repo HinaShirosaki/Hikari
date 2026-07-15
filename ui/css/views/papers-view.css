@@ -272,8 +272,8 @@
 }
 
 .papers-folder-rename-input:focus-visible {
-  outline: 2px solid var(--theme-focus);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--theme-focus);
 }
 
 .papers-folder-rename-btn {

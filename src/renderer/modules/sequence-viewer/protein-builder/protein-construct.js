@@ -4,8 +4,20 @@ import { getBlockTypeLabel } from './constants.js';
 
 export function buildConstruct(payload = {}) {
   const constructName = cleanText(payload?.constructName, 140) || 'Untitled construct';
-  const poiName = cleanText(payload?.poiName, 140) || 'Protein of Interest';
-  const poiSequence = sanitizeProteinAssemblySequence(payload?.poiSequence || '', true);
+  const activeDnaSource = payload?.activeDnaSource && typeof payload.activeDnaSource === 'object'
+    ? payload.activeDnaSource
+    : {};
+  const sourceName = cleanText(activeDnaSource.label, 140)
+    || cleanText(payload?.poiName, 140)
+    || 'Current DNA';
+  const sourceSequence = sanitizeProteinAssemblySequence(
+    activeDnaSource.proteinSequence || payload?.poiSequence || '',
+    true
+  );
+  const sourceDnaSequence = normalizeSequenceText(activeDnaSource.dnaSequence || '');
+  const sourceNote = cleanText(activeDnaSource.note, 240)
+    || (sourceSequence.length ? 'User-supplied protein sequence' : '');
+  const sourceDnaNote = cleanText(activeDnaSource.reusedSource, 240);
   const rows = Array.isArray(payload?.rows) ? payload.rows : [];
 
   const errors = [];
@@ -17,8 +29,8 @@ export function buildConstruct(payload = {}) {
     const rowType = String(row?.type || '').trim().toLowerCase();
     if (rowType === 'poi') {
       poiCount += 1;
-      if (!poiSequence.length) {
-        warnings.push('POI block exists, but POI sequence is empty.');
+      if (!sourceSequence.length) {
+        warnings.push('Current DNA block exists, but the active record has no usable coding sequence.');
         return;
       }
       parts.push({
@@ -26,9 +38,11 @@ export function buildConstruct(payload = {}) {
         type: 'poi',
         typeLabel: getBlockTypeLabel('poi'),
         kind: 'poi',
-        label: poiName,
-        sequence: poiSequence,
-        note: 'User-supplied POI sequence'
+        label: sourceName,
+        sequence: sourceSequence,
+        note: sourceNote,
+        sourceDnaSequence,
+        sourceDnaNote
       });
       return;
     }
@@ -60,13 +74,13 @@ export function buildConstruct(payload = {}) {
   });
 
   if (!poiCount) {
-    warnings.push('No POI block is present in the chain.');
+    warnings.push('No Current DNA block is present in the chain.');
   }
   if (poiCount > 1) {
-    warnings.push('Multiple POI blocks are present. The same POI sequence will repeat in the chain.');
+    warnings.push('Multiple Current DNA blocks are present. The active coding sequence will repeat in the chain.');
   }
-  if (!poiCount && poiSequence.length) {
-    warnings.push('POI sequence is provided but not placed in the chain.');
+  if (!poiCount && sourceSequence.length) {
+    warnings.push('The active DNA coding sequence is not placed in the chain.');
   }
 
   let cursor = 1;
@@ -102,7 +116,8 @@ export function buildConstruct(payload = {}) {
   return {
     ok: length > 0 && errors.length === 0,
     constructName,
-    poiName,
+    poiName: sourceName,
+    sourceName,
     parts: mappedParts,
     sequence,
     length,

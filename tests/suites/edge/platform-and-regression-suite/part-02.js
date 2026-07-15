@@ -160,8 +160,6 @@ test('[P0] main-process modules do not import renderer UI or controller implemen
 });
 
 test('[P1] Sequence Viewer main-process code has no generic-helper compatibility folders', () => {
-  assert.equal(fs.existsSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sequence')), false);
-  assert.equal(fs.existsSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sequence-library')), false);
   assert.equal(fs.existsSync(path.join(__dirname, 'src', 'main', 'sequence-viewer')), false);
   assert.equal(fs.existsSync(path.join(
     __dirname,
@@ -189,7 +187,6 @@ test('[P1] renderer folder modules have no obsolete top-level compatibility entr
     ['src', 'renderer', 'modules', 'collaboration-management'],
     ['src', 'renderer', 'modules', 'lab-management.js'],
     ['src', 'renderer', 'modules', 'common-promoters.js'],
-    ['src', 'main', 'helpers', 'main', 'render-html-to-pdf.js'],
     ['src', 'main', 'ipc', 'index.js']
   ].forEach((parts) => {
     assert.equal(fs.existsSync(path.join(__dirname, ...parts)), false);

@@ -426,7 +426,7 @@ export function initLabNotebook({
       const fromWorkspace = project.id === experimentDialogWorkspaceProjectId;
       setExperimentDialogStatus(
         fromWorkspace
-          ? `Using ${project.name} from the current workspace. Choose a protocol.`
+          ? ''
           : 'Choose a protocol to start the experiment.'
       );
       return;

@@ -3,7 +3,7 @@ module.exports = function registerAgentContractsA(context = {}) {
   const __dirname = context.__dirname || process.cwd();
 
   with (scope) {
-    const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
+    const agentDir = path.join(__dirname, 'src', 'main', 'agent');
     const agentPath = (...parts) => path.join(agentDir, ...parts);
     const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
     const readLocalSource = (...parts) => fs.readFileSync(path.join(__dirname, ...parts), 'utf8');
@@ -26,9 +26,8 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('agent registrar keeps intent-only lifecycle stages and replay IPC handlers', () => {
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
-      const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
       const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
-      const combinedSource = `${agentChatHandlerSource}\n${controllerCoreSource}\n${apiControllerSource}\n${logHandlersSource}`;
+      const combinedSource = `${agentChatHandlerSource}\n${controllerCoreSource}\n${logHandlersSource}`;
       assert.match(agentChatHandlerSource, /createLifecycleRecorder/);
       assert.match(agentChatHandlerSource, /recordLifecycleEvent/);
       assert.match(agentChatHandlerSource, /appendAgentChatLogEntry/);
@@ -36,8 +35,6 @@ module.exports = function registerAgentContractsA(context = {}) {
       // The self-implemented API agent was extracted to /self-agent and is no longer wired in.
       assert.doesNotMatch(controllerCoreSource, /require\('\.\/api-agent-controller'\)/);
       assert.match(controllerCoreSource, /controller_api_agent_disabled/);
-      assert.match(apiControllerSource, /stage: 'controller_intent_only'/);
-      assert.match(apiControllerSource, /stage: 'parser_completed'/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_LIST_REQUESTS/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_REPLAY/);
       assert.equal(/agent-validation-safety/.test(combinedSource), false);
@@ -168,17 +165,10 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('protocol runtimes preserve placeholder-fill and tie-break prompt guidance after extraction', () => {
-      const protocolNotebookSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'agent-protocol-notebook.js'), 'utf8');
-      const protocolNotebookContextSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'runtime', 'agent-protocol-notebook-context-control.js'), 'utf8');
+      // The protocol-notebook runtime assertions moved out with /self-agent when it was
+      // isolated; the src-backed notebook-generation and protocol-matching checks remain.
       const protocolMatchingSource = fs.readFileSync(agentPath('tools', 'agent-protocol-matching.js'), 'utf8');
       const notebookGenerationSource = fs.readFileSync(agentPath('tools', 'agent-notebook-generation.js'), 'utf8');
-      assert.match(protocolNotebookSource, /createProtocolNotebookContextControl/);
-      assert.match(protocolNotebookSource, /protocolNotebookContextControl\.syncActionContext\(/);
-      assert.match(protocolNotebookSource, /createProtocolMatchingRuntime/);
-      assert.match(protocolNotebookSource, /createNotebookGenerationRuntime/);
-      assert.match(protocolNotebookContextSource, /function createProtocolNotebookContextControl\(deps = \{\}\)/);
-      assert.match(protocolNotebookContextSource, /function syncActionContext\(sessionKey, input = \{\}\)/);
-      assert.match(protocolNotebookContextSource, /function closeContext\(sessionKey\)/);
       assert.match(notebookGenerationSource, /Extract exact value spans from the latest user text/);
       assert.match(notebookGenerationSource, /latest user message is a direct answer/);
       assert.match(notebookGenerationSource, /filled_values\.placeholder_key must exactly match one of the provided placeholder_key values/);
@@ -186,20 +176,14 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(notebookGenerationSource, /Example single-turn:/);
       assert.match(notebookGenerationSource, /Example follow-up:/);
       assert.match(protocolMatchingSource, /do not be over-cautious/);
-      assert.match(protocolNotebookSource, /resolveAgentRuntimeFactory/);
     });
 
-    test('agent registrar hard-errors when intent parser output is invalid', () => {
-      const apiControllerSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'api-agent-controller.js'), 'utf8');
-      assert.match(apiControllerSource, /if \(!rawParserResult\?\.ok \|\| !rawParserResult\?\.payload\)/);
-      assert.match(apiControllerSource, /ok:\s*false/);
-      assert.match(apiControllerSource, /Intent parser failed:/);
-    });
+    // The 'agent registrar hard-errors when intent parser output is invalid' test asserted
+    // on /self-agent's api-agent-controller source; it moved out when self-agent was isolated.
 
     test('purchase recommendation runtime and external-link bridge are wired across main and renderer contracts', () => {
       const purchaseSource = fs.readFileSync(agentPath('tools', 'agent-purchase-recommendation.js'), 'utf8');
       const executorsSource = fs.readFileSync(agentPath('tools', 'register-agent-tool-executors.js'), 'utf8');
-      const dispatcherSource = fs.readFileSync(path.join(__dirname, 'self-agent', 'ipc', 'agent-intent-dispatcher.js'), 'utf8');
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const preloadSource = readPreloadSource();
@@ -213,11 +197,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(mainAgentServicesSource, /const purchaseRecommendationRuntime = createPurchaseRecommendationRuntime/);
       assert.match(mainAgentServicesSource, /purchaseRecommendationRuntime,/);
       assert.match(executorsSource, /registerToolExecutor\('purchase-recommendation'/);
-      assert.match(dispatcherSource, /parserPayload\.primary_intent === 'purchase_recommendation'/);
-      assert.match(dispatcherSource, /runTrackedTool\('purchase-recommendation', \{\s*query:/);
-      assert.match(dispatcherSource, /required_terms:\s*parseCompactList\(parserPayload\?\.entities\?\.required_attributes/);
-      assert.match(dispatcherSource, /stage:\s*'purchase_recommendation_started'/);
-      assert.match(dispatcherSource, /stage:\s*'purchase_recommendation_completed'/);
+      // Purchase-recommendation dispatch assertions moved out with /self-agent's
+      // agent-intent-dispatcher when self-agent was isolated.
       assert.match(preloadSource, /openExternalUrl:\s*\(url\)\s*=>\s*ipcRenderer\.invoke\(SYSTEM\.OPEN_EXTERNAL_URL, \{ url \}\)/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(SYSTEM\.OPEN_EXTERNAL_URL/);
       assert.match(systemRegistrarSource, /shell\.openExternal\(url\)/);

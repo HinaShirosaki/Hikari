@@ -7,7 +7,6 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       __dirname,
       'src',
       'main',
-      'helpers',
       'agent',
       'codex-agent',
       'official-mcp-skills.js'
@@ -39,7 +38,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       readLocalSource('src', 'renderer', 'app', 'storage-import.js')
     ].join('\n');
     test('data-helpers default bundle hydrator preserves parsed snapshot settings', async () => {
-      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data', 'data-helpers.js'));
+      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'data', 'data-helpers.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'data-helpers-default-hydrate-'));
       const dataFilePath = path.join(tempDir, 'state.json');
       try {
@@ -62,8 +61,8 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('data-helpers auto-load repairs project codex skill sidecars after hydration', async () => {
-      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data', 'data-helpers.js'));
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'data', 'data-helpers.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'data-helpers-load-skills-'));
       const storageRoot = path.join(tempDir, 'Workspace');
       const dataFilePath = path.join(tempDir, 'hikari-data.json');
@@ -102,7 +101,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('data-helpers auto-load still returns hydrated data when sidecar repair fails', async () => {
-      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data', 'data-helpers.js'));
+      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'data', 'data-helpers.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'data-helpers-load-sync-failure-'));
       const dataFilePath = path.join(tempDir, 'state.json');
       try {
@@ -137,7 +136,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('storage-root autosave syncs folders without writing the default data file', async () => {
-      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'data', 'data-helpers.js'));
+      const { createMainDataHelpers } = require(path.join(__dirname, 'src', 'main', 'data', 'data-helpers.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-root-autosave-'));
       const staleDataPath = path.join(tempDir, 'hikari-data.json');
       try {
@@ -233,7 +232,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('storage bundle writes project memory and codex skill folders for project records', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-project-skills-'));
       const dataFilePath = path.join(tempDir, 'example.ena.json');
       try {
@@ -283,7 +282,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('storage hydration keeps lookups alive when project root scan is permission denied', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-project-permission-'));
       const dataFilePath = path.join(tempDir, 'hikari-data.json');
       const projectRootPath = path.join(tempDir, 'Project');
@@ -319,7 +318,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('storage hydration keeps lookups alive when workflow index read is permission denied', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-workflow-permission-'));
       const dataFilePath = path.join(tempDir, 'hikari-data.json');
       const workflowIndexPath = path.join(tempDir, 'Workflow', 'workflow-status.sqlite');
@@ -355,7 +354,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('storage hydration keeps notebook fallback data when the shared SQLite index is permission denied', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-sqlite-permission-'));
       const dataFilePath = path.join(tempDir, 'hikari-data.json');
       const sqlitePath = path.join(tempDir, 'Protocol', 'protocol.index.sqlite');
@@ -394,8 +393,8 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('storage bundle helper sync + hydrate roundtrip restores protocols notebook inventory and samples from folders/sqlite', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
-      const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
+      const agentDir = path.join(__dirname, 'src', 'main', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
       const { createAgentLookupSupport } = require(agentPath('tools', 'agent-lookup-support.js'));
       const { createAgentInventoryLookupRuntime } = require(agentPath('tools', 'agent-inventory-lookup.js'));
@@ -507,7 +506,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('storage-root-only sync and import does not require hikari-data.json', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-root-only-sync-'));
       try {
         const sourceSnapshot = {
@@ -544,7 +543,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('storage hydration restores project notebook pages from page folders when the notebook sidecar is missing', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'project-notebook-folder-hydration-'));
       const dataFilePath = path.join(tempDir, 'example.ena.json');
       try {
@@ -604,7 +603,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('storage root importer restores projects and notebook pages from project folders without bundle files', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'project-folder-only-import-'));
       try {
         const projectRoot = path.join(tempDir, 'Project', 'Atlas');
@@ -671,8 +670,8 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('workflow root storage sync writes template/run folders and hydrates workflows notebook pages plus related papers', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
-      const workflowStorage = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'workflow-storage.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
+      const workflowStorage = require(path.join(__dirname, 'src', 'main', 'storage', 'workflow-storage.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'workflow-root-storage-'));
       const dataFilePath = path.join(tempDir, 'workflow-example.ena.json');
       try {
@@ -769,7 +768,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('storage root importer reads supported Testdata-like bundles and writes manifest with non-zero summary counts', async () => {
-      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'index.js'));
+      const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const fixtureRoot = path.join(__dirname, 'Testdata');
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-import-fixture-'));
       try {
@@ -802,7 +801,7 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       }
     });
     test('storage manifest classifies KnowledgeBase paper markdown folders', () => {
-      const { detectManifestRole } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-manifest.js'));
+      const { detectManifestRole } = require(path.join(__dirname, 'src', 'main', 'storage', 'storage-manifest.js'));
       assert.equal(detectManifestRole('KnowledgeBase'), 'knowledge_base_root');
       assert.equal(detectManifestRole('KnowledgeBase/papers.md'), 'paper_markdown_root');
       assert.equal(detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/paper.md'), 'paper_knowledge_markdown');

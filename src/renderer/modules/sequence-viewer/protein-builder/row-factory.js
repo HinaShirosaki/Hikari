@@ -25,9 +25,9 @@ export function createPoiRow(nextRowId) {
     id: `builder_row_${nextRowId}`,
     kind: 'poi',
     type: 'poi',
-    label: 'Protein of Interest',
+    label: 'Current DNA',
     sequence: '',
-    note: 'Uses the POI fields in the left column.'
+    note: 'Uses the active Sequence Viewer DNA source.'
   };
 }
 

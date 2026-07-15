@@ -28,10 +28,10 @@ const {
 } = require(path.join(root, 'src/main/papers/search/agent-literature-search.js'));
 const {
   normalizeToolArgumentsPayload
-} = require(path.join(root, 'src/main/helpers/agent/tools/agent-tool-loading.js'));
+} = require(path.join(root, 'src/main/agent/tools/agent-tool-loading.js'));
 const {
   createAgentRuntimeSupport
-} = require(path.join(root, 'src/main/helpers/agent/runtime/agent-runtime-support.js'));
+} = require(path.join(root, 'src/main/agent/runtime/agent-runtime-support.js'));
 const {
   splitMarkdownIntoSections,
   createPaperContextLoaderRuntime
@@ -65,7 +65,7 @@ const {
 } = require(path.join(root, 'src/main/papers/retrieve/paper-context-text.js'));
 const {
   buildMcpToolResponseContent
-} = require(path.join(root, 'src/main/helpers/agent/mcp-contract/stdio-server.js'));
+} = require(path.join(root, 'src/main/agent/mcp-contract/stdio-server.js'));
 const {
   tokenize: wikiTokenize,
   scoreRow: wikiScoreRow,

@@ -46,6 +46,7 @@ export function initProtocolManagement({
     activeMenuProtocolId: '',
     activeShareProtocolId: '',
     activeShareTargetEmail: '',
+    activePlaceholderPreset: '',
     protocolSortField: 'time',
     protocolSortOrder: 'asc',
     activeProtocolId: '',
@@ -352,6 +353,15 @@ export function initProtocolManagement({
     }
   }
 
+  function setActivePlaceholderPreset(placeholderName = '') {
+    localState.activePlaceholderPreset = String(placeholderName || '').trim();
+    ui.placeholderPresetButtons.forEach((button) => {
+      const isActive = String(button.dataset.protocolPlaceholderPreset || '').trim() === localState.activePlaceholderPreset;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', String(isActive));
+    });
+  }
+
   function onProtocolSubmit(event) {
     event.preventDefault();
 
@@ -578,7 +588,10 @@ export function initProtocolManagement({
   ui.placeholderPresetButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const placeholder = String(button.dataset.protocolPlaceholderPreset || '').trim();
-      if (placeholder) addInteractivePlaceholderToken(placeholder);
+      if (placeholder) {
+        setActivePlaceholderPreset(placeholder);
+        addInteractivePlaceholderToken(placeholder);
+      }
     });
   });
   function closeProtocolSortMenu() {

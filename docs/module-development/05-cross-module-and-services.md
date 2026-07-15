@@ -136,7 +136,7 @@ If unsure, ask: *"If the user reloads, do they expect this back?"* If yes, `stat
 
 Anything that touches the OS or main process goes through the preload-injected `window.hikariApi`. In modules, accept it as `apiBridge` / `getApiBridge` rather than referencing `window` directly.
 
-Common methods (full surface in [docs/main-helpers/](../main-helpers/)):
+Common methods (full surface in [docs/main-platform/](../main-platform/)):
 
 | Method | Purpose |
 | --- | --- |
@@ -145,7 +145,7 @@ Common methods (full surface in [docs/main-helpers/](../main-helpers/)):
 | `runScript(name, payload)` | invoke a registered main-process script (used by tool-box, agent) |
 | `openExternalUrl(url)` | shell-open a URL |
 | `selectStorageRoot()` | open the directory picker for `Settings → Storage Path` |
-| Storage bundle import/export | see [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and [src/main/helpers/main/storage-bundle/](../../src/main/helpers/main/storage-bundle/) |
+| Storage bundle import/export | see [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and [src/main/storage/](../../src/main/storage/) |
 | Agent calls | `callAgent`, `streamAgent`, `cancelAgent`, … (see [docs/agent/](../agent/)) |
 
 Use it via the bridge passed to your module:

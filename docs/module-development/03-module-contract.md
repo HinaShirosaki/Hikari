@@ -212,7 +212,7 @@ const bridge = getApiBridge();
 const result = await bridge?.runScript?.('extract-feature', payload);
 ```
 
-The full surface is documented in [docs/main-helpers/](../main-helpers/). Don't import directly from `window` in modules — accept it through the options bag so the module stays testable.
+The full surface is documented in [docs/main-platform/](../main-platform/). Don't import directly from `window` in modules — accept it through the options bag so the module stays testable.
 
 ## Lifecycle and rendering
 
@@ -240,6 +240,6 @@ If your feature introduces a brand new top-level state slice (say `state.experim
 1. Add the default to `defaultState` in `app-state/defaults.js`.
 2. Extend `normalizeState()` to coerce missing/legacy values.
 3. Add the slice to the object graph if it has cross-references — see [src/renderer/modules/object-graph.js](../../src/renderer/modules/object-graph.js).
-4. If the slice should round-trip to the on-disk `.ena` storage bundle, hook the writer in [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and the matching main-process bundler in [src/main/helpers/main/storage-bundle/](../../src/main/helpers/main/storage-bundle/).
+4. If the slice should round-trip to the on-disk `.ena` storage bundle, hook the writer in [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and the matching main-process bundler in [src/main/storage/](../../src/main/storage/).
 
 Most modules do not need this. Reuse existing slices when you can.

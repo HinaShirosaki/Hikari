@@ -52,12 +52,12 @@ function normalizeLlmSettings(rawLlm) {
 }
 
 function normalizePreferredJournals(rawSettings) {
-  return normalizePreferredJournalList([
+  return Array.from(normalizePreferredJournalList([
     rawSettings.preferredJournals,
     rawSettings.preferred_journals,
     rawSettings.preferredJournal,
     rawSettings.preferred_journal
-  ]);
+  ]));
 }
 
 function normalizePluginEntries(rawPlugins) {

@@ -1,6 +1,6 @@
 # Module Map
 
-This file is a quick lookup index for `src/main/helpers/agent`.
+This file is a quick lookup index for `src/main/agent`.
 
 ## Legend
 
@@ -102,4 +102,4 @@ If you want to read the code itself after this document set:
 1. `src/main/ipc/register-agent-ipc/` (the `agent:chat` registrar folder)
 2. `src/main/core/main-services.js` (assembly via `createMainAgentServices(...)`)
 
-Those show how the pieces from `src/main/helpers/agent` are actually composed into the application's live request path.
+Those show how the pieces from `src/main/agent` are actually composed into the application's live request path.

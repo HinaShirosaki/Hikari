@@ -112,7 +112,6 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'register-agent-tool-executors.js'
@@ -213,7 +212,6 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-protocol-matching.js'
@@ -268,7 +266,6 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'register-agent-tool-executors.js'
@@ -305,7 +302,6 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -500,7 +496,6 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -560,7 +555,6 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -608,7 +602,6 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -656,7 +649,6 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'

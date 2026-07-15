@@ -50,22 +50,20 @@ const shared = {
   })
 };
 
-const agentRouting = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-routing.js'));
-const agentIntentParser = require(path.join(__dirname, 'self-agent', 'intent', 'agent-intent-parser.js'));
-const agentTools = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-tools.js'));
-const agentProtocolGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-protocol-generation.js'));
-const agentProtocolMatching = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-protocol-matching.js'));
-const agentNotebookGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-notebook-generation.js'));
-const agentNotebookDraft = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-notebook-draft.js'));
-const agentInventoryLookup = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-inventory-lookup.js'));
-const agentSubAgent = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-sub-agent.js'));
-const agentChatLog = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'context', 'agent-chat-log.js'));
-const agentContextManagement = optionalRequire(path.join(__dirname, 'self-agent', 'context', 'agent-context-management.js'));
-const agentMemory = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'context', 'agent-memory.js'));
-const agentToolCall = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-call.js'));
-const agentToolLoading = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-loading.js'));
-const agentToolExecution = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-execution.js'));
-const agentProjectRetrieval = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-project-retrieval.js'));
+const agentRouting = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-routing.js'));
+const agentTools = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-tools.js'));
+const agentProtocolGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-protocol-generation.js'));
+const agentProtocolMatching = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-protocol-matching.js'));
+const agentNotebookGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-notebook-generation.js'));
+const agentNotebookDraft = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-notebook-draft.js'));
+const agentInventoryLookup = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-inventory-lookup.js'));
+const agentSubAgent = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-sub-agent.js'));
+const agentChatLog = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'context', 'agent-chat-log.js'));
+const agentMemory = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'context', 'agent-memory.js'));
+const agentToolCall = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-call.js'));
+const agentToolLoading = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-loading.js'));
+const agentToolExecution = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-execution.js'));
+const agentProjectRetrieval = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-project-retrieval.js'));
 const agentLiteratureSearch = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'search', 'agent-literature-search.js'));
 const agentLiteratureSearchWorkflow = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'workflow', 'agent-literature-search-workflow.js'));
 const agentPaperContextLoader = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'retrieve', 'agent-paper-context-loader.js'));
@@ -73,18 +71,17 @@ const agentPaperDownload = optionalRequire(path.join(__dirname, 'src', 'main', '
 const agentPaperKnowledgeDatabase = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'store', 'agent-paper-knowledge-database.js'));
 const agentPaperAnalysis = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'analysis', 'agent-paper-analysis.js'));
 const paperMarkdownImport = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'paper-markdown-import.js'));
-const agentScienceReasoningLoop = optionalRequire(path.join(__dirname, 'self-agent', 'runtime', 'science-reasoning-loop', 'index.js'));
-const agentToolSmokeTest = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-smoke-test.js'));
-const agentResponseLayer = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-response-layer.js'));
-const agentValidationSafety = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-validation-safety.js'));
-const agentObservability = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'shared', 'agent-observability.js'));
-const agentPythonSandbox = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-python-sandbox.js'));
-const agentPython = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-python-sandbox.js'));
+const agentToolSmokeTest = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-smoke-test.js'));
+const agentResponseLayer = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-response-layer.js'));
+const agentValidationSafety = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-validation-safety.js'));
+const agentObservability = require(path.join(__dirname, 'src', 'main', 'agent', 'shared', 'agent-observability.js'));
+const agentPythonSandbox = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-python-sandbox.js'));
+const agentPython = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-python-sandbox.js'));
 const agentPythonOrchestration = agentPython;
 const agentPythonCodegen = agentPython;
-const agentWebFallback = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-web-fallback.js'));
-const phase89Runtime = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-phase89-runtime.js'));
-const agentSqliteIndex = optionalRequire(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'agent-sqlite-index.js'));
+const agentWebFallback = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-web-fallback.js'));
+const phase89Runtime = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-phase89-runtime.js'));
+const agentSqliteIndex = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-sqlite-index.js'));
 const sequenceLibrary = require(path.join(
   __dirname,
   'src',
@@ -259,7 +256,6 @@ const {
   runSimulatedAgentTurn
 } = createAgentSimulationSupport({
   assert,
-  agentIntentParser,
   agentRouting,
   agentTools,
   AGENT_SIMULATION_DISPATCH_TOOL_NAMES
@@ -307,7 +303,6 @@ const suiteScope = {
   memoryStorage,
   shared,
   agentRouting,
-  agentIntentParser,
   agentTools,
   agentProtocolGeneration,
   agentProtocolMatching,
@@ -316,7 +311,6 @@ const suiteScope = {
   agentInventoryLookup,
   agentSubAgent,
   agentChatLog,
-  agentContextManagement,
   agentMemory,
   agentToolCall,
   agentToolLoading,
@@ -329,7 +323,6 @@ const suiteScope = {
   agentPaperKnowledgeDatabase,
   agentPaperAnalysis,
   paperMarkdownImport,
-  agentScienceReasoningLoop,
   agentToolSmokeTest,
   agentResponseLayer,
   agentValidationSafety,
@@ -368,7 +361,7 @@ registerCoreSuite({ __dirname, scope: suiteScope });
 registerEdgeSuite({ __dirname, scope: suiteScope });
 
 test('plugin system: inspect-plugin-folder validates and normalizes plugin folders', async () => {
-  const { inspectPluginFolder } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'inspect-plugin-folder.js'));
+  const { inspectPluginFolder } = require(path.join(__dirname, 'src', 'main', 'lib', 'inspect-plugin-folder.js'));
   const dir = path.join(__dirname, 'tmp', 'plugin-fixture');
   await fsPromises.rm(dir, { recursive: true, force: true });
   await fsPromises.mkdir(dir, { recursive: true });

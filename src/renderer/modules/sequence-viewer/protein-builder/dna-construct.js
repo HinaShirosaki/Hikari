@@ -10,6 +10,21 @@ export function buildDnaPartFromProtein(part, options = {}) {
     return null;
   }
 
+  const sourceDnaSequence = normalizeSequenceText(part?.sourceDnaSequence || '');
+  if (sourceDnaSequence.length) {
+    const alignedSequence = alignDnaToProteinSequence(sourceDnaSequence, proteinSequence);
+    return {
+      ok: true,
+      label: cleanText(part?.label, 160) || 'Block',
+      dnaSequence: alignedSequence,
+      templateSequence: alignedSequence,
+      reusedSource: cleanText(part?.sourceDnaNote, 240)
+        || (cleanText(part?.kind, 40).toLowerCase() === 'feature'
+          ? `Reused stored DNA for ${cleanText(part?.label, 160) || 'feature block'}.`
+          : '')
+    };
+  }
+
   if (cleanText(part?.kind, 40).toLowerCase() === 'poi') {
     const poiSource = resolvePoiDnaFromRecord(proteinSequence, options?.record, options?.selectedFeature);
     if (poiSource?.dnaSequence) {
@@ -21,19 +36,6 @@ export function buildDnaPartFromProtein(part, options = {}) {
         reusedSource: poiSource.note
       };
     }
-  }
-
-  const sourceDnaSequence = normalizeSequenceText(part?.sourceDnaSequence || '');
-  if (sourceDnaSequence.length) {
-    return {
-      ok: true,
-      label: cleanText(part?.label, 160) || 'Block',
-      dnaSequence: alignDnaToProteinSequence(sourceDnaSequence, proteinSequence),
-      templateSequence: alignDnaToProteinSequence(sourceDnaSequence, proteinSequence),
-      reusedSource: cleanText(part?.kind, 40).toLowerCase() === 'feature'
-        ? `Reused stored DNA for ${cleanText(part?.label, 160) || 'feature block'}.`
-        : ''
-    };
   }
 
   const reverseTranslated = reverseTranslateProteinSequence(proteinSequence);

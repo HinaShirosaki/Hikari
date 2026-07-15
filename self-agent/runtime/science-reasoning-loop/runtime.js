@@ -16,7 +16,7 @@ const {
   getDefaultScienceMaxRounds
 } = require('./policies.js');
 const { createScienceReasoningRoundHelpers } = require('./round-helpers.js');
-const { createAgentToolProviderRuntime } = require('../../../src/main/helpers/agent/tools/agent-tool-provide.js');
+const { createAgentToolProviderRuntime } = require('../../../src/main/agent/tools/agent-tool-provide.js');
 const { createScienceDirectAnswerRuntime } = require('./direct-answer.js');
 const { createScienceLoopPreSynthesisController } = require('./pre-synthesis-controller.js');
 const { createScienceToolRoundLoopRuntime } = require('./tool-round-loop.js');

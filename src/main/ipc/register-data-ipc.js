@@ -4,7 +4,7 @@ const path = require('node:path');
 const {
   parseAssayResultImportFile,
   parseChemicalImportFile
-} = require('../helpers/main/chemical-import-parser');
+} = require('../lib/chemical-import-parser');
 const { transformPaperPdfToMarkdown } = require('../papers/parse/paper-markdown-import.js');
 const {
   STORAGE,
@@ -12,7 +12,7 @@ const {
   INVENTORY,
   PLUGINS
 } = require('../../shared/ipc/channels');
-const { inspectPluginFolder } = require('../helpers/main/inspect-plugin-folder');
+const { inspectPluginFolder } = require('../lib/inspect-plugin-folder');
 const {
   registerSequenceLibraryIpc
 } = require('./register-data-ipc/register-sequence-library-ipc');

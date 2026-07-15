@@ -220,6 +220,8 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-protein-builder-toolbar {
+  position: relative;
+  z-index: 1;
   border: 1px solid var(--theme-border);
   background: var(--theme-surface);
   padding: 12px;

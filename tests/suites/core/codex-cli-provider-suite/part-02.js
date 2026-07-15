@@ -112,7 +112,6 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'gateway.js'
@@ -121,7 +120,6 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'stdio-server.js'
@@ -130,7 +128,6 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-container.js'
@@ -139,7 +136,6 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-assay-table.js'
@@ -148,7 +144,6 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-plotly-graph.js'
@@ -328,7 +323,6 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'direct-tools'

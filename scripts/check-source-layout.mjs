@@ -82,7 +82,7 @@ dependencyEdges.forEach(([fromPath, targetPath]) => {
   if (from.startsWith('src/renderer/app/') && target.startsWith('src/renderer/core/')) {
     failures.push(`${from} creates an app -> core back-edge to ${target}`);
   }
-  if (from.startsWith('src/main/papers/') && target.startsWith('src/main/helpers/agent/')) {
+  if (from.startsWith('src/main/papers/') && target.startsWith('src/main/agent/')) {
     failures.push(`${from} imports Agent internals from ${target}`);
   }
 });
@@ -97,11 +97,8 @@ function sourceOwner(filePath) {
   if (rendererArea) {
     return `renderer:${rendererArea[1]}`;
   }
-  if (file.startsWith('src/main/helpers/agent/')) {
+  if (file.startsWith('src/main/agent/')) {
     return 'main:agent';
-  }
-  if (file.startsWith('src/main/helpers/main/')) {
-    return 'main:helpers';
   }
   // The Codex CLI provider is the transport half of the Codex Agent runtime,
   // even though its neutral public facade remains under main/lib.
@@ -165,7 +162,7 @@ const allowedSequencePrefixes = [
   'src/renderer/modules/sequence-viewer/',
   'src/main/ipc/',
   'src/main/preload/',
-  'src/main/helpers/main/storage-bundle/'
+  'src/main/storage/'
 ];
 allFiles.forEach((filePath) => {
   const file = relative(filePath);
@@ -181,8 +178,6 @@ allFiles.forEach((filePath) => {
 
 [
   'src/main/sequence-viewer',
-  'src/main/helpers/main/sequence',
-  'src/main/helpers/main/sequence-library',
   'src/renderer/modules/tool-box/sequence.js',
   'src/renderer/modules/tool-box/oligo.js',
   'src/renderer/modules/tool-box/oligo-ui.js',

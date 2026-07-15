@@ -13,8 +13,10 @@ export function installProteinBuilderWorkflowRendering(ctx) {
       return;
     }
 
-    const poiName = cleanText(elements.proteinBuilderPoiNameInput?.value, 140) || 'Protein of Interest';
-    const poiSequence = sanitizeProteinAssemblySequence(elements.proteinBuilderPoiSequenceInput?.value || '', true);
+    const activeDnaSource = ctx.getCurrentDnaSource() || {};
+    const sourceName = cleanText(activeDnaSource.label, 140) || 'Current DNA';
+    const sourceSequence = sanitizeProteinAssemblySequence(activeDnaSource.proteinSequence || '', true);
+    const sourceNote = cleanText(activeDnaSource.note, 240) || 'No usable coding sequence was found in the active DNA record.';
 
     if (!state.rows.length) {
       elements.proteinBuilderWorkflow.innerHTML = '<p class="small-note">Add a block to start the chain.</p>';
@@ -22,10 +24,10 @@ export function installProteinBuilderWorkflowRendering(ctx) {
     }
 
     elements.proteinBuilderWorkflow.innerHTML = state.rows.map((row, index) => {
-      const label = row.type === 'poi' ? poiName : row.label;
-      const sequence = row.type === 'poi' ? poiSequence : sanitizeProteinAssemblySequence(row.sequence || '', true);
+      const label = row.type === 'poi' ? sourceName : row.label;
+      const sequence = row.type === 'poi' ? sourceSequence : sanitizeProteinAssemblySequence(row.sequence || '', true);
       const note = row.type === 'poi'
-        ? `Uses the POI sequence from the left column. ${sequence.length ? `${sequence.length} aa.` : 'Sequence required.'}`
+        ? `${sourceNote} ${sequence.length ? `${sequence.length} aa.` : 'No coding sequence found.'}`
         : (row.note || 'No annotation.');
       const blockTitle = [getBlockTypeLabel(row.type), `${sequence.length} aa`, note].filter(Boolean).join(' | ');
 
@@ -111,12 +113,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
   };
 
   ctx.renderSummary = function renderSummary() {
-    const construct = buildConstruct({
-      constructName: elements.proteinBuilderNameInput?.value,
-      poiName: elements.proteinBuilderPoiNameInput?.value,
-      poiSequence: elements.proteinBuilderPoiSequenceInput?.value,
-      rows: ctx.currentRows()
-    });
+    const construct = buildConstruct(ctx.getProteinBuilderPayload());
 
     if (elements.proteinBuilderMeta) {
       elements.proteinBuilderMeta.textContent = `${construct.length} aa | ${construct.parts.length} blocks`;

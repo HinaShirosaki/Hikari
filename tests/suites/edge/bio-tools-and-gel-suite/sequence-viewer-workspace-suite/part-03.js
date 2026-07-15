@@ -78,11 +78,8 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
-    'sequence-viewer-protein-builder-poi-name',
-    'sequence-viewer-protein-builder-poi-sequence',
     'sequence-viewer-protein-builder-reset-btn',
     'sequence-viewer-protein-builder-add-custom-btn',
-    'sequence-viewer-protein-builder-add-poi-btn',
     'sequence-viewer-protein-builder-common-blocks',
     'sequence-viewer-protein-builder-feature-search-input',
     'sequence-viewer-protein-builder-feature-search-btn',
@@ -163,7 +160,7 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   assert.equal(workflowHtml.includes('stored_affinity_tag'), true);
   assert.equal(sequenceHtml.includes('MAE'), true);
 });
-test('[EDGE] sequence-viewer protein builder can build DNA and reuse POI DNA from the current vector', async () => {
+test('[EDGE] sequence-viewer protein builder can build DNA from the active vector source', async () => {
   const ids = [
     'sequence-viewer-home-workspace',
     'sequence-viewer-protein-builder-workspace',
@@ -177,11 +174,8 @@ test('[EDGE] sequence-viewer protein builder can build DNA and reuse POI DNA fro
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
-    'sequence-viewer-protein-builder-poi-name',
-    'sequence-viewer-protein-builder-poi-sequence',
     'sequence-viewer-protein-builder-reset-btn',
     'sequence-viewer-protein-builder-add-custom-btn',
-    'sequence-viewer-protein-builder-add-poi-btn',
     'sequence-viewer-protein-builder-build-dna-btn',
     'sequence-viewer-protein-builder-common-blocks',
     'sequence-viewer-protein-builder-feature-search-input',
@@ -251,10 +245,6 @@ test('[EDGE] sequence-viewer protein builder can build DNA and reuse POI DNA fro
 
   trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
 
-  const builderForm = document.getElementById('sequence-viewer-protein-builder-form');
-  const poiInput = document.getElementById('sequence-viewer-protein-builder-poi-sequence');
-  poiInput.value = 'MLLL';
-  trigger(builderForm, 'input', { target: poiInput });
   await flushAsync();
 
   trigger(document.getElementById('sequence-viewer-protein-builder-build-dna-btn'), 'click');
@@ -266,7 +256,7 @@ test('[EDGE] sequence-viewer protein builder can build DNA and reuse POI DNA fro
 
   assert.match(dnaMeta.textContent, /nt/);
   assert.equal(dnaSequence.innerHTML.includes('ATGTTATTATTA'), true);
-  assert.match(builderStatus.textContent, /Reused POI DNA from current vector CDS PoiCds/i);
+  assert.match(builderStatus.textContent, /Reused active DNA from current vector CDS PoiCds/i);
 });
   }
 };

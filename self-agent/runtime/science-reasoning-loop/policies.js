@@ -1,6 +1,6 @@
 'use strict';
 
-const { REASONING_ENTRY_TOOL_SCOPES } = require('../../../src/main/helpers/agent/tools/agent-tool-provide.js');
+const { REASONING_ENTRY_TOOL_SCOPES } = require('../../../src/main/agent/tools/agent-tool-provide.js');
 
 const SCIENCE_REASONING_INTENTS = Object.freeze([
   'general_science_question',

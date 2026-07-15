@@ -142,6 +142,34 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, /\.protocol-sort-menu-btn\.ghost-btn\s*\{[^}]*border:\s*0;/s);
     });
 
+    test('protocol workspace keeps one compact inset between the rail and editor', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+
+      assert.match(css, /\.left-rail-template\.protocol-workspace\s*\{[^}]*--left-rail-main-gap:\s*20px;[^}]*grid-template-columns:\s*var\(--layout-left-panel-width\)\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;/s);
+    });
+
+    test('protocol placeholder presets keep the selected bar visibly active', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const controller = readLocalSource('src', 'renderer', 'modules', 'protocol', 'index.js');
+
+      assert.match(html, /data-protocol-placeholder-preset="plasmid" aria-pressed="false"/);
+      assert.match(css, /\.protocol-placeholder-preset\.is-active,[\s\S]*\.protocol-placeholder-preset\[aria-pressed="true"\]\s*\{[^}]*background:\s*var\(--theme-accent\);/);
+      assert.match(controller, /function setActivePlaceholderPreset\(placeholderName = ''\)[\s\S]*classList\.toggle\('is-active', isActive\)[\s\S]*setAttribute\('aria-pressed', String\(isActive\)\)/);
+    });
+
+    test('editable text fields keep focus inside their boundaries', () => {
+      const coreCss = readLocalSource('ui', 'css', 'base', 'core.css');
+      const agentCss = readLocalSource('ui', 'css', 'views', 'agent-view.css');
+      const menusCss = readLocalSource('ui', 'css', 'overrides', 'universal-menus.css');
+      const papersCss = readLocalSource('ui', 'css', 'views', 'papers-view.css');
+
+      assert.match(coreCss, /input:not\(\[type='checkbox'\]\):not\(\[type='radio'\]\):not\(\[type='range'\]\):not\(\[type='file'\]\):not\(\[type='color'\]\):not\(\[type='button'\]\):not\(\[type='submit'\]\):not\(\[type='reset'\]\):focus-visible,[\s\S]*?textarea:focus-visible,[\s\S]*?select:focus-visible\s*\{[^}]*outline:\s*none;[^}]*border-color:\s*var\(--theme-focus\);/);
+      assert.match(agentCss, /\.agent-user-question-custom textarea:focus\s*\{[^}]*outline:\s*none;[^}]*border-color:/s);
+      assert.match(menusCss, /\.biology-notebook-sample-link-search:focus,[\s\S]*?\.assay-sample-picker-search-input:focus\s*\{[^}]*box-shadow:\s*inset 0 1px 2px var\(--theme-shadow-color-subtle\);/);
+      assert.match(papersCss, /\.papers-folder-rename-input:focus-visible\s*\{[^}]*outline:\s*none;[^}]*border-color:\s*var\(--theme-focus\);/s);
+    });
+
     test('protocol row action menus stay inside the rail above neighboring rows', () => {
       const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
       const list = readLocalSource('src', 'renderer', 'modules', 'protocol', 'list.js');
@@ -169,6 +197,40 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(sequenceCss, /\.sequence-viewer-cloning-design-toolbar\s*\{[^}]*grid-template-columns:\s*var\(--layout-left-panel-width\)\s+minmax\(0,\s*1fr\);[^}]*\}/s);
       assert.match(sequenceCss, /\.sequence-viewer-cloning-design-toolbar-main\s*\{[^}]*grid-column:\s*2;[^}]*display:\s*flex;[^}]*justify-content:\s*flex-start;[^}]*\}/s);
       assert.match(sequenceCss, /#sequence-viewer-view\s+\.left-rail-template\.sequence-viewer-home-layout\s*>\s*\.sequence-viewer-home-sidebar\.left-rail-template__rail--pinned,[^}]*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s);
+    });
+
+    test('Protein Builder toolbar navigation stays above the shared rail backdrop', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'sequence-viewer-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
+
+      assert.match(html, /class="sequence-viewer-protein-builder-toolbar-nav"[\s\S]*id="sequence-viewer-protein-builder-back-btn"/);
+      assert.match(css, /\.sequence-viewer-protein-builder-toolbar\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*1;/s);
+    });
+
+    test('Protein Builder uses the active DNA source instead of manual POI fields', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'sequence-viewer-view.html');
+      const dom = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'dom.js');
+      const context = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'controller-context.js');
+      const source = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'record-dna.js');
+
+      assert.match(html, /active DNA coding sequence/i);
+      assert.match(html, /CurrentDNA/);
+      assert.doesNotMatch(html, /protein-builder-poi-(?:name|sequence)|protein-builder-add-poi-btn|POI Name|Add POI Block/);
+      assert.doesNotMatch(dom, /proteinBuilderPoi(?:Name|Sequence)Input|proteinBuilderAddPoiBtn/);
+      assert.match(context, /activeDnaSource:\s*ctx\.getCurrentDnaSource\(\)/);
+      assert.match(source, /export function resolvePoiSourceFromRecord\(record, selectedFeature = null\)/);
+      assert.match(source, /reusedSource: `Reused active DNA from \$\{sourceDescription\}\.`/);
+    });
+
+    test('Assay result actions use accessible compact icons', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+
+      assert.match(html, /id="assay-attach-result-file-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Attach result file"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-save-results-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Save results"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-clear-results-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Clear results"[\s\S]*?<svg/);
+      assert.doesNotMatch(html, /id="assay-(?:attach-result-file|save-results|clear-results)-btn"[^>]*>\s*(?:Attach Result File|Save Results|Clear Results)\s*<\//);
+      assert.match(css, /\.assay-results-actions\s*>\s*\.assay-results-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
     });
 
     test('Papers rail pins Upload PDF above the sole scrolling library list', () => {
@@ -340,7 +402,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(detailBlock, /id="sequence-viewer-detail-workspace"/);
       assert.equal(detailBlock.includes('id="sequence-viewer-back-btn"'), false);
       assert.equal(detailBlock.includes('Back to Library'), false);
-      assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*<h2>Open Sequence<\/h2>[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-detail-protein-builder-btn"[\s\S]*<h4>Sequence Library<\/h4>/);
+      assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-detail-protein-builder-btn"[\s\S]*<h4>Sequence Library<\/h4>/);
       assert.match(detailBlock, /id="sequence-viewer-detail-protein-builder-btn"/);
       assert.equal(detailBlock.includes('id="sequence-viewer-save-btn"'), false);
       assert.equal(detailBlock.includes('id="sequence-viewer-save-name"'), false);
@@ -436,11 +498,11 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(Boolean(forgeConfig.packagerConfig.asar), true);
       assert.match(
         forgeConfig.packagerConfig.asar?.unpackDir || '',
-        /src\/main\/helpers\/agent/
+        /src\/main\/agent/
       );
       assert.match(
         forgeConfig.packagerConfig.asar?.unpackDir || '',
-        /src\/main\/helpers\/main/
+        /src\/main\/storage/
       );
       assert.match(
         forgeConfig.packagerConfig.asar?.unpackDir || '',
@@ -465,8 +527,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('main sql.js helpers resolve the bundled vendor asset from package-safe paths', () => {
-      const { resolveSqlJsWasmJsPath } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sqljs-path.js'));
-      const resolved = resolveSqlJsWasmJsPath(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle'));
+      const { resolveSqlJsWasmJsPath } = require(path.join(__dirname, 'src', 'main', 'lib', 'sqljs-path.js'));
+      const resolved = resolveSqlJsWasmJsPath(path.join(__dirname, 'src', 'main', 'storage'));
       assert.equal(resolved.endsWith(path.join('vendor', 'sqljs', 'sql-wasm.js')), true);
       assert.equal(fs.existsSync(resolved), true);
     });
@@ -487,7 +549,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('main composes dedicated IPC registrars with generic tool runtime support', () => {
-      const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
+      const agentDir = path.join(__dirname, 'src', 'main', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
       const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
       const mainSource = readMainProcessSource();
@@ -528,7 +590,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('agent shared text helpers no longer clip long prompts by default', () => {
-      const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
+      const agentDir = path.join(__dirname, 'src', 'main', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
       const llmUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'llm', 'runtime-helpers.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');

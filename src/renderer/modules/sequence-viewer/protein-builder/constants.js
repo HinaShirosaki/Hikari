@@ -10,7 +10,7 @@ export const BLOCK_TYPE_LABELS = Object.freeze({
   cleavage: 'Cleavage Site',
   feature: 'Feature DB',
   custom: 'Custom',
-  poi: 'POI'
+  poi: 'Current DNA'
 });
 
 export const DNA_ALPHABET = /^[ACGTRYSWKMBDHVN*]+$/;

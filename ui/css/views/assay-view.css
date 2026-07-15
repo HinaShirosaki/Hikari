@@ -20,6 +20,37 @@
   border-color: transparent;
 }
 
+.assay-results-actions > .assay-results-icon-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.assay-results-actions > .assay-results-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.assay-results-actions > .assay-results-save-icon-btn.primary-btn {
+  border-color: transparent;
+  background: var(--theme-accent);
+  color: var(--theme-text-on-accent);
+}
+
+.assay-results-actions > .assay-results-save-icon-btn.primary-btn:hover,
+.assay-results-actions > .assay-results-save-icon-btn.primary-btn:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 88%, var(--theme-text-strong) 12%);
+}
+
 .assay-header-row {
   display: flex;
   align-items: center;

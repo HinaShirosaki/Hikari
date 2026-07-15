@@ -747,8 +747,7 @@
 }
 
 .gel-lane-table-input:focus {
-  outline: 2px solid color-mix(in srgb, var(--theme-accent) 34%, transparent);
-  outline-offset: -2px;
+  outline: none;
   background: var(--gel-point-border);
 }
 

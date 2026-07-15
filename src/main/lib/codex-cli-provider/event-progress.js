@@ -13,7 +13,7 @@ const { summarizeCodexToolCallForProgress } = require('./event-tool-summary');
 const { cleanText } = require('./utils');
 const {
   extractPlotlyGraphArtifactFromToolOutput
-} = require('../../helpers/agent/plotly-graph-artifacts.js');
+} = require('../../agent/plotly-graph-artifacts.js');
 
 function extractCodexJsonEventThinking(event = {}) {
   if (!isCodexThinkingEvent(event)) {

@@ -11,8 +11,6 @@
     "check:source-layout": "node scripts/check-source-layout.mjs",
     "check:sample-registry-csv": "node tests/sample-registry-csv-io-selfcheck.mjs",
     "extract:standard-features": "node scripts/extract-standard-features.mjs",
-    "export:agent-context-debug": "node scripts/export-agent-context-debug.mjs",
-    "export:agent-prompts": "node scripts/export-agent-prompts.mjs",
     "report:modules": "node scripts/report-module-relationships.mjs",
     "start": "npm run build:ui && electron-forge start",
     "test": "npm run build:ui && npm run check:css-colors && npm run check:dom-ids && npm run check:source-layout && npm run check:sample-registry-csv && node test.js",
