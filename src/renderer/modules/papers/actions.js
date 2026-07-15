@@ -557,7 +557,6 @@ export function createPapersActions(context) {
         return;
       }
       context.comments?.syncViewerComments();
-      context.comments?.setCommentStatus('Viewing page 1. Select a comment or place a new pin.');
       context.renderCommentSidebar?.();
     } catch (error) {
       windowRef?.alert?.(String(error?.message || error || 'Failed to load the PDF viewer.'));

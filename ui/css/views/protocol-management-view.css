@@ -5,7 +5,6 @@
 }
 
 .left-rail-template.protocol-workspace {
-  --app-left-rail-bleed: 28px;
   --left-rail-main-gap: 20px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);

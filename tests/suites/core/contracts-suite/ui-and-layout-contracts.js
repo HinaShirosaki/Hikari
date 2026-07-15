@@ -562,7 +562,6 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
       const toolLoadingSource = fs.readFileSync(agentPath('tools', 'agent-tool-loading.js'), 'utf8');
       const toolExecutionSource = fs.readFileSync(agentPath('tools', 'agent-tool-execution.js'), 'utf8');
-      const toolProviderSource = fs.readFileSync(agentPath('tools', 'agent-tool-provide.js'), 'utf8');
       const runtimeSupportSource = fs.readFileSync(agentPath('runtime', 'agent-runtime-support.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
 
@@ -583,7 +582,6 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(systemRegistrarSource, /function registerSystemIpc\(deps = \{\}\)/);
       assert.match(toolLoadingSource, /function normalizeToolInvocationArgs\(rawArgs\)/);
       assert.match(toolExecutionSource, /function createAgentToolCallRuntime\(deps = \{\}\)/);
-      assert.match(toolProviderSource, /function createAgentToolProviderRuntime\(deps = \{\}\)/);
       assert.match(runtimeSupportSource, /function createAgentRuntimeSupport\(deps = \{\}\)/);
       assert.match(llmBridgeSource, /function createAgentLlmProviderBridge\(deps = \{\}\)/);
       assert.doesNotMatch(llmBridgeSource, /function startToolSession\(/);

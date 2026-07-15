@@ -40,55 +40,6 @@ const normalizedArrayKeys = [
   'samples',
   'messages'
 ];
-[
-  ['My Plasmid', 'My_Plasmid'],
-  ['  spaced name  ', 'spaced_name'],
-  ['A/B:C', 'A_B_C'],
-  ['___abc___', 'abc'],
-  ['a.b-c_d', 'a.b-c_d'],
-  ['***', 'plasmid'],
-  ['', 'plasmid'],
-  [null, 'plasmid'],
-  ['alpha beta gamma', 'alpha_beta_gamma'],
-  ['中文', 'plasmid']
-].forEach(([input, expected], idx) => {
-  test(`[P1] sanitizeOutputName default fallback case ${idx + 1}`, () => {
-    assert.equal(sequenceMainUtils.sanitizeOutputName(input), expected);
-  });
-});
-test('[P1] sanitizeOutputName uses custom fallback when normalized output is empty', () => {
-  assert.equal(sequenceMainUtils.sanitizeOutputName('***', 'fallback_name'), 'fallback_name');
-});
-[
-  [' _pL ann!* ', '_pLann'],
-  ['suffix-1', 'suffix-1'],
-  ['A.B_C', 'A.B_C'],
-  ['   ', ''],
-  [null, '_pLann'],
-  [undefined, '_pLann'],
-  ['x/y:z', 'xyz'],
-  ['"quoted"', 'quoted']
-].forEach(([input, expected], idx) => {
-  test(`[P1] sanitizeSuffix case ${idx + 1}`, () => {
-    assert.equal(sequenceMainUtils.sanitizeSuffix(input), expected);
-  });
-});
-[
-  ['', ''],
-  ['   ', ''],
-  ['>already\nACGT\n', '>already\nACGT'],
-  ['acgt', '>sequence\nACGT\n'],
-  ['ac gt 123', '>sequence\nACGT\n'],
-  ['n-n-n', '>sequence\nNNN\n'],
-  ['abc!def', '>sequence\nABCDEF\n'],
-  ['a'.repeat(80), `>sequence\n${'A'.repeat(80)}\n`],
-  ['a'.repeat(81), `>sequence\n${'A'.repeat(80)}\nA\n`],
-  ['a'.repeat(160), `>sequence\n${'A'.repeat(80)}\n${'A'.repeat(80)}\n`]
-].forEach(([input, expected], idx) => {
-  test(`[P0] normalizeSequenceInput case ${idx + 1}`, () => {
-    assert.equal(sequenceMainUtils.normalizeSequenceInput(input), expected);
-  });
-});
 
 const moduleExportContracts = [
   ['src/renderer/modules/agent-chat/index.js', 'initAgentChat', 'function'],
@@ -343,29 +294,5 @@ normalizedArrayKeys.forEach((key) => {
   });
 });
 
-for (let length = 1; length <= 120; length += 3) {
-  test(`[EDGE] normalizeSequenceInput wrap behavior len ${length}`, () => {
-    const source = 'acgt'.repeat(Math.ceil(length / 4)).slice(0, length);
-    const output = sequenceMainUtils.normalizeSequenceInput(source);
-    const lines = output.trim().split('\n');
-    assert.equal(lines[0], '>sequence');
-    const seq = lines.slice(1).join('');
-    assert.equal(seq, source.toUpperCase());
-    lines.slice(1).forEach((line) => {
-      assert.ok(line.length <= 80);
-    });
-  });
-}
-[
-  ['>h\nacgt\nnn\n', '>h\nacgt\nnn'],
-  ['>h\r\nACGT\r\n', '>h\r\nACGT'],
-  ['>h\n', '>h'],
-  ['>header with space\nACGT', '>header with space\nACGT'],
-  ['>\nACGT', '>\nACGT']
-].forEach(([input, expected], idx) => {
-  test(`[EDGE] normalizeSequenceInput fasta passthrough case ${idx + 1}`, () => {
-    assert.equal(sequenceMainUtils.normalizeSequenceInput(input), expected);
-  });
-});
   }
 };

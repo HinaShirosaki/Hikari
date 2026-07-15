@@ -190,7 +190,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     chatEventHistory.set(key, history);
   };
 
-  const performLookupAction = (ctx, subintent, queryText = '') => {
+  const performLookupAction = (subintent, queryText = '') => {
     const action = LOOKUP_ACTIONS.get(subintent) || LOOKUP_ACTIONS.get('inventory');
     const query = String(queryText || '').trim();
     const moduleTarget = getModuleTarget(action.moduleToken);
@@ -279,7 +279,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     return null;
   };
 
-  const performSearchScope = (ctx, scopeArg, query) => {
+  const performSearchScope = (scopeArg, query) => {
     const resolved = resolveSearchScope(scopeArg);
     if (!resolved) {
       return {
@@ -302,7 +302,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
       };
     }
 
-    return performLookupAction(ctx, resolved.subintent, query);
+    return performLookupAction(resolved.subintent, query);
   };
 
   const createDraft = (ctx, rawText, options = {}) => {
@@ -886,61 +886,61 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
 
   registerCommandAlias('inventory', [], (ctx) => {
     const query = getCommandArgs(ctx.message?.text);
-    const result = performLookupAction(ctx, 'inventory', query);
+    const result = performLookupAction('inventory', query);
     ctx.reply(result.message);
   });
 
   registerCommandAlias('chemicals', [], (ctx) => {
     const query = getCommandArgs(ctx.message?.text);
-    const result = performLookupAction(ctx, 'inventory', query);
+    const result = performLookupAction('inventory', query);
     ctx.reply(result.message);
   });
 
   registerCommandAlias('sample', [], (ctx) => {
     const query = getCommandArgs(ctx.message?.text);
-    const result = performLookupAction(ctx, 'sample', query);
+    const result = performLookupAction('sample', query);
     ctx.reply(result.message);
   });
 
   registerCommandAlias('samples', [], (ctx) => {
     const query = getCommandArgs(ctx.message?.text);
-    const result = performLookupAction(ctx, 'sample', query);
+    const result = performLookupAction('sample', query);
     ctx.reply(result.message);
   });
 
   registerCommandAlias('construct', [], (ctx) => {
     const query = getCommandArgs(ctx.message?.text);
-    const result = performLookupAction(ctx, 'construct', query);
+    const result = performLookupAction('construct', query);
     ctx.reply(result.message);
   });
 
   registerCommandAlias('protocol', [], (ctx) => {
     const query = getCommandArgs(ctx.message?.text);
-    const result = performLookupAction(ctx, 'protocol', query);
+    const result = performLookupAction('protocol', query);
     ctx.reply(result.message);
   });
 
   registerCommandAlias('project', [], (ctx) => {
     const query = getCommandArgs(ctx.message?.text);
-    const result = performLookupAction(ctx, 'project', query);
+    const result = performLookupAction('project', query);
     ctx.reply(result.message);
   });
 
   registerCommandAlias('papers', [], (ctx) => {
     const query = getCommandArgs(ctx.message?.text);
-    const result = performLookupAction(ctx, 'paper', query);
+    const result = performLookupAction('paper', query);
     ctx.reply(result.message);
   });
 
   registerCommandAlias('assay', ['assays'], (ctx) => {
     const query = getCommandArgs(ctx.message?.text);
-    const result = performSearchScope(ctx, 'assay', query);
+    const result = performSearchScope('assay', query);
     ctx.reply(result.message);
   });
 
   registerCommandAlias('gel', ['gels'], (ctx) => {
     const query = getCommandArgs(ctx.message?.text);
-    const result = performSearchScope(ctx, 'gel', query);
+    const result = performSearchScope('gel', query);
     ctx.reply(result.message);
   });
 
@@ -950,7 +950,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
       ctx.reply('Usage: /search <scope> <query>. Scopes: chemicals, samples, assay, gel, protocol, project, papers');
       return;
     }
-    const result = performSearchScope(ctx, scopeArg, query);
+    const result = performSearchScope(scopeArg, query);
     ctx.reply(result.message);
   });
 
@@ -1001,14 +1001,14 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
   });
 
   registerCommandAlias('expiring', ['expiring-lots'], (ctx) => {
-    const result = performLookupAction(ctx, 'expiry', 'expiring');
+    const result = performLookupAction('expiry', 'expiring');
     ctx.reply(result.ok
       ? `${result.message}\nReview lot expiration in Chemicals.`
       : result.message);
   });
 
   registerCommandAlias('lowstock', ['low-stock'], (ctx) => {
-    const result = performLookupAction(ctx, 'inventory', 'low stock');
+    const result = performLookupAction('inventory', 'low stock');
     ctx.reply(result.ok
       ? `${result.message}\nReview stock levels in Chemicals.`
       : result.message);
@@ -1454,7 +1454,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
 
     if (intent.intent === 'lookup') {
       const query = intent.entities?.query || '';
-      const result = performLookupAction(ctx, intent.subintent, query);
+      const result = performLookupAction(intent.subintent, query);
       ctx.reply(result.message);
       recordChatEvent(ctx, {
         type: 'lookup',

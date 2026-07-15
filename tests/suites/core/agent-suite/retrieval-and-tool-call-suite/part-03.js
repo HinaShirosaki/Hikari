@@ -1,11 +1,7 @@
 module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context = {}) {
   const scope = context.scope || {};
-  const toolLoading = scope.agentToolLoading && Object.keys(scope.agentToolLoading).length
-    ? scope.agentToolLoading
-    : (scope.agentToolCall || {});
-  const toolExecution = scope.agentToolExecution && Object.keys(scope.agentToolExecution).length
-    ? scope.agentToolExecution
-    : (scope.agentToolCall || {});
+  const toolLoading = scope.agentToolLoading || {};
+  const toolExecution = scope.agentToolExecution || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
     test('purchase recommendation runtime retries shopping-oriented search variants when the first query is weak', async () => {

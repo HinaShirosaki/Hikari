@@ -3,11 +3,10 @@ import {
   calculateFixedReaction,
   calculateMolarity,
   resolveBufferCompound
-} from '../../tool-box/bench-calculations.js';
+} from '../../../lib/bench-calculations.js';
 import { BUFFER_COMPOUNDS } from '../../../lib/chemistry/buffer-compounds.js';
 import {
   buildNotebookToolCalculationsHtml,
-  formatNotebookToolCalculationLine,
   normalizeNotebookToolCalculations
 } from '../../../lib/notebook-tool-calculations.js';
 

@@ -3,7 +3,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { hasSupportedDataExtension } = require('./storage-paths');
-const { asArray, cleanText, ensureObject, normalizeFileTimestamp, toPosixRelative } = require('./storage-utils');
+const { asArray, ensureObject, normalizeFileTimestamp, toPosixRelative } = require('./storage-utils');
 
 const STORAGE_MANIFEST_FILE_NAME = 'hikari-storage-manifest.json';
 

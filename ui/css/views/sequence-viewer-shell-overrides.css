@@ -1,0 +1,131 @@
+/* Late-load Sequence Viewer library and detail refinements. */
+
+#sequence-viewer-view .sequence-viewer-library-switch,
+#sequence-viewer-detail-view .sequence-viewer-mode-switch {
+  gap: 4px;
+  padding: 2px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+}
+
+#sequence-viewer-view .sequence-viewer-library-switch > button,
+#sequence-viewer-detail-view .sequence-viewer-mode-switch > button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  padding: 7px 10px;
+}
+
+#sequence-viewer-view .sequence-viewer-library-switch > button:hover,
+#sequence-viewer-view .sequence-viewer-library-switch > button:focus-visible,
+#sequence-viewer-detail-view .sequence-viewer-mode-switch > button:hover,
+#sequence-viewer-detail-view .sequence-viewer-mode-switch > button:focus-visible {
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+}
+
+#sequence-viewer-view .sequence-viewer-library-switch-btn-active,
+#sequence-viewer-detail-view .sequence-viewer-mode-btn-active {
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+}
+
+#sequence-viewer-view .sequence-viewer-preview-host,
+#sequence-viewer-detail-view .sequence-viewer-controls,
+#sequence-viewer-detail-view .sequence-viewer-feature-rail-host,
+#sequence-viewer-detail-view .sequence-viewer-feature-detail,
+#sequence-viewer-detail-view .sequence-viewer-context-menu,
+#sequence-viewer-detail-view .sequence-viewer-feature-editor,
+#sequence-viewer-detail-view .sequence-viewer-feature-hover-tooltip {
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+  box-shadow: none;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-context-item:hover:not(:disabled),
+#sequence-viewer-detail-view .sequence-viewer-context-item:focus-visible:not(:disabled) {
+  background: var(--theme-surface-subtle);
+}
+
+#sequence-viewer-detail-view .sequence-viewer-context-item {
+  color: var(--theme-text);
+}
+
+#sequence-viewer-view .sequence-viewer-library-item {
+  color: var(--theme-text);
+}
+
+#sequence-viewer-view .sequence-viewer-library-item:hover {
+  border-color: var(--theme-border);
+}
+
+#sequence-viewer-view .sequence-viewer-library-item-active {
+  border-color: color-mix(in srgb, var(--theme-accent) 75%, var(--theme-border));
+  background: var(--theme-surface-subtle);
+}
+
+#sequence-viewer-view .sequence-viewer-library-item-name {
+  color: var(--theme-text-strong);
+}
+
+#sequence-viewer-detail-view .sequence-viewer-inline-toggle,
+#sequence-viewer-detail-view .sequence-viewer-inline-toggle-group {
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text);
+}
+
+#sequence-viewer-detail-view .sequence-viewer-inline-toggle {
+  padding: 6px 8px;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-inline-toggle-group {
+  padding: 6px 8px;
+  gap: 6px;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-inline-toggle-group-label {
+  color: var(--theme-text-muted);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Dropdown popovers supply their own box, so avoid nested outlines. */
+#sequence-viewer-detail-view .sequence-viewer-toolbar-menu .sequence-viewer-inline-toggle,
+#sequence-viewer-detail-view .sequence-viewer-toolbar-menu .sequence-viewer-inline-toggle-group {
+  border: 0;
+  background: transparent;
+  padding: 4px 6px;
+}
+
+/* The detail action bar is a flat toolbar rather than a boxed panel. */
+#sequence-viewer-detail-view .sequence-viewer-controls {
+  border: 0;
+  background: transparent;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-feature-detail,
+#sequence-viewer-detail-view .sequence-viewer-message-box {
+  font-family: inherit;
+}
+
+#sequence-viewer-detail-view .sequence-viewer-feature-editor-overlay {
+  background: var(--sequence-viewer-overlay-soft);
+}
+
+#sequence-viewer-detail-view .sequence-viewer-feature-editor-grid label {
+  color: var(--theme-text-strong);
+}
+
+#sequence-viewer-detail-view .sequence-viewer-feature-editor-grid input,
+#sequence-viewer-detail-view .sequence-viewer-feature-editor-grid select,
+#sequence-viewer-detail-view .sequence-viewer-feature-editor-grid textarea {
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface-elevated);
+  color: var(--theme-text);
+}

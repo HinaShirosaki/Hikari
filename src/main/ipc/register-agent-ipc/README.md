@@ -34,6 +34,6 @@ This folder splits those responsibilities into smaller modules so each part is e
 ## Design notes
 
 - The public import surface is `src/main/ipc/register-agent-ipc/index.js`, composed by `src/main/core/main-services.js`.
-- The retired self-implemented API agent remains isolated under `/self-agent`; production IPC routes use the Codex controller path.
+- The retired self-implemented API agent has been removed; production IPC routes use the Codex controller path.
 - Dependency injection keeps provider, persistence, and tool runtimes outside the IPC adapter.
 - Shared helpers live close to the agent IPC boundary instead of being duplicated across route handlers.

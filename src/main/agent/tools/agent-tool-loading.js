@@ -394,12 +394,6 @@ function getToolCatalogEntry(toolName) {
   return AGENT_TOOL_CATALOG.find((entry) => entry.name === canonicalName) || null;
 }
 
-// Retrieve the normalized tool-call schema entry for a tool name.
-function getToolCallCatalogEntry(toolName) {
-  const canonicalName = resolveCanonicalToolName(toolName);
-  return canonicalName ? defaultEnsureObject(AGENT_TOOL_CALL_CATALOG[canonicalName]) : null;
-}
-
 // Normalize requested tool names, defaulting to the full catalog when none are supplied.
 function normalizeRequestedToolNames(selectedToolNames) {
   if (!Array.isArray(selectedToolNames)) {

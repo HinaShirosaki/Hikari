@@ -4,32 +4,15 @@ const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.
 const { normalizePaperAnnotationSnapshot } = require('../../papers/shared/paper-comment-context.js');
 const { normalizeChemicalStorePayload } = require('../../data/data-snapshot-utils.js');
 
-const DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE =
-  'You are Lab Agent, an AI assistant for a research lab app. Help users retrieve lab information, reason carefully about scientific questions, and stay explicit about uncertainty.\n\n{{projectScope}}\n\nUse only tools that are explicitly available in the current runtime. If a needed tool is unavailable, say so clearly instead of pretending it succeeded.';
-const DEFAULT_AGENT_SYNTHESIS_PROMPT_TEMPLATE =
-  'Return JSON matching the expected response schema exactly. If evidence is missing, say so plainly.';
-
 function createAgentRuntimeSupport(deps = {}) {
   const {
     asArray,
-    cleanText,
-    safeParseJson
+    cleanText
   } = createAgentLlmRuntimeHelpers(deps);
-  const renderPromptTemplate = typeof deps.renderPromptTemplate === 'function'
-    ? deps.renderPromptTemplate
-    : ((template, vars = {}) => String(template || '').replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => String(vars[key] ?? '')));
-  const defaultSystemPrompt = String(deps.DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE || '').trim()
-    || DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE;
-  const defaultSynthesisPrompt = String(deps.DEFAULT_AGENT_SYNTHESIS_PROMPT_TEMPLATE || '').trim()
-    || DEFAULT_AGENT_SYNTHESIS_PROMPT_TEMPLATE;
 
   function clamp(value, min, max) {
     const numeric = Number.isFinite(Number(value)) ? Number(value) : min;
     return Math.max(min, Math.min(max, numeric));
-  }
-
-  function normalizeRoutingPayload(value) {
-    return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
   }
 
   function normalizePreferredJournalNames(value) {
@@ -327,75 +310,14 @@ function createAgentRuntimeSupport(deps = {}) {
       .map((entry) => entry.item);
   }
 
-  function buildAgentSystemPrompt(projectName, prompts) {
-    const projectScope = projectName ? `Scoped project: ${projectName}.` : 'Scope: all projects.';
-    const template = String(prompts?.agent?.systemPromptTemplate || '').trim() || defaultSystemPrompt;
-    const rendered = renderPromptTemplate(template, { projectScope });
-    const sessionPrompt = cleanText(prompts?.agent?.sessionPrompt, 2400);
-    const skillsCatalogPrompt = cleanText(prompts?.agent?.skillsCatalogPrompt, 16000);
-    const activeSkillsPrompt = cleanText(prompts?.agent?.activeSkillsPrompt, 24000);
-    return [rendered, sessionPrompt, skillsCatalogPrompt, activeSkillsPrompt].filter(Boolean).join('\n\n');
-  }
-
-  function buildAgentSynthesisPrompt(_requiresApproval, prompts) {
-    const template = String(prompts?.agent?.synthesisPromptTemplate || '').trim() || defaultSynthesisPrompt;
-    return renderPromptTemplate(template, {});
-  }
-
-  function normalizeAgentOutput(raw, fallbackText) {
-    const parsed = safeParseJson(raw, null);
-    if (parsed && typeof parsed === 'object') {
-      return {
-        answer: cleanText(parsed.answer, 12000) || fallbackText || 'No answer generated.',
-        confidence: Number.isFinite(parsed.confidence) ? clamp(Number(parsed.confidence), 0, 1) : 0.55,
-        requiresApproval: parsed.requires_approval === true,
-        proposedWriteActions: asArray(parsed.proposed_write_actions),
-        citations: asArray(parsed.citations),
-        decisionRecord: parsed.decision_record && typeof parsed.decision_record === 'object'
-          ? parsed.decision_record
-          : { assumptions: [], open_questions: [], verification_notes: [] }
-      };
-    }
-
-    return {
-      answer: fallbackText || 'No answer generated.',
-      confidence: 0.55,
-      requiresApproval: false,
-      proposedWriteActions: [],
-      citations: [],
-      decisionRecord: {
-        assumptions: [],
-        open_questions: [],
-        verification_notes: ['Structured synthesis was unavailable; returned plain-text fallback.']
-      }
-    };
-  }
-
-  function toPromptConversationTranscript(conversation) {
-    const rows = asArray(conversation).map((item, index) => {
-      const role = item?.role === 'assistant' ? 'assistant' : 'user';
-      return `${index + 1}. ${role}: ${cleanText(item?.text, 2400)}`;
-    }).filter(Boolean);
-    return rows.length ? rows.join('\n') : 'No prior messages.';
-  }
-
   return {
-    DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE: defaultSystemPrompt,
-    DEFAULT_AGENT_SYNTHESIS_PROMPT_TEMPLATE: defaultSynthesisPrompt,
-    normalizeRoutingPayload,
     normalizeAgentSnapshot,
     normalizeQuery,
     scoreByQuery,
-    pickTopMatches,
-    buildAgentSystemPrompt,
-    buildAgentSynthesisPrompt,
-    normalizeAgentOutput,
-    toPromptConversationTranscript
+    pickTopMatches
   };
 }
 
 module.exports = {
-  DEFAULT_AGENT_SYSTEM_PROMPT_TEMPLATE,
-  DEFAULT_AGENT_SYNTHESIS_PROMPT_TEMPLATE,
   createAgentRuntimeSupport
 };

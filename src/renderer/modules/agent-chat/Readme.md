@@ -32,10 +32,12 @@ The rest of the folder is split by responsibility:
 - `rendering-trace.js`, `rendering-trace-rows.js`, `rendering-trace-normalizers.js`: generated trace rendering and row normalization.
 - `response.js`: agent result normalization and assistant text summaries.
 - `public-api.js`: deliberate response-helper surface for other renderer features.
+- `review-overlay.js`: generic approval/rejection presentation dispatched through feature-owned adapters.
 - `session-manager.js`: persistent chat session list, load, create, and refresh logic.
 - `shared.js`: common text, array, mapping, and tool-label helpers.
 - `state-snapshot.js`: thin Hikari state snapshot and experiment-data mapping.
 - `markdown.js`: small markdown renderer used by chat output.
-- `notebook-drafts.js`: notebook draft normalization and persistence helpers.
 
-When adding behavior, prefer putting it near the controller that owns the interaction, then importing pure helpers from `shared.js`, `response.js`, or the existing domain helper file. Keep `index.js` as composition glue only.
+Notebook-draft normalization and persistence live in `modules/biology-notebook/agent/`; generated-protocol normalization and persistence live in `modules/protocol/agent/`. Agent Chat renders and dispatches those review items through the feature adapters without owning either record schema.
+
+When adding behavior, prefer putting it near the controller that owns the interaction, then importing pure helpers from `shared.js`, `response.js`, or an owning feature's public adapter. Keep `index.js` as composition glue only.

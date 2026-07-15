@@ -956,7 +956,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         fs.rmSync(workspaceDir, { recursive: true, force: true });
       }
     });
-    test('agent MCP initializer starts host, writes runtime config options, and releases official skills', async () => {
+    test('Codex workspace initializer starts the MCP host, writes runtime config, and releases official skills', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-init-workspace-'));
       const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-init-storage-'));
       const dataFilePath = path.join(workspaceDir, 'hikari-data.json');
@@ -974,15 +974,15 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       }, null, 2), 'utf8');
 
       try {
-        const { createAgentMcpInitializer } = require(path.join(
+        const { createCodexWorkspaceInitializer } = require(path.join(
           __dirname,
           'src',
           'main',
           'core',
           'services',
-          'create-agent-mcp-initializer.js'
+          'create-codex-workspace-initializer.js'
         ));
-        const initializer = createAgentMcpInitializer({
+        const initializer = createCodexWorkspaceInitializer({
           cleanText: (value, maxLength = 2000) => {
             const text = String(value || '').trim();
             return maxLength > 0 ? text.slice(0, maxLength) : text;
@@ -1051,19 +1051,19 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         fs.rmSync(storageRoot, { recursive: true, force: true });
       }
     });
-    test('agent MCP initializer does not inject default hikari data path without request context', async () => {
+    test('Codex workspace initializer does not inject the default data path without request context', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-init-no-default-'));
       let runtimeWrite = null;
       try {
-        const { createAgentMcpInitializer } = require(path.join(
+        const { createCodexWorkspaceInitializer } = require(path.join(
           __dirname,
           'src',
           'main',
           'core',
           'services',
-          'create-agent-mcp-initializer.js'
+          'create-codex-workspace-initializer.js'
         ));
-        const initializer = createAgentMcpInitializer({
+        const initializer = createCodexWorkspaceInitializer({
           cleanText: (value, maxLength = 2000) => {
             const text = String(value || '').trim();
             return maxLength > 0 ? text.slice(0, maxLength) : text;

@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../lib/html.js';
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
-import { cleanText, normalizeSequenceText } from '../shared.js';
+import { cleanText } from '../shared.js';
 import { LIBRARY_LOOKUP } from './constants.js';
 import { buildFeatureDerivedSequence } from './sequence-utils.js';
 

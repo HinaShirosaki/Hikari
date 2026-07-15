@@ -22,10 +22,9 @@ ui/
     views/<id>-view.css    # per-view styles
     overrides/             # universal layouts (left-rail-template, menus, …)
 config/
-  llm-providers.json       # provider catalog (also generated)
+  codex-models.json        # Codex model catalog (also generated)
 src/renderer/
   bootstrap/index-shell.js # pre-app loading cover, theme application
-  renderer.js              # entry point: imports startRendererApp()
   renderer.js              # browser entry; calls the core directly
   core/start-hikari-core.js # state, services, modules, navigation, search boot
   app/navigation-shell.js  # dock, view switching, page title
@@ -43,7 +42,7 @@ scripts/
 
 `npm run build:ui` runs `scripts/build-ui.mjs`, which:
 
-1. Reads `config/llm-providers.json` and writes `src/main/generated/llm-provider-config.generated.js` and `src/renderer/modules/llm-provider-config.generated.js`. The `allowApiAgent` flag is generated into both modules; keep it `false` for Codex-only release builds.
+1. Reads `config/codex-models.json` and writes `src/main/generated/codex-model-catalog.generated.js` and `src/renderer/modules/codex-model-catalog.generated.js`. The catalog supplies the shared Codex model settings used by both direct features and Agent Chat.
 2. Reads `ui/config/app-registry.json` and writes both `src/renderer/modules/app-registry.generated.js` and `src/renderer/modules/views.js`.
 3. Uses `app-registry.json.viewOrder` to place each declared view between the shell fragments from `ui/config/html-order.json`, then writes `index.html`.
 4. Inserts each declared view stylesheet between `prefixInputs` and `suffixInputs` from `ui/config/css-order.json`, then writes `styles.css`.
@@ -104,8 +103,6 @@ You write only the markup specific to your view. The next page covers exactly wh
 There is one mutable state object created by `loadState()` and passed to every module by reference. Mutations happen in-place; persistence is explicit via the `persist()` callback (writes localStorage and, if `state.settings.storagePath` is set, autosaves to disk through `window.hikariApi.autoSaveDataFile`).
 
 `defaultState` in [src/renderer/modules/app-state/defaults.js](../../src/renderer/modules/app-state/defaults.js) defines every top-level key; [state-normalizer.js](../../src/renderer/modules/app-state/state-normalizer.js) assembles loaded state. If your module needs a new top-level field, update both with a sensible default.
-
-`state.objectGraph` is rebuilt from the rest of the state on every `persist()` in the renderer core. Don't write to it manually.
 
 ## What the dock and navigation give you
 

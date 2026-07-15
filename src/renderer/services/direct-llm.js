@@ -1,11 +1,8 @@
 export function buildDirectLlmSettings(llm = {}) {
-  const provider = String(llm?.provider || '').trim();
   return {
-    provider,
+    provider: 'codex',
     model: String(llm?.model || '').trim(),
-    reasoningEffort: String(llm?.reasoningEffort || '').trim().toLowerCase(),
-    apiEndpoint: provider === 'codex' ? '' : String(llm?.apiEndpoint || '').trim(),
-    apiKey: provider === 'codex' ? '' : String(llm?.apiKey || '').trim()
+    reasoningEffort: String(llm?.reasoningEffort || '').trim().toLowerCase()
   };
 }
 

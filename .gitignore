@@ -25,6 +25,7 @@ Agent.md
 *.log
 logs/
 data/*.log
+/data/chemicals.json
 data/Config/codex-cli-home/log/
 data/Config/codex-cli-home/tmp/
 

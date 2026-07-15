@@ -24,11 +24,7 @@ export function createPapersCommentController(context) {
   }
 
   function clearCommentDraft() {
-    commentState.mode = 'idle';
     commentState.selectedCommentId = '';
-    commentState.draftPageNumber = 0;
-    commentState.draftAnchorX = Number.NaN;
-    commentState.draftAnchorY = Number.NaN;
   }
 
   function syncViewerComments() {
@@ -38,8 +34,6 @@ export function createPapersCommentController(context) {
     paperViewer.setSelectedCommentId(commentState.selectedCommentId);
     paperViewer.setPlacementMode(false);
   }
-
-  function setCommentStatus() {}
 
   function renderSummarySection() {
     const activePaper = getActivePaper();
@@ -157,25 +151,8 @@ export function createPapersCommentController(context) {
     renderCommentSidebar();
   }
 
-  function onViewerPlacement() {}
-
   function onViewerPinSelect(comment) {
     commentState.selectedCommentId = String(comment?.id || '').trim();
-    syncViewerComments();
-  }
-
-  function beginCommentPlacement() {}
-
-  function savePaperComment() {}
-
-  function cancelPaperComment() {
-    resetCommentComposer();
-  }
-
-  function deleteSelectedPaperComment() {}
-
-  function selectCommentForEdit(commentId) {
-    commentState.selectedCommentId = String(commentId || '').trim();
     syncViewerComments();
   }
 
@@ -212,19 +189,12 @@ export function createPapersCommentController(context) {
     bindEvents,
     onViewerClose,
     onViewerPageChange,
-    onViewerPlacement,
     onViewerPinSelect,
-    beginCommentPlacement,
-    savePaperComment,
-    cancelPaperComment,
-    deleteSelectedPaperComment,
     renderCommentSidebar,
     renderBookmarkSection,
     resetCommentComposer,
     clearCommentDraft,
     syncViewerComments,
-    setCommentStatus,
-    selectCommentForEdit,
     primeForPaperOpen,
     renderSummarySection
   };

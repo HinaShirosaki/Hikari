@@ -1,4 +1,4 @@
-# storage-bundle
+# Storage
 
 This folder contains the storage bundle/import pipeline that used to live in one `storage-bundle.js` file.
 

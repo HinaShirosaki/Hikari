@@ -6,8 +6,7 @@ import {
   blockTitle,
   buildAssigneeOptions,
   buildDirectionMaps,
-  notebookEntryLabel,
-  projectNameById
+  notebookEntryLabel
 } from './presentation.js';
 import {
   buildWorkflowExecutionLayout,
@@ -23,7 +22,6 @@ export function createWorkflowRenderer(config = {}) {
   const elements = config?.elements || {};
   const safeText = typeof config?.safeText === 'function' ? config.safeText : String;
   const getBlockType = config?.getBlockType || (() => '');
-  const normalizePlainTextBlock = config?.normalizePlainTextBlock || ((value) => String(value || '').trim());
   const uniqueStrings = config?.uniqueStrings || ((values) => values || []);
   const parseTimestamp = config?.parseTimestamp || (() => 0);
   const formatTimestamp = config?.formatTimestamp || (() => '-');
@@ -59,11 +57,6 @@ export function createWorkflowRenderer(config = {}) {
       getBlockType,
       protocolNameById: protocolNameResolver
     });
-  }
-
-  function templateNameById(templateId) {
-    const template = (state.workflowTemplates || []).find((item) => item.id === templateId);
-    return template?.name || 'Custom Workflow';
   }
 
   function humanizeProtocolStep(step) {

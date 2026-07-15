@@ -27,6 +27,6 @@ renderer ─┘
 
 ## Generated files
 
-Do not hand-edit `renderer/modules/views.js`, `renderer/modules/app-registry.generated.js`, or either `llm-provider-config.generated.js`. `npm run build:ui` regenerates them from `ui/config/app-registry.json`, `ui/`, and `config/llm-providers.json`.
+Do not hand-edit `renderer/modules/views.js`, `renderer/modules/app-registry.generated.js`, or either `codex-model-catalog.generated.js`. `npm run build:ui` regenerates them from `ui/config/app-registry.json`, `ui/`, and `config/codex-models.json`.
 
 For deeper maps, start with `docs/README.md`.

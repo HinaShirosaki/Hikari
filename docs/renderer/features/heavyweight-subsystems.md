@@ -26,7 +26,7 @@ That file owns the renderer-side chat experience:
 - project-scoped context selection
 - history rendering
 - session selection and creation
-- notebook-draft creation from assistant responses
+- review-card presentation and dispatch to feature-owned agent adapters
 - developer-tool testing UI
 
 Subfiles are split cleanly:
@@ -35,10 +35,10 @@ Subfiles are split cleanly:
 - `rendering.js`: message/history DOM rendering
 - `response.js`: normalization and summary helpers for returned agent payloads
 - `state-snapshot.js`: compact experiment/context snapshot generation
-- `notebook-drafts.js`: notebook-draft extraction, autosave, and proposal reconciliation
+- `review-overlay.js`: generic approval/rejection UI dispatched through feature adapters
 - `developer-tools.js`: the developer-mode tool picker/hints
 
-This folder is the best example of a renderer module that is mostly orchestration around the agent subsystem documented elsewhere in [agent/README.md](../../agent/README.md).
+Notebook draft normalization/persistence lives under `biology-notebook/agent/`; generated-protocol normalization/persistence lives under `protocol/agent/`. Agent Chat consumes those owner APIs without defining either record schema itself. This folder is the best example of a renderer module that is mostly orchestration around the agent subsystem documented elsewhere in [agent/README.md](../../agent/README.md).
 
 ## `assay/`
 
@@ -69,6 +69,7 @@ The pure analysis math lives under `assay/analysis/` (`index.js` plus `curve-fit
 Start in `biology-notebook/index.js`. It is the view orchestrator; implementation files are grouped by ownership:
 
 - `entry/`: entry normalization, naming, list/view rendering, and save-record construction
+- `agent/`: assistant notebook-draft normalization, autosave, and planned-page persistence adapter
 - `protocol/`: placeholder editing, snapshot editing, protocol text, and step rendering
 - `project/`: project selection and dashboard rendering
 - `results/`: result tables, linked assay/gel previews, PDF actions, and selection insights
@@ -215,7 +216,7 @@ Start in `tool-box.js` and then immediately open `tool-box/view-manager.js`.
 
 The toolbox is really a collection of mini-tools with two kinds of files:
 
-- pure non-sequence calculators such as `molarity.js`
+- pure cross-feature calculators such as `lib/molarity.js` and `lib/bench-calculations.js`
 - UI initializers such as `molarity-ui.js` and `buffer-ui.js`; sequence/protein UI adapters are owned by `modules/sequence-viewer/calculations/ui/`
 
 Two details matter here:

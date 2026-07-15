@@ -246,11 +246,7 @@ export function initPapersManagement({
   const elements = getPapersElements(documentRef);
   const commentState = {
     currentPageNumber: 1,
-    mode: 'idle',
-    selectedCommentId: '',
-    draftPageNumber: 0,
-    draftAnchorX: Number.NaN,
-    draftAnchorY: Number.NaN
+    selectedCommentId: ''
   };
   const libraryState = {
     selectedFolderKey: '',
@@ -565,7 +561,6 @@ export function initPapersManagement({
     onMetadataResolved: (...args) => context.applyResolvedPdfMetadata(...args),
     onBookmarksResolved: (...args) => context.applyResolvedPdfBookmarks(...args),
     onPageChange: (...args) => context.comments?.onViewerPageChange(...args),
-    onPlacement: (...args) => context.comments?.onViewerPlacement(...args),
     onPinSelect: (...args) => context.comments?.onViewerPinSelect(...args),
     onHighlightSelection: (...args) => context.createPaperHighlight?.(...args),
     onSelectionComment: (...args) => context.createPaperTextComment?.(...args),

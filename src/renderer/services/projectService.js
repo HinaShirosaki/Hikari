@@ -1,8 +1,5 @@
 export function createProjectService(registry) {
   function handleProjectsChanged() {
-    registry.get('synthesisNotebook').renderProjectOptions?.();
-    registry.get('synthesisNotebook').renderProtocolOptions?.();
-    registry.get('synthesisNotebook').renderEntries?.();
     registry.get('biologyNotebook').renderProjectOptions?.();
     registry.get('biologyNotebook').renderProtocolOptions?.();
     registry.get('biologyNotebook').renderEntries?.();

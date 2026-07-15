@@ -3,7 +3,7 @@ import {
   clarifyNotebookNote,
   showTransientNotice
 } from '../../services/notebook-note-tools.js';
-import { formatNotebookTimestamp, notebookPageLabel } from './utils.js';
+import { notebookPageLabel } from './utils.js';
 
 // Recent notebook pages widget — surfaces the six most-recently-updated
 // notebook entries so the bench user can append a quick result note (with

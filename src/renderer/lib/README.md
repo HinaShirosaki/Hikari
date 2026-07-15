@@ -2,7 +2,8 @@
 
 Pure, cross-feature helpers live here. They must not import feature controllers.
 
-- primitives: CSV, HTML, JSON, and numeric normalization
+- primitives: CSV, HTML, JSON, numeric normalization, and unit conversions
+- shared bench calculations: molarity, buffers, and fixed-reaction recipes
 - interaction/state: file-drop and unsaved-draft helpers
 - record models: inventory settings/containers, notebook result tables, and storage paths
 - datasets: `chemistry/`

@@ -17,7 +17,6 @@
   --assay-plate-danger: #9f1c1c;
   --assay-plate-line-soft: rgba(53, 99, 153, 0.14);
   --assay-plate-line: rgba(53, 99, 153, 0.22);
-  --assay-plate-line-strong: rgba(53, 99, 153, 0.46);
   --assay-plate-header-soft: rgba(222, 237, 255, 0.72);
   --assay-plate-header: rgba(222, 237, 255, 0.95);
   --assay-plate-header-solid: rgb(222, 237, 255);
@@ -32,7 +31,6 @@
   --assay-plate-edge: rgba(28, 32, 38, 0.55);
   --assay-plate-skirt: #e8eae3;
   --assay-plate-skirt-edge: #dcdfd6;
-  --assay-plate-skirt-shadow: rgba(20, 24, 30, 0.18);
   --assay-plate-rim: rgba(20, 24, 30, 0.78);
   --assay-plate-bowl: #f6f7f3;
   --assay-plate-bowl-edge: #c9ccc1;

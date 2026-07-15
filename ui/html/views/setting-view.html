@@ -195,32 +195,20 @@
 
             <section class="settings-section" data-settings-panel="llm" hidden>
               <div class="settings-section-head">
-                <h3>LLM Model &amp; Access</h3>
-                <p class="small-note">Configure the provider and endpoint used by the assistant features.</p>
+                <h3>Codex Model &amp; Access</h3>
+                <p class="small-note">Choose the Codex model used by assistant features.</p>
               </div>
               <form id="llm-form" class="stack-form">
                 <label>
-                  Provider
-                  <select id="setting-provider"></select>
-                </label>
-                <label>
                   Model Name
-                  <input id="setting-model" list="setting-model-options" placeholder="Provider model name" />
+                  <input id="setting-model" list="setting-model-options" placeholder="optional, e.g. gpt-5.4" />
                 </label>
                 <datalist id="setting-model-options"></datalist>
                 <label>
                   Reasoning Effort
                   <select id="setting-reasoning-effort"></select>
                 </label>
-                <label>
-                  API Endpoint
-                  <input id="setting-api-endpoint" placeholder="Provider default fills automatically" />
-                </label>
-                <label>
-                  API Key
-                  <input id="setting-api-key" type="password" placeholder="sk-..." />
-                </label>
-                <div id="setting-codex-auth-controls" class="stack-form" hidden>
+                <div id="setting-codex-auth-controls" class="stack-form">
                   <p id="setting-codex-status" class="small-note">Codex login: checking...</p>
                   <p class="small-note">Codex uses a stored OpenAI login. Once signed in, it should stay available after restart until you clear it.</p>
                   <div class="form-actions">

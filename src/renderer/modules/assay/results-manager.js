@@ -41,9 +41,6 @@ export function createAssayResultsManager({
   onResultsChanged
 }) {
   const {
-    assayAnalysisAddColumnGroupBtn,
-    assayAnalysisAddRowGroupBtn,
-    assayAnalysisClearGroupsBtn,
     assayAnalysisColumnGroupsInput,
     assayAnalysisGroupVisualization,
     assayAnalysisGroupNameInput,

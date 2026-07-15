@@ -15,17 +15,16 @@ Electron lifecycle concerns stay in `src/main/app/`. `start-main-app.js` calls `
 1. app metadata and paths
 2. storage plus sequence APIs
 3. agent chat logging / chat-log transform monitor
-4. LLM prompts
-5. npm update checks
-6. Telegram
-7. provider-neutral agent foundation (`core/services/create-agent-services.js`)
-8. MCP host and workspace initializer
-9. Codex runtime
-10. data, agent, and system IPC registration
+4. npm update checks
+5. Telegram
+6. provider-neutral agent foundation (`core/services/create-agent-services.js`)
+7. provider-neutral MCP host
+8. Codex runtime and workspace initializer
+9. data, agent, and system IPC registration
 
 Every `start()` step is best-effort: a failed integration is logged with `console.warn` and must not prevent the main window from working. `shutdown()` stops services in reverse order, logging failures without blocking the rest.
 
-Codex and MCP construction live in `core/services/`. The provider-neutral agent factory must not create either integration. Codex requests ask the MCP service to initialize again, so an app-start MCP failure remains recoverable.
+Codex and MCP construction live in `core/services/`. The provider-neutral agent factory must not create either integration. Codex owns its runtime-home configuration and official skill release; each Codex request asks that workspace initializer to run again, so an app-start failure remains recoverable.
 
 ## Adding a service
 

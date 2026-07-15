@@ -1,10 +1,6 @@
 'use strict';
 
 const { createCodexAgentLlmProvider } = require('./llm-providers/codex-agent-provider.js');
-const { createOpenAiLlmProvider } = require('./llm-providers/openai-provider.js');
-const { createClaudeLlmProvider } = require('./llm-providers/claude-provider.js');
-const { createGeminiLlmProvider } = require('./llm-providers/gemini-provider.js');
-const { createDeepSeekLlmProvider } = require('./llm-providers/deepseek-provider.js');
 
 function defaultAsArray(value) {
   return Array.isArray(value) ? value : [];
@@ -28,18 +24,6 @@ function defaultSafeParseJson(text, fallback = null) {
     // Fallback below.
   }
   return fallback;
-}
-
-function defaultToInputText(role, text) {
-  return {
-    role,
-    content: [{ type: 'input_text', text: String(text || '') }]
-  };
-}
-
-function defaultParsePdfDataUrl(pdfDataUrl) {
-  const match = String(pdfDataUrl || '').trim().match(/^data:application\/pdf(?:;charset=[^;,]+)?;base64,(.+)$/i);
-  return match?.[1] ? String(match[1]).trim() : '';
 }
 
 function normalizeWebUrl(value) {
@@ -70,75 +54,6 @@ function extractSourceDomain(url) {
   }
 }
 
-function defaultExtractResponseText(payload, asArray = defaultAsArray) {
-  if (typeof payload?.output_text === 'string' && payload.output_text.trim()) {
-    return payload.output_text.trim();
-  }
-  const chunks = [];
-  asArray(payload?.output).forEach((item) => {
-    if (item?.type === 'message') {
-      asArray(item.content).forEach((content) => {
-        if (content?.type === 'output_text' && content.text) {
-          chunks.push(content.text);
-        }
-      });
-      return;
-    }
-    if (item?.type === 'output_text' && item.text) {
-      chunks.push(item.text);
-    }
-  });
-  return chunks.join('\n').trim();
-}
-
-function defaultExtractClaudeResponseText(payload, asArray = defaultAsArray) {
-  return asArray(payload?.content)
-    .filter((item) => item?.type === 'text' && item.text)
-    .map((item) => item.text)
-    .join('\n')
-    .trim();
-}
-
-function defaultExtractGeminiResponseText(payload, asArray = defaultAsArray) {
-  const candidate = Array.isArray(payload?.candidates) && payload.candidates.length > 0
-    ? payload.candidates[0]
-    : null;
-  if (!candidate?.content?.parts) {
-    return '';
-  }
-  return asArray(candidate.content.parts)
-    .filter((part) => typeof part?.text === 'string' && part.text.trim())
-    .map((part) => part.text)
-    .join('\n')
-    .trim();
-}
-
-function defaultExtractChatCompletionText(payload, asArray = defaultAsArray) {
-  const message = Array.isArray(payload?.choices) && payload.choices.length > 0
-    ? payload.choices[0]?.message
-    : null;
-  const content = message?.content;
-  if (typeof content === 'string') {
-    return content.trim();
-  }
-  return asArray(content)
-    .map((item) => {
-      if (typeof item === 'string') {
-        return item;
-      }
-      if (typeof item?.text === 'string') {
-        return item.text;
-      }
-      if (typeof item?.content === 'string') {
-        return item.content;
-      }
-      return '';
-    })
-    .filter(Boolean)
-    .join('\n')
-    .trim();
-}
-
 function createAgentLlmProviderBridge(deps = {}) {
   const LLM_PROVIDERS = deps.LLM_PROVIDERS && typeof deps.LLM_PROVIDERS === 'object'
     ? deps.LLM_PROVIDERS
@@ -146,28 +61,10 @@ function createAgentLlmProviderBridge(deps = {}) {
   const asArray = typeof deps.asArray === 'function' ? deps.asArray : defaultAsArray;
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const safeParseJson = typeof deps.safeParseJson === 'function' ? deps.safeParseJson : defaultSafeParseJson;
-  const toInputText = typeof deps.toInputText === 'function' ? deps.toInputText : defaultToInputText;
-  const parsePdfDataUrl = typeof deps.parsePdfDataUrl === 'function' ? deps.parsePdfDataUrl : defaultParsePdfDataUrl;
   const requestCodexCliText = deps.requestCodexCliText;
   const getCodexCliWorkingDirectory = typeof deps.getCodexCliWorkingDirectory === 'function'
     ? deps.getCodexCliWorkingDirectory
     : (() => process.cwd());
-  const requestClaudeMessagesWithBackoff = deps.requestClaudeMessagesWithBackoff;
-  const requestGeminiGenerateContentWithBackoff = deps.requestGeminiGenerateContentWithBackoff;
-  const requestOpenAiResponsesWithBackoff = deps.requestOpenAiResponsesWithBackoff;
-  const requestOpenAiCompatibleChatCompletionsWithBackoff = deps.requestOpenAiCompatibleChatCompletionsWithBackoff;
-  const extractClaudeResponseText = typeof deps.extractClaudeResponseText === 'function'
-    ? deps.extractClaudeResponseText
-    : ((payload) => defaultExtractClaudeResponseText(payload, asArray));
-  const extractGeminiResponseText = typeof deps.extractGeminiResponseText === 'function'
-    ? deps.extractGeminiResponseText
-    : ((payload) => defaultExtractGeminiResponseText(payload, asArray));
-  const extractChatCompletionText = typeof deps.extractChatCompletionText === 'function'
-    ? deps.extractChatCompletionText
-    : ((payload) => defaultExtractChatCompletionText(payload, asArray));
-  const extractResponseText = typeof deps.extractResponseText === 'function'
-    ? deps.extractResponseText
-    : ((payload) => defaultExtractResponseText(payload, asArray));
   const recordAgentLlmTrace = typeof deps.recordAgentLlmTrace === 'function'
     ? deps.recordAgentLlmTrace
     : (async () => {});
@@ -254,79 +151,16 @@ function createAgentLlmProviderBridge(deps = {}) {
     asArray,
     cleanText,
     providerId: LLM_PROVIDERS.CODEX,
-    toInputText,
-    parsePdfDataUrl,
-    requestOpenAiResponsesWithBackoff,
     requestCodexCliText,
     getWorkingDirectory: getCodexCliWorkingDirectory,
-    extractResponseText,
     recordTrace,
     parseJsonObjectFromText,
     buildWebSearchPrompt,
     normalizeWebSearchPayload,
     isAbortError
   });
-  const openAiProvider = createOpenAiLlmProvider({
-    asArray,
-    cleanText,
-    providerId: LLM_PROVIDERS.OPENAI,
-    toInputText,
-    requestOpenAiResponsesWithBackoff,
-    extractResponseText,
-    recordTrace,
-    parseJsonObjectFromText,
-    buildWebSearchPrompt,
-    normalizeWebSearchPayload,
-    isAbortError
-  });
-  const claudeProvider = createClaudeLlmProvider({
-    asArray,
-    cleanText,
-    providerId: LLM_PROVIDERS.CLAUDE,
-    requestClaudeMessagesWithBackoff,
-    extractClaudeResponseText,
-    recordTrace,
-    parseJsonObjectFromText,
-    isAbortError
-  });
-  const geminiProvider = createGeminiLlmProvider({
-    asArray,
-    cleanText,
-    providerId: LLM_PROVIDERS.GEMINI,
-    requestGeminiGenerateContentWithBackoff,
-    extractGeminiResponseText,
-    recordTrace,
-    parseJsonObjectFromText,
-    isAbortError
-  });
-  const deepSeekProvider = createDeepSeekLlmProvider({
-    asArray,
-    cleanText,
-    providerId: LLM_PROVIDERS.DEEPSEEK,
-    requestOpenAiCompatibleChatCompletionsWithBackoff,
-    extractChatCompletionText,
-    recordTrace,
-    parseJsonObjectFromText,
-    isAbortError
-  });
-
   function getProviderAdapter(provider = '') {
-    if (provider === LLM_PROVIDERS.CODEX) {
-      return codexAgentProvider;
-    }
-    if (provider === LLM_PROVIDERS.CLAUDE) {
-      return claudeProvider;
-    }
-    if (provider === LLM_PROVIDERS.GEMINI) {
-      return geminiProvider;
-    }
-    if (provider === LLM_PROVIDERS.DEEPSEEK) {
-      return deepSeekProvider;
-    }
-    if (provider === LLM_PROVIDERS.OPENAI) {
-      return openAiProvider;
-    }
-    return null;
+    return provider === LLM_PROVIDERS.CODEX ? codexAgentProvider : null;
   }
 
   async function requestText(options = {}) {

@@ -34,10 +34,6 @@ export function readChemicalStructureClipboard(options = {}) {
   return readChemicalStructureClipboardInternal(options);
 }
 
-export function readChemicalStructureCandidatesFromClipboard(options = {}) {
-  return readChemicalStructureClipboard(options).then((result) => result.candidates);
-}
-
 export function toChemicalStructureDraftFromCandidate(candidate) {
   const imageDataUrl = normalizeImageDataUrl(candidate?.imageDataUrl || candidate?.source);
   if (imageDataUrl) {

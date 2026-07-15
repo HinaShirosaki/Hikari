@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = path.join(repoRoot, 'src');
+const uiRoot = path.join(repoRoot, 'ui');
+const appRegistryPath = path.join(uiRoot, 'config', 'app-registry.json');
+const cssOrderPath = path.join(uiRoot, 'config', 'css-order.json');
 const failures = [];
 
 function listFiles(rootPath) {
@@ -85,6 +88,25 @@ dependencyEdges.forEach(([fromPath, targetPath]) => {
   if (from.startsWith('src/main/papers/') && target.startsWith('src/main/agent/')) {
     failures.push(`${from} imports Agent internals from ${target}`);
   }
+  if ((from.startsWith('src/main/agent/runtime/') || from.startsWith('src/main/agent/mcp-contract/'))
+    && target.startsWith('src/main/agent/codex-agent/')) {
+    failures.push(`${from} imports Codex-specific code from ${target}`);
+  }
+  if (from.startsWith('src/renderer/modules/selection-insights/')
+    && target.startsWith('src/renderer/modules/agent-chat/')
+    && target !== 'src/renderer/modules/agent-chat/public-api.js') {
+    failures.push(`${from} bypasses the Agent Chat public API via ${target}`);
+  }
+  if (from.startsWith('src/renderer/modules/agent-chat/')
+    && from !== 'src/renderer/modules/agent-chat/index.js'
+    && (target.startsWith('src/renderer/modules/biology-notebook/')
+      || target.startsWith('src/renderer/modules/protocol/'))) {
+    failures.push(`${from} imports feature-owned persistence from ${target}`);
+  }
+  if (from.startsWith('src/renderer/modules/biology-notebook/')
+    && target.startsWith('src/renderer/modules/tool-box/')) {
+    failures.push(`${from} imports Tool Box internals instead of renderer/lib via ${target}`);
+  }
 });
 
 function sourceOwner(filePath) {
@@ -148,7 +170,7 @@ const allowedRendererModuleRootFiles = new Set([
   'app-registry.generated.js',
   'app-state.js',
   'home-dashboard.js',
-  'llm-provider-config.generated.js',
+  'codex-model-catalog.generated.js',
   'tool-box.js',
   'utils.js',
   'views.js'
@@ -177,7 +199,28 @@ allFiles.forEach((filePath) => {
 });
 
 [
+  'self-agent',
+  'csv-io.js',
+  'agent-context-debug.md',
+  'Home Dashboard Prototype.html',
+  'chemicals-test-import.csv',
+  'demo.html',
+  'data/llm-prompts.json',
+  'data/chemicals.json',
   'src/main/sequence-viewer',
+  'src/main/agent/codex-agent/protocol-fallback.js',
+  'src/main/agent/plotly-graph-artifacts.js',
+  'src/main/core/services/create-agent-mcp-initializer.js',
+  'src/main/core/services/create-llm-prompts-service.js',
+  'src/main/agent/tools/agent-tool-call.js',
+  'src/main/agent/tools/agent-tool-provide.js',
+  'src/main/papers/store/intake/index.js',
+  'src/renderer/modules/agent-chat/notebook-drafts.js',
+  'src/renderer/modules/pdf-export/template.js',
+  'src/renderer/modules/sequence-viewer/sequence-input.js',
+  'src/renderer/modules/tool-box/bench-calculations.js',
+  'src/renderer/modules/tool-box/buffer.js',
+  'src/renderer/modules/tool-box/molarity.js',
   'src/renderer/modules/tool-box/sequence.js',
   'src/renderer/modules/tool-box/oligo.js',
   'src/renderer/modules/tool-box/oligo-ui.js',
@@ -188,10 +231,17 @@ allFiles.forEach((filePath) => {
   'src/renderer/modules/tool-box/translation-ui.js',
   'src/renderer/modules/tool-box/extinction-ui.js',
   'src/renderer/services/sequenceService.js',
+  'tests/suites/core/agent-suite/science-and-protocol-suite/prompt-and-fallback-suite.js',
+  'tests/suites/core/app-modules-suite/assay-and-object-graph-suite.js',
   'src/main/ipc/index.js',
   'src/renderer/module-runtime.js',
   'src/renderer/shared-left-rail.js',
-  'src/renderer/app/start-renderer-app.js'
+  'src/renderer/app/start-renderer-app.js',
+  'assets/icons/synthesis-notebook.svg',
+  'ui/assets/96-well-plate-reference.svg',
+  'ui/css/overrides/shell-first-remake.css',
+  'ui/css/views/synthesis-notebook-view.css',
+  'ui/html/views/synthesis-notebook-view.html'
 ].forEach((retiredPath) => {
   if (fs.existsSync(path.join(repoRoot, retiredPath))) {
     failures.push(`${retiredPath} is a retired compatibility path`);
@@ -201,6 +251,92 @@ allFiles.forEach((filePath) => {
 allFiles
   .filter((filePath) => path.basename(filePath) === '.DS_Store')
   .forEach((filePath) => failures.push(`${relative(filePath)} is an OS metadata file`));
+
+const appRegistry = JSON.parse(fs.readFileSync(appRegistryPath, 'utf8'));
+const viewEntries = [
+  ...(Array.isArray(appRegistry.apps) ? appRegistry.apps : []),
+  ...(Array.isArray(appRegistry.supplementalViews) ? appRegistry.supplementalViews : [])
+];
+const expectedViewIds = new Set(viewEntries.map((entry) => String(entry?.viewId || '').trim()).filter(Boolean));
+const htmlViewRoot = path.join(uiRoot, 'html', 'views');
+const actualViewIds = new Set(
+  fs.readdirSync(htmlViewRoot, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.html'))
+    .map((entry) => entry.name.replace(/\.html$/, ''))
+);
+expectedViewIds.forEach((viewId) => {
+  if (!actualViewIds.has(viewId)) {
+    failures.push(`ui/html/views/${viewId}.html is missing for a registered view`);
+  }
+});
+actualViewIds.forEach((viewId) => {
+  if (!expectedViewIds.has(viewId)) {
+    failures.push(`ui/html/views/${viewId}.html is an unregistered view fragment`);
+  }
+});
+
+const cssOrder = JSON.parse(fs.readFileSync(cssOrderPath, 'utf8'));
+const allowedCssFiles = new Set([
+  ...(Array.isArray(cssOrder.prefixInputs) ? cssOrder.prefixInputs : []),
+  ...(Array.isArray(cssOrder.suffixInputs) ? cssOrder.suffixInputs : []),
+  ...viewEntries
+    .filter((entry) => entry?.includeStyle !== false)
+    .map((entry) => `ui/css/views/${String(entry.viewId || '').trim()}.css`)
+]);
+listFiles(path.join(uiRoot, 'css'))
+  .filter((filePath) => filePath.endsWith('.css'))
+  .map(relative)
+  .forEach((filePath) => {
+    if (!allowedCssFiles.has(filePath)) {
+      failures.push(`${filePath} is not part of the generated CSS bundle`);
+    }
+  });
+allowedCssFiles.forEach((filePath) => {
+  if (!fs.existsSync(path.join(repoRoot, filePath))) {
+    failures.push(`${filePath} is configured for the CSS bundle but missing`);
+  }
+});
+
+const runtimeReferenceRoots = [sourceRoot, uiRoot, path.join(repoRoot, 'config')];
+const runtimeReferenceText = runtimeReferenceRoots
+  .flatMap(listFiles)
+  .filter((filePath) => /\.(?:css|html|js|json|mjs)$/.test(filePath))
+  .map((filePath) => fs.readFileSync(filePath, 'utf8'))
+  .join('\n');
+const referencedRuntimeAssets = new Set(
+  [...runtimeReferenceText.matchAll(/(?:assets\/icons|assets\/fonts|ui\/assets)\/[^\s"'()]+/g)]
+    .map((match) => match[0])
+);
+referencedRuntimeAssets.forEach((assetPath) => {
+  if (!fs.existsSync(path.join(repoRoot, assetPath))) {
+    failures.push(`${assetPath} is referenced by runtime source but missing`);
+  }
+});
+[
+  ['assets/icons', /\.svg$/],
+  ['ui/assets', /./]
+].forEach(([assetFolder, assetPattern]) => {
+  const assetRoot = path.join(repoRoot, assetFolder);
+  if (!fs.existsSync(assetRoot)) {
+    return;
+  }
+  listFiles(assetRoot)
+    .filter((filePath) => assetPattern.test(path.basename(filePath)))
+    .forEach((filePath) => {
+      if (!runtimeReferenceText.includes(path.basename(filePath))) {
+        failures.push(`${relative(filePath)} is an unreferenced runtime asset`);
+      }
+    });
+});
+
+const fontRoot = path.join(repoRoot, 'assets', 'fonts');
+listFiles(fontRoot)
+  .filter((filePath) => /\.(?:ttf|woff2?)$/i.test(filePath))
+  .forEach((filePath) => {
+    if (!runtimeReferenceText.includes(path.basename(filePath))) {
+      failures.push(`${relative(filePath)} is an unreferenced font asset`);
+    }
+  });
 
 if (failures.length) {
   console.error(`Source layout check failed with ${failures.length} issue(s):`);

@@ -6,18 +6,6 @@ const {
 } = require('../../lib/llm/runtime-helpers.js');
 const { createAgentLlmProviderBridge } = require('../../agent/shared/agent-llm-provider-bridge.js');
 const {
-  parsePdfDataUrl,
-  defaultToInputText,
-  defaultExtractResponseText,
-  defaultExtractClaudeResponseText,
-  defaultExtractGeminiResponseText,
-  defaultExtractChatCompletionText,
-  requestOpenAiResponsesWithBackoff,
-  requestOpenAiCompatibleChatCompletionsWithBackoff,
-  requestClaudeMessagesWithBackoff,
-  requestGeminiGenerateContentWithBackoff
-} = require('../../lib/llm/llm-provider-runtime.js');
-const {
   runPythonSandbox,
   createManagedPythonSandboxRuntime
 } = require('../../agent/tools/agent-python-sandbox.js');
@@ -65,27 +53,9 @@ const {
 const { asArray, createUniqueStrings } = require('../../data/value-utils.js');
 const { STORAGE } = require('../../../shared/ipc/channels');
 
-function renderPromptTemplate(template, vars = {}) {
-  const source = String(template || '');
-  return source.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, key) => String(vars[key] ?? ''));
-}
-
 function createMainAgentServices(deps = {}) {
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const safeParseJson = typeof deps.safeParseJson === 'function' ? deps.safeParseJson : defaultSafeParseJson;
-  const toInputText = typeof deps.toInputText === 'function' ? deps.toInputText : defaultToInputText;
-  const extractResponseText = typeof deps.extractResponseText === 'function'
-    ? deps.extractResponseText
-    : defaultExtractResponseText;
-  const extractClaudeResponseText = typeof deps.extractClaudeResponseText === 'function'
-    ? deps.extractClaudeResponseText
-    : defaultExtractClaudeResponseText;
-  const extractGeminiResponseText = typeof deps.extractGeminiResponseText === 'function'
-    ? deps.extractGeminiResponseText
-    : defaultExtractGeminiResponseText;
-  const extractChatCompletionText = typeof deps.extractChatCompletionText === 'function'
-    ? deps.extractChatCompletionText
-    : defaultExtractChatCompletionText;
   const LLM_PROVIDERS = deps.LLM_PROVIDERS && typeof deps.LLM_PROVIDERS === 'object'
     ? deps.LLM_PROVIDERS
     : {};
@@ -155,21 +125,6 @@ function createMainAgentServices(deps = {}) {
     }));
   const uniqueStrings = createUniqueStrings(cleanText);
 
-  const sharedLlmTransportDeps = {
-    parsePdfDataUrl,
-    toInputText,
-    requestCodexCliText,
-    getCodexCliWorkingDirectory,
-    requestClaudeMessagesWithBackoff,
-    requestGeminiGenerateContentWithBackoff,
-    requestOpenAiCompatibleChatCompletionsWithBackoff,
-    requestOpenAiResponsesWithBackoff,
-    extractClaudeResponseText,
-    extractGeminiResponseText,
-    extractChatCompletionText,
-    extractResponseText
-  };
-
   const llmTraceRecorderRef = {
     current: async () => {}
   };
@@ -179,7 +134,8 @@ function createMainAgentServices(deps = {}) {
     cleanText,
     safeParseJson,
     recordAgentLlmTrace: (...args) => llmTraceRecorderRef.current(...args),
-    ...sharedLlmTransportDeps
+    requestCodexCliText,
+    getCodexCliWorkingDirectory
   });
 
   const controllerUtils = createAgentControllerUtils({
@@ -212,9 +168,6 @@ function createMainAgentServices(deps = {}) {
   const directLlmRegistry = registerDefaultDirectLlmModules(createDirectLlmModuleRegistry({
     cleanText,
     LLM_PROVIDERS,
-    DEFAULT_LLM_PROVIDER,
-    normalizeLlmProvider,
-    defaultLlmEndpointForProvider,
     defaultAgentModelForProvider,
     requestText: agentLlmRuntimeHelpers.requestText,
     requestStructuredJsonPayload: agentLlmRuntimeHelpers.requestStructuredJsonPayload,
@@ -230,9 +183,7 @@ function createMainAgentServices(deps = {}) {
   agentRuntimeRegistry.registerRuntimeFactory('protocol-matching', createProtocolMatchingRuntime);
   agentRuntimeRegistry.registerRuntimeFactory('notebook-generation', createNotebookGenerationRuntime);
 
-  const agentRuntimeSupport = createAgentRuntimeSupport({
-    renderPromptTemplate
-  });
+  const agentRuntimeSupport = createAgentRuntimeSupport();
   const agentSkillRuntime = createAgentSkillRuntime({
     cleanText,
     extraSkillDirs: Array.isArray(deps.agentSkillDirs) ? deps.agentSkillDirs : []
@@ -276,7 +227,6 @@ function createMainAgentServices(deps = {}) {
   agentToolRuntime = {
     normalizeToolInvocationArgs,
     normalizeAgentSnapshot: agentRuntimeSupport.normalizeAgentSnapshot,
-    buildAgentSystemPrompt: agentRuntimeSupport.buildAgentSystemPrompt,
     listSkills: agentSkillRuntime.listSkills,
     getSkill: agentSkillRuntime.getSkill,
     parseSkillInvocation: agentSkillRuntime.parseSkillInvocation,

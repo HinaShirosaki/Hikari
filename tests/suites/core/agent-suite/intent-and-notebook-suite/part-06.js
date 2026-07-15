@@ -2,8 +2,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart06(context = {}
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-    // The intent-parser and protocol-notebook tests moved out with /self-agent when it
-    // was isolated; the src-backed protocol-matching tests below remain.
     test('protocol matching runtime selects exact match deterministically', async () => {
       const runtime = agentProtocolMatching.createProtocolMatchingRuntime();
       const selection = await runtime.selectProtocol({

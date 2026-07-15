@@ -5,7 +5,6 @@
 }
 
 .left-rail-template.personal-inventory-layout {
-  --app-left-rail-bleed: 18px;
   --left-rail-main-gap: 18px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
@@ -439,7 +438,6 @@
   --plate-body: var(--assay-plate-body);
   --plate-edge: var(--assay-plate-edge);
   --plate-skirt: var(--assay-plate-skirt);
-  --plate-skirt-shadow: var(--assay-plate-skirt-shadow);
   --well-rim: var(--assay-plate-rim);
   --well-bowl: var(--assay-plate-bowl);
   border-radius: 14px;

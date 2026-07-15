@@ -26,7 +26,13 @@
 @import url("./ui/css/views/tool-box-view.css");
 @import url("./ui/css/views/sequence-viewer-view.css");
 @import url("./ui/css/overrides/cross-view-fixes.css");
-@import url("./ui/css/overrides/shell-first-remake.css");
+@import url("./ui/css/views/tool-box-shell-overrides.css");
+@import url("./ui/css/views/sample-registry-shell-overrides.css");
+@import url("./ui/css/views/protocol-management-shell-overrides.css");
+@import url("./ui/css/views/assay-shell-overrides.css");
+@import url("./ui/css/views/workflow-shell-overrides.css");
+@import url("./ui/css/views/papers-shell-overrides.css");
+@import url("./ui/css/views/sequence-viewer-shell-overrides.css");
 @import url("./ui/css/overrides/left-rail-template.css");
 @import url("./ui/css/overrides/universal-menus.css");
 @import url("./ui/css/overrides/universal-dialogs.css");

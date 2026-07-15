@@ -8,6 +8,8 @@ const CSS_DIR = path.join(ROOT_DIR, 'ui', 'css');
 const CSS_ORDER_PATH = path.join(ROOT_DIR, 'ui', 'config', 'css-order.json');
 const COLOR_LITERAL_PATTERN = /#[0-9a-f]{3,8}\b|rgba?\s*\(|hsla?\s*\(/i;
 const CUSTOM_PROPERTY_PATTERN = /(--[a-zA-Z0-9_-]+)\s*:/g;
+const CUSTOM_PROPERTY_VAR_PATTERN = /var\(\s*(--[a-zA-Z0-9_-]+)/g;
+const CUSTOM_PROPERTY_SCRIPT_PATTERN = /(?:setProperty|getPropertyValue)\(\s*['"](--[a-zA-Z0-9_-]+)['"]/g;
 
 function toPosix(filePath) {
   return filePath.split(path.sep).join('/');
@@ -33,6 +35,22 @@ async function listCssFiles(directory) {
   return files.sort();
 }
 
+async function listTextFiles(directory) {
+  const entries = await fs.readdir(directory, { withFileTypes: true });
+  const files = [];
+
+  for (const entry of entries) {
+    const absolutePath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await listTextFiles(absolutePath));
+    } else if (entry.isFile() && /\.(?:html|js|mjs)$/.test(entry.name)) {
+      files.push(absolutePath);
+    }
+  }
+
+  return files;
+}
+
 function modulePrefixForPalette(filePath) {
   const fileName = path.basename(filePath);
   if (fileName === 'palette.css') {
@@ -45,6 +63,8 @@ const cssFiles = await listCssFiles(CSS_DIR);
 const paletteFiles = cssFiles.filter((filePath) => path.basename(filePath).endsWith('palette.css'));
 const paletteSet = new Set(paletteFiles);
 const errors = [];
+const customPropertyDeclarations = new Map();
+const customPropertyReferences = new Set();
 
 for (const filePath of cssFiles) {
   const relativePath = toPosix(path.relative(ROOT_DIR, filePath));
@@ -66,6 +86,33 @@ for (const filePath of cssFiles) {
       }
     }
   }
+
+
+  for (const match of source.matchAll(CUSTOM_PROPERTY_PATTERN)) {
+    const owners = customPropertyDeclarations.get(match[1]) || new Set();
+    owners.add(relativePath);
+    customPropertyDeclarations.set(match[1], owners);
+  }
+  for (const match of source.matchAll(CUSTOM_PROPERTY_VAR_PATTERN)) {
+    customPropertyReferences.add(match[1]);
+  }
+}
+
+const runtimeTextFiles = [
+  ...await listTextFiles(path.join(ROOT_DIR, 'src')),
+  ...await listTextFiles(path.join(ROOT_DIR, 'ui', 'html'))
+];
+for (const filePath of runtimeTextFiles) {
+  const source = stripComments(await fs.readFile(filePath, 'utf8'));
+  for (const match of source.matchAll(CUSTOM_PROPERTY_SCRIPT_PATTERN)) {
+    customPropertyReferences.add(match[1]);
+  }
+}
+
+for (const [propertyName, owners] of customPropertyDeclarations) {
+  if (!customPropertyReferences.has(propertyName)) {
+    errors.push(`${[...owners].join(', ')}: ${propertyName} is declared but never consumed`);
+  }
 }
 
 const cssOrder = JSON.parse(await fs.readFile(CSS_ORDER_PATH, 'utf8'));
@@ -84,5 +131,5 @@ if (errors.length) {
   }
   process.exitCode = 1;
 } else {
-  console.log(`CSS color contract passed: ${paletteFiles.length} palettes, no raw colors outside palettes.`);
+  console.log(`CSS color contract passed: ${paletteFiles.length} palettes, no raw colors or unused custom properties.`);
 }

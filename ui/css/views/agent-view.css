@@ -28,7 +28,6 @@ body.agent-view-fixed-scroll .workspace-main {
 
 /* Extracted from ui/css/base/core.css */
 .left-rail-template.agent-chat-layout {
-  --app-left-rail-bleed: 18px;
   --left-rail-main-gap: 18px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
@@ -924,10 +923,6 @@ details.agent-thinking-trace:not([open]) > .agent-thinking-trace-list {
 
   .agent-session-rail {
     overflow: visible;
-  }
-
-  .agent-session-panel {
-    min-height: 220px;
   }
 
   .agent-developer-tool-grid {
@@ -2193,10 +2188,6 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   .left-rail-template.agent-chat-layout > .agent-chat-panel.left-rail-template__main {
     padding-left: 0;
     overflow: hidden;
-  }
-
-  .left-rail-template.agent-chat-layout .agent-session-panel {
-    min-height: 0;
   }
 
   .left-rail-template.agent-chat-layout > .agent-session-rail.left-rail-template__rail--pinned {

@@ -3,7 +3,6 @@
 This folder holds reusable support code for the root `test.js` runner.
 
 - `runtime.js`: lightweight ESM loader, mock DOM helpers, storage helpers, and small polyfills used across suites.
-- `agent-simulation.js`: deterministic mocked agent/tool routing fixtures used by contract and behavior tests.
 
 Maintenance notes:
 

@@ -2,7 +2,7 @@ import {
   getLlmModelConfig,
   getLlmProviderModelOptions,
   normalizeReasoningEffort
-} from '../llm-provider-config.generated.js';
+} from '../codex-model-catalog.generated.js';
 
 export function normalizeCodexCatalog(rawCatalog) {
   const source = rawCatalog && typeof rawCatalog === 'object' ? rawCatalog : {};

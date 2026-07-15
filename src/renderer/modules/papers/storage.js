@@ -1,12 +1,3 @@
-export function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Failed to read PDF file.'));
-    reader.readAsDataURL(file);
-  });
-}
-
 export function fileToBytes(file) {
   if (file && typeof file.arrayBuffer === 'function') {
     return file.arrayBuffer().then((buffer) => new Uint8Array(buffer));
@@ -24,15 +15,6 @@ export function fileToBytes(file) {
     reader.onerror = () => reject(new Error('Failed to read PDF file.'));
     reader.readAsArrayBuffer(file);
   });
-}
-
-export function extractBase64Payload(dataUrl) {
-  const source = String(dataUrl || '');
-  const commaIndex = source.indexOf(',');
-  if (commaIndex < 0) {
-    return '';
-  }
-  return source.slice(commaIndex + 1).trim();
 }
 
 export function sanitizeFolderName(value) {

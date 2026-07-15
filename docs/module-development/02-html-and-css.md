@@ -94,10 +94,11 @@ If your view is a single column (e.g. Home or a dashboard), drop the wrapper and
 
 | # | Layer | Purpose |
 | --- | --- | --- |
-| 1 | `ui/css/base/core.css` | design tokens, typography, primitive elements (`button`, `input`, `.panel`, `.tile`, `.primary-btn`, `.small-note`, `.list-row`, …) |
-| 2 | `ui/css/themes/modes.css` | day / night theme variables |
-| 3..N | `ui/css/views/*-view.css` | per-view styles (one file per module) |
-| last | `ui/css/overrides/*.css` | universal layouts and corrective rules: `cross-view-fixes`, `shell-first-remake`, `left-rail-template`, `universal-menus`, `universal-left-rail-lists` |
+| 1 | `ui/css/base/palette.css`, `ui/css/base/core.css` | shared colors, typography, and primitive elements (`button`, `input`, `.panel`, `.tile`, `.primary-btn`, `.small-note`, `.list-row`, …) |
+| 2 | `ui/css/themes/modes.css` plus view palette files | day/night variables and feature-specific palette aliases |
+| 3..N | `ui/css/views/*-view.css` | per-view styles discovered from the app registry |
+| suffix | `ui/css/views/*-shell-overrides.css` | late-loading feature-owned shell corrections for views that need them |
+| last | `ui/css/overrides/*.css` | genuinely shared layouts and corrective rules: `cross-view-fixes`, `left-rail-template`, `universal-menus`, `universal-dialogs`, `universal-left-rail-lists` |
 
 Tokens you should reuse rather than redefine:
 

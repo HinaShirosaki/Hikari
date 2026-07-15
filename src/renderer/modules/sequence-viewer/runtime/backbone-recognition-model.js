@@ -104,12 +104,6 @@ function getRecognitionSelectedCandidate(match, candidateId = '') {
     || null;
 }
 
-function buildBackboneRecognitionFeatureId(role, match) {
-  const safeRole = cleanText(role, 32).toLowerCase() || 'feature';
-  const safeHostId = cleanText(match?.hostVectorId, 120) || 'vector';
-  return `${FEATURE_SOURCE_BACKBONE_RECOGNITION}_${safeRole}_${safeHostId}`;
-}
-
 function normalizeRecognitionSegments(segments, sequenceLength) {
   const safeLength = Math.max(0, Number(sequenceLength) || 0);
   return (Array.isArray(segments) ? segments : [])

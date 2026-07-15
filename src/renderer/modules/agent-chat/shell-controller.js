@@ -83,6 +83,7 @@ export function createAgentChatShellController({
   persist,
   safeText,
   runtime,
+  notebookDraftAdapter,
   hasImageCapture = false
 }) {
   let sessionManager = null;
@@ -190,7 +191,13 @@ export function createAgentChatShellController({
     const shouldStickToBottom = options.forceScroll === true
       || dom.historyNode.childElementCount === 0
       || isHistoryNearBottom();
-    renderingModule.renderHistory({ historyNode: dom.historyNode, messages: visibleMessages, state, safeText });
+    renderingModule.renderHistory({
+      historyNode: dom.historyNode,
+      messages: visibleMessages,
+      state,
+      safeText,
+      notebookDraftAdapter
+    });
     if (shouldStickToBottom) {
       scrollHistoryToBottom(options.smoothScroll === true);
       return;

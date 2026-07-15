@@ -23,7 +23,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       readLocalSource('src', 'main', 'preload', 'api', 'system-api.js')
     ].join('\n');
 
-    test('agent registrar keeps intent-only lifecycle stages and replay IPC handlers', () => {
+    test('agent registrar keeps Codex-only lifecycle stages and replay IPC handlers', () => {
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerCoreSource = fs.readFileSync(agentRegistrarPath('agent-controller-core.js'), 'utf8');
       const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
@@ -31,8 +31,7 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(agentChatHandlerSource, /createLifecycleRecorder/);
       assert.match(agentChatHandlerSource, /recordLifecycleEvent/);
       assert.match(agentChatHandlerSource, /appendAgentChatLogEntry/);
-      assert.match(controllerCoreSource, /controller_intent_only_selected/);
-      // The self-implemented API agent was extracted to /self-agent and is no longer wired in.
+      assert.doesNotMatch(controllerCoreSource, /controller_intent_only_selected/);
       assert.doesNotMatch(controllerCoreSource, /require\('\.\/api-agent-controller'\)/);
       assert.match(controllerCoreSource, /controller_api_agent_disabled/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_LIST_REQUESTS/);
@@ -52,19 +51,16 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('agent no longer depends on a serialized io contract file', () => {
       const mainSource = readMainProcessSource();
       const preloadSource = readPreloadSource();
-      const promptsSource = fs.readFileSync(path.join(__dirname, 'data', 'llm-prompts.json'), 'utf8');
       assert.equal(mainSource.includes('agent-io-contract.json'), false);
       assert.equal(mainSource.includes("agent:get-io-contract"), false);
       assert.equal(preloadSource.includes('getAgentIoContract'), false);
-      assert.equal(promptsSource.includes('agent-io-contract.json'), false);
     });
 
-    test('agent runtime support keeps snapshot normalization and synthesis helpers outside main', () => {
+    test('agent runtime support keeps provider-neutral snapshot and lookup helpers outside main', () => {
       const runtimeSupportSource = fs.readFileSync(agentPath('runtime', 'agent-runtime-support.js'), 'utf8');
       assert.match(runtimeSupportSource, /function normalizeAgentSnapshot\(rawSnapshot\)/);
-      assert.match(runtimeSupportSource, /function buildAgentSystemPrompt\(projectName, prompts\)/);
-      assert.match(runtimeSupportSource, /function buildAgentSynthesisPrompt\(_requiresApproval, prompts\)/);
-      assert.match(runtimeSupportSource, /function normalizeAgentOutput\(raw, fallbackText\)/);
+      assert.match(runtimeSupportSource, /function pickTopMatches\(items, buildSearchText, query, limit\)/);
+      assert.doesNotMatch(runtimeSupportSource, /buildAgentSystemPrompt|buildAgentSynthesisPrompt|normalizeAgentOutput/);
     });
 
     test('generic agent tool catalog keeps key retrieval and execution tools', () => {
@@ -165,8 +161,6 @@ module.exports = function registerAgentContractsA(context = {}) {
     });
 
     test('protocol runtimes preserve placeholder-fill and tie-break prompt guidance after extraction', () => {
-      // The protocol-notebook runtime assertions moved out with /self-agent when it was
-      // isolated; the src-backed notebook-generation and protocol-matching checks remain.
       const protocolMatchingSource = fs.readFileSync(agentPath('tools', 'agent-protocol-matching.js'), 'utf8');
       const notebookGenerationSource = fs.readFileSync(agentPath('tools', 'agent-notebook-generation.js'), 'utf8');
       assert.match(notebookGenerationSource, /Extract exact value spans from the latest user text/);
@@ -177,9 +171,6 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(notebookGenerationSource, /Example follow-up:/);
       assert.match(protocolMatchingSource, /do not be over-cautious/);
     });
-
-    // The 'agent registrar hard-errors when intent parser output is invalid' test asserted
-    // on /self-agent's api-agent-controller source; it moved out when self-agent was isolated.
 
     test('purchase recommendation runtime and external-link bridge are wired across main and renderer contracts', () => {
       const purchaseSource = fs.readFileSync(agentPath('tools', 'agent-purchase-recommendation.js'), 'utf8');
@@ -197,8 +188,6 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(mainAgentServicesSource, /const purchaseRecommendationRuntime = createPurchaseRecommendationRuntime/);
       assert.match(mainAgentServicesSource, /purchaseRecommendationRuntime,/);
       assert.match(executorsSource, /registerToolExecutor\('purchase-recommendation'/);
-      // Purchase-recommendation dispatch assertions moved out with /self-agent's
-      // agent-intent-dispatcher when self-agent was isolated.
       assert.match(preloadSource, /openExternalUrl:\s*\(url\)\s*=>\s*ipcRenderer\.invoke\(SYSTEM\.OPEN_EXTERNAL_URL, \{ url \}\)/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(SYSTEM\.OPEN_EXTERNAL_URL/);
       assert.match(systemRegistrarSource, /shell\.openExternal\(url\)/);
@@ -209,7 +198,6 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('agent tool loading and execution helpers expose catalogs and generic executor registry', () => {
       const loadingSource = fs.readFileSync(agentPath('tools', 'agent-tool-loading.js'), 'utf8');
       const executionSource = fs.readFileSync(agentPath('tools', 'agent-tool-execution.js'), 'utf8');
-      const wrapperSource = fs.readFileSync(agentPath('tools', 'agent-tool-call.js'), 'utf8');
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
       assert.equal(Array.isArray(toolsCatalog), true);
@@ -259,8 +247,6 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.match(loadingSource, /Short description:/);
       assert.doesNotMatch(loadingSource, /Usage: \$/m);
       assert.match(executionSource, /Object\.entries\(ensureObject\(deps\.toolExecutors\)\)/);
-      assert.match(wrapperSource, /agent-tool-loading\.js/);
-      assert.match(wrapperSource, /agent-tool-execution\.js/);
       assert.equal(executionSource.includes('createDefaultAgentToolBindingBundle'), false);
       assert.equal(/["']inventory-lookup["']/.test(executionSource), false);
       assert.equal(/["']notebook-lookup["']/.test(executionSource), false);
@@ -289,10 +275,8 @@ module.exports = function registerAgentContractsA(context = {}) {
         ['tools', 'agent-notebook-lookup.js'],
         ['tools', 'Tools.json'],
         ['tools', 'Tool-call.json'],
-        ['tools', 'agent-tool-provide.js'],
         ['tools', 'agent-tool-loading.js'],
         ['tools', 'agent-tool-execution.js'],
-        ['tools', 'agent-tool-call.js'],
         ['tools', 'agent-notebook-generation.js'],
         ['tools', 'agent-notebook-draft.js'],
         ['tools', 'agent-protocol-matching.js'],

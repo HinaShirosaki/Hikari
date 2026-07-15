@@ -3,9 +3,6 @@ module.exports = function registerLoopRuntimeEdgeAndProtocolSuite(context = {}) 
   const __dirname = context.__dirname || process.cwd();
 
   with (scope) {
-    // The science-reasoning-loop edge-case tests moved out with /self-agent when it
-    // was isolated; the src-backed protocol-generation tests below remain.
-
     test('protocol generation runtime normalizes import-ready protocol JSON without an llm call', async () => {
       let createIdCounter = 0;
       const requestOptions = [];

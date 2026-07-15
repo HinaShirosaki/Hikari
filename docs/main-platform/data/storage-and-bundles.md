@@ -2,7 +2,7 @@
 
 The data-persistence story in the `src/main/` platform layer (`storage/`, `data/`, `lib/`) is built around a compact primary snapshot plus heavier sidecars.
 
-> Layout note: `data-helpers.js` and `data-snapshot-utils.js` now live under `data/`, and the persistence engine is the `storage/` folder (entry: `storage-bundle/index.js`).
+> Layout note: `data-helpers.js` and `data-snapshot-utils.js` live under `data/`, and the persistence engine is the `storage/` folder (entry: `storage/index.js`).
 
 ## The compact snapshot
 
@@ -13,7 +13,6 @@ Its job is to strip the heavy searchable data out of the main JSON file before i
 - clears `protocols`
 - clears `notebookEntries`
 - clears `samples`
-- clears the derived `objectGraph`
 - clears `labInventory.chemicals`
 - clears `inventory`
 - keeps lightweight bundle metadata under `data_bundle`
@@ -38,9 +37,9 @@ Internally those all funnel into:
 
 The key detail is that persistence is not “write one JSON file and stop.” A save also syncs the bundle sidecars and SQLite index through `syncBundleFromSnapshot(...)`.
 
-## `storage-bundle/` is the real persistence engine
+## `storage/` is the persistence engine
 
-This folder defines the on-disk bundle layout. Its work is split across focused modules — `storage-paths.js`, `storage-sidecars.js`, `storage-manifest.js`, `storage-hydration.js`, `storage-import.js`, the `storage-sql-read/write/schema.js` trio, `workflow-storage.js`, and `paper-discovery.js` — re-exported from `storage-bundle/index.js`.
+This folder defines the on-disk bundle layout. Its work is split across focused modules — `storage-paths.js`, `storage-sidecars.js`, `storage-manifest.js`, `storage-hydration.js`, `storage-import.js`, `storage-sql-read.js`, `storage-sql-write.js`, `storage-sql-schema.js`, `workflow-storage.js`, and `paper-discovery.js` — re-exported from `storage/index.js`.
 
 Given a base data file, it derives:
 
@@ -109,4 +108,4 @@ The persistence model here is trading simplicity for scalability:
 - the sidecars keep large structured collections out of the primary snapshot
 - the SQLite index makes lookup-oriented features fast
 
-That is why several seemingly unrelated helpers in this folder all point back to `storage-bundle.js`. It is the center of gravity for the app's durable data layout.
+That is why several seemingly unrelated helpers share the `storage/index.js` public surface. The `storage/` package is the center of gravity for the app's durable data layout.

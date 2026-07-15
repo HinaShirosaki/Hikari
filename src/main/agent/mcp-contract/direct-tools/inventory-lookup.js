@@ -4,7 +4,6 @@ const {
   buildCommonLookupInputSchema,
   buildReadOnlyToolAnnotations,
   compactObject,
-  ensureObject,
   normalizeLookupQuery,
   normalizeParserPayload,
   runAppTool,

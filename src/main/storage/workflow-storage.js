@@ -10,8 +10,7 @@ const {
   loadSqlJs,
   parseJsonObject,
   readJsonFile,
-  sanitizeFolderName,
-  toPosixRelative
+  sanitizeFolderName
 } = require('./storage-utils');
 
 const WORKFLOW_ROOT_FOLDER_NAME = 'Workflow';

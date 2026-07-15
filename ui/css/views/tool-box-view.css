@@ -1,7 +1,6 @@
 /* tool-box-view */
 
 .left-rail-template.tool-layout {
-  --app-left-rail-bleed: 24px;
   --left-rail-main-gap: 24px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
@@ -608,8 +607,6 @@ body.theme-night .crispr-risk-high {
 
 body.ui-neutral-compact .sequence-block,
 body.ui-neutral-compact .calc-output,
-body.ui-neutral-compact .reaction-number,
-body.ui-neutral-compact .list-main-text span,
 body.ui-neutral-compact input[id*="id"],
 body.ui-neutral-compact input[id*="code"],
 body.ui-neutral-compact input[id*="cas"],
@@ -620,7 +617,6 @@ body.ui-neutral-compact input[id*="api-key"] {
 
 body.ui-neutral-compact .calc-output,
 body.ui-neutral-compact .sequence-block,
-body.ui-neutral-compact .reaction-number,
 body.ui-neutral-compact input[id*="id"],
 body.ui-neutral-compact input[id*="code"],
 body.ui-neutral-compact input[id*="cas"],

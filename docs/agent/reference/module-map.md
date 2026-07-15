@@ -1,105 +1,74 @@
-# Module Map
+# Agent Module Map
 
-This file is a quick lookup index for `src/main/agent`.
+This map covers the live files under `src/main/agent`. Main composition is under `src/main/core/services/`; paper implementation is under `src/main/papers/`; IPC is under `src/main/ipc/register-agent-ipc/`.
 
-## Legend
+## Codex path
 
-- `Main path`: directly involved in the current `agent:chat` controller flow
-- `Support`: consumed by a main-path module but not called by IPC directly
-- `Secondary`: real runtime/helper, but not clearly wired into the active controller path
+| File | Role |
+| --- | --- |
+| `codex-agent/runtime.js` | production whole-turn runtime |
+| `codex-agent/prompts.js` | prompt and bounded MCP context builders |
+| `codex-agent/payloads.js` | final Codex payload normalization |
+| `codex-agent/stream-events.js` | Codex stream progress plus tool-event projection |
+| `codex-agent/artifacts.js` | Codex-specific notebook/protocol tool-event extraction |
+| `codex-agent/runtime-files.js` | Codex runtime home, AGENTS, and MCP config files |
+| `codex-agent/official-mcp-skills.js` | released Hikari skill materialization |
 
-## Root and intent
+## MCP contract
 
-| File | Status | Notes |
-| --- | --- | --- |
-| `Readme.md` | Secondary | placeholder file in the source folder |
-| `intent/agent-intent.json` | Support | intent catalog consumed by the parser |
-| `intent/agent-intent-parser.js` | Main path | parser prompt builder, payload normalization, schema constants |
+| Path | Role |
+| --- | --- |
+| `mcp-contract/stdio-server.js` | stdio MCP entrypoint used by Codex |
+| `mcp-contract/host.js` | in-process MCP host and app callback bridge |
+| `mcp-contract/gateway.js` | normalized tool routing |
+| `mcp-contract/instructions.js` | source of Hikari MCP instructions |
+| `mcp-contract/direct-tools/index.js` | direct-tool allow-list and router |
+| `mcp-contract/direct-tools/*.js` | individual schemas, annotations, and handlers |
 
-## Shared
+## Runtime and shared support
 
-| File | Status | Notes |
-| --- | --- | --- |
-| `src/main/lib/llm/runtime-helpers.js` | Shared support | provider-neutral structured request helpers shared by Agent and Papers |
-| `src/main/lib/llm/request-context.js` | Shared support | abort and AsyncLocalStorage request context shared across main-process domains |
-| `shared/agent-controller-utils.js` | Main path | provider/model resolution, trace context, parser request, log formatting |
-| `shared/agent-observability.js` | Main path | lifecycle recorder, replay, failure classification |
-| `shared/agent-runtime-registry.js` | Support | small runtime-factory registry used during assembly |
+| File | Role |
+| --- | --- |
+| `runtime/agent-runtime-support.js` | snapshot and prompt-context normalization |
+| `runtime/agent-sub-app-api.js` | narrow Agent-facing adapters for app domains |
+| `runtime/tool-artifacts/protocol-generation.js` | provider-neutral protocol artifact normalization and aggregation |
+| `runtime/tool-artifacts/plotly-graph.js` | provider-neutral Plotly artifact normalization and extraction |
+| `runtime/artifact-recovery/protocol-generation.js` | prose-to-protocol recovery and direct-tool retry orchestration |
+| `shared/agent-controller-utils.js` | provider/model settings and trace helpers |
+| `shared/agent-observability.js` | lifecycle logging and replay |
+| `shared/agent-runtime-registry.js` | small runtime-factory registry |
+| `shared/agent-llm-provider-bridge.js` | Codex CLI requests used by deterministic sub-tools |
 
-## Runtime
+## Context and skills
 
-| File | Status | Notes |
-| --- | --- | --- |
-| `runtime/agent-runtime-support.js` | Support | snapshot normalization, prompt templates, fuzzy match helpers |
-| `runtime/agent-session-runtime.js` | Support | provider-agnostic multi-round session adapter |
-| `runtime/agent-protocol-notebook.js` | Main path | protocol-to-notebook coordinator with pending-session state |
-| `runtime/agent-science-main-utils.js` | Support | science response shaping, project/paper evidence helpers |
-| `runtime/science-reasoning-loop/` | Main path | non-deep-research science loop (folder; entry `index.js`) |
-| `codex-agent/runtime.js` | Main path for Codex provider | Codex-only whole-turn runtime |
-| `codex-agent/runtime-files.js` | Support for Codex provider | AGENTS.md and Codex CLI MCP config writer |
-| `mcp-contract/` | Support | provider-neutral MCP stdio server, gateway, direct tools, and callback host |
+| File | Role |
+| --- | --- |
+| `context/agent-chat-log.js` | renderer chat sessions and internal rows |
+| `context/agent-memory.js` | sparse long-term Agent memory tool |
+| `skills/agent-skill-runtime.js` | installed and official skill discovery |
 
 ## Tools
 
-| File | Status | Notes |
-| --- | --- | --- |
-| `tools/Tools.json` | Support | short tool catalog |
-| `tools/Tool-call.json` | Support | input schemas and long descriptions |
-| `tools/agent-tool-loading.js` | Main path | loads tool catalog JSON, validates schemas, and builds model-facing prompts |
-| `tools/agent-tool-execution.js` | Main path | executor registry and normalized tool execution wrapper |
-| `tools/agent-tool-call.js` | Support | compatibility wrapper that re-exports the split loading/execution helpers |
-| `tools/register-agent-tool-executors.js` | Main path | registers the full tool suite on the shared `genericAgentToolRuntime` during assembly |
-| `tools/agent-lookup-support.js` | Support | shared storage hydration and SQLite primitives for individual lookup tools |
-| `tools/agent-inventory-lookup.js` | Main path | concrete inventory lookup logic |
-| `tools/agent-notebook-lookup.js` | Main path | concrete notebook search/get bridge logic |
-| `tools/agent-protocol-matching.js` | Support | protocol ranking and tie-break selection |
-| `tools/agent-notebook-generation.js` | Support | placeholder resolution and notebook payload generation |
-| `tools/agent-notebook-draft.js` | Main path | planned notebook proposal flow; explicitly registered during agent-service assembly (`src/main/core/services/create-agent-services.js`) |
-| `tools/agent-literature-search.js` | Main path | retrieval tool; registered as `literature-search` |
-| `tools/agent-paper-download.js` | Main path | action-based paper acquisition; registered as `paper-download` |
-| `tools/agent-paper-analysis.js` | Main path | paper summarization and protocol extraction; registered as `paper-analysis` |
-| `tools/agent-protocol-generation.js` | Main path | protocol JSON normalization; registered as `protocol-generation` |
-| `tools/agent-protocol-save.js` | Support | persisted protocol save and renderer refresh bridge |
-| `tools/agent-sub-agent.js` | Main path | action-based helper-agent runtime; registered as `sub-agent` |
-| `tools/agent-python-sandbox.js` | Main path | low-level sandbox plus managed supervisor; registered as `python-sandbox` |
-| `tools/agent-tool-smoke-test.js` | Main path | exposed through developer IPC for manual tool testing |
+| Path | Role |
+| --- | --- |
+| `tools/Tools.json` and `tools/Tool-call.json` | internal tool catalog and schemas |
+| `tools/agent-tool-loading.js` | catalog loading and argument normalization |
+| `tools/agent-tool-execution.js` | registered internal executor |
+| `tools/register-agent-tool-executors.js` | service-composition registration point |
+| `tools/agent-inventory-lookup.js` | storage-aware inventory lookup |
+| `tools/agent-notebook-lookup.js` | notebook search/get bridge |
+| `tools/agent-notebook-draft.js` | planned notebook proposal workflow |
+| `tools/agent-protocol-generation.js` | deterministic protocol normalization |
+| `tools/agent-purchase-recommendation.js` | product discovery and ranking |
+| `tools/agent-python-sandbox.js` | low-level and managed Python execution |
+| `tools/agent-sub-agent.js` | Codex helper-agent lifecycle |
 
-## Context
+Paper search/download/analysis tools call implementations under `src/main/papers`; they should not be moved back into this package.
 
-| File | Status | Notes |
-| --- | --- | --- |
-| `context/agent-chat-log.js` | Main path | session storage, assistant message projection, chat history reads |
-| `context/agent-context-management.js` | Secondary | layered in-memory context runtime, not currently on the main chat flow |
-| `context/agent-memory.js` | Main path | sparse long-term memory runtime; wired into chat as the `memory` tool |
+## Start here
 
-## Deep research
-
-| File | Status | Notes |
-| --- | --- | --- |
-| `deep-research/index.js` | Main path | entry point for deep research mode |
-| `deep-research/step-1-clarify-question.js` | Support | clarify research objective |
-| `deep-research/step-2-ask-targeted-follow-up.js` | Support | decide whether a blocking follow-up is still needed |
-| `deep-research/step-3-draft-research-plan.js` | Support | structured plan plus candidate tools/sources |
-| `deep-research/step-4-execute-plan.js` | Support | iterative execution loop with tool validation |
-| `deep-research/step-5-assemble-final-answer.js` | Support | outline-first section synthesis |
-| `deep-research/context-control.js` | Support | rolling evidence and section buffers |
-| `deep-research/accuracy-preservation.js` | Support | citations, contradictions, uncertainty tracking |
-| `deep-research/final-synthesis-quality.js` | Support | default outline and section validation helpers |
-| `deep-research/sub-agent-usage.js` | Support | delegation heuristics and completion-check helper |
-
-## Newer subsystems
-
-| Folder | Status | Notes |
-| --- | --- | --- |
-| `literature-search/` | Secondary | literature-search and Codex paper-context workflows |
-| `paper-intake/` | Secondary | paper intake pipeline, search, store, and MCP tools |
-| `skills/` | Secondary | agent skill runtime |
-
-## Two good places to start in code
-
-If you want to read the code itself after this document set:
-
-1. `src/main/ipc/register-agent-ipc/` (the `agent:chat` registrar folder)
-2. `src/main/core/main-services.js` (assembly via `createMainAgentServices(...)`)
-
-Those show how the pieces from `src/main/agent` are actually composed into the application's live request path.
+1. `src/main/ipc/register-agent-ipc/agent-chat-handler.js`
+2. `src/main/ipc/register-agent-ipc/agent-controller-core.js`
+3. `src/main/core/services/create-agent-services.js`
+4. `src/main/agent/codex-agent/runtime.js`
+5. `src/main/agent/mcp-contract/direct-tools/index.js`

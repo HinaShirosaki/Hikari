@@ -136,7 +136,6 @@ function buildCodexPaperContextSystemPrompt() {
 }
 
 function buildCodexPaperContextMessage(input = {}, helpers = {}) {
-  const asArray = typeof helpers.asArray === 'function' ? helpers.asArray : defaultAsArray;
   const cleanText = typeof helpers.cleanText === 'function' ? helpers.cleanText : defaultCleanText;
   const source = ensureObject(input);
   const maxBlocks = Math.max(

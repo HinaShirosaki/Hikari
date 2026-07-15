@@ -9,7 +9,7 @@ const {
 } = require('./artifacts.js');
 const {
   extractPlotlyGraphArtifactFromToolEvent
-} = require('../plotly-graph-artifacts.js');
+} = require('../runtime/tool-artifacts/plotly-graph.js');
 
 const FINAL_ANSWER_TEXT_LIMIT = 120000;
 const LIVE_DISPLAY_TEXT_LIMIT = 1200;

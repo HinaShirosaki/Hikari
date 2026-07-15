@@ -1,167 +1,4 @@
-import {
-  findNotebookEntryForDraft,
-  normalizeNotebookDraft,
-  resolveNotebookDraftProposalId
-} from './notebook-drafts.js';
 import { asArray, trimText } from './shared.js';
-
-function looksLikeProtocol(value) {
-  return Boolean(
-    value
-    && typeof value === 'object'
-    && !Array.isArray(value)
-    && (value.protocol || value.name || value.title)
-    && (Array.isArray(value.steps) || Array.isArray(value.procedure))
-  );
-}
-
-function normalizeStepEntries(rawSteps = []) {
-  return asArray(rawSteps)
-    .map((step, index) => {
-      if (typeof step === 'string') {
-        const text = trimText(step, 2000);
-        return text ? { id: `step-${index + 1}`, text, placeholders: [] } : null;
-      }
-      const source = step && typeof step === 'object' && !Array.isArray(step) ? step : {};
-      const text = trimText(source.text || source.instruction || source.action || source.description, 2000);
-      if (!text) {
-        return null;
-      }
-      return {
-        id: trimText(source.id, 120) || `step-${index + 1}`,
-        text,
-        placeholders: asArray(source.placeholders)
-          .map((placeholder, placeholderIndex) => {
-            const placeholderSource = placeholder && typeof placeholder === 'object' && !Array.isArray(placeholder)
-              ? placeholder
-              : {};
-            const name = trimText(placeholderSource.name || placeholderSource.label, 160);
-            if (!name) {
-              return null;
-            }
-            return {
-              id: trimText(placeholderSource.id, 120) || `ph-${index + 1}-${placeholderIndex + 1}`,
-              name
-            };
-          })
-          .filter(Boolean)
-      };
-    })
-    .filter(Boolean)
-    .slice(0, 160);
-}
-
-function normalizeMaterials(rawMaterials) {
-  if (Array.isArray(rawMaterials)) {
-    return rawMaterials.map((item) => trimText(item, 220)).filter(Boolean).slice(0, 80);
-  }
-  return trimText(rawMaterials, 6000)
-    .replace(/\r\n?/g, '\n')
-    .split('\n')
-    .map((line) => line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, '').trim())
-    .filter(Boolean)
-    .slice(0, 80);
-}
-
-function normalizeTroubleshooting(rawTroubleshooting) {
-  if (Array.isArray(rawTroubleshooting)) {
-    return rawTroubleshooting
-      .map((item) => {
-        if (typeof item === 'string') {
-          return trimText(item, 1200);
-        }
-        const source = item && typeof item === 'object' && !Array.isArray(item) ? item : {};
-        return [
-          trimText(source.problem, 400) ? `Problem: ${trimText(source.problem, 400)}` : '',
-          trimText(source.possible_cause || source.possibleCause, 400)
-            ? `Possible cause: ${trimText(source.possible_cause || source.possibleCause, 400)}`
-            : '',
-          trimText(source.solution, 400) ? `Solution: ${trimText(source.solution, 400)}` : ''
-        ].filter(Boolean).join('; ');
-      })
-      .filter(Boolean)
-      .join('\n');
-  }
-  return trimText(rawTroubleshooting, 6000);
-}
-
-function normalizeGeneratedProtocol(rawProtocol) {
-  const source = rawProtocol && typeof rawProtocol === 'object' && !Array.isArray(rawProtocol)
-    ? rawProtocol
-    : {};
-  const steps = normalizeStepEntries(source.steps || source.procedure);
-  const name = trimText(source.name || source.title || source.protocol_name || source.protocolName, 220);
-  if (!name || !steps.length) {
-    return null;
-  }
-  return {
-    id: trimText(source.id || source.protocol_id || source.protocolId, 220),
-    name,
-    purpose: trimText(source.purpose || source.description, 1200),
-    materials: normalizeMaterials(source.materials),
-    steps,
-    troubleshooting: normalizeTroubleshooting(source.troubleshooting),
-    aliases: asArray(source.aliases).map((alias) => trimText(alias, 120)).filter(Boolean),
-    projectId: trimText(source.projectId || source.project_id, 120),
-    projectName: trimText(source.projectName || source.project_name, 220),
-    createdAt: trimText(source.createdAt, 80),
-    updatedAt: trimText(source.updatedAt, 80)
-  };
-}
-
-function collectProtocolPayloads(source) {
-  if (!source || typeof source !== 'object' || Array.isArray(source)) {
-    return [];
-  }
-  const protocols = [];
-  const seen = new Set();
-  const pushProtocol = (candidate) => {
-    const protocol = normalizeGeneratedProtocol(candidate);
-    if (protocol) {
-      const key = [
-        trimText(protocol.id, 220),
-        trimText(protocol.name, 220).toLowerCase(),
-        protocol.steps.map((step) => trimText(step.text, 220)).join('|')
-      ].join(':');
-      if (seen.has(key)) {
-        return;
-      }
-      seen.add(key);
-      protocols.push(protocol);
-    }
-  };
-
-  if (Array.isArray(source.protocols)) {
-    source.protocols.forEach(pushProtocol);
-  }
-  if (Array.isArray(source.items)) {
-    source.items.forEach((item) => {
-      if (looksLikeProtocol(item?.protocol)) {
-        pushProtocol(item.protocol);
-      } else if (looksLikeProtocol(item)) {
-        pushProtocol(item);
-      }
-    });
-  }
-  if (looksLikeProtocol(source.protocol)) {
-    pushProtocol(source.protocol);
-  } else if (looksLikeProtocol(source)) {
-    pushProtocol(source);
-  }
-  return protocols;
-}
-
-function collectProtocolGenerationPayloads(meta = {}) {
-  const sources = [
-    meta.protocol_generation,
-    meta.protocolGeneration,
-    meta.generated_protocol ? { protocol: meta.generated_protocol } : null,
-    meta.generatedProtocol ? { protocol: meta.generatedProtocol } : null,
-    meta.codex_agent?.protocol_generation,
-    meta.codex_agent?.protocolGeneration
-  ].filter((item) => item && typeof item === 'object' && !Array.isArray(item));
-  return sources.flatMap(collectProtocolPayloads);
-}
 
 function getProtocolReviewStatus(meta = {}, reviewId = '') {
   const review = meta.protocolReview && typeof meta.protocolReview === 'object'
@@ -170,61 +7,6 @@ function getProtocolReviewStatus(meta = {}, reviewId = '') {
   return trimText(review[reviewId]?.status || review[reviewId], 40);
 }
 
-function buildUniqueProtocolName(baseName = '', protocols = []) {
-  const takenNames = new Set(
-    asArray(protocols)
-      .map((item) => trimText(item?.name, 220).toLowerCase())
-      .filter(Boolean)
-  );
-  const base = trimText(baseName, 220) || 'Generated protocol';
-  if (!takenNames.has(base.toLowerCase())) {
-    return base;
-  }
-  const suffixedBase = `${base} (Agent Generated)`;
-  let candidate = suffixedBase;
-  let suffix = 2;
-  while (takenNames.has(candidate.toLowerCase())) {
-    candidate = `${suffixedBase} ${suffix}`;
-    suffix += 1;
-  }
-  return candidate;
-}
-
-function normalizeIsoTimestamp(rawValue, fallback = '') {
-  const candidate = trimText(rawValue, 120);
-  if (!candidate) {
-    return fallback;
-  }
-  const timestamp = Date.parse(candidate);
-  if (!Number.isFinite(timestamp)) {
-    return fallback;
-  }
-  return new Date(timestamp).toISOString();
-}
-
-function buildProtocolRecord(protocol, { state, createId }) {
-  const nowIso = new Date().toISOString();
-  const existingIds = new Set(asArray(state.protocols).map((item) => trimText(item?.id, 220)).filter(Boolean));
-  const requestedId = trimText(protocol.id, 220);
-  const id = requestedId && !existingIds.has(requestedId)
-    ? requestedId
-    : trimText(createId?.(), 220) || `agent-protocol-${Date.now().toString(36)}`;
-  const createdAt = normalizeIsoTimestamp(protocol.createdAt, nowIso) || nowIso;
-  const updatedAt = normalizeIsoTimestamp(protocol.updatedAt, nowIso) || nowIso;
-  return {
-    id,
-    name: buildUniqueProtocolName(protocol.name, state.protocols),
-    createdAt,
-    updatedAt,
-    purpose: protocol.purpose,
-    materials: protocol.materials,
-    steps: protocol.steps,
-    troubleshooting: protocol.troubleshooting,
-    ...(protocol.aliases.length ? { aliases: protocol.aliases } : {}),
-    ...(protocol.projectId ? { projectId: protocol.projectId } : {}),
-    ...(protocol.projectName ? { projectName: protocol.projectName } : {})
-  };
-}
 
 function markProtocolReview(messages, messageId, reviewId, status, reason = '') {
   const normalizedMessageId = trimText(messageId, 120);
@@ -247,15 +29,18 @@ function markProtocolReview(messages, messageId, reviewId, status, reason = '') 
   return true;
 }
 
-function collectReviewItemsForMessage(message, { state }) {
+function collectReviewItemsForMessage(message, {
+  notebookDraftAdapter,
+  protocolReviewAdapter
+}) {
   const meta = message?.meta && typeof message.meta === 'object' ? message.meta : {};
   const messageId = trimText(message?.id, 120);
   if (!messageId) {
     return [];
   }
   const items = [];
-  const notebookDraft = normalizeNotebookDraft(meta.notebookDraft);
-  const existingNotebookEntry = findNotebookEntryForDraft(state.notebookEntries, notebookDraft);
+  const notebookDraft = notebookDraftAdapter?.normalizeDraft?.(meta.notebookDraft) || null;
+  const existingNotebookEntry = notebookDraftAdapter?.findEntryForDraft?.(notebookDraft) || null;
   if (
     notebookDraft
     && notebookDraft.save.mode === 'confirm_before_save'
@@ -263,7 +48,7 @@ function collectReviewItemsForMessage(message, { state }) {
     && trimText(notebookDraft.save.status, 80) !== 'rejected'
     && !existingNotebookEntry
   ) {
-    const proposalId = resolveNotebookDraftProposalId(notebookDraft);
+    const proposalId = notebookDraftAdapter?.resolveProposalId?.(notebookDraft) || '';
     items.push({
       id: `notebook:${messageId}:${proposalId || 'draft'}`,
       type: 'notebook',
@@ -272,7 +57,8 @@ function collectReviewItemsForMessage(message, { state }) {
     });
   }
 
-  collectProtocolGenerationPayloads(meta).forEach((protocol, index) => {
+  const protocols = protocolReviewAdapter?.collectReviewProtocols?.(meta) || [];
+  protocols.forEach((protocol, index) => {
     const reviewId = `protocol:${messageId}:${index + 1}`;
     const status = getProtocolReviewStatus(meta, reviewId);
     if (status === 'approved' || status === 'rejected') {
@@ -397,13 +183,13 @@ export function createAgentReviewOverlayController({
   dom,
   state,
   persist,
-  createId,
   safeText,
   setStatus,
   renderContextSummary,
   renderHistoryView,
   notebookActions,
-  onProtocolsChanged
+  notebookDraftAdapter,
+  protocolReviewAdapter
 }) {
   let reviewItems = [];
   let activeIndex = 0;
@@ -468,18 +254,15 @@ export function createAgentReviewOverlayController({
   }
 
   function approveProtocol(item) {
-    const protocol = buildProtocolRecord(item.protocol, { state, createId });
-    state.protocols = asArray(state.protocols);
-    state.protocols.push(protocol);
+    const protocol = protocolReviewAdapter?.approveGeneratedProtocol?.(item.protocol) || null;
+    if (!protocol) {
+      setStatus?.('Generated protocol could not be added.');
+      return;
+    }
     markProtocolReview(state.agentChat?.messages, item.messageId, item.id, 'approved', 'Generated protocol approved by user.');
     persist();
     renderContextSummary?.();
     renderHistoryView?.({ forceScroll: true });
-    try {
-      onProtocolsChanged?.();
-    } catch {
-      // Keep review dialog responsive if a downstream module is not mounted.
-    }
     setStatus?.('Generated protocol added to Protocol Module.');
     removeItem(item.id);
   }
@@ -547,7 +330,10 @@ export function createAgentReviewOverlayController({
   }
 
   function openForMessage(message) {
-    const nextItems = collectReviewItemsForMessage(message, { state });
+    const nextItems = collectReviewItemsForMessage(message, {
+      notebookDraftAdapter,
+      protocolReviewAdapter
+    });
     if (!nextItems.length) {
       return;
     }
@@ -581,6 +367,9 @@ export function createAgentReviewOverlayController({
     render,
     approveItem,
     rejectItem,
-    collectReviewItemsForMessage: (message) => collectReviewItemsForMessage(message, { state })
+    collectReviewItemsForMessage: (message) => collectReviewItemsForMessage(message, {
+      notebookDraftAdapter,
+      protocolReviewAdapter
+    })
   };
 }

@@ -385,5 +385,27 @@ test('agent-chat releases the composer immediately when cancellation is acknowle
   assert.equal(state.agentChat.messages.length, 2);
   assert.deepEqual(inFlightUpdates, [true, false]);
 });
+test('agent-chat delegates notebook and protocol domain records to owner adapters', () => {
+  const agentChatRoot = path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat');
+  const reviewSource = fs.readFileSync(path.join(agentChatRoot, 'review-overlay.js'), 'utf8');
+  const historySource = fs.readFileSync(path.join(agentChatRoot, 'history-notebook-actions.js'), 'utf8');
+  const agentIndexSource = fs.readFileSync(path.join(agentChatRoot, 'index.js'), 'utf8');
+  const selectionContextSource = fs.readFileSync(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'selection-insights',
+    'controller-context.js'
+  ), 'utf8');
+
+  assert.equal(fs.existsSync(path.join(agentChatRoot, 'notebook-drafts.js')), false);
+  assert.doesNotMatch(reviewSource, /function normalizeGeneratedProtocol|state\.protocols\s*=|state\.protocols\.push/);
+  assert.doesNotMatch(historySource, /state\.notebookEntries\s*=|state\.notebookEntries\.push/);
+  assert.match(agentIndexSource, /biology-notebook\/agent\/index\.js/);
+  assert.match(agentIndexSource, /protocol\/agent\/index\.js/);
+  assert.match(selectionContextSource, /from '\.\.\/agent-chat\/public-api\.js'/);
+  assert.doesNotMatch(selectionContextSource, /agent-chat\/state-snapshot\.js/);
+});
   }
 };

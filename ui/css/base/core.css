@@ -20,7 +20,6 @@
   --font-app: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --shared-left-rail-min: 240px;
   --shared-left-rail-width: 280px;
-  --shared-left-rail-max: 400px;
   --shared-left-rail-layout-height: calc(100vh - 144px);
   --app-left-rail-track-width: max(var(--shared-left-rail-min), var(--shared-left-rail-width));
   --layout-left-panel-width: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width));
@@ -850,7 +849,6 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
 }
 
 #protocol-management-view > .panel:first-child > h2,
-#synthesis-notebook-view > .panel:first-child > h2,
 #biology-notebook-view > .panel:first-child > h2,
 #lab-common-inventory-view > .panel:first-child > h2,
 #sample-registry-view > .panel:first-child > h2,
@@ -1121,26 +1119,6 @@ button:disabled {
   justify-self: end;
 }
 
-.list-main-text {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--theme-text-strong);
-}
-
-.list-row-details {
-  grid-template-columns: 1fr;
-}
-
-.list-detail-content {
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--theme-border-soft);
-}
-
 .small-note {
   color: var(--theme-text-muted);
   margin: 0;
@@ -1187,11 +1165,6 @@ button:disabled {
 
 .notebook-step-line {
   line-height: 1.7;
-}
-
-.synthesis-reaction-panel,
-.synthesis-mw-panel {
-  margin-top: 12px;
 }
 
 .selection-insight-anchor {

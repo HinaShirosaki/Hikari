@@ -199,7 +199,7 @@ function computeCellIntensity({
   const bottom = clamp(Math.floor(Math.max(bandTop, bandBottom)), top, height - 1);
   const thickness = Math.max(1, bottom - top + 1);
 
-  const { rowMeans, smoothed, baseline } = computeLaneBaseline({
+  const { smoothed, baseline } = computeLaneBaseline({
     signal,
     width,
     lane,

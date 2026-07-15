@@ -4,16 +4,17 @@ const fs = require('fs/promises');
 const path = require('path');
 const { resolveSqlJsWasmJsPath } = require('../../lib/sqljs-path.js');
 
-// Depth-independent walk-up search for vendor/sqljs (survives directory moves).
-const SQLJS_WASM_JS_PATH = resolveSqlJsWasmJsPath(__dirname);
 let sqlJsInitPromise = null;
 
 async function loadSqlJs() {
   if (!sqlJsInitPromise) {
     sqlJsInitPromise = (async () => {
-      const initSqlJs = require(SQLJS_WASM_JS_PATH);
+      // Resolve lazily: keep requiring this module cheap and non-throwing even when
+      // sqljs can't be located (depth-independent walk-up, survives directory moves).
+      const wasmJsPath = resolveSqlJsWasmJsPath(__dirname);
+      const initSqlJs = require(wasmJsPath);
       return initSqlJs({
-        locateFile: (fileName) => path.join(path.dirname(SQLJS_WASM_JS_PATH), fileName)
+        locateFile: (fileName) => path.join(path.dirname(wasmJsPath), fileName)
       });
     })();
   }

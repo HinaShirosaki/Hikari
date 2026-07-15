@@ -6,7 +6,7 @@ A manifest owns one module's init function, registry key, options factory, optio
 
 Current manifest groups:
 
-- `foundationModuleManifests`: notebook, protocol, and project modules that other features consult early.
+- `foundationModuleManifests`: Biology Notebook (including project ownership) and protocol modules that other features consult early.
 - `collaborationModuleManifests`: agent chat, scoped chat rail, workflow, and papers.
 - `inventoryModuleManifests`: inventory and sample workspace modules.
 - `analysisModuleManifests`: assay and gel modules.

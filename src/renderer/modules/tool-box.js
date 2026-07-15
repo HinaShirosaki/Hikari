@@ -16,7 +16,7 @@ import {
   volumeFromL,
   massToG,
   massFromG
-} from './tool-box/molarity.js';
+} from '../lib/molarity.js';
 import {
   cleanNucleotideSequence,
   nucleotideCounts,
@@ -41,7 +41,6 @@ import {
   peptideStats
 } from './sequence-viewer/calculations/protein.js';
 import { linearRegression } from './tool-box/qpcr.js';
-import { renderChemicalOptions } from './tool-box/buffer.js';
 import {
   normalizeIupacPattern,
   matchesIupacPattern,
@@ -61,7 +60,7 @@ import {
   calculateBufferRecipe,
   calculateFixedReactionReagent,
   calculateFixedReaction
-} from './tool-box/bench-calculations.js';
+} from '../lib/bench-calculations.js';
 
 export {
   toNumber,
@@ -93,7 +92,6 @@ export {
   estimatePI,
   residueSummary,
   peptideStats,
-  renderChemicalOptions,
   normalizeIupacPattern,
   matchesIupacPattern,
   parseCrisprTargetsInput,

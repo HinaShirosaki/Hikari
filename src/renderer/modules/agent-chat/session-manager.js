@@ -3,7 +3,6 @@ import {
   GENERAL_CHAT_FOLDER_ID,
   buildCustomChatFolderId,
   buildDefaultChatFolderName,
-  ensureAgentChatFolderState,
   getAgentChatFolders,
   getFolderById,
   resolveSessionFolderId

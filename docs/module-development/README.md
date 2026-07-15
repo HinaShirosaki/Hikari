@@ -10,7 +10,7 @@ There is **no plugin discovery**. Adding a module means editing a small, well-de
 2. [02-html-and-css.md](./02-html-and-css.md) — The universal HTML shell and CSS layers. How view fragments slot into `index.html`, the shared `left-rail-template` layout, and the build-time validation rules.
 3. [03-module-contract.md](./03-module-contract.md) — The `init*()` function contract: what manifests pass you, what you must return, the registry, and the cross-module service layer.
 4. [04-adding-a-new-module.md](./04-adding-a-new-module.md) — A step-by-step recipe for adding a new view from scratch: every file you must touch.
-5. [05-cross-module-and-services.md](./05-cross-module-and-services.md) — Talking to other modules through services, the `hikariApi` bridge, and the persisted state object graph.
+5. [05-cross-module-and-services.md](./05-cross-module-and-services.md) — Talking to other modules through services, the `hikariApi` bridge, and stable IDs in shared persisted state.
 6. [06-checklist.md](./06-checklist.md) — Pre-flight checklist, naming conventions, and the build-time errors you can expect to hit.
 
 ## TL;DR
@@ -40,6 +40,6 @@ These are loaded through their own paths and are out of scope here:
 
 - **Agent skills** under `skills/` — read at runtime by `src/main/agent/skills/agent-skill-runtime.js`. Excluded from the Electron bundle (`forge.config.js`).
 - **Exported standard features** (`src/renderer/modules/sequence-viewer/data/exported-standard-features.js`) — pre-built data file generated from `Exported Standard Features/` by `npm run extract:standard-features`. It is data, not a UI module.
-- **LLM provider config** (`src/renderer/modules/llm-provider-config.generated.js`) — generated from `config/llm-providers.json` by the same `build:ui` step.
+- **Codex model catalog** (`src/renderer/modules/codex-model-catalog.generated.js`) — generated from `config/codex-models.json` by the same `build:ui` step.
 
 If you need to extend any of those, see the corresponding generator script under `scripts/`.

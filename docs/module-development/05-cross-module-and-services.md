@@ -53,7 +53,7 @@ The pre-seeded keys (passed in by the renderer core as `uiBridge`):
 | `setSearchInputValue` | `(inputId, value) => boolean`, used to drive in-view search inputs |
 | `VIEWS` | the `VIEWS` constants map |
 
-After init, every module is also registered under its own key. Current keys: `biologyNotebook`, `protocol`, `projectManagement`, `agentChat`, `workflowManagement`, `papers`, `labCommonInventory`, `personalInventory`, `sampleRegistry`, `assay`, `gel`, `sequenceViewer`, `toolBox`, `settings`, `homeDashboard`.
+After init, every module is also registered under its own key. Current keys: `biologyNotebook`, `protocol`, `agentChat`, `agentChatRail`, `workflowManagement`, `papers`, `labCommonInventory`, `personalInventory`, `sampleRegistry`, `assay`, `gel`, `sequenceViewer`, `toolBox`, `settings`, `homeDashboard`.
 
 When **inside** a feature module, prefer the injected callback over `registry.get(...)`. The registry exists so service files can fan out without each module knowing about the others.
 
@@ -130,7 +130,7 @@ Keep services thin — they should call `registry.get('<other>').<method>?.()` a
 
 If unsure, ask: *"If the user reloads, do they expect this back?"* If yes, `state`. If no, locals.
 
-`state.objectGraph` is a **derived** index that links nodes (notebooks, samples, protocols…) and their backlinks. Don't write to it. The renderer core's `persist()` rebuilds it on every save via `rebuildObjectGraph(state)`.
+Projects are a good ownership example: their records remain in `state.projects`, while creation and project dashboards live under `modules/biology-notebook/project/`. Other features resolve project IDs from shared state and use `projectService.handleProjectsChanged()` for rerender fan-out; there is no parallel `projectManagement` module or relationship-graph store.
 
 ## The IPC bridge: `window.hikariApi`
 
@@ -183,7 +183,7 @@ The topbar search command bar is wired to a Telegram bot bridge (see [src/render
 ## Anti-patterns
 
 - **Importing another feature module's internal helpers.** Your module should not `import { … } from './biology-notebook.js'`. Use the registry/service layer.
-- **Mutating `state.objectGraph`.** It is rebuilt on every persist.
+- **Creating a parallel module for another feature's state slice.** Extend the existing owner and expose a callback, service method, or public API instead.
 - **Direct DOM access into another view's nodes** (e.g. `document.querySelector('#protocol-list')`). The other module owns its DOM. Use its render API.
 - **Throttled persistence inside a module.** `persist()` already accounts for the autosave path; calling it eagerly is correct.
 - **Skipping `safeText` when building innerHTML.** All user-supplied strings flow through `safeText` to avoid HTML injection. Keep that pattern even when the string "looks safe."

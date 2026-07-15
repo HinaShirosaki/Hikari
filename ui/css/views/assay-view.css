@@ -68,7 +68,6 @@
 }
 
 .left-rail-template.assay-create-layout {
-  --app-left-rail-bleed: 20px;
   --left-rail-main-gap: 20px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
@@ -82,7 +81,6 @@
 }
 
 .left-rail-template.assay-results-layout {
-  --app-left-rail-bleed: 20px;
   --left-rail-main-gap: 20px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
@@ -1074,10 +1072,6 @@
 
 .assay-analysis-selection-status {
   min-height: 1.1rem;
-}
-
-.assay-analysis-help code {
-  font-size: 0.82em;
 }
 
 .assay-analysis-results {

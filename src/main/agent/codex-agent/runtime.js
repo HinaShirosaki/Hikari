@@ -19,9 +19,10 @@ const {
 const {
   createCodexStreamProgressHandler
 } = require('./stream-events.js');
+const { callProtocolGeneration } = require('../mcp-contract/direct-tools/protocol-generation.js');
 const {
   resolveProtocolGenerationArtifact
-} = require('./protocol-fallback.js');
+} = require('../runtime/artifact-recovery/protocol-generation.js');
 
 function createCodexAgentRuntime(deps = {}) {
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
@@ -183,17 +184,25 @@ function createCodexAgentRuntime(deps = {}) {
     );
 
     const protocolGenerationArtifact = await resolveProtocolGenerationArtifact({
-      codexAgent,
-      input,
-      cwd,
-      model,
+      agentResult: codexAgent,
+      userMessage: input.message,
       rawText,
       cleanText,
       lifecycleRecorder,
       recordLifecycleEvent,
-      runTool,
+      executeProtocolGeneration: runTool
+        ? (args, context) => callProtocolGeneration(args, context, { runTool })
+        : null,
       streamedProtocolGenerationPayloads: streamState.streamedProtocolGenerationPayloads,
-      traceContext
+      toolContext: {
+        ...buildCodexMcpContext({ ...input, cwd, model }, { cleanText }),
+        snapshot: ensureObject(input.snapshot),
+        traceContext,
+        lifecycleRecorder
+      },
+      lifecycleStage: 'codex_agent_direct_tool_fallback',
+      routingIntent: 'codex_agent',
+      agentLabel: 'Codex'
     });
 
     const parser = buildCodexAgentParserPayload(codexAgent, {

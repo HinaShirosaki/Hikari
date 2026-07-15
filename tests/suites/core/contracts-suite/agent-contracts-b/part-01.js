@@ -16,8 +16,6 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js')
     ].join('\n');
     test('renderer consumes science payloads through normalized agent responses', () => {
-      // The /self-agent science-reasoning-loop source assertions moved out when it was
-      // isolated; the renderer-side science payload consumption checks remain.
       const rendererSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response.js'), 'utf8');
       const responseSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'response.js'), 'utf8');
       assert.match(responseSource, /export function summarizeScienceResult/);
@@ -39,8 +37,6 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.deepEqual(toolCallCatalog['sub-agent']?.input_schema?.properties?.action?.enum, ['create', 'message', 'delete', 'get', 'list']);
     });
     test('memory helper exports a reusable runtime with an action-based contract', () => {
-      // The /self-agent context-management and registry assertions moved out when it was
-      // isolated; the src-backed memory-runtime checks remain.
       const memorySource = fs.readFileSync(agentPath('context', 'agent-memory.js'), 'utf8');
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
@@ -112,9 +108,6 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       const llmUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'llm', 'runtime-helpers.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
       const codexAgentProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'codex-agent-provider.js'), 'utf8');
-      const openAiProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'openai-provider.js'), 'utf8');
-      const claudeProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'claude-provider.js'), 'utf8');
-      const geminiProviderSource = fs.readFileSync(agentPath('shared', 'llm-providers', 'gemini-provider.js'), 'utf8');
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
@@ -156,12 +149,7 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.doesNotMatch(llmUtilsSource, /requestClaudeMessagesWithBackoff/);
       assert.doesNotMatch(llmUtilsSource, /requestGeminiGenerateContentWithBackoff/);
       assert.match(llmBridgeSource, /llm-providers\/codex-agent-provider/);
-      assert.match(llmBridgeSource, /llm-providers\/openai-provider/);
-      assert.match(llmBridgeSource, /llm-providers\/claude-provider/);
-      assert.match(llmBridgeSource, /llm-providers\/gemini-provider/);
-      assert.match(openAiProviderSource, /input_file/);
-      assert.match(geminiProviderSource, /inlineData/);
-      assert.match(claudeProviderSource, /document/);
+      assert.doesNotMatch(llmBridgeSource, /llm-providers\/(openai|claude|gemini|deepseek)-provider/);
       assert.match(codexAgentProviderSource, /enableWebSearch/);
       assert.match(mainAgentServicesSource, /createWebSearchRuntime/);
       assert.match(mainAgentServicesSource, /const webSearchRuntime = createWebSearchRuntime/);
@@ -323,19 +311,16 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.equal(Boolean(toolCallCatalog['purchase-recommendation']?.input_schema), true);
       assert.equal(typeof toolCallCatalog['purchase-recommendation']?.description, 'string');
     });
-    test('main wires intent parser + observability paths for parser-only controller', () => {
+    test('main wires provider-neutral LLM helpers and Agent observability', () => {
       const mainSource = readMainProcessSource();
       const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
       assert.match(mainSource, /createMainAgentServices/);
-      // The intent parser moved to /self-agent; live code only keeps the shared inventory search-term helper.
       assert.match(mainAgentServicesSource, /require\('\.\.\/\.\.\/agent\/shared\/agent-inventory-search-terms\.js'\)/);
       assert.match(mainAgentServicesSource, /require\('\.\.\/\.\.\/agent\/shared\/agent-observability'\)/);
       assert.match(mainAgentServicesSource, /require\('\.\.\/\.\.\/agent\/shared\/agent-controller-utils'\)/);
       assert.match(mainSource, /registerAgentIpc/);
-      // api-agent-controller and agent-session-runtime source assertions moved out with
-      // /self-agent when it was isolated.
       assert.match(llmBridgeSource, /function createAgentLlmProviderBridge\(deps = \{\}\)/);
       assert.match(llmBridgeSource, /function requestText\(options = \{\}\)/);
       assert.match(llmBridgeSource, /function requestImageInput\(options = \{\}\)/);

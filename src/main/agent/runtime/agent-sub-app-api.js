@@ -49,29 +49,10 @@ function defaultEnsureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
-function defaultUniqueStrings(values, max = 20) {
-  const seen = new Set();
-  const out = [];
-  defaultAsArray(values).forEach((value) => {
-    const normalized = defaultCleanText(value, 220);
-    if (!normalized) {
-      return;
-    }
-    const key = normalized.toLowerCase();
-    if (seen.has(key) || out.length >= max) {
-      return;
-    }
-    seen.add(key);
-    out.push(normalized);
-  });
-  return out;
-}
-
 function createAgentSubAppApi(deps = {}) {
   const asArray = typeof deps.asArray === 'function' ? deps.asArray : defaultAsArray;
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const ensureObject = typeof deps.ensureObject === 'function' ? deps.ensureObject : defaultEnsureObject;
-  const uniqueStrings = typeof deps.uniqueStrings === 'function' ? deps.uniqueStrings : defaultUniqueStrings;
   const pickTopMatches = typeof deps.pickTopMatches === 'function'
     ? deps.pickTopMatches
     : ((items, buildSearchText, query, limit = 6) => {

@@ -97,7 +97,7 @@ function normalizePythonSandboxRenderOutputs(rawOutputs, warnings = []) {
 function normalizePythonSandboxFiles(rawFiles = []) {
   return asArray(rawFiles)
     .slice(0, SANDBOX_MAX_INPUT_FILES)
-    .map((entry, index) => {
+    .map((entry) => {
       const source = ensureObject(entry);
       const relativePath = normalizeRelativePath(source.path);
       if (!relativePath) {

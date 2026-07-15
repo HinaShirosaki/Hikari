@@ -3,7 +3,7 @@ import {
   calculateMolarityVolume,
   calculateMolarityConcentration,
   calculateMolarityDilution
-} from './bench-calculations.js';
+} from '../../lib/bench-calculations.js';
 
 export function initMolarityTool(options = {}) {
   const rootDocument = options?.document || globalThis?.document || null;

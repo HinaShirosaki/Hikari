@@ -33,7 +33,7 @@ export function installProteinBuilderEvents(ctx) {
       ctx.setBuilderStatus('Added a custom block.');
     });
 
-    elements.proteinBuilderForm?.addEventListener('input', (event) => {
+    elements.proteinBuilderForm?.addEventListener('input', () => {
       ctx.render();
     });
 

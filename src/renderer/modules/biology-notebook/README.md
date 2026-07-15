@@ -3,6 +3,7 @@
 `index.js` composes the notebook view. Focused packages own the implementation:
 
 - `entry/`: entry model, naming, list/view rendering, and saved-record construction
+- `agent/`: assistant notebook-draft normalization, autosave, and planned-page persistence
 - `protocol/`: placeholders, snapshots, protocol text, and step rendering
 - `project/`: project selection and dashboard
 - `results/`: tables, linked work previews/actions, and selection insights

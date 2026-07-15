@@ -2,7 +2,7 @@
 
 This doc set explains how `src/renderer` is assembled, how the browser-side app shell boots, and where the major feature modules live once you leave the renderer core.
 
-If `doc/main-platform/` explains the main-process bridge, this folder explains the renderer-side half of the app.
+If `docs/main-platform/` explains the main-process bridge, this folder explains the renderer-side half of the app.
 
 ## Recommended reading order
 

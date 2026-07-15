@@ -2,8 +2,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart07(context = {}
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-    // The protocol-notebook sub-app-API routing test moved out with /self-agent when
-    // it was isolated; the src-backed notebook-generation/draft tests below remain.
     test('notebook generation runtime extracts token and inline placeholders', () => {
       const runtime = agentNotebookGeneration.createNotebookGenerationRuntime();
       const rows = runtime.buildProtocolPlaceholderRows({

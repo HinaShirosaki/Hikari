@@ -1,7 +1,4 @@
-import {
-  DEFAULT_AGENT_LLM_PROVIDER,
-  DEFAULT_LLM_ENDPOINTS
-} from '../llm-provider-config.generated.js';
+import { DEFAULT_AGENT_LLM_PROVIDER } from '../codex-model-catalog.generated.js';
 import { VIEWS } from '../views.js';
 import {
   DEFAULT_SAMPLE_INVENTORY_LOCATIONS,
@@ -57,7 +54,6 @@ export const defaultState = {
     events: []
   },
   notebookEntries: [],
-  synthesisChemistryDrafts: {},
   assays: [],
   gelAnalyses: [],
   samples: [],
@@ -103,10 +99,7 @@ export const defaultState = {
     llm: {
       provider: DEFAULT_AGENT_LLM_PROVIDER,
       model: '',
-      reasoningEffort: '',
-      api: '',
-      apiEndpoint: DEFAULT_LLM_ENDPOINTS[DEFAULT_AGENT_LLM_PROVIDER],
-      apiKey: ''
+      reasoningEffort: ''
     },
     agent: {
       developerMode: false,

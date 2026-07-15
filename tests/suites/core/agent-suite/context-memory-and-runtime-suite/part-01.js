@@ -2,8 +2,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart01(contex
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-    // The context-management runtime tests moved out with /self-agent when it was
-    // isolated; the src-backed memory-runtime tests below remain.
     test('memory runtime remembers, updates, recalls, lists, and forgets long-term memory', async () => {
       const runtime = agentMemory.createAgentMemoryRuntime({
         now: (() => {

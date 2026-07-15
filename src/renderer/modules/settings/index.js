@@ -1,11 +1,6 @@
 import {
-  DEFAULT_AGENT_LLM_PROVIDER as DEFAULT_LLM_PROVIDER,
-  AGENT_LLM_PROVIDER_OPTIONS as LLM_PROVIDER_OPTIONS,
-  apiKeyPlaceholderForProvider,
-  defaultLlmEndpointForProvider,
-  modelPlaceholderForProvider,
-  normalizeAgentLlmProvider as normalizeLlmProvider
-} from '../llm-provider-config.generated.js';
+  DEFAULT_AGENT_LLM_PROVIDER as DEFAULT_LLM_PROVIDER
+} from '../codex-model-catalog.generated.js';
 import { createExternalSkillsController } from './external-skills-controller.js';
 import { createPluginsController } from './plugins-controller.js';
 import {
@@ -47,12 +42,9 @@ export function initSettings({
     settingStartupDefaultView,
     settingStartupRememberLastView,
     llmForm,
-    settingProvider,
     settingModel,
     settingModelOptions,
     settingReasoningEffort,
-    settingApiEndpoint,
-    settingApiKey,
     settingCodexAuthControls,
     settingCodexStatus,
     startCodexLoginBtn,
@@ -97,11 +89,9 @@ export function initSettings({
     message: 'Checking Codex login...'
   };
   let storageImportInFlight = false;
-  let activeLlmProvider = DEFAULT_LLM_PROVIDER;
   const llmModelCatalog = createLlmModelCatalog();
   let codexLoginRefreshTimers = [];
   let activeSettingsPanel = settingsNavItems[0]?.dataset.settingsTarget || 'appearance';
-  const looksLikeEndpoint = (value) => /^[a-z]+:\/\//i.test(String(value || '').trim());
   const externalSkillsController = createExternalSkillsController({
     state,
     persist,
@@ -134,30 +124,6 @@ export function initSettings({
     onSettingsChanged: onSampleInventorySettingsChanged
   });
 
-  function renderCodexAccessFields(provider = '') {
-    const isCodexProvider = provider === 'codex';
-    const endpointLabel = settingApiEndpoint?.closest('label');
-    const apiKeyLabel = settingApiKey?.closest('label');
-    if (endpointLabel) {
-      endpointLabel.hidden = isCodexProvider;
-    }
-    if (apiKeyLabel) {
-      apiKeyLabel.hidden = isCodexProvider;
-    }
-    if (isCodexProvider) {
-      if (settingApiEndpoint) {
-        settingApiEndpoint.value = '';
-        settingApiEndpoint.placeholder = '';
-      }
-      if (settingApiKey) {
-        settingApiKey.value = '';
-        settingApiKey.placeholder = '';
-      }
-    }
-  }
-
-  populateLlmProviderOptions();
-
   settingsNavItems.forEach((item) => {
     item.addEventListener('click', () => {
       activateSettingsPanel(item.dataset.settingsTarget);
@@ -168,7 +134,6 @@ export function initSettings({
   selectStoragePathBtn?.addEventListener('click', onSelectStoragePath);
   startupForm?.addEventListener('submit', onSaveStartupSettings);
   llmForm.addEventListener('submit', onSaveLlmSettings);
-  settingProvider?.addEventListener('change', onProviderChanged);
   settingModel?.addEventListener('input', onModelChanged);
   settingModel?.addEventListener('change', onModelChanged);
   startCodexLoginBtn?.addEventListener('click', onStartCodexLogin);
@@ -193,9 +158,7 @@ export function initSettings({
   preferredJournalList?.addEventListener('keydown', onPreferredJournalListKeydown);
   clearPreferredJournalBtn?.addEventListener('click', onClearPreferredJournal);
   window.addEventListener('focus', () => {
-    if (activeLlmProvider === 'codex') {
-      void refreshCodexLoginStatus();
-    }
+    void refreshCodexLoginStatus();
   });
   void refreshTelegramBotStatus();
   void externalSkillsController.refresh();
@@ -218,7 +181,7 @@ export function initSettings({
       panel.hidden = panel.dataset.settingsPanel !== activeSettingsPanel;
     });
 
-    if (activeSettingsPanel === 'llm' && activeLlmProvider === 'codex') {
+    if (activeSettingsPanel === 'llm') {
       void refreshCodexLoginStatus();
     }
     if (
@@ -237,10 +200,7 @@ export function initSettings({
     const llm = state.settings?.llm && typeof state.settings.llm === 'object'
       ? state.settings.llm
       : {};
-    const provider = normalizeLlmProvider(llm.provider, llm.apiEndpoint || llm.api);
-    if (provider !== 'codex') {
-      return false;
-    }
+    const provider = DEFAULT_LLM_PROVIDER;
 
     const currentModel = String(llm.model || '').trim();
     const nextModel = currentModel
@@ -312,9 +272,8 @@ export function initSettings({
   }
 
   function refreshLlmModelAndReasoningFields(provider, selectedReasoningEffort = '') {
-    const resolvedProvider = normalizeLlmProvider(provider, settingApiEndpoint?.value || '');
-    renderModelOptions(resolvedProvider);
-    renderReasoningEffortOptions(resolvedProvider, settingModel?.value || '', selectedReasoningEffort);
+    renderModelOptions(provider);
+    renderReasoningEffortOptions(provider, settingModel?.value || '', selectedReasoningEffort);
   }
 
   function renderForms() {
@@ -334,24 +293,10 @@ export function initSettings({
     if (settingStartupRememberLastView) {
       settingStartupRememberLastView.checked = state.settings.startup?.rememberLastView === true;
     }
-    const llmProvider = normalizeLlmProvider(llm.provider, llm.apiEndpoint || llm.api);
-    activeLlmProvider = llmProvider;
-    if (settingProvider) {
-      settingProvider.value = llmProvider;
-    }
+    const llmProvider = DEFAULT_LLM_PROVIDER;
     settingModel.value = llm.model || '';
-    settingModel.placeholder = modelPlaceholderForProvider(llmProvider);
+    settingModel.placeholder = 'optional, e.g. gpt-5.4';
     refreshLlmModelAndReasoningFields(llmProvider, llm.reasoningEffort);
-    if (llmProvider === 'codex') {
-      renderCodexAccessFields(llmProvider);
-    } else {
-      settingApiEndpoint.value = llm.apiEndpoint
-        || (llm.api && looksLikeEndpoint(llm.api) ? llm.api : defaultLlmEndpointForProvider(llmProvider));
-      settingApiEndpoint.placeholder = defaultLlmEndpointForProvider(llmProvider);
-      settingApiKey.value = llm.apiKey || (llm.api && !looksLikeEndpoint(llm.api) ? llm.api : '');
-      settingApiKey.placeholder = apiKeyPlaceholderForProvider(llmProvider);
-      renderCodexAccessFields(llmProvider);
-    }
     if (settingAgentDeveloperMode) {
       settingAgentDeveloperMode.checked = state.settings?.agent?.developerMode === true;
     }
@@ -469,18 +414,12 @@ export function initSettings({
     if (!settingCodexAuthControls || !settingCodexStatus) {
       return;
     }
-
-    const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint?.value || '');
-    const isCodexProvider = provider === 'codex';
-    settingCodexAuthControls.hidden = !isCodexProvider;
+    settingCodexAuthControls.hidden = false;
     if (startCodexLoginBtn) {
-      startCodexLoginBtn.disabled = !isCodexProvider;
+      startCodexLoginBtn.disabled = false;
     }
     if (clearCodexLoginBtn) {
-      clearCodexLoginBtn.disabled = !isCodexProvider;
-    }
-    if (!isCodexProvider) {
-      return;
+      clearCodexLoginBtn.disabled = false;
     }
 
     const override = String(overrideMessage || '').trim();
@@ -573,21 +512,14 @@ export function initSettings({
 
   async function onSaveLlmSettings(event) {
     event.preventDefault();
-    const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint.value);
+    const provider = DEFAULT_LLM_PROVIDER;
     const model = llmModelCatalog.normalizeModel(provider, settingModel?.value);
     const reasoningEffort = llmModelCatalog.normalizeReasoning(provider, model, settingReasoningEffort?.value);
-    const endpoint = provider === 'codex'
-      ? ''
-      : (settingApiEndpoint.value.trim() || defaultLlmEndpointForProvider(provider));
-    const apiKey = provider === 'codex' ? '' : settingApiKey.value.trim();
 
     state.settings.llm = {
       provider,
       model,
-      reasoningEffort,
-      apiEndpoint: endpoint,
-      apiKey,
-      api: apiKey || endpoint
+      reasoningEffort
     };
     state.settings.agent = {
       ...state.settings.agent,
@@ -596,53 +528,26 @@ export function initSettings({
 
     persist();
 
-    if (provider === 'codex') {
-      try {
-        await Promise.all([
-          window.hikariApi?.setCodexLlmModel
-            ? window.hikariApi.setCodexLlmModel(state.settings.llm.model)
-            : Promise.resolve(),
-          window.hikariApi?.setCodexLlmReasoningEffort
-            ? window.hikariApi.setCodexLlmReasoningEffort(state.settings.llm.reasoningEffort)
-            : Promise.resolve()
-        ]);
-        const status = await refreshCodexLoginStatus();
-        if (status.loggedIn !== true) {
-          await startCodexLoginFlow();
-        }
-      } catch {
-        renderCodexStatus('Failed to start Codex login from settings.');
+    try {
+      await Promise.all([
+        window.hikariApi?.setCodexLlmModel
+          ? window.hikariApi.setCodexLlmModel(state.settings.llm.model)
+          : Promise.resolve(),
+        window.hikariApi?.setCodexLlmReasoningEffort
+          ? window.hikariApi.setCodexLlmReasoningEffort(state.settings.llm.reasoningEffort)
+          : Promise.resolve()
+      ]);
+      const status = await refreshCodexLoginStatus();
+      if (status.loggedIn !== true) {
+        await startCodexLoginFlow();
       }
-    }
-  }
-
-  function onProviderChanged() {
-    const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint.value);
-    const previousDefault = defaultLlmEndpointForProvider(activeLlmProvider);
-    const nextDefault = defaultLlmEndpointForProvider(provider);
-    const currentEndpoint = settingApiEndpoint.value.trim();
-
-    if (provider === 'codex') {
-      settingApiEndpoint.value = '';
-      settingApiKey.value = '';
-    } else if (!currentEndpoint || currentEndpoint === previousDefault) {
-      settingApiEndpoint.value = nextDefault;
-    }
-    settingApiEndpoint.placeholder = nextDefault;
-    settingModel.placeholder = modelPlaceholderForProvider(provider);
-    settingApiKey.placeholder = apiKeyPlaceholderForProvider(provider);
-    activeLlmProvider = provider;
-    renderCodexAccessFields(provider);
-    refreshLlmModelAndReasoningFields(provider, settingReasoningEffort?.value);
-    renderCodexStatus();
-    if (provider === 'codex') {
-      void refreshCodexLoginStatus();
+    } catch {
+      renderCodexStatus('Failed to start Codex login from settings.');
     }
   }
 
   function onModelChanged() {
-    const provider = normalizeLlmProvider(settingProvider?.value, settingApiEndpoint.value);
-    renderReasoningEffortOptions(provider, settingModel?.value || '', settingReasoningEffort?.value);
+    renderReasoningEffortOptions(DEFAULT_LLM_PROVIDER, settingModel?.value || '', settingReasoningEffort?.value);
   }
 
   async function refreshCodexCatalog() {
@@ -875,21 +780,6 @@ export function initSettings({
 
   function renderStorageImportStatus() {
     renderStorageStatus(settingStorageImportStatus, state, storageImportInFlight);
-  }
-
-  function populateLlmProviderOptions() {
-    if (!settingProvider) {
-      return;
-    }
-    const selectedProvider = normalizeLlmProvider(settingProvider.value);
-    settingProvider.textContent = '';
-    LLM_PROVIDER_OPTIONS.forEach((provider) => {
-      const option = document.createElement('option');
-      option.value = provider.value;
-      option.textContent = provider.label;
-      settingProvider.append(option);
-    });
-    settingProvider.value = selectedProvider || DEFAULT_LLM_PROVIDER;
   }
 
   return { renderForms, applyAppearance };

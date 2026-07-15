@@ -23,7 +23,6 @@ The important thing is that `defaultState` is broad. It is not only UI preferenc
 - samples, inventory containers, and common-chemicals inventory
 - agent-chat session/message state
 - settings, storage metadata, and growth metrics
-- the derived `objectGraph`
 
 ## Normalization and migration behavior
 
@@ -33,9 +32,9 @@ Examples:
 
 - it fills in missing branches from `defaultState`
 - it normalizes paper comments
-- it upgrades legacy LLM settings into the current `provider` plus `apiEndpoint` plus `apiKey` shape
+- it migrates legacy LLM settings to the Codex-only `provider`, `model`, and `reasoningEffort` shape while discarding endpoints and API keys
 - it normalizes startup settings and dashboard progress maps
-- it upgrades legacy chemistry draft storage into the current `synthesisChemistryDrafts` layout
+- it explicitly drops retired top-level fields such as the former relationship graph and Synthesis Chemistry draft store
 
 So when reading feature code, assume most modules receive a reasonably normalized state tree.
 
@@ -46,27 +45,18 @@ There are two persistence layers to keep in mind:
 1. `persistState(state)` in `modules/app-state.js`
    - writes the local renderer snapshot to `localStorage`
 2. `persist()` in `core/start-hikari-core.js`
-   - rebuilds `state.objectGraph`
+   - creates an undo checkpoint through `undoService`
+   - normalizes persisted storage paths
    - writes local storage
    - optionally auto-saves the `.ena` data file through the main-process bridge
 
 The second one is the important runtime callback. Feature modules receive `persist()` and treat it as the canonical "commit local changes" operation.
 
-## Object graph as derived state
+## Relationships between records
 
-`src/renderer/modules/object-graph.js` builds a relationship graph from the app's domain records.
+Cross-feature relationships are stored as stable IDs on the owning records and resolved where they are displayed or searched. For example, Biology Notebook owns project creation and dashboards under `modules/biology-notebook/project/`, while workflows, assays, gels, papers, and Agent Chat resolve their `projectId` links from `state.projects`.
 
-It links things like:
-
-- projects to workflows
-- workflows to blocks and notebook entries
-- notebook entries to protocols, samples, chemicals, papers, instruments, and people
-- assays and gels to notebook entries and projects
-- samples to chemicals, containers, and physical locations
-
-The graph is rebuilt frequently enough that it behaves like a derived index rather than a source of truth.
-
-That is why `persist()` and `renderAll()` both rebuild it.
+There is no persisted `objectGraph` mirror. Keep one source of truth for each record and update the relevant reader, search mapper, and service fan-out when a new link type is added.
 
 ## Module registry
 
@@ -77,7 +67,7 @@ That is why `persist()` and `renderAll()` both rebuild it.
 
 What makes it useful is the mix of things stored inside it:
 
-- feature-module APIs such as `assay`, `gel`, `projectManagement`, or `sequenceViewer`
+- feature-module APIs such as `assay`, `gel`, `biologyNotebook`, or `sequenceViewer`
 - shell helpers such as `showView`
 - constants such as `VIEWS`
 - small utilities like `setSearchInputValue`

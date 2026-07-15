@@ -174,21 +174,21 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart02(contex
             type: 'agent-lifecycle',
             session_id: created.session.id,
             requestId: 'req-1',
-            stage: 'parser_completed',
+            stage: 'controller_codex_agent',
             timestamp: '2026-03-22T15:00:01.700Z'
           },
           {
             type: 'agent-llm-trace',
             session_id: created.session.id,
             requestId: 'req-1',
-            stage: 'intent_parser',
-            provider: 'openai',
-            model: 'gpt-5',
+            stage: 'codex_cli',
+            provider: 'codex',
+            model: 'gpt-5.4',
             timestamp: '2026-03-22T15:00:01.800Z',
             request_direction: 'app->llm',
             response_direction: 'llm->app',
             request_payload: { prompt: 'Where is the Atlas binder notebook?' },
-            response_payload: { primary_intent: 'notebook_lookup' }
+            response_payload: { answer: 'Notebook found.' }
           },
           {
             type: 'agent-chat-result',

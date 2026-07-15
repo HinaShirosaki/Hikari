@@ -1,7 +1,6 @@
 import {
   ensureDashboardState,
   formatDateLocal,
-  formatRelativeDays,
   parseLocalDate,
   passageReminderId,
   sampleLabel
@@ -186,32 +185,6 @@ export function initPassageWidget({
         aria-label="Extend passage reminder one day for ${label}"
       >${renderPassageActionIcon('extend')}</button>
     `;
-  }
-
-  function formatPassageRowDetail(row) {
-    if (row.status === 'unconfigured') {
-      return 'Missing last passage date or interval.';
-    }
-    const detail = [];
-    if (row.passageNumber > 0) {
-      detail.push(`P${row.passageNumber}`);
-    }
-    detail.push(`Every ${row.intervalDays} day(s)`);
-    if (row.status === 'overdue') {
-      detail.push(formatRelativeDays(row.daysFromToday));
-      detail.push(`due ${formatDateLocal(row.effectiveDueDate)}`);
-      return detail.join(' | ');
-    }
-    if (row.status === 'due_today') {
-      detail.push('needs passage today');
-      return detail.join(' | ');
-    }
-    if (row.deferredUntilDate) {
-      detail.push(`extended to ${row.deferredUntilDate}`);
-      return detail.join(' | ');
-    }
-    detail.push(`${formatDateLocal(row.effectiveDueDate)} (${formatRelativeDays(row.daysFromToday)})`);
-    return detail.join(' | ');
   }
 
   function clonePassageConfig(sample) {

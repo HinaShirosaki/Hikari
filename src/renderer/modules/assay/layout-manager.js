@@ -47,7 +47,6 @@ export function createAssayLayoutManager({
     assayConcentrationAxisRowBtn,
     assayConcentrationUnitInput,
     assayDilutionFactorInput,
-    assayDilutionFillBtn,
     assayFillModeInput,
     assayImportFile,
     assayNumberDisplay,

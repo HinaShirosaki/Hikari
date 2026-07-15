@@ -249,5 +249,50 @@ test('protocol polish sends sectioned draft text to the LLM instead of a protoco
   assert.match(capturedPrompt, /Steps:\n1\. wash pellet with cold PBS\n2\. incubate on ice for \[time\]/);
   assert.equal(/Protocol draft to polish \(plain-text sections\):\n\{/.test(capturedPrompt), false);
 });
+test('protocol-owned agent adapter normalizes and persists approved generated protocols', () => {
+  const agentAdapterModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'protocol',
+    'agent',
+    'index.js'
+  ));
+  const state = {
+    protocols: [{ id: 'protocol-existing', name: 'Cell Prep' }]
+  };
+  let protocolsChanged = 0;
+  const adapter = agentAdapterModule.createProtocolAgentAdapter({
+    state,
+    createId: () => 'protocol-generated',
+    onProtocolsChanged: () => {
+      protocolsChanged += 1;
+    }
+  });
+
+  const reviewProtocols = adapter.collectReviewProtocols({
+    protocol_generation: {
+      protocol: {
+        id: 'protocol-existing',
+        title: 'Cell Prep',
+        description: 'Prepare cells for downstream analysis.',
+        materials: '- PBS\n- Cell pellet',
+        procedure: ['Wash the pellet.', { action: 'Resuspend in PBS.' }]
+      }
+    }
+  });
+
+  assert.equal(reviewProtocols.length, 1);
+  assert.equal(reviewProtocols[0].materials.join(','), 'PBS,Cell pellet');
+  assert.equal(reviewProtocols[0].steps[1].text, 'Resuspend in PBS.');
+
+  const savedProtocol = adapter.approveGeneratedProtocol(reviewProtocols[0]);
+  assert.equal(savedProtocol.id, 'protocol-generated');
+  assert.equal(savedProtocol.name, 'Cell Prep (Agent Generated)');
+  assert.equal(state.protocols.length, 2);
+  assert.equal(state.protocols[1], savedProtocol);
+  assert.equal(protocolsChanged, 1);
+});
   }
 };

@@ -99,9 +99,3 @@ export function setMultiSelectValues(selectEl, values) {
     option.selected = selectedValues.includes(option.value);
   });
 }
-
-export function delay(ms) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
-  });
-}

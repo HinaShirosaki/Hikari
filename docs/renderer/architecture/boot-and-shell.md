@@ -80,7 +80,7 @@ Examples:
 
 The renderer core owns two important shell-level helpers:
 
-- `persist()`: rebuilds the object graph, writes local storage, and optionally auto-saves the `.ena` file through `window.hikariApi.autoSaveDataFile(...)`
+- `persist()`: records an undo checkpoint, normalizes storage paths, writes local storage, and optionally auto-saves the `.ena` file through `window.hikariApi.autoSaveDataFile(...)`
 
 That means feature modules usually mutate shared state directly and then call the shared `persist()` callback instead of owning their own storage layer.
 
@@ -98,13 +98,6 @@ Key boot-time or shell-level calls include:
 
 Renderer state itself is loaded from `localStorage` (`loadState()` in `modules/app-state.js`), not from a bridge call — there is no `loadEnaFile`/`autoLoadDataFile` on `window.hikariApi`. The full bridge surface is assembled in `src/main/preload/create-preload-api.js` from the per-domain `api/*.js` modules. For the main-process side of those calls, use [doc/main-platform/README.md](../../main-platform/README.md).
 
-## Renderer-global hooks
+## External command hook
 
-Two shell-level hooks are worth knowing about:
-
-- `window.hikariGraph`
-  - exposes object-graph rebuild and a few graph queries for debugging and external scripting
-- `initTelegramCommandBridge()`
-  - subscribes to `window.hikariApi.onTelegramCommand(...)` and routes open-view or search commands back into the normal navigation/search pipeline
-
-Those hooks make the renderer core the place where local UI behavior and external automation meet.
+During initialization, the topbar search controller's `initTelegramCommandBridge()` subscribes to `window.hikariApi.onTelegramCommand(...)` and routes open-view or search commands back through the normal navigation/search pipeline. The renderer core owns that bridge so external commands reuse the same aliases and target handlers as local search.

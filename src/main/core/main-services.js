@@ -21,13 +21,12 @@ const {
   DEFAULT_LLM_PROVIDER,
   DEFAULT_LLM_ENDPOINTS,
   DEFAULT_AGENT_MODELS,
-  ALLOW_API_AGENT,
   inferLlmProviderFromEndpoint,
   normalizeLlmProvider,
   normalizeAgentLlmProvider,
   defaultLlmEndpointForProvider,
   defaultAgentModelForProvider
-} = require('../generated/llm-provider-config.generated.js');
+} = require('../generated/codex-model-catalog.generated.js');
 const { defaultCleanText } = require('../lib/llm/runtime-helpers.js');
 const { appendLogWithRotation } = require('../agent/shared/agent-observability');
 const { createMainAppPaths } = require('../lib/app-paths.js');
@@ -62,7 +61,6 @@ const {
 const { buildCompactIndexedSnapshot } = require('../data/data-snapshot-utils');
 const { createChatLogTransformMonitor } = require('../lib/llm/chat-log-transformer.js');
 const { createAgentLogService } = require('./services/create-agent-log-service');
-const { createLlmPromptsService } = require('./services/create-llm-prompts-service');
 const { createTelegramService } = require('./services/create-telegram-service');
 const { createNpmUpdaterService } = require('./services/create-npm-updater-service');
 const { createMainMcpService } = require('./services/create-mcp-service');
@@ -140,11 +138,6 @@ function createMainServices(context = {}) {
     return storagePath;
   };
 
-  const prompts = createLlmPromptsService({
-    fs,
-    promptsFilePath: path.join(projectRoot, 'data', 'llm-prompts.json')
-  });
-
   const npmUpdater = createNpmUpdaterService({ app, dialog, shell, getMainWindow });
 
   const telegram = createTelegramService({
@@ -189,11 +182,8 @@ function createMainServices(context = {}) {
   });
 
   const mcp = createMainMcpService({
-    cleanText,
     agentToolRuntime: agents.agentToolRuntime,
-    getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
-    getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
-    getBundlePaths,
+    getWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
     processObject
   });
 
@@ -243,7 +233,6 @@ function createMainServices(context = {}) {
 
   registerAgentIpc({
     ipcMain,
-    ALLOW_API_AGENT,
     LLM_PROVIDERS,
     cleanText,
     controllerUtils: agents.controllerUtils,
@@ -300,7 +289,6 @@ function createMainServices(context = {}) {
         storagePaths: defaultDataFilePath ? [path.dirname(defaultDataFilePath)] : []
       });
     });
-    await bestEffort('prompts', () => prompts.loadLlmPrompts());
     await bestEffort('npm-updater', () => npmUpdater.start());
     await bestEffort('telegram', async () => {
       await telegram.hydrateSavedTelegramToken();
@@ -309,7 +297,15 @@ function createMainServices(context = {}) {
     await bestEffort('mcp', async () => {
       const result = await mcp.initialize({ reason: 'app_ready' });
       if (result?.ok === false) {
-        const error = new Error('Hikari MCP initialization did not complete successfully.');
+        const error = new Error('Hikari MCP host did not start successfully.');
+        error.result = result;
+        throw error;
+      }
+    });
+    await bestEffort('codex', async () => {
+      const result = await codex.initialize({ reason: 'app_ready' });
+      if (result?.ok === false) {
+        const error = new Error('Codex workspace initialization did not complete successfully.');
         error.result = result;
         throw error;
       }

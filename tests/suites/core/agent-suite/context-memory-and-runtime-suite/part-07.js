@@ -318,6 +318,5 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart07(contex
       assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'limit'), false);
       assert.equal(Object.prototype.hasOwnProperty.call(calls[0], 'max_per_source'), false);
     });
-    // The session-runtime tool-loop test moved out with /self-agent when it was isolated.
   }
 };

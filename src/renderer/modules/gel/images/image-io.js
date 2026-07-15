@@ -3,7 +3,6 @@ import {
   MAX_IMAGE_DIMENSION
 } from '../constants.js';
 import { convertRgbaToGray } from '../analysis/image-processing.js';
-import { clamp } from '../shared.js';
 
 let utifLoadPromise = null;
 

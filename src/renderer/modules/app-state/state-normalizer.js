@@ -1,8 +1,7 @@
 import {
-  defaultLlmEndpointForProvider,
   normalizeAgentLlmProvider,
   normalizeReasoningEffort
-} from '../llm-provider-config.generated.js';
+} from '../codex-model-catalog.generated.js';
 import { normalizePaperAgentChatSessions } from './agent-chat-normalizer.js';
 import {
   normalizeSampleInventoryLocations,
@@ -29,25 +28,18 @@ function asObject(value) {
 }
 
 function normalizeLlmSettings(rawLlm) {
-  const legacyApi = String(rawLlm.api || '').trim();
-  const legacyApiLooksLikeEndpoint = /^[a-z]+:\/\//i.test(legacyApi);
-  const legacyCodexMarker = legacyApi.toLowerCase().startsWith('codex://');
-  const legacyEndpoint = legacyApiLooksLikeEndpoint && !legacyCodexMarker ? legacyApi : '';
-  const legacyApiKey = legacyApi && !legacyApiLooksLikeEndpoint ? legacyApi : '';
-  const provider = normalizeAgentLlmProvider(rawLlm.provider, rawLlm.apiEndpoint || legacyApi || legacyEndpoint);
+  const persistedCodexSettings = { ...rawLlm };
+  delete persistedCodexSettings.api;
+  delete persistedCodexSettings.apiEndpoint;
+  delete persistedCodexSettings.apiKey;
+  const provider = normalizeAgentLlmProvider();
   const model = String(rawLlm.model || '').trim();
-  const apiEndpoint = provider === 'codex'
-    ? ''
-    : (String(rawLlm.apiEndpoint || legacyEndpoint || '').trim() || defaultLlmEndpointForProvider(provider));
   return {
     ...defaultState.settings.llm,
-    ...rawLlm,
+    ...persistedCodexSettings,
     provider,
     model,
-    reasoningEffort: normalizeReasoningEffort(provider, model, rawLlm.reasoningEffort, apiEndpoint),
-    apiEndpoint,
-    apiKey: provider === 'codex' ? '' : String(rawLlm.apiKey || legacyApiKey).trim(),
-    api: legacyApi
+    reasoningEffort: normalizeReasoningEffort(provider, model, rawLlm.reasoningEffort)
   };
 }
 
@@ -189,7 +181,9 @@ function normalizeGrowthMetrics(source) {
 }
 
 export function normalizeState(parsed) {
-  const source = parsed || {};
+  const source = { ...asObject(parsed) };
+  delete source.objectGraph;
+  delete source.synthesisChemistryDrafts;
   return {
     ...structuredClone(defaultState),
     ...source,
@@ -217,7 +211,6 @@ export function normalizeState(parsed) {
     },
     paperAgentChatSessions: normalizePaperAgentChatSessions(source.paperAgentChatSessions),
     notebookEntries: Array.isArray(source.notebookEntries) ? source.notebookEntries : [],
-    synthesisChemistryDrafts: asObject(source.synthesisChemistryDrafts),
     assays: Array.isArray(source.assays) ? source.assays : [],
     gelAnalyses: Array.isArray(source.gelAnalyses) ? source.gelAnalyses : [],
     samples: (Array.isArray(source.samples) ? source.samples : []).map((sample) => normalizeSampleRecord(sample)),

@@ -1,5 +1,4 @@
 import { normalizeAgentResponse } from './response.js';
-import { applyNotebookDraftAutoSave } from './notebook-drafts.js';
 import { buildAttachmentSummary } from './composer-attachments.js';
 import { toConversation, trimText } from './shared.js';
 import {
@@ -36,7 +35,7 @@ export function createAgentRequestController(deps) {
     setStatus,
     syncComposerHeight,
     updateInFlightState,
-    onNotebookEntriesChanged,
+    notebookDraftAdapter,
     openReviewForMessage = () => {}
   } = deps;
 
@@ -163,11 +162,9 @@ export function createAgentRequestController(deps) {
         }
       }
       const response = normalizeAgentResponse(result);
-      const notebookDraft = applyNotebookDraftAutoSave(response.notebookPayload, messageText, {
-        state,
-        createId,
-        onNotebookEntriesChanged
-      });
+      const notebookDraft = notebookDraftAdapter?.applyAutoSave?.(response.notebookPayload, messageText)
+        ?? notebookDraftAdapter?.normalizeDraft?.(response.notebookPayload)
+        ?? null;
       if (notebookDraft?.save?.applied === true) {
         renderContextSummary();
       }

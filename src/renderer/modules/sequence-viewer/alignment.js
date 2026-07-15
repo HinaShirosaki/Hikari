@@ -94,7 +94,6 @@ function buildCandidateWindows(referenceSequence, querySequence, topology, optio
   const safeTopology = normalizeTopology(topology);
   const isCircular = safeTopology === 'circular';
   const queryLength = Math.max(0, querySequence.length);
-  const referenceLength = Math.max(0, referenceSequence.length);
   const searchSequence = isCircular ? `${referenceSequence}${referenceSequence}` : referenceSequence;
   const k = queryLength < 80 ? 6 : 8;
   const padding = Math.max(0, Number(options.windowPadding) || DEFAULT_WINDOW_PADDING_BP);

@@ -5,24 +5,22 @@ export function createHistoryActionController({
   api,
   state,
   input,
-  createId,
   persist,
   setStatus,
   syncComposerHeight,
   renderContextSummary,
   renderHistoryView,
   answerAssistantQuestion,
-  onNotebookEntriesChanged,
+  notebookDraftAdapter,
   onOpenNotebookEntry
 }) {
   const notebookActions = createNotebookHistoryActions({
     state,
     persist,
-    createId,
     setStatus,
     renderContextSummary,
     renderHistoryView,
-    onNotebookEntriesChanged,
+    notebookDraftAdapter,
     onOpenNotebookEntry
   });
 

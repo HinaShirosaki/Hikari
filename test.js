@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
-const { TextDecoder, TextEncoder } = require('node:util');
+const { TextEncoder } = require('node:util');
 const vm = require('node:vm');
 
 const {
@@ -21,24 +21,12 @@ const {
   atobPolyfill,
   encodeBase64Url
 } = require('./tests/support/runtime.js');
-const {
-  createAgentSimulationSupport
-} = require('./tests/support/agent-simulation.js');
-
 fs.mkdirSync(path.join(__dirname, 'tmp'), { recursive: true });
 
 const tests = [];
 
 function test(name, fn) {
   tests.push({ name, fn });
-}
-
-function optionalRequire(modulePath, fallback = {}) {
-  try {
-    return require(modulePath);
-  } catch {
-    return fallback;
-  }
 }
 
 const memoryStorage = createMemoryStorage();
@@ -50,38 +38,26 @@ const shared = {
   })
 };
 
-const agentRouting = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-routing.js'));
-const agentTools = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-tools.js'));
-const agentProtocolGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-protocol-generation.js'));
-const agentProtocolMatching = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-protocol-matching.js'));
-const agentNotebookGeneration = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-notebook-generation.js'));
-const agentNotebookDraft = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-notebook-draft.js'));
-const agentInventoryLookup = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-inventory-lookup.js'));
-const agentSubAgent = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-sub-agent.js'));
-const agentChatLog = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'context', 'agent-chat-log.js'));
-const agentMemory = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'context', 'agent-memory.js'));
-const agentToolCall = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-call.js'));
-const agentToolLoading = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-loading.js'));
-const agentToolExecution = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-execution.js'));
-const agentProjectRetrieval = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-project-retrieval.js'));
-const agentLiteratureSearch = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'search', 'agent-literature-search.js'));
-const agentLiteratureSearchWorkflow = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'workflow', 'agent-literature-search-workflow.js'));
-const agentPaperContextLoader = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'retrieve', 'agent-paper-context-loader.js'));
-const agentPaperDownload = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'download', 'agent-paper-download.js'));
-const agentPaperKnowledgeDatabase = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'store', 'agent-paper-knowledge-database.js'));
-const agentPaperAnalysis = optionalRequire(path.join(__dirname, 'src', 'main', 'papers', 'analysis', 'agent-paper-analysis.js'));
+const agentProtocolGeneration = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-protocol-generation.js'));
+const agentProtocolMatching = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-protocol-matching.js'));
+const agentNotebookGeneration = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-notebook-generation.js'));
+const agentNotebookDraft = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-notebook-draft.js'));
+const agentInventoryLookup = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-inventory-lookup.js'));
+const agentSubAgent = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-sub-agent.js'));
+const agentChatLog = require(path.join(__dirname, 'src', 'main', 'agent', 'context', 'agent-chat-log.js'));
+const agentMemory = require(path.join(__dirname, 'src', 'main', 'agent', 'context', 'agent-memory.js'));
+const agentToolLoading = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-loading.js'));
+const agentToolExecution = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-execution.js'));
+const agentLiteratureSearch = require(path.join(__dirname, 'src', 'main', 'papers', 'search', 'agent-literature-search.js'));
+const agentLiteratureSearchWorkflow = require(path.join(__dirname, 'src', 'main', 'papers', 'workflow', 'agent-literature-search-workflow.js'));
+const agentPaperContextLoader = require(path.join(__dirname, 'src', 'main', 'papers', 'retrieve', 'agent-paper-context-loader.js'));
+const agentPaperDownload = require(path.join(__dirname, 'src', 'main', 'papers', 'download', 'agent-paper-download.js'));
+const agentPaperKnowledgeDatabase = require(path.join(__dirname, 'src', 'main', 'papers', 'store', 'agent-paper-knowledge-database.js'));
+const agentPaperAnalysis = require(path.join(__dirname, 'src', 'main', 'papers', 'analysis', 'agent-paper-analysis.js'));
 const paperMarkdownImport = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'paper-markdown-import.js'));
-const agentToolSmokeTest = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-smoke-test.js'));
-const agentResponseLayer = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-response-layer.js'));
-const agentValidationSafety = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-validation-safety.js'));
+const agentToolSmokeTest = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-smoke-test.js'));
 const agentObservability = require(path.join(__dirname, 'src', 'main', 'agent', 'shared', 'agent-observability.js'));
-const agentPythonSandbox = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-python-sandbox.js'));
 const agentPython = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-python-sandbox.js'));
-const agentPythonOrchestration = agentPython;
-const agentPythonCodegen = agentPython;
-const agentWebFallback = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-web-fallback.js'));
-const phase89Runtime = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-phase89-runtime.js'));
-const agentSqliteIndex = optionalRequire(path.join(__dirname, 'src', 'main', 'agent', 'agent-sqlite-index.js'));
 const sequenceLibrary = require(path.join(
   __dirname,
   'src',
@@ -124,7 +100,6 @@ const toolBox = loadEsmStyleModule(
     'estimatePI',
     'residueSummary',
     'peptideStats',
-    'renderChemicalOptions',
     'normalizeIupacPattern',
     'matchesIupacPattern',
     'parseCrisprTargetsInput',
@@ -198,68 +173,14 @@ const gelAnalysisInternals = loadEsmStyleModule(
 const gelLaneTableInternals = loadEsmStyleModule(
   path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering', 'lane-table.js')
 );
-const papersManagementInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'normalizers.js'),
-  {},
-  ['normalizePaperSummary']
-);
 const papersPdfViewerInternals = loadEsmStyleModule(
   path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js')
 );
 const assayAnalysis = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'assay', 'analysis', 'index.js'));
 const mainUtils = require(path.join(__dirname, 'src', 'main', 'lib', 'main-utils.js'));
-const sequenceMainUtils = require(path.join(
-  __dirname,
-  'src',
-  'renderer',
-  'modules',
-  'sequence-viewer',
-  'main-process',
-  'sequence-input.js'
-));
 const telegramBot = require(path.join(__dirname, 'src', 'main', 'lib', 'telegramBot.js'));
 const forgeConfig = require(path.join(__dirname, 'forge.config.js'));
 const packageManifest = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
-
-const AGENT_SIMULATION_DISPATCH_TOOL_NAMES = new Set([
-  'search_projects',
-  'search_protocols',
-  'search_notebook_entries',
-  'search_workflows',
-  'search_assays',
-  'search_gel_analyses',
-  'search_inventory',
-  'search_papers',
-  'search_uniprot',
-  'search_pubmed',
-  'search_crossref',
-  'search_europe_pmc',
-  'search_web',
-  'toolbox_molarity_calculator',
-  'toolbox_peptide_properties',
-  'toolbox_buffer_preparer',
-  'toolbox_dna_to_protein',
-  'toolbox_protein_to_dna',
-  'toolbox_oligo_properties',
-  'toolbox_extinction_coefficient',
-  'toolbox_qpcr_efficiency',
-  'toolbox_crispr_sgrna_designer',
-  'run_python_sandbox',
-  'download_paper_pdf'
-]);
-
-const {
-  buildAgentSimulationSnapshot,
-  pickMockRows,
-  buildMockToolArgs,
-  buildMockToolDispatch,
-  runSimulatedAgentTurn
-} = createAgentSimulationSupport({
-  assert,
-  agentRouting,
-  agentTools,
-  AGENT_SIMULATION_DISPATCH_TOOL_NAMES
-});
 
 const sourceCache = new Map();
 
@@ -284,7 +205,6 @@ const suiteScope = {
   fs,
   fsPromises,
   path,
-  TextDecoder,
   TextEncoder,
   vm,
   createMemoryStorage,
@@ -300,10 +220,7 @@ const suiteScope = {
   atobPolyfill,
   encodeBase64Url,
   test,
-  memoryStorage,
   shared,
-  agentRouting,
-  agentTools,
   agentProtocolGeneration,
   agentProtocolMatching,
   agentNotebookGeneration,
@@ -312,10 +229,8 @@ const suiteScope = {
   agentSubAgent,
   agentChatLog,
   agentMemory,
-  agentToolCall,
   agentToolLoading,
   agentToolExecution,
-  agentProjectRetrieval,
   agentLiteratureSearch,
   agentLiteratureSearchWorkflow,
   agentPaperContextLoader,
@@ -324,35 +239,19 @@ const suiteScope = {
   agentPaperAnalysis,
   paperMarkdownImport,
   agentToolSmokeTest,
-  agentResponseLayer,
-  agentValidationSafety,
   agentObservability,
-  agentPythonSandbox,
   agentPython,
-  agentPythonOrchestration,
-  agentPythonCodegen,
-  agentWebFallback,
-  phase89Runtime,
-  agentSqliteIndex,
   sequenceLibrary,
   toolBox,
   sequenceViewerInternals,
   gelAnalysisInternals,
   gelLaneTableInternals,
-  papersManagementInternals,
   papersPdfViewerInternals,
   assayAnalysis,
   mainUtils,
-  sequenceMainUtils,
   telegramBot,
   forgeConfig,
   packageManifest,
-  AGENT_SIMULATION_DISPATCH_TOOL_NAMES,
-  buildAgentSimulationSnapshot,
-  runSimulatedAgentTurn,
-  pickMockRows,
-  buildMockToolArgs,
-  buildMockToolDispatch,
   readSource,
   assertClose
 };

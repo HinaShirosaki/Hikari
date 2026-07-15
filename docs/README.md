@@ -8,7 +8,7 @@ Hikari is an Electron app with two processes plus an agent backend:
 
 - **Renderer** (`src/renderer/`) — the browser-side single-page app. Feature workspaces are **folder modules** (`modules/<feature>/index.js`) registered through `module-manifests/`, glued together by a generated app registry, the renderer core, and a thin module runtime. Renderer state lives in `localStorage`; saves and storage-root hydration go through the `window.hikariApi` bridge.
 - **Main process** (`src/main/`) — `main.js` is a thin entry that defers to `core/main-services.js`, which constructs services in dependency order and registers all IPC. Papers owns its Node services under `src/main/papers/`; the Sequence Viewer keeps its Node-only storage half inside its existing module at `src/renderer/modules/sequence-viewer/main-process/`. Generic persistence lives under `src/main/storage/` and `src/main/data/`, with shared runtime utilities under `src/main/lib/`. IPC registrars live in `src/main/ipc/` and are invoked from `core/main-services.js`. Channel names are centralized in `src/shared/ipc/channels.js`.
-- **Agent backend** (`src/main/agent/`) — the main-process assistant. Assembled by `createMainAgentServices(...)` and exposed through `src/main/ipc/register-agent-ipc/`. It is parser-first for most providers, with a dedicated Codex provider path, and a full tool suite registered on a shared executor.
+- **Agent backend** (`src/main/agent/`) — the Codex-owned main-process assistant. It is assembled by `createMainAgentServices(...)`, exposed through `src/main/ipc/register-agent-ipc/`, and backed by MCP contracts plus a shared tool executor. Domain implementations such as paper services remain under their owning `src/main/<domain>/` folders.
 
 ## Doc sets
 
@@ -16,7 +16,7 @@ Hikari is an Electron app with two processes plus an agent backend:
 | --- | --- |
 | [renderer/](renderer/README.md) | Browser-side boot and shell, renderer state/services/search, module families, the heavyweight subsystems, and a file map |
 | [main-platform/](main-platform/README.md) | Main-process persistence, storage bundles, LLM runtime, IPC registrars, and links to feature-owned Node services |
-| [agent/](agent/README.md) | The agent backend: request lifecycle, runtimes, tools, context/observability, deep research, and the MCP contract |
+| [agent/](agent/README.md) | The Codex agent backend: request lifecycle, runtime support, tools, context/observability, and the MCP contract |
 | [module-development/](module-development/README.md) | How to add a new renderer feature module from scratch (the build pipeline, the `init*()` contract, and the wiring checklist) |
 | [plugins/](plugins/plugin-system.md) | The user plugin system: plugin folder format, Settings-based install flow, boot internals, sandboxing, and limitations |
 
@@ -29,4 +29,4 @@ Hikari is an Electron app with two processes plus an agent backend:
 
 ## A note on generated files
 
-The `agent/reference/json-schemas.md` schema dump is a large generated export, not hand-written — treat it as a build artifact rather than editing by hand. Likewise, `index.html`, `styles.css`, `src/renderer/modules/views.js`, and the `*.generated.js` modules come from `npm run build:ui`; edit their sources under `ui/` and `config/` instead.
+`agent/reference/json-schemas.md` is a hand-maintained map to the live schema sources. `index.html`, `styles.css`, `src/renderer/modules/views.js`, and the `*.generated.js` modules come from `npm run build:ui`; edit their sources under `ui/` and `config/` instead.

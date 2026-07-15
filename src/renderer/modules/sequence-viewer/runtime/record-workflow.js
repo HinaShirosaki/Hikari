@@ -1,5 +1,4 @@
 import { parseInputRecords, normalizeExternalPayload } from '../parsing.js';
-import { cleanText } from '../shared.js';
 import {
   DEFAULT_MAX_RECORDS
 } from '../constants.js';

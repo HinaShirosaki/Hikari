@@ -5,7 +5,6 @@
 }
 
 .left-rail-template.gel-workspace {
-  --app-left-rail-bleed: 24px;
   --left-rail-main-gap: 24px;
   min-height: 0;
   height: 100%;

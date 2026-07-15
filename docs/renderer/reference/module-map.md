@@ -40,9 +40,8 @@ These are the workspaces wired in `module-manifests/index.js`, grouped by manife
 
 | Manifest key | View | Entry file | Implementation |
 | --- | --- | --- | --- |
-| `biologyNotebook` | `BIOLOGY_NOTEBOOK` | `modules/biology-notebook/index.js` | biology / wet-lab notebook (entry export is still named `initLabNotebook`) |
-| `protocol` | `PROTOCOL_MANAGEMENT` | `modules/protocol/index.js` | protocol CRUD, viewing, sharing, import |
-| `projectManagement` | `PROJECT_MANAGEMENT` | `modules/project-management/index.js` | projects plus linked notebook/paper rollups |
+| `biologyNotebook` | `BIOLOGY_NOTEBOOK` | `modules/biology-notebook/index.js` | projects, biology / wet-lab notebook records, and the `agent/` draft adapter (entry export is still named `initLabNotebook`) |
+| `protocol` | `PROTOCOL_MANAGEMENT` | `modules/protocol/index.js` | protocol CRUD, viewing, sharing, import, and its `agent/` generated-record adapter |
 | `agentChat` | `AGENT` | `modules/agent-chat/index.js` | chat UI, sessions, context |
 | `agentChatRail` | (rail, no view) | `modules/agent-chat/index.js` + `agent-chat/scoped-state.js` | scoped agent chat embedded as a side rail in Papers, Biology Notebook, and Assay |
 | `workflowManagement` | `WORKFLOW_MANAGEMENT` | `modules/workflow/index.js` | workflow model, graph editor, list rendering, actions |
@@ -65,7 +64,7 @@ These files expose a deliberate secondary API or compose features that do not us
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `modules/agent-chat/public-api.js` | Support | explicit response-helper surface used outside Agent Chat |
+| `modules/agent-chat/public-api.js` | Support | explicit response and state-snapshot surface used outside Agent Chat |
 | `modules/gel/public-api.js` | Support | explicit pure gel-analysis API used by contracts and non-view consumers |
 | `modules/sequence-viewer/public-api.js` | Support | explicit parsing, rendering, ORF, restriction, alignment, and embedding API |
 | `modules/tool-box.js` | Support | toolbox composition root over many mini-tools (the `tool-box/` folder has no `index.js`) |
@@ -95,7 +94,7 @@ These files expose a deliberate secondary API or compose features that do not us
 | File | Status | Notes |
 | --- | --- | --- |
 | `modules/app-registry.generated.js` | Main path | generated shell config for dock, aliases, and view metadata |
-| `modules/llm-provider-config.generated.js` | Support | generated LLM provider catalog for the renderer |
+| `modules/codex-model-catalog.generated.js` | Support | generated Codex model catalog for the renderer |
 
 ## Bundled datasets and specialty utilities
 
@@ -121,7 +120,7 @@ If you want to read the code after this doc set, start here:
 3. `src/renderer/module-manifests/index.js`
 4. `src/renderer/modules/app-state.js`
 5. `src/renderer/services/index.js`
-6. one simple folder module such as `src/renderer/modules/project-management/index.js`
+6. one focused feature package such as `src/renderer/modules/biology-notebook/project/project-controller.js`
 7. one large subsystem entry such as `src/renderer/modules/sequence-viewer/index.js`
 
 That order makes the rest of the package much easier to place.

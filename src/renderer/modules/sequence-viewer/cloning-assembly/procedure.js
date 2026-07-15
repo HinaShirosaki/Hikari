@@ -1,6 +1,6 @@
 import { asArray, normalizeSequence } from './sequence-utils.js';
 
-export function buildProcedureSteps(strategyName, assemblyDesign, primerPlan, routeEvaluations) {
+export function buildProcedureSteps(strategyName, assemblyDesign) {
   const downstreamAssemblyMethod = assemblyDesign?.downstreamAssemblyMethod || null;
 
   if (strategyName === 'restriction-ligation') {
@@ -44,7 +44,7 @@ export function buildProcedureSteps(strategyName, assemblyDesign, primerPlan, ro
   ];
 }
 
-export function buildValidationPlan(strategyName, assemblyDesign, fragmentMap) {
+export function buildValidationPlan(strategyName, fragmentMap) {
   const fragmentIds = asArray(fragmentMap?.fragments).map((fragment) => fragment.id);
   if (strategyName === 'restriction-ligation') {
     return [

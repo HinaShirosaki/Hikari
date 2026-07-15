@@ -33,7 +33,7 @@ The non-agent application data API. Channels come from the `STORAGE`, `SEQUENCE_
 
 **Import parsers:**
 
-- `inventory:parse-chemical-import` → `chemical-import-parser.js`
+- `inventory:parse-chemical-import` → `lib/chemical-import-parser.js`
 - `assay:parse-result-import` → assay result-import detection
 
 **Sequence library (`register-data-ipc/register-sequence-library-ipc.js`, `SEQUENCE_LIBRARY.*`):**

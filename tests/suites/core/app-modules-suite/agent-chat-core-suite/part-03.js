@@ -273,10 +273,10 @@ test('agent-chat sends settings API key to main process and stores assistant res
           },
           developer_trace: [
             {
-              stage: 'intent_parser',
-              provider: 'openai',
+              stage: 'codex_agent_started',
+              provider: 'codex',
               model: 'gpt-5',
-              summary: 'Intent parsed.',
+              summary: 'Codex agent request started.',
               timestamp: '2026-03-11T12:00:00.000Z'
             }
           ]

@@ -1,0 +1,52 @@
+/* Late-load Tool Box surface refinements. */
+
+#tool-box-view .calc-output,
+#tool-box-view .sequence-block,
+#tool-box-view .result-card,
+#tool-box-view .result-table-wrap,
+#tool-box-view .crispr-controls,
+#tool-box-view .colony-counter-controls,
+#tool-box-view .colony-cropper-shell,
+#tool-box-view .colony-preview-canvas {
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+  box-shadow: none;
+}
+
+#tool-box-view .workflow-card {
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 8px;
+  background: var(--theme-surface-elevated);
+  box-shadow: none;
+}
+
+#tool-box-view .result-table th {
+  background: var(--theme-surface-subtle);
+}
+
+#tool-box-view .molarity-block {
+  border-top-color: var(--theme-border);
+}
+
+#tool-box-view .crispr-risk-badge {
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+  letter-spacing: 0;
+  text-transform: none;
+  box-shadow: none;
+}
+
+#tool-box-view .crispr-risk-low {
+  color: var(--theme-text-strong);
+}
+
+#tool-box-view .crispr-risk-medium {
+  color: var(--theme-text-muted);
+}
+
+#tool-box-view .crispr-risk-high {
+  color: var(--theme-danger);
+}

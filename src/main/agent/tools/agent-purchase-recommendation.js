@@ -1131,13 +1131,6 @@ function buildSearchQuery(input = {}) {
   ], 12).join(' ');
 }
 
-function buildMatchedRequirements(item = {}, filters = {}, pageText = '') {
-  const haystack = buildRequirementHaystack(item, pageText);
-  return asArray(filters.required_terms).filter((term) => {
-    return termMatchesHaystack(term, haystack);
-  });
-}
-
 function evaluateProductRequirementMatch(item = {}, filters = {}, pageText = '') {
   const haystack = buildRequirementHaystack(item, pageText);
   const requiredTerms = asArray(filters.required_terms);

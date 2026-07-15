@@ -2,7 +2,7 @@
 
 const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
 const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
-const { buildKeywordStyleLiteratureQuery, extractKeywordPhrases } = require('./agent-literature-query-utils.js');
+const { buildKeywordStyleLiteratureQuery } = require('./agent-literature-query-utils.js');
 const {
   prependPreferredValue,
   prioritizePreferredWebSource
@@ -268,10 +268,6 @@ function createLiteratureSearchRuntime(deps = {}) {
     }
     const text = await readResponseText(response);
     return JSON.parse(String(text || '{}'));
-  }
-
-  function normalizeQueryTerms(input = {}) {
-    return uniqueStrings(extractKeywordPhrases(buildLiteratureQuery(input), 50), 50);
   }
 
   /**

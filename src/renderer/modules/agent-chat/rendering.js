@@ -46,7 +46,7 @@ function renderAssistantMessageBody(message, safeText, { hasLiveProgress = false
   return `<div class="agent-chat-body agent-chat-markdown">${renderMarkdown(message.text || '', safeText)}</div>`;
 }
 
-export function renderHistory({ historyNode, messages, state, safeText }) {
+export function renderHistory({ historyNode, messages, state, safeText, notebookDraftAdapter }) {
   const safeMessages = asArray(messages);
   if (!safeMessages.length) {
     renderEmptyHistory({ historyNode, state, safeText });
@@ -65,8 +65,8 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
       : '';
     const assistantMeta = role === 'assistant'
       ? renderAssistantMeta(message.meta, message.id, {
-        state,
         safeText,
+        notebookDraftAdapter,
         canAnswerQuestion: !safeMessages.slice(index + 1).some((item) => item?.role === 'user')
       })
       : '';

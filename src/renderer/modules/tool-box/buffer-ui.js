@@ -3,7 +3,7 @@ import { escapeHtml } from './common.js';
 import {
   calculateBufferRecipe,
   resolveBufferCompound
-} from './bench-calculations.js';
+} from '../../lib/bench-calculations.js';
 
 const BUFFER_ROW_COUNT = 6;
 

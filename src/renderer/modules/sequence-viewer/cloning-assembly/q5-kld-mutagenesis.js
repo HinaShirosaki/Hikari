@@ -1,4 +1,3 @@
-import { reverseComplementDna } from '../calculations/sequence.js';
 import { DEFAULT_CLONING_PREFERENCES } from './constants.js';
 import { asArray, normalizeSequence } from './sequence-utils.js';
 import { normalizeEditRequest } from './edit-map.js';

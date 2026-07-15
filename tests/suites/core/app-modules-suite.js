@@ -4,7 +4,7 @@ module.exports = function registerAppModulesSuite(context = {}) {
   const registerAppAgentChatCoreSuite = require('./app-modules-suite/agent-chat-core-suite.js');
   const registerAppAgentChatSessionsAndToolsSuite = require('./app-modules-suite/agent-chat-sessions-and-tools-suite.js');
   const registerAppPapersSuite = require('./app-modules-suite/papers-suite.js');
-  const registerAppAssayAndObjectGraphSuite = require('./app-modules-suite/assay-and-object-graph-suite.js');
+  const registerAppAssaySuite = require('./app-modules-suite/assay-suite.js');
   const registerAppWorkflowSuite = require('./app-modules-suite/workflow-suite.js');
 
   registerAppLabAndProjectSuite(context);
@@ -12,6 +12,6 @@ module.exports = function registerAppModulesSuite(context = {}) {
   registerAppAgentChatCoreSuite(context);
   registerAppAgentChatSessionsAndToolsSuite(context);
   registerAppPapersSuite(context);
-  registerAppAssayAndObjectGraphSuite(context);
+  registerAppAssaySuite(context);
   registerAppWorkflowSuite(context);
 };

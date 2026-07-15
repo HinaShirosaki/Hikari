@@ -100,28 +100,6 @@ export function summarizeNotebookToolCalculations(rawCalculations) {
   return `${calculations.length} calculation${calculations.length === 1 ? '' : 's'}${labels.length ? ` (${labels.join('; ')}${suffix})` : ''}`;
 }
 
-export function flattenNotebookToolCalculationsText(rawCalculations) {
-  return normalizeNotebookToolCalculations(rawCalculations)
-    .map((calculation) => [
-      calculation.title,
-      calculation.result,
-      calculation.formula,
-      calculation.summary,
-      calculation.table
-        ? [
-          calculation.table.caption,
-          calculation.table.headers.join(' '),
-          ...calculation.table.metaRows.map((row) => row.join(' ')),
-          ...calculation.table.rows.map((row) => row.join(' ')),
-          ...calculation.table.footerRows.map((row) => row.join(' '))
-        ].filter(Boolean).join(' ')
-        : '',
-      JSON.stringify(calculation.inputs || {})
-    ].filter(Boolean).join(' '))
-    .join(' ')
-    .trim();
-}
-
 function padCells(cells, width) {
   const source = Array.isArray(cells) ? cells : [];
   return source.concat(Array.from({ length: Math.max(0, width - source.length) }, () => ''));

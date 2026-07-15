@@ -50,8 +50,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       const registry = createRegistryWithUi(servicesModule);
       const services = servicesModule.createRendererServices(registry);
 
-      const synthesisProtocolOptions = createSpy('synthesisProtocolOptions');
-      const synthesisEntries = createSpy('synthesisEntries');
       const biologyProtocolOptions = createSpy('biologyProtocolOptions');
       const biologyEntries = createSpy('biologyEntries');
       const workflowRender = createSpy('workflowRender');
@@ -61,10 +59,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       const gelList = createSpy('gelList');
       const protocolList = createSpy('protocolList');
 
-      registry.register('synthesisNotebook', {
-        renderProtocolOptions: synthesisProtocolOptions,
-        renderEntries: synthesisEntries
-      });
       registry.register('biologyNotebook', {
         renderProtocolOptions: biologyProtocolOptions,
         renderEntries: biologyEntries
@@ -81,8 +75,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       registry.register('protocol', { renderList: protocolList });
 
       services.protocol.handleProtocolsChanged();
-      assert.equal(synthesisProtocolOptions.calls.length, 1);
-      assert.equal(synthesisEntries.calls.length, 1);
       assert.equal(biologyProtocolOptions.calls.length, 1);
       assert.equal(biologyEntries.calls.length, 1);
       assert.equal(workflowRender.calls.length, 1);
@@ -94,8 +86,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
 
       services.protocol.handleProtocolsImported();
       assert.equal(protocolList.calls.length, 1);
-      assert.equal(synthesisProtocolOptions.calls.length, 2);
-      assert.equal(synthesisEntries.calls.length, 2);
       assert.equal(biologyProtocolOptions.calls.length, 2);
       assert.equal(biologyEntries.calls.length, 2);
       assert.equal(workflowRender.calls.length, 2);
@@ -262,7 +252,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       const assayList = createSpy('assayList');
       const gelNotebookOptions = createSpy('gelNotebookOptions');
       const gelList = createSpy('gelList');
-      const synthesisEntries = createSpy('synthesisEntries');
       const biologyEntries = createSpy('biologyEntries');
 
       registry.register('workflowManagement', { render: workflowRender });
@@ -274,7 +263,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
         renderNotebookOptions: gelNotebookOptions,
         renderList: gelList
       });
-      registry.register('synthesisNotebook', { renderEntries: synthesisEntries });
       registry.register('biologyNotebook', { renderEntries: biologyEntries });
 
       services.notebook.handleNotebookEntriesChanged();
@@ -283,7 +271,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       assert.equal(assayList.calls.length, 1);
       assert.equal(gelNotebookOptions.calls.length, 1);
       assert.equal(gelList.calls.length, 1);
-      assert.equal(synthesisEntries.calls.length, 0);
       assert.equal(biologyEntries.calls.length, 0);
 
       services.notebook.handleAgentNotebookEntriesChanged();
@@ -292,7 +279,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       assert.equal(assayList.calls.length, 2);
       assert.equal(gelNotebookOptions.calls.length, 2);
       assert.equal(gelList.calls.length, 2);
-      assert.equal(synthesisEntries.calls.length, 1);
       assert.equal(biologyEntries.calls.length, 1);
     });
 
@@ -301,9 +287,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       const registry = createRegistryWithUi(servicesModule);
       const services = servicesModule.createRendererServices(registry);
 
-      const synthesisProjectOptions = createSpy('synthesisProjectOptions');
-      const synthesisProtocolOptions = createSpy('synthesisProtocolOptions');
-      const synthesisEntries = createSpy('synthesisEntries');
       const biologyProjectOptions = createSpy('biologyProjectOptions');
       const biologyProtocolOptions = createSpy('biologyProtocolOptions');
       const biologyEntries = createSpy('biologyEntries');
@@ -317,11 +300,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       const papersRender = createSpy('papersRender');
       const agentRender = createSpy('agentRender');
 
-      registry.register('synthesisNotebook', {
-        renderProjectOptions: synthesisProjectOptions,
-        renderProtocolOptions: synthesisProtocolOptions,
-        renderEntries: synthesisEntries
-      });
       registry.register('biologyNotebook', {
         renderProjectOptions: biologyProjectOptions,
         renderProtocolOptions: biologyProtocolOptions,
@@ -342,9 +320,6 @@ module.exports = function registerModuleServicesSuite(context = {}) {
       registry.register('agentChat', { render: agentRender });
 
       services.project.handleProjectsChanged();
-      assert.equal(synthesisProjectOptions.calls.length, 1);
-      assert.equal(synthesisProtocolOptions.calls.length, 1);
-      assert.equal(synthesisEntries.calls.length, 1);
       assert.equal(biologyProjectOptions.calls.length, 1);
       assert.equal(biologyProtocolOptions.calls.length, 1);
       assert.equal(biologyEntries.calls.length, 1);

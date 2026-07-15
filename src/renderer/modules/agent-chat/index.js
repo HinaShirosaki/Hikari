@@ -16,6 +16,8 @@ import { createAgentChatRuntimeState } from './runtime-state.js';
 import { createDeveloperToolUi } from './developer-tool-ui.js';
 import { renderAgentChat } from './render-cycle.js';
 import { mapExperimentDataToLlmJson } from './state-snapshot.js';
+import { createNotebookDraftAgentAdapter } from '../biology-notebook/agent/index.js';
+import { createProtocolAgentAdapter } from '../protocol/agent/index.js';
 
 export { mapExperimentDataToLlmJson };
 
@@ -31,6 +33,8 @@ export function initAgentChat({
   onNotebookEntriesChanged,
   onOpenNotebookEntry = () => {},
   onProtocolsChanged = () => {},
+  notebookDraftAdapter: providedNotebookDraftAdapter = null,
+  protocolReviewAdapter: providedProtocolReviewAdapter = null,
   captureImageAttachment = null,
   onPlotlyGraphArtifact = () => {}
 }) {
@@ -42,6 +46,16 @@ export function initAgentChat({
   if (dom.paperScreenshotBtn && typeof captureImageAttachment !== 'function') {
     dom.paperScreenshotBtn.hidden = true;
   }
+  const notebookDraftAdapter = providedNotebookDraftAdapter || createNotebookDraftAgentAdapter({
+    state,
+    createId,
+    onNotebookEntriesChanged
+  });
+  const protocolReviewAdapter = providedProtocolReviewAdapter || createProtocolAgentAdapter({
+    state,
+    createId,
+    onProtocolsChanged
+  });
   const runtime = createAgentChatRuntimeState();
   const shell = createAgentChatShellController({
     dom,
@@ -49,6 +63,7 @@ export function initAgentChat({
     persist,
     safeText,
     runtime,
+    notebookDraftAdapter,
     hasImageCapture: typeof captureImageAttachment === 'function'
   });
   let developerContextController = null;
@@ -124,14 +139,13 @@ export function initAgentChat({
     api,
     state,
     input: dom.input,
-    createId,
     persist,
     setStatus: shell.setStatus,
     syncComposerHeight: shell.syncComposerHeight,
     renderContextSummary: shell.renderContextSummary,
     renderHistoryView: shell.renderHistoryView,
     answerAssistantQuestion: questionController.answerAssistantQuestion,
-    onNotebookEntriesChanged,
+    notebookDraftAdapter,
     onOpenNotebookEntry
   });
 
@@ -139,13 +153,13 @@ export function initAgentChat({
     dom,
     state,
     persist,
-    createId,
     safeText,
     setStatus: shell.setStatus,
     renderContextSummary: shell.renderContextSummary,
     renderHistoryView: shell.renderHistoryView,
     notebookActions: historyController.notebookActions,
-    onProtocolsChanged
+    notebookDraftAdapter,
+    protocolReviewAdapter
   });
 
   requestController = createAgentRequestController({
@@ -166,7 +180,7 @@ export function initAgentChat({
     setStatus: shell.setStatus,
     syncComposerHeight: shell.syncComposerHeight,
     updateInFlightState: shell.updateInFlightState,
-    onNotebookEntriesChanged,
+    notebookDraftAdapter,
     openReviewForMessage: reviewController.openForMessage
   });
 
@@ -186,7 +200,7 @@ export function initAgentChat({
     syncComposerHeight: shell.syncComposerHeight,
     updateInFlightState: shell.updateInFlightState,
     ensureAgentState: shell.ensureAgentState,
-    onNotebookEntriesChanged,
+    notebookDraftAdapter,
     openReviewForMessage: reviewController.openForMessage
   });
 

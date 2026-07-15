@@ -601,7 +601,6 @@ function renderAssayPlot(ctx, assay, def) {
   const colHeaderHeight = 16;
   const maxPlotWidth = ctx.maxWidth - rowHeaderWidth;
   const cellSize = Math.max(8, Math.floor(maxPlotWidth / maxColumns));
-  const plotWidth = cellSize * maxColumns;
   const plotHeight = cellSize * maxRows;
   const neededHeight = plotHeight + colHeaderHeight + 24;
   const startX = ctx.margin + rowHeaderWidth;

@@ -144,7 +144,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
       </div>
     `).join('');
     const bodyMarkup = rows.map((row, rowIndex) => {
-      const cells = layout.columns.map((column, columnIndex) => `
+      const cells = layout.columns.map((_column, columnIndex) => `
         <td>
           <input
             type="text"

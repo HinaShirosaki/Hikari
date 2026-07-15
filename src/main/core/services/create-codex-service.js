@@ -14,6 +14,9 @@ const {
 const {
   resolveCodexCliRuntimeHomeDirectory
 } = require('../../lib/codex-cli-provider');
+const {
+  createCodexWorkspaceInitializer
+} = require('./create-codex-workspace-initializer.js');
 
 function ensurePlainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -29,12 +32,19 @@ function createMainCodexService({
   syncBundleFromSnapshot,
   mcpService,
   agentFoundation,
-  processObject = process
+  processObject = process,
+  createWorkspaceInitializer = createCodexWorkspaceInitializer
 } = {}) {
   if (!String(processObject.env.HIKARI_CODEX_HOME || '').trim()) {
     processObject.env.HIKARI_CODEX_HOME = getCodexCliHomePath()
       || resolveCodexCliRuntimeHomeDirectory(getCodexCliWorkingDirectory());
   }
+  const workspaceInitializer = createWorkspaceInitializer({
+    cleanText,
+    mcpHost: mcpService?.mcpHost,
+    getCodexCliWorkingDirectory,
+    getBundlePaths
+  });
 
   function findProjectForCodexWorkspace(snapshot = {}, {
     projectId = '',
@@ -153,7 +163,7 @@ function createMainCodexService({
   }
 
   async function requestCodexAgentText(input = {}) {
-    await mcpService.initialize({
+    await workspaceInitializer.initialize({
       cwd: input.cwd,
       envOverrides: input.envOverrides
     });
@@ -260,7 +270,7 @@ function createMainCodexService({
       HIKARI_AGENT_MCP_REQUEST_CONTEXT: mcpContextJson,
       HIKARI_CODEX_REQUEST_CONTEXT: mcpContextJson
     };
-    await mcpService.initialize({
+    await workspaceInitializer.initialize({
       cwd,
       envOverrides
     });
@@ -324,8 +334,14 @@ function createMainCodexService({
     runTool: agentFoundation.agentToolRuntime.runAgentTool
   });
 
+  async function initialize(input = {}) {
+    return workspaceInitializer.initialize(input);
+  }
+
   return {
     codexAgentRuntime,
+    getLastInitialization: workspaceInitializer.getLastResult,
+    initialize,
     prepareProjectWorkspace,
     requestCodexAgentText,
     runSubAgentTurn,

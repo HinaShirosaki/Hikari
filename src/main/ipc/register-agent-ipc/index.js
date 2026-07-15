@@ -26,10 +26,7 @@ function registerAgentIpc(deps = {}) {
 
   const { runAgentController } = createAgentControllerCore({
     deps: {
-      ...deps,
-      ALLOW_API_AGENT: typeof deps.ALLOW_API_AGENT === 'boolean'
-        ? deps.ALLOW_API_AGENT
-        : true
+      ...deps
     },
     cleanText,
     controllerUtils: deps.controllerUtils || {},

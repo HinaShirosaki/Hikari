@@ -1,7 +1,6 @@
 /* sample-registry-view */
 
 .left-rail-template.sample-layout {
-  --app-left-rail-bleed: 28px;
   --left-rail-main-gap: 28px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(300px, 0.9fr) minmax(320px, 1fr);

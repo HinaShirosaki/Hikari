@@ -14,9 +14,6 @@ const SCALE_MAP = {
   kg: 1e3
 };
 
-// Common molar units offered as type-ahead suggestions for the concentration axis.
-export const CONCENTRATION_UNIT_SUGGESTIONS = Object.freeze(['fM', 'pM', 'nM', 'µM', 'mM', 'M']);
-
 function normalizeUnit(rawUnit) {
   return String(rawUnit || '')
     .trim()

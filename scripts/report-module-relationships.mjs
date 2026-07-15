@@ -327,6 +327,20 @@ function describeSourceArea(filePath) {
     };
   }
 
+  if (relativePath.startsWith('src/main/storage/')) {
+    return {
+      area: 'main-storage',
+      family: 'storage'
+    };
+  }
+
+  if (relativePath.startsWith('src/main/data/')) {
+    return {
+      area: 'main-data',
+      family: 'data'
+    };
+  }
+
   if (relativePath.startsWith('src/main/')) {
     return {
       area: 'main',

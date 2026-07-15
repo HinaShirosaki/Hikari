@@ -6,7 +6,6 @@
 }
 
 .left-rail-template.workflow-editor-layout {
-  --app-left-rail-bleed: 18px;
   --left-rail-main-gap: 18px;
   display: grid;
   gap: 18px;
@@ -577,8 +576,7 @@
   box-shadow: 0 0 0 4px var(--workflow-node-selected-ring);
 }
 
-.workflow-progress-node.is-locked,
-.workflow-branch-node.is-locked {
+.workflow-progress-node.is-locked {
   cursor: not-allowed;
 }
 
@@ -790,100 +788,6 @@
 
 
 
-.workflow-branch-section {
-  display: grid;
-  gap: 10px;
-}
-
-.workflow-branch-section h5 {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--theme-primary);
-}
-
-.workflow-branch-list {
-  display: grid;
-  gap: 12px;
-}
-
-.workflow-branch-card {
-  display: grid;
-  gap: 10px;
-  padding: 12px;
-  border: 1px dashed var(--theme-border);
-  background: var(--theme-surface);
-}
-
-.workflow-branch-card.is-active {
-  border-style: solid;
-  border-color: color-mix(in srgb, var(--theme-accent) 50%, var(--theme-border));
-}
-
-.workflow-branch-card-head {
-  display: flex;
-  gap: 12px;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.workflow-branch-card-head p,
-.workflow-branch-card-head strong {
-  margin: 0;
-}
-
-.workflow-branch-track {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.workflow-branch-node {
-  position: relative;
-  min-width: 150px;
-  padding: 10px 12px 12px;
-  border: 1px solid var(--theme-border-soft);
-  background: var(--theme-surface-elevated);
-  text-align: left;
-}
-
-.workflow-branch-node-label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 0.82rem;
-  color: var(--theme-primary);
-}
-
-.workflow-branch-node-dot {
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 999px;
-  border: 2px solid color-mix(in srgb, var(--theme-border) 92%, var(--theme-text));
-  background: transparent;
-}
-
-.workflow-branch-node.is-complete .workflow-branch-node-dot {
-  border-color: color-mix(in srgb, var(--theme-accent) 78%, var(--theme-border));
-  background: color-mix(in srgb, var(--theme-accent) 82%, var(--theme-surface-elevated));
-}
-
-.workflow-branch-node.is-active {
-  border-color: color-mix(in srgb, var(--theme-accent) 50%, var(--theme-border));
-}
-
-.workflow-branch-node-connector {
-  display: inline-block;
-  width: 34px;
-  margin-left: 10px;
-  border-top: 2px dashed color-mix(in srgb, var(--theme-border) 92%, var(--theme-text));
-  vertical-align: middle;
-}
-
-.workflow-branch-node-connector.is-complete {
-  border-top-style: solid;
-  border-top-color: color-mix(in srgb, var(--theme-accent) 72%, var(--theme-border));
-}
-
 body.workflow-dragging {
   cursor: grabbing;
 }
@@ -920,8 +824,7 @@ body.workflow-dragging {
     height: 420px;
   }
 
-  .workflow-execution-header,
-.workflow-branch-card-head {
+  .workflow-execution-header {
     grid-template-columns: minmax(0, 1fr);
     display: grid;
   }

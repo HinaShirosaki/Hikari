@@ -19,7 +19,6 @@ test('[EDGE] tool-box internal functions are exposed for unit tests', () => {
     'oligoTm',
     'linearRegression',
     'peptideStats',
-    'renderChemicalOptions',
     'parseCrisprTargetsInput',
     'designCrisprGuides'
   ].forEach((name) => {

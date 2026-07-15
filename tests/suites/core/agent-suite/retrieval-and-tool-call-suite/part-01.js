@@ -1,11 +1,7 @@
 module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context = {}) {
   const scope = context.scope || {};
-  const toolLoading = scope.agentToolLoading && Object.keys(scope.agentToolLoading).length
-    ? scope.agentToolLoading
-    : (scope.agentToolCall || {});
-  const toolExecution = scope.agentToolExecution && Object.keys(scope.agentToolExecution).length
-    ? scope.agentToolExecution
-    : (scope.agentToolCall || {});
+  const toolLoading = scope.agentToolLoading || {};
+  const toolExecution = scope.agentToolExecution || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
     test('inventory lookup runtime is reusable with fallback snapshot search', async () => {
@@ -480,42 +476,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(pythonSchema.input_schema.anyOf.some((entry) => Array.isArray(entry.required) && entry.required.includes('sub_agent_id')), true);
       assert.equal(Object.prototype.hasOwnProperty.call(pythonSchema.input_schema.properties, 'feedback'), true);
       assert.equal(Object.prototype.hasOwnProperty.call(pythonSchema.input_schema.properties, 'max_repair_attempts'), true);
-    });
-    test('agent tool provider resolves reasoning entry tools from the catalog schemas', () => {
-      const toolProvider = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-tool-provide.js'));
-      const runtime = toolProvider.createAgentToolProviderRuntime();
-
-      const scienceTools = runtime.provideTools({
-        entryPoint: 'science_reasoning_entry',
-        intent: 'general_science_question'
-      });
-      assert.equal(scienceTools.tool_names.includes('literature-search'), true);
-      assert.equal(scienceTools.tool_names.includes('web-search'), true);
-      assert.equal(scienceTools.tool_names.includes('python-sandbox'), true);
-      assert.equal(scienceTools.tool_names.includes('notebook-lookup'), false);
-      assert.equal(scienceTools.tool_names.includes('memory'), false);
-      assert.equal(scienceTools.tool_names.includes('container'), false);
-      assert.equal(scienceTools.tool_names.includes('assay-table'), false);
-      assert.equal(scienceTools.tool_names.includes('plotly-graph'), false);
-      assert.equal(scienceTools.tool_names.includes('command-line'), false);
-      assert.equal(scienceTools.tool_names.includes('notebook-generation'), false);
-      assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'literature-search'), true);
-      assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'web-search'), true);
-      assert.equal(
-        scienceTools.tool_definitions.find((tool) => tool.name === 'literature-search').parameters.properties.sources.items.$ref,
-        '#/$defs/literature_source'
-      );
-
-      const catalogTools = runtime.provideTools();
-      assert.equal(catalogTools.tool_names.includes('inventory-lookup'), true);
-      assert.equal(catalogTools.tool_names.includes('literature-search'), true);
-      assert.equal(catalogTools.tool_names.includes('web-search'), true);
-      assert.equal(catalogTools.tool_names.includes('command-line'), true);
-      assert.equal(catalogTools.tool_names.includes('purchase-recommendation'), true);
-      assert.equal(catalogTools.tool_names.includes('container'), true);
-      assert.equal(catalogTools.tool_names.includes('assay-table'), true);
-      assert.equal(catalogTools.tool_names.includes('plotly-graph'), true);
-      assert.equal(catalogTools.tool_names.includes('protocol-generation'), true);
     });
     test('command-line runtime executes focused commands and blocks mutating commands when write tools are disabled', async () => {
       const { createAgentCommandLineRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-command-line.js'));

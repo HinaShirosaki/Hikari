@@ -1,8 +1,8 @@
 'use strict';
 
 // Shared inventory search-term builder used by the live inventory-lookup path
-// (codex + skills). Extracted from the self-implemented agent's intent parser so
-// live tools don't depend on /self-agent. ponytail: self-contained, no shared deps.
+// (Codex and skills). This module stays dependency-free so every caller uses the
+// same term normalization without importing a provider-specific runtime.
 
 function cleanText(value, _maxLength = 500) {
   return String(value || '').trim();

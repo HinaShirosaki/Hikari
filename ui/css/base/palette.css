@@ -43,11 +43,6 @@
   --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 76%, var(--theme-surface-elevated) 24%);
   --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
   --theme-control-border: color-mix(in srgb, var(--theme-border) 84%, transparent);
-  --theme-control-filled-background: var(--theme-accent);
-  --theme-control-filled-text: var(--theme-text-on-accent);
-  --theme-control-disabled-background: color-mix(in srgb, var(--theme-surface-subtle) 72%, var(--theme-text-muted) 28%);
-  --theme-control-disabled-text: color-mix(in srgb, var(--theme-text-muted) 82%, var(--theme-text-strong) 18%);
-  --theme-inverse-surface: #17120e;
 
   /* Overlays and shadows */
   --theme-loading-background: #11140f;
@@ -98,11 +93,6 @@ body.theme-night {
   --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 76%, var(--theme-surface-elevated) 24%);
   --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
   --theme-control-border: color-mix(in srgb, var(--theme-border) 84%, transparent);
-  --theme-control-filled-background: color-mix(in srgb, var(--theme-accent) 76%, #162014 24%);
-  --theme-control-filled-text: #071006;
-  --theme-control-disabled-background: color-mix(in srgb, var(--theme-surface-subtle) 66%, #6f786f 34%);
-  --theme-control-disabled-text: color-mix(in srgb, var(--theme-text-muted) 82%, var(--theme-text-strong) 18%);
-  --theme-inverse-surface: #f8fbf4;
 
   --theme-loading-background: #11140f;
   --theme-overlay: rgba(5, 9, 6, 0.46);
@@ -149,11 +139,6 @@ body.theme-miku {
   --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
   --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 68%, var(--theme-accent) 32%);
   --theme-control-border: color-mix(in srgb, var(--theme-border) 90%, transparent);
-  --theme-control-filled-background: var(--theme-accent);
-  --theme-control-filled-text: var(--theme-text-on-accent);
-  --theme-control-disabled-background: color-mix(in srgb, var(--theme-surface-subtle) 70%, var(--theme-text-muted) 30%);
-  --theme-control-disabled-text: color-mix(in srgb, var(--theme-text-muted) 84%, var(--theme-text-strong) 16%);
-  --theme-inverse-surface: #16383b;
 
   --theme-loading-background: #102b2e;
   --theme-overlay: rgba(20, 67, 70, 0.2);

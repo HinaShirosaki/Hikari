@@ -426,7 +426,6 @@ function buildRelativePath(rootPath, targetPath) {
 }
 
 function createPaperDownloadRuntime(deps = {}) {
-  const asArray = typeof deps.asArray === 'function' ? deps.asArray : defaultAsArray;
   const cleanText = typeof deps.cleanText === 'function' ? deps.cleanText : defaultCleanText;
   const now = typeof deps.now === 'function' ? deps.now : (() => new Date().toISOString());
   const createId = typeof deps.createId === 'function' ? deps.createId : createDownloadId;

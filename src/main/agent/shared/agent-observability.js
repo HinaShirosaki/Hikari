@@ -274,12 +274,6 @@ function classifyFailureReasons({
   if (resolvedValidation.passed === false || resolvedValidation.forced_clarification === true) {
     reasons.push('validation_failed');
   }
-  if (
-    String(resolvedResult.error || error || '').toLowerCase().includes('intent parser')
-    || asArray(lifecycleEvents).some((event) => event?.stage === 'parser_completed' && event?.status === 'failed')
-  ) {
-    reasons.push('intent_parser_failed');
-  }
   if (plan.protocol_match?.needs_clarification === true) {
     const ambiguity = cleanText(plan.protocol_match?.ambiguity_reason, 200).toLowerCase();
     if (ambiguity.includes('no_protocol') || !cleanText(plan.protocol_match?.selected_protocol_id, 80)) {

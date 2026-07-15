@@ -1,6 +1,6 @@
 # Main-Process Helper Overview
 
-the `src/main/` platform layer (`storage/`, `data/`, `lib/`) is the persistence, runtime, and import layer of the main process. The IPC registrars that expose it to the renderer live one level up in `src/main/ipc/`.
+The `src/main/` platform layer (`storage/`, `data/`, `lib/`) is the persistence, runtime, and import layer of the main process. The IPC registrars that expose it to the renderer live one level up in `src/main/ipc/`.
 
 ## Assembly pattern
 
@@ -20,14 +20,14 @@ That gives the folder a consistent shape:
 | --- | --- |
 | persistence facade | `data/data-helpers.js` |
 | compact snapshot serialization | `data/data-snapshot-utils.js` |
-| bundle sidecars, SQLite, storage import | `storage-bundle/` (folder) |
+| bundle sidecars, SQLite, storage import | `storage/` (folder) |
 | sequence storage, search, annotation | `src/renderer/modules/sequence-viewer/main-process/sequence-library/` |
 | sequence inference and parsing | `src/renderer/modules/sequence-viewer/` |
-| LLM provider runtime + chat-log transform | `llm/` (folder) |
+| Codex CLI support + chat-log transform | `lib/codex-cli-provider/` and `lib/llm/` |
 | provider-neutral agent wiring | `src/main/core/services/create-agent-services.js` |
 | MCP and Codex integration | `src/main/core/services/` |
 | PDF and paper import | `src/main/papers/parse/` |
-| chemical import | `chemical-import-parser.js` |
+| chemical import | `lib/chemical-import-parser.js` |
 | renderer-facing IPC | `src/main/ipc/` (data / system / agent registrars) |
 
 ## Three-registrar model
@@ -48,7 +48,7 @@ The persistence path is layered:
 
 1. `data/data-snapshot-utils.js` builds a compact JSON snapshot (`buildCompactIndexedSnapshot`).
 2. `data/data-helpers.js` provides high-level save/load (`saveSelectedDataFile`, `autoSaveDataFile`, `loadSelectedDataFile`, `autoLoadDataFile`).
-3. `storage-bundle/` writes/reads the heavier sidecars and the SQLite index.
+3. `storage/` writes/reads the heavier sidecars and the SQLite index.
 
 The primary JSON file is intentionally not the whole truth: it is the small top-level snapshot, while protocols, notebook pages, and searchable inventory/record indexes live in companion files. See [storage-and-bundles.md](../data/storage-and-bundles.md).
 
@@ -68,5 +68,5 @@ Shortest reading path:
 
 1. `src/main/core/main-services.js` — service construction and IPC composition
 2. `src/main/ipc/register-data-ipc.js` and its `register-data-ipc/` endpoint groups — the external API surface
-3. `data/data-helpers.js` and `storage-bundle/index.js` — save/load semantics
+3. `data/data-helpers.js` and `storage/index.js` — save/load semantics
 4. `src/renderer/modules/sequence-viewer/main-process/sequence-library/index.js` — only after that; it is effectively its own storage subsystem

@@ -1,4 +1,3 @@
-import { clamp } from './pdf-viewer-anchors.js';
 import { getTextLayerRangeInfo } from './pdf-viewer-selection.js';
 import {
   buildPdfSelectionSearchResultFromMatches,

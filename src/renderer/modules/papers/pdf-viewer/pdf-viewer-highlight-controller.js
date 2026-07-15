@@ -59,7 +59,7 @@ export const installPdfViewerHighlightController = (ctx) => {
     }, Math.max(0, Number(delay) || 0));
   }
 
-  function showHighlightPopover(highlight, comment, clientX, clientY) {
+  function showHighlightPopover(highlight, clientX, clientY) {
     if (!highlightCommentPopover || !highlight || !shell) {
       return;
     }
@@ -97,7 +97,7 @@ export const installPdfViewerHighlightController = (ctx) => {
       || (commentId && String(item.commentId || '').trim() === commentId)
     )) || null;
     if (highlight) {
-      showHighlightPopover(highlight, comment, clientX, clientY);
+      showHighlightPopover(highlight, clientX, clientY);
     }
   }
 
@@ -198,7 +198,7 @@ export const installPdfViewerHighlightController = (ctx) => {
       scheduleHighlightPopoverHide();
       return;
     }
-    showHighlightPopover(match.highlight, match.comment, event.clientX, event.clientY);
+    showHighlightPopover(match.highlight, event.clientX, event.clientY);
   }
 
   function handleHighlightPageLeave(event) {

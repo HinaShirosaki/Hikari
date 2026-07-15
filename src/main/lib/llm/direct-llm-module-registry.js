@@ -117,15 +117,10 @@ function createDirectLlmModuleRegistry(deps = {}) {
   const requestImageInput = typeof deps.requestImageInput === 'function' ? deps.requestImageInput : null;
   const requestFileInput = typeof deps.requestFileInput === 'function' ? deps.requestFileInput : null;
   const requestWebSearch = typeof deps.requestWebSearch === 'function' ? deps.requestWebSearch : null;
-  const normalizeLlmProvider = typeof deps.normalizeLlmProvider === 'function' ? deps.normalizeLlmProvider : null;
-  const defaultLlmEndpointForProvider = typeof deps.defaultLlmEndpointForProvider === 'function'
-    ? deps.defaultLlmEndpointForProvider
-    : (() => '');
   const defaultAgentModelForProvider = typeof deps.defaultAgentModelForProvider === 'function'
     ? deps.defaultAgentModelForProvider
     : (() => '');
   const LLM_PROVIDERS = ensureObject(deps.LLM_PROVIDERS);
-  const DEFAULT_LLM_PROVIDER = cleanText(deps.DEFAULT_LLM_PROVIDER, 80);
   const modules = new Map();
 
   function registerModule(rawModule = {}) {
@@ -171,25 +166,12 @@ function createDirectLlmModuleRegistry(deps = {}) {
 
   function normalizeLlmSource(rawSource = {}) {
     const source = ensureObject(rawSource);
-    const endpointCandidate = cleanText(source.endpoint || source.apiEndpoint || source.api_endpoint, 2000);
-    const providerCandidate = cleanText(source.provider, 80);
-    const provider = normalizeRegistryId(
-      normalizeLlmProvider
-        ? normalizeLlmProvider(providerCandidate || DEFAULT_LLM_PROVIDER, endpointCandidate)
-        : (providerCandidate || DEFAULT_LLM_PROVIDER)
-    );
     const codexProvider = normalizeRegistryId(LLM_PROVIDERS.CODEX || 'codex');
-    const endpoint = provider === codexProvider
-      ? ''
-      : (endpointCandidate || cleanText(defaultLlmEndpointForProvider(provider), 2000));
-    const apiKey = provider === codexProvider
-      ? ''
-      : cleanText(source.apiKey || source.api_key || source.token, 400);
-    const model = cleanText(source.model, 120) || cleanText(defaultAgentModelForProvider(provider), 120);
+    const model = cleanText(source.model, 120) || cleanText(defaultAgentModelForProvider(codexProvider), 120);
     return {
-      provider,
-      endpoint,
-      apiKey,
+      provider: codexProvider,
+      endpoint: '',
+      apiKey: '',
       model,
       reasoningEffort: cleanText(source.reasoningEffort || source.reasoning_effort, 40).toLowerCase()
     };
@@ -247,13 +229,6 @@ function createDirectLlmModuleRegistry(deps = {}) {
     if (!llmSource.provider) {
       return { ok: false, error: 'LLM provider is required.' };
     }
-    if (llmSource.provider !== codexProvider && !llmSource.apiKey) {
-      return { ok: false, error: 'Missing API key in Settings > LLM Model & Access.' };
-    }
-    if (llmSource.provider !== codexProvider && !llmSource.model) {
-      return { ok: false, error: 'Missing model in Settings > LLM Model & Access.' };
-    }
-
     const requestOptions = {
       provider: llmSource.provider,
       endpoint: llmSource.endpoint,
