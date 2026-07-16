@@ -609,8 +609,34 @@ function createPaperDownloadRuntime(deps = {}) {
 
     return new Promise(async (resolve) => {
       let settled = false;
+      let parentWindowClosed = false;
       const webContents = browserWindow.webContents;
       const sessionObject = webContents?.session;
+      const childWindows = new Set();
+
+      function hasOpenChildWindow() {
+        return Array.from(childWindows).some((childWindow) => !childWindow?.isDestroyed?.());
+      }
+
+      function closeWindow(targetWindow) {
+        try {
+          if (targetWindow && !targetWindow.isDestroyed?.()) {
+            targetWindow.close?.();
+          }
+        } catch {
+          // Ignore window cleanup errors.
+        }
+      }
+
+      function failIfAllBrowserWindowsClosed() {
+        if (!settled && parentWindowClosed && !hasOpenChildWindow()) {
+          void finalize({
+            ok: false,
+            session_id: sessionId,
+            error: 'Browser session closed before download completed.'
+          });
+        }
+      }
 
       async function finalize(result) {
         if (settled) {
@@ -625,13 +651,9 @@ function createPaperDownloadRuntime(deps = {}) {
         } catch {
           // Ignore listener cleanup errors.
         }
-        try {
-          if (!browserWindow.isDestroyed()) {
-            browserWindow.close();
-          }
-        } catch {
-          // Ignore window cleanup errors.
-        }
+        childWindows.forEach((childWindow) => closeWindow(childWindow));
+        childWindows.clear();
+        closeWindow(browserWindow);
         if (sessionId && terminateBrowserDownloadSession) {
           await Promise.resolve(terminateBrowserDownloadSession({
             session_id: sessionId,
@@ -703,23 +725,66 @@ function createPaperDownloadRuntime(deps = {}) {
       };
 
       sessionObject?.on?.('will-download', willDownloadListener);
-      browserWindow.on('closed', () => {
-        finalize({
-          ok: false,
-          session_id: sessionId,
-          error: 'Browser session closed before download completed.'
+      webContents?.setWindowOpenHandler?.((details = {}) => {
+        const popupUrl = cleanText(details.url, 4000);
+        if (popupUrl && !/^(?:https?:|blob:)/i.test(popupUrl)) {
+          return { action: 'deny' };
+        }
+        return {
+          action: 'allow',
+          overrideBrowserWindowOptions: {
+            width: 1100,
+            height: 820,
+            autoHideMenuBar: true,
+            show: true,
+            title: 'Paper PDF Viewer',
+            webPreferences: {
+              sandbox: true,
+              contextIsolation: true,
+              nodeIntegration: false,
+              partition: sessionId
+            }
+          }
+        };
+      });
+      webContents?.on?.('did-create-window', (childWindow) => {
+        if (!childWindow) {
+          return;
+        }
+        childWindows.add(childWindow);
+        childWindow.show?.();
+        childWindow.on?.('closed', () => {
+          childWindows.delete(childWindow);
+          failIfAllBrowserWindowsClosed();
         });
+        updateProgress({
+          status: 'awaiting_browser_click',
+          method: 'browser',
+          browser_session_active: true,
+          browser_session_id: sessionId,
+          browser_viewer_open: true
+        });
+      });
+      browserWindow.on('closed', () => {
+        parentWindowClosed = true;
+        failIfAllBrowserWindowsClosed();
       });
 
       try {
-        await browserWindow.loadURL(browserEntryUrl || selectedPdfUrl || 'about:blank');
+        const navigationUrl = selectedPdfUrl || browserEntryUrl || 'about:blank';
+        await browserWindow.loadURL(navigationUrl);
         updateProgress({
           status: 'awaiting_browser_click',
           method: 'browser',
           browser_session_active: true,
           browser_session_id: sessionId
         });
-        if (simulateOneClick && selectedPdfUrl && typeof webContents?.downloadURL === 'function') {
+        if (
+          simulateOneClick
+          && selectedPdfUrl
+          && selectedPdfUrl !== navigationUrl
+          && typeof webContents?.downloadURL === 'function'
+        ) {
           webContents.downloadURL(selectedPdfUrl);
         }
       } catch (error) {

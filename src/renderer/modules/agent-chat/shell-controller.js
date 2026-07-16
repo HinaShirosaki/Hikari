@@ -112,7 +112,7 @@ export function createAgentChatShellController({
     dom.status.textContent = text;
     const normalized = trimText(text, 160).toLowerCase();
     let tone = 'neutral';
-    if (!normalized || normalized === 'ready.') {
+    if (!normalized || normalized === 'ready.' || normalized === 'waiting for your answer.') {
       tone = 'ready';
     } else if (normalized.includes('error') || normalized.includes('failed') || normalized.includes('unavailable')) {
       tone = 'error';
@@ -274,11 +274,22 @@ export function createAgentChatShellController({
     });
   }
 
-  function updateInFlightState(nextInFlight) {
-    runtime.inFlight = nextInFlight;
-    if (!runtime.inFlight) {
-      runtime.stopRequested = false;
-      runtime.stopInProgress = false;
+  function findActiveRequestForCurrentSession() {
+    const requests = runtime.activeRequests instanceof Map
+      ? runtime.activeRequests.values()
+      : [];
+    const currentSessionId = trimText(state.agentChat?.currentSessionId, 120);
+    for (const request of requests) {
+      if (trimText(request?.sessionId, 120) === currentSessionId) {
+        return request;
+      }
+    }
+    return null;
+  }
+
+  function applyInFlightControls() {
+    if (dom.newChatBtn) {
+      dom.newChatBtn.disabled = false;
     }
     dom.sendBtn.disabled = runtime.inFlight;
     if (dom.stopBtn) {
@@ -287,7 +298,6 @@ export function createAgentChatShellController({
       dom.stopBtn.textContent = runtime.stopInProgress ? 'Stopping...' : 'Stop';
     }
     [
-      dom.newChatBtn,
       dom.developerTestToolsBtn,
       dom.developerRunToolBtn,
       dom.developerToolSelect,
@@ -298,14 +308,32 @@ export function createAgentChatShellController({
     ].filter(Boolean).forEach((node) => {
       node.disabled = runtime.inFlight;
     });
-    if (dom.clearBtn) {
-      dom.clearBtn.disabled = runtime.inFlight;
-    }
     if (dom.projectSelect) {
       dom.projectSelect.disabled = runtime.inFlight;
     }
     dom.input.disabled = runtime.inFlight;
     sessionManager?.renderSessionList();
+  }
+
+  function updateInFlightState(nextInFlight) {
+    runtime.inFlight = nextInFlight;
+    if (!runtime.inFlight) {
+      runtime.stopRequested = false;
+      runtime.stopInProgress = false;
+    }
+    applyInFlightControls();
+  }
+
+  function syncActiveRequestState() {
+    const request = findActiveRequestForCurrentSession();
+    runtime.inFlight = Boolean(request);
+    runtime.liveAssistantMessage = request?.liveAssistantMessage || null;
+    runtime.activeClientRequestId = trimText(request?.clientRequestId, 120);
+    runtime.inFlightClientRequestId = runtime.activeClientRequestId;
+    runtime.stopRequested = request?.stopRequested === true;
+    runtime.stopInProgress = request?.stopInProgress === true;
+    applyInFlightControls();
+    return request;
   }
 
   return {
@@ -320,6 +348,7 @@ export function createAgentChatShellController({
     setSessionStatus,
     setStatus,
     syncComposerHeight,
+    syncActiveRequestState,
     updateInFlightState,
     updateScrollToBottomButton
   };

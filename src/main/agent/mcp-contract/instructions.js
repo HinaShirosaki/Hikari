@@ -26,6 +26,20 @@ function buildHikariCodexMcpToolName(toolName = '') {
   return `${HIKARI_CODEX_MCP_TOOL_PREFIX}${String(toolName || '').trim()}`;
 }
 
+function buildProtocolNotebookHandoffInstructionLines() {
+  const toolName = buildHikariCodexMcpToolName;
+  return [
+    '- Generated protocols must be executable starting protocols, not questionnaires. Fill routine, low-risk procedural parameters from loaded evidence; when the source is silent, choose a scientifically conventional starting value and identify it in troubleshooting as a recommended starting condition rather than a source-reported fact.',
+    '- Do not create placeholders for routine defaults such as replicate count, dilution factor, concentration-series point count, common staining or wash buffer, wash count, incubation time or temperature, acquisition volume, or minimum event target when a reasonable starting value can be selected.',
+    '- Reserve placeholders for genuinely user-, reagent-, sample-, or instrument-specific choices that would be unreliable to infer, such as exact biological sample or clone identity, reagent identity, stock concentration or solvent, affinity tag or catalog-specific reagent, and instrument-specific channel or detector settings. In materials, prefer a clear generic category such as "the user\'s PD-L1 stable cell line" over a bracket placeholder that does not map to an executable step.',
+    '- Aim for 0-3 unresolved placeholders and do not exceed 5 unless the source explicitly defines more independent choices. If more than 5 would remain, replace routine placeholders with labeled starting defaults or ask one blocking clarification before generating the protocol.',
+    '- Represent each real decision with one placeholder at its first executable use, then refer to the selected value in later steps without creating duplicate placeholders for the same buffer, sample, or setting.',
+    `- For a combined protocol-and-notebook request, call \`${toolName('protocol_generation')}\` first and then call \`${toolName('notebook_draft')}\`. The notebook tool accepts only \`project_name\`, \`protocol_candidates\`, \`pending_values\`, and optional \`step_edits\`; do not send \`message\`, \`project_id\`, \`workflow_id\`, \`evidence_context\`, or \`parser_payload\` as tool arguments.`,
+    '- Every `pending_values` key must exactly match a `placeholder_key` in `<step-id>:<placeholder-id>` form from the normalized protocol or a prior notebook-draft result. Display names are not keys. Supply actual selected, user-provided, evidence-supported, or deliberately chosen starting values; never use uncertainty text such as "not specified" as a value.',
+    `- Inspect \`${toolName('notebook_draft')}\` results. If \`missing_placeholders\` contains values already known or safe routine starting choices, retry once with exact \`placeholder_key\` entries. Do not describe the notebook draft as ready while avoidable routine placeholders remain; ask one blocking question only for the genuinely specific choices that still prevent execution.`
+  ];
+}
+
 function buildHikariAgentMcpInstructionBodyLines() {
   const toolName = buildHikariCodexMcpToolName;
   return [
@@ -71,9 +85,10 @@ function buildHikariAgentMcpInstructionBodyLines() {
     `- When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first, then call \`${toolName('protocol_generation')}\` with \`save: true\`, then summarize the review-ready protocol.`,
     `- When the user asks to save or add a generated protocol, call \`${toolName('protocol_generation')}\` once with \`save: true\`; Hikari will ask the user to approve or reject the generated protocol.`,
     `- Use direct \`${toolName('notebook_draft')}\` for planned next-experiment notebook drafts.`,
+    ...buildProtocolNotebookHandoffInstructionLines(),
     '',
     'Clarification rule:',
-    `When one blocking user answer is required, call \`${toolName('ask_user')}\`. It returns a renderable \`final_response\` payload. Do not wait inside MCP for the human answer; the host app renders the options and sends the user answer as the next turn.`,
+    `When one blocking user answer is required, call \`${toolName('ask_user')}\` at most once for that unresolved issue. It returns a renderable \`final_response\` payload. Return that payload and end the current turn; this is a completed waiting state, not a failed or still-running agent. Do not call more tools, repeat the same question, or wait inside MCP. The host app renders the options and sends the answer as the next user turn; treat that latest message as the answer and resume the existing Codex session.`,
     '',
     'Verification rule:',
     'Separate observed evidence from inference. Cite loaded context blocks, local records, and paper records from tool outputs rather than invented source labels.'
@@ -92,6 +107,7 @@ module.exports = {
   HIKARI_CODEX_MCP_TOOL_PREFIX,
   HIKARI_MCP_TOOL_NAMES,
   buildHikariCodexMcpToolName,
+  buildProtocolNotebookHandoffInstructionLines,
   buildHikariAgentMcpInstructionBodyLines,
   buildHikariAgentMcpInstructions
 };

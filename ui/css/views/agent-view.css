@@ -1062,13 +1062,23 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
 }
 
 .agent-session-card {
-  gap: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
   padding: 7px 0;
   border: 0;
   border-radius: 0;
   min-width: 0;
   min-height: var(--left-rail-item-min-height, 36px);
   overflow: hidden;
+}
+
+.agent-session-card.is-agent-running::after {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--theme-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent) 16%, transparent);
 }
 
 .agent-session-card:hover,
@@ -1468,6 +1478,22 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   color: var(--theme-text-strong);
 }
 
+.agent-hidden-context-pill {
+  border-color: color-mix(in srgb, var(--theme-accent) 28%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface-subtle));
+}
+
+.agent-hidden-context-icon {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .agent-composer-toolbar {
   display: flex;
   align-items: center;
@@ -1772,7 +1798,7 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   align-items: start;
   justify-items: center;
   overflow: hidden;
-  padding: clamp(20px, 3vw, 34px) 24px 24px;
+  padding: 10px 24px 24px;
   background: color-mix(in srgb, var(--theme-surface) 70%, transparent);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);

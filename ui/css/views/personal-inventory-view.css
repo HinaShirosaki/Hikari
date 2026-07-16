@@ -23,6 +23,37 @@
   border-top: 0;
 }
 
+.left-rail-template.personal-inventory-layout > .inventory-rail-panel.left-rail-template__rail--pinned {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  gap: 0;
+  padding: 0 !important;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+  background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+}
+
+.left-rail-template.personal-inventory-layout > .inventory-rail-panel > .inventory-rail-pinned.left-rail-template__pinned {
+  display: grid;
+  align-content: start;
+  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
+  border-bottom: 1px solid var(--app-left-rail-divider);
+}
+
+.left-rail-template.personal-inventory-layout > .inventory-rail-panel > .inventory-rail-scroll.left-rail-template__scroll {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  padding: 8px var(--app-left-rail-padding-inline, 16px);
+  scrollbar-gutter: stable;
+}
+
+.inventory-rail-pinned #inventory-add-container-btn {
+  width: 100%;
+  min-height: 36px;
+}
+
 .inventory-rail-stack {
   display: grid;
   gap: 12px;
@@ -34,7 +65,7 @@
 .inventory-location-nav {
   display: grid;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 0;
 }
 
 .inventory-container-nav-empty {

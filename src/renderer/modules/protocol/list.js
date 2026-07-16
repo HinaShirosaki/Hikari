@@ -4,16 +4,12 @@ export function createProtocolListController({
   ui,
   localState,
   safeText,
-  getShareTargetEmails,
-  defaultShareStatus,
   normalizeIsoTimestamp,
   parseTimestamp,
   onViewProtocol,
   onEditProtocol,
   onDeleteProtocol,
   onExportProtocol,
-  onShareProtocolConfirm,
-  onCopyProtocolLink,
   syncSelectionAfterMutation
 }) {
   function updateSortButtonLabels() {
@@ -119,16 +115,10 @@ export function createProtocolListController({
       return;
     }
 
-    const shareOptions = ['<option value="">Select teammate</option>'];
-    getShareTargetEmails().forEach((email) => {
-      const selectedAttr = localState.activeShareTargetEmail === email ? ' selected' : '';
-      shareOptions.push(`<option value="${safeText(email)}"${selectedAttr}>${safeText(email)}</option>`);
-    });
-
     const sortedProtocols = [...state.protocols].sort(compareProtocols);
     ui.protocolList.innerHTML = sortedProtocols.map((protocol) => `
       <article
-        class="list-row protocol-list-row${localState.activeShareProtocolId === protocol.id ? ' protocol-list-row-share-open' : ''}${localState.activeMenuProtocolId === protocol.id ? ' protocol-list-row-menu-open' : ''}${localState.activeProtocolId === protocol.id ? ' protocol-list-row-selected list-row-selected' : ''}"
+        class="list-row protocol-list-row${localState.activeMenuProtocolId === protocol.id ? ' protocol-list-row-menu-open' : ''}${localState.activeProtocolId === protocol.id ? ' protocol-list-row-selected list-row-selected' : ''}"
         data-protocol-select="${protocol.id}"
         tabindex="0"
       >
@@ -141,7 +131,6 @@ export function createProtocolListController({
             <button type="button" class="ghost-btn protocol-view-btn" data-protocol-view="${protocol.id}">View</button>
             <button type="button" class="ghost-btn protocol-view-btn" data-protocol-export="${protocol.id}">Export PDF</button>
             <button type="button" class="ghost-btn protocol-edit-btn" data-protocol-edit="${protocol.id}">Edit</button>
-            <button type="button" class="ghost-btn protocol-share-btn" data-protocol-share="${protocol.id}">Share</button>
             <button type="button" class="danger-btn protocol-delete-btn" data-protocol-delete="${protocol.id}">Delete</button>
           </div>
           <button
@@ -157,21 +146,10 @@ export function createProtocolListController({
             <div class="protocol-action-menu protocol-preview-block" role="menu">
               <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="edit" data-protocol-id="${protocol.id}">Edit</button>
               <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="export" data-protocol-id="${protocol.id}">Export PDF</button>
-              <button type="button" class="ghost-btn protocol-action-item" data-protocol-action="share" data-protocol-id="${protocol.id}">Share</button>
               <button type="button" class="ghost-btn protocol-action-item protocol-action-item-danger" data-protocol-action="delete" data-protocol-id="${protocol.id}">Delete</button>
             </div>
           ` : ''}
         </div>
-        ${localState.activeShareProtocolId === protocol.id ? `
-          <div class="protocol-share-inline">
-            <select data-protocol-share-select="${protocol.id}">
-              ${shareOptions.join('')}
-            </select>
-            <button type="button" class="primary-btn" data-protocol-share-confirm="${protocol.id}" ${localState.activeShareTargetEmail ? '' : 'disabled'}>Confirm</button>
-            <button type="button" class="ghost-btn" data-protocol-copy-link="${protocol.id}">Copy Link</button>
-            <button type="button" class="ghost-btn" data-protocol-share-cancel>Cancel</button>
-          </div>
-        ` : ''}
       </article>
     `).join('');
 
@@ -183,7 +161,7 @@ export function createProtocolListController({
       row.addEventListener('click', (event) => {
         const target = event.target;
         const interactive = typeof target?.closest === 'function'
-          ? target.closest('button, select, textarea, input, .protocol-share-inline, .protocol-action-menu')
+          ? target.closest('button, select, textarea, input, .protocol-action-menu')
           : null;
         if (interactive) {
           return;
@@ -197,7 +175,7 @@ export function createProtocolListController({
         }
         const target = event.target;
         const interactive = typeof target?.closest === 'function'
-          ? target.closest('button, select, textarea, input, .protocol-share-inline, .protocol-action-menu')
+          ? target.closest('button, select, textarea, input, .protocol-action-menu')
           : null;
         if (interactive) {
           return;
@@ -215,51 +193,8 @@ export function createProtocolListController({
       button.addEventListener('click', () => onExportProtocol(button.dataset.protocolExport));
     });
 
-    ui.protocolList.querySelectorAll('[data-protocol-share]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const protocolId = String(button.dataset.protocolShare || '');
-        localState.activeMenuProtocolId = '';
-        if (localState.activeShareProtocolId === protocolId) {
-          localState.activeShareProtocolId = '';
-          localState.activeShareTargetEmail = '';
-        } else {
-          localState.activeShareProtocolId = protocolId;
-          localState.activeShareTargetEmail = '';
-        }
-        renderList();
-      });
-    });
-
     ui.protocolList.querySelectorAll('[data-protocol-delete]').forEach((button) => {
       button.addEventListener('click', () => onDeleteProtocol(button.dataset.protocolDelete));
-    });
-
-    ui.protocolList.querySelectorAll('[data-protocol-share-select]').forEach((select) => {
-      select.addEventListener('change', () => {
-        localState.activeShareTargetEmail = String(select.value || '').trim();
-        renderList();
-      });
-    });
-
-    ui.protocolList.querySelectorAll('[data-protocol-share-confirm]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const protocolId = String(button.dataset.protocolShareConfirm || '');
-        onShareProtocolConfirm(protocolId, localState.activeShareTargetEmail);
-      });
-    });
-
-    ui.protocolList.querySelectorAll('[data-protocol-copy-link]').forEach((button) => {
-      button.addEventListener('click', () => {
-        void onCopyProtocolLink(String(button.dataset.protocolCopyLink || ''));
-      });
-    });
-
-    ui.protocolList.querySelectorAll('[data-protocol-share-cancel]').forEach((button) => {
-      button.addEventListener('click', () => {
-        localState.activeShareProtocolId = '';
-        localState.activeShareTargetEmail = '';
-        renderList();
-      });
     });
 
     ui.protocolList.querySelectorAll('[data-protocol-menu-trigger]').forEach((button) => {
@@ -284,12 +219,6 @@ export function createProtocolListController({
         }
         if (action === 'export') {
           onExportProtocol(protocolId);
-          renderList();
-          return;
-        }
-        if (action === 'share') {
-          localState.activeShareProtocolId = localState.activeShareProtocolId === protocolId ? '' : protocolId;
-          localState.activeShareTargetEmail = '';
           renderList();
           return;
         }

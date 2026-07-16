@@ -5,7 +5,14 @@
             <div class="papers-library-topbar">
               <h2>Papers</h2>
               <div class="papers-library-actions">
-                <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn">Upload PDF</button>
+                <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn" aria-label="Upload PDF" title="Upload PDF">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M12 16V4"></path>
+                    <path d="m7 9 5-5 5 5"></path>
+                    <path d="M5 14v5h14v-5"></path>
+                  </svg>
+                  <span class="sr-only">Upload PDF</span>
+                </button>
               </div>
             </div>
             <p id="paper-folder-selection" class="papers-library-status" hidden>No folder selected</p>

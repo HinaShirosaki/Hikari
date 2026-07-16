@@ -41,13 +41,13 @@ function splitPathEntries(pathValue) {
     .filter(Boolean);
 }
 
-function buildPathCommandCandidates(commandName) {
+function buildPathCommandCandidates(commandName, pathValue = process.env.PATH) {
   const command = String(commandName || '').trim();
   if (!command) {
     return [];
   }
 
-  const pathEntries = splitPathEntries(process.env.PATH);
+  const pathEntries = splitPathEntries(pathValue);
   const extCandidates = process.platform === 'win32'
     ? ['', '.exe', '.cmd', '.bat', '.com']
     : [''];
@@ -107,6 +107,98 @@ function resolveCodexBinary() {
   }
 
   return explicit || 'codex';
+}
+
+function executableUsesEnvNode(candidatePath = '') {
+  const target = String(candidatePath || '').trim();
+  if (!target || process.platform === 'win32') {
+    return false;
+  }
+  let descriptor = null;
+  try {
+    descriptor = fsSync.openSync(target, 'r');
+    const buffer = Buffer.alloc(512);
+    const bytesRead = fsSync.readSync(descriptor, buffer, 0, buffer.length, 0);
+    const firstLine = buffer.subarray(0, bytesRead).toString('utf8').split(/\r?\n/u, 1)[0];
+    return /^#![^\r\n]*\benv(?:\s+-S)?\s+node(?:\s|$)/u.test(firstLine);
+  } catch {
+    return false;
+  } finally {
+    if (descriptor !== null) {
+      try {
+        fsSync.closeSync(descriptor);
+      } catch {
+        // Ignore close failures while probing an executable.
+      }
+    }
+  }
+}
+
+function resolveCodexNodeBinary(codexBinary = '', env = process.env, options = {}) {
+  const envSource = env && typeof env === 'object' ? env : process.env;
+  const explicit = String(
+    envSource.HIKARI_CODEX_NODE_PATH
+      || envSource.HIKARI_NODE_PATH
+      || ''
+  ).trim();
+  const processExecPath = Object.prototype.hasOwnProperty.call(options, 'processExecPath')
+    ? String(options.processExecPath || '').trim()
+    : String(process.execPath || '').trim();
+  const commonNodePaths = Array.isArray(options.commonNodePaths)
+    ? options.commonNodePaths
+    : process.platform === 'darwin'
+      ? ['/opt/homebrew/bin/node', '/usr/local/bin/node', '/opt/local/bin/node', '/usr/bin/node']
+      : ['/usr/local/bin/node', '/usr/bin/node'];
+  const candidates = [];
+
+  if (explicit) {
+    candidates.push(explicit);
+    if (!looksLikePath(explicit)) {
+      candidates.push(...buildPathCommandCandidates(explicit, envSource.PATH));
+    }
+  }
+  if (looksLikePath(codexBinary)) {
+    candidates.push(path.join(path.dirname(codexBinary), process.platform === 'win32' ? 'node.exe' : 'node'));
+  }
+  if (/^node(?:\.exe)?$/iu.test(path.basename(processExecPath))) {
+    candidates.push(processExecPath);
+  }
+  candidates.push(...buildPathCommandCandidates('node', envSource.PATH));
+  candidates.push(...commonNodePaths);
+
+  const seen = new Set();
+  for (const candidate of candidates) {
+    const value = String(candidate || '').trim();
+    if (!value || seen.has(value)) {
+      continue;
+    }
+    seen.add(value);
+    if (looksLikePath(value) && isRunnableFile(value)) {
+      return value;
+    }
+  }
+  return '';
+}
+
+function resolveCodexInvocation(env = process.env, options = {}) {
+  const codexBinary = String(options.codexBinary || resolveCodexBinary()).trim();
+  if (!executableUsesEnvNode(codexBinary)) {
+    return {
+      command: codexBinary,
+      argsPrefix: []
+    };
+  }
+  const nodeBinary = resolveCodexNodeBinary(codexBinary, env, options);
+  if (!nodeBinary) {
+    return {
+      command: codexBinary,
+      argsPrefix: []
+    };
+  }
+  return {
+    command: nodeBinary,
+    argsPrefix: [codexBinary]
+  };
 }
 
 function pickExistingDirectory(candidates) {
@@ -194,6 +286,8 @@ module.exports = {
   getNativeCodexCliHomeDirectory,
   isFilesystemRoot,
   resolveCodexBinary,
+  resolveCodexInvocation,
+  resolveCodexNodeBinary,
   resolveCodexCliRuntimeHomeDirectory,
   resolveWorkingDirectory
 };

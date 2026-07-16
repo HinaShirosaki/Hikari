@@ -323,30 +323,37 @@ Input schema:
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "message": { "type": "string" },
-    "project": { "type": "object", "additionalProperties": true },
-    "project_id": { "type": "string" },
     "project_name": { "type": "string" },
-    "workflow_id": { "type": "string", "maxLength": 160 },
-    "protocol_name": { "type": "string" },
     "protocol_candidates": {
       "type": "array",
       "items": { "type": "string" },
       "maxItems": 5
     },
-    "evidence_context": {
-      "type": "array",
-      "items": { "type": "object", "additionalProperties": true },
-      "maxItems": 8
+    "pending_values": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
     },
-    "parser_payload": { "type": "object", "additionalProperties": true }
+    "step_edits": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "step_number": { "type": "integer", "minimum": 1 },
+          "text": { "type": "string" }
+        }
+      }
+    }
   }
 }
 ```
 
+`pending_values` keys must exactly match the generated `placeholder_key` form `<step-id>:<placeholder-id>`; display labels do not identify placeholders. `step_edits` affect only the planned notebook copy and never mutate the saved protocol.
+
 ### `ask_user`
 
-Direct MCP helper for one blocking clarification. It does not wait inside MCP for a human answer; instead it returns a renderable `final_response` payload that Codex should emit as the whole-turn JSON result. Hikari renders the options and custom text box, then sends the user answer back as the next chat turn.
+Direct MCP helper for one blocking clarification. It is a turn boundary: Codex emits the returned `final_response` and ends the current turn in a completed waiting state. Hikari renders the one-shot options and custom text box, then sends the answer as the next chat turn. Codex resumes from that answer without repeating the same question.
 
 Input schema:
 

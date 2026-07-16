@@ -45,6 +45,32 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart04(context =
       });
       assert.equal(argsPayload.ok, true);
       assert.equal(argsPayload.payload.tool_calls[0].arguments.limit, 5);
+
+      const notebookDraftArgs = toolLoading.normalizeToolArgumentsPayload({
+        tool_calls: [
+          {
+            tool_name: 'notebook-draft',
+            arguments: {
+              project: { name: 'Atlas' },
+              protocol_candidates: ['Flow Cytometric IC50'],
+              pending_values: {
+                'step-1:peptide-id': 'PDL1-peptide-7'
+              },
+              step_edits: [
+                { step_number: 2, text: 'Acquire the prepared dose series.' }
+              ]
+            }
+          }
+        ]
+      }, {
+        selectedToolNames: ['notebook-draft']
+      });
+      assert.equal(notebookDraftArgs.ok, true);
+      assert.equal(
+        notebookDraftArgs.payload.tool_calls[0].arguments.pending_values['step-1:peptide-id'],
+        'PDL1-peptide-7'
+      );
+      assert.equal(notebookDraftArgs.payload.tool_calls[0].arguments.step_edits[0].step_number, 2);
       assert.deepEqual(
         toolLoading.normalizeToolInvocationArgs({
           input_json: JSON.stringify({ query: 'PEI', limit: 5 })

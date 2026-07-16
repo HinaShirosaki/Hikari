@@ -261,8 +261,11 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /Call the direct Hikari MCP tool `mcp__hikari__protocol_generation`/);
         assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /expects complete protocol JSON/);
         assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /Protocol JSON checklist:/);
+        assert.match(await fsPromises.readFile(rootProtocolSkillPath, 'utf8'), /Aim for 0-3 unresolved placeholders and do not exceed 5/);
         assert.match(await fsPromises.readFile(rootNotebookSkillPath, 'utf8'), /Call the direct Hikari MCP tool `mcp__hikari__notebook_draft`/);
         assert.match(await fsPromises.readFile(rootNotebookSkillPath, 'utf8'), /Draft context checklist:/);
+        assert.match(await fsPromises.readFile(rootNotebookSkillPath, 'utf8'), /These are the only supported tool arguments/);
+        assert.match(await fsPromises.readFile(rootNotebookSkillPath, 'utf8'), /Every key must exactly match a `placeholder_key`/);
         assert.match(await fsPromises.readFile(rootPaperRetrievalSkillPath, 'utf8'), /Hikari Paper Retrieval MCP/);
         assert.match(await fsPromises.readFile(rootPaperRetrievalSkillPath, 'utf8'), /mcp__hikari__paper_intake_search_summaries/);
         assert.match(await fsPromises.readFile(rootPaperRetrievalSkillPath, 'utf8'), /source_paths\.paper_md/);

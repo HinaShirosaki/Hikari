@@ -2,7 +2,7 @@ module.exports = function registerAppCollaborationAndProtocolSuitePart01(context
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-test('protocol-management supports draft creation, sharing, link copy, and delete cascades', async () => {
+test('protocol-management supports draft creation and delete cascades without dead share actions', () => {
   const document = createMockDocument([
     'protocol-list-panel',
     'protocol-editor-panel',
@@ -22,9 +22,6 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
     'protocol-troubleshooting',
     'add-placeholder-btn',
     'placeholder-name',
-    'protocol-share-status',
-    'protocol-share-link-panel',
-    'protocol-share-link-output',
     'protocol-list',
     'protocol-sort-menu-btn',
     'protocol-sort-menu'
@@ -45,8 +42,6 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
 
   let persistCalls = 0;
   let importedCalls = 0;
-  let copiedText = '';
-  const tracked = [];
   const state = {
     protocols: [],
     notebookEntries: [],
@@ -66,18 +61,7 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
     }
   };
 
-  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), {
-    document,
-    TextEncoder,
-    btoa: btoaPolyfill,
-    navigator: {
-      clipboard: {
-        writeText: async (value) => {
-          copiedText = String(value || '');
-        }
-      }
-    }
-  });
+  const protocolModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'index.js'), { document });
   const protocol = protocolModule.initProtocolManagement({
     state,
     persist: () => {
@@ -90,14 +74,8 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
     safeText: shared.safeText,
     onProtocolsChanged: () => {
       importedCalls += 1;
-    },
-    trackGrowthEvent: (_state, name, props) => {
-      tracked.push({ name, props });
     }
   });
-
-  protocol.renderShareTargets();
-  assert.match(document.getElementById('protocol-share-status').textContent, /Click Share/);
 
   assert.equal(
     protocol.addDraftFromExtractedMethod({ title: 'Empty Method', steps: [] }, { title: 'Paper' }),
@@ -150,33 +128,7 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
 
   protocol.renderList();
   const protocolList = document.getElementById('protocol-list');
-  const shareBtn = protocolList.querySelectorAll('[data-protocol-share]')[0];
-  trigger(shareBtn, 'click');
-
-  const shareSelect = protocolList.querySelectorAll('[data-protocol-share-select]')[0];
-  shareSelect.value = 'teammate@hikari.test';
-  trigger(shareSelect, 'change');
-
-  const confirmShareBtn = protocolList.querySelectorAll('[data-protocol-share-confirm]')[0];
-  trigger(confirmShareBtn, 'click');
-  assert.equal(state.messages.length, 1);
-  assert.equal(state.messages[0].type, 'protocol_share');
-  assert.match(state.messages[0].payload.shareLink, /^hikari:\/\/protocol-share\//);
-  assert.equal(tracked[0].name, 'protocol_share_sent');
-
-  protocol.renderList();
-  const reopenedShareBtn = protocolList.querySelectorAll('[data-protocol-share]')[0];
-  trigger(reopenedShareBtn, 'click');
-
-  const copyLinkBtn = protocolList.querySelectorAll('[data-protocol-copy-link]')[0];
-  trigger(copyLinkBtn, 'click');
-  await flushAsync();
-
-  assert.equal(copiedText, state.messages[0].payload.shareLink);
-  assert.equal(tracked[1].name, 'protocol_share_link_copied');
-  assert.equal(document.getElementById('protocol-share-link-panel').hidden, false);
-  assert.equal(document.getElementById('protocol-share-link-output').value, copiedText);
-  assert.match(document.getElementById('protocol-share-status').textContent, /Copied a share link/);
+  assert.doesNotMatch(protocolList.innerHTML, /data-protocol-(?:share|copy-link)|data-protocol-action="share"/);
 
   const protocolId = state.protocols[0].id;
   state.notebookEntries = [{ id: 'entry-1', protocolId, projectId: 'project-1' }];
@@ -218,7 +170,7 @@ test('protocol-management supports draft creation, sharing, link copy, and delet
   assert.equal(state.workflows[0].links.length, 0);
   assert.deepEqual(state.workflowTemplates[0].blocks.map((item) => item.id), ['tblock-2']);
   assert.equal(state.workflowTemplates[0].links.length, 0);
-  assert.ok(persistCalls >= 3);
+  assert.ok(persistCalls >= 2);
   assert.ok(importedCalls >= 2);
 });
 test('protocol-management opens JSON import in an overlay on create and hides the launcher on edit', async () => {
@@ -250,9 +202,6 @@ test('protocol-management opens JSON import in an overlay on create and hides th
     'protocol-generate-btn',
     'add-placeholder-btn',
     'placeholder-name',
-    'protocol-share-status',
-    'protocol-share-link-panel',
-    'protocol-share-link-output',
     'protocol-list',
     'protocol-sort-menu-btn',
     'protocol-sort-menu'

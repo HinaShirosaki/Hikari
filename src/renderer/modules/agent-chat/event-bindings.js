@@ -12,6 +12,7 @@ export function bindAgentChatEvents({
   sessionManager,
   shell,
   attachmentsController,
+  payloadBuilder,
   developerContextController,
   requestController,
   developerMockController,
@@ -82,13 +83,7 @@ export function bindAgentChatEvents({
   dom.newChatBtn?.addEventListener('click', () => {
     dom.input.value = '';
     attachmentsController.reset();
-    shell.syncComposerHeight();
-    void sessionManager.startNewChatSession();
-  });
-
-  dom.clearBtn?.addEventListener('click', () => {
-    dom.input.value = '';
-    attachmentsController.reset();
+    payloadBuilder.consumeHiddenContexts?.();
     shell.syncComposerHeight();
     void sessionManager.startNewChatSession();
   });
@@ -176,17 +171,35 @@ export function bindAgentChatEvents({
     attachmentsController.removeById(attachmentId);
   });
 
+  dom.hiddenContextList?.addEventListener('click', (event) => {
+    const removeButton = event?.target?.closest?.('[data-agent-remove-hidden-context]')
+      || (event?.target?.dataset?.agentRemoveHiddenContext !== undefined ? event.target : null);
+    if (removeButton) {
+      payloadBuilder.consumeHiddenContexts?.();
+      developerContextController.invalidate();
+      developerContextController.render();
+    }
+  });
+
   api?.onAgentProgress?.((payload) => {
     const clientRequestId = trimText(payload?.client_request_id, 120);
-    if (!clientRequestId || clientRequestId !== runtime.activeClientRequestId || !runtime.liveAssistantMessage) {
+    const request = runtime.activeRequests instanceof Map
+      ? runtime.activeRequests.get(clientRequestId)
+      : null;
+    if (!clientRequestId || !request?.liveAssistantMessage) {
       return;
     }
-    runtime.liveAssistantMessage = applyLiveProgressEvent(runtime.liveAssistantMessage, payload);
+    request.liveAssistantMessage = applyLiveProgressEvent(request.liveAssistantMessage, payload);
+    const isVisible = trimText(request.sessionId, 120) === trimText(state.agentChat.currentSessionId, 120);
+    if (!isVisible) {
+      return;
+    }
+    runtime.liveAssistantMessage = request.liveAssistantMessage;
     const plotlyGraphArtifact = extractPlotlyGraphArtifactFromProgressEvent(payload);
     if (plotlyGraphArtifact?.figure?.data?.length) {
       onPlotlyGraphArtifact(plotlyGraphArtifact, payload);
     }
     shell.renderHistoryView();
-    shell.setStatus(trimText(runtime.liveAssistantMessage?.text, 320) || 'Working on this...');
+    shell.setStatus(trimText(request.liveAssistantMessage?.text, 320) || 'Working on this...');
   });
 }

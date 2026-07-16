@@ -81,8 +81,39 @@ export function initAgentChat({
     state,
     input: dom.input,
     getComposerAttachments: attachmentsController.getAttachments,
-    ensureAgentState: shell.ensureAgentState
+    ensureAgentState: shell.ensureAgentState,
+    onHiddenDraftContextsChanged: (contexts) => {
+      renderHiddenContextIndicator(contexts);
+      developerContextController?.invalidate();
+      developerContextController?.render();
+    }
   });
+
+  function renderHiddenContextIndicator(contexts = payloadBuilder.getPrimedHiddenContexts?.()) {
+    if (!dom.hiddenContextList) {
+      return;
+    }
+    const hasInjectedText = Array.isArray(contexts)
+      && contexts.some((context) => String(context?.text || '').trim());
+    if (!hasInjectedText) {
+      dom.hiddenContextList.innerHTML = '';
+      dom.hiddenContextList.hidden = true;
+      return;
+    }
+    dom.hiddenContextList.hidden = false;
+    dom.hiddenContextList.innerHTML = `
+      <span class="agent-attachment-pill agent-hidden-context-pill" title="Selected text will be included with the next message">
+        <svg class="agent-hidden-context-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+          <path d="M6 3h8l4 4v14H6z"></path>
+          <path d="M14 3v5h5"></path>
+          <path d="M9 12h6"></path>
+          <path d="M9 16h6"></path>
+        </svg>
+        <span>Text</span>
+        <button type="button" data-agent-remove-hidden-context aria-label="Remove selected text context">&times;</button>
+      </span>
+    `;
+  }
   const syncStateSnapshot = (projectId) => buildSyncedStateSnapshot({ api, state, projectId });
   developerContextController = createDeveloperContextController({
     api,
@@ -114,7 +145,14 @@ export function initAgentChat({
     renderHistory: shell.renderHistoryView,
     setStatus: shell.setStatus,
     setSessionStatus: shell.setSessionStatus,
-    isInteractionLocked: () => runtime.inFlight,
+    getRunningSessionIds: () => new Set(
+      [...(runtime.activeRequests instanceof Map ? runtime.activeRequests.values() : [])]
+        .map((request) => String(request?.sessionId || '').trim())
+        .filter(Boolean)
+    ),
+    onActiveSessionChanged: () => {
+      shell.syncActiveRequestState();
+    },
     onProjectScopeChanged: () => {
       developerContextController?.invalidate();
       developerContextController?.render();
@@ -179,7 +217,7 @@ export function initAgentChat({
     renderHistoryView: shell.renderHistoryView,
     setStatus: shell.setStatus,
     syncComposerHeight: shell.syncComposerHeight,
-    updateInFlightState: shell.updateInFlightState,
+    syncActiveRequestState: shell.syncActiveRequestState,
     notebookDraftAdapter,
     openReviewForMessage: reviewController.openForMessage
   });
@@ -219,18 +257,21 @@ export function initAgentChat({
     updateInFlightState: shell.updateInFlightState
   });
 
-  const render = () => renderAgentChat({
-    api,
-    state,
-    dom,
-    runtime,
-    shell,
-    sessionManager,
-    developerToolUi,
-    developerContextController,
-    attachmentsController,
-    loadPersistentSessions
-  });
+  const render = () => {
+    renderAgentChat({
+      api,
+      state,
+      dom,
+      runtime,
+      shell,
+      sessionManager,
+      developerToolUi,
+      developerContextController,
+      attachmentsController,
+      loadPersistentSessions
+    });
+    renderHiddenContextIndicator();
+  };
 
   function focusComposer() {
     dom.input?.focus?.();
@@ -256,6 +297,7 @@ export function initAgentChat({
     sessionManager,
     shell,
     attachmentsController,
+    payloadBuilder,
     developerContextController,
     requestController,
     developerMockController,

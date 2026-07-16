@@ -103,6 +103,19 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, listRule);
     });
 
+    test('Samples and Inventory pins Add Container above its sole rail scroller', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'personal-inventory-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'personal-inventory-view.css');
+      const railRule = /\.left-rail-template\.personal-inventory-layout\s*>\s*\.inventory-rail-panel\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const pinnedRule = /\.left-rail-template\.personal-inventory-layout\s*>\s*\.inventory-rail-panel\s*>\s*\.inventory-rail-pinned\.left-rail-template__pinned\s*\{[^}]*padding:\s*14px\s+calc\(var\(--app-left-rail-padding-inline,\s*16px\)\s*\+\s*var\(--theme-scrollbar-size,\s*8px\)\)\s+12px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*border-bottom:\s*1px\s+solid\s+var\(--app-left-rail-divider\);[^}]*\}/s;
+      const scrollRule = /\.left-rail-template\.personal-inventory-layout\s*>\s*\.inventory-rail-panel\s*>\s*\.inventory-rail-scroll\.left-rail-template__scroll\s*\{[^}]*display:\s*grid;[^}]*padding:\s*8px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*scrollbar-gutter:\s*stable;[^}]*\}/s;
+
+      assert.match(html, /class="inventory-rail-panel[^"]*left-rail-template__rail--pinned[^"]*"[\s\S]*class="inventory-rail-pinned left-rail-template__pinned"[\s\S]*id="inventory-add-container-btn"[\s\S]*class="inventory-rail-scroll left-rail-template__scroll"[\s\S]*id="inventory-location-nav"[\s\S]*id="inventory-summary-card"/);
+      assert.match(css, railRule);
+      assert.match(css, pinnedRule);
+      assert.match(css, scrollRule);
+    });
+
     test('biology notebook page header stays fixed above its detail scroller', () => {
       const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
@@ -180,6 +193,22 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(css, /\.protocol-action-menu\s*\{[^}]*left:\s*calc\(100%/s);
     });
 
+    test('Protocols does not expose the retired share function', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const list = readLocalSource('src', 'renderer', 'modules', 'protocol', 'list.js');
+      const controller = readLocalSource('src', 'renderer', 'modules', 'protocol', 'index.js');
+      const manifest = readLocalSource('src', 'renderer', 'module-manifests', 'protocol.js');
+      const sharingModulePath = path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'sharing.js');
+
+      assert.doesNotMatch(html, /protocol-share|Portable Share Link/);
+      assert.doesNotMatch(css, /protocol-(?:share|list-row-share-open)/);
+      assert.doesNotMatch(list, /data-protocol-(?:share|copy-link)|data-protocol-action="share"|activeShare/);
+      assert.doesNotMatch(controller, /createProtocolSharingController|renderShareTargets|sharingController|DEFAULT_SHARE_STATUS/);
+      assert.doesNotMatch(manifest, /renderShareTargets/);
+      assert.equal(fs.existsSync(sharingModulePath), false);
+    });
+
     test('Workflow and Sequence Viewer pin their rail actions above their only rail scroller', () => {
       const workflowHtml = readLocalSource('ui', 'html', 'views', 'workflow-management-view.html');
       const workflowCss = readLocalSource('ui', 'css', 'views', 'workflow-management-view.css');
@@ -197,6 +226,18 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(sequenceCss, /\.sequence-viewer-cloning-design-toolbar\s*\{[^}]*grid-template-columns:\s*var\(--layout-left-panel-width\)\s+minmax\(0,\s*1fr\);[^}]*\}/s);
       assert.match(sequenceCss, /\.sequence-viewer-cloning-design-toolbar-main\s*\{[^}]*grid-column:\s*2;[^}]*display:\s*flex;[^}]*justify-content:\s*flex-start;[^}]*\}/s);
       assert.match(sequenceCss, /#sequence-viewer-view\s+\.left-rail-template\.sequence-viewer-home-layout\s*>\s*\.sequence-viewer-home-sidebar\.left-rail-template__rail--pinned,[^}]*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s);
+    });
+
+    test('workflow protocol filling uses compact bordered placeholder inputs without extra controls', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'workflow-management-view.css');
+      const renderer = readLocalSource('src', 'renderer', 'modules', 'workflow', 'renderer.js');
+
+      assert.match(css, /\.workflow-step-inline\s*\{[^}]*width:\s*min\(300px,\s*calc\(100vw\s*-\s*32px\)\);[^}]*max-height:\s*min\(420px,\s*65vh\);[^}]*padding:\s*14px;[^}]*overflow-y:\s*auto;/s);
+      assert.match(css, /\.workflow-placeholder-field input\s*\{[^}]*min-height:\s*38px;[^}]*border:\s*1px solid var\(--theme-border\);[^}]*border-radius:\s*7px;[^}]*box-shadow:\s*none;/s);
+      assert.match(renderer, /workflow-placeholder-field-label/);
+      assert.match(renderer, /placeholder="Enter value"/);
+      assert.doesNotMatch(renderer, /workflow-step-editor-(?:header|footer)|workflow-placeholder-field-context|workflow-step-status-picker/);
+      assert.doesNotMatch(renderer, /workflow-placeholder-table/);
     });
 
     test('Protein Builder toolbar navigation stays above the shared rail backdrop', () => {
@@ -233,15 +274,43 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, /\.assay-results-actions\s*>\s*\.assay-results-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
     });
 
-    test('Papers rail pins Upload PDF above the sole scrolling library list', () => {
+    test('Assay setup actions stay at the top of the form as accessible compact icons', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+
+      assert.match(html, /id="assay-form"[^>]*>[\s\S]*?id="assay-id"[\s\S]*?class="form-actions assay-form-actions"[\s\S]*?class="assay-display-field"/);
+      assert.match(html, /id="assay-export-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Export CSV template"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-import-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Import CSV"[\s\S]*?<svg/);
+      assert.match(html, /type="submit"[^>]*assay-form-save-icon-btn[^>]*aria-label="Save assay"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-cancel-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Cancel edit"[\s\S]*?<svg/);
+      assert.doesNotMatch(html, /id="assay-(?:export-template|import-template|cancel)-btn"[^>]*>\s*(?:Export CSV Template|Import CSV|Cancel Edit)\s*<\//);
+      assert.match(css, /\.assay-form-actions\s*>\s*\.assay-form-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+    });
+
+    test('Assay plate setup toolbar stays separated from the plate grid', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+
+      assert.match(html, /class="form-actions assay-plate-toolbar"[\s\S]*id="assay-plate-field-sample-btn"[\s\S]*id="assay-serial-dilution-btn"[\s\S]*id="assay-plate-preview"/);
+      assert.match(css, /\.assay-create-preview-panel\s*>\s*\.assay-plate-toolbar\s*\{[^}]*margin-bottom:\s*12px;/s);
+    });
+
+    test('Papers rail pins a borderless Upload icon above the sole scrolling library list', () => {
       const css = readLocalSource('ui', 'css', 'views', 'papers-view.css');
       const html = readLocalSource('ui', 'html', 'views', 'papers-view.html');
       const railRule = /\.left-rail-template\.papers-layout\s*>\s*\.papers-library-rail\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const layoutHeightRule = /\.left-rail-template\.papers-layout\s*\{[^}]*min-height:\s*0;[^}]*height:\s*100%;/s;
+      const railHeightRule = /\.left-rail-template\.papers-layout\s*>\s*\.papers-library-rail\.left-rail-template__rail--pinned\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0;[^}]*max-height:\s*100%;/s;
       const pinnedRule = /\.left-rail-template\.papers-layout\s*>\s*\.papers-library-rail\s*>\s*\.papers-library-pinned\.left-rail-template__pinned\s*\{[^}]*padding:\s*14px\s+calc\(var\(--app-left-rail-padding-inline,\s*16px\)\s*\+\s*var\(--theme-scrollbar-size,\s*8px\)\)\s+12px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*border-bottom:\s*1px\s+solid\s+var\(--app-left-rail-divider\);[^}]*\}/s;
       const listRule = /\.left-rail-template\.papers-layout\s*>\s*\.papers-library-rail\s*>\s*\.papers-library-scroll\.left-rail-template__scroll\s*\{[^}]*padding:\s*8px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*scrollbar-gutter:\s*stable;[^}]*\}/s;
 
       assert.match(html, /class="papers-library-rail[^"]*left-rail-template__rail--pinned[^"]*"[\s\S]*class="papers-library-pinned left-rail-template__pinned"[\s\S]*id="paper-upload-trigger"[\s\S]*class="papers-library-scroll left-rail-template__scroll"[\s\S]*id="journal-club-list"/);
+      assert.match(html, /id="paper-upload-trigger"[^>]*aria-label="Upload PDF"[^>]*title="Upload PDF"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Upload PDF<\/span>/);
+      assert.doesNotMatch(html, /id="paper-upload-trigger"[^>]*>\s*Upload PDF\s*<\/button>/);
+      assert.match(css, /\.papers-library-upload-btn\.ghost-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*background:\s*transparent;/s);
       assert.match(css, railRule);
+      assert.match(css, layoutHeightRule);
+      assert.match(css, railHeightRule);
       assert.match(css, pinnedRule);
       assert.match(css, listRule);
     });
@@ -299,6 +368,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(html, /id="agent-rail-status"/);
       assert.doesNotMatch(html, /universal-agent-chat-rail__kicker/);
       assert.doesNotMatch(html, /id="agent-rail-clear-btn"/);
+      assert.doesNotMatch(html, /id="agent-clear-btn"/);
       assert.doesNotMatch(html, /id="agent-rail-project-select"/);
       assert.equal((registry.apps || []).filter((app) => app.agentChatRail === true).map((app) => app.id).join(','), 'biology-notebook,assay,papers');
       assert.match(generatedRegistry, /"id": "biology-notebook"[\s\S]*"agentChatRail": true/);
@@ -573,7 +643,6 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(mainAgentServicesSource, /agent-tool-loading\.js/);
       assert.match(mainAgentServicesSource, /agent-tool-execution\.js/);
       assert.match(mainAgentServicesSource, /createAgentRuntimeSupport/);
-      assert.match(mainAgentServicesSource, /sharedLlmTransportDeps/);
       assert.match(mainAgentServicesSource, /llmProviderBridge/);
       assert.match(mainAgentServicesSource, /sharedAgentLlmDeps/);
       assert.match(mainAgentServicesSource, /registerAgentToolExecutors/);

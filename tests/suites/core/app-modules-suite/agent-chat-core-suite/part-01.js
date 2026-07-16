@@ -44,6 +44,59 @@ test('agent-chat live progress keeps tool display JSON out of assistant text', (
 
   assert.equal(withAssistantAnswer.text, 'Final paper search answer.');
   assert.equal(withAssistantAnswer.meta.live_progress.response_text, 'Final paper search answer.');
+
+  const waitingForUser = liveProgressModule.applyLiveProgressEvent(withAssistantAnswer, {
+    client_request_id: 'agent-request-tool-json',
+    stage: 'codex_agent_completed',
+    status: 'ok',
+    message: 'Codex agent completed.',
+    meta: {
+      status: 'needs_more_info'
+    }
+  });
+  const waitingRow = waitingForUser.meta.live_progress.activity_rows
+    .find((row) => row.stage === 'codex_agent_completed');
+  assert.equal(waitingRow.text, 'Waiting for your answer');
+});
+test('agent-chat clarification cards disappear after one answer or any later user turn', () => {
+  const questionRenderer = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'rendering-question-card.js'
+  ));
+  const questionMeta = {
+    codex_agent: {
+      status: 'needs_more_info'
+    },
+    user_question: {
+      question: 'Which project should I use?',
+      options: [{ label: 'Atlas', value: 'Use Atlas.' }],
+      allow_custom: true
+    }
+  };
+
+  assert.match(
+    questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText),
+    /agent-user-question-card/
+  );
+  assert.equal(
+    questionRenderer.renderUserQuestionCard({
+      ...questionMeta,
+      user_question: {
+        ...questionMeta.user_question,
+        status: 'answered',
+        answered: { answer: 'Use Atlas.' }
+      }
+    }, 'assistant-question', shared.safeText),
+    ''
+  );
+  assert.equal(
+    questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText, { disabled: true }),
+    ''
+  );
 });
 test('agent-chat maps assay experiment data with numeric summaries and preview caps', () => {
   const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'));
@@ -429,6 +482,7 @@ test('agent-chat renders Codex user questions and returns option answers', async
   await flushAsync();
 
   assert.equal(payloads.length, 1);
+  assert.equal(document.getElementById('agent-status').textContent, 'Waiting for your answer.');
   assert.match(history.innerHTML, /agent-user-question-card/);
   assert.match(history.innerHTML, /data-agent-question-answer="Use Atlas\."/);
   const optionButton = history.querySelector('[data-agent-question-option]');
@@ -452,6 +506,8 @@ test('agent-chat renders Codex user questions and returns option answers', async
   assert.equal(state.agentChat.messages[2].role, 'user');
   assert.equal(state.agentChat.messages[2].text, 'Use Atlas.');
   assert.equal(state.agentChat.messages[3].text, 'Using Atlas.');
+  assert.doesNotMatch(history.innerHTML, /agent-user-question-card/);
+  assert.equal(document.getElementById('agent-status').textContent, 'Complete.');
 });
 test('agent-chat renders completed science thinking trace details in assistant metadata', () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));

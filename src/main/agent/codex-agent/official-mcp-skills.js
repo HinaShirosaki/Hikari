@@ -288,15 +288,20 @@ Protocol JSON checklist:
 
 Placeholder usage:
 
-- Use bracket placeholders for values the user must choose at execution time or values not specified by the evidence: \`"Add [volume] of [buffer] to each [sample]."\`
-- Prefer meaningful placeholder names that match what the user will fill in later, for example \`[plasmid]\`, \`[protein]\`, \`[volume]\`, \`[buffer]\`, \`[temperature]\`, or \`[time]\`.
+- Produce an executable starting protocol, not a questionnaire. Fill routine, low-risk procedural parameters from evidence; when the source is silent, select a scientifically conventional starting value and identify it in troubleshooting as a recommended starting condition rather than a source-reported fact.
+- Do not create placeholders for routine defaults such as replicate count, dilution factor, concentration-series point count, common staining or wash buffer, wash count, incubation time or temperature, acquisition volume, or minimum event target when a reasonable starting value can be selected.
+- Reserve placeholders for genuinely user-, reagent-, sample-, or instrument-specific choices that would be unreliable to infer: exact biological sample or clone identity, reagent identity, stock concentration or solvent, affinity tag or catalog-specific reagent, and instrument-specific channel or detector settings.
+- In materials, prefer a clear generic category such as \`the user's PD-L1 stable cell line\` over a bracket placeholder that does not map to an executable step.
+- Aim for 0-3 unresolved placeholders and do not exceed 5 unless the source explicitly defines more independent choices. If more than 5 would remain, replace routine placeholders with labeled starting defaults or ask one blocking clarification before generation.
+- Represent each real decision with one placeholder at its first executable use, then refer to the selected value later without creating duplicate placeholders for the same buffer, sample, or setting.
+- Use meaningful placeholder names that match the value the user will fill, for example \`[plasmid identity]\`, \`[stock concentration]\`, or \`[detector channel]\`.
 - If supplying structured step objects with explicit placeholder ids, bind each placeholder in \`text\` with \`{{ph:<id>}}\` and include matching \`placeholders: [{ id: "<id>", name: "<display name>" }]\`.
-- Do not invent exact values just to remove a placeholder. Keep placeholders visible when the paper, selected text, or user request leaves the value open.
+- Do not invent identity-, stock-, or instrument-specific values merely to remove a placeholder. Routine recommended starting conditions are allowed when clearly labeled as recommendations.
 
 Workflow:
 
 1. Gather the source evidence first: active paper markdown, selected methods text, local protocols, records, or user-provided procedure text.
-2. Author the complete protocol JSON yourself from that evidence, using placeholders for execution-time or missing values.
+2. Author the complete protocol JSON yourself from that evidence, using labeled starting defaults for routine settings and placeholders only for genuinely specific unresolved decisions.
 3. Call \`${PROTOCOL_GENERATION_TOOL_NAME}\` once with \`{ protocol, result_summary, save: true }\` for generated protocols that should enter Hikari review.
 4. Read the tool result and use the returned \`protocol\`, \`status\`, \`save_requested\`, and \`requires_user_approval\` fields as the source of truth.
 5. Reply in normal assistant prose that the generated protocol is ready for review, and mention the normalized protocol name plus any important caveats or user-fillable placeholders.
@@ -323,20 +328,26 @@ Direct tool:
 
 Draft context checklist:
 
-- \`message\`: the user's notebook-draft request or planning goal.
-- \`project_id\` or \`project_name\`: include the selected or resolved Hikari project when known.
-- \`workflow_id\`: include the workflow step identifier when the next experiment should follow a workflow.
-- \`protocol_name\` or \`protocol_candidates\`: include likely protocol names when the draft should be based on a protocol.
-- \`evidence_context\`: include compact summaries from records, protocol lookup, notebook lookup, literature, or paper analysis that were actually loaded for this turn.
-- \`parser_payload\`: include intent/entity hints when the surrounding Hikari run already prepared them.
+- \`project_name\`: the selected or resolved Hikari project name when known.
+- \`protocol_candidates\`: up to five likely protocol names, with the strongest candidate first.
+- \`pending_values\`: known placeholder values. Every key must exactly match a \`placeholder_key\` in \`<step-id>:<placeholder-id>\` form from the normalized protocol or an earlier notebook-draft result; display names are not keys.
+- \`step_edits\`: optional draft-only replacements by \`step_number\`, or appended step text when \`step_number\` is omitted. These edits never mutate the saved protocol.
+- These are the only supported tool arguments. The host already supplies the current message and project context; do not send \`message\`, \`project_id\`, \`workflow_id\`, \`evidence_context\`, or \`parser_payload\`.
+
+Placeholder fill rules:
+
+- Put actual selected, user-provided, evidence-supported, or deliberately chosen routine starting values in \`pending_values\`. Never fill a placeholder with uncertainty prose such as \`not specified\`, \`unknown\`, or a generic restatement of its label.
+- For a newly normalized protocol, derive keys from its returned step ids and placeholder ids: \`<step.id>:<placeholder.id>\`.
+- After the first notebook-draft result, inspect \`missing_placeholders\`. If any values are already known or are safe routine starting choices, retry once using their exact returned \`placeholder_key\` values.
+- Do not call a draft confirmation-ready while avoidable routine placeholders remain. Aim for 0-3 unresolved choices and review any result with more than 5; ask one blocking clarification only for genuinely sample-, reagent-, or instrument-specific decisions.
 
 Workflow:
 
 1. Resolve the project and experiment target from the selected project, user request, recent workflow state, protocol candidates, and loaded notebook history.
 2. Gather local Hikari context first when it matters: protocol candidates, workflow progress, previous notebook results, relevant records, and paper-derived evidence.
-3. Call \`${NOTEBOOK_DRAFT_TOOL_NAME}\` with the resolved project fields, workflow/protocol hints, and evidence context.
+3. Call \`${NOTEBOOK_DRAFT_TOOL_NAME}\` using only \`project_name\`, \`protocol_candidates\`, \`pending_values\`, and optional \`step_edits\`.
 4. Read the tool result and use \`status\`, \`proposal_summary\`, \`proposal\`, \`notebook\`, \`missing_placeholders\`, and \`follow_up_questions\` as the source of truth.
-5. Return the confirmation-ready draft for user approval. Include concise next-step context and any follow-up questions reported by the tool.
+5. Retry once with exact placeholder keys when known or routine values can be supplied, then return the confirmation-ready draft or the one genuinely blocking follow-up question.
 
 If one blocking detail is missing, ask the user through the Hikari clarification flow instead of inventing values.
 `

@@ -81,6 +81,23 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       }
     }
 
+    test('codex command timeout supports unlimited interactive turns and bounded callers', () => {
+      const { normalizeCodexCommandTimeoutMs } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'lib',
+        'codex-cli-provider',
+        'run-command.js'
+      ));
+
+      assert.equal(normalizeCodexCommandTimeoutMs(null), null);
+      assert.equal(normalizeCodexCommandTimeoutMs(45000), 45000);
+      assert.equal(normalizeCodexCommandTimeoutMs(250), 1000);
+      assert.equal(normalizeCodexCommandTimeoutMs(0), 180000);
+      assert.equal(normalizeCodexCommandTimeoutMs(), 180000);
+    });
+
     function createFakeCodexBinary(workspaceDir) {
       const fakePath = path.join(workspaceDir, 'fake-codex.js');
       const capturePath = path.join(workspaceDir, 'fake-codex-call.json');
@@ -413,6 +430,7 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.equal(calls[0].model, 'gpt-5.4');
       assert.equal(calls[0].reasoningEffort, 'high');
       assert.equal(calls[0].cwd, '/tmp/hikari-workspace');
+      assert.equal(calls[0].timeoutMs, null);
       assert.equal(calls[0].stream, true);
       assert.equal(typeof calls[0].onStream, 'function');
       assert.equal(calls[0].enableWebSearch, true);
@@ -420,9 +438,14 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.equal(calls[0].resumeSessionId, '');
       assert.match(calls[0].prompt, /Codex Chat Turn/);
       assert.match(calls[0].prompt, /Current user request:\nWhy was SUMO1 conjugation weak\?/);
-      assert.match(calls[0].prompt, /Protocol generation handoff:/);
+      assert.match(calls[0].prompt, /Protocol and notebook handoff:/);
       assert.match(calls[0].prompt, /call `mcp__hikari__protocol_generation` with/);
       assert.match(calls[0].prompt, /summarize that the generated protocol is ready for review/);
+      assert.match(calls[0].prompt, /Generated protocols must be executable starting protocols, not questionnaires/);
+      assert.match(calls[0].prompt, /Aim for 0-3 unresolved placeholders and do not exceed 5/);
+      assert.match(calls[0].prompt, /accepts only `project_name`, `protocol_candidates`, `pending_values`, and optional `step_edits`/);
+      assert.match(calls[0].prompt, /placeholder_key` in `<step-id>:<placeholder-id>` form/);
+      assert.match(calls[0].prompt, /never use uncertainty text such as "not specified"/);
       assert.match(calls[0].prompt, /mcp__hikari__protocol_generation/);
       assert.match(calls[0].prompt, /Assay context handoff:/);
       assert.match(calls[0].prompt, /Assay plate data \(TSV/);

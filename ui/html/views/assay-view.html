@@ -16,6 +16,40 @@
           </details>
           <form id="assay-form" class="form-grid assay-form-grid">
             <input type="hidden" id="assay-id" />
+            <div class="form-actions assay-form-actions" aria-label="Assay actions">
+              <button type="button" id="assay-export-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Export CSV template" title="Export CSV template">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 4v12"></path>
+                  <path d="m7 11 5 5 5-5"></path>
+                  <path d="M5 20h14"></path>
+                </svg>
+                <span class="sr-only">Export CSV template</span>
+              </button>
+              <button type="button" id="assay-import-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Import CSV" title="Import CSV">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 16V4"></path>
+                  <path d="m7 9 5-5 5 5"></path>
+                  <path d="M5 20h14"></path>
+                </svg>
+                <span class="sr-only">Import CSV</span>
+              </button>
+              <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
+              <button type="submit" class="primary-btn assay-form-icon-btn assay-form-save-icon-btn" aria-label="Save assay" title="Save assay">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 3h12l3 3v15H4V3Z"></path>
+                  <path d="M8 3v6h8V3"></path>
+                  <path d="M8 21v-7h8v7"></path>
+                </svg>
+                <span class="sr-only">Save assay</span>
+              </button>
+              <button type="button" id="assay-cancel-btn" class="ghost-btn assay-form-icon-btn" aria-label="Cancel edit" title="Cancel edit">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M6 6l12 12"></path>
+                  <path d="M18 6 6 18"></path>
+                </svg>
+                <span class="sr-only">Cancel edit</span>
+              </button>
+            </div>
             <div class="assay-display-field">
               <span class="assay-display-label">Assay Number</span>
               <div id="assay-number-display" class="assay-display-value" aria-live="polite"></div>
@@ -71,18 +105,11 @@
             </select>
             <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
             <div id="assay-csv-status" class="small-note assay-form-note"></div>
-            <div class="form-actions assay-form-actions">
-              <button type="button" id="assay-export-template-btn" class="ghost-btn">Export CSV Template</button>
-              <button type="button" id="assay-import-template-btn" class="ghost-btn">Import CSV</button>
-              <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
-              <button type="submit" class="primary-btn">Save Assay</button>
-              <button type="button" id="assay-cancel-btn" class="ghost-btn">Cancel Edit</button>
-            </div>
           </form>
         </div>
 
         <div class="panel assay-mode-create-panel assay-create-preview-panel left-rail-template__main">
-          <div class="form-actions">
+          <div class="form-actions assay-plate-toolbar">
             <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
               <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Edit Conc.</button>

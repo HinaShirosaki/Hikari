@@ -427,6 +427,36 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
         });
         assert.equal(nodeResult.ok, true);
         assert.match(nodeResult.markdown, /Node extracted paper text/);
+
+        let defaultPdfJsSpecifier = '';
+        const defaultPathRuntime = pdfTextExtraction.createPdfTextExtractionRuntime({
+          importEsm: async (specifier) => {
+            defaultPdfJsSpecifier = specifier;
+            return {
+              getDocument: () => ({
+                promise: Promise.resolve({
+                  numPages: 1,
+                  getPage: async () => ({
+                    getTextContent: async () => ({
+                      items: [{ str: 'Default vendor path works.', hasEOL: true }]
+                    }),
+                    cleanup: () => {}
+                  }),
+                  getOutline: async () => [],
+                  destroy: async () => {}
+                })
+              })
+            };
+          }
+        });
+        const defaultPathResult = await defaultPathRuntime.extractText({
+          buffer: Buffer.from('%PDF-1.7\nfake bytes')
+        });
+        assert.equal(defaultPathResult.ok, true);
+        assert.equal(
+          defaultPdfJsSpecifier,
+          `file://${path.join(__dirname, 'vendor', 'pdfjs', 'build', 'pdf.mjs')}`
+        );
       } finally {
         if (originalDomMatrix) {
           globalThis.DOMMatrix = originalDomMatrix;

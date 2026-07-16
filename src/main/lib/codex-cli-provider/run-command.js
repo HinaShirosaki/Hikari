@@ -12,8 +12,19 @@ const { DEFAULT_TIMEOUT_MS } = require('./constants');
 const { summarizeCodexCommandFailure } = require('./event-failure');
 const { looksLikeJsonLine } = require('./event-values');
 const { ensureCodexCliWorkingDirectoryGuidance } = require('./guidance');
-const { resolveCodexBinary, resolveWorkingDirectory } = require('./paths');
+const { resolveCodexInvocation, resolveWorkingDirectory } = require('./paths');
 const { cleanText, safeParseJson } = require('./utils');
+
+function normalizeCodexCommandTimeoutMs(timeoutMs = DEFAULT_TIMEOUT_MS) {
+  if (timeoutMs === null) {
+    return null;
+  }
+  const numericTimeoutMs = Number(timeoutMs);
+  if (!Number.isFinite(numericTimeoutMs) || numericTimeoutMs <= 0) {
+    return DEFAULT_TIMEOUT_MS;
+  }
+  return Math.max(1000, numericTimeoutMs);
+}
 
 async function runCodexCommand({
   args,
@@ -27,7 +38,8 @@ async function runCodexCommand({
   await ensureCodexCliWorkingDirectoryGuidance(safeCwd);
   return new Promise((resolve, reject) => {
     throwIfAgentRequestAborted('Agent request stopped before starting Codex CLI.');
-    const child = spawn(resolveCodexBinary(), args, {
+    const invocation = resolveCodexInvocation(env);
+    const child = spawn(invocation.command, [...invocation.argsPrefix, ...args], {
       cwd: safeCwd,
       env,
       stdio: 'pipe'
@@ -41,11 +53,14 @@ async function runCodexCommand({
     let jsonLineBuffer = '';
     let stderrLineBuffer = '';
     const abortSignal = getAgentRequestAbortSignal();
+    const effectiveTimeoutMs = normalizeCodexCommandTimeoutMs(timeoutMs);
 
-    const timeout = setTimeout(() => {
-      timedOut = true;
-      child.kill('SIGTERM');
-    }, Math.max(1000, Number(timeoutMs) || DEFAULT_TIMEOUT_MS));
+    const timeout = effectiveTimeoutMs === null
+      ? null
+      : setTimeout(() => {
+        timedOut = true;
+        child.kill('SIGTERM');
+      }, effectiveTimeoutMs);
 
     const finishReject = (error) => {
       if (finished) {
@@ -156,7 +171,7 @@ async function runCodexCommand({
         return;
       }
       if (timedOut) {
-        const timeoutError = new Error(`Codex CLI timed out after ${Math.round((Number(timeoutMs) || DEFAULT_TIMEOUT_MS) / 1000)}s.`);
+        const timeoutError = new Error(`Codex CLI timed out after ${Math.round(effectiveTimeoutMs / 1000)}s.`);
         timeoutError.code = 'ETIMEDOUT';
         timeoutError.stdout = stdout;
         timeoutError.stderr = stderr;
@@ -203,5 +218,6 @@ function emitJsonOrPlainLine(line, stream, onJsonEvent, emitPlainCodexOutputLine
 }
 
 module.exports = {
+  normalizeCodexCommandTimeoutMs,
   runCodexCommand
 };

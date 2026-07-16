@@ -89,13 +89,13 @@ function createCodexAgentRuntime(deps = {}) {
       stage: 'codex_agent_started',
       status: 'started',
       routing_intent: 'codex_agent',
-      message: 'Starting Codex-owned agent lifecycle.'
+      message: 'Thinking'
     });
     await recordAgentLlmTrace(traceContext, {
       stage: 'codex_agent_runtime',
       provider: 'codex',
       model,
-      summary: 'Started Codex-owned agent lifecycle.',
+      summary: 'Thinking',
       request_payload: {
         model,
         reasoning_effort: reasoningEffort,
@@ -121,6 +121,7 @@ function createCodexAgentRuntime(deps = {}) {
       cwd,
       enableWebSearch: true,
       attachments: asArray(input.attachments),
+      timeoutMs: null,
       stream: true,
       onStream: streamProgress.emitStreamProgress,
       resumeSessionId,

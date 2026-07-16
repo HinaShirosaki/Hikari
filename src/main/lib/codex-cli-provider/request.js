@@ -52,6 +52,7 @@ async function requestCodexCliText({
   if (!cleanPrompt) {
     throw new Error('Prompt is required for Codex request.');
   }
+  const requestStartedAtMs = Date.now();
 
   const safeCwd = resolveWorkingDirectory(cwd);
   if (cleanText(cwd, 2400)) {
@@ -95,7 +96,7 @@ async function requestCodexCliText({
       cwd: safeCwd,
       getSessionId: streamHandler.getCodexSessionId,
       onJsonEvent: streamHandler.handleJsonEvent,
-      minTimestampMs: Date.now() - 2000,
+      minTimestampMs: requestStartedAtMs - 2000,
       intervalMs: process.env.HIKARI_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS
     })
     : null;
@@ -121,7 +122,8 @@ async function requestCodexCliText({
     returnMetadata,
     safeCwd,
     onStream,
-    streamHandler
+    streamHandler,
+    requestStartedAtMs
   });
 }
 
@@ -192,7 +194,8 @@ async function readCodexRequestResult({
   returnMetadata,
   safeCwd,
   onStream,
-  streamHandler
+  streamHandler,
+  requestStartedAtMs
 }) {
   throwIfAgentRequestAborted('Agent request stopped before reading Codex output.');
   let outputText = '';
@@ -212,7 +215,10 @@ async function readCodexRequestResult({
       cwd: safeCwd,
       onStream,
       seenProgressEvents: streamHandler.getSeenProgressEvents(),
-      seenDisplayEvents: streamHandler.getSeenDisplayEvents()
+      seenDisplayEvents: streamHandler.getSeenDisplayEvents(),
+      minTimestampMs: cleanResumeSessionId
+        ? Math.max(0, Number(requestStartedAtMs) - 2000)
+        : 0
     });
   }
   const resultText = cleanText(outputText || streamHandler.getStreamedText() || commandResult.stdout, 120000);

@@ -406,9 +406,6 @@ export function createProtocolDraftHelpers({
     if (parsed.protocol && typeof parsed.protocol === 'object') {
       return sanitizeIncomingProtocols(parsed.protocol);
     }
-    if (parsed.type === 'protocol_share_link') {
-      return sanitizeIncomingProtocols(parsed.protocol || parsed.protocols);
-    }
     return sanitizeIncomingProtocols(parsed);
   }
 

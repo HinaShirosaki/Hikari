@@ -2,7 +2,6 @@
 
 const {
   asArray,
-  buildReadOnlyToolAnnotations,
   cleanText,
   compactObject,
   ensureObject
@@ -10,8 +9,14 @@ const {
 
 const ASK_USER_MCP_TOOL = Object.freeze({
   name: 'ask_user',
-  description: 'Prepare one blocking user clarification question with suggested options and optional custom text input for Hikari to render.',
-  annotations: buildReadOnlyToolAnnotations('Ask user clarification'),
+  description: 'Prepare one blocking user clarification question with suggested options and optional custom text input for Hikari to render. This is a turn boundary: after the tool returns, emit final_response and end the current turn so Hikari can collect one answer; resume work from the next user message without repeating the same question.',
+  annotations: Object.freeze({
+    title: 'Ask user clarification',
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: false
+  }),
   inputSchema: {
     type: 'object',
     additionalProperties: false,
@@ -112,7 +117,7 @@ async function callAskUser(input = {}) {
       reasoning_summary: 'Waiting for the user to answer this blocking clarification.',
       citations: []
     },
-    summary: 'Return the final_response JSON as the Codex answer so Hikari can render the question and collect the user answer.'
+    summary: 'Return final_response as the Codex answer and end the current turn. Hikari will render this one question and send the answer as the next user turn; resume from that answer without asking the same question again.'
   };
 }
 

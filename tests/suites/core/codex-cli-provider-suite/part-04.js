@@ -869,6 +869,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       const forgeConfigSource = fs.readFileSync(path.join(__dirname, 'forge.config.js'), 'utf8');
       assert.match(forgeConfigSource, /src\/main\/agent/);
       assert.match(forgeConfigSource, /src\/main\/papers/);
+      assert.match(forgeConfigSource, /vendor\/pdfjs/);
       assert.match(forgeConfigSource, /node_modules\/@modelcontextprotocol\/sdk/);
     });
     test('codex agent MCP config includes the app host callback when available', async () => {

@@ -8,14 +8,14 @@ test('agent-chat sends settings API key to main process and stores assistant res
     'agent-chat-history',
     'agent-message-input',
     'agent-send-btn',
-    'agent-clear-btn',
+    'agent-new-chat-btn',
     'agent-status'
   ]);
   const projectSelect = document.getElementById('agent-project-select');
   const history = document.getElementById('agent-chat-history');
   const messageInput = document.getElementById('agent-message-input');
   const sendBtn = document.getElementById('agent-send-btn');
-  const clearBtn = document.getElementById('agent-clear-btn');
+  const newChatBtn = document.getElementById('agent-new-chat-btn');
   const status = document.getElementById('agent-status');
 
   let persistCalls = 0;
@@ -381,13 +381,13 @@ test('agent-chat sends settings API key to main process and stores assistant res
   agent.render();
   assert.equal(/Developer Trace/.test(history.innerHTML), false);
   assert.equal(sendBtn.disabled, false);
-  assert.equal(clearBtn.disabled, false);
+  assert.equal(newChatBtn.disabled, false);
   assert.equal(projectSelect.disabled, false);
   assert.equal(messageInput.disabled, false);
   assert.equal(status.textContent, 'Ready.');
   assert.ok(persistCalls >= 3);
 
-  trigger(clearBtn, 'click');
+  trigger(newChatBtn, 'click');
   assert.equal(state.agentChat.messages.length, 0);
   assert.equal(status.textContent, 'New chat ready.');
 });
@@ -596,11 +596,13 @@ test('paper rail selected text is carried as hidden one-shot agent context', () 
     }
   };
   const input = { value: 'What does this imply for follow-up experiments?' };
+  const hiddenContextUpdates = [];
   const payloadBuilder = payloadModule.createAgentPayloadBuilder({
     state,
     input,
     getComposerAttachments: () => [],
-    ensureAgentState: () => {}
+    ensureAgentState: () => {},
+    onHiddenDraftContextsChanged: (contexts) => hiddenContextUpdates.push(contexts)
   });
 
   const didPrime = payloadBuilder.primeHiddenContext({
@@ -621,9 +623,66 @@ test('paper rail selected text is carried as hidden one-shot agent context', () 
   assert.equal(agentFlags.hiddenContexts[0].text, 'A hidden selected sentence from page 2.');
   assert.equal(agentFlags.hiddenContexts[0].pageNumber, 2);
   assert.match(agentFlags.paperSessionPrompt, /active paper markdown/);
+  assert.equal(payloadBuilder.getPrimedHiddenContexts().length, 1);
+  assert.equal(hiddenContextUpdates.length, 1);
 
   payloadBuilder.consumeHiddenContexts();
   assert.equal(payloadBuilder.getDraftRequest().hiddenContexts.length, 0);
+  assert.equal(payloadBuilder.getPrimedHiddenContexts().length, 0);
+  assert.equal(hiddenContextUpdates.length, 2);
+});
+
+test('paper rail shows and removes the selected-text context indicator', () => {
+  const document = createMockDocument([
+    'agent-rail-chat-history',
+    'agent-rail-message-input',
+    'agent-rail-send-btn',
+    'agent-rail-hidden-context-list'
+  ]);
+  const hiddenContextList = document.getElementById('agent-rail-hidden-context-list');
+  hiddenContextList.hidden = true;
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window: {}
+  });
+  const agent = agentModule.initAgentChat({
+    idPrefix: 'agent-rail',
+    state: {
+      projects: [],
+      settings: {},
+      agentChat: { projectId: '', messages: [], sessions: [] },
+      agentChatContext: { scopeType: 'paper' }
+    },
+    persist: () => {},
+    createId: () => 'agent-msg-1',
+    safeText: shared.safeText
+  });
+
+  agent.render();
+  assert.equal(hiddenContextList.hidden, true);
+
+  const didPrime = agent.primeHiddenContext({
+    kind: 'paper-selection',
+    label: 'Selected paper text',
+    text: 'Selected sentence from the paper.'
+  });
+
+  assert.equal(didPrime, true);
+  assert.equal(hiddenContextList.hidden, false);
+  assert.match(hiddenContextList.innerHTML, /agent-hidden-context-icon/);
+  assert.match(hiddenContextList.innerHTML, />Text</);
+
+  trigger(hiddenContextList, 'click', {
+    target: {
+      dataset: { agentRemoveHiddenContext: '' },
+      closest(selector) {
+        return selector === '[data-agent-remove-hidden-context]' ? this : null;
+      }
+    }
+  });
+
+  assert.equal(hiddenContextList.hidden, true);
+  assert.equal(hiddenContextList.innerHTML, '');
 });
 
 test('notebook rail automatically carries active page content as hidden agent context', () => {

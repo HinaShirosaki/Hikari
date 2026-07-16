@@ -13,7 +13,7 @@ const {
 
 const NOTEBOOK_DRAFT_MCP_TOOL = Object.freeze({
   name: 'notebook_draft',
-  description: 'Select a protocol from candidates, fill known placeholder values from pending_values, and optionally apply small per-draft step_edits (replace a step by step_number, or append a step), then prepare a planned Hikari biology notebook draft on a copy — never the saved protocol — for explicit user confirmation before any notebook page is created. Unresolved placeholders are returned as follow-up questions.',
+  description: 'Select a protocol from candidates, fill known placeholder values from pending_values, and optionally apply small per-draft step_edits (replace a step by step_number, or append a step), then prepare a planned Hikari biology notebook draft on a copy — never the saved protocol — for explicit user confirmation before any notebook page is created. pending_values keys must exactly match placeholder_key values in <step-id>:<placeholder-id> form; display names are not accepted as keys. Unresolved placeholders are returned as follow-up questions.',
   annotations: Object.freeze({
     title: 'Notebook draft',
     readOnlyHint: true,

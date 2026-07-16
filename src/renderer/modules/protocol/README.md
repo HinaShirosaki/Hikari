@@ -4,7 +4,7 @@
 
 - generation and polish: `generation.js`, `polish.js`
 - generated assistant records: `agent/` normalization, review payload collection, and approved-record persistence
-- import/share: `import-controller.js`, `sharing.js`
+- import: `import-controller.js`
 - editing and draft normalization: `editor-utils.js`, `draft-utils.js`
 - list/preview rendering: `list.js`, `preview.js`
 - shared view wiring: `dom.js`, `constants.js`

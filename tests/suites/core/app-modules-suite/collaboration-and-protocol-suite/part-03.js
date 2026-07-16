@@ -22,7 +22,6 @@ test('protocol-management keeps legacy string steps editable and viewable', () =
     'protocol-troubleshooting',
     'add-placeholder-btn',
     'placeholder-name',
-    'protocol-share-status',
     'protocol-list',
     'protocol-sort-menu-btn',
     'protocol-sort-menu'

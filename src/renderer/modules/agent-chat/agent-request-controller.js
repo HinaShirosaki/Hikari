@@ -34,14 +34,57 @@ export function createAgentRequestController(deps) {
     renderHistoryView,
     setStatus,
     syncComposerHeight,
+    syncActiveRequestState,
     updateInFlightState,
     notebookDraftAdapter,
     openReviewForMessage = () => {}
   } = deps;
 
-  function clearLiveAssistantState() {
-    runtime.liveAssistantMessage = null;
-    runtime.activeClientRequestId = '';
+  function getActiveRequests() {
+    if (!(runtime.activeRequests instanceof Map)) {
+      runtime.activeRequests = new Map();
+    }
+    return runtime.activeRequests;
+  }
+
+  function syncRequestUiState() {
+    if (typeof syncActiveRequestState === 'function') {
+      return syncActiveRequestState();
+    }
+    const currentSessionId = trimText(state.agentChat.currentSessionId, 120);
+    const request = [...getActiveRequests().values()]
+      .find((item) => trimText(item?.sessionId, 120) === currentSessionId) || null;
+    runtime.liveAssistantMessage = request?.liveAssistantMessage || null;
+    runtime.activeClientRequestId = trimText(request?.clientRequestId, 120);
+    runtime.inFlightClientRequestId = runtime.activeClientRequestId;
+    runtime.stopRequested = request?.stopRequested === true;
+    runtime.stopInProgress = request?.stopInProgress === true;
+    const nextInFlight = Boolean(request);
+    if (typeof updateInFlightState === 'function' && runtime.inFlight !== nextInFlight) {
+      updateInFlightState(nextInFlight);
+    } else {
+      runtime.inFlight = nextInFlight;
+    }
+    return request;
+  }
+
+  function isRequestVisible(request) {
+    return trimText(request?.sessionId, 120) === trimText(state.agentChat.currentSessionId, 120);
+  }
+
+  function setRequestStatus(request, text) {
+    if (isRequestVisible(request)) {
+      setStatus(text);
+    }
+  }
+
+  function clearLiveAssistantState(request) {
+    if (request) {
+      request.liveAssistantMessage = null;
+    }
+    if (trimText(runtime.activeClientRequestId, 120) === trimText(request?.clientRequestId, 120)) {
+      runtime.liveAssistantMessage = null;
+    }
   }
 
   function getCanceledRequestIds() {
@@ -55,8 +98,8 @@ export function createAgentRequestController(deps) {
     return getCanceledRequestIds().has(clientRequestId);
   }
 
-  function collectTraceRows() {
-    const progress = runtime.liveAssistantMessage?.meta?.live_progress || {};
+  function collectTraceRows(request) {
+    const progress = request?.liveAssistantMessage?.meta?.live_progress || {};
     return {
       thinking: cloneLiveThinkingRows(progress.thinking_rows),
       activity: cloneLiveActivityRows(progress.activity_rows),
@@ -64,20 +107,28 @@ export function createAgentRequestController(deps) {
     };
   }
 
-  function appendStoppedAssistantMessage(requestText, message = 'Agent request stopped.') {
-    clearLiveAssistantState();
+  function appendStoppedAssistantMessage(request, requestText, message = 'Agent request stopped.') {
+    clearLiveAssistantState(request);
+    if (!isRequestVisible(request)) {
+      return false;
+    }
     state.agentChat.messages.push(buildStoppedAssistantMessage(requestText, message, createId));
     state.agentChat.messages = state.agentChat.messages.slice(-40);
     persist();
     sessionManager.renderSessionList();
     renderHistoryView({ forceScroll: true });
+    return true;
   }
-  function persistAssistantMessage(message) {
+  function persistAssistantMessage(request, message) {
+    if (!isRequestVisible(request)) {
+      return false;
+    }
     state.agentChat.messages.push(message);
     state.agentChat.messages = state.agentChat.messages.slice(-40);
     persist();
     sessionManager.renderSessionList();
     renderHistoryView({ forceScroll: true });
+    return true;
   }
 
   async function sendMessage() {
@@ -101,6 +152,10 @@ export function createAgentRequestController(deps) {
     // syncs the active project scope from that folder, so the project details captured
     // below (and sent with this request) reflect the folder, not the previous/empty scope.
     const currentSessionId = await sessionManager.ensureCurrentChatSession(messageText);
+    const requestSessionId = trimText(currentSessionId || state.agentChat.currentSessionId, 120);
+    if (requestSessionId && !trimText(state.agentChat.currentSessionId, 120)) {
+      state.agentChat.currentSessionId = requestSessionId;
+    }
     const { projectId, projectName } = payloadBuilder.getCurrentProjectDetails();
     state.agentChat.messages.push({
       id: createId(),
@@ -110,6 +165,7 @@ export function createAgentRequestController(deps) {
       createdAt: new Date().toISOString()
     });
     state.agentChat.messages = state.agentChat.messages.slice(-40);
+    const conversation = toConversation(state.agentChat.messages);
     persist();
     input.value = '';
     attachmentsController.reset();
@@ -119,16 +175,22 @@ export function createAgentRequestController(deps) {
 
     const clientRequestId = `agent-request-${trimText(createId(), 120) || Date.now().toString(36)}`;
     getCanceledRequestIds().delete(clientRequestId);
-    runtime.activeClientRequestId = clientRequestId;
-    runtime.inFlightClientRequestId = clientRequestId;
-    runtime.liveAssistantMessage = buildLiveAssistantPlaceholder(clientRequestId, messageText, createId);
+    const request = {
+      clientRequestId,
+      sessionId: requestSessionId,
+      requestText: messageText,
+      liveAssistantMessage: buildLiveAssistantPlaceholder(clientRequestId, messageText, createId),
+      stopRequested: false,
+      stopInProgress: false
+    };
+    getActiveRequests().set(clientRequestId, request);
+    syncRequestUiState();
     renderHistoryView({ forceScroll: true });
-    updateInFlightState(true);
     setStatus('Working on this...');
 
     try {
       const stateSnapshot = await buildSyncedStateSnapshot(projectId);
-      if (runtime.stopRequested) {
+      if (request.stopRequested) {
         throw createLocalStopError('Agent request stopped before thinking began.');
       }
       const result = await api.agentChat({
@@ -138,7 +200,7 @@ export function createAgentRequestController(deps) {
         chatSessionId: currentSessionId,
         projectId,
         projectName,
-        conversation: toConversation(state.agentChat.messages),
+        conversation,
         stateSnapshot,
         llm: payloadBuilder.buildAgentLlmPayload(),
         agent: payloadBuilder.buildAgentFlagsPayload({ hiddenContexts })
@@ -148,8 +210,8 @@ export function createAgentRequestController(deps) {
       }
       if (!result?.ok) {
         if (result?.canceled === true) {
-          appendStoppedAssistantMessage(messageText, result?.error || 'Agent request stopped.');
-          setStatus('Stopped.');
+          appendStoppedAssistantMessage(request, messageText, result?.error || 'Agent request stopped.');
+          setRequestStatus(request, 'Stopped.');
           return;
         }
         throw new Error(result?.error || 'Agent request failed.');
@@ -157,7 +219,7 @@ export function createAgentRequestController(deps) {
       if (result.chat_session && typeof result.chat_session === 'object') {
         const sessionId = trimText(result.chat_session.id || result.chat_session.session_id, 120);
         if (sessionId) {
-          state.agentChat.currentSessionId = sessionId;
+          request.sessionId = sessionId;
           sessionManager.upsertSessionSummary(result.chat_session);
         }
       }
@@ -168,34 +230,34 @@ export function createAgentRequestController(deps) {
       if (notebookDraft?.save?.applied === true) {
         renderContextSummary();
       }
-      const traceRows = collectTraceRows();
-      clearLiveAssistantState();
+      const traceRows = collectTraceRows(request);
+      clearLiveAssistantState(request);
       const assistantMessage = buildAssistantResponseMessage({ createId, response, notebookDraft, traceRows, messageText });
-      persistAssistantMessage(assistantMessage);
-      openReviewForMessage(assistantMessage);
-      if (state.agentChat.currentSessionId) {
+      if (persistAssistantMessage(request, assistantMessage)) {
+        openReviewForMessage(assistantMessage);
+      }
+      if (request.sessionId) {
         void sessionManager.refreshPersistentSessions({ force: true, loadCurrent: false });
       }
-      setStatus('Complete.');
+      setRequestStatus(request, response.userQuestion?.question ? 'Waiting for your answer.' : 'Complete.');
     } catch (error) {
       if (wasRequestCanceled(clientRequestId)) {
         return;
       }
       if (isLocalStopError(error)) {
-        appendStoppedAssistantMessage(messageText, error?.message || 'Agent request stopped.');
-        setStatus('Stopped.');
+        appendStoppedAssistantMessage(request, messageText, error?.message || 'Agent request stopped.');
+        setRequestStatus(request, 'Stopped.');
         return;
       }
-      const traceRows = collectTraceRows();
-      clearLiveAssistantState();
-      persistAssistantMessage(buildAssistantErrorMessage({ createId, error, traceRows, messageText }));
-      setStatus('Error.');
+      const traceRows = collectTraceRows(request);
+      clearLiveAssistantState(request);
+      persistAssistantMessage(request, buildAssistantErrorMessage({ createId, error, traceRows, messageText }));
+      setRequestStatus(request, 'Error.');
     } finally {
       getCanceledRequestIds().delete(clientRequestId);
-      if (runtime.inFlightClientRequestId === clientRequestId) {
-        runtime.inFlightClientRequestId = '';
-        updateInFlightState(false);
-      }
+      getActiveRequests().delete(clientRequestId);
+      syncRequestUiState();
+      sessionManager.renderSessionList();
     }
   }
 
@@ -204,10 +266,17 @@ export function createAgentRequestController(deps) {
       return;
     }
     const clientRequestId = runtime.activeClientRequestId;
+    const request = getActiveRequests().get(clientRequestId);
+    if (!request) {
+      syncRequestUiState();
+      return;
+    }
     const requestText = trimText(
-      runtime.liveAssistantMessage?.meta?.live_progress?.request_text,
+      request.liveAssistantMessage?.meta?.live_progress?.request_text || request.requestText,
       3000
     );
+    request.stopRequested = true;
+    request.stopInProgress = true;
     runtime.stopRequested = true;
     runtime.stopInProgress = true;
     if (deps.dom?.stopBtn) {
@@ -223,9 +292,9 @@ export function createAgentRequestController(deps) {
       if (canceled?.ok === true && canceled?.canceled === true
         && runtime.activeClientRequestId === clientRequestId) {
         getCanceledRequestIds().add(clientRequestId);
-        appendStoppedAssistantMessage(requestText, 'Agent request stopped by user.');
-        runtime.inFlightClientRequestId = '';
-        updateInFlightState(false);
+        appendStoppedAssistantMessage(request, requestText, 'Agent request stopped by user.');
+        getActiveRequests().delete(clientRequestId);
+        syncRequestUiState();
         setStatus('Stopped.');
       }
     } catch {

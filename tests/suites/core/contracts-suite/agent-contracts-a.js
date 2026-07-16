@@ -134,7 +134,7 @@ module.exports = function registerAgentContractsA(context = {}) {
 
       assert.match(controllerCoreSource, /codexAgentRuntime\.run\(/);
       assert.match(codexServiceSource, /const codexAgentRuntime = createCodexAgentRuntime\(\{[\s\S]*requestCodexAgentText,/);
-      assert.match(mainAgentServicesSource, /const sharedLlmTransportDeps = \{[\s\S]*requestCodexCliText,[\s\S]*getCodexCliWorkingDirectory/);
+      assert.match(mainAgentServicesSource, /createAgentLlmProviderBridge\(\{[\s\S]*requestCodexCliText,[\s\S]*getCodexCliWorkingDirectory/);
       assert.equal(/requestCodexCliText:\s*requestCodexAgentText/.test(mainAgentServicesSource), false);
       assert.match(mainRuntimeSource, /registerSystemIpc\(\{[\s\S]*requestCodexCliText,[\s\S]*getCodexCliWorkingDirectory/);
       assert.equal(mainRuntimeSource.includes('agentServices.requestCodexAgentText || requestCodexCliText'), false);
@@ -227,6 +227,8 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(Boolean(toolCallCatalog['paper-download']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['paper-analysis']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['notebook-draft']?.input_schema), true);
+      assert.equal(toolCallCatalog['notebook-draft']?.input_schema?.properties?.pending_values?.$ref, '#/$defs/pending_values');
+      assert.equal(toolCallCatalog['notebook-draft']?.input_schema?.properties?.step_edits?.type, 'array');
       assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['assay-table']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['plotly-graph']?.input_schema), true);

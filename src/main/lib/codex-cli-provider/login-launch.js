@@ -10,7 +10,7 @@ const {
   invalidateCodexLoginStatusCache,
   setActiveCodexLogin
 } = require('./login-state');
-const { resolveCodexBinary, resolveWorkingDirectory } = require('./paths');
+const { resolveCodexInvocation, resolveWorkingDirectory } = require('./paths');
 const { buildCodexCommandEnv } = require('./runtime-home');
 const { cleanText } = require('./utils');
 
@@ -34,7 +34,8 @@ async function launchCodexCliLogin({ cwd = process.cwd() } = {}) {
     };
   }
 
-  const child = spawn(resolveCodexBinary(), ['login'], {
+  const invocation = resolveCodexInvocation(env);
+  const child = spawn(invocation.command, [...invocation.argsPrefix, 'login'], {
     cwd: safeCwd,
     env,
     stdio: ['ignore', 'pipe', 'pipe']

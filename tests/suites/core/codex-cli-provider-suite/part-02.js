@@ -396,6 +396,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       const paperDownloadDefinition = mcpTools.find((tool) => tool.name === 'paper_download');
       assert.equal(askUserDefinition.annotations.readOnlyHint, true);
       assert.equal(askUserDefinition.annotations.destructiveHint, false);
+      assert.equal(askUserDefinition.annotations.idempotentHint, false);
       assert.equal(askUserDefinition.annotations.openWorldHint, false);
       assert.equal(protocolGenerationDefinition.annotations.readOnlyHint, false);
       assert.equal(protocolGenerationDefinition.annotations.destructiveHint, false);
@@ -550,6 +551,8 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(askUserResult.user_question.question, 'Which project should I use?');
       assert.equal(askUserResult.user_question.options.length, 2);
       assert.equal(askUserResult.final_response.status, 'needs_more_info');
+      assert.match(askUserResult.summary, /end the current turn/);
+      assert.match(askUserResult.summary, /without asking the same question again/);
       assert.equal(calls[calls.length - 1].toolId, 'notebook-draft');
 
       const containerCreateResult = await gateway.callGatewayTool('container', {

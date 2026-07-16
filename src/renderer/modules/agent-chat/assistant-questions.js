@@ -28,6 +28,8 @@ export function createAssistantQuestionController({
     const codexStatus = trimText(meta.codex_agent?.status, 40);
     const keepUserQuestion = Boolean(
       explicitUserQuestion
+      && trimText(explicitUserQuestion?.status, 40).toLowerCase() !== 'answered'
+      && !trimText(explicitUserQuestion?.answered?.answer, 1000)
       && (
         codexStatus === 'needs_more_info'
         || codexStatus === 'needs_user_answer'

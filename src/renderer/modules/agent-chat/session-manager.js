@@ -30,7 +30,8 @@ export function createAgentChatSessionManager(deps = {}) {
     renderHistory,
     setStatus,
     setSessionStatus,
-    isInteractionLocked,
+    getRunningSessionIds = () => new Set(),
+    onActiveSessionChanged = () => {},
     onProjectScopeChanged = () => {}
   } = deps;
 
@@ -45,6 +46,11 @@ export function createAgentChatSessionManager(deps = {}) {
   let contextFolderId = '';
   let draggedSessionId = '';
   let activeDropTarget = null;
+
+  function readRunningSessionIds() {
+    const value = getRunningSessionIds();
+    return value instanceof Set ? value : new Set(asArray(value));
+  }
 
   function getExpandedFolderIds() {
     ensureAgentState();
@@ -158,8 +164,8 @@ export function createAgentChatSessionManager(deps = {}) {
     if (!sessionList) {
       return;
     }
-    const interactionLocked = typeof isInteractionLocked === 'function' && isInteractionLocked() === true;
     const sessions = asArray(state.agentChat.sessions);
+    const runningSessionIds = readRunningSessionIds();
     const folders = syncSelectedFolder();
     const expandedFolderIds = getExpandedFolderIds();
     const activeSessionId = trimText(state.agentChat.currentSessionId, 120);
@@ -187,7 +193,6 @@ export function createAgentChatSessionManager(deps = {}) {
           data-agent-folder-drop="${safeText(folder.id)}"
           aria-expanded="${isExpanded ? 'true' : 'false'}"
           aria-label="${safeText(folderLabel)}"
-          ${interactionLocked ? 'disabled' : ''}
         >
           <span class="agent-session-folder-chevron" aria-hidden="true"></span>
           <span class="agent-session-folder-glyph${folder.type === 'project' ? ' is-project' : ''}" aria-hidden="true"></span>
@@ -199,16 +204,17 @@ export function createAgentChatSessionManager(deps = {}) {
         ? folderSessions.map((session) => {
           const sessionId = trimText(session?.id, 120);
           const isActive = activeSessionId && sessionId === activeSessionId;
+          const isRunning = runningSessionIds.has(sessionId);
           const title = trimText(session?.title, 160) || 'New Chat';
           return `
             <button
               type="button"
-              class="agent-session-card${isActive ? ' is-active' : ''}"
+              class="agent-session-card${isActive ? ' is-active' : ''}${isRunning ? ' is-agent-running' : ''}"
               data-session-id="${safeText(sessionId)}"
               data-agent-session-drag="${safeText(sessionId)}"
               draggable="true"
               title="${safeText(title)}"
-              ${interactionLocked ? 'disabled' : ''}
+              ${isRunning ? 'aria-busy="true"' : ''}
             >
               <strong>${safeText(title)}</strong>
             </button>
@@ -272,11 +278,12 @@ export function createAgentChatSessionManager(deps = {}) {
       renderProjectOptions();
       renderContextSummary();
       onProjectScopeChanged(state.agentChat.projectId);
+      onActiveSessionChanged(targetSessionId);
       renderSessionList();
       renderHistory({ forceScroll: true });
       setSessionStatus('');
       if (options.silent !== true) {
-        setStatus('Ready.');
+        setStatus(readRunningSessionIds().has(targetSessionId) ? 'Working on this...' : 'Ready.');
       }
     }).catch((error) => {
       setSessionStatus(`Chat load failed: ${String(error?.message || error)}`);
@@ -343,6 +350,7 @@ export function createAgentChatSessionManager(deps = {}) {
       ) {
         state.agentChat.currentSessionId = '';
         state.agentChat.messages = [];
+        onActiveSessionChanged('');
         persist();
         renderHistory({ forceScroll: true });
       } else if (state.agentChat.currentSessionId && options.loadCurrent !== false) {
@@ -415,6 +423,7 @@ export function createAgentChatSessionManager(deps = {}) {
     const storagePath = getStoragePath();
     if (!storagePath || !api?.agentChatLogCreateSession) {
       state.agentChat.currentSessionId = '';
+      onActiveSessionChanged('');
       persist();
       renderSessionList();
       renderHistory({ forceScroll: true });
@@ -437,6 +446,7 @@ export function createAgentChatSessionManager(deps = {}) {
         throw new Error(result?.error || 'Failed to create chat session.');
       }
       state.agentChat.currentSessionId = trimText(result.session.id, 120);
+      onActiveSessionChanged(state.agentChat.currentSessionId);
       upsertSessionSummary(result.session);
       assignSessionToFolder(state.agentChat.currentSessionId, selectedFolder?.id || GENERAL_CHAT_FOLDER_ID);
       renderSessionList();
@@ -619,7 +629,7 @@ export function createAgentChatSessionManager(deps = {}) {
       }
       const sessionCard = findSessionCard(event?.target);
       const sessionId = trimText(sessionCard?.dataset?.sessionId, 120);
-      if (sessionId && !(typeof isInteractionLocked === 'function' && isInteractionLocked())) {
+      if (sessionId) {
         void loadChatSession(sessionId);
       }
     });

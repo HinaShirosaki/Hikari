@@ -308,12 +308,51 @@
   flex-wrap: wrap;
 }
 
+.assay-form-actions > .assay-form-icon-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+
+.assay-form-actions > .assay-form-icon-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.assay-form-actions > .ghost-btn.assay-form-icon-btn {
+  border-color: transparent;
+  background: transparent;
+}
+
+.assay-form-actions > .ghost-btn.assay-form-icon-btn:hover,
+.assay-form-actions > .ghost-btn.assay-form-icon-btn:focus-visible {
+  border-color: transparent;
+  background: var(--theme-surface-subtle);
+}
+
+.assay-form-actions > .assay-form-save-icon-btn.primary-btn {
+  border-color: transparent;
+}
+
 .assay-create-preview-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
   align-self: stretch;
+}
+
+.assay-create-preview-panel > .assay-plate-toolbar {
+  margin-bottom: 12px;
 }
 
 /* Extracted from ui/css/themes/modes.css */

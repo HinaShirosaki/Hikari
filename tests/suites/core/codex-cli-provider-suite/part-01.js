@@ -396,6 +396,39 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
       assert.doesNotMatch(packagedConfigBlock, /command = "node"/);
       fs.rmSync(fakeNodeDir, { recursive: true, force: true });
     });
+    test('codex cli launch resolves an env-node shim when the GUI PATH omits Node', () => {
+      if (process.platform === 'win32') {
+        return;
+      }
+      const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-env-node-'));
+      try {
+        const codexBinary = path.join(fixtureDir, 'codex');
+        const siblingNode = path.join(fixtureDir, 'node');
+        fs.writeFileSync(codexBinary, '#!/usr/bin/env node\n', 'utf8');
+        fs.writeFileSync(siblingNode, '#!/bin/sh\n', 'utf8');
+        fs.chmodSync(codexBinary, 0o755);
+        fs.chmodSync(siblingNode, 0o755);
+        const { resolveCodexInvocation } = require(path.join(
+          __dirname,
+          'src',
+          'main',
+          'lib',
+          'codex-cli-provider',
+          'paths.js'
+        ));
+        const invocation = resolveCodexInvocation({ PATH: '/usr/bin:/bin' }, {
+          codexBinary,
+          processExecPath: '/Applications/Hikari.app/Contents/MacOS/Hikari',
+          commonNodePaths: []
+        });
+        assert.deepEqual(invocation, {
+          command: siblingNode,
+          argsPrefix: [codexBinary]
+        });
+      } finally {
+        fs.rmSync(fixtureDir, { recursive: true, force: true });
+      }
+    });
     test('codex cli provider writes Hikari AGENTS.md guidance into the runtime workspace', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-agents-'));
       try {

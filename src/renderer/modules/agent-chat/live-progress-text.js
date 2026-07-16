@@ -57,12 +57,16 @@ export function getProgressRowKey(eventPayload = {}) {
 export function getProgressRowText(eventPayload = {}) {
   const stage = trimText(eventPayload?.stage, 80);
   const toolLabel = getToolActivityLabel(eventPayload?.tool_name);
+  const lifecycleStatus = trimText(eventPayload?.meta?.status, 40);
+  if (stage === 'codex_agent_completed' && lifecycleStatus === 'needs_more_info') {
+    return 'Waiting for your answer';
+  }
   const stageLabels = {
     request_received: 'Request received',
     request_aborted: 'Request stopped',
     controller_codex_agent_selected: 'Preparing Codex agent request',
     controller_codex_agent: 'Routing to Codex agent',
-    codex_agent_started: 'Codex agent running',
+    codex_agent_started: 'Thinking',
     codex_agent_stream: 'Codex response streaming',
     codex_agent_completed: 'Codex agent completed',
     response_emitted: 'Final answer ready',

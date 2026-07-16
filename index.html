@@ -392,12 +392,6 @@
                 </div>
               </div>
             </div>
-            <p id="protocol-share-status" class="small-note" hidden></p>
-            <div id="protocol-share-link-panel" class="protocol-preview-block" hidden>
-              <h4>Portable Share Link</h4>
-              <p class="small-note">Paste this link into chat or email. Recipients can import it from Collaborations.</p>
-              <textarea id="protocol-share-link-output" rows="3" readonly></textarea>
-            </div>
           </div>
           <div class="protocol-list-scroll left-rail-template__scroll">
             <div id="protocol-list" class="list-table"></div>
@@ -1059,13 +1053,17 @@
 <!-- SOURCE: ui/html/views/personal-inventory-view.html -->
 <section id="personal-inventory-view" class="view">
       <div class="personal-inventory-layout left-rail-template">
-        <aside class="inventory-rail-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="inventory-rail-stack app-left-rail-section">
+        <aside class="inventory-rail-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="inventory-rail-pinned left-rail-template__pinned">
             <button id="inventory-add-container-btn" type="button" class="primary-btn" aria-controls="inventory-add-container-overlay" aria-expanded="false">Add Container</button>
-            <div id="inventory-location-nav" class="inventory-location-nav"></div>
-            <div id="inventory-container-context-menu" class="personal-inventory-context-menu" hidden></div>
           </div>
-          <div id="inventory-summary-card" class="inventory-summary-card app-left-rail-section"></div>
+          <div class="inventory-rail-scroll left-rail-template__scroll">
+            <div class="inventory-rail-stack app-left-rail-section">
+              <div id="inventory-location-nav" class="inventory-location-nav"></div>
+              <div id="inventory-container-context-menu" class="personal-inventory-context-menu" hidden></div>
+            </div>
+            <div id="inventory-summary-card" class="inventory-summary-card app-left-rail-section"></div>
+          </div>
         </aside>
 
         <div class="panel inventory-main-panel left-rail-template__main">
@@ -1289,6 +1287,40 @@
           </details>
           <form id="assay-form" class="form-grid assay-form-grid">
             <input type="hidden" id="assay-id" />
+            <div class="form-actions assay-form-actions" aria-label="Assay actions">
+              <button type="button" id="assay-export-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Export CSV template" title="Export CSV template">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 4v12"></path>
+                  <path d="m7 11 5 5 5-5"></path>
+                  <path d="M5 20h14"></path>
+                </svg>
+                <span class="sr-only">Export CSV template</span>
+              </button>
+              <button type="button" id="assay-import-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Import CSV" title="Import CSV">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 16V4"></path>
+                  <path d="m7 9 5-5 5 5"></path>
+                  <path d="M5 20h14"></path>
+                </svg>
+                <span class="sr-only">Import CSV</span>
+              </button>
+              <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
+              <button type="submit" class="primary-btn assay-form-icon-btn assay-form-save-icon-btn" aria-label="Save assay" title="Save assay">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 3h12l3 3v15H4V3Z"></path>
+                  <path d="M8 3v6h8V3"></path>
+                  <path d="M8 21v-7h8v7"></path>
+                </svg>
+                <span class="sr-only">Save assay</span>
+              </button>
+              <button type="button" id="assay-cancel-btn" class="ghost-btn assay-form-icon-btn" aria-label="Cancel edit" title="Cancel edit">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M6 6l12 12"></path>
+                  <path d="M18 6 6 18"></path>
+                </svg>
+                <span class="sr-only">Cancel edit</span>
+              </button>
+            </div>
             <div class="assay-display-field">
               <span class="assay-display-label">Assay Number</span>
               <div id="assay-number-display" class="assay-display-value" aria-live="polite"></div>
@@ -1344,18 +1376,11 @@
             </select>
             <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
             <div id="assay-csv-status" class="small-note assay-form-note"></div>
-            <div class="form-actions assay-form-actions">
-              <button type="button" id="assay-export-template-btn" class="ghost-btn">Export CSV Template</button>
-              <button type="button" id="assay-import-template-btn" class="ghost-btn">Import CSV</button>
-              <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
-              <button type="submit" class="primary-btn">Save Assay</button>
-              <button type="button" id="assay-cancel-btn" class="ghost-btn">Cancel Edit</button>
-            </div>
           </form>
         </div>
 
         <div class="panel assay-mode-create-panel assay-create-preview-panel left-rail-template__main">
-          <div class="form-actions">
+          <div class="form-actions assay-plate-toolbar">
             <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
               <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Edit Conc.</button>
@@ -2323,7 +2348,14 @@
             <div class="papers-library-topbar">
               <h2>Papers</h2>
               <div class="papers-library-actions">
-                <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn">Upload PDF</button>
+                <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn" aria-label="Upload PDF" title="Upload PDF">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M12 16V4"></path>
+                    <path d="m7 9 5-5 5 5"></path>
+                    <path d="M5 14v5h14v-5"></path>
+                  </svg>
+                  <span class="sr-only">Upload PDF</span>
+                </button>
               </div>
             </div>
             <p id="paper-folder-selection" class="papers-library-status" hidden>No folder selected</p>
@@ -2667,7 +2699,6 @@
                     <div class="form-actions agent-composer-actions">
                       <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
                       <button type="button" id="agent-stop-btn" class="danger-btn" hidden>Stop</button>
-                      <button type="button" id="agent-clear-btn" class="ghost-btn">New Thread</button>
                     </div>
                   </div>
                 </div>
@@ -4084,6 +4115,7 @@
                     </button>
                   </span>
                 </label>
+                <div id="agent-rail-hidden-context-list" class="agent-attachment-list agent-hidden-context-list" aria-label="Injected context" aria-live="polite" hidden></div>
                 <div id="agent-rail-attachment-list" class="agent-attachment-list" hidden></div>
                 <div class="agent-composer-toolbar">
                   <div class="agent-composer-toolbar-start">
