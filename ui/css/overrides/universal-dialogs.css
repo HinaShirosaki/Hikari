@@ -56,6 +56,62 @@
   margin: 0;
 }
 
+button.app-dialog-close-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  inline-size: 32px;
+  block-size: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  min-inline-size: 32px;
+  min-block-size: 32px;
+  max-width: 32px;
+  max-height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 1.12rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.app-dialog-head button.app-dialog-close-btn {
+  margin-left: auto;
+}
+
+button.app-dialog-close-btn:hover,
+button.app-dialog-close-btn:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-border) 72%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 84%, transparent);
+  color: var(--theme-text-strong);
+}
+
+button.app-dialog-close-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 58%, transparent);
+  outline-offset: 2px;
+}
+
+button.app-dialog-close-btn span {
+  display: block;
+  transform: translateY(-1px);
+}
+
+button.app-dialog-close-btn--floating {
+  position: absolute;
+  inset-block-start: 12px;
+  inset-inline-end: 12px;
+  z-index: 2;
+}
+
 #home-view .app-dialog-overlay.app-dialog-overlay--contained {
   position: absolute;
   z-index: 20;

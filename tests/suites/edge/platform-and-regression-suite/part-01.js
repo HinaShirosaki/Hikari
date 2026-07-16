@@ -30,6 +30,14 @@ const normalizedArrayKeys = [
   'samples',
   'messages'
 ];
+test('[P1] normalizeState drops retired derived and feature state', () => {
+  const normalized = shared.normalizeState({
+    objectGraph: { nodes: { stale: true } },
+    synthesisChemistryDrafts: { stale: { title: 'Retired draft' } }
+  });
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized, 'objectGraph'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized, 'synthesisChemistryDrafts'), false);
+});
 normalizedArrayKeys.forEach((key) => {
   test(`[P0] normalizeState resets invalid "${key}" to []`, () => {
     const normalized = shared.normalizeState({ [key]: { bad: true } });
@@ -130,6 +138,11 @@ test('[P0] normalizeState normalizes agentChat defaults', () => {
   assert.equal(normalized.agentChat.sessions.length, 0);
   assert.equal(Array.isArray(normalized.agentChat.messages), true);
   assert.equal(normalized.agentChat.messages.length, 0);
+  assert.equal(Array.isArray(normalized.agentChat.folders), true);
+  assert.equal(Object.keys(normalized.agentChat.sessionFolderIds).length, 0);
+  assert.equal(normalized.agentChat.selectedFolderId, 'general');
+  assert.equal(Array.isArray(normalized.agentChat.expandedFolderIds), true);
+  assert.equal(normalized.agentChat.expandedFolderIds.length, 0);
 });
 test('[P1] normalizeState preserves provided agentChat messages array', () => {
   const payload = [{ id: 'm1', role: 'user', text: 'hello' }];
@@ -138,12 +151,20 @@ test('[P1] normalizeState preserves provided agentChat messages array', () => {
       projectId: 'p1',
       currentSessionId: 'chat-1',
       sessions: [{ id: 'chat-1', title: 'Saved Chat' }],
+      folders: [{ id: 'folder-1', name: 'Planning' }],
+      sessionFolderIds: { 'chat-1': 'custom:folder-1' },
+      selectedFolderId: 'custom:folder-1',
+      expandedFolderIds: ['custom:folder-1'],
       messages: payload
     }
   });
   assert.equal(normalized.agentChat.projectId, 'p1');
   assert.equal(normalized.agentChat.currentSessionId, 'chat-1');
   assert.equal(normalized.agentChat.sessions.length, 1);
+  assert.equal(normalized.agentChat.folders.length, 1);
+  assert.equal(normalized.agentChat.sessionFolderIds['chat-1'], 'custom:folder-1');
+  assert.equal(normalized.agentChat.selectedFolderId, 'custom:folder-1');
+  assert.equal(normalized.agentChat.expandedFolderIds[0], 'custom:folder-1');
   assert.deepEqual(normalized.agentChat.messages, payload);
 });
 test('[P0] normalizeState keeps default inventory locations when invalid', () => {
@@ -153,6 +174,16 @@ test('[P0] normalizeState keeps default inventory locations when invalid', () =>
 test('[P1] normalizeState preserves explicit inventory locations array', () => {
   const normalized = shared.normalizeState({ settings: { inventoryLocations: ['Freezer A', 'Fridge B'] } });
   assert.deepEqual(normalized.settings.inventoryLocations, ['Freezer A', 'Fridge B']);
+});
+test('[P1] normalizeState normalizes multiple preferred journals from list and legacy strings', () => {
+  const normalized = shared.normalizeState({
+    settings: {
+      preferredJournals: ['Nature Biotechnology; Cell', ' nature biotechnology '],
+      preferredJournal: 'Science\nCell'
+    }
+  });
+  assert.deepEqual(normalized.settings.preferredJournals, ['Nature Biotechnology', 'Cell', 'Science']);
+  assert.equal(normalized.settings.preferredJournal, 'Nature Biotechnology; Cell; Science');
 });
 test('[P0] normalizeState keeps default sample inventory locations when invalid', () => {
   const normalized = shared.normalizeState({ settings: { sampleInventoryLocations: 'bad' } });
@@ -235,30 +266,30 @@ test('[P0] normalizeState resets invalid startup flags to defaults', () => {
 });
 test('[P1] normalizeState forces legacy API endpoint settings onto the Codex release agent', () => {
   const normalized = shared.normalizeState({ settings: { llm: { api: 'https://example.com/v1' } } });
-  assert.equal(normalized.settings.llm.apiEndpoint, '');
-  assert.equal(normalized.settings.llm.apiKey, '');
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized.settings.llm, 'apiEndpoint'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized.settings.llm, 'apiKey'), false);
   assert.equal(normalized.settings.llm.provider, 'codex');
 });
 test('[P1] normalizeState treats codex:// legacy llm.api as a Codex agent marker', () => {
   const normalized = shared.normalizeState({ settings: { llm: { provider: 'codex', api: 'codex://cli' } } });
   assert.equal(normalized.settings.llm.provider, 'codex');
-  assert.equal(normalized.settings.llm.apiEndpoint, '');
-  assert.equal(normalized.settings.llm.apiKey, '');
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized.settings.llm, 'apiEndpoint'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized.settings.llm, 'apiKey'), false);
 });
 test('[P1] normalizeState clears API credentials while the release agent is Codex-only', () => {
   const normalized = shared.normalizeState({ settings: { llm: { api: 'legacy-key', apiKey: 'new-key' } } });
   assert.equal(normalized.settings.llm.provider, 'codex');
-  assert.equal(normalized.settings.llm.apiKey, '');
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized.settings.llm, 'apiKey'), false);
 });
 test('[P1] normalizeState clears API endpoints while the release agent is Codex-only', () => {
   const normalized = shared.normalizeState({ settings: { llm: { apiEndpoint: '  https://api.example/v1  ' } } });
   assert.equal(normalized.settings.llm.provider, 'codex');
-  assert.equal(normalized.settings.llm.apiEndpoint, '');
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized.settings.llm, 'apiEndpoint'), false);
 });
 test('[P1] normalizeState replaces an explicit API provider with Codex in release builds', () => {
   const normalized = shared.normalizeState({ settings: { llm: { provider: 'claude' } } });
   assert.equal(normalized.settings.llm.provider, 'codex');
-  assert.equal(normalized.settings.llm.apiEndpoint, '');
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized.settings.llm, 'apiEndpoint'), false);
 });
 test('[P1] normalizeState replaces an inferred API provider with Codex in release builds', () => {
   const normalized = shared.normalizeState({
@@ -269,7 +300,7 @@ test('[P1] normalizeState replaces an inferred API provider with Codex in releas
     }
   });
   assert.equal(normalized.settings.llm.provider, 'codex');
-  assert.equal(normalized.settings.llm.apiEndpoint, '');
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized.settings.llm, 'apiEndpoint'), false);
 });
 test('[P1] normalizeState infers llm.provider from legacy codex marker without keeping an endpoint', () => {
   const normalized = shared.normalizeState({
@@ -280,7 +311,7 @@ test('[P1] normalizeState infers llm.provider from legacy codex marker without k
     }
   });
   assert.equal(normalized.settings.llm.provider, 'codex');
-  assert.equal(normalized.settings.llm.apiEndpoint, '');
+  assert.equal(Object.prototype.hasOwnProperty.call(normalized.settings.llm, 'apiEndpoint'), false);
 });
 test('[P1] normalizeState preserves supported llm reasoning effort values', () => {
   const normalized = shared.normalizeState({

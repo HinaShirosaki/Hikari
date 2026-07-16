@@ -1,5 +1,4 @@
 import { parseInputRecords, normalizeExternalPayload } from '../parsing.js';
-import { cleanText } from '../shared.js';
 import {
   DEFAULT_MAX_RECORDS
 } from '../constants.js';
@@ -22,6 +21,9 @@ export function createRecordWorkflowActions(ctx) {
     dialogs.closeBackboneRecognitionDialog();
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
+    if (elements.saveNameInput) {
+      elements.saveNameInput.value = state.records[0]?.name || '';
+    }
     actions.resetAlignmentState();
     resetDetailSurfaces();
     controllers.detail?.updateRecordSelect();

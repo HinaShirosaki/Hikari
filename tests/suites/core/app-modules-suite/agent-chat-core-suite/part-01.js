@@ -2,6 +2,102 @@ module.exports = function registerAppAgentChatCoreSuitePart01(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
+test('agent-chat live progress keeps tool display JSON out of assistant text', () => {
+  const liveProgressModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'live-progress-state.js'
+  ));
+  const placeholder = liveProgressModule.buildLiveAssistantPlaceholder(
+    'agent-request-tool-json',
+    'Find papers',
+    () => 'live-id'
+  );
+  const withToolOutput = liveProgressModule.applyLiveProgressEvent(placeholder, {
+    client_request_id: 'agent-request-tool-json',
+    stage: 'codex_cli_display',
+    status: 'completed',
+    message: 'literature_search: {"selected_papers":[{"title":"A very long tool payload"}]}',
+    meta: {
+      codex_display_kind: 'tool',
+      codex_display_text: 'literature_search: {"selected_papers":[{"title":"A very long tool payload"}]}'
+    }
+  });
+
+  assert.equal(withToolOutput.text, 'Working on this...');
+  assert.equal(withToolOutput.meta.live_progress.response_text, '');
+  assert.equal(withToolOutput.meta.live_progress.codex_cli_display_rows.length, 1);
+
+  const withAssistantAnswer = liveProgressModule.applyLiveProgressEvent(withToolOutput, {
+    client_request_id: 'agent-request-tool-json',
+    stage: 'codex_cli_display',
+    status: 'streaming',
+    message: 'Final paper search answer.',
+    meta: {
+      codex_display_kind: 'assistant',
+      codex_display_text: 'Final paper search answer.'
+    }
+  });
+
+  assert.equal(withAssistantAnswer.text, 'Final paper search answer.');
+  assert.equal(withAssistantAnswer.meta.live_progress.response_text, 'Final paper search answer.');
+
+  const waitingForUser = liveProgressModule.applyLiveProgressEvent(withAssistantAnswer, {
+    client_request_id: 'agent-request-tool-json',
+    stage: 'codex_agent_completed',
+    status: 'ok',
+    message: 'Codex agent completed.',
+    meta: {
+      status: 'needs_more_info'
+    }
+  });
+  const waitingRow = waitingForUser.meta.live_progress.activity_rows
+    .find((row) => row.stage === 'codex_agent_completed');
+  assert.equal(waitingRow.text, 'Waiting for your answer');
+});
+test('agent-chat clarification cards disappear after one answer or any later user turn', () => {
+  const questionRenderer = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'rendering-question-card.js'
+  ));
+  const questionMeta = {
+    codex_agent: {
+      status: 'needs_more_info'
+    },
+    user_question: {
+      question: 'Which project should I use?',
+      options: [{ label: 'Atlas', value: 'Use Atlas.' }],
+      allow_custom: true
+    }
+  };
+
+  assert.match(
+    questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText),
+    /agent-user-question-card/
+  );
+  assert.equal(
+    questionRenderer.renderUserQuestionCard({
+      ...questionMeta,
+      user_question: {
+        ...questionMeta.user_question,
+        status: 'answered',
+        answered: { answer: 'Use Atlas.' }
+      }
+    }, 'assistant-question', shared.safeText),
+    ''
+  );
+  assert.equal(
+    questionRenderer.renderUserQuestionCard(questionMeta, 'assistant-question', shared.safeText, { disabled: true }),
+    ''
+  );
+});
 test('agent-chat maps assay experiment data with numeric summaries and preview caps', () => {
   const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'));
   const mapped = agentModule.mapExperimentDataToLlmJson({
@@ -78,6 +174,38 @@ test('agent-chat maps assay experiment data with numeric summaries and preview c
   assert.equal(assayRun.result_summary.max, 13);
   assertClose(assayRun.result_summary.mean, 7.590909090909091, 1e-12);
   assert.equal(assayRun.result_summary.preview.length, 12);
+});
+test('agent-chat extracts Plotly graph artifacts from progress metadata', () => {
+  const plotlyArtifacts = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'plotly-artifacts.js'
+  ));
+  const artifact = plotlyArtifacts.extractPlotlyGraphArtifactFromProgressEvent({
+    stage: 'tool_call_completed',
+    status: 'completed',
+    tool_name: 'plotly_graph',
+    meta: {
+      plotly_graph_artifact: {
+        id: '1',
+        name: 'Assay dose response',
+        summary: 'Created graph.',
+        figure: {
+          data: [{ type: 'scatter', x: [0.1, 1], y: [12, 42], name: 'Sample A' }],
+          layout: { title: { text: 'Assay dose response' } },
+          config: { responsive: true }
+        }
+      }
+    }
+  });
+
+  assert.equal(artifact.id, '1');
+  assert.equal(artifact.name, 'Assay dose response');
+  assert.equal(artifact.figure.data[0].name, 'Sample A');
+  assert.equal(artifact.figure.layout.title.text, 'Assay dose response');
 });
 test('agent-chat maps gel experiment data with confidence, calibration, and warning caps', () => {
   const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'));
@@ -185,7 +313,7 @@ test('agent-chat renders assistant markdown with emphasis, tables, and escaped H
   assert.doesNotMatch(history.innerHTML, /<script>/);
 });
 test('agent-chat normalizes Codex agent answer envelopes', () => {
-  const responseModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat-response.js'));
+  const responseModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'public-api.js'));
   const completed = responseModule.normalizeAgentResponse({
     parser: {
       primary_intent: 'codex_agent',
@@ -198,7 +326,7 @@ test('agent-chat normalizes Codex agent answer envelopes', () => {
       follow_up_questions: [],
       citations: [
         {
-          source: 'record-lookup',
+          source: 'notebook-lookup',
           pointer: 'notebook:1',
           reason: 'Matched local evidence.'
         }
@@ -354,6 +482,7 @@ test('agent-chat renders Codex user questions and returns option answers', async
   await flushAsync();
 
   assert.equal(payloads.length, 1);
+  assert.equal(document.getElementById('agent-status').textContent, 'Waiting for your answer.');
   assert.match(history.innerHTML, /agent-user-question-card/);
   assert.match(history.innerHTML, /data-agent-question-answer="Use Atlas\."/);
   const optionButton = history.querySelector('[data-agent-question-option]');
@@ -377,6 +506,8 @@ test('agent-chat renders Codex user questions and returns option answers', async
   assert.equal(state.agentChat.messages[2].role, 'user');
   assert.equal(state.agentChat.messages[2].text, 'Use Atlas.');
   assert.equal(state.agentChat.messages[3].text, 'Using Atlas.');
+  assert.doesNotMatch(history.innerHTML, /agent-user-question-card/);
+  assert.equal(document.getElementById('agent-status').textContent, 'Complete.');
 });
 test('agent-chat renders completed science thinking trace details in assistant metadata', () => {
   const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'rendering.js'));
@@ -444,7 +575,7 @@ test('agent-chat renders completed science thinking trace details in assistant m
   assert.match(history.innerHTML, /Round 1 call: I want to use literature-search to investigate/);
   assert.match(history.innerHTML, /Final synthesis: I am synthesizing the final grounded answer/);
   assert.equal(
-    history.innerHTML.indexOf('MAPK resistance commonly involves pathway reactivation.') < history.innerHTML.indexOf('Agent Trace'),
+    history.innerHTML.indexOf('Agent Trace') < history.innerHTML.indexOf('MAPK resistance commonly involves pathway reactivation.'),
     true
   );
 });

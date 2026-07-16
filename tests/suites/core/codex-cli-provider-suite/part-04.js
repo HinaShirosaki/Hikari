@@ -107,12 +107,49 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         capturePath
       };
     }
+    test('codex cli provider carries Plotly graph artifacts from MCP tool output', () => {
+      const provider = loadProvider();
+      const progressEvents = provider.extractCodexJsonEventProgress({
+        type: 'response_item',
+        payload: {
+          type: 'item.completed',
+          item: {
+            type: 'mcp_tool_call',
+            server: 'hikari',
+            tool: 'plotly_graph',
+            result: {
+              structured_content: {
+                ok: true,
+                status: 'created',
+                summary: 'Created dose response plot.',
+                graph: {
+                  id: '1',
+                  name: 'Dose response',
+                  figure: {
+                    data: [
+                      { type: 'scatter', mode: 'markers', x: [1, 2], y: [3, 4], name: 'Std' }
+                    ],
+                    layout: { title: { text: 'Dose response' } },
+                    config: { responsive: true }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      const graphEvent = progressEvents.find((event) => event.tool_name === 'plotly_graph');
+      assert.equal(graphEvent?.status, 'completed');
+      assert.equal(graphEvent?.plotly_graph_artifact?.id, '1');
+      assert.equal(graphEvent?.plotly_graph_artifact?.figure?.data?.[0]?.name, 'Std');
+      assert.equal(graphEvent?.plotly_graph_artifact?.figure?.layout?.title?.text, 'Dose response');
+    });
     test('codex agent runtime recovers ask_user clarification from tool stream when final text is prose', async () => {
       const { createCodexAgentRuntime } = require(path.join(
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -190,7 +227,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -237,7 +273,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -276,7 +311,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -389,7 +423,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -436,7 +469,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'stdio-server.js'
@@ -478,7 +510,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
 
       try {
         const response = await client.callTool({
-          name: 'record_lookup',
+          name: 'notebook_lookup',
           arguments: { query: 'paper' }
         });
 
@@ -487,7 +519,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         assert.equal(capturedContext.project.name, 'Atlas');
         assert.equal(capturedContext.traceRequestId, 'req-ctx');
         assert.equal(capturedContext.mcpRequest.method, 'tools/call');
-        assert.equal(capturedContext.mcpRequest.params.name, 'record_lookup');
+        assert.equal(capturedContext.mcpRequest.params.name, 'notebook_lookup');
         assert.equal(response.isError, false);
         assert.equal(Array.isArray(response.content), true);
         assert.equal(response.content[0].type, 'text');
@@ -502,7 +534,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'stdio-server.js'
@@ -521,43 +552,49 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         app_tool: 'literature-search',
         output: {
           ok: true,
-          status: 'completed',
-          query: 'EGFR kinase inhibitor resistance',
-          summary: 'Found 20 candidates and selected 1 paper.',
-          items: bulkyItems,
-          source_counts: { crossref: 20 },
-          source_errors: {},
-          selected_papers: [{
-            paper_id: 'paper-1',
-            paper_title: 'EGFR resistance mechanisms',
-            source: 'pubmed',
-            doi: '10.1000/egfr',
-            url: 'https://example.org/egfr',
-            summary: 'A focused paper on EGFR inhibitor resistance.'
-          }],
-          downloaded_papers: [{
-            paper_id: 'paper-1',
-            paper_title: 'EGFR resistance mechanisms',
+          tool_name: 'literature_search',
+          result: {
             ok: true,
-            status: 'downloaded',
-            relative_path: 'KnowledgeBase/papers.md/paper-1/paper.pdf',
-            knowledge_markdown_relative_path: 'KnowledgeBase/papers.md/paper-1/paper.md'
-          }],
-          loaded_context_blocks: [{
-            paper_id: 'paper-1',
-            paper_title: 'EGFR resistance mechanisms',
-            section_label: 'Results',
-            source: 'llm_pdf_text_read',
-            excerpt: 'EGFR secondary mutations and bypass signaling were associated with acquired resistance.',
-            relevance_reason: 'Directly supports the requested resistance mechanism.'
-          }],
-          papers_read_count: 1
+            status: 'completed',
+            query: 'EGFR kinase inhibitor resistance',
+            summary: 'Found 20 candidates and selected 1 paper.',
+            items: bulkyItems,
+            source_counts: { crossref: 20 },
+            source_errors: {},
+            selected_papers: [{
+              paper_id: 'paper-1',
+              paper_title: 'EGFR resistance mechanisms',
+              source: 'pubmed',
+              doi: '10.1000/egfr',
+              url: 'https://example.org/egfr',
+              summary: 'A focused paper on EGFR inhibitor resistance.'
+            }],
+            downloaded_papers: [{
+              paper_id: 'paper-1',
+              paper_title: 'EGFR resistance mechanisms',
+              ok: true,
+              status: 'downloaded',
+              relative_path: 'KnowledgeBase/papers.md/paper-1/paper.pdf',
+              knowledge_markdown_relative_path: 'KnowledgeBase/papers.md/paper-1/paper.md'
+            }],
+            loaded_context_blocks: [{
+              paper_id: 'paper-1',
+              paper_title: 'EGFR resistance mechanisms',
+              section_label: 'Results',
+              source: 'llm_pdf_text_read',
+              excerpt: 'EGFR secondary mutations and bypass signaling were associated with acquired resistance.',
+              relevance_reason: 'Directly supports the requested resistance mechanism.'
+            }],
+            papers_read_count: 1
+          }
         }
       };
 
+      let literatureGatewayCalls = 0;
       const { server, connect } = createAgentMcpStdioServer({
         gateway: {
           async callGatewayTool() {
+            literatureGatewayCalls += 1;
             return gatewayResult;
           }
         }
@@ -583,12 +620,23 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         assert.equal(textPayload.counts.candidate_count, 20);
         assert.equal(textPayload.counts.selected_count, 1);
         assert.equal(textPayload.counts.context_block_count, 1);
+        assert.equal(textPayload.source_counts.crossref, 20);
         assert.equal(textPayload.selected_papers[0].paper_title, 'EGFR resistance mechanisms');
         assert.equal(textPayload.downloaded_papers[0].knowledge_markdown_relative_path, 'KnowledgeBase/papers.md/paper-1/paper.md');
         assert.equal(textPayload.loaded_context_blocks[0].section_label, 'Results');
         assert.equal(Object.prototype.hasOwnProperty.call(textPayload, 'items'), false);
-        assert.equal(response.structuredContent.output.items.length, 20);
+        assert.equal(response.structuredContent.output.result.items.length, 20);
         assert.ok(response.content[0].text.length < JSON.stringify(gatewayResult, null, 2).length / 2);
+
+        const repeatedResponse = await client.callTool({
+          name: 'literature_search',
+          arguments: { query: 'EGFR resistance title lookup' }
+        });
+        const repeatedPayload = JSON.parse(repeatedResponse.content[0].text);
+        assert.equal(repeatedResponse.isError, true);
+        assert.equal(repeatedPayload.status, 'rejected');
+        assert.match(repeatedPayload.error, /already completed one literature_search request/i);
+        assert.equal(literatureGatewayCalls, 1);
       } finally {
         await client.close();
         await server.close();
@@ -621,7 +669,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'stdio-server.js'
@@ -631,7 +678,8 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
 
       const { server, connect } = createAgentMcpStdioServer({
         env: {
-          HIKARI_AGENT_MCP_WORKSPACE: workspaceDir
+          HIKARI_AGENT_MCP_WORKSPACE: workspaceDir,
+          HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify({ project: { id: 'project-1' } })
         }
       });
       const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -671,7 +719,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
 
         const projectResponse = await client.callTool({
           name: 'paper_intake_list_project_summaries',
-          arguments: { project_id: 'project-1', limit: 3 }
+          arguments: { limit: 3 }
         });
         const projectResult = JSON.parse(projectResponse.content[0].text);
         assert.equal(projectResponse.isError, false);
@@ -691,7 +739,6 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'host.js'
@@ -703,10 +750,19 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'host-client.js'
+      ));
+      const {
+        HIKARI_MCP_TOOL_TIMEOUT_MS
+      } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'mcp-contract',
+        'constants.js'
       ));
       const host = createAgentMcpHost({
         env,
@@ -741,6 +797,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         assert.equal(String(resolveAgentMcpEndpointUrl('http://127.0.0.1:43123')), 'http://127.0.0.1:43123/mcp');
 
         const runTool = createAgentMcpHostToolRunner({ env });
+        assert.equal(HIKARI_MCP_TOOL_TIMEOUT_MS, 300000);
         const output = await runTool(
           'literature-search',
           { query: 'MG-PACE' },
@@ -761,10 +818,58 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         await host.close();
       }
     });
+    test('agent MCP app host rejects a duplicate literature search across client reconnects', async () => {
+      const { createAgentMcpHost } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'mcp-contract',
+        'host.js'
+      ));
+      const { createAgentMcpHostToolRunner } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'mcp-contract',
+        'host-client.js'
+      ));
+      const env = {};
+      let literatureSearchCalls = 0;
+      const host = createAgentMcpHost({
+        env,
+        runTool: async (toolId) => {
+          assert.equal(toolId, 'literature-search');
+          literatureSearchCalls += 1;
+          return { ok: true, status: 'completed', summary: 'Found papers.' };
+        }
+      });
+      const { url, token } = await host.ensureStarted();
+      const runTool = createAgentMcpHostToolRunner({ hostUrl: url, token });
+
+      try {
+        const first = await runTool('literature-search', { query: 'molecular glue degraders' }, {}, {
+          traceRequestId: 'literature-turn-1'
+        });
+        const repeated = await runTool('literature-search', { query: 'exact title lookup' }, {}, {
+          traceRequestId: 'literature-turn-1'
+        });
+
+        assert.equal(first.ok, true);
+        assert.equal(repeated.ok, false);
+        assert.equal(repeated.status, 'rejected');
+        assert.match(repeated.error, /already completed one literature_search request/i);
+        assert.equal(literatureSearchCalls, 1);
+      } finally {
+        await host.close();
+      }
+    });
     test('packaged MCP runtime unpacks paper modules required by direct paper tools', () => {
       const forgeConfigSource = fs.readFileSync(path.join(__dirname, 'forge.config.js'), 'utf8');
-      assert.match(forgeConfigSource, /src\/main\/helpers\/agent/);
+      assert.match(forgeConfigSource, /src\/main\/agent/);
       assert.match(forgeConfigSource, /src\/main\/papers/);
+      assert.match(forgeConfigSource, /vendor\/pdfjs/);
       assert.match(forgeConfigSource, /node_modules\/@modelcontextprotocol\/sdk/);
     });
     test('codex agent MCP config includes the app host callback when available', async () => {
@@ -835,11 +940,12 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         const configText = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
         assert.match(configText, /\[mcp_servers\.hikari\]/);
         assert.match(configText, /required = true/);
-        assert.match(configText, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
+        assert.match(configText, /enabled_tools = \["inventory_lookup", "chemical_lookup", "notebook_lookup", "protocol_lookup", "protocol_generation"/);
         assert.match(configText, /"container"/);
         assert.match(configText, /"assay_table"/);
         assert.match(configText, /"plotly_graph"/);
         assert.match(configText, /default_tools_approval_mode = "approve"/);
+        assert.match(configText, /tool_timeout_sec = 300/);
         assert.match(configText, /\[mcp_servers\.hikari\.tools\.protocol_generation\]/);
         assert.match(configText, /HIKARI_AGENT_MCP_REQUEST_CONTEXT/);
         assert.match(configText, /HIKARI_AGENT_MCP_REQUEST_CONTEXT/);
@@ -851,7 +957,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         fs.rmSync(workspaceDir, { recursive: true, force: true });
       }
     });
-    test('agent MCP initializer starts host, writes runtime config options, and releases official skills', async () => {
+    test('Codex workspace initializer starts the MCP host, writes runtime config, and releases official skills', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-init-workspace-'));
       const storageRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-init-storage-'));
       const dataFilePath = path.join(workspaceDir, 'hikari-data.json');
@@ -869,15 +975,15 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
       }, null, 2), 'utf8');
 
       try {
-        const { createAgentMcpInitializer } = require(path.join(
+        const { createCodexWorkspaceInitializer } = require(path.join(
           __dirname,
           'src',
           'main',
-          'helpers',
-          'main',
-          'agent-mcp-initializer.js'
+          'core',
+          'services',
+          'create-codex-workspace-initializer.js'
         ));
-        const initializer = createAgentMcpInitializer({
+        const initializer = createCodexWorkspaceInitializer({
           cleanText: (value, maxLength = 2000) => {
             const text = String(value || '').trim();
             return maxLength > 0 ? text.slice(0, maxLength) : text;
@@ -946,19 +1052,19 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         fs.rmSync(storageRoot, { recursive: true, force: true });
       }
     });
-    test('agent MCP initializer does not inject default hikari data path without request context', async () => {
+    test('Codex workspace initializer does not inject the default data path without request context', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-init-no-default-'));
       let runtimeWrite = null;
       try {
-        const { createAgentMcpInitializer } = require(path.join(
+        const { createCodexWorkspaceInitializer } = require(path.join(
           __dirname,
           'src',
           'main',
-          'helpers',
-          'main',
-          'agent-mcp-initializer.js'
+          'core',
+          'services',
+          'create-codex-workspace-initializer.js'
         ));
-        const initializer = createAgentMcpInitializer({
+        const initializer = createCodexWorkspaceInitializer({
           cleanText: (value, maxLength = 2000) => {
             const text = String(value || '').trim();
             return maxLength > 0 ? text.slice(0, maxLength) : text;

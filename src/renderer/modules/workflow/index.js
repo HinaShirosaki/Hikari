@@ -3,7 +3,6 @@ import {
   createWorkflowModel,
   formatTimestamp,
   getBlockType,
-  normalizePlainTextBlock,
   parseTimestamp,
   uniqueStrings
 } from './model.js';
@@ -64,7 +63,6 @@ export function initWorkflowManagement({
     elements,
     safeText,
     getBlockType,
-    normalizePlainTextBlock,
     uniqueStrings,
     parseTimestamp,
     formatTimestamp,

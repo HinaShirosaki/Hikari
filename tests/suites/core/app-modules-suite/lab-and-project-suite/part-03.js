@@ -120,6 +120,219 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
   assert.equal(document.getElementById('biology-notebook-protocol-title').hidden, false);
   assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Renamed transformation page');
 });
+test('biology-notebook page naming uses a small model once and skips generated or user-renamed names', async () => {
+  const document = createMockDocument([
+    'biology-notebook-project-select',
+    'biology-notebook-protocol-search',
+    'biology-notebook-protocol-select',
+    'biology-notebook-page-starter',
+    'biology-notebook-empty-state',
+    'biology-notebook-protocol-area',
+    'biology-notebook-experiment-name',
+    'biology-notebook-protocol-title',
+    'biology-notebook-protocol-meta',
+    'biology-notebook-edit-protocol-btn',
+    'biology-notebook-apply-protocol-edit-btn',
+    'biology-notebook-cancel-protocol-edit-btn',
+    'biology-notebook-export-btn',
+    'biology-notebook-mark-executed-btn',
+    'biology-notebook-protocol-editor',
+    'biology-notebook-page-protocol-name',
+    'biology-notebook-page-protocol-steps',
+    'biology-notebook-steps',
+    'biology-notebook-result',
+    'biology-notebook-result-file',
+    'save-biology-notebook-btn',
+    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-entry-list'
+  ]);
+  const protocolSnapshot = {
+    id: 'protocol-1',
+    name: 'Transformation',
+    steps: [
+      {
+        id: 'step-1',
+        text: 'Transform cells with {{ph:dna}} and recover in {{ph:medium}}.',
+        placeholders: [
+          { id: 'dna', name: 'DNA' },
+          { id: 'medium', name: 'Recovery medium' }
+        ]
+      }
+    ]
+  };
+  const state = {
+    projects: [{ id: 'p1', name: 'Atlas' }],
+    protocols: [protocolSnapshot],
+    notebookEntries: [
+      {
+        id: 'generated-page',
+        notebookType: 'biology',
+        projectId: 'p1',
+        projectName: 'Atlas',
+        protocolId: 'protocol-1',
+        protocolName: 'Transformation',
+        experimentName: 'Transformation',
+        protocolSnapshot,
+        values: {
+          'step-1:dna': 'pET28a-GFP',
+          'step-1:medium': 'SOC'
+        },
+        result: '',
+        resultFiles: [],
+        resultFileRecords: []
+      },
+      {
+        id: 'renamed-page',
+        notebookType: 'biology',
+        projectId: 'p1',
+        projectName: 'Atlas',
+        protocolId: 'protocol-1',
+        protocolName: 'Transformation',
+        experimentName: 'GFP pilot transformation',
+        protocolSnapshot,
+        values: {
+          'step-1:dna': 'pET28a-GFP',
+          'step-1:medium': 'SOC'
+        },
+        result: '',
+        resultFiles: [],
+        resultFileRecords: []
+      }
+    ],
+    assays: [],
+    gelAnalyses: [],
+    settings: {
+      storagePath: '',
+      llm: {
+        provider: 'codex',
+        model: 'gpt-5.4',
+        reasoningEffort: 'high'
+      }
+    }
+  };
+  const directCalls = [];
+  let runDirectResponse = async () => ({ ok: true, text: 'pET28a GFP SOC Transformation' });
+  let persistCalls = 0;
+  const notebookModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'index.js'), {
+    document,
+    window: {
+      hikariApi: {
+        runDirectLlmPrompt: async (payload) => {
+          directCalls.push(payload);
+          return runDirectResponse(payload);
+        }
+      }
+    }
+  });
+  const notebook = notebookModule.initLabNotebook({
+    state,
+    persist: () => { persistCalls += 1; },
+    createId: () => 'new-entry',
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+
+  notebook.renderProjectOptions();
+  notebook.renderProtocolOptions();
+  notebook.openEntry('generated-page');
+  await flushAsync();
+
+  assert.equal(directCalls.length, 1);
+  assert.equal(directCalls[0].moduleId, 'notebook');
+  assert.equal(directCalls[0].task, 'page-name');
+  assert.equal(directCalls[0].llm.model, 'gpt-5.4-mini');
+  assert.equal(directCalls[0].llm.reasoningEffort, 'low');
+  assert.equal(directCalls[0].maxOutputTokens, 40);
+  assert.equal(state.notebookEntries[0].experimentName, 'pET28a GFP SOC Transformation');
+  assert.equal(state.notebookEntries[0].experimentNameSource, 'generated');
+  assert.ok(state.notebookEntries[0].experimentNameGeneratedAt);
+  assert.equal(state.notebookEntries[0].experimentNameGeneratedModel, 'gpt-5.4-mini');
+  assert.ok(persistCalls >= 1);
+
+  notebook.openEntry('generated-page');
+  notebook.openEntry('renamed-page');
+  await flushAsync();
+  assert.equal(directCalls.length, 1);
+  assert.equal(state.notebookEntries[1].experimentName, 'GFP pilot transformation');
+  assert.equal(state.notebookEntries[1].experimentNameSource, undefined);
+
+  state.notebookEntries.push({
+    id: 'rename-during-generation',
+    notebookType: 'biology',
+    projectId: 'p1',
+    projectName: 'Atlas',
+    protocolId: 'protocol-1',
+    protocolName: 'Transformation',
+    experimentName: 'Transformation',
+    protocolSnapshot,
+    values: {
+      'step-1:dna': 'pET28a-GFP',
+      'step-1:medium': 'SOC'
+    },
+    result: '',
+    resultFiles: [],
+    resultFileRecords: []
+  });
+  let finishPendingName;
+  runDirectResponse = () => new Promise((resolve) => { finishPendingName = resolve; });
+  notebook.openEntry('rename-during-generation');
+  await flushAsync();
+  assert.equal(directCalls.length, 2);
+
+  trigger(document.getElementById('biology-notebook-protocol-title'), 'dblclick');
+  document.getElementById('biology-notebook-experiment-name').value = 'User named GFP transformation';
+  trigger(document.getElementById('biology-notebook-experiment-name'), 'keydown', { key: 'Enter' });
+  finishPendingName({ ok: true, text: 'Late Generated Name' });
+  await flushAsync();
+  assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'User named GFP transformation');
+  assert.equal(state.notebookEntries[2].experimentName, 'Transformation');
+
+  trigger(document.getElementById('save-biology-notebook-btn'), 'click');
+  await flushAsync();
+  assert.equal(state.notebookEntries[2].experimentName, 'User named GFP transformation');
+  assert.equal(state.notebookEntries[2].experimentNameSource, 'user');
+  notebook.openEntry('rename-during-generation');
+  await flushAsync();
+  assert.equal(directCalls.length, 2);
+});
+test('biology-notebook page naming recognizes completion and legacy rename state', () => {
+  const namingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'entry', 'page-name-generator.js'), {});
+  const protocol = {
+    name: 'Expression',
+    steps: [
+      {
+        id: 'step-1',
+        placeholders: [
+          { id: 'temperature', name: 'Temperature' },
+          { id: 'duration', name: 'Duration' }
+        ]
+      }
+    ]
+  };
+
+  assert.equal(namingModule.areAllNotebookPlaceholdersFilled(protocol, {
+    'step-1:temperature': '18 C',
+    'step-1:duration': '16 h'
+  }), true);
+  assert.equal(namingModule.areAllNotebookPlaceholdersFilled(protocol, {
+    'step-1:temperature': '18 C',
+    'step-1:duration': '   '
+  }), false);
+  assert.equal(namingModule.areAllNotebookPlaceholdersFilled({ name: 'No placeholders', steps: [] }, {}), false);
+  assert.equal(namingModule.resolveNotebookExperimentNameSource({
+    protocolName: 'Expression',
+    experimentName: 'Expression'
+  }, protocol), 'protocol');
+  assert.equal(namingModule.resolveNotebookExperimentNameSource({
+    protocolName: 'Expression',
+    experimentName: 'Overnight GFP expression'
+  }, protocol), 'user');
+  assert.equal(namingModule.resolveNotebookExperimentNameSource({
+    protocolName: 'Expression',
+    experimentName: 'Generated expression name',
+    experimentNameSource: 'generated'
+  }, protocol), 'generated');
+});
 test('biology-notebook edits only the saved page protocol copy and keeps the original protocol unchanged', () => {
   const document = createMockDocument([
     'biology-notebook-project-select',
@@ -412,6 +625,121 @@ test('biology-notebook saves and reopens multiple result tables with Tabulator',
   assert.equal(reopenedTables[1].data[0][reopenedTables[1].columns[0].field], 'Induced');
   assert.match(document.getElementById('biology-notebook-result-table-status').textContent, /2 tables/i);
   assert.ok(persistCalls >= 1);
+});
+
+test('biology-notebook creates a result table from a placeholder variable', () => {
+  const document = createMockDocument([
+    'biology-notebook-result-table-wrap',
+    'biology-notebook-result-table',
+    'biology-notebook-result-table-status',
+    'biology-notebook-add-table-btn',
+    'biology-notebook-add-table-row-btn',
+    'biology-notebook-add-table-column-btn',
+    'biology-notebook-remove-table-btn'
+  ]);
+
+  class MockTabulator {
+    static instances = [];
+
+    constructor(host, options = {}) {
+      this.host = host;
+      this.data = Array.isArray(options.data) ? options.data.map((row) => ({ ...row })) : [];
+      this.columns = Array.isArray(options.columns) ? options.columns.map((column) => ({ ...column })) : [];
+      MockTabulator.instances.push(this);
+    }
+
+    destroy() {}
+
+    getData() {
+      return this.data.map((row) => ({ ...row }));
+    }
+
+    getColumns() {
+      return this.columns.map((column) => ({
+        getField: () => column.field,
+        getDefinition: () => ({ ...column })
+      }));
+    }
+  }
+
+  const resultTableModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'results', 'result-table-controller.js'), {});
+  const resultTableController = resultTableModule.createResultTableController({
+    host: document.getElementById('biology-notebook-result-table'),
+    statusEl: document.getElementById('biology-notebook-result-table-status'),
+    wrapEl: document.getElementById('biology-notebook-result-table-wrap'),
+    addBtn: document.getElementById('biology-notebook-add-table-btn'),
+    addRowBtn: document.getElementById('biology-notebook-add-table-row-btn'),
+    addColBtn: document.getElementById('biology-notebook-add-table-column-btn'),
+    removeBtn: document.getElementById('biology-notebook-remove-table-btn'),
+    createId: (() => {
+      let index = 0;
+      return () => `placeholder-${index += 1}`;
+    })(),
+    TabulatorLib: MockTabulator
+  });
+
+  resultTableController.onAddFromPlaceholder({
+    name: 'Incubation temperature',
+    value: '37 °C'
+  });
+
+  const table = resultTableController.getCurrentTables()[0];
+  assert.equal(table.columns.map((column) => column.title).join('|'), 'Variable|Value');
+  assert.equal(table.rows.length, 1);
+  assert.equal(table.rows[0][table.columns[0].field], 'Incubation temperature');
+  assert.equal(table.rows[0][table.columns[1].field], '37 °C');
+  assert.equal(MockTabulator.instances.length, 1);
+});
+
+test('biology-notebook placeholder context menu exposes the table action for regular variables', () => {
+  const action = {
+    closest(selector) {
+      return selector === '[data-placeholder-add-table]' ? action : null;
+    }
+  };
+  const menu = {
+    hidden: true,
+    style: {},
+    listeners: {},
+    setAttribute() {},
+    addEventListener(type, handler) {
+      this.listeners[type] = handler;
+    },
+    querySelector(selector) {
+      return selector === '[data-placeholder-add-table]' ? action : null;
+    }
+  };
+  const document = {
+    documentElement: { clientWidth: 800, clientHeight: 600 },
+    body: { append() {} },
+    createElement() {
+      return menu;
+    }
+  };
+  const menuModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'samples', 'sample-link-menu.js'), {});
+  let receivedState = null;
+  const controller = menuModule.createSampleLinkMenuController({
+    doc: document,
+    win: { innerWidth: 800, innerHeight: 600 },
+    safeText: shared.safeText,
+    onAddTable: (state) => { receivedState = state; }
+  });
+  const wrap = {
+    dataset: { placeholderName: 'Incubation temperature' },
+    querySelector: () => ({ value: '37 °C' })
+  };
+  const token = { dataset: { nbKeyRef: 'step-1:temperature' } };
+
+  controller.open({ wrap, token, x: 100, y: 100 });
+  menu.listeners.click({
+    target: action,
+    preventDefault() {}
+  });
+
+  assert.equal(receivedState.key, 'step-1:temperature');
+  assert.equal(receivedState.placeholderName, 'Incubation temperature');
+  assert.equal(receivedState.value, '37 °C');
+  assert.equal(menu.hidden, true);
 });
 test('biology-notebook sidebar records bench calculations and inserts readable notes', async () => {
   const document = createMockDocument([

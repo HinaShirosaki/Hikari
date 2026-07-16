@@ -65,14 +65,18 @@ export function createSequenceEditActions(ctx) {
   }
 
   function updateEditState({ current, nextRecord, nextRecords, selectedIndex, nextSequence, edit }) {
+    // Keep the earliest original as the design baseline: if the prior design
+    // source ended on exactly this edit's starting sequence, the edits chain, so
+    // carry its original forward instead of resetting to the pre-edit sequence.
+    const existing = state.sequenceEditDesignSource;
+    const baseline = existing
+      && normalizeSequenceText(existing.editedSequence || '') === normalizeSequenceText(edit.sequence)
+      ? existing.originalSequence
+      : edit.sequence;
     state.sequenceEditDesignSource = buildSequenceEditDesignSource({
       record: current,
-      previousSequence: edit.sequence,
-      nextSequence,
-      mode: edit.mode,
-      start: edit.start,
-      end: edit.end,
-      replacement: edit.replacement
+      originalSequence: baseline,
+      nextSequence
     });
     state.cloningDesign = {};
     if (typeof nextRecord.quality === 'string' && nextRecord.quality.length) {

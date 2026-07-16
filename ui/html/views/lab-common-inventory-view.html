@@ -6,7 +6,7 @@
               <button type="button" id="chemical-open-add-btn" class="primary-btn chemical-add-btn">Add Chemical</button>
               <button type="button" id="chemical-import-btn" class="ghost-btn chemical-import-btn">Import Chemicals</button>
               <input id="chemical-import-file" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-              <p id="chemical-import-status" class="small-note chemical-import-status">Import CSV, XLS, or XLSX. Similar column names are matched automatically.</p>
+              <p id="chemical-import-status" class="small-note chemical-import-status" hidden></p>
               <label class="chemical-search-field">
                 Search
                 <input id="chemical-search" type="search" placeholder="Name, CAS, vendor, catalog, location" />
@@ -38,7 +38,7 @@
         </aside>
 
         <div class="chemical-main left-rail-template__main">
-          <div class="panel chemical-list-panel">
+          <div class="chemical-list-panel">
             <div class="chemical-panel-head">
               <div class="chemical-panel-copy">
                 <h2>Chemicals</h2>
@@ -49,10 +49,10 @@
             <div id="chemical-list" class="list-table"></div>
           </div>
 
-          <div id="chemical-detail-panel" class="panel chemical-detail-panel" hidden>
+          <div id="chemical-detail-panel" class="chemical-detail-panel" hidden>
             <h3 id="chemical-detail-title">Chemical Details</h3>
             <div id="chemical-detail-content" class="stack-form"></div>
-            <div class="card-actions">
+            <div class="chemical-detail-actions">
               <button type="button" id="chemical-detail-edit-btn" class="ghost-btn">Edit</button>
               <button type="button" id="chemical-detail-delete-btn" class="danger-btn">Delete</button>
             </div>
@@ -67,7 +67,7 @@
               <h3 id="chemical-dialog-title">Add Chemical</h3>
               <p class="small-note">Create or update a chemical record.</p>
             </div>
-            <button type="button" id="chemical-dialog-close-btn" class="ghost-btn" aria-label="Close chemical dialog">Close</button>
+            <button type="button" id="chemical-dialog-close-btn" class="app-dialog-close-btn" aria-label="Close chemical dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
 
           <form id="chemical-form" class="form-grid">

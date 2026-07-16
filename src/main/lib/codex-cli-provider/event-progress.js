@@ -11,6 +11,9 @@ const {
 } = require('./event-values');
 const { summarizeCodexToolCallForProgress } = require('./event-tool-summary');
 const { cleanText } = require('./utils');
+const {
+  extractPlotlyGraphArtifactFromToolOutput
+} = require('../../agent/runtime/tool-artifacts/plotly-graph.js');
 
 function extractCodexJsonEventThinking(event = {}) {
   if (!isCodexThinkingEvent(event)) {
@@ -76,9 +79,11 @@ function extractCodexJsonEventToolCall(event = {}) {
       || invocation.tool
       || invocation.name
       || item.name
+      || item.tool
       || item.tool_name
       || item.toolName
       || call.name
+      || call.tool
       || name,
     160
   ) || 'codex-tool';
@@ -133,6 +138,7 @@ function extractCodexJsonEventToolCall(event = {}) {
     outputText,
     directText: detailText
   });
+  const plotlyGraphArtifact = extractPlotlyGraphArtifactFromToolOutput(toolName, outputValue, { status });
   return {
     type: 'codex_tool_call',
     event_type: type,
@@ -140,7 +146,8 @@ function extractCodexJsonEventToolCall(event = {}) {
     tool_name: toolName,
     call_id: cleanText(source.call_id || source.callId || item.call_id || item.callId || call.call_id || call.callId, 160),
     tool_call_text: toolCallText,
-    tool_output_text: outputText
+    tool_output_text: outputText,
+    ...(plotlyGraphArtifact ? { plotly_graph_artifact: plotlyGraphArtifact } : {})
   };
 }
 

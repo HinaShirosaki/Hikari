@@ -6,8 +6,7 @@ import {
   blockTitle,
   buildAssigneeOptions,
   buildDirectionMaps,
-  notebookEntryLabel,
-  projectNameById
+  notebookEntryLabel
 } from './presentation.js';
 import {
   buildWorkflowExecutionLayout,
@@ -23,15 +22,12 @@ export function createWorkflowRenderer(config = {}) {
   const elements = config?.elements || {};
   const safeText = typeof config?.safeText === 'function' ? config.safeText : String;
   const getBlockType = config?.getBlockType || (() => '');
-  const normalizePlainTextBlock = config?.normalizePlainTextBlock || ((value) => String(value || '').trim());
   const uniqueStrings = config?.uniqueStrings || ((values) => values || []);
   const parseTimestamp = config?.parseTimestamp || (() => 0);
   const formatTimestamp = config?.formatTimestamp || (() => '-');
   const getRenderGraphEditor = typeof config?.getRenderGraphEditor === 'function'
     ? config.getRenderGraphEditor
     : (() => null);
-  const renderStepPlaceholderRegex = /\{\{ph:[^}]+\}\}/g;
-
   function getSelectedValues(select) {
     if (!select) {
       return [];
@@ -61,29 +57,6 @@ export function createWorkflowRenderer(config = {}) {
     });
   }
 
-  function templateNameById(templateId) {
-    const template = (state.workflowTemplates || []).find((item) => item.id === templateId);
-    return template?.name || 'Custom Workflow';
-  }
-
-  function humanizeProtocolStep(step) {
-    const placeholders = Array.isArray(step?.placeholders) ? step.placeholders : [];
-    let placeholderIndex = 0;
-    const source = String(step?.text || '').trim();
-    if (!source) {
-      return '';
-    }
-    const replaced = source.replace(renderStepPlaceholderRegex, () => {
-      const placeholder = placeholders[placeholderIndex];
-      placeholderIndex += 1;
-      return `[${placeholder?.name || 'value'}]`;
-    });
-    if (placeholders.length && replaced === source) {
-      return `${source} ${placeholders.map((placeholder) => `[${placeholder.name}]`).join(' ')}`.trim();
-    }
-    return replaced;
-  }
-
   function collectProtocolPlaceholderFields(protocol) {
     if (!protocol || !Array.isArray(protocol.steps)) {
       return [];
@@ -95,7 +68,6 @@ export function createWorkflowRenderer(config = {}) {
         const key = `${step.id}:${placeholder.id}`;
         fields.push({
           key,
-          stepText: humanizeProtocolStep(step),
           placeholderName: placeholder.name
         });
       });
@@ -479,38 +451,27 @@ export function createWorkflowRenderer(config = {}) {
       : '';
     const placeholderMarkup = protocol && placeholderFields.length
       ? `
-        <table class="workflow-placeholder-table">
-          <tbody>
-            ${placeholderFields.map((field) => `
-              <tr>
-                <th scope="row">${safeText(field.placeholderName)}</th>
-                <td>
-                  <input
-                    data-workflow-step-value="${safeText(field.key)}"
-                    data-workflow-entry-id="${safeText(entry.id)}"
-                    data-workflow-workflow-id="${safeText(workflow.id)}"
-                    data-workflow-block-id="${safeText(block.id)}"
-                    value="${safeText(stepState.values[field.key] || '')}"
-                    aria-label="${safeText(field.placeholderName)}"
-                  />
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
+        <div class="workflow-placeholder-list">
+          ${placeholderFields.map((field) => `
+            <label class="workflow-placeholder-field">
+              <span class="workflow-placeholder-field-label">${safeText(field.placeholderName)}</span>
+              <input
+                data-workflow-step-value="${safeText(field.key)}"
+                data-workflow-entry-id="${safeText(entry.id)}"
+                data-workflow-workflow-id="${safeText(workflow.id)}"
+                data-workflow-block-id="${safeText(block.id)}"
+                value="${safeText(stepState.values[field.key] || '')}"
+                placeholder="Enter value"
+                aria-label="${safeText(field.placeholderName)}"
+              />
+            </label>
+          `).join('')}
+        </div>
       `
       : '';
     const emptyMarkup = !instructionMarkup && !placeholderMarkup
       ? '<p class="small-note workflow-step-empty">No placeholders.</p>'
       : '';
-    const statusOptions = [
-      { value: 'completed', className: 'is-finished', title: 'Finished' },
-      { value: 'failed', className: 'is-failed', title: 'Failed' },
-      { value: 'pending', className: 'is-pending', title: 'Pending' },
-      { value: 'not_done', className: 'is-empty', title: 'Not done' }
-    ];
-    const currentStatus = stepState.status || 'not_done';
-
     const classNames = ['workflow-step-inline'];
     if (options.floating) {
       classNames.push('workflow-step-popover');
@@ -530,22 +491,6 @@ export function createWorkflowRenderer(config = {}) {
         ${instructionMarkup}
         ${placeholderMarkup}
         ${emptyMarkup}
-        <div class="workflow-step-status-picker" aria-label="Set step status">
-          ${statusOptions.map((option) => `
-            <button
-              type="button"
-              class="workflow-step-status-option ${option.className}${currentStatus === option.value ? ' is-selected' : ''}"
-              data-workflow-step-status="${safeText(option.value)}"
-              data-workflow-entry-id="${safeText(entry.id)}"
-              data-workflow-workflow-id="${safeText(workflow.id)}"
-              data-workflow-block-id="${safeText(block.id)}"
-              title="${safeText(option.title)}"
-              aria-label="${safeText(option.title)}"
-            >
-              <span class="workflow-step-status-dot ${option.className}"></span>
-            </button>
-          `).join('')}
-        </div>
       </div>
     `;
   }
@@ -800,7 +745,7 @@ export function createWorkflowRenderer(config = {}) {
     const anchorRect = anchor.getBoundingClientRect();
     const baseLeft = (anchorRect.left - scrollRect.left) + scrollRegion.scrollLeft + (anchorRect.width / 2);
     const baseTop = (anchorRect.bottom - scrollRect.top) + scrollRegion.scrollTop + 8;
-    const popoverWidth = popover.offsetWidth || 230;
+    const popoverWidth = popover.offsetWidth || 300;
     const minLeft = scrollRegion.scrollLeft + (popoverWidth / 2) + 12;
     const maxLeft = scrollRegion.scrollLeft + scrollRegion.clientWidth - (popoverWidth / 2) - 12;
     const clampedLeft = Math.min(Math.max(baseLeft, minLeft), Math.max(minLeft, maxLeft));

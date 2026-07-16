@@ -4,9 +4,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
   with (scope) {
     test('controller core routes Codex provider through the Codex-owned agent runtime', async () => {
       const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
-      const { createAgentRuntimeSupport } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'runtime', 'agent-runtime-support.js'));
+      const { createAgentRuntimeSupport } = require(path.join(__dirname, 'src', 'main', 'agent', 'runtime', 'agent-runtime-support.js'));
       const runtimeSupport = createAgentRuntimeSupport({});
-      let parserCallCount = 0;
       let codexRunInput = null;
       let setModelValue = '';
       let setReasoningValue = '';
@@ -53,10 +52,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
           },
           requestWebSearch: async () => {
             throw new Error('Selection insight web-search path should be skipped for Codex-owned lifecycle.');
-          },
-          async requestIntentParserPayload() {
-            parserCallCount += 1;
-            throw new Error('Intent parser should be skipped for Codex-owned lifecycle.');
           }
         },
         observability: {
@@ -131,8 +126,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
         executeInventoryLookup: async () => {
           throw new Error('Inventory lookup should not run before Codex agent runtime.');
         },
-        executeRecordLookup: async () => {
-          throw new Error('Record lookup should not run before Codex agent runtime.');
+        executeNotebookLookup: async () => {
+          throw new Error('Notebook lookup should not run before Codex agent runtime.');
         },
         getAgentChatLogPath: () => '',
         getDefaultDataFilePath: () => '/tmp/hikari-data.json',
@@ -202,7 +197,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
         }
       });
 
-      assert.equal(parserCallCount, 0);
       assert.equal(setModelValue, 'gpt-5.4');
       assert.equal(setReasoningValue, 'high');
       assert.equal(result.ok, true);
@@ -229,13 +223,11 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
       assert.equal(lifecycleStages.includes('controller_codex_agent'), true);
       assert.equal(lifecycleStages.includes('controller_intent_only'), false);
     });
-    test('controller core refuses API agent routing when the release feature flag is disabled', async () => {
+    test('Codex-only controller refuses API agent routing', async () => {
       const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
-      let parserCallCount = 0;
       const lifecycleStages = [];
       const controller = createAgentControllerCore({
         deps: {
-          ALLOW_API_AGENT: false,
           LLM_PROVIDERS: {
             OPENAI: 'openai',
             CODEX: 'codex'
@@ -256,11 +248,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
             enabled: false,
             rows: [],
             entries: []
-          }),
-          async requestIntentParserPayload() {
-            parserCallCount += 1;
-            throw new Error('Disabled API agent must not start its parser.');
-          }
+          })
         },
         observability: {
           recordLifecycleEvent: (_recorder, event = {}) => {
@@ -307,7 +295,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
         }
       });
 
-      assert.equal(parserCallCount, 0);
       assert.equal(result.ok, false);
       assert.equal(result.provider, 'codex');
       assert.match(result.error, /Codex agent only/);

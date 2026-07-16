@@ -40,7 +40,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart05(contex
           entry: JSON.stringify({
             type: 'agent-lifecycle',
             requestId: 'req-1',
-            stage: 'parser_completed',
+            stage: 'controller_codex_agent',
             status: 'ok',
             timestamp: '2026-03-21T10:00:01.000Z'
           })
@@ -50,10 +50,10 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart05(contex
           entry: JSON.stringify({
             type: 'agent-llm-trace',
             requestId: 'req-1',
-            stage: 'intent_parser',
-            provider: 'openai',
-            model: 'gpt-5',
-            summary: 'Intent parsed.',
+            stage: 'codex_cli',
+            provider: 'codex',
+            model: 'gpt-5.4',
+            summary: 'Codex request completed.',
             timestamp: '2026-03-21T10:00:02.000Z',
             request_payload: { prompt: '...' },
             response_payload: { primary_intent: 'inventory_lookup' }
@@ -79,9 +79,9 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart05(contex
         assert.equal(Array.isArray(replay.traces), true);
         assert.equal(replay.events.length, 1);
         assert.equal(replay.traces.length, 1);
-        assert.equal(replay.traces[0].stage, 'intent_parser');
+        assert.equal(replay.traces[0].stage, 'codex_cli');
         assert.equal(Array.isArray(replay.summary.trace_stages), true);
-        assert.equal(replay.summary.trace_stages.includes('intent_parser'), true);
+        assert.equal(replay.summary.trace_stages.includes('codex_cli'), true);
       } finally {
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }

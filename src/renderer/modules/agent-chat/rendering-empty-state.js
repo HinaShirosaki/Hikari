@@ -9,8 +9,8 @@ export function renderEmptyHistory({ historyNode, state, safeText }) {
       <h3>${safeText(projectName ? `Start a thread for ${projectName}` : 'Start a new lab thread')}</h3>
       <p class="small-note">
         ${safeText(projectName
-          ? 'Ask for planning help, record lookups, literature grounding, or a next-step recommendation within the selected project.'
-          : 'Ask for planning help, record lookups, literature grounding, or a next-step recommendation across your lab data.')}
+          ? 'Ask for planning help, notebook lookups, literature grounding, or a next-step recommendation within the selected project.'
+          : 'Ask for planning help, notebook lookups, literature grounding, or a next-step recommendation across your lab data.')}
       </p>
       <div class="agent-empty-prompt-list">
         <button type="button" class="ghost-btn agent-empty-prompt" data-agent-suggest-prompt="Summarize the latest progress and open questions for this project.">Summarize recent progress</button>

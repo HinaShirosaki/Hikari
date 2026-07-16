@@ -1,6 +1,9 @@
 'use strict';
 
-const { isAgentRequestAbortError } = require('../../helpers/agent/shared/agent-request-context.js');
+const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
+const {
+  extractPlotlyGraphArtifactFromToolOutput
+} = require('../../agent/runtime/tool-artifacts/plotly-graph.js');
 
 function createAgentLifecycleService({
   cleanText,
@@ -36,6 +39,13 @@ function createAgentLifecycleService({
     if (!stage) {
       return null;
     }
+    const toolName = cleanText(source.tool_name, 120);
+    const status = cleanText(source.status, 20) || 'ok';
+    const meta = source.meta && typeof source.meta === 'object' ? { ...source.meta } : {};
+    const plotlyGraphArtifact = extractPlotlyGraphArtifactFromToolOutput(toolName, source.tool_output, { status });
+    if (plotlyGraphArtifact?.figure?.data?.length) {
+      meta.plotly_graph_artifact = plotlyGraphArtifact;
+    }
     return {
       client_request_id: cleanText(clientRequestId, 120),
       request_id: cleanText(requestId || source.requestId, 80),
@@ -43,10 +53,10 @@ function createAgentLifecycleService({
       timestamp: cleanText(source.timestamp, 80) || new Date().toISOString(),
       routing_intent: cleanText(source.routing_intent, 80),
       stage,
-      status: cleanText(source.status, 20) || 'ok',
-      tool_name: cleanText(source.tool_name, 120),
+      status,
+      tool_name: toolName,
       message: cleanText(source.message, 360),
-      meta: source.meta && typeof source.meta === 'object' ? source.meta : {}
+      meta
     };
   }
 

@@ -1,15 +1,15 @@
 import {
-  defaultLlmEndpointForProvider,
   normalizeAgentLlmProvider,
   normalizeReasoningEffort
-} from '../llm-provider-config.generated.js';
-import { normalizePaperAgentChatSessions } from '../agent-chat/scoped-state.js';
+} from '../codex-model-catalog.generated.js';
+import { normalizePaperAgentChatSessions } from './agent-chat-normalizer.js';
 import {
   normalizeSampleInventoryLocations,
   normalizeSampleTypeLabels
-} from '../sample-inventory-settings.js';
+} from '../../lib/inventory-settings.js';
 import { defaultState, STARTUP_DEFAULT_VIEW_IDS } from './defaults.js';
 import { normalizeAppearanceMode } from './appearance.js';
+import { normalizePreferredJournalList } from '../../lib/preferred-journals.js';
 import {
   normalizeDashboardActiveTimers,
   normalizeDashboardIncubationLocations,
@@ -28,49 +28,54 @@ function asObject(value) {
 }
 
 function normalizeLlmSettings(rawLlm) {
-  const legacyApi = String(rawLlm.api || '').trim();
-  const legacyApiLooksLikeEndpoint = /^[a-z]+:\/\//i.test(legacyApi);
-  const legacyCodexMarker = legacyApi.toLowerCase().startsWith('codex://');
-  const legacyEndpoint = legacyApiLooksLikeEndpoint && !legacyCodexMarker ? legacyApi : '';
-  const legacyApiKey = legacyApi && !legacyApiLooksLikeEndpoint ? legacyApi : '';
-  const provider = normalizeAgentLlmProvider(rawLlm.provider, rawLlm.apiEndpoint || legacyApi || legacyEndpoint);
+  const persistedCodexSettings = { ...rawLlm };
+  delete persistedCodexSettings.api;
+  delete persistedCodexSettings.apiEndpoint;
+  delete persistedCodexSettings.apiKey;
+  const provider = normalizeAgentLlmProvider();
   const model = String(rawLlm.model || '').trim();
-  const apiEndpoint = provider === 'codex'
-    ? ''
-    : (String(rawLlm.apiEndpoint || legacyEndpoint || '').trim() || defaultLlmEndpointForProvider(provider));
   return {
     ...defaultState.settings.llm,
-    ...rawLlm,
+    ...persistedCodexSettings,
     provider,
     model,
-    reasoningEffort: normalizeReasoningEffort(provider, model, rawLlm.reasoningEffort, apiEndpoint),
-    apiEndpoint,
-    apiKey: provider === 'codex' ? '' : String(rawLlm.apiKey || legacyApiKey).trim(),
-    api: legacyApi
+    reasoningEffort: normalizeReasoningEffort(provider, model, rawLlm.reasoningEffort)
   };
 }
 
 function normalizePreferredJournals(rawSettings) {
-  const rawList = Array.isArray(rawSettings.preferredJournals)
-    ? rawSettings.preferredJournals
-    : [];
-  const legacyValue = String(rawSettings.preferredJournal || '').trim();
-  const candidates = [
-    ...rawList,
-    ...(legacyValue ? legacyValue.split(/[;\n]+/) : [])
-  ];
-  const seen = new Set();
-  const journals = [];
-  candidates.forEach((candidate) => {
-    const journal = String(candidate || '').trim();
-    const key = journal.toLowerCase();
-    if (!journal || seen.has(key)) {
-      return;
-    }
-    seen.add(key);
-    journals.push(journal);
-  });
-  return journals.slice(0, 12);
+  return Array.from(normalizePreferredJournalList([
+    rawSettings.preferredJournals,
+    rawSettings.preferred_journals,
+    rawSettings.preferredJournal,
+    rawSettings.preferred_journal
+  ]));
+}
+
+function normalizePluginEntries(rawPlugins) {
+  if (!Array.isArray(rawPlugins)) {
+    return [];
+  }
+  const seenIds = new Set();
+  return rawPlugins
+    .map((entry) => {
+      const raw = asObject(entry);
+      return {
+        id: String(raw.id || '').trim(),
+        name: String(raw.name || '').trim(),
+        description: String(raw.description || '').trim(),
+        path: String(raw.path || '').trim(),
+        entryUrl: String(raw.entryUrl || '').trim(),
+        enabled: raw.enabled !== false
+      };
+    })
+    .filter((entry) => {
+      if (!entry.id || !entry.entryUrl || seenIds.has(entry.id)) {
+        return false;
+      }
+      seenIds.add(entry.id);
+      return true;
+    });
 }
 
 function normalizeSettings(source) {
@@ -152,7 +157,8 @@ function normalizeSettings(source) {
     sampleInventoryLocations: normalizeSampleInventoryLocations(rawSettings.sampleInventoryLocations),
     sampleTypeLabels: normalizeSampleTypeLabels(rawSettings.sampleTypeLabels),
     preferredJournals,
-    preferredJournal: preferredJournals.join('; ')
+    preferredJournal: preferredJournals.join('; '),
+    plugins: normalizePluginEntries(rawSettings.plugins)
   };
 }
 
@@ -175,7 +181,9 @@ function normalizeGrowthMetrics(source) {
 }
 
 export function normalizeState(parsed) {
-  const source = parsed || {};
+  const source = { ...asObject(parsed) };
+  delete source.objectGraph;
+  delete source.synthesisChemistryDrafts;
   return {
     ...structuredClone(defaultState),
     ...source,
@@ -193,11 +201,16 @@ export function normalizeState(parsed) {
       projectId: String(source.agentChat?.projectId || ''),
       currentSessionId: String(source.agentChat?.currentSessionId || ''),
       sessions: Array.isArray(source.agentChat?.sessions) ? source.agentChat.sessions : [],
-      messages: Array.isArray(source.agentChat?.messages) ? source.agentChat.messages : []
+      messages: Array.isArray(source.agentChat?.messages) ? source.agentChat.messages : [],
+      folders: Array.isArray(source.agentChat?.folders) ? source.agentChat.folders : [],
+      sessionFolderIds: source.agentChat?.sessionFolderIds && typeof source.agentChat.sessionFolderIds === 'object' && !Array.isArray(source.agentChat.sessionFolderIds)
+        ? source.agentChat.sessionFolderIds
+        : {},
+      selectedFolderId: String(source.agentChat?.selectedFolderId || 'general'),
+      expandedFolderIds: Array.isArray(source.agentChat?.expandedFolderIds) ? source.agentChat.expandedFolderIds : []
     },
     paperAgentChatSessions: normalizePaperAgentChatSessions(source.paperAgentChatSessions),
     notebookEntries: Array.isArray(source.notebookEntries) ? source.notebookEntries : [],
-    synthesisChemistryDrafts: asObject(source.synthesisChemistryDrafts),
     assays: Array.isArray(source.assays) ? source.assays : [],
     gelAnalyses: Array.isArray(source.gelAnalyses) ? source.gelAnalyses : [],
     samples: (Array.isArray(source.samples) ? source.samples : []).map((sample) => normalizeSampleRecord(sample)),

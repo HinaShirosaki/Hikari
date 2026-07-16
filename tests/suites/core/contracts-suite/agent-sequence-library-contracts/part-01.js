@@ -106,6 +106,63 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
+    test('sequence library helper hydrates alignment source files from entry folders when metadata is incomplete', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-alignment-hydration-'));
+      try {
+        const saved = await sequenceLibrary.upsertSequenceEntry({
+          storagePath: storageRoot,
+          name: 'AlignmentHost',
+          status: 'saved',
+          sourceFormat: 'genbank',
+          topology: 'linear',
+          sequenceLength: 12,
+          featureCount: 0,
+          gbkText: 'LOCUS       AlignmentHost    12 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtacgt\n//\n',
+          htmlText: '<html><body>alignment host</body></html>'
+        });
+
+        const alignmentsDir = path.join(storageRoot, 'SequenceViewer', 'entries', saved.entry.id, 'alignments');
+        const manifestSessionDir = path.join(alignmentsDir, 'legacy_manifest_session');
+        const folderOnlySessionDir = path.join(alignmentsDir, 'folder_only_session');
+        await fsPromises.mkdir(manifestSessionDir, { recursive: true });
+        await fsPromises.mkdir(folderOnlySessionDir, { recursive: true });
+        await fsPromises.writeFile(
+          path.join(manifestSessionDir, 'legacy_read.fasta'),
+          '>legacy_read\nACGTACGTAA\n',
+          'utf8'
+        );
+        await fsPromises.writeFile(
+          path.join(folderOnlySessionDir, 'folder_only_read.fasta'),
+          '>folder_only_read\nTTGGCCAATT\n',
+          'utf8'
+        );
+        await fsPromises.writeFile(path.join(alignmentsDir, 'alignment-sessions.json'), JSON.stringify({
+          sessions: [{
+            id: 'legacy_manifest_session',
+            name: 'Legacy manifest read',
+            referenceRecordName: 'AlignmentHost',
+            sourceKind: 'file',
+            sourceFormat: 'fasta',
+            originalFileName: 'legacy_read.fasta',
+            storedSourceRelPath: `entries/${saved.entry.id}/alignments/legacy_manifest_session/legacy_read.fasta`
+          }]
+        }, null, 2), 'utf8');
+
+        const fetched = await sequenceLibrary.getSequenceEntry({
+          storagePath: storageRoot,
+          id: saved.entry.id,
+          includeAlignments: true
+        });
+        const alignmentsById = new Map(fetched.alignments.map((session) => [session.id, session]));
+        assert.equal(fetched.alignments.length, 2);
+        assert.equal(alignmentsById.get('legacy_manifest_session')?.queryRecord?.sequence, 'ACGTACGTAA');
+        assert.equal(alignmentsById.get('legacy_manifest_session')?.storedSourcePath.endsWith('legacy_read.fasta'), true);
+        assert.equal(alignmentsById.get('folder_only_session')?.queryRecord?.sequence, 'TTGGCCAATT');
+        assert.equal(alignmentsById.get('folder_only_session')?.originalFileName, 'folder_only_read.fasta');
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
     test('sequence library helper indexes feature sequences and traces them back to host vectors', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-feature-search-'));
       try {
@@ -202,8 +259,8 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
           htmlText: '<html><body>protein vector</body></html>'
         });
 
-        const { loadSqlJs } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-utils.js'));
-        const { readSqlRows } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-sql-read.js'));
+        const { loadSqlJs } = require(path.join(__dirname, 'src', 'main', 'storage', 'storage-utils.js'));
+        const { readSqlRows } = require(path.join(__dirname, 'src', 'main', 'storage', 'storage-sql-read.js'));
         const sqlitePath = path.join(storageRoot, 'SequenceViewer', 'sequence-library.sqlite');
         const bytes = await fsPromises.readFile(sqlitePath);
         const SQL = await loadSqlJs();

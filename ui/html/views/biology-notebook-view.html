@@ -2,9 +2,10 @@
       <div id="biology-notebook-layout" class="biology-notebook-layout left-rail-template">
         <aside id="biology-notebook-rail" class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="left-rail-template__pinned">
-            <select id="biology-notebook-project-select" hidden aria-hidden="true" tabindex="-1">
-              <option value="">Select project</option>
-            </select>
+            <button id="biology-notebook-new-experiment-btn" class="ghost-btn biology-notebook-new-experiment-btn" type="button">
+              <span aria-hidden="true">＋</span>
+              <span>New Experiment</span>
+            </button>
           </div>
           <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
           <div id="biology-notebook-project-context-menu" class="biology-notebook-context-menu" hidden>
@@ -14,25 +15,8 @@
 
         <div class="biology-notebook-viewer-column left-rail-template__main">
           <button id="biology-notebook-tool-mobile-toggle" class="ghost-btn biology-notebook-tool-mobile-toggle" type="button" aria-expanded="false">Bench Tools</button>
-          <div id="biology-notebook-page-starter" class="panel biology-notebook-page-starter">
-            <div class="biology-notebook-page-starter-head">
-              <div>
-                <p class="small-note biology-notebook-viewer-kicker">Add Notebook Page</p>
-                <h3 id="biology-notebook-page-starter-project">Choose a project folder</h3>
-              </div>
-            </div>
-            <div class="stack-form biology-notebook-select-stack biology-notebook-page-starter-controls">
-              <label>
-                Search Protocol
-                <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
-              </label>
-              <label>
-                Select Protocol
-                <select id="biology-notebook-protocol-select">
-                  <option value="">Select protocol</option>
-                </select>
-              </label>
-            </div>
+          <div id="biology-notebook-page-starter" class="biology-notebook-page-starter" hidden aria-hidden="true">
+            <span id="biology-notebook-page-starter-project"></span>
           </div>
 
           <div id="biology-notebook-empty-state" class="panel biology-notebook-empty-state">
@@ -59,70 +43,70 @@
               </div>
             </div>
 
-            <details class="biology-notebook-viewer-section" open>
-              <summary class="biology-notebook-viewer-section-summary">
-                <span>Protocol</span>
-                <span class="biology-notebook-viewer-section-chevron" aria-hidden="true"></span>
-              </summary>
-              <div class="biology-notebook-viewer-section-body">
-                <div id="biology-notebook-protocol-editor" class="biology-notebook-protocol-editor" hidden>
-                  <p class="small-note biology-notebook-protocol-editor-note">Edits here only change this notebook page copy. The original protocol stays unchanged.</p>
-                  <label>
-                    Page Protocol Name
-                    <input id="biology-notebook-page-protocol-name" type="text" placeholder="Rename this page copy" />
-                  </label>
-                  <label>
-                    Page Protocol Steps
-                    <textarea id="biology-notebook-page-protocol-steps" rows="8" placeholder="• Add buffer [Volume]&#10;• Incubate for [Time]"></textarea>
-                  </label>
-                  <p class="small-note biology-notebook-protocol-editor-note">Use one step per line. Keep fillable values as `[Volume]`, `[Buffer]`, `[Time]`, and so on.</p>
-                </div>
-                <div id="biology-notebook-steps" class="notebook-steps"></div>
-              </div>
-            </details>
-
-            <section class="biology-notebook-viewer-section biology-notebook-viewer-section-static">
-              <div class="biology-notebook-viewer-section-summary biology-notebook-viewer-section-summary-static">
-                <span>Notes / Results</span>
-              </div>
-              <div class="biology-notebook-viewer-section-body">
-                <div class="biology-notebook-linked-toolbar">
-                  <button id="biology-notebook-add-gel-btn" class="ghost-btn" type="button">Add Gel</button>
-                  <button id="biology-notebook-add-assay-btn" class="ghost-btn" type="button">Add Assay</button>
-                  <button id="biology-notebook-add-samples-btn" class="ghost-btn" type="button">Add Samples</button>
-                  <button id="biology-notebook-add-table-btn" class="ghost-btn" type="button">Add Table</button>
-                  <button id="biology-notebook-add-table-row-btn" class="ghost-btn" type="button" hidden>Add Row</button>
-                  <button id="biology-notebook-add-table-column-btn" class="ghost-btn" type="button" hidden>Add Column</button>
-                  <button id="biology-notebook-remove-table-btn" class="ghost-btn" type="button" hidden>Remove Table</button>
-                </div>
-                <div id="biology-notebook-linked-results" class="biology-notebook-linked-results">
-                  <p class="small-note">Linked gel, assay, and plot previews will appear here.</p>
-                </div>
-                <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations">
-                  <p class="small-note biology-notebook-tool-calculation-empty">Recorded bench calculations will appear here.</p>
-                </div>
-                <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
-                <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
-                  <div class="biology-notebook-result-table-head">
-                    <p id="biology-notebook-result-table-status" class="small-note">Add a table to capture structured notebook results.</p>
+            <div class="biology-notebook-viewer-scroll">
+              <details class="biology-notebook-viewer-section" open>
+                <summary class="biology-notebook-viewer-section-summary">
+                  <span>Protocol</span>
+                  <span class="biology-notebook-viewer-section-chevron" aria-hidden="true"></span>
+                </summary>
+                <div class="biology-notebook-viewer-section-body">
+                  <div id="biology-notebook-protocol-editor" class="biology-notebook-protocol-editor" hidden>
+                    <p class="small-note biology-notebook-protocol-editor-note">Edits here only change this notebook page copy. The original protocol stays unchanged.</p>
+                    <label>
+                      Page Protocol Name
+                      <input id="biology-notebook-page-protocol-name" type="text" placeholder="Rename this page copy" />
+                    </label>
+                    <label>
+                      Page Protocol Steps
+                      <textarea id="biology-notebook-page-protocol-steps" rows="8" placeholder="• Add buffer [Volume]&#10;• Incubate for [Time]"></textarea>
+                    </label>
+                    <p class="small-note biology-notebook-protocol-editor-note">Use one step per line. Keep fillable values as `[Volume]`, `[Buffer]`, `[Time]`, and so on.</p>
                   </div>
-                  <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables"></div>
+                  <div id="biology-notebook-steps" class="notebook-steps"></div>
                 </div>
-                <label>
-                  Experiment Results File / Notes
-                  <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
-                </label>
-                <label>
-                  Experiment Result Files
-                  <input id="biology-notebook-result-file" type="file" multiple />
-                </label>
-                <div class="form-actions">
-                  <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
-                  <button id="clarify-save-biology-notebook-btn" class="ghost-btn" type="button">Clarify and Save</button>
-                  <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
+              </details>
+
+              <section class="biology-notebook-viewer-section biology-notebook-viewer-section-static">
+                <div class="biology-notebook-viewer-section-summary biology-notebook-viewer-section-summary-static">
+                  <span>Notes / Results</span>
                 </div>
-              </div>
-            </section>
+                <div class="biology-notebook-viewer-section-body">
+                  <div class="biology-notebook-linked-toolbar">
+                    <button id="biology-notebook-add-gel-btn" class="ghost-btn" type="button">Add Gel</button>
+                    <button id="biology-notebook-add-assay-btn" class="ghost-btn" type="button">Add Assay</button>
+                    <button id="biology-notebook-add-samples-btn" class="ghost-btn" type="button">Add Samples</button>
+                    <button id="biology-notebook-add-table-btn" class="ghost-btn" type="button">Add Table</button>
+                    <button id="biology-notebook-add-table-row-btn" class="ghost-btn" type="button" hidden>Add Row</button>
+                    <button id="biology-notebook-add-table-column-btn" class="ghost-btn" type="button" hidden>Add Column</button>
+                    <button id="biology-notebook-remove-table-btn" class="ghost-btn" type="button" hidden>Remove Table</button>
+                  </div>
+                  <div id="biology-notebook-linked-results" class="biology-notebook-linked-results">
+                  </div>
+                  <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations">
+                  </div>
+                  <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
+                  <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
+                    <div class="biology-notebook-result-table-head">
+                      <p id="biology-notebook-result-table-status" class="small-note">Add a table to capture structured notebook results.</p>
+                    </div>
+                    <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables"></div>
+                  </div>
+                  <label>
+                    Experiment Results File / Notes
+                    <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+                  </label>
+                  <label>
+                    Experiment Result Files
+                    <input id="biology-notebook-result-file" type="file" multiple />
+                  </label>
+                  <div class="form-actions">
+                    <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
+                    <button id="clarify-save-biology-notebook-btn" class="ghost-btn" type="button">Clarify and Save</button>
+                    <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
+                  </div>
+                </div>
+              </section>
+            </div>
           </div>
         </div>
 
@@ -406,6 +390,39 @@
         </aside>
       </div>
 
+      <div id="biology-notebook-experiment-dialog-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
+        <div class="biology-notebook-experiment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-experiment-dialog-title">
+          <div class="app-dialog-head">
+            <div>
+              <h3 id="biology-notebook-experiment-dialog-title">New Experiment</h3>
+              <p class="small-note">Choose a project and protocol to create a notebook experiment.</p>
+            </div>
+            <button id="biology-notebook-experiment-dialog-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close new experiment dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <form id="biology-notebook-experiment-form" class="stack-form biology-notebook-experiment-form">
+            <label>
+              Project
+              <select id="biology-notebook-project-select">
+                <option value="">Select project</option>
+              </select>
+            </label>
+            <label>
+              Search &amp; Select Protocol
+              <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." autocomplete="off" aria-controls="biology-notebook-protocol-search-results" />
+            </label>
+            <div id="biology-notebook-protocol-search-results" class="biology-notebook-protocol-search-results" role="listbox" aria-label="Matching protocols"></div>
+            <select id="biology-notebook-protocol-select" hidden aria-hidden="true" tabindex="-1">
+              <option value="">Select protocol</option>
+            </select>
+            <p id="biology-notebook-experiment-dialog-status" class="small-note" aria-live="polite"></p>
+            <div class="form-actions">
+              <button id="biology-notebook-experiment-cancel-btn" class="ghost-btn" type="button">Cancel</button>
+              <button id="biology-notebook-experiment-start-btn" class="primary-btn" type="submit">Start Experiment</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <div id="biology-notebook-project-dialog-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
         <div class="biology-notebook-project-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-project-dialog-title">
           <div class="app-dialog-head">
@@ -413,7 +430,7 @@
               <h3 id="biology-notebook-project-dialog-title">Add a project</h3>
               <p class="small-note">Create a project folder for notebook pages and linked work.</p>
             </div>
-            <button id="biology-notebook-project-dialog-close-btn" class="ghost-btn" type="button" aria-label="Close add project dialog">Close</button>
+            <button id="biology-notebook-project-dialog-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close add project dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <form id="biology-notebook-project-form" class="stack-form">
             <label>

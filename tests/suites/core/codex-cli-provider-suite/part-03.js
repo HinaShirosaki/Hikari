@@ -81,6 +81,23 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       }
     }
 
+    test('codex command timeout supports unlimited interactive turns and bounded callers', () => {
+      const { normalizeCodexCommandTimeoutMs } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'lib',
+        'codex-cli-provider',
+        'run-command.js'
+      ));
+
+      assert.equal(normalizeCodexCommandTimeoutMs(null), null);
+      assert.equal(normalizeCodexCommandTimeoutMs(45000), 45000);
+      assert.equal(normalizeCodexCommandTimeoutMs(250), 1000);
+      assert.equal(normalizeCodexCommandTimeoutMs(0), 180000);
+      assert.equal(normalizeCodexCommandTimeoutMs(), 180000);
+    });
+
     function createFakeCodexBinary(workspaceDir) {
       const fakePath = path.join(workspaceDir, 'fake-codex.js');
       const capturePath = path.join(workspaceDir, 'fake-codex-call.json');
@@ -112,7 +129,6 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'register-agent-tool-executors.js'
@@ -143,7 +159,8 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
             executors.set(name, executor);
           }
         },
-        agentLookupRuntime: {},
+        inventoryLookupRuntime: {},
+        notebookLookupRuntime: {},
         agentAppApi: {
           protocol: {
             async matchForNotebook(input) {
@@ -212,7 +229,6 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-protocol-matching.js'
@@ -262,12 +278,47 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       });
       assert.equal(weakResult.selected_protocol, null);
     });
+    test('agent tool executors defer nested web search for Codex MCP literature calls', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+      const executors = new Map();
+      let received = null;
+      registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, executor) {
+            executors.set(name, executor);
+          }
+        },
+        literatureSearchRuntime: {
+          async execute(input) {
+            received = input;
+            return { ok: true, status: 'completed' };
+          }
+        }
+      });
+
+      await executors.get('literature-search')({
+        args: { query: 'molecular glue degraders' },
+        context: {
+          agentMcp: true,
+          provider: 'codex',
+          snapshot: {}
+        }
+      });
+
+      assert.equal(received.defer_web_search_to_codex, true);
+    });
     test('codex agent runtime builds a Codex-session prompt and renders plain final text', async () => {
       const { createCodexAgentRuntime } = require(path.join(
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -379,6 +430,7 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.equal(calls[0].model, 'gpt-5.4');
       assert.equal(calls[0].reasoningEffort, 'high');
       assert.equal(calls[0].cwd, '/tmp/hikari-workspace');
+      assert.equal(calls[0].timeoutMs, null);
       assert.equal(calls[0].stream, true);
       assert.equal(typeof calls[0].onStream, 'function');
       assert.equal(calls[0].enableWebSearch, true);
@@ -386,14 +438,21 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.equal(calls[0].resumeSessionId, '');
       assert.match(calls[0].prompt, /Codex Chat Turn/);
       assert.match(calls[0].prompt, /Current user request:\nWhy was SUMO1 conjugation weak\?/);
-      assert.match(calls[0].prompt, /Protocol generation handoff:/);
+      assert.match(calls[0].prompt, /Protocol and notebook handoff:/);
       assert.match(calls[0].prompt, /call `mcp__hikari__protocol_generation` with/);
       assert.match(calls[0].prompt, /summarize that the generated protocol is ready for review/);
+      assert.match(calls[0].prompt, /Generated protocols must be executable starting protocols, not questionnaires/);
+      assert.match(calls[0].prompt, /Aim for 0-3 unresolved placeholders and do not exceed 5/);
+      assert.match(calls[0].prompt, /accepts only `project_name`, `protocol_candidates`, `pending_values`, and optional `step_edits`/);
+      assert.match(calls[0].prompt, /placeholder_key` in `<step-id>:<placeholder-id>` form/);
+      assert.match(calls[0].prompt, /never use uncertainty text such as "not specified"/);
       assert.match(calls[0].prompt, /mcp__hikari__protocol_generation/);
       assert.match(calls[0].prompt, /Assay context handoff:/);
       assert.match(calls[0].prompt, /Assay plate data \(TSV/);
       assert.match(calls[0].prompt, /retrieve the active assay data by reading/);
-      assert.match(calls[0].prompt, /Do not call or expect `record_lookup` for active assay plate data/);
+      assert.match(calls[0].prompt, /Do not use local lookup tools for active assay plate data/);
+      const retiredDirectToolName = ['record', 'lookup'].join('_');
+      assert.equal(calls[0].prompt.includes(retiredDirectToolName), false);
       assert.doesNotMatch(calls[0].prompt, /initially visible tool list/);
       assert.doesNotMatch(calls[0].prompt, /Do not answer only with markdown or prose/);
       assert.doesNotMatch(calls[0].prompt, /Recent conversation:/);
@@ -401,6 +460,13 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.match(calls[0].prompt, /Paper agent session:/);
       assert.match(calls[0].prompt, /Read the transformed markdown before answering paper-specific questions/);
       assert.match(calls[0].prompt, /\/tmp\/hikari-storage\/KnowledgeBase\/papers\.md\/atlas-sumo1\/paper\.md/);
+      assert.match(calls[0].prompt, /Saved Hikari settings:/);
+      assert.match(calls[0].prompt, /"preferred_journals": \[/);
+      assert.match(calls[0].prompt, /Nature Biotechnology/);
+      assert.match(calls[0].prompt, /Do not call memory just to rediscover these saved settings/);
+      assert.match(calls[0].prompt, /soft ranking preferences/);
+      assert.match(calls[0].prompt, /including when the user says "from my preferred journals"/);
+      assert.match(calls[0].prompt, /make at most one `mcp__hikari__literature_search` call/);
       assert.match(calls[0].prompt, /pilot\.pdf/);
       assert.doesNotMatch(calls[0].prompt, /"assistant_text"/);
       const mcpContext = JSON.parse(calls[0].envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT);
@@ -448,12 +514,117 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.equal(progressEvents.some((event) => event.stage === 'codex_agent_stream'), true);
       assert.equal(progressEvents.some((event) => event.meta?.stream_text === 'Streaming answer.'), true);
     });
+    test('codex agent runtime prefers streamed final answer over parsed tool arguments', async () => {
+      const { createCodexAgentRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'codex-agent',
+        'runtime.js'
+      ));
+      const traceRows = [];
+      const lifecycleEvents = [];
+      const runtime = createCodexAgentRuntime({
+        cleanText: (value, maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        requestCodexAgentText: async (input = {}) => {
+          input.onStream?.({
+            type: 'codex_cli_display',
+            display_kind: 'assistant',
+            display_text: 'Ran one Hikari literature_search call with crossref and web results.',
+            event_type: 'agent_message:final_answer'
+          });
+          return {
+            text: JSON.stringify({
+              query: 'molecular glue degraders',
+              source: 'auto',
+              message: 'Find papers on molecular glue degraders from my preferred journals.'
+            }),
+            metadata: {
+              session_id: 'codex-final-answer-session'
+            }
+          };
+        },
+        recordAgentLlmTrace: async (_traceContext, event = {}) => {
+          traceRows.push(event);
+        },
+        recordLifecycleEvent: (_recorder, event = {}) => {
+          lifecycleEvents.push(event);
+        },
+        getWorkingDirectory: () => '/tmp/hikari-workspace'
+      });
+
+      const result = await runtime.run({
+        message: 'Find papers on molecular glue degraders from my preferred journals.',
+        model: 'gpt-5.4',
+        traceContext: { requestId: 'req-codex-streamed-final', rows: [], entries: [] },
+        lifecycleRecorder: { requestId: 'req-codex-streamed-final', events: [] }
+      });
+
+      assert.equal(result.ok, true);
+      assert.equal(result.codex_agent.status, 'completed');
+      assert.equal(result.codex_agent.answer, 'Ran one Hikari literature_search call with crossref and web results.');
+      assert.equal(result.parser.direct_answer, 'Ran one Hikari literature_search call with crossref and web results.');
+      const completedTrace = traceRows.find((row) => row.stage === 'codex_agent_completed');
+      assert.equal(completedTrace.response_payload.assistant_text, 'Ran one Hikari literature_search call with crossref and web results.');
+      assert.equal(completedTrace.response_payload.raw_response_payload.query, 'molecular glue degraders');
+      assert.equal(lifecycleEvents.some((event) => event.stage === 'codex_cli_display' && event.meta?.codex_event_type === 'agent_message:final_answer'), true);
+    });
+    test('codex agent runtime keeps full streamed final answer while compacting display events', async () => {
+      const { createCodexAgentRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'codex-agent',
+        'runtime.js'
+      ));
+      const longFinalAnswer = `Final answer start ${'paper-result '.repeat(900)}Final answer end`;
+      const lifecycleEvents = [];
+      const runtime = createCodexAgentRuntime({
+        cleanText: (value, maxLength = 2000) => {
+          const text = String(value || '').trim();
+          return maxLength > 0 ? text.slice(0, maxLength) : text;
+        },
+        requestCodexAgentText: async (input = {}) => {
+          input.onStream?.({
+            type: 'codex_cli_display',
+            display_kind: 'assistant',
+            display_text: longFinalAnswer,
+            event_type: 'message:final_answer'
+          });
+          return {
+            text: JSON.stringify({ answer: 'short parsed fallback' }),
+            metadata: { session_id: 'codex-long-final-session' }
+          };
+        },
+        recordAgentLlmTrace: async () => {},
+        recordLifecycleEvent: (_recorder, event = {}) => {
+          lifecycleEvents.push(event);
+        },
+        getWorkingDirectory: () => '/tmp/hikari-workspace'
+      });
+
+      const result = await runtime.run({
+        message: 'Return a long final answer.',
+        model: 'gpt-5.4',
+        traceContext: { requestId: 'req-codex-long-final', rows: [], entries: [] },
+        lifecycleRecorder: { requestId: 'req-codex-long-final', events: [] }
+      });
+
+      const displayEvent = lifecycleEvents.find((event) => event.stage === 'codex_cli_display');
+      assert.equal(result.codex_agent.answer, longFinalAnswer);
+      assert.equal(displayEvent.meta.codex_display_text.length, 8000);
+      assert.equal(displayEvent.message.length, 8000);
+    });
     test('codex agent runtime prefers a prepared selected-project workspace when cwd is not explicit', async () => {
       const { createCodexAgentRuntime } = require(path.join(
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'
@@ -501,7 +672,6 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime.js'

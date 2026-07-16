@@ -8,7 +8,6 @@ export function createNotebookService(registry) {
   }
 
   function handleAgentNotebookEntriesChanged() {
-    registry.get('synthesisNotebook').renderEntries?.();
     registry.get('biologyNotebook').renderEntries?.();
     handleNotebookEntriesChanged();
   }

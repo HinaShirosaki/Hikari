@@ -1,21 +1,9 @@
 /* Spacing and overlap fixes by view */
 
 :root {
-  --multi-panel-left-rail-bg: color-mix(in srgb, var(--theme-surface-subtle) 92%, var(--theme-text-strong) 8%);
-  --multi-panel-left-rail-border: color-mix(in srgb, var(--theme-border-soft) 84%, var(--theme-text-strong) 10%);
-  --multi-panel-left-rail-max-height: calc(100vh - 168px);
   --app-left-rail-surface: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-background) 4%);
-  --app-left-rail-bg: var(--app-left-rail-surface);
   --app-left-rail-divider: color-mix(in srgb, var(--theme-border-soft) 88%, var(--theme-text-strong) 12%);
-  --app-left-rail-handle: color-mix(in srgb, var(--theme-border) 80%, var(--theme-accent) 20%);
 }
-
-
-
-
-@media (max-width: 980px) {
-  }
-
 .app-left-rail {
   --app-left-rail-padding-inline: 16px;
   position: relative;

@@ -1,5 +1,7 @@
-import { buildStateSnapshot } from '../agent-chat/state-snapshot.js';
-import { normalizeAgentResponse } from '../agent-chat-response.js';
+import {
+  buildStateSnapshot,
+  normalizeAgentResponse
+} from '../agent-chat/public-api.js';
 import { normalizeInsights } from './insight-model.js';
 import { createSelectionInsightPrompt } from './prompt.js';
 import { cleanText } from './text-utils.js';

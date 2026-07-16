@@ -15,8 +15,8 @@
         </div>
 
         <div class="sequence-viewer-detail-layout left-rail-template">
-          <aside class="sequence-viewer-detail-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
-            <div class="left-rail-template__stack">
+          <aside class="sequence-viewer-detail-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+            <div class="sequence-viewer-detail-sidebar-pinned left-rail-template__pinned">
               <section class="sequence-viewer-rail-actions-section left-rail-template__section">
                 <div class="form-actions sequence-viewer-rail-nav-actions">
                   <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
@@ -25,6 +25,8 @@
                   <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
                 </div>
               </section>
+            </div>
+            <div class="sequence-viewer-detail-sidebar-scroll left-rail-template__scroll">
               <section class="sequence-viewer-library-card left-rail-template__section">
                 <div class="result-card-head">
                   <h4>Sequence Library</h4>
@@ -208,7 +210,7 @@
           <form id="sequence-viewer-feature-editor-form" class="sequence-viewer-feature-editor app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-feature-editor-head app-dialog-head">
               <h4 id="sequence-viewer-feature-editor-title">Add Feature</h4>
-              <button id="sequence-viewer-feature-editor-close" type="button" class="ghost-btn">Close</button>
+              <button id="sequence-viewer-feature-editor-close" type="button" class="app-dialog-close-btn" aria-label="Close feature editor dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <p id="sequence-viewer-feature-editor-note" class="small-note">Choose the feature metadata for the selected range.</p>
 
@@ -254,7 +256,7 @@
           <section class="sequence-viewer-primer-design-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-design-title">
             <div class="result-card-head sequence-viewer-primer-design-head app-dialog-head">
               <h4 id="sequence-viewer-primer-design-title">Designed Primers</h4>
-              <button id="sequence-viewer-primer-design-close" type="button" class="ghost-btn">Close</button>
+              <button id="sequence-viewer-primer-design-close" type="button" class="app-dialog-close-btn" aria-label="Close designed primers dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <p id="sequence-viewer-primer-design-note" class="small-note">Primer details will appear here.</p>
             <div id="sequence-viewer-primer-design-result" class="sequence-viewer-primer-design-result calc-output"></div>
@@ -268,7 +270,7 @@
           <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
               <h4 id="sequence-viewer-sequence-edit-title">Edit Bases</h4>
-              <button id="sequence-viewer-sequence-edit-close" type="button" class="ghost-btn">Close</button>
+              <button id="sequence-viewer-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <p id="sequence-viewer-sequence-edit-note" class="small-note">Type the bases to apply.</p>
 
@@ -292,7 +294,7 @@
                 <h4 id="sequence-viewer-backbone-dialog-title">Backbone / Insert Candidates</h4>
                 <p id="sequence-viewer-backbone-dialog-subtitle" class="small-note">Review promoter and ORF candidates before applying a backbone/insert interpretation.</p>
               </div>
-              <button id="sequence-viewer-backbone-dialog-close-btn" type="button" class="ghost-btn" aria-label="Close backbone recognition dialog">Close</button>
+              <button id="sequence-viewer-backbone-dialog-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close backbone recognition dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
 
             <div class="sequence-viewer-backbone-dialog-mode-switch" role="tablist" aria-label="Recognition mode">
@@ -336,14 +338,16 @@
       <div id="sequence-viewer-cloning-design-workspace" class="sequence-viewer-cloning-design-workspace" hidden>
         <div class="sequence-viewer-cloning-design-toolbar">
           <div class="sequence-viewer-cloning-design-toolbar-nav">
-            <button id="sequence-viewer-cloning-design-back-btn" type="button" class="ghost-btn">Back to Sequence</button>
+            <button id="sequence-viewer-cloning-design-back-btn" type="button" class="ghost-btn">&larr; Back to Sequence</button>
           </div>
-          <div class="sequence-viewer-cloning-design-toolbar-copy">
-            <h2>Cloning Design</h2>
-            <span id="sequence-viewer-cloning-design-status" class="small-note">Edit the active sequence to enable cloning design.</span>
-          </div>
-          <div class="form-actions sequence-viewer-cloning-design-toolbar-actions">
-            <button id="sequence-viewer-cloning-design-run-btn" type="button" class="primary-btn">Design Primers</button>
+          <div class="sequence-viewer-cloning-design-toolbar-main">
+            <div class="sequence-viewer-cloning-design-toolbar-copy">
+              <h2>Cloning Design</h2>
+              <span id="sequence-viewer-cloning-design-status" class="small-note">Edit the active sequence to enable cloning design.</span>
+            </div>
+            <div class="form-actions sequence-viewer-cloning-design-toolbar-actions">
+              <button id="sequence-viewer-cloning-design-run-btn" type="button" class="primary-btn">Design Primers</button>
+            </div>
           </div>
         </div>
 
@@ -353,7 +357,7 @@
               <div class="result-card-head">
                 <h4>Route</h4>
               </div>
-              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-mode-switch sequence-viewer-cloning-design-strategy-list" role="tablist" aria-label="Cloning design route"></div>
+              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-cloning-design-strategy-list" role="tablist" aria-label="Cloning design route"></div>
             </section>
 
             <section class="sequence-viewer-cloning-design-panel">
@@ -392,7 +396,7 @@
 
       <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace app-dialog-overlay app-dialog-overlay--top" hidden>
         <div class="sequence-viewer-alignment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-label="Alignment">
-          <button id="sequence-viewer-alignment-close-btn" type="button" class="sequence-viewer-alignment-close-icon" aria-label="Close alignment dialog">×</button>
+          <button id="sequence-viewer-alignment-close-btn" type="button" class="app-dialog-close-btn app-dialog-close-btn--floating" aria-label="Close alignment dialog" title="Close"><span aria-hidden="true">&times;</span></button>
 
           <section class="result-card sequence-viewer-alignment-panel">
             <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Alignment query input mode">

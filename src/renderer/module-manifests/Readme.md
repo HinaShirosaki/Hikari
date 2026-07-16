@@ -2,11 +2,11 @@
 
 This folder holds renderer module declarations for Hikari's manifest-driven module runtime.
 
-A manifest owns one module's init function, registry key, options factory, optional view routes, and optional boot render order. `module-runtime.js` consumes the full manifest list, supplies the shared runtime context, and builds registration plus render dispatch from these declarations.
+A manifest owns one module's init function, registry key, options factory, optional view routes, and optional boot render order. `../core/module-runtime.js` consumes the full manifest list, supplies the shared runtime context, and builds registration plus render dispatch from these declarations.
 
 Current manifest groups:
 
-- `foundationModuleManifests`: notebook, protocol, and project modules that other features consult early.
+- `foundationModuleManifests`: Biology Notebook (including project ownership) and protocol modules that other features consult early.
 - `collaborationModuleManifests`: agent chat, scoped chat rail, workflow, and papers.
 - `inventoryModuleManifests`: inventory and sample workspace modules.
 - `analysisModuleManifests`: assay and gel modules.

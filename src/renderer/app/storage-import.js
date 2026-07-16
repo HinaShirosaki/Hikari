@@ -14,7 +14,6 @@ const WORKSPACE_STATE_KEYS = [
   'agentChat',
   'messages',
   'notebookEntries',
-  'synthesisChemistryDrafts',
   'assays',
   'gelAnalyses',
   'samples',

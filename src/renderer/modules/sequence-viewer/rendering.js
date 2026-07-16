@@ -1,4 +1,4 @@
-import { escapeHtml } from '../tool-box/common.js';
+import { escapeHtml } from '../../lib/html.js';
 import {
   DEFAULT_SEQUENCE_LINE_LENGTH,
   DEFAULT_STRAND_COLUMN_GAP_PX,
@@ -174,11 +174,107 @@ function renderAlignmentQueryRowHtml(lineStart, lineEnd, alignmentSequenceTrack)
 
   return `
     <div class="sequence-viewer-strand-row sequence-viewer-alignment-query-row">
-      <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" title="Aligned sequencing read">READ</span>
       <span class="sequence-viewer-seq-text sequence-viewer-alignment-query-text">
         <span class="sequence-viewer-seq-text-content">${body.join('')}</span>
       </span>
       <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
+    </div>
+  `;
+}
+
+function renderAlignmentReferenceRowHtml(lineStart, lineEnd, referenceSequence, alignmentSequenceTrack) {
+  if (!alignmentSequenceTrack?.cells?.length) {
+    return '';
+  }
+
+  let hasAlignedBases = false;
+  const body = [];
+  for (let baseIndex = lineStart; baseIndex < lineEnd; baseIndex += 1) {
+    const cell = alignmentSequenceTrack.cells[baseIndex] || null;
+    if (!cell) {
+      body.push('<span class="sequence-viewer-seq-base sequence-viewer-alignment-reference-base sequence-viewer-alignment-reference-base-empty">&nbsp;</span>');
+      continue;
+    }
+
+    hasAlignedBases = true;
+    const differenceClass = cell.kind === 'mismatch' || cell.kind === 'deletion'
+      ? ` sequence-viewer-alignment-reference-base-${cell.kind}`
+      : '';
+    body.push(
+      `<span class="sequence-viewer-seq-base sequence-viewer-alignment-reference-base${differenceClass}">${escapeHtml(referenceSequence[baseIndex] || '')}</span>`
+    );
+  }
+
+  if (!hasAlignedBases) {
+    return '';
+  }
+
+  return `
+    <div class="sequence-viewer-strand-row sequence-viewer-alignment-reference-row">
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" title="Reference sequence">REF</span>
+      <span class="sequence-viewer-seq-text sequence-viewer-alignment-reference-text">
+        <span class="sequence-viewer-seq-text-content">${body.join('')}</span>
+      </span>
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
+    </div>
+  `;
+}
+
+function renderAlignmentGuideRowHtml(lineStart, lineEnd, alignmentSequenceTrack) {
+  if (!alignmentSequenceTrack?.cells?.length) {
+    return '';
+  }
+
+  let hasAlignedBases = false;
+  const body = [];
+  for (let baseIndex = lineStart; baseIndex < lineEnd; baseIndex += 1) {
+    const cell = alignmentSequenceTrack.cells[baseIndex] || null;
+    if (!cell) {
+      body.push('<span class="sequence-viewer-seq-base sequence-viewer-alignment-guide-base sequence-viewer-alignment-guide-base-empty">&nbsp;</span>');
+      continue;
+    }
+
+    hasAlignedBases = true;
+    const kind = cell.kind === 'mismatch' || cell.kind === 'deletion' ? cell.kind : 'match';
+    const marker = kind === 'match' ? '|' : (kind === 'mismatch' ? '×' : '−');
+    body.push(
+      `<span class="sequence-viewer-seq-base sequence-viewer-alignment-guide-base sequence-viewer-alignment-guide-base-${kind}">${marker}</span>`
+    );
+  }
+
+  if (!hasAlignedBases) {
+    return '';
+  }
+
+  return `
+    <div class="sequence-viewer-strand-row sequence-viewer-alignment-guide-row" aria-label="Alignment guide: vertical bar means a match, multiplication sign means a mismatch, and minus means a deletion">
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-row-label" title="Alignment guide">&nbsp;</span>
+      <span class="sequence-viewer-seq-text sequence-viewer-alignment-guide-text">
+        <span class="sequence-viewer-seq-text-content">${body.join('')}</span>
+      </span>
+      <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
+    </div>
+  `;
+}
+
+function renderAlignmentComparisonRowsHtml(lineStart, lineEnd, referenceSequence, alignmentSequenceTrack) {
+  const referenceRow = renderAlignmentReferenceRowHtml(
+    lineStart,
+    lineEnd,
+    referenceSequence,
+    alignmentSequenceTrack
+  );
+  const queryRow = renderAlignmentQueryRowHtml(lineStart, lineEnd, alignmentSequenceTrack);
+  if (!referenceRow || !queryRow) {
+    return '';
+  }
+
+  return `
+    <div class="sequence-viewer-alignment-comparison">
+      ${referenceRow}
+      ${renderAlignmentGuideRowHtml(lineStart, lineEnd, alignmentSequenceTrack)}
+      ${queryRow}
     </div>
   `;
 }
@@ -590,8 +686,13 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
 
     const forwardBody = buildHighlightedLineMarkup(text, lineStart, lineEnd, lineHighlights);
     const complementaryBody = buildHighlightedLineMarkup(complementary, lineStart, lineEnd, lineHighlights);
-    const alignmentQueryRow = renderAlignmentQueryRowHtml(lineStart, lineEnd, alignmentSequenceTrack);
-    const alignmentTraceRow = alignmentQueryRow
+    const alignmentComparisonRows = renderAlignmentComparisonRowsHtml(
+      lineStart,
+      lineEnd,
+      text,
+      alignmentSequenceTrack
+    );
+    const alignmentTraceRow = alignmentComparisonRows
       ? String(alignmentSequenceTrack?.traceLines?.[String(lineStart)] || '')
       : '';
     const aminoAcidRow = renderOrfAminoAcidRowHtml(lineStart, lineEnd, orfTranslationContext, charAdvancePx);
@@ -625,7 +726,7 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
     const cursorLeftPx = (cursorBlockOnLine || showThinCursor)
       ? lineFeatureOffsetPx + ((cursorBaseIndex - lineStart) * charAdvancePx)
       : null;
-    const cursorRowCount = alignmentQueryRow ? 3 : 2;
+    const cursorRowCount = alignmentComparisonRows ? 5 : 2;
     const strandPairHeightPx = Math.max(
       8,
       (sequenceLineHeightPx * cursorRowCount) + (STRAND_PAIR_ROW_GAP_PX * (cursorRowCount - 1))
@@ -656,7 +757,7 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
               <span class="sequence-viewer-strand-end">3'</span>
             </div>
             ${alignmentTraceRow}
-            ${alignmentQueryRow}
+            ${alignmentComparisonRows}
             <div class="sequence-viewer-strand-row sequence-viewer-strand-row-bottom">
               <span class="sequence-viewer-strand-end">3'</span>
               <span class="sequence-viewer-seq-text"><span class="sequence-viewer-seq-text-content">${complementaryBody}</span></span>

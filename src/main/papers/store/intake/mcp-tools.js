@@ -4,12 +4,12 @@
  * Direct Hikari MCP tools for the paper-intake summary KB.
  *
  * Three tools, all read-only:
- *   1. paper_intake_list_project_summaries — list one-sentence summaries for
- *      every paper attached to a given project.
- *   2. paper_intake_search_summaries — keyword search across one-sentence
+ *   1. paper_intake_search_summaries — keyword search across one-sentence
  *      summaries (and titles).
- *   3. paper_intake_search_experiments — keyword search across structured
+ *   2. paper_intake_search_experiments — keyword search across structured
  *      experiment entries.
+ *   3. paper_intake_list_project_summaries — list one-sentence summaries for
+ *      every paper attached to a given project.
  *
  * These mirror the `definition` + `handler` shape used by the other entries in
  * `mcp-contract/direct-tools/` and are registered by that index.
@@ -52,6 +52,26 @@ function clampLimit(value) {
   const parsed = Number(value);
   const number = Number.isFinite(parsed) ? Math.trunc(parsed) : DEFAULT_LIMIT;
   return Math.max(1, Math.min(MAX_LIMIT, number));
+}
+
+// Resolve the target project. filterByProject treats id and name as alternatives (OR),
+// so we must never combine a context id with a different agent-supplied name — that would
+// return the union of the active project and the named one. An explicit name therefore
+// stands alone; only when the agent names nothing do we fall back to the active project in
+// context (whose id and name refer to the same project, so OR-ing them is safe).
+function resolveProjectSelector(args = {}, context = {}) {
+  const suppliedName = cleanText(args.project_name || args.projectName, 240);
+  if (suppliedName) {
+    return { projectId: '', projectName: suppliedName };
+  }
+  const ctxProject = ensureObject(context.project);
+  return {
+    projectId: cleanText(ctxProject.id || ctxProject.project_id || ctxProject.projectId, 200),
+    projectName: cleanText(
+      ctxProject.name || ctxProject.project_name || ctxProject.projectName || ctxProject.title,
+      240
+    )
+  };
 }
 
 function readOnlyAnnotations(title) {
@@ -162,7 +182,6 @@ const LIST_PROJECT_SUMMARIES_DEFINITION = Object.freeze({
     type: 'object',
     additionalProperties: false,
     properties: {
-      project_id: { type: 'string', minLength: 1, maxLength: 200 },
       project_name: { type: 'string', minLength: 1, maxLength: 240 },
       doc_types: {
         type: 'array',
@@ -170,11 +189,7 @@ const LIST_PROJECT_SUMMARIES_DEFINITION = Object.freeze({
         maxItems: DOC_TYPES.length
       },
       limit: { type: 'integer', minimum: 1, maximum: MAX_LIMIT }
-    },
-    anyOf: [
-      { required: ['project_id'] },
-      { required: ['project_name'] }
-    ]
+    }
   }
 });
 
@@ -184,14 +199,13 @@ async function callListProjectSummaries(input = {}, context = {}, deps = {}) {
   if (error) {
     return error;
   }
-  const projectId = cleanText(args.project_id || args.projectId, 200);
-  const projectName = cleanText(args.project_name || args.projectName, 240);
+  const { projectId, projectName } = resolveProjectSelector(args, context);
   if (!projectId && !projectName) {
     return {
       ok: false,
       status: 'invalid_arguments',
       mcp_tool: TOOL_NAMES.LIST_PROJECT_SUMMARIES,
-      error: 'Provide project_id or project_name.'
+      error: 'Provide project_name (or open a project so it is available in context).'
     };
   }
   const docTypes = asArray(args.doc_types).filter((value) => DOC_TYPES.includes(value));
@@ -247,7 +261,6 @@ const SEARCH_SUMMARIES_DEFINITION = Object.freeze({
     required: ['query'],
     properties: {
       query: { type: 'string', minLength: 1, maxLength: 300 },
-      project_id: { type: 'string', minLength: 1, maxLength: 200 },
       project_name: { type: 'string', minLength: 1, maxLength: 240 },
       doc_types: {
         type: 'array',
@@ -286,8 +299,7 @@ async function callSearchSummaries(input = {}, context = {}, deps = {}) {
     };
   }
   const docTypes = asArray(args.doc_types).filter((value) => DOC_TYPES.includes(value));
-  const projectId = cleanText(args.project_id || args.projectId, 200);
-  const projectName = cleanText(args.project_name || args.projectName, 240);
+  const { projectId, projectName } = resolveProjectSelector(args, context);
   const limit = clampLimit(args.limit);
 
   const load = await store.loadAll();
@@ -352,7 +364,6 @@ const SEARCH_EXPERIMENTS_DEFINITION = Object.freeze({
     required: ['query'],
     properties: {
       query: { type: 'string', minLength: 1, maxLength: 300 },
-      project_id: { type: 'string', minLength: 1, maxLength: 200 },
       project_name: { type: 'string', minLength: 1, maxLength: 240 },
       technique: { type: 'string', minLength: 1, maxLength: 200 },
       limit: { type: 'integer', minimum: 1, maximum: MAX_LIMIT }
@@ -386,8 +397,7 @@ async function callSearchExperiments(input = {}, context = {}, deps = {}) {
       items: []
     };
   }
-  const projectId = cleanText(args.project_id || args.projectId, 200);
-  const projectName = cleanText(args.project_name || args.projectName, 240);
+  const { projectId, projectName } = resolveProjectSelector(args, context);
   const techniqueFilter = cleanText(args.technique, 200).toLowerCase();
   const limit = clampLimit(args.limit);
 
@@ -446,16 +456,16 @@ async function callSearchExperiments(input = {}, context = {}, deps = {}) {
 
 const PAPER_INTAKE_DIRECT_MCP_TOOLS = Object.freeze([
   Object.freeze({
-    definition: LIST_PROJECT_SUMMARIES_DEFINITION,
-    handler: callListProjectSummaries
-  }),
-  Object.freeze({
     definition: SEARCH_SUMMARIES_DEFINITION,
     handler: callSearchSummaries
   }),
   Object.freeze({
     definition: SEARCH_EXPERIMENTS_DEFINITION,
     handler: callSearchExperiments
+  }),
+  Object.freeze({
+    definition: LIST_PROJECT_SUMMARIES_DEFINITION,
+    handler: callListProjectSummaries
   })
 ]);
 

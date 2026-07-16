@@ -314,11 +314,314 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
-    test('literature search workflow preserves DOI metadata and passes it into paper download', async () => {
+    test('main agent services enable the default browser download session for packaged paper downloads', async () => {
+      const { createMainAgentServices } = require(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'));
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-main-browser-'));
+      const openedUrls = [];
+      const createdWindows = [];
+
+      class FakeBrowserWindow {
+        constructor() {
+          this.destroyed = false;
+          this.handlers = new Map();
+          this.sessionHandlers = new Map();
+          this.webContents = {
+            session: {
+              on: (eventName, listener) => {
+                this.sessionHandlers.set(eventName, listener);
+              },
+              removeListener: () => {}
+            },
+            downloadURL: () => {}
+          };
+          createdWindows.push(this);
+        }
+
+        on(eventName, listener) {
+          this.handlers.set(eventName, listener);
+        }
+
+        isDestroyed() {
+          return this.destroyed;
+        }
+
+        close() {
+          this.destroyed = true;
+        }
+
+        async loadURL(url) {
+          openedUrls.push(url);
+          setImmediate(() => {
+            const listener = this.sessionHandlers.get('will-download');
+            if (typeof listener !== 'function') {
+              return;
+            }
+            const item = {
+              savePath: '',
+              setSavePath: (targetPath) => {
+                item.savePath = targetPath;
+              },
+              getTotalBytes: () => 42,
+              getReceivedBytes: () => 42,
+              on: () => {},
+              once: (_eventName, doneListener) => {
+                setImmediate(async () => {
+                  await fsPromises.writeFile(item.savePath, '%PDF-1.7\nmain service browser fallback\n');
+                  doneListener(null, 'completed');
+                });
+              }
+            };
+            listener({}, item);
+          });
+        }
+      }
+
+      try {
+        const services = createMainAgentServices({
+          BrowserWindow: FakeBrowserWindow,
+          getAgentPythonSandboxRoot: () => storageRoot,
+          getAgentMemoryFilePath: () => path.join(storageRoot, 'agent-memory.json'),
+          getDefaultDataFilePath: () => path.join(storageRoot, 'hikari-data.json')
+        });
+
+        const result = await services.paperDownloadRuntime.downloadPaper({
+          doi: '10.1000/example-doi',
+          paper_title: 'Main service DOI paper',
+          linked_type: 'literature-search',
+          linked_name: 'Atlas',
+          storage_path: storageRoot
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.status, 'completed');
+        assert.equal(result.method, 'browser');
+        assert.equal(openedUrls[0], 'https://doi.org/10.1000/example-doi');
+        assert.equal(createdWindows.length, 1);
+        assert.equal(await fsPromises.readFile(result.file_path, 'utf8'), '%PDF-1.7\nmain service browser fallback\n');
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+    test('paper browser fallback opens an HTML PDF viewer URL instead of downloading it as a file', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-viewer-url-'));
+      const openedUrls = [];
+      const forcedDownloadUrls = [];
+
+      class FakeBrowserWindow {
+        constructor() {
+          this.destroyed = false;
+          this.handlers = new Map();
+          this.sessionHandlers = new Map();
+          this.webContents = {
+            session: {
+              on: (eventName, listener) => this.sessionHandlers.set(eventName, listener),
+              removeListener: () => {}
+            },
+            downloadURL: (url) => forcedDownloadUrls.push(url),
+            setWindowOpenHandler: () => {},
+            on: () => {}
+          };
+        }
+
+        on(eventName, listener) {
+          this.handlers.set(eventName, listener);
+        }
+
+        isDestroyed() {
+          return this.destroyed;
+        }
+
+        close() {
+          this.destroyed = true;
+        }
+
+        async loadURL(url) {
+          openedUrls.push(url);
+          setImmediate(() => {
+            const listener = this.sessionHandlers.get('will-download');
+            const item = {
+              savePath: '',
+              setSavePath: (targetPath) => {
+                item.savePath = targetPath;
+              },
+              getTotalBytes: () => 48,
+              getReceivedBytes: () => 48,
+              on: () => {},
+              once: (_eventName, doneListener) => {
+                setImmediate(async () => {
+                  await fsPromises.writeFile(item.savePath, '%PDF-1.7\nviewer download\n');
+                  doneListener(null, 'completed');
+                });
+              }
+            };
+            listener?.({}, item);
+          });
+        }
+      }
+
+      try {
+        const runtime = agentPaperDownload.createPaperDownloadRuntime({
+          fetch: async () => ({
+            ok: true,
+            status: 200,
+            headers: {
+              get(name) {
+                return String(name || '').toLowerCase() === 'content-type'
+                  ? 'text/html; charset=utf-8'
+                  : '';
+              }
+            },
+            text: async () => '<html><body>Publisher PDF viewer</body></html>'
+          }),
+          enableDefaultBrowserSession: true,
+          BrowserWindow: FakeBrowserWindow,
+          createId: () => 'paper-download-viewer-url-1'
+        });
+        const viewerUrl = 'https://publisher.example.org/pdf/viewer?id=paper-1';
+        const result = await runtime.downloadPaper({
+          paper_pdf_url: viewerUrl,
+          page_url: 'https://publisher.example.org/article/paper-1',
+          paper_title: 'Viewer-backed paper',
+          linked_type: 'literature-search',
+          linked_name: 'Atlas',
+          storage_path: storageRoot
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.method, 'browser');
+        assert.equal(openedUrls[0], viewerUrl);
+        assert.deepEqual(forcedDownloadUrls, []);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+    test('paper browser fallback keeps a child PDF viewer alive after its opener closes', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-download-popup-viewer-'));
+      let popupDecision = null;
+      let childWindowShown = false;
+
+      class FakeChildWindow {
+        constructor() {
+          this.destroyed = false;
+          this.handlers = new Map();
+        }
+
+        on(eventName, listener) {
+          this.handlers.set(eventName, listener);
+        }
+
+        show() {
+          childWindowShown = true;
+        }
+
+        isDestroyed() {
+          return this.destroyed;
+        }
+
+        close() {
+          if (this.destroyed) {
+            return;
+          }
+          this.destroyed = true;
+          this.handlers.get('closed')?.();
+        }
+      }
+
+      class FakeBrowserWindow {
+        constructor() {
+          this.destroyed = false;
+          this.handlers = new Map();
+          this.webContentsHandlers = new Map();
+          this.sessionHandlers = new Map();
+          this.windowOpenHandler = null;
+          this.webContents = {
+            session: {
+              on: (eventName, listener) => this.sessionHandlers.set(eventName, listener),
+              removeListener: () => {}
+            },
+            setWindowOpenHandler: (handler) => {
+              this.windowOpenHandler = handler;
+            },
+            on: (eventName, listener) => this.webContentsHandlers.set(eventName, listener)
+          };
+        }
+
+        on(eventName, listener) {
+          this.handlers.set(eventName, listener);
+        }
+
+        isDestroyed() {
+          return this.destroyed;
+        }
+
+        close() {
+          if (this.destroyed) {
+            return;
+          }
+          this.destroyed = true;
+          this.handlers.get('closed')?.();
+        }
+
+        async loadURL() {
+          setImmediate(() => {
+            popupDecision = this.windowOpenHandler?.({
+              url: 'https://publisher.example.org/pdf/viewer?id=paper-2'
+            });
+            const childWindow = new FakeChildWindow();
+            this.webContentsHandlers.get('did-create-window')?.(childWindow);
+            this.destroyed = true;
+            this.handlers.get('closed')?.();
+
+            const listener = this.sessionHandlers.get('will-download');
+            const item = {
+              savePath: '',
+              setSavePath: (targetPath) => {
+                item.savePath = targetPath;
+              },
+              getTotalBytes: () => 52,
+              getReceivedBytes: () => 52,
+              on: () => {},
+              once: (_eventName, doneListener) => {
+                setImmediate(async () => {
+                  await fsPromises.writeFile(item.savePath, '%PDF-1.7\npopup viewer download\n');
+                  doneListener(null, 'completed');
+                });
+              }
+            };
+            listener?.({}, item);
+          });
+        }
+      }
+
+      try {
+        const runtime = agentPaperDownload.createPaperDownloadRuntime({
+          enableDefaultBrowserSession: true,
+          BrowserWindow: FakeBrowserWindow,
+          createId: () => 'paper-download-popup-viewer-1'
+        });
+        const result = await runtime.downloadPaper({
+          page_url: 'https://publisher.example.org/article/paper-2',
+          paper_title: 'Popup-backed paper',
+          linked_type: 'literature-search',
+          linked_name: 'Atlas',
+          storage_path: storageRoot
+        });
+
+        assert.equal(popupDecision?.action, 'allow');
+        assert.equal(popupDecision?.overrideBrowserWindowOptions?.show, true);
+        assert.equal(childWindowShown, true);
+        assert.equal(result.ok, true);
+        assert.equal(result.method, 'browser');
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+    test('literature search workflow preserves DOI metadata for later user-triggered download', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-doi-'));
       const downloadCalls = [];
       try {
         const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
           literatureSearchRuntime: {
             buildLiteratureQuery: () => 'ncAA incorporation',
             searchLiteratureCandidates: async () => ({
@@ -397,12 +700,116 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
         });
 
         assert.equal(result.ok, true);
-        assert.equal(downloadCalls.length, 1);
-        assert.equal(downloadCalls[0].doi, '10.1000/example-doi');
-        assert.equal(downloadCalls[0].page_url, 'https://doi.org/10.1000/example-doi');
+        assert.equal(downloadCalls.length, 0);
         assert.equal(result.selected_papers[0].doi, '10.1000/example-doi');
-        assert.equal(result.downloaded_papers[0].knowledge_markdown_relative_path, 'KnowledgeBase/papers.md/10.1000_example-doi/paper.md');
-        assert.equal(result.downloaded_papers[0].knowledge_database.status, 'ready');
+        assert.equal(result.selected_papers[0].url, '');
+        assert.equal(result.selected_papers[0].download_available, true);
+        assert.equal(result.selected_papers[0].download_status, 'not_requested');
+        assert.deepEqual(result.selected_papers[0].pdf_urls, []);
+        assert.equal(result.downloaded_papers.length, 0);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+    test('packaged literature workflow soft-prefers any configured preferred journal', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-preferred-journals-'));
+      const downloadCalls = [];
+      try {
+        const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
+          literatureSearchRuntime: {
+            buildLiteratureQuery: () => 'kinase inhibitor resistance',
+            searchLiteratureCandidates: async (input = {}) => {
+              assert.equal(Object.prototype.hasOwnProperty.call(input, 'journals'), false);
+              assert.equal(Object.prototype.hasOwnProperty.call(input, 'journal_filter'), false);
+              return {
+                ok: true,
+                status: 'completed',
+                query: 'kinase inhibitor resistance',
+                sources: ['pubmed'],
+                items: [
+                  {
+                    id: 'paper-other',
+                    source: 'pubmed',
+                    title: 'Kinase inhibitor resistance mechanisms',
+                    summary: 'Comparable candidate from a non-preferred journal.',
+                    journal: 'Other Journal',
+                    doi: '10.1000/other',
+                    url: 'https://example.org/other'
+                  },
+                  {
+                    id: 'paper-cell',
+                    source: 'pubmed',
+                    title: 'Kinase inhibitor resistance mechanisms',
+                    summary: 'Comparable candidate from Cell.',
+                    journal: 'Cell',
+                    doi: '10.1000/cell',
+                    url: 'https://example.org/cell'
+                  }
+                ],
+                citations: [],
+                loaded_context_blocks: [],
+                papers_read_count: 0,
+                source_counts: { pubmed: 2 },
+                source_errors: {},
+                summary: 'Found 2 literature results.'
+              };
+            }
+          },
+          paperContextLoaderRuntime: {
+            fetchEuropePmcMetadataForItem: async () => ({
+              pmid: '',
+              pmcid: '',
+              doi: '',
+              pdf_urls: [],
+              abstract_sections: []
+            })
+          },
+          paperDownloadRuntime: {
+            downloadPaper: async (input = {}) => {
+              downloadCalls.push(JSON.parse(JSON.stringify(input)));
+              return {
+                ok: true,
+                status: 'completed',
+                paper_id: input.paper_id,
+                paper_title: input.paper_title,
+                doi: input.doi,
+                relative_path: `Papers/${input.paper_id}.pdf`,
+                summary: `Downloaded ${input.paper_title || input.paper_id}.`
+              };
+            }
+          },
+          subAgentRuntime: {
+            createSubAgent: async () => {
+              throw new Error('No extracted markdown should require a Codex paper context turn.');
+            }
+          }
+        });
+
+        const result = await runtime.execute({
+          provider: 'codex',
+          query: 'kinase inhibitor resistance',
+          max_papers: 2,
+          snapshot: {
+            settings: {
+              storagePath: storageRoot,
+              preferredJournal: 'Nature Biotechnology; Cell'
+            }
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.codex_paper_context, false);
+        assert.equal(result.selected_papers.length, 2);
+        assert.equal(result.selected_papers[0].paper_title, 'Kinase inhibitor resistance mechanisms');
+        assert.equal(result.selected_papers[0].doi, '10.1000/cell');
+        assert.equal(result.selected_papers[1].doi, '10.1000/other');
+        assert.deepEqual(
+          result.sub_agent_context.preferred_journals,
+          ['Nature Biotechnology', 'Cell']
+        );
+        assert.equal(result.sub_agent_context.preferred_journal, 'Nature Biotechnology; Cell');
+        assert.equal(downloadCalls.length, 0);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }

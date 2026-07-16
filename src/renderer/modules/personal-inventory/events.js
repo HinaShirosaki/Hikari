@@ -22,8 +22,7 @@ export function bindPersonalInventoryEvents(ctx) {
       closeAddContainerDialog();
       return;
     }
-    ctx.renderAddContainerLocationOptions();
-    ctx.setAddContainerFormOpen(true);
+    ctx.beginAddContainer();
     windowRef.requestAnimationFrame?.(() => {
       addContainerNameInput?.focus();
     }) || addContainerNameInput?.focus();
@@ -41,7 +40,7 @@ export function bindPersonalInventoryEvents(ctx) {
   [addContainerCloseBtn, addContainerCancelBtn].forEach((button) => {
     button?.addEventListener('click', closeAddContainerDialog);
   });
-  rootDocument?.addEventListener('keydown', (event) => {
+  rootDocument?.addEventListener?.('keydown', (event) => {
     if (event.key === 'Escape' && ctx.uiState.isAddContainerFormOpen) {
       closeAddContainerDialog();
     }

@@ -42,12 +42,6 @@ export function collectSegmentTextEntries(segmentElement) {
   return entries;
 }
 
-export function getSegmentPlainText(segmentElement) {
-  return collectSegmentTextEntries(segmentElement)
-    .map((entry) => entry.text)
-    .join('');
-}
-
 export function unwrapInsightAnchors(host) {
   host?.querySelectorAll?.('[data-selection-insight-anchor-id]')?.forEach?.((anchor) => {
     const parent = anchor.parentNode;

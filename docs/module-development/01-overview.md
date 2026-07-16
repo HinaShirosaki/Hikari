@@ -22,16 +22,15 @@ ui/
     views/<id>-view.css    # per-view styles
     overrides/             # universal layouts (left-rail-template, menus, …)
 config/
-  llm-providers.json       # provider catalog (also generated)
+  codex-models.json        # Codex model catalog (also generated)
 src/renderer/
   bootstrap/index-shell.js # pre-app loading cover, theme application
-  renderer.js              # entry point: imports startRendererApp()
-  app/start-renderer-app.js # compatibility wrapper into renderer core
+  renderer.js              # browser entry; calls the core directly
   core/start-hikari-core.js # state, services, modules, navigation, search boot
   app/navigation-shell.js  # dock, view switching, page title
   app/topbar-open-handlers.js # search result open routing
   app/topbar-search.js
-  module-runtime.js        # manifest composition plus shared render dispatch
+  core/module-runtime.js   # manifest composition plus shared render dispatch
   module-manifests/        # per-module init/render declarations
   modules/                 # per-feature controllers
   services/                # cross-module fan-out (registry + services)
@@ -43,7 +42,7 @@ scripts/
 
 `npm run build:ui` runs `scripts/build-ui.mjs`, which:
 
-1. Reads `config/llm-providers.json` and writes `src/main/generated/llm-provider-config.generated.js` and `src/renderer/modules/llm-provider-config.generated.js`. The `allowApiAgent` flag is generated into both modules; keep it `false` for Codex-only release builds.
+1. Reads `config/codex-models.json` and writes `src/main/generated/codex-model-catalog.generated.js` and `src/renderer/modules/codex-model-catalog.generated.js`. The catalog supplies the shared Codex model settings used by both direct features and Agent Chat.
 2. Reads `ui/config/app-registry.json` and writes both `src/renderer/modules/app-registry.generated.js` and `src/renderer/modules/views.js`.
 3. Uses `app-registry.json.viewOrder` to place each declared view between the shell fragments from `ui/config/html-order.json`, then writes `index.html`.
 4. Inserts each declared view stylesheet between `prefixInputs` and `suffixInputs` from `ui/config/css-order.json`, then writes `styles.css`.
@@ -63,7 +62,7 @@ Once Electron loads `index.html`:
 4. `startRendererApp()` delegates to `startHikariCore()` ([src/renderer/core/start-hikari-core.js](../../src/renderer/core/start-hikari-core.js)):
    - `loadState()` from localStorage (key `hikari_state_v1`).
    - Creates the **module registry** (a `Map`-based bus) and the **renderer services** (cross-module fan-out helpers).
-   - Calls `createRendererModuleRuntime({...})` ([src/renderer/module-runtime.js](../../src/renderer/module-runtime.js)) which initializes manifest-declared modules from [src/renderer/module-manifests/](../../src/renderer/module-manifests/), registers each module with the registry, and builds route/boot render dispatch from manifest metadata.
+   - Calls `createRendererModuleRuntime({...})` ([src/renderer/core/module-runtime.js](../../src/renderer/core/module-runtime.js)) which initializes manifest-declared modules from [src/renderer/module-manifests/](../../src/renderer/module-manifests/), registers each module with the registry, and builds route/boot render dispatch from manifest metadata.
    - Creates the **navigation shell**, which renders the dock from `APP_REGISTRY` and wires `showView()`.
    - Hydrates extra state from `window.hikariApi` if a storage path is set, runs `renderAll()`, then activates the startup view.
    - Dispatches `hikari:app-ready`. The bootstrap cover fades out.
@@ -75,7 +74,7 @@ Every entry in `APP_REGISTRY` corresponds to one view fragment and one controlle
 - looks up its DOM nodes by ID inside its own `<section id="...-view">`,
 - attaches event listeners,
 - exposes a small render API (e.g. `render()`, `renderList()`, `renderEntries()`),
-- returns that API so [src/renderer/module-runtime.js](../../src/renderer/module-runtime.js) can call it during `renderAll()` and `renderView(viewId)`.
+- returns that API so [src/renderer/core/module-runtime.js](../../src/renderer/core/module-runtime.js) can call it during `renderAll()` and `renderView(viewId)`.
 
 A module owns the DOM inside its `<section>`. It must not reach into another module's view. Cross-module communication happens through:
 
@@ -104,8 +103,6 @@ You write only the markup specific to your view. The next page covers exactly wh
 There is one mutable state object created by `loadState()` and passed to every module by reference. Mutations happen in-place; persistence is explicit via the `persist()` callback (writes localStorage and, if `state.settings.storagePath` is set, autosaves to disk through `window.hikariApi.autoSaveDataFile`).
 
 `defaultState` in [src/renderer/modules/app-state/defaults.js](../../src/renderer/modules/app-state/defaults.js) defines every top-level key; [state-normalizer.js](../../src/renderer/modules/app-state/state-normalizer.js) assembles loaded state. If your module needs a new top-level field, update both with a sensible default.
-
-`state.objectGraph` is rebuilt from the rest of the state on every `persist()` in the renderer core. Don't write to it manually.
 
 ## What the dock and navigation give you
 

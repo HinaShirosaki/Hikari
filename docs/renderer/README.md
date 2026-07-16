@@ -2,7 +2,7 @@
 
 This doc set explains how `src/renderer` is assembled, how the browser-side app shell boots, and where the major feature modules live once you leave the renderer core.
 
-If `doc/main-helpers/` explains the main-process bridge, this folder explains the renderer-side half of the app.
+If `docs/main-platform/` explains the main-process bridge, this folder explains the renderer-side half of the app.
 
 ## Recommended reading order
 
@@ -16,7 +16,7 @@ If `doc/main-helpers/` explains the main-process bridge, this folder explains th
 
 `src/renderer` is not just a pile of view scripts. It owns the full renderer runtime:
 
-- app-shell boot in `renderer.js`, `app/start-renderer-app.js`, and `core/start-hikari-core.js`
+- app-shell boot in `renderer.js` and `core/start-hikari-core.js`
 - renderer-local state load, normalization, persistence, and appearance
 - dock navigation, topbar search/result routing, startup-view resolution, and Telegram command routing
 - feature controllers for inventory, notebooks, protocols, workflows, papers, assays, gels, agent chat, sequence viewing, and bench tools
@@ -43,6 +43,6 @@ If `doc/main-helpers/` explains the main-process bridge, this folder explains th
 
 ## Important boundaries
 
-- `window.hikariApi` is the renderer-to-main bridge. For the main-process side of those calls, use [doc/main-helpers/README.md](../main-helpers/README.md).
+- `window.hikariApi` is the renderer-to-main bridge. For the main-process side of those calls, use [doc/main-platform/README.md](../main-platform/README.md).
 - The renderer-side Agent UI lives in `src/renderer/modules/agent-chat/`, but the actual agent backend is documented separately in [agent/README.md](../agent/README.md).
 - `src/renderer/modules/app-registry.generated.js` is generated from `ui/config/app-registry.json`, so dock layout, labels, aliases, and search-scope wiring start from config, not handwritten renderer code.

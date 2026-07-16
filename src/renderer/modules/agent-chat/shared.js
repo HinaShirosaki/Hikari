@@ -216,7 +216,7 @@ export function toConversation(messages) {
 
 export const TOOL_ACTIVITY_LABELS = {
   'inventory-lookup': 'Checking inventory records',
-  'record-lookup': 'Checking lab records',
+  'notebook-lookup': 'Checking lab notebook pages',
   'purchase-recommendation': 'Finding products to buy',
   'notebook-draft': 'Preparing notebook draft',
   'python-sandbox': 'Running Python sandbox',
@@ -252,9 +252,9 @@ export const DEVELOPER_TOOL_TEST_OPTIONS = [
     example: 'Atlas construct sample'
   },
   {
-    name: 'record-lookup',
-    label: 'Record Lookup',
-    description: 'Pass a protocol, workflow, or record title to inspect record retrieval output.',
+    name: 'notebook-lookup',
+    label: 'Notebook Lookup',
+    description: 'Pass a project, protocol, result phrase, or notebook title to inspect notebook retrieval output.',
     example: 'Cell Prep'
   },
   {

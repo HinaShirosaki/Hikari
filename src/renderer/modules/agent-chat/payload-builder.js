@@ -6,9 +6,18 @@ export function createAgentPayloadBuilder({
   state,
   input,
   getComposerAttachments,
-  ensureAgentState
+  ensureAgentState,
+  onHiddenDraftContextsChanged = () => {}
 }) {
   let hiddenDraftContexts = [];
+
+  function getPrimedHiddenContexts() {
+    return hiddenDraftContexts.map((context) => ({ ...context }));
+  }
+
+  function notifyHiddenDraftContextsChanged() {
+    onHiddenDraftContextsChanged(getPrimedHiddenContexts());
+  }
 
   function getHiddenContextTextLimit(source = {}) {
     const kind = trimText(source.kind || 'selection', 80);
@@ -67,11 +76,16 @@ export function createAgentPayloadBuilder({
       return false;
     }
     hiddenDraftContexts = [normalized];
+    notifyHiddenDraftContextsChanged();
     return true;
   }
 
   function consumeHiddenContexts() {
+    if (!hiddenDraftContexts.length) {
+      return;
+    }
     hiddenDraftContexts = [];
+    notifyHiddenDraftContextsChanged();
   }
 
   function getCurrentProjectDetails() {
@@ -207,6 +221,7 @@ export function createAgentPayloadBuilder({
     consumeHiddenContexts,
     getCurrentProjectDetails,
     getDraftRequest,
+    getPrimedHiddenContexts,
     primeHiddenContext,
     summarizeAgentLlmPayload
   };

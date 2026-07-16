@@ -12,11 +12,10 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart03(contex
       });
 
       const recorded = agentObservability.recordLifecycleEvent(recorder, {
-        stage: 'science_round_started',
+        stage: 'codex_agent_started',
         status: 'started',
-        routing_intent: 'general_science_question',
-        tool_name: 'literature-search',
-        message: 'Science reasoning round 1 started with literature-search.',
+        routing_intent: 'codex_agent',
+        message: 'Codex agent request started.',
         meta: {
           round: 1
         }
@@ -26,7 +25,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart03(contex
       assert.equal(seen.length, 1);
       assert.deepEqual(seen[0], recorded);
       assert.equal(seen[0].requestId, 'req-observe-1');
-      assert.equal(seen[0].stage, 'science_round_started');
+      assert.equal(seen[0].stage, 'codex_agent_started');
       assert.equal(seen[0].meta.round, 1);
     });
     test('lifecycle tool runner forwards request context into tool execution', async () => {

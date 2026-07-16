@@ -1,11 +1,7 @@
 module.exports = function registerAgentRetrievalAndToolCallSuitePart04(context = {}) {
   const scope = context.scope || {};
-  const toolLoading = scope.agentToolLoading && Object.keys(scope.agentToolLoading).length
-    ? scope.agentToolLoading
-    : (scope.agentToolCall || {});
-  const toolExecution = scope.agentToolExecution && Object.keys(scope.agentToolExecution).length
-    ? scope.agentToolExecution
-    : (scope.agentToolCall || {});
+  const toolLoading = scope.agentToolLoading || {};
+  const toolExecution = scope.agentToolExecution || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
     test('agent tool-call normalizes selection and arguments payloads and rejects invalid input', () => {
@@ -39,10 +35,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart04(context =
               query: 'PEI',
               limit: 5,
               inventory_search: {
-                normalized_query: 'PEI',
-                candidate_terms: ['PEI'],
-                aliases: [],
-                search_mode: 'exact_then_alias_then_fuzzy'
+                candidate_terms: ['PEI']
               }
             }
           }
@@ -52,6 +45,32 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart04(context =
       });
       assert.equal(argsPayload.ok, true);
       assert.equal(argsPayload.payload.tool_calls[0].arguments.limit, 5);
+
+      const notebookDraftArgs = toolLoading.normalizeToolArgumentsPayload({
+        tool_calls: [
+          {
+            tool_name: 'notebook-draft',
+            arguments: {
+              project: { name: 'Atlas' },
+              protocol_candidates: ['Flow Cytometric IC50'],
+              pending_values: {
+                'step-1:peptide-id': 'PDL1-peptide-7'
+              },
+              step_edits: [
+                { step_number: 2, text: 'Acquire the prepared dose series.' }
+              ]
+            }
+          }
+        ]
+      }, {
+        selectedToolNames: ['notebook-draft']
+      });
+      assert.equal(notebookDraftArgs.ok, true);
+      assert.equal(
+        notebookDraftArgs.payload.tool_calls[0].arguments.pending_values['step-1:peptide-id'],
+        'PDL1-peptide-7'
+      );
+      assert.equal(notebookDraftArgs.payload.tool_calls[0].arguments.step_edits[0].step_number, 2);
       assert.deepEqual(
         toolLoading.normalizeToolInvocationArgs({
           input_json: JSON.stringify({ query: 'PEI', limit: 5 })
@@ -123,7 +142,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart04(context =
     test('agent tool-call runtime passes normalized context and helper services into injected executors', async () => {
       const runtime = toolExecution.createAgentToolCallRuntime({
         toolExecutors: {
-          'record-lookup': async ({ toolName, args, context, services }) => ({
+          'notebook-lookup': async ({ toolName, args, context, services }) => ({
             status: 'handled',
             summary: `${toolName} received ${args.query}.`,
             items: [
@@ -137,7 +156,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart04(context =
         }
       });
       const result = await runtime.executeToolCall({
-        tool_name: 'record-lookup',
+        tool_name: 'notebook-lookup',
         arguments: {
           query: 'Protein Purification'
         }
@@ -151,7 +170,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart04(context =
         }
       });
       assert.equal(result.ok, true);
-      assert.equal(result.tool_name, 'record-lookup');
+      assert.equal(result.tool_name, 'notebook-lookup');
       assert.equal(result.result.status, 'handled');
       assert.equal(result.result.items[0].message, 'Find protein purification records for Atlas.');
       assert.equal(result.result.items[0].projectName, 'Atlas');

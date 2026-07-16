@@ -51,7 +51,7 @@ function hasAgentResultShape(source) {
       || source.protocol_generation
       || source.codex_agent
       || source.inventory_lookup
-      || source.record_lookup
+      || source.notebook_lookup
       || source.purchase_recommendation
       || source.general_science_question
       || source.project_science_question
@@ -152,10 +152,7 @@ export function buildDeveloperMockAgentResult({
           : null,
         entities: {},
         inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
+          candidate_terms: []
         },
         protocol_candidates: [],
         reasoning_summary: trimText(parsed.reasoning_summary, 1200)
@@ -186,10 +183,7 @@ export function buildDeveloperMockAgentResult({
       clarification_reason: null,
       entities: {},
       inventory_search: {
-        normalized_query: null,
-        candidate_terms: [],
-        aliases: [],
-        search_mode: null
+        candidate_terms: []
       },
       protocol_candidates: [],
       reasoning_summary: raw || 'Developer mock response.'
@@ -227,12 +221,6 @@ export function formatDeveloperVisibleContext(context = {}) {
   );
   sections.push('\n--- System / Agent Prompt ---');
   sections.push(systemPrompt || 'No separate system prompt is available for this preview branch.');
-
-  const parserPrompt = trimText(prompt.parser_user_prompt || prompt.intent_parser_prompt || '', 120000);
-  if (parserPrompt) {
-    sections.push('\n--- Intent Parser User Prompt ---');
-    sections.push(parserPrompt);
-  }
 
   sections.push('\n--- Current Request ---');
   sections.push(trimText(request.message || preview.message, 24000) || '(no draft message)');

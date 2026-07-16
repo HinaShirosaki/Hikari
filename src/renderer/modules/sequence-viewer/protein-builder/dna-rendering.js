@@ -1,4 +1,4 @@
-import { escapeHtml } from '../../tool-box/common.js';
+import { escapeHtml } from '../../../lib/html.js';
 import { buildDnaConstruct } from './dna-construct.js';
 
 export function installProteinBuilderDnaRendering(ctx) {
@@ -46,12 +46,7 @@ export function installProteinBuilderDnaRendering(ctx) {
   };
 
   ctx.buildCurrentDnaSequence = function buildCurrentDnaSequence() {
-    const payload = {
-      constructName: elements.proteinBuilderNameInput?.value,
-      poiName: elements.proteinBuilderPoiNameInput?.value,
-      poiSequence: elements.proteinBuilderPoiSequenceInput?.value,
-      rows: ctx.currentRows()
-    };
+    const payload = ctx.getProteinBuilderPayload();
     const dnaConstruct = buildDnaConstruct(payload, {
       record: ctx.getSelectedRecord(),
       selectedFeature: ctx.getSelectedFeature()

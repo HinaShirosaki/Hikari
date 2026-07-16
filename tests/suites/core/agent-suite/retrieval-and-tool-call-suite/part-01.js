@@ -1,11 +1,7 @@
 module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context = {}) {
   const scope = context.scope || {};
-  const toolLoading = scope.agentToolLoading && Object.keys(scope.agentToolLoading).length
-    ? scope.agentToolLoading
-    : (scope.agentToolCall || {});
-  const toolExecution = scope.agentToolExecution && Object.keys(scope.agentToolExecution).length
-    ? scope.agentToolExecution
-    : (scope.agentToolCall || {});
+  const toolLoading = scope.agentToolLoading || {};
+  const toolExecution = scope.agentToolExecution || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
     test('inventory lookup runtime is reusable with fallback snapshot search', async () => {
@@ -68,17 +64,24 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(result.items.find((item) => item.name === 'Atlas construct')?.location, 'Shelf 3 / A7');
       assert.equal(result.terms_used.includes('Atlas construct'), true);
     });
-    test('record lookup runtime is reusable with fallback snapshot search', async () => {
-      const runtime = agentRecordLookup.createAgentRecordLookupRuntime();
-      const result = await runtime.executeRecordLookup({
-        message: 'Find protein purification records for Atlas.',
+    test('notebook lookup runtime is reusable with fallback snapshot search', async () => {
+      const { createAgentNotebookLookupRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'tools',
+        'agent-notebook-lookup.js'
+      ));
+      const runtime = createAgentNotebookLookupRuntime();
+      const result = await runtime.execute({
+        message: 'Find protein purification notebook for Atlas.',
         parserPayload: {
           entities: {
             project_name: 'Atlas',
             protocol_name: 'Protein Purification',
-            workflow_step: null,
-            requested_output: 'yield',
-            activity_type: 'purification'
+            notebook_name: null,
+            requested_output: 'yield'
           }
         },
         snapshot: {
@@ -92,39 +95,130 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
               result: 'Yield improved by 20%.',
               updatedAt: '2026-03-20T10:00:00.000Z'
             }
-          ],
-          protocols: [
-            {
-              id: 'prot-1',
-              name: 'Protein Purification',
-              purpose: 'Affinity purification flow.',
-              steps: ['Bind sample', 'Wash', 'Elute']
-            }
-          ],
-          workflows: [
-            {
-              id: 'wf-1',
-              name: 'Atlas purification workflow',
-              description: 'Chromatography handoff',
-              projectId: 'proj-1',
-              projectName: 'Atlas',
-              blocks: [
-                { text: 'Bind lysate to resin' }
-              ]
-            }
           ]
         }
       });
       assert.equal(result.status, 'matched');
       assert.equal(result.source, 'fallback_json');
-      assert.equal(result.items.some((item) => item.record_type === 'protocol'), true);
       assert.equal(result.items.some((item) => item.record_type === 'notebook'), true);
       assert.equal(result.items.some((item) => item.linked_protocol_name === 'Protein Purification'), true);
+      assert.equal(result.access.complete, true);
+      assert.equal(result.items[0].ui_target.entry_id, 'note-1');
     });
-    test('record lookup runtime does not provide assay data', async () => {
-      const runtime = agentRecordLookup.createAgentRecordLookupRuntime();
-      const result = await runtime.executeRecordLookup({
-        message: 'Find viability assay records for Atlas.',
+    test('notebook lookup returns full structured page content when detail is full', async () => {
+      const { createAgentNotebookLookupRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'tools',
+        'agent-notebook-lookup.js'
+      ));
+      const runtime = createAgentNotebookLookupRuntime();
+      const result = await runtime.execute({
+        protocolName: 'Protein Purification',
+        detail: 'full',
+        snapshot: {
+          notebookEntries: [{
+            id: 'note-full-1',
+            experimentName: 'Atlas purification run 2',
+            protocolId: 'prot-1',
+            protocolName: 'Protein Purification',
+            projectId: 'proj-1',
+            projectName: 'Atlas',
+            result: 'Yield improved to 4.2 mg.',
+            values: { sample_name: 'Atlas-2' },
+            resultTables: [{ name: 'Yield', rows: [{ value: 4.2 }] }],
+            toolCalculations: [{ title: 'Recovery', result: '84%' }],
+            resultFileRecords: [{ name: 'gel.png', path: '/private/gel.png', relativePath: 'Results/gel.png' }],
+            notebookState: 'executed',
+            updatedAt: '2026-07-11T10:00:00.000Z'
+          }]
+        }
+      });
+
+      assert.equal(result.status, 'matched');
+      assert.equal(result.detail, 'full');
+      assert.equal(result.items[0].title, 'Atlas purification run 2');
+      assert.equal(result.items[0].content.values.sample_name, 'Atlas-2');
+      assert.equal(result.items[0].content.result_tables[0].rows[0].value, 4.2);
+      assert.equal(result.items[0].content.result_files[0].relative_path, 'Results/gel.png');
+      assert.equal(Object.prototype.hasOwnProperty.call(result.items[0].content.result_files[0], 'path'), false);
+      assert.equal(result.items[0].ui_target.view, 'biology-notebook');
+    });
+    test('notebook lookup reports permission-limited coverage instead of a false no-match', async () => {
+      const { createAgentNotebookLookupRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'tools',
+        'agent-notebook-lookup.js'
+      ));
+      const runtime = createAgentNotebookLookupRuntime({
+        buildLookupContext: async ({ snapshot = {} } = {}) => ({
+          snapshot: { notebookEntries: [] },
+          hydratedSnapshot: {
+            notebookEntries: snapshot.notebook_lookup_bridge?.entries || []
+          },
+          warnings: ["EPERM: operation not permitted, open '/private/notebooks/page.json'"],
+          loadedDataFile: false,
+          liveNotebookBridge: {
+            entryCount: snapshot.notebook_lookup_bridge?.entries?.length || 0,
+            complete: snapshot.notebook_lookup_bridge?.complete === true
+          },
+          migration: {
+            applied: [],
+            warnings: []
+          }
+        })
+      });
+      const result = await runtime.execute({
+        message: 'Atlas purification',
+        dataFilePath: '/private/hikari-data.json'
+      });
+
+      assert.equal(result.status, 'permission_denied');
+      assert.equal(result.access.complete, false);
+      assert.equal(result.access.retryable, true);
+      assert.equal(result.access.warning_codes.includes('storage_permission_denied'), true);
+      assert.match(result.access.user_action, /Grant Hikari access/);
+      assert.equal(JSON.stringify(result.access).includes('/private/notebooks'), false);
+
+      const liveFallback = await runtime.execute({
+        message: 'Atlas purification',
+        dataFilePath: '/private/hikari-data.json',
+        snapshot: {
+          notebook_lookup_bridge: {
+            version: 1,
+            complete: true,
+            entries: [{
+              id: 'note-live-1',
+              projectId: 'proj-1',
+              projectName: 'Atlas',
+              protocolName: 'Purification',
+              result: 'Current in-memory notebook summary.'
+            }]
+          }
+        }
+      });
+      assert.equal(liveFallback.status, 'partial');
+      assert.equal(liveFallback.items[0].id, 'note-live-1');
+      assert.equal(liveFallback.sources.includes('live_notebook_bridge'), true);
+      assert.equal(liveFallback.access.complete, false);
+    });
+    test('notebook lookup runtime does not provide assay data', async () => {
+      const { createAgentNotebookLookupRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'tools',
+        'agent-notebook-lookup.js'
+      ));
+      const runtime = createAgentNotebookLookupRuntime();
+      const result = await runtime.execute({
+        message: 'Find viability assay notebook for Atlas.',
         parserPayload: {
           entities: {
             project_name: 'Atlas',
@@ -138,7 +232,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
               name: 'Viability Readout',
               projectId: 'proj-1',
               projectName: 'Atlas',
-              notes: 'This matching assay should stay out of record_lookup.'
+              notes: 'This matching assay should stay out of notebook lookup.'
             }
           ]
         }
@@ -152,7 +246,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'runtime',
         'agent-sub-app-api.js'
@@ -236,23 +329,27 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(typeof api.protocol.matchForNotebook, 'function');
       assert.equal(typeof api.notebook.generateFromProtocol, 'function');
     });
-    test('record lookup runtime can source paper fallback results through the agent sub-app API layer', async () => {
-      const runtime = agentRecordLookup.createAgentRecordLookupRuntime({
+    test('notebook lookup runtime can source fallback results through the agent sub-app API layer', async () => {
+      const { createAgentNotebookLookupRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'tools',
+        'agent-notebook-lookup.js'
+      ));
+      const runtime = createAgentNotebookLookupRuntime({
         agentAppApi: {
-          papers: {
-            listAgentRecords() {
+          notebook: {
+            listAgentEntries() {
               return [
                 {
-                  record_type: 'paper',
-                  record_id: 'paper-1',
-                  title: 'Atlas SUMO1 pilot',
-                  project_id: 'proj-1',
-                  project_name: 'Atlas',
-                  summary: 'Weak conjugation paper.',
-                  linked_protocol_id: '',
-                  linked_protocol_name: '',
-                  updated_at: '2026-03-22T10:00:00.000Z',
-                  search_text: 'atlas sumo1 pilot weak conjugation paper'
+                  id: 'note-api-1',
+                  protocolName: 'Protein Purification',
+                  projectId: 'proj-1',
+                  projectName: 'Atlas',
+                  result: 'API-backed notebook result.',
+                  updatedAt: '2026-03-22T10:00:00.000Z'
                 }
               ];
             }
@@ -260,12 +357,12 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         }
       });
 
-      const result = await runtime.executeRecordLookup({
-        message: 'Find the Atlas weak conjugation paper.',
+      const result = await runtime.execute({
+        message: 'Find the Atlas protein purification notebook.',
         parserPayload: {
           entities: {
             project_name: 'Atlas',
-            requested_output: 'paper'
+            protocol_name: 'Protein Purification'
           }
         },
         snapshot: {}
@@ -273,12 +370,20 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
 
       assert.equal(result.status, 'matched');
       assert.equal(result.source, 'fallback_json');
-      assert.equal(result.items.some((item) => item.record_type === 'paper'), true);
-      assert.equal(result.items.find((item) => item.record_type === 'paper')?.title, 'Atlas SUMO1 pilot');
+      assert.equal(result.items.some((item) => item.record_type === 'notebook'), true);
+      assert.equal(result.items.find((item) => item.record_type === 'notebook')?.id, 'note-api-1');
     });
-    test('lookup query derivation prefers the searched entity over requested output hints', () => {
+    test('lookup query derivation prefers the searched entity over requested output hints', async () => {
       const inventoryRuntime = agentInventoryLookup.createAgentInventoryLookupRuntime();
-      const recordRuntime = agentRecordLookup.createAgentRecordLookupRuntime();
+      const { createAgentNotebookLookupRuntime } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'tools',
+        'agent-notebook-lookup.js'
+      ));
+      const lookupRuntime = createAgentNotebookLookupRuntime();
 
       assert.equal(
         inventoryRuntime.deriveInventoryLookupQuery({
@@ -293,24 +398,32 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
         'Do we have acetic acid?'
       );
 
-      assert.equal(
-        recordRuntime.deriveRecordLookupQuery({
-          message: 'Find protein purification records for Atlas.',
-          parserPayload: {
-            entities: {
-              protocol_name: 'Protein Purification',
-              project_name: 'Atlas',
-              requested_output: 'yield'
-            }
+      const notebookResult = await lookupRuntime.execute({
+        message: '',
+        parserPayload: {
+          entities: {
+            protocol_name: 'Protein Purification',
+            project_name: 'Atlas',
+            requested_output: 'yield'
           }
-        }),
-        'Protein Purification'
-      );
+        },
+        snapshot: {
+          notebookEntries: [
+            {
+              id: 'note-1',
+              protocolName: 'Protein Purification',
+              projectName: 'Atlas',
+              result: 'Yield improved by 20%.'
+            }
+          ]
+        }
+      });
+      assert.equal(notebookResult.query, 'Protein Purification');
     });
     test('agent tool-call catalog stays in sync and prompt builders render tool metadata', () => {
       const toolNames = toolLoading.AGENT_TOOL_CATALOG.map((entry) => entry.name);
       const schemaNames = Object.keys(toolLoading.AGENT_TOOL_CALL_CATALOG).filter((name) => name !== '$defs');
-      assert.deepEqual(toolNames, ['inventory-lookup', 'record-lookup', 'notebook-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'command-line', 'web-search', 'sub-agent', 'memory', 'container', 'assay-table', 'plotly-graph', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'paper-search', 'protocol-generation']);
+      assert.deepEqual(toolNames, ['inventory-lookup', 'notebook-lookup', 'protocol-matching', 'notebook-generation', 'notebook-draft', 'python-sandbox', 'command-line', 'web-search', 'sub-agent', 'memory', 'container', 'assay-table', 'plotly-graph', 'literature-search', 'purchase-recommendation', 'paper-download', 'paper-analysis', 'paper-search', 'protocol-generation']);
       assert.deepEqual(schemaNames, toolNames);
       const inventoryEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'inventory-lookup');
       const protocolEntry = toolLoading.AGENT_TOOL_CATALOG.find((entry) => entry.name === 'protocol-matching');
@@ -364,44 +477,8 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(Object.prototype.hasOwnProperty.call(pythonSchema.input_schema.properties, 'feedback'), true);
       assert.equal(Object.prototype.hasOwnProperty.call(pythonSchema.input_schema.properties, 'max_repair_attempts'), true);
     });
-    test('agent tool provider resolves reasoning entry tools from the catalog schemas', () => {
-      const toolProvider = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-tool-provide.js'));
-      const runtime = toolProvider.createAgentToolProviderRuntime();
-
-      const scienceTools = runtime.provideTools({
-        entryPoint: 'science_reasoning_entry',
-        intent: 'general_science_question'
-      });
-      assert.equal(scienceTools.tool_names.includes('literature-search'), true);
-      assert.equal(scienceTools.tool_names.includes('web-search'), true);
-      assert.equal(scienceTools.tool_names.includes('python-sandbox'), true);
-      assert.equal(scienceTools.tool_names.includes('record-lookup'), false);
-      assert.equal(scienceTools.tool_names.includes('memory'), false);
-      assert.equal(scienceTools.tool_names.includes('container'), false);
-      assert.equal(scienceTools.tool_names.includes('assay-table'), false);
-      assert.equal(scienceTools.tool_names.includes('plotly-graph'), false);
-      assert.equal(scienceTools.tool_names.includes('command-line'), false);
-      assert.equal(scienceTools.tool_names.includes('notebook-generation'), false);
-      assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'literature-search'), true);
-      assert.equal(scienceTools.tool_definitions.some((tool) => tool.name === 'web-search'), true);
-      assert.equal(
-        scienceTools.tool_definitions.find((tool) => tool.name === 'literature-search').parameters.properties.source.$ref,
-        '#/$defs/literature_source'
-      );
-
-      const catalogTools = runtime.provideTools();
-      assert.equal(catalogTools.tool_names.includes('inventory-lookup'), true);
-      assert.equal(catalogTools.tool_names.includes('literature-search'), true);
-      assert.equal(catalogTools.tool_names.includes('web-search'), true);
-      assert.equal(catalogTools.tool_names.includes('command-line'), true);
-      assert.equal(catalogTools.tool_names.includes('purchase-recommendation'), true);
-      assert.equal(catalogTools.tool_names.includes('container'), true);
-      assert.equal(catalogTools.tool_names.includes('assay-table'), true);
-      assert.equal(catalogTools.tool_names.includes('plotly-graph'), true);
-      assert.equal(catalogTools.tool_names.includes('protocol-generation'), true);
-    });
     test('command-line runtime executes focused commands and blocks mutating commands when write tools are disabled', async () => {
-      const { createAgentCommandLineRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-command-line.js'));
+      const { createAgentCommandLineRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-command-line.js'));
       const runtime = createAgentCommandLineRuntime({
         defaultCwd: __dirname
       });
@@ -424,7 +501,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(fs.existsSync(blockedTarget), false);
     });
     test('skill runtime loads OpenClaw-style SKILL.md files with workspace precedence and direct tool dispatch metadata', async () => {
-      const { createAgentSkillRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'skills', 'agent-skill-runtime.js'));
+      const { createAgentSkillRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'skills', 'agent-skill-runtime.js'));
       const tempRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'agent-skills-'));
       const homeDir = path.join(tempRoot, 'home');
       const workspaceDir = path.join(tempRoot, 'workspace');

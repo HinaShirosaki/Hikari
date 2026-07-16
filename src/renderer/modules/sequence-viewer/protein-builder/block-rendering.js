@@ -1,4 +1,4 @@
-import { escapeHtml } from '../../tool-box/common.js';
+import { escapeHtml } from '../../../lib/html.js';
 import { cleanText } from '../shared.js';
 import { COMMON_BLOCK_GROUPS } from './constants.js';
 import { buildFeatureResultMeta } from './feature-meta.js';

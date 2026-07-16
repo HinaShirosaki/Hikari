@@ -25,6 +25,7 @@ Agent.md
 *.log
 logs/
 data/*.log
+/data/chemicals.json
 data/Config/codex-cli-home/log/
 data/Config/codex-cli-home/tmp/
 
@@ -35,7 +36,6 @@ data/Config/codex-cli-home/auth.json
 
 # Local scratch / personal / test material (not part of the app)
 /Book3.xlsx
-/agent-context-debug.md
 /Exported Standard Features/
 /Testdata/
 /TestData2/

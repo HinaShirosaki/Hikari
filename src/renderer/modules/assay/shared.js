@@ -1,3 +1,7 @@
+import { escapeCsv } from '../../lib/csv.js';
+
+export { escapeCsv };
+
 export function oppositeAxis(axis) {
   return axis === 'column' ? 'row' : 'column';
 }
@@ -24,14 +28,6 @@ export function sanitizeFilePart(text, fallback) {
     .replace(/-+/g, '-')
     .replace(/^-+|-+$/g, '');
   return cleaned || fallback;
-}
-
-export function escapeCsv(value) {
-  const text = String(value || '');
-  if (/[",\r\n]/.test(text)) {
-    return `"${text.replace(/"/g, '""')}"`;
-  }
-  return text;
 }
 
 export function parseCsvLine(line) {

@@ -7,16 +7,13 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
-      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
-      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
-      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'app', 'main-runtime.js'),
-      readLocalSource('src', 'main', 'ipc', 'index.js')
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js'),
+      readLocalSource('src', 'main', 'ipc', 'register-data-ipc.js'),
+      readLocalSource('src', 'main', 'ipc', 'register-agent-ipc', 'index.js'),
+      readLocalSource('src', 'main', 'ipc', 'register-system-ipc.js')
     ].join('\n');
     const readPreloadSource = () => [
       readLocalSource('src', 'main', 'preload.js'),
@@ -29,14 +26,14 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       readLocalSource('src', 'main', 'preload', 'api', 'telegram-api.js')
     ].join('\n');
     const readRendererShellSource = () => [
-      readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'renderer.js'),
       readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
       readLocalSource('src', 'renderer', 'app', 'navigation-shell.js'),
       readLocalSource('src', 'renderer', 'app', 'topbar-open-handlers.js'),
       readLocalSource('src', 'renderer', 'app', 'topbar-search.js')
     ].join('\n');
     const readRendererModuleRuntimeSource = () => [
-      readLocalSource('src', 'renderer', 'module-runtime.js'),
+      readLocalSource('src', 'renderer', 'core', 'module-runtime.js'),
       ...fs.readdirSync(path.join(__dirname, 'src', 'renderer', 'module-manifests'))
         .filter((fileName) => fileName.endsWith('.js'))
         .sort()
@@ -77,6 +74,250 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const css = readLocalSource('ui', 'css', 'overrides', 'universal-left-rail-lists.css');
       assert.match(css, /body\s*\{[\s\S]*--hikari-left-rail-list-selected:\s*color-mix\(in srgb, var\(--theme-surface-subtle\) 78%, transparent\);/);
       assert.doesNotMatch(css, /:root\s*\{[\s\S]*--hikari-left-rail-list-selected:/);
+    });
+
+    test('agent chat folders keep the shared two-pixel rail rhythm', () => {
+      const css = readLocalSource('ui', 'css', 'overrides', 'universal-left-rail-lists.css');
+      assert.match(css, /:is\([\s\S]*\.agent-session-list,[\s\S]*\.agent-session-folder-children[\s\S]*\)\s*\{\s*gap:\s*2px !important;/);
+    });
+
+    test('agent chat rail pins its toolbar above the sole gutter-aligned scroller', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'agent-view.css');
+      const railRule = /.left-rail-template\.agent-chat-layout\s*>\s*\.agent-session-rail\.left-rail-template__rail\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const toolbarRule = /\.agent-session-toolbar\s*\{[^}]*padding:\s*14px\s+calc\(var\(--app-left-rail-padding-inline,\s*16px\)\s*\+\s*var\(--theme-scrollbar-size,\s*8px\)\)\s+12px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*border-bottom:\s*1px\s+solid\s+var\(--app-left-rail-divider\);[^}]*\}/s;
+      const listRule = /\.left-rail-template\.agent-chat-layout\s*>\s*\.agent-session-rail\s*>\s*\.agent-session-list\.left-rail-template__scroll\s*\{[^}]*padding:\s*8px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*scrollbar-gutter:\s*stable;[^}]*\}/s;
+
+      assert.match(css, railRule);
+      assert.match(css, toolbarRule);
+      assert.match(css, listRule);
+    });
+
+    test('biology notebook rail pins New Experiment above the sole gutter-aligned scroller', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
+      const railRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const pinnedRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\s*>\s*\.left-rail-template__pinned\s*\{[^}]*display:\s*grid;[^}]*padding:\s*14px\s+calc\(var\(--app-left-rail-padding-inline,\s*16px\)\s*\+\s*var\(--theme-scrollbar-size,\s*8px\)\)\s+12px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*border-bottom:\s*1px\s+solid\s+var\(--app-left-rail-divider\);[^}]*\}/s;
+      const listRule = /\.left-rail-template\.biology-notebook-layout\s*>\s*\.biology-notebook-rail\s*>\s*\.biology-notebook-page-list\.left-rail-template__scroll\s*\{[^}]*padding:\s*8px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*scrollbar-gutter:\s*stable;[^}]*\}/s;
+
+      assert.match(css, railRule);
+      assert.match(css, pinnedRule);
+      assert.match(css, listRule);
+    });
+
+    test('Samples and Inventory pins Add Container above its sole rail scroller', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'personal-inventory-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'personal-inventory-view.css');
+      const railRule = /\.left-rail-template\.personal-inventory-layout\s*>\s*\.inventory-rail-panel\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const pinnedRule = /\.left-rail-template\.personal-inventory-layout\s*>\s*\.inventory-rail-panel\s*>\s*\.inventory-rail-pinned\.left-rail-template__pinned\s*\{[^}]*padding:\s*14px\s+calc\(var\(--app-left-rail-padding-inline,\s*16px\)\s*\+\s*var\(--theme-scrollbar-size,\s*8px\)\)\s+12px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*border-bottom:\s*1px\s+solid\s+var\(--app-left-rail-divider\);[^}]*\}/s;
+      const scrollRule = /\.left-rail-template\.personal-inventory-layout\s*>\s*\.inventory-rail-panel\s*>\s*\.inventory-rail-scroll\.left-rail-template__scroll\s*\{[^}]*display:\s*grid;[^}]*padding:\s*8px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*scrollbar-gutter:\s*stable;[^}]*\}/s;
+
+      assert.match(html, /class="inventory-rail-panel[^"]*left-rail-template__rail--pinned[^"]*"[\s\S]*class="inventory-rail-pinned left-rail-template__pinned"[\s\S]*id="inventory-add-container-btn"[\s\S]*class="inventory-rail-scroll left-rail-template__scroll"[\s\S]*id="inventory-location-nav"[\s\S]*id="inventory-summary-card"/);
+      assert.match(css, railRule);
+      assert.match(css, pinnedRule);
+      assert.match(css, scrollRule);
+    });
+
+    test('biology notebook page header stays fixed above its detail scroller', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
+      const viewerRule = /\.biology-notebook-viewer\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*height:\s*100%;[^}]*min-height:\s*0;[^}]*overflow:\s*hidden;/s;
+      const scrollRule = /\.biology-notebook-viewer-scroll\s*\{[^}]*display:\s*grid;[^}]*min-height:\s*0;[^}]*overflow-x:\s*hidden;[^}]*overflow-y:\s*auto;[^}]*scrollbar-gutter:\s*stable;/s;
+
+      assert.match(html, /class="biology-notebook-viewer-head"[\s\S]*?<\/div>\s*<div class="biology-notebook-viewer-scroll">[\s\S]*?<details class="biology-notebook-viewer-section"/);
+      assert.match(css, viewerRule);
+      assert.match(css, scrollRule);
+    });
+
+    test('biology notebook New Experiment dialog owns project and protocol selection', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
+      assert.match(html, /id="biology-notebook-new-experiment-btn"[\s\S]*New Experiment/);
+      assert.match(html, /id="biology-notebook-experiment-dialog-overlay"[\s\S]*id="biology-notebook-project-select"[\s\S]*Search &amp; Select Protocol[\s\S]*id="biology-notebook-protocol-search"[\s\S]*id="biology-notebook-protocol-search-results"[\s\S]*id="biology-notebook-protocol-select" hidden aria-hidden="true" tabindex="-1"[\s\S]*id="biology-notebook-experiment-start-btn"/);
+    });
+
+    test('protocol rail pins its actions above the sole scrolling protocol list', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
+      const railRule = /\.left-rail-template\.protocol-workspace\s*>\s*\.protocol-list-panel\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const pinnedRule = /\.left-rail-template\.protocol-workspace\s*>\s*\.protocol-list-panel\s*>\s*\.protocol-list-pinned\.left-rail-template__pinned\s*\{[^}]*padding:\s*14px\s+calc\(var\(--app-left-rail-padding-inline,\s*16px\)\s*\+\s*var\(--theme-scrollbar-size,\s*8px\)\)\s+12px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*border-bottom:\s*1px\s+solid\s+var\(--app-left-rail-divider\);[^}]*\}/s;
+      const listRule = /\.left-rail-template\.protocol-workspace\s*>\s*\.protocol-list-panel\s*>\s*\.protocol-list-scroll\.left-rail-template__scroll\s*\{[^}]*padding:\s*8px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*scrollbar-gutter:\s*stable;[^}]*\}/s;
+
+      assert.match(html, /class="protocol-list-panel[^"]*left-rail-template__rail--pinned[^"]*"[\s\S]*class="protocol-list-pinned left-rail-template__pinned"[\s\S]*class="protocol-list-scroll left-rail-template__scroll"[\s\S]*id="protocol-list"/);
+      assert.match(css, railRule);
+      assert.match(css, pinnedRule);
+      assert.match(css, listRule);
+    });
+
+    test('protocol rail uses one borderless icon menu for its four sort combinations', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
+
+      assert.match(html, /id="protocol-sort-menu-btn"[^>]*aria-label="Sort protocols"[\s\S]*<svg[\s\S]*id="protocol-sort-menu"[\s\S]*data-protocol-sort="time:asc"[\s\S]*data-protocol-sort="time:desc"[\s\S]*data-protocol-sort="name:asc"[\s\S]*data-protocol-sort="name:desc"/);
+      assert.doesNotMatch(html, /id="protocol-sort-(?:field|order)-btn"/);
+      assert.match(css, /\.protocol-sort-menu-btn\.ghost-btn\s*\{[^}]*border:\s*0;/s);
+    });
+
+    test('protocol workspace keeps one compact inset between the rail and editor', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+
+      assert.match(css, /\.left-rail-template\.protocol-workspace\s*\{[^}]*--left-rail-main-gap:\s*20px;[^}]*grid-template-columns:\s*var\(--layout-left-panel-width\)\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;/s);
+    });
+
+    test('protocol placeholder presets keep the selected bar visibly active', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const controller = readLocalSource('src', 'renderer', 'modules', 'protocol', 'index.js');
+
+      assert.match(html, /data-protocol-placeholder-preset="plasmid" aria-pressed="false"/);
+      assert.match(css, /\.protocol-placeholder-preset\.is-active,[\s\S]*\.protocol-placeholder-preset\[aria-pressed="true"\]\s*\{[^}]*background:\s*var\(--theme-accent\);/);
+      assert.match(controller, /function setActivePlaceholderPreset\(placeholderName = ''\)[\s\S]*classList\.toggle\('is-active', isActive\)[\s\S]*setAttribute\('aria-pressed', String\(isActive\)\)/);
+    });
+
+    test('editable text fields keep focus inside their boundaries', () => {
+      const coreCss = readLocalSource('ui', 'css', 'base', 'core.css');
+      const agentCss = readLocalSource('ui', 'css', 'views', 'agent-view.css');
+      const menusCss = readLocalSource('ui', 'css', 'overrides', 'universal-menus.css');
+      const papersCss = readLocalSource('ui', 'css', 'views', 'papers-view.css');
+
+      assert.match(coreCss, /input:not\(\[type='checkbox'\]\):not\(\[type='radio'\]\):not\(\[type='range'\]\):not\(\[type='file'\]\):not\(\[type='color'\]\):not\(\[type='button'\]\):not\(\[type='submit'\]\):not\(\[type='reset'\]\):focus-visible,[\s\S]*?textarea:focus-visible,[\s\S]*?select:focus-visible\s*\{[^}]*outline:\s*none;[^}]*border-color:\s*var\(--theme-focus\);/);
+      assert.match(agentCss, /\.agent-user-question-custom textarea:focus\s*\{[^}]*outline:\s*none;[^}]*border-color:/s);
+      assert.match(menusCss, /\.biology-notebook-sample-link-search:focus,[\s\S]*?\.assay-sample-picker-search-input:focus\s*\{[^}]*box-shadow:\s*inset 0 1px 2px var\(--theme-shadow-color-subtle\);/);
+      assert.match(papersCss, /\.papers-folder-rename-input:focus-visible\s*\{[^}]*outline:\s*none;[^}]*border-color:\s*var\(--theme-focus\);/s);
+    });
+
+    test('protocol row action menus stay inside the rail above neighboring rows', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const list = readLocalSource('src', 'renderer', 'modules', 'protocol', 'list.js');
+
+      assert.match(list, /protocol-list-row-menu-open/);
+      assert.match(css, /\.protocol-list-row-menu-open\s*\{[^}]*z-index:\s*2;/s);
+      assert.match(css, /\.protocol-action-menu\s*\{[^}]*right:\s*0;[^}]*top:\s*calc\(100%\s*\+\s*8px\);[^}]*z-index:\s*3;/s);
+      assert.doesNotMatch(css, /\.protocol-action-menu\s*\{[^}]*left:\s*calc\(100%/s);
+    });
+
+    test('Protocols does not expose the retired share function', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'protocol-management-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'protocol-management-view.css');
+      const list = readLocalSource('src', 'renderer', 'modules', 'protocol', 'list.js');
+      const controller = readLocalSource('src', 'renderer', 'modules', 'protocol', 'index.js');
+      const manifest = readLocalSource('src', 'renderer', 'module-manifests', 'protocol.js');
+      const sharingModulePath = path.join(__dirname, 'src', 'renderer', 'modules', 'protocol', 'sharing.js');
+
+      assert.doesNotMatch(html, /protocol-share|Portable Share Link/);
+      assert.doesNotMatch(css, /protocol-(?:share|list-row-share-open)/);
+      assert.doesNotMatch(list, /data-protocol-(?:share|copy-link)|data-protocol-action="share"|activeShare/);
+      assert.doesNotMatch(controller, /createProtocolSharingController|renderShareTargets|sharingController|DEFAULT_SHARE_STATUS/);
+      assert.doesNotMatch(manifest, /renderShareTargets/);
+      assert.equal(fs.existsSync(sharingModulePath), false);
+    });
+
+    test('Workflow and Sequence Viewer pin their rail actions above their only rail scroller', () => {
+      const workflowHtml = readLocalSource('ui', 'html', 'views', 'workflow-management-view.html');
+      const workflowCss = readLocalSource('ui', 'css', 'views', 'workflow-management-view.css');
+      const sequenceHomeHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-view.html');
+      const sequenceDetailHtml = readLocalSource('ui', 'html', 'views', 'sequence-viewer-detail-view.html');
+      const sequenceCss = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
+
+      assert.match(workflowHtml, /class="workflow-editor-sidebar[^\"]*left-rail-template__rail--pinned[^\"]*"[\s\S]*class="workflow-editor-sidebar-pinned left-rail-template__pinned"[\s\S]*id="workflow-entry-view-btn"[\s\S]*class="workflow-editor-sidebar-scroll left-rail-template__scroll"[\s\S]*id="workflow-list"/);
+      assert.match(workflowCss, /#workflow-management-view\s+\.left-rail-template\.workflow-editor-layout\s*>\s*\.workflow-editor-sidebar\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s);
+
+      assert.match(sequenceHomeHtml, /class="sequence-viewer-home-sidebar[^\"]*left-rail-template__rail--pinned[^\"]*"[\s\S]*class="sequence-viewer-home-sidebar-pinned left-rail-template__pinned"[\s\S]*id="sequence-viewer-home-paste-btn"[\s\S]*class="sequence-viewer-home-sidebar-scroll left-rail-template__scroll"[\s\S]*id="sequence-viewer-library-list"/);
+      assert.match(sequenceHomeHtml, /class="sequence-viewer-protein-builder-sidebar[^\"]*left-rail-template__rail--pinned[^\"]*"[\s\S]*class="sequence-viewer-protein-builder-sidebar-pinned left-rail-template__pinned"[\s\S]*id="sequence-viewer-protein-builder-form"[\s\S]*class="sequence-viewer-protein-builder-sidebar-scroll left-rail-template__scroll"[\s\S]*id="sequence-viewer-protein-builder-feature-search-results"/);
+      assert.match(sequenceDetailHtml, /class="sequence-viewer-detail-sidebar[^\"]*left-rail-template__rail--pinned[^\"]*"[\s\S]*class="sequence-viewer-detail-sidebar-pinned left-rail-template__pinned"[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*class="sequence-viewer-detail-sidebar-scroll left-rail-template__scroll"[\s\S]*id="sequence-viewer-detail-library-list"/);
+      assert.match(sequenceDetailHtml, /class="sequence-viewer-cloning-design-toolbar"[\s\S]*class="sequence-viewer-cloning-design-toolbar-nav"[\s\S]*id="sequence-viewer-cloning-design-back-btn"[\s\S]*class="sequence-viewer-cloning-design-toolbar-main"[\s\S]*id="sequence-viewer-cloning-design-run-btn"/);
+      assert.match(sequenceCss, /\.sequence-viewer-cloning-design-toolbar\s*\{[^}]*grid-template-columns:\s*var\(--layout-left-panel-width\)\s+minmax\(0,\s*1fr\);[^}]*\}/s);
+      assert.match(sequenceCss, /\.sequence-viewer-cloning-design-toolbar-main\s*\{[^}]*grid-column:\s*2;[^}]*display:\s*flex;[^}]*justify-content:\s*flex-start;[^}]*\}/s);
+      assert.match(sequenceCss, /#sequence-viewer-view\s+\.left-rail-template\.sequence-viewer-home-layout\s*>\s*\.sequence-viewer-home-sidebar\.left-rail-template__rail--pinned,[^}]*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s);
+    });
+
+    test('workflow protocol filling uses compact bordered placeholder inputs without extra controls', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'workflow-management-view.css');
+      const renderer = readLocalSource('src', 'renderer', 'modules', 'workflow', 'renderer.js');
+
+      assert.match(css, /\.workflow-step-inline\s*\{[^}]*width:\s*min\(300px,\s*calc\(100vw\s*-\s*32px\)\);[^}]*max-height:\s*min\(420px,\s*65vh\);[^}]*padding:\s*14px;[^}]*overflow-y:\s*auto;/s);
+      assert.match(css, /\.workflow-placeholder-field input\s*\{[^}]*min-height:\s*38px;[^}]*border:\s*1px solid var\(--theme-border\);[^}]*border-radius:\s*7px;[^}]*box-shadow:\s*none;/s);
+      assert.match(renderer, /workflow-placeholder-field-label/);
+      assert.match(renderer, /placeholder="Enter value"/);
+      assert.doesNotMatch(renderer, /workflow-step-editor-(?:header|footer)|workflow-placeholder-field-context|workflow-step-status-picker/);
+      assert.doesNotMatch(renderer, /workflow-placeholder-table/);
+    });
+
+    test('Protein Builder toolbar navigation stays above the shared rail backdrop', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'sequence-viewer-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'sequence-viewer-view.css');
+
+      assert.match(html, /class="sequence-viewer-protein-builder-toolbar-nav"[\s\S]*id="sequence-viewer-protein-builder-back-btn"/);
+      assert.match(css, /\.sequence-viewer-protein-builder-toolbar\s*\{[^}]*position:\s*relative;[^}]*z-index:\s*1;/s);
+    });
+
+    test('Protein Builder uses the active DNA source instead of manual POI fields', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'sequence-viewer-view.html');
+      const dom = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'dom.js');
+      const context = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'controller-context.js');
+      const source = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'record-dna.js');
+
+      assert.match(html, /active DNA coding sequence/i);
+      assert.match(html, /CurrentDNA/);
+      assert.doesNotMatch(html, /protein-builder-poi-(?:name|sequence)|protein-builder-add-poi-btn|POI Name|Add POI Block/);
+      assert.doesNotMatch(dom, /proteinBuilderPoi(?:Name|Sequence)Input|proteinBuilderAddPoiBtn/);
+      assert.match(context, /activeDnaSource:\s*ctx\.getCurrentDnaSource\(\)/);
+      assert.match(source, /export function resolvePoiSourceFromRecord\(record, selectedFeature = null\)/);
+      assert.match(source, /reusedSource: `Reused active DNA from \$\{sourceDescription\}\.`/);
+    });
+
+    test('Assay result actions use accessible compact icons', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+
+      assert.match(html, /id="assay-attach-result-file-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Attach result file"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-save-results-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Save results"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-clear-results-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Clear results"[\s\S]*?<svg/);
+      assert.doesNotMatch(html, /id="assay-(?:attach-result-file|save-results|clear-results)-btn"[^>]*>\s*(?:Attach Result File|Save Results|Clear Results)\s*<\//);
+      assert.match(css, /\.assay-results-actions\s*>\s*\.assay-results-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+    });
+
+    test('Assay setup actions stay at the top of the form as accessible compact icons', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+
+      assert.match(html, /id="assay-form"[^>]*>[\s\S]*?id="assay-id"[\s\S]*?class="form-actions assay-form-actions"[\s\S]*?class="assay-display-field"/);
+      assert.match(html, /id="assay-export-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Export CSV template"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-import-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Import CSV"[\s\S]*?<svg/);
+      assert.match(html, /type="submit"[^>]*assay-form-save-icon-btn[^>]*aria-label="Save assay"[\s\S]*?<svg/);
+      assert.match(html, /id="assay-cancel-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Cancel edit"[\s\S]*?<svg/);
+      assert.doesNotMatch(html, /id="assay-(?:export-template|import-template|cancel)-btn"[^>]*>\s*(?:Export CSV Template|Import CSV|Cancel Edit)\s*<\//);
+      assert.match(css, /\.assay-form-actions\s*>\s*\.assay-form-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+    });
+
+    test('Assay plate setup toolbar stays separated from the plate grid', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+
+      assert.match(html, /class="form-actions assay-plate-toolbar"[\s\S]*id="assay-plate-field-sample-btn"[\s\S]*id="assay-serial-dilution-btn"[\s\S]*id="assay-plate-preview"/);
+      assert.match(css, /\.assay-create-preview-panel\s*>\s*\.assay-plate-toolbar\s*\{[^}]*margin-bottom:\s*12px;/s);
+    });
+
+    test('Papers rail pins a borderless Upload icon above the sole scrolling library list', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'papers-view.css');
+      const html = readLocalSource('ui', 'html', 'views', 'papers-view.html');
+      const railRule = /\.left-rail-template\.papers-layout\s*>\s*\.papers-library-rail\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*gap:\s*0;[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s;
+      const layoutHeightRule = /\.left-rail-template\.papers-layout\s*\{[^}]*min-height:\s*0;[^}]*height:\s*100%;/s;
+      const railHeightRule = /\.left-rail-template\.papers-layout\s*>\s*\.papers-library-rail\.left-rail-template__rail--pinned\s*\{[^}]*height:\s*100%;[^}]*min-height:\s*0;[^}]*max-height:\s*100%;/s;
+      const pinnedRule = /\.left-rail-template\.papers-layout\s*>\s*\.papers-library-rail\s*>\s*\.papers-library-pinned\.left-rail-template__pinned\s*\{[^}]*padding:\s*14px\s+calc\(var\(--app-left-rail-padding-inline,\s*16px\)\s*\+\s*var\(--theme-scrollbar-size,\s*8px\)\)\s+12px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*border-bottom:\s*1px\s+solid\s+var\(--app-left-rail-divider\);[^}]*\}/s;
+      const listRule = /\.left-rail-template\.papers-layout\s*>\s*\.papers-library-rail\s*>\s*\.papers-library-scroll\.left-rail-template__scroll\s*\{[^}]*padding:\s*8px\s+var\(--app-left-rail-padding-inline,\s*16px\);[^}]*scrollbar-gutter:\s*stable;[^}]*\}/s;
+
+      assert.match(html, /class="papers-library-rail[^"]*left-rail-template__rail--pinned[^"]*"[\s\S]*class="papers-library-pinned left-rail-template__pinned"[\s\S]*id="paper-upload-trigger"[\s\S]*class="papers-library-scroll left-rail-template__scroll"[\s\S]*id="journal-club-list"/);
+      assert.match(html, /id="paper-upload-trigger"[^>]*aria-label="Upload PDF"[^>]*title="Upload PDF"[\s\S]*?<svg[\s\S]*?<span class="sr-only">Upload PDF<\/span>/);
+      assert.doesNotMatch(html, /id="paper-upload-trigger"[^>]*>\s*Upload PDF\s*<\/button>/);
+      assert.match(css, /\.papers-library-upload-btn\.ghost-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*background:\s*transparent;/s);
+      assert.match(css, railRule);
+      assert.match(css, layoutHeightRule);
+      assert.match(css, railHeightRule);
+      assert.match(css, pinnedRule);
+      assert.match(css, listRule);
+    });
+
+    test('the shared left-rail template contains only structural selectors', () => {
+      const css = readLocalSource('ui', 'css', 'overrides', 'left-rail-template.css');
+      assert.doesNotMatch(css, /\b(?:agent|assay|biology|chemical|gel|inventory|papers|protocol|sample|tool|workflow)\b/i);
     });
 
     test('gel tools omit manual steps and keep ladder MW in analysis controls', () => {
@@ -127,6 +368,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(html, /id="agent-rail-status"/);
       assert.doesNotMatch(html, /universal-agent-chat-rail__kicker/);
       assert.doesNotMatch(html, /id="agent-rail-clear-btn"/);
+      assert.doesNotMatch(html, /id="agent-clear-btn"/);
       assert.doesNotMatch(html, /id="agent-rail-project-select"/);
       assert.equal((registry.apps || []).filter((app) => app.agentChatRail === true).map((app) => app.id).join(','), 'biology-notebook,assay,papers');
       assert.match(generatedRegistry, /"id": "biology-notebook"[\s\S]*"agentChatRail": true/);
@@ -230,7 +472,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(detailBlock, /id="sequence-viewer-detail-workspace"/);
       assert.equal(detailBlock.includes('id="sequence-viewer-back-btn"'), false);
       assert.equal(detailBlock.includes('Back to Library'), false);
-      assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*<h2>Open Sequence<\/h2>[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-detail-protein-builder-btn"[\s\S]*<h4>Sequence Library<\/h4>/);
+      assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-detail-protein-builder-btn"[\s\S]*<h4>Sequence Library<\/h4>/);
       assert.match(detailBlock, /id="sequence-viewer-detail-protein-builder-btn"/);
       assert.equal(detailBlock.includes('id="sequence-viewer-save-btn"'), false);
       assert.equal(detailBlock.includes('id="sequence-viewer-save-name"'), false);
@@ -288,11 +530,11 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
     test('papers PDF text layer keeps native browser selection stable during drag', () => {
       const css = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
-      const pageRecordsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-records.js');
-      const renderingSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-rendering.js');
-      const selectionMenuSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-selection-menu-controller.js');
-      const eventsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-events-controller.js');
-      const selectionSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-text-selection.js');
+      const pageRecordsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-page-records.js');
+      const renderingSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-rendering.js');
+      const selectionMenuSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-selection-menu-controller.js');
+      const eventsSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-events-controller.js');
+      const selectionSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-text-selection.js');
       assert.match(pageRecordsSource, /className\s*=\s*'papers-viewer-text-layer textLayer'/);
       assert.match(pageRecordsSource, /textSelectionCleanup/);
       assert.match(renderingSource, /bindPdfTextLayerSelection/);
@@ -312,8 +554,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('papers PDF first-load sizing stays inside the app shell', () => {
       const coreCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'base', 'core.css'), 'utf8');
       const papersCss = fs.readFileSync(path.join(__dirname, 'ui', 'css', 'views', 'papers-view.css'), 'utf8');
-      const domSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-dom-controller.js');
-      const navigationSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-navigation-controller.js');
+      const domSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-dom-controller.js');
+      const navigationSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-page-navigation-controller.js');
       assert.match(coreCss, /html\s*\{[\s\S]*height:\s*100%;[\s\S]*overflow:\s*hidden;/);
       assert.match(coreCss, /body\s*\{[\s\S]*height:\s*100%;[\s\S]*overflow:\s*hidden;/);
       assert.match(papersCss, /\.papers-viewer-workspace\s*\{[\s\S]*overflow:\s*hidden;/);
@@ -326,11 +568,11 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(Boolean(forgeConfig.packagerConfig.asar), true);
       assert.match(
         forgeConfig.packagerConfig.asar?.unpackDir || '',
-        /src\/main\/helpers\/agent/
+        /src\/main\/agent/
       );
       assert.match(
         forgeConfig.packagerConfig.asar?.unpackDir || '',
-        /src\/main\/helpers\/main/
+        /src\/main\/storage/
       );
       assert.match(
         forgeConfig.packagerConfig.asar?.unpackDir || '',
@@ -355,8 +597,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('main sql.js helpers resolve the bundled vendor asset from package-safe paths', () => {
-      const { resolveSqlJsWasmJsPath } = require(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'sqljs-path.js'));
-      const resolved = resolveSqlJsWasmJsPath(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle'));
+      const { resolveSqlJsWasmJsPath } = require(path.join(__dirname, 'src', 'main', 'lib', 'sqljs-path.js'));
+      const resolved = resolveSqlJsWasmJsPath(path.join(__dirname, 'src', 'main', 'storage'));
       assert.equal(resolved.endsWith(path.join('vendor', 'sqljs', 'sql-wasm.js')), true);
       assert.equal(fs.existsSync(resolved), true);
     });
@@ -377,17 +619,19 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('main composes dedicated IPC registrars with generic tool runtime support', () => {
-      const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
+      const agentDir = path.join(__dirname, 'src', 'main', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
       const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
       const mainSource = readMainProcessSource();
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'create-main-agent-services.js'), 'utf8');
-      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8');
+      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
+      const dataRegistrarSource = [
+        fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8'),
+        fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc', 'register-sequence-library-ipc.js'), 'utf8')
+      ].join('\n');
       const agentRegistrarSource = fs.readFileSync(agentRegistrarPath('index.js'), 'utf8');
       const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
       const toolLoadingSource = fs.readFileSync(agentPath('tools', 'agent-tool-loading.js'), 'utf8');
       const toolExecutionSource = fs.readFileSync(agentPath('tools', 'agent-tool-execution.js'), 'utf8');
-      const toolProviderSource = fs.readFileSync(agentPath('tools', 'agent-tool-provide.js'), 'utf8');
       const runtimeSupportSource = fs.readFileSync(agentPath('runtime', 'agent-runtime-support.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
 
@@ -399,7 +643,6 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(mainAgentServicesSource, /agent-tool-loading\.js/);
       assert.match(mainAgentServicesSource, /agent-tool-execution\.js/);
       assert.match(mainAgentServicesSource, /createAgentRuntimeSupport/);
-      assert.match(mainAgentServicesSource, /sharedLlmTransportDeps/);
       assert.match(mainAgentServicesSource, /llmProviderBridge/);
       assert.match(mainAgentServicesSource, /sharedAgentLlmDeps/);
       assert.match(mainAgentServicesSource, /registerAgentToolExecutors/);
@@ -408,16 +651,15 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(systemRegistrarSource, /function registerSystemIpc\(deps = \{\}\)/);
       assert.match(toolLoadingSource, /function normalizeToolInvocationArgs\(rawArgs\)/);
       assert.match(toolExecutionSource, /function createAgentToolCallRuntime\(deps = \{\}\)/);
-      assert.match(toolProviderSource, /function createAgentToolProviderRuntime\(deps = \{\}\)/);
       assert.match(runtimeSupportSource, /function createAgentRuntimeSupport\(deps = \{\}\)/);
       assert.match(llmBridgeSource, /function createAgentLlmProviderBridge\(deps = \{\}\)/);
       assert.doesNotMatch(llmBridgeSource, /function startToolSession\(/);
     });
 
     test('agent shared text helpers no longer clip long prompts by default', () => {
-      const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
+      const agentDir = path.join(__dirname, 'src', 'main', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
-      const llmUtilsSource = fs.readFileSync(agentPath('shared', 'agent-llm-utils.js'), 'utf8');
+      const llmUtilsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'llm', 'runtime-helpers.js'), 'utf8');
       const llmBridgeSource = fs.readFileSync(agentPath('shared', 'agent-llm-provider-bridge.js'), 'utf8');
       const chatLogSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
       const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
@@ -448,16 +690,19 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     });
 
     test('main and preload expose sequence library IPC bridge through the data registrar', () => {
-      const dataRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'), 'utf8');
+      const dataRegistrarSource = fs.readFileSync(
+        path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc', 'register-sequence-library-ipc.js'),
+        'utf8'
+      );
       const preloadSource = readPreloadSource();
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.LIST/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.GET/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.UPSERT/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.PROMOTE/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.DELETE/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.SEARCH_FEATURES/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.ANNOTATE/);
-      assert.match(dataRegistrarSource, /ipcMain\.handle\(SEQUENCE_LIBRARY\.RECOGNIZE_BACKBONE/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.LIST/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.GET/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.UPSERT/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.PROMOTE/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.DELETE/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.SEARCH_FEATURES/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.ANNOTATE/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.RECOGNIZE_BACKBONE/);
       assert.match(preloadSource, /sequenceLibraryList:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.LIST, payload\)/);
       assert.match(preloadSource, /sequenceLibraryGet:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.GET, payload\)/);
       assert.match(preloadSource, /sequenceLibraryUpsert:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.UPSERT, payload\)/);

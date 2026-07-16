@@ -1,4 +1,4 @@
-import { escapeHtml } from '../tool-box/common.js';
+import { escapeHtml } from '../../lib/html.js';
 import { buildFeatureLocationText } from './feature-model.js';
 import { FEATURE_TOOLTIP_OFFSET_PX } from './constants.js';
 

@@ -1,14 +1,8 @@
 # Science And Protocol Suite
 
-This folder holds the large science and protocol agent tests split by concern.
+This folder holds the remaining protocol-generation tests split by concern.
 
-- `route-planning-suite.js`: route planning and exit-criteria generation contracts.
-- `synthesis-and-verification-suite.js`: final synthesis and logical verification contracts.
-- `prompt-and-fallback-suite.js`: prompt rendering and fallback heuristic contracts.
-- `judge-and-trace-suite.js`: judge fallbacks, pre-synthesis helpers, and thinking-trace contracts.
-- `loop-runtime-core-suite.js`: core multi-round science loop execution behavior.
-- `loop-runtime-followup-suite.js`: clarification, reasoning-effort-0, and straightforward retrieval flow.
-- `loop-runtime-edge-and-protocol-suite.js`: late-stage loop edge cases and protocol generation.
+- `loop-runtime-edge-and-protocol-suite.js`: deterministic protocol normalization and prompt contracts (the filename is retained to avoid needless test-loader churn).
 - `index.js`: thin composition entrypoint used by the parent agent suite.
 
 Maintenance notes:

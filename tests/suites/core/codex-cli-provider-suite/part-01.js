@@ -264,15 +264,61 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         const runtimeConfig = fs.readFileSync(path.join(runtimeHome, 'config.toml'), 'utf8');
         assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
         assert.match(runtimeConfig, /required = true/);
-        assert.match(runtimeConfig, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
+        assert.match(runtimeConfig, /enabled_tools = \["inventory_lookup", "chemical_lookup", "notebook_lookup", "protocol_lookup", "protocol_generation"/);
         assert.match(runtimeConfig, /"container"/);
         assert.match(runtimeConfig, /"assay_table"/);
         assert.match(runtimeConfig, /"plotly_graph"/);
         assert.match(runtimeConfig, /default_tools_approval_mode = "approve"/);
+        assert.match(runtimeConfig, /tool_timeout_sec = 300/);
         assert.match(runtimeConfig, /\[mcp_servers\.hikari\.tools\.protocol_generation\]/);
         assert.match(runtimeConfig, /approval_mode = "approve"/);
         assert.match(runtimeConfig, /HIKARI_AGENT_MCP/);
         assert.match(runtimeConfig, /HIKARI_CODEX_MCP/);
+      } finally {
+        if (typeof previousCodexHome === 'string') {
+          process.env.CODEX_HOME = previousCodexHome;
+        } else {
+          delete process.env.CODEX_HOME;
+        }
+        if (typeof previousHikariCodexHome === 'string') {
+          process.env.HIKARI_CODEX_HOME = previousHikariCodexHome;
+        } else {
+          delete process.env.HIKARI_CODEX_HOME;
+        }
+        fs.rmSync(sourceHome, { recursive: true, force: true });
+        fs.rmSync(workspaceDir, { recursive: true, force: true });
+      }
+    });
+    test('codex cli runtime cache removes reasoning levels unsupported by the bundled CLI', async () => {
+      const sourceHome = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-source-'));
+      const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-workspace-'));
+      const previousCodexHome = process.env.CODEX_HOME;
+      const previousHikariCodexHome = process.env.HIKARI_CODEX_HOME;
+      const modelsCache = {
+        models: [{
+          slug: 'gpt-5.5',
+          default_reasoning_level: 'max',
+          supported_reasoning_levels: [
+            { effort: 'high' },
+            { effort: 'xhigh' },
+            { effort: 'max' },
+            { effort: 'ultra' }
+          ]
+        }]
+      };
+      fs.writeFileSync(path.join(sourceHome, 'models_cache.json'), JSON.stringify(modelsCache), 'utf8');
+      process.env.CODEX_HOME = sourceHome;
+      delete process.env.HIKARI_CODEX_HOME;
+
+      try {
+        const provider = loadProvider();
+        const runtimeHome = await provider.ensureCodexCliRuntimeHome(workspaceDir);
+        const copied = JSON.parse(fs.readFileSync(path.join(runtimeHome, 'models_cache.json'), 'utf8'));
+        assert.deepEqual(
+          copied.models[0].supported_reasoning_levels.map((level) => level.effort),
+          ['high', 'xhigh']
+        );
+        assert.equal(copied.models[0].default_reasoning_level, 'xhigh');
       } finally {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;
@@ -297,7 +343,6 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'codex-agent',
         'runtime-files.js'
@@ -311,7 +356,6 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         'app.asar',
         'src',
         'main',
-        'helpers',
         'agent',
         'mcp-contract',
         'stdio-server.js'
@@ -324,11 +368,12 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
       const configBlock = buildHikariCodexMcpConfigBlock({ workspace: '/tmp/Hikari' });
       assert.match(configBlock, /\[mcp_servers\.hikari\]/);
       assert.match(configBlock, new RegExp(`command = ${JSON.stringify(process.execPath).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
-      assert.match(configBlock, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
+      assert.match(configBlock, /enabled_tools = \["inventory_lookup", "chemical_lookup", "notebook_lookup", "protocol_lookup", "protocol_generation"/);
       assert.match(configBlock, /"container"/);
       assert.match(configBlock, /"assay_table"/);
       assert.match(configBlock, /"plotly_graph"/);
       assert.match(configBlock, /default_tools_approval_mode = "approve"/);
+      assert.match(configBlock, /tool_timeout_sec = 300/);
       assert.match(configBlock, /\[mcp_servers\.hikari\.tools\.protocol_generation\]/);
       assert.doesNotMatch(configBlock, /ELECTRON_RUN_AS_NODE/);
       const fakeNodeDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-node-bin-'));
@@ -351,6 +396,39 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
       assert.doesNotMatch(packagedConfigBlock, /command = "node"/);
       fs.rmSync(fakeNodeDir, { recursive: true, force: true });
     });
+    test('codex cli launch resolves an env-node shim when the GUI PATH omits Node', () => {
+      if (process.platform === 'win32') {
+        return;
+      }
+      const fixtureDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-env-node-'));
+      try {
+        const codexBinary = path.join(fixtureDir, 'codex');
+        const siblingNode = path.join(fixtureDir, 'node');
+        fs.writeFileSync(codexBinary, '#!/usr/bin/env node\n', 'utf8');
+        fs.writeFileSync(siblingNode, '#!/bin/sh\n', 'utf8');
+        fs.chmodSync(codexBinary, 0o755);
+        fs.chmodSync(siblingNode, 0o755);
+        const { resolveCodexInvocation } = require(path.join(
+          __dirname,
+          'src',
+          'main',
+          'lib',
+          'codex-cli-provider',
+          'paths.js'
+        ));
+        const invocation = resolveCodexInvocation({ PATH: '/usr/bin:/bin' }, {
+          codexBinary,
+          processExecPath: '/Applications/Hikari.app/Contents/MacOS/Hikari',
+          commonNodePaths: []
+        });
+        assert.deepEqual(invocation, {
+          command: siblingNode,
+          argsPrefix: [codexBinary]
+        });
+      } finally {
+        fs.rmSync(fixtureDir, { recursive: true, force: true });
+      }
+    });
     test('codex cli provider writes Hikari AGENTS.md guidance into the runtime workspace', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-agents-'));
       try {
@@ -363,7 +441,9 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         assert.match(firstContent, /paper_download/);
         assert.match(firstContent, /load bounded paper context blocks/);
         assert.match(firstContent, /retrieve the active assay data by parsing its `Assay plate data \(TSV\.\.\.\)` block directly from the chat prompt/);
-        assert.match(firstContent, /Never call or expect `mcp__hikari__record_lookup` for active Assay plate\/result rows/);
+        assert.match(firstContent, /Do not use local lookup tools for active Assay plate\/result rows/);
+        const retiredMcpTool = ['mcp__hikari__', ['record', 'lookup'].join('_')].join('');
+        assert.equal(firstContent.includes(retiredMcpTool), false);
 
         fs.writeFileSync(agentsPath, `${firstContent}\nLocal note stays here.\n`, 'utf8');
         await provider.ensureCodexCliAgentsFile(workspaceDir);

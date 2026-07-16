@@ -1,7 +1,7 @@
 /* tool-box-view */
 
-.tool-layout {
-  --app-left-rail-bleed: 24px;
+.left-rail-template.tool-layout {
+  --left-rail-main-gap: 24px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(0, 1fr);
   gap: 24px;
@@ -159,8 +159,8 @@
 
 .tool-box-buffer-sheet input:focus,
 .tool-box-reaction-sheet input:focus {
-  outline: 2px solid color-mix(in srgb, var(--theme-accent) 48%, transparent);
-  outline-offset: -2px;
+  outline: none;
+  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
 }
 
 .tool-box-buffer-sheet output,
@@ -607,8 +607,6 @@ body.theme-night .crispr-risk-high {
 
 body.ui-neutral-compact .sequence-block,
 body.ui-neutral-compact .calc-output,
-body.ui-neutral-compact .reaction-number,
-body.ui-neutral-compact .list-main-text span,
 body.ui-neutral-compact input[id*="id"],
 body.ui-neutral-compact input[id*="code"],
 body.ui-neutral-compact input[id*="cas"],
@@ -619,7 +617,6 @@ body.ui-neutral-compact input[id*="api-key"] {
 
 body.ui-neutral-compact .calc-output,
 body.ui-neutral-compact .sequence-block,
-body.ui-neutral-compact .reaction-number,
 body.ui-neutral-compact input[id*="id"],
 body.ui-neutral-compact input[id*="code"],
 body.ui-neutral-compact input[id*="cas"],

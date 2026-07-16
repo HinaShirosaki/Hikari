@@ -17,6 +17,8 @@ export function createPersonalInventoryContext({
     addContainerBtn: document.getElementById('inventory-add-container-btn'),
     addContainerOverlay: document.getElementById('inventory-add-container-overlay'),
     addContainerForm: document.getElementById('inventory-add-container-form'),
+    addContainerTitle: document.getElementById('inventory-add-container-title'),
+    addContainerNote: document.getElementById('inventory-add-container-note'),
     addContainerNameInput: document.getElementById('inventory-add-container-name'),
     addContainerLocationSelect: document.getElementById('inventory-add-container-location'),
     addContainerTypeSelect: document.getElementById('inventory-add-container-type'),
@@ -33,6 +35,7 @@ export function createPersonalInventoryContext({
     editingSampleId: '',
     wellEditorStatus: '',
     isAddContainerFormOpen: false,
+    addContainerParent: null,
     shouldAutoOpenContainer: true,
     contextContainer: null,
     cloningSampleId: null

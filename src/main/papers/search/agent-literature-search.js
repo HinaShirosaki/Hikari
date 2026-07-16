@@ -1,12 +1,13 @@
 'use strict';
 
-const { isAgentRequestAbortError } = require('../../helpers/agent/shared/agent-request-context.js');
-const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/agent-llm-utils.js');
-const { buildKeywordStyleLiteratureQuery, extractKeywordPhrases } = require('./agent-literature-query-utils.js');
+const { isAgentRequestAbortError } = require('../../lib/llm/request-context.js');
+const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
+const { buildKeywordStyleLiteratureQuery } = require('./agent-literature-query-utils.js');
 const {
   prependPreferredValue,
   prioritizePreferredWebSource
 } = require('./agent-search-source-preferences.js');
+const { normalizePaperDoi } = require('./literature-candidates.js');
 
 const LITERATURE_SOURCES = Object.freeze({
   AUTO: 'auto',
@@ -62,6 +63,24 @@ function toFiniteInteger(value, fallback = 0) {
 function clampInteger(value, fallback, min, max) {
   const parsed = toFiniteInteger(value, fallback);
   return Math.max(min, Math.min(max, parsed));
+}
+
+function toPositiveInteger(value, fallback = 0) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return fallback;
+  }
+  return Math.floor(parsed);
+}
+
+function firstPositiveInteger(values = [], fallback = 0) {
+  for (const value of values) {
+    const parsed = toPositiveInteger(value, 0);
+    if (parsed > 0) {
+      return parsed;
+    }
+  }
+  return fallback;
 }
 
 function decodeXmlEntities(value) {
@@ -180,8 +199,9 @@ function buildEuropePmcUrl({ pmcid, pmid, doi, id } = {}) {
   if (String(pmid || '').trim()) {
     return `https://pubmed.ncbi.nlm.nih.gov/${encodeURIComponent(String(pmid).trim())}/`;
   }
-  if (String(doi || '').trim()) {
-    return `https://doi.org/${encodeURIComponent(String(doi).trim())}`;
+  const normalizedDoi = normalizePaperDoi(doi);
+  if (normalizedDoi) {
+    return `https://doi.org/${encodeURIComponent(normalizedDoi)}`;
   }
   if (String(id || '').trim()) {
     return `https://europepmc.org/article/MED/${encodeURIComponent(String(id).trim())}`;
@@ -190,7 +210,7 @@ function buildEuropePmcUrl({ pmcid, pmid, doi, id } = {}) {
 }
 
 function buildCrossrefUrl(doi, fallbackUrl = '') {
-  const normalizedDoi = String(doi || '').trim();
+  const normalizedDoi = normalizePaperDoi(doi);
   if (normalizedDoi) {
     return `https://doi.org/${encodeURIComponent(normalizedDoi)}`;
   }
@@ -248,10 +268,6 @@ function createLiteratureSearchRuntime(deps = {}) {
     }
     const text = await readResponseText(response);
     return JSON.parse(String(text || '{}'));
-  }
-
-  function normalizeQueryTerms(input = {}) {
-    return uniqueStrings(extractKeywordPhrases(buildLiteratureQuery(input), 50), 50);
   }
 
   /**
@@ -363,12 +379,16 @@ function createLiteratureSearchRuntime(deps = {}) {
 
   function normalizeResultItem(sourceName, raw = {}) {
     const item = ensureObject(raw);
+    const doi = normalizePaperDoi(cleanText(item.doi, 160));
     const title = cleanText(item.title, 320)
       || cleanText(item.protein_name, 320)
       || cleanText(item.accession, 120)
       || cleanText(item.id, 120);
     const summary = cleanText(item.summary || item.snippet || item.abstract || item.description, 900);
-    const url = safeUrl(item.url);
+    const rawUrl = safeUrl(item.url);
+    const url = doi && /^https?:\/\/(?:dx\.)?doi\.org\//i.test(rawUrl)
+      ? buildCrossrefUrl(doi)
+      : rawUrl;
     return {
       source: sourceName,
       id: cleanText(item.id, 120) || cleanText(item.pmid, 120) || cleanText(item.pmcid, 120) || cleanText(item.doi, 160) || cleanText(item.accession, 120) || url || title,
@@ -376,7 +396,7 @@ function createLiteratureSearchRuntime(deps = {}) {
       summary,
       snippet: summary,
       url,
-      doi: cleanText(item.doi, 160),
+      doi,
       pmid: cleanText(item.pmid, 120),
       pmcid: cleanText(item.pmcid, 120),
       accession: cleanText(item.accession, 120),
@@ -406,7 +426,7 @@ function createLiteratureSearchRuntime(deps = {}) {
 
   function buildResultKey(item = {}) {
     return cleanText(
-      item.doi
+      normalizePaperDoi(item.doi)
       || item.pmid
       || item.pmcid
       || item.accession
@@ -416,7 +436,7 @@ function createLiteratureSearchRuntime(deps = {}) {
     ).toLowerCase();
   }
 
-  function sortAndDedupeResults(items, executedSources = [], limit = 10, preferRecent = true) {
+  function sortAndDedupeResults(items, executedSources = [], limit = 0, preferRecent = true) {
     const sourceOrder = new Map(executedSources.map((source, index) => [source, index]));
     const ranked = asArray(items)
       .map((item, index) => ({ ...item, __index: index }))
@@ -440,7 +460,7 @@ function createLiteratureSearchRuntime(deps = {}) {
     const output = [];
     ranked.forEach((item) => {
       const key = buildResultKey(item);
-      if (!key || seen.has(key) || output.length >= limit) {
+      if (!key || seen.has(key) || (limit > 0 && output.length >= limit)) {
         return;
       }
       seen.add(key);
@@ -460,16 +480,21 @@ function createLiteratureSearchRuntime(deps = {}) {
     };
   }
 
-  async function searchPubMedRecords(query, limit = 5, journals = []) {
+  async function searchPubMedRecords(query, limit = 0, journals = []) {
     if (searchPubMedRecordsOverride) {
       return normalizeResultList(LITERATURE_SOURCES.PUBMED, await searchPubMedRecordsOverride({ query, limit, journals }));
     }
 
     const term = buildJournalScopedTerm(LITERATURE_SOURCES.PUBMED, query, journals);
+    const retmaxParam = limit > 0 ? `&retmax=${encodeURIComponent(limit)}` : '';
     const idPayload = await fetchJson(
-      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json&retmax=${encodeURIComponent(limit)}&term=${encodeURIComponent(term)}`
+      `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmode=json${retmaxParam}&term=${encodeURIComponent(term)}`
     );
-    const ids = uniqueStrings(asArray(idPayload?.esearchresult?.idlist), limit);
+    const ids = [...new Set(
+      asArray(idPayload?.esearchresult?.idlist)
+        .map((id) => cleanText(id, 120))
+        .filter(Boolean)
+    )];
     if (!ids.length) {
       return [];
     }
@@ -480,7 +505,9 @@ function createLiteratureSearchRuntime(deps = {}) {
     return ids.map((pmid) => {
       const record = ensureObject(resultMap[pmid]);
       const articleIds = asArray(record.articleids);
-      const doi = cleanText(articleIds.find((item) => cleanText(item?.idtype, 40).toLowerCase() === 'doi')?.value, 160);
+      const doi = normalizePaperDoi(
+        cleanText(articleIds.find((item) => cleanText(item?.idtype, 40).toLowerCase() === 'doi')?.value, 160)
+      );
       const authors = normalizeAuthorList(asArray(record.authors).map((author) => author?.name));
       return normalizeResultItem(LITERATURE_SOURCES.PUBMED, {
         id: cleanText(record.uid, 120) || pmid,
@@ -496,7 +523,7 @@ function createLiteratureSearchRuntime(deps = {}) {
     }).filter((item) => item.title);
   }
 
-  async function searchCrossrefRecords(query, limit = 5, journals = []) {
+  async function searchCrossrefRecords(query, limit = 0, journals = []) {
     if (searchCrossrefRecordsOverride) {
       return normalizeResultList(LITERATURE_SOURCES.CROSSREF, await searchCrossrefRecordsOverride({ query, limit, journals }));
     }
@@ -504,12 +531,14 @@ function createLiteratureSearchRuntime(deps = {}) {
     const journalParam = journals.length
       ? `&query.container-title=${encodeURIComponent(journals.join(' '))}`
       : '';
+    const rowsParam = limit > 0 ? `rows=${encodeURIComponent(limit)}&` : '';
     const payload = await fetchJson(
-      `https://api.crossref.org/works?rows=${encodeURIComponent(limit)}&query.bibliographic=${encodeURIComponent(query)}${journalParam}`
+      `https://api.crossref.org/works?${rowsParam}query.bibliographic=${encodeURIComponent(query)}${journalParam}`
     );
-    return asArray(payload?.message?.items).slice(0, limit).map((record) => {
+    const records = asArray(payload?.message?.items);
+    return (limit > 0 ? records.slice(0, limit) : records).map((record) => {
       const source = ensureObject(record);
-      const doi = cleanText(source.DOI, 160);
+      const doi = normalizePaperDoi(cleanText(source.DOI, 160));
       return normalizeResultItem(LITERATURE_SOURCES.CROSSREF, {
         id: doi || cleanText(source.URL, 260) || cleanText(asArray(source.title)[0], 200),
         doi,
@@ -559,18 +588,20 @@ function createLiteratureSearchRuntime(deps = {}) {
     }).filter((item) => item.title || item.accession);
   }
 
-  async function searchEuropePmcRecords(query, limit = 5, journals = []) {
+  async function searchEuropePmcRecords(query, limit = 0, journals = []) {
     if (searchEuropePmcRecordsOverride) {
       return normalizeResultList(LITERATURE_SOURCES.EUROPE_PMC, await searchEuropePmcRecordsOverride({ query, limit, journals }));
     }
 
     const scopedQuery = buildJournalScopedTerm(LITERATURE_SOURCES.EUROPE_PMC, query, journals);
+    const pageSizeParam = limit > 0 ? `&pageSize=${encodeURIComponent(limit)}` : '';
     const payload = await fetchJson(
-      `https://www.ebi.ac.uk/europepmc/webservices/rest/search?format=json&pageSize=${encodeURIComponent(limit)}&query=${encodeURIComponent(scopedQuery)}`
+      `https://www.ebi.ac.uk/europepmc/webservices/rest/search?format=json${pageSizeParam}&query=${encodeURIComponent(scopedQuery)}`
     );
-    return asArray(payload?.resultList?.result).slice(0, limit).map((record) => {
+    const records = asArray(payload?.resultList?.result);
+    return (limit > 0 ? records.slice(0, limit) : records).map((record) => {
       const source = ensureObject(record);
-      const doi = cleanText(source.doi, 160);
+      const doi = normalizePaperDoi(cleanText(source.doi, 160));
       const pmid = cleanText(source.pmid, 120);
       const pmcid = cleanText(source.pmcid, 120);
       return normalizeResultItem(LITERATURE_SOURCES.EUROPE_PMC, {
@@ -593,7 +624,7 @@ function createLiteratureSearchRuntime(deps = {}) {
     }).filter((item) => item.title);
   }
 
-  async function searchWebRecords(query, limit = 5, input = {}) {
+  async function searchWebRecords(query, limit = 0, input = {}) {
     const preferredWebSource = cleanText(
       input?.preferred_web_source || input?.preferredWebSource,
       240
@@ -601,7 +632,7 @@ function createLiteratureSearchRuntime(deps = {}) {
 
     if (searchWebResultsOverride) {
       return prioritizePreferredWebSource(
-        normalizeResultList(LITERATURE_SOURCES.WEB, await searchWebResultsOverride({ query, limit })),
+        normalizeResultList(LITERATURE_SOURCES.WEB, await searchWebResultsOverride({ query, ...(limit > 0 ? { limit } : {}) })),
         preferredWebSource,
         (item) => item?.source_domain || item?.url || ''
       );
@@ -610,7 +641,7 @@ function createLiteratureSearchRuntime(deps = {}) {
       const result = await webSearchRuntime.searchWebResults({
         ...ensureObject(input),
         query,
-        limit,
+        ...(limit > 0 ? { limit } : {}),
         stage: cleanText(input?.stage, 120) || 'literature_search_web'
       });
       return prioritizePreferredWebSource(
@@ -623,7 +654,7 @@ function createLiteratureSearchRuntime(deps = {}) {
       const providerSearch = await requestWebSearch({
         stage: 'literature_search_web',
         query,
-        maxResults: limit,
+        ...(limit > 0 ? { maxResults: limit } : {}),
         traceContext: input?.traceContext || null
       });
       if (!providerSearch?.ok) {
@@ -657,6 +688,12 @@ function createLiteratureSearchRuntime(deps = {}) {
     return [];
   }
 
+  function shouldDeferWebSearchToCodex(input = {}) {
+    const source = ensureObject(input);
+    return source.defer_web_search_to_codex === true
+      || source.deferWebSearchToCodex === true;
+  }
+
   async function searchLiteratureCandidates(input = {}) {
     const source = ensureObject(input);
     const query = buildLiteratureQuery(source);
@@ -670,8 +707,19 @@ function createLiteratureSearchRuntime(deps = {}) {
 
     const requestedSource = normalizeSource(source.source);
     const resolvedSources = resolveLiteratureSources({ ...source, query });
-    const limit = clampInteger(source.limit, 8, 1, 25);
-    const perSourceLimit = clampInteger(source.max_per_source, Math.min(limit, 5), 1, 25);
+    const limit = firstPositiveInteger([
+      source.limit,
+      source._internal_limit,
+      source.internal_limit,
+      source.internalLimit
+    ], 0);
+    const perSourceLimit = firstPositiveInteger([
+      source.max_per_source,
+      source.maxPerSource,
+      source._internal_max_per_source,
+      source.internal_max_per_source,
+      source.internalMaxPerSource
+    ], limit);
     const preferRecent = source.prefer_recent !== false;
     const journalFilter = resolveJournalFilter(source);
     const allowUnfilteredFallback = source.allow_unfiltered_fallback !== false
@@ -695,8 +743,13 @@ function createLiteratureSearchRuntime(deps = {}) {
         : resolvedSources;
       for (const sourceName of sourcesToRun) {
         execed.push(sourceName);
+        if (sourceName === LITERATURE_SOURCES.WEB && shouldDeferWebSearchToCodex(source)) {
+          counts[sourceName] = 0;
+          errors[sourceName] = 'Web discovery was deferred to the active Codex agent to avoid starting a nested Codex CLI request inside literature_search.';
+          continue;
+        }
         try {
-          const items = await searchSource(sourceName, query, Math.min(perSourceLimit, limit), source, journals);
+          const items = await searchSource(sourceName, query, perSourceLimit, source, journals);
           counts[sourceName] = items.length;
           collected.push(...items);
         } catch (error) {
@@ -806,7 +859,13 @@ function createLiteratureSearchRuntime(deps = {}) {
           message: cleanText(source.message, 1600),
           topic: cleanText(source.topic, 240),
           query,
-          max_papers: clampInteger(source.max_papers, 8, 1, 8),
+          max_papers: clampInteger(firstPositiveInteger([
+            source.max_papers,
+            source.maxPapers,
+            source._internal_max_papers,
+            source.internal_max_papers,
+            source.internalMaxPapers
+          ], 8), 8, 1, 8),
           figure_policy: cleanText(source.figure_policy, 40) || 'when_needed',
           items
         });

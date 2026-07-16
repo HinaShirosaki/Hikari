@@ -2,6 +2,105 @@ module.exports = function registerAppLabAndProjectSuitePart04(context = {}) {
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
+test('biology-notebook New Experiment keeps the workspace project and starts only after protocol selection', () => {
+  const document = createMockDocument([
+    'biology-notebook-project-select',
+    'biology-notebook-protocol-search',
+    'biology-notebook-protocol-select',
+    'biology-notebook-new-experiment-btn',
+    'biology-notebook-experiment-dialog-overlay',
+    'biology-notebook-experiment-form',
+    'biology-notebook-experiment-dialog-close-btn',
+    'biology-notebook-experiment-cancel-btn',
+    'biology-notebook-experiment-start-btn',
+    'biology-notebook-experiment-dialog-status',
+    'biology-notebook-protocol-search-results',
+    'biology-notebook-page-starter',
+    'biology-notebook-page-starter-project',
+    'biology-notebook-empty-state',
+    'biology-notebook-protocol-area',
+    'biology-notebook-protocol-title',
+    'biology-notebook-protocol-meta',
+    'biology-notebook-steps',
+    'biology-notebook-result',
+    'biology-notebook-result-file',
+    'save-biology-notebook-btn',
+    'cancel-biology-notebook-edit-btn',
+    'biology-notebook-entry-list'
+  ]);
+  const overlay = document.getElementById('biology-notebook-experiment-dialog-overlay');
+  const protocolArea = document.getElementById('biology-notebook-protocol-area');
+  overlay.hidden = true;
+  protocolArea.hidden = true;
+
+  const state = {
+    projects: [
+      { id: 'p1', name: 'Atlas' },
+      { id: 'p2', name: 'Vector Engineering' }
+    ],
+    protocols: [
+      { id: 'pr1', name: 'PCR Setup', steps: [] },
+      { id: 'pr2', name: 'Transformation', steps: [] }
+    ],
+    notebookEntries: [],
+    assays: [],
+    gelAnalyses: [],
+    settings: { storagePath: '' }
+  };
+  const notebookModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'biology-notebook',
+    'index.js'
+  ), {
+    document,
+    window: { hikariApi: {} }
+  });
+  const notebook = notebookModule.initLabNotebook({
+    state,
+    persist: () => {},
+    createId: () => 'new-entry',
+    safeText: shared.safeText,
+    onNotebookEntriesChanged: () => {}
+  });
+  const projectSelect = document.getElementById('biology-notebook-project-select');
+  const protocolSearch = document.getElementById('biology-notebook-protocol-search');
+  const protocolSelect = document.getElementById('biology-notebook-protocol-select');
+  const protocolResults = document.getElementById('biology-notebook-protocol-search-results');
+  const startBtn = document.getElementById('biology-notebook-experiment-start-btn');
+
+  notebook.renderProjectOptions();
+  projectSelect.value = 'p2';
+  trigger(document.getElementById('biology-notebook-new-experiment-btn'), 'click');
+
+  assert.equal(overlay.hidden, false);
+  assert.equal(projectSelect.value, 'p2');
+  assert.equal(startBtn.disabled, true);
+  assert.equal(document.getElementById('biology-notebook-experiment-dialog-status').textContent, '');
+
+  protocolSearch.value = 'transform';
+  trigger(protocolSearch, 'input');
+  assert.match(protocolSelect.innerHTML, /Transformation/);
+  assert.doesNotMatch(protocolSelect.innerHTML, /PCR Setup/);
+  assert.match(protocolResults.innerHTML, /Transformation/);
+  assert.doesNotMatch(protocolResults.innerHTML, /PCR Setup/);
+
+  trigger(protocolResults, 'click', {
+    target: { dataset: { notebookExperimentProtocolId: 'pr2' } }
+  });
+  assert.equal(protocolSelect.value, 'pr2');
+  assert.equal(startBtn.disabled, false);
+  assert.equal(document.getElementById('biology-notebook-experiment-dialog-status').textContent, '');
+
+  trigger(document.getElementById('biology-notebook-experiment-form'), 'submit');
+  assert.equal(overlay.hidden, true);
+  assert.equal(protocolArea.hidden, false);
+  assert.equal(document.getElementById('biology-notebook-protocol-title').textContent, 'Transformation');
+  assert.match(document.getElementById('biology-notebook-protocol-meta').textContent, /Vector Engineering protocol draft/);
+});
+
 test('notebook pdf export includes linked page content and omits notebook type plus storage folder metadata', async () => {
   class MockJsPdf {
     static instances = [];

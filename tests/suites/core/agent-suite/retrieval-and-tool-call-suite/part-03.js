@@ -1,15 +1,11 @@
 module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context = {}) {
   const scope = context.scope || {};
-  const toolLoading = scope.agentToolLoading && Object.keys(scope.agentToolLoading).length
-    ? scope.agentToolLoading
-    : (scope.agentToolCall || {});
-  const toolExecution = scope.agentToolExecution && Object.keys(scope.agentToolExecution).length
-    ? scope.agentToolExecution
-    : (scope.agentToolCall || {});
+  const toolLoading = scope.agentToolLoading || {};
+  const toolExecution = scope.agentToolExecution || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
     test('purchase recommendation runtime retries shopping-oriented search variants when the first query is weak', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const searchQueries = [];
       const pages = {
         'https://info.test/ss320-overview': `
@@ -72,7 +68,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
       assert.equal(result.items[0].candidate_reasoning?.product_gate?.is_product, true);
     });
     test('purchase recommendation runtime can use llm search planning and llm product judgments for non-Codex providers', async () => {
-      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'helpers', 'agent', 'tools', 'agent-purchase-recommendation.js'));
+      const { createPurchaseRecommendationRuntime } = require(path.join(__dirname, 'src', 'main', 'agent', 'tools', 'agent-purchase-recommendation.js'));
       const llmStages = [];
       const runtime = createPurchaseRecommendationRuntime({
         requestStructuredJsonPayload: async ({ stage, userPrompt }) => {
@@ -177,7 +173,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
     test('agent tool-call catalog validators reject malformed catalog data', () => {
       const missingDescriptionCatalog = toolLoading.AGENT_TOOL_CATALOG.filter((entry) => [
         'inventory-lookup',
-        'record-lookup',
+        'notebook-lookup',
         'protocol-matching',
         'notebook-generation',
         'notebook-draft',
@@ -221,7 +217,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
             }
           }
         }, toolLoading.AGENT_TOOL_CATALOG),
-        /missing schema for "record-lookup"/i
+        /missing schema for "notebook-lookup"/i
       );
 
       assert.throws(
@@ -234,7 +230,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
               properties: {}
             }
           },
-          'record-lookup': {
+          'notebook-lookup': {
             description: 'record usage',
             input_schema: {
               type: 'object',
@@ -369,7 +365,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart03(context =
               properties: {}
             }
           },
-          'record-lookup': {
+          'notebook-lookup': {
             description: 'record usage',
             input_schema: {
               type: 'object',

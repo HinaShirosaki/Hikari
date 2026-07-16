@@ -11,7 +11,6 @@ export const protocolManifest = {
     createId,
     safeText,
     rendererServices,
-    trackGrowthEvent,
     selectionInsightsController,
     rootDocument,
     windowObject,
@@ -22,20 +21,15 @@ export const protocolManifest = {
     createId,
     safeText,
     onProtocolsChanged: rendererServices.protocol.handleProtocolsChanged,
-    trackGrowthEvent,
     selectionInsightsController,
     __globals: {
       document: rootDocument,
       windowObject,
       hikariApi: apiBridge,
-      navigator: windowObject?.navigator || globalThis?.navigator || null,
-      FileReader: windowObject?.FileReader || globalThis?.FileReader || null,
-      TextEncoder: windowObject?.TextEncoder || globalThis?.TextEncoder || null,
-      btoa: windowObject?.btoa || globalThis?.btoa || null
+      FileReader: windowObject?.FileReader || globalThis?.FileReader || null
     }
   }),
   render: ({ modules }) => {
-    modules.protocol.renderShareTargets();
     modules.protocol.renderList();
   }
 };

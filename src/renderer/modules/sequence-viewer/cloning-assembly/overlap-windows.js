@@ -1,5 +1,5 @@
-import { reverseComplementDna } from '../../tool-box/sequence.js';
-import { oligoTm } from '../../tool-box/oligo.js';
+import { reverseComplementDna } from '../calculations/sequence.js';
+import { oligoTm } from '../calculations/oligo.js';
 import {
   DEFAULT_CLONING_PREFERENCES,
   DEFAULT_MAX_ENGINEERED_OVERLAP_LENGTH,

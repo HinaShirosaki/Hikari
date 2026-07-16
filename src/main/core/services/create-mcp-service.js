@@ -1,38 +1,36 @@
 'use strict';
 
-const { createAgentMcpHost } = require('../../helpers/agent/mcp-contract/host.js');
-const { createAgentMcpInitializer } = require('../../helpers/main/agent-mcp-initializer.js');
+const { createAgentMcpHost } = require('../../agent/mcp-contract/host.js');
 
 function createMainMcpService({
-  cleanText,
   agentToolRuntime,
-  getCodexCliWorkingDirectory,
-  getDefaultDataFilePath,
-  getBundlePaths,
+  getWorkingDirectory = () => process.cwd(),
   processObject = process,
-  createMcpHost = createAgentMcpHost,
-  createMcpInitializer = createAgentMcpInitializer
+  createMcpHost = createAgentMcpHost
 } = {}) {
   const mcpHost = createMcpHost({
     runTool: agentToolRuntime?.runAgentTool,
     env: processObject.env,
     getSnapshot: () => ({}),
     getContextDefaults: () => ({
-      cwd: getCodexCliWorkingDirectory(),
+      cwd: getWorkingDirectory(),
       dataFilePath: '',
       fallbackDataFilePath: ''
     })
   });
-  const initializer = createMcpInitializer({
-    cleanText,
-    mcpHost,
-    getCodexCliWorkingDirectory,
-    getDefaultDataFilePath,
-    getBundlePaths
-  });
+  let lastInitialization = null;
 
-  async function initialize(input = {}) {
-    return initializer.initialize(input);
+  async function initialize() {
+    const host = await mcpHost.ensureStarted();
+    const hostUrl = String(host?.url || mcpHost.getHostUrl?.() || '').trim();
+    const token = String(host?.token || mcpHost.getToken?.() || '').trim();
+    lastInitialization = {
+      ok: Boolean(hostUrl),
+      status: 'initialized',
+      host_url: hostUrl,
+      has_token: Boolean(token)
+    };
+    return lastInitialization;
   }
 
   async function stop() {
@@ -40,7 +38,7 @@ function createMainMcpService({
   }
 
   return {
-    getLastInitialization: initializer.getLastResult,
+    getLastInitialization: () => lastInitialization,
     initialize,
     mcpHost,
     stop

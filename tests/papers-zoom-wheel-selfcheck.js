@@ -7,7 +7,7 @@ const { loadEsmStyleModule } = require('./support/runtime.js');
 
 const root = path.resolve(__dirname, '..');
 const { installPdfViewerPdfNavigationController } = loadEsmStyleModule(
-  path.join(root, 'src/renderer/modules/papers/pdf-viewer-pdf-navigation-controller.js')
+  path.join(root, 'src/renderer/modules/papers/pdf-viewer/pdf-viewer-pdf-navigation-controller.js')
 );
 
 // Minimal ctx: real adjustZoom mutates state.zoom; rAF is captured so we can flush frames by hand.

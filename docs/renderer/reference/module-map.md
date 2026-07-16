@@ -2,7 +2,7 @@
 
 This is a quick lookup map for `src/renderer`.
 
-Most user-facing features are **folder modules** (`modules/<feature>/index.js`) registered through `module-manifests/`. Top-level `.js` files are reserved for cross-cutting helpers, generated configuration, or composition roots that do not have a folder entry.
+Most user-facing features are **folder modules** (`modules/<feature>/index.js`) registered through `module-manifests/`. The `modules/` root now contains only generated files and deliberate composition facades; pure cross-feature code lives in `lib/` and integration adapters live in `services/`.
 
 ## Legend
 
@@ -15,10 +15,9 @@ Most user-facing features are **folder modules** (`modules/<feature>/index.js`) 
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `renderer.js` | Main path | browser-side script entry that calls the app wrapper |
-| `app/start-renderer-app.js` | Main path | compatibility wrapper into the renderer core |
+| `renderer.js` | Main path | browser-side script entry that calls the renderer core directly |
 | `core/start-hikari-core.js` | Main path | renderer core: state, services, modules, navigation, search, hydration, persistence |
-| `module-runtime.js` | Main path | composes manifest-declared modules and builds route/boot render dispatch from manifest metadata |
+| `core/module-runtime.js` | Main path | composes manifest-declared modules and builds route/boot render dispatch from manifest metadata |
 | `module-manifests/` | Main path | per-module init/render declarations grouped by boot order and feature family |
 | `app/topbar-open-handlers.js` | Main path | topbar search result open routing for domain records |
 
@@ -33,7 +32,7 @@ Most user-facing features are **folder modules** (`modules/<feature>/index.js`) 
 | `services/projectService.js` | Cross-cutting | project-driven rerender fan-out |
 | `services/inventoryService.js` | Cross-cutting | sample-registry refresh and sample-search handoff |
 | `services/analysisService.js` | Cross-cutting | assay/gel updates back into project summaries |
-| `services/sequenceService.js` | Cross-cutting | toolbox-to-sequence-viewer handoff |
+| `modules/sequence-viewer/service.js` | Cross-cutting | toolbox-to-sequence-viewer handoff, owned by the destination feature |
 
 ## Feature modules (manifest-registered)
 
@@ -41,9 +40,8 @@ These are the workspaces wired in `module-manifests/index.js`, grouped by manife
 
 | Manifest key | View | Entry file | Implementation |
 | --- | --- | --- | --- |
-| `biologyNotebook` | `BIOLOGY_NOTEBOOK` | `modules/biology-notebook/index.js` | biology / wet-lab notebook (entry export is still named `initLabNotebook`) |
-| `protocol` | `PROTOCOL_MANAGEMENT` | `modules/protocol/index.js` | protocol CRUD, viewing, sharing, import |
-| `projectManagement` | `PROJECT_MANAGEMENT` | `modules/project-management/index.js` | projects plus linked notebook/paper rollups |
+| `biologyNotebook` | `BIOLOGY_NOTEBOOK` | `modules/biology-notebook/index.js` | projects, biology / wet-lab notebook records, and the `agent/` draft adapter (entry export is still named `initLabNotebook`) |
+| `protocol` | `PROTOCOL_MANAGEMENT` | `modules/protocol/index.js` | protocol CRUD, viewing, sharing, import, and its `agent/` generated-record adapter |
 | `agentChat` | `AGENT` | `modules/agent-chat/index.js` | chat UI, sessions, context |
 | `agentChatRail` | (rail, no view) | `modules/agent-chat/index.js` + `agent-chat/scoped-state.js` | scoped agent chat embedded as a side rail in Papers, Biology Notebook, and Assay |
 | `workflowManagement` | `WORKFLOW_MANAGEMENT` | `modules/workflow/index.js` | workflow model, graph editor, list rendering, actions |
@@ -66,67 +64,63 @@ These files expose a deliberate secondary API or compose features that do not us
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `modules/agent-chat-response.js` | Support | stable re-export surface for agent response helpers |
+| `modules/agent-chat/public-api.js` | Support | explicit response and state-snapshot surface used outside Agent Chat |
 | `modules/gel/public-api.js` | Support | explicit pure gel-analysis API used by contracts and non-view consumers |
 | `modules/sequence-viewer/public-api.js` | Support | explicit parsing, rendering, ORF, restriction, alignment, and embedding API |
 | `modules/tool-box.js` | Support | toolbox composition root over many mini-tools (the `tool-box/` folder has no `index.js`) |
 | `modules/home-dashboard.js` | Support | orchestrator that wires the `home-dashboard/` widgets (the folder has no `index.js`) |
 
-## Cross-cutting root-level files
+## Cross-cutting libraries and adapters
 
 | File | Status | Notes |
 | --- | --- | --- |
 | `modules/views.js` | Cross-cutting | generated `VIEWS` and `TITLES` constants sourced from `ui/config/app-registry.json` |
 | `modules/app-state.js` | Cross-cutting | small public facade over the normalization modules in `modules/app-state/` |
 | `modules/utils.js` | Cross-cutting | shared renderer helpers such as `createId`, `safeText`, and `cssEscape` |
-| `modules/object-graph.js` | Cross-cutting | derived graph builder over protocols, notebooks, inventory, workflows, assays, gels, papers |
-| `modules/storage-path-normalizer.js` | Cross-cutting | normalizes storage paths across state on load |
-| `modules/file-drop.js` | Cross-cutting | reusable drag-and-drop file-target binding (used by gel, papers, sequence import, etc.) |
-| `modules/direct-llm.js` | Cross-cutting | direct (non-agent) LLM request helper and provider settings builder |
-| `modules/chemical-structure-clipboard.js` | Cross-cutting | reads chemical-structure candidates from clipboard paste |
-| `modules/notebook-result-table.js` | Cross-cutting | notebook result-table normalization/cloning helpers |
-| `modules/notebook-linked-previews.js` | Cross-cutting | linked assay/gel/record preview rendering for notebook entries |
-| `modules/notebook-note-tools.js` | Cross-cutting | transient notices and LLM note-clarification helpers |
-| `modules/experiment-llm-mapper.js` | Support | compresses notebook, assay, and gel data into LLM-friendly JSON |
+| `modules/app-state/storage-path-normalizer.js` | Cross-cutting | normalizes persisted record paths during state hydration |
+| `lib/file-drop.js` | Cross-cutting | reusable drag-and-drop file-target binding (used by gel, papers, sequence import, etc.) |
+| `lib/unsaved-draft.js` | Cross-cutting | stable form snapshots for unsaved-change detection |
+| `lib/notebook-result-tables.js` | Cross-cutting | notebook result-table normalization/cloning helpers |
+| `lib/notebook-tool-calculations.js` | Cross-cutting | notebook calculation normalization and rendering model |
+| `lib/inventory-settings.js` | Cross-cutting | inventory location and sample-type settings normalization |
+| `services/direct-llm.js` | Cross-cutting | direct (non-agent) LLM request helper and provider settings builder |
+| `services/chemical-structure-clipboard.js` | Cross-cutting | reads chemical-structure candidates from clipboard paste |
+| `services/notebook-linked-previews.js` | Cross-cutting | linked assay/gel/record preview models for notebook entries |
+| `services/notebook-note-tools.js` | Cross-cutting | transient notices and LLM note-clarification helpers |
+| `services/experiment-llm-mapper.js` | Support | compresses notebook, assay, and gel data into LLM-friendly JSON |
 
 ## App configuration (generated)
 
 | File | Status | Notes |
 | --- | --- | --- |
 | `modules/app-registry.generated.js` | Main path | generated shell config for dock, aliases, and view metadata |
-| `modules/llm-provider-config.generated.js` | Support | generated LLM provider catalog for the renderer |
+| `modules/codex-model-catalog.generated.js` | Support | generated Codex model catalog for the renderer |
 
 ## Bundled datasets and specialty utilities
 
 | File | Status | Notes |
 | --- | --- | --- |
-| `modules/buffer-compounds.js` | Support | buffer-compound constants for toolbox calculations |
-| `modules/common-promoters.js` | Support | common-promoter sequence library dataset |
+| `lib/chemistry/buffer-compounds.js` | Support | buffer-compound constants shared by Toolbox and notebook calculations |
 | `modules/pdf-export/` | Support | shared PDF export helpers for protocol/notebook-like views |
 | `modules/print/` | Support | shared print-window helper |
 | `modules/selection-insights/` | Cross-cutting | selection-driven insight panels reused by several views |
 
-## Present but not statically wired
+## Removed legacy workspaces
 
-These exist in the tree but are not registered in `module-manifests/` and have no static importers. Treat them as legacy or in-progress, and confirm before relying on them.
+The unwired Collaboration Management and Lab Management views were removed instead of being preserved as production-like source. Protocol sharing remains under `modules/protocol/`, while member/message data still supports active Protocol, Workflow, and inventory flows.
 
-| Path | Notes |
-| --- | --- |
-| `modules/collaboration-management/` | messaging / protocol-sharing workspace; not in `VIEWS` or any manifest |
-| `modules/lab-management.js` | members directory (`initLabManagement`); not currently registered |
-
-> Removed since earlier docs: the standalone `Instruments` workspace and a separate synthesis "lab notebook" no longer ship. The wet-lab notebook lives in `modules/biology-notebook/` (whose entry export is still named `initLabNotebook`).
+The standalone Instruments workspace and a separate synthesis "lab notebook" also no longer ship. The wet-lab notebook lives in `modules/biology-notebook/` (whose entry export is still named `initLabNotebook`).
 
 ## Good entry points
 
 If you want to read the code after this doc set, start here:
 
 1. `src/renderer/core/start-hikari-core.js`
-2. `src/renderer/module-runtime.js`
+2. `src/renderer/core/module-runtime.js`
 3. `src/renderer/module-manifests/index.js`
 4. `src/renderer/modules/app-state.js`
 5. `src/renderer/services/index.js`
-6. one simple folder module such as `src/renderer/modules/project-management/index.js`
+6. one focused feature package such as `src/renderer/modules/biology-notebook/project/project-controller.js`
 7. one large subsystem entry such as `src/renderer/modules/sequence-viewer/index.js`
 
 That order makes the rest of the package much easier to place.

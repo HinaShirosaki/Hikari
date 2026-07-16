@@ -696,11 +696,6 @@ export function createWorkflowActions(config = {}) {
     renderWorkflowViews();
   }
 
-  function onExecutionGroupingChange() {
-    runtime.workflowGrouping = String(elements.workflowGroupingInput?.value || 'project').trim() || 'project';
-    renderWorkflowViews();
-  }
-
   function onAddWorkflow() {
     const template = getTemplateById(runtime.activeTemplateId);
     if (!template) {

@@ -147,6 +147,25 @@ test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument balances crowded t
   assert.ok(viewBoxMatch);
   assert.equal(Number(viewBoxMatch[1]) > Number(viewBoxMatch[2]), true);
 });
+test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument renders a linear map for linear topology', () => {
+  const html = sequenceViewerInternals.buildCircularPreviewHtmlDocument({
+    name: 'linFragment',
+    topology: 'linear',
+    sequence: 'A'.repeat(3200),
+    features: [
+      { name: 'AmpR', type: 'cds', strand: 1, segments: [{ start: 140, end: 980 }] },
+      { name: 'MCS insert', type: 'misc_feature', strand: -1, segments: [{ start: 1080, end: 1355 }] }
+    ]
+  });
+
+  assert.match(html, /linear sequence preview/i);
+  assert.match(html, /· linear/);
+  assert.match(html, /<line class="circular-preview__backbone"/);
+  assert.doesNotMatch(html, /<circle class="circular-preview__backbone"/);
+  assert.match(html, /AmpR/);
+  assert.match(html, /data-preview-tooltip="feature"/);
+  assert.match(html, /circular-preview__scene/);
+});
 test('[EDGE] sequence-viewer buildCircularPreviewHtmlDocument returns an empty-state HTML shell without sequence', () => {
   const html = sequenceViewerInternals.buildCircularPreviewHtmlDocument({
     name: 'empty_preview',

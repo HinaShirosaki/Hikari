@@ -66,7 +66,8 @@ async function replayCodexSessionProgressFromTranscript({
   cwd = '',
   onStream = null,
   seenProgressEvents = new Set(),
-  seenDisplayEvents = new Set()
+  seenDisplayEvents = new Set(),
+  minTimestampMs = 0
 } = {}) {
   if (!sessionId || typeof onStream !== 'function') {
     return '';
@@ -81,6 +82,7 @@ async function replayCodexSessionProgressFromTranscript({
   } catch {
     return '';
   }
+  const effectiveMinTimestampMs = Math.max(0, Number(minTimestampMs) || 0);
   raw.split(/\r?\n/u).forEach((line) => {
     const trimmed = line.trim();
     if (!trimmed) {
@@ -88,6 +90,10 @@ async function replayCodexSessionProgressFromTranscript({
     }
     const parsed = safeParseJson(trimmed, null);
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return;
+    }
+    const timestampMs = readTranscriptTimestampMs(parsed);
+    if (effectiveMinTimestampMs && timestampMs && timestampMs < effectiveMinTimestampMs) {
       return;
     }
     const extracted = extractCodexJsonEventText(parsed);

@@ -387,7 +387,7 @@ test('[EDGE] sequence-viewer dual-strand renderer places selected ORF amino-acid
   const minusAa = minusHtml.indexOf('sequence-viewer-aa-row-minus');
   assert.equal(minusBottom < minusAa, true);
 });
-test('[EDGE] sequence-viewer dual-strand renderer places aligned query bases directly under the reference strand', () => {
+test('[EDGE] sequence-viewer dual-strand renderer renders an explicit reference-guide-read alignment block', () => {
   const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('AAACCCGGGTTT', [], {
     lineLength: 12,
     charAdvancePx: 8,
@@ -407,15 +407,24 @@ test('[EDGE] sequence-viewer dual-strand renderer places aligned query bases dir
     }
   });
 
+  assert.match(html, /sequence-viewer-alignment-comparison/);
+  assert.match(html, /sequence-viewer-alignment-reference-row/);
+  assert.match(html, /sequence-viewer-alignment-guide-row/);
   assert.match(html, /sequence-viewer-alignment-query-row/);
   assert.match(html, /sequence-viewer-alignment-query-base-mismatch/);
   assert.match(html, /sequence-viewer-alignment-query-base-deletion/);
   assert.match(html, /sequence-viewer-alignment-query-base-gap/);
+  assert.match(html, /sequence-viewer-alignment-reference-base-mismatch/);
+  assert.match(html, /sequence-viewer-alignment-guide-base-match/);
+  assert.match(html, /sequence-viewer-alignment-guide-base-mismatch/);
+  assert.match(html, /sequence-viewer-alignment-guide-base-deletion/);
 
   const topIndex = html.indexOf('sequence-viewer-strand-row-top');
-  const alignmentIndex = html.indexOf('sequence-viewer-alignment-query-row');
+  const referenceIndex = html.indexOf('sequence-viewer-alignment-reference-row');
+  const guideIndex = html.indexOf('sequence-viewer-alignment-guide-row');
+  const readIndex = html.indexOf('sequence-viewer-alignment-query-row');
   const bottomIndex = html.indexOf('sequence-viewer-strand-row-bottom');
-  assert.equal(topIndex < alignmentIndex && alignmentIndex < bottomIndex, true);
+  assert.equal(topIndex < referenceIndex && referenceIndex < guideIndex && guideIndex < readIndex && readIndex < bottomIndex, true);
 });
 test('[EDGE] sequence-viewer dual-strand renderer inserts AB1 trace between reference and aligned query rows', () => {
   const cells = Array.from({ length: 60 }, () => ({ base: 'A', kind: 'match' }));
@@ -443,14 +452,18 @@ test('[EDGE] sequence-viewer dual-strand renderer inserts AB1 trace between refe
   const secondLineHtml = html.slice(secondLineStart, thirdLineStart);
   const firstTopIndex = firstLineHtml.indexOf('sequence-viewer-strand-row-top');
   const firstTraceIndex = firstLineHtml.indexOf('sequence-viewer-inline-trace-row');
+  const firstReferenceIndex = firstLineHtml.indexOf('sequence-viewer-alignment-reference-row');
+  const firstGuideIndex = firstLineHtml.indexOf('sequence-viewer-alignment-guide-row');
   const firstAlignmentIndex = firstLineHtml.indexOf('sequence-viewer-alignment-query-row');
   const firstBottomIndex = firstLineHtml.indexOf('sequence-viewer-strand-row-bottom');
   const secondTopIndex = secondLineHtml.indexOf('sequence-viewer-strand-row-top');
   const secondTraceIndex = secondLineHtml.indexOf('sequence-viewer-inline-trace-row');
+  const secondReferenceIndex = secondLineHtml.indexOf('sequence-viewer-alignment-reference-row');
+  const secondGuideIndex = secondLineHtml.indexOf('sequence-viewer-alignment-guide-row');
   const secondAlignmentIndex = secondLineHtml.indexOf('sequence-viewer-alignment-query-row');
   const secondBottomIndex = secondLineHtml.indexOf('sequence-viewer-strand-row-bottom');
-  assert.equal(firstTopIndex < firstTraceIndex && firstTraceIndex < firstAlignmentIndex && firstAlignmentIndex < firstBottomIndex, true);
-  assert.equal(secondTopIndex < secondTraceIndex && secondTraceIndex < secondAlignmentIndex && secondAlignmentIndex < secondBottomIndex, true);
+  assert.equal(firstTopIndex < firstTraceIndex && firstTraceIndex < firstReferenceIndex && firstReferenceIndex < firstGuideIndex && firstGuideIndex < firstAlignmentIndex && firstAlignmentIndex < firstBottomIndex, true);
+  assert.equal(secondTopIndex < secondTraceIndex && secondTraceIndex < secondReferenceIndex && secondReferenceIndex < secondGuideIndex && secondGuideIndex < secondAlignmentIndex && secondAlignmentIndex < secondBottomIndex, true);
 });
 test('[EDGE] sequence-viewer ORF translation context terminates before stop codons', () => {
   const sequence = 'ATGAAATAGCCC';

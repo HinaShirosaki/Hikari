@@ -316,7 +316,7 @@ test('papers module stores highlight selections with PDF-style quad points', asy
 });
 test('papers highlight normalizer derives boxes from stored quad points', () => {
   const normalizersModule = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-normalizers.js')
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-normalizers.js')
   );
   const highlights = normalizersModule.normalizeHighlightList([
     {
@@ -336,7 +336,7 @@ test('papers highlight normalizer derives boxes from stored quad points', () => 
 });
 test('papers highlighted text copy helper merges PDF line wraps and preserves paragraphs', async () => {
   const viewerModule = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js')
   );
   const source = 'The highlighted\\ntext is organ-\\nized across PDF lines.\\n\\nSecond paragraph.';
   const expected = 'The highlighted text is organized across PDF lines.\n\nSecond paragraph.';
@@ -354,7 +354,7 @@ test('papers highlighted text copy helper merges PDF line wraps and preserves pa
 });
 test('papers highlighted text hover markup is a compact ask and copy toolbar', () => {
   const viewerModule = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js')
   );
   const markup = viewerModule.buildHighlightPopoverMarkup({
     text: 'First PDF line\\nsecond PDF line'
@@ -368,7 +368,7 @@ test('papers highlighted text hover markup is a compact ask and copy toolbar', (
 });
 test('papers PDF selection search helper finds matching pages and next target', () => {
   const viewerModule = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js')
   );
   const result = viewerModule.buildCurrentPdfSelectionSearchResult([
     { pageNumber: 1, text: 'Selected kinase appears here. Selected kinase appears again.' },
@@ -385,7 +385,7 @@ test('papers PDF selection search helper finds matching pages and next target', 
 });
 test('papers PDF selection search terms omit short filler words and split hyphenated terms', () => {
   const viewerModule = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js')
   );
   const terms = viewerModule.getPdfSelectionSearchTerms('the β-strand of P53 macrocycles');
 
@@ -393,7 +393,7 @@ test('papers PDF selection search terms omit short filler words and split hyphen
 });
 test('papers PDF selection search match summary supports individual matched-word navigation', () => {
   const viewerModule = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js')
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js')
   );
   const result = viewerModule.buildPdfSelectionSearchResultFromMatches([
     { id: 'm3', pageNumber: 3, boxes: [{ x: 0.3, y: 0.2, width: 0.1, height: 0.02 }] },
@@ -410,7 +410,7 @@ test('papers PDF selection search match summary supports individual matched-word
 });
 test('papers selection search popover omits result lists and keeps match arrows horizontal', () => {
   const viewerSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js'),
     'utf8'
   );
   const css = fs.readFileSync(
@@ -424,11 +424,11 @@ test('papers selection search popover omits result lists and keeps match arrows 
 });
 test('papers selection search popover dismisses on outside document pointer down', () => {
   const searchUiSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-search-ui-controller.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-search-ui-controller.js'),
     'utf8'
   );
   const eventsSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-events-controller.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-events-controller.js'),
     'utf8'
   );
 
@@ -457,10 +457,13 @@ test('papers PDF loading prefers stored bytes and compacts embedded PDF state', 
   const resolveBytesBlock = actionsSource.slice(actionsSource.indexOf('async function resolvePaperPdfBytes'));
 
   assert.match(storageApiSource, /readFileBytes:\s*\(path\) => ipcRenderer\.invoke\(STORAGE\.READ_FILE_BYTES/);
+  assert.match(storageApiSource, /moveStoredFile:\s*\(payload\) => ipcRenderer\.invoke\(STORAGE\.MOVE_STORED_FILE, payload\)/);
   assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.READ_FILE_BYTES/);
+  assert.match(dataRegistrarSource, /ipcMain\.handle\(STORAGE\.MOVE_STORED_FILE/);
   assert.match(dataRegistrarSource, /bytes\.buffer\.slice\(bytes\.byteOffset,\s*bytes\.byteOffset \+ bytes\.byteLength\)/);
   assert.match(dataRegistrarSource, /normalizeImportedDataBytes/);
   assert.match(dataRegistrarSource, /dataBytes\?\.byteLength \? dataBytes : Buffer\.from\(dataBase64, 'base64'\)/);
+  assert.match(actionsSource, /async function movePaperToFolder\(paperId, folderKey\)/);
   assert.match(actionsSource, /const pdfBytes = await fileToBytes\(file\)/);
   assert.match(actionsSource, /dataBytes:\s*pdfBytes\.buffer\.slice/);
   assert.match(actionsSource, /pdfDataUrl:\s*''/);
@@ -477,23 +480,23 @@ test('papers PDF loading prefers stored bytes and compacts embedded PDF state', 
 });
 test('papers PDF viewer virtualizes page rendering and prunes offscreen canvases', () => {
   const renderSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-render-controller.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-render-controller.js'),
     'utf8'
   );
   const pageRecordsSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-page-records.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-page-records.js'),
     'utf8'
   );
   const searchSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-search-execution-controller.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-search-execution-controller.js'),
     'utf8'
   );
   const renderingSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-rendering.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-rendering.js'),
     'utf8'
   );
   const navigationSource = fs.readFileSync(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-pdf-navigation-controller.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-pdf-navigation-controller.js'),
     'utf8'
   );
 
@@ -516,7 +519,7 @@ test('papers PDF viewer virtualizes page rendering and prunes offscreen canvases
 });
 test('papers PDF link buttons remain active after later virtualized render passes', async () => {
   const renderingModule = loadEsmStyleModule(
-    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer-rendering.js'),
+    path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'pdf-viewer-rendering.js'),
     { URL }
   );
   const createdButtons = [];

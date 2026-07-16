@@ -1,14 +1,14 @@
 import { initToolBoxViewManager } from './tool-box/view-manager.js';
 import { initMolarityTool } from './tool-box/molarity-ui.js';
-import { initPeptideTool } from './tool-box/peptide-ui.js';
-import { initTranslationTool } from './tool-box/translation-ui.js';
-import { initOligoTool } from './tool-box/oligo-ui.js';
-import { initExtinctionTool } from './tool-box/extinction-ui.js';
+import { initPeptideTool } from './sequence-viewer/calculations/ui/peptide-tool.js';
+import { initTranslationTool } from './sequence-viewer/calculations/ui/translation-tool.js';
+import { initOligoTool } from './sequence-viewer/calculations/ui/oligo-tool.js';
+import { initExtinctionTool } from './sequence-viewer/calculations/ui/extinction-tool.js';
 import { initQpcrTool } from './tool-box/qpcr-ui.js';
 import { initBufferTool } from './tool-box/buffer-ui.js';
 import { initFixedReactionTool } from './tool-box/fixed-reaction-ui.js';
-import { initCrisprTool } from './tool-box/crispr-ui.js';
-import { toNumber, formatSequenceLines } from './tool-box/common.js';
+import { initCrisprTool } from './sequence-viewer/calculations/ui/crispr-tool.js';
+import { toNumber } from './tool-box/common.js';
 import {
   concentrationToM,
   concentrationFromM,
@@ -16,7 +16,7 @@ import {
   volumeFromL,
   massToG,
   massFromG
-} from './tool-box/molarity.js';
+} from '../lib/molarity.js';
 import {
   cleanNucleotideSequence,
   nucleotideCounts,
@@ -25,9 +25,10 @@ import {
   cleanProteinSequence,
   parseRestrictionSites,
   getCodonOptionsForResidue,
-  reverseTranslateProteinSequence
-} from './tool-box/sequence.js';
-import { oligoMolecularWeight, oligoExtinction, oligoTm } from './tool-box/oligo.js';
+  reverseTranslateProteinSequence,
+  formatSequenceLines
+} from './sequence-viewer/calculations/sequence.js';
+import { oligoMolecularWeight, oligoExtinction, oligoTm } from './sequence-viewer/calculations/oligo.js';
 import {
   cleanSequence,
   countResidues,
@@ -38,9 +39,8 @@ import {
   estimatePI,
   residueSummary,
   peptideStats
-} from './tool-box/peptide.js';
+} from './sequence-viewer/calculations/protein.js';
 import { linearRegression } from './tool-box/qpcr.js';
-import { renderChemicalOptions } from './tool-box/buffer.js';
 import {
   normalizeIupacPattern,
   matchesIupacPattern,
@@ -48,7 +48,7 @@ import {
   collectCrisprPamSites,
   computeCrisprOffTargetStats,
   designCrisprGuides
-} from './tool-box/crispr.js';
+} from './sequence-viewer/calculations/crispr.js';
 import {
   calculateMolarityMass,
   calculateMolarityVolume,
@@ -60,7 +60,7 @@ import {
   calculateBufferRecipe,
   calculateFixedReactionReagent,
   calculateFixedReaction
-} from './tool-box/bench-calculations.js';
+} from '../lib/bench-calculations.js';
 
 export {
   toNumber,
@@ -92,7 +92,6 @@ export {
   estimatePI,
   residueSummary,
   peptideStats,
-  renderChemicalOptions,
   normalizeIupacPattern,
   matchesIupacPattern,
   parseCrisprTargetsInput,

@@ -31,8 +31,8 @@
               <small>Storage locations and type names</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="preferred-journal">
-              <span>Preferred Journal</span>
-              <small>Default journal name or URL</small>
+              <span>Preferred Journals</span>
+              <small>Default journal names or URLs</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="llm">
               <span>LLM Model &amp; Access</span>
@@ -41,6 +41,10 @@
             <button type="button" class="settings-nav-item" data-settings-target="skills">
               <span>External Skills</span>
               <small>Agent skill files</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="plugins">
+              <span>Plugins</span>
+              <small>User plugin folders</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="telegram">
               <span>Telegram Bot</span>
@@ -178,7 +182,7 @@
               </div>
               <form id="preferred-journal-form" class="stack-form">
                 <label>
-                  Journal Name or URL
+                  Journal Names or URLs
                   <input id="setting-preferred-journal" placeholder="Journal name or https://..." />
                 </label>
                 <div id="setting-preferred-journal-list" class="stack-form"></div>
@@ -191,32 +195,20 @@
 
             <section class="settings-section" data-settings-panel="llm" hidden>
               <div class="settings-section-head">
-                <h3>LLM Model &amp; Access</h3>
-                <p class="small-note">Configure the provider and endpoint used by the assistant features.</p>
+                <h3>Codex Model &amp; Access</h3>
+                <p class="small-note">Choose the Codex model used by assistant features.</p>
               </div>
               <form id="llm-form" class="stack-form">
                 <label>
-                  Provider
-                  <select id="setting-provider"></select>
-                </label>
-                <label>
                   Model Name
-                  <input id="setting-model" list="setting-model-options" placeholder="Provider model name" />
+                  <input id="setting-model" list="setting-model-options" placeholder="optional, e.g. gpt-5.4" />
                 </label>
                 <datalist id="setting-model-options"></datalist>
                 <label>
                   Reasoning Effort
                   <select id="setting-reasoning-effort"></select>
                 </label>
-                <label>
-                  API Endpoint
-                  <input id="setting-api-endpoint" placeholder="Provider default fills automatically" />
-                </label>
-                <label>
-                  API Key
-                  <input id="setting-api-key" type="password" placeholder="sk-..." />
-                </label>
-                <div id="setting-codex-auth-controls" class="stack-form" hidden>
+                <div id="setting-codex-auth-controls" class="stack-form">
                   <p id="setting-codex-status" class="small-note">Codex login: checking...</p>
                   <p class="small-note">Codex uses a stored OpenAI login. Once signed in, it should stay available after restart until you clear it.</p>
                   <div class="form-actions">
@@ -249,6 +241,21 @@
                 <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn">Refresh Skills</button>
               </div>
               <div id="setting-external-skills-list" class="settings-skill-list" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <section class="settings-section" data-settings-panel="plugins" hidden>
+            <div class="settings-section-head">
+              <h3>Plugins</h3>
+              <p class="small-note">Add a plugin folder containing index.html (plus its own JS and CSS). Enabled plugins appear in app navigation after a reload.</p>
+            </div>
+            <div class="stack-form">
+              <div class="form-actions">
+                <button type="button" id="setting-plugins-add-btn" class="primary-btn">Add Plugin Folder</button>
+                <button type="button" id="setting-plugins-reload-btn" class="ghost-btn">Reload App</button>
+              </div>
+              <p id="setting-plugins-status" class="small-note" aria-live="polite"></p>
+              <div id="setting-plugins-list" class="settings-skill-list" aria-live="polite"></div>
             </div>
           </section>
 

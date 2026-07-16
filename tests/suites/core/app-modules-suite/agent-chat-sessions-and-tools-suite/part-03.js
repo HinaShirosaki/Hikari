@@ -86,7 +86,7 @@ test('agent-chat prioritizes inventory lookup summary text and renders lookup me
             }
           ]
         },
-        record_lookup: {
+        notebook_lookup: {
           status: 'matched',
           query: 'transformation',
           source: 'sqlite',
@@ -127,16 +127,16 @@ test('agent-chat prioritizes inventory lookup summary text and renders lookup me
 
   assert.equal(state.agentChat.messages.length, 2);
   assert.equal(state.agentChat.messages[1].meta.inventory_lookup.status, 'matched');
-  assert.equal(state.agentChat.messages[1].meta.record_lookup.status, 'matched');
+  assert.equal(state.agentChat.messages[1].meta.notebook_lookup.status, 'matched');
   assert.match(state.agentChat.messages[1].text, /Found 2 inventory matches/);
   assert.match(state.agentChat.messages[1].text, /location Box A1/i);
   assert.match(state.agentChat.messages[1].text, /location Shelf 4/i);
-  assert.equal(/record match/i.test(state.agentChat.messages[1].text), false);
+  assert.equal(/notebook match/i.test(state.agentChat.messages[1].text), false);
   assert.doesNotMatch(history.innerHTML, /Inventory Lookup/);
   assert.doesNotMatch(history.innerHTML, /Inventory Items/);
-  assert.doesNotMatch(history.innerHTML, /Record Lookup/);
+  assert.doesNotMatch(history.innerHTML, /Notebook Lookup/);
 });
-test('agent-chat uses record lookup summary when inventory lookup payload is absent', async () => {
+test('agent-chat uses notebook lookup summary when inventory lookup payload is absent', async () => {
   const document = createMockDocument([
     'agent-project-select',
     'agent-chat-history',
@@ -182,7 +182,7 @@ test('agent-chat uses record lookup summary when inventory lookup payload is abs
       agentChat: async () => ({
         ok: true,
         parser: {
-          primary_intent: 'record_lookup',
+          primary_intent: 'notebook_lookup',
           needs_clarification: false,
           clarification_reason: null,
           entities: {
@@ -197,7 +197,7 @@ test('agent-chat uses record lookup summary when inventory lookup payload is abs
           protocol_candidates: [],
           reasoning_summary: 'Fallback parser reasoning.'
         },
-        record_lookup: {
+        notebook_lookup: {
           status: 'no_match',
           query: 'transformation record',
           source: 'sqlite',
@@ -231,9 +231,9 @@ test('agent-chat uses record lookup summary when inventory lookup payload is abs
   await flushAsync();
 
   assert.equal(state.agentChat.messages.length, 2);
-  assert.equal(state.agentChat.messages[1].meta.record_lookup.status, 'no_match');
-  assert.match(state.agentChat.messages[1].text, /No record matches found/);
-  assert.doesNotMatch(history.innerHTML, /Record Lookup/);
+  assert.equal(state.agentChat.messages[1].meta.notebook_lookup.status, 'no_match');
+  assert.match(state.agentChat.messages[1].text, /No notebook matches found/);
+  assert.doesNotMatch(history.innerHTML, /Notebook Lookup/);
   assert.equal(/Inventory Lookup/.test(history.innerHTML), false);
 });
 test('agent-chat prioritizes purchase recommendation summary, renders shopping tiles, and opens vendor pages', async () => {

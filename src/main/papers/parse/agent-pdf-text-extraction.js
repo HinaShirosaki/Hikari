@@ -16,8 +16,8 @@ const DEFAULT_MAX_CHARS_PER_PAGE = 20000;
 const DEFAULT_MAX_TOTAL_CHARS = 400000;
 const DEFAULT_FETCH_ACCEPT = 'application/pdf,application/octet-stream;q=0.9,*/*;q=0.1';
 const DEFAULT_USER_AGENT = 'Mozilla/5.0 (compatible; HikariPdfTextExtraction/1.0; +https://hikari.local)';
-const DEFAULT_VENDOR_PDFJS_PATH = path.resolve(__dirname, '../../../../../vendor/pdfjs/build/pdf.mjs');
-const DEFAULT_VENDOR_PDFJS_ROOT = path.resolve(__dirname, '../../../../../vendor/pdfjs');
+const DEFAULT_VENDOR_PDFJS_PATH = path.resolve(__dirname, '../../../../vendor/pdfjs/build/pdf.mjs');
+const DEFAULT_VENDOR_PDFJS_ROOT = path.resolve(__dirname, '../../../../vendor/pdfjs');
 
 class PdfTextDomMatrix {
   constructor(init) {

@@ -1,7 +1,7 @@
 /* sample-registry-view */
 
-.sample-layout {
-  --app-left-rail-bleed: 28px;
+.left-rail-template.sample-layout {
+  --left-rail-main-gap: 28px;
   display: grid;
   grid-template-columns: var(--layout-left-panel-width) minmax(300px, 0.9fr) minmax(320px, 1fr);
   gap: 28px;
@@ -10,6 +10,14 @@
 }
 
 .sample-layout > * {
+  min-width: 0;
+}
+
+.sample-main-grid {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.9fr) minmax(320px, 1fr);
+  gap: 28px;
+  align-items: start;
   min-width: 0;
 }
 
@@ -179,6 +187,10 @@
 
   .sample-detail-panel {
     grid-column: 1 / -1;
+  }
+
+  .sample-main-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

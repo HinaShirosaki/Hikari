@@ -55,7 +55,9 @@ function setChemicalImportStatus(message, tone = 'idle') {
   if (!chemicalImportStatus) {
     return;
   }
-  chemicalImportStatus.textContent = String(message || '');
+  const text = String(message || '');
+  chemicalImportStatus.textContent = text;
+  chemicalImportStatus.hidden = !text;
   chemicalImportStatus.dataset.status = tone;
 }
 

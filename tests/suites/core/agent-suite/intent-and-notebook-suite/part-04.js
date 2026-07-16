@@ -2,9 +2,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart04(context = {}
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-    test('controller core dispatches direct skill commands to tools before intent parsing or LLM setup', async () => {
+    test('controller core dispatches direct skill commands before LLM setup', async () => {
       const { createAgentControllerCore } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', 'agent-controller-core.js'));
-      let parserCallCount = 0;
       let toolCallCount = 0;
       const controller = createAgentControllerCore({
         deps: {
@@ -34,11 +33,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart04(context = {}
             model: '',
             rows: [],
             entries: []
-          }),
-          async requestIntentParserPayload() {
-            parserCallCount += 1;
-            throw new Error('Intent parser should not run for direct skill commands.');
-          }
+          })
         },
         observability: {
           recordLifecycleEvent: () => {}
@@ -88,8 +83,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart04(context = {}
         executeInventoryLookup: async () => {
           throw new Error('Inventory lookup should not run for direct skill commands.');
         },
-        executeRecordLookup: async () => {
-          throw new Error('Record lookup should not run for direct skill commands.');
+        executeNotebookLookup: async () => {
+          throw new Error('Notebook lookup should not run for direct skill commands.');
         },
         getAgentChatLogPath: () => '',
         getDefaultDataFilePath: () => '',
@@ -114,7 +109,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart04(context = {}
         requestId: 'req-skill-command'
       });
 
-      assert.equal(parserCallCount, 0);
       assert.equal(toolCallCount, 1);
       assert.equal(result.ok, true);
       assert.equal(result.parser.primary_intent, 'skill_command');

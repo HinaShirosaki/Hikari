@@ -93,12 +93,12 @@ test('agent-chat replaces the live placeholder with a persisted error response o
     request_id: 'req-live-error',
     chat_session_id: '',
     routing_intent: 'general_science_question',
-    stage: 'parser_completed',
+    stage: 'controller_codex_agent',
     status: 'ok',
-    message: 'Intent parsed.',
+    message: 'Routing request to Codex.',
     meta: {}
   });
-  assert.match(history.innerHTML, /Intent parsed/);
+  assert.match(history.innerHTML, /Routing request to Codex/);
 
   rejectAgentRequest(new Error('Network timeout'));
   await flushAsync();

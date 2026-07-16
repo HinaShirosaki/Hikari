@@ -25,9 +25,6 @@
     (18 * var(--contribution-cell-size)) + (17 * var(--contribution-cell-gap))
   );
   --contribution-map-width: var(--contribution-grid-width);
-  --contribution-card-width: calc(
-    var(--contribution-map-width) + (2 * var(--home-tile-padding))
-  );
   height: 100%;
   max-height: 100%;
   min-height: 0;
@@ -48,10 +45,6 @@ body.theme-night #home-view {
   --home-tile-control-bg: var(--theme-control-background);
   --home-tile-control-bg-hover: var(--theme-control-background-hover);
   --home-tile-control-border: var(--theme-control-border);
-  --home-tile-filled-bg: var(--theme-control-filled-background);
-  --home-tile-filled-text: var(--theme-control-filled-text);
-  --home-tile-disabled-bg: var(--theme-control-disabled-background);
-  --home-tile-disabled-text: var(--theme-control-disabled-text);
   --home-contribution-empty-bg: var(--home-contribution-empty);
 }
 
@@ -354,12 +347,6 @@ body.theme-night #home-view {
   gap: 6px;
   max-width: none;
   color: var(--home-tile-text);
-}
-
-#home-view .dashboard-field-grow,
-#home-view .dashboard-field-grow textarea {
-  min-height: 0;
-  height: 100%;
 }
 
 #home-view .home-contribution-display {
@@ -864,9 +851,13 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
   width: min(100%, 380px);
 }
 
+#home-view .home-timer-dialog-head {
+  align-items: center;
+}
+
 #home-view .home-timer-form-row {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(120px, 0.8fr) auto;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 0.8fr) auto;
   gap: 10px;
 }
 
@@ -882,6 +873,17 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
   min-height: 0;
   overflow: auto;
   padding-right: 4px;
+}
+
+@media (max-width: 480px) {
+  #home-view .home-timer-form-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  #home-view .home-timer-form-row .ghost-btn {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
 }
 
 #home-view .home-timer-template-row {
@@ -918,8 +920,7 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
   gap: 8px;
 }
 
-#home-view .home-timer-template-start-btn,
-#home-view .dashboard-timer-remove-btn {
+#home-view .home-timer-template-start-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -939,24 +940,15 @@ body.theme-night #home-view .home-tile .primary-btn:hover {
 }
 
 #home-view .home-timer-template-start-btn:hover,
-#home-view .home-timer-template-start-btn:focus-visible,
-#home-view .dashboard-timer-remove-btn:hover,
-#home-view .dashboard-timer-remove-btn:focus-visible {
+#home-view .home-timer-template-start-btn:focus-visible {
   transform: scale(1.04);
 }
 
-#home-view .home-timer-template-start-btn svg,
-#home-view .dashboard-timer-remove-btn svg {
+#home-view .home-timer-template-start-btn svg {
   width: 12px;
   height: 12px;
 }
 
-#home-view .dashboard-timer-remove-btn {
-  background: var(--theme-danger);
-  color: var(--theme-surface-elevated);
-}
-
-body.theme-night #home-view .dashboard-timer-active-row,
 body.theme-night #home-view .home-timer-template-row {
   background: var(--home-tile-control-bg);
 }
@@ -967,13 +959,6 @@ body.theme-night #home-view .home-timer-template-start-btn:focus-visible {
   border-color: var(--home-tile-control-border);
   background: var(--home-tile-control-bg);
   color: var(--home-tile-text);
-}
-
-body.theme-night #home-view .dashboard-timer-remove-btn,
-body.theme-night #home-view .dashboard-timer-remove-btn:hover,
-body.theme-night #home-view .dashboard-timer-remove-btn:focus-visible {
-  background: var(--theme-danger);
-  color: var(--theme-surface-elevated);
 }
 
 #home-view .home-dialog-overlay {

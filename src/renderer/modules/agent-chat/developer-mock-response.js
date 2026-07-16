@@ -1,5 +1,4 @@
 import { normalizeAgentResponse } from './response.js';
-import { applyNotebookDraftAutoSave } from './notebook-drafts.js';
 import * as developerToolsModule from './developer-tools.js';
 import { buildAttachmentSummary } from './composer-attachments.js';
 import { buildAssistantResponseMessage } from './assistant-message-meta.js';
@@ -21,7 +20,7 @@ export function createDeveloperMockResponseController({
   syncComposerHeight,
   updateInFlightState,
   ensureAgentState,
-  onNotebookEntriesChanged,
+  notebookDraftAdapter,
   openReviewForMessage = () => {}
 }) {
   async function useDeveloperMockResponse() {
@@ -69,11 +68,9 @@ export function createDeveloperMockResponseController({
         model: llm.model
       });
       const response = normalizeAgentResponse(mockResult);
-      const notebookDraft = applyNotebookDraftAutoSave(response.notebookPayload, messageText, {
-        state,
-        createId,
-        onNotebookEntriesChanged
-      });
+      const notebookDraft = notebookDraftAdapter?.applyAutoSave?.(response.notebookPayload, messageText)
+        ?? notebookDraftAdapter?.normalizeDraft?.(response.notebookPayload)
+        ?? null;
       if (notebookDraft?.save?.applied === true) {
         renderContextSummary();
       }
@@ -113,7 +110,7 @@ export function createDeveloperMockResponseController({
             needs_clarification: true,
             clarification_reason: 'developer_mock_error',
             entities: {},
-            inventory_search: { normalized_query: null, candidate_terms: [], aliases: [], search_mode: null },
+            inventory_search: { candidate_terms: [] },
             protocol_candidates: [],
             reasoning_summary: `Developer mock response failed: ${String(error?.message || error)}`
           },

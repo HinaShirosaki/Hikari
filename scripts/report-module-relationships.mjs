@@ -10,7 +10,7 @@ const rendererRoot = path.join(repoRoot, 'src', 'renderer');
 const rendererModulesRoot = path.join(rendererRoot, 'modules');
 const rendererManifestsRoot = path.join(rendererRoot, 'module-manifests');
 const rendererServicesRoot = path.join(rendererRoot, 'services');
-const moduleRuntimeFile = path.join(rendererRoot, 'module-runtime.js');
+const moduleRuntimeFile = path.join(rendererRoot, 'core', 'module-runtime.js');
 const defaultOutputPath = path.join(repoRoot, 'reports', 'renderer-module-relationships.md');
 
 function parseArguments(argv) {
@@ -42,7 +42,7 @@ function printHelp() {
   console.log('');
   console.log('Scans src/**/*.js for local import dependencies and direct imported API calls.');
   console.log('Also infers renderer service and registry-based communication from');
-  console.log('src/renderer/module-runtime.js (init/registration root) and src/renderer/services/.');
+  console.log('src/renderer/core/module-runtime.js (init/registration root) and src/renderer/services/.');
 }
 
 function toPosixPath(value) {
@@ -313,17 +313,10 @@ function describeSourceArea(filePath) {
     };
   }
 
-  if (relativePath.startsWith('src/main/helpers/agent/')) {
+  if (relativePath.startsWith('src/main/agent/')) {
     return {
       area: 'main-agent',
       family: 'agent'
-    };
-  }
-
-  if (relativePath.startsWith('src/main/helpers/main/')) {
-    return {
-      area: 'main-helper',
-      family: 'main'
     };
   }
 
@@ -331,6 +324,20 @@ function describeSourceArea(filePath) {
     return {
       area: 'main-lib',
       family: 'lib'
+    };
+  }
+
+  if (relativePath.startsWith('src/main/storage/')) {
+    return {
+      area: 'main-storage',
+      family: 'storage'
+    };
+  }
+
+  if (relativePath.startsWith('src/main/data/')) {
+    return {
+      area: 'main-data',
+      family: 'data'
     };
   }
 
@@ -522,7 +529,7 @@ function extractRendererInitBlocks(source, initImportMap) {
 
   for (const line of lines) {
     if (!currentBlock) {
-      // Inline form (current architecture in src/renderer/module-runtime.js):
+      // Inline form (current architecture in src/renderer/core/module-runtime.js):
       //   <localKey>: initAndRegisterModule(moduleRegistry, '<registryKey>', <initFn>, {
       const inlineMatch = line.match(
         /^\s*([A-Za-z_$][\w$]*)\s*:\s*initAndRegisterModule\s*\(\s*moduleRegistry\s*,\s*'([^']+)'\s*,\s*([A-Za-z_$][\w$]*)\s*,\s*\{/

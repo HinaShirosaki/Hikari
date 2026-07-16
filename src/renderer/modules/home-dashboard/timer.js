@@ -24,6 +24,7 @@ export function initTimerWidget({
     timerActiveList,
     timerOpenBtn,
     timerDialogOverlay,
+    timerDialogCloseBtn,
     timerDialogForm,
     timerNameInput,
     timerMinutesInput,
@@ -34,6 +35,7 @@ export function initTimerWidget({
   let localClockHandle = 0;
 
   timerOpenBtn.addEventListener('click', openTimerDialog);
+  timerDialogCloseBtn.addEventListener('click', closeTimerDialog);
   timerDialogOverlay.addEventListener('click', onTimerDialogOverlayClick);
   timerDialogForm.addEventListener('submit', onTimerDialogSubmit);
   timerTemplateList.addEventListener('click', onTimerTemplateListClick);
@@ -54,6 +56,7 @@ export function initTimerWidget({
   function closeTimerDialog() {
     timerDialogForm.reset();
     timerDialogOverlay.hidden = true;
+    timerOpenBtn.focus();
   }
 
   function onTimerDialogOverlayClick(event) {

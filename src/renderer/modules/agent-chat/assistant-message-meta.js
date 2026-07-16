@@ -19,7 +19,7 @@ export function buildAssistantResponseMessage({
       user_question: response.userQuestion,
       purchase_recommendation: response.purchaseRecommendation,
       inventory_lookup: response.inventoryLookup,
-      record_lookup: response.recordLookup,
+      notebook_lookup: response.notebookLookup,
       general_science_question: response.generalScienceQuestion,
       project_science_question: response.projectScienceQuestion,
       result_analysis: response.resultAnalysis,
@@ -55,10 +55,7 @@ export function buildAssistantErrorMessage({
         clarification_reason: 'agent_error',
         entities: {},
         inventory_search: {
-          normalized_query: null,
-          candidate_terms: [],
-          aliases: [],
-          search_mode: null
+          candidate_terms: []
         },
         protocol_candidates: [],
         reasoning_summary: `Agent failed: ${errorText}`
@@ -68,7 +65,7 @@ export function buildAssistantErrorMessage({
       protocol_generation: null,
       purchase_recommendation: null,
       inventory_lookup: null,
-      record_lookup: null,
+      notebook_lookup: null,
       general_science_question: null,
       project_science_question: null,
       result_analysis: null,

@@ -191,7 +191,7 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);
           assert.match(runtimeConfig, /mcp-contract\/stdio-server\.js/);
           assert.match(runtimeConfig, /required = true/);
-          assert.match(runtimeConfig, /enabled_tools = \["inventory_lookup", "chemical_lookup", "record_lookup", "protocol_lookup", "protocol_generation"/);
+          assert.match(runtimeConfig, /enabled_tools = \["inventory_lookup", "chemical_lookup", "notebook_lookup", "protocol_lookup", "protocol_generation"/);
           assert.match(runtimeConfig, /"container"/);
           assert.match(runtimeConfig, /"assay_table"/);
           assert.match(runtimeConfig, /"plotly_graph"/);
@@ -264,8 +264,13 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.equal(fs.existsSync(assayPlotlySkillPath), true);
           const protocolSkillText = fs.readFileSync(protocolSkillPath, 'utf8');
           assert.match(protocolSkillText, /Placeholder usage:/);
-          assert.match(protocolSkillText, /Use bracket placeholders/);
-          assert.match(protocolSkillText, /\[volume\]/);
+          assert.match(protocolSkillText, /Produce an executable starting protocol, not a questionnaire/);
+          assert.match(protocolSkillText, /Aim for 0-3 unresolved placeholders and do not exceed 5/);
+          assert.match(protocolSkillText, /Routine recommended starting conditions are allowed/);
+          const notebookSkillText = fs.readFileSync(path.join(projectDir, '.agents', 'skills', 'hikari-notebook-draft', 'SKILL.md'), 'utf8');
+          assert.match(notebookSkillText, /These are the only supported tool arguments/);
+          assert.match(notebookSkillText, /<step-id>:<placeholder-id>/);
+          assert.match(notebookSkillText, /Never fill a placeholder with uncertainty prose/);
           const paperRetrievalSkillText = fs.readFileSync(paperRetrievalSkillPath, 'utf8');
           assert.match(paperRetrievalSkillText, /mcp__hikari__paper_intake_search_experiments/);
           assert.match(paperRetrievalSkillText, /source_paths\.paper_md/);
@@ -384,7 +389,7 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.equal(displayEvents.some((event) => event.display_text === 'Checking project context.' && event.display_kind === 'thinking'), true);
           assert.equal(displayEvents.some((event) => event.display_text === 'I am checking inventory.' && event.display_kind === 'assistant'), true);
           assert.equal(displayEvents.some((event) => event.display_text === 'I am checking inventory.' && event.display_kind === 'thinking'), false);
-          assert.equal(displayEvents.some((event) => event.display_kind === 'tool' && /inventory_lookup/.test(event.display_text) && /SUMO1/.test(event.display_text)), true);
+          assert.equal(displayEvents.some((event) => event.display_kind === 'tool' && /inventory[ _]lookup/i.test(event.display_text) && /SUMO1/.test(event.display_text)), true);
           assert.equal(displayEvents.some((event) => event.display_kind === 'assistant' && event.display_text === 'Final response from Codex.'), true);
           assert.equal(displayEvents.some((event) => /^\s*\{/.test(event.display_text || '')), false);
         } finally {
@@ -544,6 +549,94 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.equal(displayEvents.some((event) => event.display_kind === 'assistant' && event.display_text === 'Replay final answer.'), true);
           assert.equal(displayEvents.some((event) => /Hikari Codex Chat Turn/.test(event.display_text || '')), false);
           assert.equal(displayEvents.some((event) => /^\s*\{/.test(event.display_text || '')), false);
+        } finally {
+          if (typeof previousCodexCli === 'string') {
+            process.env.HIKARI_CODEX_CLI = previousCodexCli;
+          } else {
+            delete process.env.HIKARI_CODEX_CLI;
+          }
+          if (typeof previousCapture === 'string') {
+            process.env.HIKARI_FAKE_CODEX_CAPTURE = previousCapture;
+          } else {
+            delete process.env.HIKARI_FAKE_CODEX_CAPTURE;
+          }
+          if (typeof previousStdout === 'string') {
+            process.env.HIKARI_FAKE_CODEX_STDOUT = previousStdout;
+          } else {
+            delete process.env.HIKARI_FAKE_CODEX_STDOUT;
+          }
+          fs.rmSync(workspaceDir, { recursive: true, force: true });
+        }
+      });
+    });
+    test('codex cli provider does not replay a prior final answer over a resumed turn', async () => {
+      const accessToken = buildJwt({
+        exp: Math.floor(Date.now() / 1000) + 3600,
+        email: 'scientist@example.com'
+      });
+      await withCodexHome({
+        authFile: {
+          auth_mode: 'chatgpt',
+          tokens: {
+            access_token: accessToken,
+            refresh_token: 'refresh-token',
+            account_id: 'acct-resume-current-turn'
+          }
+        }
+      }, async () => {
+        const provider = loadProvider();
+        const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-codex-resume-current-'));
+        const fakeCodex = createFakeCodexBinary(workspaceDir);
+        const sessionId = 'codex-resume-current-turn-1';
+        const transcriptDir = path.join(process.env.CODEX_HOME, 'sessions', '2026', '07', '15');
+        fs.mkdirSync(transcriptDir, { recursive: true });
+        fs.writeFileSync(path.join(transcriptDir, `rollout-${sessionId}.jsonl`), [
+          JSON.stringify({ timestamp: new Date(Date.now() - 60000).toISOString(), type: 'session_meta', payload: { id: sessionId } }),
+          JSON.stringify({
+            timestamp: new Date(Date.now() - 59000).toISOString(),
+            type: 'response_item',
+            payload: {
+              type: 'message',
+              role: 'assistant',
+              content: [{ type: 'output_text', text: 'Stale answer from the previous turn.' }],
+              phase: 'final_answer'
+            }
+          }),
+          ''
+        ].join('\n'), 'utf8');
+        const previousCodexCli = process.env.HIKARI_CODEX_CLI;
+        const previousCapture = process.env.HIKARI_FAKE_CODEX_CAPTURE;
+        const previousStdout = process.env.HIKARI_FAKE_CODEX_STDOUT;
+        process.env.HIKARI_CODEX_CLI = fakeCodex.fakePath;
+        process.env.HIKARI_FAKE_CODEX_CAPTURE = fakeCodex.capturePath;
+        process.env.HIKARI_FAKE_CODEX_STDOUT = `${JSON.stringify({
+          timestamp: new Date().toISOString(),
+          type: 'response_item',
+          payload: {
+            type: 'message',
+            role: 'assistant',
+            content: [{ type: 'output_text', text: 'Current answer from selected text.' }],
+            phase: 'final_answer'
+          }
+        })}\n`;
+
+        try {
+          const streamEvents = [];
+          const result = await provider.requestCodexCliText({
+            prompt: 'Explain the newly selected text.',
+            cwd: workspaceDir,
+            stream: true,
+            onStream: (event) => {
+              streamEvents.push(event);
+            },
+            resumeSessionId: sessionId,
+            returnMetadata: true
+          });
+          const finalDisplayText = streamEvents
+            .filter((event) => event.type === 'codex_cli_display' && /final_answer$/u.test(event.event_type || ''))
+            .map((event) => event.display_text);
+          assert.equal(result.text, 'OK from fake codex');
+          assert.deepEqual(finalDisplayText, ['Current answer from selected text.']);
         } finally {
           if (typeof previousCodexCli === 'string') {
             process.env.HIKARI_CODEX_CLI = previousCodexCli;

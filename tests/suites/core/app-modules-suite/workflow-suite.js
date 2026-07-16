@@ -226,7 +226,6 @@ test('workflow execution blocks later steps and closes quick fill on blank board
       return null;
     }
   };
-
   workflowExecutionBoard.dispatch('click', { target: stepTarget('block-b') });
   assert.equal(runtime.activeBlockId, '');
   assert.equal(renderCount, 0);
@@ -277,7 +276,24 @@ test('workflow execution renderer keeps the active step editor inside the workfl
   };
   const renderer = createWorkflowRenderer({
     state: {
-      protocols: [],
+      protocols: [
+        {
+          id: 'protocol-a',
+          name: 'Ni-NTA Purification',
+          steps: [
+            {
+              id: 'step-1',
+              text: 'Load {{ph:amount}} of clarified lysate onto the column.',
+              placeholders: [{ id: 'amount-1', name: 'amount' }]
+            },
+            {
+              id: 'step-2',
+              text: 'Elute with {{ph:volume}} of buffer.',
+              placeholders: [{ id: 'volume-1', name: 'volume' }]
+            }
+          ]
+        }
+      ],
       workflowTemplates: [
         {
           id: 'template-1',
@@ -312,7 +328,10 @@ test('workflow execution renderer keeps the active step editor inside the workfl
               id: 'entry-1',
               name: 'NiNTA 1',
               stepStates: {
-                'block-a': { status: 'completed' },
+                'block-a': {
+                  status: 'completed',
+                  values: { 'step-1:amount-1': '10 mL' }
+                },
                 'block-b': { status: 'pending' }
               }
             }
@@ -324,7 +343,7 @@ test('workflow execution renderer keeps the active step editor inside the workfl
       activeTemplateId: 'template-1',
       activeWorkflowId: 'workflow-1',
       activeEntryId: 'entry-1',
-      activeBlockId: 'block-b'
+      activeBlockId: 'block-a'
     },
     elements,
     safeText: (value) => String(value || ''),
@@ -341,6 +360,10 @@ test('workflow execution renderer keeps the active step editor inside the workfl
   assert.doesNotMatch(board.innerHTML, /workflow-progress-connector/);
   assert.match(board.innerHTML, /data-workflow-step-open="block-c"[\s\S]*disabled aria-disabled="true"/);
   assert.match(board.innerHTML, /data-workflow-step-popover="true"/);
+  assert.match(board.innerHTML, /workflow-placeholder-field-label">amount/);
+  assert.match(board.innerHTML, /workflow-placeholder-field[\s\S]*value="10 mL"[\s\S]*placeholder="Enter value"/);
+  assert.doesNotMatch(board.innerHTML, /workflow-placeholder-field-context|workflow-step-editor-header|workflow-step-status-picker/);
+  assert.doesNotMatch(board.innerHTML, /workflow-placeholder-table/);
   assert.doesNotMatch(board.innerHTML, /workflow-step-detail-panel/);
 });
 

@@ -1,4 +1,4 @@
-import { escapeHtml } from '../tool-box/common.js';
+import { escapeHtml } from '../../lib/html.js';
 import {
   FALLBACK_CHAR_ADVANCE_PX,
 } from './constants.js';

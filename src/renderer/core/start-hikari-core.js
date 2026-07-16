@@ -6,21 +6,22 @@ import {
   trackGrowthEvent
 } from '../modules/app-state.js';
 import { APP_DOCK_ORDER, APP_REGISTRY } from '../modules/app-registry.generated.js';
-import { createRendererModuleRuntime } from '../module-runtime.js';
+import { createRendererModuleRuntime } from './module-runtime.js';
 import {
   createModuleRegistry,
   createRendererServices,
   createUndoService,
   createUnsavedChangesService
 } from '../services/index.js';
-import { initSharedLeftRailResizers } from '../shared-left-rail.js';
-import { normalizeStateStoragePaths } from '../modules/storage-path-normalizer.js';
+import { initSharedLeftRailResizers } from '../app/shared-left-rail.js';
+import { normalizeStateStoragePaths } from '../modules/app-state/storage-path-normalizer.js';
 import {
   applyAppearanceSnapshot,
   createNavigationShell,
   normalizeViewId
 } from '../app/navigation-shell.js';
 import { createStorageImportController } from '../app/storage-import.js';
+import { installPlugins } from '../app/plugin-loader.js';
 import {
   buildSearchScopeMap,
   buildViewAliasMap,
@@ -97,6 +98,9 @@ export function startHikariCore({
   windowObject = window
 } = {}) {
   const state = loadState();
+  // Plugin views and registry entries must exist before the navigation shell
+  // and search maps below snapshot APP_REGISTRY and the `.view` sections.
+  installPlugins({ state, documentObject, appRegistry: APP_REGISTRY });
   const normalizeAppViewId = (viewId) => normalizeViewId(VIEWS, viewId);
   const globalViewAliases = buildViewAliasMap({
     apps: APP_REGISTRY,

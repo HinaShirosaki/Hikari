@@ -28,6 +28,7 @@ Agent.md
 *.log
 logs/
 data/*.log
+/data/chemicals.json
 data/Config/codex-cli-home/log/
 data/Config/codex-cli-home/tmp/
 
@@ -44,7 +45,6 @@ reports/
 idea/
 skills/
 test.js
-agent-context-debug.md
 
 # Local scratch / personal / test material
 Book3.xlsx

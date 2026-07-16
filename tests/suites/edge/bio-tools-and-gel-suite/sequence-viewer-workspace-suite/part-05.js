@@ -16,11 +16,8 @@ test('[EDGE] sequence-viewer protein builder only lists recognized backbone sele
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
-    'sequence-viewer-protein-builder-poi-name',
-    'sequence-viewer-protein-builder-poi-sequence',
     'sequence-viewer-protein-builder-reset-btn',
     'sequence-viewer-protein-builder-add-custom-btn',
-    'sequence-viewer-protein-builder-add-poi-btn',
     'sequence-viewer-protein-builder-build-dna-btn',
     'sequence-viewer-protein-builder-assemble-btn',
     'sequence-viewer-protein-builder-common-blocks',
@@ -154,13 +151,9 @@ ORIGIN
 
   trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
 
-  const builderForm = document.getElementById('sequence-viewer-protein-builder-form');
   const constructNameInput = document.getElementById('sequence-viewer-protein-builder-name');
-  const poiInput = document.getElementById('sequence-viewer-protein-builder-poi-sequence');
   constructNameInput.value = 'GFP Insert';
-  trigger(builderForm, 'input', { target: constructNameInput });
-  poiInput.value = 'MLLL';
-  trigger(builderForm, 'input', { target: poiInput });
+  trigger(document.getElementById('sequence-viewer-protein-builder-form'), 'input', { target: constructNameInput });
   await flushAsync();
 
   const sequenceLibraryListCallsBeforeAssembly = sequenceLibraryListCalls.length;
@@ -188,11 +181,8 @@ test('[EDGE] sequence-viewer protein builder does not hydrate saved library entr
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
     'sequence-viewer-protein-builder-name',
-    'sequence-viewer-protein-builder-poi-name',
-    'sequence-viewer-protein-builder-poi-sequence',
     'sequence-viewer-protein-builder-reset-btn',
     'sequence-viewer-protein-builder-add-custom-btn',
-    'sequence-viewer-protein-builder-add-poi-btn',
     'sequence-viewer-protein-builder-build-dna-btn',
     'sequence-viewer-protein-builder-assemble-btn',
     'sequence-viewer-protein-builder-common-blocks',
@@ -332,13 +322,9 @@ ORIGIN
 
   trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
 
-  const builderForm = document.getElementById('sequence-viewer-protein-builder-form');
   const constructNameInput = document.getElementById('sequence-viewer-protein-builder-name');
-  const poiInput = document.getElementById('sequence-viewer-protein-builder-poi-sequence');
   constructNameInput.value = 'GFP Insert';
-  trigger(builderForm, 'input', { target: constructNameInput });
-  poiInput.value = 'MLLL';
-  trigger(builderForm, 'input', { target: poiInput });
+  trigger(document.getElementById('sequence-viewer-protein-builder-form'), 'input', { target: constructNameInput });
   await flushAsync();
 
   const sequenceLibraryListCallsBeforeAssembly = sequenceLibraryListCalls.length;

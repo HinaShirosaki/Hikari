@@ -123,13 +123,10 @@ export function assembleCloningPlan(payload = {}) {
   });
   const stepByStepProcedure = buildProcedureSteps(
     recommendedStrategy?.name,
-    assembledVectorDesign,
-    primerOligoPlan,
-    routeEvaluations
+    assembledVectorDesign
   );
   const validationPlan = buildValidationPlan(
     recommendedStrategy?.name,
-    assembledVectorDesign,
     orderedFragmentMap
   );
   const warnings = buildGlobalWarnings(routeEvaluations, primerOligoPlan, recommendedStrategy?.name);

@@ -1,4 +1,4 @@
-import { escapeHtml } from '../../tool-box/common.js';
+import { escapeHtml } from '../../../lib/html.js';
 import { cleanText } from '../shared.js';
 import { buildStoredBackboneDisplayName, formatStoredBackboneDate } from './assembly-payload.js';
 import { escapeAttribute } from './row-factory.js';

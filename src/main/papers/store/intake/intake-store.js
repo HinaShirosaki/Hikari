@@ -18,7 +18,7 @@ const path = require('node:path');
 const {
   KNOWLEDGE_BASE_ROOT_FOLDER_NAME,
   PAPER_MARKDOWN_ROOT_FOLDER_NAME
-} = require('../../../helpers/main/storage-bundle/storage-paths.js');
+} = require('../../../storage/storage-paths.js');
 
 const INTAKE_SCHEMA_VERSION = 1;
 const INTAKE_FILE_NAME = 'intake.json';
@@ -76,13 +76,15 @@ function normalizeDocType(value) {
 
 function normalizeExperiment(value, index = 0) {
   const source = ensureObject(value);
+  const evidence = cleanText(source.evidence || source.source_content || source.sourceContent, 1600);
   return {
     id: cleanText(source.id, 80) || `e${index + 1}`,
     title: cleanText(source.title, 240),
     technique: cleanText(source.technique, 240),
     variables: cleanText(source.variables, 400),
     figure_ref: cleanText(source.figure_ref || source.figureRef, 80),
-    outcome: cleanText(source.outcome, 600)
+    outcome: cleanText(source.outcome, 600),
+    ...(evidence ? { evidence } : {})
   };
 }
 
@@ -238,6 +240,37 @@ function createIntakeStore(deps = {}) {
     try {
       const markdown = await fs.readFile(absPath, 'utf8');
       return { ok: true, status: 'loaded', paper_id: id, markdown: String(markdown || '') };
+    } catch (error) {
+      if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+        return { ok: false, status: 'not_found', paper_id: id };
+      }
+      return {
+        ok: false,
+        status: 'read_failed',
+        paper_id: id,
+        error: cleanText(error?.message || error, 600)
+      };
+    }
+  }
+
+  /**
+   * Read the page-delimited `extracted.txt` generated beside paper.md. Each
+   * page starts with `[[page:N]]`; the intake pipeline owns that cursor and
+   * only gives the model the current page content.
+   */
+  async function readPaperExtractedText(paperId) {
+    const guard = ensureReady();
+    if (guard) {
+      return guard;
+    }
+    const id = cleanText(paperId, 200);
+    if (!id) {
+      return { ok: false, status: 'invalid_arguments', error: 'paper_id is required.' };
+    }
+    const absPath = path.join(paperFolderAbsolute(id), 'extracted.txt');
+    try {
+      const content = await fs.readFile(absPath, 'utf8');
+      return { ok: true, status: 'loaded', paper_id: id, content: String(content || '') };
     } catch (error) {
       if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
         return { ok: false, status: 'not_found', paper_id: id };
@@ -467,6 +500,7 @@ function createIntakeStore(deps = {}) {
     loadAll,
     listPaperIds,
     readPaperMarkdown,
+    readPaperExtractedText,
     readPaperMeta,
     effectiveProjectIds,
     filterByProject,

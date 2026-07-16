@@ -7,16 +7,11 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
     const readMainProcessSource = () => [
       readLocalSource('src', 'main', 'main.js'),
       readLocalSource('src', 'main', 'app', 'start-main-app.js'),
-      readLocalSource('src', 'main', 'core', 'start-hikari-main-core.js'),
-      readLocalSource('src', 'main', 'core', 'main-service-catalog.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'app-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'agent-services.js'),
-      readLocalSource('src', 'main', 'core', 'catalog', 'ipc-services.js'),
+      readLocalSource('src', 'main', 'core', 'main-services.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-mcp-service.js'),
       readLocalSource('src', 'main', 'core', 'services', 'create-codex-service.js'),
-      readLocalSource('src', 'main', 'helpers', 'main', 'create-main-agent-services.js'),
-      readLocalSource('src', 'main', 'app', 'main-runtime.js'),
-      readLocalSource('src', 'main', 'app', 'agent-log-runtime.js')
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-services.js'),
+      readLocalSource('src', 'main', 'core', 'services', 'create-agent-log-service.js')
     ].join('\n');
     const readPreloadStorageSource = () => [
       readLocalSource('src', 'main', 'preload.js'),
@@ -24,13 +19,13 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       readLocalSource('src', 'main', 'preload', 'api', 'storage-api.js')
     ].join('\n');
     const readRendererStorageSource = () => [
-      readLocalSource('src', 'renderer', 'app', 'start-renderer-app.js'),
+      readLocalSource('src', 'renderer', 'renderer.js'),
       readLocalSource('src', 'renderer', 'core', 'start-hikari-core.js'),
       readLocalSource('src', 'renderer', 'app', 'storage-import.js')
     ].join('\n');
     test('chemical bundle hydration/import no longer depends on legacy chemical json fallback', () => {
-      const hydrationSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-hydration.js'), 'utf8');
-      const importSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'storage-bundle', 'storage-import.js'), 'utf8');
+      const hydrationSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'storage', 'storage-hydration.js'), 'utf8');
+      const importSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'storage', 'storage-import.js'), 'utf8');
       const mainSource = readMainProcessSource();
       assert.equal(hydrationSource.includes('legacyChemicalsPath'), false);
       assert.equal(hydrationSource.includes('hydrateFromLegacyChemicals'), false);
@@ -189,16 +184,15 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       assert.equal(telegramLoggingSource.includes('telegram-messages.log'), false);
     });
     test('main agent chat logging records request/result/error with redacted API key metadata', () => {
-      const agentDir = path.join(__dirname, 'src', 'main', 'helpers', 'agent');
+      const agentDir = path.join(__dirname, 'src', 'main', 'agent');
       const agentPath = (...parts) => path.join(agentDir, ...parts);
       const agentRegistrarPath = (...parts) => path.join(__dirname, 'src', 'main', 'ipc', 'register-agent-ipc', ...parts);
       const mainSource = readMainProcessSource();
-      const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'helpers', 'main', 'app-paths.js'), 'utf8');
+      const appPathsSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'lib', 'app-paths.js'), 'utf8');
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const controllerUtilsSource = fs.readFileSync(agentPath('shared', 'agent-controller-utils.js'), 'utf8');
-      const catalogConstants = require(path.join(__dirname, 'src', 'main', 'core', 'catalog', 'constants.js'));
-      assert.equal(catalogConstants.AGENT_CHAT_LOG_FILE_NAME, 'agent-chat.log');
-      assert.match(mainSource, /agentLogRuntime\.ensureAgentChatLogFile\([^)]*getAgentChatLogPath\(\)\)/);
+      assert.match(mainSource, /AGENT_CHAT_LOG_FILE_NAME = 'agent-chat\.log'/);
+      assert.match(mainSource, /agentLogService\.ensureAgentChatLogFile\([^)]*getAgentChatLogPath\(\)\)/);
       assert.match(mainSource, /createMainAppPaths/);
       assert.match(appPathsSource, /HIKARI_AGENT_CHAT_LOG_PATH/);
       assert.match(controllerUtilsSource, /apiKeyProvided: Boolean\(cleanText\(source\.apiKey, 12\)\)/);

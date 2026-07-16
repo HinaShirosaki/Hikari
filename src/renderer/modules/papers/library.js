@@ -6,7 +6,9 @@ import {
   formatRelativePaperTime
 } from './model.js';
 import { getPaperDisplayTitle } from './pdf-metadata.js';
-import { bindFileDropTarget } from '../file-drop.js';
+import { bindFileDropTarget } from '../../lib/file-drop.js';
+
+const PAPER_DRAG_MIME = 'application/x-hikari-paper-id';
 
 export function createPapersLibraryController(context) {
   const {
@@ -21,6 +23,10 @@ export function createPapersLibraryController(context) {
     libraryContextState,
     elements
   } = context;
+  const paperDragState = {
+    paperId: '',
+    activeDropTarget: null
+  };
 
   function getExpandedFolderKeys() {
     if (!(libraryState.expandedFolderKeys instanceof Set)) {
@@ -114,6 +120,46 @@ export function createPapersLibraryController(context) {
     libraryContextState.folderId = '';
     libraryContextState.folderType = '';
     libraryContextState.paperId = '';
+  }
+
+  function getDraggedPaperId(event) {
+    const fromTransfer = typeof event?.dataTransfer?.getData === 'function'
+      ? String(event.dataTransfer.getData(PAPER_DRAG_MIME) || '').trim()
+      : '';
+    return fromTransfer || String(paperDragState.paperId || '').trim();
+  }
+
+  function getDropFolderTarget(event) {
+    if (!event?.target || typeof event.target.closest !== 'function') {
+      return null;
+    }
+    return event.target.closest('[data-folder-drop]');
+  }
+
+  function canDropPaperOnFolder(paperId = '', folderKey = '') {
+    const paper = (state.papers || []).find((item) => String(item?.id || '') === String(paperId || '')) || null;
+    if (!paper) {
+      return false;
+    }
+    const folder = getLibraryFolders(state).find((item) => item.key === folderKey) || null;
+    if (!folder) {
+      return false;
+    }
+    return buildFolderKey(paper.linkedType, paper.linkedId) !== folder.key;
+  }
+
+  function clearPaperDropTarget() {
+    paperDragState.activeDropTarget?.classList?.remove?.('is-paper-drop-target');
+    paperDragState.activeDropTarget = null;
+  }
+
+  function setPaperDropTarget(target) {
+    if (paperDragState.activeDropTarget === target) {
+      return;
+    }
+    clearPaperDropTarget();
+    paperDragState.activeDropTarget = target;
+    target?.classList?.add?.('is-paper-drop-target');
   }
 
   function onGlobalKeydown(event) {
@@ -456,6 +502,8 @@ export function createPapersLibraryController(context) {
         type="button"
         class="papers-paper-row${activePaperId === paper.id ? ' is-active' : ''}"
         data-paper-view="${paper.id}"
+        data-paper-drag="${paper.id}"
+        draggable="true"
       >
         <span class="papers-paper-title">${safeText(getPaperDisplayTitle(paper))}</span>
         <span class="papers-paper-time">${safeText(formatRelativePaperTime(paper.updatedAt))}</span>
@@ -523,6 +571,7 @@ export function createPapersLibraryController(context) {
             class="papers-folder-item${folder.key === selectedFolder?.key ? ' is-active' : ''}${isFolderExpanded(folder.key) ? ' is-expanded' : ''}"
             data-folder-select="${safeText(folder.key)}"
             data-folder-context="${safeText(folder.key)}"
+            data-folder-drop="${safeText(folder.key)}"
             aria-expanded="${isFolderExpanded(folder.key) ? 'true' : 'false'}"
           >
             <span class="papers-folder-chevron" aria-hidden="true"></span>
@@ -623,6 +672,66 @@ export function createPapersLibraryController(context) {
     renderLibrarySidebar(libraryState.selectedFolderKey);
   }
 
+  function onPaperDragStart(event) {
+    const paperTarget = event.target?.closest?.('[data-paper-drag]');
+    const paperId = String(paperTarget?.dataset?.paperDrag || '').trim();
+    if (!paperId) {
+      return;
+    }
+    paperDragState.paperId = paperId;
+    paperTarget?.classList?.add?.('is-dragging');
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.dropEffect = 'move';
+      event.dataTransfer.setData?.(PAPER_DRAG_MIME, paperId);
+      event.dataTransfer.setData?.('text/plain', paperId);
+    }
+  }
+
+  function onPaperDragEnd(event) {
+    event.target?.closest?.('[data-paper-drag]')?.classList?.remove?.('is-dragging');
+    paperDragState.paperId = '';
+    clearPaperDropTarget();
+  }
+
+  function onPaperDragOver(event) {
+    const folderTarget = getDropFolderTarget(event);
+    const folderKey = String(folderTarget?.dataset?.folderDrop || '').trim();
+    const paperId = getDraggedPaperId(event);
+    if (!folderTarget || !canDropPaperOnFolder(paperId, folderKey)) {
+      clearPaperDropTarget();
+      return;
+    }
+    event.preventDefault?.();
+    event.stopPropagation?.();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+    setPaperDropTarget(folderTarget);
+  }
+
+  function onPaperDragLeave(event) {
+    const folderTarget = getDropFolderTarget(event);
+    if (folderTarget && folderTarget === paperDragState.activeDropTarget) {
+      clearPaperDropTarget();
+    }
+  }
+
+  function onPaperDrop(event) {
+    const folderTarget = getDropFolderTarget(event);
+    const folderKey = String(folderTarget?.dataset?.folderDrop || '').trim();
+    const paperId = getDraggedPaperId(event);
+    if (!folderTarget || !canDropPaperOnFolder(paperId, folderKey)) {
+      clearPaperDropTarget();
+      return;
+    }
+    event.preventDefault?.();
+    event.stopPropagation?.();
+    clearPaperDropTarget();
+    paperDragState.paperId = '';
+    void context.actions?.movePaperToFolder?.(paperId, folderKey);
+  }
+
   function onFolderListInput(event) {
     const renameInput = event.target?.closest?.('[data-folder-rename-input]');
     if (!renameInput) {
@@ -721,6 +830,11 @@ export function createPapersLibraryController(context) {
     elements.journalClubList?.addEventListener('click', onFolderListClick);
     elements.journalClubList?.addEventListener('input', onFolderListInput);
     elements.journalClubList?.addEventListener('keydown', onFolderListKeydown);
+    elements.journalClubList?.addEventListener('dragstart', onPaperDragStart);
+    elements.journalClubList?.addEventListener('dragend', onPaperDragEnd);
+    elements.journalClubList?.addEventListener('dragover', onPaperDragOver);
+    elements.journalClubList?.addEventListener('dragleave', onPaperDragLeave);
+    elements.journalClubList?.addEventListener('drop', onPaperDrop);
     elements.journalClubList?.addEventListener('click', onPaperListClick);
     elements.papersLibraryRail?.addEventListener('contextmenu', onLibraryContextMenu);
     elements.papersLibraryContextMenu?.addEventListener('click', onLibraryContextMenuClick);

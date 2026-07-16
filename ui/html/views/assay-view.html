@@ -16,6 +16,40 @@
           </details>
           <form id="assay-form" class="form-grid assay-form-grid">
             <input type="hidden" id="assay-id" />
+            <div class="form-actions assay-form-actions" aria-label="Assay actions">
+              <button type="button" id="assay-export-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Export CSV template" title="Export CSV template">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 4v12"></path>
+                  <path d="m7 11 5 5 5-5"></path>
+                  <path d="M5 20h14"></path>
+                </svg>
+                <span class="sr-only">Export CSV template</span>
+              </button>
+              <button type="button" id="assay-import-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Import CSV" title="Import CSV">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 16V4"></path>
+                  <path d="m7 9 5-5 5 5"></path>
+                  <path d="M5 20h14"></path>
+                </svg>
+                <span class="sr-only">Import CSV</span>
+              </button>
+              <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
+              <button type="submit" class="primary-btn assay-form-icon-btn assay-form-save-icon-btn" aria-label="Save assay" title="Save assay">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 3h12l3 3v15H4V3Z"></path>
+                  <path d="M8 3v6h8V3"></path>
+                  <path d="M8 21v-7h8v7"></path>
+                </svg>
+                <span class="sr-only">Save assay</span>
+              </button>
+              <button type="button" id="assay-cancel-btn" class="ghost-btn assay-form-icon-btn" aria-label="Cancel edit" title="Cancel edit">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M6 6l12 12"></path>
+                  <path d="M18 6 6 18"></path>
+                </svg>
+                <span class="sr-only">Cancel edit</span>
+              </button>
+            </div>
             <div class="assay-display-field">
               <span class="assay-display-label">Assay Number</span>
               <div id="assay-number-display" class="assay-display-value" aria-live="polite"></div>
@@ -71,18 +105,11 @@
             </select>
             <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
             <div id="assay-csv-status" class="small-note assay-form-note"></div>
-            <div class="form-actions assay-form-actions">
-              <button type="button" id="assay-export-template-btn" class="ghost-btn">Export CSV Template</button>
-              <button type="button" id="assay-import-template-btn" class="ghost-btn">Import CSV</button>
-              <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
-              <button type="submit" class="primary-btn">Save Assay</button>
-              <button type="button" id="assay-cancel-btn" class="ghost-btn">Cancel Edit</button>
-            </div>
           </form>
         </div>
 
         <div class="panel assay-mode-create-panel assay-create-preview-panel left-rail-template__main">
-          <div class="form-actions">
+          <div class="form-actions assay-plate-toolbar">
             <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
               <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Edit Conc.</button>
@@ -141,10 +168,28 @@
               </select>
             </label>
             <div class="form-actions assay-results-actions">
-              <button type="button" id="assay-attach-result-file-btn" class="ghost-btn">Attach Result File</button>
+              <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" title="Attach result file">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
+                </svg>
+              </button>
               <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-              <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
-              <button type="button" id="assay-clear-results-btn" class="ghost-btn">Clear Results</button>
+              <button type="button" id="assay-save-results-btn" class="primary-btn assay-results-icon-btn assay-results-save-icon-btn" aria-label="Save results" title="Save results">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 3h12l3 3v15H4V3Z"></path>
+                  <path d="M8 3v6h8V3"></path>
+                  <path d="M8 21v-7h8v7"></path>
+                </svg>
+              </button>
+              <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M3 6h18"></path>
+                  <path d="M8 6V4h8v2"></path>
+                  <path d="m19 6-1 14H6L5 6"></path>
+                  <path d="M10 11v5"></path>
+                  <path d="M14 11v5"></path>
+                </svg>
+              </button>
             </div>
             <div id="assay-active-assay-info" class="small-note"></div>
             <div id="assay-result-status" class="small-note"></div>
@@ -177,14 +222,9 @@
               </select>
             </label>
             <div class="assay-analysis-controls">
-              <label>
-                Row Groups (optional)
-                <textarea id="assay-analysis-row-groups" rows="2" placeholder="Control: A,B; Treated: C,D"></textarea>
-              </label>
-              <label>
-                Column Groups (optional)
-                <textarea id="assay-analysis-column-groups" rows="2" placeholder="Early: 1,2; Late: 3,4"></textarea>
-              </label>
+              <input id="assay-analysis-row-groups" type="hidden" />
+              <input id="assay-analysis-column-groups" type="hidden" />
+              <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
               <label class="assay-analysis-checkbox">
                 <input id="assay-analysis-error-bars" type="checkbox" />
                 Show SD error bars (for Row/Column Summary)
@@ -223,7 +263,7 @@
         <div class="assay-serial-dilution-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
           <div class="assay-header-row assay-serial-dilution-head app-dialog-head">
             <h3 id="assay-serial-dilution-title">Serial Dilution</h3>
-            <button type="button" id="assay-serial-dilution-close-btn" class="ghost-btn" aria-label="Close serial dilution dialog">Close</button>
+            <button type="button" id="assay-serial-dilution-close-btn" class="app-dialog-close-btn" aria-label="Close serial dilution dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <p class="small-note">Use the current mapped plate to calculate a constant final volume per well, with the last active dilution well discarding the final carryover volume.</p>
           <div class="assay-serial-dilution-controls">
@@ -244,7 +284,7 @@
               <h3 id="assay-result-import-title">Select Result Matrix</h3>
               <p id="assay-result-import-status" class="small-note"></p>
             </div>
-            <button type="button" id="assay-result-import-close-btn" class="ghost-btn" aria-label="Close result import dialog">Close</button>
+            <button type="button" id="assay-result-import-close-btn" class="app-dialog-close-btn" aria-label="Close result import dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <div class="assay-result-import-body">
             <div id="assay-result-import-candidates" class="assay-result-import-candidates" role="listbox" aria-label="Detected result matrices"></div>

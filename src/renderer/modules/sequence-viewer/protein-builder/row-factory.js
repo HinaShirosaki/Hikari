@@ -1,6 +1,6 @@
-import { escapeHtml } from '../../tool-box/common.js';
+import { escapeHtml } from '../../../lib/html.js';
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
-import { cleanText, normalizeSequenceText } from '../shared.js';
+import { cleanText } from '../shared.js';
 import { LIBRARY_LOOKUP } from './constants.js';
 import { buildFeatureDerivedSequence } from './sequence-utils.js';
 
@@ -25,9 +25,9 @@ export function createPoiRow(nextRowId) {
     id: `builder_row_${nextRowId}`,
     kind: 'poi',
     type: 'poi',
-    label: 'Protein of Interest',
+    label: 'Current DNA',
     sequence: '',
-    note: 'Uses the POI fields in the left column.'
+    note: 'Uses the active Sequence Viewer DNA source.'
   };
 }
 

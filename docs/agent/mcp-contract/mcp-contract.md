@@ -1,6 +1,6 @@
 # Hikari Agent MCP Contract
 
-This document exports the provider-neutral MCP-facing contract for Hikari agents. The live reusable implementation is in `src/main/helpers/agent/mcp-contract/`. Codex-specific behavior, such as AGENTS.md injection and Codex CLI config writing, stays in `src/main/helpers/agent/codex-agent/`.
+This document exports the provider-neutral MCP-facing contract for Hikari agents. The live reusable implementation is in `src/main/agent/mcp-contract/`. Codex-specific behavior, such as AGENTS.md injection and Codex CLI config writing, stays in `src/main/agent/codex-agent/`.
 
 ## Runtime config
 
@@ -12,16 +12,14 @@ Any agent provider that supports MCP can launch the shared stdio server. The Cod
 enabled = true
 required = true
 command = "/absolute/path/to/node"
-args = ["/absolute/path/to/src/main/helpers/agent/mcp-contract/stdio-server.js"]
+args = ["/absolute/path/to/src/main/agent/mcp-contract/stdio-server.js"]
 enabled_tools = [
   "inventory_lookup",
   "chemical_lookup",
-  "record_lookup",
+  "notebook_lookup",
   "protocol_lookup",
   "protocol_generation",
   "notebook_draft",
-  "notebook_generation",
-  "notebook_lookup",
   "literature_search",
   "paper_download",
   "paper_analysis",
@@ -29,7 +27,6 @@ enabled_tools = [
   "paper_intake_search_experiments",
   "paper_intake_list_project_summaries",
   "purchase_recommendation",
-  "memory",
   "container",
   "assay_table",
   "plotly_graph",
@@ -37,7 +34,7 @@ enabled_tools = [
 ]
 default_tools_approval_mode = "approve"
 startup_timeout_sec = 30
-tool_timeout_sec = 120
+tool_timeout_sec = 300
 env = {
   HIKARI_AGENT_MCP = "1",
   HIKARI_AGENT_MCP_WORKSPACE = "/runtime/workspace",
@@ -122,12 +119,11 @@ The Hikari MCP surface is direct-tool-only. Agent providers call the named tools
 
 - `inventory_lookup`
 - `chemical_lookup`
-- `record_lookup`
+- `notebook_lookup`
 - `protocol_lookup`
 - `protocol_generation`
 - `notebook_draft`
 - `notebook_generation`
-- `notebook_lookup`
 - `literature_search`
 - `paper_download`
 - `paper_analysis`
@@ -145,12 +141,10 @@ Codex exposes the same server tools to the model with the server namespace prefi
 
 - `mcp__hikari__inventory_lookup`
 - `mcp__hikari__chemical_lookup`
-- `mcp__hikari__record_lookup`
+- `mcp__hikari__notebook_lookup`
 - `mcp__hikari__protocol_lookup`
 - `mcp__hikari__protocol_generation`
 - `mcp__hikari__notebook_draft`
-- `mcp__hikari__notebook_generation`
-- `mcp__hikari__notebook_lookup`
 - `mcp__hikari__literature_search`
 - `mcp__hikari__paper_download`
 - `mcp__hikari__paper_analysis`
@@ -158,7 +152,6 @@ Codex exposes the same server tools to the model with the server namespace prefi
 - `mcp__hikari__paper_intake_search_experiments`
 - `mcp__hikari__paper_intake_list_project_summaries`
 - `mcp__hikari__purchase_recommendation`
-- `mcp__hikari__memory`
 - `mcp__hikari__container`
 - `mcp__hikari__assay_table`
 - `mcp__hikari__plotly_graph`
@@ -170,8 +163,8 @@ Direct wrappers that delegate to app executors use the app tool schema and retur
 {
   "ok": true,
   "status": "completed",
-  "mcp_tool": "record_lookup",
-  "app_tool": "record-lookup",
+  "mcp_tool": "notebook_lookup",
+  "app_tool": "notebook-lookup",
   "output": {}
 }
 ```
@@ -217,9 +210,9 @@ Input schema:
 }
 ```
 
-### `record_lookup`
+### `notebook_lookup`
 
-Direct MCP wrapper for stored Hikari records beyond specialized inventory, protocol, notebook, paper, or assay tools. Use it for projects, protocols, notebook pages, workflows, gels, papers, and linked historical context. Do not use it to provide active Assay data; active assay values come from the Assay rail context and `assay_table`.
+Read-only notebook-agent bridge. It calls the app `notebook-lookup` executor to search pages or retrieve one exact saved page. The runtime merges persisted notebook storage with a bounded live notebook index from the thin app snapshot. Results include stable entry/project/protocol identity, an app `ui_target`, optional structured page content, source coverage, and an `access` block. When `access.complete` is false, the result is incomplete evidence rather than a definitive no-match.
 
 Input schema:
 
@@ -228,12 +221,21 @@ Input schema:
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "query": { "type": "string" },
+    "action": { "type": "string", "enum": ["search", "get"] },
+    "entry_id": { "type": "string" },
+    "query": { "type": "string", "minLength": 1 },
     "limit": { "type": "integer", "minimum": 1, "maximum": 25 },
-    "parser_payload": { "type": "object" }
+    "project_id": { "type": "string" },
+    "project_name": { "type": "string" },
+    "protocol_id": { "type": "string" },
+    "protocol_name": { "type": "string" },
+    "notebook_state": { "type": "string", "enum": ["planned", "executed"] },
+    "detail": { "type": "string", "enum": ["summary", "full"] }
   }
 }
 ```
+
+`action` defaults to `search`. Search requires `query` or at least one scope filter. `get` requires `entry_id` and returns `detail: "full"`. Permission failures return `status: "partial"` or `status: "permission_denied"`, with recovery guidance in `access.user_action`.
 
 ### `protocol_lookup`
 
@@ -310,27 +312,6 @@ Input schema:
 }
 ```
 
-### `notebook_lookup`
-
-Direct MCP convenience wrapper for local Hikari notebook entries. It calls the notebook-only app lookup executor and returns notebook records.
-
-Input schema:
-
-```json
-{
-  "type": "object",
-  "additionalProperties": false,
-  "required": ["query"],
-  "properties": {
-    "query": { "type": "string", "minLength": 1 },
-    "limit": { "type": "integer", "minimum": 1, "maximum": 25 },
-    "project_id": { "type": "string" },
-    "project_name": { "type": "string" },
-    "protocol_name": { "type": "string" }
-  }
-}
-```
-
 ### `notebook_draft`
 
 Direct MCP convenience wrapper for planned next-experiment notebook drafts. It calls `notebook-draft`, returns a confirmation-ready draft payload, and does not create the notebook page itself.
@@ -342,30 +323,37 @@ Input schema:
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "message": { "type": "string" },
-    "project": { "type": "object", "additionalProperties": true },
-    "project_id": { "type": "string" },
     "project_name": { "type": "string" },
-    "workflow_id": { "type": "string", "maxLength": 160 },
-    "protocol_name": { "type": "string" },
     "protocol_candidates": {
       "type": "array",
       "items": { "type": "string" },
       "maxItems": 5
     },
-    "evidence_context": {
-      "type": "array",
-      "items": { "type": "object", "additionalProperties": true },
-      "maxItems": 8
+    "pending_values": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
     },
-    "parser_payload": { "type": "object", "additionalProperties": true }
+    "step_edits": {
+      "type": "array",
+      "maxItems": 60,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "step_number": { "type": "integer", "minimum": 1 },
+          "text": { "type": "string" }
+        }
+      }
+    }
   }
 }
 ```
 
+`pending_values` keys must exactly match the generated `placeholder_key` form `<step-id>:<placeholder-id>`; display labels do not identify placeholders. `step_edits` affect only the planned notebook copy and never mutate the saved protocol.
+
 ### `ask_user`
 
-Direct MCP helper for one blocking clarification. It does not wait inside MCP for a human answer; instead it returns a renderable `final_response` payload that Codex should emit as the whole-turn JSON result. Hikari renders the options and custom text box, then sends the user answer back as the next chat turn.
+Direct MCP helper for one blocking clarification. It is a turn boundary: Codex emits the returned `final_response` and ends the current turn in a completed waiting state. Hikari renders the one-shot options and custom text box, then sends the answer as the next chat turn. Codex resumes from that answer without repeating the same question.
 
 Input schema:
 
@@ -480,7 +468,7 @@ The private app host exposes one SDK tool, `hikari_app_tool_call`, for relay int
 
 ```json
 {
-  "tool_id": "record-lookup",
+  "tool_id": "notebook-lookup",
   "args": {},
   "snapshot": {},
   "context": {}
@@ -504,7 +492,7 @@ Response:
 {
   "ok": true,
   "status": "completed",
-  "tool_id": "record-lookup",
+  "tool_id": "notebook-lookup",
   "output": {}
 }
 ```
@@ -513,6 +501,6 @@ Unauthorized calls return HTTP 401 with `status: "unauthorized"`. Missing execut
 
 ## Direct tool files
 
-The MCP surface is allow-listed by `src/main/helpers/agent/mcp-contract/direct-tools/index.js`. Most direct wrappers live under `direct-tools/`; the paper-intake tools are grouped in `src/main/helpers/agent/paper-intake/mcp-tools.js` and folded into the same allow-list. Hyphenated app tool ids are available only when a direct tool wrapper exists, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `record-lookup` as `record_lookup`.
+The MCP surface is allow-listed by `src/main/agent/mcp-contract/direct-tools/index.js`. Most direct wrappers live under `direct-tools/`; the paper-intake tools stay with their domain owner in `src/main/papers/store/intake/mcp-tools.js` and are folded into the same allow-list. Hyphenated app tool ids are available only when a direct tool wrapper exists, for example `literature-search` is called as `literature_search`, `paper-download` as `paper_download`, and `notebook-lookup` as `notebook_lookup`.
 
 See `mcp-contract.json` next to this file for the exact generated MCP tool definitions and input schemas.

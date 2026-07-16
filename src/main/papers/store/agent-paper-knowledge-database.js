@@ -4,7 +4,7 @@ const crypto = require('node:crypto');
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 
-const { createAgentLlmRuntimeHelpers } = require('../../helpers/agent/shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../lib/llm/runtime-helpers.js');
 const { normalizePmid, normalizePmcid } = require('../identity/paper-identity.js');
 const { createIntakePipeline } = require('./intake/intake-pipeline.js');
 const {

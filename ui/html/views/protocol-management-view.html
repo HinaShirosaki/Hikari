@@ -1,20 +1,30 @@
 <section id="protocol-management-view" class="view">
       <div class="protocol-workspace left-rail-template">
-        <div id="protocol-list-panel" class="protocol-list-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="protocol-list-head">
-            <div class="inline-row protocol-sort-controls">
-              <button type="button" id="create-protocol-btn" class="primary-btn">Create Protocol</button>
-              <button type="button" id="protocol-sort-field-btn" class="ghost-btn">Sort: Time</button>
-              <button type="button" id="protocol-sort-order-btn" class="ghost-btn">Order: Low to High</button>
+        <div id="protocol-list-panel" class="protocol-list-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="protocol-list-pinned left-rail-template__pinned">
+            <div class="protocol-list-head">
+              <div class="inline-row protocol-sort-controls">
+                <button type="button" id="create-protocol-btn" class="primary-btn">Create Protocol</button>
+                <div class="protocol-sort-menu">
+                  <button type="button" id="protocol-sort-menu-btn" class="ghost-btn protocol-sort-menu-btn" aria-label="Sort protocols" aria-haspopup="menu" aria-expanded="false" title="Sort protocols">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h10M4 12h16M4 17h7"></path>
+                      <path d="m17 5 2 2-2 2M14 15l2 2 2-2"></path>
+                    </svg>
+                  </button>
+                  <div id="protocol-sort-menu" class="protocol-sort-menu-popup" role="menu" hidden>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="true" data-protocol-sort="time:asc">Time: Low to High</button>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="time:desc">Time: High to Low</button>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="name:asc">Name: Low to High</button>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="name:desc">Name: High to Low</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <p id="protocol-share-status" class="small-note" hidden></p>
-          <div id="protocol-share-link-panel" class="protocol-preview-block" hidden>
-            <h4>Portable Share Link</h4>
-            <p class="small-note">Paste this link into chat or email. Recipients can import it from Collaborations.</p>
-            <textarea id="protocol-share-link-output" rows="3" readonly></textarea>
+          <div class="protocol-list-scroll left-rail-template__scroll">
+            <div id="protocol-list" class="list-table"></div>
           </div>
-          <div id="protocol-list" class="list-table"></div>
         </div>
 
         <div id="protocol-detail-panel" class="panel protocol-detail-panel left-rail-template__main">
@@ -51,7 +61,7 @@
                 <textarea id="protocol-purpose" rows="3" placeholder="Describe the purpose"></textarea>
               </label>
               <label>
-                Materials (start each material with a bullet point)
+                Materials
                 <textarea id="protocol-materials" rows="5" placeholder="• Material 1&#10;• Material 2"></textarea>
               </label>
               <label>
@@ -59,12 +69,12 @@
                 <div class="protocol-steps-toolbar">
                   <span class="protocol-steps-toolbar-label">Interactive bars</span>
                   <div class="protocol-placeholder-presets" role="toolbar" aria-label="Protocol step placeholder presets">
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="plasmid">plasmid</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="protein">protein</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="volume">volume</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="buffer">buffer</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="temperature">temperature</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="time">time</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="plasmid" aria-pressed="false">plasmid</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="protein" aria-pressed="false">protein</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="volume" aria-pressed="false">volume</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="buffer" aria-pressed="false">buffer</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="temperature" aria-pressed="false">temperature</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="time" aria-pressed="false">time</button>
                   </div>
                 </div>
                 <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
@@ -107,7 +117,7 @@
                   <span class="protocol-detail-mode">Import</span>
                   <h3 id="protocol-json-import-title">Import Protocol JSON</h3>
                 </div>
-                <button type="button" id="protocol-json-import-close-btn" class="ghost-btn">Close</button>
+                <button type="button" id="protocol-json-import-close-btn" class="app-dialog-close-btn" aria-label="Close protocol import dialog" title="Close"><span aria-hidden="true">&times;</span></button>
               </div>
               <div class="stack-form">
                 <label>
@@ -134,7 +144,7 @@
                     <span class="protocol-detail-mode">Generate</span>
                     <h3 id="protocol-generate-input-title">Generate Protocol</h3>
                   </div>
-                  <button type="button" id="protocol-generate-close-btn" class="ghost-btn">Close</button>
+                  <button type="button" id="protocol-generate-close-btn" class="app-dialog-close-btn" aria-label="Close protocol generation dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
 
                 <div class="agent-composer-shell protocol-generate-composer-shell">
@@ -167,7 +177,7 @@
                     <span class="protocol-detail-mode">Generate</span>
                     <h3 id="protocol-generate-title">Generated Protocol</h3>
                   </div>
-                  <button type="button" id="protocol-generate-result-close-btn" class="ghost-btn">Close</button>
+                  <button type="button" id="protocol-generate-result-close-btn" class="app-dialog-close-btn" aria-label="Close generated protocol dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div id="protocol-generate-result-preview" class="protocol-polish-preview stack-form"></div>
                 <p id="protocol-generate-status" class="small-note" hidden></p>
@@ -199,7 +209,7 @@
                       <span class="protocol-detail-mode">After</span>
                       <h3 id="protocol-polish-title">Polished Protocol</h3>
                     </div>
-                    <button type="button" id="protocol-polish-close-btn" class="ghost-btn">Close</button>
+                    <button type="button" id="protocol-polish-close-btn" class="app-dialog-close-btn" aria-label="Close protocol polish dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                   </div>
                   <div id="protocol-polish-result-preview" class="protocol-polish-preview stack-form"></div>
                   <p id="protocol-polish-status" class="small-note" hidden></p>

@@ -1,6 +1,6 @@
 'use strict';
 
-const { throwIfAgentRequestAborted } = require('../../helpers/agent/shared/agent-request-context.js');
+const { throwIfAgentRequestAborted } = require('../../lib/llm/request-context.js');
 
 function createAgentControllerCore({
   deps,
@@ -16,10 +16,8 @@ function createAgentControllerCore({
   lifecycleService
 } = {}) {
   const { normalizeJsonPayload, asArray } = lifecycleService;
-  // The self-implemented (API) agent was extracted to /self-agent and is no longer wired in.
-  // Non-Codex providers now fall through to the disabled response below.
-  // ponytail: re-wire here if the standalone self-agent service is reintroduced.
-  const allowApiAgent = false;
+  // Only the Codex agent provider is wired into this controller.
+  // Non-Codex providers fall through to the disabled response below.
 
   function normalizeAttachments(rawAttachments = []) {
     return asArray(rawAttachments).map((attachment) => {
@@ -123,10 +121,7 @@ function createAgentControllerCore({
         command_tool: cleanText(toolName, 120)
       },
       inventory_search: {
-        normalized_query: null,
-        candidate_terms: [],
-        aliases: [],
-        search_mode: null
+        candidate_terms: []
       },
       protocol_candidates: [],
       reasoning_summary: cleanText(reasoningSummary, 1200) || 'Handled as a direct skill command.'
@@ -340,16 +335,6 @@ function createAgentControllerCore({
       setCodexCliModel(model);
       setCodexCliReasoningEffort(reasoningEffort);
     }
-    const conversation = controllerUtils.extractConversation(payload?.conversation);
-    const latestConversationMessage = conversation[conversation.length - 1] || null;
-    const hasLatestUserInConversation = Boolean(
-      conversation.length > 0
-      && latestConversationMessage.role === 'user'
-      && (
-        latestConversationMessage.text === effectiveMessage
-        || latestConversationMessage.text === visibleEffectiveMessage
-      )
-    );
     const executionFlags = controllerUtils.resolveAgentExecutionFlags(payload, { settings: rawSnapshot?.settings || {} });
     const traceContext = controllerUtils.createAgentLlmTraceContext({
       enabled: executionFlags.developerMode === true,
@@ -364,10 +349,6 @@ function createAgentControllerCore({
     const projectId = cleanText(payload?.projectId, 80);
     const projectName = cleanText(payload?.projectName, 180);
     const attachments = normalizeAttachments(payload?.attachments);
-    const promptConversation = hasLatestUserInConversation
-      ? [...conversation.slice(0, -1), { role: 'user', text: effectiveMessage }]
-      : [...conversation, { role: 'user', text: effectiveMessage }];
-
     if (provider === deps.LLM_PROVIDERS.CODEX) {
       if (!codexAgentRuntime || typeof codexAgentRuntime.run !== 'function') {
         return {
@@ -417,7 +398,7 @@ function createAgentControllerCore({
     observability.recordLifecycleEvent(lifecycleRecorder, {
       stage: 'controller_api_agent_disabled',
       status: 'failed',
-      message: 'The self-implemented API agent has been extracted to /self-agent and is not wired in.'
+      message: 'Non-Codex API agent support is not part of this build.'
     });
     return {
       ok: false,
@@ -444,11 +425,9 @@ function createAgentControllerCore({
       return runAgentControllerCore(payload, runtime && typeof runtime === 'object' ? runtime : {});
     }
     observability.recordLifecycleEvent(lifecycleRecorder, {
-      stage: allowApiAgent ? 'controller_intent_only_selected' : 'controller_api_agent_disabled',
-      status: allowApiAgent ? 'ok' : 'failed',
-      message: allowApiAgent
-        ? 'Using modular API agent controller path.'
-        : 'API agent support is disabled by the application feature flag.'
+      stage: 'controller_api_agent_disabled',
+      status: 'failed',
+      message: 'The Agent workspace supports the Codex runtime only.'
     });
     return runAgentControllerCore(payload, runtime && typeof runtime === 'object' ? runtime : {});
   }

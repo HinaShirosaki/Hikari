@@ -21,8 +21,15 @@ export function renderUserQuestionCard(meta, messageId = '', safeText, { disable
     return '';
   }
   const answeredText = trimText(question.answered?.answer, 1000);
+  const questionStatus = trimText(question.status, 40).toLowerCase();
+  // Clarification cards are one-shot UI. Once answered, or once any later user
+  // message has continued the thread, retaining the old card makes ask_user look
+  // active across multiple turns even though its turn already completed.
+  if (answeredText || questionStatus === 'answered' || disabled) {
+    return '';
+  }
   const messageKey = trimText(messageId, 120);
-  const controlsDisabled = disabled || Boolean(answeredText) || !messageKey;
+  const controlsDisabled = !messageKey;
   const disabledAttr = controlsDisabled ? ' disabled' : '';
   const options = asArray(question.options);
   return `
@@ -68,8 +75,6 @@ export function renderUserQuestionCard(meta, messageId = '', safeText, { disable
           </button>
         </div>
       ` : ''}
-      ${answeredText ? `<p class="agent-user-question-answer">Answered: ${safeText(answeredText)}</p>` : ''}
-      ${!answeredText && disabled ? '<p class="agent-user-question-answer">This thread has already continued.</p>' : ''}
     </section>
   `;
 }

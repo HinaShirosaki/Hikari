@@ -1,0 +1,47 @@
+/* Late-load Workflow graph refinements. */
+
+#workflow-management-view .workflow-context-item:hover {
+  background: var(--theme-surface-subtle);
+}
+
+#workflow-management-view .workflow-context-item {
+  color: var(--theme-text);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+}
+
+#workflow-management-view .workflow-graph-canvas {
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--theme-border-soft) 80%, transparent) 1px, transparent 1px),
+    linear-gradient(0deg, color-mix(in srgb, var(--theme-border-soft) 80%, transparent) 1px, transparent 1px),
+    var(--theme-surface);
+  background-size: 28px 28px, 28px 28px, auto;
+}
+
+#workflow-management-view .workflow-node-header {
+  color: var(--theme-text-strong);
+}
+
+#workflow-management-view .workflow-node-index,
+#workflow-management-view .workflow-port {
+  border: 1px solid var(--theme-border);
+  border-radius: 6px;
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+  box-shadow: none;
+}
+
+#workflow-management-view .workflow-graph-link {
+  stroke: color-mix(in srgb, var(--theme-accent) 60%, var(--theme-text));
+}
+
+#workflow-management-view .workflow-graph-link-preview {
+  stroke: color-mix(in srgb, var(--theme-accent) 45%, var(--theme-text-muted));
+}
+
+#workflow-management-view .workflow-graph-selection {
+  border-color: var(--theme-accent);
+  background: color-mix(in srgb, var(--theme-accent) 14%, transparent);
+}

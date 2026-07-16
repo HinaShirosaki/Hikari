@@ -1,6 +1,6 @@
 'use strict';
 
-const { SYSTEM } = require('../../../shared/ipc/channels');
+const { PLUGINS, SYSTEM } = require('../../../shared/ipc/channels');
 
 const CHEMICAL_CLIPBOARD_FORMAT_HINTS = [
   'chemical',
@@ -40,6 +40,7 @@ const MAX_NATIVE_IMAGE_DIMENSION = 1600;
 function createSystemApi(ipcRenderer, deps = {}) {
   return {
     openExternalUrl: (url) => ipcRenderer.invoke(SYSTEM.OPEN_EXTERNAL_URL, { url }),
+    inspectPluginFolder: (path) => ipcRenderer.invoke(PLUGINS.INSPECT_FOLDER, { path }),
     onAppCloseRequested: (handler) => {
       if (typeof handler !== 'function') {
         return () => {};

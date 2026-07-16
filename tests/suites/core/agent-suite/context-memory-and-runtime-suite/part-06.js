@@ -7,7 +7,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'register-agent-tool-executors.js'
@@ -86,7 +85,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'shared',
         'agent-llm-provider-bridge.js'
@@ -124,12 +122,11 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
       assert.match(calls[0].prompt, /Return valid JSON only\./);
       assert.match(calls[0].prompt, /Pick the best excerpt\./);
     });
-    test('provider bridge forwards openai web search requests through Responses web_search tool', async () => {
+    test('provider bridge rejects retired API-provider web search requests', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'shared',
         'agent-llm-provider-bridge.js'
@@ -137,23 +134,11 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
       const calls = [];
       const bridge = createAgentLlmProviderBridge({
         LLM_PROVIDERS: {
-          OPENAI: 'openai'
+          CODEX: 'codex'
         },
-        requestOpenAiResponsesWithBackoff: async ({ body } = {}) => {
-          calls.push(body);
-          return {
-            output_text: JSON.stringify({
-              results: [
-                {
-                  title: 'Vendor Product',
-                  url: 'https://vendor.test/products/item-1',
-                  summary: 'Direct product detail page.',
-                  source_domain: 'vendor.test'
-                }
-              ],
-              reasoning: 'Used web search.'
-            })
-          };
+        requestCodexCliText: async () => {
+          calls.push('called');
+          return '{}';
         }
       });
 
@@ -168,20 +153,14 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         allowedDomains: ['vendor.test']
       });
 
-      assert.equal(result.ok, true);
-      assert.equal(result.results.length, 1);
-      assert.equal(result.results[0].url, 'https://vendor.test/products/item-1');
-      assert.equal(calls.length, 1);
-      assert.equal(calls[0].tools[0].type, 'web_search');
-      assert.deepEqual(calls[0].tools[0].filters.allowed_domains, ['vendor.test']);
-      assert.deepEqual(calls[0].include, ['web_search_call.action.sources']);
+      assert.equal(result.ok, false);
+      assert.equal(calls.length, 0);
     });
     test('provider bridge routes codex web search through the Codex agent web-search surface', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'shared',
         'agent-llm-provider-bridge.js'
@@ -226,7 +205,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'shared',
         'agent-llm-provider-bridge.js'
@@ -235,10 +213,9 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
-        'agent',
-        'shared',
-        'agent-llm-utils.js'
+        'lib',
+        'llm',
+        'runtime-helpers.js'
       ));
 
       const calls = [];
@@ -259,7 +236,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         provider: 'codex',
         endpoint: '',
         model: 'gpt-5.4-mini',
-        stage: 'intent_parser',
+        stage: 'structured_payload',
         systemPrompt: 'Return valid JSON only.',
         userPrompt: 'User asks a science question.',
         enableWebSearch: true,
@@ -267,7 +244,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
           type: 'object',
           additionalProperties: true
         },
-        defaultError: 'Intent parser provider is not configured.'
+        defaultError: 'Structured payload provider is not configured.'
       });
 
       assert.equal(result.ok, true);
@@ -278,12 +255,11 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
       assert.match(calls[0].prompt, /Return valid JSON only\./);
       assert.match(calls[0].prompt, /User asks a science question\./);
     });
-    test('runtime helpers can carry web search through openai structured requests', async () => {
+    test('runtime helpers reject retired API-provider structured requests', async () => {
       const { createAgentLlmProviderBridge } = require(path.join(
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'shared',
         'agent-llm-provider-bridge.js'
@@ -292,22 +268,19 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
-        'agent',
-        'shared',
-        'agent-llm-utils.js'
+        'lib',
+        'llm',
+        'runtime-helpers.js'
       ));
 
       const calls = [];
       const bridge = createAgentLlmProviderBridge({
         LLM_PROVIDERS: {
-          OPENAI: 'openai'
+          CODEX: 'codex'
         },
-        requestOpenAiResponsesWithBackoff: async ({ body } = {}) => {
-          calls.push(body);
-          return {
-            output_text: '{"protocol":{"name":"Test","purpose":"Test","materials":[],"steps":["Do it."],"troubleshooting":""},"result_summary":"done"}'
-          };
+        requestCodexCliText: async () => {
+          calls.push('called');
+          return '{}';
         }
       });
       const helpers = createAgentLlmRuntimeHelpers({
@@ -329,18 +302,14 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         }
       });
 
-      assert.equal(result.ok, true);
-      assert.equal(calls.length, 1);
-      assert.equal(calls[0].tools[0].type, 'web_search');
-      assert.equal(calls[0].tool_choice, 'auto');
-      assert.deepEqual(calls[0].include, ['web_search_call.action.sources']);
+      assert.equal(result.ok, false);
+      assert.equal(calls.length, 0);
     });
     test('web search runtime exposes provider-backed web search to agent tools', async () => {
       const { createWebSearchRuntime } = require(path.join(
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'agent-web-search.js'
@@ -383,7 +352,6 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart06(contex
         __dirname,
         'src',
         'main',
-        'helpers',
         'agent',
         'tools',
         'register-agent-tool-executors.js'

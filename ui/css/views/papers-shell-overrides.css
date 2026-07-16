@@ -1,0 +1,57 @@
+/* Late-load Papers library and viewer refinements. */
+
+#papers-view .papers-layout {
+  gap: 16px;
+}
+
+#papers-view .papers-folder-item {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 8px 10px 8px 0;
+}
+
+#papers-view .papers-folder-item:hover,
+#papers-view .papers-folder-item:focus-visible {
+  background: var(--theme-surface-subtle);
+}
+
+#papers-view .papers-folder-item.is-active {
+  border-color: var(--theme-border);
+  background: var(--theme-surface-subtle);
+}
+
+#papers-view .papers-paper-row {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 7px 8px;
+}
+
+#papers-view .papers-paper-row.is-active {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--theme-surface-subtle) 78%, transparent);
+  padding: 7px 8px;
+}
+
+#papers-view .papers-paper-row.is-active .papers-paper-title {
+  font-weight: 500;
+}
+
+#papers-view .papers-viewer-stage {
+  padding: 12px;
+}
+
+#papers-view .papers-viewer-canvas {
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+#papers-view .papers-viewer-pin {
+  border: 2px solid var(--theme-surface-elevated);
+  background: var(--theme-danger);
+  box-shadow: none;
+}
+
+#papers-view .papers-viewer-pin.is-active {
+  background: var(--theme-accent);
+}

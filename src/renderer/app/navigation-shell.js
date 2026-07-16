@@ -57,6 +57,9 @@ export function createNavigationShell({
   const pageTitle = documentObject.getElementById('page-title');
   const pageSubtitle = documentObject.getElementById('page-subtitle');
   const topbarViewActions = documentObject.getElementById('topbar-view-actions');
+  const topbarAssayModeSwitch = documentObject.getElementById('topbar-assay-mode-switch');
+  const topbarAssayModeNote = documentObject.getElementById('assay-mode-note');
+  const topbarNotebookAddProjectBtn = documentObject.getElementById('biology-notebook-header-add-project-btn');
   const exitBtn = documentObject.getElementById('exit-btn');
   const topbarSearchInput = documentObject.getElementById('topbar-search');
   const topbarSearchSuggestions = documentObject.getElementById('topbar-search-suggestions');
@@ -505,7 +508,18 @@ export function createNavigationShell({
       pageSubtitle.textContent = TITLES[subtitleView] || '';
     }
     if (topbarViewActions) {
-      topbarViewActions.hidden = nextView !== VIEWS.ASSAY;
+      const isAssay = nextView === VIEWS.ASSAY;
+      const isNotebook = nextView === VIEWS.BIOLOGY_NOTEBOOK;
+      topbarViewActions.hidden = !isAssay && !isNotebook;
+      if (topbarAssayModeSwitch) {
+        topbarAssayModeSwitch.hidden = !isAssay;
+      }
+      if (topbarAssayModeNote) {
+        topbarAssayModeNote.hidden = !isAssay;
+      }
+      if (topbarNotebookAddProjectBtn) {
+        topbarNotebookAddProjectBtn.hidden = !isNotebook;
+      }
     }
     closeMoreMenu();
     moduleRuntime.renderView(nextView);

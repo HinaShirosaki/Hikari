@@ -1,4 +1,4 @@
-import { calculateFixedReaction } from './bench-calculations.js';
+import { calculateFixedReaction } from '../../lib/bench-calculations.js';
 
 const REACTION_ROW_COUNT = 6;
 

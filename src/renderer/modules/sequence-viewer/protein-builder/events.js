@@ -33,15 +33,7 @@ export function installProteinBuilderEvents(ctx) {
       ctx.setBuilderStatus('Added a custom block.');
     });
 
-    elements.proteinBuilderAddPoiBtn?.addEventListener('click', () => {
-      ctx.addPoiRow();
-    });
-
-    elements.proteinBuilderForm?.addEventListener('input', (event) => {
-      const targetId = cleanText(event?.target?.id, 120);
-      if (targetId === 'sequence-viewer-protein-builder-poi-sequence') {
-        ctx.invalidateDnaConstruct();
-      }
+    elements.proteinBuilderForm?.addEventListener('input', () => {
       ctx.render();
     });
 

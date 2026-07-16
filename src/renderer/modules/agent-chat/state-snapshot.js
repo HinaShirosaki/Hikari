@@ -1,4 +1,4 @@
-import { mapExperimentDataToLlmJson } from '../experiment-llm-mapper.js';
+import { mapExperimentDataToLlmJson } from '../../services/experiment-llm-mapper.js';
 import {
   asArray,
   mapPaper,
@@ -6,8 +6,34 @@ import {
   mapWorkflow,
   trimText
 } from './shared.js';
+import { normalizePreferredJournalList } from '../../lib/preferred-journals.js';
 
 export { mapExperimentDataToLlmJson };
+
+export function mapNotebookEntryForLookupBridge(entry) {
+  const source = entry && typeof entry === 'object' ? entry : {};
+  return {
+    id: trimText(source.id, 120),
+    notebookType: trimText(source.notebookType, 80),
+    notebookState: trimText(source.notebookState, 80),
+    experimentName: trimText(source.experimentName, 220),
+    projectId: trimText(source.projectId, 120),
+    projectName: trimText(source.projectName, 220),
+    protocolId: trimText(source.protocolId, 120),
+    protocolName: trimText(source.protocolName, 220),
+    result: trimText(source.result, 2400),
+    toolCalculations: asArray(source.toolCalculations).slice(0, 8).map((calculation) => ({
+      title: trimText(calculation?.title, 220),
+      result: trimText(calculation?.result, 600),
+      summary: trimText(calculation?.summary, 600),
+      formula: trimText(calculation?.formula, 600)
+    })),
+    createdAt: trimText(source.createdAt, 80),
+    updatedAt: trimText(source.updatedAt, 80),
+    executedAt: trimText(source.executedAt, 80),
+    bridgeSnapshot: true
+  };
+}
 
 export function buildStateSnapshot(state, projectId) {
   const agentChatContext = state.agentChatContext && typeof state.agentChatContext === 'object'
@@ -22,6 +48,10 @@ export function buildStateSnapshot(state, projectId) {
   const filteredNotebookEntries = asArray(state.notebookEntries)
     .filter((entry) => !projectIds.size || projectIds.has(entry.projectId))
     .slice(-120);
+  const notebookLookupBridgeEntries = filteredNotebookEntries
+    .slice(-60)
+    .map(mapNotebookEntryForLookupBridge)
+    .filter((entry) => entry.id);
   const protocolIds = new Set(filteredNotebookEntries.map((entry) => String(entry?.protocolId || '')).filter(Boolean));
   const protocolCount = projectIds.size
     ? asArray(state.protocols).filter((protocol) => protocolIds.has(String(protocol?.id || ''))).length
@@ -76,17 +106,26 @@ export function buildStateSnapshot(state, projectId) {
   const personalSections = Object.entries(state?.inventory || {});
   const personalItemCount = personalSections.reduce((count, [, items]) => count + asArray(items).length, 0);
   const chemicalCount = asArray(state?.labInventory?.chemicals).length;
-  const preferredJournals = asArray(state.settings?.preferredJournals)
-    .map((item) => trimText(item, 240))
-    .filter(Boolean);
-  const preferredJournal = preferredJournals.length
-    ? preferredJournals.join('; ')
-    : trimText(state.settings?.preferredJournal, 1200);
+  const preferredJournals = Array.from(
+    normalizePreferredJournalList([
+      state.settings?.preferredJournals,
+      state.settings?.preferred_journals,
+      state.settings?.preferredJournal,
+      state.settings?.preferred_journal
+    ]),
+    (item) => trimText(item, 240)
+  ).filter(Boolean);
+  const preferredJournal = preferredJournals.join('; ');
   return {
     projects,
     workflows,
     protocols,
     notebookEntries: [],
+    notebook_lookup_bridge: {
+      version: 1,
+      complete: filteredNotebookEntries.length <= notebookLookupBridgeEntries.length,
+      entries: notebookLookupBridgeEntries
+    },
     assays,
     gelAnalyses,
     experimentData,

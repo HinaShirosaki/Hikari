@@ -1,5 +1,6 @@
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import { DEFAULT_CHAIN } from './constants.js';
+import { resolvePoiSourceFromRecord } from './record-dna.js';
 import { cloneLibraryRow, createPoiRow } from './row-factory.js';
 
 export function createProteinBuilderContext(config = {}) {
@@ -103,6 +104,18 @@ export function createProteinBuilderContext(config = {}) {
 
   ctx.currentRows = function currentRows() {
     return state.rows.map((row) => ({ ...row }));
+  };
+
+  ctx.getCurrentDnaSource = function getCurrentDnaSource() {
+    return resolvePoiSourceFromRecord(ctx.getSelectedRecord(), ctx.getSelectedFeature());
+  };
+
+  ctx.getProteinBuilderPayload = function getProteinBuilderPayload() {
+    return {
+      constructName: elements.proteinBuilderNameInput?.value,
+      activeDnaSource: ctx.getCurrentDnaSource(),
+      rows: ctx.currentRows()
+    };
   };
 
   ctx.getDnaBuildContextKey = function getDnaBuildContextKey() {

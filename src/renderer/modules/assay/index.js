@@ -18,7 +18,7 @@ import { oppositeAxis } from './shared.js';
 import { createAssayAgentContext } from './agent/context.js';
 import { bindAssayEvents } from './ui/event-bindings.js';
 import { createAssayBrowserView } from './ui/browser-view.js';
-import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
+import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
 
 export function initAssay({ state, persist, createId, safeText, onAssaysChanged, onActiveAssayChanged }) {
   const TabulatorLib = window.Tabulator || null;
@@ -169,7 +169,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions(assay.id);
-    renderActiveAssayInfo(assay);
+    clearActiveAssayInfo();
     renderList();
     if (typeof onAssaysChanged === 'function') {
       onAssaysChanged();
@@ -205,7 +205,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     elements.assayNumberDisplay.textContent = previewNextAssayNumber(state);
   }
 
-  function renderActiveAssayInfo(assay) {
+  function clearActiveAssayInfo() {
     if (!elements.assayActiveAssayInfo) {
       return;
     }
@@ -271,7 +271,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions(assay.id);
-    renderActiveAssayInfo(assay);
+    clearActiveAssayInfo();
     renderList();
     if (typeof onAssaysChanged === 'function') {
       onAssaysChanged();
@@ -345,7 +345,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     const assay = getAssayById(assayId);
     if (!assay) {
       runtime.activeResultsAssayId = '';
-      renderActiveAssayInfo(null);
+      clearActiveAssayInfo();
       return;
     }
     runtime.activeResultsAssayId = assay.id;
@@ -361,7 +361,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     layoutManager.renderPlatePreview(axisValues);
     layoutManager.renderPlateDefinition();
     resultsManager.renderResultTable();
-    renderActiveAssayInfo(assay);
+    clearActiveAssayInfo();
     analysisView.loadChartStyle(assay.chartStyle);
     analysisView.clearOutput();
     markResultsDraftSaved();
@@ -395,7 +395,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
       if (selected) {
         loadAssayForResults(selected);
       } else {
-        renderActiveAssayInfo(null);
+        clearActiveAssayInfo();
       }
     }
     notifyActiveAssayChanged();
@@ -405,7 +405,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     const assayId = elements.assayResultsAssaySelect?.value || '';
     if (!assayId) {
       runtime.activeResultsAssayId = '';
-      renderActiveAssayInfo(null);
+      clearActiveAssayInfo();
       setResultStatus('No assay plate selected.');
       notifyActiveAssayChanged();
       return;
@@ -433,7 +433,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     syncNotebookAssayLinks();
     persist();
     renderResultsAssayOptions(assay.id);
-    renderActiveAssayInfo(assay);
+    clearActiveAssayInfo();
     renderList();
     if (typeof onAssaysChanged === 'function') {
       onAssaysChanged();
@@ -551,6 +551,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
       elements.assayAnalysisGroupNameInput.value = '';
     }
     resultsManager.setAnalysisSelectionStatus('');
+    resultsManager.refreshAnalysisGroupDisplay();
     setCsvStatus('');
     setLayoutStatus('');
     if (elements.assaySampleAxisInput) {
@@ -568,7 +569,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     layoutManager.renderPlatePreview();
     renderAssayNumberDisplay();
     renderResultsAssayOptions();
-    renderActiveAssayInfo(null);
+    clearActiveAssayInfo();
     resultsManager.renderResultTable();
     analysisView.clearOutput();
     layoutManager.updateActiveWellPreviewState();
@@ -601,7 +602,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     layoutManager.renderPlatePreview(axisValues);
     renderAssayNumberDisplay();
     renderResultsAssayOptions(assay.id);
-    renderActiveAssayInfo(assay);
+    clearActiveAssayInfo();
     resultsManager.renderResultTable();
     elements.assayNotebookEntryInput.value = assay.notebookEntryId || '';
     if (assay.notebookEntryId && !Array.from(elements.assayNotebookEntryInput.options).some((option) => option.value === assay.notebookEntryId)) {
@@ -626,7 +627,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
       runtime.currentResults = {};
       runtime.currentLayout = [];
       resultsManager.renderResultTable();
-      renderActiveAssayInfo(null);
+      clearActiveAssayInfo();
       analysisView.clearOutput();
     }
     syncNotebookAssayLinks();
@@ -666,7 +667,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     layoutManager.renderPlateDefinition();
     renderAssayNumberDisplay();
     renderResultsAssayOptions(runtime.activeResultsAssayId || elements.assayResultsAssaySelect?.value || '');
-    renderActiveAssayInfo(getAssayById(runtime.activeResultsAssayId));
+    clearActiveAssayInfo();
     layoutManager.renderPlatePreview();
     resultsManager.renderResultTable();
     renderList();
@@ -729,6 +730,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     renderProjectOptions,
     renderNotebookOptions,
     renderList,
+    renderAgentPlotlyGraph: (artifact) => analysisView?.renderAgentPlotlyGraph?.(artifact) === true,
     saveUnsavedChanges: async () => {
       if (savedResultsDraftSnapshot && getResultsDraftSnapshot() !== savedResultsDraftSnapshot) {
         if (!onSaveResults()) {

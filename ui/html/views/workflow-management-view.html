@@ -1,12 +1,15 @@
 <section id="workflow-management-view" class="view">
       <div class="workflow-editor-layout left-rail-template">
-        <aside class="workflow-editor-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
-            <button type="button" id="workflow-entry-view-btn" class="primary-btn">Workflow Board</button>
-            <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Template Editor</button>
-            <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Board</button>
+        <aside class="workflow-editor-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="workflow-editor-sidebar-pinned left-rail-template__pinned">
+            <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
+              <button type="button" id="workflow-entry-view-btn" class="primary-btn">Workflow Board</button>
+              <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Template Editor</button>
+              <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Board</button>
+            </div>
           </div>
 
+          <div class="workflow-editor-sidebar-scroll left-rail-template__scroll">
           <div class="workflow-list-panel app-left-rail-section" hidden>
             <h3>Workflow Templates</h3>
             <label>
@@ -63,6 +66,7 @@
                 <button type="button" id="workflow-cancel-btn" class="ghost-btn">Cancel Edit</button>
               </div>
             </form>
+          </div>
           </div>
         </aside>
 

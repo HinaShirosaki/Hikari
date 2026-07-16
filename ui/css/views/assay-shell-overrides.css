@@ -1,0 +1,51 @@
+/* Late-load Assay shell and plate refinements. */
+
+.calendar-view-switch {
+  gap: 4px;
+  padding: 2px;
+  border: 1px solid var(--theme-border);
+  border-radius: 8px;
+  background: var(--theme-surface);
+}
+
+.calendar-view-switch > button {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  padding: 7px 10px;
+}
+
+.calendar-view-switch > button:hover,
+.calendar-view-switch > button:focus-visible {
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+}
+
+.calendar-view-switch > .calendar-view-active {
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+}
+
+#assay-view .assay-plate-table th,
+#assay-view .assay-plate-table td {
+  border-color: var(--assay-plate-line-soft);
+}
+
+#assay-view .assay-plate-table th,
+#assay-view .assay-plate-editor-row th {
+  background: var(--assay-plate-header);
+}
+
+#assay-view .assay-well {
+  background: var(--assay-plate-surface);
+}
+
+#assay-view .assay-well-meta {
+  color: var(--assay-plate-meta);
+}
+
+#assay-view .assay-result-disabled {
+  background: var(--assay-plate-disabled-bg);
+  color: var(--theme-text-muted);
+}

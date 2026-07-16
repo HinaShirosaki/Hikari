@@ -1,4 +1,4 @@
-import { escapeHtml } from '../tool-box/common.js';
+import { escapeHtml } from '../../lib/html.js';
 import { designPcrPrimerPair } from './cloning-assembly.js';
 import {
   COMMON_SEQUENCE_FEATURE_TYPES,
@@ -129,7 +129,6 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
   const setStatus = config?.setStatus || (() => {});
   const persistFeatureMutation = config?.persistFeatureMutation || (async () => {});
 
-  let featureContextMenuState = null;
   let featureEditorState = null;
 
   function populateFeatureTypeOptions() {
@@ -144,7 +143,6 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
   populateFeatureTypeOptions();
 
   function hideFeatureContextMenu() {
-    featureContextMenuState = null;
     if (!elements.featureContextMenu) {
       return;
     }
@@ -376,7 +374,6 @@ export function createSequenceViewerFeatureEditingController(config = {}) {
     }
     const selectionLabel = context?.selectionRange ? formatBaseRangeLabel(context.selectionRange) : '';
     const featureName = cleanText(context?.featureContext?.feature?.name, 120) || 'feature';
-    featureContextMenuState = context;
     elements.featureContextMenu.innerHTML = `
       ${selectionLabel ? `<p class="small-note">${escapeHtml(selectionLabel)}</p>` : ''}
       <button type="button" class="sequence-viewer-context-item" data-sequence-feature-action="add"${context?.selectionRange ? '' : ' disabled'}>Add Feature</button>

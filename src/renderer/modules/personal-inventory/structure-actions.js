@@ -1,7 +1,7 @@
 import {
   readChemicalStructureClipboard,
   toChemicalStructureDraftFromCandidate
-} from '../chemical-structure-clipboard.js';
+} from '../../services/chemical-structure-clipboard.js';
 
 export function installStructureActions(ctx) {
   const { helpers, pendingStructureDrafts, persist } = ctx;

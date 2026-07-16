@@ -326,7 +326,7 @@ npm start
 Expected output for `build:ui`:
 
 ```
-Built src/main/generated/llm-provider-config.generated.js, src/renderer/modules/llm-provider-config.generated.js, src/renderer/modules/app-registry.generated.js, src/renderer/modules/views.js, index.html, styles.css
+Built src/main/generated/codex-model-catalog.generated.js, src/renderer/modules/codex-model-catalog.generated.js, src/renderer/modules/app-registry.generated.js, src/renderer/modules/views.js, index.html, styles.css
 ```
 
 (All six paths printed.) If anything is missing, the build aborted; read the `[build-ui] Failed:` line above.

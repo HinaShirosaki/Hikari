@@ -26,7 +26,7 @@ export const APP_REGISTRY = [
     "viewId": "protocol-management-view",
     "subtitle": "Protocol library for drafting, editing, and reuse.",
     "icon": "protocols.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <rect x=\"6\" y=\"5.5\" width=\"12\" height=\"14\" rx=\"1.75\" />\n  <path d=\"M9.5 5.5v-1.25A1.25 1.25 0 0 1 10.75 3h2.5A1.25 1.25 0 0 1 14.5 4.25v1.25Z\" />\n  <path d=\"m8.75 11 1.25 1.25 2.25-2.5\" />\n  <path d=\"M13.75 10.5h1.5\" />\n  <path d=\"M8.75 14.5h6.5\" />\n  <path d=\"M8.75 17h4.5\" />\n</svg>",
+    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <rect x=\"6\" y=\"5\" width=\"12\" height=\"15\" rx=\"2\" />\n  <path d=\"M9.5 5V4a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 4v1\" />\n  <path d=\"m9.25 12 1.75 1.75 3.75-4\" />\n  <path d=\"M9.25 17h5.5\" />\n</svg>",
     "placement": "dock",
     "aliases": [
       "protocol",
@@ -43,7 +43,7 @@ export const APP_REGISTRY = [
     "viewId": "biology-notebook-view",
     "subtitle": "Biology notebook entries and wet-lab context.",
     "icon": "biology-notebook.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <circle cx=\"12\" cy=\"12\" r=\"7\" />\n  <path d=\"M8 9.5c1.2 0 2.3 1 2.3 2.2S9.2 14 8 14\" />\n  <path d=\"M16 10c-1 0-1.8.8-1.8 1.8S15 13.5 16 13.5\" />\n  <path d=\"M10.5 16c.4-.9 1.1-1.4 1.8-1.4.8 0 1.5.5 1.9 1.4\" />\n</svg>",
+    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M5.5 5.5c2.8 0 4.8 1.1 6.5 3 1.7-1.9 3.7-3 6.5-3v13c-2.8 0-4.8 1.1-6.5 3-1.7-1.9-3.7-3-6.5-3Z\" />\n  <path d=\"M12 8.5v13\" />\n  <path d=\"M8 11h2M14 11h2\" />\n</svg>",
     "placement": "more",
     "aliases": [
       "biology",
@@ -81,7 +81,7 @@ export const APP_REGISTRY = [
     "viewId": "sample-registry-view",
     "subtitle": "Samples, storage containers, and personal inventory in one workspace.",
     "icon": "sample-inventory.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <rect x=\"3.5\" y=\"5\" width=\"17\" height=\"14\" rx=\"2\" />\n  <path d=\"M3.5 9.5h17\" />\n  <circle cx=\"8.5\" cy=\"13.25\" r=\"1.1\" />\n  <circle cx=\"12\" cy=\"13.25\" r=\"1.1\" />\n  <circle cx=\"15.5\" cy=\"13.25\" r=\"1.1\" />\n  <circle cx=\"8.5\" cy=\"16.5\" r=\"1.1\" />\n  <circle cx=\"12\" cy=\"16.5\" r=\"1.1\" />\n  <circle cx=\"15.5\" cy=\"16.5\" r=\"1.1\" />\n</svg>",
+    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M6 5.5h12v3H6Z\" />\n  <path d=\"M8 8.5v7.25a1.5 1.5 0 0 0 3 0V8.5M13 8.5v7.25a1.5 1.5 0 0 0 3 0V8.5\" />\n  <path d=\"M5 18.5h14\" />\n</svg>",
     "placement": "dock",
     "aliases": [
       "sample",
@@ -101,7 +101,7 @@ export const APP_REGISTRY = [
     "viewId": "assay-view",
     "subtitle": "Plate setup, pasted results, and assay analysis.",
     "icon": "assay.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <rect x=\"3\" y=\"7.5\" width=\"18\" height=\"9\" rx=\"1.5\" />\n  <circle cx=\"6\" cy=\"10\" r=\"0.9\" />\n  <circle cx=\"10\" cy=\"10\" r=\"0.9\" />\n  <circle cx=\"14\" cy=\"10\" r=\"0.9\" />\n  <circle cx=\"18\" cy=\"10\" r=\"0.9\" />\n  <circle cx=\"6\" cy=\"14\" r=\"0.9\" />\n  <circle cx=\"10\" cy=\"14\" r=\"0.9\" />\n  <circle cx=\"14\" cy=\"14\" r=\"0.9\" />\n  <circle cx=\"18\" cy=\"14\" r=\"0.9\" />\n</svg>",
+    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <rect x=\"4\" y=\"6.5\" width=\"16\" height=\"11\" rx=\"2\" />\n  <circle cx=\"8\" cy=\"10\" r=\"1\" />\n  <circle cx=\"12\" cy=\"10\" r=\"1\" />\n  <circle cx=\"16\" cy=\"10\" r=\"1\" />\n  <circle cx=\"8\" cy=\"14\" r=\"1\" />\n  <circle cx=\"12\" cy=\"14\" r=\"1\" />\n  <circle cx=\"16\" cy=\"14\" r=\"1\" />\n</svg>",
     "placement": "dock",
     "aliases": [
       "assays",
@@ -118,7 +118,7 @@ export const APP_REGISTRY = [
     "viewId": "gel-view",
     "subtitle": "Gel and blot analysis with band-level review.",
     "icon": "gel.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <rect x=\"4\" y=\"4.5\" width=\"16\" height=\"15\" rx=\"1.5\" />\n  <path d=\"M4 8h16\" />\n  <path d=\"M5.5 11h3M10.5 11h3M15.5 11h3\" />\n  <path d=\"M5.5 14h3M15.5 14h3\" />\n  <path d=\"M10.5 16.5h3\" />\n  <path d=\"M5.5 17.5h3\" />\n</svg>",
+    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <rect x=\"5\" y=\"4.5\" width=\"14\" height=\"15\" rx=\"1.5\" />\n  <path d=\"M9.5 7v10M14.5 7v10\" />\n  <path d=\"M6.75 9.5h1.5M10.75 12h1.5M15.75 14.5h1.5\" />\n</svg>",
     "placement": "dock",
     "aliases": [
       "gels",
@@ -152,7 +152,7 @@ export const APP_REGISTRY = [
     "viewId": "papers-view",
     "subtitle": "Paper library, linked projects, comments, and summaries.",
     "icon": "papers.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M8 5h6l4 4v9\" />\n  <path d=\"M5 8h6l4 4v7a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z\" />\n  <path d=\"M11 8v4h4\" />\n  <path d=\"M6.5 15.5h6\" />\n  <path d=\"M6.5 18h4\" />\n</svg>",
+    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M7 3.5h6l4 4v13H7Z\" />\n  <path d=\"M13 3.5v4h4\" />\n  <path d=\"M9.5 12h5M9.5 15.5h4\" />\n</svg>",
     "placement": "dock",
     "aliases": [
       "paper",
@@ -170,7 +170,7 @@ export const APP_REGISTRY = [
     "viewId": "agent-view",
     "subtitle": "Assistant sessions with project context and evidence-grounded responses.",
     "icon": "agent.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M12 4.5v3\" />\n  <circle cx=\"12\" cy=\"12\" r=\"5\" />\n  <path d=\"M12 7a2 2 0 0 0 2 2 2 2 0 0 1-2 2 2 2 0 0 0-2 2 2 2 0 0 1-2-2 2 2 0 0 0 2-2 2 2 0 0 1 2-2Z\" />\n  <path d=\"M6.5 17.5 5 19M17.5 17.5 19 19\" />\n</svg>",
+    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M5.5 5.5h13v10H11l-4 3v-3H5.5Z\" />\n  <path d=\"M12 8v5M9.5 10.5h5\" />\n</svg>",
     "placement": "more",
     "aliases": [
       "assistant",
@@ -188,7 +188,7 @@ export const APP_REGISTRY = [
     "viewId": "sequence-viewer-view",
     "subtitle": "Sequence records, annotations, overlays, and detail views.",
     "icon": "sequence-viewer.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M8 4q4 4 0 8t0 8\" />\n  <path d=\"M16 4q-4 4 0 8t0 8\" />\n  <path d=\"M8 4h8M8 12h8M8 20h8\" />\n</svg>",
+    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M7 4c3.5 2.5 6.5 5.5 10 8-3.5 2.5-6.5 5.5-10 8\" />\n  <path d=\"M17 4c-3.5 2.5-6.5 5.5-10 8 3.5 2.5 6.5 5.5 10 8\" />\n  <path d=\"m9.25 7.25 5.5 3.25M14.75 13.5l-5.5 3.25\" />\n</svg>",
     "placement": "dock",
     "aliases": [
       "sequence",
@@ -207,7 +207,7 @@ export const APP_REGISTRY = [
     "viewId": "tool-box-view",
     "subtitle": "Bench calculators, sequence utilities, and quick analysis tools.",
     "icon": "tools.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <rect x=\"5\" y=\"4.5\" width=\"14\" height=\"15\" rx=\"2\" />\n  <path d=\"M8.5 8h7M8.5 12h2M12 12h2M15.5 12h0M8.5 15.5h2M12 15.5h2M15.5 15.5h0\" />\n</svg>",
+    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M5 8h14v10H5Z\" />\n  <path d=\"M9 8V6.5h6V8M9 13h6M12 13v2\" />\n</svg>",
     "placement": "more",
     "aliases": [
       "tool",
@@ -225,7 +225,7 @@ export const APP_REGISTRY = [
     "viewId": "setting-view",
     "subtitle": "Workspace appearance, startup, storage, and model settings.",
     "icon": "settings.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <circle cx=\"12\" cy=\"12\" r=\"2.75\" />\n  <path d=\"M12 4.5v2M12 17.5v2M19.5 12h-2M6.5 12h-2M17.3 6.7l-1.4 1.4M8.1 15.9l-1.4 1.4M17.3 17.3l-1.4-1.4M8.1 8.1 6.7 6.7\" />\n</svg>",
+    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M6 5v14M12 5v14M18 5v14\" />\n  <circle cx=\"6\" cy=\"9\" r=\"1.75\" />\n  <circle cx=\"12\" cy=\"15\" r=\"1.75\" />\n  <circle cx=\"18\" cy=\"10.5\" r=\"1.75\" />\n</svg>",
     "placement": "more",
     "aliases": [
       "setting",

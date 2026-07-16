@@ -1,4 +1,4 @@
-import { escapeHtml } from '../../tool-box/common.js';
+import { escapeHtml } from '../../../lib/html.js';
 import { buildCircularPreviewHtmlDocument } from '../storage.js';
 import {
   cleanText,

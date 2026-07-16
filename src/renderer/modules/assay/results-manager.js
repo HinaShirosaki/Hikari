@@ -2,7 +2,8 @@ import {
   rowLabelToIndex,
   wellIdFor
 } from './plate-model.js';
-import { bindFileDropTarget } from '../file-drop.js';
+import { bindFileDropTarget } from '../../lib/file-drop.js';
+import { parseDimensionGroupSpec } from './analysis/shared.js';
 import { createResultImportController } from './results/result-import.js';
 import { createResultGridModel } from './results/grid-model.js';
 
@@ -40,10 +41,8 @@ export function createAssayResultsManager({
   onResultsChanged
 }) {
   const {
-    assayAnalysisAddColumnGroupBtn,
-    assayAnalysisAddRowGroupBtn,
-    assayAnalysisClearGroupsBtn,
     assayAnalysisColumnGroupsInput,
+    assayAnalysisGroupVisualization,
     assayAnalysisGroupNameInput,
     assayAnalysisRowGroupsInput,
     assayAnalysisSelectionStatus,
@@ -53,6 +52,13 @@ export function createAssayResultsManager({
 
   let resultGrid = null;
   let resultGridSignature = '';
+  const analysisGroupColorCount = 4;
+  const analysisGroupColorClasses = Array.from({ length: analysisGroupColorCount }, (_item, index) => index + 1)
+    .flatMap((colorIndex) => [
+      `assay-analysis-group-color-${colorIndex}`,
+      `assay-analysis-row-group-color-${colorIndex}`,
+      `assay-analysis-column-group-color-${colorIndex}`
+    ]);
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -142,9 +148,144 @@ export function createAssayResultsManager({
     };
   }
 
+  function getAnalysisGroups() {
+    const plate = getCurrentDefinition();
+    return {
+      row: parseDimensionGroupSpec(
+        assayAnalysisRowGroupsInput?.value,
+        'row',
+        Number(plate?.rows)
+      ),
+      column: parseDimensionGroupSpec(
+        assayAnalysisColumnGroupsInput?.value,
+        'column',
+        Number(plate?.columns)
+      )
+    };
+  }
+
+  function getAnalysisGroupColorIndex(groupIndex) {
+    return (groupIndex % analysisGroupColorCount) + 1;
+  }
+
+  function clearAnalysisGroupClasses(element) {
+    if (!element?.classList) {
+      return;
+    }
+    element.classList.remove(
+      'assay-analysis-row-group-cell',
+      'assay-analysis-column-group-cell',
+      'assay-analysis-column-group-header',
+      ...analysisGroupColorClasses
+    );
+  }
+
+  function buildGroupMemberIndex(groups) {
+    const memberIndex = new Map();
+    groups.forEach((group, groupIndex) => {
+      group.members.forEach((member) => memberIndex.set(String(member), groupIndex));
+    });
+    return memberIndex;
+  }
+
+  function applyAnalysisGroupHighlights(analysisGroups) {
+    if (!resultGrid) {
+      return;
+    }
+    const rowGroups = analysisGroups?.row?.groups || [];
+    const columnGroups = analysisGroups?.column?.groups || [];
+    const rowMemberIndex = buildGroupMemberIndex(rowGroups);
+    const columnMemberIndex = buildGroupMemberIndex(columnGroups);
+    const rows = typeof resultGrid.getRows === 'function' ? resultGrid.getRows() : [];
+
+    rows.forEach((row) => {
+      const rowLabel = String(row?.getData?.()?.rowLabel || '').trim().toUpperCase();
+      const rowGroupIndex = rowMemberIndex.get(rowLabel);
+      const cells = typeof row?.getCells === 'function' ? row.getCells() : [];
+      cells.forEach((cell) => {
+        const element = cell?.getElement?.();
+        clearAnalysisGroupClasses(element);
+        if (Number.isInteger(rowGroupIndex)) {
+          element?.classList?.add(
+            'assay-analysis-row-group-cell',
+            `assay-analysis-row-group-color-${getAnalysisGroupColorIndex(rowGroupIndex)}`
+          );
+        }
+      });
+    });
+
+    const columns = typeof resultGrid.getColumns === 'function' ? resultGrid.getColumns() : [];
+    columns.forEach((column) => {
+      const columnIndex = resultFieldToColumnIndex(column?.getField?.());
+      const groupIndex = columnMemberIndex.get(String(columnIndex + 1));
+      const headerElement = column?.getElement?.();
+      clearAnalysisGroupClasses(headerElement);
+      if (!Number.isInteger(groupIndex)) {
+        return;
+      }
+      const colorIndex = getAnalysisGroupColorIndex(groupIndex);
+      headerElement?.classList?.add(
+        'assay-analysis-column-group-header',
+        `assay-analysis-column-group-color-${colorIndex}`
+      );
+      const cells = typeof column?.getCells === 'function' ? column.getCells() : [];
+      cells.forEach((cell) => {
+        cell?.getElement?.()?.classList?.add(
+          'assay-analysis-column-group-cell',
+          `assay-analysis-column-group-color-${colorIndex}`
+        );
+      });
+    });
+  }
+
+  function buildAnalysisGroupSection(label, groups) {
+    if (!groups.length) {
+      return '';
+    }
+    return `
+      <div class="assay-analysis-group-section">
+        <span class="assay-analysis-group-section-label">${escapeHtml(label)}</span>
+        <div class="assay-analysis-group-chips">
+          ${groups.map((group, groupIndex) => `
+            <span class="assay-analysis-group-chip assay-analysis-group-color-${getAnalysisGroupColorIndex(groupIndex)}">
+              <span class="assay-analysis-group-dot" aria-hidden="true"></span>
+              <strong>${escapeHtml(group.label)}</strong>
+              <span>${escapeHtml(group.members.join(', '))}</span>
+            </span>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function refreshAnalysisGroupDisplay() {
+    const analysisGroups = getAnalysisGroups();
+    const rowGroups = analysisGroups.row.groups;
+    const columnGroups = analysisGroups.column.groups;
+    if (assayAnalysisGroupVisualization) {
+      assayAnalysisGroupVisualization.innerHTML = rowGroups.length || columnGroups.length
+        ? `
+          ${buildAnalysisGroupSection('Row groups', rowGroups)}
+          ${buildAnalysisGroupSection('Column groups', columnGroups)}
+        `
+        : '<p class="small-note">Drag across result-table cells, then add the selected rows or columns as a group.</p>';
+    }
+    applyAnalysisGroupHighlights(analysisGroups);
+    return analysisGroups;
+  }
+
   function updateResultRangeSelectionStatus() {
     const selection = getCurrentResultRangeSelection();
-    setAnalysisSelectionStatus('');
+    const parts = [];
+    if (selection.rowLabels.length) {
+      parts.push(`Rows ${summarizeSelectionLabels(selection.rowLabels)}`);
+    }
+    if (selection.columnLabels.length) {
+      parts.push(`Columns ${summarizeSelectionLabels(selection.columnLabels)}`);
+    }
+    setAnalysisSelectionStatus(parts.length
+      ? `Selected: ${parts.join(' · ')}. Add the selection as a row or column group.`
+      : 'Drag across cells in the result table to select group members.');
     return selection;
   }
 
@@ -187,6 +328,7 @@ export function createAssayResultsManager({
     const fallbackName = nextGroupName(dimension);
     const groupName = sanitizeGroupName(assayAnalysisGroupNameInput?.value, fallbackName);
     appendGroupEntry(input, groupName, members);
+    refreshAnalysisGroupDisplay();
     setAnalysisSelectionStatus(`Added "${groupName}" with ${members.length} ${dimension === 'row' ? 'row(s)' : 'column(s)'}.`);
     if (typeof onAnalysisConfigChange === 'function') {
       onAnalysisConfigChange();
@@ -211,6 +353,7 @@ export function createAssayResultsManager({
     if (assayAnalysisGroupNameInput) {
       assayAnalysisGroupNameInput.value = '';
     }
+    refreshAnalysisGroupDisplay();
     setAnalysisSelectionStatus('Cleared row and column groups.');
     if (typeof onAnalysisConfigChange === 'function') {
       onAnalysisConfigChange();
@@ -244,7 +387,7 @@ export function createAssayResultsManager({
       return;
     }
     runtime.resultPasteAnchor = { rowIndex, columnIndex };
-    setResultStatus(`Result wells with values: ${getResultValueCount()}. Only mapped wells are editable.`);
+    setResultStatus('');
     notifyResultsChanged();
   }
 
@@ -302,16 +445,20 @@ export function createAssayResultsManager({
         resultGrid.on('rangeAdded', updateResultRangeSelectionStatus);
         resultGrid.on('rangeChanged', updateResultRangeSelectionStatus);
         resultGrid.on('rangeRemoved', updateResultRangeSelectionStatus);
+        resultGrid.on('tableBuilt', refreshAnalysisGroupDisplay);
+        resultGrid.on('renderComplete', () => applyAnalysisGroupHighlights(getAnalysisGroups()));
       }
       host.addEventListener('focus', () => {
         setResultStatus('Table selected. Paste starts at A1 unless a result cell is selected.');
       });
       resultGridSignature = signature;
       updateResultRangeSelectionStatus();
+      refreshAnalysisGroupDisplay();
       return true;
     }
     resultGrid.replaceData(buildResultGridData(def));
     updateResultRangeSelectionStatus();
+    refreshAnalysisGroupDisplay();
     return true;
   }
 
@@ -320,7 +467,7 @@ export function createAssayResultsManager({
     if (!ensureResultGrid(def)) {
       return;
     }
-    setResultStatus(`Result wells with values: ${getResultValueCount()}. Only mapped wells are editable.`);
+    setResultStatus('');
   }
 
   function syncCurrentResultsFromGrid() {
@@ -475,7 +622,7 @@ export function createAssayResultsManager({
       replaceAll: start.fromTableSelection
     });
     renderResultTable();
-    setResultStatus(`Pasted ${pastedCount} value(s). Skipped ${skippedCount} unmapped cell(s). Result wells with values: ${getResultValueCount()}.`);
+    setResultStatus(`Pasted ${pastedCount} value(s). Skipped ${skippedCount} unmapped cell(s).`);
     notifyResultsChanged();
   }
 
@@ -485,7 +632,7 @@ export function createAssayResultsManager({
     if (typeof clearAnalysisOutput === 'function') {
       clearAnalysisOutput();
     }
-    setResultStatus('Cleared all result values. Only mapped wells are editable.');
+    setResultStatus('Cleared all result values.');
     notifyResultsChanged();
   }
 
@@ -502,12 +649,15 @@ export function createAssayResultsManager({
     }
   });
 
+  refreshAnalysisGroupDisplay();
+
   return {
     getResultValueCount,
     clearResultGrid,
     renderResultTable,
     syncCurrentResultsFromGrid,
     setAnalysisSelectionStatus,
+    refreshAnalysisGroupDisplay,
     onAddSelectedRowGroup,
     onAddSelectedColumnGroup,
     onClearAnalysisGroups,

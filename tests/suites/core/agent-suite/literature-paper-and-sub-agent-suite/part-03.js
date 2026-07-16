@@ -2,7 +2,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart03(con
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
-    test('literature search workflow delegates to a sub-agent, batches paper reads, and downloads into literature-search storage', async () => {
+    test('literature search workflow delegates to a sub-agent, batches paper reads, and leaves downloads for user action', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-'));
       const searchCalls = [];
       const loadCalls = [];
@@ -21,6 +21,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart03(con
       }));
       try {
         const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
           literatureSearchRuntime: {
             buildLiteratureQuery: () => 'MAPK resistance mechanism',
             searchLiteratureCandidates: async (input = {}) => {
@@ -144,33 +145,121 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart03(con
         assert.equal(loadCalls.length, 2);
         assert.deepEqual(loadCalls[0], candidateItems.slice(0, 8).map((item) => item.id));
         assert.deepEqual(loadCalls[1], [candidateItems[8].id]);
-        assert.equal(downloadCalls.length, 9);
-        assert.equal(maxConcurrentDownloads > 1, true);
-        assert.equal(downloadCalls.every((call) => call.linked_type === 'literature-search'), true);
-        assert.equal(downloadCalls.every((call) => call.linked_name === 'Atlas'), true);
-        assert.equal(downloadCalls.every((call) => call.storage_path === storageRoot), true);
+        assert.equal(downloadCalls.length, 0);
+        assert.equal(maxConcurrentDownloads, 0);
         assert.equal(result.sub_agent_id.length > 0, true);
         assert.equal(result.sub_agent?.task?.state, 'completed');
         assert.equal(result.sub_agent?.message_count >= 2, true);
         assert.equal(result.sub_agent_context.storage_path, storageRoot);
         assert.equal(result.selected_papers.length, 9);
-        assert.equal(result.downloaded_papers.length, 9);
+        assert.equal(result.selected_papers.every((item) => item.download_status === 'not_requested'), true);
+        assert.equal(result.downloaded_papers.length, 0);
         assert.equal(result.loaded_context_blocks.length, 9);
         assert.equal(result.papers_read_count, 9);
-        assert.match(String(result.summary || ''), /Downloaded 9 selected PDF/i);
+        assert.match(String(result.summary || ''), /downloads were not started automatically/i);
         assert.match(String(result.summary || ''), /Loaded 9 bounded context block/i);
-        assert.equal(result.downloaded_papers.every((item) => String(item.relative_path || '').includes('Papers/Atlas/')), true);
         assert.equal(result.sub_agent?.last_response?.output?.selected_papers.length, 9);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
-    test('literature search workflow owns paper IDs used for downloads and reads', async () => {
+    test('literature search workflow does not forward public limit fields when caller omits caps', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-no-public-limits-'));
+      const searchCalls = [];
+      try {
+        const candidateItems = Array.from({ length: 13 }, (_unused, index) => ({
+          id: `paper-${index + 1}`,
+          source: index % 2 ? 'crossref' : 'pubmed',
+          title: `Molecular glue degrader paper ${index + 1}`,
+          summary: `Candidate paper ${index + 1} about molecular glue degraders.`,
+          doi: `10.1000/glue-${index + 1}`,
+          url: `https://example.org/glue-${index + 1}`
+        }));
+        const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
+          literatureSearchRuntime: {
+            searchLiteratureCandidates: async (input = {}) => {
+              searchCalls.push(JSON.parse(JSON.stringify(input)));
+              return {
+                ok: true,
+                status: 'completed',
+                query: String(input.query || ''),
+                sources: ['pubmed', 'crossref', 'web'],
+                items: candidateItems,
+                citations: [],
+                loaded_context_blocks: [],
+                papers_read_count: 0,
+                source_counts: { pubmed: 1, crossref: 1, web: 0 },
+                source_errors: {},
+                summary: 'Found 2 literature results.'
+              };
+            }
+          },
+          paperContextLoaderRuntime: {
+            fetchEuropePmcMetadataForItem: async () => ({
+              pdf_urls: [],
+              abstract_sections: []
+            }),
+            loadPaperContexts: async ({ items }) => ({
+              ok: true,
+              papers_read_count: items.length,
+              loaded_context_blocks: items.map((item) => ({
+                paper_id: item.paper_id,
+                paper_title: item.title,
+                section_label: 'Abstract',
+                excerpt: `Context for ${item.title}.`,
+                relevance_reason: 'Matches the query.',
+                source: item.source,
+                evidence_kind: 'text'
+              })),
+              papers: items,
+              summary: `Read ${items.length} paper(s).`
+            })
+          },
+          paperDownloadRuntime: {
+            downloadPaper: async (input = {}) => ({
+              ok: true,
+              status: 'completed',
+              file_name: `${String(input.paper_id || 'paper')}.pdf`,
+              file_path: path.join(storageRoot, 'Papers', `${String(input.paper_id || 'paper')}.pdf`),
+              relative_path: `Papers/${String(input.paper_id || 'paper')}.pdf`,
+              summary: `Downloaded ${String(input.paper_id || 'paper')}.pdf`
+            })
+          }
+        });
+
+        const result = await runtime.runLiteratureWorkflow({
+          query: 'molecular glue degraders',
+          source: 'auto'
+        }, {
+          storage_path: storageRoot,
+          project: {
+            id: 'project-atlas',
+            name: 'Atlas'
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(searchCalls.length, 1);
+        assert.equal(searchCalls[0].query, 'molecular glue degraders');
+        assert.equal(Object.prototype.hasOwnProperty.call(searchCalls[0], 'limit'), false);
+        assert.equal(Object.prototype.hasOwnProperty.call(searchCalls[0], 'max_per_source'), false);
+        assert.equal(Object.prototype.hasOwnProperty.call(searchCalls[0], 'max_papers'), false);
+        assert.equal(Object.prototype.hasOwnProperty.call(searchCalls[0], '_internal_limit'), false);
+        assert.equal(Object.prototype.hasOwnProperty.call(searchCalls[0], '_internal_max_per_source'), false);
+        assert.equal(Object.prototype.hasOwnProperty.call(searchCalls[0], '_internal_max_papers'), false);
+        assert.equal(result.selected_papers.length, candidateItems.length);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+    test('literature search workflow owns paper IDs used for reads and future download actions', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-paper-id-'));
       const downloadCalls = [];
       const loadCalls = [];
       try {
         const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
           literatureSearchRuntime: {
             searchLiteratureCandidates: async () => ({
               ok: true,
@@ -202,11 +291,10 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart03(con
               abstract_sections: []
             }),
             loadPaperContexts: async ({ items, download_promise }) => {
-              const downloaded = await download_promise;
+              assert.equal(download_promise, null);
               loadCalls.push({
                 itemPaperId: String(items[0]?.paper_id || ''),
-                itemId: String(items[0]?.id || ''),
-                downloadedPaperId: String(downloaded[0]?.paper_id || '')
+                itemId: String(items[0]?.id || '')
               });
               return {
                 ok: true,
@@ -257,16 +345,119 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart03(con
         });
 
         assert.equal(result.ok, true);
-        assert.equal(downloadCalls.length, 1);
+        assert.equal(downloadCalls.length, 0);
         assert.equal(result.selected_papers[0].paper_id, 'paper-1');
-        assert.equal(result.downloaded_papers[0].paper_id, 'paper-1');
+        assert.equal(result.selected_papers[0].download_status, 'not_requested');
+        assert.deepEqual(result.selected_papers[0].pdf_urls, ['https://example.org/mapk-resistance.pdf']);
+        assert.equal(result.downloaded_papers.length, 0);
         assert.equal(loadCalls.length, 1);
         assert.deepEqual(loadCalls[0], {
           itemPaperId: 'paper-1',
-          itemId: 'llm-invented-candidate-id',
-          downloadedPaperId: 'paper-1'
+          itemId: 'llm-invented-candidate-id'
         });
         assert.equal(result.loaded_context_blocks[0].paper_id, 'paper-1');
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+    test('literature search workflow soft-ranks saved snake_case preferred journals without hard filtering', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'literature-workflow-preferred-journal-'));
+      const searchCalls = [];
+      try {
+        const runtime = agentLiteratureSearchWorkflow.createLiteratureSearchWorkflowRuntime({
+          createSubAgentRuntime: agentSubAgent.createAgentSubAgentRuntime,
+          literatureSearchRuntime: {
+            buildLiteratureQuery: () => 'molecular glue degraders',
+            searchLiteratureCandidates: async (input = {}) => {
+              searchCalls.push(JSON.parse(JSON.stringify(input)));
+              return {
+                ok: true,
+                status: 'completed',
+                query: 'molecular glue degraders',
+                sources: ['pubmed'],
+                items: [
+                  {
+                    id: 'other-paper',
+                    source: 'pubmed',
+                    title: 'Molecular glue degrader review',
+                    summary: 'Comparable molecular glue degrader evidence from a non-preferred journal.',
+                    journal: 'Other Journal',
+                    url: 'https://example.org/other',
+                    doi: '10.1000/other',
+                    published_at: '2026-01-01'
+                  },
+                  {
+                    id: 'cell-paper',
+                    source: 'pubmed',
+                    title: 'Molecular glue degrader mechanism',
+                    summary: 'Comparable molecular glue degrader evidence from a preferred journal.',
+                    journal: 'Cell',
+                    url: 'https://example.org/cell',
+                    doi: '10.1000/cell',
+                    published_at: '2024-01-01'
+                  }
+                ],
+                citations: [],
+                source_counts: { pubmed: 2 },
+                source_errors: {},
+                summary: 'Found 2 candidate papers.'
+              };
+            }
+          },
+          paperContextLoaderRuntime: {
+            fetchEuropePmcMetadataForItem: async () => ({
+              pdf_urls: [],
+              abstract_sections: []
+            }),
+            loadPaperContexts: async ({ items }) => ({
+              ok: true,
+              papers_read_count: items.length,
+              loaded_context_blocks: items.map((item) => ({
+                paper_id: item.paper_id,
+                paper_title: item.paper_title,
+                section_label: 'Abstract',
+                excerpt: `Loaded ${item.paper_title}.`,
+                relevance_reason: 'Selected candidate.',
+                source: item.source,
+                evidence_kind: 'text'
+              })),
+              papers: items,
+              summary: `Read ${items.length} paper(s).`
+            })
+          },
+          paperDownloadRuntime: {
+            downloadPaper: async (input = {}) => ({
+              ok: true,
+              status: 'completed',
+              file_name: `${String(input.paper_title || 'paper').trim()}.pdf`,
+              file_path: path.join(storageRoot, 'Papers', `${String(input.paper_title || 'paper').trim()}.pdf`),
+              relative_path: `Papers/${String(input.paper_title || 'paper').trim()}.pdf`,
+              summary: 'Downloaded selected paper.'
+            })
+          }
+        });
+
+        const result = await runtime.execute({
+          query: 'molecular glue degraders',
+          source: 'auto',
+          max_papers: 1,
+          storage_path: storageRoot,
+          snapshot: {
+            settings: {
+              preferred_journals: ['Cell'],
+              storagePath: storageRoot
+            }
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(searchCalls.length, 1);
+        assert.equal(Object.prototype.hasOwnProperty.call(searchCalls[0], 'journals'), false);
+        assert.equal(Object.prototype.hasOwnProperty.call(searchCalls[0], 'journal_filter'), false);
+        assert.deepEqual(result.sub_agent_context.preferred_journals, ['Cell']);
+        assert.equal(result.selected_papers.length, 1);
+        assert.equal(result.selected_papers[0].journal, 'Cell');
+        assert.equal(result.selected_papers[0].doi, '10.1000/cell');
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }

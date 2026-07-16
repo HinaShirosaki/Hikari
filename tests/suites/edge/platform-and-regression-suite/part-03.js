@@ -48,43 +48,5 @@ const normalizedArrayKeys = [
     assert.equal(mainUtils.normalizeDataFilePath(preferred, fallback), expected);
   });
 });
-[
-  ['a'.repeat(120), 'a'.repeat(120)],
-  ['a b c d e', 'a_b_c_d_e'],
-  ['___', 'plasmid'],
-  ['.....', '.....'],
-  ['abc/def?ghi', 'abc_def_ghi'],
-  [' leading-and-trailing ', 'leading-and-trailing'],
-  ['UPPER lower MIXED', 'UPPER_lower_MIXED'],
-  ['multiple   spaces', 'multiple_spaces'],
-  ['name-with-dash', 'name-with-dash'],
-  ['name_with_underscore', 'name_with_underscore'],
-  ['name.with.dot', 'name.with.dot'],
-  ['$', 'plasmid'],
-  ['\n\t', 'plasmid'],
-  ['__alpha__beta__', 'alpha__beta'],
-  ['A/B\\C:D*E?F"G<H>I|J', 'A_B_C_D_E_F_G_H_I_J']
-].forEach(([input, expected], idx) => {
-  test(`[EDGE] sanitizeOutputName extended case ${idx + 1}`, () => {
-    assert.equal(mainUtils.sanitizeOutputName(input), expected);
-  });
-});
-[
-  ['_alpha', '_alpha'],
-  [' alpha beta ', 'alphabeta'],
-  ['-x-y-z-', '-x-y-z-'],
-  ['A.B.C', 'A.B.C'],
-  ['A/B/C', 'ABC'],
-  ['***suffix***', 'suffix'],
-  ['123', '123'],
-  ['__', '__'],
-  ['\nA\tB\r', 'AB'],
-  ['汉字', ''],
-  [Symbol.for('x'), 'Symbolx']
-].forEach(([input, expected], idx) => {
-  test(`[EDGE] sanitizeSuffix extended case ${idx + 1}`, () => {
-    assert.equal(mainUtils.sanitizeSuffix(input), expected);
-  });
-});
   }
 };

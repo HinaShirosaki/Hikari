@@ -48,56 +48,27 @@ export function getToolActivityLabel(toolName = '') {
 export function getProgressRowKey(eventPayload = {}) {
   const stage = trimText(eventPayload?.stage, 80);
   const toolName = trimText(eventPayload?.tool_name, 120);
-  const round = trimText(eventPayload?.meta?.round, 40);
   if (['tool_call_started', 'tool_call_completed', 'tool_call_failed'].includes(stage)) {
     return `tool:${toolName}`;
-  }
-  if (stage === 'science_round_started') {
-    return `science-round:${round || '0'}:${toolName}`;
-  }
-  if (stage === 'science_evaluator_continue' || stage === 'science_evaluator_satisfied') {
-    return `science-evaluator:${round || '0'}`;
   }
   return stage;
 }
 
 export function getProgressRowText(eventPayload = {}) {
   const stage = trimText(eventPayload?.stage, 80);
-  const round = trimText(eventPayload?.meta?.round, 40);
   const toolLabel = getToolActivityLabel(eventPayload?.tool_name);
+  const lifecycleStatus = trimText(eventPayload?.meta?.status, 40);
+  if (stage === 'codex_agent_completed' && lifecycleStatus === 'needs_more_info') {
+    return 'Waiting for your answer';
+  }
   const stageLabels = {
     request_received: 'Request received',
     request_aborted: 'Request stopped',
-    controller_intent_only_selected: 'Preparing parser-first request',
-    controller_intent_only: 'Running parser-first controller',
     controller_codex_agent_selected: 'Preparing Codex agent request',
     controller_codex_agent: 'Routing to Codex agent',
-    codex_agent_started: 'Codex agent running',
+    codex_agent_started: 'Thinking',
     codex_agent_stream: 'Codex response streaming',
     codex_agent_completed: 'Codex agent completed',
-    parser_completed: 'Intent parsed',
-    protocol_to_notebook_followup: 'Continuing notebook follow-up',
-    protocol_to_notebook_completed: 'Notebook draft status updated',
-    purchase_recommendation_started: 'Finding products to buy',
-    purchase_recommendation_completed: 'Purchase recommendations updated',
-    inventory_lookup_started: 'Checking inventory records',
-    inventory_lookup_completed: 'Inventory lookup updated',
-    record_lookup_started: 'Checking lab records',
-    record_lookup_completed: 'Record lookup updated',
-    notebook_draft_started: getToolActivityLabel('notebook-draft'),
-    notebook_draft_completed: 'Notebook draft updated',
-    science_intent_start: 'Starting reasoning loop',
-    science_intent_started: 'Reasoning loop ready',
-    science_clarification_started: 'Clarifying the request',
-    science_clarification_completed: 'Request clarified',
-    science_route_planner_started: 'Drafting route plan',
-    science_route_planner_completed: 'Route plan ready',
-    science_exit_criteria_started: 'Defining stopping criteria',
-    science_exit_criteria_completed: 'Stopping criteria ready',
-    science_evaluator_continue: round ? `Round ${round}: More evidence needed` : 'More evidence needed',
-    science_evaluator_satisfied: round ? `Round ${round}: Evidence is sufficient` : 'Evidence is sufficient',
-    science_budget_exhausted: round ? `Round ${round}: Reasoning budget exhausted` : 'Reasoning budget exhausted',
-    science_intent_completed: 'Reasoning completed',
     response_emitted: 'Final answer ready',
     controller_error: 'Request failed'
   };
@@ -109,9 +80,6 @@ export function getProgressRowText(eventPayload = {}) {
       }
     }
     return toolLabel;
-  }
-  if (stage === 'science_round_started') {
-    return round ? `Round ${round}: ${toolLabel}` : toolLabel;
   }
   return stageLabels[stage] || trimText(eventPayload?.message, 240) || humanizeToken(stage) || 'Working on this';
 }

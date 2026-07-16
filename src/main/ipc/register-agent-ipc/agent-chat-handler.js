@@ -5,7 +5,7 @@ const {
   createAgentRequestAbortError,
   isAgentRequestAbortError,
   runWithAgentRequestContext
-} = require('../../helpers/agent/shared/agent-request-context.js');
+} = require('../../lib/llm/request-context.js');
 const { AGENT, AGENT_PROGRESS_EVENT } = require('../../../shared/ipc/channels');
 
 function registerAgentChatHandler({
@@ -296,13 +296,13 @@ function registerAgentChatHandler({
                 ? 'purchase_recommendation'
               : (result?.inventory_lookup
                 ? 'inventory_lookup'
-                : (result?.record_lookup
-                  ? 'record_lookup'
+                : (result?.notebook_lookup
+                  ? 'notebook_lookup'
                   : (result?.general_science_question
                     ? 'general_science_question'
                     : (result?.project_science_question
                       ? 'project_science_question'
-                      : (result?.result_analysis ? 'result_analysis' : 'intent_parser'))))))))),
+                    : (result?.result_analysis ? 'result_analysis' : 'agent_result'))))))))),
           routing_intent: cleanText(result?.parser?.primary_intent, 80) || 'unclear',
           failure_reasons: failureReasons,
           message: result?.ok === true

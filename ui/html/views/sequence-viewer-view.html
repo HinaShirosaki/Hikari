@@ -2,8 +2,8 @@
       <div class="sequence-viewer-shell">
         <section id="sequence-viewer-home-workspace" class="sequence-viewer-home-workspace">
           <div class="sequence-viewer-home-layout left-rail-template">
-            <aside class="sequence-viewer-home-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
-              <div class="left-rail-template__stack">
+            <aside class="sequence-viewer-home-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+              <div class="sequence-viewer-home-sidebar-pinned left-rail-template__pinned">
                 <section class="sequence-viewer-rail-actions-section left-rail-template__section">
                   <div class="form-actions sequence-viewer-rail-nav-actions">
                     <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
@@ -13,7 +13,9 @@
                   </div>
                   <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
                 </section>
+              </div>
 
+              <div class="sequence-viewer-home-sidebar-scroll left-rail-template__scroll">
                 <section class="sequence-viewer-library-card left-rail-template__section">
               <div class="result-card-head">
                 <h4>Sequence Library</h4>
@@ -22,6 +24,14 @@
                 <button id="sequence-viewer-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
                 <button id="sequence-viewer-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
               </div>
+              <input
+                id="sequence-viewer-library-search-input"
+                class="sequence-viewer-library-search"
+                type="search"
+                placeholder="Search sequences"
+                autocomplete="off"
+                aria-label="Search sequence library"
+              />
               <div id="sequence-viewer-library-list" class="sequence-viewer-library-list">
                 <p class="small-note">No sequence entries found.</p>
               </div>
@@ -43,24 +53,6 @@
                   </div>
                 </section>
 
-                <section class="result-card sequence-viewer-feature-search-card">
-                  <div class="result-card-head">
-                    <h4>Feature Search</h4>
-                  </div>
-                  <div class="sequence-viewer-feature-search-controls">
-                    <input
-                      id="sequence-viewer-feature-search-input"
-                      type="search"
-                      placeholder="Search by feature name or sequence"
-                      autocomplete="off"
-                    />
-                    <button id="sequence-viewer-feature-search-btn" type="button" class="ghost-btn">Search</button>
-                    <span id="sequence-viewer-feature-search-status" class="small-note">Search stored features and open the host vector directly.</span>
-                  </div>
-                  <div id="sequence-viewer-feature-search-results" class="sequence-viewer-feature-search-results">
-                    <p class="small-note">Search by feature name, full sequence, or partial sequence.</p>
-                  </div>
-                </section>
               </div>
             </div>
           </div>
@@ -73,7 +65,7 @@
             </div>
             <div class="sequence-viewer-protein-builder-toolbar-copy">
               <h2>Protein Builder</h2>
-              <p class="small-note">Build a linear fusion from tags, stored features, linkers, cleavage sites, and a POI block.</p>
+              <p class="small-note">Build a linear fusion from tags, stored features, linkers, cleavage sites, and the active DNA coding sequence.</p>
               <span id="sequence-viewer-protein-builder-status" class="small-note">Linear chain: each block accepts one upstream and one downstream connection.</span>
             </div>
             <div class="form-actions sequence-viewer-protein-builder-toolbar-actions">
@@ -83,35 +75,23 @@
 
           <div class="sequence-viewer-protein-builder-grid-wrap">
             <div class="sequence-viewer-protein-builder-grid left-rail-template">
-              <aside class="sequence-viewer-protein-builder-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+              <aside class="sequence-viewer-protein-builder-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+                <div class="sequence-viewer-protein-builder-sidebar-pinned left-rail-template__pinned">
                 <section class="sequence-viewer-protein-builder-panel">
                   <form id="sequence-viewer-protein-builder-form" class="stack-form sequence-viewer-protein-builder-controls" autocomplete="off">
-                    <div class="form-grid">
-                      <label>
-                        Construct Name
-                        <input id="sequence-viewer-protein-builder-name" placeholder="e.g. His6-TEV-POI-TwinStrep" />
-                      </label>
-                      <label>
-                        POI Name
-                        <input id="sequence-viewer-protein-builder-poi-name" placeholder="e.g. EGFR kinase domain" />
-                      </label>
-                    </div>
                     <label>
-                      Protein of Interest Sequence
-                      <textarea
-                        id="sequence-viewer-protein-builder-poi-sequence"
-                        rows="5"
-                        placeholder="Paste amino-acid sequence (A-Z, optional *)"
-                      ></textarea>
+                      Construct Name
+                      <input id="sequence-viewer-protein-builder-name" placeholder="e.g. His6-TEV-CurrentDNA-TwinStrep" />
                     </label>
                     <div class="form-actions">
                       <button id="sequence-viewer-protein-builder-reset-btn" type="button" class="ghost-btn">Reset Default Chain</button>
                       <button id="sequence-viewer-protein-builder-add-custom-btn" type="button" class="ghost-btn">Add Custom Block</button>
-                      <button id="sequence-viewer-protein-builder-add-poi-btn" type="button" class="ghost-btn">Add POI Block</button>
                     </div>
                   </form>
                 </section>
+                </div>
 
+                <div class="sequence-viewer-protein-builder-sidebar-scroll left-rail-template__scroll">
                 <section class="sequence-viewer-protein-builder-panel">
                   <div class="result-card-head">
                     <h4>Common Blocks</h4>
@@ -141,6 +121,7 @@
                     <p class="small-note">Search by feature name or stored sequence.</p>
                   </div>
                 </section>
+                </div>
               </aside>
 
               <div class="sequence-viewer-protein-builder-main left-rail-template__main">
@@ -182,7 +163,7 @@
                   <h4 id="sequence-viewer-protein-builder-assembly-title">Assemble Plasmid</h4>
                   <p id="sequence-viewer-protein-builder-assembly-subtitle" class="small-note">Select a stored backbone to combine with the current DNA build.</p>
                 </div>
-                <button id="sequence-viewer-protein-builder-assembly-close-btn" type="button" class="ghost-btn" aria-label="Close stored backbone selector">Close</button>
+                <button id="sequence-viewer-protein-builder-assembly-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close stored backbone selector" title="Close"><span aria-hidden="true">&times;</span></button>
               </div>
 
               <div class="sequence-viewer-backbone-dialog-grid">

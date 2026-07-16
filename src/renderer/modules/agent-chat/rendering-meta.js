@@ -5,14 +5,13 @@ import {
   renderPythonSandboxRuns
 } from './rendering-python.js';
 import { renderUserQuestionCard } from './rendering-question-card.js';
-import {
-  findNotebookEntryForDraft,
-  normalizeNotebookDraft,
-  normalizeNotebookState
-} from './notebook-drafts.js';
 import { asArray, trimText } from './shared.js';
 
-export function renderAssistantMeta(meta, messageId = '', { state, safeText, canAnswerQuestion = true }) {
+export function renderAssistantMeta(meta, messageId = '', {
+  safeText,
+  notebookDraftAdapter,
+  canAnswerQuestion = true
+}) {
   if (!meta || typeof meta !== 'object') {
     return '';
   }
@@ -38,8 +37,8 @@ export function renderAssistantMeta(meta, messageId = '', { state, safeText, can
     return '';
   }
 
-  const notebookDraft = normalizeNotebookDraft(meta.notebookDraft);
-  const existingNotebookEntry = findNotebookEntryForDraft(state.notebookEntries, notebookDraft);
+  const notebookDraft = notebookDraftAdapter?.normalizeDraft?.(meta.notebookDraft) || null;
+  const existingNotebookEntry = notebookDraftAdapter?.findEntryForDraft?.(notebookDraft) || null;
   const hasMessageId = Boolean(trimText(messageId, 120));
   const showCreatePlannedPageButton = Boolean(
     notebookDraft
@@ -50,7 +49,7 @@ export function renderAssistantMeta(meta, messageId = '', { state, safeText, can
     && !existingNotebookEntry
   );
   const showOpenNotebookPageButton = Boolean(notebookDraft && existingNotebookEntry && hasMessageId);
-  const openNotebookButtonLabel = normalizeNotebookState(existingNotebookEntry?.notebookState) === 'planned'
+  const openNotebookButtonLabel = notebookDraftAdapter?.normalizeState?.(existingNotebookEntry?.notebookState) === 'planned'
     ? 'Open Planned Page'
     : 'Open Notebook Page';
   const hasPurchaseRecommendation = meta.purchase_recommendation && typeof meta.purchase_recommendation === 'object';

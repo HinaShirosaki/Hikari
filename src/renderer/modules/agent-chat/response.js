@@ -116,19 +116,19 @@ export function collectAgentActivityRows(meta) {
     upsertRow('done', 'Inventory SQL index backfilled');
   }
 
-  const recordLookup = meta.record_lookup && typeof meta.record_lookup === 'object'
-    ? meta.record_lookup
+  const notebookLookup = meta.notebook_lookup && typeof meta.notebook_lookup === 'object'
+    ? meta.notebook_lookup
     : {};
-  const recordStatus = trimText(recordLookup.status, 40);
-  if (recordStatus) {
-    upsertRow(recordStatus === 'matched' ? 'done' : 'pending', `Record lookup status: ${recordStatus}`);
+  const notebookStatus = trimText(notebookLookup.status, 40);
+  if (notebookStatus) {
+    upsertRow(notebookStatus === 'matched' ? 'done' : 'pending', `Notebook lookup status: ${notebookStatus}`);
   }
-  const recordItemCount = asArray(recordLookup.items).length;
-  if (recordItemCount > 0) {
-    upsertRow('done', `Record matches: ${recordItemCount}`);
+  const notebookItemCount = asArray(notebookLookup.items).length;
+  if (notebookItemCount > 0) {
+    upsertRow('done', `Notebook matches: ${notebookItemCount}`);
   }
-  if (recordLookup.backfilled_sql === true) {
-    upsertRow('done', 'Record SQL index backfilled');
+  if (notebookLookup.backfilled_sql === true) {
+    upsertRow('done', 'Notebook SQL index backfilled');
   }
 
   const purchaseRecommendation = meta.purchase_recommendation && typeof meta.purchase_recommendation === 'object'
@@ -233,7 +233,7 @@ export function summarizeInventoryLookup(lookup) {
   return '';
 }
 
-export function summarizeRecordLookup(lookup) {
+export function summarizeNotebookLookup(lookup) {
   const payload = lookup && typeof lookup === 'object' ? lookup : {};
   const status = trimText(payload.status, 40);
   if (!status) {
@@ -241,7 +241,7 @@ export function summarizeRecordLookup(lookup) {
   }
   if (status === 'needs_more_info') {
     const followUps = asArray(payload.follow_up_questions).map((item) => trimText(item, 280)).filter(Boolean);
-    return followUps.join(' ') || 'I need more details to run record lookup.';
+    return followUps.join(' ') || 'I need more details to run notebook lookup.';
   }
   const query = trimText(payload.query, 220);
   const items = asArray(payload.items);
@@ -265,13 +265,13 @@ export function summarizeRecordLookup(lookup) {
       .filter(Boolean);
     const extraCount = Math.max(0, items.length - previewLines.length);
     return [
-      `Found ${items.length} record match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.`,
+      `Found ${items.length} notebook match${items.length === 1 ? '' : 'es'}${query ? ` for "${query}"` : ''}.`,
       ...previewLines,
       extraCount ? `${extraCount} more match${extraCount === 1 ? '' : 'es'} not shown.` : ''
     ].filter(Boolean).join('\n');
   }
   if (status === 'no_match') {
-    return `No record matches found${query ? ` for "${query}"` : ''}.`;
+    return `No notebook matches found${query ? ` for "${query}"` : ''}.`;
   }
   return '';
 }
@@ -426,8 +426,8 @@ export function normalizeAgentResponse(result) {
   const inventoryLookup = result?.inventory_lookup && typeof result.inventory_lookup === 'object'
     ? result.inventory_lookup
     : null;
-  const recordLookup = result?.record_lookup && typeof result.record_lookup === 'object'
-    ? result.record_lookup
+  const notebookLookup = result?.notebook_lookup && typeof result.notebook_lookup === 'object'
+    ? result.notebook_lookup
     : null;
   const purchaseRecommendation = result?.purchase_recommendation && typeof result.purchase_recommendation === 'object'
     ? result.purchase_recommendation
@@ -461,7 +461,7 @@ export function normalizeAgentResponse(result) {
     ? result.result_analysis
     : null;
   const inventorySummaryText = summarizeInventoryLookup(inventoryLookup);
-  const recordSummaryText = summarizeRecordLookup(recordLookup);
+  const notebookSummaryText = summarizeNotebookLookup(notebookLookup);
   const purchaseRecommendationText = summarizePurchaseRecommendation(purchaseRecommendation);
   const codexAgentText = summarizeCodexAgent(codexAgent);
   const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
@@ -480,7 +480,7 @@ export function normalizeAgentResponse(result) {
       : (scienceAnswerText
           || purchaseRecommendationText
           || inventorySummaryText
-          || recordSummaryText
+          || notebookSummaryText
           || trimText(parser.reasoning_summary, 12000)
           || 'Intent parsing completed.')));
 
@@ -494,7 +494,7 @@ export function normalizeAgentResponse(result) {
     codexAgent,
     userQuestion,
     inventoryLookup,
-    recordLookup,
+    notebookLookup,
     generalScienceQuestion,
     projectScienceQuestion,
     resultAnalysis,

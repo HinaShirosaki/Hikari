@@ -36,6 +36,7 @@ const STORAGE = Object.freeze({
   ENSURE_DIRECTORY: 'storage:ensure-directory',
   IMPORT_ROOT: 'storage:import-root',
   STORE_IMPORTED_FILE: 'storage:store-imported-file',
+  MOVE_STORED_FILE: 'storage:move-stored-file',
   WRITE_JSON_FILE: 'storage:write-json-file',
   DISCOVER_PAPERS: 'storage:discover-papers',
   OPEN_FILE: 'storage:open-file',
@@ -49,6 +50,10 @@ const SYSTEM = Object.freeze({
   OPEN_EXTERNAL_URL: 'system:open-external-url',
   APP_CLOSE_REQUESTED: 'system:app-close-requested',
   APP_CLOSE_RESPONSE: 'system:app-close-response'
+});
+
+const PLUGINS = Object.freeze({
+  INSPECT_FOLDER: 'plugins:inspect-folder'
 });
 
 const INVENTORY = Object.freeze({
@@ -97,6 +102,7 @@ module.exports = {
   AGENT_PROGRESS_EVENT,
   STORAGE,
   SYSTEM,
+  PLUGINS,
   INVENTORY,
   ASSAY,
   SEQUENCE_LIBRARY,

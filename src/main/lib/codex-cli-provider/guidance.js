@@ -4,11 +4,11 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const {
   releaseOfficialMcpSkills
-} = require('../../helpers/agent/codex-agent/official-mcp-skills.js');
+} = require('../../agent/codex-agent/official-mcp-skills.js');
 const {
   ensureHikariCodexAgentsFile,
   removeHikariCodexAgentsFileIfOnlyManaged
-} = require('../../helpers/agent/codex-agent/runtime-files.js');
+} = require('../../agent/codex-agent/runtime-files.js');
 const {
   CODEX_AGENTS_FOLDER_NAME,
   CODEX_PROJECT_MEMORY_FILE,

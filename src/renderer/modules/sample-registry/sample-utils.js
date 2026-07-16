@@ -3,7 +3,7 @@ import {
   getEditableSampleTypeEntries,
   getSampleTypeLabel,
   normalizeSampleType
-} from '../sample-inventory-settings.js';
+} from '../../lib/inventory-settings.js';
 
 export function ensureSampleState(ctx) {
   if (!Array.isArray(ctx.state.samples)) {
@@ -97,11 +97,5 @@ export function setMultiSelectValues(selectEl, values) {
   });
   Array.from(selectEl.options).forEach((option) => {
     option.selected = selectedValues.includes(option.value);
-  });
-}
-
-export function delay(ms) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, ms);
   });
 }

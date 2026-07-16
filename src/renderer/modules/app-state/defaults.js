@@ -1,12 +1,9 @@
-import {
-  DEFAULT_AGENT_LLM_PROVIDER,
-  DEFAULT_LLM_ENDPOINTS
-} from '../llm-provider-config.generated.js';
+import { DEFAULT_AGENT_LLM_PROVIDER } from '../codex-model-catalog.generated.js';
 import { VIEWS } from '../views.js';
 import {
   DEFAULT_SAMPLE_INVENTORY_LOCATIONS,
   DEFAULT_SAMPLE_TYPE_LABELS
-} from '../sample-inventory-settings.js';
+} from '../../lib/inventory-settings.js';
 
 export const STARTUP_DEFAULT_VIEW_IDS = new Set([
   VIEWS.HOME,
@@ -40,7 +37,11 @@ export const defaultState = {
     projectId: '',
     currentSessionId: '',
     sessions: [],
-    messages: []
+    messages: [],
+    folders: [],
+    sessionFolderIds: {},
+    selectedFolderId: 'general',
+    expandedFolderIds: []
   },
   messages: [],
   growthMetrics: {
@@ -53,7 +54,6 @@ export const defaultState = {
     events: []
   },
   notebookEntries: [],
-  synthesisChemistryDrafts: {},
   assays: [],
   gelAnalyses: [],
   samples: [],
@@ -99,10 +99,7 @@ export const defaultState = {
     llm: {
       provider: DEFAULT_AGENT_LLM_PROVIDER,
       model: '',
-      reasoningEffort: '',
-      api: '',
-      apiEndpoint: DEFAULT_LLM_ENDPOINTS[DEFAULT_AGENT_LLM_PROVIDER],
-      apiKey: ''
+      reasoningEffort: ''
     },
     agent: {
       developerMode: false,
@@ -128,7 +125,8 @@ export const defaultState = {
     startup: {
       defaultViewId: VIEWS.HOME,
       rememberLastView: false
-    }
+    },
+    plugins: []
   },
   inventory: {
     'Room Temp': [],

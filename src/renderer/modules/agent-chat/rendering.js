@@ -22,32 +22,23 @@ function getLiveStreamText(message) {
   );
 }
 
-function renderLiveStreamOutputText(text, safeText) {
-  const rawText = String(text || '');
-  const tokens = rawText.match(/\s+|\S+/gu) || [];
-  let wordIndex = 0;
-  const html = tokens.map((token) => {
-    if (/^\s+$/u.test(token)) {
-      return safeText(token);
-    }
-    const delayMs = Math.min(wordIndex * 34, 960);
-    wordIndex += 1;
-    return `<span data-agent-stream-word style="--agent-stream-word-delay: ${delayMs}ms">${safeText(token)}</span>`;
-  }).join('');
-  const stepCount = Math.max(1, Math.min(36, wordIndex || Math.ceil(rawText.length / 6)));
-  const durationMs = Math.max(420, Math.min(1400, 320 + wordIndex * 34));
-  return `
-    <div
-      class="agent-chat-body agent-chat-body-plain agent-stream-output-text"
-      style="--agent-stream-output-duration: ${durationMs}ms; --agent-stream-output-steps: ${stepCount};"
-    >${html}</div>
-  `;
+function renderLiveActivityLine(message, safeText) {
+  const rows = asArray(message?.meta?.live_progress?.activity_rows);
+  const pending = rows.filter((row) => row?.status === 'pending').pop();
+  const text = trimText(pending?.text, 240);
+  if (!text) {
+    return '';
+  }
+  return `<div class="agent-stream-activity agent-progress-flow-text">${safeText(text)}</div>`;
 }
 
 function renderAssistantMessageBody(message, safeText, { hasLiveProgress = false } = {}) {
   const liveStreamText = hasLiveProgress ? getLiveStreamText(message) : '';
   if (liveStreamText) {
-    return renderLiveStreamOutputText(liveStreamText, safeText);
+    return `
+      <div class="agent-chat-body agent-chat-markdown agent-stream-live">${renderMarkdown(liveStreamText, safeText)}</div>
+      ${renderLiveActivityLine(message, safeText)}
+    `;
   }
   if (hasLiveProgress) {
     return `<div class="agent-chat-body agent-chat-body-plain agent-progress-flow-text">${safeText(message.text || 'Working on this...')}</div>`;
@@ -55,7 +46,7 @@ function renderAssistantMessageBody(message, safeText, { hasLiveProgress = false
   return `<div class="agent-chat-body agent-chat-markdown">${renderMarkdown(message.text || '', safeText)}</div>`;
 }
 
-export function renderHistory({ historyNode, messages, state, safeText }) {
+export function renderHistory({ historyNode, messages, state, safeText, notebookDraftAdapter }) {
   const safeMessages = asArray(messages);
   if (!safeMessages.length) {
     renderEmptyHistory({ historyNode, state, safeText });
@@ -74,8 +65,8 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
       : '';
     const assistantMeta = role === 'assistant'
       ? renderAssistantMeta(message.meta, message.id, {
-        state,
         safeText,
+        notebookDraftAdapter,
         canAnswerQuestion: !safeMessages.slice(index + 1).some((item) => item?.role === 'user')
       })
       : '';
@@ -95,8 +86,8 @@ export function renderHistory({ historyNode, messages, state, safeText }) {
             </div>
             <span>${safeText(timestamp)}</span>
           </header>
-          ${messageBody}
           ${assistantGeneratedTrace}
+          ${messageBody}
           ${role === 'user' ? renderUserAttachments(message.attachments, safeText) : ''}
           ${assistantMeta}
         </article>

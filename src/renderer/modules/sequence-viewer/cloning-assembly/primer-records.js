@@ -1,4 +1,4 @@
-import { oligoTm } from '../../tool-box/oligo.js';
+import { oligoTm } from '../calculations/oligo.js';
 import { asArray, computeGcContent, mean, normalizeSequence } from './sequence-utils.js';
 
 export function buildPrimerRecord({ name, role, sequence, tailSequence = '', bindingSequence = '', tmSequence = '', warnings = [] }) {

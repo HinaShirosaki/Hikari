@@ -1,3 +1,3 @@
-import { startRendererApp } from './app/start-renderer-app.js';
+import { startHikariCore } from './core/start-hikari-core.js';
 
-startRendererApp();
+startHikariCore();

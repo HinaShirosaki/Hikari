@@ -18,9 +18,9 @@ body.theme-night {
   .papers-paper-row,
   .biology-notebook-folder-item,
   .biology-notebook-page-row,
-  .project-rail-item,
   .settings-nav-item,
   .tool-tile .label,
+  .agent-session-folder-row,
   .agent-session-card,
   .protocol-list-row,
   .workflow-card,
@@ -40,9 +40,9 @@ body.theme-night {
   .papers-paper-row,
   .biology-notebook-folder-item,
   .biology-notebook-page-row,
-  .project-rail-item,
   .settings-nav-item,
   .tool-tile .label,
+  .agent-session-folder-row,
   .agent-session-card,
   .protocol-list-row,
   .workflow-card,
@@ -57,9 +57,9 @@ body.theme-night {
   .papers-paper-row,
   .biology-notebook-folder-item,
   .biology-notebook-page-row,
-  .project-rail-main-btn,
   .settings-nav-item,
   .tool-tile,
+  .agent-session-folder-row,
   .agent-session-card,
   .protocol-list-row,
   .workflow-card,
@@ -78,7 +78,7 @@ body.theme-night {
   .papers-folder-item.is-active,
   .papers-paper-row.is-active,
   .biology-notebook-page-row.is-active,
-  .project-rail-item.is-active,
+  .agent-session-folder-row.is-active,
   .settings-nav-item.is-active,
   .tool-tile-active .label,
   .agent-session-card.is-active,
@@ -101,9 +101,9 @@ body.theme-night {
   .papers-paper-row,
   .biology-notebook-folder-item,
   .biology-notebook-page-row,
-  .project-rail-main-btn,
   .settings-nav-item,
   .tool-tile,
+  .agent-session-folder-row,
   .agent-session-card,
   .protocol-list-row,
   .workflow-card,
@@ -121,9 +121,9 @@ body.theme-night {
   .papers-paper-title,
   .biology-notebook-folder-name,
   .biology-notebook-page-name,
-  .project-rail-title,
   .settings-nav-item span,
   .tool-tile .label,
+  .agent-session-folder-name,
   .agent-session-card strong,
   .protocol-name-text,
   .workflow-card h3,
@@ -131,8 +131,7 @@ body.theme-night {
   .sequence-viewer-library-item-name,
   .inventory-container-name,
   .assay-browser-item-title,
-  .text-list-btn,
-  .list-main-text
+  .text-list-btn
 ) {
   font-weight: 500 !important;
 }
@@ -141,7 +140,7 @@ body.theme-night {
   .papers-folder-item.is-active .papers-folder-name,
   .papers-paper-row.is-active .papers-paper-title,
   .biology-notebook-page-row.is-active .biology-notebook-page-name,
-  .project-rail-item.is-active .project-rail-title,
+  .agent-session-folder-row.is-active .agent-session-folder-name,
   .settings-nav-item.is-active span,
   .tool-tile-active .label,
   .agent-session-card.is-active strong,
@@ -151,8 +150,7 @@ body.theme-night {
   .sequence-viewer-library-item-active .sequence-viewer-library-item-name,
   .inventory-container-btn.active .inventory-container-name,
   .assay-browser-item.is-active .assay-browser-item-title,
-  .list-row-selected .text-list-btn,
-  .list-row-selected .list-main-text
+  .list-row-selected .text-list-btn
 ) {
   color: var(--theme-text-strong) !important;
   font-weight: 700 !important;
@@ -160,9 +158,9 @@ body.theme-night {
 
 
 .left-rail-template__rail :is(
-  .project-rail-main-btn,
   .tool-tile,
   .tool-tile .label,
+  .agent-session-folder-row,
   .agent-session-card,
   .settings-nav-item,
   .inventory-container-btn
@@ -176,9 +174,8 @@ body.theme-night {
   .papers-paper-row,
   .biology-notebook-folder-item,
   .biology-notebook-page-row,
-  .project-rail-item,
-  .project-rail-main-btn,
   .settings-nav-item,
+  .agent-session-folder-row,
   .agent-session-card,
   .protocol-list-row,
   .workflow-template-name-item,
@@ -222,7 +219,7 @@ body.theme-night {
   .biology-notebook-page-row,
   .papers-folder-item,
   .papers-paper-row,
-  .project-rail-item,
+  .agent-session-folder-row,
   .agent-session-card,
   .protocol-list-row
 ) {
@@ -234,6 +231,9 @@ body.theme-night {
   .papers-paper-list,
   .papers-folder-group,
   .papers-folder-children,
+  .agent-session-list,
+  .agent-session-folder,
+  .agent-session-folder-children,
   .biology-notebook-page-list,
   .biology-notebook-folder,
   .biology-notebook-folder-children,
@@ -245,6 +245,7 @@ body.theme-night {
 .left-rail-template__rail :is(
   .papers-folder-item,
   .papers-paper-row,
+  .agent-session-folder-row,
   .biology-notebook-folder-item,
   .biology-notebook-page-row
 ) {
@@ -254,6 +255,7 @@ body.theme-night {
 }
 
 .left-rail-template__rail .papers-folder-children,
+.left-rail-template__rail .agent-session-folder-children,
 .left-rail-template__rail .biology-notebook-folder-children,
 .left-rail-template__rail .biology-notebook-folder-children--pages {
   padding-top: 0 !important;
@@ -262,6 +264,7 @@ body.theme-night {
 }
 
 .left-rail-template__rail .papers-folder-children > .papers-paper-row,
+.left-rail-template__rail .agent-session-folder-children > .agent-session-card,
 .left-rail-template__rail .biology-notebook-folder-children > .biology-notebook-page-row {
   margin-left: -18px !important;
   width: calc(100% + 18px) !important;

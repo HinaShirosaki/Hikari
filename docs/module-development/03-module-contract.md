@@ -34,7 +34,7 @@ Modules get their options bag from a manifest in `src/renderer/module-manifests/
 | Option | Type | Source | Meaning |
 | --- | --- | --- | --- |
 | `state` | object | `loadState()` | the single mutable state object — mutate in place, then call `persist()` |
-| `persist` | `() => void` | renderer core | flushes state to localStorage and disk; rebuilds `state.objectGraph` |
+| `persist` | `() => void` | renderer core | records an undo checkpoint, normalizes storage paths, writes localStorage, and auto-saves to disk when configured |
 | `createId` | `() => string` | `utils.js` | timestamp+random ID generator for new entities |
 | `safeText` | `(value) => string` | `utils.js` | HTML-escape helper, use whenever you build innerHTML |
 | `cssEscape` | `(value) => string` | `utils.js` | escapes a value for use inside a CSS attribute selector |
@@ -42,12 +42,12 @@ Modules get their options bag from a manifest in `src/renderer/module-manifests/
 | `apiBridge` | object \| null | `window.hikariApi` | IPC bridge exposed by the preload script |
 | `getApiBridge` | `() => object \| null` | factory | use this if you may need the bridge after lazy initialization |
 | `rootDocument` | Document | `globalThis.document` | useful when supporting iframes or off-screen render in tests |
-| `selectionInsightsController` | object | `selection-insights.js` | optional: text selection insights service |
+| `selectionInsightsController` | object | `selection-insights/index.js` | optional: text selection insights service |
 | `trackGrowthEvent` | function | `app-state.js` | append a growth event to `state.growthMetrics` |
 | `onXxxChanged` | function | `rendererServices.<area>` | the **important** one: cross-module fan-out callbacks (see below) |
 | `onOpen<Other>` | function | renderer core | navigation/launch callbacks (e.g. `onOpenNotebookEntry`) |
 
-Look at [src/renderer/module-manifests/assay.js](../../src/renderer/module-manifests/assay.js) or [src/renderer/module-manifests/project-management.js](../../src/renderer/module-manifests/project-management.js) for the preferred wiring shape. If your module needs several other modules to already exist, put that dependency in the manifest `createOptions` callback; the runtime passes the shared `modules` object after each group is initialized.
+Look at [src/renderer/module-manifests/assay.js](../../src/renderer/module-manifests/assay.js) or [src/renderer/module-manifests/biology-notebook.js](../../src/renderer/module-manifests/biology-notebook.js) for the preferred wiring shape. Project creation and project dashboards are owned by the Biology Notebook's `project/` package; there is no separate project manifest. If your module needs several other modules to already exist, put that dependency in the manifest `createOptions` callback; the runtime passes the shared `modules` object after each group is initialized.
 
 A typical module signature:
 
@@ -135,7 +135,6 @@ Rules:
 2. **Call `persist()` after every user-visible change.** It writes localStorage and triggers `autoSaveDataFile` if a storage path is configured. Do not throttle it inside a module — the renderer core already swallows the auto-save promise.
 3. **Add new top-level keys to `defaultState`.** Otherwise users who upgrade have `undefined` until they touch your view. Defaults live in [src/renderer/modules/app-state/defaults.js](../../src/renderer/modules/app-state/defaults.js).
 4. **Keep transient UI state in module locals**, not on `state`. The `selectedRowId`, "is dialog open", "draft text", etc. should never leave the module. The persisted `state` is for data the user expects back next session.
-5. **Never write to `state.objectGraph`.** It is rebuilt on every `persist()` from the rest of the state by [src/renderer/modules/object-graph.js](../../src/renderer/modules/object-graph.js).
 
 If your module reads data that lives under another module's domain (e.g. `state.protocols` from inside the notebook), read it directly. Don't try to channel it through service calls — the state object **is** the source of truth.
 
@@ -166,7 +165,7 @@ The services are defined in [src/renderer/services/](../../src/renderer/services
 - `projectService.js` — `handleProjectsChanged`
 - `inventoryService.js` — `handleSamplesChanged`, `openSampleSearch`
 - `analysisService.js` — `handleAssaysChanged`, `handleGelAnalysesChanged`, `openAssayForNotebook`, `openGelForNotebook`
-- `sequenceService.js` — `openFromToolBox`
+- `modules/sequence-viewer/service.js` — `openFromToolBox` (destination-owned handoff service)
 
 Add a new service file for a new feature area. The shape is mechanical — see [src/renderer/services/protocolService.js](../../src/renderer/services/protocolService.js):
 
@@ -196,7 +195,7 @@ protocol.renderList?.();
 `registry.get` always returns an object (the empty frozen sentinel `{}` if missing), so optional chaining is enough. The keys come from `manifest.key`. Current keys:
 
 ```
-biologyNotebook, protocol, projectManagement, agentChat, workflowManagement,
+biologyNotebook, protocol, agentChat, workflowManagement,
 papers, labCommonInventory, personalInventory, sampleRegistry, assay, gel,
 sequenceViewer, toolBox, settings, homeDashboard
 ```
@@ -212,7 +211,7 @@ const bridge = getApiBridge();
 const result = await bridge?.runScript?.('extract-feature', payload);
 ```
 
-The full surface is documented in [docs/main-helpers/](../main-helpers/). Don't import directly from `window` in modules — accept it through the options bag so the module stays testable.
+The full surface is documented in [docs/main-platform/](../main-platform/). Don't import directly from `window` in modules — accept it through the options bag so the module stays testable.
 
 ## Lifecycle and rendering
 
@@ -239,7 +238,7 @@ If your feature introduces a brand new top-level state slice (say `state.experim
 
 1. Add the default to `defaultState` in `app-state/defaults.js`.
 2. Extend `normalizeState()` to coerce missing/legacy values.
-3. Add the slice to the object graph if it has cross-references — see [src/renderer/modules/object-graph.js](../../src/renderer/modules/object-graph.js).
-4. If the slice should round-trip to the on-disk `.ena` storage bundle, hook the writer in [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and the matching main-process bundler in [src/main/helpers/main/storage-bundle/](../../src/main/helpers/main/storage-bundle/).
+3. Represent cross-feature links with stable record IDs and update each owning reader/search mapper that resolves those IDs; the renderer does not persist a second relationship graph.
+4. If the slice should round-trip to the on-disk `.ena` storage bundle, hook the writer in [src/renderer/app/storage-import.js](../../src/renderer/app/storage-import.js) and the matching main-process bundler in [src/main/storage/](../../src/main/storage/).
 
 Most modules do not need this. Reuse existing slices when you can.

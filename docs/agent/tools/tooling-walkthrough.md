@@ -1,11 +1,10 @@
 # Tooling Walkthrough
 
-The `tools/` folder mixes two concerns:
-
-- concrete tool implementations such as literature search or notebook generation
-- a generic schema-driven tool-call wrapper
-
-It helps to read the folder in that order.
+The `tools/` folder owns the generic schema-driven tool runtime and the
+agent-facing adapters for app capabilities. Domain implementations stay with
+their owning main-process modules. For example, paper search, download, and
+analysis live under `src/main/papers/`; the agent tool registry injects those
+runtimes instead of duplicating them under `src/main/agent`.
 
 ## Layer 1: the tool catalog
 
@@ -34,15 +33,13 @@ Two JSON files define the model-facing tool surface:
 
 It does not know how to run any concrete tool by itself. It only runs what has been registered.
 
-`agent-tool-call.js` now exists as a thin compatibility wrapper that re-exports both modules.
-
 ## Current wiring (agent-service assembly)
 
 This is the most important practical detail in the whole tools layer:
 
-- the agent-service assembly (`create-main-agent-services.js`) creates one shared `genericAgentToolRuntime`
-- it then calls `registerAgentToolExecutors(...)` (`tools/register-agent-tool-executors.js`), which registers the full tool suite on that shared instance: `inventory-lookup`, `record-lookup`, `protocol-matching`, `notebook-generation`, `notebook-draft`, `web-search`, `sub-agent`, `memory`, `literature-search`, `paper-download`, `paper-search`, `paper-analysis`, `purchase-recommendation`, `protocol-generation`, `python-sandbox`, and `command-line`
-- the `inventory_lookup` and `record_lookup` *intents* still call `agent-lookup-runtime` directly from the controller, but the same lookups are also registered as tools for the science/deep-research loops to call
+- the agent-service assembly (`src/main/core/services/create-agent-services.js`) creates one shared `genericAgentToolRuntime`
+- it then calls `registerAgentToolExecutors(...)` (`tools/register-agent-tool-executors.js`), which registers the full catalog on that shared instance: `inventory-lookup`, `notebook-lookup`, `protocol-matching`, `notebook-generation`, `notebook-draft`, `python-sandbox`, `command-line`, `web-search`, `sub-agent`, `memory`, `container`, `assay-table`, `plotly-graph`, `literature-search`, `purchase-recommendation`, `paper-download`, `paper-analysis`, `paper-search`, and `protocol-generation`
+- the `inventory-lookup` and `notebook-lookup` executors call their individual tool runtimes directly; no aggregate lookup coordinator sits between MCP and the owning implementation
 
 So the shared executor now exposes the folder's full tool surface, not just a single tool.
 
@@ -51,27 +48,34 @@ So the shared executor now exposes the folder's full tool surface, not just a si
 | Tool name | File | What it does |
 | --- | --- | --- |
 | `inventory-lookup` | `tools/agent-inventory-lookup.js` | query local inventory with SQLite-first, snapshot-fallback behavior |
-| `record-lookup` | `tools/agent-record-lookup.js` | query project/protocol/notebook/workflow/gel/paper records; Assay data stays in Assay rail context and dedicated assay tools |
+| `notebook-lookup` | `tools/agent-notebook-lookup.js` | search notebook pages or retrieve one structured page by stable id, with storage-access coverage |
 | `protocol-matching` | `tools/agent-protocol-matching.js` | rank local protocols and break close ties with an LLM when needed |
 | `notebook-generation` | `tools/agent-notebook-generation.js` | resolve placeholders and build a notebook payload from a selected protocol |
 | `notebook-draft` | `tools/agent-notebook-draft.js` | infer the next likely experiment and prepare a planned notebook draft |
-| `literature-search` | `tools/agent-literature-search.js` | search PubMed, Europe PMC, Crossref, UniProt, or web RSS results |
-| `paper-download` | `tools/agent-paper-download.js` | locate PDF URLs, download papers, track progress, and fall back to browser-assisted download |
-| `paper-analysis` | `tools/agent-paper-analysis.js` | summarize a paper and optionally extract/generate a protocol |
-| `protocol-generation` | `tools/agent-protocol-generation.js` | normalize supplied protocol JSON into an import-ready protocol payload and optionally save it |
 | `python-sandbox` | `tools/agent-python-sandbox.js` | run agent-authored Python in a sandbox and optionally supervise it through a sub-agent |
-| `sub-agent` | `tools/agent-sub-agent.js` | create, message, inspect, list, and delete Codex CLI-backed helper sub-agent sessions |
+| `command-line` | `tools/agent-command-line.js` | run a bounded local shell command in the active project workspace |
+| `web-search` | `tools/agent-web-search.js` | use the configured provider/Codex web-search transport |
+| `sub-agent` | `tools/agent-sub-agent.js` | create, message, inspect, list, and delete Codex CLI-backed helper sessions |
 | `memory` | `context/agent-memory.js` | sparse long-term memory with `remember`, `recall`, `forget`, and `list` actions |
+| `container` | `tools/agent-container.js` | manage temporary exact string/number containers |
+| `assay-table` | `tools/agent-assay-table.js` | create and transform scratch assay tables |
+| `plotly-graph` | `tools/agent-plotly-graph.js` | create, update, read, and inspect Plotly figure specifications |
+| `literature-search` | `src/main/papers/search/agent-literature-search.js` | search PubMed, Europe PMC, Crossref, UniProt, or web RSS results |
+| `purchase-recommendation` | `tools/agent-purchase-recommendation.js` | discover products, enforce explicit requirements, and rank valid candidates |
+| `paper-download` | `src/main/papers/download/agent-paper-download.js` | locate PDF URLs, download papers, track progress, and fall back to browser-assisted download |
+| `paper-analysis` | `src/main/papers/analysis/agent-paper-analysis.js` | summarize a paper and optionally extract/generate a protocol |
+| `paper-search` | `src/main/papers/retrieve/agent-paper-wiki-search.js` | full-text search across locally transformed paper Markdown |
+| `protocol-generation` | `tools/agent-protocol-generation.js` | normalize supplied protocol JSON into an import-ready protocol payload and optionally save it |
 
 ## Tool group walkthrough
 
 ## Lookup tools
 
-`agent-inventory-lookup.js` and `agent-record-lookup.js` are deterministic and data-local. They are the best examples of tools that are production-useful even without a fully wired generic executor because the controller can call them directly.
+`agent-inventory-lookup.js` and `agent-notebook-lookup.js` are deterministic and data-local. They share storage primitives but own their lookup behavior independently.
 
 Both tools:
 
-- derive queries from parser entities
+- normalize queries from tool arguments and request context
 - search SQLite indexes
 - fall back to hydrated snapshot JSON
 - optionally backfill SQLite to reduce future fallback work
@@ -90,7 +94,12 @@ These five files form one sub-system:
 
 ## Literature and paper tools
 
-`agent-literature-search.js` is a pure retrieval tool. `agent-paper-download.js` handles acquisition and storage. `agent-paper-analysis.js` sits above them conceptually: it consumes paper content and turns it into lab-friendly summaries or protocol seeds.
+`src/main/papers/search/agent-literature-search.js` owns retrieval.
+`src/main/papers/download/agent-paper-download.js` owns acquisition and storage.
+`src/main/papers/analysis/agent-paper-analysis.js` consumes paper content and
+turns it into lab-friendly summaries or protocol seeds. These runtimes are
+injected into `register-agent-tool-executors.js`; their domain code does not
+belong in the general Agent folder.
 
 The paper-download runtime is action-based:
 

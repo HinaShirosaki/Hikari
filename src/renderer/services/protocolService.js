@@ -113,8 +113,6 @@ export function createProtocolService(registry, deps = {}) {
   }
 
   function handleProtocolsChanged() {
-    registry.get('synthesisNotebook').renderProtocolOptions?.();
-    registry.get('synthesisNotebook').renderEntries?.();
     registry.get('biologyNotebook').renderProtocolOptions?.();
     registry.get('biologyNotebook').renderEntries?.();
     registry.get('workflowManagement').render?.();

@@ -1,8 +1,11 @@
 import { asArray, trimText } from './shared.js';
+import {
+  normalizeAgentChatState,
+  normalizePaperAgentChatSessions,
+  normalizeScopeKey
+} from '../app-state/agent-chat-normalizer.js';
 
-const DEFAULT_SCOPE_KEY = 'papers:library';
-const DEFAULT_NOTEBOOK_SCOPE_KEY = 'notebook:workspace';
-const DEFAULT_ASSAY_SCOPE_KEY = 'assay:workspace';
+export { normalizePaperAgentChatSessions };
 
 function buildPaperAgentSessionPrompt(context = {}) {
   const paperId = trimText(context.paperId, 220);
@@ -70,7 +73,7 @@ function buildAssayAgentSessionPrompt(context = {}) {
     'You are in an Assay right-rail chat session. Treat the active assay plate, result table, and analysis output as the default subject when the user says "this assay", "this plate", "these results", or "this graph".',
     'Use the hidden assay context supplied with each user question as the current assay state. It may include unsaved plate mappings, pasted result values, analysis settings, latest summaries, and an `Assay plate data (TSV...)` block.',
     'To retrieve active assay data, parse the TSV rows in that hidden context after the header `well\trow\tcolumn\tsample\tconcentration\tresult`, then create an `assay_table` from those rows for calculations or graphing.',
-    'Do not use record_lookup for active assay plate/result data; it is not the source for the current assay.',
+    'Do not use local lookup tools for active assay plate/result data; they are not the source for the current assay.',
     'For derived tables and custom graphs, prefer the Hikari assay table and Plotly graph MCP tools when available.'
   ];
   if (assayName) {
@@ -88,86 +91,11 @@ function buildAssayAgentSessionPrompt(context = {}) {
   return lines.join('\n');
 }
 
-function normalizeAgentChatState(source = {}, defaults = {}) {
-  const value = source && typeof source === 'object' ? source : {};
-  const hasProjectId = Object.prototype.hasOwnProperty.call(value, 'projectId');
-  return {
-    projectId: trimText(hasProjectId ? value.projectId : defaults.projectId, 120),
-    currentSessionId: trimText(value.currentSessionId, 120),
-    sessions: asArray(value.sessions),
-    messages: asArray(value.messages)
-  };
-}
-
-function normalizePaperScopeKey(value) {
-  const raw = trimText(value, 220);
-  return raw ? `paper:${raw}` : DEFAULT_SCOPE_KEY;
-}
-
-function normalizeNotebookScopeKey(context = {}) {
-  const entryId = trimText(context.notebookEntryId, 220);
-  if (entryId) {
-    return `notebook:${entryId}`;
-  }
-  const projectId = trimText(context.projectId, 120);
-  const protocolId = trimText(context.protocolId, 120);
-  if (projectId || protocolId) {
-    return `notebook:draft:${projectId || 'project'}:${protocolId || 'protocol'}`;
-  }
-  return DEFAULT_NOTEBOOK_SCOPE_KEY;
-}
-
-function normalizeAssayScopeKey(context = {}) {
-  const assayId = trimText(context.assayId, 220);
-  if (assayId) {
-    return `assay:${assayId}`;
-  }
-  const projectId = trimText(context.projectId, 120);
-  if (projectId) {
-    return `assay:draft:${projectId}`;
-  }
-  return DEFAULT_ASSAY_SCOPE_KEY;
-}
-
-function normalizeScopeKey(context = {}) {
-  const scopeType = trimText(context.scopeType, 80);
-  if (scopeType === 'notebook') {
-    return normalizeNotebookScopeKey(context);
-  }
-  if (scopeType === 'assay') {
-    return normalizeAssayScopeKey(context);
-  }
-  return normalizePaperScopeKey(context.paperId);
-}
-
-function normalizeStoredScopeKey(value) {
-  const raw = trimText(value, 260);
-  if (!raw || raw === DEFAULT_SCOPE_KEY) {
-    return DEFAULT_SCOPE_KEY;
-  }
-  if (raw === DEFAULT_NOTEBOOK_SCOPE_KEY || raw === DEFAULT_ASSAY_SCOPE_KEY || raw.startsWith('paper:') || raw.startsWith('notebook:') || raw.startsWith('assay:')) {
-    return raw;
-  }
-  return normalizePaperScopeKey(raw);
-}
-
 function ensurePaperAgentChatSessions(rootState) {
   if (!rootState.paperAgentChatSessions || typeof rootState.paperAgentChatSessions !== 'object' || Array.isArray(rootState.paperAgentChatSessions)) {
     rootState.paperAgentChatSessions = {};
   }
   return rootState.paperAgentChatSessions;
-}
-
-export function normalizePaperAgentChatSessions(source = {}) {
-  if (!source || typeof source !== 'object' || Array.isArray(source)) {
-    return {};
-  }
-  return Object.fromEntries(
-    Object.entries(source).map(([scopeKey, chatState]) => [
-      normalizeStoredScopeKey(scopeKey),
-      normalizeAgentChatState(chatState)
-    ])
-  );
 }
 
 function normalizeHiddenContext(context = {}) {

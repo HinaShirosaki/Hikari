@@ -1,15 +1,16 @@
-import { createPapersPdfViewer } from './pdf-viewer.js';
+import { createPapersPdfViewer } from './pdf-viewer/index.js';
 import { printPdfBytes } from '../print/index.js';
 import { createPapersActions } from './actions.js';
 import { createPapersCommentController } from './comments.js';
 import { createPapersLibraryController } from './library.js';
 import { ensurePaperHighlights } from './model.js';
 import { normalizePaperSummary } from './normalizers.js';
+import { bindFileDropTarget } from '../../lib/file-drop.js';
 import {
   boxesToPdfQuadPoints,
   normalizeHighlightBoxes,
   normalizePageDimension
-} from './pdf-viewer-geometry.js';
+} from './pdf-viewer/pdf-viewer-geometry.js';
 import {
   getPaperDisplayTitle,
   hasPaperPdfMetadata,
@@ -245,11 +246,7 @@ export function initPapersManagement({
   const elements = getPapersElements(documentRef);
   const commentState = {
     currentPageNumber: 1,
-    mode: 'idle',
-    selectedCommentId: '',
-    draftPageNumber: 0,
-    draftAnchorX: Number.NaN,
-    draftAnchorY: Number.NaN
+    selectedCommentId: ''
   };
   const libraryState = {
     selectedFolderKey: '',
@@ -564,7 +561,6 @@ export function initPapersManagement({
     onMetadataResolved: (...args) => context.applyResolvedPdfMetadata(...args),
     onBookmarksResolved: (...args) => context.applyResolvedPdfBookmarks(...args),
     onPageChange: (...args) => context.comments?.onViewerPageChange(...args),
-    onPlacement: (...args) => context.comments?.onViewerPlacement(...args),
     onPinSelect: (...args) => context.comments?.onViewerPinSelect(...args),
     onHighlightSelection: (...args) => context.createPaperHighlight?.(...args),
     onSelectionComment: (...args) => context.createPaperTextComment?.(...args),
@@ -781,6 +777,21 @@ export function initPapersManagement({
       printPdfBytes(bytes, { title: getPaperDisplayTitle(activePaper) || 'Paper' });
     } catch (error) {
       windowRef?.alert?.(String(error?.message || error || 'Failed to open the PDF for printing.'));
+    }
+  });
+
+  bindFileDropTarget({
+    target: elements.paperViewerShell,
+    accept: elements.paperPdfInput?.getAttribute?.('accept') || 'application/pdf,.pdf',
+    multiple: false,
+    onFiles: async (files) => {
+      await actions.uploadAndViewPaperFile(files[0]);
+    },
+    onRejected: () => {
+      windowRef?.alert?.('Drop one PDF file to import and view it.');
+    },
+    onError: (error) => {
+      windowRef?.alert?.(String(error?.message || error || 'Failed to open dropped PDF.'));
     }
   });
 

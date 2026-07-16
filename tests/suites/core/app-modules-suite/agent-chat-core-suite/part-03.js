@@ -8,14 +8,14 @@ test('agent-chat sends settings API key to main process and stores assistant res
     'agent-chat-history',
     'agent-message-input',
     'agent-send-btn',
-    'agent-clear-btn',
+    'agent-new-chat-btn',
     'agent-status'
   ]);
   const projectSelect = document.getElementById('agent-project-select');
   const history = document.getElementById('agent-chat-history');
   const messageInput = document.getElementById('agent-message-input');
   const sendBtn = document.getElementById('agent-send-btn');
-  const clearBtn = document.getElementById('agent-clear-btn');
+  const newChatBtn = document.getElementById('agent-new-chat-btn');
   const status = document.getElementById('agent-status');
 
   let persistCalls = 0;
@@ -273,10 +273,10 @@ test('agent-chat sends settings API key to main process and stores assistant res
           },
           developer_trace: [
             {
-              stage: 'intent_parser',
-              provider: 'openai',
+              stage: 'codex_agent_started',
+              provider: 'codex',
               model: 'gpt-5',
-              summary: 'Intent parsed.',
+              summary: 'Codex agent request started.',
               timestamp: '2026-03-11T12:00:00.000Z'
             }
           ]
@@ -327,6 +327,10 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.stateSnapshot.protocols[0].name, 'Cell Prep');
   assert.equal(payloadSeen.stateSnapshot.protocols[0].steps.length, 2);
   assert.equal(payloadSeen.stateSnapshot.notebookEntries.length, 0);
+  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.version, 1);
+  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.complete, true);
+  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.entries.length, 1);
+  assert.equal(payloadSeen.stateSnapshot.notebook_lookup_bridge.entries[0].id, 'n1');
   assert.equal(payloadSeen.stateSnapshot.context_counts.protocols, 1);
   assert.equal(payloadSeen.stateSnapshot.context_counts.notebookEntries, 1);
   assert.equal(payloadSeen.stateSnapshot.workflows.length, 1);
@@ -377,13 +381,13 @@ test('agent-chat sends settings API key to main process and stores assistant res
   agent.render();
   assert.equal(/Developer Trace/.test(history.innerHTML), false);
   assert.equal(sendBtn.disabled, false);
-  assert.equal(clearBtn.disabled, false);
+  assert.equal(newChatBtn.disabled, false);
   assert.equal(projectSelect.disabled, false);
   assert.equal(messageInput.disabled, false);
   assert.equal(status.textContent, 'Ready.');
   assert.ok(persistCalls >= 3);
 
-  trigger(clearBtn, 'click');
+  trigger(newChatBtn, 'click');
   assert.equal(state.agentChat.messages.length, 0);
   assert.equal(status.textContent, 'New chat ready.');
 });
@@ -414,7 +418,10 @@ test('paper-scoped agent chat snapshot includes the active transformed markdown 
     gelAnalyses: [],
     inventory: {},
     labInventory: { chemicals: [] },
-    settings: { storagePath: '/tmp/hikari-storage' },
+    settings: {
+      storagePath: '/tmp/hikari-storage',
+      preferredJournal: 'Nature Biotechnology; Cell'
+    },
     papers: [{
       id: 'paper-1',
       title: 'Atlas Uploaded Paper',
@@ -448,6 +455,8 @@ test('paper-scoped agent chat snapshot includes the active transformed markdown 
   assert.equal(snapshot.paper_agent.transformed_markdown_relative_path, 'KnowledgeBase/papers.md/atlas-uploaded-paper/paper.md');
   assert.equal(snapshot.paper_agent.has_transformed_markdown, true);
   assert.match(snapshot.paper_agent.session_prompt, /read the transformed markdown/i);
+  assert.deepEqual(snapshot.settings.preferredJournals, ['Nature Biotechnology', 'Cell']);
+  assert.equal(snapshot.settings.preferredJournal, 'Nature Biotechnology; Cell');
 });
 
 test('notebook-scoped agent chat stores page sessions and exposes hidden page context', () => {
@@ -544,7 +553,7 @@ test('assay-scoped agent chat stores assay sessions and exposes hidden assay con
   assert.equal(Object.keys(rootState.paperAgentChatSessions).join(','), 'assay:assay-1');
   assert.match(scopedState.agentChatContext.sessionPrompt, /Assay right-rail/);
   assert.match(scopedState.agentChatContext.sessionPrompt, /parse the TSV rows in that hidden context after the header/);
-  assert.match(scopedState.agentChatContext.sessionPrompt, /Do not use record_lookup for active assay plate\/result data/);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /Do not use local lookup tools for active assay plate\/result data/);
   assert.match(scopedState.agentChatContext.sessionPrompt, /Hikari assay table and Plotly graph MCP tools/);
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].kind, 'assay-page');
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].assayId, 'assay-1');
@@ -587,11 +596,13 @@ test('paper rail selected text is carried as hidden one-shot agent context', () 
     }
   };
   const input = { value: 'What does this imply for follow-up experiments?' };
+  const hiddenContextUpdates = [];
   const payloadBuilder = payloadModule.createAgentPayloadBuilder({
     state,
     input,
     getComposerAttachments: () => [],
-    ensureAgentState: () => {}
+    ensureAgentState: () => {},
+    onHiddenDraftContextsChanged: (contexts) => hiddenContextUpdates.push(contexts)
   });
 
   const didPrime = payloadBuilder.primeHiddenContext({
@@ -612,9 +623,66 @@ test('paper rail selected text is carried as hidden one-shot agent context', () 
   assert.equal(agentFlags.hiddenContexts[0].text, 'A hidden selected sentence from page 2.');
   assert.equal(agentFlags.hiddenContexts[0].pageNumber, 2);
   assert.match(agentFlags.paperSessionPrompt, /active paper markdown/);
+  assert.equal(payloadBuilder.getPrimedHiddenContexts().length, 1);
+  assert.equal(hiddenContextUpdates.length, 1);
 
   payloadBuilder.consumeHiddenContexts();
   assert.equal(payloadBuilder.getDraftRequest().hiddenContexts.length, 0);
+  assert.equal(payloadBuilder.getPrimedHiddenContexts().length, 0);
+  assert.equal(hiddenContextUpdates.length, 2);
+});
+
+test('paper rail shows and removes the selected-text context indicator', () => {
+  const document = createMockDocument([
+    'agent-rail-chat-history',
+    'agent-rail-message-input',
+    'agent-rail-send-btn',
+    'agent-rail-hidden-context-list'
+  ]);
+  const hiddenContextList = document.getElementById('agent-rail-hidden-context-list');
+  hiddenContextList.hidden = true;
+  const agentModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat', 'index.js'), {
+    document,
+    window: {}
+  });
+  const agent = agentModule.initAgentChat({
+    idPrefix: 'agent-rail',
+    state: {
+      projects: [],
+      settings: {},
+      agentChat: { projectId: '', messages: [], sessions: [] },
+      agentChatContext: { scopeType: 'paper' }
+    },
+    persist: () => {},
+    createId: () => 'agent-msg-1',
+    safeText: shared.safeText
+  });
+
+  agent.render();
+  assert.equal(hiddenContextList.hidden, true);
+
+  const didPrime = agent.primeHiddenContext({
+    kind: 'paper-selection',
+    label: 'Selected paper text',
+    text: 'Selected sentence from the paper.'
+  });
+
+  assert.equal(didPrime, true);
+  assert.equal(hiddenContextList.hidden, false);
+  assert.match(hiddenContextList.innerHTML, /agent-hidden-context-icon/);
+  assert.match(hiddenContextList.innerHTML, />Text</);
+
+  trigger(hiddenContextList, 'click', {
+    target: {
+      dataset: { agentRemoveHiddenContext: '' },
+      closest(selector) {
+        return selector === '[data-agent-remove-hidden-context]' ? this : null;
+      }
+    }
+  });
+
+  assert.equal(hiddenContextList.hidden, true);
+  assert.equal(hiddenContextList.innerHTML, '');
 });
 
 test('notebook rail automatically carries active page content as hidden agent context', () => {

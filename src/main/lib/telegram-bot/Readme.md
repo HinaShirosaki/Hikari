@@ -1,6 +1,6 @@
 # Telegram Bot
 
-This folder holds the Telegram bot's pure, stateless modules. `../telegramBot.js`
+This folder owns the Telegram bot runtime and its pure, stateless modules. `index.js`
 is the runtime: it owns the Telegraf instance and per-chat session state (drafts,
 protocol runs, reminders, history) and wires these modules into command and
 message handlers.
@@ -25,9 +25,9 @@ message handlers.
 Maintenance notes:
 
 - Put static maps and label registries in `config.js` instead of growing
-  `telegramBot.js`.
+  `index.js`.
 - Keep these modules pure (no Telegraf/session state); stateful wiring belongs in
-  `telegramBot.js`.
+  `index.js`.
 - Keys stay canonical and lower-case so the parser and command router stay aligned.
 - When adding a new Telegram intent or scope, update config first, then the
-  relevant pure module, then wire runtime behavior in `telegramBot.js`.
+  relevant pure module, then wire runtime behavior in `index.js`.

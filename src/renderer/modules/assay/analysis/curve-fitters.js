@@ -1,5 +1,4 @@
 import {
-  clamp,
   formatNumber,
   linearRegression,
   optimizeModelParameters,

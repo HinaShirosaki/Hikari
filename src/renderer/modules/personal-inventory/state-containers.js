@@ -1,5 +1,5 @@
 import { getWellName } from './constants.js';
-import { getSampleInventoryLocationNames } from '../sample-inventory-settings.js';
+import { getSampleInventoryLocationNames } from '../../lib/inventory-settings.js';
 
 export function createContainerStateHelpers({ state, uiState }) {
   function getWellLabel(container, index) {
@@ -15,6 +15,52 @@ export function createContainerStateHelpers({ state, uiState }) {
 
   function getContainer(section, containerId) {
     return (state.inventory?.[section] || []).find((item) => item.id === containerId);
+  }
+
+  function getContainerChildren(section, parentContainerId) {
+    const parentId = String(parentContainerId || '');
+    if (!parentId) {
+      return [];
+    }
+    return (state.inventory?.[section] || []).filter((item) => (
+      item?.id
+      && String(item.id) !== parentId
+      && String(item.parentContainerId || '') === parentId
+    ));
+  }
+
+  function getRootContainers(section) {
+    const containers = state.inventory?.[section] || [];
+    const containerIds = new Set(containers.map((item) => String(item?.id || '')).filter(Boolean));
+    return containers.filter((item) => {
+      const id = String(item?.id || '');
+      const parentId = String(item?.parentContainerId || '');
+      return !parentId || parentId === id || !containerIds.has(parentId);
+    });
+  }
+
+  function getContainerDescendantIds(section, containerId) {
+    const containers = state.inventory?.[section] || [];
+    const rootId = String(containerId || '');
+    if (!rootId) {
+      return [];
+    }
+    const descendantIds = [];
+    const visitedIds = new Set([rootId]);
+    const queue = [rootId];
+    while (queue.length) {
+      const currentId = queue.shift();
+      containers.forEach((item) => {
+        const id = String(item?.id || '');
+        if (!id || visitedIds.has(id) || String(item?.parentContainerId || '') !== currentId) {
+          return;
+        }
+        visitedIds.add(id);
+        descendantIds.push(id);
+        queue.push(id);
+      });
+    }
+    return descendantIds;
   }
 
   function getLinkedSamples(section, containerId, wellIndex = null) {
@@ -73,6 +119,9 @@ export function createContainerStateHelpers({ state, uiState }) {
   return {
     getWellLabel,
     getContainer,
+    getContainerChildren,
+    getRootContainers,
+    getContainerDescendantIds,
     getLinkedSamples,
     getContainerSampleCount,
     getSectionContainerCount,

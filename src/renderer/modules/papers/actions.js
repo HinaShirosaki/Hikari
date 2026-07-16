@@ -1,6 +1,7 @@
 import {
   buildFolderKey,
   formatLinkedTarget,
+  getLibraryFolders,
   updatePaperAvailability
 } from './model.js';
 import {
@@ -38,6 +39,19 @@ export function createPapersActions(context) {
 
   function getPaperById(paperId) {
     return (state.papers || []).find((paper) => paper.id === paperId) || null;
+  }
+
+  function getPathFileName(value = '') {
+    const parts = String(value || '').split(/[\\/]+/).filter(Boolean);
+    return parts[parts.length - 1] || '';
+  }
+
+  function getPaperFolderByKey(folderKey = '') {
+    const normalizedKey = String(folderKey || '').trim();
+    if (!normalizedKey) {
+      return null;
+    }
+    return getLibraryFolders(state).find((folder) => folder.key === normalizedKey) || null;
   }
 
   async function startPaperAutoIngest(paperId) {
@@ -217,6 +231,82 @@ export function createPapersActions(context) {
     elements.paperForm?.reset?.();
     context.render?.();
     return uploaded;
+  }
+
+  async function uploadAndViewPaperFile(file) {
+    const uploaded = await uploadPaperFiles(file ? [file] : []);
+    const paper = uploaded[0] || null;
+    if (paper?.id) {
+      await viewPaperPdf(paper.id);
+    }
+    return paper;
+  }
+
+  async function movePaperToFolder(paperId, folderKey) {
+    const paper = getPaperById(paperId);
+    const targetFolder = getPaperFolderByKey(folderKey);
+    if (!paper || !targetFolder) {
+      return { ok: false, error: 'Paper or target folder was not found.' };
+    }
+
+    const targetFolderKey = buildFolderKey(targetFolder.type, targetFolder.id);
+    if (buildFolderKey(paper.linkedType, paper.linkedId) === targetFolderKey) {
+      return { ok: true, skipped: true, paper };
+    }
+
+    const rootPath = String(state.settings?.storagePath || '').trim();
+    if (!rootPath) {
+      windowRef?.alert?.('Set Storage Folder Path in Settings before moving papers.');
+      return { ok: false, error: 'Missing storage path.' };
+    }
+    if (typeof windowRef?.hikariApi?.moveStoredFile !== 'function') {
+      windowRef?.alert?.('Stored file move API is unavailable.');
+      return { ok: false, error: 'Stored file move API is unavailable.' };
+    }
+
+    const sourcePath = resolveStoredPaperPath(paper, rootPath);
+    if (!sourcePath) {
+      windowRef?.alert?.('This paper does not have a stored PDF file to move.');
+      return { ok: false, error: 'Missing stored PDF path.' };
+    }
+
+    try {
+      const result = await windowRef.hikariApi.moveStoredFile({
+        storagePath: rootPath,
+        sourcePath,
+        sourceRelativePath: paper.storedRelativePath || '',
+        targetFolder: buildPaperStorageFolder({
+          rootPath,
+          linkedType: targetFolder.type,
+          linkedName: targetFolder.name
+        }),
+        fileName: paper.fileName || getPathFileName(sourcePath)
+      });
+      if (!result?.ok) {
+        throw new Error(result?.error || 'Failed to move stored PDF.');
+      }
+
+      const now = new Date().toISOString();
+      paper.linkedType = targetFolder.type;
+      paper.linkedId = targetFolder.id;
+      paper.linkedName = targetFolder.name;
+      paper.fileName = result.fileName || paper.fileName || getPathFileName(sourcePath);
+      paper.storedFilePath = result.filePath || '';
+      paper.storedRelativePath = result.relativePath || paper.storedRelativePath || '';
+      paper.updatedAt = now;
+      updatePaperAvailability(paper);
+
+      libraryState.selectedFolderKey = targetFolderKey;
+      context.library?.ensureFolderExpanded?.(targetFolderKey);
+      persist();
+      context.render?.();
+      context.onActivePaperChanged?.(context.getActivePaper?.() || null);
+      return { ok: true, paper };
+    } catch (error) {
+      const message = String(error?.message || error || 'Failed to move stored PDF.');
+      windowRef?.alert?.(message);
+      return { ok: false, error: message };
+    }
   }
 
   async function onPaperSubmit(event) {
@@ -467,7 +557,6 @@ export function createPapersActions(context) {
         return;
       }
       context.comments?.syncViewerComments();
-      context.comments?.setCommentStatus('Viewing page 1. Select a comment or place a new pin.');
       context.renderCommentSidebar?.();
     } catch (error) {
       windowRef?.alert?.(String(error?.message || error || 'Failed to load the PDF viewer.'));
@@ -491,6 +580,8 @@ export function createPapersActions(context) {
     startPaperAutoIngest,
     onPaperSubmit,
     uploadPaperFiles,
+    uploadAndViewPaperFile,
+    movePaperToFolder,
     deleteJournalClub,
     deletePaper,
     summarizePaper,

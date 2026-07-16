@@ -3,7 +3,7 @@
 /**
  * Line-range parsing + Markdown line extraction for the Codex paper-context
  * workflow. The Codex sub-agent returns 1-based line ranges into paper.md;
- * these pure helpers normalize those (parse, clamp, merge, cap), pull the
+ * these pure helpers normalize those (parse, validate, merge, cap), pull the
  * verbatim lines back out, and infer a section label from the nearest heading.
  *
  * Split out of codex-paper-context-workflow.js so this parity-sensitive
@@ -161,18 +161,33 @@ function inferMarkdownSectionLabel(lines = [], startLine = 1, fallback = '') {
 
 function readLineRangesFromText(text = '', ranges = []) {
   const lines = String(text || '').split(/\r?\n/);
+  const rejectedRanges = [];
   const parts = normalizeLineRanges(ranges).map((range) => {
-    const start = Math.max(1, Math.min(range.start_line, lines.length || 1));
-    const end = Math.max(start, Math.min(range.end_line, lines.length || start));
+    if (range.start_line > lines.length) {
+      rejectedRanges.push({
+        ...range,
+        reason: 'start_line_out_of_range'
+      });
+      return null;
+    }
+    const start = range.start_line;
+    const end = Math.max(start, Math.min(range.end_line, lines.length));
+    const sourceLines = lines.slice(start - 1, end).map((content, index) => ({
+      line_number: start + index,
+      content
+    }));
     return {
       start_line: start,
       end_line: end,
-      text: lines.slice(start - 1, end).join('\n').trim()
+      text: sourceLines.map((line) => line.content).join('\n').trim(),
+      source_lines: sourceLines
     };
-  }).filter((part) => part.text);
+  }).filter((part) => part && part.text);
   return {
     line_count: lines.length,
     parts,
+    source_lines: parts.flatMap((part) => part.source_lines),
+    rejected_ranges: rejectedRanges,
     excerpt: parts.map((part) => part.text).join('\n\n[... omitted source lines ...]\n\n').trim()
   };
 }

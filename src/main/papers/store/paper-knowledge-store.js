@@ -13,7 +13,7 @@ const crypto = require('node:crypto');
 const fsPromises = require('node:fs/promises');
 const path = require('node:path');
 
-const { loadSqlJs } = require('../../helpers/main/storage-bundle/storage-utils.js');
+const { loadSqlJs } = require('../../storage/storage-utils.js');
 const { normalizeDoi, sanitizeStorageName } = require('./paper-knowledge-paths.js');
 const { normalizePmid, normalizePmcid } = require('../identity/paper-identity.js');
 

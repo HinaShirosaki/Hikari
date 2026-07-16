@@ -1,4 +1,4 @@
-import { bindFileDropTarget } from '../../file-drop.js';
+import { bindFileDropTarget } from '../../../lib/file-drop.js';
 import { FILE_ACCEPT, LIBRARY_STATUS_SAVED } from './config.js';
 
 export function bindSequenceViewerRuntimeEvents(ctx) {

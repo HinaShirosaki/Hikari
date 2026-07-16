@@ -28,10 +28,11 @@
             <p id="page-title" class="topbar-page-title">Home</p>
             <div id="topbar-view-actions" class="topbar-view-actions" hidden>
               <div id="topbar-assay-mode-switch" class="calendar-view-switch assay-mode-switch" role="group" aria-label="Assay mode">
-                <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active">Create Assay</button>
-                <button type="button" id="assay-mode-results-btn" class="ghost-btn">View &amp; Results</button>
+                <button type="button" id="assay-mode-create-btn" class="ghost-btn calendar-view-active">Setup</button>
+                <button type="button" id="assay-mode-results-btn" class="ghost-btn">Analyze</button>
               </div>
               <p id="assay-mode-note" class="small-note" aria-live="polite"></p>
+              <button type="button" id="biology-notebook-header-add-project-btn" class="ghost-btn biology-notebook-add-project-btn" aria-label="Add a project" title="Add a project">+</button>
             </div>
           </div>
           <p id="page-subtitle" class="sr-only">Reminders and active work.</p>
@@ -279,7 +280,16 @@
           aria-labelledby="dashboard-timer-dialog-title"
         >
           <div class="home-dialog-form">
-            <h3 id="dashboard-timer-dialog-title">Start timer</h3>
+            <div class="app-dialog-head home-timer-dialog-head">
+              <h3 id="dashboard-timer-dialog-title">Start timer</h3>
+              <button
+                type="button"
+                id="dashboard-timer-dialog-close-btn"
+                class="app-dialog-close-btn"
+                aria-label="Close start timer dialog"
+                title="Close"
+              ><span aria-hidden="true">&times;</span></button>
+            </div>
             <form id="dashboard-timer-dialog-form" class="home-timer-form-row">
               <input
                 id="dashboard-timer-name-input"
@@ -361,21 +371,31 @@
 <!-- SOURCE: ui/html/views/protocol-management-view.html -->
 <section id="protocol-management-view" class="view">
       <div class="protocol-workspace left-rail-template">
-        <div id="protocol-list-panel" class="protocol-list-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="protocol-list-head">
-            <div class="inline-row protocol-sort-controls">
-              <button type="button" id="create-protocol-btn" class="primary-btn">Create Protocol</button>
-              <button type="button" id="protocol-sort-field-btn" class="ghost-btn">Sort: Time</button>
-              <button type="button" id="protocol-sort-order-btn" class="ghost-btn">Order: Low to High</button>
+        <div id="protocol-list-panel" class="protocol-list-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="protocol-list-pinned left-rail-template__pinned">
+            <div class="protocol-list-head">
+              <div class="inline-row protocol-sort-controls">
+                <button type="button" id="create-protocol-btn" class="primary-btn">Create Protocol</button>
+                <div class="protocol-sort-menu">
+                  <button type="button" id="protocol-sort-menu-btn" class="ghost-btn protocol-sort-menu-btn" aria-label="Sort protocols" aria-haspopup="menu" aria-expanded="false" title="Sort protocols">
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M4 7h10M4 12h16M4 17h7"></path>
+                      <path d="m17 5 2 2-2 2M14 15l2 2 2-2"></path>
+                    </svg>
+                  </button>
+                  <div id="protocol-sort-menu" class="protocol-sort-menu-popup" role="menu" hidden>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="true" data-protocol-sort="time:asc">Time: Low to High</button>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="time:desc">Time: High to Low</button>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="name:asc">Name: Low to High</button>
+                    <button type="button" class="protocol-sort-menu-option" role="menuitemradio" aria-checked="false" data-protocol-sort="name:desc">Name: High to Low</button>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <p id="protocol-share-status" class="small-note" hidden></p>
-          <div id="protocol-share-link-panel" class="protocol-preview-block" hidden>
-            <h4>Portable Share Link</h4>
-            <p class="small-note">Paste this link into chat or email. Recipients can import it from Collaborations.</p>
-            <textarea id="protocol-share-link-output" rows="3" readonly></textarea>
+          <div class="protocol-list-scroll left-rail-template__scroll">
+            <div id="protocol-list" class="list-table"></div>
           </div>
-          <div id="protocol-list" class="list-table"></div>
         </div>
 
         <div id="protocol-detail-panel" class="panel protocol-detail-panel left-rail-template__main">
@@ -412,7 +432,7 @@
                 <textarea id="protocol-purpose" rows="3" placeholder="Describe the purpose"></textarea>
               </label>
               <label>
-                Materials (start each material with a bullet point)
+                Materials
                 <textarea id="protocol-materials" rows="5" placeholder="• Material 1&#10;• Material 2"></textarea>
               </label>
               <label>
@@ -420,12 +440,12 @@
                 <div class="protocol-steps-toolbar">
                   <span class="protocol-steps-toolbar-label">Interactive bars</span>
                   <div class="protocol-placeholder-presets" role="toolbar" aria-label="Protocol step placeholder presets">
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="plasmid">plasmid</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="protein">protein</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="volume">volume</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="buffer">buffer</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="temperature">temperature</button>
-                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="time">time</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="plasmid" aria-pressed="false">plasmid</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="protein" aria-pressed="false">protein</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="volume" aria-pressed="false">volume</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="buffer" aria-pressed="false">buffer</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="temperature" aria-pressed="false">temperature</button>
+                    <button type="button" class="ghost-btn protocol-placeholder-preset" data-protocol-placeholder-preset="time" aria-pressed="false">time</button>
                   </div>
                 </div>
                 <textarea id="protocol-steps" rows="7" placeholder="• Step 1&#10;• Step 2"></textarea>
@@ -468,7 +488,7 @@
                   <span class="protocol-detail-mode">Import</span>
                   <h3 id="protocol-json-import-title">Import Protocol JSON</h3>
                 </div>
-                <button type="button" id="protocol-json-import-close-btn" class="ghost-btn">Close</button>
+                <button type="button" id="protocol-json-import-close-btn" class="app-dialog-close-btn" aria-label="Close protocol import dialog" title="Close"><span aria-hidden="true">&times;</span></button>
               </div>
               <div class="stack-form">
                 <label>
@@ -495,7 +515,7 @@
                     <span class="protocol-detail-mode">Generate</span>
                     <h3 id="protocol-generate-input-title">Generate Protocol</h3>
                   </div>
-                  <button type="button" id="protocol-generate-close-btn" class="ghost-btn">Close</button>
+                  <button type="button" id="protocol-generate-close-btn" class="app-dialog-close-btn" aria-label="Close protocol generation dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
 
                 <div class="agent-composer-shell protocol-generate-composer-shell">
@@ -528,7 +548,7 @@
                     <span class="protocol-detail-mode">Generate</span>
                     <h3 id="protocol-generate-title">Generated Protocol</h3>
                   </div>
-                  <button type="button" id="protocol-generate-result-close-btn" class="ghost-btn">Close</button>
+                  <button type="button" id="protocol-generate-result-close-btn" class="app-dialog-close-btn" aria-label="Close generated protocol dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div id="protocol-generate-result-preview" class="protocol-polish-preview stack-form"></div>
                 <p id="protocol-generate-status" class="small-note" hidden></p>
@@ -560,7 +580,7 @@
                       <span class="protocol-detail-mode">After</span>
                       <h3 id="protocol-polish-title">Polished Protocol</h3>
                     </div>
-                    <button type="button" id="protocol-polish-close-btn" class="ghost-btn">Close</button>
+                    <button type="button" id="protocol-polish-close-btn" class="app-dialog-close-btn" aria-label="Close protocol polish dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                   </div>
                   <div id="protocol-polish-result-preview" class="protocol-polish-preview stack-form"></div>
                   <p id="protocol-polish-status" class="small-note" hidden></p>
@@ -582,9 +602,10 @@
       <div id="biology-notebook-layout" class="biology-notebook-layout left-rail-template">
         <aside id="biology-notebook-rail" class="biology-notebook-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="left-rail-template__pinned">
-            <select id="biology-notebook-project-select" hidden aria-hidden="true" tabindex="-1">
-              <option value="">Select project</option>
-            </select>
+            <button id="biology-notebook-new-experiment-btn" class="ghost-btn biology-notebook-new-experiment-btn" type="button">
+              <span aria-hidden="true">＋</span>
+              <span>New Experiment</span>
+            </button>
           </div>
           <div id="biology-notebook-entry-list" class="biology-notebook-page-list left-rail-template__scroll"></div>
           <div id="biology-notebook-project-context-menu" class="biology-notebook-context-menu" hidden>
@@ -594,25 +615,8 @@
 
         <div class="biology-notebook-viewer-column left-rail-template__main">
           <button id="biology-notebook-tool-mobile-toggle" class="ghost-btn biology-notebook-tool-mobile-toggle" type="button" aria-expanded="false">Bench Tools</button>
-          <div id="biology-notebook-page-starter" class="panel biology-notebook-page-starter">
-            <div class="biology-notebook-page-starter-head">
-              <div>
-                <p class="small-note biology-notebook-viewer-kicker">Add Notebook Page</p>
-                <h3 id="biology-notebook-page-starter-project">Choose a project folder</h3>
-              </div>
-            </div>
-            <div class="stack-form biology-notebook-select-stack biology-notebook-page-starter-controls">
-              <label>
-                Search Protocol
-                <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." />
-              </label>
-              <label>
-                Select Protocol
-                <select id="biology-notebook-protocol-select">
-                  <option value="">Select protocol</option>
-                </select>
-              </label>
-            </div>
+          <div id="biology-notebook-page-starter" class="biology-notebook-page-starter" hidden aria-hidden="true">
+            <span id="biology-notebook-page-starter-project"></span>
           </div>
 
           <div id="biology-notebook-empty-state" class="panel biology-notebook-empty-state">
@@ -639,70 +643,70 @@
               </div>
             </div>
 
-            <details class="biology-notebook-viewer-section" open>
-              <summary class="biology-notebook-viewer-section-summary">
-                <span>Protocol</span>
-                <span class="biology-notebook-viewer-section-chevron" aria-hidden="true"></span>
-              </summary>
-              <div class="biology-notebook-viewer-section-body">
-                <div id="biology-notebook-protocol-editor" class="biology-notebook-protocol-editor" hidden>
-                  <p class="small-note biology-notebook-protocol-editor-note">Edits here only change this notebook page copy. The original protocol stays unchanged.</p>
-                  <label>
-                    Page Protocol Name
-                    <input id="biology-notebook-page-protocol-name" type="text" placeholder="Rename this page copy" />
-                  </label>
-                  <label>
-                    Page Protocol Steps
-                    <textarea id="biology-notebook-page-protocol-steps" rows="8" placeholder="• Add buffer [Volume]&#10;• Incubate for [Time]"></textarea>
-                  </label>
-                  <p class="small-note biology-notebook-protocol-editor-note">Use one step per line. Keep fillable values as `[Volume]`, `[Buffer]`, `[Time]`, and so on.</p>
-                </div>
-                <div id="biology-notebook-steps" class="notebook-steps"></div>
-              </div>
-            </details>
-
-            <section class="biology-notebook-viewer-section biology-notebook-viewer-section-static">
-              <div class="biology-notebook-viewer-section-summary biology-notebook-viewer-section-summary-static">
-                <span>Notes / Results</span>
-              </div>
-              <div class="biology-notebook-viewer-section-body">
-                <div class="biology-notebook-linked-toolbar">
-                  <button id="biology-notebook-add-gel-btn" class="ghost-btn" type="button">Add Gel</button>
-                  <button id="biology-notebook-add-assay-btn" class="ghost-btn" type="button">Add Assay</button>
-                  <button id="biology-notebook-add-samples-btn" class="ghost-btn" type="button">Add Samples</button>
-                  <button id="biology-notebook-add-table-btn" class="ghost-btn" type="button">Add Table</button>
-                  <button id="biology-notebook-add-table-row-btn" class="ghost-btn" type="button" hidden>Add Row</button>
-                  <button id="biology-notebook-add-table-column-btn" class="ghost-btn" type="button" hidden>Add Column</button>
-                  <button id="biology-notebook-remove-table-btn" class="ghost-btn" type="button" hidden>Remove Table</button>
-                </div>
-                <div id="biology-notebook-linked-results" class="biology-notebook-linked-results">
-                  <p class="small-note">Linked gel, assay, and plot previews will appear here.</p>
-                </div>
-                <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations">
-                  <p class="small-note biology-notebook-tool-calculation-empty">Recorded bench calculations will appear here.</p>
-                </div>
-                <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
-                <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
-                  <div class="biology-notebook-result-table-head">
-                    <p id="biology-notebook-result-table-status" class="small-note">Add a table to capture structured notebook results.</p>
+            <div class="biology-notebook-viewer-scroll">
+              <details class="biology-notebook-viewer-section" open>
+                <summary class="biology-notebook-viewer-section-summary">
+                  <span>Protocol</span>
+                  <span class="biology-notebook-viewer-section-chevron" aria-hidden="true"></span>
+                </summary>
+                <div class="biology-notebook-viewer-section-body">
+                  <div id="biology-notebook-protocol-editor" class="biology-notebook-protocol-editor" hidden>
+                    <p class="small-note biology-notebook-protocol-editor-note">Edits here only change this notebook page copy. The original protocol stays unchanged.</p>
+                    <label>
+                      Page Protocol Name
+                      <input id="biology-notebook-page-protocol-name" type="text" placeholder="Rename this page copy" />
+                    </label>
+                    <label>
+                      Page Protocol Steps
+                      <textarea id="biology-notebook-page-protocol-steps" rows="8" placeholder="• Add buffer [Volume]&#10;• Incubate for [Time]"></textarea>
+                    </label>
+                    <p class="small-note biology-notebook-protocol-editor-note">Use one step per line. Keep fillable values as `[Volume]`, `[Buffer]`, `[Time]`, and so on.</p>
                   </div>
-                  <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables"></div>
+                  <div id="biology-notebook-steps" class="notebook-steps"></div>
                 </div>
-                <label>
-                  Experiment Results File / Notes
-                  <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
-                </label>
-                <label>
-                  Experiment Result Files
-                  <input id="biology-notebook-result-file" type="file" multiple />
-                </label>
-                <div class="form-actions">
-                  <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
-                  <button id="clarify-save-biology-notebook-btn" class="ghost-btn" type="button">Clarify and Save</button>
-                  <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
+              </details>
+
+              <section class="biology-notebook-viewer-section biology-notebook-viewer-section-static">
+                <div class="biology-notebook-viewer-section-summary biology-notebook-viewer-section-summary-static">
+                  <span>Notes / Results</span>
                 </div>
-              </div>
-            </section>
+                <div class="biology-notebook-viewer-section-body">
+                  <div class="biology-notebook-linked-toolbar">
+                    <button id="biology-notebook-add-gel-btn" class="ghost-btn" type="button">Add Gel</button>
+                    <button id="biology-notebook-add-assay-btn" class="ghost-btn" type="button">Add Assay</button>
+                    <button id="biology-notebook-add-samples-btn" class="ghost-btn" type="button">Add Samples</button>
+                    <button id="biology-notebook-add-table-btn" class="ghost-btn" type="button">Add Table</button>
+                    <button id="biology-notebook-add-table-row-btn" class="ghost-btn" type="button" hidden>Add Row</button>
+                    <button id="biology-notebook-add-table-column-btn" class="ghost-btn" type="button" hidden>Add Column</button>
+                    <button id="biology-notebook-remove-table-btn" class="ghost-btn" type="button" hidden>Remove Table</button>
+                  </div>
+                  <div id="biology-notebook-linked-results" class="biology-notebook-linked-results">
+                  </div>
+                  <div id="biology-notebook-tool-calculations" class="biology-notebook-tool-calculations">
+                  </div>
+                  <section id="biology-notebook-tool-workspace" class="biology-notebook-tool-workspace" hidden aria-label="Bench tool workspace"></section>
+                  <div id="biology-notebook-result-table-wrap" class="biology-notebook-result-table-wrap" hidden>
+                    <div class="biology-notebook-result-table-head">
+                      <p id="biology-notebook-result-table-status" class="small-note">Add a table to capture structured notebook results.</p>
+                    </div>
+                    <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables"></div>
+                  </div>
+                  <label>
+                    Experiment Results File / Notes
+                    <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+                  </label>
+                  <label>
+                    Experiment Result Files
+                    <input id="biology-notebook-result-file" type="file" multiple />
+                  </label>
+                  <div class="form-actions">
+                    <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
+                    <button id="clarify-save-biology-notebook-btn" class="ghost-btn" type="button">Clarify and Save</button>
+                    <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
+                  </div>
+                </div>
+              </section>
+            </div>
           </div>
         </div>
 
@@ -986,6 +990,39 @@
         </aside>
       </div>
 
+      <div id="biology-notebook-experiment-dialog-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
+        <div class="biology-notebook-experiment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-experiment-dialog-title">
+          <div class="app-dialog-head">
+            <div>
+              <h3 id="biology-notebook-experiment-dialog-title">New Experiment</h3>
+              <p class="small-note">Choose a project and protocol to create a notebook experiment.</p>
+            </div>
+            <button id="biology-notebook-experiment-dialog-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close new experiment dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <form id="biology-notebook-experiment-form" class="stack-form biology-notebook-experiment-form">
+            <label>
+              Project
+              <select id="biology-notebook-project-select">
+                <option value="">Select project</option>
+              </select>
+            </label>
+            <label>
+              Search &amp; Select Protocol
+              <input id="biology-notebook-protocol-search" type="search" placeholder="Search protocols..." autocomplete="off" aria-controls="biology-notebook-protocol-search-results" />
+            </label>
+            <div id="biology-notebook-protocol-search-results" class="biology-notebook-protocol-search-results" role="listbox" aria-label="Matching protocols"></div>
+            <select id="biology-notebook-protocol-select" hidden aria-hidden="true" tabindex="-1">
+              <option value="">Select protocol</option>
+            </select>
+            <p id="biology-notebook-experiment-dialog-status" class="small-note" aria-live="polite"></p>
+            <div class="form-actions">
+              <button id="biology-notebook-experiment-cancel-btn" class="ghost-btn" type="button">Cancel</button>
+              <button id="biology-notebook-experiment-start-btn" class="primary-btn" type="submit">Start Experiment</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
       <div id="biology-notebook-project-dialog-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
         <div class="biology-notebook-project-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="biology-notebook-project-dialog-title">
           <div class="app-dialog-head">
@@ -993,7 +1030,7 @@
               <h3 id="biology-notebook-project-dialog-title">Add a project</h3>
               <p class="small-note">Create a project folder for notebook pages and linked work.</p>
             </div>
-            <button id="biology-notebook-project-dialog-close-btn" class="ghost-btn" type="button" aria-label="Close add project dialog">Close</button>
+            <button id="biology-notebook-project-dialog-close-btn" class="app-dialog-close-btn" type="button" aria-label="Close add project dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <form id="biology-notebook-project-form" class="stack-form">
             <label>
@@ -1016,13 +1053,17 @@
 <!-- SOURCE: ui/html/views/personal-inventory-view.html -->
 <section id="personal-inventory-view" class="view">
       <div class="personal-inventory-layout left-rail-template">
-        <aside class="inventory-rail-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="inventory-rail-stack app-left-rail-section">
+        <aside class="inventory-rail-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="inventory-rail-pinned left-rail-template__pinned">
             <button id="inventory-add-container-btn" type="button" class="primary-btn" aria-controls="inventory-add-container-overlay" aria-expanded="false">Add Container</button>
-            <div id="inventory-location-nav" class="inventory-location-nav"></div>
-            <div id="inventory-container-context-menu" class="personal-inventory-context-menu" hidden></div>
           </div>
-          <div id="inventory-summary-card" class="inventory-summary-card app-left-rail-section"></div>
+          <div class="inventory-rail-scroll left-rail-template__scroll">
+            <div class="inventory-rail-stack app-left-rail-section">
+              <div id="inventory-location-nav" class="inventory-location-nav"></div>
+              <div id="inventory-container-context-menu" class="personal-inventory-context-menu" hidden></div>
+            </div>
+            <div id="inventory-summary-card" class="inventory-summary-card app-left-rail-section"></div>
+          </div>
         </aside>
 
         <div class="panel inventory-main-panel left-rail-template__main">
@@ -1041,9 +1082,9 @@
           <div class="app-dialog-head inventory-add-container-head">
             <div>
               <h3 id="inventory-add-container-title">Add Container</h3>
-              <p class="small-note">Create a storage box, plate, tube, or custom grid.</p>
+              <p id="inventory-add-container-note" class="small-note">Create a storage box, plate, tube, or custom grid.</p>
             </div>
-            <button id="inventory-add-container-close" type="button" class="ghost-btn" aria-label="Close add container dialog">Close</button>
+            <button id="inventory-add-container-close" type="button" class="app-dialog-close-btn" aria-label="Close add container dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <label>
             Container Name
@@ -1246,6 +1287,40 @@
           </details>
           <form id="assay-form" class="form-grid assay-form-grid">
             <input type="hidden" id="assay-id" />
+            <div class="form-actions assay-form-actions" aria-label="Assay actions">
+              <button type="button" id="assay-export-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Export CSV template" title="Export CSV template">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 4v12"></path>
+                  <path d="m7 11 5 5 5-5"></path>
+                  <path d="M5 20h14"></path>
+                </svg>
+                <span class="sr-only">Export CSV template</span>
+              </button>
+              <button type="button" id="assay-import-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Import CSV" title="Import CSV">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 16V4"></path>
+                  <path d="m7 9 5-5 5 5"></path>
+                  <path d="M5 20h14"></path>
+                </svg>
+                <span class="sr-only">Import CSV</span>
+              </button>
+              <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
+              <button type="submit" class="primary-btn assay-form-icon-btn assay-form-save-icon-btn" aria-label="Save assay" title="Save assay">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 3h12l3 3v15H4V3Z"></path>
+                  <path d="M8 3v6h8V3"></path>
+                  <path d="M8 21v-7h8v7"></path>
+                </svg>
+                <span class="sr-only">Save assay</span>
+              </button>
+              <button type="button" id="assay-cancel-btn" class="ghost-btn assay-form-icon-btn" aria-label="Cancel edit" title="Cancel edit">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M6 6l12 12"></path>
+                  <path d="M18 6 6 18"></path>
+                </svg>
+                <span class="sr-only">Cancel edit</span>
+              </button>
+            </div>
             <div class="assay-display-field">
               <span class="assay-display-label">Assay Number</span>
               <div id="assay-number-display" class="assay-display-value" aria-live="polite"></div>
@@ -1301,18 +1376,11 @@
             </select>
             <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
             <div id="assay-csv-status" class="small-note assay-form-note"></div>
-            <div class="form-actions assay-form-actions">
-              <button type="button" id="assay-export-template-btn" class="ghost-btn">Export CSV Template</button>
-              <button type="button" id="assay-import-template-btn" class="ghost-btn">Import CSV</button>
-              <input id="assay-import-file" type="file" accept=".csv,text/csv" hidden />
-              <button type="submit" class="primary-btn">Save Assay</button>
-              <button type="button" id="assay-cancel-btn" class="ghost-btn">Cancel Edit</button>
-            </div>
           </form>
         </div>
 
         <div class="panel assay-mode-create-panel assay-create-preview-panel left-rail-template__main">
-          <div class="form-actions">
+          <div class="form-actions assay-plate-toolbar">
             <div class="calendar-view-switch assay-mode-switch" role="group" aria-label="Plate edit field">
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
               <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Edit Conc.</button>
@@ -1371,10 +1439,28 @@
               </select>
             </label>
             <div class="form-actions assay-results-actions">
-              <button type="button" id="assay-attach-result-file-btn" class="ghost-btn">Attach Result File</button>
+              <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" title="Attach result file">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
+                </svg>
+              </button>
               <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-              <button type="button" id="assay-save-results-btn" class="primary-btn">Save Results</button>
-              <button type="button" id="assay-clear-results-btn" class="ghost-btn">Clear Results</button>
+              <button type="button" id="assay-save-results-btn" class="primary-btn assay-results-icon-btn assay-results-save-icon-btn" aria-label="Save results" title="Save results">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M5 3h12l3 3v15H4V3Z"></path>
+                  <path d="M8 3v6h8V3"></path>
+                  <path d="M8 21v-7h8v7"></path>
+                </svg>
+              </button>
+              <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M3 6h18"></path>
+                  <path d="M8 6V4h8v2"></path>
+                  <path d="m19 6-1 14H6L5 6"></path>
+                  <path d="M10 11v5"></path>
+                  <path d="M14 11v5"></path>
+                </svg>
+              </button>
             </div>
             <div id="assay-active-assay-info" class="small-note"></div>
             <div id="assay-result-status" class="small-note"></div>
@@ -1407,14 +1493,9 @@
               </select>
             </label>
             <div class="assay-analysis-controls">
-              <label>
-                Row Groups (optional)
-                <textarea id="assay-analysis-row-groups" rows="2" placeholder="Control: A,B; Treated: C,D"></textarea>
-              </label>
-              <label>
-                Column Groups (optional)
-                <textarea id="assay-analysis-column-groups" rows="2" placeholder="Early: 1,2; Late: 3,4"></textarea>
-              </label>
+              <input id="assay-analysis-row-groups" type="hidden" />
+              <input id="assay-analysis-column-groups" type="hidden" />
+              <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
               <label class="assay-analysis-checkbox">
                 <input id="assay-analysis-error-bars" type="checkbox" />
                 Show SD error bars (for Row/Column Summary)
@@ -1453,7 +1534,7 @@
         <div class="assay-serial-dilution-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="assay-serial-dilution-title">
           <div class="assay-header-row assay-serial-dilution-head app-dialog-head">
             <h3 id="assay-serial-dilution-title">Serial Dilution</h3>
-            <button type="button" id="assay-serial-dilution-close-btn" class="ghost-btn" aria-label="Close serial dilution dialog">Close</button>
+            <button type="button" id="assay-serial-dilution-close-btn" class="app-dialog-close-btn" aria-label="Close serial dilution dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <p class="small-note">Use the current mapped plate to calculate a constant final volume per well, with the last active dilution well discarding the final carryover volume.</p>
           <div class="assay-serial-dilution-controls">
@@ -1474,7 +1555,7 @@
               <h3 id="assay-result-import-title">Select Result Matrix</h3>
               <p id="assay-result-import-status" class="small-note"></p>
             </div>
-            <button type="button" id="assay-result-import-close-btn" class="ghost-btn" aria-label="Close result import dialog">Close</button>
+            <button type="button" id="assay-result-import-close-btn" class="app-dialog-close-btn" aria-label="Close result import dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <div class="assay-result-import-body">
             <div id="assay-result-import-candidates" class="assay-result-import-candidates" role="listbox" aria-label="Detected result matrices"></div>
@@ -1686,7 +1767,7 @@
                   <h3 id="gel-peak-editor-title">Lane Peak Area</h3>
                   <div id="gel-peak-editor-summary" class="small-note"></div>
                 </div>
-                <button type="button" id="gel-peak-editor-close-btn" class="ghost-btn">Close</button>
+                <button type="button" id="gel-peak-editor-close-btn" class="app-dialog-close-btn" aria-label="Close lane peak area dialog" title="Close"><span aria-hidden="true">&times;</span></button>
               </header>
               <div class="gel-peak-editor-toolbar" role="toolbar" aria-label="Peak area tools">
                 <label class="gel-peak-editor-lane-picker small-note">
@@ -1719,7 +1800,7 @@
               <button type="button" id="chemical-open-add-btn" class="primary-btn chemical-add-btn">Add Chemical</button>
               <button type="button" id="chemical-import-btn" class="ghost-btn chemical-import-btn">Import Chemicals</button>
               <input id="chemical-import-file" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-              <p id="chemical-import-status" class="small-note chemical-import-status">Import CSV, XLS, or XLSX. Similar column names are matched automatically.</p>
+              <p id="chemical-import-status" class="small-note chemical-import-status" hidden></p>
               <label class="chemical-search-field">
                 Search
                 <input id="chemical-search" type="search" placeholder="Name, CAS, vendor, catalog, location" />
@@ -1751,7 +1832,7 @@
         </aside>
 
         <div class="chemical-main left-rail-template__main">
-          <div class="panel chemical-list-panel">
+          <div class="chemical-list-panel">
             <div class="chemical-panel-head">
               <div class="chemical-panel-copy">
                 <h2>Chemicals</h2>
@@ -1762,10 +1843,10 @@
             <div id="chemical-list" class="list-table"></div>
           </div>
 
-          <div id="chemical-detail-panel" class="panel chemical-detail-panel" hidden>
+          <div id="chemical-detail-panel" class="chemical-detail-panel" hidden>
             <h3 id="chemical-detail-title">Chemical Details</h3>
             <div id="chemical-detail-content" class="stack-form"></div>
-            <div class="card-actions">
+            <div class="chemical-detail-actions">
               <button type="button" id="chemical-detail-edit-btn" class="ghost-btn">Edit</button>
               <button type="button" id="chemical-detail-delete-btn" class="danger-btn">Delete</button>
             </div>
@@ -1780,7 +1861,7 @@
               <h3 id="chemical-dialog-title">Add Chemical</h3>
               <p class="small-note">Create or update a chemical record.</p>
             </div>
-            <button type="button" id="chemical-dialog-close-btn" class="ghost-btn" aria-label="Close chemical dialog">Close</button>
+            <button type="button" id="chemical-dialog-close-btn" class="app-dialog-close-btn" aria-label="Close chemical dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
 
           <form id="chemical-form" class="form-grid">
@@ -1873,8 +1954,8 @@
               <small>Storage locations and type names</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="preferred-journal">
-              <span>Preferred Journal</span>
-              <small>Default journal name or URL</small>
+              <span>Preferred Journals</span>
+              <small>Default journal names or URLs</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="llm">
               <span>LLM Model &amp; Access</span>
@@ -1883,6 +1964,10 @@
             <button type="button" class="settings-nav-item" data-settings-target="skills">
               <span>External Skills</span>
               <small>Agent skill files</small>
+            </button>
+            <button type="button" class="settings-nav-item" data-settings-target="plugins">
+              <span>Plugins</span>
+              <small>User plugin folders</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="telegram">
               <span>Telegram Bot</span>
@@ -2020,7 +2105,7 @@
               </div>
               <form id="preferred-journal-form" class="stack-form">
                 <label>
-                  Journal Name or URL
+                  Journal Names or URLs
                   <input id="setting-preferred-journal" placeholder="Journal name or https://..." />
                 </label>
                 <div id="setting-preferred-journal-list" class="stack-form"></div>
@@ -2033,32 +2118,20 @@
 
             <section class="settings-section" data-settings-panel="llm" hidden>
               <div class="settings-section-head">
-                <h3>LLM Model &amp; Access</h3>
-                <p class="small-note">Configure the provider and endpoint used by the assistant features.</p>
+                <h3>Codex Model &amp; Access</h3>
+                <p class="small-note">Choose the Codex model used by assistant features.</p>
               </div>
               <form id="llm-form" class="stack-form">
                 <label>
-                  Provider
-                  <select id="setting-provider"></select>
-                </label>
-                <label>
                   Model Name
-                  <input id="setting-model" list="setting-model-options" placeholder="Provider model name" />
+                  <input id="setting-model" list="setting-model-options" placeholder="optional, e.g. gpt-5.4" />
                 </label>
                 <datalist id="setting-model-options"></datalist>
                 <label>
                   Reasoning Effort
                   <select id="setting-reasoning-effort"></select>
                 </label>
-                <label>
-                  API Endpoint
-                  <input id="setting-api-endpoint" placeholder="Provider default fills automatically" />
-                </label>
-                <label>
-                  API Key
-                  <input id="setting-api-key" type="password" placeholder="sk-..." />
-                </label>
-                <div id="setting-codex-auth-controls" class="stack-form" hidden>
+                <div id="setting-codex-auth-controls" class="stack-form">
                   <p id="setting-codex-status" class="small-note">Codex login: checking...</p>
                   <p class="small-note">Codex uses a stored OpenAI login. Once signed in, it should stay available after restart until you clear it.</p>
                   <div class="form-actions">
@@ -2094,6 +2167,21 @@
             </div>
           </section>
 
+          <section class="settings-section" data-settings-panel="plugins" hidden>
+            <div class="settings-section-head">
+              <h3>Plugins</h3>
+              <p class="small-note">Add a plugin folder containing index.html (plus its own JS and CSS). Enabled plugins appear in app navigation after a reload.</p>
+            </div>
+            <div class="stack-form">
+              <div class="form-actions">
+                <button type="button" id="setting-plugins-add-btn" class="primary-btn">Add Plugin Folder</button>
+                <button type="button" id="setting-plugins-reload-btn" class="ghost-btn">Reload App</button>
+              </div>
+              <p id="setting-plugins-status" class="small-note" aria-live="polite"></p>
+              <div id="setting-plugins-list" class="settings-skill-list" aria-live="polite"></div>
+            </div>
+          </section>
+
           <section class="settings-section" data-settings-panel="telegram" hidden>
             <div class="settings-section-head">
               <h3>Telegram Bot</h3>
@@ -2119,13 +2207,16 @@
 <!-- SOURCE: ui/html/views/workflow-management-view.html -->
 <section id="workflow-management-view" class="view">
       <div class="workflow-editor-layout left-rail-template">
-        <aside class="workflow-editor-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
-            <button type="button" id="workflow-entry-view-btn" class="primary-btn">Workflow Board</button>
-            <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Template Editor</button>
-            <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Board</button>
+        <aside class="workflow-editor-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="workflow-editor-sidebar-pinned left-rail-template__pinned">
+            <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
+              <button type="button" id="workflow-entry-view-btn" class="primary-btn">Workflow Board</button>
+              <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Template Editor</button>
+              <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Board</button>
+            </div>
           </div>
 
+          <div class="workflow-editor-sidebar-scroll left-rail-template__scroll">
           <div class="workflow-list-panel app-left-rail-section" hidden>
             <h3>Workflow Templates</h3>
             <label>
@@ -2182,6 +2273,7 @@
                 <button type="button" id="workflow-cancel-btn" class="ghost-btn">Cancel Edit</button>
               </div>
             </form>
+          </div>
           </div>
         </aside>
 
@@ -2250,44 +2342,55 @@
 
 <!-- SOURCE: ui/html/views/papers-view.html -->
 <section id="papers-view" class="view">
-      <div id="papers-layout" class="papers-layout left-rail-template">
-        <aside id="papers-library-rail" class="papers-library-rail app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="papers-library-topbar">
-            <h2>Papers</h2>
-            <div class="papers-library-actions">
-              <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn">Upload PDF</button>
+      <div id="papers-layout" class="papers-layout left-rail-template left-rail-template--preserve-columns-on-narrow">
+        <aside id="papers-library-rail" class="papers-library-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="papers-library-pinned left-rail-template__pinned">
+            <div class="papers-library-topbar">
+              <h2>Papers</h2>
+              <div class="papers-library-actions">
+                <button type="button" id="paper-upload-trigger" class="ghost-btn papers-library-upload-btn" aria-label="Upload PDF" title="Upload PDF">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M12 16V4"></path>
+                    <path d="m7 9 5-5 5 5"></path>
+                    <path d="M5 14v5h14v-5"></path>
+                  </svg>
+                  <span class="sr-only">Upload PDF</span>
+                </button>
+              </div>
             </div>
+            <p id="paper-folder-selection" class="papers-library-status" hidden>No folder selected</p>
+            <p id="paper-upload-target-label" class="papers-library-status" hidden>Select a folder to file new papers.</p>
           </div>
-          <p id="paper-folder-selection" class="papers-library-status" hidden>No folder selected</p>
-          <p id="paper-upload-target-label" class="papers-library-status" hidden>Select a folder to file new papers.</p>
-          <div id="journal-club-list" class="papers-thread-list"></div>
-          <div id="paper-list" class="papers-paper-list" hidden></div>
+          <div class="papers-library-scroll left-rail-template__scroll">
+            <div id="journal-club-list" class="papers-thread-list"></div>
+            <div id="paper-list" class="papers-paper-list" hidden></div>
 
-          <form id="paper-form" class="papers-hidden-upload-form" hidden>
-            <input id="paper-title" type="hidden" />
-            <input id="paper-pdf" type="file" accept="application/pdf,.pdf" required hidden />
-            <div class="papers-hidden-link-controls" hidden>
-              <label>
-                Link Type
-                <select id="paper-link-type">
-                  <option value="project">Project</option>
-                  <option value="journal-club">Journal Club</option>
-                </select>
-              </label>
-              <label>
-                Link To
-                <select id="paper-link-target">
-                  <option value="">Select target</option>
-                </select>
-              </label>
+            <form id="paper-form" class="papers-hidden-upload-form" hidden>
+              <input id="paper-title" type="hidden" />
+              <input id="paper-pdf" type="file" accept="application/pdf,.pdf" required hidden />
+              <div class="papers-hidden-link-controls" hidden>
+                <label>
+                  Link Type
+                  <select id="paper-link-type">
+                    <option value="project">Project</option>
+                    <option value="journal-club">Journal Club</option>
+                  </select>
+                </label>
+                <label>
+                  Link To
+                  <select id="paper-link-target">
+                    <option value="">Select target</option>
+                  </select>
+                </label>
+              </div>
+              <button type="submit" class="primary-btn">Upload Paper</button>
+            </form>
+
+            <div id="papers-library-context-menu" class="papers-context-menu" hidden>
+              <button type="button" id="papers-context-new-folder" class="papers-context-item">New Folder</button>
+              <button type="button" id="papers-context-rename-folder" class="papers-context-item" hidden>Rename Folder</button>
+              <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden>Delete Folder</button>
             </div>
-            <button type="submit" class="primary-btn">Upload Paper</button>
-          </form>
-
-          <div id="papers-library-context-menu" class="papers-context-menu" hidden>
-            <button type="button" id="papers-context-new-folder" class="papers-context-item">New Folder</button>
-            <button type="button" id="papers-context-rename-folder" class="papers-context-item" hidden>Rename Folder</button>
-            <button type="button" id="papers-context-delete-folder" class="papers-context-item papers-context-item-danger" hidden>Delete Folder</button>
           </div>
         </aside>
 
@@ -2502,10 +2605,9 @@
 <!-- SOURCE: ui/html/views/agent-view.html -->
 <section id="agent-view" class="view">
       <div class="agent-chat-layout left-rail-template">
-        <aside class="agent-session-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+        <aside id="agent-session-rail" class="agent-session-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="agent-session-toolbar left-rail-template__pinned">
             <div class="agent-session-toolbar-copy">
-              <h3>Saved Chats</h3>
               <p id="agent-session-status" class="small-note">Set Storage Folder Path in Settings to save and browse agent chats.</p>
             </div>
             <button type="button" id="agent-new-chat-btn" class="ghost-btn agent-new-chat-btn" aria-label="New Chat" title="New Chat">
@@ -2513,9 +2615,15 @@
                 <path d="M5 5.75A2.75 2.75 0 0 1 7.75 3h8.5A2.75 2.75 0 0 1 19 5.75v5.5A2.75 2.75 0 0 1 16.25 14H12l-4.15 3.2A.8.8 0 0 1 6.55 16.58V14A2.75 2.75 0 0 1 5 11.25v-5.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>
                 <path d="M12 6.75v3.5M10.25 8.5h3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
               </svg>
+              <span>New Chat</span>
             </button>
           </div>
           <div id="agent-session-list" class="agent-session-list left-rail-template__scroll" aria-live="polite"></div>
+          <div id="agent-session-context-menu" class="agent-session-context-menu" hidden>
+            <button type="button" id="agent-context-new-folder" class="agent-session-context-item">New Folder</button>
+            <button type="button" id="agent-context-rename-folder" class="agent-session-context-item" hidden>Rename Folder</button>
+            <button type="button" id="agent-context-delete-folder" class="agent-session-context-item agent-session-context-item-danger" hidden>Delete Folder</button>
+          </div>
         </aside>
 
         <div class="panel agent-chat-panel left-rail-template__main">
@@ -2591,7 +2699,6 @@
                     <div class="form-actions agent-composer-actions">
                       <button type="button" id="agent-send-btn" class="primary-btn">Send</button>
                       <button type="button" id="agent-stop-btn" class="danger-btn" hidden>Stop</button>
-                      <button type="button" id="agent-clear-btn" class="ghost-btn">New Thread</button>
                     </div>
                   </div>
                 </div>
@@ -2604,7 +2711,7 @@
                     <h3 id="agent-review-title">Review Generated Drafts</h3>
                     <p class="small-note">Approve or reject generated protocol and notebook pages before they are added.</p>
                   </div>
-                  <button type="button" id="agent-review-close-btn" class="ghost-btn">Close</button>
+                  <button type="button" id="agent-review-close-btn" class="app-dialog-close-btn" aria-label="Close generated draft review dialog" title="Close"><span aria-hidden="true">&times;</span></button>
                 </header>
                 <div id="agent-review-track" class="agent-review-track" tabindex="0" aria-live="polite"></div>
                 <footer class="agent-review-footer">
@@ -3334,8 +3441,8 @@
       <div class="sequence-viewer-shell">
         <section id="sequence-viewer-home-workspace" class="sequence-viewer-home-workspace">
           <div class="sequence-viewer-home-layout left-rail-template">
-            <aside class="sequence-viewer-home-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
-              <div class="left-rail-template__stack">
+            <aside class="sequence-viewer-home-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+              <div class="sequence-viewer-home-sidebar-pinned left-rail-template__pinned">
                 <section class="sequence-viewer-rail-actions-section left-rail-template__section">
                   <div class="form-actions sequence-viewer-rail-nav-actions">
                     <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
@@ -3345,7 +3452,9 @@
                   </div>
                   <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
                 </section>
+              </div>
 
+              <div class="sequence-viewer-home-sidebar-scroll left-rail-template__scroll">
                 <section class="sequence-viewer-library-card left-rail-template__section">
               <div class="result-card-head">
                 <h4>Sequence Library</h4>
@@ -3354,6 +3463,14 @@
                 <button id="sequence-viewer-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
                 <button id="sequence-viewer-library-filter-temporary" class="sequence-viewer-library-switch-btn" type="button">Unsaved</button>
               </div>
+              <input
+                id="sequence-viewer-library-search-input"
+                class="sequence-viewer-library-search"
+                type="search"
+                placeholder="Search sequences"
+                autocomplete="off"
+                aria-label="Search sequence library"
+              />
               <div id="sequence-viewer-library-list" class="sequence-viewer-library-list">
                 <p class="small-note">No sequence entries found.</p>
               </div>
@@ -3375,24 +3492,6 @@
                   </div>
                 </section>
 
-                <section class="result-card sequence-viewer-feature-search-card">
-                  <div class="result-card-head">
-                    <h4>Feature Search</h4>
-                  </div>
-                  <div class="sequence-viewer-feature-search-controls">
-                    <input
-                      id="sequence-viewer-feature-search-input"
-                      type="search"
-                      placeholder="Search by feature name or sequence"
-                      autocomplete="off"
-                    />
-                    <button id="sequence-viewer-feature-search-btn" type="button" class="ghost-btn">Search</button>
-                    <span id="sequence-viewer-feature-search-status" class="small-note">Search stored features and open the host vector directly.</span>
-                  </div>
-                  <div id="sequence-viewer-feature-search-results" class="sequence-viewer-feature-search-results">
-                    <p class="small-note">Search by feature name, full sequence, or partial sequence.</p>
-                  </div>
-                </section>
               </div>
             </div>
           </div>
@@ -3405,7 +3504,7 @@
             </div>
             <div class="sequence-viewer-protein-builder-toolbar-copy">
               <h2>Protein Builder</h2>
-              <p class="small-note">Build a linear fusion from tags, stored features, linkers, cleavage sites, and a POI block.</p>
+              <p class="small-note">Build a linear fusion from tags, stored features, linkers, cleavage sites, and the active DNA coding sequence.</p>
               <span id="sequence-viewer-protein-builder-status" class="small-note">Linear chain: each block accepts one upstream and one downstream connection.</span>
             </div>
             <div class="form-actions sequence-viewer-protein-builder-toolbar-actions">
@@ -3415,35 +3514,23 @@
 
           <div class="sequence-viewer-protein-builder-grid-wrap">
             <div class="sequence-viewer-protein-builder-grid left-rail-template">
-              <aside class="sequence-viewer-protein-builder-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
+              <aside class="sequence-viewer-protein-builder-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+                <div class="sequence-viewer-protein-builder-sidebar-pinned left-rail-template__pinned">
                 <section class="sequence-viewer-protein-builder-panel">
                   <form id="sequence-viewer-protein-builder-form" class="stack-form sequence-viewer-protein-builder-controls" autocomplete="off">
-                    <div class="form-grid">
-                      <label>
-                        Construct Name
-                        <input id="sequence-viewer-protein-builder-name" placeholder="e.g. His6-TEV-POI-TwinStrep" />
-                      </label>
-                      <label>
-                        POI Name
-                        <input id="sequence-viewer-protein-builder-poi-name" placeholder="e.g. EGFR kinase domain" />
-                      </label>
-                    </div>
                     <label>
-                      Protein of Interest Sequence
-                      <textarea
-                        id="sequence-viewer-protein-builder-poi-sequence"
-                        rows="5"
-                        placeholder="Paste amino-acid sequence (A-Z, optional *)"
-                      ></textarea>
+                      Construct Name
+                      <input id="sequence-viewer-protein-builder-name" placeholder="e.g. His6-TEV-CurrentDNA-TwinStrep" />
                     </label>
                     <div class="form-actions">
                       <button id="sequence-viewer-protein-builder-reset-btn" type="button" class="ghost-btn">Reset Default Chain</button>
                       <button id="sequence-viewer-protein-builder-add-custom-btn" type="button" class="ghost-btn">Add Custom Block</button>
-                      <button id="sequence-viewer-protein-builder-add-poi-btn" type="button" class="ghost-btn">Add POI Block</button>
                     </div>
                   </form>
                 </section>
+                </div>
 
+                <div class="sequence-viewer-protein-builder-sidebar-scroll left-rail-template__scroll">
                 <section class="sequence-viewer-protein-builder-panel">
                   <div class="result-card-head">
                     <h4>Common Blocks</h4>
@@ -3473,6 +3560,7 @@
                     <p class="small-note">Search by feature name or stored sequence.</p>
                   </div>
                 </section>
+                </div>
               </aside>
 
               <div class="sequence-viewer-protein-builder-main left-rail-template__main">
@@ -3514,7 +3602,7 @@
                   <h4 id="sequence-viewer-protein-builder-assembly-title">Assemble Plasmid</h4>
                   <p id="sequence-viewer-protein-builder-assembly-subtitle" class="small-note">Select a stored backbone to combine with the current DNA build.</p>
                 </div>
-                <button id="sequence-viewer-protein-builder-assembly-close-btn" type="button" class="ghost-btn" aria-label="Close stored backbone selector">Close</button>
+                <button id="sequence-viewer-protein-builder-assembly-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close stored backbone selector" title="Close"><span aria-hidden="true">&times;</span></button>
               </div>
 
               <div class="sequence-viewer-backbone-dialog-grid">
@@ -3565,8 +3653,8 @@
         </div>
 
         <div class="sequence-viewer-detail-layout left-rail-template">
-          <aside class="sequence-viewer-detail-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
-            <div class="left-rail-template__stack">
+          <aside class="sequence-viewer-detail-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+            <div class="sequence-viewer-detail-sidebar-pinned left-rail-template__pinned">
               <section class="sequence-viewer-rail-actions-section left-rail-template__section">
                 <div class="form-actions sequence-viewer-rail-nav-actions">
                   <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
@@ -3575,6 +3663,8 @@
                   <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
                 </div>
               </section>
+            </div>
+            <div class="sequence-viewer-detail-sidebar-scroll left-rail-template__scroll">
               <section class="sequence-viewer-library-card left-rail-template__section">
                 <div class="result-card-head">
                   <h4>Sequence Library</h4>
@@ -3758,7 +3848,7 @@
           <form id="sequence-viewer-feature-editor-form" class="sequence-viewer-feature-editor app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-feature-editor-head app-dialog-head">
               <h4 id="sequence-viewer-feature-editor-title">Add Feature</h4>
-              <button id="sequence-viewer-feature-editor-close" type="button" class="ghost-btn">Close</button>
+              <button id="sequence-viewer-feature-editor-close" type="button" class="app-dialog-close-btn" aria-label="Close feature editor dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <p id="sequence-viewer-feature-editor-note" class="small-note">Choose the feature metadata for the selected range.</p>
 
@@ -3804,7 +3894,7 @@
           <section class="sequence-viewer-primer-design-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="sequence-viewer-primer-design-title">
             <div class="result-card-head sequence-viewer-primer-design-head app-dialog-head">
               <h4 id="sequence-viewer-primer-design-title">Designed Primers</h4>
-              <button id="sequence-viewer-primer-design-close" type="button" class="ghost-btn">Close</button>
+              <button id="sequence-viewer-primer-design-close" type="button" class="app-dialog-close-btn" aria-label="Close designed primers dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <p id="sequence-viewer-primer-design-note" class="small-note">Primer details will appear here.</p>
             <div id="sequence-viewer-primer-design-result" class="sequence-viewer-primer-design-result calc-output"></div>
@@ -3818,7 +3908,7 @@
           <form id="sequence-viewer-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
             <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
               <h4 id="sequence-viewer-sequence-edit-title">Edit Bases</h4>
-              <button id="sequence-viewer-sequence-edit-close" type="button" class="ghost-btn">Close</button>
+              <button id="sequence-viewer-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
             <p id="sequence-viewer-sequence-edit-note" class="small-note">Type the bases to apply.</p>
 
@@ -3842,7 +3932,7 @@
                 <h4 id="sequence-viewer-backbone-dialog-title">Backbone / Insert Candidates</h4>
                 <p id="sequence-viewer-backbone-dialog-subtitle" class="small-note">Review promoter and ORF candidates before applying a backbone/insert interpretation.</p>
               </div>
-              <button id="sequence-viewer-backbone-dialog-close-btn" type="button" class="ghost-btn" aria-label="Close backbone recognition dialog">Close</button>
+              <button id="sequence-viewer-backbone-dialog-close-btn" type="button" class="app-dialog-close-btn" aria-label="Close backbone recognition dialog" title="Close"><span aria-hidden="true">&times;</span></button>
             </div>
 
             <div class="sequence-viewer-backbone-dialog-mode-switch" role="tablist" aria-label="Recognition mode">
@@ -3886,14 +3976,16 @@
       <div id="sequence-viewer-cloning-design-workspace" class="sequence-viewer-cloning-design-workspace" hidden>
         <div class="sequence-viewer-cloning-design-toolbar">
           <div class="sequence-viewer-cloning-design-toolbar-nav">
-            <button id="sequence-viewer-cloning-design-back-btn" type="button" class="ghost-btn">Back to Sequence</button>
+            <button id="sequence-viewer-cloning-design-back-btn" type="button" class="ghost-btn">&larr; Back to Sequence</button>
           </div>
-          <div class="sequence-viewer-cloning-design-toolbar-copy">
-            <h2>Cloning Design</h2>
-            <span id="sequence-viewer-cloning-design-status" class="small-note">Edit the active sequence to enable cloning design.</span>
-          </div>
-          <div class="form-actions sequence-viewer-cloning-design-toolbar-actions">
-            <button id="sequence-viewer-cloning-design-run-btn" type="button" class="primary-btn">Design Primers</button>
+          <div class="sequence-viewer-cloning-design-toolbar-main">
+            <div class="sequence-viewer-cloning-design-toolbar-copy">
+              <h2>Cloning Design</h2>
+              <span id="sequence-viewer-cloning-design-status" class="small-note">Edit the active sequence to enable cloning design.</span>
+            </div>
+            <div class="form-actions sequence-viewer-cloning-design-toolbar-actions">
+              <button id="sequence-viewer-cloning-design-run-btn" type="button" class="primary-btn">Design Primers</button>
+            </div>
           </div>
         </div>
 
@@ -3903,7 +3995,7 @@
               <div class="result-card-head">
                 <h4>Route</h4>
               </div>
-              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-mode-switch sequence-viewer-cloning-design-strategy-list" role="tablist" aria-label="Cloning design route"></div>
+              <div id="sequence-viewer-cloning-design-strategy-list" class="sequence-viewer-cloning-design-strategy-list" role="tablist" aria-label="Cloning design route"></div>
             </section>
 
             <section class="sequence-viewer-cloning-design-panel">
@@ -3942,7 +4034,7 @@
 
       <div id="sequence-viewer-alignment-workspace" class="sequence-viewer-alignment-workspace app-dialog-overlay app-dialog-overlay--top" hidden>
         <div class="sequence-viewer-alignment-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-label="Alignment">
-          <button id="sequence-viewer-alignment-close-btn" type="button" class="sequence-viewer-alignment-close-icon" aria-label="Close alignment dialog">×</button>
+          <button id="sequence-viewer-alignment-close-btn" type="button" class="app-dialog-close-btn app-dialog-close-btn--floating" aria-label="Close alignment dialog" title="Close"><span aria-hidden="true">&times;</span></button>
 
           <section class="result-card sequence-viewer-alignment-panel">
             <div class="sequence-viewer-mode-switch" role="tablist" aria-label="Alignment query input mode">
@@ -4023,6 +4115,7 @@
                     </button>
                   </span>
                 </label>
+                <div id="agent-rail-hidden-context-list" class="agent-attachment-list agent-hidden-context-list" aria-label="Injected context" aria-live="polite" hidden></div>
                 <div id="agent-rail-attachment-list" class="agent-attachment-list" hidden></div>
                 <div class="agent-composer-toolbar">
                   <div class="agent-composer-toolbar-start">

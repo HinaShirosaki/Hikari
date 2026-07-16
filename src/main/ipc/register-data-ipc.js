@@ -4,14 +4,18 @@ const path = require('node:path');
 const {
   parseAssayResultImportFile,
   parseChemicalImportFile
-} = require('../helpers/main/chemical-import-parser');
+} = require('../lib/chemical-import-parser');
 const { transformPaperPdfToMarkdown } = require('../papers/parse/paper-markdown-import.js');
 const {
   STORAGE,
   ASSAY,
   INVENTORY,
-  SEQUENCE_LIBRARY
+  PLUGINS
 } = require('../../shared/ipc/channels');
+const { inspectPluginFolder } = require('../lib/inspect-plugin-folder');
+const {
+  registerSequenceLibraryIpc
+} = require('./register-data-ipc/register-sequence-library-ipc');
 
 function registerDataIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
@@ -208,6 +212,73 @@ function registerDataIpc(deps = {}) {
     };
   }
 
+  function resolveStorageFilePath(storagePath, sourcePath = '', sourceRelativePath = '') {
+    const resolvedStoragePath = path.resolve(storagePath);
+    const directPath = String(sourcePath || '').trim();
+    const relativePath = String(sourceRelativePath || '').trim();
+    const candidate = directPath
+      ? (path.isAbsolute(directPath) ? path.resolve(directPath) : path.resolve(resolvedStoragePath, directPath))
+      : path.resolve(resolvedStoragePath, relativePath);
+    return ensurePathWithinRoot(resolvedStoragePath, candidate);
+  }
+
+  async function moveStoredFile(payload) {
+    const storagePath = String(payload?.storagePath || '').trim();
+    const targetFolderInput = String(payload?.targetFolder || '').trim();
+
+    if (!storagePath) {
+      throw new Error('Missing storage path.');
+    }
+    if (!targetFolderInput) {
+      throw new Error('Missing target folder.');
+    }
+
+    const resolvedStoragePath = path.resolve(storagePath);
+    const sourceFilePath = resolveStorageFilePath(
+      resolvedStoragePath,
+      payload?.sourcePath,
+      payload?.sourceRelativePath
+    );
+    const sourceStat = await fs.stat(sourceFilePath);
+    if (!sourceStat.isFile()) {
+      throw new Error('Source path is not a file.');
+    }
+
+    const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
+    await fs.mkdir(resolvedTargetFolder, { recursive: true });
+
+    const targetFileName = sanitizeImportedFileName(payload?.fileName || path.basename(sourceFilePath));
+    const directTargetPath = path.join(resolvedTargetFolder, targetFileName);
+    if (path.resolve(directTargetPath) === sourceFilePath) {
+      return {
+        moved: false,
+        filePath: sourceFilePath,
+        fileName: path.basename(sourceFilePath),
+        relativePath: path.relative(resolvedStoragePath, sourceFilePath).split(path.sep).join('/'),
+        previousRelativePath: path.relative(resolvedStoragePath, sourceFilePath).split(path.sep).join('/')
+      };
+    }
+
+    const targetFilePath = await getUniqueFilePath(resolvedTargetFolder, targetFileName);
+    try {
+      await fs.rename(sourceFilePath, targetFilePath);
+    } catch (error) {
+      if (error?.code !== 'EXDEV') {
+        throw error;
+      }
+      await fs.copyFile(sourceFilePath, targetFilePath);
+      await fs.unlink(sourceFilePath);
+    }
+
+    return {
+      moved: true,
+      filePath: targetFilePath,
+      fileName: path.basename(targetFilePath),
+      relativePath: path.relative(resolvedStoragePath, targetFilePath).split(path.sep).join('/'),
+      previousRelativePath: path.relative(resolvedStoragePath, sourceFilePath).split(path.sep).join('/')
+    };
+  }
+
   async function appendNotebookPageLog(payload) {
     const storagePath = String(payload?.storagePath || '').trim();
     const targetFolderInput = String(payload?.storageFolder || '').trim();
@@ -330,6 +401,15 @@ function registerDataIpc(deps = {}) {
     return { ok: true, path: result.filePaths[0] };
   });
 
+  ipcMain.handle(PLUGINS.INSPECT_FOLDER, async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    try {
+      return await inspectPluginFolder({ fs, folderPath: normalizedPayload?.path });
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
   ipcMain.handle(STORAGE.ENSURE_DIRECTORY, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
@@ -349,6 +429,15 @@ function registerDataIpc(deps = {}) {
     try {
       const stored = await storeImportedFile(normalizeJsonPayload(payload, {}));
       return { ok: true, ...stored };
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  ipcMain.handle(STORAGE.MOVE_STORED_FILE, async (_event, payload) => {
+    try {
+      const moved = await moveStoredFile(normalizeJsonPayload(payload, {}));
+      return { ok: true, ...moved };
     } catch (error) {
       return { ok: false, error: String(error?.message || error) };
     }
@@ -528,215 +617,20 @@ function registerDataIpc(deps = {}) {
     }
   });
 
-  ipcMain.handle(SEQUENCE_LIBRARY.LIST, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      const status = cleanText(normalizedPayload?.status, 40);
-      const result = await listSequenceEntries({ storagePath, status });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.GET, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      const id = cleanText(normalizedPayload?.id, 200);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (!id) {
-        return { ok: false, error: 'Missing sequence entry id.' };
-      }
-      const result = await getSequenceEntry({
-        storagePath,
-        id,
-        includeGbk: normalizedPayload?.includeGbk === true,
-        includeHtml: normalizedPayload?.includeHtml === true,
-        includeAlignments: normalizedPayload?.includeAlignments === true
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.UPSERT, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      const result = await upsertSequenceEntry({
-        storagePath,
-        id: cleanText(normalizedPayload?.id, 200),
-        name: cleanText(normalizedPayload?.name, 140),
-        status: cleanText(normalizedPayload?.status, 40),
-        sourceFormat: cleanText(normalizedPayload?.sourceFormat, 80),
-        topology: cleanText(normalizedPayload?.topology, 40),
-        sequenceLength: Number(normalizedPayload?.sequenceLength),
-        featureCount: Number(normalizedPayload?.featureCount),
-        sequence: String(normalizedPayload?.sequence || ''),
-        features: Array.isArray(normalizedPayload?.features) ? normalizedPayload.features : [],
-        gbkText: String(normalizedPayload?.gbkText || ''),
-        htmlText: String(normalizedPayload?.htmlText || ''),
-        alignmentSessions: Array.isArray(normalizedPayload?.alignmentSessions)
-          ? normalizedPayload.alignmentSessions
-          : null
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.PROMOTE, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      const id = cleanText(normalizedPayload?.id, 200);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (!id) {
-        return { ok: false, error: 'Missing sequence entry id.' };
-      }
-      const result = await promoteSequenceEntry({
-        storagePath,
-        id,
-        name: cleanText(normalizedPayload?.name, 140)
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.DELETE, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      const id = cleanText(normalizedPayload?.id, 200);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (!id) {
-        return { ok: false, error: 'Missing sequence entry id.' };
-      }
-      const result = await deleteSequenceEntry({ storagePath, id });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.SEARCH_FEATURES, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      const result = await searchSequenceFeatures({
-        storagePath,
-        query: cleanText(normalizedPayload?.query, 600),
-        limit: Number(normalizedPayload?.limit)
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.LIST_BACKBONES, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (typeof listRecognizedBackbones !== 'function') {
-        throw new Error('Stored backbone API unavailable.');
-      }
-      const result = await listRecognizedBackbones({
-        storagePath,
-        query: cleanText(normalizedPayload?.query, 600),
-        limit: Number(normalizedPayload?.limit)
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.UPSERT_BACKBONE, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (typeof upsertRecognizedBackbone !== 'function') {
-        throw new Error('Stored backbone API unavailable.');
-      }
-      const result = await upsertRecognizedBackbone({
-        storagePath,
-        backbone: normalizedPayload?.backbone || normalizedPayload?.data || {}
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.ANNOTATE, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (typeof annotateSequenceRecord !== 'function') {
-        throw new Error('Sequence annotation API unavailable.');
-      }
-      const result = await annotateSequenceRecord({
-        storagePath,
-        sequence: String(normalizedPayload?.sequence || ''),
-        topology: cleanText(normalizedPayload?.topology, 40),
-        excludeEntryId: cleanText(normalizedPayload?.excludeEntryId, 200)
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
-  });
-
-  ipcMain.handle(SEQUENCE_LIBRARY.RECOGNIZE_BACKBONE, async (_event, payload) => {
-    try {
-      const normalizedPayload = normalizeJsonPayload(payload, {});
-      const storagePath = cleanText(normalizedPayload?.storagePath, 2000);
-      if (!storagePath) {
-        return { ok: false, error: 'Missing storage path.' };
-      }
-      if (typeof recognizeSequenceBackbone !== 'function') {
-        throw new Error('Backbone recognition API unavailable.');
-      }
-      const result = await recognizeSequenceBackbone({
-        storagePath,
-        sequence: String(normalizedPayload?.sequence || ''),
-        excludeEntryId: cleanText(normalizedPayload?.excludeEntryId, 200)
-      });
-      return { ok: true, ...result };
-    } catch (error) {
-      return { ok: false, error: String(error?.message || error) };
-    }
+  registerSequenceLibraryIpc({
+    ipcMain,
+    cleanText,
+    normalizeJsonPayload,
+    listSequenceEntries,
+    getSequenceEntry,
+    upsertSequenceEntry,
+    promoteSequenceEntry,
+    deleteSequenceEntry,
+    annotateSequenceRecord,
+    searchSequenceFeatures,
+    listRecognizedBackbones,
+    upsertRecognizedBackbone,
+    recognizeSequenceBackbone
   });
 
 }

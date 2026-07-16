@@ -18,6 +18,9 @@ export function createPersonalInventoryStateHelpers({ state, safeText, uiState }
 
   return {
     getContainer: containerHelpers.getContainer,
+    getContainerChildren: containerHelpers.getContainerChildren,
+    getRootContainers: containerHelpers.getRootContainers,
+    getContainerDescendantIds: containerHelpers.getContainerDescendantIds,
     getLinkedSamples: containerHelpers.getLinkedSamples,
     getContainerSampleCount: containerHelpers.getContainerSampleCount,
     getSectionContainerCount: containerHelpers.getSectionContainerCount,

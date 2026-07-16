@@ -1,14 +1,14 @@
-import { analyzeGelImage } from './analysis-core.js';
-import { createCropController } from './crop-controller.js';
+import { analyzeGelImage } from './analysis/analysis-core.js';
+import { createCropController } from './images/crop-controller.js';
 import { getGelElements } from './dom.js';
-import { createImageController } from './image-controller.js';
-import { createLaneTableController } from './lane-table.js';
-import { createManualWorkflowController } from './manual-workflow.js';
+import { createImageController } from './images/image-controller.js';
+import { createLaneTableController } from './rendering/lane-table.js';
+import { createManualWorkflowController } from './manual/manual-workflow.js';
 import { createRecordsManager } from './records-manager.js';
-import { createRenderingController, selectViewerBaseImageData } from './rendering.js';
+import { createRenderingController, selectViewerBaseImageData } from './rendering/index.js';
 import { createEmptyManualOverrides } from './shared.js';
-import { bindFileDropTarget } from '../file-drop.js';
-import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
+import { bindFileDropTarget } from '../../lib/file-drop.js';
+import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
 
 export { selectViewerBaseImageData };
 

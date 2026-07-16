@@ -128,16 +128,7 @@ function registerAgentLogHandlers({
         endpoint: cleanText(llmSource?.endpoint, 2000),
         hasApiKey: Boolean(cleanText(llmSource?.apiKey, 400))
       };
-    const baseSystemPrompt = typeof agentToolRuntime.buildAgentSystemPrompt === 'function'
-      ? agentToolRuntime.buildAgentSystemPrompt(projectName, {
-        agent: {
-          skillsCatalogPrompt: cleanText(skillPromptPayload.skills_catalog_prompt, 16000),
-          activeSkillsPrompt: cleanText(skillPromptPayload.active_skills_prompt, 24000)
-        }
-      })
-      : '';
-    const codexPrompt = provider === 'codex'
-      && codexAgentRuntime
+    const codexPrompt = codexAgentRuntime
       && typeof codexAgentRuntime.buildPrompt === 'function'
       ? codexAgentRuntime.buildPrompt({
         provider,
@@ -173,9 +164,8 @@ function registerAgentLogHandlers({
         attachments
       },
       prompt: {
-        kind: provider === 'codex' ? 'codex_agent_prompt' : 'agent_runtime_prompt',
-        system_prompt: codexPrompt || baseSystemPrompt,
-        parser_system_prompt: provider === 'codex' ? '' : 'Return valid JSON only.',
+        kind: 'codex_agent_prompt',
+        system_prompt: codexPrompt,
         skills_catalog_prompt: cleanText(skillPromptPayload.skills_catalog_prompt, 16000),
         active_skills_prompt: cleanText(skillPromptPayload.active_skills_prompt, 24000)
       },
@@ -185,20 +175,18 @@ function registerAgentLogHandlers({
         command_name: cleanText(skillInvocation?.command_name, 80),
         skill_name: cleanText(skillInvocation?.skill?.name, 160)
       },
-      mcp_context: provider === 'codex'
-        ? {
-          provider: 'codex',
-          model,
-          cwd: workspaceDir,
-          message: cleanText(effectiveMessage, 3200),
-          conversation: promptConversation.slice(-12),
-          project: {
-            id: projectId,
-            name: projectName
-          },
-          dataFilePath: cleanText(snapshot?.data_file_path || snapshot?.dataFilePath, 2000)
-        }
-        : null,
+      mcp_context: {
+        provider: 'codex',
+        model,
+        cwd: workspaceDir,
+        message: cleanText(effectiveMessage, 3200),
+        conversation: promptConversation.slice(-12),
+        project: {
+          id: projectId,
+          name: projectName
+        },
+        dataFilePath: cleanText(snapshot?.data_file_path || snapshot?.dataFilePath, 2000)
+      },
       llm: llmSummary,
       agent: agentFlags,
       state_snapshot: snapshot

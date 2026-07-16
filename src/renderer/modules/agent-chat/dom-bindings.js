@@ -6,9 +6,14 @@ export function collectAgentChatDom(rootDocument, options = {}) {
   const historyNode = byId(id('chat-history'));
   return {
     projectSelect: byId(id('project-select')),
+    sessionRail: byId(id('session-rail')),
     sessionStatus: byId(id('session-status')),
     sessionList: byId(id('session-list')),
     newChatBtn: byId(id('new-chat-btn')),
+    sessionContextMenu: byId(id('session-context-menu')),
+    contextNewFolderBtn: byId(id('context-new-folder')),
+    contextRenameFolderBtn: byId(id('context-rename-folder')),
+    contextDeleteFolderBtn: byId(id('context-delete-folder')),
     developerTools: byId(id('developer-tools')),
     developerTestToolsBtn: byId(id('dev-test-tools-btn')),
     developerToolSelect: byId(id('dev-tool-select')),
@@ -36,12 +41,12 @@ export function collectAgentChatDom(rootDocument, options = {}) {
     input: byId(id('message-input')),
     quickPrompts: byId(id('quick-prompts')),
     attachmentInput: byId(id('attachment-input')),
+    hiddenContextList: byId(id('hidden-context-list')),
     attachmentList: byId(id('attachment-list')),
     attachBtn: byId(id('attach-btn')),
     paperScreenshotBtn: byId(id('paper-screenshot-btn')),
     sendBtn: byId(id('send-btn')),
     stopBtn: byId(id('stop-btn')),
-    clearBtn: byId(id('clear-btn')),
     status: byId(id('status'))
   };
 }

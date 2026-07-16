@@ -1,0 +1,1202 @@
+{
+  "$defs": {
+    "inventory_search": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "candidate_terms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 10
+        }
+      }
+    },
+    "parser_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "primary_intent": {
+          "type": "string"
+        },
+        "needs_clarification": {
+          "type": "boolean"
+        },
+        "clarification_reason": {
+          "type": "string"
+        },
+        "reasoning_summary": {
+          "type": "string"
+        },
+        "entities": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "inventory_search": {
+          "$ref": "#/$defs/inventory_search"
+        },
+        "protocol_candidates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8
+        }
+      }
+    },
+    "protocol_step": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "text": {
+          "type": "string"
+        },
+        "instruction": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "placeholders": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "maxItems": 60
+        }
+      }
+    },
+    "protocol_record": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "purpose": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "aliases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/protocol_step"
+          },
+          "maxItems": 160
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "projectId": {
+          "type": "string"
+        },
+        "projectName": {
+          "type": "string"
+        }
+      }
+    },
+    "project_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "resolution_source": {
+          "type": "string"
+        }
+      }
+    },
+    "pending_values": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "python_sandbox_file": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "content": {
+          "type": "string"
+        }
+      }
+    },
+    "sub_agent_metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "task_type": {
+          "type": "string"
+        },
+        "parent_request_id": {
+          "type": "string"
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        }
+      }
+    },
+    "memory_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "key": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "project_name": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 120
+        }
+      }
+    },
+    "paper_record": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "doi": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "abstract": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string"
+        },
+        "methods": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "maxItems": 40
+        },
+        "key_findings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20
+        }
+      }
+    },
+    "protocol_generation_step": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "instruction": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        }
+      }
+    },
+    "literature_source": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "web",
+        "pubmed",
+        "crossref",
+        "uniprot",
+        "europe_pmc"
+      ]
+    }
+  },
+  "inventory-lookup": {
+    "description": "Use this tool when the user needs to know whether a reagent, consumable, or personal inventory item exists locally, where it is stored, or how much is available. Prefer it for stock, location, container, quantity, and alias-based reagent lookup. Provide `query` for the main search text, and include `inventory_search` when the parser already extracted normalized candidate terms or search hints.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "inventory_search": {
+          "$ref": "#/$defs/inventory_search"
+        },
+        "parser_payload": {
+          "$ref": "#/$defs/parser_payload"
+        }
+      }
+    }
+  },
+  "notebook-lookup": {
+    "description": "Use this tool to search local notebook pages by text, project, protocol, or state. Prefer `protocol-matching` for protocol lookup and paper tools for paper lookup. Search results include storage coverage and permission status.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string"
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "project_name": {
+          "type": "string"
+        },
+        "protocol_name": {
+          "type": "string"
+        },
+        "notebook_state": {
+          "type": "string",
+          "enum": [
+            "planned",
+            "executed"
+          ]
+        },
+        "detail": {
+          "type": "string",
+          "enum": [
+            "summary",
+            "full"
+          ]
+        },
+        "parser_payload": {
+          "$ref": "#/$defs/parser_payload"
+        }
+      }
+    }
+  },
+  "protocol-matching": {
+    "description": "Use this tool to choose the best local protocol for a user-described activity before generating a notebook entry or protocol-driven draft. It ranks candidate protocols against parser hints, protocol names, aliases, purposes, and step overlap. Provide `protocol_candidates` when the parser or caller already identified likely names, and optionally provide `fallback_protocol` only when there is one specific protocol record that should be considered if ranked candidates are weak.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "protocol_candidates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 5
+        },
+        "fallback_protocol": {
+          "$ref": "#/$defs/protocol_record"
+        }
+      }
+    }
+  },
+  "notebook-generation": {
+    "description": "Use this tool after protocol selection to generate a structured notebook draft from a selected protocol, project context, and known placeholder values. It fills placeholders conservatively, keeps unresolved placeholders visible, and can return follow-up questions when key details are missing. Provide `selected_protocol` when already known, `project` when a project has been resolved, and `pending_values` for explicit user-supplied placeholder answers.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "selected_protocol": {
+          "$ref": "#/$defs/protocol_record"
+        },
+        "project": {
+          "$ref": "#/$defs/project_record"
+        },
+        "pending_values": {
+          "$ref": "#/$defs/pending_values"
+        }
+      }
+    }
+  },
+  "notebook-draft": {
+    "description": "Use this tool to propose a likely next experiment and prepare a planned biology notebook draft for explicit confirmation. It should prefer workflow-downstream experiments and recent executed notebook progress, fill pending_values whose keys exactly match <step-id>:<placeholder-id>, optionally apply per-draft step_edits without mutating the saved protocol, tolerate genuinely unresolved placeholders, and return a confirm-before-save draft instead of auto-creating the page.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "$ref": "#/$defs/project_record"
+        },
+        "workflow_id": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "protocol_candidates": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 5
+        },
+        "pending_values": {
+          "$ref": "#/$defs/pending_values"
+        },
+        "step_edits": {
+          "type": "array",
+          "maxItems": 60,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "step_number": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "text": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "evidence_context": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "tool_name": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "item_count": {
+                "type": "integer"
+              },
+              "citations": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true
+                },
+                "maxItems": 12
+              }
+            }
+          },
+          "maxItems": 8
+        }
+      }
+    }
+  },
+  "python-sandbox": {
+    "description": "Use this tool when the agent needs to write and run Python code to compute, transform, inspect, or generate artifacts in a controlled sandbox. The agent can start a new sandbox run by supplying runnable `code`, optionally stage input files in `files`, and request outputs through `readback_paths`. The managed Python sandbox sub-agent will try to repair failing runs itself before giving up. To continue a prior sandbox helper after the main agent decides the result is insufficient, call this tool again with `sub_agent_id` and optional `feedback`; the same helper will keep working instead of starting over. Inside the sandbox, `import hikari_sandbox as sandbox` to read staged files and emit chat-renderable text or image outputs. Prefer this for deterministic analysis or file generation, not for calling local lab records that already have dedicated lookup tools.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "anyOf": [
+        {
+          "required": [
+            "code"
+          ]
+        },
+        {
+          "required": [
+            "sub_agent_id"
+          ]
+        }
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40000
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 500,
+          "maximum": 15000
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/python_sandbox_file"
+          },
+          "maxItems": 32
+        },
+        "readback_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 240
+          },
+          "maxItems": 20
+        },
+        "sub_agent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "feedback": {
+          "type": "string",
+          "maxLength": 40000
+        },
+        "max_repair_attempts": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 6
+        }
+      }
+    }
+  },
+  "command-line": {
+    "description": "Use this tool when a focused local shell command is the fastest way to inspect or operate on the current workspace, such as `pwd`, `ls`, `git status`, `npm test`, or another project CLI. Provide the complete shell command in `command`, and optionally override `cwd` or `timeout_ms`. Mutating commands may be blocked unless the runtime explicitly enables write-capable tool execution.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command"
+      ],
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 12000
+        },
+        "cwd": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "working_directory": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 500,
+          "maximum": 120000
+        },
+        "commandName": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "skillName": {
+          "type": "string",
+          "maxLength": 160
+        }
+      }
+    }
+  },
+  "web-search": {
+    "description": "Use this tool for broad external web retrieval when the agent needs current or general internet sources rather than paper-specific scholarly search. Provide `query` when possible, and optionally constrain `allowed_domains` for focused retrieval. The runtime routes through the shared web-search transport, including provider-native search and Codex agent search support.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "topic": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "allowed_domains": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 160
+          },
+          "maxItems": 12
+        },
+        "external_web_access": {
+          "type": "boolean"
+        },
+        "user_location": {
+          "type": "object"
+        },
+        "parser_payload": {
+          "$ref": "#/$defs/parser_payload"
+        }
+      }
+    }
+  },
+  "sub-agent": {
+    "description": "Use this tool to manage real Codex CLI-backed helper sub-agent sessions for multi-step or delegated work that should persist across turns. `create` starts a Codex session with a system prompt and initial message, `message` resumes that session with a follow-up, `get` inspects one session, `list` shows active sessions, and `delete` removes a session. Use it when the agent needs a reusable delegated Codex workspace rather than a one-shot tool execution.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "create",
+            "message",
+            "delete",
+            "get",
+            "list"
+          ]
+        },
+        "agent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "system_prompt": {
+          "type": "string",
+          "maxLength": 40000
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 40000
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "metadata": {
+          "$ref": "#/$defs/sub_agent_metadata"
+        }
+      }
+    }
+  },
+  "memory": {
+    "description": "Use this tool to manage sparse long-term user memory across sessions. `recall` searches previously stored preferences, project names, workflow habits, or other stable context. `remember` stores or updates a structured memory record with `key`, `summary`, and optional `value`. `forget` removes matching memory entries. `list` enumerates stored memory, optionally filtered by category, project, or tags. Use it only for durable facts or preferences, not for replaying whole conversations.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "recall",
+            "remember",
+            "forget",
+            "list"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "query": {
+          "type": "string",
+          "maxLength": 320
+        },
+        "category": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "key": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "project_name": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
+        },
+        "record": {
+          "$ref": "#/$defs/memory_record"
+        }
+      }
+    }
+  },
+  "container": {
+    "description": "Use this tool for temporary exact string or number containers. Create a container with a human-readable name and an exact copied value when possible; the tool returns short IDs such as `1` or `2`. Use `read` or `list` to refresh IDs, `update` to replace a value, and `replace_range` to edit a string by zero-based start/end offsets.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "create",
+            "read",
+            "list",
+            "update",
+            "replace_range",
+            "rename",
+            "delete",
+            "clear"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "new_name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 120000
+            },
+            {
+              "type": "number"
+            }
+          ]
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "replacement": {
+          "type": "string",
+          "maxLength": 120000
+        }
+      }
+    }
+  },
+  "assay-table": {
+    "description": "Use this tool for scratch assay data tables and derived calculation tables. Use `create` for original rows, `derive` to build a new table from an existing table, `add_column` for row-wise calculations, and `python` when +, -, *, /, max, min, avg, sd, median, count, log, or pow are not enough. For row-wise replicate summaries, set calculation columns such as `{ \"name\": \"avg\", \"op\": \"avg\", \"operands\": [\"rep1\", \"rep2\", \"rep3\"] }`. For grouped summaries, pass `group_by` and columns with `op` plus `source`, such as `{ \"name\": \"sd_response\", \"op\": \"sd\", \"source\": \"response\" }`. The Python action stages `input_table.json` and `tables.json`; code must write `output_table.json` containing `{ \"columns\": [...], \"rows\": [...] }` or a JSON array of row objects.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "create",
+            "read",
+            "list",
+            "derive",
+            "add_column",
+            "python",
+            "delete",
+            "clear"
+          ]
+        },
+        "table_id": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "output_name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120
+              },
+              {
+                "type": "object",
+                "additionalProperties": true
+              }
+            ]
+          },
+          "maxItems": 200
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": true
+              },
+              {
+                "type": "array",
+                "items": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          "maxItems": 5000
+        },
+        "keep_columns": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "maxItems": 200
+        },
+        "include_source_columns": {
+          "type": "boolean"
+        },
+        "group_by": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "maxItems": 20
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 40000
+        }
+      }
+    }
+  },
+  "plotly-graph": {
+    "description": "Use this tool to create and iteratively adjust scratch Plotly.js graphs from `data` (the traces) and `layout`. Use `inspect` after `create` or `update` to review trace types, axis/title coverage, and x/y length mismatches before answering.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "create",
+            "read",
+            "list",
+            "update",
+            "inspect",
+            "delete",
+            "clear"
+          ]
+        },
+        "graph_id": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "maxItems": 80
+        },
+        "layout": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "replace": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "literature-search": {
+    "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `sources` to name specific databases, or leave it empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/literature_source"
+          },
+          "maxItems": 6
+        },
+        "journals": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 180
+          }
+        },
+        "prefer_recent": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "purchase-recommendation": {
+    "description": "Use this tool when the user wants products they can purchase from external vendors. Provide a compact product query, explicit `required_terms` and `excluded_terms` when known, and a `budget_preference` such as `cheap` when price sensitivity matters. The tool searches generic web results, extracts product metadata from vendor pages, rejects incomplete results, and returns chat-card-ready items with image, vendor, price, and destination URL.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "query": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "required_terms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "excluded_terms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 12
+        },
+        "budget_preference": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        }
+      }
+    }
+  },
+  "paper-download": {
+    "description": "Use this tool when the user wants a paper PDF downloaded into app storage. It extracts candidate PDF URLs from the provided fields and streams the PDF with progress tracking in one call. When direct bot fetching is blocked, the tool can use a configured browser-assisted session; if no safe browser session is configured, it returns `browser_required` instead of opening publisher pages inside the agent process.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "doi": {
+          "type": "string"
+        },
+        "candidate_urls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 24
+        },
+        "linked_name": {
+          "type": "string",
+          "maxLength": 220
+        }
+      }
+    }
+  },
+  "paper-analysis": {
+    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, or explain its methods. Reference a locally-ingested paper by its `paper.id` or `paper.doi` and Hikari loads the paper markdown for you; only pass paper text fields when the paper is not in the local KnowledgeBase. To turn extracted methods into a saved protocol, follow up with `protocol_generation`.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "paper": {
+          "$ref": "#/$defs/paper_record"
+        }
+      }
+    }
+  },
+  "paper-search": {
+    "description": "Use this tool to look up information across the local paper wiki. Each paper has been rewritten into a structured Markdown file with sections like Background, Methods, Key results, Limitations, etc., chunked and indexed with FTS5. Provide a compact keyword `query` (e.g. `MAPK inhibitor resistance`). Optionally pass `paper_id` to restrict to one paper, or `scope`/`container` (`scope`=`project`|`journal-club`, `container`=project or club name) to restrict to one folder. Returns top section matches with title, DOI, section heading, page citation, and a snippet — prefer this over re-reading the full PDF when answering a focused question.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query"
+      ],
+      "properties": {
+        "query": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 400
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "paper_id": {
+          "type": "string",
+          "maxLength": 180
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "project",
+            "journal-club",
+            "global"
+          ]
+        },
+        "container": {
+          "type": "string",
+          "maxLength": 220
+        },
+        "storage_path": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      }
+    }
+  },
+  "protocol-generation": {
+    "description": "Use this tool only when the agent already has a complete protocol JSON object and needs to normalize it into the app's import-ready protocol format. The tool does not call an LLM or synthesize method content. Set save to true in the same call when the user wants the protocol added to the Hikari Protocols module.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol"
+      ],
+      "properties": {
+        "protocol": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "name",
+            "steps"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "purpose": {
+              "type": "string"
+            },
+            "materials": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 80
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "$ref": "#/$defs/protocol_generation_step"
+                  }
+                ]
+              },
+              "maxItems": 120
+            },
+            "troubleshooting": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array"
+                }
+              ]
+            },
+            "createdAt": {
+              "type": "string"
+            },
+            "updatedAt": {
+              "type": "string"
+            }
+          }
+        },
+        "result_summary": {
+          "type": "string"
+        },
+        "save": {
+          "type": "boolean"
+        },
+        "overwrite": {
+          "type": "boolean"
+        },
+        "upsert": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

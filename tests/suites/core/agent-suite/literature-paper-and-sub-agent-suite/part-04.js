@@ -194,6 +194,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-knowledge-intake-'));
       const pdfPath = path.join(storageRoot, 'Papers', 'Atlas', 'intake.pdf');
       const stages = [];
+      let researchPageCalls = 0;
       try {
         await fsPromises.mkdir(path.dirname(pdfPath), { recursive: true });
         await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nfake pdf bytes for intake\n'));
@@ -246,20 +247,63 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
                 }
               };
             }
-            if (options.stage === 'paper_intake_research_summary') {
+            if (options.stage === 'paper_intake_research_page') {
+              researchPageCalls += 1;
+              if (researchPageCalls === 1) {
+                assert.match(options.userPrompt, /Cells were treated with inhibitor\./);
+                assert.doesNotMatch(options.userPrompt, /paper_id|page_number|line_number/);
+                return {
+                  ok: true,
+                  payload: {
+                    experiments: [
+                      {
+                        title: 'Inhibitor treatment',
+                        technique: 'cell treatment',
+                        variables: 'inhibitor-treated cells',
+                        figure_ref: '',
+                        outcome: 'Cells were exposed to inhibitor before measurement.',
+                        evidence: 'Cells were treated with inhibitor.'
+                      }
+                    ],
+                    request_next_page: true
+                  }
+                };
+              }
+              assert.match(options.userPrompt, /Western blot signal changed\./);
+              assert.match(options.userPrompt, /Previous-page analysis for continuation only/);
+              assert.match(options.userPrompt, /Previous full page content retained because continuation was requested/);
               return {
                 ok: true,
                 payload: {
-                  one_sentence_summary: 'This study tests inhibitor treatment in cells and finds altered western blot signal.',
                   experiments: [
                     {
                       title: 'Inhibitor treatment western blot',
                       technique: 'western blot',
                       variables: 'treated versus untreated cells',
                       figure_ref: 'Fig. 1',
-                      outcome: 'The target signal changed after inhibitor treatment.'
+                      outcome: 'The target signal changed after inhibitor treatment.',
+                      evidence: 'Western blot signal changed.'
+                    },
+                    {
+                      title: 'Invented proliferation assay',
+                      technique: 'cell counting',
+                      variables: 'treated versus untreated cells',
+                      figure_ref: 'Fig. 9',
+                      outcome: 'Cell growth changed.',
+                      evidence: 'This sentence does not occur in either supplied page.'
                     }
-                  ]
+                  ],
+                  request_next_page: false
+                }
+              };
+            }
+            if (options.stage === 'paper_intake_research_summary') {
+              assert.match(options.userPrompt, /Inhibitor treatment western blot/);
+              assert.doesNotMatch(options.userPrompt, /Invented proliferation assay/);
+              return {
+                ok: true,
+                payload: {
+                  one_sentence_summary: 'This study tests inhibitor treatment in cells and finds altered western blot signal.'
                 }
               };
             }
@@ -280,14 +324,23 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
         assert.equal(result.ok, true);
         assert.equal(result.paper_intake.ok, true);
         assert.equal(result.paper_intake.status, 'saved');
-        assert.deepEqual(stages, ['paper_intake_classification', 'paper_intake_research_summary']);
+        assert.deepEqual(stages, [
+          'paper_intake_classification',
+          'paper_intake_research_page',
+          'paper_intake_research_page',
+          'paper_intake_research_summary'
+        ]);
+        assert.equal(result.paper_intake.pages_read, 2);
+        assert.equal(result.paper_intake.rejected_experiment_count, 1);
         assert.equal(result.markdown_relative_path, 'KnowledgeBase/papers.md/10.1000_intake.test/paper.md');
         const intakePath = path.join(storageRoot, 'KnowledgeBase', 'papers.md', '10.1000_intake.test', 'intake.json');
         const intake = JSON.parse(await fsPromises.readFile(intakePath, 'utf8'));
         assert.equal(intake.paper_id, '10.1000_intake.test');
         assert.equal(intake.doc_type, 'research_paper');
         assert.equal(intake.source_paths.paper_md, 'KnowledgeBase/papers.md/10.1000_intake.test/paper.md');
-        assert.equal(intake.experiments[0].technique, 'western blot');
+        assert.equal(intake.experiments.length, 2);
+        assert.equal(intake.experiments[1].technique, 'western blot');
+        assert.equal(intake.experiments[1].evidence, 'Western blot signal changed.');
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
@@ -374,6 +427,36 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
         });
         assert.equal(nodeResult.ok, true);
         assert.match(nodeResult.markdown, /Node extracted paper text/);
+
+        let defaultPdfJsSpecifier = '';
+        const defaultPathRuntime = pdfTextExtraction.createPdfTextExtractionRuntime({
+          importEsm: async (specifier) => {
+            defaultPdfJsSpecifier = specifier;
+            return {
+              getDocument: () => ({
+                promise: Promise.resolve({
+                  numPages: 1,
+                  getPage: async () => ({
+                    getTextContent: async () => ({
+                      items: [{ str: 'Default vendor path works.', hasEOL: true }]
+                    }),
+                    cleanup: () => {}
+                  }),
+                  getOutline: async () => [],
+                  destroy: async () => {}
+                })
+              })
+            };
+          }
+        });
+        const defaultPathResult = await defaultPathRuntime.extractText({
+          buffer: Buffer.from('%PDF-1.7\nfake bytes')
+        });
+        assert.equal(defaultPathResult.ok, true);
+        assert.equal(
+          defaultPdfJsSpecifier,
+          `file://${path.join(__dirname, 'vendor', 'pdfjs', 'build', 'pdf.mjs')}`
+        );
       } finally {
         if (originalDomMatrix) {
           globalThis.DOMMatrix = originalDomMatrix;
@@ -426,6 +509,52 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
       assert.match(sectionMarkdown, /### Results \(p\. 1\)/);
       assert.match(sectionMarkdown, /First result sentence continues as one paragraph\./);
       assert.doesNotMatch(sectionMarkdown, /^## Pages/m);
+    });
+    test('paper intake page cursor exposes only content state and does not cap verified experiments at sixty', async () => {
+      const intakePipeline = require(path.join(__dirname, 'src', 'main', 'papers', 'store', 'intake', 'intake-pipeline.js'));
+      const pages = intakePipeline.splitExtractedTextPages(
+        '[[page:1]]\nFirst full page.\n\n[[page:2]]\nSecond full page.'
+      );
+      const cursor = intakePipeline.createPaperPageCursor(pages);
+      assert.deepEqual(cursor.nextPage(), { content: 'First full page.', has_more: true });
+      assert.deepEqual(cursor.nextPage(), { content: 'Second full page.', has_more: false });
+      assert.deepEqual(cursor.nextPage(), { content: '', has_more: false });
+
+      const evidence = 'A verified assay result appears in this page content.';
+      const runtime = intakePipeline.createIntakePipeline({
+        store: { writeIntake: async () => ({ ok: true }) },
+        requestStructuredJsonPayload: async (options = {}) => {
+          if (options.stage === 'paper_intake_research_page') {
+            return {
+              ok: true,
+              payload: {
+                experiments: Array.from({ length: 61 }, (_, index) => ({
+                  title: `Verified experiment ${index + 1}`,
+                  technique: `assay ${index + 1}`,
+                  variables: 'condition A versus condition B',
+                  figure_ref: `Fig. ${index + 1}`,
+                  outcome: 'The measured result changed.',
+                  evidence
+                })),
+                request_next_page: false
+              }
+            };
+          }
+          return {
+            ok: true,
+            payload: {
+              one_sentence_summary: 'The paper reports a complete evidence-backed experimental inventory.'
+            }
+          };
+        }
+      });
+      const summary = await runtime.summarizeResearch({
+        title: 'Large experiment inventory',
+        markdown: evidence,
+        pages: [evidence]
+      });
+      assert.equal(summary.ok, true);
+      assert.equal(summary.experiments.length, 61);
     });
     test('pdf text extraction keeps long detected sections within the overall extraction budget by default', async () => {
       const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'agent-pdf-text-extraction.js'));

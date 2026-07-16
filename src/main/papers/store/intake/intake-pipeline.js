@@ -6,7 +6,7 @@
  * Runs automatically for every imported paper AFTER its PDF has been transferred
  * into `KnowledgeBase/papers.md/<paper_id>/paper.md`. The pipeline:
  *
- *   1. Reads `paper.md` (and `meta.json` for title/doi hints) through the store.
+ *   1. Reads `paper.md`, page-delimited `extracted.txt`, and metadata through the store.
  *   2. Classifies the document type with the injected LLM (research_paper vs
  *      review / book / book_chapter / other).
  *   3. Branches:
@@ -25,10 +25,11 @@
  * transformed markdown.
  */
 
-const { createAgentLlmRuntimeHelpers } = require('../../../helpers/agent/shared/agent-llm-utils.js');
+const { createAgentLlmRuntimeHelpers } = require('../../../lib/llm/runtime-helpers.js');
 const { createIntakeStore, DOC_TYPES } = require('./intake-store.js');
 
 const DEFAULT_MARKDOWN_CHAR_LIMIT = 24000;
+const DEFAULT_FALLBACK_PAGE_CHARS = 12000;
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -73,27 +74,37 @@ const CLASSIFICATION_SCHEMA = {
   }
 };
 
-const RESEARCH_SCHEMA = {
+const RESEARCH_PAGE_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: ['one_sentence_summary', 'experiments'],
+  required: ['experiments', 'request_next_page'],
   properties: {
-    one_sentence_summary: { type: 'string' },
     experiments: {
       type: 'array',
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['title', 'technique', 'variables', 'figure_ref', 'outcome'],
+        required: ['title', 'technique', 'variables', 'figure_ref', 'outcome', 'evidence'],
         properties: {
           title: { type: 'string' },
           technique: { type: 'string' },
           variables: { type: 'string' },
           figure_ref: { type: 'string' },
-          outcome: { type: 'string' }
+          outcome: { type: 'string' },
+          evidence: { type: 'string' }
         }
       }
-    }
+    },
+    request_next_page: { type: 'boolean' }
+  }
+};
+
+const RESEARCH_SUMMARY_SCHEMA = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['one_sentence_summary'],
+  properties: {
+    one_sentence_summary: { type: 'string' }
   }
 };
 
@@ -142,15 +153,20 @@ const CLASSIFY_SYSTEM_PROMPT = [
   'Return JSON only.'
 ].join(' ');
 
-const RESEARCH_SYSTEM_PROMPT = [
-  'You summarize a research paper for a lab knowledge base.',
-  'Write exactly ONE sentence naming the system/question, the core method, and the headline finding.',
-  'Then list every distinct experiment the paper conducts, in order of presentation.',
-  'For each experiment give a short title, the technique/assay, the variables compared or hypothesis tested,',
-  'the figure or table that reports it (e.g. "Fig. 2B", "Table 1", or "" when none), and a one-line outcome.',
-  'Cover ablations, separate controls, supplementary experiments referenced in the main text, and computational experiments.',
-  'Group sub-panels of the same experiment under one entry. Do not invent experiments only described as future work.',
-  'Use the paper\'s own terminology for assays and techniques. Return JSON only.'
+const RESEARCH_PAGE_SYSTEM_PROMPT = [
+  'You inventory experiments from one full extracted paper page at a time.',
+  'List every distinct experiment, control, ablation, computational analysis, or supplementary experiment evidenced by the supplied content.',
+  'Include only experiments conducted by this paper; exclude background studies, cited prior work, future work, and reference-list entries.',
+  'For each experiment, copy a short verbatim evidence excerpt from the supplied content.',
+  'Do not paraphrase evidence and do not report an experiment without supporting content.',
+  'Set request_next_page to true when another page is available and the paragraph, caption, table, method, result, or experiment continues.',
+  'Do not add identifiers, page numbers, line numbers, or source paths. Return JSON only.'
+].join(' ');
+
+const RESEARCH_SUMMARY_SYSTEM_PROMPT = [
+  'Write exactly one sentence summarizing a research paper from its verified experiment inventory.',
+  'Name the system or question, core methods, and headline finding.',
+  'Do not add findings absent from the inventory. Return JSON only.'
 ].join(' ');
 
 const NON_RESEARCH_SYSTEM_PROMPT = [
@@ -173,13 +189,42 @@ function buildClassificationPrompt({ title, doi, markdown }) {
   ].join('\n\n');
 }
 
-function buildResearchPrompt({ title, markdown }) {
+function buildResearchPagePrompt({
+  title,
+  content,
+  hasMore,
+  previousPageAnalysis = null,
+  previousPageContent = ''
+}) {
   return [
-    'Summarize the research paper below and enumerate every experiment.',
+    'Inspect this full extracted page and return newly evidenced experiments.',
     `Title: ${title || '-'}`,
-    'Paper Markdown (from paper.md):',
-    markdown || '-',
-    'Return JSON with one_sentence_summary and experiments[] (title, technique, variables, figure_ref, outcome).'
+    `Another full page is available: ${hasMore ? 'yes' : 'no'}`,
+    previousPageContent
+      ? `Previous full page content retained because continuation was requested:\n${previousPageContent}`
+      : '',
+    previousPageAnalysis
+      ? `Previous-page analysis for continuation only:\n${JSON.stringify(previousPageAnalysis, null, 2)}`
+      : '',
+    'Full page content:',
+    content || '-',
+    'Return JSON with experiments[] (title, technique, variables, figure_ref, outcome, evidence) and request_next_page.'
+  ].filter(Boolean).join('\n\n');
+}
+
+function buildResearchSummaryPrompt({ title, experiments }) {
+  const compactExperiments = asArray(experiments).map((experiment) => ({
+    title: cleanText(experiment?.title, 240),
+    technique: cleanText(experiment?.technique, 240),
+    variables: cleanText(experiment?.variables, 400),
+    figure_ref: cleanText(experiment?.figure_ref, 80),
+    outcome: cleanText(experiment?.outcome, 600)
+  }));
+  return [
+    'Summarize the verified experiment inventory below.',
+    `Title: ${title || '-'}`,
+    `Verified experiments JSON:\n${JSON.stringify(compactExperiments, null, 2)}`,
+    'Return JSON with one_sentence_summary.'
   ].join('\n\n');
 }
 
@@ -193,21 +238,120 @@ function buildNonResearchPrompt({ title, docType, markdown }) {
   ].join('\n\n');
 }
 
-function normalizeExperiments(value) {
+function normalizeComparableContent(value = '') {
+  return String(value || '')
+    .normalize('NFKC')
+    .replace(/(\p{L})-\s+(\p{Ll})/gu, '$1$2')
+    .replace(/\s+/gu, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+function contentSupportsEvidence(content = '', evidence = '') {
+  const normalizedEvidence = normalizeComparableContent(evidence);
+  return normalizedEvidence.length >= 12
+    && normalizeComparableContent(content).includes(normalizedEvidence);
+}
+
+function normalizeExperiments(value, { sourceContents = [], requireEvidence = false } = {}) {
   return asArray(value)
     .map((item, index) => {
       const source = ensureObject(item);
+      const evidence = cleanText(source.evidence || source.source_content || source.sourceContent, 1600);
+      if (requireEvidence && !asArray(sourceContents).some((content) => contentSupportsEvidence(content, evidence))) {
+        return null;
+      }
       return {
         id: `e${index + 1}`,
         title: cleanText(source.title, 240),
         technique: cleanText(source.technique, 240),
         variables: cleanText(source.variables, 400),
         figure_ref: cleanText(source.figure_ref || source.figureRef, 80),
-        outcome: cleanText(source.outcome, 600)
+        outcome: cleanText(source.outcome, 600),
+        ...(evidence ? { evidence } : {})
       };
     })
-    .filter((experiment) => experiment.title || experiment.technique)
-    .slice(0, 60);
+    .filter((experiment) => experiment && (experiment.title || experiment.technique));
+}
+
+function experimentIdentity(experiment = {}) {
+  const source = ensureObject(experiment);
+  return [source.figure_ref, source.title, source.technique, source.variables, source.outcome]
+    .map((value) => normalizeComparableContent(value))
+    .join('|');
+}
+
+function mergeExperiments(current = [], incoming = []) {
+  const merged = [];
+  const seen = new Set();
+  [...asArray(current), ...asArray(incoming)].forEach((experiment) => {
+    const key = experimentIdentity(experiment);
+    if (!key || seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    merged.push({ ...experiment, id: `e${merged.length + 1}` });
+  });
+  return merged;
+}
+
+function splitExtractedTextPages(value = '') {
+  const text = String(value || '');
+  const markerPattern = /^\[\[page:\s*\d+\s*\]\]\s*$/gimu;
+  const markers = [...text.matchAll(markerPattern)];
+  if (!markers.length) {
+    return [];
+  }
+  return markers.map((marker, index) => {
+    const start = Number(marker.index) + marker[0].length;
+    const end = index + 1 < markers.length ? Number(markers[index + 1].index) : text.length;
+    return text.slice(start, end).trim();
+  }).filter(Boolean);
+}
+
+function splitTextIntoPageWindows(value = '', maxChars = DEFAULT_FALLBACK_PAGE_CHARS) {
+  const paragraphs = String(value || '').split(/\n{2,}/u).map((paragraph) => paragraph.trim()).filter(Boolean);
+  const pages = [];
+  let current = '';
+  paragraphs.forEach((paragraph) => {
+    if (current && current.length + paragraph.length + 2 > maxChars) {
+      pages.push(current);
+      current = '';
+    }
+    if (paragraph.length > maxChars) {
+      if (current) {
+        pages.push(current);
+        current = '';
+      }
+      for (let offset = 0; offset < paragraph.length; offset += maxChars) {
+        pages.push(paragraph.slice(offset, offset + maxChars));
+      }
+      return;
+    }
+    current = current ? `${current}\n\n${paragraph}` : paragraph;
+  });
+  if (current) {
+    pages.push(current);
+  }
+  return pages;
+}
+
+function createPaperPageCursor(pages = []) {
+  const contentPages = asArray(pages).map((page) => cleanText(page, 0)).filter(Boolean);
+  let index = 0;
+  return Object.freeze({
+    nextPage() {
+      if (index >= contentPages.length) {
+        return { content: '', has_more: false };
+      }
+      const content = contentPages[index];
+      index += 1;
+      return {
+        content,
+        has_more: index < contentPages.length
+      };
+    }
+  });
 }
 
 function normalizeOutline(value) {
@@ -248,7 +392,8 @@ function normalizeClaims(value) {
  * Optional deps:
  *   - resolveProjectIdsForPaper / listKnownPaperIds / matchProjectName — forwarded
  *     to the store.
- *   - markdownCharLimit — cap on how much paper.md is fed to the LLM.
+ *   - markdownCharLimit — cap for classification and non-research summaries.
+ *     Research experiment extraction always traverses every available page.
  *   - saveNonResearch (default true) — when false, non-research papers are
  *     classified and returned but not written to the KB.
  *   - minResearchConfidence (default 0) — re-route low-confidence research
@@ -290,23 +435,80 @@ function createIntakePipeline(deps = {}) {
     };
   }
 
-  async function summarizeResearch({ title, markdown, traceContext }) {
-    const result = await llm.requestStructuredJsonPayload({
+  async function summarizeResearch({ title, markdown, pages: suppliedPages = [], traceContext }) {
+    const pages = asArray(suppliedPages).length
+      ? asArray(suppliedPages)
+      : splitTextIntoPageWindows(markdown);
+    const cursor = createPaperPageCursor(pages);
+    let experiments = [];
+    let previousPageAnalysis = null;
+    let previousPageContent = '';
+    let pagesRead = 0;
+    let rejectedExperimentCount = 0;
+
+    while (true) {
+      const page = cursor.nextPage();
+      if (!page.content) {
+        break;
+      }
+      const result = await llm.requestStructuredJsonPayload({
+        stage: 'paper_intake_research_page',
+        systemPrompt: RESEARCH_PAGE_SYSTEM_PROMPT,
+        userPrompt: buildResearchPagePrompt({
+          title,
+          content: page.content,
+          hasMore: page.has_more,
+          previousPageAnalysis,
+          previousPageContent
+        }),
+        schema: RESEARCH_PAGE_SCHEMA,
+        traceContext: traceContext || null,
+        defaultError: 'Paper intake page-analysis provider is not configured.'
+      });
+      if (!result?.ok || !result.payload) {
+        return { ok: false, error: cleanText(result?.error, 600) || 'Research page analysis failed.' };
+      }
+      pagesRead += 1;
+      const payload = ensureObject(result.payload);
+      const rawExperiments = asArray(payload.experiments);
+      const sourceContents = [page.content];
+      if (previousPageAnalysis && previousPageContent) {
+        sourceContents.push(previousPageContent);
+      }
+      const accepted = normalizeExperiments(rawExperiments, {
+        sourceContents,
+        requireEvidence: true
+      });
+      rejectedExperimentCount += Math.max(0, rawExperiments.length - accepted.length);
+      experiments = mergeExperiments(experiments, accepted);
+      const requestsNextPage = payload.request_next_page === true && page.has_more;
+      previousPageAnalysis = requestsNextPage
+        ? { experiments: accepted, request_next_page: true }
+        : null;
+      previousPageContent = requestsNextPage ? page.content : '';
+      if (!page.has_more) {
+        break;
+      }
+    }
+
+    const summaryResult = await llm.requestStructuredJsonPayload({
       stage: 'paper_intake_research_summary',
-      systemPrompt: RESEARCH_SYSTEM_PROMPT,
-      userPrompt: buildResearchPrompt({ title, markdown }),
-      schema: RESEARCH_SCHEMA,
+      systemPrompt: RESEARCH_SUMMARY_SYSTEM_PROMPT,
+      userPrompt: buildResearchSummaryPrompt({ title, experiments }),
+      schema: RESEARCH_SUMMARY_SCHEMA,
       traceContext: traceContext || null,
       defaultError: 'Paper intake summary provider is not configured.'
     });
-    if (!result?.ok || !result.payload) {
-      return { ok: false, error: cleanText(result?.error, 600) || 'Research summary failed.' };
+    if (!summaryResult?.ok || !summaryResult.payload) {
+      return { ok: false, error: cleanText(summaryResult?.error, 600) || 'Research summary failed.' };
     }
-    const payload = ensureObject(result.payload);
+    const payload = ensureObject(summaryResult.payload);
     return {
       ok: true,
       one_sentence_summary: firstSentence(payload.one_sentence_summary),
-      experiments: normalizeExperiments(payload.experiments)
+      experiments,
+      pages_read: pagesRead,
+      rejected_experiment_count: rejectedExperimentCount
     };
   }
 
@@ -389,7 +591,20 @@ function createIntakePipeline(deps = {}) {
 
     let summary = null;
     if (treatAsResearch) {
-      summary = await summarizeResearch({ title, markdown: boundedMarkdown, traceContext });
+      let extractedText = cleanText(options.extractedText || options.extracted_text, 0);
+      if (!extractedText && typeof store.readPaperExtractedText === 'function') {
+        const extractedResult = await store.readPaperExtractedText(paperId);
+        if (extractedResult?.ok) {
+          extractedText = extractedResult.content;
+        }
+      }
+      const pages = splitExtractedTextPages(extractedText);
+      summary = await summarizeResearch({
+        title,
+        markdown,
+        pages: pages.length ? pages : splitTextIntoPageWindows(markdown),
+        traceContext
+      });
     } else {
       summary = await summarizeNonResearch({
         title,
@@ -452,6 +667,8 @@ function createIntakePipeline(deps = {}) {
       is_research_paper: treatAsResearch,
       ran_summary_pipeline: true,
       experiment_count: treatAsResearch ? record.experiments.length : 0,
+      pages_read: treatAsResearch ? Number(summary.pages_read) || 0 : 0,
+      rejected_experiment_count: treatAsResearch ? Number(summary.rejected_experiment_count) || 0 : 0,
       one_sentence_summary: record.one_sentence_summary,
       record: saved || record
     };
@@ -506,18 +723,25 @@ function createIntakePipeline(deps = {}) {
     runIntakeForPaper,
     runIntakeForImportedPapers,
     CLASSIFICATION_SCHEMA,
-    RESEARCH_SCHEMA,
+    RESEARCH_PAGE_SCHEMA,
+    RESEARCH_SUMMARY_SCHEMA,
     NON_RESEARCH_SCHEMA
   });
 }
 
 module.exports = {
   CLASSIFICATION_SCHEMA,
-  RESEARCH_SCHEMA,
+  RESEARCH_PAGE_SCHEMA,
+  RESEARCH_SUMMARY_SCHEMA,
   NON_RESEARCH_SCHEMA,
   CLASSIFY_SYSTEM_PROMPT,
-  RESEARCH_SYSTEM_PROMPT,
+  RESEARCH_PAGE_SYSTEM_PROMPT,
+  RESEARCH_SUMMARY_SYSTEM_PROMPT,
   NON_RESEARCH_SYSTEM_PROMPT,
   firstSentence,
+  contentSupportsEvidence,
+  createPaperPageCursor,
+  splitExtractedTextPages,
+  splitTextIntoPageWindows,
   createIntakePipeline
 };

@@ -39,7 +39,7 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 ## Highlights
 
 - Local desktop app built with Electron — your data stays on your machine.
-- One workspace for `Home`, `Protocols`, `Projects`, `Workflows`, `Biology Notebook`, `Sample & Inventory`, `Chemicals`, `Assay`, `Gel`, `Papers`, `Agent`, `Sequence Viewer`, `Tools`, and `Settings`.
+- One workspace for `Home`, `Protocols`, `Workflows`, `Biology Notebook` (including projects), `Sample & Inventory`, `Chemicals`, `Assay`, `Gel`, `Papers`, `Agent`, `Sequence Viewer`, `Tools`, and `Settings`.
 - Snapshot save/load support for `.json` and `.ena` data files.
 - Storage-root-backed files for notebooks, projects, papers, and sequence assets.
 - Optional LLM-backed features for `Papers` and `Agent`.
@@ -80,14 +80,13 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 | --- | --- |
 | <img src="assets/icons/home.svg" width="16"/> `Home` | Dashboard with quick navigation, workflow progress, lab timer, and cell-passage reminders. |
 | <img src="assets/icons/protocols.svg" width="16"/> `Protocols` | Protocol authoring, import/export, share flows, and notebook placeholders. |
-| <img src="assets/icons/folder-2-svgrepo-com.svg" width="16"/> `Projects` | Project registry with linked notebook, assay, gel, and paper context. |
 | <img src="assets/icons/workflows.svg" width="16"/> `Workflows` | Graph-based workflow builder with templates and project linkage. |
 
 ### Experiment data
 
 | Module | What it does |
 | --- | --- |
-| <img src="assets/icons/biology-notebook.svg" width="16"/> `Biology Notebook` | Protocol-linked experiment records with structured fields, attachments, and PDF export. |
+| <img src="assets/icons/biology-notebook.svg" width="16"/> `Biology Notebook` | Project creation and dashboards plus protocol-linked experiment records, attachments, and PDF export. |
 | <img src="assets/icons/sample-inventory.svg" width="16"/> `Sample & Inventory` | Registry for plasmids, cell lines, strains, antibodies, proteins, compounds, primers, and storage locations. |
 | <img src="assets/icons/chemicals.svg" width="16"/> `Chemicals` | Shared reagent inventory with searchable records, locations, lots, and activity history. |
 | <img src="assets/icons/assay.svg" width="16"/> `Assay` | Plate design, CSV mapping flow, result capture, and analysis views. |
@@ -106,7 +105,7 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 | Module | What it does |
 | --- | --- |
 | <img src="assets/icons/agent.svg" width="16"/> `Agent` | Evidence-grounded assistant over app state, papers, workflows, and linked records. |
-| <img src="assets/icons/settings.svg" width="16"/> `Settings` | Personal profile, appearance, startup behavior, storage path, LLM provider setup, Telegram token, and data file controls. |
+| <img src="assets/icons/settings.svg" width="16"/> `Settings` | Personal profile, appearance, startup behavior, storage path, Codex model setup, Telegram token, and data file controls. |
 
 ## Quick Start
 
@@ -133,38 +132,19 @@ npm run start
 
 ## AI and Agent Setup
 
-Configure AI features in `Settings > LLM Model & Access`.
+Configure AI features in `Settings > Codex Model & Access`.
 
-The shipped agent uses:
+The Agent workspace uses:
 
 - `Codex Agent (CLI)`
 
-API-backed agent providers remain available for development builds when
-`allowApiAgent` is set to `true` in [`config/llm-providers.json`](./config/llm-providers.json):
-
-- `OpenAI`
-- `Gemini`
-- `Claude`
-- `DeepSeek`
-
-Environment variable fallbacks:
-
-- `HIKARI_LLM_API_KEY`
-- `LLM_API_KEY`
-
-Notes:
-
-- `Agent` defaults to Codex and ignores persisted API-agent selections while `allowApiAgent` is `false`.
-- Provider defaults come from [`config/llm-providers.json`](./config/llm-providers.json).
-- DeepSeek uses the OpenAI-compatible Chat Completions API at `https://api.deepseek.com`.
-- Codex Agent mode does not use an API endpoint or API key; it uses the signed-in `codex` CLI plus Hikari MCP tools.
+The model catalog is [`config/codex-models.json`](./config/codex-models.json). All LLM-backed features use the signed-in `codex` CLI; no API endpoint or API key is stored by the app.
 
 ### Codex Agent Setup
 
 1. Install the `codex` CLI and make sure it is available on `PATH`.
 2. Run `codex login`.
-3. In `Settings > LLM Model & Access`, select `Codex Agent (CLI)`.
-4. Optionally choose a model and reasoning effort.
+3. In `Settings > Codex Model & Access`, optionally choose a model and reasoning effort.
 
 ## Telegram Bot
 
@@ -253,13 +233,14 @@ Packaging notes:
 ## Project Layout
 
 - `src/main/main.js`: Electron main process, window lifecycle, IPC wiring, LLM integration, and Telegram lifecycle.
-- `src/main/helpers/main/`: persistence, storage-bundle import/export, sequence-library logic, and main-process IPC registrars.
-- `src/main/helpers/agent/`: agent backend, tool execution, runtime orchestration, and deep-research pipeline.
-- `src/main/lib/`: process-level integrations such as the Telegram bot and Codex agent launcher.
+- `src/main/storage/`: storage-bundle import/export, persistence, and sequence-library summary logic.
+- `src/main/data/`: primary snapshot and data-helper utilities.
+- `src/main/agent/`: Codex integration, MCP contracts, tool adapters, context, and agent runtime support.
+- `src/main/lib/`: process-level integrations and shared utilities (Telegram bot, Codex agent launcher, LLM runtime, app-paths).
 - `src/renderer/`: renderer shell, feature modules, shared state, and service layer.
 - `ui/html/` and `ui/css/`: source fragments used to generate the shipped `index.html` and `styles.css`.
 - `ui/config/`: source-of-truth ordering and app-registry config for generated UI assets.
-- `config/llm-providers.json`: provider catalog used to generate renderer and main-process LLM config modules.
+- `config/codex-models.json`: Codex model catalog used to generate renderer and main-process model metadata modules.
 - `docs/`: internal walkthroughs for renderer, main helpers, and the agent backend.
 
 ## Internal Docs
@@ -268,7 +249,7 @@ If you are onboarding to the codebase, start with the docs index and then the ar
 
 - [`docs/README.md`](./docs/README.md) — internal docs index and architecture overview
 - [`docs/renderer/README.md`](./docs/renderer/README.md)
-- [`docs/main-helpers/README.md`](./docs/main-helpers/README.md)
+- [`docs/main-platform/README.md`](./docs/main-platform/README.md)
 - [`docs/agent/README.md`](./docs/agent/README.md)
 - [`docs/module-development/README.md`](./docs/module-development/README.md) — how to add a new module
 - [`tests/README.md`](./tests/README.md)
@@ -284,11 +265,9 @@ If you are onboarding to the codebase, start with the docs index and then the ar
 </details>
 
 <details>
-<summary><strong>Papers or Agent says an API key is missing</strong></summary>
+<summary><strong>Papers or Agent says Codex is unavailable</strong></summary>
 
-- For OpenAI, Gemini, Claude, or DeepSeek, set the provider, model, endpoint, and key in `Settings > LLM Model & Access`.
-- For Codex Agent, sign in with `codex login`; no endpoint or API key is used.
-- Or export `HIKARI_LLM_API_KEY` / `LLM_API_KEY` before launching the app.
+- Sign in with `codex login` and reopen `Settings > Codex Model & Access` to refresh the status.
 
 </details>
 

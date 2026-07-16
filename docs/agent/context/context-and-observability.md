@@ -1,105 +1,39 @@
 # Context And Observability
 
-The `context/` and `shared/agent-observability.js` files are the package's memory and debugging backbone.
+Production Agent context is intentionally small: renderer-facing chat sessions, sparse long-term memory, request-scoped Codex context, and lifecycle traces.
 
-## `agent-chat-log.js`
+## `context/agent-chat-log.js`
 
-This is the primary context file on the main `agent:chat` path (alongside `agent-memory.js`, which is now reachable as the `memory` tool — see below).
+The chat-log runtime manages:
 
-It manages:
+- session creation and indexing;
+- per-session JSONL rows;
+- renderer-facing assistant message projection;
+- session listing and retrieval.
 
-- chat session creation and indexing
-- per-session JSONL row storage
-- conversion from internal agent result objects into renderer-friendly assistant messages
-- session listing and retrieval for the chat sidebar/history
+The `messages` projection contains what the UI needs. Raw rows retain request, result, lifecycle, and LLM-trace detail.
 
-The agent IPC layer uses it for:
+## `context/agent-memory.js`
 
-- `ensureSession(...)`
-- `appendRows(...)`
-- `buildAssistantMessageFromResult(...)`
-- `buildAssistantMessageFromError(...)`
+The memory runtime persists sparse records and exposes `remember`, `recall`, `forget`, and `list`. Records are normalized and deduplicated by category, key, and project name. The storage file is optional, so tests can inject an in-memory map.
 
-One subtle but useful detail: the assistant message stored for the renderer is a summarized projection of the agent result, not a raw dump of lifecycle internals.
+Memory is registered as an internal Agent tool. It is distinct from the project-scoped Codex `MEMORY.md` files prepared by the Codex service.
 
-## `agent-context-management.js`
+## Request context
 
-This file implements a richer layered context model than the current controller uses.
+Each Codex turn receives a bounded MCP request context built by `codex-agent/prompts.js`. It carries the active working directory, project/storage hints, model settings, and the thin Agent snapshot needed by direct tools. Large feature data should be retrieved through owning tools rather than copied into the prompt.
 
-It keeps three layers:
+## `shared/agent-observability.js`
 
-- immediate context
-- session memory
-- long-term memory
+Observability provides lifecycle recorder creation, event recording, log rotation, request listing, replay, and failure classification. The Agent IPC layer records controller selection, Codex execution, tool activity, completion, and errors through this service.
 
-It can:
+## Debugging order
 
-- start or update an active task
-- record tool rounds and follow-up exchanges
-- build prompt blocks for each context layer
-- derive candidate long-term memories from the session state
-- prune expired sessions
+When a turn behaves unexpectedly:
 
-It is well-commented and structurally ready for use, but it is not currently wired into the `agent:chat` flow in `src/main/ipc/register-agent-ipc/`. (This is distinct from `agent-memory.js`, which *is* wired.)
+1. inspect the session rows to confirm the renderer request and final projection;
+2. replay the lifecycle request to locate the failing stage;
+3. inspect the Codex/MCP tool events and request context;
+4. only then change prompts or tool behavior.
 
-## `agent-memory.js`
-
-This file is the sparse long-term memory store. It can persist JSON records to disk and expose four actions:
-
-- `remember`
-- `recall`
-- `forget`
-- `list`
-
-Important behaviors:
-
-- records are normalized before storage
-- deduplication is based on a stable key of `category + key + project_name`
-- values can be scalar or JSON
-- the file store is optional; the runtime can also work off an injected in-memory `Map`
-
-Unlike `agent-context-management.js`, this runtime *is* attached to the main controller path: `register-agent-tool-executors.js` registers a `memory` tool that calls `memoryRuntime.execute({...})`, so the assistant can `remember`/`recall`/`forget`/`list` during a chat.
-
-## `agent-observability.js`
-
-This file is used heavily by the controller.
-
-It provides:
-
-- `createLifecycleRecorder(...)`
-- `recordLifecycleEvent(...)`
-- `appendLogWithRotation(...)`
-- `readLifecycleLogs(...)`
-- `replayRequestLifecycle(...)`
-- `classifyFailureReasons(...)`
-
-That gives the package two levels of history:
-
-- a renderer-facing chat session log
-- a lower-level request/lifecycle trace log
-
-The lifecycle log is still the better source when debugging routing or tool failures at the request level, but the per-session chat log now also persists the internal request/result/lifecycle/LLM-trace rows for each chat. The `messages` projection remains user-facing; the raw `rows` payload is the full hop-by-hop history.
-
-## How the pieces fit during `agent:chat`
-
-For a normal request:
-
-1. `src/main/ipc/register-agent-ipc/` creates a lifecycle recorder.
-2. It writes the user request into the main log and session log.
-3. Each stage of parsing, routing, tool execution, and synthesis records lifecycle rows.
-4. At the end, the lifecycle rows are flushed to disk.
-5. A summarized assistant message is built and appended to the session log.
-
-This split is intentional:
-
-- lifecycle rows are detailed and diagnostic
-- session rows are stable and UI-friendly for `messages`, while still retaining the raw internal rows for replay/debugging
-
-## Practical onboarding note
-
-If you are trying to understand why the agent answered something unexpected, start with the observability replay path before you start editing prompts. The package already records enough structure to show:
-
-- which intent won
-- which runtime handled the request
-- which tool calls ran
-- why failure reasons were classified the way they were
+There is no separate layered `agent-context-management` runtime in production.

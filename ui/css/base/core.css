@@ -1,42 +1,25 @@
 @font-face {
-  font-family: "Source Serif 4";
-  src: url("../../../assets/fonts/SourceSerif4-400.ttf") format("truetype");
+  font-family: "Inter";
+  src: url("../../../assets/fonts/InterVariable.woff2") format("woff2-variations");
   font-style: normal;
-  font-weight: 400;
+  font-weight: 100 900;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "Source Serif 4";
-  src: url("../../../assets/fonts/SourceSerif4-500.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Source Serif 4";
-  src: url("../../../assets/fonts/SourceSerif4-600.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Source Serif 4";
-  src: url("../../../assets/fonts/SourceSerif4-700.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 700;
+  font-family: "Inter";
+  src: url("../../../assets/fonts/InterVariable-Italic.woff2") format("woff2-variations");
+  font-style: italic;
+  font-weight: 100 900;
   font-display: swap;
 }
 
 :root {
   color-scheme: light;
   --app-font-size: 16px;
-  --font-app: "Source Serif 4", serif;
+  --font-app: "Inter", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --shared-left-rail-min: 240px;
   --shared-left-rail-width: 280px;
-  --shared-left-rail-max: 400px;
   --shared-left-rail-layout-height: calc(100vh - 144px);
   --app-left-rail-track-width: max(var(--shared-left-rail-min), var(--shared-left-rail-width));
   --layout-left-panel-width: minmax(var(--shared-left-rail-min), var(--shared-left-rail-width));
@@ -323,6 +306,19 @@ div {
 
 .topbar-search-suggestions[hidden] {
   display: none;
+}
+
+@media (min-width: 961px) and (max-width: 1180px) {
+  .topbar {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .topbar-tools {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
+    justify-self: stretch;
+  }
 }
 
 .topbar-search-suggestion {
@@ -839,10 +835,20 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
   height: 100%;
 }
 
-#lab-management-view > .panel:first-child > h2,
+.plugin-view.is-active {
+  display: flex;
+  height: 100%;
+  min-height: 100%;
+}
+
+.plugin-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: transparent;
+}
+
 #protocol-management-view > .panel:first-child > h2,
-#collaboration-management-view > .panel:first-child > h2,
-#synthesis-notebook-view > .panel:first-child > h2,
 #biology-notebook-view > .panel:first-child > h2,
 #lab-common-inventory-view > .panel:first-child > h2,
 #sample-registry-view > .panel:first-child > h2,
@@ -932,9 +938,13 @@ button:hover {
   background: var(--theme-surface-subtle);
 }
 
-input:focus-visible,
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='button']):not([type='submit']):not([type='reset']):focus-visible,
 textarea:focus-visible,
-select:focus-visible,
+select:focus-visible {
+  outline: none;
+  border-color: var(--theme-focus);
+}
+
 button:focus-visible {
   outline: 2px solid var(--theme-focus);
   outline-offset: 2px;
@@ -965,6 +975,45 @@ a.ghost-btn {
   border-color: color-mix(in srgb, var(--theme-danger) 35%, var(--theme-border));
   color: var(--theme-danger);
   background: var(--theme-surface);
+}
+
+.row-action-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--theme-text);
+}
+
+.row-action-icon-btn svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.row-action-icon-btn:hover,
+.row-action-icon-btn:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
+  color: var(--theme-text-strong);
+}
+
+.row-action-icon-btn-danger {
+  color: var(--theme-danger);
+}
+
+.row-action-icon-btn-danger:hover,
+.row-action-icon-btn-danger:focus-visible {
+  background: color-mix(in srgb, var(--theme-danger) 9%, var(--theme-surface));
+  color: var(--theme-danger);
 }
 
 button:disabled {
@@ -1070,26 +1119,6 @@ button:disabled {
   justify-self: end;
 }
 
-.list-main-text {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--theme-text-strong);
-}
-
-.list-row-details {
-  grid-template-columns: 1fr;
-}
-
-.list-detail-content {
-  margin-top: 8px;
-  padding-top: 10px;
-  border-top: 1px solid var(--theme-border-soft);
-}
-
 .small-note {
   color: var(--theme-text-muted);
   margin: 0;
@@ -1136,11 +1165,6 @@ button:disabled {
 
 .notebook-step-line {
   line-height: 1.7;
-}
-
-.synthesis-reaction-panel,
-.synthesis-mw-panel {
-  margin-top: 12px;
 }
 
 .selection-insight-anchor {

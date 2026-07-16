@@ -1,18 +1,17 @@
 import { exportProtocolPdf } from '../pdf-export/index.js';
 import { printElement } from '../print/index.js';
-import { requestLlmText } from '../direct-llm.js';
-import { parseJsonFromText } from '../papers/normalizers.js';
-import { DEFAULT_PROTOCOL_JSON_IMPORT_STATUS, DEFAULT_SHARE_STATUS, PLACEHOLDER_TOKEN_REGEX } from './constants.js';
+import { requestLlmText } from '../../services/direct-llm.js';
+import { parseJsonFromText } from '../../lib/json.js';
+import { DEFAULT_PROTOCOL_JSON_IMPORT_STATUS, PLACEHOLDER_TOKEN_REGEX } from './constants.js';
 import { getProtocolDom } from './dom.js';
 import { createProtocolDraftHelpers } from './draft-utils.js';
 import { createProtocolImportController } from './import-controller.js';
 import { createProtocolPreviewHelpers } from './preview.js';
-import { createProtocolSharingController } from './sharing.js';
 import { createProtocolListController } from './list.js';
 import { createProtocolPolishController } from './polish.js';
 import { createProtocolGenerationController } from './generation.js';
 import { createProtocolEditorHelpers } from './editor-utils.js';
-import { serializeDraftSnapshot, snapshotFormControls } from '../unsaved-draft.js';
+import { serializeDraftSnapshot, snapshotFormControls } from '../../lib/unsaved-draft.js';
 
 export function initProtocolManagement({
   state,
@@ -20,17 +19,13 @@ export function initProtocolManagement({
   createId,
   safeText,
   onProtocolsChanged,
-  trackGrowthEvent,
   selectionInsightsController = null,
   __globals = {}
 }) {
   const documentRef = __globals.document || globalThis.document;
   const windowObject = __globals.windowObject || globalThis.window || null;
   const api = __globals.hikariApi || windowObject?.hikariApi || globalThis.hikariApi || null;
-  const navigatorRef = __globals.navigator || globalThis.navigator || null;
   const FileReaderClass = __globals.FileReader || globalThis.FileReader || null;
-  const TextEncoderClass = __globals.TextEncoder || globalThis.TextEncoder || null;
-  const btoaFn = __globals.btoa || globalThis.btoa || null;
   const ui = getProtocolDom(documentRef);
   const draftHelpers = createProtocolDraftHelpers({ createId, placeholderTokenRegex: PLACEHOLDER_TOKEN_REGEX });
   const previewHelpers = createProtocolPreviewHelpers({
@@ -44,8 +39,7 @@ export function initProtocolManagement({
   const localState = {
     currentProtocolDraft: draftHelpers.createEmptyDraft(),
     activeMenuProtocolId: '',
-    activeShareProtocolId: '',
-    activeShareTargetEmail: '',
+    activePlaceholderPreset: '',
     protocolSortField: 'time',
     protocolSortOrder: 'asc',
     activeProtocolId: '',
@@ -62,7 +56,6 @@ export function initProtocolManagement({
   const editorHelpers = createProtocolEditorHelpers({ ui, localState, draftHelpers });
 
   let listController = null;
-  let sharingController = null;
   let importController = null;
   let polishController = null;
   let generationController = null;
@@ -333,7 +326,6 @@ export function initProtocolManagement({
 
     persist();
     listController.renderList();
-    sharingController.setShareLinkOutput('');
     if (localState.activeProtocolId === protocolId) {
       setSelectedProtocol('');
     }
@@ -350,6 +342,15 @@ export function initProtocolManagement({
     if (ui.placeholderNameInput) {
       ui.placeholderNameInput.value = '';
     }
+  }
+
+  function setActivePlaceholderPreset(placeholderName = '') {
+    localState.activePlaceholderPreset = String(placeholderName || '').trim();
+    ui.placeholderPresetButtons.forEach((button) => {
+      const isActive = String(button.dataset.protocolPlaceholderPreset || '').trim() === localState.activePlaceholderPreset;
+      button.classList.toggle('is-active', isActive);
+      button.setAttribute('aria-pressed', String(isActive));
+    });
   }
 
   function onProtocolSubmit(event) {
@@ -422,23 +423,6 @@ export function initProtocolManagement({
     return true;
   }
 
-  sharingController = createProtocolSharingController({
-    state,
-    persist,
-    createId,
-    trackGrowthEvent,
-    ui,
-    localState,
-    defaultShareStatus: DEFAULT_SHARE_STATUS,
-    navigatorRef,
-    TextEncoderClass,
-    btoaFn,
-    normalizeMaterials: draftHelpers.normalizeMaterials,
-    getStepText: draftHelpers.getStepText,
-    normalizeIsoTimestamp: draftHelpers.normalizeIsoTimestamp,
-    renderList: () => listController?.renderList?.()
-  });
-
   importController = createProtocolImportController({
     state,
     persist,
@@ -458,16 +442,12 @@ export function initProtocolManagement({
     ui,
     localState,
     safeText,
-    getShareTargetEmails: sharingController.getShareTargetEmails,
-    defaultShareStatus: DEFAULT_SHARE_STATUS,
     normalizeIsoTimestamp: draftHelpers.normalizeIsoTimestamp,
     parseTimestamp: draftHelpers.parseTimestamp,
     onViewProtocol: viewProtocol,
     onEditProtocol: editProtocol,
     onDeleteProtocol: deleteProtocol,
     onExportProtocol,
-    onShareProtocolConfirm: sharingController.shareProtocol,
-    onCopyProtocolLink: sharingController.copyProtocolShareLink,
     syncSelectionAfterMutation
   });
 
@@ -578,18 +558,56 @@ export function initProtocolManagement({
   ui.placeholderPresetButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const placeholder = String(button.dataset.protocolPlaceholderPreset || '').trim();
-      if (placeholder) addInteractivePlaceholderToken(placeholder);
+      if (placeholder) {
+        setActivePlaceholderPreset(placeholder);
+        addInteractivePlaceholderToken(placeholder);
+      }
     });
   });
-  ui.protocolSortFieldBtn?.addEventListener('click', () => {
-    localState.protocolSortField = localState.protocolSortField === 'time' ? 'name' : 'time';
-    listController.updateSortButtonLabels();
+  function closeProtocolSortMenu() {
+    if (ui.protocolSortMenu) {
+      ui.protocolSortMenu.hidden = true;
+    }
+    ui.protocolSortMenuBtn?.setAttribute('aria-expanded', 'false');
+  }
+
+  function applyProtocolSort(sortValue) {
+    const [field, order] = String(sortValue || '').split(':');
+    if (!['time', 'name'].includes(field) || !['asc', 'desc'].includes(order)) {
+      return;
+    }
+
+    localState.protocolSortField = field;
+    localState.protocolSortOrder = order;
+    closeProtocolSortMenu();
     listController.renderList();
+  }
+
+  ui.protocolSortMenuBtn?.addEventListener('click', () => {
+    if (!ui.protocolSortMenu) {
+      return;
+    }
+    const willOpen = ui.protocolSortMenu.hidden;
+    ui.protocolSortMenu.hidden = !willOpen;
+    ui.protocolSortMenuBtn.setAttribute('aria-expanded', String(willOpen));
   });
-  ui.protocolSortOrderBtn?.addEventListener('click', () => {
-    localState.protocolSortOrder = localState.protocolSortOrder === 'asc' ? 'desc' : 'asc';
-    listController.updateSortButtonLabels();
-    listController.renderList();
+  ui.protocolSortMenu?.addEventListener('click', (event) => {
+    const option = event.target?.closest?.('[data-protocol-sort]') || event.target;
+    applyProtocolSort(option?.dataset?.protocolSort);
+  });
+  documentRef?.addEventListener?.('click', (event) => {
+    if (ui.protocolSortMenu?.hidden) {
+      return;
+    }
+    if (ui.protocolSortMenu?.contains?.(event.target) || ui.protocolSortMenuBtn?.contains?.(event.target)) {
+      return;
+    }
+    closeProtocolSortMenu();
+  });
+  documentRef?.addEventListener?.('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeProtocolSortMenu();
+    }
   });
   ui.protocolExportPdfBtn?.addEventListener('click', onExportViewedProtocolPdf);
   ui.protocolPrintBtn?.addEventListener('click', onPrintViewedProtocol);
@@ -602,7 +620,6 @@ export function initProtocolManagement({
     }
   });
 
-  sharingController.setShareStatus(DEFAULT_SHARE_STATUS);
   if (ui.protocolJsonImportStatus && !String(ui.protocolJsonImportStatus.textContent || '').trim()) ui.protocolJsonImportStatus.textContent = DEFAULT_PROTOCOL_JSON_IMPORT_STATUS;
   listController.updateSortButtonLabels();
   generationController.syncProtocolGenerateButtonVisibility();
@@ -680,7 +697,6 @@ export function initProtocolManagement({
     ),
     importProtocolsFromJson: importController.importProtocolsFromJson,
     renderList: listController.renderList,
-    renderShareTargets: sharingController.renderShareTargets,
     saveUnsavedChanges: async () => {
       const protocol = onProtocolSubmit({ preventDefault() {} });
       return Boolean(protocol) && localState.protocolDetailMode !== 'edit';

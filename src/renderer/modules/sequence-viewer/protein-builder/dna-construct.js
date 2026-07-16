@@ -1,4 +1,4 @@
-import { reverseTranslateProteinSequence } from '../../tool-box/sequence.js';
+import { reverseTranslateProteinSequence } from '../calculations/sequence.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
 import { alignDnaToProteinSequence, normalizeProteinBuildSequence } from './sequence-utils.js';
 import { buildConstruct } from './protein-construct.js';
@@ -8,6 +8,21 @@ export function buildDnaPartFromProtein(part, options = {}) {
   const proteinSequence = normalizeProteinBuildSequence(part?.sequence || '');
   if (!proteinSequence.length) {
     return null;
+  }
+
+  const sourceDnaSequence = normalizeSequenceText(part?.sourceDnaSequence || '');
+  if (sourceDnaSequence.length) {
+    const alignedSequence = alignDnaToProteinSequence(sourceDnaSequence, proteinSequence);
+    return {
+      ok: true,
+      label: cleanText(part?.label, 160) || 'Block',
+      dnaSequence: alignedSequence,
+      templateSequence: alignedSequence,
+      reusedSource: cleanText(part?.sourceDnaNote, 240)
+        || (cleanText(part?.kind, 40).toLowerCase() === 'feature'
+          ? `Reused stored DNA for ${cleanText(part?.label, 160) || 'feature block'}.`
+          : '')
+    };
   }
 
   if (cleanText(part?.kind, 40).toLowerCase() === 'poi') {
@@ -21,19 +36,6 @@ export function buildDnaPartFromProtein(part, options = {}) {
         reusedSource: poiSource.note
       };
     }
-  }
-
-  const sourceDnaSequence = normalizeSequenceText(part?.sourceDnaSequence || '');
-  if (sourceDnaSequence.length) {
-    return {
-      ok: true,
-      label: cleanText(part?.label, 160) || 'Block',
-      dnaSequence: alignDnaToProteinSequence(sourceDnaSequence, proteinSequence),
-      templateSequence: alignDnaToProteinSequence(sourceDnaSequence, proteinSequence),
-      reusedSource: cleanText(part?.kind, 40).toLowerCase() === 'feature'
-        ? `Reused stored DNA for ${cleanText(part?.label, 160) || 'feature block'}.`
-        : ''
-    };
   }
 
   const reverseTranslated = reverseTranslateProteinSequence(proteinSequence);

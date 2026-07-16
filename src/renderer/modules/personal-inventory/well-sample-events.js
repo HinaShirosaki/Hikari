@@ -44,6 +44,56 @@ function importContainerCsv(ctx, section, container, csvText) {
   ctx.notifySamplesChanged();
 }
 
+function escapeCsvValue(value) {
+  const text = String(value || '');
+  if (/[",\r\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+}
+
+function safeFilePart(text, fallback) {
+  const cleaned = String(text || '')
+    .trim()
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return cleaned || fallback;
+}
+
+function exportContainerCsv(ctx, section, container) {
+  const { helpers } = ctx;
+  const columns = ['well', 'code', 'name', 'type', 'lot', 'concentration', 'notes'];
+  const rows = [columns.join(',')];
+  (container.wells || []).forEach((_well, index) => {
+    const wellLabel = helpers.getWellLabel(container, index);
+    const linkedSamples = helpers.getLinkedSamples(section, container.id, index);
+    if (!linkedSamples.length) {
+      rows.push([wellLabel, '', '', '', '', '', ''].map(escapeCsvValue).join(','));
+      return;
+    }
+    linkedSamples.forEach((sample) => {
+      rows.push([
+        wellLabel,
+        sample.code,
+        sample.name,
+        sample.type,
+        sample.lot,
+        sample.concentration,
+        sample.notes
+      ].map(escapeCsvValue).join(','));
+    });
+  });
+
+  const blob = new Blob([`\uFEFF${rows.join('\r\n')}`], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${safeFilePart(section, 'inventory')}-${safeFilePart(container.name, 'container')}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  ctx.uiState.wellEditorStatus = `Exported ${container.name || 'container'} CSV.`;
+}
+
 export function bindWellSampleEvents(ctx) {
   const { helpers, persist, state, uiState } = ctx;
   const { inventorySections } = ctx.elements;
@@ -82,7 +132,7 @@ export function bindWellSampleEvents(ctx) {
 
   if (!ctx._dragCloneMouseupBound) {
     ctx._dragCloneMouseupBound = true;
-    document.addEventListener('mouseup', () => {
+    document?.addEventListener?.('mouseup', () => {
       if (!dragClone.active) {
         return;
       }
@@ -227,11 +277,11 @@ export function bindWellSampleEvents(ctx) {
       }
       if (uiState.cloningSampleId === sample.id) {
         uiState.cloningSampleId = null;
-        uiState.wellEditorStatus = 'Clone cancelled.';
+        uiState.wellEditorStatus = 'Fill wells cancelled.';
       } else {
         helpers.ensureSamples();
         uiState.cloningSampleId = sample.id;
-        uiState.wellEditorStatus = `Drag across wells to clone ${sample.code || sample.name}.`;
+        uiState.wellEditorStatus = `Drag across wells to fill with ${sample.code || sample.name}.`;
       }
       renderSections();
     });
@@ -259,6 +309,19 @@ export function bindWellSampleEvents(ctx) {
       file.text().then((text) => importContainerCsv(ctx, section, container, text)).then(() => {
         renderSections();
       });
+    });
+  });
+
+  inventorySections.querySelectorAll('[data-container-export-csv]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const section = button.dataset.section || uiState.selectedContainer?.section;
+      const containerId = button.dataset.containerExportCsv;
+      const container = section && containerId ? helpers.getContainer(section, containerId) : null;
+      if (!container) {
+        return;
+      }
+      exportContainerCsv(ctx, section, container);
+      renderSections();
     });
   });
 

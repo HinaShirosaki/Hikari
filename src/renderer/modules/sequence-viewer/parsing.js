@@ -48,7 +48,7 @@ function parseAbifDirectoryEntry(view, offset) {
   };
 }
 
-function getAbifEntryData(buffer, view, entry) {
+function getAbifEntryData(buffer, entry) {
   const safeEntry = entry && typeof entry === 'object' ? entry : null;
   if (!safeEntry) {
     return new Uint8Array(0);
@@ -99,10 +99,7 @@ function buildAbifDirectoryMap(buffer) {
     directoryMap.set(`${entry.name}${entry.number}`, entry);
   }
 
-  return {
-    view,
-    directoryMap
-  };
+  return directoryMap;
 }
 
 function getAbifEntryByPreference(directoryMap, ...keys) {
@@ -114,8 +111,8 @@ function getAbifEntryByPreference(directoryMap, ...keys) {
   return null;
 }
 
-function readNumericSeriesFromEntry(buffer, view, entry, options = {}) {
-  const bytes = getAbifEntryData(buffer, view, entry);
+function readNumericSeriesFromEntry(buffer, entry, options = {}) {
+  const bytes = getAbifEntryData(buffer, entry);
   const elementSize = Math.max(1, Number(entry?.elementSize) || 1);
   const elementCount = Math.max(0, Number(entry?.elementCount) || 0);
   const availableCount = Math.floor(bytes.byteLength / elementSize);
@@ -159,10 +156,10 @@ function normalizeAb1BaseOrder(rawValue) {
   return cleaned.split('');
 }
 
-function buildAb1TracePayload(buffer, view, directoryMap, sequenceLength, warnings) {
+function buildAb1TracePayload(buffer, directoryMap, sequenceLength, warnings) {
   const baseOrderEntry = getAbifEntryByPreference(directoryMap, 'FWO_1', 'FWO_2');
   const baseOrder = normalizeAb1BaseOrder(
-    baseOrderEntry ? readAsciiString(getAbifEntryData(buffer, view, baseOrderEntry)) : ''
+    baseOrderEntry ? readAsciiString(getAbifEntryData(buffer, baseOrderEntry)) : ''
   );
   const canonicalBases = ['A', 'C', 'G', 'T'];
   const preferredTraceEntries = [9, 10, 11, 12].map((index) => directoryMap.get(`DATA${index}`) || null);
@@ -181,14 +178,14 @@ function buildAb1TracePayload(buffer, view, directoryMap, sequenceLength, warnin
     if (!base) {
       return;
     }
-    const values = readNumericSeriesFromEntry(buffer, view, entry)
+    const values = readNumericSeriesFromEntry(buffer, entry)
       .map((value) => Math.max(0, Math.round(Number(value) || 0)));
     rawChannelsByBase.set(base, values);
   });
 
   const positionsEntry = getAbifEntryByPreference(directoryMap, 'PLOC2', 'PLOC1');
   let positions = positionsEntry
-    ? readNumericSeriesFromEntry(buffer, view, positionsEntry).map((value) => Math.max(0, Math.round(Number(value) || 0)))
+    ? readNumericSeriesFromEntry(buffer, positionsEntry).map((value) => Math.max(0, Math.round(Number(value) || 0)))
     : [];
 
   if (positions.length && sequenceLength && positions.length > sequenceLength) {
@@ -259,14 +256,14 @@ export function parseAb1Record(rawInput, options = {}) {
       throw new Error('AB1 parsing requires an ArrayBuffer input.');
     }
 
-    const { view, directoryMap } = buildAbifDirectoryMap(buffer);
+    const directoryMap = buildAbifDirectoryMap(buffer);
     const baseEntry = getAbifEntryByPreference(directoryMap, 'PBAS2', 'PBAS1');
     if (!baseEntry) {
       throw new Error('AB1 file did not contain callable base tags (PBAS2/PBAS1).');
     }
 
     const qualityEntry = getAbifEntryByPreference(directoryMap, 'PCON2', 'PCON1');
-    const baseBytes = getAbifEntryData(buffer, view, baseEntry);
+    const baseBytes = getAbifEntryData(buffer, baseEntry);
     const sequence = normalizeSequenceText(readAsciiString(baseBytes));
     if (!sequence.length) {
       throw new Error('AB1 file did not contain any callable base sequence.');
@@ -274,12 +271,12 @@ export function parseAb1Record(rawInput, options = {}) {
 
     let quality = '';
     if (qualityEntry) {
-      const qualityBytes = getAbifEntryData(buffer, view, qualityEntry);
+      const qualityBytes = getAbifEntryData(buffer, qualityEntry);
       quality = sanitizeAb1QualityBytes(qualityBytes, sequence.length, warnings);
     } else {
       warnings.push('AB1 quality values were not present (PCON2/PCON1 missing).');
     }
-    const trace = buildAb1TracePayload(buffer, view, directoryMap, sequence.length, warnings);
+    const trace = buildAb1TracePayload(buffer, directoryMap, sequence.length, warnings);
 
     const fallbackName = String(options?.name || options?.fileName || 'sequencing_trace')
       .replace(/\.[^.]+$/u, '')

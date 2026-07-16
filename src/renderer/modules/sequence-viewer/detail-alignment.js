@@ -1,4 +1,4 @@
-import { escapeHtml } from '../tool-box/common.js';
+import { escapeHtml } from '../../lib/html.js';
 import { normalizeHighlightSegments } from './rendering.js';
 import {
   buildSequenceSignature,
@@ -240,16 +240,84 @@ function buildSmoothTracePathData(points) {
   return commands.join(' ');
 }
 
-function positionToInlineTraceX(position, sampleStart, sampleEnd, traceWidth) {
-  const safeStart = Number(sampleStart) || 0;
-  const safeEnd = Math.max(safeStart + 1, Number(sampleEnd) || safeStart + 1);
-  const safeWidth = Math.max(1, Number(traceWidth) || 1);
-  return ((clampTraceValue(position, safeStart, safeEnd) - safeStart) / (safeEnd - safeStart)) * safeWidth;
+function buildInlineTraceCoordinateMap(traceCells, lineStart, charAdvancePx) {
+  const safeLineStart = Math.max(0, Math.floor(Number(lineStart) || 0));
+  const safeAdvance = Math.max(1, Number(charAdvancePx) || TRACE_PIXELS_PER_BASE);
+  const anchorsByPosition = new Map();
+
+  (Array.isArray(traceCells) ? traceCells : []).forEach((cell) => {
+    const position = Number(cell?.position);
+    const referenceIndex = Math.floor(Number(cell?.referenceIndex));
+    if (!Number.isFinite(position) || !Number.isFinite(referenceIndex)) {
+      return;
+    }
+    const x = ((referenceIndex - safeLineStart) + 0.5) * safeAdvance;
+    const existing = anchorsByPosition.get(position);
+    if (existing) {
+      existing.xTotal += x;
+      existing.count += 1;
+      return;
+    }
+    anchorsByPosition.set(position, { position, xTotal: x, count: 1 });
+  });
+
+  const anchors = [...anchorsByPosition.values()]
+    .map((anchor) => ({
+      position: anchor.position,
+      x: anchor.xTotal / Math.max(1, anchor.count)
+    }))
+    .sort((left, right) => left.position - right.position);
+  if (!anchors.length) {
+    return null;
+  }
+
+  const fallbackSlope = safeAdvance / Math.max(1, Number(anchors[1]?.position) - Number(anchors[0]?.position) || 1);
+  const slopeAt = (anchorIndex, direction) => {
+    const anchor = anchors[anchorIndex];
+    const neighbor = anchors[anchorIndex + direction];
+    const sampleDelta = Number(neighbor?.position) - Number(anchor?.position);
+    const xDelta = Number(neighbor?.x) - Number(anchor?.x);
+    return Number.isFinite(sampleDelta) && sampleDelta > 0 && Number.isFinite(xDelta)
+      ? xDelta / sampleDelta
+      : fallbackSlope;
+  };
+  const leadingSlope = anchors.length > 1 ? slopeAt(0, 1) : fallbackSlope;
+  const trailingSlope = anchors.length > 1 ? slopeAt(anchors.length - 2, 1) : fallbackSlope;
+
+  return {
+    anchors,
+    positionToX(position) {
+      const safePosition = Number(position) || 0;
+      const first = anchors[0];
+      const last = anchors[anchors.length - 1];
+      if (safePosition <= first.position) {
+        return first.x + ((safePosition - first.position) * leadingSlope);
+      }
+      if (safePosition >= last.position) {
+        return last.x + ((safePosition - last.position) * trailingSlope);
+      }
+
+      let low = 0;
+      let high = anchors.length - 1;
+      while (high - low > 1) {
+        const middle = Math.floor((low + high) / 2);
+        if (anchors[middle].position <= safePosition) {
+          low = middle;
+        } else {
+          high = middle;
+        }
+      }
+      const start = anchors[low];
+      const end = anchors[high];
+      const span = Math.max(1, end.position - start.position);
+      return start.x + (((safePosition - start.position) / span) * (end.x - start.x));
+    }
+  };
 }
 
-function buildInlineTraceSamplePoints(values, sampleStart, sampleEnd, maxSignal, traceWidth) {
+function buildInlineTraceSamplePoints(values, sampleStart, sampleEnd, maxSignal, coordinateMap) {
   const smoothedValues = smoothTraceValues(values);
-  if (!smoothedValues.length) {
+  if (!smoothedValues.length || !coordinateMap) {
     return [];
   }
 
@@ -270,7 +338,7 @@ function buildInlineTraceSamplePoints(values, sampleStart, sampleEnd, maxSignal,
     const averageValue = total / Math.max(1, end - start);
     const sampleIndex = start + ((end - start - 1) / 2);
     points.push({
-      x: positionToInlineTraceX(sampleIndex, sampleStart, sampleEnd, traceWidth),
+      x: coordinateMap.positionToX(sampleIndex),
       y: INLINE_TRACE_SIGNAL_TOP + INLINE_TRACE_SIGNAL_HEIGHT - ((averageValue / signalMax) * INLINE_TRACE_SIGNAL_HEIGHT)
     });
   }
@@ -278,8 +346,8 @@ function buildInlineTraceSamplePoints(values, sampleStart, sampleEnd, maxSignal,
   return points;
 }
 
-function buildInlineTracePathData(values, sampleStart, sampleEnd, maxSignal, traceWidth) {
-  return buildSmoothTracePathData(buildInlineTraceSamplePoints(values, sampleStart, sampleEnd, maxSignal, traceWidth));
+function buildInlineTracePathData(values, sampleStart, sampleEnd, maxSignal, coordinateMap) {
+  return buildSmoothTracePathData(buildInlineTraceSamplePoints(values, sampleStart, sampleEnd, maxSignal, coordinateMap));
 }
 
 function computeInlineTraceSampleWindow(traceCells, displayTrace) {
@@ -308,7 +376,7 @@ function computeInlineTraceSampleWindow(traceCells, displayTrace) {
   };
 }
 
-function renderInlineTraceChannelPaths(displayTrace, sampleWindow, traceWidth) {
+function renderInlineTraceChannelPaths(displayTrace, sampleWindow, coordinateMap) {
   const startIndex = clampTraceValue(Math.floor(sampleWindow.start), 0, displayTrace.sampleCount - 1);
   const endIndex = clampTraceValue(Math.ceil(sampleWindow.end), startIndex + 1, displayTrace.sampleCount);
   const smoothedByBase = displayTrace.channels.map((channel) => ({
@@ -323,7 +391,7 @@ function renderInlineTraceChannelPaths(displayTrace, sampleWindow, traceWidth) {
 
   return smoothedByBase
     .map((channel) => {
-      const pathData = buildInlineTracePathData(channel.values, sampleWindow.start, sampleWindow.end, maxSignal, traceWidth);
+      const pathData = buildInlineTracePathData(channel.values, sampleWindow.start, sampleWindow.end, maxSignal, coordinateMap);
       return pathData
         ? `<path class="sequence-viewer-trace-line sequence-viewer-trace-line-${channel.base}" d="${pathData}"></path>`
         : '';
@@ -353,6 +421,12 @@ function renderInlineTraceLineHtml(displayTrace, traceCells, lineStart, lineEnd,
 
   const charAdvancePx = Math.max(1, Number(options?.charAdvancePx) || TRACE_PIXELS_PER_BASE);
   const traceWidth = Math.max(1, (lineEnd - lineStart) * charAdvancePx);
+  const coordinateMap = buildInlineTraceCoordinateMap(safeCells, lineStart, charAdvancePx);
+  if (!coordinateMap) {
+    return '';
+  }
+  const firstAnchor = coordinateMap.anchors[0];
+  const lastAnchor = coordinateMap.anchors[coordinateMap.anchors.length - 1];
 
   return `
     <div class="sequence-viewer-strand-row sequence-viewer-inline-trace-row">
@@ -364,10 +438,13 @@ function renderInlineTraceLineHtml(displayTrace, traceCells, lineStart, lineEnd,
           viewBox="0 0 ${formatSvgNumber(traceWidth)} ${INLINE_TRACE_HEIGHT}"
           role="img"
           aria-label="Chromatogram bases ${lineStart + 1}-${lineEnd}"
+          data-alignment-anchor-count="${coordinateMap.anchors.length}"
+          data-alignment-first-base-x="${formatSvgNumber(firstAnchor.x)}"
+          data-alignment-last-base-x="${formatSvgNumber(lastAnchor.x)}"
         >
           <rect class="sequence-viewer-trace-plot-bg" x="0" y="${INLINE_TRACE_SIGNAL_TOP}" width="${formatSvgNumber(traceWidth)}" height="${INLINE_TRACE_SIGNAL_HEIGHT}"></rect>
           <g class="sequence-viewer-trace-grid">${renderInlineTraceGrid(traceWidth)}</g>
-          <g class="sequence-viewer-trace-lines">${renderInlineTraceChannelPaths(displayTrace, sampleWindow, traceWidth)}</g>
+          <g class="sequence-viewer-trace-lines">${renderInlineTraceChannelPaths(displayTrace, sampleWindow, coordinateMap)}</g>
         </svg>
       </span>
       <span class="sequence-viewer-strand-end sequence-viewer-alignment-query-end"></span>
@@ -504,10 +581,28 @@ export function getAlignmentSessionsForRecord(state, record) {
   if (!referenceKey) {
     return [];
   }
+  const activeEntryId = cleanText(state?.activeEntryId, 200);
   return sessions.filter((session) => {
     const sessionReferenceKey = cleanText(session?.referenceRecordKey, 200);
-    return !sessionReferenceKey || sessionReferenceKey === referenceKey;
+    return !sessionReferenceKey
+      || sessionReferenceKey === referenceKey
+      || isStoredAlignmentSessionForActiveEntry(session, activeEntryId);
   });
+}
+
+function isStoredAlignmentSessionForActiveEntry(session, activeEntryId = '') {
+  const entryId = cleanText(activeEntryId, 200);
+  if (!entryId) {
+    return false;
+  }
+  const sourceRelPath = cleanText(session?.storedSourceRelPath, 2000).replace(/\\/g, '/');
+  const sourceAbsPath = cleanText(session?.storedSourcePath, 4000).replace(/\\/g, '/');
+  const entryPathPattern = new RegExp(`(?:^|/)entries/${escapeRegExp(entryId)}/alignments(?:/|$)`);
+  return entryPathPattern.test(sourceRelPath) || entryPathPattern.test(sourceAbsPath);
+}
+
+function escapeRegExp(value = '') {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 export function syncAlignmentControlsState({ elements = {}, state = {}, record = null } = {}) {
