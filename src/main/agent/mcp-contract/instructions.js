@@ -1,7 +1,5 @@
 'use strict';
 
-const HIKARI_CODEX_MCP_TOOL_PREFIX = 'mcp__hikari__';
-
 const HIKARI_MCP_TOOL_NAMES = Object.freeze([
   'inventory_lookup',
   'chemical_lookup',
@@ -19,15 +17,17 @@ const HIKARI_MCP_TOOL_NAMES = Object.freeze([
   'container',
   'assay_table',
   'plotly_graph',
+  'sequence_viewer',
+  'sequence_edit',
   'ask_user'
 ]);
 
-function buildHikariCodexMcpToolName(toolName = '') {
-  return `${HIKARI_CODEX_MCP_TOOL_PREFIX}${String(toolName || '').trim()}`;
+function buildHikariMcpToolName(toolName = '') {
+  return String(toolName || '').trim();
 }
 
 function buildProtocolNotebookHandoffInstructionLines() {
-  const toolName = buildHikariCodexMcpToolName;
+  const toolName = buildHikariMcpToolName;
   return [
     '- Generated protocols must be executable starting protocols, not questionnaires. Fill routine, low-risk procedural parameters from loaded evidence; when the source is silent, choose a scientifically conventional starting value and identify it in troubleshooting as a recommended starting condition rather than a source-reported fact.',
     '- Do not create placeholders for routine defaults such as replicate count, dilution factor, concentration-series point count, common staining or wash buffer, wash count, incubation time or temperature, acquisition volume, or minimum event target when a reasonable starting value can be selected.',
@@ -41,14 +41,14 @@ function buildProtocolNotebookHandoffInstructionLines() {
 }
 
 function buildHikariAgentMcpInstructionBodyLines() {
-  const toolName = buildHikariCodexMcpToolName;
+  const toolName = buildHikariMcpToolName;
   return [
-    'This MCP server is the Hikari app contract. Codex exposes this server\'s tools with the `mcp__hikari__` prefix. Use the prefixed Codex tool names for local Hikari data, protocols, notebooks, inventory, papers, and structured app actions.',
+    'This MCP server is the Hikari app contract. Use the raw tool names below for local Hikari data, protocols, notebooks, inventory, papers, and structured app actions.',
     '',
-    'Use the first-class prefixed MCP tools below as the complete Hikari app tool surface for this server.',
+    'Use the first-class raw MCP tools below as the complete Hikari app tool surface for this server.',
     '',
     'Direct Hikari MCP tools:',
-    `- \`${toolName('inventory_lookup')}\`: search local personal inventory: personal containers and samples (use ${toolName('chemical_lookup')} for chemical stock).`,
+    `- \`${toolName('inventory_lookup')}\`: search local personal inventory: personal containers and samples (use \`${toolName('chemical_lookup')}\` for chemical stock).`,
     `- \`${toolName('chemical_lookup')}\`: search local chemical records by name, CAS, supplier, or storage hint.`,
     `- \`${toolName('notebook_lookup')}\`: search local notebook pages by text, project, protocol, or state, with agent-safe content and storage-access status.`,
     `- \`${toolName('protocol_lookup')}\`: search local protocols through Hikari protocol matching.`,
@@ -56,7 +56,7 @@ function buildHikariAgentMcpInstructionBodyLines() {
     `- \`${toolName('notebook_draft')}\`: select a protocol from candidates, fill known placeholder values, and prepare a planned biology notebook draft for explicit confirmation before creating a notebook page.`,
     `- \`${toolName('literature_search')}\`: find papers, rank selected candidates, return download-ready metadata, and load bounded paper context blocks from abstracts or already-ingested paper markdown without starting new PDF downloads automatically.`,
     `- \`${toolName('paper_download')}\`: download a paper PDF into Hikari storage.`,
-    `- \`${toolName('paper_analysis')}\`: summarize or extract methods from a specific paper.`,
+    `- \`${toolName('paper_analysis')}\`: read a specific local paper through one Codex sub-agent command and return exact line-backed context plus related local comments.`,
     `- \`${toolName('paper_intake_search_summaries')}\`: search one-sentence summaries in the paper-intake knowledge base.`,
     `- \`${toolName('paper_intake_search_experiments')}\`: search structured experiment entries extracted during paper intake.`,
     `- \`${toolName('paper_intake_list_project_summaries')}\`: list paper-intake summaries for papers attached to a project.`,
@@ -64,6 +64,8 @@ function buildHikariAgentMcpInstructionBodyLines() {
     `- \`${toolName('container')}\`: store, name, read, copy, update, and position-edit temporary string or number containers with short runtime IDs.`,
     `- \`${toolName('assay_table')}\`: create scratch assay tables, derive calculated tables, add calculated columns, and run Python-backed table transforms.`,
     `- \`${toolName('plotly_graph')}\`: create, update, read, and inspect Plotly.js graph specifications from Plotly figure arguments.`,
+    `- \`${toolName('sequence_viewer')}\`: read and compute over loaded sequence-viewer records (list, metadata, windowed slices, features, restriction/ORF/translation/GC analysis, compute-only cloning designs). Read-only, 1-based inclusive coordinates.`,
+    `- \`${toolName('sequence_edit')}\`: propose a base edit or feature annotation change; returns a preview plus a pending-approval token and never applies the change itself.`,
     `- \`${toolName('ask_user')}\`: prepare one blocking clarification question with suggested answer options and optional custom text input for Hikari to render.`,
     '',
     'Tool-use rules:',
@@ -71,16 +73,19 @@ function buildHikariAgentMcpInstructionBodyLines() {
     '- Do not use local lookup tools for active Assay plate/result rows; if assay rows are missing from the hidden TSV, treat it as missing UI context and ask for or await refreshed context.',
     `- Use \`${toolName('notebook_lookup')}\` to discover notebook pages by text, project, protocol, or state. Treat \`access.complete: false\` as incomplete evidence, follow \`access.user_action\` for permission recovery, and never turn a partial lookup into a definitive no-match claim.`,
     `- Use \`${toolName('literature_search')}\` for finding papers, references, recent literature, or external scientific evidence.`,
-    `- \`${toolName('literature_search')}\` is search-first: do not expect it to open publisher pages or download new PDFs. The user can click the paper download button, or you can use \`${toolName('paper_download')}\` only when the user explicitly asks to download a paper.`,
+    `- \`${toolName('literature_search')}\` is search-first: do not expect it to open publisher pages or download new PDFs. To get a local PDF, the user can click the paper download button or you can use \`${toolName('paper_download')}\` per its rule below.`,
     `- For \`${toolName('literature_search')}\`, saved Preferred Journals from the current Hikari settings are already available in the request context. Treat them as soft ranking preferences even when the user says "from my preferred journals" or asks to use saved preferences, and do not pass a hard \`journals\` filter unless the current request explicitly names a restrictive filter such as "only" or "exclusively" those journals.`,
     `- For a normal paper-discovery request, make at most one \`${toolName('literature_search')}\` call. When the request also needs Codex/web discovery, use Hikari API sources (\`pubmed\`, \`crossref\`, and \`europe_pmc\`) in that call and use native Codex web search separately; do not include Hikari's \`web\` source because it would re-enter Codex CLI from inside the active MCP request. Use the returned structured result to answer; do not launch follow-up title or DOI searches through \`${toolName('literature_search')}\` just to compensate for weak candidates unless the user explicitly asks to refine or repeat the search.`,
     `- Use \`${toolName('paper_download')}\` when the user explicitly asks to download a paper PDF into app storage, or when a workflow needs a local PDF for deeper reading.`,
-    `- Use \`${toolName('paper_analysis')}\` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text.`,
+    `- Use \`${toolName('paper_analysis')}\` when the user asks to summarize a specific paper, extract findings, explain methods, or pull protocol-relevant details from paper text. Call it once, answer from \`loaded_context_blocks.source_lines\`, and treat \`related_comments\` as local user annotations rather than paper evidence.`,
     `- Use \`${toolName('paper_intake_search_summaries')}\` or \`${toolName('paper_intake_search_experiments')}\` when already-ingested papers are enough and a full paper read is unnecessary.`,
     `- Use \`${toolName('paper_intake_list_project_summaries')}\` for a project-scoped roll-up of ingested paper summaries.`,
+    `- Use \`${toolName('purchase_recommendation')}\` when the user asks what to buy, wants product or vendor options, price comparisons, or restocking suggestions for purchasable items.`,
     `- Use \`${toolName('container')}\` for temporary exact string or number storage, especially when a value should be named, reused, copied, or edited by string position without turning it into long-term memory.`,
     `- Use \`${toolName('assay_table')}\` when assay data should be transformed into a reusable table with arithmetic, summaries, grouped statistics, or Python-backed calculations.`,
     `- Use \`${toolName('plotly_graph')}\` when the user asks for a graph, chart, or custom visualization; call \`inspect\` after create/update and adjust the Plotly figure before answering when inspection reports issues.`,
+    `- Use \`${toolName('sequence_viewer')}\` to inspect loaded plasmid/sequence records and run restriction/ORF/translation/GC analysis or a compute-only \`design_cloning\` route. Coordinates are 1-based inclusive; read long sequences in <=20 kb windows with \`get_sequence\`.`,
+    `- Use \`${toolName('sequence_edit')}\` only to propose base edits or feature annotations; it never applies changes. Read the record first with \`${toolName('sequence_viewer')}\` (which returns the \`target\` identity to echo back), then propose. Hikari renders an approve/reject card and applies only on approval; a \`TARGET_CHANGED\` error means re-read and re-propose.`,
     `- Use direct \`${toolName('protocol_generation')}\` only after complete protocol JSON already exists.`,
     `- When the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, author complete protocol JSON first, then call \`${toolName('protocol_generation')}\` with \`save: true\`, then summarize the review-ready protocol.`,
     `- When the user asks to save or add a generated protocol, call \`${toolName('protocol_generation')}\` once with \`save: true\`; Hikari will ask the user to approve or reject the generated protocol.`,
@@ -104,9 +109,8 @@ function buildHikariAgentMcpInstructions() {
 }
 
 module.exports = {
-  HIKARI_CODEX_MCP_TOOL_PREFIX,
   HIKARI_MCP_TOOL_NAMES,
-  buildHikariCodexMcpToolName,
+  buildHikariMcpToolName,
   buildProtocolNotebookHandoffInstructionLines,
   buildHikariAgentMcpInstructionBodyLines,
   buildHikariAgentMcpInstructions

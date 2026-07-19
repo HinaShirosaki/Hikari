@@ -26,6 +26,7 @@ export const DEFAULT_SAMPLE_TYPE_LABELS = {
 };
 
 export const SAMPLE_TYPE_ORDER = Object.keys(DEFAULT_SAMPLE_TYPE_LABELS);
+export const CUSTOM_SAMPLE_TYPE_PREFIX = 'custom_';
 
 function cleanSettingText(value) {
   return String(value || '').trim().replace(/\s+/g, ' ');
@@ -93,18 +94,58 @@ export function normalizeSampleType(type) {
   if (key === 'compound') {
     return 'chemical';
   }
-  return Object.prototype.hasOwnProperty.call(DEFAULT_SAMPLE_TYPE_LABELS, key) ? key : 'other';
+  if (Object.prototype.hasOwnProperty.call(DEFAULT_SAMPLE_TYPE_LABELS, key)) {
+    return key;
+  }
+  return isCustomSampleType(key) ? key : 'other';
+}
+
+export function isCustomSampleType(type = '') {
+  return new RegExp(`^${CUSTOM_SAMPLE_TYPE_PREFIX}[a-z0-9_]+$`).test(String(type || '').trim().toLowerCase());
+}
+
+export function createCustomSampleTypeId(label = '', existingTypes = []) {
+  const stem = cleanSettingText(label)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '') || 'sample_type';
+  const existing = new Set((Array.isArray(existingTypes) ? existingTypes : [])
+    .map((type) => String(type || '').trim().toLowerCase())
+    .filter(Boolean));
+  const base = `${CUSTOM_SAMPLE_TYPE_PREFIX}${stem}`;
+  let candidate = base;
+  let suffix = 2;
+  while (existing.has(candidate)) {
+    candidate = `${base}_${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+export function normalizeSampleTypeHidden(rawValue) {
+  const source = Array.isArray(rawValue) ? rawValue : [];
+  return Array.from(new Set(source
+    .map((type) => normalizeSampleType(type))
+    .filter((type) => type !== 'other' && Object.prototype.hasOwnProperty.call(DEFAULT_SAMPLE_TYPE_LABELS, type))));
 }
 
 export function normalizeSampleTypeLabels(rawValue) {
   const source = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
     ? rawValue
     : {};
-  return SAMPLE_TYPE_ORDER.reduce((labels, type) => {
+  const labels = SAMPLE_TYPE_ORDER.reduce((result, type) => {
     const cleanLabel = cleanSettingText(source[type]);
-    labels[type] = cleanLabel || DEFAULT_SAMPLE_TYPE_LABELS[type];
-    return labels;
+    result[type] = cleanLabel || DEFAULT_SAMPLE_TYPE_LABELS[type];
+    return result;
   }, {});
+  Object.entries(source).forEach(([rawType, rawLabel]) => {
+    const type = normalizeSampleType(rawType);
+    const label = cleanSettingText(rawLabel);
+    if (isCustomSampleType(type) && label) {
+      labels[type] = label;
+    }
+  });
+  return labels;
 }
 
 export function getSampleTypeLabels(settings = {}) {
@@ -127,11 +168,22 @@ export function normalizeConfiguredSampleType(type = '') {
 
 export function getEditableSampleTypeEntries(settings = {}) {
   const labels = getSampleTypeLabels(settings);
-  return SAMPLE_TYPE_ORDER
-    .filter((type) => type !== 'other')
+  const hiddenTypes = new Set(normalizeSampleTypeHidden(settings?.sampleTypeHidden));
+  const configuredTypes = SAMPLE_TYPE_ORDER
+    .filter((type) => type !== 'other' && !hiddenTypes.has(type))
     .map((type) => ({
       type,
       label: labels[type] || DEFAULT_SAMPLE_TYPE_LABELS[type],
-      defaultLabel: DEFAULT_SAMPLE_TYPE_LABELS[type]
+      defaultLabel: DEFAULT_SAMPLE_TYPE_LABELS[type],
+      isCustom: false
     }));
+  const customTypes = Object.keys(labels)
+    .filter((type) => isCustomSampleType(type))
+    .map((type) => ({
+      type,
+      label: labels[type],
+      defaultLabel: labels[type],
+      isCustom: true
+    }));
+  return configuredTypes.concat(customTypes);
 }

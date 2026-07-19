@@ -8,7 +8,6 @@ import {
   normalizeCodexLoginStatus
 } from './llm-model-catalog.js';
 import { getSettingsElements } from './dom.js';
-import { renderStorageImportStatus as renderStorageStatus } from './storage-status.js';
 import { escapeHtml } from './html.js';
 import { createSampleInventorySettingsController } from './sample-inventory-controller.js';
 import {
@@ -36,7 +35,6 @@ export function initSettings({
     settingMode,
     storageForm,
     settingStoragePath,
-    settingStorageImportStatus,
     selectStoragePathBtn,
     startupForm,
     settingStartupDefaultView,
@@ -51,7 +49,6 @@ export function initSettings({
     clearCodexLoginBtn,
     settingAgentDeveloperMode,
     settingAgentExternalSkillsEnabled,
-    settingExternalSkillsStatus,
     settingExternalSkillsRefreshBtn,
     settingExternalSkillsList,
     pluginsAddBtn,
@@ -60,7 +57,6 @@ export function initSettings({
     pluginsList,
     telegramForm,
     settingTelegramToken,
-    settingTelegramStatus,
     clearTelegramTokenBtn,
     locationInput,
     locationAddBtn,
@@ -69,17 +65,14 @@ export function initSettings({
     sampleInventoryLocationAddBtn,
     sampleInventoryLocationList,
     sampleTypeLabelsForm,
+    sampleTypeAddInput,
+    sampleTypeAddBtn,
     sampleTypeLabelList,
     preferredJournalForm,
     settingPreferredJournal,
     preferredJournalList,
     clearPreferredJournalBtn
   } = getSettingsElements(document);
-  let telegramConfig = {
-    enabled: false,
-    source: 'none',
-    hasSavedToken: false
-  };
   let codexLoginConfig = {
     ok: false,
     loggedIn: false,
@@ -88,7 +81,6 @@ export function initSettings({
     sourcePath: '',
     message: 'Checking Codex login...'
   };
-  let storageImportInFlight = false;
   const llmModelCatalog = createLlmModelCatalog();
   let codexLoginRefreshTimers = [];
   let activeSettingsPanel = settingsNavItems[0]?.dataset.settingsTarget || 'appearance';
@@ -97,7 +89,6 @@ export function initSettings({
     persist,
     api: window.hikariApi || null,
     enabledInput: settingAgentExternalSkillsEnabled,
-    statusElement: settingExternalSkillsStatus,
     listElement: settingExternalSkillsList,
     escapeHtml
   });
@@ -117,6 +108,7 @@ export function initSettings({
       locationList,
       sampleInventoryLocationInput,
       sampleInventoryLocationList,
+      sampleTypeAddInput,
       sampleTypeLabelList
     },
     escapeHtml,
@@ -152,6 +144,13 @@ export function initSettings({
   clearTelegramTokenBtn?.addEventListener('click', onClearTelegramToken);
   locationAddBtn.addEventListener('click', sampleInventoryController.onAddLocation);
   sampleInventoryLocationAddBtn?.addEventListener('click', sampleInventoryController.onAddSampleInventoryLocation);
+  sampleTypeAddBtn?.addEventListener('click', sampleInventoryController.onAddSampleType);
+  sampleTypeAddInput?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      sampleInventoryController.onAddSampleType();
+    }
+  });
   sampleTypeLabelsForm?.addEventListener('submit', sampleInventoryController.onSaveSampleTypeLabels);
   preferredJournalForm?.addEventListener('submit', onSavePreferredJournal);
   preferredJournalList?.addEventListener('click', onPreferredJournalListClick);
@@ -160,7 +159,6 @@ export function initSettings({
   window.addEventListener('focus', () => {
     void refreshCodexLoginStatus();
   });
-  void refreshTelegramBotStatus();
   void externalSkillsController.refresh();
   void refreshCodexCatalog();
   void refreshCodexLoginStatus();
@@ -306,12 +304,10 @@ export function initSettings({
     renderCodexStatus();
     externalSkillsController.render();
     pluginsController.render();
-    renderTelegramStatus();
     sampleInventoryController.renderLocationList();
     sampleInventoryController.renderSampleInventoryLocationList();
     sampleInventoryController.renderSampleTypeLabelList();
     renderPreferredJournal();
-    renderStorageImportStatus();
     if (didSyncCodexSettings) {
       persist();
     }
@@ -362,28 +358,19 @@ export function initSettings({
     if (!nextPath) {
       state.settings.storagePath = '';
       persist();
-      renderStorageImportStatus();
       return;
     }
     if (typeof onStoragePathSaved !== 'function') {
       state.settings.storagePath = nextPath;
       persist();
-      renderStorageImportStatus();
       return;
     }
-    storageImportInFlight = true;
-    renderStorageImportStatus();
-    try {
-      const result = await onStoragePathSaved(nextPath, {
-        resetWorkspace: rootChanged,
-        previousStoragePath: previousPath
-      });
-      if (!result?.ok && rootChanged && result?.refreshed !== true && settingStoragePath) {
-        settingStoragePath.value = previousPath;
-      }
-    } finally {
-      storageImportInFlight = false;
-      renderStorageImportStatus();
+    const result = await onStoragePathSaved(nextPath, {
+      resetWorkspace: rootChanged,
+      previousStoragePath: previousPath
+    });
+    if (!result?.ok && rootChanged && result?.refreshed !== true && settingStoragePath) {
+      settingStoragePath.value = previousPath;
     }
   }
 
@@ -570,52 +557,35 @@ export function initSettings({
     event.preventDefault();
     const token = settingTelegramToken?.value?.trim() || '';
     if (!token) {
-      renderTelegramStatus('Token is required.');
       return;
     }
     if (!window.hikariApi?.setTelegramBotToken) {
-      renderTelegramStatus('Telegram integration is unavailable.');
       return;
     }
 
     const result = await window.hikariApi.setTelegramBotToken(token);
     if (!result?.ok) {
-      renderTelegramStatus(result?.error || 'Failed to save token.');
       return;
     }
 
-    telegramConfig = {
-      enabled: result.enabled === true,
-      source: result.source || 'none',
-      hasSavedToken: result.hasSavedToken === true
-    };
     if (settingTelegramToken) {
       settingTelegramToken.value = '';
     }
-    renderTelegramStatus();
   }
 
   async function onClearTelegramToken() {
     if (!window.hikariApi?.clearTelegramBotToken) {
-      renderTelegramStatus('Telegram integration is unavailable.');
       return;
     }
 
     const result = await window.hikariApi.clearTelegramBotToken();
     if (!result?.ok) {
-      renderTelegramStatus(result?.error || 'Failed to clear saved token.');
       return;
     }
 
-    telegramConfig = {
-      enabled: result.enabled === true,
-      source: result.source || 'none',
-      hasSavedToken: result.hasSavedToken === true
-    };
     if (settingTelegramToken) {
       settingTelegramToken.value = '';
     }
-    renderTelegramStatus();
   }
 
   function renderPreferredJournal() {
@@ -723,63 +693,6 @@ export function initSettings({
     const normalized = normalizePreferredJournalList(journals);
     state.settings.preferredJournals = normalized;
     state.settings.preferredJournal = normalized.join('; ');
-  }
-
-  async function refreshTelegramBotStatus() {
-    if (!window.hikariApi?.getTelegramBotConfig) {
-      renderTelegramStatus('Telegram integration is unavailable.');
-      return;
-    }
-
-    const result = await window.hikariApi.getTelegramBotConfig();
-    if (!result?.ok) {
-      renderTelegramStatus(result?.error || 'Failed to load Telegram bot status.');
-      return;
-    }
-
-    telegramConfig = {
-      enabled: result.enabled === true,
-      source: result.source || 'none',
-      hasSavedToken: result.hasSavedToken === true
-    };
-    renderTelegramStatus();
-  }
-
-  function renderTelegramStatus(errorMessage = '') {
-    if (!settingTelegramStatus) {
-      return;
-    }
-
-    if (errorMessage) {
-      settingTelegramStatus.textContent = `Telegram bot status: ${errorMessage}`;
-      return;
-    }
-
-    if (telegramConfig.enabled) {
-      const sourceText = telegramConfig.source === 'app'
-        ? 'using token saved in app'
-        : telegramConfig.source === 'env'
-          ? 'using TELEGRAM_BOT_TOKEN env var'
-          : 'using configured token';
-      settingTelegramStatus.textContent = `Telegram bot status: running (${sourceText}).`;
-      return;
-    }
-
-    if (telegramConfig.hasSavedToken) {
-      settingTelegramStatus.textContent = 'Telegram bot status: token is saved, but bot is not running.';
-      return;
-    }
-
-    if (telegramConfig.source === 'env') {
-      settingTelegramStatus.textContent = 'Telegram bot status: env token detected, bot is not running.';
-      return;
-    }
-
-    settingTelegramStatus.textContent = 'Telegram bot status: not configured.';
-  }
-
-  function renderStorageImportStatus() {
-    renderStorageStatus(settingStorageImportStatus, state, storageImportInFlight);
   }
 
   return { renderForms, applyAppearance };

@@ -1,7 +1,7 @@
 import { getWellName } from '../../../lib/inventory-containers.js';
 import {
+  getEditableSampleTypeEntries,
   getConfiguredSampleTypeLabel,
-  getSampleTypeLabels,
   normalizeConfiguredSampleType
 } from '../../../lib/inventory-settings.js';
 import { formatEntryTimestamp } from '../entry/entry-helpers.js';
@@ -26,7 +26,6 @@ function addSamplePlaceholderAlias(aliases, alias, type) {
 
 export function buildSamplePlaceholderTypeAliases(settings = {}) {
   const aliases = new Map();
-  const sampleTypeLabels = getSampleTypeLabels(settings);
   const extraAliases = {
     plasmid: ['plasmids', 'vector', 'vectors'],
     cell_line: ['cell', 'cells', 'cell line', 'cell lines'],
@@ -38,10 +37,7 @@ export function buildSamplePlaceholderTypeAliases(settings = {}) {
     primer: ['primers', 'oligo', 'oligos']
   };
 
-  Object.entries(sampleTypeLabels).forEach(([type, label]) => {
-    if (type === 'other') {
-      return;
-    }
+  getEditableSampleTypeEntries(settings).forEach(({ type, label }) => {
     addSamplePlaceholderAlias(aliases, type, type);
     addSamplePlaceholderAlias(aliases, String(type || '').replace(/_/g, ' '), type);
     addSamplePlaceholderAlias(aliases, label, type);

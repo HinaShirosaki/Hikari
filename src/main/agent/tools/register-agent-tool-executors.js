@@ -226,6 +226,7 @@ function registerAgentToolExecutors(deps = {}) {
   const containerRuntime = deps.containerRuntime || {};
   const assayTableRuntime = deps.assayTableRuntime || {};
   const plotlyGraphRuntime = deps.plotlyGraphRuntime || {};
+  const sequenceAgentRuntime = deps.sequenceAgentRuntime || {};
   const memoryRuntime = deps.memoryRuntime || {};
   const paperDownloadRuntime = deps.paperDownloadRuntime || {};
   const paperAnalysisRuntime = deps.paperAnalysisRuntime || {};
@@ -603,6 +604,45 @@ function registerAgentToolExecutors(deps = {}) {
     };
   });
 
+  async function runSequenceAgentAction(toolName, args = {}) {
+    if (!sequenceAgentRuntime || typeof sequenceAgentRuntime.invoke !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Sequence-viewer runtime is not configured.',
+        summary: 'Sequence-viewer runtime is not configured.'
+      };
+    }
+    const action = cleanText(args?.action, 60);
+    const result = await sequenceAgentRuntime.invoke(action, ensureObject(args));
+    const payload = ensureObject(result);
+    const errorMessage = cleanText(payload?.error?.message || payload?.error, 1200);
+    const ok = !errorMessage && payload?.pending_approval !== false;
+    return {
+      ...payload,
+      ok: ok !== false && !errorMessage,
+      status: errorMessage
+        ? cleanText(payload?.error?.code, 60) || 'error'
+        : (payload?.pending_approval ? 'pending_approval' : 'completed'),
+      action,
+      error: errorMessage,
+      summary: cleanText(payload?.summary, 320)
+        || (errorMessage
+          ? errorMessage
+          : (payload?.pending_approval
+            ? `${toolName} prepared a proposal for approval.`
+            : `${toolName} ${action || 'action'} completed.`))
+    };
+  }
+
+  genericAgentToolRuntime.registerToolExecutor('sequence-viewer', async ({ args }) => (
+    runSequenceAgentAction('sequence-viewer', args)
+  ));
+
+  genericAgentToolRuntime.registerToolExecutor('sequence-edit', async ({ args }) => (
+    runSequenceAgentAction('sequence-edit', args)
+  ));
+
   genericAgentToolRuntime.registerToolExecutor('literature-search', async ({ args, context }) => {
     if (!literatureSearchRuntime || typeof literatureSearchRuntime.execute !== 'function') {
       return {
@@ -728,18 +768,24 @@ function registerAgentToolExecutors(deps = {}) {
         summary: 'Paper analysis runtime is not configured.'
       };
     }
+    const snapshot = context?.snapshot && typeof context.snapshot === 'object'
+      ? context.snapshot
+      : {};
     return paperAnalysisRuntime.analyzePaper({
       ...args,
       provider: cleanText(context?.provider, 80),
       endpoint: cleanText(context?.endpoint, 2000),
       apiKey: cleanText(context?.apiKey, 400),
       model: cleanText(context?.model, 120),
+      reasoning_effort: cleanText(context?.reasoning_effort || context?.reasoningEffort, 40),
+      cwd: cleanText(context?.cwd, 2400),
       message: cleanText(args?.message || context?.message, 2400),
+      snapshot,
       storage_path: cleanText(
         args?.storage_path
         || context?.storagePath
-        || context?.snapshot?.settings?.storagePath
-        || context?.snapshot?.storagePath,
+        || snapshot?.settings?.storagePath
+        || snapshot?.storagePath,
         2000
       ),
       traceContext: context?.traceContext || null
@@ -921,6 +967,8 @@ function registerAgentToolExecutors(deps = {}) {
     'container',
     'assay-table',
     'plotly-graph',
+    'sequence-viewer',
+    'sequence-edit',
     'literature-search',
     'purchase-recommendation',
     'paper-download',

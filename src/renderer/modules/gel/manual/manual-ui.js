@@ -1,12 +1,6 @@
 export function getViewerToolLabel(tool = '') {
-  if (tool === 'left') {
-    return 'Set left border';
-  }
-  if (tool === 'right') {
-    return 'Set right border';
-  }
   if (tool === 'dividers') {
-    return 'Set dividers';
+    return 'Set lane dividers';
   }
   if (tool === 'ladder') {
     return 'Set ladder lane';
@@ -24,8 +18,6 @@ export function getViewerToolLabel(tool = '') {
 }
 
 export function renderViewerToolbar(elements, selectedViewerTool, laneBandMode = false) {
-  elements.gelToolLeftBorderBtn?.classList.toggle('is-active', selectedViewerTool === 'left');
-  elements.gelToolRightBorderBtn?.classList.toggle('is-active', selectedViewerTool === 'right');
   elements.gelToolDividersBtn?.classList.toggle('is-active', selectedViewerTool === 'dividers');
   elements.gelToolLadderLaneBtn?.classList.toggle('is-active', selectedViewerTool === 'ladder');
   elements.gelToolLaneVerticesBtn?.classList.toggle('is-active', selectedViewerTool === 'lane-vertices');

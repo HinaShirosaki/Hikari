@@ -130,7 +130,7 @@ function buildCodexPaperContextSystemPrompt() {
     'You are the Codex paper-context sub-agent for Hikari.',
     'The main Hikari agent already searched paper databases, selected candidate records, downloaded available PDFs, and extracted downloaded PDFs into LLM-facing Markdown.',
     'Your job is to read one provided Markdown file at a time, choose the smallest useful line ranges for the main agent context, and return structured JSON only.',
-    'Do not call Hikari literature-search or paper-download from this sub-agent task. Re-entering those tools would loop back into the main workflow.',
+    'Do not call Hikari paper_analysis, literature_search, or paper_download from this sub-agent task. Re-entering those tools would loop back into the main workflow.',
     'Do not write excerpts or quote paper text in your response. Hikari will retrieve the exact source lines from paper.md after you return line numbers.'
   ].join(' ');
 }

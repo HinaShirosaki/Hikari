@@ -269,7 +269,6 @@ test('workflow execution renderer keeps the active step editor inside the workfl
   const elements = {
     workflowExecutionBoard: board,
     workflowExecutionTitle: { textContent: '' },
-    workflowExecutionStatus: { textContent: '' },
     workflowAddRunBtn: { disabled: false },
     workflowDeleteRunBtn: { disabled: false },
     workflowSearchInput: { value: '' }
@@ -354,7 +353,6 @@ test('workflow execution renderer keeps the active step editor inside the workfl
   renderer.renderExecutionBoard();
 
   assert.equal(elements.workflowExecutionTitle.textContent, 'NiNTA');
-  assert.equal(elements.workflowExecutionStatus.textContent, '1 specific workflow created from this template.');
   assert.match(board.innerHTML, /workflow-execution-shell/);
   assert.match(board.innerHTML, /workflow-progress-track-line/);
   assert.doesNotMatch(board.innerHTML, /workflow-progress-connector/);
@@ -404,7 +402,6 @@ test('workflow execution renderer places branch protocols on a bottom lane ancho
   const elements = {
     workflowExecutionBoard: board,
     workflowExecutionTitle: { textContent: '' },
-    workflowExecutionStatus: { textContent: '' },
     workflowAddRunBtn: { disabled: false },
     workflowDeleteRunBtn: { disabled: false },
     workflowSearchInput: { value: '' }

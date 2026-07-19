@@ -42,7 +42,6 @@ export function bindAssayEvents({
   elements.assayConcentrationAxisColumnBtn?.addEventListener('click', () => layoutManager.setConcentrationAxis('column'));
   elements.assayPlateFieldSampleBtn?.addEventListener('click', () => layoutManager.setPlateEditField('sampleId'));
   elements.assayPlateFieldConcentrationBtn?.addEventListener('click', () => layoutManager.setPlateEditField('concentration'));
-  elements.assayConcentrationUnitInput?.addEventListener('input', layoutManager.onConcentrationUnitInput);
   elements.assayFillModeInput?.addEventListener('change', layoutManager.syncFillModeInputs);
   elements.assayDilutionFillBtn?.addEventListener('click', layoutManager.onFillConcentrations);
   layoutManager.syncFillModeInputs();

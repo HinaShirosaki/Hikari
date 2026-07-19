@@ -63,7 +63,7 @@ So the shared executor now exposes the folder's full tool surface, not just a si
 | `literature-search` | `src/main/papers/search/agent-literature-search.js` | search PubMed, Europe PMC, Crossref, UniProt, or web RSS results |
 | `purchase-recommendation` | `tools/agent-purchase-recommendation.js` | discover products, enforce explicit requirements, and rank valid candidates |
 | `paper-download` | `src/main/papers/download/agent-paper-download.js` | locate PDF URLs, download papers, track progress, and fall back to browser-assisted download |
-| `paper-analysis` | `src/main/papers/analysis/agent-paper-analysis.js` | summarize a paper and optionally extract/generate a protocol |
+| `paper-analysis` | `src/main/papers/analysis/agent-paper-analysis.js` | run one Codex CLI paper read, hydrate exact lines, and attach local comments |
 | `paper-search` | `src/main/papers/retrieve/agent-paper-wiki-search.js` | full-text search across locally transformed paper Markdown |
 | `protocol-generation` | `tools/agent-protocol-generation.js` | normalize supplied protocol JSON into an import-ready protocol payload and optionally save it |
 
@@ -96,10 +96,12 @@ These five files form one sub-system:
 
 `src/main/papers/search/agent-literature-search.js` owns retrieval.
 `src/main/papers/download/agent-paper-download.js` owns acquisition and storage.
-`src/main/papers/analysis/agent-paper-analysis.js` consumes paper content and
-turns it into lab-friendly summaries or protocol seeds. These runtimes are
-injected into `register-agent-tool-executors.js`; their domain code does not
-belong in the general Agent folder.
+`src/main/papers/analysis/agent-paper-analysis.js` sends one local `paper.md`
+read to the Codex paper-context sub-agent, hydrates the returned physical line
+ranges, and attaches matching local comments. Inline paper text keeps the
+provider-backed summary/protocol-seed fallback. These runtimes are injected
+into `register-agent-tool-executors.js`; their domain code does not belong in
+the general Agent folder.
 
 The paper-download runtime is action-based:
 

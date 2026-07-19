@@ -815,7 +815,6 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   document.getElementById('biology-notebook-tool-mass-mw').value = '58.44';
   document.getElementById('biology-notebook-tool-mass-volume').value = '1';
   document.getElementById('biology-notebook-tool-mass-volume-unit').value = 'L';
-  document.getElementById('biology-notebook-tool-mass-output-unit').value = 'mg';
   trigger(document.getElementById('biology-notebook-tool-mass-volume'), 'input');
   trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
 

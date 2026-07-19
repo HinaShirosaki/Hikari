@@ -524,7 +524,7 @@ export function createWorkflowRenderer(config = {}) {
     }
 
     if (!workflows.length) {
-      return '<p class="small-note">No specific workflows created from this template yet. Use Add Workflow to create one.</p>';
+      return '<p class="small-note">Use Add Workflow to create one.</p>';
     }
 
     const trackColumnCount = Math.max(
@@ -756,7 +756,7 @@ export function createWorkflowRenderer(config = {}) {
   }
 
   function renderExecutionBoard() {
-    if (!elements.workflowExecutionBoard || !elements.workflowExecutionTitle || !elements.workflowExecutionStatus) {
+    if (!elements.workflowExecutionBoard || !elements.workflowExecutionTitle) {
       return;
     }
 
@@ -789,13 +789,11 @@ export function createWorkflowRenderer(config = {}) {
 
     if (!activeTemplate) {
       elements.workflowExecutionTitle.textContent = 'Select a workflow template';
-      elements.workflowExecutionStatus.textContent = 'Choose a template on the left to manage the workflows created from it.';
       elements.workflowExecutionBoard.innerHTML = '<p class="small-note">No workflow template selected.</p>';
       return;
     }
 
     elements.workflowExecutionTitle.textContent = activeTemplate.name || 'Untitled template';
-    elements.workflowExecutionStatus.textContent = `${workflows.length} specific workflow${workflows.length === 1 ? '' : 's'} created from this template.`;
     elements.workflowExecutionBoard.innerHTML = buildTemplateWorkflowTableMarkup(activeTemplate, workflows, activeWorkflow);
     const executionScroll = elements.workflowExecutionBoard.querySelector('.workflow-execution-scroll');
     if (executionScroll && elements.workflowExecutionBoard.querySelector('[data-workflow-step-popover]')) {
@@ -864,10 +862,19 @@ export function createWorkflowRenderer(config = {}) {
       elements.workflowEntryBackBtn.hidden = showHome;
     }
     if (elements.workflowEntryPanel) {
-      elements.workflowEntryPanel.hidden = showTemplateEditor;
+      elements.workflowEntryPanel.hidden = false;
+    }
+    if (elements.workflowEntryViewBtn) {
+      elements.workflowEntryViewBtn.hidden = !showHome;
+    }
+    if (elements.workflowEntryTemplateBtn) {
+      elements.workflowEntryTemplateBtn.hidden = !showHome;
     }
     (elements.workflowSidebarEditorPanels || []).forEach((panel) => {
       panel.hidden = !showWorkflowSidebarEditor;
+    });
+    (elements.workflowBlockComposerPanels || []).forEach((panel) => {
+      panel.hidden = !showMainEditor;
     });
     (elements.workflowMainEditorPanels || []).forEach((panel) => {
       panel.hidden = !showMainEditor;

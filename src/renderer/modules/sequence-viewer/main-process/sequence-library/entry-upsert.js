@@ -104,6 +104,7 @@ function buildEntryRow({ existing, payload, entryId, resolvedName, status, gbkAb
     featureCount: Math.max(0, Math.round(Number(payload.featureCount) || Number(existing?.featureCount) || 0)),
     gbkRelPath: toPosixRelative(paths.libraryRoot, gbkAbsPath),
     htmlRelPath: toPosixRelative(paths.libraryRoot, htmlAbsPath),
+    folderId: cleanText(existing?.folderId, 200),
     createdAt: existing?.createdAt || now,
     updatedAt: now
   };
@@ -113,8 +114,8 @@ function upsertEntryRow(db, row) {
   db.run(
     `INSERT INTO sequence_entries (
        id, name, normalized_name, status, source_format, topology, sequence_length, feature_count,
-       gbk_rel_path, html_rel_path, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       gbk_rel_path, html_rel_path, folder_id, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        name = excluded.name,
        normalized_name = excluded.normalized_name,
@@ -125,10 +126,12 @@ function upsertEntryRow(db, row) {
        feature_count = excluded.feature_count,
        gbk_rel_path = excluded.gbk_rel_path,
        html_rel_path = excluded.html_rel_path,
+       folder_id = excluded.folder_id,
        updated_at = excluded.updated_at`,
     [
       row.id, row.name, row.normalizedName, row.status, row.sourceFormat, row.topology,
-      row.sequenceLength, row.featureCount, row.gbkRelPath, row.htmlRelPath, row.createdAt, row.updatedAt
+      row.sequenceLength, row.featureCount, row.gbkRelPath, row.htmlRelPath, row.folderId,
+      row.createdAt, row.updatedAt
     ]
   );
 }

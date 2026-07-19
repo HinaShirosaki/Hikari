@@ -70,11 +70,19 @@ const SEQUENCE_LIBRARY = Object.freeze({
   UPSERT: 'sequence-library:upsert',
   PROMOTE: 'sequence-library:promote',
   DELETE: 'sequence-library:delete',
+  UPSERT_FOLDER: 'sequence-library:upsert-folder',
+  DELETE_FOLDER: 'sequence-library:delete-folder',
+  MOVE_ENTRY: 'sequence-library:move-entry',
   SEARCH_FEATURES: 'sequence-library:search-features',
   LIST_BACKBONES: 'sequence-library:list-backbones',
   UPSERT_BACKBONE: 'sequence-library:upsert-backbone',
   ANNOTATE: 'sequence-library:annotate',
   RECOGNIZE_BACKBONE: 'sequence-library:recognize-backbone'
+});
+
+const SEQUENCE_AGENT = Object.freeze({
+  REQUEST: 'sequence-agent:request',
+  RESPONSE: 'sequence-agent:response'
 });
 
 const TELEGRAM = Object.freeze({
@@ -84,6 +92,15 @@ const TELEGRAM = Object.freeze({
 });
 
 const TELEGRAM_COMMAND_EVENT = 'telegram-command';
+
+const SCHEDULED_TASK = Object.freeze({
+  LIST: 'scheduled-task:list',
+  GET: 'scheduled-task:get',
+  CREATE: 'scheduled-task:create',
+  UPDATE: 'scheduled-task:update',
+  DELETE: 'scheduled-task:delete',
+  RUN: 'scheduled-task:run'
+});
 
 const LLM = Object.freeze({
   CODEX_STATUS: 'llm:codex-status',
@@ -106,7 +123,9 @@ module.exports = {
   INVENTORY,
   ASSAY,
   SEQUENCE_LIBRARY,
+  SEQUENCE_AGENT,
   TELEGRAM,
   TELEGRAM_COMMAND_EVENT,
+  SCHEDULED_TASK,
   LLM
 };

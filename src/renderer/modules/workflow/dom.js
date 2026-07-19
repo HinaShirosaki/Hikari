@@ -33,7 +33,6 @@ export function getWorkflowElements(rootDocument) {
     workflowSearchInput: rootDocument?.getElementById?.('workflow-search'),
     workflowList: rootDocument?.getElementById?.('workflow-list'),
     workflowExecutionTitle: rootDocument?.getElementById?.('workflow-execution-title'),
-    workflowExecutionStatus: rootDocument?.getElementById?.('workflow-execution-status'),
     workflowExecutionBoard: rootDocument?.getElementById?.('workflow-execution-board'),
     workflowAddRunBtn: rootDocument?.getElementById?.('workflow-add-run-btn'),
     workflowDeleteRunBtn: rootDocument?.getElementById?.('workflow-delete-run-btn'),
@@ -43,6 +42,7 @@ export function getWorkflowElements(rootDocument) {
     workflowEntryViewBtn: rootDocument?.getElementById?.('workflow-entry-view-btn'),
     workflowEntryBackBtn: rootDocument?.getElementById?.('workflow-entry-back-btn'),
     workflowSidebarEditorPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-sidebar-editor-panel') || [])],
+    workflowBlockComposerPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-block-composer-panel') || [])],
     workflowMainEditorPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-main-editor-panel') || [])],
     workflowTemplateEditorPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-template-editor-panel') || [])],
     workflowListPanels: [...(rootDocument?.querySelectorAll?.('#workflow-management-view .workflow-list-panel') || [])]

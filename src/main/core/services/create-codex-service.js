@@ -170,6 +170,55 @@ function createMainCodexService({
     return requestCodexCliText(input);
   }
 
+  async function runScheduledTask(task = {}) {
+    const project = ensurePlainObject(task.project);
+    const execution = ensurePlainObject(task.execution);
+    const projectName = cleanText(project.name, 320);
+    const dataFilePath = cleanText(project.data_file_path, 2400);
+    const storagePath = cleanText(project.storage_path, 2400)
+      || (dataFilePath ? path.dirname(path.resolve(dataFilePath)) : '');
+    const cwd = cleanText(project.cwd, 2400)
+      || (storagePath && projectName
+        ? path.join(
+          storagePath,
+          'Project',
+          sanitizeProjectMemoryFolderName(projectName, 'Untitled_Project')
+        )
+        : '');
+    const snapshot = {
+      settings: {
+        ...(storagePath
+          ? { storagePath }
+          : {})
+      },
+      projects: project.id || project.name
+        ? [{
+          ...(cleanText(project.id, 220) ? { id: cleanText(project.id, 220) } : {}),
+          name: projectName || 'Untitled Project'
+        }]
+        : [],
+      ...(dataFilePath
+        ? { data_file_path: dataFilePath }
+        : {})
+    };
+    return codexAgentRuntime.run({
+      message: cleanText(task.prompt, 120000),
+      model: cleanText(execution.model, 120),
+      reasoningEffort: cleanText(execution.reasoning_effort, 40),
+      enableWebSearch: execution.enable_web_search !== false,
+      timeoutMs: execution.timeout_ms,
+      cwd,
+      projectId: cleanText(project.id, 220),
+      projectName,
+      dataFilePath,
+      fallbackDataFilePath: dataFilePath,
+      snapshot,
+      traceContext: {
+        requestId: `scheduled-task:${cleanText(task.id, 160)}`
+      }
+    });
+  }
+
   async function runSubAgentTurn(turnInput = {}) {
     const turnMetadata = ensurePlainObject(turnInput.metadata);
     const agentMetadata = ensurePlainObject(turnInput?.agent?.metadata);
@@ -344,6 +393,7 @@ function createMainCodexService({
     initialize,
     prepareProjectWorkspace,
     requestCodexAgentText,
+    runScheduledTask,
     runSubAgentTurn,
     runtimeHome: processObject.env.HIKARI_CODEX_HOME
   };

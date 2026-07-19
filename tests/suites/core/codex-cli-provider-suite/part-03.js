@@ -439,14 +439,14 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.match(calls[0].prompt, /Codex Chat Turn/);
       assert.match(calls[0].prompt, /Current user request:\nWhy was SUMO1 conjugation weak\?/);
       assert.match(calls[0].prompt, /Protocol and notebook handoff:/);
-      assert.match(calls[0].prompt, /call `mcp__hikari__protocol_generation` with/);
+      assert.match(calls[0].prompt, /call `protocol_generation` with/);
       assert.match(calls[0].prompt, /summarize that the generated protocol is ready for review/);
       assert.match(calls[0].prompt, /Generated protocols must be executable starting protocols, not questionnaires/);
       assert.match(calls[0].prompt, /Aim for 0-3 unresolved placeholders and do not exceed 5/);
       assert.match(calls[0].prompt, /accepts only `project_name`, `protocol_candidates`, `pending_values`, and optional `step_edits`/);
       assert.match(calls[0].prompt, /placeholder_key` in `<step-id>:<placeholder-id>` form/);
       assert.match(calls[0].prompt, /never use uncertainty text such as "not specified"/);
-      assert.match(calls[0].prompt, /mcp__hikari__protocol_generation/);
+      assert.match(calls[0].prompt, /`protocol_generation`/);
       assert.match(calls[0].prompt, /Assay context handoff:/);
       assert.match(calls[0].prompt, /Assay plate data \(TSV/);
       assert.match(calls[0].prompt, /retrieve the active assay data by reading/);
@@ -466,7 +466,7 @@ module.exports = function registerCodexCliProviderSuitePart03(context = {}) {
       assert.match(calls[0].prompt, /Do not call memory just to rediscover these saved settings/);
       assert.match(calls[0].prompt, /soft ranking preferences/);
       assert.match(calls[0].prompt, /including when the user says "from my preferred journals"/);
-      assert.match(calls[0].prompt, /make at most one `mcp__hikari__literature_search` call/);
+      assert.match(calls[0].prompt, /make at most one `literature_search` call/);
       assert.match(calls[0].prompt, /pilot\.pdf/);
       assert.doesNotMatch(calls[0].prompt, /"assistant_text"/);
       const mcpContext = JSON.parse(calls[0].envOverrides.HIKARI_AGENT_MCP_REQUEST_CONTEXT);

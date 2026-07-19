@@ -1,5 +1,6 @@
 import { deleteContainer } from './container-delete-events.js';
 import { renameContainer } from './container-rename-events.js';
+import { deleteInventoryFolder, renameInventoryFolder } from './folder-actions.js';
 
 export function installContainerContextMenu(ctx) {
   const { containerContextMenu } = ctx.elements;
@@ -9,6 +10,7 @@ export function installContainerContextMenu(ctx) {
 
   function hideContainerContextMenu() {
     uiState.contextContainer = null;
+    uiState.contextFolder = null;
     if (containerContextMenu) {
       containerContextMenu.hidden = true;
       renderMenuButtons();
@@ -19,26 +21,55 @@ export function installContainerContextMenu(ctx) {
     if (!containerContextMenu) {
       return;
     }
-    containerContextMenu.innerHTML = `
-      <button type="button" class="personal-inventory-context-item" data-container-context-add-child>
-        Add Subcontainer
+    const isFolder = Boolean(uiState.contextFolder);
+    containerContextMenu.innerHTML = isFolder ? `
+      <button type="button" class="personal-inventory-context-item" data-folder-context-add-container>
+        Add Container Here
       </button>
+      <button type="button" class="personal-inventory-context-item" data-folder-context-add-folder>
+        New Folder Inside
+      </button>
+      <button type="button" class="personal-inventory-context-item" data-folder-context-rename>
+        Rename Folder
+      </button>
+      <button type="button" class="personal-inventory-context-item personal-inventory-context-item-danger" data-folder-context-delete>
+        Delete Folder
+      </button>
+    ` : `
       <button type="button" class="personal-inventory-context-item" data-container-context-rename>
-        Rename
+        Rename Container
       </button>
       <button type="button" class="personal-inventory-context-item personal-inventory-context-item-danger" data-container-context-delete>
-        Delete
+        Delete Container
       </button>
     `;
-    containerContextMenu.querySelector('[data-container-context-add-child]')?.addEventListener('click', () => {
-      const target = uiState.contextContainer;
+
+    containerContextMenu.querySelector('[data-folder-context-add-container]')?.addEventListener('click', () => {
+      const target = uiState.contextFolder;
       hideContainerContextMenu();
       if (target) {
-        ctx.beginAddSubcontainer?.(target.section, target.containerId);
+        ctx.beginAddContainer?.({ section: target.section, folderId: target.folderId });
+      }
+    });
+    containerContextMenu.querySelector('[data-folder-context-add-folder]')?.addEventListener('click', () => {
+      const target = uiState.contextFolder;
+      hideContainerContextMenu();
+      if (target) {
+        ctx.beginAddFolder?.({ section: target.section, folderId: target.folderId });
+      }
+    });
+    containerContextMenu.querySelector('[data-folder-context-rename]')?.addEventListener('click', () => {
+      enterRenameMode(uiState.contextFolder, 'folder');
+    });
+    containerContextMenu.querySelector('[data-folder-context-delete]')?.addEventListener('click', () => {
+      const target = uiState.contextFolder;
+      hideContainerContextMenu();
+      if (target) {
+        deleteInventoryFolder(ctx, target.section, target.folderId);
       }
     });
     containerContextMenu.querySelector('[data-container-context-rename]')?.addEventListener('click', () => {
-      enterRenameMode(uiState.contextContainer);
+      enterRenameMode(uiState.contextContainer, 'container');
     });
     containerContextMenu.querySelector('[data-container-context-delete]')?.addEventListener('click', () => {
       const target = uiState.contextContainer;
@@ -49,17 +80,19 @@ export function installContainerContextMenu(ctx) {
     });
   }
 
-  function enterRenameMode(target) {
+  function enterRenameMode(target, targetType) {
     if (!containerContextMenu || !target) {
       return;
     }
-    const container = ctx.helpers?.getContainer?.(target.section, target.containerId);
+    const item = targetType === 'folder'
+      ? ctx.helpers?.getFolder?.(target.section, target.folderId)
+      : ctx.helpers?.getContainer?.(target.section, target.containerId);
     containerContextMenu.innerHTML = '<input type="text" class="personal-inventory-context-rename-input" maxlength="120" />';
     const input = containerContextMenu.querySelector('.personal-inventory-context-rename-input');
     if (!input) {
       return;
     }
-    input.value = container?.name || '';
+    input.value = item?.name || '';
     input.focus();
     input.select();
 
@@ -71,7 +104,11 @@ export function installContainerContextMenu(ctx) {
       settled = true;
       const nextName = input.value;
       hideContainerContextMenu();
-      renameContainer(ctx, target.section, target.containerId, nextName);
+      if (targetType === 'folder') {
+        renameInventoryFolder(ctx, target.section, target.folderId, nextName);
+      } else {
+        renameContainer(ctx, target.section, target.containerId, nextName);
+      }
     };
     input.addEventListener('keydown', (event) => {
       if (event.key === 'Enter') {
@@ -86,13 +123,14 @@ export function installContainerContextMenu(ctx) {
     input.addEventListener('blur', commit);
   }
 
-  function openContainerContextMenu(event, section, containerId) {
-    if (!containerContextMenu || !section || !containerId) {
+  function openContextMenu(event, targetType, section, itemId) {
+    if (!containerContextMenu || !section || !itemId) {
       return;
     }
     event?.preventDefault?.();
     event?.stopPropagation?.();
-    uiState.contextContainer = { section, containerId };
+    uiState.contextContainer = targetType === 'container' ? { section, containerId: itemId } : null;
+    uiState.contextFolder = targetType === 'folder' ? { section, folderId: itemId } : null;
     renderMenuButtons();
     containerContextMenu.style.left = `${Math.max(0, Number(event?.clientX) || 0)}px`;
     containerContextMenu.style.top = `${Math.max(0, Number(event?.clientY) || 0)}px`;
@@ -105,6 +143,14 @@ export function installContainerContextMenu(ctx) {
       containerContextMenu.style.left = `${left}px`;
       containerContextMenu.style.top = `${top}px`;
     }
+  }
+
+  function openContainerContextMenu(event, section, containerId) {
+    openContextMenu(event, 'container', section, containerId);
+  }
+
+  function openFolderContextMenu(event, section, folderId) {
+    openContextMenu(event, 'folder', section, folderId);
   }
 
   if (containerContextMenu) {
@@ -128,6 +174,7 @@ export function installContainerContextMenu(ctx) {
 
   Object.assign(ctx, {
     hideContainerContextMenu,
-    openContainerContextMenu
+    openContainerContextMenu,
+    openFolderContextMenu
   });
 }

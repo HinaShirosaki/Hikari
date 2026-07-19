@@ -40,6 +40,9 @@ function registerDataIpc(deps = {}) {
   const upsertSequenceEntry = deps.upsertSequenceEntry;
   const promoteSequenceEntry = deps.promoteSequenceEntry;
   const deleteSequenceEntry = deps.deleteSequenceEntry;
+  const upsertSequenceFolder = deps.upsertSequenceFolder;
+  const deleteSequenceFolder = deps.deleteSequenceFolder;
+  const moveSequenceEntryToFolder = deps.moveSequenceEntryToFolder;
   const annotateSequenceRecord = deps.annotateSequenceRecord;
   const searchSequenceFeatures = deps.searchSequenceFeatures;
   const listRecognizedBackbones = deps.listRecognizedBackbones;
@@ -626,6 +629,9 @@ function registerDataIpc(deps = {}) {
     upsertSequenceEntry,
     promoteSequenceEntry,
     deleteSequenceEntry,
+    upsertSequenceFolder,
+    deleteSequenceFolder,
+    moveSequenceEntryToFolder,
     annotateSequenceRecord,
     searchSequenceFeatures,
     listRecognizedBackbones,

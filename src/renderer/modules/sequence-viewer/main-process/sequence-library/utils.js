@@ -97,6 +97,10 @@ function buildEntryId() {
   return `seq_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
 }
 
+function buildFolderId() {
+  return `seq_folder_${Date.now()}_${Math.random().toString(16).slice(2, 10)}`;
+}
+
 function buildSequenceSignature(sequence, prefix = 'seq') {
   const normalized = normalizeSequenceText(sequence);
   if (!normalized.length) {
@@ -117,6 +121,7 @@ function stripExtension(name) {
 
 module.exports = {
   buildEntryId,
+  buildFolderId,
   buildSequenceSignature,
   buildStableId,
   clamp,

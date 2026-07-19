@@ -135,7 +135,7 @@ export function createEntryListRenderer({
               aria-expanded="${isCollapsed ? 'false' : 'true'}"
               aria-label="Toggle ${safeText(group.groupName)}"
             >
-              <span class="biology-notebook-folder-glyph" aria-hidden="true"></span>
+              <span class="left-rail-folder-glyph biology-notebook-folder-glyph" aria-hidden="true"></span>
             </button>
             <${folderNameTag}${folderNameAttrs}>${safeText(group.groupName)}</${folderNameTag}>
           </div>

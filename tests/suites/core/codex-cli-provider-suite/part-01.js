@@ -442,8 +442,7 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         assert.match(firstContent, /load bounded paper context blocks/);
         assert.match(firstContent, /retrieve the active assay data by parsing its `Assay plate data \(TSV\.\.\.\)` block directly from the chat prompt/);
         assert.match(firstContent, /Do not use local lookup tools for active Assay plate\/result rows/);
-        const retiredMcpTool = ['mcp__hikari__', ['record', 'lookup'].join('_')].join('');
-        assert.equal(firstContent.includes(retiredMcpTool), false);
+        assert.doesNotMatch(firstContent, /mcp__[a-z0-9-]+__/i);
 
         fs.writeFileSync(agentsPath, `${firstContent}\nLocal note stays here.\n`, 'utf8');
         await provider.ensureCodexCliAgentsFile(workspaceDir);

@@ -468,7 +468,7 @@ test('personal-inventory removes the saved-sample card and deletes containers fr
   trigger(addChildBtn, 'click');
   assert.equal(containerContextMenu.hidden, true);
   assert.equal(addContainerOverlay.hidden, false);
-  assert.equal(addContainerTitle.textContent, 'Add Subcontainer');
+  assert.equal(addContainerTitle.textContent, 'Add Container Inside');
   assert.equal(addContainerLocationSelect.value, '-20 Degree');
   assert.equal(addContainerLocationSelect.disabled, true);
 
@@ -479,7 +479,18 @@ test('personal-inventory removes the saved-sample card and deletes containers fr
   assert.equal(nestedContainer.name, 'Nested Box');
   assert.equal(nestedContainer.parentContainerId, 'box-context');
   assert.match(inventoryLocationNav.innerHTML, /inventory-container-children/);
+  assert.match(inventoryLocationNav.innerHTML, /folder-tree-template__children/);
   assert.match(inventoryLocationNav.innerHTML, /Nested Box/);
+
+  let parentToggle = inventoryLocationNav.querySelector('[data-container-toggle]');
+  parentToggle.dataset.section = '-20 Degree';
+  assert.match(inventoryLocationNav.innerHTML, /data-container-toggle="box-context"[\s\S]*?aria-expanded="true"/);
+  trigger(parentToggle, 'click');
+  parentToggle = inventoryLocationNav.querySelector('[data-container-toggle]');
+  parentToggle.dataset.section = '-20 Degree';
+  assert.match(inventoryLocationNav.innerHTML, /data-container-toggle="box-context"[\s\S]*?aria-expanded="false"/);
+  assert.match(inventoryLocationNav.innerHTML, /class="inventory-container-children folder-tree-template__children" hidden/);
+  trigger(parentToggle, 'click');
 
   state.samples.push({
     id: 'sample-child',

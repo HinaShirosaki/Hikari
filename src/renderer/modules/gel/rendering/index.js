@@ -677,7 +677,7 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
       elements.gelLaneProfileSelect.innerHTML = '<option value="">Select lane</option>';
       elements.gelLaneProfileCaption.textContent = 'Finish lane division to plot the average row intensity for a lane.';
       elements.gelLaneProfileMeta.textContent = '';
-      renderLaneProfilePlaceholder(elements.gelLaneProfileChart, 'Set left/right borders and lane dividers first.');
+      renderLaneProfilePlaceholder(elements.gelLaneProfileChart, 'Set the lane dividers first.');
       return;
     }
 

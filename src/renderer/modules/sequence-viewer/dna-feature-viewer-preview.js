@@ -2,6 +2,7 @@ import { escapeHtml } from '../../lib/html.js';
 import {
   assignFeatureLanes,
   buildFeatureLocationText,
+  getContrastTextColor,
   hashTypeToColor
 } from './feature-model.js';
 import { clamp, normalizeRecordName, normalizeSequenceText } from './shared.js';
@@ -835,6 +836,7 @@ function buildPreviewFeatures(record, sequenceLength) {
           labelFill: lightenHexColor(fill, 0.9),
           labelStroke: lightenHexColor(fill, 0.5),
           labelTextColor: darkenHexColor(fill, 0.5),
+          onBarTextColor: getContrastTextColor(fill),
           labelLines: normalizeLabelLines(feature?.name || feature?.type || 'Feature'),
           anchorPosition: computeFeatureAnchorPosition({ segments }, sequenceLength)
         };
@@ -1064,6 +1066,26 @@ function renderPreviewSvgDocument({ recordName, viewBox, ariaLabel, descText, sc
       stroke-width: 1.5;
       stroke-linejoin: round;
     }
+    .circular-preview__intron {
+      fill: none;
+      stroke-width: 1.4;
+      stroke-dasharray: 5 3;
+      opacity: 0.75;
+    }
+    .circular-preview__feature-label {
+      font-size: 12px;
+      font-weight: 650;
+      dominant-baseline: middle;
+      pointer-events: none;
+    }
+    .circular-preview__feature-label--inside {
+      text-anchor: middle;
+    }
+    .circular-preview__feature-label--above {
+      text-anchor: start;
+      font-size: 11px;
+      font-weight: 600;
+    }
     .circular-preview__leader {
       fill: none;
       stroke-width: 1.5;
@@ -1221,30 +1243,12 @@ export function buildDnaFeatureViewerLinearPreviewHtmlDocument(record) {
   const featureBandTop = (lane) => baselineY - (FEATURE_START_GAP + FEATURE_BAND_WIDTH) - (lane * (FEATURE_BAND_WIDTH + FEATURE_LANE_GAP));
   const topFeatureY = featureBandTop(maxLane);
 
-  // Labels sit in one row above the top feature lane, packed left→right so boxes don't overlap.
-  // ponytail: single-row greedy packing; clustered features push labels rightward. Multi-row layout if that gets ugly.
-  let cursor = Number.NEGATIVE_INFINITY;
-  [...previewFeatures]
-    .sort((left, right) => xOf(left.anchorPosition) - xOf(right.anchorPosition))
-    .forEach((feature) => {
-      const width = Math.max(70, estimateLabelWidthPx(feature.labelLines));
-      const height = estimateLabelHeightPx(feature.labelLines);
-      const anchorX = xOf(feature.anchorPosition);
-      let boxX = anchorX - (width / 2);
-      if (boxX < cursor + LABEL_STACK_GAP) {
-        boxX = cursor + LABEL_STACK_GAP;
-      }
-      cursor = boxX + width;
-      feature.anchorX = anchorX;
-      feature.labelWidthPx = width;
-      feature.labelHeightPx = height;
-      feature.labelBoxX = boxX;
-      feature.labelCenterY = topFeatureY - LABEL_BASE_GAP - (height / 2);
-      feature.labelSide = (boxX + (width / 2)) >= anchorX ? 'right' : 'left';
-    });
-
+  // ponytail: the name rides on its own feature bar (or just above it when the bar is too
+  // narrow to hold the text), so labels track each feature instead of colliding in a shared row.
+  const ON_BAR_CHAR_PX = 6.6;
   const featureMarkup = [];
   const labelMarkup = [];
+  let labelHeadroom = 0;
 
   [...previewFeatures]
     .sort((left, right) => {
@@ -1258,6 +1262,7 @@ export function buildDnaFeatureViewerLinearPreviewHtmlDocument(record) {
       const lane = Number(feature?.lane) || 0;
       const bandTop = featureBandTop(lane);
       const bandBottom = bandTop + FEATURE_BAND_WIDTH;
+      const bandMid = (bandTop + bandBottom) / 2;
       const direction = feature?.strand === -1 ? -1 : feature?.strand === 1 ? 1 : 0;
       const tooltip = escapeHtml(buildFeatureTooltip(feature, sequenceLength));
       const hoverCard = buildFeatureHoverCardData(feature, sequenceLength);
@@ -1266,6 +1271,18 @@ export function buildDnaFeatureViewerLinearPreviewHtmlDocument(record) {
       const hoverMeta = escapeHtml(hoverCard.meta);
       const hoverLocation = escapeHtml(hoverCard.location);
       const hoverDescription = escapeHtml(hoverCard.description);
+
+      // Dashed intron connectors bridge the gaps between joined segments.
+      for (let seg = 0; seg < feature.segments.length - 1; seg += 1) {
+        const gapStart = xOf(feature.segments[seg].end);
+        const gapEnd = xOf(feature.segments[seg + 1].start);
+        if (gapEnd - gapStart <= 0.5) {
+          continue;
+        }
+        featureMarkup.push(
+          `<line class="circular-preview__intron" x1="${gapStart.toFixed(2)}" y1="${bandMid.toFixed(2)}" x2="${gapEnd.toFixed(2)}" y2="${bandMid.toFixed(2)}" stroke="${feature.stroke}"></line>`
+        );
+      }
 
       feature.segments.forEach((segment, segmentIndex) => {
         const path = buildLinearFeaturePath(xOf(segment.start), xOf(segment.end), bandTop, bandBottom, direction);
@@ -1289,55 +1306,28 @@ export function buildDnaFeatureViewerLinearPreviewHtmlDocument(record) {
         `);
       });
 
-      const featureX = feature.anchorX;
-      const featureY = bandTop;
-      const centerY = feature.labelCenterY;
-      const boxX = feature.labelBoxX;
-      const boxY = centerY - (feature.labelHeightPx / 2);
-      const innerEdgeX = feature.labelSide === 'right' ? boxX : boxX + feature.labelWidthPx;
-      const textX = boxX + LABEL_BOX_HORIZONTAL_PADDING;
-
-      labelMarkup.push(`
-        <g
-          class="circular-preview__annotation"
-          data-preview-tooltip="feature"
-          data-label-side="${feature.labelSide}"
-          data-tooltip-key="${hoverKey}"
-          data-tooltip-name="${hoverName}"
-          data-tooltip-meta="${hoverMeta}"
-          data-tooltip-location="${hoverLocation}"
-          data-tooltip-description="${hoverDescription}"
-          data-feature-x="${featureX.toFixed(2)}"
-          data-feature-y="${featureY.toFixed(2)}"
-          data-bend-x="${featureX.toFixed(2)}"
-          data-bend-y="${centerY.toFixed(2)}"
-          data-label-center-y="${centerY.toFixed(2)}"
-          aria-label="${tooltip}">
-          <path class="circular-preview__leader"
-            d="M ${featureX.toFixed(2)} ${featureY.toFixed(2)} L ${featureX.toFixed(2)} ${centerY.toFixed(2)} L ${innerEdgeX.toFixed(2)} ${centerY.toFixed(2)}"
-            stroke="${feature.stroke}"></path>
-          <rect
-            class="circular-preview__label-box"
-            x="${boxX.toFixed(2)}"
-            y="${boxY.toFixed(2)}"
-            width="${feature.labelWidthPx.toFixed(2)}"
-            height="${feature.labelHeightPx.toFixed(2)}"
-            rx="9"
-            ry="9"
-            fill="${feature.labelFill}"
-            stroke="${feature.labelStroke}"></rect>
-          ${feature.labelLines.map((line, lineIndex) => `
-            <text
-              class="circular-preview__label-text"
-              x="${textX.toFixed(2)}"
-              y="${(centerY + ((lineIndex - ((feature.labelLines.length - 1) / 2)) * LABEL_LINE_HEIGHT)).toFixed(2)}"
-              text-anchor="start"
-              fill="${feature.labelTextColor}">
-              ${escapeHtml(line)}
-            </text>
-          `).join('')}
-        </g>
-      `);
+      // Name centered on the widest segment (a real exon, never an intron gap) when it fits;
+      // otherwise just above the feature start.
+      const widest = feature.segments.reduce((best, segment) => (
+        (segment.end - segment.start) > (best.end - best.start) ? segment : best
+      ), feature.segments[0]);
+      const wx0 = xOf(widest.start);
+      const wx1 = xOf(widest.end);
+      const name = feature.name;
+      const fitsOnBar = (name.length * ON_BAR_CHAR_PX) <= ((wx1 - wx0) - 10);
+      if (fitsOnBar) {
+        labelMarkup.push(
+          `<text class="circular-preview__feature-label circular-preview__feature-label--inside" x="${((wx0 + wx1) / 2).toFixed(2)}" y="${bandMid.toFixed(2)}" fill="${feature.onBarTextColor}">${escapeHtml(name)}</text>`
+        );
+      } else {
+        const x0 = xOf(feature.segments[0].start);
+        labelMarkup.push(
+          `<text class="circular-preview__feature-label circular-preview__feature-label--above" x="${x0.toFixed(2)}" y="${(bandTop - 5).toFixed(2)}" fill="${feature.labelTextColor}">${escapeHtml(name)}</text>`
+        );
+        if (bandTop === topFeatureY) {
+          labelHeadroom = 18;
+        }
+      }
     });
 
   const rulerMarkup = buildLinearTickMarkup(xOf, baselineY, sequenceLength);
@@ -1348,9 +1338,7 @@ export function buildDnaFeatureViewerLinearPreviewHtmlDocument(record) {
     <line class="circular-preview__tick circular-preview__tick--major" x1="${TRACK_WIDTH}" y1="${(baselineY - capReach).toFixed(2)}" x2="${TRACK_WIDTH}" y2="${(baselineY + capReach).toFixed(2)}"></line>
   `;
 
-  const labelTop = previewFeatures.length
-    ? Math.min(...previewFeatures.map((feature) => feature.labelCenterY - (feature.labelHeightPx / 2)))
-    : topFeatureY - LABEL_BASE_GAP;
+  const labelTop = topFeatureY - labelHeadroom;
   const titleY = labelTop - 44;
   const featureCount = previewFeatures.length;
   const subtitle = escapeHtml(`${formatBpCount(sequenceLength)} · ${featureCount} feature${featureCount === 1 ? '' : 's'} · linear`);
@@ -1370,8 +1358,8 @@ export function buildDnaFeatureViewerLinearPreviewHtmlDocument(record) {
       `;
 
   // Rough initial viewBox; the fit script tightens it from the real bbox on load.
-  const minX = Math.min(0, ...previewFeatures.map((feature) => feature.labelBoxX));
-  const maxX = Math.max(TRACK_WIDTH, ...previewFeatures.map((feature) => feature.labelBoxX + feature.labelWidthPx));
+  const minX = 0;
+  const maxX = TRACK_WIDTH;
   const minY = titleY - 20;
   const maxY = baselineY + 34;
   const viewBox = `${Math.floor(minX - VIEWBOX_PADDING)} ${Math.floor(minY - VIEWBOX_PADDING)} ${Math.ceil((maxX - minX) + (VIEWBOX_PADDING * 2))} ${Math.ceil((maxY - minY) + (VIEWBOX_PADDING * 2))}`;

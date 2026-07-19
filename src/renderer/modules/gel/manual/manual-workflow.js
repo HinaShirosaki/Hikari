@@ -52,6 +52,10 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     renderViewerToolbar(elements, runtime.selectedViewerTool, isPerLaneBandMode(runtime.manualOverrides?.laneSegmentation));
     const label = getViewerToolLabel(runtime.selectedViewerTool);
     if (label) {
+      if (runtime.selectedViewerTool === 'dividers') {
+        deps.setStatus('Set lane dividers selected. Click every lane boundary; the outermost lines define the gel edges.');
+        return;
+      }
       if (runtime.selectedViewerTool === 'lane-vertices') {
         deps.setStatus('Adjust lane vertices selected. Drag one of the four corner handles for a lane.');
         return;
@@ -64,14 +68,6 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
 
   function getManualStep(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
     const segmentation = overrides.laneSegmentation || {};
-    const hasLeft = Number.isFinite(segmentation.gelLeft);
-    const hasRight = Number.isFinite(segmentation.gelRight);
-    if (!hasLeft) {
-      return 'left';
-    }
-    if (!hasRight) {
-      return 'right';
-    }
     if (!hasEffectiveDividerLayout(overrides)) {
       return 'dividers';
     }
@@ -133,6 +129,12 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
 
   function hasEffectiveDividerLayout(overrides = normalizeManualOverrides(runtime.manualOverrides)) {
     const segmentation = overrides.laneSegmentation || {};
+    const hasLaneBoundaries = Number.isFinite(segmentation.gelLeft)
+      && Number.isFinite(segmentation.gelRight)
+      && segmentation.gelRight > segmentation.gelLeft + 2;
+    if (!hasLaneBoundaries) {
+      return false;
+    }
     if (Boolean(segmentation.dividerDone) || runtime.manualDividerConfirmed) {
       return true;
     }
@@ -521,12 +523,17 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     const step = getManualStep();
     const segmentation = normalizeManualOverrides(runtime.manualOverrides).laneSegmentation || {};
     if (step === 'dividers') {
-      if (!Number.isFinite(segmentation.gelLeft) || !Number.isFinite(segmentation.gelRight)) {
-        deps.setStatus('Set left and right borders before finishing dividers.');
+      if (
+        !Number.isFinite(segmentation.gelLeft)
+        || !Number.isFinite(segmentation.gelRight)
+        || segmentation.gelRight <= segmentation.gelLeft + 2
+      ) {
+        deps.setStatus('Add at least two lane dividers to define the gel edges before finishing.');
         return;
       }
       runtime.manualDividerConfirmed = true;
       updateLaneSegmentation({ dividerDone: true });
+      clearCanvasTool('dividers');
       renderOverrideStatus();
       deps.setStatus('Dividers confirmed. Click a lane to set ladder lane.');
       return;
@@ -561,23 +568,10 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
   function onManualPrevStep() {
     const step = getManualStep();
     const normalized = normalizeManualOverrides(runtime.manualOverrides);
-    if (step === 'left') {
+    if (step === 'dividers') {
       return;
     }
-    if (step === 'right') {
-      updateLaneSegmentation({ gelLeft: null, laneVertices: [] });
-      runtime.manualDividerConfirmed = false;
-    } else if (step === 'dividers') {
-      updateLaneSegmentation({ gelRight: null, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [], laneVertices: [] });
-      runtime.manualDividerConfirmed = false;
-      runtime.manualOverrides = {
-        ...normalizeManualOverrides(runtime.manualOverrides),
-        ladderLane: null,
-        ladderBands: [],
-        ladderBandsDone: false,
-        addedBands: []
-      };
-    } else if (step === 'ladder') {
+    if (step === 'ladder') {
       updateLaneSegmentation({ dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [] });
       runtime.manualDividerConfirmed = false;
       runtime.manualOverrides = {
@@ -722,16 +716,24 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       bandBottom: null
     };
     const divider = clamp(Math.floor(x), 0, Math.max(0, runtime.currentImage.width - 1));
-    const gelLeft = Number.isFinite(segmentation.gelLeft) ? segmentation.gelLeft : null;
-    const gelRight = Number.isFinite(segmentation.gelRight) ? segmentation.gelRight : null;
-    if (Number.isFinite(gelLeft) && divider <= gelLeft + 1) {
+    const existingBoundaries = [
+      segmentation.gelLeft,
+      ...(Array.isArray(segmentation.dividers) ? segmentation.dividers : []),
+      segmentation.gelRight
+    ]
+      .filter(Number.isFinite)
+      .map((value) => clamp(Math.floor(value), 0, Math.max(0, runtime.currentImage.width - 1)))
+      .sort((a, b) => a - b)
+      .filter((value, index, all) => index === 0 || value !== all[index - 1]);
+    if (existingBoundaries.includes(divider)) {
       return false;
     }
-    if (Number.isFinite(gelRight) && divider >= gelRight - 1) {
-      return false;
-    }
+    const boundaries = [...existingBoundaries, divider].sort((a, b) => a - b);
     updateLaneSegmentation({
-      dividers: [...(segmentation.dividers || []), divider],
+      gelLeft: boundaries[0],
+      gelRight: boundaries.length > 1 ? boundaries[boundaries.length - 1] : null,
+      dividers: boundaries.length > 2 ? boundaries.slice(1, -1) : [],
+      dividerDone: false,
       laneBandWindows: [],
       laneVertices: [],
       quantifyConfirmed: false
@@ -917,38 +919,22 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
       deps.onRunAnalysis();
       return;
     }
-    if (step === 'left') {
-      updateLaneSegmentation({ gelLeft: point.x, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [], laneVertices: [] });
-      runtime.manualDividerConfirmed = false;
-      resetDownstreamManualSelections();
-      renderOverrideStatus();
-      deps.renderCanvas();
-      deps.setStatus(`Left border set at x=${point.x}.`);
-      return;
-    }
-    if (step === 'right') {
-      const left = normalizeManualOverrides(runtime.manualOverrides).laneSegmentation?.gelLeft;
-      if (!Number.isFinite(left) || point.x <= left + 2) {
-        deps.setStatus('Right border must be to the right of left border.');
-        return;
-      }
-      updateLaneSegmentation({ gelRight: point.x, dividers: [], dividerDone: false, bandTop: null, bandBottom: null, laneBandWindows: [], laneVertices: [] });
-      runtime.manualDividerConfirmed = false;
-      resetDownstreamManualSelections();
-      renderOverrideStatus();
-      deps.renderCanvas();
-      deps.setStatus(`Right border set at x=${point.x}.`);
-      return;
-    }
     if (step === 'dividers') {
       const added = addLaneDivider(point.x);
-      renderOverrideStatus();
-      deps.renderCanvas();
       if (!added) {
-        deps.setStatus('Divider must be between left and right borders.');
+        deps.setStatus('A lane divider already exists at that position.');
         return;
       }
-      deps.setStatus(`Divider added at x=${point.x}. Add more, then click Done Dividers.`);
+      runtime.manualDividerConfirmed = false;
+      resetDownstreamManualSelections();
+      renderOverrideStatus();
+      deps.renderCanvas();
+      const segmentation = normalizeManualOverrides(runtime.manualOverrides).laneSegmentation || {};
+      if (!Number.isFinite(segmentation.gelRight)) {
+        deps.setStatus(`First lane divider added at x=${point.x}. Add at least one more to define the gel edges.`);
+        return;
+      }
+      deps.setStatus(`Lane divider added at x=${point.x}. The outermost lines define the gel edges; add more or click Done Dividers.`);
       return;
     }
     if (step === 'ladder') {
@@ -1108,7 +1094,7 @@ export function createManualWorkflowController({ runtime, elements, deps }) {
     });
     const peakCount = result?.peaks?.length ?? 0;
     if (!result || peakCount < 2) {
-      deps.setStatus('Auto-detection found no clear lanes. Adjust borders or contrast and try again.');
+      deps.setStatus('Auto-detection found no clear lanes. Adjust the lane dividers or contrast and try again.');
       return;
     }
     updateLaneSegmentation({

@@ -6,7 +6,8 @@ module.exports = function registerCodexCliProviderSuite(context = {}) {
     require('./codex-cli-provider-suite/part-04.js'),
     require('./codex-cli-provider-suite/part-05.js'),
     require('./codex-cli-provider-suite/part-06.js'),
-    require('./codex-cli-provider-suite/part-07.js')
+    require('./codex-cli-provider-suite/part-07.js'),
+    require('./codex-cli-provider-suite/part-08.js')
   ];
 
   registerParts.forEach((registerPart) => registerPart(context));

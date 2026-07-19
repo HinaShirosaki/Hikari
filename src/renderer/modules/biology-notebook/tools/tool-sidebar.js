@@ -331,8 +331,7 @@ export function createNotebookToolSidebarController({
           massUnit: inputValue(getElement(doc, 'biology-notebook-tool-volume-mass-unit')) || 'mg',
           molecularWeight: inputValue(getElement(doc, 'biology-notebook-tool-volume-mw')),
           concentrationValue: inputValue(getElement(doc, 'biology-notebook-tool-volume-concentration')),
-          concentrationUnit: inputValue(getElement(doc, 'biology-notebook-tool-volume-concentration-unit')) || 'mM',
-          outputUnit: inputValue(getElement(doc, 'biology-notebook-tool-volume-output-unit')) || 'mL'
+          concentrationUnit: inputValue(getElement(doc, 'biology-notebook-tool-volume-concentration-unit')) || 'mM'
         }
       };
     }
@@ -344,8 +343,7 @@ export function createNotebookToolSidebarController({
           massUnit: inputValue(getElement(doc, 'biology-notebook-tool-concentration-mass-unit')) || 'mg',
           molecularWeight: inputValue(getElement(doc, 'biology-notebook-tool-concentration-mw')),
           volumeValue: inputValue(getElement(doc, 'biology-notebook-tool-concentration-volume')),
-          volumeUnit: inputValue(getElement(doc, 'biology-notebook-tool-concentration-volume-unit')) || 'mL',
-          outputUnit: inputValue(getElement(doc, 'biology-notebook-tool-concentration-output-unit')) || 'mM'
+          volumeUnit: inputValue(getElement(doc, 'biology-notebook-tool-concentration-volume-unit')) || 'mL'
         }
       };
     }
@@ -358,8 +356,7 @@ export function createNotebookToolSidebarController({
           targetConcentrationValue: inputValue(getElement(doc, 'biology-notebook-tool-dilution-target')),
           targetConcentrationUnit: inputValue(getElement(doc, 'biology-notebook-tool-dilution-target-unit')) || 'mM',
           finalVolumeValue: inputValue(getElement(doc, 'biology-notebook-tool-dilution-volume')),
-          finalVolumeUnit: inputValue(getElement(doc, 'biology-notebook-tool-dilution-volume-unit')) || 'mL',
-          outputUnit: inputValue(getElement(doc, 'biology-notebook-tool-dilution-output-unit')) || 'mL'
+          finalVolumeUnit: inputValue(getElement(doc, 'biology-notebook-tool-dilution-volume-unit')) || 'mL'
         }
       };
     }
@@ -370,8 +367,7 @@ export function createNotebookToolSidebarController({
         concentrationUnit: inputValue(getElement(doc, 'biology-notebook-tool-mass-concentration-unit')) || 'mM',
         molecularWeight: inputValue(getElement(doc, 'biology-notebook-tool-mass-mw')),
         volumeValue: inputValue(getElement(doc, 'biology-notebook-tool-mass-volume')),
-        volumeUnit: inputValue(getElement(doc, 'biology-notebook-tool-mass-volume-unit')) || 'mL',
-        outputUnit: inputValue(getElement(doc, 'biology-notebook-tool-mass-output-unit')) || 'mg'
+        volumeUnit: inputValue(getElement(doc, 'biology-notebook-tool-mass-volume-unit')) || 'mL'
       }
     };
   }
@@ -805,26 +801,22 @@ export function createNotebookToolSidebarController({
     'biology-notebook-tool-mass-mw',
     'biology-notebook-tool-mass-volume',
     'biology-notebook-tool-mass-volume-unit',
-    'biology-notebook-tool-mass-output-unit',
     'biology-notebook-tool-volume-mass',
     'biology-notebook-tool-volume-mass-unit',
     'biology-notebook-tool-volume-mw',
     'biology-notebook-tool-volume-concentration',
     'biology-notebook-tool-volume-concentration-unit',
-    'biology-notebook-tool-volume-output-unit',
     'biology-notebook-tool-concentration-mass',
     'biology-notebook-tool-concentration-mass-unit',
     'biology-notebook-tool-concentration-mw',
     'biology-notebook-tool-concentration-volume',
     'biology-notebook-tool-concentration-volume-unit',
-    'biology-notebook-tool-concentration-output-unit',
     'biology-notebook-tool-dilution-stock',
     'biology-notebook-tool-dilution-stock-unit',
     'biology-notebook-tool-dilution-target',
     'biology-notebook-tool-dilution-target-unit',
     'biology-notebook-tool-dilution-volume',
     'biology-notebook-tool-dilution-volume-unit',
-    'biology-notebook-tool-dilution-output-unit',
     'biology-notebook-tool-buffer-volume',
     'biology-notebook-tool-buffer-ph',
     'biology-notebook-tool-reaction-total-volume',

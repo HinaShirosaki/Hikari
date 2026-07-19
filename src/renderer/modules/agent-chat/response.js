@@ -500,6 +500,8 @@ export function normalizeAgentResponse(result) {
     resultAnalysis,
     thinkingTrace: extractStructuredThinkingTrace(result),
     developerTrace: asArray(result?.developer_trace),
+    sequenceEditProposals: asArray(result?.sequence_edit?.proposals)
+      .filter((proposal) => proposal && typeof proposal === 'object' && proposal.approvalToken),
     assistantText
   };
 }

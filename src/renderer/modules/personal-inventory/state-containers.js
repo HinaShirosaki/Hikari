@@ -17,50 +17,56 @@ export function createContainerStateHelpers({ state, uiState }) {
     return (state.inventory?.[section] || []).find((item) => item.id === containerId);
   }
 
-  function getContainerChildren(section, parentContainerId) {
-    const parentId = String(parentContainerId || '');
-    if (!parentId) {
-      return [];
-    }
-    return (state.inventory?.[section] || []).filter((item) => (
-      item?.id
-      && String(item.id) !== parentId
-      && String(item.parentContainerId || '') === parentId
-    ));
+  function getFolders(section) {
+    return Array.isArray(state.inventoryFolders?.[section]) ? state.inventoryFolders[section] : [];
   }
 
-  function getRootContainers(section) {
-    const containers = state.inventory?.[section] || [];
-    const containerIds = new Set(containers.map((item) => String(item?.id || '')).filter(Boolean));
-    return containers.filter((item) => {
-      const id = String(item?.id || '');
-      const parentId = String(item?.parentContainerId || '');
-      return !parentId || parentId === id || !containerIds.has(parentId);
+  function getFolder(section, folderId) {
+    const id = String(folderId || '');
+    return getFolders(section).find((folder) => String(folder?.id || '') === id) || null;
+  }
+
+  function getFolderChildren(section, parentFolderId = '') {
+    const parentId = String(parentFolderId || '');
+    return getFolders(section).filter((folder) => {
+      const id = String(folder?.id || '');
+      return id && id !== parentId && String(folder?.parentFolderId || '') === parentId;
     });
   }
 
-  function getContainerDescendantIds(section, containerId) {
-    const containers = state.inventory?.[section] || [];
-    const rootId = String(containerId || '');
-    if (!rootId) {
-      return [];
+  function getRootFolders(section) {
+    const folders = getFolders(section);
+    const folderIds = new Set(folders.map((folder) => String(folder?.id || '')).filter(Boolean));
+    return folders.filter((folder) => {
+      const id = String(folder?.id || '');
+      const parentId = String(folder?.parentFolderId || '');
+      return id && (!parentId || parentId === id || !folderIds.has(parentId));
+    });
+  }
+
+  function getContainersInFolder(section, folderId = '') {
+    const targetFolderId = String(folderId || '');
+    return (state.inventory?.[section] || []).filter((container) => (
+      String(container?.folderId || '') === targetFolderId
+    ));
+  }
+
+  function getFolderAncestorIds(section, folderId) {
+    const folders = getFolders(section);
+    const byId = new Map(folders.map((folder) => [String(folder?.id || ''), folder]));
+    const ancestorIds = [];
+    const visitedIds = new Set();
+    let current = byId.get(String(folderId || ''));
+    while (current) {
+      const parentId = String(current.parentFolderId || '');
+      if (!parentId || visitedIds.has(parentId)) {
+        break;
+      }
+      visitedIds.add(parentId);
+      ancestorIds.push(parentId);
+      current = byId.get(parentId);
     }
-    const descendantIds = [];
-    const visitedIds = new Set([rootId]);
-    const queue = [rootId];
-    while (queue.length) {
-      const currentId = queue.shift();
-      containers.forEach((item) => {
-        const id = String(item?.id || '');
-        if (!id || visitedIds.has(id) || String(item?.parentContainerId || '') !== currentId) {
-          return;
-        }
-        visitedIds.add(id);
-        descendantIds.push(id);
-        queue.push(id);
-      });
-    }
-    return descendantIds;
+    return ancestorIds;
   }
 
   function getLinkedSamples(section, containerId, wellIndex = null) {
@@ -94,6 +100,10 @@ export function createContainerStateHelpers({ state, uiState }) {
     return Array.isArray(state.inventory?.[section]) ? state.inventory[section].length : 0;
   }
 
+  function getSectionFolderCount(section) {
+    return getFolders(section).length;
+  }
+
   function getSectionSampleCount(section) {
     return (state.inventory?.[section] || []).reduce((count, container) => (
       count + getContainerSampleCount(section, container.id)
@@ -119,12 +129,16 @@ export function createContainerStateHelpers({ state, uiState }) {
   return {
     getWellLabel,
     getContainer,
-    getContainerChildren,
-    getRootContainers,
-    getContainerDescendantIds,
+    getFolders,
+    getFolder,
+    getFolderChildren,
+    getRootFolders,
+    getContainersInFolder,
+    getFolderAncestorIds,
     getLinkedSamples,
     getContainerSampleCount,
     getSectionContainerCount,
+    getSectionFolderCount,
     getSectionSampleCount,
     getPreferredSection,
     getSectionNames

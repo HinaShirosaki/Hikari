@@ -111,50 +111,6 @@
   padding-left: 8px;
 }
 
-.inventory-container-tree,
-.inventory-container-tree-node,
-.inventory-container-children {
-  display: grid;
-}
-
-.inventory-container-tree,
-.inventory-container-tree-node {
-  gap: 0.25rem;
-}
-
-.inventory-container-children {
-  gap: 0.25rem;
-  margin-left: 1rem;
-  padding-left: 0.5rem;
-  border-left: 1px solid var(--theme-border-soft);
-}
-
-.inventory-container-children .inventory-container-btn {
-  background: transparent;
-}
-
-.inventory-container-add-child-btn {
-  inline-size: 1.75rem;
-  aspect-ratio: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--theme-text-muted);
-  font: inherit;
-  font-size: 0.95rem;
-  line-height: 1;
-}
-
-.inventory-container-add-child-btn:hover,
-.inventory-container-add-child-btn:focus-visible {
-  color: var(--theme-text-strong);
-  border-color: var(--theme-border-soft);
-  background: color-mix(in srgb, var(--theme-surface-subtle) 70%, transparent);
-}
-
 .inventory-location-icon {
   min-width: 30px;
   height: 30px;
@@ -186,36 +142,15 @@
 }
 
 .inventory-container-item {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
+  isolation: isolate;
 }
 
 .inventory-container-btn {
-  width: 100%;
-  display: grid;
-  gap: 2px;
-  padding: 7px 9px;
-  border: 1px solid transparent;
-  border-radius: 11px;
-  /* match the section-header fill so nested cards read as one shade, not a color step */
-  background: color-mix(in srgb, var(--theme-surface-subtle) 62%, transparent);
   color: inherit;
-  text-align: left;
-}
-
-.inventory-container-btn:hover,
-.inventory-container-btn:focus-visible,
-.inventory-container-btn.active {
-  border-color: var(--theme-border-soft);
-  background: color-mix(in srgb, var(--theme-surface-subtle) 82%, transparent);
 }
 
 .inventory-container-name {
-  color: var(--theme-text-strong);
-  font-weight: 650;
-  font-size: 0.82rem;
+  color: inherit;
 }
 
 .personal-inventory-context-menu {

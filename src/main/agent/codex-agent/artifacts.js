@@ -138,7 +138,24 @@ function extractNotebookDraftArtifactFromToolEvent(streamEvent = {}) {
   return null;
 }
 
+function extractSequenceEditProposalFromToolEvent(streamEvent = {}) {
+  const source = streamEvent && typeof streamEvent === 'object' && !Array.isArray(streamEvent)
+    ? streamEvent
+    : {};
+  const toolName = normalizeCodexToolName(source.tool_name || source.toolName, { cleanText: defaultCleanText });
+  if (toolName !== 'sequence_edit') {
+    return null;
+  }
+  for (const candidate of collectToolEventObjects(source)) {
+    if (candidate?.pending_approval === true && candidate?.approvalToken) {
+      return cloneJson(candidate, null);
+    }
+  }
+  return null;
+}
+
 module.exports = {
   extractNotebookDraftArtifactFromToolEvent,
-  extractProtocolGenerationArtifactFromToolEvent
+  extractProtocolGenerationArtifactFromToolEvent,
+  extractSequenceEditProposalFromToolEvent
 };

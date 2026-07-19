@@ -59,6 +59,62 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
+    test('sequence library helper persists user folders and moves entries without coupling sequence data to folders', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-folders-'));
+      try {
+        const stored = await sequenceLibrary.upsertSequenceEntry({
+          storagePath: storageRoot,
+          name: 'FolderVector',
+          status: 'saved',
+          sourceFormat: 'genbank',
+          topology: 'circular',
+          sequenceLength: 10,
+          featureCount: 0,
+          gbkText: 'LOCUS       FolderVector      10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtac\n//\n',
+          htmlText: '<html><body>folder vector</body></html>'
+        });
+        const created = await sequenceLibrary.upsertSequenceFolder({
+          storagePath: storageRoot,
+          name: 'Cloning'
+        });
+
+        const moved = await sequenceLibrary.moveSequenceEntryToFolder({
+          storagePath: storageRoot,
+          id: stored.entry.id,
+          folderId: created.folder.id
+        });
+        assert.equal(moved.entry.folderId, created.folder.id);
+
+        const grouped = await sequenceLibrary.listSequenceEntries({ storagePath: storageRoot, status: 'saved' });
+        assert.equal(grouped.folders.length, 1);
+        assert.equal(grouped.folders[0].name, 'Cloning');
+        assert.equal(grouped.entries[0].folderId, created.folder.id);
+
+        const renamed = await sequenceLibrary.upsertSequenceFolder({
+          storagePath: storageRoot,
+          id: created.folder.id,
+          name: 'Expression Vectors'
+        });
+        assert.equal(renamed.folder.name, 'Expression Vectors');
+
+        await sequenceLibrary.deleteSequenceFolder({
+          storagePath: storageRoot,
+          id: created.folder.id
+        });
+        const unfiled = await sequenceLibrary.listSequenceEntries({ storagePath: storageRoot, status: 'saved' });
+        assert.equal(unfiled.folders.length, 0);
+        assert.equal(unfiled.entries.length, 1);
+        assert.equal(unfiled.entries[0].folderId, '');
+        const fetched = await sequenceLibrary.getSequenceEntry({
+          storagePath: storageRoot,
+          id: stored.entry.id,
+          includeGbk: true
+        });
+        assert.match(fetched.gbkText, /FolderVector/);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
     test('sequence library helper returns stored GBK/HTML and promotes temporary entries to saved names', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-promote-'));
       try {

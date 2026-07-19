@@ -25,10 +25,6 @@
   background: var(--theme-surface-subtle);
 }
 
-#tool-box-view .molarity-block {
-  border-top-color: var(--theme-border);
-}
-
 #tool-box-view .crispr-risk-badge {
   border: 1px solid var(--theme-border);
   border-radius: 6px;

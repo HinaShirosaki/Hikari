@@ -12,6 +12,9 @@ function registerSequenceLibraryIpc(deps = {}) {
     upsertSequenceEntry,
     promoteSequenceEntry,
     deleteSequenceEntry,
+    upsertSequenceFolder,
+    deleteSequenceFolder,
+    moveSequenceEntryToFolder,
     annotateSequenceRecord,
     searchSequenceFeatures,
     listRecognizedBackbones,
@@ -85,6 +88,23 @@ function registerSequenceLibraryIpc(deps = {}) {
   handle(SEQUENCE_LIBRARY.DELETE, async (payload) => deleteSequenceEntry({
     storagePath: requireStoragePath(payload),
     id: requireEntryId(payload)
+  }));
+
+  handle(SEQUENCE_LIBRARY.UPSERT_FOLDER, async (payload) => upsertSequenceFolder({
+    storagePath: requireStoragePath(payload),
+    id: cleanText(payload?.id, 200),
+    name: cleanText(payload?.name, 140)
+  }));
+
+  handle(SEQUENCE_LIBRARY.DELETE_FOLDER, async (payload) => deleteSequenceFolder({
+    storagePath: requireStoragePath(payload),
+    id: cleanText(payload?.id, 200)
+  }));
+
+  handle(SEQUENCE_LIBRARY.MOVE_ENTRY, async (payload) => moveSequenceEntryToFolder({
+    storagePath: requireStoragePath(payload),
+    id: requireEntryId(payload),
+    folderId: cleanText(payload?.folderId, 200)
   }));
 
   handle(SEQUENCE_LIBRARY.SEARCH_FEATURES, async (payload) => searchSequenceFeatures({

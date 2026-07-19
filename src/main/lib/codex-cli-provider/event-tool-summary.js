@@ -167,7 +167,7 @@ module.exports = {
 if (require.main === module) {
   const assert = require('node:assert');
   const started = summarizeCodexToolCallForProgress({
-    toolName: 'mcp__hikari__inventory_lookup',
+    toolName: 'inventory_lookup',
     status: 'started',
     argumentValue: { query: 'SUMO1', limit: 5 }
   });

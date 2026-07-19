@@ -163,15 +163,11 @@ export function createWorkflowGraphController(config = {}) {
       elements.workflowGraphStatus.textContent = `Connecting from ${displayLabelForBlock(runtime.activeLinkFromBlockId)}. Click an input dot on another block.`;
       return;
     }
-    if (runtime.selectedBlockIds.size) {
-      elements.workflowGraphStatus.textContent = `${runtime.selectedBlockIds.size} block(s) selected. Drag any selected block to move the group.`;
-      return;
-    }
     elements.workflowGraphStatus.textContent = 'Tip: Drag blocks. Output dot -> input dot to connect. Right-click for actions.';
   }
 
   function renderGraphNodes() {
-    elements.workflowGraphNodes.innerHTML = (runtime.draft?.blocks || []).map((block, index) => {
+    elements.workflowGraphNodes.innerHTML = (runtime.draft?.blocks || []).map((block) => {
       const isTextBlock = getBlockType(block) === 'text';
       const connectingClass = runtime.activeLinkFromBlockId === block.id ? ' workflow-node-connecting' : '';
       const selectedClass = runtime.selectedBlockIds.has(block.id) ? ' workflow-node-selected' : '';
@@ -189,7 +185,6 @@ export function createWorkflowGraphController(config = {}) {
           <button type="button" class="workflow-port workflow-port-in" data-workflow-port-in="${safeText(block.id)}" title="Connect into this block" aria-label="Input port for ${safeText(title)}"></button>
           <button type="button" class="workflow-port workflow-port-out" data-workflow-port-out="${safeText(block.id)}" title="Connect out from this block" aria-label="Output port for ${safeText(title)}"></button>
           <header class="workflow-node-header" data-workflow-node-drag="${safeText(block.id)}">
-            <span class="workflow-node-index">${safeText(index + 1)}</span>
             <strong>${safeText(title)}</strong>
           </header>
         </article>

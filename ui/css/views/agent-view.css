@@ -167,37 +167,6 @@ body.agent-view-fixed-scroll .workspace-main {
   transform: rotate(45deg) translate(-1px, -1px);
 }
 
-.agent-session-folder-glyph {
-  width: 16px;
-  height: 12px;
-  border: 1.5px solid currentColor;
-  border-radius: 2px;
-  position: relative;
-  opacity: 0.82;
-}
-
-.agent-session-folder-glyph::before {
-  content: '';
-  position: absolute;
-  left: 1px;
-  top: -4px;
-  width: 7px;
-  height: 4px;
-  border: 1.5px solid currentColor;
-  border-bottom: 0;
-  border-radius: 2px 2px 0 0;
-  background: var(--theme-surface);
-}
-
-.agent-session-folder-glyph.is-project::after {
-  content: '';
-  position: absolute;
-  inset: 3px 4px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.55;
-}
-
 .agent-session-folder-name {
   min-width: 0;
   overflow: hidden;

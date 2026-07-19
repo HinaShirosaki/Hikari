@@ -292,6 +292,13 @@ export function createSequenceViewerAgentApi(context = {}) {
       kind: 'edit',
       target: buildTarget(record, index),
       mode: input.mode,
+      // Echo the raw request so the host can re-apply after approval (1-based).
+      edit: {
+        mode: input.mode,
+        start,
+        end: input.mode === 'insert' ? start : Math.round(Number(input.end)),
+        sequence: input.mode === 'delete' ? '' : insert
+      },
       summary: input.mode === 'delete'
         ? `Delete ${removed.length} bp at ${start}..${end}`
         : input.mode === 'insert'

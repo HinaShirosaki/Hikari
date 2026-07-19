@@ -52,6 +52,14 @@
     "description": "Create, update, read, and inspect scratch Plotly.js graph specifications using Plotly figure arguments."
   },
   {
+    "name": "sequence-viewer",
+    "description": "Read and compute over loaded sequence-viewer records: list, metadata, windowed slices, features, restriction/ORF/translation/GC analysis, and compute-only cloning designs. Read-only."
+  },
+  {
+    "name": "sequence-edit",
+    "description": "Propose a base edit or feature annotation change as a preview plus a pending-approval token; never applies until the user approves in Hikari."
+  },
+  {
     "name": "literature-search",
     "description": "Search literature across PubMed, Crossref, UniProt, Europe PMC, and provider/Codex web search in auto mode. The workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads bounded context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer compact keyword or entity-style queries such as `MAPK inhibitor resistance mechanism` instead of full-sentence prompts, and use preferred source hints when you want one literature database or web domain ranked ahead of the defaults. Leave `limit`, `max_papers`, and `max_per_source` omitted unless the user asks for a cap. To restrict the search to specific journals, pass `journals` (an array of journal names, e.g. [\"Nature\", \"Cell\"]); this hard-scopes the PubMed, Crossref, and Europe PMC queries and relaxes to an unfiltered search only when nothing matches."
   },
@@ -65,7 +73,7 @@
   },
   {
     "name": "paper-analysis",
-    "description": "Summarize a paper briefly, extract protocol-relevant methods, and optionally draft a generated protocol from the paper."
+    "description": "Load exact line-backed context and matching local comments from an ingested paper through one Codex CLI sub-agent read; inline paper text can still be summarized or converted into a protocol seed."
   },
   {
     "name": "paper-search",

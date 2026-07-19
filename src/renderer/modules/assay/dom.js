@@ -17,7 +17,6 @@ export function getAssayElements(root = document) {
     assayConcentrationAxisInput: root.getElementById('assay-concentration-axis'),
     assayConcentrationAxisRowBtn: root.getElementById('assay-concentration-axis-row-btn'),
     assayConcentrationAxisColumnBtn: root.getElementById('assay-concentration-axis-column-btn'),
-    assayConcentrationUnitInput: root.getElementById('assay-concentration-unit'),
     assayDilutionFactorInput: root.getElementById('assay-dilution-factor'),
     assayDilutionFillBtn: root.getElementById('assay-dilution-fill-btn'),
     assayFillModeInput: root.getElementById('assay-fill-mode'),

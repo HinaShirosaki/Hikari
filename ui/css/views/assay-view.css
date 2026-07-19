@@ -268,10 +268,6 @@
   font-size: 0.9rem;
 }
 
-.assay-conc-unit-input[type="text"] {
-  width: 88px;
-}
-
 .assay-fill-mode-select {
   padding: 6px 8px;
   border: 1px solid var(--theme-border);

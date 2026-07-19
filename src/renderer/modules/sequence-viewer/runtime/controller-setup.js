@@ -29,6 +29,10 @@ export function setupSequenceViewerControllers(ctx) {
     readFileAsText: actions.readFileAsText,
     onParsedRecordsOpened: actions.maybePersistImportedGenbankRecord,
     onRenameLibraryEntry: actions.renameLibraryEntry,
+    onCreateLibraryFolder: (name) => actions.upsertLibraryFolder('', name),
+    onRenameLibraryFolder: actions.upsertLibraryFolder,
+    onDeleteLibraryFolder: actions.deleteLibraryFolder,
+    onMoveLibraryEntry: actions.moveLibraryEntryToFolder,
     onLibraryEntryLoaded: ({ alignments }) => {
       actions.setAlignmentSessions(alignments);
       controllers.alignment?.handleReferenceRecordChanged?.();

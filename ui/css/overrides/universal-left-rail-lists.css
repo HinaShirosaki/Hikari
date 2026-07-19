@@ -13,6 +13,18 @@ body.theme-night {
   --hikari-left-rail-list-focus: color-mix(in srgb, var(--theme-focus) 28%, transparent);
 }
 
+/* One glyph for every folder/project group that appears in a left rail. */
+.left-rail-template__rail .left-rail-folder-glyph {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: block;
+  background: currentColor;
+  opacity: 0.74;
+  -webkit-mask: url("../../../assets/icons/folder-2-svgrepo-com.svg") center / contain no-repeat;
+  mask: url("../../../assets/icons/folder-2-svgrepo-com.svg") center / contain no-repeat;
+}
+
 .left-rail-template__rail :is(
   .papers-folder-item,
   .papers-paper-row,
@@ -279,13 +291,4 @@ body.theme-night {
 /* Protocol rows use full-width dividers; keep their active fill square. */
 #protocol-management-view .left-rail-template__rail .protocol-list-row {
   border-radius: 0 !important;
-}
-
-/* Tool rows use full-width dividers; round only the selected highlight. */
-#tool-box-view .left-rail-template__rail .tool-tile .label {
-  border-radius: 0 !important;
-}
-
-#tool-box-view .left-rail-template__rail .tool-tile-active .label {
-  border-radius: var(--hikari-left-rail-list-radius) !important;
 }

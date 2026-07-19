@@ -1,0 +1,200 @@
+/* Shared recursive folder-tree structure for Enana left rails. */
+
+.folder-tree-template,
+.folder-tree-template__node,
+.folder-tree-template__children {
+  display: grid;
+  min-width: 0;
+}
+
+.folder-tree-template,
+.folder-tree-template__node,
+.folder-tree-template__children {
+  gap: 2px;
+}
+
+.folder-tree-template__node {
+  position: relative;
+}
+
+.folder-tree-template__row {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 24px;
+  gap: 3px;
+  align-items: center;
+  padding: 2px 4px;
+  border-radius: 8px;
+  color: var(--theme-text);
+}
+
+.folder-tree-template__row:hover,
+.folder-tree-template__row:focus-within {
+  background: var(--hikari-left-rail-list-hover, color-mix(in srgb, var(--theme-surface-subtle) 68%, transparent));
+  color: var(--theme-text-strong);
+}
+
+.folder-tree-template__row.is-active {
+  background: var(--hikari-left-rail-list-selected, color-mix(in srgb, var(--theme-accent) 12%, transparent));
+  color: var(--theme-text-strong);
+}
+
+.folder-tree-template__disclosure,
+.folder-tree-template__disclosure-spacer {
+  width: 22px;
+  height: 22px;
+}
+
+.folder-tree-template__disclosure {
+  appearance: none;
+  display: inline-grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  cursor: pointer;
+}
+
+.folder-tree-template__disclosure:hover,
+.folder-tree-template__disclosure:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
+.folder-tree-template__chevron {
+  width: 7px;
+  height: 7px;
+  display: block;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  border-radius: 1px;
+  opacity: 0.78;
+  transform: rotate(-45deg);
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+
+.folder-tree-template__disclosure[aria-expanded="true"] .folder-tree-template__chevron {
+  opacity: 1;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.folder-tree-template__main {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: center;
+  margin: 0;
+  padding: 0 3px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.folder-tree-template__main:focus-visible {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: -2px;
+}
+
+.folder-tree-template__label {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font-size: 0.84rem;
+  font-weight: 550;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folder-tree-template__row.is-active .folder-tree-template__label {
+  font-weight: 650;
+}
+
+.folder-tree-template__meta {
+  color: var(--theme-text-muted);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.folder-tree-template__action {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+.folder-tree-template__row:hover .folder-tree-template__action,
+.folder-tree-template__row:focus-within .folder-tree-template__action,
+.folder-tree-template__action:focus-visible {
+  opacity: 1;
+}
+
+.folder-tree-template__action:hover,
+.folder-tree-template__action:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
+  color: var(--theme-text-strong);
+  outline: none;
+}
+
+.folder-tree-template__children {
+  position: relative;
+  margin-left: 11px;
+  padding-left: 14px;
+}
+
+.folder-tree-template__children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 15px;
+  left: 0;
+  width: 1px;
+  background: color-mix(in srgb, var(--theme-border-soft) 82%, transparent);
+}
+
+.folder-tree-template__children > .folder-tree-template__node::before {
+  content: '';
+  position: absolute;
+  top: 17px;
+  left: -14px;
+  width: 10px;
+  height: 1px;
+  background: color-mix(in srgb, var(--theme-border-soft) 82%, transparent);
+}
+
+.folder-tree-template__children[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folder-tree-template__chevron,
+  .folder-tree-template__action {
+    transition: none;
+  }
+}

@@ -41,6 +41,7 @@ module.exports = function registerEdgeToolBoxSuitePart01(context = {}) {
   });
 });
 [
+  ['nL', 1e-9],
   ['uL', 1e-6],
   ['mL', 1e-3],
   ['L', 1]

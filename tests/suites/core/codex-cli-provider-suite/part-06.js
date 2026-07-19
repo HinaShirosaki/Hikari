@@ -136,7 +136,7 @@ module.exports = function registerCodexCliProviderSuitePart06(context = {}) {
               payload: {
                 type: 'function_call',
                 name: 'ask_user',
-                namespace: 'mcp__hikari__',
+                namespace: 'hikari',
                 arguments: '{"question":"Which project scope should I use?","options":[{"label":"All projects","value":"Search all projects"}]}'
               }
             }),

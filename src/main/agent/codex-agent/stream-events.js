@@ -5,7 +5,8 @@ const {
 } = require('./payloads.js');
 const {
   extractNotebookDraftArtifactFromToolEvent,
-  extractProtocolGenerationArtifactFromToolEvent
+  extractProtocolGenerationArtifactFromToolEvent,
+  extractSequenceEditProposalFromToolEvent
 } = require('./artifacts.js');
 const {
   extractPlotlyGraphArtifactFromToolEvent
@@ -26,6 +27,7 @@ function createCodexStreamProgressHandler({
   let streamedAskUserPayload = null;
   let streamedNotebookDraftPayload = null;
   const streamedProtocolGenerationPayloads = [];
+  const streamedSequenceEditProposals = [];
 
   function publishCodexProgress(progressEvent = {}) {
     const recorded = recordLifecycleEvent(lifecycleRecorder, progressEvent);
@@ -48,6 +50,10 @@ function createCodexStreamProgressHandler({
       const protocolGenerationArtifact = extractProtocolGenerationArtifactFromToolEvent(streamEvent);
       if (protocolGenerationArtifact?.protocol) {
         streamedProtocolGenerationPayloads.push(protocolGenerationArtifact);
+      }
+      const sequenceEditProposal = extractSequenceEditProposalFromToolEvent(streamEvent);
+      if (sequenceEditProposal?.approvalToken) {
+        streamedSequenceEditProposals.push(sequenceEditProposal);
       }
     }
     if (eventType === 'codex_cli_display') {
@@ -180,7 +186,8 @@ function createCodexStreamProgressHandler({
       streamedFinalAnswerText,
       streamedAskUserPayload,
       streamedNotebookDraftPayload,
-      streamedProtocolGenerationPayloads
+      streamedProtocolGenerationPayloads,
+      streamedSequenceEditProposals
     };
   }
 

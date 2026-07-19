@@ -75,16 +75,22 @@
               <div class="panel gel-viewer-panel">
                 <h3>Gel Viewer</h3>
                 <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools">
-                  <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
-                  <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
+                  <button type="button" id="gel-crop-mode-btn" class="ghost-btn gel-viewer-icon-btn gel-crop-mode-btn" aria-label="Start crop" title="Start crop" aria-pressed="false">
+                    <svg class="gel-viewer-button-icon gel-crop-mode-icon gel-crop-mode-icon--start" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <path d="M6 3v13a2 2 0 0 0 2 2h13"></path>
+                      <path d="M18 21V8a2 2 0 0 0-2-2H3"></path>
+                    </svg>
+                    <svg class="gel-viewer-button-icon gel-crop-mode-icon gel-crop-mode-icon--cancel" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <path d="m7 7 10 10"></path>
+                      <path d="M17 7 7 17"></path>
+                    </svg>
+                  </button>
+                  <button type="button" id="gel-apply-crop-btn" class="ghost-btn gel-viewer-icon-btn" aria-label="Apply crop" title="Apply crop" disabled hidden>
+                    <svg class="gel-viewer-button-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <path d="m5 12 4 4L19 6"></path>
+                    </svg>
+                  </button>
                   <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
-                  <div class="gel-rotate-control" role="group" aria-label="Free rotate gel image">
-                    <label for="gel-rotate-angle-range" class="small-note">Angle</label>
-                    <input id="gel-rotate-angle-range" class="gel-rotate-angle-range" type="range" min="-180" max="180" step="0.1" value="0" disabled />
-                    <input id="gel-rotate-angle-input" class="gel-rotate-angle-input" type="number" min="-180" max="180" step="0.1" value="0" disabled aria-label="Rotation angle in degrees" />
-                    <span class="small-note" aria-hidden="true">deg</span>
-                    <button type="button" id="gel-reset-rotation-btn" class="ghost-btn" disabled title="Reset rotation">Reset</button>
-                  </div>
                   <button type="button" id="gel-process-image-btn" class="ghost-btn">Process Image</button>
                   <button type="button" id="gel-view-original-btn" class="ghost-btn" aria-pressed="true">View Original</button>
                 </div>
@@ -107,9 +113,7 @@
                     <details class="gel-tool-group" open>
                       <summary>Lane</summary>
                       <div class="gel-tool-actions">
-                        <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
-                        <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
-                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
+                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" title="Outermost dividers define the gel edges">Set lane dividers</button>
                         <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
                         <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Adjust lane vertices</button>
                         <label class="small-note gel-lane-count-control">

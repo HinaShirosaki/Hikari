@@ -503,27 +503,43 @@
   color: var(--gel-active-text);
 }
 
-.gel-rotate-control {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: min(100%, 300px);
-  padding: 5px 8px;
-  border: 1px solid var(--gel-chart-border);
-  border-radius: 6px;
-  background: var(--gel-chart-surface);
+.gel-viewer-toolbar .gel-viewer-icon-btn {
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
 }
 
-.gel-rotate-control .small-note {
-  white-space: nowrap;
+.gel-viewer-button-icon {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.gel-rotate-angle-range {
-  width: clamp(110px, 18vw, 180px);
+.gel-crop-mode-icon--cancel,
+.gel-crop-mode-btn[aria-pressed="true"] .gel-crop-mode-icon--start {
+  display: none;
 }
 
-.gel-rotate-angle-input {
-  width: 70px;
+.gel-crop-mode-btn[aria-pressed="true"] .gel-crop-mode-icon--cancel {
+  display: block;
+}
+
+.gel-viewer-stage .cropper-face,
+.gel-viewer-stage .cropper-drag-box {
+  cursor: grab;
+}
+
+.gel-viewer-stage .cropper-container.is-gel-rotating .cropper-face,
+.gel-viewer-stage .cropper-container.is-gel-rotating .cropper-drag-box {
+  cursor: grabbing;
 }
 
 .gel-tool-panel {

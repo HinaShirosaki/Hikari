@@ -30,7 +30,6 @@ export function createExternalSkillsController({
   persist,
   api,
   enabledInput,
-  statusElement,
   listElement,
   escapeHtml
 }) {
@@ -94,24 +93,13 @@ export function createExternalSkillsController({
   }
 
   function render() {
-    if (!statusElement || !listElement) {
+    if (!listElement) {
       return;
     }
     const settings = getAgentSettings();
     const globallyEnabled = settings.externalSkillsEnabled !== false;
     const disabledSet = getDisabledSet();
     const skills = catalog.skills || [];
-    const availableCount = skills.filter((skill) => (
-      globallyEnabled && skill.eligible && !disabledSet.has(skill.name.toLowerCase())
-    )).length;
-
-    if (loading) {
-      statusElement.textContent = 'External skills: loading...';
-    } else if (catalog.error) {
-      statusElement.textContent = `External skills: ${catalog.error}`;
-    } else {
-      statusElement.textContent = `External skills: ${globallyEnabled ? 'enabled' : 'off'} · ${skills.length} discovered · ${availableCount} available.`;
-    }
 
     if (!skills.length) {
       listElement.innerHTML = '<p class="small-note">No external skills discovered.</p>';

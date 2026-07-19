@@ -3,20 +3,20 @@
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const {
-  buildHikariCodexMcpToolName
+  buildHikariMcpToolName
 } = require('../mcp-contract/instructions.js');
 
 const CODEX_AGENTS_FOLDER_NAME = '.agents';
 const CODEX_SKILLS_FOLDER_NAME = 'skills';
 const OFFICIAL_MCP_SKILL_MARKER = 'HIKARI_OFFICIAL_MCP_SKILL';
-const PROTOCOL_GENERATION_TOOL_NAME = buildHikariCodexMcpToolName('protocol_generation');
-const NOTEBOOK_DRAFT_TOOL_NAME = buildHikariCodexMcpToolName('notebook_draft');
-const PAPER_INTAKE_SEARCH_SUMMARIES_TOOL_NAME = buildHikariCodexMcpToolName('paper_intake_search_summaries');
-const PAPER_INTAKE_SEARCH_EXPERIMENTS_TOOL_NAME = buildHikariCodexMcpToolName('paper_intake_search_experiments');
-const PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME = buildHikariCodexMcpToolName('paper_intake_list_project_summaries');
-const CONTAINER_TOOL_NAME = buildHikariCodexMcpToolName('container');
-const ASSAY_TABLE_TOOL_NAME = buildHikariCodexMcpToolName('assay_table');
-const PLOTLY_GRAPH_TOOL_NAME = buildHikariCodexMcpToolName('plotly_graph');
+const PROTOCOL_GENERATION_TOOL_NAME = buildHikariMcpToolName('protocol_generation');
+const NOTEBOOK_DRAFT_TOOL_NAME = buildHikariMcpToolName('notebook_draft');
+const PAPER_INTAKE_SEARCH_SUMMARIES_TOOL_NAME = buildHikariMcpToolName('paper_intake_search_summaries');
+const PAPER_INTAKE_SEARCH_EXPERIMENTS_TOOL_NAME = buildHikariMcpToolName('paper_intake_search_experiments');
+const PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME = buildHikariMcpToolName('paper_intake_list_project_summaries');
+const CONTAINER_TOOL_NAME = buildHikariMcpToolName('container');
+const ASSAY_TABLE_TOOL_NAME = buildHikariMcpToolName('assay_table');
+const PLOTLY_GRAPH_TOOL_NAME = buildHikariMcpToolName('plotly_graph');
 
 function buildSkillMarkdown({ id = '', name = '', description = '', body = '' } = {}) {
   return [

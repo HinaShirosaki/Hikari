@@ -12,6 +12,9 @@ const {
   openKnowledgeDatabase,
   queryRows
 } = require('../store/paper-knowledge-store.js');
+const {
+  runCodexPaperContextSubAgent
+} = require('../workflow/codex-paper-context-workflow.js');
 
 function createPaperAnalysisRuntime(deps = {}) {
   const {
@@ -64,13 +67,18 @@ function createPaperAnalysisRuntime(deps = {}) {
       if (!wikiPath) {
         return null;
       }
-      const markdown = await fsPromises.readFile(resolveRelativeStoragePath(resolved, wikiPath), 'utf8').catch(() => '');
+      const markdownPath = resolveRelativeStoragePath(resolved, wikiPath);
+      const markdown = await fsPromises.readFile(markdownPath, 'utf8').catch(() => '');
       if (!cleanText(markdown, 10)) {
         return null;
       }
       return {
+        id: cleanText(row.id, 200),
         title: cleanText(row.title, 220),
         abstract: cleanText(row.abstract, 3000),
+        doi: cleanText(row.doi, 200),
+        markdown_path: markdownPath,
+        markdown_relative_path: wikiPath,
         content: markdown
       };
     } catch {
@@ -244,24 +252,107 @@ function createPaperAnalysisRuntime(deps = {}) {
       error: 'Protocol generation is not configured for this paper-analysis runtime.'
     })
   };
+  const defaultSubAgentRuntime = deps.subAgentRuntime && typeof deps.subAgentRuntime === 'object'
+    ? deps.subAgentRuntime
+    : null;
+  const runPaperContextSubAgent = typeof deps.runCodexPaperContextSubAgent === 'function'
+    ? deps.runCodexPaperContextSubAgent
+    : runCodexPaperContextSubAgent;
+
+  async function analyzeLocalPaperWithSubAgent(source = {}, context = {}, loadedPaper = {}) {
+    const paper = source.paper && typeof source.paper === 'object' ? source.paper : {};
+    const subAgentRuntime = source.subAgentRuntime && typeof source.subAgentRuntime === 'object'
+      ? source.subAgentRuntime
+      : defaultSubAgentRuntime;
+    if (!subAgentRuntime || typeof subAgentRuntime.createSubAgent !== 'function') {
+      return {
+        ok: false,
+        status: 'error',
+        error: 'Codex paper context sub-agent runtime is not configured.'
+      };
+    }
+
+    const paperId = cleanText(loadedPaper.id || paper.id || loadedPaper.doi || paper.doi || context.title, 200);
+    const paperTitle = cleanText(context.title || loadedPaper.title || paper.title, 320);
+    const doi = cleanText(loadedPaper.doi || paper.doi || source.doi, 200);
+    const query = cleanText(source.query || source.message, 2400)
+      || `Summarize the important findings and methods in ${paperTitle || 'this paper'}.`;
+    const selectedPapers = [{
+      paper_id: paperId,
+      paper_title: paperTitle,
+      doi,
+      summary: cleanText(loadedPaper.abstract || context.abstract || context.summary, 1600),
+      source: 'knowledge_markdown'
+    }];
+    const downloadedPapers = [{
+      paper_id: paperId,
+      paper_title: paperTitle,
+      doi,
+      ok: true,
+      status: 'reused',
+      knowledge_markdown_path: cleanText(loadedPaper.markdown_path, 4000),
+      knowledge_markdown_relative_path: cleanText(loadedPaper.markdown_relative_path, 2000)
+    }];
+    const paperContextResult = await runPaperContextSubAgent({
+      subAgentRuntime,
+      query,
+      message: query,
+      selectedPapers,
+      downloadedPapers,
+      snapshot: source.snapshot || null,
+      source,
+      parentRequestId: cleanText(source.traceContext?.requestId || source.request_id, 160),
+      cwd: cleanText(source.cwd, 2400),
+      model: cleanText(source.model, 120),
+      reasoningEffort: cleanText(source.reasoning_effort || source.reasoningEffort, 40),
+      name: cleanText(source.sub_agent_name || source.subAgentName, 160)
+        || `codex-paper-analysis-${Date.now()}`
+    }, { asArray, cleanText });
+
+    if (!paperContextResult?.ok) {
+      return {
+        ok: false,
+        status: cleanText(paperContextResult?.status, 40) || 'error',
+        error: cleanText(paperContextResult?.error, 1200) || 'Codex paper context sub-agent failed.',
+        sub_agent_id: cleanText(paperContextResult?.sub_agent_id, 160),
+        sub_agent: paperContextResult?.sub_agent || null
+      };
+    }
+
+    return {
+      ok: true,
+      status: 'completed',
+      query,
+      paper_title: paperTitle,
+      selected_papers: asArray(paperContextResult.selected_papers),
+      loaded_context_blocks: asArray(paperContextResult.loaded_context_blocks),
+      papers_read_count: Number(paperContextResult.papers_read_count) || 0,
+      notes: asArray(paperContextResult.notes),
+      sub_agent_id: cleanText(paperContextResult.sub_agent_id, 160),
+      sub_agent: paperContextResult.sub_agent || null,
+      summary: cleanText(paperContextResult.summary, 800)
+        || `Loaded exact line-backed context for ${paperTitle || 'paper'}.`
+    };
+  }
 
   async function analyzePaper(input = {}) {
     const source = input && typeof input === 'object' ? input : {};
     const context = buildPaperContext(source);
+    let loadedPaper = null;
     // Reference-by-id: when no paper text was passed, load the ingested paper.md from
     // the local KnowledgeBase using the supplied id / doi / title.
     if (!cleanText(context.content, 10)) {
       const paper = source.paper && typeof source.paper === 'object' ? source.paper : {};
-      const loaded = await loadPaperFromKnowledge({
+      loadedPaper = await loadPaperFromKnowledge({
         storagePath: source.storage_path || source.storagePath,
         paperId: paper.id || source.paper_id || source.id,
         doi: paper.doi || source.doi,
         title: context.title || paper.title
       });
-      if (loaded) {
-        context.title = context.title || loaded.title;
-        context.abstract = context.abstract || loaded.abstract;
-        context.content = cleanText(loaded.content, 12000);
+      if (loadedPaper) {
+        context.title = context.title || loadedPaper.title;
+        context.abstract = context.abstract || loadedPaper.abstract;
+        context.content = cleanText(loadedPaper.content, 12000);
       }
     }
     const evidenceText = [context.title, context.summary, context.abstract, context.methods, context.content].filter(Boolean).join(' ');
@@ -271,6 +362,10 @@ function createPaperAnalysisRuntime(deps = {}) {
         status: 'error',
         error: 'Paper analysis requires a paper reference (id, doi, or title) for a locally ingested paper, or paper text.'
       };
+    }
+
+    if (cleanText(loadedPaper?.markdown_path, 10)) {
+      return analyzeLocalPaperWithSubAgent(source, context, loadedPaper);
     }
 
     const llmResult = await requestStructuredJsonPayload({

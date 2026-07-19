@@ -1,7 +1,10 @@
 import {
+  createCustomSampleTypeId,
   getEditableSampleTypeEntries,
   getSampleInventoryLocationNames,
   normalizeSampleInventoryLocations,
+  normalizeSampleType,
+  normalizeSampleTypeHidden,
   normalizeSampleTypeLabels
 } from '../../lib/inventory-settings.js';
 
@@ -18,6 +21,7 @@ export function createSampleInventorySettingsController({
     locationList,
     sampleInventoryLocationInput,
     sampleInventoryLocationList,
+    sampleTypeAddInput,
     sampleTypeLabelList
   } = elements;
 
@@ -42,11 +46,20 @@ export function createSampleInventorySettingsController({
       return;
     }
     state.inventory = state.inventory && typeof state.inventory === 'object' ? state.inventory : {};
+    state.inventoryFolders = state.inventoryFolders && typeof state.inventoryFolders === 'object'
+      ? state.inventoryFolders
+      : {};
     const sourceContainers = Array.isArray(state.inventory[source]) ? state.inventory[source] : [];
     if (sourceContainers.length) {
       const targetContainers = Array.isArray(state.inventory[target]) ? state.inventory[target] : [];
       state.inventory[target] = targetContainers.concat(sourceContainers);
       delete state.inventory[source];
+    }
+    const sourceFolders = Array.isArray(state.inventoryFolders[source]) ? state.inventoryFolders[source] : [];
+    if (sourceFolders.length) {
+      const targetFolders = Array.isArray(state.inventoryFolders[target]) ? state.inventoryFolders[target] : [];
+      state.inventoryFolders[target] = targetFolders.concat(sourceFolders);
+      delete state.inventoryFolders[source];
     }
     (state.samples || []).forEach((sample) => {
       if (sample?.inventoryLink?.section === source) {
@@ -126,7 +139,7 @@ export function createSampleInventorySettingsController({
     sampleInventoryLocationList.innerHTML = locations.map((location, index) => {
       const count = containerCount(location);
       return `
-        <div class="settings-edit-row">
+        <div class="settings-edit-row settings-sample-inventory-location-row">
           <input value="${escapeHtml(location)}" data-sample-inventory-location-input="${index}" aria-label="Sample inventory location ${index + 1}" />
           <span class="small-note">${escapeHtml(`${count} container${count === 1 ? '' : 's'}`)}</span>
           <button type="button" class="ghost-btn" data-sample-inventory-location-save="${index}">Save</button>
@@ -150,12 +163,24 @@ export function createSampleInventorySettingsController({
     if (!sampleTypeLabelList) {
       return;
     }
-    sampleTypeLabelList.innerHTML = getEditableSampleTypeEntries(state.settings).map((entry) => `
-      <label class="settings-sample-type-label-row">
-        <span>${escapeHtml(entry.defaultLabel)}</span>
-        <input data-sample-type-label="${escapeHtml(entry.type)}" value="${escapeHtml(entry.label)}" placeholder="${escapeHtml(entry.defaultLabel)}" />
-      </label>
-    `).join('');
+    const entries = getEditableSampleTypeEntries(state.settings);
+    sampleTypeLabelList.innerHTML = entries.map((entry) => {
+      const sampleCount = (state.samples || []).filter((sample) => normalizeSampleType(sample?.type) === entry.type).length;
+      const cannotDelete = sampleCount > 0 || entries.length <= 1;
+      const deleteTitle = sampleCount > 0
+        ? 'Reassign samples before removing this type.'
+        : (entries.length <= 1 ? 'Keep at least one sample type.' : 'Remove sample type');
+      return `
+      <li class="settings-sample-type-label-row">
+        <span class="settings-sample-type-label-bullet" aria-hidden="true"></span>
+        <input class="settings-sample-type-label-input" data-sample-type-label="${escapeHtml(entry.type)}" value="${escapeHtml(entry.label)}" placeholder="${escapeHtml(entry.defaultLabel)}" aria-label="Sample type name: ${escapeHtml(entry.defaultLabel)}" />
+        <button type="button" class="ghost-btn settings-sample-type-remove" data-sample-type-delete="${escapeHtml(entry.type)}" aria-label="Remove ${escapeHtml(entry.label)}" title="${deleteTitle}"${cannotDelete ? ' disabled' : ''}>&times;</button>
+      </li>
+    `;
+    }).join('');
+    sampleTypeLabelList.querySelectorAll('[data-sample-type-delete]').forEach((button) => {
+      button.addEventListener('click', () => deleteSampleType(button.dataset.sampleTypeDelete));
+    });
   }
 
   function onSaveSampleTypeLabels(event) {
@@ -164,10 +189,61 @@ export function createSampleInventorySettingsController({
     sampleTypeLabelList?.querySelectorAll('[data-sample-type-label]').forEach((input) => {
       const type = String(input.dataset.sampleTypeLabel || '').trim();
       if (type) {
-        nextLabels[type] = String(input.value || '').trim().replace(/\s+/g, ' ');
+        nextLabels[type] = String(input.value || '').trim().replace(/\s+/g, ' ') || nextLabels[type];
       }
     });
     state.settings.sampleTypeLabels = normalizeSampleTypeLabels(nextLabels);
+    persist();
+    renderSettings();
+    notifyChanged();
+  }
+
+  function deleteSampleType(rawType) {
+    const type = String(rawType || '').trim().toLowerCase();
+    const entries = getEditableSampleTypeEntries(state.settings);
+    const sampleCount = (state.samples || []).filter((sample) => normalizeSampleType(sample?.type) === type).length;
+    if (!entries.some((entry) => entry.type === type) || sampleCount > 0 || entries.length <= 1) {
+      renderSampleTypeLabelList();
+      return;
+    }
+    if (type.startsWith('custom_')) {
+      const labels = { ...normalizeSampleTypeLabels(state.settings.sampleTypeLabels) };
+      delete labels[type];
+      state.settings.sampleTypeLabels = normalizeSampleTypeLabels(labels);
+    } else {
+      state.settings.sampleTypeHidden = normalizeSampleTypeHidden([
+        ...(state.settings.sampleTypeHidden || []),
+        type
+      ]);
+    }
+    persist();
+    renderSettings();
+    notifyChanged();
+  }
+
+  function onAddSampleType() {
+    const label = String(sampleTypeAddInput?.value || '').trim().replace(/\s+/g, ' ');
+    if (!label) {
+      return;
+    }
+    const labels = normalizeSampleTypeLabels(state.settings.sampleTypeLabels);
+    const matchingType = Object.keys(labels).find((type) => labels[type].toLowerCase() === label.toLowerCase());
+    if (matchingType) {
+      const hiddenTypes = normalizeSampleTypeHidden(state.settings.sampleTypeHidden);
+      if (!hiddenTypes.includes(matchingType)) {
+        sampleTypeAddInput?.setCustomValidity('A sample type with this name already exists.');
+        sampleTypeAddInput?.reportValidity();
+        return;
+      }
+      state.settings.sampleTypeHidden = hiddenTypes.filter((type) => type !== matchingType);
+    } else {
+      const type = createCustomSampleTypeId(label, Object.keys(labels));
+      state.settings.sampleTypeLabels = normalizeSampleTypeLabels({ ...labels, [type]: label });
+    }
+    if (sampleTypeAddInput) {
+      sampleTypeAddInput.value = '';
+      sampleTypeAddInput.setCustomValidity('');
+    }
     persist();
     renderSettings();
     notifyChanged();
@@ -211,6 +287,7 @@ export function createSampleInventorySettingsController({
   return {
     onAddLocation,
     onAddSampleInventoryLocation,
+    onAddSampleType,
     onSaveSampleTypeLabels,
     renderLocationList,
     renderSampleInventoryLocationList,

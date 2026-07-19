@@ -24,8 +24,23 @@ async function loadSqlJs() {
   return sqlJsInitPromise;
 }
 function applySchema(db) {
+  const hadFolderTable = Boolean(readSingleRow(
+    db,
+    `SELECT name FROM sqlite_master
+     WHERE type = 'table' AND name = 'sequence_folders'
+     LIMIT 1`
+  ));
   db.run(`
     PRAGMA foreign_keys = ON;
+    CREATE TABLE IF NOT EXISTS sequence_folders (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      normalized_name TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_sequence_folders_name
+      ON sequence_folders(normalized_name);
     CREATE TABLE IF NOT EXISTS sequence_entries (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -37,6 +52,7 @@ function applySchema(db) {
       feature_count INTEGER NOT NULL DEFAULT 0,
       gbk_rel_path TEXT NOT NULL,
       html_rel_path TEXT NOT NULL,
+      folder_id TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
@@ -99,6 +115,17 @@ function applySchema(db) {
     CREATE INDEX IF NOT EXISTS idx_sequence_feature_occurrences_host
       ON sequence_feature_occurrences(host_vector_id, updated_at DESC);
   `);
+
+  const entryColumns = readRows(db, 'PRAGMA table_info(sequence_entries)');
+  const hadFolderIdColumn = entryColumns.some((row) => String(row?.name || '') === 'folder_id');
+  if (!hadFolderIdColumn) {
+    db.run("ALTER TABLE sequence_entries ADD COLUMN folder_id TEXT NOT NULL DEFAULT ''");
+  }
+  db.run(`
+    CREATE INDEX IF NOT EXISTS idx_sequence_entries_folder
+      ON sequence_entries(folder_id, status, updated_at DESC);
+  `);
+  return !hadFolderTable || !hadFolderIdColumn;
 }
 async function openDatabase(sqlitePath) {
   const SQL = await loadSqlJs();
@@ -119,9 +146,9 @@ async function openDatabase(sqlitePath) {
      WHERE type = 'table' AND name = 'sequence_feature_cds_sequences'
      LIMIT 1`
   ));
-  applySchema(db);
+  const schemaChanged = applySchema(db);
   const cdsTableChanges = cdsSequenceTableRebuilder ? cdsSequenceTableRebuilder(db) : 0;
-  if (!hadCdsSequenceTable || cdsTableChanges > 0) {
+  if (schemaChanged || !hadCdsSequenceTable || cdsTableChanges > 0) {
     await persistDatabase(sqlitePath, db);
   }
   return db;
@@ -172,6 +199,7 @@ function normalizeEntryRow(row) {
     featureCount: Math.max(0, Number(row.feature_count) || 0),
     gbkRelPath: cleanText(row.gbk_rel_path, 1200),
     htmlRelPath: cleanText(row.html_rel_path, 1200),
+    folderId: cleanText(row.folder_id, 200),
     createdAt: cleanText(row.created_at, 60),
     updatedAt: cleanText(row.updated_at, 60)
   };

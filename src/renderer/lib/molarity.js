@@ -10,6 +10,7 @@ const CONCENTRATION_TO_M = {
 };
 
 const VOLUME_TO_L = {
+  nL: 1e-9,
   uL: 1e-6,
   mL: 1e-3,
   L: 1

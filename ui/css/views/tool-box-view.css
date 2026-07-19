@@ -21,7 +21,7 @@
 .tool-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 0;
+  gap: 4px;
 }
 
 .tool-tile {
@@ -43,8 +43,8 @@
   width: 100%;
   min-height: 44px;
   padding: 10px 12px;
-  border-radius: 0;
-  border-bottom: 1px solid var(--theme-border-soft);
+  border-radius: var(--hikari-left-rail-list-radius, 8px);
+  border-bottom: 0;
   color: var(--theme-text);
   font-size: 0.9rem;
   font-weight: 500;
@@ -71,10 +71,6 @@
 .tool-tile-active .label {
   font-weight: 650;
   box-shadow: inset 2px 0 0 color-mix(in srgb, var(--theme-accent) 55%, transparent);
-}
-
-.tool-tile:last-child .label {
-  border-bottom: 0;
 }
 
 .tool-subview {
@@ -480,6 +476,92 @@
   padding: 12px;
 }
 
+.colony-crop-actions {
+  align-items: center;
+}
+
+.colony-crop-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.colony-crop-menu-btn.ghost-btn {
+  display: grid;
+  width: 36px;
+  min-height: 36px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme-text-strong);
+}
+
+.colony-crop-menu-btn.ghost-btn:hover:not(:disabled),
+.colony-crop-menu-btn.ghost-btn[aria-expanded="true"] {
+  background: var(--theme-surface-subtle);
+}
+
+.colony-crop-menu-btn.ghost-btn:focus-visible {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: 2px;
+}
+
+.colony-crop-menu-btn svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.colony-crop-menu-popup {
+  position: absolute;
+  z-index: 70;
+  top: calc(100% + 8px);
+  left: 0;
+  display: grid;
+  min-width: 184px;
+  gap: 2px;
+  padding: 6px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--theme-surface-raised, var(--theme-surface));
+  box-shadow: 0 12px 28px color-mix(in srgb, var(--theme-text-strong) 16%, transparent);
+}
+
+.colony-crop-menu-popup[hidden] {
+  display: none;
+}
+
+.colony-crop-menu-option {
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text-strong);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.colony-crop-menu-option:hover:not(:disabled) {
+  background: var(--theme-surface-subtle);
+}
+
+.colony-crop-menu-option:focus-visible {
+  outline: 2px solid var(--theme-focus);
+  outline-offset: -2px;
+}
+
+.colony-crop-menu-option:disabled {
+  cursor: default;
+  opacity: 0.48;
+}
+
 .colony-preview-card {
   margin: 0;
 }
@@ -513,17 +595,6 @@
     grid-template-columns: 1fr;
   }
 }
-.molarity-block {
-  margin-top: 14px;
-  padding-top: 10px;
-  border-top: 1px solid var(--theme-border-soft);
-}
-
-.molarity-block h4 {
-  margin: 0 0 8px;
-  color: var(--theme-primary);
-}
-
 /* Extracted from ui/css/themes/modes.css */
 body.theme-night .calc-output {
   color: var(--theme-text);
@@ -682,4 +753,234 @@ body.ui-neutral-compact input[id*="api-key"] {
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+}
+
+/* Molarity calculator */
+.molarity-view-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 4px 2px 20px;
+  border-bottom: 1px solid var(--theme-border-soft);
+}
+
+.molarity-view-header h3 {
+  margin: 2px 0 6px;
+  color: var(--theme-text-strong);
+  font-size: clamp(1.45rem, 2vw, 1.85rem);
+  letter-spacing: -0.025em;
+}
+
+.molarity-kicker {
+  margin: 0;
+  color: var(--theme-accent);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.molarity-lead {
+  max-width: 680px;
+  margin: 0;
+  color: var(--theme-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.molarity-auto-unit-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 30%, var(--theme-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--theme-accent) 7%, var(--theme-surface));
+  color: var(--theme-text-strong);
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.molarity-auto-unit-badge::before {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--theme-accent);
+  box-shadow: 0 0 0 4px var(--theme-accent-soft);
+  content: "";
+}
+
+.molarity-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+#tool-molarity-view .molarity-block {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  min-width: 0;
+  margin: 0;
+  padding: 20px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 16px;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-accent) 4%),
+    var(--theme-surface)
+  );
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--theme-text) 8%, transparent);
+}
+
+.molarity-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.molarity-card-header h4 {
+  margin: 0;
+  color: var(--theme-text-strong);
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.molarity-card-header p {
+  margin: 3px 0 0;
+  color: var(--theme-text-muted);
+  font-size: 0.8rem;
+}
+
+.molarity-step {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border: 1px solid color-mix(in srgb, var(--theme-accent) 30%, var(--theme-border));
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
+  color: var(--theme-accent);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+#tool-molarity-view .molarity-form {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+}
+
+#tool-molarity-view .molarity-form > label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  color: var(--theme-text-muted);
+  font-size: 0.8rem;
+  font-weight: 650;
+}
+
+#tool-molarity-view .molarity-form input,
+#tool-molarity-view .molarity-form select {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+#tool-molarity-view .molarity-form input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+#tool-molarity-view .molarity-form input[type="number"]::-webkit-inner-spin-button,
+#tool-molarity-view .molarity-form input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+}
+
+#tool-molarity-view .molarity-form .inline-row select {
+  width: auto;
+  min-width: 70px;
+}
+
+#tool-molarity-view .molarity-block .molarity-output {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+  min-height: 72px;
+  margin: 18px 0 0;
+  padding: 13px 15px;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--theme-surface-subtle) 86%, var(--theme-surface-elevated));
+  color: var(--theme-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+#tool-molarity-view .molarity-output::before {
+  color: var(--theme-text-muted);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  content: "Result:";
+}
+
+#tool-molarity-view .molarity-output[data-state="calculated"] {
+  border-color: color-mix(in srgb, var(--theme-accent) 34%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-accent) 9%, var(--theme-surface));
+  color: var(--theme-text-strong);
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+#tool-molarity-view .molarity-output[data-state="calculated"]::before {
+  color: var(--theme-accent);
+}
+
+#tool-molarity-view .molarity-output[data-state="warning"] {
+  border-color: color-mix(in srgb, var(--theme-danger) 34%, var(--theme-border));
+  background: color-mix(in srgb, var(--theme-danger) 8%, var(--theme-surface));
+  color: var(--theme-danger);
+  font-family: inherit;
+  font-weight: 650;
+}
+
+#tool-molarity-view .molarity-output[data-state="warning"]::before {
+  color: var(--theme-danger);
+}
+
+@media (max-width: 1200px) {
+  .molarity-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .molarity-view-header {
+    display: grid;
+    gap: 14px;
+  }
+
+  .molarity-auto-unit-badge {
+    justify-self: start;
+  }
+
+  #tool-molarity-view .molarity-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #tool-molarity-view .molarity-block {
+    padding: 16px;
+  }
 }

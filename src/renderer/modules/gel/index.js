@@ -26,6 +26,7 @@ export function initGelAnalysis({
     cropApplied: false,
     cropDisplaySize: null,
     cropRotationDegrees: 0,
+    cropRotationDrag: null,
     cropperActive: false,
     cropperInstance: null,
     currentImage: null,
@@ -168,24 +169,23 @@ export function initGelAnalysis({
   elements.gelContrastStrengthInput?.addEventListener('input', imageController.onEnhancementChanged);
   elements.gelRunBtn?.addEventListener('click', onRunAnalysis);
   elements.gelResetOverridesBtn?.addEventListener('click', manualWorkflow.onResetManualOverrides);
-  elements.gelStartCropBtn?.addEventListener('click', cropController.onCropAction);
-  elements.gelCancelCropBtn?.addEventListener('click', cropController.onCancelCrop);
+  elements.gelCropModeBtn?.addEventListener('click', cropController.onCropModeAction);
+  elements.gelApplyCropBtn?.addEventListener('click', cropController.onApplyCrop);
   elements.gelResetCropBtn?.addEventListener('click', cropController.onResetCrop);
-  elements.gelRotateAngleRange?.addEventListener('input', cropController.onRotationAngleInput);
-  elements.gelRotateAngleInput?.addEventListener('input', cropController.onRotationAngleInput);
-  elements.gelResetRotationBtn?.addEventListener('click', cropController.onResetRotation);
+  elements.gelViewerStage?.addEventListener('pointerdown', cropController.onRotationDragStart, true);
   elements.gelCanvas?.addEventListener('click', manualWorkflow.onCanvasClick);
   elements.gelCanvas?.addEventListener('contextmenu', manualWorkflow.onCanvasContextMenu);
   elements.gelCanvas?.addEventListener('mousedown', manualWorkflow.onCanvasMouseDown);
   if (typeof window !== 'undefined') {
+    window.addEventListener('pointermove', cropController.onRotationDragMove);
+    window.addEventListener('pointerup', cropController.onRotationDragEnd);
+    window.addEventListener('pointercancel', cropController.onRotationDragEnd);
     window.addEventListener('mousemove', manualWorkflow.onCanvasMouseMove);
     window.addEventListener('mouseup', manualWorkflow.onCanvasMouseUp);
   }
   elements.gelCancelBtn?.addEventListener('click', recordsManager.resetForm);
   elements.gelExportJsonBtn?.addEventListener('click', recordsManager.onExportJson);
   elements.gelExportCsvBtn?.addEventListener('click', recordsManager.onExportCsv);
-  elements.gelToolLeftBorderBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('left'));
-  elements.gelToolRightBorderBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('right'));
   elements.gelToolDividersBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('dividers'));
   elements.gelToolLadderLaneBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('ladder'));
   elements.gelToolLaneVerticesBtn?.addEventListener('click', () => manualWorkflow.onViewerToolSelected('lane-vertices'));

@@ -47,7 +47,91 @@ test('[EDGE] sequence-viewer library rows render only sequence names in the left
   assert.match(libraryList.innerHTML, /sequence-viewer-library-item-name/);
   assert.match(libraryList.innerHTML, /pcDNA3\.1-GFP_1-10_/);
   assert.doesNotMatch(libraryList.innerHTML, /sequence-viewer-library-item-meta/);
+  assert.doesNotMatch(libraryList.innerHTML, /sequence-viewer-library-folder-glyph/);
   assert.doesNotMatch(libraryList.innerHTML, /6076|6,076|bp|features|updated/i);
+});
+test('[EDGE] sequence-viewer creates real folders and moves sequences into them', async () => {
+  const ids = [
+    'sequence-viewer-home-workspace',
+    'sequence-viewer-detail-workspace',
+    'sequence-viewer-home-status',
+    'sequence-viewer-library-filter-saved',
+    'sequence-viewer-library-filter-temporary',
+    'sequence-viewer-library-new-folder-btn',
+    'sequence-viewer-library-list',
+    'sequence-viewer-preview-host'
+  ];
+  const folders = [];
+  const entries = [{ id: 'entry_folder_move', name: 'Alpha Vector', status: 'saved', folderId: '' }];
+  const moveCalls = [];
+  const document = createMockDocument(ids);
+  document.defaultView = {
+    prompt(label, value) {
+      assert.equal(label, 'New sequence folder');
+      assert.equal(value, 'New Folder');
+      return 'Cloning';
+    }
+  };
+  const window = {
+    hikariApi: {
+      sequenceLibraryList: async () => ({ ok: true, folders: [...folders], entries: entries.map((entry) => ({ ...entry })) }),
+      sequenceLibraryUpsertFolder: async (payload) => {
+        const folder = { id: 'folder_cloning', name: payload.name };
+        folders.push(folder);
+        return { ok: true, folder };
+      },
+      sequenceLibraryMoveEntry: async (payload) => {
+        moveCalls.push(payload);
+        entries[0].folderId = payload.folderId;
+        return { ok: true, entry: { ...entries[0] } };
+      }
+    }
+  };
+  const localStorage = {
+    getItem() {
+      return JSON.stringify({ settings: { storagePath: '/tmp/sequence-viewer-tests' } });
+    }
+  };
+  const moduleWithDom = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
+    { document, window, localStorage }
+  );
+  moduleWithDom.initSequenceViewer();
+  await flushAsync();
+
+  trigger(document.getElementById('sequence-viewer-library-new-folder-btn'), 'click');
+  await flushAsync();
+  await flushAsync();
+
+  const libraryList = document.getElementById('sequence-viewer-library-list');
+  assert.match(libraryList.innerHTML, /sequence-viewer-library-folder-row/);
+  assert.match(libraryList.innerHTML, /Cloning/);
+  assert.match(libraryList.innerHTML, /Alpha Vector/);
+
+  const entryTarget = {
+    dataset: { sequenceEntryId: 'entry_folder_move' },
+    classList: { add() {}, remove() {} },
+    closest(selector) {
+      return selector === '[data-sequence-entry-id]' ? this : null;
+    }
+  };
+  const folderTarget = {
+    dataset: { sequenceFolderDrop: 'folder_cloning' },
+    classList: { add() {}, remove() {} },
+    closest(selector) {
+      return selector === '[data-sequence-folder-drop]' ? this : null;
+    }
+  };
+  trigger(libraryList, 'dragstart', { target: entryTarget });
+  trigger(libraryList, 'dragover', { target: folderTarget });
+  trigger(libraryList, 'drop', { target: folderTarget });
+  await flushAsync();
+  await flushAsync();
+
+  assert.equal(moveCalls.length, 1);
+  assert.equal(moveCalls[0].id, 'entry_folder_move');
+  assert.equal(moveCalls[0].folderId, 'folder_cloning');
+  assert.match(libraryList.innerHTML, /sequence-viewer-library-folder-children[\s\S]*Alpha Vector/);
 });
 test('[EDGE] sequence-viewer renames a library entry from the right-click menu', async () => {
   const ids = [

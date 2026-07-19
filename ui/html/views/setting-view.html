@@ -5,7 +5,6 @@
             <section class="left-rail-template__section">
               <div class="settings-head">
                 <h2>Settings</h2>
-                <p class="small-note">Workspace appearance, storage, startup, and model configuration.</p>
               </div>
             </section>
 
@@ -58,10 +57,9 @@
             <section class="settings-section" data-settings-panel="appearance">
               <div class="settings-section-head">
                 <h3>Appearance</h3>
-                <p class="small-note">Keep the workspace legible and consistent.</p>
               </div>
               <form id="appearance-form" class="stack-form">
-                <label>
+                <label class="settings-choice-field settings-choice-field--short">
                   Font Size
                   <select id="setting-font-size">
                     <option value="14">Small</option>
@@ -69,7 +67,7 @@
                     <option value="18">Large</option>
                   </select>
                 </label>
-                <label>
+                <label class="settings-choice-field settings-choice-field--medium">
                   Theme
                   <select id="setting-mode">
                     <option value="day">Day</option>
@@ -86,15 +84,12 @@
             <section class="settings-section" data-settings-panel="storage" hidden>
               <div class="settings-section-head">
                 <h3>Storage</h3>
-                <p class="small-note">Pick the root folder for imported lab data and linked notebook content.</p>
               </div>
               <form id="storage-form" class="stack-form">
                 <label>
                   Root Folder Path
                   <input id="setting-storage-path" placeholder="/path/to/storage-root" readonly />
                 </label>
-                <p class="small-note">Notebook pages will reference individual folders under this path.</p>
-                <p id="setting-storage-import-status" class="small-note">Storage import: not started.</p>
                 <div class="form-actions">
                   <button type="button" id="select-storage-path-btn" class="ghost-btn">Select Folder</button>
                   <button type="submit" class="primary-btn">Save Storage Path</button>
@@ -105,7 +100,6 @@
             <section class="settings-section" data-settings-panel="startup" hidden>
               <div class="settings-section-head">
                 <h3>Startup</h3>
-                <p class="small-note">Control which module opens first when the workspace launches.</p>
               </div>
               <form id="startup-form" class="stack-form">
                 <label>
@@ -126,11 +120,10 @@
                     <option value="setting-view">Settings</option>
                   </select>
                 </label>
-                <label class="inline-row">
+                <label class="inline-row settings-toggle-row">
                   <input id="setting-startup-remember-last-view" type="checkbox" />
-                  Remember last opened module on launch
+                  <span>Remember last opened module on launch</span>
                 </label>
-                <p class="small-note">If enabled, “Remember last opened module” overrides the default startup module.</p>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn">Save Startup Settings</button>
                 </div>
@@ -140,7 +133,6 @@
             <section class="settings-section" data-settings-panel="locations" hidden>
               <div class="settings-section-head">
                 <h3>Inventory Locations</h3>
-                <p class="small-note">Keep the storage vocabulary consistent across samples and chemicals.</p>
               </div>
               <div class="stack-form">
                 <div class="inline-row settings-location-entry">
@@ -154,7 +146,6 @@
             <section class="settings-section" data-settings-panel="sample-inventory" hidden>
               <div class="settings-section-head">
                 <h3>Sample &amp; Inventory</h3>
-                <p class="small-note">Configure sample storage sections and the visible names for sample types.</p>
               </div>
               <div class="stack-form">
                 <div class="settings-subsection">
@@ -167,7 +158,11 @@
                 </div>
                 <form id="sample-type-labels-form" class="stack-form settings-subsection">
                   <h4>Sample Type Names</h4>
-                  <div id="setting-sample-type-label-list" class="settings-sample-type-label-list"></div>
+                  <div class="inline-row settings-sample-type-add">
+                    <input id="setting-sample-type-add-input" placeholder="Add sample type" aria-label="Add sample type" />
+                    <button type="button" id="setting-sample-type-add-btn" class="ghost-btn">Add Type</button>
+                  </div>
+                  <ul id="setting-sample-type-label-list" class="settings-sample-type-label-list"></ul>
                   <div class="form-actions">
                     <button type="submit" class="primary-btn">Save Type Names</button>
                   </div>
@@ -178,7 +173,6 @@
             <section class="settings-section" data-settings-panel="preferred-journal" hidden>
               <div class="settings-section-head">
                 <h3>Preferred Journals</h3>
-                <p class="small-note">Set the journals you most often submit to or browse. Enter journal names (e.g. <em>Nature Chemistry</em>) or URLs (e.g. <em>https://www.nature.com/nchem/</em>).</p>
               </div>
               <form id="preferred-journal-form" class="stack-form">
                 <label>
@@ -196,7 +190,6 @@
             <section class="settings-section" data-settings-panel="llm" hidden>
               <div class="settings-section-head">
                 <h3>Codex Model &amp; Access</h3>
-                <p class="small-note">Choose the Codex model used by assistant features.</p>
               </div>
               <form id="llm-form" class="stack-form">
                 <label>
@@ -204,7 +197,7 @@
                   <input id="setting-model" list="setting-model-options" placeholder="optional, e.g. gpt-5.4" />
                 </label>
                 <datalist id="setting-model-options"></datalist>
-                <label>
+                <label class="settings-choice-field settings-choice-field--medium">
                   Reasoning Effort
                   <select id="setting-reasoning-effort"></select>
                 </label>
@@ -216,9 +209,9 @@
                     <button type="button" id="clear-codex-login-btn" class="ghost-btn">Clear Saved Login</button>
                   </div>
                 </div>
-                <label class="inline-row">
+                <label class="inline-row settings-toggle-row">
                   <input id="setting-agent-developer-mode" type="checkbox" />
-                  Agent Developer Mode (record redacted LLM request/response traces)
+                  <span>Agent Developer Mode (record redacted LLM request/response traces)</span>
                 </label>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn">Save LLM Settings</button>
@@ -229,14 +222,12 @@
           <section class="settings-section" data-settings-panel="skills" hidden>
             <div class="settings-section-head">
               <h3>External Skills</h3>
-              <p class="small-note">View discovered skill files and control which ones the agent may use.</p>
             </div>
             <div class="stack-form">
-              <label class="inline-row settings-switch-row">
+              <label class="inline-row settings-toggle-row settings-switch-row">
                 <input id="setting-agent-external-skills-enabled" type="checkbox" />
-                External skills enabled
+                <span>External skills enabled</span>
               </label>
-              <p id="setting-external-skills-status" class="small-note">External skills: loading...</p>
               <div class="form-actions">
                 <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn">Refresh Skills</button>
               </div>
@@ -247,7 +238,6 @@
           <section class="settings-section" data-settings-panel="plugins" hidden>
             <div class="settings-section-head">
               <h3>Plugins</h3>
-              <p class="small-note">Add a plugin folder containing index.html (plus its own JS and CSS). Enabled plugins appear in app navigation after a reload.</p>
             </div>
             <div class="stack-form">
               <div class="form-actions">
@@ -262,15 +252,12 @@
           <section class="settings-section" data-settings-panel="telegram" hidden>
             <div class="settings-section-head">
               <h3>Telegram Bot</h3>
-              <p class="small-note">Store a token for Telegram automation and status reporting.</p>
             </div>
             <form id="telegram-form" class="stack-form">
               <label>
                 Bot Token
                 <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
               </label>
-              <p class="small-note">Enter token to store it in app settings. Clearing saved token falls back to env token if available.</p>
-              <p id="setting-telegram-status" class="small-note">Telegram bot status: loading...</p>
               <div class="form-actions">
                 <button type="submit" class="primary-btn">Save Telegram Token</button>
                 <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>

@@ -2,6 +2,8 @@ import { createEmptyManualOverrides } from '../shared.js';
 
 const MIN_ROTATION_DEGREES = -180;
 const MAX_ROTATION_DEGREES = 180;
+const ROTATION_DRAG_DEGREES_PER_PIXEL = 0.25;
+const CROP_BORDER_SELECTOR = '.cropper-line, .cropper-point';
 
 function normalizeRotationDegrees(value) {
   const numeric = Number(value);
@@ -18,17 +20,21 @@ function formatRotationDegrees(value) {
 }
 
 export function createCropController({ runtime, elements, deps }) {
-  function renderRotationUi() {
-    const value = formatRotationDegrees(runtime.cropRotationDegrees);
-    if (elements.gelRotateAngleRange) {
-      elements.gelRotateAngleRange.value = value;
+  function clearRotationDrag() {
+    const drag = runtime.cropRotationDrag;
+    drag?.container?.classList?.remove('is-gel-rotating');
+    if (drag?.captureTarget && Number.isFinite(drag.pointerId)) {
+      try {
+        drag.captureTarget.releasePointerCapture?.(drag.pointerId);
+      } catch {
+        // Pointer capture may already have been released by the browser.
+      }
     }
-    if (elements.gelRotateAngleInput) {
-      elements.gelRotateAngleInput.value = value;
-    }
+    runtime.cropRotationDrag = null;
   }
 
   function destroyCropper() {
+    clearRotationDrag();
     if (runtime.cropperInstance && typeof runtime.cropperInstance.destroy === 'function') {
       runtime.cropperInstance.destroy();
     }
@@ -48,7 +54,6 @@ export function createCropController({ runtime, elements, deps }) {
     }
     runtime.cropDisplaySize = null;
     runtime.cropRotationDegrees = 0;
-    renderRotationUi();
   }
 
   function captureCurrentGelDisplaySize() {
@@ -105,40 +110,34 @@ export function createCropController({ runtime, elements, deps }) {
     });
     runtime.cropperActive = true;
     runtime.cropRotationDegrees = 0;
-    renderRotationUi();
     return true;
   }
 
   function setCropUiState() {
     const isCropping = Boolean(runtime.cropperActive && runtime.cropperInstance);
-    if (elements.gelStartCropBtn) {
-      elements.gelStartCropBtn.disabled = !runtime.currentImage && !isCropping;
-      elements.gelStartCropBtn.textContent = isCropping ? 'Apply Crop' : 'Start Crop';
-      elements.gelStartCropBtn.classList.toggle('is-active', isCropping);
-      elements.gelStartCropBtn.setAttribute('aria-pressed', isCropping ? 'true' : 'false');
+    if (elements.gelCropModeBtn) {
+      const cropModeLabel = isCropping ? 'Cancel crop' : 'Start crop';
+      elements.gelCropModeBtn.disabled = !runtime.currentImage && !isCropping;
+      elements.gelCropModeBtn.classList.toggle('is-active', isCropping);
+      elements.gelCropModeBtn.setAttribute('aria-label', cropModeLabel);
+      elements.gelCropModeBtn.setAttribute('aria-pressed', isCropping ? 'true' : 'false');
+      elements.gelCropModeBtn.setAttribute('title', cropModeLabel);
     }
-    if (elements.gelCancelCropBtn) {
-      elements.gelCancelCropBtn.disabled = !isCropping;
+    if (elements.gelApplyCropBtn) {
+      elements.gelApplyCropBtn.disabled = !isCropping;
+      elements.gelApplyCropBtn.hidden = !isCropping;
     }
     if (elements.gelResetCropBtn) {
       elements.gelResetCropBtn.disabled = !runtime.originalImage;
     }
-    if (elements.gelRotateAngleRange) {
-      elements.gelRotateAngleRange.disabled = !isCropping;
-    }
-    if (elements.gelRotateAngleInput) {
-      elements.gelRotateAngleInput.disabled = !isCropping;
-    }
-    if (elements.gelResetRotationBtn) {
-      elements.gelResetRotationBtn.disabled = !isCropping || normalizeRotationDegrees(runtime.cropRotationDegrees) === 0;
-    }
-    renderRotationUi();
   }
 
-  function setRotationDegrees(degrees) {
+  function setRotationDegrees(degrees, { announce = true } = {}) {
     if (!runtime.cropperActive || !runtime.cropperInstance) {
-      deps.setStatus('Start crop mode first to rotate.');
-      return;
+      if (announce) {
+        deps.setStatus('Start crop mode first to rotate.');
+      }
+      return false;
     }
     const current = normalizeRotationDegrees(runtime.cropRotationDegrees);
     const next = normalizeRotationDegrees(degrees);
@@ -147,21 +146,83 @@ export function createCropController({ runtime, elements, deps }) {
     } else if (typeof runtime.cropperInstance.rotate === 'function') {
       runtime.cropperInstance.rotate(next - current);
     } else {
-      deps.setStatus('Cropper rotation is unavailable.');
-      return;
+      if (announce) {
+        deps.setStatus('Cropper rotation is unavailable.');
+      }
+      return false;
     }
     runtime.cropRotationDegrees = next;
-    renderRotationUi();
-    setCropUiState();
-    deps.setStatus(`Rotated to ${formatRotationDegrees(next)} deg. Adjust selection then Apply Crop.`);
+    if (announce) {
+      deps.setStatus(`Rotated to ${formatRotationDegrees(next)} deg. Adjust selection then Apply Crop.`);
+    }
+    return true;
   }
 
-  function onRotationAngleInput(event) {
-    setRotationDegrees(event?.target?.value);
+  function onRotationDragStart(event) {
+    if (
+      !runtime.cropperActive
+      || !runtime.cropperInstance
+      || event?.isPrimary === false
+      || (Number.isFinite(event?.button) && event.button !== 0)
+      || event?.target?.closest?.(CROP_BORDER_SELECTOR)
+    ) {
+      return;
+    }
+    const container = event?.target?.closest?.('.cropper-container');
+    if (!container || !Number.isFinite(event?.clientX)) {
+      return;
+    }
+    clearRotationDrag();
+    runtime.cropRotationDrag = {
+      captureTarget: event.currentTarget || null,
+      container,
+      moved: false,
+      pointerId: Number.isFinite(event.pointerId) ? event.pointerId : null,
+      startDegrees: normalizeRotationDegrees(runtime.cropRotationDegrees),
+      startX: event.clientX
+    };
+    container.classList?.add('is-gel-rotating');
+    if (Number.isFinite(event.pointerId)) {
+      event.currentTarget?.setPointerCapture?.(event.pointerId);
+    }
+    event.preventDefault?.();
+    event.stopPropagation?.();
+    event.stopImmediatePropagation?.();
   }
 
-  function onResetRotation() {
-    setRotationDegrees(0);
+  function onRotationDragMove(event) {
+    const drag = runtime.cropRotationDrag;
+    if (
+      !drag
+      || !Number.isFinite(event?.clientX)
+      || (Number.isFinite(drag.pointerId) && event.pointerId !== drag.pointerId)
+    ) {
+      return;
+    }
+    const deltaX = event.clientX - drag.startX;
+    if (Math.abs(deltaX) >= 1) {
+      drag.moved = true;
+    }
+    setRotationDegrees(
+      drag.startDegrees + (deltaX * ROTATION_DRAG_DEGREES_PER_PIXEL),
+      { announce: false }
+    );
+    event.preventDefault?.();
+    event.stopPropagation?.();
+  }
+
+  function onRotationDragEnd(event) {
+    const drag = runtime.cropRotationDrag;
+    if (!drag || (Number.isFinite(drag.pointerId) && event?.pointerId !== drag.pointerId)) {
+      return;
+    }
+    const moved = drag.moved;
+    clearRotationDrag();
+    if (moved) {
+      deps.setStatus(`Rotated to ${formatRotationDegrees(runtime.cropRotationDegrees)} deg. Adjust selection then Apply Crop.`);
+    }
+    event?.preventDefault?.();
+    event?.stopPropagation?.();
   }
 
   function leaveCropMode() {
@@ -198,12 +259,12 @@ export function createCropController({ runtime, elements, deps }) {
       deps.setStatus('Failed to start crop mode.');
       return;
     }
-    deps.setStatus('Crop mode: adjust selection with Cropper.js, then click Apply Crop.');
+    deps.setStatus('Crop mode: drag away from the crop border to rotate, drag the border to resize, then click Apply Crop.');
   }
 
-  function onCropAction() {
+  function onCropModeAction() {
     if (runtime.cropperActive && runtime.cropperInstance) {
-      onApplyCrop();
+      onCancelCrop();
       return;
     }
     onStartCrop();
@@ -262,10 +323,11 @@ export function createCropController({ runtime, elements, deps }) {
     leaveCropMode,
     onApplyCrop,
     onCancelCrop,
-    onCropAction,
+    onCropModeAction,
     onResetCrop,
-    onResetRotation,
-    onRotationAngleInput,
+    onRotationDragEnd,
+    onRotationDragMove,
+    onRotationDragStart,
     onStartCrop,
     setCropUiState
   };

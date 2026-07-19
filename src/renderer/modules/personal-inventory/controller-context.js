@@ -1,5 +1,6 @@
 import { createPersonalInventoryStateHelpers } from './state.js';
 import { createPersonalInventoryDetailRenderer } from './detail-rendering.js';
+import { createFolderTreeState } from '../../lib/folder-tree.js';
 
 export function createPersonalInventoryContext({
   state,
@@ -15,16 +16,20 @@ export function createPersonalInventoryContext({
     containerContextMenu: document.getElementById('inventory-container-context-menu'),
     inventorySummaryCard: document.getElementById('inventory-summary-card'),
     addContainerBtn: document.getElementById('inventory-add-container-btn'),
+    addFolderBtn: document.getElementById('inventory-add-folder-btn'),
     addContainerOverlay: document.getElementById('inventory-add-container-overlay'),
     addContainerForm: document.getElementById('inventory-add-container-form'),
     addContainerTitle: document.getElementById('inventory-add-container-title'),
     addContainerNote: document.getElementById('inventory-add-container-note'),
+    addItemNameLabel: document.getElementById('inventory-add-item-name-label'),
     addContainerNameInput: document.getElementById('inventory-add-container-name'),
     addContainerLocationSelect: document.getElementById('inventory-add-container-location'),
+    addContainerTypeField: document.getElementById('inventory-add-container-type-field'),
     addContainerTypeSelect: document.getElementById('inventory-add-container-type'),
     addContainerGridFields: document.getElementById('inventory-add-container-grid-fields'),
     addContainerRowsInput: document.getElementById('inventory-add-container-rows'),
     addContainerColsInput: document.getElementById('inventory-add-container-cols'),
+    addContainerSubmit: document.getElementById('inventory-add-container-submit'),
     addContainerCloseBtn: document.getElementById('inventory-add-container-close'),
     addContainerCancelBtn: document.getElementById('inventory-add-container-cancel')
   };
@@ -35,12 +40,15 @@ export function createPersonalInventoryContext({
     editingSampleId: '',
     wellEditorStatus: '',
     isAddContainerFormOpen: false,
-    addContainerParent: null,
+    addItemMode: 'container',
+    addItemTarget: null,
     shouldAutoOpenContainer: true,
     contextContainer: null,
+    contextFolder: null,
     cloningSampleId: null
   };
   const pendingStructureDrafts = new Map();
+  const folderTree = createFolderTreeState({ defaultExpanded: true });
   const helpers = createPersonalInventoryStateHelpers({ state, safeText, uiState });
   const ctx = {
     state,
@@ -49,6 +57,7 @@ export function createPersonalInventoryContext({
     safeText,
     elements,
     uiState,
+    folderTree,
     pendingStructureDrafts,
     helpers,
     structurePasteContext: null,
