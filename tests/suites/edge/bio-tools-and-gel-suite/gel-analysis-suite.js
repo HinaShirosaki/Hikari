@@ -52,7 +52,7 @@ test('[EDGE] gel-analysis viewer image selection handles empty input', () => {
   assert.equal(gelAnalysisInternals.selectViewerBaseImageData(null, { previewImageData: { tag: 'preview' } }), null);
 });
 
-test('[EDGE] gel-analysis crop rotation accepts arbitrary angle input', () => {
+test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders', () => {
   const cropModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'images', 'crop-controller.js'));
   const rotationCalls = [];
   const statuses = [];
@@ -60,6 +60,7 @@ test('[EDGE] gel-analysis crop rotation accepts arbitrary angle input', () => {
     cropRotationDegrees: 0,
     cropperActive: true,
     cropperInstance: {
+      destroy() {},
       rotateTo(degrees) {
         rotationCalls.push(degrees);
       }
@@ -68,12 +69,9 @@ test('[EDGE] gel-analysis crop rotation accepts arbitrary angle input', () => {
     originalImage: { width: 120, height: 80 }
   };
   const elements = {
-    gelStartCropBtn: new MockElement('gel-start-crop-btn'),
-    gelCancelCropBtn: new MockElement('gel-cancel-crop-btn'),
-    gelResetCropBtn: new MockElement('gel-reset-crop-btn'),
-    gelRotateAngleRange: new MockElement('gel-rotate-angle-range'),
-    gelRotateAngleInput: new MockElement('gel-rotate-angle-input'),
-    gelResetRotationBtn: new MockElement('gel-reset-rotation-btn')
+    gelCropModeBtn: new MockElement('gel-crop-mode-btn'),
+    gelApplyCropBtn: new MockElement('gel-apply-crop-btn'),
+    gelResetCropBtn: new MockElement('gel-reset-crop-btn')
   };
   const controller = cropModule.createCropController({
     runtime,
@@ -87,26 +85,83 @@ test('[EDGE] gel-analysis crop rotation accepts arbitrary angle input', () => {
   });
 
   controller.setCropUiState();
-  assert.equal(elements.gelRotateAngleRange.disabled, false);
-  assert.equal(elements.gelRotateAngleInput.disabled, false);
+  assert.equal(elements.gelCropModeBtn.getAttribute('aria-label'), 'Cancel crop');
+  assert.equal(elements.gelCropModeBtn.getAttribute('aria-pressed'), 'true');
+  assert.equal(elements.gelApplyCropBtn.disabled, false);
+  assert.equal(elements.gelApplyCropBtn.hidden, false);
 
-  elements.gelRotateAngleInput.value = '12.5';
-  controller.onRotationAngleInput({ target: elements.gelRotateAngleInput });
+  const cropperContainer = new MockElement('cropper-container');
+  const captureTarget = {
+    capturedPointerId: null,
+    releasedPointerId: null,
+    setPointerCapture(pointerId) {
+      this.capturedPointerId = pointerId;
+    },
+    releasePointerCapture(pointerId) {
+      this.releasedPointerId = pointerId;
+    }
+  };
+  const surfaceTarget = {
+    closest(selector) {
+      return selector === '.cropper-container' ? cropperContainer : null;
+    }
+  };
+  const borderTarget = {
+    closest(selector) {
+      return selector.includes('.cropper-line') ? this : cropperContainer;
+    }
+  };
+
+  controller.onRotationDragStart({
+    button: 0,
+    clientX: 100,
+    currentTarget: captureTarget,
+    isPrimary: true,
+    pointerId: 6,
+    target: borderTarget
+  });
+  assert.equal(runtime.cropRotationDrag ?? null, null);
+
+  controller.onRotationDragStart({
+    button: 0,
+    clientX: 100,
+    currentTarget: captureTarget,
+    isPrimary: true,
+    pointerId: 7,
+    preventDefault() {},
+    stopImmediatePropagation() {},
+    stopPropagation() {},
+    target: surfaceTarget
+  });
+  assert.equal(captureTarget.capturedPointerId, 7);
+  assert.equal(cropperContainer.classList.contains('is-gel-rotating'), true);
+
+  controller.onRotationDragMove({
+    clientX: 150,
+    pointerId: 7,
+    preventDefault() {},
+    stopPropagation() {}
+  });
   assert.deepEqual(rotationCalls, [12.5]);
   assert.equal(runtime.cropRotationDegrees, 12.5);
-  assert.equal(elements.gelRotateAngleRange.value, '12.5');
-  assert.equal(elements.gelResetRotationBtn.disabled, false);
+
+  controller.onRotationDragEnd({
+    pointerId: 7,
+    preventDefault() {},
+    stopPropagation() {}
+  });
+  assert.equal(cropperContainer.classList.contains('is-gel-rotating'), false);
+  assert.equal(captureTarget.releasedPointerId, 7);
+  assert.equal(runtime.cropRotationDrag, null);
   assert.match(statuses[statuses.length - 1], /12\.5 deg/);
 
-  elements.gelRotateAngleRange.value = '-7.2';
-  controller.onRotationAngleInput({ target: elements.gelRotateAngleRange });
-  assert.deepEqual(rotationCalls, [12.5, -7.2]);
-  assert.equal(elements.gelRotateAngleInput.value, '-7.2');
-
-  controller.onResetRotation();
-  assert.deepEqual(rotationCalls, [12.5, -7.2, 0]);
-  assert.equal(elements.gelRotateAngleRange.value, '0');
-  assert.equal(elements.gelResetRotationBtn.disabled, true);
+  controller.onCropModeAction();
+  assert.equal(runtime.cropperActive, false);
+  assert.equal(elements.gelCropModeBtn.getAttribute('aria-label'), 'Start crop');
+  assert.equal(elements.gelCropModeBtn.getAttribute('aria-pressed'), 'false');
+  assert.equal(elements.gelApplyCropBtn.disabled, true);
+  assert.equal(elements.gelApplyCropBtn.hidden, true);
+  assert.match(statuses[statuses.length - 1], /crop cancelled/i);
 });
 
 test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divider alignment', () => {
@@ -156,6 +211,68 @@ test('[EDGE] gel-analysis lane table render includes gel-edge offsets for divide
   assert.match(elements.gelLaneTableShell.innerHTML, /padding-right:16\.6667%;/);
   assert.match(elements.gelLaneTableShell.innerHTML, /width:37\.5%;/);
   assert.match(elements.gelLaneTableShell.innerHTML, /width:31\.25%;/);
+});
+
+test('[EDGE] gel-analysis outermost lane dividers define gel edges without separate border tools', () => {
+  const manualModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'manual', 'manual-workflow.js'));
+  const gelCanvas = new MockElement('gel-canvas');
+  gelCanvas.getBoundingClientRect = () => ({
+    left: 0,
+    top: 0,
+    width: 100,
+    height: 100
+  });
+  const runtime = {
+    currentImage: {
+      width: 100,
+      height: 100,
+      gray: new Float32Array(10000).fill(0.1)
+    },
+    cropperActive: false,
+    currentReport: null,
+    manualDividerConfirmed: false,
+    manualOverrides: gelAnalysisInternals.normalizeManualOverrides({}),
+    selectedViewerTool: 'dividers'
+  };
+  const elements = {
+    gelCanvas,
+    gelToolDividersBtn: new MockElement('gel-tool-dividers-btn'),
+    gelManualNextBtn: new MockElement('gel-manual-next-btn'),
+    gelOverrideStatus: new MockElement('gel-override-status')
+  };
+  const statuses = [];
+  const controller = manualModule.createManualWorkflowController({
+    runtime,
+    elements,
+    deps: {
+      onRunAnalysis() {},
+      renderCanvas() {},
+      renderLaneTable() {},
+      renderReport() {},
+      setStatus: (message) => statuses.push(message)
+    }
+  });
+
+  assert.equal(controller.getManualStep(), 'dividers');
+  controller.onCanvasClick({ clientX: 60, clientY: 50 });
+  assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, 60);
+  assert.equal(runtime.manualOverrides.laneSegmentation.gelRight, null);
+
+  controller.onCanvasClick({ clientX: 20, clientY: 50 });
+  assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, 20);
+  assert.equal(runtime.manualOverrides.laneSegmentation.gelRight, 60);
+  assert.deepEqual(runtime.manualOverrides.laneSegmentation.dividers, []);
+
+  controller.onCanvasClick({ clientX: 80, clientY: 50 });
+  assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, 20);
+  assert.equal(runtime.manualOverrides.laneSegmentation.gelRight, 80);
+  assert.deepEqual(runtime.manualOverrides.laneSegmentation.dividers, [60]);
+
+  controller.onManualNextStep();
+  assert.equal(runtime.manualOverrides.laneSegmentation.dividerDone, true);
+  assert.equal(runtime.selectedViewerTool, '');
+  assert.equal(controller.getManualStep(), 'ladder');
+  assert.match(statuses[statuses.length - 1], /dividers confirmed/i);
 });
 
 test('[EDGE] gel-analysis lane-by-lane band mode clears tools and records top and bottom per clicked lane', () => {

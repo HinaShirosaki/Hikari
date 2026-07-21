@@ -162,6 +162,8 @@ export function initColonyCounterTool() {
   const colonyApplyCropBtn = document.getElementById('colony-apply-crop-btn');
   const colonyCancelCropBtn = document.getElementById('colony-cancel-crop-btn');
   const colonyResetCropBtn = document.getElementById('colony-reset-crop-btn');
+  const colonyCropMenuBtn = document.getElementById('colony-crop-menu-btn');
+  const colonyCropMenu = document.getElementById('colony-crop-menu');
   const colonyClearMarkersBtn = document.getElementById('colony-clear-markers-btn');
   const colonyStatus = document.getElementById('colony-status');
   const colonySummary = document.getElementById('colony-summary');
@@ -209,12 +211,12 @@ export function initColonyCounterTool() {
     colonyStatus.style.color = isError ? 'var(--theme-danger)' : '';
   }
 
-  // Restore the summary panel to its default instructional text.
+  // Clear results when the tool returns to its initial state.
   function resetColonySummary() {
     if (!colonySummary) {
       return;
     }
-    colonySummary.innerHTML = '<p class="small-note">Choose or drop a plate image, then run auto count or click colonies manually.</p>';
+    colonySummary.textContent = '';
   }
 
   function hasActiveMask(mask = colonyState.mask) {
@@ -575,6 +577,13 @@ export function initColonyCounterTool() {
     const busy = colonyState.isModelRunning;
     const drawingMask = colonyState.isDrawingMask;
 
+    if (colonyCropMenuBtn) {
+      colonyCropMenuBtn.disabled = !hasImage || busy || drawingMask;
+      if (colonyCropMenuBtn.disabled) {
+        closeColonyCropMenu();
+      }
+    }
+
     if (colonyStartCropBtn) {
       colonyStartCropBtn.disabled = !hasImage || cropActive || busy || drawingMask;
     }
@@ -616,6 +625,13 @@ export function initColonyCounterTool() {
         colonyPreviewCanvas.style.cursor = 'crosshair';
       }
     }
+  }
+
+  function closeColonyCropMenu() {
+    if (colonyCropMenu) {
+      colonyCropMenu.hidden = true;
+    }
+    colonyCropMenuBtn?.setAttribute('aria-expanded', 'false');
   }
 
   // Remove the cropper image source so the host element is fully reset.
@@ -1333,6 +1349,37 @@ export function initColonyCounterTool() {
     },
     onError: (error) => {
       setColonyStatus(String(error?.message || error || 'Failed to load the dropped colony image.'), true);
+    }
+  });
+
+  colonyCropMenuBtn?.addEventListener('click', () => {
+    if (!colonyCropMenu) {
+      return;
+    }
+    const willOpen = colonyCropMenu.hidden;
+    colonyCropMenu.hidden = !willOpen;
+    colonyCropMenuBtn.setAttribute('aria-expanded', String(willOpen));
+  });
+
+  colonyCropMenu?.addEventListener('click', (event) => {
+    if (event.target?.closest?.('.colony-crop-menu-option')) {
+      closeColonyCropMenu();
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    if (colonyCropMenu?.hidden) {
+      return;
+    }
+    if (colonyCropMenu.contains?.(event.target) || colonyCropMenuBtn?.contains?.(event.target)) {
+      return;
+    }
+    closeColonyCropMenu();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeColonyCropMenu();
     }
   });
 

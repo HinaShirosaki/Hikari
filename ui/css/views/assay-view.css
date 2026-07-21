@@ -67,6 +67,30 @@
   align-self: stretch;
 }
 
+.left-rail-template.assay-create-layout > .assay-create-sidebar.left-rail-template__rail--pinned {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  gap: 0;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  padding: 0 !important;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+  background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+}
+
+.assay-create-sidebar > .assay-create-sidebar-pinned.left-rail-template__pinned {
+  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
+  border-bottom: 1px solid var(--app-left-rail-divider);
+}
+
+.assay-create-sidebar > .assay-create-sidebar-scroll.left-rail-template__scroll {
+  padding: 8px var(--app-left-rail-padding-inline, 16px) 16px;
+  scrollbar-gutter: stable;
+}
+
 .left-rail-template.assay-create-layout {
   --left-rail-main-gap: 20px;
   display: grid;
@@ -104,9 +128,8 @@
 
 .assay-browser-panel {
   margin: 0;
-  padding: 0 0 6px;
+  padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--theme-border-soft);
 }
 
 .assay-browser-summary {
@@ -266,10 +289,6 @@
   background: var(--theme-surface-elevated);
   color: var(--theme-text-strong);
   font-size: 0.9rem;
-}
-
-.assay-conc-unit-input[type="text"] {
-  width: 88px;
 }
 
 .assay-fill-mode-select {
@@ -1147,6 +1166,7 @@
 @media (max-width: 1100px) {
   .assay-create-layout {
     grid-template-columns: 1fr;
+    height: auto;
   }
 
   .assay-results-layout {
@@ -1162,6 +1182,19 @@
     background: transparent !important;
     box-shadow: none;
     scrollbar-gutter: auto;
+  }
+
+  .left-rail-template.assay-create-layout > .assay-create-sidebar.left-rail-template__rail--pinned {
+    grid-template-rows: auto auto;
+    align-self: start;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+    overflow: visible !important;
+  }
+
+  .assay-create-sidebar > .assay-create-sidebar-scroll.left-rail-template__scroll {
+    max-height: min(360px, 42vh);
   }
 
   .assay-serial-dilution-sample-head {

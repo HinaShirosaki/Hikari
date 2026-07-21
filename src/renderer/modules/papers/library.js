@@ -539,7 +539,7 @@ export function createPapersLibraryController(context) {
             data-folder-context="${safeText(folder.key)}"
           >
             <span class="papers-folder-chevron" aria-hidden="true"></span>
-            <span class="papers-folder-glyph" aria-hidden="true"></span>
+            <span class="left-rail-folder-glyph papers-folder-glyph" aria-hidden="true"></span>
             <div class="papers-folder-rename-wrap">
               <input
                 type="text"
@@ -575,7 +575,7 @@ export function createPapersLibraryController(context) {
             aria-expanded="${isFolderExpanded(folder.key) ? 'true' : 'false'}"
           >
             <span class="papers-folder-chevron" aria-hidden="true"></span>
-            <span class="papers-folder-glyph" aria-hidden="true"></span>
+            <span class="left-rail-folder-glyph papers-folder-glyph" aria-hidden="true"></span>
             <span class="papers-folder-name">${safeText(folder.name)}</span>
             <span class="papers-folder-count">${getFolderPaperCount(state, folder)}</span>
           </button>

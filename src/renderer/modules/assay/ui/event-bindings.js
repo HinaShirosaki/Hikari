@@ -8,6 +8,7 @@ export function bindAssayEvents({
 }) {
   const {
     onSubmit,
+    startNewAssay,
     resetForm,
     setAssayMode,
     renderNotebookOptions,
@@ -19,6 +20,7 @@ export function bindAssayEvents({
   } = handlers;
 
   elements.assayForm?.addEventListener('submit', onSubmit);
+  elements.assayNewBtn?.addEventListener('click', startNewAssay);
   elements.assayCancelBtn?.addEventListener('click', resetForm);
   elements.assayModeCreateBtn?.addEventListener('click', () => setAssayMode('create'));
   elements.assayModeResultsBtn?.addEventListener('click', () => setAssayMode('results'));
@@ -42,7 +44,6 @@ export function bindAssayEvents({
   elements.assayConcentrationAxisColumnBtn?.addEventListener('click', () => layoutManager.setConcentrationAxis('column'));
   elements.assayPlateFieldSampleBtn?.addEventListener('click', () => layoutManager.setPlateEditField('sampleId'));
   elements.assayPlateFieldConcentrationBtn?.addEventListener('click', () => layoutManager.setPlateEditField('concentration'));
-  elements.assayConcentrationUnitInput?.addEventListener('input', layoutManager.onConcentrationUnitInput);
   elements.assayFillModeInput?.addEventListener('change', layoutManager.syncFillModeInputs);
   elements.assayDilutionFillBtn?.addEventListener('click', layoutManager.onFillConcentrations);
   layoutManager.syncFillModeInputs();

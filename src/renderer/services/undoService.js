@@ -65,22 +65,25 @@ function isEditableTarget(target) {
   return Boolean(editable);
 }
 
-function shouldCoalesceActiveEdit(documentObject) {
+// Returns the element whose edits may coalesce into one undo entry, or null.
+// The identity matters, not just the type: two fields edited inside the same
+// window are separate user intents and must not merge into one undo step.
+function getCoalesceTarget(documentObject) {
   const active = documentObject?.activeElement;
   if (typeof Element === 'undefined' || !(active instanceof Element)) {
-    return false;
+    return null;
   }
   if (
     (typeof HTMLTextAreaElement !== 'undefined' && active instanceof HTMLTextAreaElement)
     || (typeof HTMLSelectElement !== 'undefined' && active instanceof HTMLSelectElement)
     || active.isContentEditable
   ) {
-    return true;
+    return active;
   }
   if (typeof HTMLInputElement !== 'undefined' && active instanceof HTMLInputElement) {
-    return COALESCED_INPUT_TYPES.has(String(active.type || 'text').toLowerCase());
+    return COALESCED_INPUT_TYPES.has(String(active.type || 'text').toLowerCase()) ? active : null;
   }
-  return false;
+  return null;
 }
 
 function getKeyboardCommand(event) {
@@ -120,6 +123,7 @@ export function createUndoService({
   const redoButton = documentObject?.getElementById?.(redoButtonId) || null;
   let lastSnapshot = serializeHistoryState(state);
   let lastHistoryPushAt = 0;
+  let lastCoalesceTarget = null;
   let applyingSnapshot = false;
 
   function historyBytes() {
@@ -166,21 +170,34 @@ export function createUndoService({
     }
   }
 
-  function pushUndoSnapshot(serialized, options = {}) {
+  function pushUndoSnapshot(serialized) {
     if (!serialized) {
       return;
     }
     const now = Date.now();
-    const coalesce = options.coalesce === true
-      || (options.coalesce !== false && shouldCoalesceActiveEdit(documentObject));
-    const withinCoalesceWindow = coalesce && undoStack.length > 0 && now - lastHistoryPushAt <= coalesceMs;
-    if (!withinCoalesceWindow && undoStack[undoStack.length - 1] !== serialized) {
-      undoStack.push(serialized);
+    const coalesceTarget = getCoalesceTarget(documentObject);
+    const withinCoalesceWindow = Boolean(coalesceTarget)
+      && coalesceTarget === lastCoalesceTarget
+      && undoStack.length > 0
+      && now - lastHistoryPushAt <= coalesceMs;
+    lastCoalesceTarget = coalesceTarget;
+    if (withinCoalesceWindow || undoStack[undoStack.length - 1] === serialized) {
+      return;
     }
+    undoStack.push(serialized);
+    // Only a real push advances the window. Advancing it on a dropped push makes
+    // the window slide with every keystroke, so sustained typing never
+    // checkpoints and one undo reverts the whole burst.
     lastHistoryPushAt = now;
     trimHistoryBudget();
   }
 
+  // options.external — the change came from the main process (an agent write, an
+  //   IPC push), not the user. Save it, but leave both stacks alone: it is not
+  //   the user's to undo, and clearing redo would destroy history they own.
+  // options.barrier — the change accompanies a side effect outside `state` that
+  //   undo cannot reverse (a moved or written file). Undoing across it would
+  //   desynchronize state from disk, so history is dropped instead.
   function persist(options = {}) {
     const before = lastSnapshot || serializeHistoryState(state);
     const result = persistStateNow();
@@ -189,13 +206,17 @@ export function createUndoService({
       syncButtons();
       return result;
     }
-    if (applyingSnapshot) {
+    if (applyingSnapshot || options.external === true) {
       lastSnapshot = after;
       syncButtons();
       return result;
     }
+    if (options.barrier === true) {
+      reset();
+      return result;
+    }
     if (before && after !== before) {
-      pushUndoSnapshot(before, options);
+      pushUndoSnapshot(before);
       redoStack.length = 0;
       lastSnapshot = after;
       syncButtons();
@@ -218,6 +239,7 @@ export function createUndoService({
       persistStateNow();
       lastSnapshot = serializeHistoryState(state) || serialized;
       lastHistoryPushAt = 0;
+      lastCoalesceTarget = null;
       renderCurrentState();
     } finally {
       applyingSnapshot = false;
@@ -259,6 +281,7 @@ export function createUndoService({
     redoStack.length = 0;
     lastSnapshot = serializeHistoryState(state);
     lastHistoryPushAt = 0;
+    lastCoalesceTarget = null;
     syncButtons();
   }
 

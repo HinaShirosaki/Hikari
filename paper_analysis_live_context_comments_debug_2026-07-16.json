@@ -1,0 +1,602 @@
+{
+  "debug_schema_version": 1,
+  "created_for": "Live remade-package paper_analysis MCP context and comments verification",
+  "observed_at_utc": "2026-07-17T03:39:11.043Z",
+  "package": {
+    "path": "/Users/shiyifan/Projects/Enana/out/Hikari-darwin-arm64/Hikari.app",
+    "built_at_local": "2026-07-16 22:36:26",
+    "surface": "Packaged Hikari Papers agent-chat rail"
+  },
+  "mcp_call": {
+    "server": "hikari",
+    "tool": "paper_analysis",
+    "arguments": {
+      "paper": {
+        "id": "paper-h1a871392",
+        "title": "s00280 026 04911 y"
+      }
+    },
+    "call_id": "call_CxDVvlNEDMLltaiyVi28wSng",
+    "duration_seconds": 63.563502667,
+    "ok": true,
+    "status": "completed"
+  },
+  "main_agent": {
+    "session_id": "019f6797-a48a-7fd0-840d-e4bfd66e03d2",
+    "session_log": "/Users/shiyifan/Library/Application Support/Hikari/Config/codex-cli-home/sessions/2026/07/15/rollout-2026-07-15T16-03-39-019f6797-a48a-7fd0-840d-e4bfd66e03d2.jsonl",
+    "query": "Use the raw paper_analysis MCP tool exactly once on the current paper. What constraints to broader application of anti-PD-1 therapies does this paper mention? Answer only from loaded_context_blocks.source_lines, and separately report every related_comments item returned by the tool. Do not use web search."
+  },
+  "sub_agent": {
+    "id": "subagent-1784259487529-cd8d6493",
+    "name": "codex-paper-analysis-1784259487528",
+    "codex_session_id": "019f6e27-2929-7e43-a1b4-2c493ca657b9",
+    "session_log": "/Users/shiyifan/Library/Application Support/Hikari/Config/codex-cli-home/sessions/2026/07/16/rollout-2026-07-16T22-38-08-019f6e27-2929-7e43-a1b4-2c493ca657b9.jsonl",
+    "real_codex_sub_agent": true,
+    "provider": "codex-cli",
+    "command": "exec",
+    "message_count": 2,
+    "task": {
+      "state": "completed",
+      "task_type": "codex-paper-context",
+      "summary": "Read 1 extracted paper markdown file(s) and loaded 9 exact line-backed context block(s).",
+      "started_at": "2026-07-17T03:39:11.031Z",
+      "last_heartbeat_at": "2026-07-17T03:39:11.033Z",
+      "last_progress_at": "",
+      "finished_at": "2026-07-17T03:39:11.033Z",
+      "process_id": null,
+      "heartbeat_count": 1,
+      "progress_count": 0,
+      "exit_code": null,
+      "signal": "",
+      "timed_out": false,
+      "metadata": {
+        "query": "Use the raw paper_analysis MCP tool exactly once on the current paper. What constraints to broader application of anti-PD-1 therapies does this paper mention? Answer only from loaded_context_blocks.source_lines, and separately report every related_comments item returned by the tool. Do not use web search.",
+        "paper_target_count": 1,
+        "selected_count": 1,
+        "context_block_count": 9,
+        "papers_read_count": 1
+      }
+    },
+    "line_selection": {
+      "ok": true,
+      "status": "completed",
+      "selected_line_ranges": [
+        {
+          "line_ranges": [
+            {
+              "start_line": 24,
+              "end_line": 24
+            },
+            {
+              "start_line": 34,
+              "end_line": 34
+            }
+          ],
+          "relevance_reason": "These lines directly identify constraints limiting broader use of systemic PD-1/PD-L1 antibody therapies, including size, tumor access, systemic adverse effects, cost, heterogeneous response, and off-tumor toxicity mechanisms."
+        },
+        {
+          "line_ranges": [
+            {
+              "start_line": 36,
+              "end_line": 36
+            }
+          ],
+          "relevance_reason": "This line gives limitations specific to scFv alternatives that affect translation despite their advantages over full antibodies."
+        },
+        {
+          "line_ranges": [
+            {
+              "start_line": 65,
+              "end_line": 67
+            }
+          ],
+          "relevance_reason": "These lines describe practical translational constraints for direct scFv delivery platforms, including payload stability, linker optimization, nanoformulation scalability, and reproducible manufacturing."
+        },
+        {
+          "line_ranges": [
+            {
+              "start_line": 93,
+              "end_line": 95
+            }
+          ],
+          "relevance_reason": "These lines identify remaining platform challenges for cell-mediated and viral approaches, including performance variability, antiviral immune responses, replication control, and off-target infection risk."
+        },
+        {
+          "line_ranges": [
+            {
+              "start_line": 125,
+              "end_line": 127
+            }
+          ],
+          "relevance_reason": "These lines mention constraints around brain penetration, expensive injectable biologics, vector immunity, intratumoral spread variability, delivery efficiency, and large-scale manufacturing."
+        },
+        {
+          "line_ranges": [
+            {
+              "start_line": 129,
+              "end_line": 135
+            }
+          ],
+          "relevance_reason": "These lines provide clinical-translation context where safety assessment, systemic-toxicity avoidance, dose-limiting toxicities, pharmacokinetics, and inability to receive systemic antibodies are relevant constraints."
+        },
+        {
+          "line_ranges": [
+            {
+              "start_line": 139,
+              "end_line": 139
+            }
+          ],
+          "relevance_reason": "This figure-caption line directly contrasts local anti-PD-1 scFv delivery with systemic anti-PD-1 monoclonal antibody limitations, including poor penetration, variable response, immune adverse events, and repeated dosing."
+        },
+        {
+          "line_ranges": [
+            {
+              "start_line": 153,
+              "end_line": 161
+            }
+          ],
+          "relevance_reason": "This table compactly lists comparative constraints for systemic antibodies and scFv-based platforms, including systemic exposure, immune-related adverse events, variable responses, manufacturing cost, off-target toxicity, viral shedding, insertional mutagenesis, and TIL production burden."
+        },
+        {
+          "line_ranges": [
+            {
+              "start_line": 181,
+              "end_line": 181
+            }
+          ],
+          "relevance_reason": "This conclusion line summarizes remaining clinical-development constraints for anti-PD-1 scFv approaches, including manufacturing, vector standardization, dose-limiting toxicities, and patient-selection optimization."
+        }
+      ],
+      "notes": [],
+      "summary": "Selected 9 line-range objects from this paper."
+    }
+  },
+  "result": {
+    "ok": true,
+    "status": "completed",
+    "summary": "Read 1 extracted paper markdown file(s) and loaded 9 exact line-backed context block(s).",
+    "papers_read_count": 1,
+    "selected_papers": [
+      {
+        "paper_id": "paper-doi-10.1007_s00280-026-04911-y",
+        "paper_title": "s00280 026 04911 y",
+        "source": "knowledge_markdown",
+        "summary": "",
+        "url": "",
+        "doi": "10.1007/s00280-026-04911-y",
+        "pmid": "",
+        "pmcid": "",
+        "pdf_urls": [],
+        "published_at": "",
+        "score": 0,
+        "reason": "Selected 9 line-range objects from this paper."
+      }
+    ],
+    "context_block_count": 9,
+    "source_line_count": 30,
+    "comment_count": 9,
+    "local_annotation_count": 0
+  },
+  "context": [
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-1",
+      "paper_id": "paper-doi-10.1007_s00280-026-04911-y",
+      "paper_title": "s00280 026 04911 y",
+      "section_label": "Abstract",
+      "excerpt": "The programmed death-1 (PD-1) immune checkpoint is a core regulator of T-cell exhaustion and immune evasion in cancer. While PD-1/PD-L1 monoclonal antibodies have changed the landscape of cancer immunotherapy, there are barriers to broader application due to their large size, potential for systemic toxicities, and high production costs. In this review article, we will focus on therapeutic development, functional applications, and translational advances of anti-PD-1 singlechain variable fragments (scFvs). Advances in phage-display libraries, immunization methods, and antibody engineering have helped develop high-affinity scFvs with novel structural and mechanistic properties. Direct functional applications incorporating anti-PD-1 scFvs are bispecific and trispecific constructs, antibody–drug conjugates (ADCs), immunotoxins, nanoparticles, and biological vector carriers that incorporate checkpoint blockade with targeted cytotoxicity or immunostimulation. Engineered immune cells, such as armored CAR-Ts, NK cells, and MSCs, can secrete or display anti-PD-1 scFvs within the tumor to provide localized checkpoint inhibition, enhance effector-cell persistence, and remodel the tumor microenvironment. Oncolytic and non-replicating viral vectors can further confine scFv activity to tumors, coupling checkpoint blockade with oncolysis, cytokine expression, or bispecific T-cell engagers. Early-phase clinical trials are currently studying TILs and CAR-TILs engineered to secrete scFvs and oncolytic HSV-1 encoding multifunctional checkpoint payloads across a variety of solid tumors. Taken together, anti-PD-1 scFvs represent a modular platform for localized checkpoint inhibition and potentially improved cost-effectiveness compared with systemic antibodies. Future work should prioritize rational combination strategies and well-designed clinical trials that integrate anti-PD-1 scFv platforms with other immunotherapies and standard treatments to maximize clinical benefit.\n\n[... omitted source lines ...]\n\nEscaping this checkpoint with blocking antibodies, such as nivolumab or pembrolizumab, prevents ligand binding and restores proximal TCR signaling and effector cytokine production. Although these systemic antibody therapies have shown long-term durable responses in patients with melanoma, lung cancer, and renal carcinoma, significant challenges remain [10–12]. Antibodies are large (∼150 kDa) and do not readily penetrate tumors; they have long half-lives, which contribute to immunotherapeutic related adverse events, including colitis and pneumonitis, in the clinical setting, as well as production costs and interpatient heterogeneity in response, limiting more widespread use [13–16]. In addition, Fc-mediated antibody-dependent cellular cytotoxicity (ADCC) and other effector functions can contribute to off-tumor toxicities in non-responders, as suggested by preclinical and clinical correlative studies reporting increased immune-related adverse events despite limited antitumor benefit [17].",
+      "relevance_reason": "These lines directly identify constraints limiting broader use of systemic PD-1/PD-L1 antibody therapies, including size, tumor access, systemic adverse effects, cost, heterogeneous response, and off-tumor toxicity mechanisms.",
+      "source": "knowledge_markdown",
+      "evidence_kind": "text",
+      "line_ranges": [
+        {
+          "start_line": 24,
+          "end_line": 24
+        },
+        {
+          "start_line": 34,
+          "end_line": 34
+        }
+      ],
+      "source_lines": [
+        {
+          "line_number": 24,
+          "content": "The programmed death-1 (PD-1) immune checkpoint is a core regulator of T-cell exhaustion and immune evasion in cancer. While PD-1/PD-L1 monoclonal antibodies have changed the landscape of cancer immunotherapy, there are barriers to broader application due to their large size, potential for systemic toxicities, and high production costs. In this review article, we will focus on therapeutic development, functional applications, and translational advances of anti-PD-1 singlechain variable fragments (scFvs). Advances in phage-display libraries, immunization methods, and antibody engineering have helped develop high-affinity scFvs with novel structural and mechanistic properties. Direct functional applications incorporating anti-PD-1 scFvs are bispecific and trispecific constructs, antibody–drug conjugates (ADCs), immunotoxins, nanoparticles, and biological vector carriers that incorporate checkpoint blockade with targeted cytotoxicity or immunostimulation. Engineered immune cells, such as armored CAR-Ts, NK cells, and MSCs, can secrete or display anti-PD-1 scFvs within the tumor to provide localized checkpoint inhibition, enhance effector-cell persistence, and remodel the tumor microenvironment. Oncolytic and non-replicating viral vectors can further confine scFv activity to tumors, coupling checkpoint blockade with oncolysis, cytokine expression, or bispecific T-cell engagers. Early-phase clinical trials are currently studying TILs and CAR-TILs engineered to secrete scFvs and oncolytic HSV-1 encoding multifunctional checkpoint payloads across a variety of solid tumors. Taken together, anti-PD-1 scFvs represent a modular platform for localized checkpoint inhibition and potentially improved cost-effectiveness compared with systemic antibodies. Future work should prioritize rational combination strategies and well-designed clinical trials that integrate anti-PD-1 scFv platforms with other immunotherapies and standard treatments to maximize clinical benefit."
+        },
+        {
+          "line_number": 34,
+          "content": "Escaping this checkpoint with blocking antibodies, such as nivolumab or pembrolizumab, prevents ligand binding and restores proximal TCR signaling and effector cytokine production. Although these systemic antibody therapies have shown long-term durable responses in patients with melanoma, lung cancer, and renal carcinoma, significant challenges remain [10–12]. Antibodies are large (∼150 kDa) and do not readily penetrate tumors; they have long half-lives, which contribute to immunotherapeutic related adverse events, including colitis and pneumonitis, in the clinical setting, as well as production costs and interpatient heterogeneity in response, limiting more widespread use [13–16]. In addition, Fc-mediated antibody-dependent cellular cytotoxicity (ADCC) and other effector functions can contribute to off-tumor toxicities in non-responders, as suggested by preclinical and clinical correlative studies reporting increased immune-related adverse events despite limited antitumor benefit [17]."
+        }
+      ],
+      "source_line_count": 430,
+      "source_path": "KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "source_absolute_path": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "related_comments": []
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-2",
+      "paper_id": "paper-doi-10.1007_s00280-026-04911-y",
+      "paper_title": "s00280 026 04911 y",
+      "section_label": "Introduction",
+      "excerpt": "Single-chain variable fragments (scFvs) offer an appealing alternative format. scFvs are generated by joining the VH and VL domains of an antibody with a flexible linker. The resulting protein is approximately 27–30 kDa and retains antigen specificity without the Fc domain. This low molecular weight facilitates greater tissue diffusion throughout the body and improved penetration into three-dimensional tumor spheroids compared with full-length antibodies in preclinical models [18, 19]. scFvs are suitable for microbial expression systems and are easily genetically incorporated into various delivery platforms, including chimeric antigen receptor (CAR) T cells, oncolytic viruses, and nanoparticles [20]. Furthermore, scFvs circumvent off-target immune activation associated with Fc-mediated effector functions, allowing for the modular engineering of bispecific, trispecific, or fusion constructs. Most importantly, scFvs can be secreted or displayed locally within tumors, allowing checkpoint blockade to be focused where it is needed while disregarding peripheral tissues. Nevertheless, scFvs also have limitations, including short serum half-life, a propensity for aggregation, and potential immunogenicity, which necessitate careful engineering and formulation strategies to optimize clinical translation [21, 22].",
+      "relevance_reason": "This line gives limitations specific to scFv alternatives that affect translation despite their advantages over full antibodies.",
+      "source": "knowledge_markdown",
+      "evidence_kind": "text",
+      "line_ranges": [
+        {
+          "start_line": 36,
+          "end_line": 36
+        }
+      ],
+      "source_lines": [
+        {
+          "line_number": 36,
+          "content": "Single-chain variable fragments (scFvs) offer an appealing alternative format. scFvs are generated by joining the VH and VL domains of an antibody with a flexible linker. The resulting protein is approximately 27–30 kDa and retains antigen specificity without the Fc domain. This low molecular weight facilitates greater tissue diffusion throughout the body and improved penetration into three-dimensional tumor spheroids compared with full-length antibodies in preclinical models [18, 19]. scFvs are suitable for microbial expression systems and are easily genetically incorporated into various delivery platforms, including chimeric antigen receptor (CAR) T cells, oncolytic viruses, and nanoparticles [20]. Furthermore, scFvs circumvent off-target immune activation associated with Fc-mediated effector functions, allowing for the modular engineering of bispecific, trispecific, or fusion constructs. Most importantly, scFvs can be secreted or displayed locally within tumors, allowing checkpoint blockade to be focused where it is needed while disregarding peripheral tissues. Nevertheless, scFvs also have limitations, including short serum half-life, a propensity for aggregation, and potential immunogenicity, which necessitate careful engineering and formulation strategies to optimize clinical translation [21, 22]."
+        }
+      ],
+      "source_line_count": 430,
+      "source_path": "KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "source_absolute_path": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "related_comments": []
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-3",
+      "paper_id": "paper-doi-10.1007_s00280-026-04911-y",
+      "paper_title": "s00280 026 04911 y",
+      "section_label": "Methods",
+      "excerpt": "Biological vehicles add additional ways to facilitate delivery. Yang et al. utilized adenovirus-transduced mesenchymal stromal cells to deliver CD3-HAC (a fusion of anti-CD3 scFv and the PD-1 ectodomain). The CD3-HAC allowed redirected T cells to target PD-L1⁺ breast cancer cells, synergized with 5-FU, and was produced locally in metastases [45]. Riviere et al. used the protozoan Neospora caninum vector to deliver anti-PD-L1 scFv-Fc, which mediated antibody-dependent cellular toxicity (ADCC) and phagocytosis, verifying protozoan vectors for checkpoint blockade (Fig. 1) [46]. In sum, each of these direct delivery mechanisms shows how scFvs can be manipulated as bispecifics, immunotoxins, ADCs, nanoparticles, or biologically vectored entities, incorporating checkpoint blockade with mechanisms of targeted cytotoxicity, costimulation, or metabolic therapy, while still requiring careful attention to payload stability and nanoformulation scalability for clinical translation (Table 2).\n\nNevertheless, these direct delivery strategies also face practical constraints, including the need to optimize ADC stability and linker chemistry, as well as to ensure scalable and reproducible manufacturing of nanoparticle-based systems, which will be critical for successful clinical translation. Cell-mediated anti-PD-1 scFv therapy One of the most promising uses of scFvs is in engineered immune cells, such as CAR-T cells, where they serve as antigen-recognition domains. This modular architecture enables the integration of additional functional domains into a single construct, thereby enhancing localized immunomodulatory activity [51]. Rafiq et al. created “armored” CAR-T cells secreting anti-PD-1 scFv, introducing a way to circumvent checkpoint blockade through localized paracrine and autocrine inhibition. Such armored CAR-T cells showed significantly increased cytotoxicity against PD-L1⁺ tumors, with enhanced IFN-γ and IL-2 secretion (~ 2–3-fold increase), improved bystander T-cell activation, and reduced systemic cytokine exposure compared with systemic antibody delivery [52]. Nakajima et al. showed scFv-secreting CAR-T cells demonstrated superior tumor control, reduced T-cell apoptosis, and markedly higher intratumoral scFv concentrations, with minimal detectable systemic levels (often > 10–50-fold lower), confirming the pharmacokinetic advantage of localized scFv production, and that scFvs were present intratumorally at high levels but very low systemically, cementing the pharmacologic benefit of local production [53].",
+      "relevance_reason": "These lines describe practical translational constraints for direct scFv delivery platforms, including payload stability, linker optimization, nanoformulation scalability, and reproducible manufacturing.",
+      "source": "knowledge_markdown",
+      "evidence_kind": "text",
+      "line_ranges": [
+        {
+          "start_line": 65,
+          "end_line": 67
+        }
+      ],
+      "source_lines": [
+        {
+          "line_number": 65,
+          "content": "Biological vehicles add additional ways to facilitate delivery. Yang et al. utilized adenovirus-transduced mesenchymal stromal cells to deliver CD3-HAC (a fusion of anti-CD3 scFv and the PD-1 ectodomain). The CD3-HAC allowed redirected T cells to target PD-L1⁺ breast cancer cells, synergized with 5-FU, and was produced locally in metastases [45]. Riviere et al. used the protozoan Neospora caninum vector to deliver anti-PD-L1 scFv-Fc, which mediated antibody-dependent cellular toxicity (ADCC) and phagocytosis, verifying protozoan vectors for checkpoint blockade (Fig. 1) [46]. In sum, each of these direct delivery mechanisms shows how scFvs can be manipulated as bispecifics, immunotoxins, ADCs, nanoparticles, or biologically vectored entities, incorporating checkpoint blockade with mechanisms of targeted cytotoxicity, costimulation, or metabolic therapy, while still requiring careful attention to payload stability and nanoformulation scalability for clinical translation (Table 2)."
+        },
+        {
+          "line_number": 66,
+          "content": ""
+        },
+        {
+          "line_number": 67,
+          "content": "Nevertheless, these direct delivery strategies also face practical constraints, including the need to optimize ADC stability and linker chemistry, as well as to ensure scalable and reproducible manufacturing of nanoparticle-based systems, which will be critical for successful clinical translation. Cell-mediated anti-PD-1 scFv therapy One of the most promising uses of scFvs is in engineered immune cells, such as CAR-T cells, where they serve as antigen-recognition domains. This modular architecture enables the integration of additional functional domains into a single construct, thereby enhancing localized immunomodulatory activity [51]. Rafiq et al. created “armored” CAR-T cells secreting anti-PD-1 scFv, introducing a way to circumvent checkpoint blockade through localized paracrine and autocrine inhibition. Such armored CAR-T cells showed significantly increased cytotoxicity against PD-L1⁺ tumors, with enhanced IFN-γ and IL-2 secretion (~ 2–3-fold increase), improved bystander T-cell activation, and reduced systemic cytokine exposure compared with systemic antibody delivery [52]. Nakajima et al. showed scFv-secreting CAR-T cells demonstrated superior tumor control, reduced T-cell apoptosis, and markedly higher intratumoral scFv concentrations, with minimal detectable systemic levels (often > 10–50-fold lower), confirming the pharmacokinetic advantage of localized scFv production, and that scFvs were present intratumorally at high levels but very low systemically, cementing the pharmacologic benefit of local production [53]."
+        }
+      ],
+      "source_line_count": 430,
+      "source_path": "KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "source_absolute_path": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "related_comments": []
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-4",
+      "paper_id": "paper-doi-10.1007_s00280-026-04911-y",
+      "paper_title": "s00280 026 04911 y",
+      "section_label": "Methods",
+      "excerpt": "Across these platforms, consistent trends include ~ 2–3-fold increases in cytokine secretion, > 80% tumor reduction in several models, and markedly lower systemic exposure compared with conventional antibody therapies. Despite these promising advances, key challenges remain, vivo functional performance across patients and tumor types. Importantly, the underlying principle, local, sustained delivery of checkpoint-blocking scFv, is shared with the virotherapy strategies described in the next section, where engineered viral vectors similarly provide intratumoral production of anti-PD-1 scFvs to reshape the tumor microenvironment. Anti-PD-1 scFv virotherapy Oncolytic and viral vectors offer a powerful way to restrict checkpoint blockade in space, while creating immunogenic tumor cell lysis [74, 75]. Oncolytic and viral vectors can encode an anti-PD-1 or anti-PD-L1 scFv or other constructs within replicating or non-replicating vectors. This increases the concentration of the drug at the site of action, alters the TME, and limits systemic exposure; these properties circumvent barriers identified with monoclonal antibodies.\n\nHowever, viral delivery systems are not without limitations, including host antiviral immune responses, challenges in controlling replication kinetics, and the risk of off-target infection in non-tumor tissues [76, 77]. Replicating viral vectors Kleinpeter et al. first illustrated this concept using a vaccinia virus engineered to express three different constructs of anti-PD-1 (anti-PD-1 scFv, Fab, or murine full mAb). Despite the variations in format, all three inhibited the PD-1/ligand interaction. Importantly, the intratumoral viral replication would confine the production of the anti-PD-1 antibody fragment to sites of active replication within the tumors to achieve high levels locally with minimal systemic exposure. Intratumoral CD8⁺ T-cell infiltration increased by 2.5-fold compared to systemic antibody treatment. The study is an early proof of principle that armed (anti-PD-1) oncolytic viruses can elicit similar blockade compared to systemic agents and, more importantly, limit activity to the tumor niche [78].",
+      "relevance_reason": "These lines identify remaining platform challenges for cell-mediated and viral approaches, including performance variability, antiviral immune responses, replication control, and off-target infection risk.",
+      "source": "knowledge_markdown",
+      "evidence_kind": "text",
+      "line_ranges": [
+        {
+          "start_line": 93,
+          "end_line": 95
+        }
+      ],
+      "source_lines": [
+        {
+          "line_number": 93,
+          "content": "Across these platforms, consistent trends include ~ 2–3-fold increases in cytokine secretion, > 80% tumor reduction in several models, and markedly lower systemic exposure compared with conventional antibody therapies. Despite these promising advances, key challenges remain, vivo functional performance across patients and tumor types. Importantly, the underlying principle, local, sustained delivery of checkpoint-blocking scFv, is shared with the virotherapy strategies described in the next section, where engineered viral vectors similarly provide intratumoral production of anti-PD-1 scFvs to reshape the tumor microenvironment. Anti-PD-1 scFv virotherapy Oncolytic and viral vectors offer a powerful way to restrict checkpoint blockade in space, while creating immunogenic tumor cell lysis [74, 75]. Oncolytic and viral vectors can encode an anti-PD-1 or anti-PD-L1 scFv or other constructs within replicating or non-replicating vectors. This increases the concentration of the drug at the site of action, alters the TME, and limits systemic exposure; these properties circumvent barriers identified with monoclonal antibodies."
+        },
+        {
+          "line_number": 94,
+          "content": ""
+        },
+        {
+          "line_number": 95,
+          "content": "However, viral delivery systems are not without limitations, including host antiviral immune responses, challenges in controlling replication kinetics, and the risk of off-target infection in non-tumor tissues [76, 77]. Replicating viral vectors Kleinpeter et al. first illustrated this concept using a vaccinia virus engineered to express three different constructs of anti-PD-1 (anti-PD-1 scFv, Fab, or murine full mAb). Despite the variations in format, all three inhibited the PD-1/ligand interaction. Importantly, the intratumoral viral replication would confine the production of the anti-PD-1 antibody fragment to sites of active replication within the tumors to achieve high levels locally with minimal systemic exposure. Intratumoral CD8⁺ T-cell infiltration increased by 2.5-fold compared to systemic antibody treatment. The study is an early proof of principle that armed (anti-PD-1) oncolytic viruses can elicit similar blockade compared to systemic agents and, more importantly, limit activity to the tumor niche [78]."
+        }
+      ],
+      "source_line_count": 430,
+      "source_path": "KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "source_absolute_path": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "related_comments": []
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-5",
+      "paper_id": "paper-doi-10.1007_s00280-026-04911-y",
+      "paper_title": "s00280 026 04911 y",
+      "section_label": "Methods",
+      "excerpt": "Table 3 (continued) growth, achieving significant tumor reduction (> 70–80%) and sustained CD8⁺ T-cell activation, decreased immunosuppressive Tregs and MDSCs, and long-term protective CTL immunity was developed, similar to a vaccination like response. The treatment can have durable effects [86]. Maksoud et al. bioengineered an AAV9 to express anti-PD-1 scFv for the treatment of glioblastoma, where antibodies had poor efficacy due to a lack of blood-brain barrier penetration. When expressed locally, the AAV activated CTLs producing IFN-γ and granzyme B, lowered tumor burden, and enhanced survival. Expression of PD-1 on T cells in the tumor was confirmed by scRNA-seq analysis, with PD- 1-containing T cells being the relevant target [87]. (Fig. 3) Inexpensive gene delivery systems have potential. Yang et al. used intramuscular injection of plasmids containing PD-1 and CTLA-4 scFvs. With just one dose, serum concentrations around 150–600 ng/mL, which were sufficient to impact melanoma progression and improve survival without systemic toxicity moderately. For those who work in lowincome, resource-poor settings, this is favorable compared to expensive injectable biologics (Fig. 4) [88].\n\nCollectively, these studies extend principles established in cell-mediated scFv delivery, particularly localized, sustained checkpoint blockade, into viral platforms. Collectively, these studies demonstrate the flexibility of viral and gene delivery vectors for scFv-based checkpoint blockade. Mechanistically, these vectors provide local PD-1/ PD-L1 inhibition and modify the immune contexture by activating dendritic cells, reprogramming macrophages, enhancing T-cell memory responses, and reducing T-cell exhaustion. Most importantly, the scFv-armed virotherapies are overcoming significant challenges of systemic antibodies, including poor intratumoral penetration, immune-related toxicities, and high costs, while achieving 50–150× lower systemic scFv levels, ~3-fold increases in CD8⁺ T-cell infiltration, and tumor reductions exceeding 80% in multiple preclinical models. Additionally, pre-existing immunity to viral vectors and variability in intratumoral spread may limit therapeutic consistency across patients. In moving the field forward, scFvarmed virotherapy has the potential to be a next-generation immunotherapeutic that combines tumor lysis, immune stimulation, and checkpoint blockade within a single spatially constrained therapeutic response, supported by robust quantitative improvements in immune activation and tumor control (Table 4) [89, 90]. Despite these promising outcomes, challenges such as antiviral immunity, vector delivery efficiency, and large-scale manufacturing remain significant barriers to clinical translation. Future progress in this field will depend on results from ongoing and upcoming clinical trials assessing the safety, efficacy, and scalability of these virotherapy platforms. Viro-scFv and systemic monoclonal antibody metrics are included in Table 5.",
+      "relevance_reason": "These lines mention constraints around brain penetration, expensive injectable biologics, vector immunity, intratumoral spread variability, delivery efficiency, and large-scale manufacturing.",
+      "source": "knowledge_markdown",
+      "evidence_kind": "text",
+      "line_ranges": [
+        {
+          "start_line": 125,
+          "end_line": 127
+        }
+      ],
+      "source_lines": [
+        {
+          "line_number": 125,
+          "content": "Table 3 (continued) growth, achieving significant tumor reduction (> 70–80%) and sustained CD8⁺ T-cell activation, decreased immunosuppressive Tregs and MDSCs, and long-term protective CTL immunity was developed, similar to a vaccination like response. The treatment can have durable effects [86]. Maksoud et al. bioengineered an AAV9 to express anti-PD-1 scFv for the treatment of glioblastoma, where antibodies had poor efficacy due to a lack of blood-brain barrier penetration. When expressed locally, the AAV activated CTLs producing IFN-γ and granzyme B, lowered tumor burden, and enhanced survival. Expression of PD-1 on T cells in the tumor was confirmed by scRNA-seq analysis, with PD- 1-containing T cells being the relevant target [87]. (Fig. 3) Inexpensive gene delivery systems have potential. Yang et al. used intramuscular injection of plasmids containing PD-1 and CTLA-4 scFvs. With just one dose, serum concentrations around 150–600 ng/mL, which were sufficient to impact melanoma progression and improve survival without systemic toxicity moderately. For those who work in lowincome, resource-poor settings, this is favorable compared to expensive injectable biologics (Fig. 4) [88]."
+        },
+        {
+          "line_number": 126,
+          "content": ""
+        },
+        {
+          "line_number": 127,
+          "content": "Collectively, these studies extend principles established in cell-mediated scFv delivery, particularly localized, sustained checkpoint blockade, into viral platforms. Collectively, these studies demonstrate the flexibility of viral and gene delivery vectors for scFv-based checkpoint blockade. Mechanistically, these vectors provide local PD-1/ PD-L1 inhibition and modify the immune contexture by activating dendritic cells, reprogramming macrophages, enhancing T-cell memory responses, and reducing T-cell exhaustion. Most importantly, the scFv-armed virotherapies are overcoming significant challenges of systemic antibodies, including poor intratumoral penetration, immune-related toxicities, and high costs, while achieving 50–150× lower systemic scFv levels, ~3-fold increases in CD8⁺ T-cell infiltration, and tumor reductions exceeding 80% in multiple preclinical models. Additionally, pre-existing immunity to viral vectors and variability in intratumoral spread may limit therapeutic consistency across patients. In moving the field forward, scFvarmed virotherapy has the potential to be a next-generation immunotherapeutic that combines tumor lysis, immune stimulation, and checkpoint blockade within a single spatially constrained therapeutic response, supported by robust quantitative improvements in immune activation and tumor control (Table 4) [89, 90]. Despite these promising outcomes, challenges such as antiviral immunity, vector delivery efficiency, and large-scale manufacturing remain significant barriers to clinical translation. Future progress in this field will depend on results from ongoing and upcoming clinical trials assessing the safety, efficacy, and scalability of these virotherapy platforms. Viro-scFv and systemic monoclonal antibody metrics are included in Table 5."
+        }
+      ],
+      "source_line_count": 430,
+      "source_path": "KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "source_absolute_path": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "related_comments": []
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-6",
+      "paper_id": "paper-doi-10.1007_s00280-026-04911-y",
+      "paper_title": "s00280 026 04911 y",
+      "section_label": "Methods",
+      "excerpt": "Clinical translation The promising early findings of anti-PD-1 scFv engineering and preclinical development have started to transition into a clinical setting, and several early-phase clinical trials have begun to test their safety, feasibility, and early signals of efficacy. These trials and studies are a major step toward evaluating scFv-based therapeutic approaches in humans. One of the more innovative approaches is the combination of intrinsic checkpoint gene editing with scFv gene engineering for local scFv secretion. In one unique approach (NCT04842812) using genetically engineered tumor-infiltrating lymphocytes (TILs) and CAR-TILs, they not only knocked out PD-1 by gene editing, but also secreted scFvs specific to PD-1 and, in particular, CTLA-4. The investigators aim to relieve TIL exhaustion via PD-1 knockout at the genetic level, while simultaneously delivering checkpointblocking scFvs locally within the TME. By combining PD-1 disruption with the engagement of multiple targeting scFvs, they aim to generate robust and localized immune activation, potentially disturbing the dense and immunosuppressive cellular landscape often encountered in advanced solid tumors, including colorectal, lung, liver, breast, and ovarian cancers. The trial focuses on dose-escalation to assess safety, while also measuring early anti-tumor indicators, cytokine activation, and the persistence of the engineered TILs [97].\n\nThe other significant clinical research avenue is looking into the use of oncolytic viruses to deliver checkpoint blockade type payloads (via an oncolytic virus). A series of early Phase 1 trials is evaluating an oncolytic virus, HSV-1 (R130), where R130 has been designed to express anti-CD3 scFv, CD86, and an anti-PD-1 scFv payload. R130 was designed to facilitate T-cell activation (via CD86) simultaneously, direct cytotoxicity (via CD3 scFv), and relieve PD- 1-mediated inhibition within tumors; this virus combines all three in one delivery mechanism. R130 is administered intratumorally or intraperitoneally; both methods confine R130 activity to the tumor site of administration, thereby reducing systemic exposure and potential immune-related toxicities. Many parallel trials are ongoing for many types of cancers: relapsed/refractory ovarian or peritoneal carcinomatosis (NCT05801783), advanced solid tumors where the lung, kidney, and brain are involved (NCT05961111), heavily pretreated - refractory solid tumors including gastric, liver, ovarian, sarcoma, and breast cancers (NCT05886075), relapsed/refractory head and neck cancers (NCT05830240), advanced sarcomas (NCT06171282), refractory bone and soft tissue tumors, including osseous or osteosarcoma (NCT05851456). Taken together, these studies offer the opportunity to not only assess the safety and tolerability of R130 but also assess its versatility across a range of tumor histologies and anatomical localizations. Key secondary endpoints include immune biomarker assessments, scFv expression levels, and durability of viral replication in the tumor bed.\n\nThe HSV-1 approach will be further optimized in NCT05812677, which is specifically evaluating gynecologic malignancies. In this trial, an HSV-1 vector containing an anti-PD-1 scFv payload is delivered intratumorally\n\nFig. 3 Virotherapy platforms for intratumoral delivery of anti-PD-1 scFvs. Oncolytic and gene therapy vectors can be engineered to deliver anti-PD-1 scFvs directly within the tumor microenvironment. Oncolytic viruses infect tumor cells, replicate locally, and induce lysis while driving intratumoral expression of anti-PD-1 scFvs that block inhibitory signaling and enhance T-cell cytotoxicity. Adenoviral and retroviral vectors enable stable expression of anti-PD-1 scFvs together with immunostimulatory cytokines such as IL-12 and IL-2, amplifying dendritic cell (DC) cross-priming and effector T-cell responses. Local checkpoint blockade reduces Treg-mediated suppression, promotes effector T-cell infiltration and activity, and remodels the TME toward durable antitumor immunity or intraperitoneally (via the abdominal cavity) in subjects with relapsed or refractory cervical and endometrial cancers. These types of cancers typically express high levels of PD-L1 and have significant local immunosuppression, indicating that they are strong candidates for local checkpoint blockade. The primary aims of this trial will be to evaluate dose-limiting toxicities, pharmacokinetics of scFv secretion, and early clinical responses in patients who are unable to receive systemic antibody therapies due to comorbidities or prior toxicity.",
+      "relevance_reason": "These lines provide clinical-translation context where safety assessment, systemic-toxicity avoidance, dose-limiting toxicities, pharmacokinetics, and inability to receive systemic antibodies are relevant constraints.",
+      "source": "knowledge_markdown",
+      "evidence_kind": "text",
+      "line_ranges": [
+        {
+          "start_line": 129,
+          "end_line": 135
+        }
+      ],
+      "source_lines": [
+        {
+          "line_number": 129,
+          "content": "Clinical translation The promising early findings of anti-PD-1 scFv engineering and preclinical development have started to transition into a clinical setting, and several early-phase clinical trials have begun to test their safety, feasibility, and early signals of efficacy. These trials and studies are a major step toward evaluating scFv-based therapeutic approaches in humans. One of the more innovative approaches is the combination of intrinsic checkpoint gene editing with scFv gene engineering for local scFv secretion. In one unique approach (NCT04842812) using genetically engineered tumor-infiltrating lymphocytes (TILs) and CAR-TILs, they not only knocked out PD-1 by gene editing, but also secreted scFvs specific to PD-1 and, in particular, CTLA-4. The investigators aim to relieve TIL exhaustion via PD-1 knockout at the genetic level, while simultaneously delivering checkpointblocking scFvs locally within the TME. By combining PD-1 disruption with the engagement of multiple targeting scFvs, they aim to generate robust and localized immune activation, potentially disturbing the dense and immunosuppressive cellular landscape often encountered in advanced solid tumors, including colorectal, lung, liver, breast, and ovarian cancers. The trial focuses on dose-escalation to assess safety, while also measuring early anti-tumor indicators, cytokine activation, and the persistence of the engineered TILs [97]."
+        },
+        {
+          "line_number": 130,
+          "content": ""
+        },
+        {
+          "line_number": 131,
+          "content": "The other significant clinical research avenue is looking into the use of oncolytic viruses to deliver checkpoint blockade type payloads (via an oncolytic virus). A series of early Phase 1 trials is evaluating an oncolytic virus, HSV-1 (R130), where R130 has been designed to express anti-CD3 scFv, CD86, and an anti-PD-1 scFv payload. R130 was designed to facilitate T-cell activation (via CD86) simultaneously, direct cytotoxicity (via CD3 scFv), and relieve PD- 1-mediated inhibition within tumors; this virus combines all three in one delivery mechanism. R130 is administered intratumorally or intraperitoneally; both methods confine R130 activity to the tumor site of administration, thereby reducing systemic exposure and potential immune-related toxicities. Many parallel trials are ongoing for many types of cancers: relapsed/refractory ovarian or peritoneal carcinomatosis (NCT05801783), advanced solid tumors where the lung, kidney, and brain are involved (NCT05961111), heavily pretreated - refractory solid tumors including gastric, liver, ovarian, sarcoma, and breast cancers (NCT05886075), relapsed/refractory head and neck cancers (NCT05830240), advanced sarcomas (NCT06171282), refractory bone and soft tissue tumors, including osseous or osteosarcoma (NCT05851456). Taken together, these studies offer the opportunity to not only assess the safety and tolerability of R130 but also assess its versatility across a range of tumor histologies and anatomical localizations. Key secondary endpoints include immune biomarker assessments, scFv expression levels, and durability of viral replication in the tumor bed."
+        },
+        {
+          "line_number": 132,
+          "content": ""
+        },
+        {
+          "line_number": 133,
+          "content": "The HSV-1 approach will be further optimized in NCT05812677, which is specifically evaluating gynecologic malignancies. In this trial, an HSV-1 vector containing an anti-PD-1 scFv payload is delivered intratumorally"
+        },
+        {
+          "line_number": 134,
+          "content": ""
+        },
+        {
+          "line_number": 135,
+          "content": "Fig. 3 Virotherapy platforms for intratumoral delivery of anti-PD-1 scFvs. Oncolytic and gene therapy vectors can be engineered to deliver anti-PD-1 scFvs directly within the tumor microenvironment. Oncolytic viruses infect tumor cells, replicate locally, and induce lysis while driving intratumoral expression of anti-PD-1 scFvs that block inhibitory signaling and enhance T-cell cytotoxicity. Adenoviral and retroviral vectors enable stable expression of anti-PD-1 scFvs together with immunostimulatory cytokines such as IL-12 and IL-2, amplifying dendritic cell (DC) cross-priming and effector T-cell responses. Local checkpoint blockade reduces Treg-mediated suppression, promotes effector T-cell infiltration and activity, and remodels the TME toward durable antitumor immunity or intraperitoneally (via the abdominal cavity) in subjects with relapsed or refractory cervical and endometrial cancers. These types of cancers typically express high levels of PD-L1 and have significant local immunosuppression, indicating that they are strong candidates for local checkpoint blockade. The primary aims of this trial will be to evaluate dose-limiting toxicities, pharmacokinetics of scFv secretion, and early clinical responses in patients who are unable to receive systemic antibody therapies due to comorbidities or prior toxicity."
+        }
+      ],
+      "source_line_count": 430,
+      "source_path": "KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "source_absolute_path": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "related_comments": []
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-7",
+      "paper_id": "paper-doi-10.1007_s00280-026-04911-y",
+      "paper_title": "s00280 026 04911 y",
+      "section_label": "Methods",
+      "excerpt": "Fig. 4 Comparison of local viral delivery of anti-PD-1 scFv versus systemic anti-PD-1 monoclonal antibody therapy. Intratumoral injection of oncolytic viral vectors leads to local replication and secretion of anti-PD-1 scFv within the tumor, resulting in effective local checkpoint blockade, enhanced T-cell infiltration, tumor regression, and prolonged survival, with minimal systemic exposure. Intravenous administration of full-length anti-PD-1 monoclonal antibodies results in high circulating antibody levels, poor tumor penetration, variable antitumor responses, significant immune-related adverse events, and requires repeated dosing",
+      "relevance_reason": "This figure-caption line directly contrasts local anti-PD-1 scFv delivery with systemic anti-PD-1 monoclonal antibody limitations, including poor penetration, variable response, immune adverse events, and repeated dosing.",
+      "source": "knowledge_markdown",
+      "evidence_kind": "text",
+      "line_ranges": [
+        {
+          "start_line": 139,
+          "end_line": 139
+        }
+      ],
+      "source_lines": [
+        {
+          "line_number": 139,
+          "content": "Fig. 4 Comparison of local viral delivery of anti-PD-1 scFv versus systemic anti-PD-1 monoclonal antibody therapy. Intratumoral injection of oncolytic viral vectors leads to local replication and secretion of anti-PD-1 scFv within the tumor, resulting in effective local checkpoint blockade, enhanced T-cell infiltration, tumor regression, and prolonged survival, with minimal systemic exposure. Intravenous administration of full-length anti-PD-1 monoclonal antibodies results in high circulating antibody levels, poor tumor penetration, variable antitumor responses, significant immune-related adverse events, and requires repeated dosing"
+        }
+      ],
+      "source_line_count": 430,
+      "source_path": "KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "source_absolute_path": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "related_comments": []
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-8",
+      "paper_id": "paper-doi-10.1007_s00280-026-04911-y",
+      "paper_title": "s00280 026 04911 y",
+      "section_label": "Methods",
+      "excerpt": "Table 5 Comparison of viro-scFv and systemic monoclonal antibody metrics for targeting PD-1\n\n| Metric | Virotherapy (anti-PD-1 scFv) | Systemic monoclonal antibody |\n| --- | --- | --- |\n| Tumor penetration | High – scFv ~ 27 kDa diffuses easily; local production inside |  |\n\ntumor; AAV9-scFv-PD-1 reaches brain tumors Poor – full-length mAbs ~ 150 kDa show heterogeneous intratumoral distribution [87] Systemic exposure Very low – circulating levels 50- to 150-fold lower than systemic mAbs while maintaining efficacy High – weeks of circulating levels, leading to systemic irAEs [79] Immune-related adverse events (irAEs) Reduced – Grade 3/4 irAEs rare in preclinical models; G207 trial reported no dose-limiting toxic effects and only Grade 1 events possibly related Common – Grade 3/4 irAEs occur in 15–30% of patients (colitis, pneumonitis, dermatitis) [91] Tumor CD8⁺ T-cell increases 2.5- to 4.5-fold increase (vaccinia, HSV-1, RRV); G207 converted “cold” to “hot” tumors Typically, <2-fold in non-responders; variable [78– 80] Tumor volume reduction > 80% in multiple preclinical models (e.g., ZD55‑aPD‑L1 in TNBC) Variable – 20–60% depending on tumor type and line of therapy [85] Manufacturing cost Moderate – scFv production in E. coli can achieve ~$250/g; viral vector production adds cost but is scalable High – CHO cell culture, purification, formulation; commercial mAbs cost $5,000–15,000/g [92, 93] Risk of off-target toxicity Low – activity largely confined to injected tumor or transduced cells Systemic – affects skin, gut, lung, endocrine organs [94] Risk of viral shedding (HSV-1 vectors)\n\nNone detected in G207 trial (saliva, blood, conjunctiva); HSV1716 also showed no shedding Not applicable [91] Risk of insertional mutagenesis (integrating vectors) Relevant for integrating viral vectors (γ-retroviral, lentiviral) – rare but serious (CAR+ lymphomas reported) Not applicable [95] TIL manufacturing time & cost (for cell-based scFv delivery) 22-days process; wholesale cost $515,000 per patient (Amtagvi) Not applicable (off-the-shelf antibodies) [96] Clinical translation status Phase 1/Early Phase 1 trials ongoing (R130, STI-1386, etc.) FDA-approved for multiple tumor types (melanoma, NSCLC, RCC, etc.) identifying potential biomarkers of response for scFv-based checkpoint blockade, thereby enabling the subsequent Phase 2 efficacy-focused studies (Table 6) [98–100]. For Phase 1 trials of scFv-based therapies, expected metrics include determination of the maximum tolerated dose (MTD) or recommended Phase 2 dose (RP2D), characterization of dose-limiting toxicities (DLTs), and preliminary assessment of anti-tumor activity. While formal MTD values for the scFv-armed platforms in Table 5 are not yet reported (trials are ongoing), benchmark data from other TIL and oncolytic virus trials provide context; the autologous TIL therapy GT101 achieved a manageable safety profile with encouraging objective response rates (ORR), particularly in cervical cancer (ORR = 45.5% in 11 cervical cancer patients) [101, 102]; TIDAL-01 reported an ORR of 25% and a disease control rate (DCR) of 50% in advanced colorectal cancer [103]; and the oncolytic HSV-1 G207 showed no virus shedding and a median overall survival of 12.2 months in pediatric high-grade gliomas [91]. These examples suggest that an ORR exceeding 20% is a reasonable benchmark for promising Phase 1 activity in heavily pretreated solid tumors Importantly, scFv-based platforms also carry distinct risks. TIL manufacturing is challenged by long production times (typically 3 weeks to several months), tumor-to-tumor variability, open-process contamination risks, and high costs. Viral shedding of oncolytic HSV-1, though generally low or transient, has been detected in some studies (e.g., saliva), necessitating biosafety precautions for patients and healthcare workers [91]. Insertional mutagenesis remains a concern for integrating viral vectors (e.g., retroviral or lentiviral vectors used in some CAR-T platforms), with historical evidence of genotoxicity despite modern self-inactivating (SIN) designs [104, 105].",
+      "relevance_reason": "This table compactly lists comparative constraints for systemic antibodies and scFv-based platforms, including systemic exposure, immune-related adverse events, variable responses, manufacturing cost, off-target toxicity, viral shedding, insertional mutagenesis, and TIL production burden.",
+      "source": "knowledge_markdown",
+      "evidence_kind": "text",
+      "line_ranges": [
+        {
+          "start_line": 153,
+          "end_line": 161
+        }
+      ],
+      "source_lines": [
+        {
+          "line_number": 153,
+          "content": "Table 5 Comparison of viro-scFv and systemic monoclonal antibody metrics for targeting PD-1"
+        },
+        {
+          "line_number": 154,
+          "content": ""
+        },
+        {
+          "line_number": 155,
+          "content": "| Metric | Virotherapy (anti-PD-1 scFv) | Systemic monoclonal antibody |"
+        },
+        {
+          "line_number": 156,
+          "content": "| --- | --- | --- |"
+        },
+        {
+          "line_number": 157,
+          "content": "| Tumor penetration | High – scFv ~ 27 kDa diffuses easily; local production inside |  |"
+        },
+        {
+          "line_number": 158,
+          "content": ""
+        },
+        {
+          "line_number": 159,
+          "content": "tumor; AAV9-scFv-PD-1 reaches brain tumors Poor – full-length mAbs ~ 150 kDa show heterogeneous intratumoral distribution [87] Systemic exposure Very low – circulating levels 50- to 150-fold lower than systemic mAbs while maintaining efficacy High – weeks of circulating levels, leading to systemic irAEs [79] Immune-related adverse events (irAEs) Reduced – Grade 3/4 irAEs rare in preclinical models; G207 trial reported no dose-limiting toxic effects and only Grade 1 events possibly related Common – Grade 3/4 irAEs occur in 15–30% of patients (colitis, pneumonitis, dermatitis) [91] Tumor CD8⁺ T-cell increases 2.5- to 4.5-fold increase (vaccinia, HSV-1, RRV); G207 converted “cold” to “hot” tumors Typically, <2-fold in non-responders; variable [78– 80] Tumor volume reduction > 80% in multiple preclinical models (e.g., ZD55‑aPD‑L1 in TNBC) Variable – 20–60% depending on tumor type and line of therapy [85] Manufacturing cost Moderate – scFv production in E. coli can achieve ~$250/g; viral vector production adds cost but is scalable High – CHO cell culture, purification, formulation; commercial mAbs cost $5,000–15,000/g [92, 93] Risk of off-target toxicity Low – activity largely confined to injected tumor or transduced cells Systemic – affects skin, gut, lung, endocrine organs [94] Risk of viral shedding (HSV-1 vectors)"
+        },
+        {
+          "line_number": 160,
+          "content": ""
+        },
+        {
+          "line_number": 161,
+          "content": "None detected in G207 trial (saliva, blood, conjunctiva); HSV1716 also showed no shedding Not applicable [91] Risk of insertional mutagenesis (integrating vectors) Relevant for integrating viral vectors (γ-retroviral, lentiviral) – rare but serious (CAR+ lymphomas reported) Not applicable [95] TIL manufacturing time & cost (for cell-based scFv delivery) 22-days process; wholesale cost $515,000 per patient (Amtagvi) Not applicable (off-the-shelf antibodies) [96] Clinical translation status Phase 1/Early Phase 1 trials ongoing (R130, STI-1386, etc.) FDA-approved for multiple tumor types (melanoma, NSCLC, RCC, etc.) identifying potential biomarkers of response for scFv-based checkpoint blockade, thereby enabling the subsequent Phase 2 efficacy-focused studies (Table 6) [98–100]. For Phase 1 trials of scFv-based therapies, expected metrics include determination of the maximum tolerated dose (MTD) or recommended Phase 2 dose (RP2D), characterization of dose-limiting toxicities (DLTs), and preliminary assessment of anti-tumor activity. While formal MTD values for the scFv-armed platforms in Table 5 are not yet reported (trials are ongoing), benchmark data from other TIL and oncolytic virus trials provide context; the autologous TIL therapy GT101 achieved a manageable safety profile with encouraging objective response rates (ORR), particularly in cervical cancer (ORR = 45.5% in 11 cervical cancer patients) [101, 102]; TIDAL-01 reported an ORR of 25% and a disease control rate (DCR) of 50% in advanced colorectal cancer [103]; and the oncolytic HSV-1 G207 showed no virus shedding and a median overall survival of 12.2 months in pediatric high-grade gliomas [91]. These examples suggest that an ORR exceeding 20% is a reasonable benchmark for promising Phase 1 activity in heavily pretreated solid tumors Importantly, scFv-based platforms also carry distinct risks. TIL manufacturing is challenged by long production times (typically 3 weeks to several months), tumor-to-tumor variability, open-process contamination risks, and high costs. Viral shedding of oncolytic HSV-1, though generally low or transient, has been detected in some studies (e.g., saliva), necessitating biosafety precautions for patients and healthcare workers [91]. Insertional mutagenesis remains a concern for integrating viral vectors (e.g., retroviral or lentiviral vectors used in some CAR-T platforms), with historical evidence of genotoxicity despite modern self-inactivating (SIN) designs [104, 105]."
+        }
+      ],
+      "source_line_count": 430,
+      "source_path": "KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "source_absolute_path": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "related_comments": []
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-9",
+      "paper_id": "paper-doi-10.1007_s00280-026-04911-y",
+      "paper_title": "s00280 026 04911 y",
+      "section_label": "Conclusion",
+      "excerpt": "What is particularly notable about anti-PD-1 scFvs is their modularity and potential cost-effectiveness, as their smaller size enables improved tumor penetration and may reduce manufacturing complexity compared with full-length antibodies. However, important challenges remain, including large-scale manufacturing, vector standardization, and the management of dose-limiting toxicities (DLTs) in earlyphase clinical trials. In the near future, results from ongoing clinical studies will provide crucial insights into the safety and therapeutic potential of scFv-based checkpoint inhibitors. Future efforts should prioritize combination clinical trials that monitor intratumoral scFv levels, tumor microenvironment remodeling, and immune activation dynamics to optimize therapeutic efficacy and patient selection.",
+      "relevance_reason": "This conclusion line summarizes remaining clinical-development constraints for anti-PD-1 scFv approaches, including manufacturing, vector standardization, dose-limiting toxicities, and patient-selection optimization.",
+      "source": "knowledge_markdown",
+      "evidence_kind": "text",
+      "line_ranges": [
+        {
+          "start_line": 181,
+          "end_line": 181
+        }
+      ],
+      "source_lines": [
+        {
+          "line_number": 181,
+          "content": "What is particularly notable about anti-PD-1 scFvs is their modularity and potential cost-effectiveness, as their smaller size enables improved tumor penetration and may reduce manufacturing complexity compared with full-length antibodies. However, important challenges remain, including large-scale manufacturing, vector standardization, and the management of dose-limiting toxicities (DLTs) in earlyphase clinical trials. In the near future, results from ongoing clinical studies will provide crucial insights into the safety and therapeutic potential of scFv-based checkpoint inhibitors. Future efforts should prioritize combination clinical trials that monitor intratumoral scFv levels, tumor microenvironment remodeling, and immune activation dynamics to optimize therapeutic efficacy and patient selection."
+        }
+      ],
+      "source_line_count": 430,
+      "source_path": "KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "source_absolute_path": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+      "related_comments": []
+    }
+  ],
+  "comments": [
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-1",
+      "line_ranges": [
+        {
+          "start_line": 24,
+          "end_line": 24
+        },
+        {
+          "start_line": 34,
+          "end_line": 34
+        }
+      ],
+      "relevance_reason": "These lines directly identify constraints limiting broader use of systemic PD-1/PD-L1 antibody therapies, including size, tumor access, systemic adverse effects, cost, heterogeneous response, and off-tumor toxicity mechanisms."
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-2",
+      "line_ranges": [
+        {
+          "start_line": 36,
+          "end_line": 36
+        }
+      ],
+      "relevance_reason": "This line gives limitations specific to scFv alternatives that affect translation despite their advantages over full antibodies."
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-3",
+      "line_ranges": [
+        {
+          "start_line": 65,
+          "end_line": 67
+        }
+      ],
+      "relevance_reason": "These lines describe practical translational constraints for direct scFv delivery platforms, including payload stability, linker optimization, nanoformulation scalability, and reproducible manufacturing."
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-4",
+      "line_ranges": [
+        {
+          "start_line": 93,
+          "end_line": 95
+        }
+      ],
+      "relevance_reason": "These lines identify remaining platform challenges for cell-mediated and viral approaches, including performance variability, antiviral immune responses, replication control, and off-target infection risk."
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-5",
+      "line_ranges": [
+        {
+          "start_line": 125,
+          "end_line": 127
+        }
+      ],
+      "relevance_reason": "These lines mention constraints around brain penetration, expensive injectable biologics, vector immunity, intratumoral spread variability, delivery efficiency, and large-scale manufacturing."
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-6",
+      "line_ranges": [
+        {
+          "start_line": 129,
+          "end_line": 135
+        }
+      ],
+      "relevance_reason": "These lines provide clinical-translation context where safety assessment, systemic-toxicity avoidance, dose-limiting toxicities, pharmacokinetics, and inability to receive systemic antibodies are relevant constraints."
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-7",
+      "line_ranges": [
+        {
+          "start_line": 139,
+          "end_line": 139
+        }
+      ],
+      "relevance_reason": "This figure-caption line directly contrasts local anti-PD-1 scFv delivery with systemic anti-PD-1 monoclonal antibody limitations, including poor penetration, variable response, immune adverse events, and repeated dosing."
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-8",
+      "line_ranges": [
+        {
+          "start_line": 153,
+          "end_line": 161
+        }
+      ],
+      "relevance_reason": "This table compactly lists comparative constraints for systemic antibodies and scFv-based platforms, including systemic exposure, immune-related adverse events, variable responses, manufacturing cost, off-target toxicity, viral shedding, insertional mutagenesis, and TIL production burden."
+    },
+    {
+      "block_id": "paper-doi-10.1007_s00280-026-04911-y::lines-9",
+      "line_ranges": [
+        {
+          "start_line": 181,
+          "end_line": 181
+        }
+      ],
+      "relevance_reason": "This conclusion line summarizes remaining clinical-development constraints for anti-PD-1 scFv approaches, including manufacturing, vector standardization, dose-limiting toxicities, and patient-selection optimization."
+    }
+  ],
+  "local_annotations": [],
+  "comment_observation": "For this workflow, comments are the sub-agent relevance_reason values attached to selected line ranges. Persisted PDF annotations remain separate under related_comments/local_annotations."
+}

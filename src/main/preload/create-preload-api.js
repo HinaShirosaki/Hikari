@@ -5,6 +5,7 @@ const { createAssayApi } = require('./api/assay-api');
 const { createInventoryApi } = require('./api/inventory-api');
 const { createLlmApi } = require('./api/llm-api');
 const { createSequenceLibraryApi } = require('./api/sequence-library-api');
+const { createScheduledTaskApi } = require('./api/scheduled-task-api');
 const { createStorageApi } = require('./api/storage-api');
 const { createSystemApi } = require('./api/system-api');
 const { createTelegramApi } = require('./api/telegram-api');
@@ -16,6 +17,7 @@ function createPreloadApi(ipcRenderer, deps = {}) {
     ...createAssayApi(ipcRenderer),
     ...createInventoryApi(ipcRenderer),
     ...createSequenceLibraryApi(ipcRenderer),
+    ...createScheduledTaskApi(ipcRenderer),
     ...createTelegramApi(ipcRenderer),
     ...createLlmApi(ipcRenderer),
     ...createAgentApi(ipcRenderer)

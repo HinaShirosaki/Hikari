@@ -141,7 +141,9 @@ export function createProtocolService(registry, deps = {}) {
       state.protocols = [];
     }
     upsertProtocolRecord(state.protocols, protocol);
-    persist?.();
+    // Main-process write, not a user edit: must not push an undo entry or clear
+    // the user's redo stack.
+    persist?.({ external: true });
     handleProtocolsImported();
     return true;
   }

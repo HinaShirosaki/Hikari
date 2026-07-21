@@ -1,16 +1,21 @@
 # Sequence Viewer MCP Contract (design)
 
-> Status: **compute core implemented + verified; cross-process wiring pending.**
-> - Done & tested: the pure contract logic in
+> Status: **wired end-to-end.**
+> - Compute core (done & tested): the pure contract logic in
 >   `src/renderer/modules/sequence-viewer/agent/agent-api.js` (reads, `analyze`,
 >   compute-only `design_cloning`, non-mutating `propose_*` with target identity +
 >   `verifyTarget`) and the strategy adapter
 >   `src/renderer/modules/sequence-viewer/agent/cloning-adapter.js`
->   (`buildDisplayPlan` is now exported from `cloning-design.js`). Covered by tests
+>   (`buildDisplayPlan` is exported from `cloning-design.js`). Covered by tests
 >   in `tests/suites/edge/bio-tools-and-gel-suite/cloning-assembly-suite.js`.
-> - Pending (needs the running Electron app to verify): the main-process MCP tool
->   definitions + registration, the renderer executor IPC bridge that binds
->   `agent-api` to live state, and the `review-overlay.js` approval cards.
+> - Cross-process wiring (done): the `sequence_viewer` / `sequence_edit` MCP tool
+>   definitions (`src/main/agent/mcp-contract/direct-tools/`), executors
+>   (`register-agent-tool-executors.js`), and a main→renderer round-trip
+>   (`SEQUENCE_AGENT` channels + `src/main/agent/tools/agent-sequence-viewer.js`)
+>   that binds `agent-api` to live state via
+>   `src/renderer/modules/sequence-viewer/agent/bridge.js`. Edit/annotation
+>   proposals surface as approval cards in `agent-chat/review-overlay.js`
+>   (`type: 'sequence-edit'`), applied only on approval after target re-verification.
 
 ## Core principle: the agent proposes, it never mutates
 
@@ -41,7 +46,7 @@ Split by trust level so annotations stay honest:
 - **`sequence_edit`** — proposes mutations. Write tool, `destructiveHint: false`
   because it is approval-gated (returns a proposal, never applies).
 
-Prefixed `mcp__hikari__sequence_viewer` / `mcp__hikari__sequence_edit`.
+Raw MCP names: `sequence_viewer` / `sequence_edit`.
 
 ---
 

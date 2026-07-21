@@ -8,7 +8,7 @@ const {
   ensureObject
 } = require('./runtime-utils.js');
 const {
-  buildHikariCodexMcpToolName,
+  buildHikariMcpToolName,
   buildProtocolNotebookHandoffInstructionLines
 } = require('../mcp-contract/instructions.js');
 
@@ -162,20 +162,20 @@ function buildCodexAgentPrompt(input = {}, { cleanText = defaultCleanText } = {}
   const selectionInsight = ensureObject(input.selectionInsight);
   const paperAgentSessionBlock = buildPaperAgentSessionBlock(input, cleanText);
   const savedSettingsBlock = buildSavedSettingsBlock(input, cleanText);
-  const protocolGenerationTool = buildHikariCodexMcpToolName('protocol_generation');
-  const assayTableTool = buildHikariCodexMcpToolName('assay_table');
-  const plotlyGraphTool = buildHikariCodexMcpToolName('plotly_graph');
+  const protocolGenerationTool = buildHikariMcpToolName('protocol_generation');
+  const assayTableTool = buildHikariMcpToolName('assay_table');
+  const plotlyGraphTool = buildHikariMcpToolName('plotly_graph');
   const protocolNotebookHandoff = buildProtocolNotebookHandoffInstructionLines().join('\n');
   const blocks = [
     '# Hikari Codex Chat Turn',
     '',
-    'You are handling this Hikari chat turn as the Codex reasoning agent. Own the lifecycle yourself: manage context in this Codex session, clarify if necessary, call prefixed Hikari MCP tools, verify the inference, and synthesize the final user-facing answer.',
+    'You are handling this Hikari chat turn as the Codex reasoning agent. Own the lifecycle yourself: manage context in this Codex session, clarify if necessary, call raw Hikari MCP tools, verify the inference, and synthesize the final user-facing answer.',
     '',
     'The Codex instruction chain contains the durable Hikari Codex agent contract. If this turn is scoped to a selected project, the working directory may also contain project `MEMORY.md` and `.agents/skills`; treat them as the project-specific context and skill layers for this run.',
     '',
     'Hikari provides rendering and the MCP server. Use your Codex session context for continuity, tool choice, intent parsing, synthesis, and normal assistant prose for Hikari to render. Use native Codex search for external web evidence. Live thinking, progress, and tool activity are emitted by the Codex CLI stream.',
     '',
-    'For a normal paper-discovery request, make at most one `mcp__hikari__literature_search` call. When a paper request needs both literature APIs and Codex web discovery, use API sources only (`pubmed`, `crossref`, and `europe_pmc`) in that Hikari call, then use native Codex web search separately. Do not include `web` in the Hikari call: that source would start a nested Codex CLI request and stall the current turn.',
+    'For a normal paper-discovery request, make at most one `literature_search` call. When a paper request needs both literature APIs and Codex web discovery, use API sources only (`pubmed`, `crossref`, and `europe_pmc`) in that Hikari call, then use native Codex web search separately. Do not include `web` in the Hikari call: that source would start a nested Codex CLI request and stall the current turn.',
     '',
     `Protocol and notebook handoff: when the user asks to generate, draft, create, prepare, build, or turn paper/method text into an experimental protocol, first author complete protocol JSON from the evidence, then call \`${protocolGenerationTool}\` with \`{ protocol, save: true }\`. After the tool call, summarize that the generated protocol is ready for review.\n${protocolNotebookHandoff}`,
     '',

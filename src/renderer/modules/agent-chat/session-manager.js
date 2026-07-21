@@ -178,7 +178,7 @@ export function createAgentChatSessionManager(deps = {}) {
       const folderHead = renamingFolderId === folder.id ? `
         <div class="agent-session-folder-row agent-session-folder-row-editing" data-agent-folder-context="${safeText(folder.id)}">
           <span class="agent-session-folder-chevron" aria-hidden="true"></span>
-          <span class="agent-session-folder-glyph" aria-hidden="true"></span>
+          <span class="left-rail-folder-glyph agent-session-folder-glyph" aria-hidden="true"></span>
           <input class="agent-session-folder-rename-input" data-agent-folder-rename-input="${safeText(folder.id)}" value="${safeText(renamingFolderName || folder.name)}" aria-label="Rename chat folder" />
           <button type="button" class="agent-session-folder-rename-btn" data-agent-folder-rename-save="${safeText(folder.id)}">Save</button>
           <button type="button" class="agent-session-folder-rename-btn is-secondary" data-agent-folder-rename-cancel="${safeText(folder.id)}">Cancel</button>
@@ -195,7 +195,7 @@ export function createAgentChatSessionManager(deps = {}) {
           aria-label="${safeText(folderLabel)}"
         >
           <span class="agent-session-folder-chevron" aria-hidden="true"></span>
-          <span class="agent-session-folder-glyph${folder.type === 'project' ? ' is-project' : ''}" aria-hidden="true"></span>
+          <span class="left-rail-folder-glyph agent-session-folder-glyph" aria-hidden="true"></span>
           <span class="agent-session-folder-name">${safeText(folder.name)}</span>
           <span class="agent-session-folder-count">${folderSessions.length}</span>
         </button>

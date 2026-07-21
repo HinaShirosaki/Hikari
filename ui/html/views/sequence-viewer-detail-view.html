@@ -28,8 +28,9 @@
             </div>
             <div class="sequence-viewer-detail-sidebar-scroll left-rail-template__scroll">
               <section class="sequence-viewer-library-card left-rail-template__section">
-                <div class="result-card-head">
+                <div class="result-card-head sequence-viewer-library-head">
                   <h4>Sequence Library</h4>
+                  <button id="sequence-viewer-detail-library-new-folder-btn" type="button" class="ghost-btn sequence-viewer-library-new-folder-btn">New Folder</button>
                 </div>
                 <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
                   <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
@@ -39,7 +40,11 @@
                   <p class="small-note">No sequence entries found.</p>
                 </div>
                 <div id="sequence-viewer-detail-library-context-menu" class="sequence-viewer-context-menu" hidden>
-                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename">Rename</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="new-folder">New Folder</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename" hidden>Rename Sequence</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="move-entry" hidden>Move to Folder...</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename-folder" hidden>Rename Folder</button>
+                  <button type="button" class="sequence-viewer-context-item sequence-viewer-context-item-danger" data-sequence-library-action="delete-folder" hidden>Delete Folder</button>
                 </div>
                 <span id="sequence-viewer-detail-library-status" class="small-note"></span>
               </section>

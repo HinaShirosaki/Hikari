@@ -24,6 +24,7 @@ const {
   attachAlignmentSourcePaths,
   readAlignmentManifest
 } = require('./alignment-store');
+const { listSequenceFoldersFromDb } = require('./folder-store');
 
 function findNextSavedName(db, requestedName, selfId = '') {
   const base = normalizeName(requestedName, 'sequence');
@@ -65,6 +66,7 @@ async function listSequenceEntries({ storagePath, status = '' }) {
     return {
       rootPath: paths.libraryRoot,
       sqlitePath: paths.sqlitePath,
+      folders: listSequenceFoldersFromDb(db),
       entries: rows.map((row) => normalizeEntryRow(row)).filter(Boolean)
     };
   } finally {

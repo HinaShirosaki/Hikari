@@ -932,7 +932,7 @@ export function analyzeGelImage({
   const segmentedLanes = buildLanesFromManualSegmentation(manualOverrides, width, height);
   const laneBlueprints = segmentedLanes || [];
   if (!laneBlueprints.length) {
-    throw new Error('Manual analysis requires left/right borders and lane dividers first.');
+    throw new Error('Manual analysis requires at least two lane dividers first.');
   }
 
   const lanes = laneBlueprints.map((lane) => ({

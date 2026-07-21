@@ -973,6 +973,280 @@
       }
     }
   },
+  "sequence-viewer": {
+    "description": "Read and compute over loaded sequence-viewer records. Coordinates are 1-based inclusive. `get_sequence` windows are capped (~20 kb) so read long plasmids in slices. `design_cloning` is compute-only and never persists a design.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "list_records",
+            "get_record",
+            "get_sequence",
+            "get_features",
+            "analyze",
+            "design_cloning",
+            "get_cloning_design"
+          ]
+        },
+        "recordId": {
+          "type": "string",
+          "maxLength": 160,
+          "description": "Parsed record id, e.g. genbank_1."
+        },
+        "recordIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Position in the loaded record set (fallback for recordId)."
+        },
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "sequence",
+              "features",
+              "stats"
+            ]
+          },
+          "description": "get_record: extra blocks to include; sequence is omitted unless requested."
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-based inclusive start."
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1-based inclusive end."
+        },
+        "type": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "get_features: optional GenBank feature-type filter."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "restriction",
+            "orf",
+            "translation",
+            "gc"
+          ],
+          "description": "analyze: which analysis to run."
+        },
+        "frame": {
+          "type": "integer",
+          "description": "analyze translation: reading frame."
+        },
+        "strategy": {
+          "type": "string",
+          "enum": [
+            "whole-plasmid",
+            "q5-kld",
+            "two-step-ligation",
+            "golden-gate",
+            "gibson",
+            "in-fusion"
+          ],
+          "description": "design_cloning: cloning route."
+        },
+        "edit": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "design_cloning: optional hypothetical edit delta (never applied).",
+          "properties": {
+            "mode": {
+              "type": "string",
+              "enum": [
+                "insert",
+                "delete",
+                "replace"
+              ]
+            },
+            "start": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "end": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "sequence": {
+              "type": "string",
+              "maxLength": 120000
+            }
+          }
+        },
+        "insertRange": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "design_cloning: insert coordinates for gibson/in-fusion/golden-gate.",
+          "properties": {
+            "start": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "end": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    }
+  },
+  "sequence-edit": {
+    "description": "Propose a base edit or feature annotation change. Never applies: returns a preview plus a pending-approval token the user must approve in Hikari. Every proposal carries a `target` identity re-verified at approval time; a mismatch returns TARGET_CHANGED and you must re-read and re-propose. Coordinates are 1-based inclusive.",
+    "input_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action",
+        "target"
+      ],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "propose_edit",
+            "propose_annotation"
+          ]
+        },
+        "target": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Identity of the record the proposal was computed against; re-verified at approval time.",
+          "properties": {
+            "entryId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 160
+            },
+            "recordId": {
+              "type": "string",
+              "maxLength": 160
+            },
+            "recordIndex": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "baseLength": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "baseDigest": {
+              "type": "string",
+              "maxLength": 64
+            }
+          }
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "insert",
+            "delete",
+            "replace",
+            "add",
+            "edit"
+          ],
+          "description": "propose_edit: insert|delete|replace. propose_annotation: add|edit|delete."
+        },
+        "start": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "propose_edit: 1-based start (= end for insert)."
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "propose_edit: 1-based inclusive end."
+        },
+        "sequence": {
+          "type": "string",
+          "maxLength": 120000,
+          "description": "propose_edit: new bases for insert/replace."
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "propose_annotation add/edit: feature name."
+        },
+        "type": {
+          "type": "string",
+          "maxLength": 80,
+          "description": "propose_annotation add/edit: GenBank feature type."
+        },
+        "strand": {
+          "type": "integer",
+          "enum": [
+            1,
+            -1,
+            0
+          ],
+          "description": "propose_annotation add/edit: strand."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "propose_annotation add/edit: optional note."
+        },
+        "segments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "start": {
+                "type": "integer"
+              },
+              "end": {
+                "type": "integer"
+              }
+            }
+          },
+          "description": "propose_annotation add/edit: 1-based inclusive segments (multi-segment joins preserved)."
+        },
+        "featureRef": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "propose_annotation edit/delete: identifies exactly one existing feature.",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "index": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "name": {
+              "type": "string"
+            },
+            "range": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "start": {
+                  "type": "integer"
+                },
+                "end": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "literature-search": {
     "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `sources` to name specific databases, or leave it empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
     "input_schema": {
@@ -1063,7 +1337,7 @@
     }
   },
   "paper-analysis": {
-    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, or explain its methods. Reference a locally-ingested paper by its `paper.id` or `paper.doi` and Hikari loads the paper markdown for you; only pass paper text fields when the paper is not in the local KnowledgeBase. To turn extracted methods into a saved protocol, follow up with `protocol_generation`.",
+    "description": "Use this tool when the user asks to summarize a paper, extract the important findings, or explain its methods. For a locally-ingested paper reference, Hikari runs one Codex CLI paper-context sub-agent command, hydrates the returned physical `paper.md` line ranges, and returns exact `source_lines` with matching local `related_comments`. Only pass paper text fields when the paper is not in the local KnowledgeBase. Answer from `loaded_context_blocks`; to turn extracted methods into a saved protocol, follow up with `protocol_generation`.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,

@@ -27,6 +27,12 @@ const {
 const { recognizeSequenceBackbone } = require('./backbone-service');
 const { rebuildCdsSequenceTable } = require('./feature-store');
 const { sanitizeFileName } = require('./utils');
+const {
+  deleteSequenceFolder,
+  listSequenceFolders,
+  moveSequenceEntryToFolder,
+  upsertSequenceFolder
+} = require('./folder-store');
 
 setCdsSequenceTableRebuilder(rebuildCdsSequenceTable);
 
@@ -40,6 +46,10 @@ module.exports = {
   upsertSequenceEntry,
   promoteSequenceEntry,
   deleteSequenceEntry,
+  listSequenceFolders,
+  upsertSequenceFolder,
+  deleteSequenceFolder,
+  moveSequenceEntryToFolder,
   annotateSequenceRecord,
   searchSequenceFeatures,
   listRecognizedBackbones,

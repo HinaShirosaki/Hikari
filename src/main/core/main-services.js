@@ -52,6 +52,9 @@ const {
   upsertSequenceEntry,
   promoteSequenceEntry,
   deleteSequenceEntry,
+  upsertSequenceFolder,
+  deleteSequenceFolder,
+  moveSequenceEntryToFolder,
   annotateSequenceRecord,
   searchSequenceFeatures,
   listRecognizedBackbones,
@@ -65,8 +68,10 @@ const { createTelegramService } = require('./services/create-telegram-service');
 const { createNpmUpdaterService } = require('./services/create-npm-updater-service');
 const { createMainMcpService } = require('./services/create-mcp-service');
 const { createMainCodexService } = require('./services/create-codex-service');
+const { createScheduledTaskService } = require('./services/create-scheduled-task-service');
 const { registerDataIpc } = require('../ipc/register-data-ipc');
 const { registerAgentIpc } = require('../ipc/register-agent-ipc');
+const { registerScheduledTaskIpc } = require('../ipc/register-scheduled-task-ipc');
 const { registerSystemIpc } = require('../ipc/register-system-ipc');
 
 const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
@@ -168,6 +173,7 @@ function createMainServices(context = {}) {
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     BrowserWindow,
+    ipcMain,
     getAgentPythonSandboxRoot: appPaths.getAgentPythonSandboxRoot,
     getAgentMemoryFilePath: appPaths.getAgentMemoryFilePath,
     getBundlePaths,
@@ -200,6 +206,14 @@ function createMainServices(context = {}) {
     processObject
   });
 
+  const scheduledTasks = createScheduledTaskService({
+    fs,
+    path,
+    cleanText,
+    getScheduledTasksPath: appPaths.getScheduledTasksPath,
+    runCodexTask: codex.runScheduledTask
+  });
+
   // IPC registration (before app ready).
   registerDataIpc({
     ipcMain,
@@ -224,6 +238,9 @@ function createMainServices(context = {}) {
     upsertSequenceEntry,
     promoteSequenceEntry,
     deleteSequenceEntry,
+    upsertSequenceFolder,
+    deleteSequenceFolder,
+    moveSequenceEntryToFolder,
     annotateSequenceRecord,
     searchSequenceFeatures,
     listRecognizedBackbones,
@@ -250,6 +267,12 @@ function createMainServices(context = {}) {
     appendAgentChatLogEntry: agentLogService.appendAgentChatLogEntry
   });
 
+  registerScheduledTaskIpc({
+    ipcMain,
+    scheduledTaskService: scheduledTasks,
+    cleanText
+  });
+
   registerSystemIpc({
     ipcMain,
     shell,
@@ -263,6 +286,7 @@ function createMainServices(context = {}) {
     setCodexCliModel,
     setCodexCliReasoningEffort,
     requestCodexCliText,
+    getCodexDesktopMcpSetupPrompt: codex.getCodexDesktopMcpSetupPrompt,
     directLlmRegistry: agents.directLlmRegistry,
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
     writeSavedTelegramToken: telegram.writeSavedTelegramToken,
@@ -310,11 +334,13 @@ function createMainServices(context = {}) {
         throw error;
       }
     });
+    await bestEffort('scheduled-tasks', () => scheduledTasks.start());
   }
 
   // Reverse start order; each failure is logged without blocking the rest.
   async function shutdown() {
     const stops = [
+      ['scheduled-tasks', () => scheduledTasks.stop()],
       ['mcp', () => mcp.stop()],
       ['telegram', () => telegram.stopTelegramBot('app quit')],
       ['npm-updater', () => npmUpdater.stop()],

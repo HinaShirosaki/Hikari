@@ -41,6 +41,14 @@ const {
   callPlotlyGraph
 } = require('./plotly-graph.js');
 const {
+  SEQUENCE_VIEWER_MCP_TOOL,
+  callSequenceViewer
+} = require('./sequence-viewer.js');
+const {
+  SEQUENCE_EDIT_MCP_TOOL,
+  callSequenceEdit
+} = require('./sequence-edit.js');
+const {
   LITERATURE_SEARCH_MCP_TOOL,
   callLiteratureSearch
 } = require('./literature-search.js');
@@ -113,6 +121,14 @@ const DIRECT_MCP_TOOLS = Object.freeze([
   {
     definition: PLOTLY_GRAPH_MCP_TOOL,
     handler: callPlotlyGraph
+  },
+  {
+    definition: SEQUENCE_VIEWER_MCP_TOOL,
+    handler: callSequenceViewer
+  },
+  {
+    definition: SEQUENCE_EDIT_MCP_TOOL,
+    handler: callSequenceEdit
   },
   {
     definition: ASK_USER_MCP_TOOL,

@@ -203,7 +203,7 @@ export function createLaneTableController({ runtime, elements, safeText, deps = 
     const layout = resolveLaneLayout(runtime);
     const overrides = normalizeManualOverrides(runtime.manualOverrides);
     if (!layout || !hasDividerLayout(overrides)) {
-      deps.setStatus?.('Set left and right borders, finish dividers, and keep the gel visible before adding the table.');
+      deps.setStatus?.('Set and finish the lane dividers, then keep the gel visible before adding the table.');
       return;
     }
     updateRows((rows) => {

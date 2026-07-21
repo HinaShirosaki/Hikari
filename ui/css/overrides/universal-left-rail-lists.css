@@ -13,6 +13,18 @@ body.theme-night {
   --hikari-left-rail-list-focus: color-mix(in srgb, var(--theme-focus) 28%, transparent);
 }
 
+/* One glyph for every folder/project group that appears in a left rail. */
+.left-rail-template__rail .left-rail-folder-glyph {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  display: block;
+  background: currentColor;
+  opacity: 0.74;
+  -webkit-mask: url("../../../assets/icons/folder-2-svgrepo-com.svg") center / contain no-repeat;
+  mask: url("../../../assets/icons/folder-2-svgrepo-com.svg") center / contain no-repeat;
+}
+
 .left-rail-template__rail :is(
   .papers-folder-item,
   .papers-paper-row,
@@ -26,7 +38,6 @@ body.theme-night {
   .workflow-card,
   .workflow-template-name-item,
   .sequence-viewer-library-item,
-  .inventory-container-btn,
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ) {
@@ -48,7 +59,6 @@ body.theme-night {
   .workflow-card,
   .workflow-template-name-item,
   .sequence-viewer-library-item,
-  .inventory-container-btn,
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ):hover,
@@ -65,7 +75,6 @@ body.theme-night {
   .workflow-card,
   .workflow-template-name-item,
   .sequence-viewer-library-item,
-  .inventory-container-btn,
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ):focus-visible {
@@ -86,7 +95,6 @@ body.theme-night {
   .protocol-list-row.list-row-selected,
   .workflow-template-name-item.is-active,
   .sequence-viewer-library-item-active,
-  .inventory-container-btn.active,
   .assay-browser-item.is-active,
   .list-row-selected
 ) {
@@ -109,7 +117,6 @@ body.theme-night {
   .workflow-card,
   .workflow-template-name-item,
   .sequence-viewer-library-item,
-  .inventory-container-btn,
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ):focus-visible {
@@ -129,7 +136,6 @@ body.theme-night {
   .workflow-card h3,
   .workflow-template-name-item,
   .sequence-viewer-library-item-name,
-  .inventory-container-name,
   .assay-browser-item-title,
   .text-list-btn
 ) {
@@ -148,7 +154,6 @@ body.theme-night {
   .protocol-list-row.list-row-selected .protocol-name-text,
   .workflow-template-name-item.is-active,
   .sequence-viewer-library-item-active .sequence-viewer-library-item-name,
-  .inventory-container-btn.active .inventory-container-name,
   .assay-browser-item.is-active .assay-browser-item-title,
   .list-row-selected .text-list-btn
 ) {
@@ -162,8 +167,7 @@ body.theme-night {
   .tool-tile .label,
   .agent-session-folder-row,
   .agent-session-card,
-  .settings-nav-item,
-  .inventory-container-btn
+  .settings-nav-item
 ) {
   transform: none !important;
 }
@@ -180,7 +184,6 @@ body.theme-night {
   .protocol-list-row,
   .workflow-template-name-item,
   .sequence-viewer-library-item,
-  .inventory-container-btn,
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ) {
@@ -279,13 +282,4 @@ body.theme-night {
 /* Protocol rows use full-width dividers; keep their active fill square. */
 #protocol-management-view .left-rail-template__rail .protocol-list-row {
   border-radius: 0 !important;
-}
-
-/* Tool rows use full-width dividers; round only the selected highlight. */
-#tool-box-view .left-rail-template__rail .tool-tile .label {
-  border-radius: 0 !important;
-}
-
-#tool-box-view .left-rail-template__rail .tool-tile-active .label {
-  border-radius: var(--hikari-left-rail-list-radius) !important;
 }

@@ -36,6 +36,7 @@ function startMainApp() {
     closeResponseTimer = null;
     mainWindow = createMainWindow({
       BrowserWindow,
+      shell,
       path,
       projectRoot: PROJECT_ROOT,
       appIconPath: mainServices.appIconPath,

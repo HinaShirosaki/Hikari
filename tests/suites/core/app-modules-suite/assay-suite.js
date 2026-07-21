@@ -206,6 +206,21 @@ test('assay agent TSV formatter preserves object-row cells', () => {
   assert.doesNotMatch(source, /const source = Array\.isArray\(row\) \? row : \{\};/);
 });
 
+test('assay treats loading a saved plate as a clean setup and results baseline', () => {
+  const source = fs.readFileSync(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'index.js'
+  ), 'utf8');
+
+  assert.match(source, /function markLoadedAssayDraftsSaved\(\)\s*\{\s*markCreateDraftSaved\(\);\s*markResultsDraftSaved\(\);\s*\}/s);
+  assert.match(source, /function loadAssayForResults\([\s\S]*?markLoadedAssayDraftsSaved\(\);[\s\S]*?notifyActiveAssayChanged\(\);\s*\}/);
+  assert.match(source, /function editAssay\([\s\S]*?markLoadedAssayDraftsSaved\(\);[\s\S]*?notifyActiveAssayChanged\(\);\s*\}/);
+});
+
 test('assay analysis accepts agent Plotly graph artifacts for workspace rendering', () => {
   const analysisViewModule = loadEsmStyleModule(path.join(
     __dirname,

@@ -17,6 +17,12 @@ const {
 const {
   createCodexWorkspaceInitializer
 } = require('./create-codex-workspace-initializer.js');
+const {
+  buildHikariCodexDesktopMcpSetupPrompt
+} = require('../../agent/codex-agent/desktop-mcp-prompt.js');
+const {
+  CODEX_CONFIG_FILE
+} = require('../../lib/codex-cli-provider/constants.js');
 
 function ensurePlainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -168,6 +174,55 @@ function createMainCodexService({
       envOverrides: input.envOverrides
     });
     return requestCodexCliText(input);
+  }
+
+  async function runScheduledTask(task = {}) {
+    const project = ensurePlainObject(task.project);
+    const execution = ensurePlainObject(task.execution);
+    const projectName = cleanText(project.name, 320);
+    const dataFilePath = cleanText(project.data_file_path, 2400);
+    const storagePath = cleanText(project.storage_path, 2400)
+      || (dataFilePath ? path.dirname(path.resolve(dataFilePath)) : '');
+    const cwd = cleanText(project.cwd, 2400)
+      || (storagePath && projectName
+        ? path.join(
+          storagePath,
+          'Project',
+          sanitizeProjectMemoryFolderName(projectName, 'Untitled_Project')
+        )
+        : '');
+    const snapshot = {
+      settings: {
+        ...(storagePath
+          ? { storagePath }
+          : {})
+      },
+      projects: project.id || project.name
+        ? [{
+          ...(cleanText(project.id, 220) ? { id: cleanText(project.id, 220) } : {}),
+          name: projectName || 'Untitled Project'
+        }]
+        : [],
+      ...(dataFilePath
+        ? { data_file_path: dataFilePath }
+        : {})
+    };
+    return codexAgentRuntime.run({
+      message: cleanText(task.prompt, 120000),
+      model: cleanText(execution.model, 120),
+      reasoningEffort: cleanText(execution.reasoning_effort, 40),
+      enableWebSearch: execution.enable_web_search !== false,
+      timeoutMs: execution.timeout_ms,
+      cwd,
+      projectId: cleanText(project.id, 220),
+      projectName,
+      dataFilePath,
+      fallbackDataFilePath: dataFilePath,
+      snapshot,
+      traceContext: {
+        requestId: `scheduled-task:${cleanText(task.id, 160)}`
+      }
+    });
   }
 
   async function runSubAgentTurn(turnInput = {}) {
@@ -338,12 +393,51 @@ function createMainCodexService({
     return workspaceInitializer.initialize(input);
   }
 
+  async function getCodexDesktopMcpSetupPrompt(input = {}) {
+    const storagePath = cleanText(input.storagePath, 2400);
+    const dataFilePath = cleanText(
+      input.dataFilePath || (storagePath ? '' : getDefaultDataFilePath()),
+      2400
+    );
+    const initialization = await workspaceInitializer.initialize({
+      cwd: getCodexCliWorkingDirectory(),
+      dataFilePath,
+      fallbackDataFilePath: dataFilePath,
+      snapshot: {
+        settings: {
+          ...(storagePath ? { storagePath } : {})
+        },
+        ...(dataFilePath ? { data_file_path: dataFilePath } : {})
+      }
+    });
+    const runtimeHome = cleanText(
+      initialization?.runtime_home || processObject.env.HIKARI_CODEX_HOME,
+      2400
+    );
+    const managedConfigPath = runtimeHome ? path.join(runtimeHome, CODEX_CONFIG_FILE) : '';
+    const prompt = buildHikariCodexDesktopMcpSetupPrompt({ managedConfigPath });
+    if (!prompt) {
+      return {
+        ok: false,
+        error: 'Hikari could not prepare its live Codex MCP configuration.'
+      };
+    }
+    return {
+      ok: true,
+      prompt,
+      managedConfigPath,
+      requiresRestart: true
+    };
+  }
+
   return {
     codexAgentRuntime,
+    getCodexDesktopMcpSetupPrompt,
     getLastInitialization: workspaceInitializer.getLastResult,
     initialize,
     prepareProjectWorkspace,
     requestCodexAgentText,
+    runScheduledTask,
     runSubAgentTurn,
     runtimeHome: processObject.env.HIKARI_CODEX_HOME
   };

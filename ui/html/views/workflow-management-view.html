@@ -5,7 +5,7 @@
             <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
               <button type="button" id="workflow-entry-view-btn" class="primary-btn">Workflow Board</button>
               <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Template Editor</button>
-              <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Board</button>
+              <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>&larr; Back to Home</button>
             </div>
           </div>
 
@@ -38,6 +38,36 @@
           <div class="workflow-template-list-panel app-left-rail-section" hidden>
             <h3>Saved Templates</h3>
             <div id="workflow-template-list" class="workflow-list app-left-rail-list"></div>
+          </div>
+
+          <div class="workflow-block-composer-panel app-left-rail-section" hidden>
+            <h3>Add Blocks</h3>
+            <div class="form-grid workflow-grid workflow-block-grid">
+              <label>
+                Block Type
+                <select id="workflow-block-type">
+                  <option value="protocol">Protocol</option>
+                  <option value="text">Plain Text</option>
+                </select>
+              </label>
+              <label id="workflow-block-protocol-search-field">
+                Search Protocol
+                <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." />
+              </label>
+              <label id="workflow-block-protocol-field">
+                Protocol
+                <select id="workflow-block-protocol">
+                  <option value="">Select protocol</option>
+                </select>
+              </label>
+              <label id="workflow-block-text-field" hidden>
+                Plain Text
+                <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
+              </label>
+              <div class="form-actions workflow-inline-actions">
+                <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
+              </div>
+            </div>
           </div>
 
           <div class="workflow-editor-panel workflow-sidebar-editor-panel app-left-rail-section" hidden>
@@ -74,9 +104,7 @@
           <div class="panel workflow-list-panel" hidden>
             <div class="workflow-execution-header">
               <div class="workflow-execution-copy">
-                <p class="small-note">Template Workflows</p>
                 <h3 id="workflow-execution-title">Select a workflow template</h3>
-                <p id="workflow-execution-status" class="small-note">Choose a template on the left to manage the workflows created from it.</p>
               </div>
               <div class="workflow-execution-actions">
                 <button type="button" id="workflow-add-run-btn" class="primary-btn">Add Workflow</button>
@@ -85,40 +113,8 @@
             </div>
             <div id="workflow-execution-board" class="workflow-execution-board"></div>
           </div>
-
-          <div class="panel workflow-editor-panel workflow-main-editor-panel" hidden>
-            <h3>Add Blocks</h3>
-            <div class="form-grid workflow-grid workflow-block-grid">
-              <label>
-                Block Type
-                <select id="workflow-block-type">
-                  <option value="protocol">Protocol</option>
-                  <option value="text">Plain Text</option>
-                </select>
-              </label>
-              <label id="workflow-block-protocol-search-field">
-                Search Protocol
-                <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." />
-              </label>
-              <label id="workflow-block-protocol-field">
-                Protocol
-                <select id="workflow-block-protocol">
-                  <option value="">Select protocol</option>
-                </select>
-              </label>
-              <label id="workflow-block-text-field" hidden>
-                Plain Text
-                <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
-              </label>
-              <div class="form-actions workflow-inline-actions">
-                <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
-              </div>
-            </div>
-          </div>
-
           <div class="panel workflow-editor-panel workflow-main-editor-panel" hidden>
             <h3>Graph Editor</h3>
-            <p class="small-note">Drag blocks to arrange. Hover the top-left corner of a block to delete it. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
             <div id="workflow-graph-canvas" class="workflow-graph-canvas">
               <div id="workflow-graph-board" class="workflow-graph-board">
                 <svg id="workflow-graph-svg" class="workflow-graph-svg" aria-hidden="true"></svg>

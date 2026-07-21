@@ -9,15 +9,10 @@ export function deleteContainer(ctx, section, id) {
     return false;
   }
 
-  const idsToDelete = new Set([
-    String(id),
-    ...(ctx.helpers?.getContainerDescendantIds?.(section, id) || [])
-  ]);
-
-  state.inventory[section] = containers.filter((item) => !idsToDelete.has(String(item?.id || '')));
+  state.inventory[section] = containers.filter((item) => String(item?.id || '') !== String(id));
   state.samples = (state.samples || []).map((sample) => {
     const link = sample.inventoryLink;
-    if (!link || link.section !== section || !idsToDelete.has(String(link.containerId || ''))) {
+    if (!link || link.section !== section || String(link.containerId || '') !== String(id)) {
       return sample;
     }
     return { ...sample, inventoryLink: null, updatedAt: new Date().toISOString() };
@@ -26,7 +21,7 @@ export function deleteContainer(ctx, section, id) {
   if (
     uiState.selectedContainer
     && uiState.selectedContainer.section === section
-    && idsToDelete.has(String(uiState.selectedContainer.containerId || ''))
+    && String(uiState.selectedContainer.containerId || '') === String(id)
   ) {
     uiState.selectedContainer = null;
     uiState.editingWellIndex = -1;

@@ -5,6 +5,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    Local-first app: everything is bundled, so nothing loads over the network.
+    'wasm-unsafe-eval' is for the onnxruntime colony-counter model; 'unsafe-inline'
+    on style-src covers the <style> blocks the print and sequence-preview documents
+    build at runtime. blob: covers generated PDFs (print iframe + viewer popup).
+  -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'wasm-unsafe-eval';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob:;
+    font-src 'self' data:;
+    connect-src 'self' data: blob:;
+    frame-src 'self' blob:;
+    object-src 'none';
+    base-uri 'none';
+    form-action 'none';
+  " />
   <title>Hikari</title>
   <link rel="icon" type="image/png" href="./assets/icon.png" />
   <link rel="stylesheet" href="styles.css" />
@@ -744,10 +762,7 @@
                 <label>Formula Weight <input id="biology-notebook-tool-mass-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
                 <label>Volume <input id="biology-notebook-tool-mass-volume" type="number" min="0" step="0.000001" placeholder="100" /></label>
                 <select id="biology-notebook-tool-mass-volume-unit">
-                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
-                </select>
-                <select id="biology-notebook-tool-mass-output-unit">
-                  <option value="ug">ug</option><option value="mg" selected>mg</option><option value="g">g</option>
+                  <option value="nL">nL</option><option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
                 </select>
               </div>
 
@@ -761,9 +776,6 @@
                 <select id="biology-notebook-tool-volume-concentration-unit">
                   <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
                 </select>
-                <select id="biology-notebook-tool-volume-output-unit">
-                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
-                </select>
               </div>
 
               <div id="biology-notebook-tool-molarity-concentration" class="biology-notebook-tool-mode" hidden>
@@ -774,10 +786,7 @@
                 <label>Formula Weight <input id="biology-notebook-tool-concentration-mw" type="number" min="0" step="0.000001" placeholder="58.44" /></label>
                 <label>Volume <input id="biology-notebook-tool-concentration-volume" type="number" min="0" step="0.000001" placeholder="1" /></label>
                 <select id="biology-notebook-tool-concentration-volume-unit">
-                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
-                </select>
-                <select id="biology-notebook-tool-concentration-output-unit">
-                  <option value="uM">uM</option><option value="mM" selected>mM</option><option value="M">M</option><option value="nM">nM</option>
+                  <option value="nL">nL</option><option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
                 </select>
               </div>
 
@@ -792,10 +801,7 @@
                 </select>
                 <label>Final Volume <input id="biology-notebook-tool-dilution-volume" type="number" min="0" step="0.000001" placeholder="1" /></label>
                 <select id="biology-notebook-tool-dilution-volume-unit">
-                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
-                </select>
-                <select id="biology-notebook-tool-dilution-output-unit">
-                  <option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
+                  <option value="nL">nL</option><option value="uL">uL</option><option value="mL" selected>mL</option><option value="L">L</option>
                 </select>
               </div>
             </section>
@@ -1055,7 +1061,10 @@
       <div class="personal-inventory-layout left-rail-template">
         <aside class="inventory-rail-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="inventory-rail-pinned left-rail-template__pinned">
-            <button id="inventory-add-container-btn" type="button" class="primary-btn" aria-controls="inventory-add-container-overlay" aria-expanded="false">Add Container</button>
+            <div class="inventory-rail-create-actions">
+              <button id="inventory-add-container-btn" type="button" class="primary-btn" aria-controls="inventory-add-container-overlay" aria-expanded="false">Add Container</button>
+              <button id="inventory-add-folder-btn" type="button" class="ghost-btn" aria-controls="inventory-add-container-overlay" aria-expanded="false">New Folder</button>
+            </div>
           </div>
           <div class="inventory-rail-scroll left-rail-template__scroll">
             <div class="inventory-rail-stack app-left-rail-section">
@@ -1082,12 +1091,12 @@
           <div class="app-dialog-head inventory-add-container-head">
             <div>
               <h3 id="inventory-add-container-title">Add Container</h3>
-              <p id="inventory-add-container-note" class="small-note">Create a storage box, plate, tube, or custom grid.</p>
+              <p id="inventory-add-container-note" class="small-note" hidden></p>
             </div>
             <button id="inventory-add-container-close" type="button" class="app-dialog-close-btn" aria-label="Close add container dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <label>
-            Container Name
+            <span id="inventory-add-item-name-label">Container Name</span>
             <input id="inventory-add-container-name" placeholder="e.g. Box A" required />
           </label>
           <label>
@@ -1096,7 +1105,7 @@
               <option value="">Select location</option>
             </select>
           </label>
-          <label>
+          <label id="inventory-add-container-type-field">
             Type
             <select id="inventory-add-container-type">
               <option value="box81">81-well cube box</option>
@@ -1117,7 +1126,7 @@
             <p class="small-note inventory-custom-grid-note">Custom grid boxes reuse the same visual style as the 81-well box.</p>
           </div>
           <div class="form-actions">
-            <button type="submit" class="primary-btn">Save Container</button>
+            <button id="inventory-add-container-submit" type="submit" class="primary-btn">Save Container</button>
             <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
           </div>
         </form>
@@ -1271,23 +1280,17 @@
 <!-- SOURCE: ui/html/views/assay-view.html -->
 <section id="assay-view" class="view">
       <div class="assay-create-layout left-rail-template">
-        <div class="assay-mode-create-panel assay-create-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <details id="assay-browser-panel" class="assay-browser-panel">
-            <summary class="assay-browser-summary">
-              <span>Existing Assays</span>
-              <span id="assay-browser-count" class="small-note">0</span>
-            </summary>
-            <div class="assay-browser-body">
-              <label>
-                Search Assays
-                <input id="assay-search" placeholder="Search assay plates, projects, or notes" />
-              </label>
-              <div id="assay-list" class="assay-browser-list"></div>
-            </div>
-          </details>
-          <form id="assay-form" class="form-grid assay-form-grid">
+        <div class="assay-mode-create-panel assay-create-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <form id="assay-form" class="form-grid assay-form-grid assay-create-sidebar-pinned left-rail-template__pinned">
             <input type="hidden" id="assay-id" />
             <div class="form-actions assay-form-actions" aria-label="Assay actions">
+              <button type="button" id="assay-new-btn" class="ghost-btn assay-form-icon-btn" aria-label="Create new assay" title="Create new assay">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 5v14"></path>
+                  <path d="M5 12h14"></path>
+                </svg>
+                <span class="sr-only">Create new assay</span>
+              </button>
               <button type="button" id="assay-export-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Export CSV template" title="Export CSV template">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M12 4v12"></path>
@@ -1377,6 +1380,21 @@
             <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
             <div id="assay-csv-status" class="small-note assay-form-note"></div>
           </form>
+          <div class="assay-create-sidebar-scroll left-rail-template__scroll">
+            <details id="assay-browser-panel" class="assay-browser-panel">
+              <summary class="assay-browser-summary">
+                <span>Existing Assays</span>
+                <span id="assay-browser-count" class="small-note">0</span>
+              </summary>
+              <div class="assay-browser-body">
+                <label>
+                  Search Assays
+                  <input id="assay-search" placeholder="Search assay plates, projects, or notes" />
+                </label>
+                <div id="assay-list" class="assay-browser-list"></div>
+              </div>
+            </details>
+          </div>
         </div>
 
         <div class="panel assay-mode-create-panel assay-create-preview-panel left-rail-template__main">
@@ -1385,25 +1403,6 @@
               <button type="button" id="assay-plate-field-sample-btn" class="ghost-btn calendar-view-active">Edit Sample ID</button>
               <button type="button" id="assay-plate-field-concentration-btn" class="ghost-btn" aria-label="Edit Concentration">Edit Conc.</button>
             </div>
-            <label class="assay-conc-unit-field">
-              Conc. unit
-              <input
-                type="text"
-                id="assay-concentration-unit"
-                class="assay-conc-unit-input"
-                list="assay-concentration-unit-options"
-                placeholder="e.g. nM"
-                autocomplete="off"
-              />
-              <datalist id="assay-concentration-unit-options">
-                <option value="fM"></option>
-                <option value="pM"></option>
-                <option value="nM"></option>
-                <option value="µM"></option>
-                <option value="mM"></option>
-                <option value="M"></option>
-              </datalist>
-            </label>
             <label class="assay-conc-unit-field">
               Fill
               <select id="assay-fill-mode" class="assay-fill-mode-select">
@@ -1647,16 +1646,22 @@
               <div class="panel gel-viewer-panel">
                 <h3>Gel Viewer</h3>
                 <div class="gel-viewer-toolbar" role="toolbar" aria-label="Gel viewer tools">
-                  <button type="button" id="gel-start-crop-btn" class="ghost-btn">Start Crop</button>
-                  <button type="button" id="gel-cancel-crop-btn" class="ghost-btn" disabled>Cancel Crop</button>
+                  <button type="button" id="gel-crop-mode-btn" class="ghost-btn gel-viewer-icon-btn gel-crop-mode-btn" aria-label="Start crop" title="Start crop" aria-pressed="false">
+                    <svg class="gel-viewer-button-icon gel-crop-mode-icon gel-crop-mode-icon--start" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <path d="M6 3v13a2 2 0 0 0 2 2h13"></path>
+                      <path d="M18 21V8a2 2 0 0 0-2-2H3"></path>
+                    </svg>
+                    <svg class="gel-viewer-button-icon gel-crop-mode-icon gel-crop-mode-icon--cancel" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <path d="m7 7 10 10"></path>
+                      <path d="M17 7 7 17"></path>
+                    </svg>
+                  </button>
+                  <button type="button" id="gel-apply-crop-btn" class="ghost-btn gel-viewer-icon-btn" aria-label="Apply crop" title="Apply crop" disabled hidden>
+                    <svg class="gel-viewer-button-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                      <path d="m5 12 4 4L19 6"></path>
+                    </svg>
+                  </button>
                   <button type="button" id="gel-reset-crop-btn" class="ghost-btn">Reset to Full Image</button>
-                  <div class="gel-rotate-control" role="group" aria-label="Free rotate gel image">
-                    <label for="gel-rotate-angle-range" class="small-note">Angle</label>
-                    <input id="gel-rotate-angle-range" class="gel-rotate-angle-range" type="range" min="-180" max="180" step="0.1" value="0" disabled />
-                    <input id="gel-rotate-angle-input" class="gel-rotate-angle-input" type="number" min="-180" max="180" step="0.1" value="0" disabled aria-label="Rotation angle in degrees" />
-                    <span class="small-note" aria-hidden="true">deg</span>
-                    <button type="button" id="gel-reset-rotation-btn" class="ghost-btn" disabled title="Reset rotation">Reset</button>
-                  </div>
                   <button type="button" id="gel-process-image-btn" class="ghost-btn">Process Image</button>
                   <button type="button" id="gel-view-original-btn" class="ghost-btn" aria-pressed="true">View Original</button>
                 </div>
@@ -1679,9 +1684,7 @@
                     <details class="gel-tool-group" open>
                       <summary>Lane</summary>
                       <div class="gel-tool-actions">
-                        <button type="button" id="gel-tool-left-border-btn" class="ghost-btn">Set left border</button>
-                        <button type="button" id="gel-tool-right-border-btn" class="ghost-btn">Set right border</button>
-                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn">Set dividers</button>
+                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" title="Outermost dividers define the gel edges">Set lane dividers</button>
                         <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
                         <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Adjust lane vertices</button>
                         <label class="small-note gel-lane-count-control">
@@ -1928,7 +1931,6 @@
             <section class="left-rail-template__section">
               <div class="settings-head">
                 <h2>Settings</h2>
-                <p class="small-note">Workspace appearance, storage, startup, and model configuration.</p>
               </div>
             </section>
 
@@ -1981,10 +1983,9 @@
             <section class="settings-section" data-settings-panel="appearance">
               <div class="settings-section-head">
                 <h3>Appearance</h3>
-                <p class="small-note">Keep the workspace legible and consistent.</p>
               </div>
               <form id="appearance-form" class="stack-form">
-                <label>
+                <label class="settings-choice-field settings-choice-field--short">
                   Font Size
                   <select id="setting-font-size">
                     <option value="14">Small</option>
@@ -1992,7 +1993,7 @@
                     <option value="18">Large</option>
                   </select>
                 </label>
-                <label>
+                <label class="settings-choice-field settings-choice-field--medium">
                   Theme
                   <select id="setting-mode">
                     <option value="day">Day</option>
@@ -2009,15 +2010,12 @@
             <section class="settings-section" data-settings-panel="storage" hidden>
               <div class="settings-section-head">
                 <h3>Storage</h3>
-                <p class="small-note">Pick the root folder for imported lab data and linked notebook content.</p>
               </div>
               <form id="storage-form" class="stack-form">
                 <label>
                   Root Folder Path
                   <input id="setting-storage-path" placeholder="/path/to/storage-root" readonly />
                 </label>
-                <p class="small-note">Notebook pages will reference individual folders under this path.</p>
-                <p id="setting-storage-import-status" class="small-note">Storage import: not started.</p>
                 <div class="form-actions">
                   <button type="button" id="select-storage-path-btn" class="ghost-btn">Select Folder</button>
                   <button type="submit" class="primary-btn">Save Storage Path</button>
@@ -2028,7 +2026,6 @@
             <section class="settings-section" data-settings-panel="startup" hidden>
               <div class="settings-section-head">
                 <h3>Startup</h3>
-                <p class="small-note">Control which module opens first when the workspace launches.</p>
               </div>
               <form id="startup-form" class="stack-form">
                 <label>
@@ -2049,11 +2046,10 @@
                     <option value="setting-view">Settings</option>
                   </select>
                 </label>
-                <label class="inline-row">
+                <label class="inline-row settings-toggle-row">
                   <input id="setting-startup-remember-last-view" type="checkbox" />
-                  Remember last opened module on launch
+                  <span>Remember last opened module on launch</span>
                 </label>
-                <p class="small-note">If enabled, “Remember last opened module” overrides the default startup module.</p>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn">Save Startup Settings</button>
                 </div>
@@ -2063,7 +2059,6 @@
             <section class="settings-section" data-settings-panel="locations" hidden>
               <div class="settings-section-head">
                 <h3>Inventory Locations</h3>
-                <p class="small-note">Keep the storage vocabulary consistent across samples and chemicals.</p>
               </div>
               <div class="stack-form">
                 <div class="inline-row settings-location-entry">
@@ -2077,7 +2072,6 @@
             <section class="settings-section" data-settings-panel="sample-inventory" hidden>
               <div class="settings-section-head">
                 <h3>Sample &amp; Inventory</h3>
-                <p class="small-note">Configure sample storage sections and the visible names for sample types.</p>
               </div>
               <div class="stack-form">
                 <div class="settings-subsection">
@@ -2090,7 +2084,11 @@
                 </div>
                 <form id="sample-type-labels-form" class="stack-form settings-subsection">
                   <h4>Sample Type Names</h4>
-                  <div id="setting-sample-type-label-list" class="settings-sample-type-label-list"></div>
+                  <div class="inline-row settings-sample-type-add">
+                    <input id="setting-sample-type-add-input" placeholder="Add sample type" aria-label="Add sample type" />
+                    <button type="button" id="setting-sample-type-add-btn" class="ghost-btn">Add Type</button>
+                  </div>
+                  <ul id="setting-sample-type-label-list" class="settings-sample-type-label-list"></ul>
                   <div class="form-actions">
                     <button type="submit" class="primary-btn">Save Type Names</button>
                   </div>
@@ -2101,7 +2099,6 @@
             <section class="settings-section" data-settings-panel="preferred-journal" hidden>
               <div class="settings-section-head">
                 <h3>Preferred Journals</h3>
-                <p class="small-note">Set the journals you most often submit to or browse. Enter journal names (e.g. <em>Nature Chemistry</em>) or URLs (e.g. <em>https://www.nature.com/nchem/</em>).</p>
               </div>
               <form id="preferred-journal-form" class="stack-form">
                 <label>
@@ -2119,7 +2116,6 @@
             <section class="settings-section" data-settings-panel="llm" hidden>
               <div class="settings-section-head">
                 <h3>Codex Model &amp; Access</h3>
-                <p class="small-note">Choose the Codex model used by assistant features.</p>
               </div>
               <form id="llm-form" class="stack-form">
                 <label>
@@ -2127,7 +2123,7 @@
                   <input id="setting-model" list="setting-model-options" placeholder="optional, e.g. gpt-5.4" />
                 </label>
                 <datalist id="setting-model-options"></datalist>
-                <label>
+                <label class="settings-choice-field settings-choice-field--medium">
                   Reasoning Effort
                   <select id="setting-reasoning-effort"></select>
                 </label>
@@ -2139,9 +2135,18 @@
                     <button type="button" id="clear-codex-login-btn" class="ghost-btn">Clear Saved Login</button>
                   </div>
                 </div>
-                <label class="inline-row">
+                <div class="settings-subsection settings-codex-desktop-mcp">
+                  <h4>Connect Codex Desktop to Hikari</h4>
+                  <p class="small-note">Copy this setup prompt into a Codex Desktop task. It merges Hikari's live MCP connection into your Codex user configuration without replacing other settings.</p>
+                  <div class="form-actions settings-codex-desktop-mcp-actions">
+                    <button type="button" id="copy-codex-desktop-mcp-prompt-btn" class="ghost-btn">Copy Setup Prompt</button>
+                    <span id="setting-codex-desktop-mcp-status" class="small-note" aria-live="polite"></span>
+                  </div>
+                  <p class="small-note">Keep Hikari open. Codex Desktop will need one restart after installing the connection.</p>
+                </div>
+                <label class="inline-row settings-toggle-row">
                   <input id="setting-agent-developer-mode" type="checkbox" />
-                  Agent Developer Mode (record redacted LLM request/response traces)
+                  <span>Agent Developer Mode (record redacted LLM request/response traces)</span>
                 </label>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn">Save LLM Settings</button>
@@ -2152,14 +2157,12 @@
           <section class="settings-section" data-settings-panel="skills" hidden>
             <div class="settings-section-head">
               <h3>External Skills</h3>
-              <p class="small-note">View discovered skill files and control which ones the agent may use.</p>
             </div>
             <div class="stack-form">
-              <label class="inline-row settings-switch-row">
+              <label class="inline-row settings-toggle-row settings-switch-row">
                 <input id="setting-agent-external-skills-enabled" type="checkbox" />
-                External skills enabled
+                <span>External skills enabled</span>
               </label>
-              <p id="setting-external-skills-status" class="small-note">External skills: loading...</p>
               <div class="form-actions">
                 <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn">Refresh Skills</button>
               </div>
@@ -2170,7 +2173,6 @@
           <section class="settings-section" data-settings-panel="plugins" hidden>
             <div class="settings-section-head">
               <h3>Plugins</h3>
-              <p class="small-note">Add a plugin folder containing index.html (plus its own JS and CSS). Enabled plugins appear in app navigation after a reload.</p>
             </div>
             <div class="stack-form">
               <div class="form-actions">
@@ -2185,15 +2187,12 @@
           <section class="settings-section" data-settings-panel="telegram" hidden>
             <div class="settings-section-head">
               <h3>Telegram Bot</h3>
-              <p class="small-note">Store a token for Telegram automation and status reporting.</p>
             </div>
             <form id="telegram-form" class="stack-form">
               <label>
                 Bot Token
                 <input id="setting-telegram-token" type="password" placeholder="123456:ABCDEF..." />
               </label>
-              <p class="small-note">Enter token to store it in app settings. Clearing saved token falls back to env token if available.</p>
-              <p id="setting-telegram-status" class="small-note">Telegram bot status: loading...</p>
               <div class="form-actions">
                 <button type="submit" class="primary-btn">Save Telegram Token</button>
                 <button type="button" id="clear-telegram-token-btn" class="ghost-btn">Clear Saved Token</button>
@@ -2212,7 +2211,7 @@
             <div id="workflow-entry-panel" class="workflow-entry-panel app-left-rail-section">
               <button type="button" id="workflow-entry-view-btn" class="primary-btn">Workflow Board</button>
               <button type="button" id="workflow-entry-template-btn" class="ghost-btn">Template Editor</button>
-              <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>Back to Board</button>
+              <button type="button" id="workflow-entry-back-btn" class="ghost-btn" hidden>&larr; Back to Home</button>
             </div>
           </div>
 
@@ -2245,6 +2244,36 @@
           <div class="workflow-template-list-panel app-left-rail-section" hidden>
             <h3>Saved Templates</h3>
             <div id="workflow-template-list" class="workflow-list app-left-rail-list"></div>
+          </div>
+
+          <div class="workflow-block-composer-panel app-left-rail-section" hidden>
+            <h3>Add Blocks</h3>
+            <div class="form-grid workflow-grid workflow-block-grid">
+              <label>
+                Block Type
+                <select id="workflow-block-type">
+                  <option value="protocol">Protocol</option>
+                  <option value="text">Plain Text</option>
+                </select>
+              </label>
+              <label id="workflow-block-protocol-search-field">
+                Search Protocol
+                <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." />
+              </label>
+              <label id="workflow-block-protocol-field">
+                Protocol
+                <select id="workflow-block-protocol">
+                  <option value="">Select protocol</option>
+                </select>
+              </label>
+              <label id="workflow-block-text-field" hidden>
+                Plain Text
+                <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
+              </label>
+              <div class="form-actions workflow-inline-actions">
+                <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
+              </div>
+            </div>
           </div>
 
           <div class="workflow-editor-panel workflow-sidebar-editor-panel app-left-rail-section" hidden>
@@ -2281,9 +2310,7 @@
           <div class="panel workflow-list-panel" hidden>
             <div class="workflow-execution-header">
               <div class="workflow-execution-copy">
-                <p class="small-note">Template Workflows</p>
                 <h3 id="workflow-execution-title">Select a workflow template</h3>
-                <p id="workflow-execution-status" class="small-note">Choose a template on the left to manage the workflows created from it.</p>
               </div>
               <div class="workflow-execution-actions">
                 <button type="button" id="workflow-add-run-btn" class="primary-btn">Add Workflow</button>
@@ -2292,40 +2319,8 @@
             </div>
             <div id="workflow-execution-board" class="workflow-execution-board"></div>
           </div>
-
-          <div class="panel workflow-editor-panel workflow-main-editor-panel" hidden>
-            <h3>Add Blocks</h3>
-            <div class="form-grid workflow-grid workflow-block-grid">
-              <label>
-                Block Type
-                <select id="workflow-block-type">
-                  <option value="protocol">Protocol</option>
-                  <option value="text">Plain Text</option>
-                </select>
-              </label>
-              <label id="workflow-block-protocol-search-field">
-                Search Protocol
-                <input id="workflow-block-protocol-search" type="search" placeholder="Search protocols..." />
-              </label>
-              <label id="workflow-block-protocol-field">
-                Protocol
-                <select id="workflow-block-protocol">
-                  <option value="">Select protocol</option>
-                </select>
-              </label>
-              <label id="workflow-block-text-field" hidden>
-                Plain Text
-                <input id="workflow-block-text" placeholder="e.g. Incubate at room temperature for 10 minutes" />
-              </label>
-              <div class="form-actions workflow-inline-actions">
-                <button type="button" id="workflow-block-add-btn" class="ghost-btn">Add Protocol Block</button>
-              </div>
-            </div>
-          </div>
-
           <div class="panel workflow-editor-panel workflow-main-editor-panel" hidden>
             <h3>Graph Editor</h3>
-            <p class="small-note">Drag blocks to arrange. Hover the top-left corner of a block to delete it. Click an output dot, then an input dot to connect. Click a line to remove a connection.</p>
             <div id="workflow-graph-canvas" class="workflow-graph-canvas">
               <div id="workflow-graph-board" class="workflow-graph-board">
                 <svg id="workflow-graph-svg" class="workflow-graph-svg" aria-hidden="true"></svg>
@@ -2767,13 +2762,27 @@
           </div>
         </aside>
 
-        <div class="tool-content left-rail-template__main">
+      <div class="tool-content left-rail-template__main">
       <div id="tool-molarity-view" class="panel tool-subview">
-        <h3>Molarity Calculator</h3>
+        <header class="molarity-view-header">
+          <div>
+            <p class="molarity-kicker">Solution calculator</p>
+            <h3>Molarity Calculator</h3>
+            <p class="molarity-lead">Enter the values you know. Results update instantly and choose a practical unit automatically.</p>
+          </div>
+          <span class="molarity-auto-unit-badge">Automatic units</span>
+        </header>
 
-        <div class="molarity-block">
-          <h4>1) Find Mass from Concentration and Volume</h4>
-          <form id="molarity-mass-form" class="form-grid" autocomplete="off">
+        <div class="molarity-card-grid">
+        <section class="molarity-block" data-molarity-mode="mass">
+          <header class="molarity-card-header">
+            <span class="molarity-step" aria-hidden="true">01</span>
+            <div>
+              <h4>Mass</h4>
+              <p>From concentration and volume</p>
+            </div>
+          </header>
+          <form id="molarity-mass-form" class="form-grid molarity-form" autocomplete="off">
             <label>
               Concentration
               <div class="inline-row">
@@ -2797,28 +2806,26 @@
               <div class="inline-row">
                 <input id="mass-calc-volume" type="number" min="0" step="0.000001" placeholder="e.g. 500" />
                 <select id="mass-calc-volume-unit">
+                  <option value="nL">nL</option>
                   <option value="uL">uL</option>
                   <option value="mL" selected>mL</option>
                   <option value="L">L</option>
                 </select>
               </div>
             </label>
-            <label>
-              Output Mass Unit
-              <select id="mass-calc-output-unit">
-                <option value="ug">ug</option>
-                <option value="mg" selected>mg</option>
-                <option value="g">g</option>
-                <option value="kg">kg</option>
-              </select>
-            </label>
           </form>
-          <p id="mass-calc-result" class="calc-output"></p>
-        </div>
+          <p id="mass-calc-result" class="calc-output molarity-output" aria-live="polite"></p>
+        </section>
 
-        <div class="molarity-block">
-          <h4>2) Find Volume from Mass and Concentration</h4>
-          <form id="molarity-volume-form" class="form-grid" autocomplete="off">
+        <section class="molarity-block" data-molarity-mode="volume">
+          <header class="molarity-card-header">
+            <span class="molarity-step" aria-hidden="true">02</span>
+            <div>
+              <h4>Volume</h4>
+              <p>From mass and concentration</p>
+            </div>
+          </header>
+          <form id="molarity-volume-form" class="form-grid molarity-form" autocomplete="off">
             <label>
               Mass
               <div class="inline-row">
@@ -2849,21 +2856,19 @@
                 </select>
               </div>
             </label>
-            <label>
-              Output Volume Unit
-              <select id="volume-calc-output-unit">
-                <option value="uL">uL</option>
-                <option value="mL" selected>mL</option>
-                <option value="L">L</option>
-              </select>
-            </label>
           </form>
-          <p id="volume-calc-result" class="calc-output"></p>
-        </div>
+          <p id="volume-calc-result" class="calc-output molarity-output" aria-live="polite"></p>
+        </section>
 
-        <div class="molarity-block">
-          <h4>3) Find Concentration from Mass and Volume</h4>
-          <form id="molarity-concentration-form" class="form-grid" autocomplete="off">
+        <section class="molarity-block" data-molarity-mode="concentration">
+          <header class="molarity-card-header">
+            <span class="molarity-step" aria-hidden="true">03</span>
+            <div>
+              <h4>Concentration</h4>
+              <p>From mass and volume</p>
+            </div>
+          </header>
+          <form id="molarity-concentration-form" class="form-grid molarity-form" autocomplete="off">
             <label>
               Mass
               <div class="inline-row">
@@ -2885,30 +2890,26 @@
               <div class="inline-row">
                 <input id="conc-calc-volume" type="number" min="0" step="0.000001" placeholder="e.g. 1" />
                 <select id="conc-calc-volume-unit">
+                  <option value="nL">nL</option>
                   <option value="uL">uL</option>
                   <option value="mL" selected>mL</option>
                   <option value="L">L</option>
                 </select>
               </div>
             </label>
-            <label>
-              Output Concentration Unit
-              <select id="conc-calc-output-unit">
-                <option value="fM">fM</option>
-                <option value="pM">pM</option>
-                <option value="nM">nM</option>
-                <option value="uM">uM</option>
-                <option value="mM" selected>mM</option>
-                <option value="M">M</option>
-              </select>
-            </label>
           </form>
-          <p id="conc-calc-result" class="calc-output"></p>
-        </div>
+          <p id="conc-calc-result" class="calc-output molarity-output" aria-live="polite"></p>
+        </section>
 
-        <div class="molarity-block">
-          <h4>4) Dilute a Stock Solution (C1V1 = C2V2)</h4>
-          <form id="molarity-dilution-form" class="form-grid" autocomplete="off">
+        <section class="molarity-block" data-molarity-mode="dilution">
+          <header class="molarity-card-header">
+            <span class="molarity-step" aria-hidden="true">04</span>
+            <div>
+              <h4>Dilution</h4>
+              <p>Prepare a stock dilution with C1V1 = C2V2</p>
+            </div>
+          </header>
+          <form id="molarity-dilution-form" class="form-grid molarity-form" autocomplete="off">
             <label>
               Stock Concentration
               <div class="inline-row">
@@ -2942,22 +2943,16 @@
               <div class="inline-row">
                 <input id="dilution-target-volume" type="number" min="0" step="0.000001" placeholder="e.g. 1" />
                 <select id="dilution-target-volume-unit">
+                  <option value="nL">nL</option>
                   <option value="uL">uL</option>
                   <option value="mL" selected>mL</option>
                   <option value="L">L</option>
                 </select>
               </div>
             </label>
-            <label>
-              Output Volume Unit
-              <select id="dilution-output-unit">
-                <option value="uL">uL</option>
-                <option value="mL" selected>mL</option>
-                <option value="L">L</option>
-              </select>
-            </label>
           </form>
-          <p id="dilution-calc-result" class="calc-output"></p>
+          <p id="dilution-calc-result" class="calc-output molarity-output" aria-live="polite"></p>
+        </section>
         </div>
       </div>
 
@@ -2998,7 +2993,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-1">
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-1" />
+                      <input id="buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-1" aria-expanded="false" />
                       <div id="buffer-suggestions-1" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>
@@ -3010,7 +3005,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-2">
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-2" />
+                      <input id="buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-2" aria-expanded="false" />
                       <div id="buffer-suggestions-2" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>
@@ -3022,7 +3017,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-3" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-3" />
+                      <input id="buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-3" aria-expanded="false" />
                       <div id="buffer-suggestions-3" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>
@@ -3034,7 +3029,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-4" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-4" />
+                      <input id="buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-4" aria-expanded="false" />
                       <div id="buffer-suggestions-4" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>
@@ -3046,7 +3041,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-5" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-5" />
+                      <input id="buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-5" aria-expanded="false" />
                       <div id="buffer-suggestions-5" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>
@@ -3058,7 +3053,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-6" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-6" />
+                      <input id="buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-6" aria-expanded="false" />
                       <div id="buffer-suggestions-6" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>
@@ -3384,11 +3379,30 @@
                 <input id="colony-image-file" type="file" accept="image/*,.png,.jpg,.jpeg,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif" />
               </label>
 
-              <div class="form-actions">
-                <button id="colony-start-crop-btn" type="button" class="ghost-btn">Start Crop</button>
-                <button id="colony-apply-crop-btn" type="button" class="ghost-btn" disabled>Apply Crop</button>
-                <button id="colony-cancel-crop-btn" type="button" class="ghost-btn" disabled>Cancel Crop</button>
-                <button id="colony-reset-crop-btn" type="button" class="ghost-btn">Reset to Full Image</button>
+              <div class="form-actions colony-crop-actions">
+                <div class="colony-crop-menu">
+                  <button
+                    id="colony-crop-menu-btn"
+                    type="button"
+                    class="ghost-btn colony-crop-menu-btn"
+                    aria-label="Crop image"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-controls="colony-crop-menu"
+                    title="Crop image"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                      <path d="M7 3v14a4 4 0 0 0 4 4h10"></path>
+                      <path d="M17 21V7a4 4 0 0 0-4-4H3"></path>
+                    </svg>
+                  </button>
+                  <div id="colony-crop-menu" class="colony-crop-menu-popup" role="menu" hidden>
+                    <button id="colony-start-crop-btn" type="button" class="colony-crop-menu-option" role="menuitem">Start Crop</button>
+                    <button id="colony-apply-crop-btn" type="button" class="colony-crop-menu-option" role="menuitem" disabled>Apply Crop</button>
+                    <button id="colony-cancel-crop-btn" type="button" class="colony-crop-menu-option" role="menuitem" disabled>Cancel Crop</button>
+                    <button id="colony-reset-crop-btn" type="button" class="colony-crop-menu-option" role="menuitem">Reset to Full Image</button>
+                  </div>
+                </div>
               </div>
 
               <div class="form-grid">
@@ -3424,9 +3438,7 @@
               </div>
             </form>
 
-            <div id="colony-summary" class="calc-output">
-              <p class="small-note">Choose or drop a plate image, then run auto count or click colonies manually.</p>
-            </div>
+            <div id="colony-summary" class="calc-output"></div>
           </div>
         </div>
 
@@ -3456,8 +3468,9 @@
 
               <div class="sequence-viewer-home-sidebar-scroll left-rail-template__scroll">
                 <section class="sequence-viewer-library-card left-rail-template__section">
-              <div class="result-card-head">
+              <div class="result-card-head sequence-viewer-library-head">
                 <h4>Sequence Library</h4>
+                <button id="sequence-viewer-library-new-folder-btn" type="button" class="ghost-btn sequence-viewer-library-new-folder-btn">New Folder</button>
               </div>
               <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
                 <button id="sequence-viewer-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
@@ -3475,7 +3488,11 @@
                 <p class="small-note">No sequence entries found.</p>
               </div>
               <div id="sequence-viewer-library-context-menu" class="sequence-viewer-context-menu" hidden>
-                <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename">Rename</button>
+                <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="new-folder">New Folder</button>
+                <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename" hidden>Rename Sequence</button>
+                <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="move-entry" hidden>Move to Folder...</button>
+                <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename-folder" hidden>Rename Folder</button>
+                <button type="button" class="sequence-viewer-context-item sequence-viewer-context-item-danger" data-sequence-library-action="delete-folder" hidden>Delete Folder</button>
               </div>
                 </section>
               </div>
@@ -3666,8 +3683,9 @@
             </div>
             <div class="sequence-viewer-detail-sidebar-scroll left-rail-template__scroll">
               <section class="sequence-viewer-library-card left-rail-template__section">
-                <div class="result-card-head">
+                <div class="result-card-head sequence-viewer-library-head">
                   <h4>Sequence Library</h4>
+                  <button id="sequence-viewer-detail-library-new-folder-btn" type="button" class="ghost-btn sequence-viewer-library-new-folder-btn">New Folder</button>
                 </div>
                 <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
                   <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
@@ -3677,7 +3695,11 @@
                   <p class="small-note">No sequence entries found.</p>
                 </div>
                 <div id="sequence-viewer-detail-library-context-menu" class="sequence-viewer-context-menu" hidden>
-                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename">Rename</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="new-folder">New Folder</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename" hidden>Rename Sequence</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="move-entry" hidden>Move to Folder...</button>
+                  <button type="button" class="sequence-viewer-context-item" data-sequence-library-action="rename-folder" hidden>Rename Folder</button>
+                  <button type="button" class="sequence-viewer-context-item sequence-viewer-context-item-danger" data-sequence-library-action="delete-folder" hidden>Delete Folder</button>
                 </div>
                 <span id="sequence-viewer-detail-library-status" class="small-note"></span>
               </section>

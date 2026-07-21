@@ -114,6 +114,197 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart06(con
       assert.match(String(capturedProtocolInput.protocol.steps.join(' ') || ''), /Ni-NTA resin/i);
       assert.equal(capturedProtocolInput.result_summary, 'The paper presents a practical purification workflow for a PD-1 nanobody construct.');
     });
+    test('paper analysis delegates one local paper read to one Codex CLI sub-agent turn and returns hydrated comments', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-analysis-sub-agent-'));
+      const markdownPath = path.join(storageRoot, 'KnowledgeBase', 'papers.md', 'paper-1', 'paper.md');
+      const markdown = [
+        '# Anti-PD-1 paper',
+        '',
+        '## Findings',
+        'Large antibodies have limited tumor penetration.',
+        'Systemic toxicity and production costs constrain broader use.'
+      ].join('\n');
+      let createCalls = 0;
+      let delegatedInput = null;
+      let providerCalls = 0;
+      try {
+        await fsPromises.mkdir(path.dirname(markdownPath), { recursive: true });
+        await fsPromises.writeFile(markdownPath, markdown, 'utf8');
+        const assistantMessage = JSON.stringify({
+          ok: true,
+          status: 'completed',
+          selected_line_ranges: [{
+            line_ranges: [{ start_line: 4, end_line: 5 }],
+            relevance_reason: 'These lines answer the translation-constraint query.'
+          }],
+          notes: [],
+          summary: 'Selected one exact range.'
+        });
+        const agent = {
+          id: 'paper-analysis-agent-1',
+          name: 'paper-analysis-reader',
+          status: 'active',
+          created_at: '2026-07-16T12:00:00.000Z',
+          updated_at: '2026-07-16T12:00:01.000Z',
+          messages: [
+            { role: 'user', text: 'read paper' },
+            { role: 'assistant', text: assistantMessage }
+          ],
+          metadata: {
+            provider: 'codex-cli',
+            real_codex_sub_agent: true,
+            command: 'exec'
+          },
+          last_response: {
+            assistant_message: assistantMessage,
+            summary: 'Selected one exact range.'
+          }
+        };
+        const runtime = agentPaperAnalysis.createPaperAnalysisRuntime({
+          requestStructuredJsonPayload: async () => {
+            providerCalls += 1;
+            throw new Error('Local paper analysis must not enter the nested provider path.');
+          },
+          loadPaperFromKnowledge: async (input = {}) => {
+            assert.equal(input.doi, '10.1000/paper-analysis');
+            return {
+              id: 'kb-paper-1',
+              title: 'Anti-PD-1 paper',
+              abstract: 'A review of anti-PD-1 translation constraints.',
+              doi: '10.1000/paper-analysis',
+              markdown_path: markdownPath,
+              markdown_relative_path: 'KnowledgeBase/papers.md/paper-1/paper.md',
+              content: markdown
+            };
+          },
+          subAgentRuntime: {
+            createSubAgent: async (input = {}) => {
+              createCalls += 1;
+              delegatedInput = input;
+              return { ok: true, status: 'created', agent };
+            },
+            sendSubAgentMessage: async () => {
+              throw new Error('A single-paper analysis must use only the create command turn.');
+            },
+            getSubAgent: () => ({ ok: true, status: 'found', agent }),
+            completeSubAgentTask: () => ({ ok: true, status: 'completed' })
+          }
+        });
+
+        const result = await runtime.analyzePaper({
+          paper: {
+            doi: '10.1000/paper-analysis',
+            title: 'Anti-PD-1 paper'
+          },
+          message: 'What limits broader clinical application?',
+          storage_path: storageRoot,
+          snapshot: {
+            papers: [{
+              id: 'local-paper-1',
+              title: 'Anti-PD-1 paper',
+              doi: '10.1000/paper-analysis',
+              highlights: [{
+                id: 'highlight-1',
+                pageNumber: 1,
+                text: 'Systemic toxicity and production costs constrain broader use.'
+              }],
+              comments: [{
+                id: 'comment-1',
+                text: 'Treat toxicity and cost as translation constraints.',
+                author: 'Local user',
+                highlightId: 'highlight-1'
+              }]
+            }]
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.status, 'completed');
+        assert.equal(createCalls, 1);
+        assert.equal(providerCalls, 0);
+        assert.equal(result.sub_agent_id, 'paper-analysis-agent-1');
+        assert.equal(result.sub_agent.message_count, 2);
+        assert.match(String(delegatedInput?.message || ''), /What limits broader clinical application/);
+        assert.match(String(delegatedInput?.message || ''), /KnowledgeBase\/papers\.md\/paper-1\/paper\.md/);
+        assert.match(String(delegatedInput?.message || ''), /nl -ba/);
+        assert.match(String(delegatedInput?.system_prompt || ''), /Do not call Hikari paper_analysis/);
+        assert.deepEqual(result.loaded_context_blocks[0].line_ranges, [{ start_line: 4, end_line: 5 }]);
+        assert.deepEqual(result.loaded_context_blocks[0].source_lines, [
+          { line_number: 4, content: 'Large antibodies have limited tumor penetration.' },
+          { line_number: 5, content: 'Systemic toxicity and production costs constrain broader use.' }
+        ]);
+        assert.equal(result.loaded_context_blocks[0].related_comments[0].id, 'comment-1');
+        assert.equal(result.loaded_context_blocks[0].related_comments[0].relation, 'highlight_overlap');
+
+        const { buildMcpToolResponseContent } = require(path.join(
+          __dirname,
+          'src',
+          'main',
+          'agent',
+          'mcp-contract',
+          'stdio-server.js'
+        ));
+        const modelPayload = JSON.parse(buildMcpToolResponseContent('paper_analysis', {
+          ok: true,
+          status: 'completed',
+          mcp_tool: 'paper_analysis',
+          app_tool: 'paper-analysis',
+          output: { result }
+        }));
+        assert.equal(modelPayload.mcp_tool, 'paper_analysis');
+        assert.equal(modelPayload.app_tool, 'paper-analysis');
+        assert.deepEqual(modelPayload.loaded_context_blocks[0].source_lines, result.loaded_context_blocks[0].source_lines);
+        assert.equal(modelPayload.loaded_context_blocks[0].related_comments[0].text, 'Treat toxicity and cost as translation constraints.');
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+    test('paper analysis executor forwards the live snapshot and Codex request context', async () => {
+      const executors = new Map();
+      let capturedInput = null;
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+      registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, executor) {
+            executors.set(name, executor);
+          }
+        },
+        paperAnalysisRuntime: {
+          analyzePaper: async (input = {}) => {
+            capturedInput = input;
+            return { ok: true, status: 'completed', loaded_context_blocks: [] };
+          }
+        }
+      });
+      const snapshot = {
+        settings: { storagePath: '/tmp/hikari-storage' },
+        papers: [{ id: 'paper-1', comments: [{ id: 'comment-1', text: 'Saved comment' }] }]
+      };
+      await executors.get('paper-analysis')({
+        args: { paper: { doi: '10.1000/paper-analysis' } },
+        context: {
+          provider: 'codex',
+          model: 'gpt-5',
+          reasoningEffort: 'high',
+          cwd: '/tmp/hikari-workspace',
+          message: 'Find the translation constraints.',
+          snapshot
+        }
+      });
+
+      assert.equal(capturedInput.snapshot, snapshot);
+      assert.equal(capturedInput.storage_path, '/tmp/hikari-storage');
+      assert.equal(capturedInput.message, 'Find the translation constraints.');
+      assert.equal(capturedInput.cwd, '/tmp/hikari-workspace');
+      assert.equal(capturedInput.reasoning_effort, 'high');
+    });
     test('sub-agent runtime creates, messages, lists, and deletes managed sub-agents', async () => {
       const runtime = agentSubAgent.createAgentSubAgentRuntime({
         now: (() => {

@@ -298,7 +298,10 @@ export function createPapersActions(context) {
 
       libraryState.selectedFolderKey = targetFolderKey;
       context.library?.ensureFolderExpanded?.(targetFolderKey);
-      persist();
+      // The PDF has already moved on disk and undo cannot move it back; undoing
+      // past this point would leave the stored paths pointing at the old
+      // location. Drop history instead of corrupting the file references.
+      persist({ barrier: true });
       context.render?.();
       context.onActivePaperChanged?.(context.getActivePaper?.() || null);
       return { ok: true, paper };

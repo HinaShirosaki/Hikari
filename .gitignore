@@ -40,8 +40,11 @@ data/Config/codex-cli-home/auth.json
 /Testdata/
 /TestData2/
 /TestData3/
+/TestData5/
+/TestData6/
 /idea/
 /reports/
+/colony-counter/
 
 # Stray local biology samples dropped into data/
 /data/*.gb

@@ -109,6 +109,7 @@ export const defaultState = {
     inventoryLocations: ['Main Storage', 'Cold Room', 'Fume Hood'],
     sampleInventoryLocations: [...DEFAULT_SAMPLE_INVENTORY_LOCATIONS],
     sampleTypeLabels: { ...DEFAULT_SAMPLE_TYPE_LABELS },
+    sampleTypeHidden: [],
     preferredJournals: [],
     preferredJournal: '',
     dashboard: {
@@ -129,6 +130,13 @@ export const defaultState = {
     plugins: []
   },
   inventory: {
+    'Room Temp': [],
+    '4 Degree': [],
+    '-20 Degree': [],
+    '-80 Degree': [],
+    'Liquid Nitrogen': []
+  },
+  inventoryFolders: {
     'Room Temp': [],
     '4 Degree': [],
     '-20 Degree': [],

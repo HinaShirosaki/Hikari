@@ -1,4 +1,5 @@
 import { asArray, trimText } from './shared.js';
+import { verifyAndApplySequenceProposal } from '../sequence-viewer/agent/bridge.js';
 
 function getProtocolReviewStatus(meta = {}, reviewId = '') {
   const review = meta.protocolReview && typeof meta.protocolReview === 'object'
@@ -20,6 +21,34 @@ function markProtocolReview(messages, messageId, reviewId, status, reason = '') 
     protocolReview: {
       ...(currentMeta.protocolReview && typeof currentMeta.protocolReview === 'object' ? currentMeta.protocolReview : {}),
       [reviewId]: {
+        status,
+        reason: trimText(reason, 320),
+        reviewed_at: new Date().toISOString()
+      }
+    }
+  };
+  return true;
+}
+
+function getSequenceEditReviewStatus(meta = {}, token = '') {
+  const review = meta.sequenceEditReview && typeof meta.sequenceEditReview === 'object'
+    ? meta.sequenceEditReview
+    : {};
+  return trimText(review[token]?.status || review[token], 40);
+}
+
+function markSequenceEditReview(messages, messageId, token, status, reason = '') {
+  const normalizedMessageId = trimText(messageId, 120);
+  const message = asArray(messages).find((item) => trimText(item?.id, 120) === normalizedMessageId);
+  if (!message || message.role !== 'assistant') {
+    return false;
+  }
+  const currentMeta = message.meta && typeof message.meta === 'object' ? message.meta : {};
+  message.meta = {
+    ...currentMeta,
+    sequenceEditReview: {
+      ...(currentMeta.sequenceEditReview && typeof currentMeta.sequenceEditReview === 'object' ? currentMeta.sequenceEditReview : {}),
+      [token]: {
         status,
         reason: trimText(reason, 320),
         reviewed_at: new Date().toISOString()
@@ -69,6 +98,27 @@ function collectReviewItemsForMessage(message, {
       type: 'protocol',
       messageId,
       protocol
+    });
+  });
+
+  const sequenceProposals = meta.sequenceEditProposal && typeof meta.sequenceEditProposal === 'object'
+    ? meta.sequenceEditProposal
+    : {};
+  Object.keys(sequenceProposals).forEach((token) => {
+    const proposal = sequenceProposals[token];
+    if (!proposal || typeof proposal !== 'object') {
+      return;
+    }
+    const status = getSequenceEditReviewStatus(meta, token);
+    if (status === 'approved' || status === 'rejected') {
+      return;
+    }
+    items.push({
+      id: `sequence-edit:${messageId}:${token}`,
+      type: 'sequence-edit',
+      messageId,
+      token,
+      proposal
     });
   });
   return items;
@@ -179,6 +229,44 @@ function renderNotebookPreview(item, safeText) {
   `;
 }
 
+function renderSequenceEditPreview(item, safeText) {
+  const proposal = item.proposal || {};
+  const preview = proposal.preview || {};
+  const affected = asArray(proposal.affectedFeatures)
+    .map((feature) => trimText(`${feature?.name || feature?.id || 'feature'}${feature?.shift == null ? ' (overlaps edit)' : ` (${feature.shift >= 0 ? '+' : ''}${feature.shift} bp)`}`, 200))
+    .filter(Boolean);
+  const kindLabel = proposal.kind === 'annotation' ? 'Annotation' : 'Sequence Edit';
+  return `
+    <article class="agent-review-card" data-agent-review-card="${safeText(item.id)}">
+      <div class="agent-review-card-header">
+        <span class="agent-review-type">${safeText(kindLabel)}</span>
+        <h4>${safeText(proposal.summary || 'Proposed change')}</h4>
+      </div>
+      <div class="agent-review-content">
+        ${preview.before || preview.after ? `
+          <section class="agent-review-section">
+            <h5>Before</h5>
+            <p class="agent-review-mono">${safeText(preview.before || '')}</p>
+            <h5>After</h5>
+            <p class="agent-review-mono">${safeText(preview.after || '')}</p>
+            ${preview.newLength ? `<p class="agent-review-muted">New length: ${safeText(String(preview.newLength))} bp</p>` : ''}
+          </section>
+        ` : ''}
+        ${affected.length ? `
+          <section class="agent-review-section">
+            <h5>Affected Features</h5>
+            <ul>${affected.map((feature) => `<li>${safeText(feature)}</li>`).join('')}</ul>
+          </section>
+        ` : ''}
+      </div>
+      <div class="agent-review-actions">
+        <button type="button" class="primary-btn" data-agent-review-approve="${safeText(item.id)}">Approve</button>
+        <button type="button" class="ghost-btn" data-agent-review-reject="${safeText(item.id)}">Reject</button>
+      </div>
+    </article>
+  `;
+}
+
 export function createAgentReviewOverlayController({
   dom,
   state,
@@ -228,11 +316,15 @@ export function createAgentReviewOverlayController({
     }
     activeIndex = Math.min(Math.max(activeIndex, 0), reviewItems.length - 1);
     dom.reviewOverlay.hidden = false;
-    dom.reviewTrack.innerHTML = reviewItems.map((item) => (
-      item.type === 'protocol'
-        ? renderProtocolPreview(item, safeText)
-        : renderNotebookPreview(item, safeText)
-    )).join('');
+    dom.reviewTrack.innerHTML = reviewItems.map((item) => {
+      if (item.type === 'protocol') {
+        return renderProtocolPreview(item, safeText);
+      }
+      if (item.type === 'sequence-edit') {
+        return renderSequenceEditPreview(item, safeText);
+      }
+      return renderNotebookPreview(item, safeText);
+    }).join('');
     if (dom.reviewPageLabel) {
       dom.reviewPageLabel.textContent = `${activeIndex + 1} / ${reviewItems.length}`;
     }
@@ -285,6 +377,32 @@ export function createAgentReviewOverlayController({
     removeItem(item.id);
   }
 
+  async function approveSequenceEdit(item) {
+    const result = await verifyAndApplySequenceProposal(item.proposal);
+    if (result?.error) {
+      const code = trimText(result.error.code, 60);
+      if (code === 'TARGET_CHANGED' || code === 'TARGET_NOT_FOUND') {
+        setStatus?.('The record changed since this proposal; ask the agent to re-read and re-propose.');
+      } else {
+        setStatus?.(trimText(result.error.message, 320) || 'The proposed change could not be applied.');
+      }
+      return;
+    }
+    markSequenceEditReview(state.agentChat?.messages, item.messageId, item.token, 'approved', 'Sequence change approved by user.');
+    persist();
+    renderHistoryView?.({ forceScroll: true });
+    setStatus?.(trimText(result?.summary, 320) || 'Sequence change applied.');
+    removeItem(item.id);
+  }
+
+  function rejectSequenceEdit(item) {
+    markSequenceEditReview(state.agentChat?.messages, item.messageId, item.token, 'rejected', 'Sequence change rejected by user.');
+    persist();
+    renderHistoryView?.({ forceScroll: true });
+    setStatus?.('Sequence change rejected.');
+    removeItem(item.id);
+  }
+
   function findItem(itemId = '') {
     const normalizedItemId = trimText(itemId, 180);
     return reviewItems.find((item) => item.id === normalizedItemId) || null;
@@ -299,6 +417,10 @@ export function createAgentReviewOverlayController({
       approveProtocol(item);
       return;
     }
+    if (item.type === 'sequence-edit') {
+      void approveSequenceEdit(item);
+      return;
+    }
     approveNotebook(item);
   }
 
@@ -309,6 +431,10 @@ export function createAgentReviewOverlayController({
     }
     if (item.type === 'protocol') {
       rejectProtocol(item);
+      return;
+    }
+    if (item.type === 'sequence-edit') {
+      rejectSequenceEdit(item);
       return;
     }
     rejectNotebook(item);

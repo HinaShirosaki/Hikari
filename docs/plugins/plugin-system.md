@@ -368,7 +368,7 @@ Agent-facing tools live in the provider-neutral MCP contract at
    `codex-agent/runtime-files.js`) and add a
    `` `${toolName('my_tool')}`: ... `` bullet plus any tool-use rule to
    `buildHikariAgentMcpInstructionBodyLines()` so the agent knows when to
-   call it. Codex sees the tool as `mcp__hikari__my_tool`.
+   call the raw `my_tool` name.
 
 4. **Keep the contract doc in sync** —
    [`docs/agent/mcp-contract/mcp-contract.md`](../agent/mcp-contract/mcp-contract.md)
@@ -396,8 +396,8 @@ To add one for your module:
 1. Append an entry to `OFFICIAL_MCP_SKILLS` with a unique `id`, a
    `directory` (convention: `hikari-<name>`), and `content` built with
    `buildSkillMarkdown({ id, name, description, body })`. Reference your MCP
-   tools by their prefixed names via `buildHikariCodexMcpToolName('my_tool')`
-   so the skill matches what the agent actually sees.
+   tools by their raw names via `buildHikariMcpToolName('my_tool')` so the
+   skill matches the Hikari contract.
 2. That's it — at agent startup (and on storage-root sync) the app releases
    every official skill into `<workspace>/.agents/skills/<directory>/SKILL.md`
    (`releaseOfficialMcpSkillsForWorkspace`). The release is idempotent and

@@ -77,6 +77,10 @@ function createCodexAgentRuntime(deps = {}) {
       : null;
     const model = cleanText(input.model, 120);
     const reasoningEffort = cleanText(input.reasoningEffort, 40);
+    const requestedTimeoutMs = Number(input.timeoutMs ?? input.timeout_ms);
+    const timeoutMs = Number.isFinite(requestedTimeoutMs) && requestedTimeoutMs >= 1000
+      ? requestedTimeoutMs
+      : null;
     const resumeSessionId = cleanText(input.codexSessionId || input.codex_session_id, 240);
     const streamProgress = createCodexStreamProgressHandler({
       cleanText,
@@ -119,9 +123,9 @@ function createCodexAgentRuntime(deps = {}) {
       model,
       reasoningEffort,
       cwd,
-      enableWebSearch: true,
+      enableWebSearch: input.enableWebSearch !== false && input.enable_web_search !== false,
       attachments: asArray(input.attachments),
-      timeoutMs: null,
+      timeoutMs,
       stream: true,
       onStream: streamProgress.emitStreamProgress,
       resumeSessionId,
@@ -260,6 +264,9 @@ function createCodexAgentRuntime(deps = {}) {
         }
         : {}),
       ...(protocolGenerationArtifact ? { protocol_generation: protocolGenerationArtifact } : {}),
+      ...(streamState.streamedSequenceEditProposals?.length
+        ? { sequence_edit: { proposals: streamState.streamedSequenceEditProposals } }
+        : {}),
       thinking_trace: {
         intent_parse_question: 'Codex owned this request without Hikari parser dispatch.',
         final_synthesize: cleanText(codexAgent.reasoning_summary, 1000)

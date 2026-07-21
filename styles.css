@@ -34,6 +34,7 @@
 @import url("./ui/css/views/papers-shell-overrides.css");
 @import url("./ui/css/views/sequence-viewer-shell-overrides.css");
 @import url("./ui/css/overrides/left-rail-template.css");
+@import url("./ui/css/overrides/folder-tree-template.css");
 @import url("./ui/css/overrides/universal-menus.css");
 @import url("./ui/css/overrides/universal-dialogs.css");
 @import url("./ui/css/overrides/universal-left-rail-lists.css");

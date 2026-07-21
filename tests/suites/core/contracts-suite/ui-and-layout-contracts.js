@@ -76,6 +76,26 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(css, /:root\s*\{[\s\S]*--hikari-left-rail-list-selected:/);
     });
 
+    test('folder rows share one glyph, including the Sequence Viewer library', () => {
+      const sharedCss = readLocalSource('ui', 'css', 'overrides', 'universal-left-rail-lists.css');
+      const agentCss = readLocalSource('ui', 'css', 'views', 'agent-view.css');
+      const papersCss = readLocalSource('ui', 'css', 'views', 'papers-view.css');
+      const notebookCss = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
+      const agentSource = readLocalSource('src', 'renderer', 'modules', 'agent-chat', 'session-manager.js');
+      const papersSource = readLocalSource('src', 'renderer', 'modules', 'papers', 'library.js');
+      const notebookSource = readLocalSource('src', 'renderer', 'modules', 'biology-notebook', 'entry', 'entry-list-renderer.js');
+      const sequenceSource = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'home-controller.js');
+
+      assert.match(sharedCss, /\.left-rail-template__rail \.left-rail-folder-glyph\s*\{[\s\S]*-webkit-mask:\s*url\("\.\.\/\.\.\/\.\.\/assets\/icons\/folder-2-svgrepo-com\.svg"\)/);
+      assert.match(agentSource, /class="left-rail-folder-glyph agent-session-folder-glyph"/);
+      assert.match(papersSource, /class="left-rail-folder-glyph papers-folder-glyph"/);
+      assert.match(notebookSource, /class="left-rail-folder-glyph biology-notebook-folder-glyph"/);
+      assert.match(sequenceSource, /class="left-rail-folder-glyph sequence-viewer-library-folder-glyph"/);
+      assert.doesNotMatch(agentCss, /\.agent-session-folder-glyph\s*\{/);
+      assert.doesNotMatch(papersCss, /\.papers-folder-glyph\s*\{/);
+      assert.doesNotMatch(notebookCss, /\.biology-notebook-folder-glyph\s*\{/);
+    });
+
     test('agent chat folders keep the shared two-pixel rail rhythm', () => {
       const css = readLocalSource('ui', 'css', 'overrides', 'universal-left-rail-lists.css');
       assert.match(css, /:is\([\s\S]*\.agent-session-list,[\s\S]*\.agent-session-folder-children[\s\S]*\)\s*\{\s*gap:\s*2px !important;/);
@@ -125,6 +145,18 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(html, /class="biology-notebook-viewer-head"[\s\S]*?<\/div>\s*<div class="biology-notebook-viewer-scroll">[\s\S]*?<details class="biology-notebook-viewer-section"/);
       assert.match(css, viewerRule);
       assert.match(css, scrollRule);
+    });
+
+    test('Samples and Inventory omits redundant container and section-count copy', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'personal-inventory-view.html');
+      const containerForm = readLocalSource('src', 'renderer', 'modules', 'personal-inventory', 'container-form.js');
+      const sectionNavigation = readLocalSource('src', 'renderer', 'modules', 'personal-inventory', 'section-navigation.js');
+
+      assert.match(html, /id="inventory-add-container-note"[^>]*hidden><\/p>/);
+      assert.doesNotMatch(html, /Create a storage box, plate, tube, or custom grid\./);
+      assert.match(containerForm, /addContainerNote\.hidden\s*=\s*!parent;/);
+      assert.doesNotMatch(containerForm, /Create a storage box, plate, tube, or custom grid\./);
+      assert.doesNotMatch(sectionNavigation, /container\(s\) and .*linked sample\(s\)/);
     });
 
     test('biology notebook New Experiment dialog owns project and protocol selection', () => {
@@ -228,6 +260,67 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(sequenceCss, /#sequence-viewer-view\s+\.left-rail-template\.sequence-viewer-home-layout\s*>\s*\.sequence-viewer-home-sidebar\.left-rail-template__rail--pinned,[^}]*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*padding:\s*0 !important;[^}]*overflow:\s*hidden !important;[^}]*scrollbar-gutter:\s*auto !important;[^}]*\}/s);
     });
 
+    test('Workflow keeps the Add Blocks composer in the left rail for edit modes', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'workflow-management-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'workflow-management-view.css');
+      const dom = readLocalSource('src', 'renderer', 'modules', 'workflow', 'dom.js');
+      const renderer = readLocalSource('src', 'renderer', 'modules', 'workflow', 'renderer.js');
+      const mainMarkup = html.slice(html.indexOf('<div class="workflow-editor-main'));
+
+      assert.match(html, /class="workflow-editor-sidebar-scroll left-rail-template__scroll"[\s\S]*class="workflow-block-composer-panel app-left-rail-section"[\s\S]*<h3>Add Blocks<\/h3>[\s\S]*id="workflow-block-add-btn"/);
+      assert.doesNotMatch(mainMarkup, /<h3>Add Blocks<\/h3>/);
+      assert.match(css, /\.workflow-block-composer-panel\s+\.workflow-block-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s);
+      assert.match(dom, /workflowBlockComposerPanels:/);
+      assert.match(renderer, /workflowBlockComposerPanels\s*\|\|\s*\[\]\)\.forEach\(\(panel\)\s*=>\s*\{[^}]*panel\.hidden\s*=\s*!showMainEditor;/s);
+    });
+
+    test('Workflow editor modes retain a pinned Back to Home rail action', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'workflow-management-view.html');
+      const renderer = readLocalSource('src', 'renderer', 'modules', 'workflow', 'renderer.js');
+
+      assert.match(html, /id="workflow-entry-back-btn"[^>]*>&larr; Back to Home<\/button>/);
+      assert.match(renderer, /workflowEntryPanel\.hidden\s*=\s*false;/);
+      assert.match(renderer, /workflowEntryViewBtn\.hidden\s*=\s*!showHome;/);
+      assert.match(renderer, /workflowEntryTemplateBtn\.hidden\s*=\s*!showHome;/);
+      assert.match(renderer, /workflowEntryBackBtn\.hidden\s*=\s*showHome;/);
+    });
+
+    test('Workflow graph editor omits redundant interaction instructions', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'workflow-management-view.html');
+
+      assert.match(html, /<h3>Graph Editor<\/h3>[\s\S]*id="workflow-graph-canvas"/);
+      assert.doesNotMatch(html, /Drag blocks to arrange\. Hover the top-left corner of a block to delete it\./);
+    });
+
+    test('Workflow graph selection omits redundant group-drag status copy', () => {
+      const graphController = readLocalSource('src', 'renderer', 'modules', 'workflow', 'graph-controller.js');
+
+      assert.doesNotMatch(graphController, /block\(s\) selected\. Drag any selected block to move the group\./);
+      assert.match(graphController, /Tip: Drag blocks\. Output dot -> input dot to connect\./);
+    });
+
+    test('Workflow graph blocks show only their names until interacted with', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'workflow-management-view.css');
+      const graphController = readLocalSource('src', 'renderer', 'modules', 'workflow', 'graph-controller.js');
+
+      assert.doesNotMatch(graphController, /workflow-node-index/);
+      assert.match(graphController, /<header class="workflow-node-header"[\s\S]*?<strong>\$\{safeText\(title\)\}<\/strong>[\s\S]*?<\/header>/);
+      assert.match(css, /\.workflow-node-header\s*\{[^}]*justify-content:\s*center;[^}]*min-height:\s*102px;[^}]*text-align:\s*center;/s);
+      assert.match(css, /\.workflow-port\s*\{[^}]*opacity:\s*0;[^}]*pointer-events:\s*none;/s);
+      assert.match(css, /\.workflow-node:hover\s+\.workflow-port,[\s\S]*?\.workflow-node:focus-within\s+\.workflow-port\s*\{[^}]*opacity:\s*1;[^}]*pointer-events:\s*auto;/s);
+    });
+
+    test('Workflow execution omits redundant template and workflow-count copy', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'workflow-management-view.html');
+      const dom = readLocalSource('src', 'renderer', 'modules', 'workflow', 'dom.js');
+      const renderer = readLocalSource('src', 'renderer', 'modules', 'workflow', 'renderer.js');
+
+      assert.doesNotMatch(html, /Template Workflows|workflow-execution-status/);
+      assert.doesNotMatch(dom, /workflowExecutionStatus/);
+      assert.doesNotMatch(renderer, /specific workflow.*created from this template/);
+      assert.match(renderer, /Use Add Workflow to create one\./);
+    });
+
     test('workflow protocol filling uses compact bordered placeholder inputs without extra controls', () => {
       const css = readLocalSource('ui', 'css', 'views', 'workflow-management-view.css');
       const renderer = readLocalSource('src', 'renderer', 'modules', 'workflow', 'renderer.js');
@@ -277,14 +370,31 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('Assay setup actions stay at the top of the form as accessible compact icons', () => {
       const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+      const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
+      const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
+      const assay = readLocalSource('src', 'renderer', 'modules', 'assay', 'index.js');
 
       assert.match(html, /id="assay-form"[^>]*>[\s\S]*?id="assay-id"[\s\S]*?class="form-actions assay-form-actions"[\s\S]*?class="assay-display-field"/);
+      assert.match(html, /id="assay-new-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Create new assay"[\s\S]*?<svg/);
       assert.match(html, /id="assay-export-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Export CSV template"[\s\S]*?<svg/);
       assert.match(html, /id="assay-import-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Import CSV"[\s\S]*?<svg/);
       assert.match(html, /type="submit"[^>]*assay-form-save-icon-btn[^>]*aria-label="Save assay"[\s\S]*?<svg/);
       assert.match(html, /id="assay-cancel-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Cancel edit"[\s\S]*?<svg/);
       assert.doesNotMatch(html, /id="assay-(?:export-template|import-template|cancel)-btn"[^>]*>\s*(?:Export CSV Template|Import CSV|Cancel Edit)\s*<\//);
       assert.match(css, /\.assay-form-actions\s*>\s*\.assay-form-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+      assert.match(dom, /assayNewBtn:\s*root\.getElementById\('assay-new-btn'\)/);
+      assert.match(bindings, /assayNewBtn\?\.addEventListener\('click',\s*startNewAssay\)/);
+      assert.match(assay, /function startNewAssay\(\)\s*\{\s*resetForm\(\);\s*elements\.assayNameInput\?\.focus\(\);\s*\}/s);
+    });
+
+    test('Assay setup form stays pinned above the independently scrolling existing-assays list', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+
+      assert.match(html, /class="assay-mode-create-panel assay-create-sidebar[^\"]*left-rail-template__rail--pinned[^\"]*"[\s\S]*id="assay-form"[^>]*assay-create-sidebar-pinned[^>]*left-rail-template__pinned[\s\S]*class="assay-create-sidebar-scroll left-rail-template__scroll"[\s\S]*id="assay-browser-panel"/);
+      assert.match(css, /\.left-rail-template\.assay-create-layout\s*>\s*\.assay-create-sidebar\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*overflow:\s*hidden\s*!important;/s);
+      assert.match(css, /\.assay-create-sidebar\s*>\s*\.assay-create-sidebar-scroll\.left-rail-template__scroll\s*\{[^}]*scrollbar-gutter:\s*stable;/s);
+      assert.match(css, /@media \(max-width:\s*1100px\)[\s\S]*?\.assay-create-layout\s*\{[^}]*height:\s*auto;[\s\S]*?\.assay-create-sidebar\.left-rail-template__rail--pinned\s*\{[^}]*align-self:\s*start;[^}]*min-height:\s*auto;[\s\S]*?\.assay-create-sidebar\s*>\s*\.assay-create-sidebar-scroll\.left-rail-template__scroll\s*\{[^}]*max-height:\s*min\(360px,\s*42vh\);/s);
     });
 
     test('Assay plate setup toolbar stays separated from the plate grid', () => {
@@ -315,9 +425,35 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(css, listRule);
     });
 
+    test('Papers centers its PDF toolbar within the rail-bounded viewer column', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'papers-view.css');
+
+      assert.match(css, /\.papers-stage\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)\s+minmax\(248px,\s*var\(--papers-comments-width\)\);/s);
+      assert.match(css, /\.papers-viewer-toolbar\s*\{[^}]*justify-content:\s*center;/s);
+      assert.match(css, /@media \(max-width:\s*720px\)[\s\S]*?\.papers-viewer-toolbar\s*\{[^}]*justify-content:\s*flex-start;/s);
+    });
+
     test('the shared left-rail template contains only structural selectors', () => {
       const css = readLocalSource('ui', 'css', 'overrides', 'left-rail-template.css');
       assert.doesNotMatch(css, /\b(?:agent|assay|biology|chemical|gel|inventory|papers|protocol|sample|tool|workflow)\b/i);
+    });
+
+    test('the shared folder tree supports recursive rails and custom disclosure controls', () => {
+      const css = readLocalSource('ui', 'css', 'overrides', 'folder-tree-template.css');
+      const cssOrder = readLocalSource('ui', 'config', 'css-order.json');
+
+      assert.match(cssOrder, /ui\/css\/overrides\/folder-tree-template\.css/);
+      assert.match(css, /\.folder-tree-template__children\s*\{[^}]*position:\s*relative;[^}]*padding-left:\s*14px;/s);
+      assert.match(css, /\.folder-tree-template__children::before\s*\{/);
+      assert.match(css, /\.folder-tree-template__children\s*>\s*:is\(\.folder-tree-template__node,\s*\.folder-tree-template__leaf\)::before\s*\{/);
+      assert.match(css, /\.folder-tree-template__chevron\s*\{[^}]*border-right:\s*1\.5px solid currentColor;[^}]*transform:\s*rotate\(-45deg\);/s);
+      assert.doesNotMatch(css, /content:\s*['\"]>['\"]/);
+    });
+
+    test('Chemical search stays visually separated from filtering without a rail divider', () => {
+      const css = readLocalSource('ui', 'css', 'views', 'lab-common-inventory-view.css');
+
+      assert.match(css, /\.chemical-sidebar-section\s*\+\s*\.chemical-sidebar-section\s*\{[^}]*border-top:\s*0;/s);
     });
 
     test('gel tools omit manual steps and keep ladder MW in analysis controls', () => {
@@ -463,6 +599,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(homeBlock.includes('id="sequence-viewer-home-import-btn"'), false);
       assert.match(homeBlock, /id="sequence-viewer-library-filter-saved"/);
       assert.match(homeBlock, /id="sequence-viewer-library-filter-temporary"/);
+      assert.match(homeBlock, /id="sequence-viewer-library-new-folder-btn"/);
       assert.match(homeBlock, /id="sequence-viewer-library-list"/);
       assert.match(homeBlock, /id="sequence-viewer-preview-host"/);
       assert.equal(homeBlock.includes('<h2>Sequence Viewer</h2>'), false);
@@ -474,6 +611,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.equal(detailBlock.includes('Back to Library'), false);
       assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-detail-protein-builder-btn"[\s\S]*<h4>Sequence Library<\/h4>/);
       assert.match(detailBlock, /id="sequence-viewer-detail-protein-builder-btn"/);
+      assert.match(detailBlock, /id="sequence-viewer-detail-library-new-folder-btn"/);
       assert.equal(detailBlock.includes('id="sequence-viewer-save-btn"'), false);
       assert.equal(detailBlock.includes('id="sequence-viewer-save-name"'), false);
       assert.match(detailBlock, /id="sequence-viewer-detail-library-context-menu"[\s\S]*data-sequence-library-action="rename"/);
@@ -483,6 +621,29 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(detailBlock, /id="sequence-viewer-orf-toggle"/);
       assert.match(detailBlock, /id="sequence-viewer-restriction-neb-toggle"/);
       assert.match(detailBlock, /id="sequence-viewer-restriction-thermo-toggle"/);
+    });
+
+    test('molarity calculator uses responsive cards with automatic result states', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'tool-box-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'tool-box-view.css');
+      const source = readLocalSource('src', 'renderer', 'modules', 'tool-box', 'molarity-ui.js');
+
+      assert.match(html, /class="molarity-view-header"[\s\S]*class="molarity-auto-unit-badge"[\s\S]*class="molarity-card-grid"/);
+      assert.equal((html.match(/class="molarity-block"/g) || []).length, 4);
+      assert.match(html, /class="molarity-step"[^>]*>01<[\s\S]*class="molarity-step"[^>]*>04</);
+      assert.equal((html.match(/class="form-grid molarity-form"/g) || []).length, 4);
+      assert.equal((html.match(/class="calc-output molarity-output" aria-live="polite"/g) || []).length, 4);
+      assert.doesNotMatch(html, /(?:mass|volume|conc|dilution)-calc-output-unit/);
+      assert.match(css, /\.molarity-card-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(520px,\s*1fr\)\)/s);
+      assert.match(css, /\.molarity-output\[data-state="calculated"\]/);
+      assert.match(css, /\.molarity-output\[data-state="warning"\]/);
+      assert.match(css, /input\[type="number"\]::\-webkit-inner-spin-button/);
+      assert.match(css, /content:\s*"Result:"/);
+      assert.doesNotMatch(css, /\.molarity-output[^{]*\{[^}]*border-left/s);
+      assert.match(source, /function renderMolarityResult\(element, result\)[\s\S]*element\.dataset\.state\s*=\s*state;/);
+      assert.match(source, /result\.resultText\s*\?\s*'calculated'\s*:\s*'empty'/);
+      assert.match(source, /element\.textContent\s*=\s*result\.resultText\s*\|\|\s*'';/);
+      assert.doesNotMatch(source, /element\.textContent\s*=\s*result\.resultText\s*\|\|\s*result\.formulaText/);
     });
 
     test('tool box no longer owns Sequence Viewer cloning or protein-builder code', () => {
@@ -669,7 +830,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(systemRegistrarSource, /promptRaw\.length > 120000/);
     });
 
-    test('settings expose Codex login recovery controls through preload and system IPC', () => {
+    test('settings expose Codex login and Desktop MCP setup controls through preload and system IPC', () => {
       const mainSource = readMainProcessSource();
       const preloadSource = readPreloadSource();
       const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
@@ -680,13 +841,20 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(mainSource, /clearCodexCliStoredLogin/);
       assert.match(preloadSource, /loginCodexLlm:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(LLM\.CODEX_LOGIN\)/);
       assert.match(preloadSource, /clearCodexLlmLogin:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(LLM\.CODEX_CLEAR_LOGIN\)/);
+      assert.match(preloadSource, /getCodexDesktopMcpSetupPrompt:\s*\(payload\)\s*=>\s*\(/);
+      assert.match(preloadSource, /writeTextToClipboard:\s*\(value\)\s*=>\s*writeTextToClipboard/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_LOGIN/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_CLEAR_LOGIN/);
+      assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_DESKTOP_MCP_PROMPT/);
       assert.match(settingsSource, /window\.hikariApi\?\.loginCodexLlm/);
       assert.match(settingsSource, /window\.hikariApi\?\.clearCodexLlmLogin/);
+      assert.match(settingsSource, /window\.hikariApi\?\.getCodexDesktopMcpSetupPrompt/);
+      assert.match(settingsSource, /window\.hikariApi\?\.writeTextToClipboard/);
       assert.match(settingsHtml, /id="setting-codex-status"/);
       assert.match(settingsHtml, /id="start-codex-login-btn"/);
       assert.match(settingsHtml, /id="clear-codex-login-btn"/);
+      assert.match(settingsHtml, /id="copy-codex-desktop-mcp-prompt-btn"/);
+      assert.match(settingsHtml, /id="setting-codex-desktop-mcp-status"/);
     });
 
     test('main and preload expose sequence library IPC bridge through the data registrar', () => {
@@ -700,12 +868,18 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.UPSERT/);
       assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.PROMOTE/);
       assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.DELETE/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.UPSERT_FOLDER/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.DELETE_FOLDER/);
+      assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.MOVE_ENTRY/);
       assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.SEARCH_FEATURES/);
       assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.ANNOTATE/);
       assert.match(dataRegistrarSource, /handle\(SEQUENCE_LIBRARY\.RECOGNIZE_BACKBONE/);
       assert.match(preloadSource, /sequenceLibraryList:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.LIST, payload\)/);
       assert.match(preloadSource, /sequenceLibraryGet:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.GET, payload\)/);
       assert.match(preloadSource, /sequenceLibraryUpsert:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.UPSERT, payload\)/);
+      assert.match(preloadSource, /sequenceLibraryUpsertFolder:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.UPSERT_FOLDER, payload\)/);
+      assert.match(preloadSource, /sequenceLibraryDeleteFolder:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.DELETE_FOLDER, payload\)/);
+      assert.match(preloadSource, /sequenceLibraryMoveEntry:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.MOVE_ENTRY, payload\)/);
       assert.match(preloadSource, /sequenceLibrarySearchFeatures:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.SEARCH_FEATURES, payload\)/);
       assert.match(preloadSource, /sequenceLibraryAnnotate:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.ANNOTATE, payload\)/);
       assert.match(preloadSource, /sequenceLibraryRecognizeBackbone:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(SEQUENCE_LIBRARY\.RECOGNIZE_BACKBONE, payload\)/);

@@ -30,6 +30,8 @@ enabled_tools = [
   "container",
   "assay_table",
   "plotly_graph",
+  "sequence_viewer",
+  "sequence_edit",
   "ask_user"
 ]
 default_tools_approval_mode = "approve"
@@ -135,27 +137,12 @@ The Hikari MCP surface is direct-tool-only. Agent providers call the named tools
 - `container`
 - `assay_table`
 - `plotly_graph`
+- `sequence_viewer`
+- `sequence_edit`
 - `ask_user`
 
-Codex exposes the same server tools to the model with the server namespace prefix. Codex-facing instructions, skills, and model-facing examples should use:
-
-- `mcp__hikari__inventory_lookup`
-- `mcp__hikari__chemical_lookup`
-- `mcp__hikari__notebook_lookup`
-- `mcp__hikari__protocol_lookup`
-- `mcp__hikari__protocol_generation`
-- `mcp__hikari__notebook_draft`
-- `mcp__hikari__literature_search`
-- `mcp__hikari__paper_download`
-- `mcp__hikari__paper_analysis`
-- `mcp__hikari__paper_intake_search_summaries`
-- `mcp__hikari__paper_intake_search_experiments`
-- `mcp__hikari__paper_intake_list_project_summaries`
-- `mcp__hikari__purchase_recommendation`
-- `mcp__hikari__container`
-- `mcp__hikari__assay_table`
-- `mcp__hikari__plotly_graph`
-- `mcp__hikari__ask_user`
+Codex-facing instructions, skills, and examples use these same raw tool names.
+Hikari does not add or document a provider namespace prefix.
 
 Direct wrappers that delegate to app executors use the app tool schema and return this envelope:
 
@@ -350,6 +337,35 @@ Input schema:
 ```
 
 `pending_values` keys must exactly match the generated `placeholder_key` form `<step-id>:<placeholder-id>`; display labels do not identify placeholders. `step_edits` affect only the planned notebook copy and never mutate the saved protocol.
+
+### `sequence_viewer`
+
+Read + compute over the loaded sequence-viewer records. Read-only, all coordinates 1-based inclusive. The tool round-trips into the renderer (`SEQUENCE_AGENT` channels → `sequence-viewer/agent/bridge.js`) so it always sees live state.
+
+`action` enum: `list_records`, `get_record`, `get_sequence`, `get_features`, `analyze`, `design_cloning`, `get_cloning_design`.
+
+| action | key inputs | returns |
+|---|---|---|
+| `list_records` | — | `[{ id, name, length, topology, featureCount, selected }]` |
+| `get_record` | `recordId`, `include?: [sequence,features,stats]` | metadata + a `target` identity block; `sequence` omitted unless requested |
+| `get_sequence` | `recordId`, `start`, `end` | `{ start, end, length, sequence, gcPercent }` — windowed, capped ~20 kb |
+| `get_features` | `recordId`, `type?` | `[{ id, name, type, strand, segments }]` |
+| `analyze` | `recordId`, `kind: restriction\|orf\|translation\|gc`, `start?`, `end?` | analysis result, no mutation |
+| `design_cloning` | `recordId`, `strategy`, `edit?`, `insertRange?` | normalized plan `{ feasible, strategy, engineRoute, primers, enzymes, procedure, warnings, summary }` — compute-only |
+| `get_cloning_design` | — | the current in-app design source, if any |
+
+Structured errors: `RECORD_NOT_FOUND`, `RANGE_OUT_OF_BOUNDS`, `UNKNOWN_STRATEGY`, `NO_EDIT_CONTEXT`, `VIEWER_UNAVAILABLE` (viewer not open). The full input schema is in `mcp-contract.json`.
+
+### `sequence_edit`
+
+Propose a base edit or feature annotation. **Never applies** — returns a preview plus a pending-approval token; Hikari renders an approve/reject card and applies only on approval after re-verifying the target.
+
+`action` enum: `propose_edit`, `propose_annotation`. Every call carries a `target` identity (`entryId`, `recordId`, `recordIndex`, `baseLength`, `baseDigest`) that is re-resolved and re-checked at approval time.
+
+- `propose_edit`: `target`, `mode: insert|delete|replace`, `start`, `end`, `sequence`. Returns `{ pending_approval: true, kind: "edit", target, mode, edit, summary, preview: { before, after, newLength }, affectedFeatures, approvalToken }`.
+- `propose_annotation`: `target`, `mode: add|edit|delete`, `name`/`type`/`strand`/`description`/`segments` (add/edit), `featureRef` (edit/delete). Returns `{ pending_approval: true, kind: "annotation", target, mode, feature, featureRef, summary, approvalToken }`.
+
+At approval the host rejects with `TARGET_CHANGED` (digest/length moved) or `TARGET_NOT_FOUND` (record unloaded); `propose_annotation` returns `AMBIGUOUS_FEATURE` when `featureRef` does not match exactly one feature. The proposal is surfaced on the assistant message as `meta.sequenceEditProposal[approvalToken]` and reviewed via `agent-chat/review-overlay.js` (`type: 'sequence-edit'`).
 
 ### `ask_user`
 

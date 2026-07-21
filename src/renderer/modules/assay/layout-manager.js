@@ -45,7 +45,6 @@ export function createAssayLayoutManager({
     assayConcentrationAxisColumnBtn,
     assayConcentrationAxisInput,
     assayConcentrationAxisRowBtn,
-    assayConcentrationUnitInput,
     assayDilutionFactorInput,
     assayFillModeInput,
     assayImportFile,
@@ -75,17 +74,6 @@ export function createAssayLayoutManager({
 
   function setConcentrationUnit(value) {
     runtime.concentrationUnit = String(value || '').trim();
-    if (assayConcentrationUnitInput) {
-      assayConcentrationUnitInput.value = runtime.concentrationUnit;
-    }
-  }
-
-  function onConcentrationUnitInput() {
-    runtime.concentrationUnit = String(assayConcentrationUnitInput?.value || '').trim();
-    renderPlatePreview();
-    if (serialDilution.isOpen()) {
-      serialDilution.render();
-    }
   }
 
   // When a concentration cell carries a recognized unit (e.g. "100 nM"), adopt it as
@@ -650,7 +638,6 @@ export function createAssayLayoutManager({
     setConcentrationAxis,
     getConcentrationUnit,
     setConcentrationUnit,
-    onConcentrationUnitInput,
     onFillConcentrations,
     syncFillModeInputs,
     setPlateEditField,

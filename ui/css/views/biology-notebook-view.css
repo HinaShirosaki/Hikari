@@ -172,16 +172,6 @@
   outline: none;
 }
 
-.biology-notebook-folder-glyph {
-  width: 18px;
-  height: 18px;
-  display: block;
-  background: currentColor;
-  opacity: 0.74;
-  -webkit-mask: url("../../../assets/icons/folder-2-svgrepo-com.svg") center / contain no-repeat;
-  mask: url("../../../assets/icons/folder-2-svgrepo-com.svg") center / contain no-repeat;
-}
-
 .biology-notebook-folder-name {
   min-width: 0;
   font-weight: 500;

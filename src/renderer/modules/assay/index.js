@@ -88,6 +88,11 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     savedResultsDraftSnapshot = getResultsDraftSnapshot();
   }
 
+  function markLoadedAssayDraftsSaved() {
+    markCreateDraftSaved();
+    markResultsDraftSaved();
+  }
+
   function hasUnsavedResultsDraft() {
     return Boolean(savedResultsDraftSnapshot && getResultsDraftSnapshot() !== savedResultsDraftSnapshot);
   }
@@ -364,7 +369,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     clearActiveAssayInfo();
     analysisView.loadChartStyle(assay.chartStyle);
     analysisView.clearOutput();
-    markResultsDraftSaved();
+    markLoadedAssayDraftsSaved();
     notifyActiveAssayChanged();
   }
 
@@ -579,6 +584,11 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     notifyActiveAssayChanged();
   }
 
+  function startNewAssay() {
+    resetForm();
+    elements.assayNameInput?.focus();
+  }
+
   function editAssay(assayId) {
     const assay = getAssayById(assayId);
     if (!assay) {
@@ -616,7 +626,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     setResultStatus(`Loaded ${Object.keys(runtime.currentResults).length} result value(s) from saved assay.`);
     setLayoutStatus('');
     analysisView.clearOutput();
-    markCreateDraftSaved();
+    markLoadedAssayDraftsSaved();
     notifyActiveAssayChanged();
   }
 
@@ -710,6 +720,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     analysisView,
     handlers: {
       onSubmit,
+      startNewAssay,
       resetForm,
       setAssayMode,
       renderNotebookOptions,

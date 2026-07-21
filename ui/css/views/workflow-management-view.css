@@ -118,6 +118,14 @@
   grid-template-columns: minmax(170px, 0.65fr) minmax(260px, 1fr) auto;
 }
 
+.workflow-block-composer-panel .workflow-block-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.workflow-block-composer-panel .workflow-inline-actions {
+  justify-content: flex-start;
+}
+
 .workflow-inline-actions {
   align-self: end;
 }
@@ -192,10 +200,13 @@
 .workflow-node-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 102px;
+  padding: 12px 20px;
   cursor: grab;
   color: var(--theme-primary);
+  text-align: center;
   font-size: 0.93rem;
 }
 
@@ -207,20 +218,6 @@
 .workflow-node-header:active {
   cursor: grabbing;
 }
-
-.workflow-node-index {
-  display: inline-grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--theme-text-strong);
-  background: var(--theme-surface-subtle);
-}
-
-
 
 .workflow-node-remove {
   position: absolute;
@@ -268,6 +265,15 @@
   background: var(--theme-surface-subtle);
   box-shadow: none;
   padding: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+.workflow-node:hover .workflow-port,
+.workflow-node:focus-within .workflow-port {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .workflow-port:hover,

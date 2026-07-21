@@ -127,11 +127,68 @@ test('[EDGE] bench tool calculations return instant results and substituted form
     concentrationUnit: 'mM',
     molecularWeight: 58.44,
     volumeValue: 1,
-    volumeUnit: 'L',
-    outputUnit: 'mg'
+    volumeUnit: 'L'
   });
   assert.match(massResult.resultText, /584\.4 mg/i);
   assert.match(massResult.formulaText, /10 mM x 1 L x 58\.44 g\/mol/i);
+
+  [
+    { volumeValue: 1, volumeUnit: 'L', expected: '1 g' },
+    { volumeValue: 1, volumeUnit: 'mL', expected: '1 mg' },
+    { volumeValue: 1, volumeUnit: 'uL', expected: '1 ug' },
+    { volumeValue: 1, volumeUnit: 'nL', expected: '1 ng' }
+  ].forEach(({ volumeValue, volumeUnit, expected }) => {
+    const adaptiveMass = toolBox.calculateMolarityMass({
+      concentrationValue: 1,
+      concentrationUnit: 'M',
+      molecularWeight: 1,
+      volumeValue,
+      volumeUnit
+    });
+    assert.equal(adaptiveMass.resultText, `Mass needed: ${expected}.`);
+  });
+
+  [
+    { massValue: 1, massUnit: 'g', expected: '1 L' },
+    { massValue: 10, massUnit: 'mg', expected: '10 mL' },
+    { massValue: 10, massUnit: 'ug', expected: '10 uL' },
+    { massValue: 0.01, massUnit: 'ug', expected: '10 nL' }
+  ].forEach(({ massValue, massUnit, expected }) => {
+    const volumeResult = toolBox.calculateMolarityVolume({
+      massValue,
+      massUnit,
+      molecularWeight: 1,
+      concentrationValue: 1,
+      concentrationUnit: 'M'
+    });
+    assert.equal(volumeResult.resultText, `Final volume: ${expected}.`);
+  });
+
+  [
+    { massValue: 1, massUnit: 'g', expected: '1 M' },
+    { massValue: 1, massUnit: 'mg', expected: '1 mM' },
+    { massValue: 1, massUnit: 'ug', expected: '1 uM' },
+    { massValue: 0.001, massUnit: 'ug', expected: '1 nM' }
+  ].forEach(({ massValue, massUnit, expected }) => {
+    const adaptiveConcentration = toolBox.calculateMolarityConcentration({
+      massValue,
+      massUnit,
+      molecularWeight: 1,
+      volumeValue: 1,
+      volumeUnit: 'L'
+    });
+    assert.equal(adaptiveConcentration.resultText, `Concentration: ${expected}.`);
+  });
+
+  const adaptiveDilution = toolBox.calculateMolarityDilution({
+    stockConcentrationValue: 1000,
+    stockConcentrationUnit: 'mM',
+    targetConcentrationValue: 0.01,
+    targetConcentrationUnit: 'mM',
+    finalVolumeValue: 1,
+    finalVolumeUnit: 'mL'
+  });
+  assert.match(adaptiveDilution.resultText, /Use 10 nL stock \+ 1000 uL diluent\./i);
 
   const missingDilution = toolBox.calculateMolarityDilution({
     stockConcentrationValue: 100,
@@ -252,6 +309,32 @@ test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () =>
   document.getElementById('buffer-name-1').value = 'Stored';
   trigger(document.getElementById('buffer-name-1'), 'input');
   assert.match(document.getElementById('buffer-suggestions-1').innerHTML, /Stored Salt/);
+  assert.equal(document.getElementById('buffer-name-1').getAttribute('aria-expanded'), 'true');
+
+  const floatingInput = document.getElementById('buffer-name-1');
+  const floatingMenu = document.getElementById('buffer-suggestions-1');
+  floatingInput.getBoundingClientRect = () => ({
+    top: 720,
+    right: 360,
+    bottom: 760,
+    left: 120,
+    width: 240,
+    height: 40
+  });
+  floatingMenu.scrollHeight = 220;
+  document.documentElement = { clientWidth: 1000, clientHeight: 800 };
+  document.body = {
+    appendChild(element) {
+      element.parentElement = this;
+    }
+  };
+
+  trigger(floatingInput, 'focus');
+  assert.equal(floatingMenu.classList.contains('tool-box-buffer-suggestions--floating'), true);
+  assert.equal(floatingMenu.style.top, 'auto');
+  assert.equal(floatingMenu.style.bottom, '81px');
+  assert.equal(floatingMenu.style.maxHeight, '230px');
+  assert.equal(floatingMenu.style.width, '242px');
 });
 test('[EDGE] sequence-viewer assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {
   const plan = sequenceViewerInternals.assembleCloningPlan({

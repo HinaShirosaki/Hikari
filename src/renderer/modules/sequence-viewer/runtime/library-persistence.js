@@ -153,6 +153,83 @@ export function createLibraryPersistenceActions(ctx) {
     return response.entry;
   }
 
+  async function upsertLibraryFolder(folderId, requestedName) {
+    const bridge = actions.getBridge();
+    const storagePath = actions.getStoragePath();
+    const safeFolderId = cleanText(folderId, 200);
+    const nextName = normalizeRecordName(requestedName, '');
+    if (!storagePath || !nextName) {
+      throw new Error('Enter a folder name.');
+    }
+    if (!bridge?.sequenceLibraryUpsertFolder) {
+      throw new Error('Sequence folder storage API unavailable.');
+    }
+
+    const response = await bridge.sequenceLibraryUpsertFolder({
+      storagePath,
+      id: safeFolderId,
+      name: nextName
+    });
+    if (!response?.ok || !response?.folder) {
+      throw new Error(response?.error || 'Failed to save sequence folder.');
+    }
+    await controllers.home?.refreshLibraryEntries({
+      expandFolderId: response.folder.id,
+      silent: true
+    });
+    return response.folder;
+  }
+
+  async function deleteLibraryFolder(folderId) {
+    const bridge = actions.getBridge();
+    const storagePath = actions.getStoragePath();
+    const safeFolderId = cleanText(folderId, 200);
+    if (!storagePath || !safeFolderId) {
+      throw new Error('Sequence folder not found.');
+    }
+    if (!bridge?.sequenceLibraryDeleteFolder) {
+      throw new Error('Sequence folder storage API unavailable.');
+    }
+
+    const response = await bridge.sequenceLibraryDeleteFolder({
+      storagePath,
+      id: safeFolderId
+    });
+    if (!response?.ok) {
+      throw new Error(response?.error || 'Failed to delete sequence folder.');
+    }
+    await controllers.home?.refreshLibraryEntries({ silent: true });
+    return response;
+  }
+
+  async function moveLibraryEntryToFolder(entryId, folderId = '') {
+    const bridge = actions.getBridge();
+    const storagePath = actions.getStoragePath();
+    const safeEntryId = cleanText(entryId, 200);
+    const safeFolderId = cleanText(folderId, 200);
+    if (!storagePath || !safeEntryId) {
+      throw new Error('Sequence entry not found.');
+    }
+    if (!bridge?.sequenceLibraryMoveEntry) {
+      throw new Error('Sequence folder storage API unavailable.');
+    }
+
+    const response = await bridge.sequenceLibraryMoveEntry({
+      storagePath,
+      id: safeEntryId,
+      folderId: safeFolderId
+    });
+    if (!response?.ok || !response?.entry) {
+      throw new Error(response?.error || 'Failed to move sequence entry.');
+    }
+    await controllers.home?.refreshLibraryEntries({
+      selectedId: safeEntryId,
+      expandFolderId: safeFolderId,
+      silent: true
+    });
+    return response.entry;
+  }
+
   async function persistAlignmentSession(payload = {}) {
     const referenceRecord = payload?.referenceRecord;
     const session = payload?.session;
@@ -200,9 +277,12 @@ export function createLibraryPersistenceActions(ctx) {
   }
 
   return {
+    deleteLibraryFolder,
+    moveLibraryEntryToFolder,
     persistAlignmentSession,
     persistFeatureMutation,
     persistRecordToLibrary,
-    renameLibraryEntry
+    renameLibraryEntry,
+    upsertLibraryFolder
   };
 }

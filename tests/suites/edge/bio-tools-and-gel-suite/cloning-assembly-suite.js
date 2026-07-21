@@ -202,6 +202,17 @@ module.exports = function registerEdgeCloningAssemblySuite(context = {}) {
       const editIndex = filler.length + 7;
       const proposal = api.proposeEdit({ target: rec.target, mode: 'replace', start: editIndex, end: editIndex, sequence: 'A' });
       assert.equal(proposal.pending_approval, true);
+      // The echoed edit is what the approval overlay re-applies; it must be the
+      // 1-based request verbatim so the host can convert it back to a 0-based edit.
+      assert.equal(proposal.edit.mode, 'replace');
+      assert.equal(proposal.edit.start, editIndex);
+      assert.equal(proposal.edit.end, editIndex);
+      assert.equal(proposal.edit.sequence, 'A');
+      const insertProposal = api.proposeEdit({ target: rec.target, mode: 'insert', start: editIndex, sequence: 'TT' });
+      assert.equal(insertProposal.edit.mode, 'insert');
+      assert.equal(insertProposal.edit.start, editIndex);
+      assert.equal(insertProposal.edit.end, editIndex); // insert echoes end === start
+      assert.equal(insertProposal.edit.sequence, 'TT');
       assert.equal(records[0].sequence, seq); // propose never mutates
       assert.ok(api.verifyTarget(proposal.target).record);
 

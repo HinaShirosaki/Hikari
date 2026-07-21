@@ -2,7 +2,7 @@
 
 const {
   buildHikariAgentMcpInstructionBodyLines,
-  buildHikariCodexMcpToolName
+  buildHikariMcpToolName
 } = require('../mcp-contract/instructions.js');
 
 const HIKARI_AGENTS_BLOCK_START = '<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_START -->';
@@ -10,7 +10,7 @@ const HIKARI_AGENTS_BLOCK_END = '<!-- HIKARI_CODEX_AGENT_INSTRUCTIONS_END -->';
 
 function buildHikariCodexAgentsInstructions() {
   const sharedMcpContractLines = buildHikariAgentMcpInstructionBodyLines();
-  const toolName = buildHikariCodexMcpToolName;
+  const toolName = buildHikariMcpToolName;
   return [
     '# Hikari Codex Agent Instructions',
     '',
@@ -22,7 +22,7 @@ function buildHikariCodexAgentsInstructions() {
     'Codex runtime rules:',
     '- Use the shared Hikari MCP contract below.',
     '- Use direct Hikari MCP tools for app evidence, routing, inventory, protocols, notebook drafts, and structured app state.',
-    `- Call direct Hikari MCP tools by their Codex-exposed prefixed names, such as \`${toolName('inventory_lookup')}\`, \`${toolName('protocol_generation')}\`, and \`${toolName('notebook_draft')}\`.`,
+    `- Call direct Hikari MCP tools by their raw names, such as \`${toolName('inventory_lookup')}\`, \`${toolName('protocol_generation')}\`, and \`${toolName('notebook_draft')}\`.`,
     '- JSON-only prompts require JSON-only replies.',
     '',
     'Shared Hikari MCP contract:',

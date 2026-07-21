@@ -1,9 +1,7 @@
 import { BUFFER_COMPOUNDS } from './chemistry/buffer-compounds.js';
 import { formatSigFig, toNumber } from './numbers.js';
 import {
-  concentrationFromM,
   concentrationToM,
-  massFromG,
   massToG,
   volumeFromL,
   volumeToL
@@ -40,6 +38,27 @@ const BUFFER_PKA_HINTS = [
 
 const BUFFER_PH_ADJUSTMENT_MOLARITY = 6;
 const VOLUME_EPSILON_L = 1e-15;
+const ADAPTIVE_VOLUME_UNITS = [
+  { unit: 'L', factor: 1 },
+  { unit: 'mL', factor: 1e-3 },
+  { unit: 'uL', factor: 1e-6 },
+  { unit: 'nL', factor: 1e-9 }
+];
+const ADAPTIVE_MASS_UNITS = [
+  { unit: 'kg', factor: 1e3 },
+  { unit: 'g', factor: 1 },
+  { unit: 'mg', factor: 1e-3 },
+  { unit: 'ug', factor: 1e-6 },
+  { unit: 'ng', factor: 1e-9 }
+];
+const ADAPTIVE_CONCENTRATION_UNITS = [
+  { unit: 'M', factor: 1 },
+  { unit: 'mM', factor: 1e-3 },
+  { unit: 'uM', factor: 1e-6 },
+  { unit: 'nM', factor: 1e-9 },
+  { unit: 'pM', factor: 1e-12 },
+  { unit: 'fM', factor: 1e-15 }
+];
 
 function isPositive(value) {
   return Number.isFinite(value) && value > 0;
@@ -457,13 +476,34 @@ function withLabel(item, label) {
   };
 }
 
+function formatAdaptiveQuantity(value, units, zeroUnit) {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue) || numericValue === 0) {
+    return `0 ${zeroUnit}`;
+  }
+  const absoluteValue = Math.abs(numericValue);
+  const selected = units.find(({ factor }) => absoluteValue >= factor) || units[units.length - 1];
+  return `${formatSigFig(numericValue / selected.factor)} ${selected.unit}`;
+}
+
+function formatAdaptiveVolume(valueL) {
+  return formatAdaptiveQuantity(valueL, ADAPTIVE_VOLUME_UNITS, 'uL');
+}
+
+function formatAdaptiveMass(valueG) {
+  return formatAdaptiveQuantity(valueG, ADAPTIVE_MASS_UNITS, 'mg');
+}
+
+function formatAdaptiveConcentration(valueM) {
+  return formatAdaptiveQuantity(valueM, ADAPTIVE_CONCENTRATION_UNITS, 'mM');
+}
+
 export function calculateMolarityMass({
   concentrationValue,
   concentrationUnit = 'mM',
   molecularWeight,
   volumeValue,
-  volumeUnit = 'mL',
-  outputUnit = 'mg'
+  volumeUnit = 'mL'
 } = {}) {
   const concentration = withLabel(describeRawValue(concentrationValue, concentrationUnit, 'concentration'), 'concentration');
   const volume = withLabel(describeRawValue(volumeValue, volumeUnit, 'volume'), 'volume');
@@ -474,13 +514,13 @@ export function calculateMolarityMass({
   if (!missing.length) {
     const moles = concentrationToM(concentration.value, concentrationUnit) * volumeToL(volume.value, volumeUnit);
     const massG = moles * mw.value;
-    resultText = `Mass needed: ${formatSigFig(massFromG(massG, outputUnit))} ${outputUnit}.`;
+    resultText = `Mass needed: ${formatAdaptiveMass(massG)}.`;
   }
   return buildResult({
     type: 'molarity',
     mode: 'mass',
     title: 'Molarity - Mass',
-    inputs: { concentrationValue, concentrationUnit, molecularWeight, volumeValue, volumeUnit, outputUnit },
+    inputs: { concentrationValue, concentrationUnit, molecularWeight, volumeValue, volumeUnit },
     resultText,
     formulaText,
     missing
@@ -492,8 +532,7 @@ export function calculateMolarityVolume({
   massUnit = 'mg',
   molecularWeight,
   concentrationValue,
-  concentrationUnit = 'mM',
-  outputUnit = 'mL'
+  concentrationUnit = 'mM'
 } = {}) {
   const mass = withLabel(describeRawValue(massValue, massUnit, 'mass'), 'mass');
   const mw = withLabel(describeRawValue(molecularWeight, 'g/mol', 'molecular weight'), 'molecular weight');
@@ -505,13 +544,13 @@ export function calculateMolarityVolume({
     const massG = massToG(mass.value, massUnit);
     const moles = massG / mw.value;
     const volumeL = moles / concentrationToM(concentration.value, concentrationUnit);
-    resultText = `Final volume: ${formatSigFig(volumeFromL(volumeL, outputUnit))} ${outputUnit}.`;
+    resultText = `Final volume: ${formatAdaptiveVolume(volumeL)}.`;
   }
   return buildResult({
     type: 'molarity',
     mode: 'volume',
     title: 'Molarity - Volume',
-    inputs: { massValue, massUnit, molecularWeight, concentrationValue, concentrationUnit, outputUnit },
+    inputs: { massValue, massUnit, molecularWeight, concentrationValue, concentrationUnit },
     resultText,
     formulaText,
     missing
@@ -523,8 +562,7 @@ export function calculateMolarityConcentration({
   massUnit = 'mg',
   molecularWeight,
   volumeValue,
-  volumeUnit = 'mL',
-  outputUnit = 'mM'
+  volumeUnit = 'mL'
 } = {}) {
   const mass = withLabel(describeRawValue(massValue, massUnit, 'mass'), 'mass');
   const mw = withLabel(describeRawValue(molecularWeight, 'g/mol', 'molecular weight'), 'molecular weight');
@@ -535,13 +573,13 @@ export function calculateMolarityConcentration({
   if (!missing.length) {
     const moles = massToG(mass.value, massUnit) / mw.value;
     const concentrationM = moles / volumeToL(volume.value, volumeUnit);
-    resultText = `Concentration: ${formatSigFig(concentrationFromM(concentrationM, outputUnit))} ${outputUnit}.`;
+    resultText = `Concentration: ${formatAdaptiveConcentration(concentrationM)}.`;
   }
   return buildResult({
     type: 'molarity',
     mode: 'concentration',
     title: 'Molarity - Concentration',
-    inputs: { massValue, massUnit, molecularWeight, volumeValue, volumeUnit, outputUnit },
+    inputs: { massValue, massUnit, molecularWeight, volumeValue, volumeUnit },
     resultText,
     formulaText,
     missing
@@ -554,8 +592,7 @@ export function calculateMolarityDilution({
   targetConcentrationValue,
   targetConcentrationUnit = 'mM',
   finalVolumeValue,
-  finalVolumeUnit = 'mL',
-  outputUnit = 'mL'
+  finalVolumeUnit = 'mL'
 } = {}) {
   const stock = withLabel(describeRawValue(stockConcentrationValue, stockConcentrationUnit, 'stock concentration'), 'stock concentration');
   const target = withLabel(describeRawValue(targetConcentrationValue, targetConcentrationUnit, 'desired concentration'), 'desired concentration');
@@ -574,7 +611,7 @@ export function calculateMolarityDilution({
     } else {
       const stockL = (targetM * finalL) / stockM;
       const diluentL = finalL - stockL;
-      resultText = `Use ${formatSigFig(volumeFromL(stockL, outputUnit))} ${outputUnit} stock + ${formatSigFig(volumeFromL(diluentL, outputUnit))} ${outputUnit} diluent.`;
+      resultText = `Use ${formatAdaptiveVolume(stockL)} stock + ${formatAdaptiveVolume(diluentL)} diluent.`;
     }
   }
   return buildResult({
@@ -587,8 +624,7 @@ export function calculateMolarityDilution({
       targetConcentrationValue,
       targetConcentrationUnit,
       finalVolumeValue,
-      finalVolumeUnit,
-      outputUnit
+      finalVolumeUnit
     },
     resultText,
     formulaText,

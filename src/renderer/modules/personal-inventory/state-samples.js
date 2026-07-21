@@ -2,6 +2,7 @@ import {
   SAMPLE_TYPE_COLORS
 } from './constants.js';
 import {
+  getEditableSampleTypeEntries,
   getSampleTypeLabels,
   normalizeConfiguredSampleType
 } from '../../lib/inventory-settings.js';
@@ -68,9 +69,8 @@ export function createSampleStateHelpers({ state, safeText, getWellLabel }) {
 
   function renderSampleTypeOptions(selectedType = 'plasmid') {
     const selected = normalizeSampleType(selectedType);
-    return Object.entries(getSampleTypeLabels(state.settings))
-      .filter(([value]) => value !== 'other')
-      .map(([value, label]) => `<option value="${safeText(value)}"${selected === value ? ' selected' : ''}>${safeText(label)}</option>`)
+    return getEditableSampleTypeEntries(state.settings)
+      .map(({ type, label }) => `<option value="${safeText(type)}"${selected === type ? ' selected' : ''}>${safeText(label)}</option>`)
       .join('');
   }
 

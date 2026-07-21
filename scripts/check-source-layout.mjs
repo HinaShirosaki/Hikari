@@ -186,13 +186,22 @@ const allowedSequencePrefixes = [
   'src/main/preload/',
   'src/main/storage/'
 ];
+// Agent-side MCP wiring for the sequence_viewer / sequence_edit tools lives with
+// the other agent tools, not in the viewer module. These specific files are the
+// only sequence-named exceptions in the agent layer.
+const allowedSequenceFiles = new Set([
+  'src/renderer/module-manifests/sequence-viewer.js',
+  'src/main/agent/mcp-contract/direct-tools/sequence-viewer.js',
+  'src/main/agent/mcp-contract/direct-tools/sequence-edit.js',
+  'src/main/agent/tools/agent-sequence-viewer.js'
+]);
 allFiles.forEach((filePath) => {
   const file = relative(filePath);
   if (!sequenceNamePattern.test(path.basename(file))) {
     return;
   }
   const allowed = allowedSequencePrefixes.some((prefix) => file.startsWith(prefix))
-    || file === 'src/renderer/module-manifests/sequence-viewer.js';
+    || allowedSequenceFiles.has(file);
   if (!allowed) {
     failures.push(`${file} is sequence-owned code outside a Sequence Viewer or allowed boundary`);
   }

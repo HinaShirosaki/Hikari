@@ -27,12 +27,19 @@ export function createSequenceViewerHomeController(config = {}) {
   const onClearAll = config?.onClearAll || (() => {});
   const onParsedRecordsOpened = config?.onParsedRecordsOpened || (async () => null);
   const onRenameLibraryEntry = config?.onRenameLibraryEntry || (async () => null);
+  const onCreateLibraryFolder = config?.onCreateLibraryFolder || (async () => null);
+  const onRenameLibraryFolder = config?.onRenameLibraryFolder || (async () => null);
+  const onDeleteLibraryFolder = config?.onDeleteLibraryFolder || (async () => null);
+  const onMoveLibraryEntry = config?.onMoveLibraryEntry || (async () => null);
   const onLibraryEntryLoaded = typeof config?.onLibraryEntryLoaded === 'function'
     ? config.onLibraryEntryLoaded
     : () => {};
   const libraryPreviewDelayMs = 320;
   let libraryPreviewTimer = null;
-  let libraryContextEntryId = '';
+  let libraryContextType = '';
+  let libraryContextId = '';
+  let draggedLibraryEntryId = '';
+  let activeFolderDropTarget = null;
 
   function compactElementList(...items) {
     const seen = new Set();
@@ -61,26 +68,40 @@ export function createSequenceViewerHomeController(config = {}) {
     return compactElementList(elements.libraryContextMenu, elements.detailLibraryContextMenu);
   }
 
+  function getLibraryNewFolderButtons() {
+    return compactElementList(elements.libraryNewFolderBtn, elements.detailLibraryNewFolderBtn);
+  }
+
   function hideLibraryContextMenus() {
     getLibraryContextMenus().forEach((menu) => {
       menu.hidden = true;
     });
-    libraryContextEntryId = '';
+    libraryContextType = '';
+    libraryContextId = '';
   }
 
-  function showLibraryContextMenu(menu, entryId, event) {
-    if (!menu || !entryId) {
+  function showLibraryContextMenu(menu, contextType, contextId, event) {
+    if (!menu) {
       return;
     }
     hideLibraryContextMenus();
-    libraryContextEntryId = entryId;
+    libraryContextType = contextType;
+    libraryContextId = contextId;
+    const visibleActions = contextType === 'entry'
+      ? new Set(['new-folder', 'rename', 'move-entry'])
+      : contextType === 'folder'
+        ? new Set(['new-folder', 'rename-folder', 'delete-folder'])
+        : new Set(['new-folder']);
+    menu.querySelectorAll?.('[data-sequence-library-action]')?.forEach?.((button) => {
+      button.hidden = !visibleActions.has(cleanText(button?.dataset?.sequenceLibraryAction, 40));
+    });
     menu.hidden = false;
     menu.style.left = `${Math.max(8, Number(event?.clientX) || 0)}px`;
     menu.style.top = `${Math.max(8, Number(event?.clientY) || 0)}px`;
   }
 
   async function renameLibraryEntryFromContextMenu() {
-    const entryId = cleanText(libraryContextEntryId, 200);
+    const entryId = libraryContextType === 'entry' ? cleanText(libraryContextId, 200) : '';
     const entry = (Array.isArray(state.libraryEntries) ? state.libraryEntries : [])
       .find((item) => cleanText(item?.id, 200) === entryId);
     hideLibraryContextMenus();
@@ -96,7 +117,7 @@ export function createSequenceViewerHomeController(config = {}) {
     if (requestedName === null) {
       return;
     }
-    const nextName = cleanText(requestedName, 140);
+    const nextName = normalizePromptName(requestedName);
     if (!nextName) {
       setHomeStatus('Enter a sequence name.', true);
       return;
@@ -105,6 +126,138 @@ export function createSequenceViewerHomeController(config = {}) {
       await onRenameLibraryEntry(entryId, nextName);
     } catch (error) {
       setHomeStatus(error?.message || 'Failed to rename sequence entry.', true);
+    }
+  }
+
+  function normalizePromptName(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ').slice(0, 140);
+  }
+
+  function getPromptFunction() {
+    return rootDocument?.defaultView?.prompt || globalThis?.prompt;
+  }
+
+  async function createLibraryFolderFromPrompt() {
+    hideLibraryContextMenus();
+    const promptFn = getPromptFunction();
+    if (typeof promptFn !== 'function') {
+      setHomeStatus('Folder prompt unavailable.', true);
+      return;
+    }
+    const requestedName = promptFn('New sequence folder', 'New Folder');
+    if (requestedName === null) {
+      return;
+    }
+    const nextName = normalizePromptName(requestedName);
+    if (!nextName) {
+      setHomeStatus('Enter a folder name.', true);
+      return;
+    }
+    try {
+      const folder = await onCreateLibraryFolder(nextName);
+      setHomeStatus(`Created folder: ${folder?.name || nextName}.`);
+    } catch (error) {
+      setHomeStatus(error?.message || 'Failed to create sequence folder.', true);
+    }
+  }
+
+  async function renameLibraryFolderFromContextMenu() {
+    const folderId = libraryContextType === 'folder' ? cleanText(libraryContextId, 200) : '';
+    const folder = (Array.isArray(state.libraryFolders) ? state.libraryFolders : [])
+      .find((item) => cleanText(item?.id, 200) === folderId);
+    hideLibraryContextMenus();
+    if (!folder) {
+      return;
+    }
+    const promptFn = getPromptFunction();
+    if (typeof promptFn !== 'function') {
+      setHomeStatus('Folder prompt unavailable.', true);
+      return;
+    }
+    const requestedName = promptFn('Rename sequence folder', String(folder.name || 'Folder'));
+    if (requestedName === null) {
+      return;
+    }
+    const nextName = normalizePromptName(requestedName);
+    if (!nextName) {
+      setHomeStatus('Enter a folder name.', true);
+      return;
+    }
+    try {
+      const renamed = await onRenameLibraryFolder(folderId, nextName);
+      setHomeStatus(`Renamed folder to ${renamed?.name || nextName}.`);
+    } catch (error) {
+      setHomeStatus(error?.message || 'Failed to rename sequence folder.', true);
+    }
+  }
+
+  async function deleteLibraryFolderFromContextMenu() {
+    const folderId = libraryContextType === 'folder' ? cleanText(libraryContextId, 200) : '';
+    const folder = (Array.isArray(state.libraryFolders) ? state.libraryFolders : [])
+      .find((item) => cleanText(item?.id, 200) === folderId);
+    hideLibraryContextMenus();
+    if (!folder) {
+      return;
+    }
+    const confirmFn = rootDocument?.defaultView?.confirm || globalThis?.confirm;
+    if (typeof confirmFn === 'function' && !confirmFn(`Delete folder "${folder.name}"? Its sequences will become unfiled.`)) {
+      return;
+    }
+    try {
+      await onDeleteLibraryFolder(folderId);
+      setHomeStatus(`Deleted folder ${folder.name}. Its sequences are now unfiled.`);
+    } catch (error) {
+      setHomeStatus(error?.message || 'Failed to delete sequence folder.', true);
+    }
+  }
+
+  async function moveLibraryEntryFromContextMenu() {
+    const entryId = libraryContextType === 'entry' ? cleanText(libraryContextId, 200) : '';
+    const entry = (Array.isArray(state.libraryEntries) ? state.libraryEntries : [])
+      .find((item) => cleanText(item?.id, 200) === entryId);
+    const folders = Array.isArray(state.libraryFolders) ? state.libraryFolders : [];
+    hideLibraryContextMenus();
+    if (!entry) {
+      return;
+    }
+    if (!folders.length) {
+      setHomeStatus('Create a folder before moving sequences.', true);
+      return;
+    }
+    const promptFn = getPromptFunction();
+    if (typeof promptFn !== 'function') {
+      setHomeStatus('Folder prompt unavailable.', true);
+      return;
+    }
+    const currentFolder = folders.find((folder) => cleanText(folder?.id, 200) === cleanText(entry.folderId, 200));
+    const requestedName = promptFn(
+      `Move "${entry.name || 'sequence'}" to folder (${folders.map((folder) => folder.name).join(', ')}). Leave blank to remove from its folder.`,
+      currentFolder?.name || ''
+    );
+    if (requestedName === null) {
+      return;
+    }
+    const normalizedName = normalizePromptName(requestedName).toLowerCase();
+    const folder = normalizedName
+      ? folders.find((item) => String(item?.name || '').trim().toLowerCase() === normalizedName)
+      : null;
+    if (normalizedName && !folder) {
+      setHomeStatus(`Folder "${normalizePromptName(requestedName)}" was not found.`, true);
+      return;
+    }
+    await moveLibraryEntry(entryId, folder?.id || '');
+  }
+
+  async function moveLibraryEntry(entryId, folderId) {
+    try {
+      const moved = await onMoveLibraryEntry(entryId, folderId);
+      const folder = (Array.isArray(state.libraryFolders) ? state.libraryFolders : [])
+        .find((item) => cleanText(item?.id, 200) === cleanText(folderId, 200));
+      setHomeStatus(folder
+        ? `Moved ${moved?.name || 'sequence'} to ${folder.name}.`
+        : `Moved ${moved?.name || 'sequence'} out of its folder.`);
+    } catch (error) {
+      setHomeStatus(error?.message || 'Failed to move sequence entry.', true);
     }
   }
 
@@ -222,6 +375,9 @@ export function createSequenceViewerHomeController(config = {}) {
     getLibraryTemporaryFilterButtons().forEach((button) => {
       button.disabled = !hasStorage;
     });
+    getLibraryNewFolderButtons().forEach((button) => {
+      button.disabled = !hasStorage;
+    });
     if (elements.librarySearchInput) {
       elements.librarySearchInput.disabled = !hasStorage;
     }
@@ -313,7 +469,8 @@ export function createSequenceViewerHomeController(config = {}) {
     }
 
     const entries = Array.isArray(state.libraryEntries) ? state.libraryEntries : [];
-    if (!entries.length) {
+    const folders = Array.isArray(state.libraryFolders) ? state.libraryFolders : [];
+    if (!entries.length && !folders.length) {
       const noun = state.libraryFilter === libraryStatusSaved ? 'saved' : 'unsaved';
       libraryLists.forEach((libraryList) => {
         libraryList.innerHTML = `<p class="small-note">No ${noun} sequence entries.</p>`;
@@ -322,34 +479,101 @@ export function createSequenceViewerHomeController(config = {}) {
     }
 
     const query = cleanText(state.librarySearchQuery, 200).toLowerCase();
-    const visibleEntries = query
+    const matchingEntries = query
       ? entries.filter((entry) => String(entry?.name || '').toLowerCase().includes(query))
       : entries;
-    if (!visibleEntries.length) {
+    const matchingFolders = query
+      ? folders.filter((folder) => {
+        const folderMatches = String(folder?.name || '').toLowerCase().includes(query);
+        const childMatches = matchingEntries.some((entry) => cleanText(entry?.folderId, 200) === cleanText(folder?.id, 200));
+        return folderMatches || childMatches;
+      })
+      : folders;
+    const folderIds = new Set(folders.map((folder) => cleanText(folder?.id, 200)).filter(Boolean));
+    const unfiledEntries = matchingEntries.filter((entry) => {
+      const folderId = cleanText(entry?.folderId, 200);
+      return !folderId || !folderIds.has(folderId);
+    });
+    if (!unfiledEntries.length && !matchingFolders.length) {
       libraryLists.forEach((libraryList) => {
         libraryList.innerHTML = `<p class="small-note">No sequences match "${escapeHtml(query)}".</p>`;
       });
       return;
     }
 
-    const html = visibleEntries
-      .map((entry) => {
-        const active = cleanText(entry.id, 200) === cleanText(state.selectedLibraryEntryId, 200);
+    const entryHtml = (entry) => {
+      const active = cleanText(entry.id, 200) === cleanText(state.selectedLibraryEntryId, 200);
+      return `
+        <button
+          type="button"
+          class="sequence-viewer-library-item${active ? ' sequence-viewer-library-item-active' : ''}"
+          data-sequence-entry-id="${escapeHtml(entry.id)}"
+          draggable="true"
+          title="${escapeHtml(entry.name || 'sequence')}"
+        >
+          <span class="sequence-viewer-library-item-name">${escapeHtml(entry.name || 'sequence')}</span>
+        </button>
+      `;
+    };
+    const html = [
+      unfiledEntries.map(entryHtml).join(''),
+      matchingFolders.map((folder) => {
+        const folderId = cleanText(folder?.id, 200);
+        const folderNameMatches = query && String(folder?.name || '').toLowerCase().includes(query);
+        const folderEntries = entries.filter((entry) => cleanText(entry?.folderId, 200) === folderId);
+        const visibleFolderEntries = query && !folderNameMatches
+          ? matchingEntries.filter((entry) => cleanText(entry?.folderId, 200) === folderId)
+          : folderEntries;
+        const expanded = query ? true : isLibraryFolderExpanded(folderId);
         return `
-          <button
-            type="button"
-            class="sequence-viewer-library-item${active ? ' sequence-viewer-library-item-active' : ''}"
-            data-sequence-entry-id="${escapeHtml(entry.id)}"
-            title="${escapeHtml(entry.name || 'sequence')}"
-          >
-            <span class="sequence-viewer-library-item-name">${escapeHtml(entry.name || 'sequence')}</span>
-          </button>
+          <div class="sequence-viewer-library-folder-group${expanded ? ' is-expanded' : ''}">
+            <button
+              type="button"
+              class="sequence-viewer-library-folder-row${expanded ? ' is-expanded' : ''}"
+              data-sequence-folder-id="${escapeHtml(folderId)}"
+              data-sequence-folder-drop="${escapeHtml(folderId)}"
+              aria-expanded="${expanded ? 'true' : 'false'}"
+              title="${escapeHtml(folder.name || 'Folder')}"
+            >
+              <span class="sequence-viewer-library-folder-chevron" aria-hidden="true"></span>
+              <span class="left-rail-folder-glyph sequence-viewer-library-folder-glyph" aria-hidden="true"></span>
+              <span class="sequence-viewer-library-folder-name">${escapeHtml(folder.name || 'Folder')}</span>
+              <span class="sequence-viewer-library-folder-count">${folderEntries.length}</span>
+            </button>
+            ${expanded ? `
+              <div class="sequence-viewer-library-folder-children">
+                ${visibleFolderEntries.length
+                  ? visibleFolderEntries.map(entryHtml).join('')
+                  : '<p class="sequence-viewer-library-folder-empty">No sequences.</p>'}
+              </div>
+            ` : ''}
+          </div>
         `;
-      })
-      .join('');
+      }).join('')
+    ].join('');
     libraryLists.forEach((libraryList) => {
       libraryList.innerHTML = html;
     });
+  }
+
+  function isLibraryFolderExpanded(folderId) {
+    return (Array.isArray(state.expandedLibraryFolderIds) ? state.expandedLibraryFolderIds : [])
+      .some((id) => cleanText(id, 200) === cleanText(folderId, 200));
+  }
+
+  function toggleLibraryFolder(folderId) {
+    const safeFolderId = cleanText(folderId, 200);
+    if (!safeFolderId) {
+      return;
+    }
+    const expanded = new Set(Array.isArray(state.expandedLibraryFolderIds) ? state.expandedLibraryFolderIds : []);
+    if (expanded.has(safeFolderId)) {
+      expanded.delete(safeFolderId);
+    } else {
+      expanded.add(safeFolderId);
+    }
+    state.expandedLibraryFolderIds = [...expanded];
+    renderLibraryList();
   }
 
   async function loadSelectedLibraryPreview() {
@@ -392,6 +616,10 @@ export function createSequenceViewerHomeController(config = {}) {
     syncHomeControlsState();
     if (!storagePath) {
       state.libraryEntries = [];
+      state.libraryFolders = [];
+      state.expandedLibraryFolderIds = [];
+      state.libraryFolderExpansionInitialized = false;
+      state.libraryStoragePath = '';
       state.selectedLibraryEntryId = '';
       renderLibraryList();
       renderPreviewFromHtml(null, '');
@@ -415,7 +643,27 @@ export function createSequenceViewerHomeController(config = {}) {
       }
 
       const entries = Array.isArray(response.entries) ? response.entries : [];
+      const folders = Array.isArray(response.folders) ? response.folders : [];
+      const storageChanged = cleanText(state.libraryStoragePath, 2000) !== cleanText(storagePath, 2000);
+      if (storageChanged) {
+        state.libraryStoragePath = storagePath;
+        state.libraryFolderExpansionInitialized = false;
+        state.expandedLibraryFolderIds = [];
+      }
       state.libraryEntries = entries;
+      state.libraryFolders = folders;
+
+      const validFolderIds = new Set(folders.map((folder) => cleanText(folder?.id, 200)).filter(Boolean));
+      const expanded = state.libraryFolderExpansionInitialized
+        ? new Set((Array.isArray(state.expandedLibraryFolderIds) ? state.expandedLibraryFolderIds : [])
+          .filter((folderId) => validFolderIds.has(cleanText(folderId, 200))))
+        : new Set(validFolderIds);
+      const requestedExpandedFolderId = cleanText(options.expandFolderId, 200);
+      if (requestedExpandedFolderId && validFolderIds.has(requestedExpandedFolderId)) {
+        expanded.add(requestedExpandedFolderId);
+      }
+      state.expandedLibraryFolderIds = [...expanded];
+      state.libraryFolderExpansionInitialized = true;
 
       const preferred = cleanText(options.selectedId, 200) || cleanText(state.selectedLibraryEntryId, 200);
       const nextSelected = entries.some((entry) => cleanText(entry.id, 200) === preferred)
@@ -430,6 +678,7 @@ export function createSequenceViewerHomeController(config = {}) {
       }
     } catch (error) {
       state.libraryEntries = [];
+      state.libraryFolders = [];
       state.selectedLibraryEntryId = '';
       renderLibraryList();
       renderPreviewFromHtml(null, '');
@@ -444,14 +693,26 @@ export function createSequenceViewerHomeController(config = {}) {
   }
 
   function resolveLibraryEntryIdFromEvent(event) {
+    return resolveLibraryDatasetIdFromEvent(event, 'sequenceEntryId', '[data-sequence-entry-id]');
+  }
+
+  function resolveLibraryFolderIdFromEvent(event) {
+    return resolveLibraryDatasetIdFromEvent(event, 'sequenceFolderId', '[data-sequence-folder-id]');
+  }
+
+  function resolveLibraryFolderDropIdFromEvent(event) {
+    return resolveLibraryDatasetIdFromEvent(event, 'sequenceFolderDrop', '[data-sequence-folder-drop]');
+  }
+
+  function resolveLibraryDatasetIdFromEvent(event, datasetKey, selector) {
     const target = event?.target;
-    const direct = cleanText(target?.dataset?.sequenceEntryId, 200);
+    const direct = cleanText(target?.dataset?.[datasetKey], 200);
     if (direct) {
       return direct;
     }
 
     const viaClosest = cleanText(
-      target?.closest?.('[data-sequence-entry-id]')?.dataset?.sequenceEntryId,
+      target?.closest?.(selector)?.dataset?.[datasetKey],
       200
     );
     if (viaClosest) {
@@ -460,7 +721,7 @@ export function createSequenceViewerHomeController(config = {}) {
 
     let cursor = target?.parentElement || target?.parentNode || null;
     while (cursor) {
-      const resolved = cleanText(cursor?.dataset?.sequenceEntryId, 200);
+      const resolved = cleanText(cursor?.dataset?.[datasetKey], 200);
       if (resolved) {
         return resolved;
       }
@@ -679,6 +940,12 @@ export function createSequenceViewerHomeController(config = {}) {
       });
     });
 
+    getLibraryNewFolderButtons().forEach((button) => {
+      button.addEventListener('click', () => {
+        void createLibraryFolderFromPrompt();
+      });
+    });
+
     const bindLibraryList = (libraryList, options = {}) => {
       if (!libraryList) {
         return;
@@ -686,6 +953,10 @@ export function createSequenceViewerHomeController(config = {}) {
       libraryList.addEventListener('click', (event) => {
         const entryId = resolveLibraryEntryIdFromEvent(event);
         if (!entryId) {
+          const folderId = resolveLibraryFolderIdFromEvent(event);
+          if (folderId) {
+            toggleLibraryFolder(folderId);
+          }
           return;
         }
         if (Number.isFinite(Number(event?.detail)) && Number(event.detail) > 1) {
@@ -707,15 +978,71 @@ export function createSequenceViewerHomeController(config = {}) {
 
       libraryList.addEventListener('contextmenu', (event) => {
         const entryId = resolveLibraryEntryIdFromEvent(event);
+        const folderId = entryId ? '' : resolveLibraryFolderIdFromEvent(event);
+        event.preventDefault?.();
+        clearLibraryPreviewTimer();
+        if (entryId) {
+          state.selectedLibraryEntryId = entryId;
+          renderLibraryList();
+          showLibraryContextMenu(options.contextMenu, 'entry', entryId, event);
+          return;
+        }
+        showLibraryContextMenu(options.contextMenu, folderId ? 'folder' : 'library', folderId, event);
+      });
+
+      libraryList.addEventListener('dragstart', (event) => {
+        const entryId = resolveLibraryEntryIdFromEvent(event);
         if (!entryId) {
-          hideLibraryContextMenus();
+          return;
+        }
+        draggedLibraryEntryId = entryId;
+        const entryRow = event?.target?.closest?.('[data-sequence-entry-id]')
+          || (event?.target?.dataset?.sequenceEntryId ? event.target : null);
+        entryRow?.classList?.add?.('is-dragging');
+        event?.dataTransfer?.setData?.('text/plain', entryId);
+        if (event?.dataTransfer) {
+          event.dataTransfer.effectAllowed = 'move';
+        }
+      });
+
+      libraryList.addEventListener('dragover', (event) => {
+        const folderId = resolveLibraryFolderDropIdFromEvent(event);
+        if (!draggedLibraryEntryId || !folderId) {
           return;
         }
         event.preventDefault?.();
-        clearLibraryPreviewTimer();
-        state.selectedLibraryEntryId = entryId;
-        renderLibraryList();
-        showLibraryContextMenu(options.contextMenu, entryId, event);
+        if (event?.dataTransfer) {
+          event.dataTransfer.dropEffect = 'move';
+        }
+        const dropTarget = event?.target?.closest?.('[data-sequence-folder-drop]')
+          || (event?.target?.dataset?.sequenceFolderDrop ? event.target : null);
+        if (activeFolderDropTarget && activeFolderDropTarget !== dropTarget) {
+          activeFolderDropTarget.classList?.remove?.('is-sequence-drop-target');
+        }
+        activeFolderDropTarget = dropTarget;
+        activeFolderDropTarget?.classList?.add?.('is-sequence-drop-target');
+      });
+
+      libraryList.addEventListener('drop', (event) => {
+        const folderId = resolveLibraryFolderDropIdFromEvent(event);
+        const entryId = cleanText(draggedLibraryEntryId || event?.dataTransfer?.getData?.('text/plain'), 200);
+        if (!entryId || !folderId) {
+          return;
+        }
+        event.preventDefault?.();
+        activeFolderDropTarget?.classList?.remove?.('is-sequence-drop-target');
+        activeFolderDropTarget = null;
+        draggedLibraryEntryId = '';
+        void moveLibraryEntry(entryId, folderId);
+      });
+
+      libraryList.addEventListener('dragend', (event) => {
+        const entryRow = event?.target?.closest?.('[data-sequence-entry-id]')
+          || (event?.target?.dataset?.sequenceEntryId ? event.target : null);
+        entryRow?.classList?.remove?.('is-dragging');
+        activeFolderDropTarget?.classList?.remove?.('is-sequence-drop-target');
+        activeFolderDropTarget = null;
+        draggedLibraryEntryId = '';
       });
     };
 
@@ -733,6 +1060,14 @@ export function createSequenceViewerHomeController(config = {}) {
         );
         if (action === 'rename') {
           void renameLibraryEntryFromContextMenu();
+        } else if (action === 'new-folder') {
+          void createLibraryFolderFromPrompt();
+        } else if (action === 'rename-folder') {
+          void renameLibraryFolderFromContextMenu();
+        } else if (action === 'delete-folder') {
+          void deleteLibraryFolderFromContextMenu();
+        } else if (action === 'move-entry') {
+          void moveLibraryEntryFromContextMenu();
         }
       });
     });

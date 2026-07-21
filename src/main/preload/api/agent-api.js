@@ -1,6 +1,6 @@
 'use strict';
 
-const { AGENT, AGENT_PROGRESS_EVENT } = require('../../../shared/ipc/channels');
+const { AGENT, AGENT_PROGRESS_EVENT, SEQUENCE_AGENT } = require('../../../shared/ipc/channels');
 
 function createAgentApi(ipcRenderer) {
   return {
@@ -25,6 +25,27 @@ function createAgentApi(ipcRenderer) {
       ipcRenderer.on(AGENT_PROGRESS_EVENT, listener);
       return () => {
         ipcRenderer.removeListener(AGENT_PROGRESS_EVENT, listener);
+      };
+    },
+    // Main asks the renderer to run a sequence-viewer agent action against live
+    // state, then awaits the reply on SEQUENCE_AGENT.RESPONSE keyed by requestId.
+    onSequenceAgentRequest: (handler) => {
+      if (typeof handler !== 'function') {
+        return () => {};
+      }
+      const listener = async (_event, payload = {}) => {
+        const requestId = payload?.requestId;
+        let result;
+        try {
+          result = await handler(payload);
+        } catch (error) {
+          result = { error: { code: 'HANDLER_FAILED', message: String(error?.message || error) } };
+        }
+        ipcRenderer.send(SEQUENCE_AGENT.RESPONSE, { requestId, result });
+      };
+      ipcRenderer.on(SEQUENCE_AGENT.REQUEST, listener);
+      return () => {
+        ipcRenderer.removeListener(SEQUENCE_AGENT.REQUEST, listener);
       };
     }
   };

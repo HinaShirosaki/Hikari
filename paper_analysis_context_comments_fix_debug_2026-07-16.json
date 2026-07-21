@@ -1,0 +1,66 @@
+{
+  "debug_schema_version": 1,
+  "created_for": "paper_analysis sub-agent context hydration fix",
+  "package": {
+    "path": "/Users/shiyifan/Projects/Enana/out/Hikari-darwin-arm64/Hikari.app",
+    "built_at_local": "2026-07-16 18:47:11",
+    "runtime_module": "out/Hikari-darwin-arm64/Hikari.app/Contents/Resources/app.asar.unpacked/src/main/papers/analysis/agent-paper-analysis.js",
+    "source_matches_packaged_runtime": true
+  },
+  "contract": {
+    "mcp_tool_name": "paper_analysis",
+    "raw_tool_names_only": true,
+    "authored_prefix_occurrence_count": 0,
+    "paper_reference": {
+      "doi": "10.1007/s00280-026-04911-y",
+      "title": "s00280 026 04911 y"
+    },
+    "query": "What constraints to broader application of anti-PD-1 therapies does this paper mention?"
+  },
+  "packaged_runtime_verification": {
+    "ok": true,
+    "status": "completed",
+    "create_sub_agent_calls": 1,
+    "follow_up_sub_agent_calls": 0,
+    "nested_analysis_provider_calls": 0,
+    "sub_agent_id": "packaged-paper-agent",
+    "sub_agent_message_count": 2,
+    "summary": "Read 1 extracted paper markdown file(s) and loaded 1 exact line-backed context block(s)."
+  },
+  "context": {
+    "paper_title": "s00280 026 04911 y",
+    "source_path": "KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+    "source_absolute_path": "/Users/shiyifan/Projects/Enana/TestData3/KnowledgeBase/papers.md/s00280_026_04911_y/paper.md",
+    "line_ranges": [
+      {
+        "start_line": 24,
+        "end_line": 24
+      }
+    ],
+    "source_lines": [
+      {
+        "line_number": 24,
+        "content": "The programmed death-1 (PD-1) immune checkpoint is a core regulator of T-cell exhaustion and immune evasion in cancer. While PD-1/PD-L1 monoclonal antibodies have changed the landscape of cancer immunotherapy, there are barriers to broader application due to their large size, potential for systemic toxicities, and high production costs. In this review article, we will focus on therapeutic development, functional applications, and translational advances of anti-PD-1 singlechain variable fragments (scFvs). Advances in phage-display libraries, immunization methods, and antibody engineering have helped develop high-affinity scFvs with novel structural and mechanistic properties. Direct functional applications incorporating anti-PD-1 scFvs are bispecific and trispecific constructs, antibody–drug conjugates (ADCs), immunotoxins, nanoparticles, and biological vector carriers that incorporate checkpoint blockade with targeted cytotoxicity or immunostimulation. Engineered immune cells, such as armored CAR-Ts, NK cells, and MSCs, can secrete or display anti-PD-1 scFvs within the tumor to provide localized checkpoint inhibition, enhance effector-cell persistence, and remodel the tumor microenvironment. Oncolytic and non-replicating viral vectors can further confine scFv activity to tumors, coupling checkpoint blockade with oncolysis, cytokine expression, or bispecific T-cell engagers. Early-phase clinical trials are currently studying TILs and CAR-TILs engineered to secrete scFvs and oncolytic HSV-1 encoding multifunctional checkpoint payloads across a variety of solid tumors. Taken together, anti-PD-1 scFvs represent a modular platform for localized checkpoint inhibition and potentially improved cost-effectiveness compared with systemic antibodies. Future work should prioritize rational combination strategies and well-designed clinical trials that integrate anti-PD-1 scFv platforms with other immunotherapies and standard treatments to maximize clinical benefit."
+      }
+    ]
+  },
+  "comments": [
+    {
+      "id": "comment-debug",
+      "text": "Treat systemic toxicity and production cost as translation constraints.",
+      "author": "Local user",
+      "page_number": 1,
+      "highlight_id": "highlight-debug",
+      "highlight_text": "barriers to broader application due to their large size, potential for systemic toxicities, and high production costs",
+      "relation": "highlight_overlap",
+      "fixture_note": "This snapshot comment was supplied to the packaged-runtime regression check so the complete Hikari attachment path could be verified."
+    }
+  ],
+  "verification": {
+    "focused_paper_analysis_tests": "4/4 passed",
+    "source_layout": "passed",
+    "full_suite_outside_sandbox": "1215/1216 passed",
+    "remaining_failure": "Unrelated in-progress Gel lane-divider assertion in the existing dirty worktree.",
+    "gui_reopen": "blocked because the Mac was locked"
+  }
+}
