@@ -54,8 +54,25 @@ function createSystemApi(ipcRenderer, deps = {}) {
         action: String(action || '').trim()
       });
     },
+    writeTextToClipboard: (value) => writeTextToClipboard(deps.clipboard, value),
     readChemicalClipboard: () => readChemicalClipboard(deps.clipboard, deps.nativeImage)
   };
+}
+
+function writeTextToClipboard(clipboard, value = '') {
+  const text = String(value || '');
+  if (!text || !clipboard || typeof clipboard.writeText !== 'function') {
+    return { ok: false, error: 'Text clipboard is unavailable.' };
+  }
+  try {
+    clipboard.writeText(text);
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: String(error?.message || error || 'Unable to copy text.')
+    };
+  }
 }
 
 function readChemicalClipboard(clipboard, nativeImage = null) {
@@ -316,5 +333,6 @@ function dedupeCandidates(candidates) {
 
 module.exports = {
   createSystemApi,
-  readChemicalClipboard
+  readChemicalClipboard,
+  writeTextToClipboard
 };

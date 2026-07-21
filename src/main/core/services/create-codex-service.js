@@ -17,6 +17,12 @@ const {
 const {
   createCodexWorkspaceInitializer
 } = require('./create-codex-workspace-initializer.js');
+const {
+  buildHikariCodexDesktopMcpSetupPrompt
+} = require('../../agent/codex-agent/desktop-mcp-prompt.js');
+const {
+  CODEX_CONFIG_FILE
+} = require('../../lib/codex-cli-provider/constants.js');
 
 function ensurePlainObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -387,8 +393,46 @@ function createMainCodexService({
     return workspaceInitializer.initialize(input);
   }
 
+  async function getCodexDesktopMcpSetupPrompt(input = {}) {
+    const storagePath = cleanText(input.storagePath, 2400);
+    const dataFilePath = cleanText(
+      input.dataFilePath || (storagePath ? '' : getDefaultDataFilePath()),
+      2400
+    );
+    const initialization = await workspaceInitializer.initialize({
+      cwd: getCodexCliWorkingDirectory(),
+      dataFilePath,
+      fallbackDataFilePath: dataFilePath,
+      snapshot: {
+        settings: {
+          ...(storagePath ? { storagePath } : {})
+        },
+        ...(dataFilePath ? { data_file_path: dataFilePath } : {})
+      }
+    });
+    const runtimeHome = cleanText(
+      initialization?.runtime_home || processObject.env.HIKARI_CODEX_HOME,
+      2400
+    );
+    const managedConfigPath = runtimeHome ? path.join(runtimeHome, CODEX_CONFIG_FILE) : '';
+    const prompt = buildHikariCodexDesktopMcpSetupPrompt({ managedConfigPath });
+    if (!prompt) {
+      return {
+        ok: false,
+        error: 'Hikari could not prepare its live Codex MCP configuration.'
+      };
+    }
+    return {
+      ok: true,
+      prompt,
+      managedConfigPath,
+      requiresRestart: true
+    };
+  }
+
   return {
     codexAgentRuntime,
+    getCodexDesktopMcpSetupPrompt,
     getLastInitialization: workspaceInitializer.getLastResult,
     initialize,
     prepareProjectWorkspace,

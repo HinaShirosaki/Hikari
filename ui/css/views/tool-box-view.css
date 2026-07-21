@@ -234,6 +234,12 @@
   box-shadow: 0 12px 28px color-mix(in srgb, var(--theme-shadow) 18%, transparent);
 }
 
+.tool-box-buffer-suggestions--floating {
+  position: fixed;
+  z-index: 120;
+  inset: auto;
+}
+
 .tool-box-buffer-suggestions[hidden] {
   display: none;
 }

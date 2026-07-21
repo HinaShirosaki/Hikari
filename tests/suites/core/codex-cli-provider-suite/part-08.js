@@ -175,6 +175,202 @@ module.exports = function registerCodexCliProviderSuitePart08(context = {}) {
       }
     });
 
+    test('scheduled task loading survives a malformed row and reconciles a stale run', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-scheduled-recovery-'));
+      const configPath = path.join(tmpDir, 'scheduled-tasks.json');
+      const { createScheduledTaskService } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'core',
+        'services',
+        'create-scheduled-task-service.js'
+      ));
+      fs.writeFileSync(configPath, JSON.stringify({
+        version: 1,
+        tasks: [
+          { id: 'broken', title: 'no prompt at all' },
+          { id: 'good', prompt: 'still works', schedule: { kind: 'manual' } },
+          {
+            id: 'crashed',
+            prompt: 'was running when the app died',
+            schedule: { kind: 'manual' },
+            last_run: { id: 'r1', status: 'running', started_at: '2026-07-19T00:00:00.000Z' }
+          }
+        ]
+      }));
+
+      const service = createScheduledTaskService({
+        fs: fsPromises,
+        path,
+        getScheduledTasksPath: () => configPath,
+        runCodexTask: async () => ({ ok: true, text: 'unused' }),
+        consoleObject: { error() {} }
+      });
+
+      try {
+        const tasks = await service.listTasks();
+        assert.deepEqual(tasks.map((task) => task.id).sort(), ['crashed', 'good']);
+        const crashed = await service.getTask('crashed');
+        assert.equal(crashed.last_run.status, 'interrupted');
+        assert.ok(crashed.last_run.completed_at);
+      } finally {
+        await service.stop();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+
+    test('scheduled task run wraps a non-Error rejection and cleans up a failed write', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-scheduled-failures-'));
+      const { createScheduledTaskService } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'core',
+        'services',
+        'create-scheduled-task-service.js'
+      ));
+
+      const rejectPath = path.join(tmpDir, 'reject', 'scheduled-tasks.json');
+      const rejectService = createScheduledTaskService({
+        fs: fsPromises,
+        path,
+        getScheduledTasksPath: () => rejectPath,
+        runCodexTask: async () => Promise.reject('codex exploded'),
+        consoleObject: { error() {} }
+      });
+
+      const writePath = path.join(tmpDir, 'write', 'scheduled-tasks.json');
+      const failingFs = {
+        ...fsPromises,
+        writeFile: async (target, ...rest) => {
+          await fsPromises.writeFile(target, ...rest);
+          throw new Error('disk full');
+        }
+      };
+      const writeService = createScheduledTaskService({
+        fs: failingFs,
+        path,
+        getScheduledTasksPath: () => writePath,
+        runCodexTask: async () => ({ ok: true, text: 'unused' }),
+        consoleObject: { error() {} }
+      });
+
+      try {
+        const task = await rejectService.createTask({ prompt: 'boom', schedule: { kind: 'manual' } });
+        await assert.rejects(
+          () => rejectService.runTask(task.id),
+          (error) => {
+            assert.ok(error instanceof Error);
+            assert.equal(error.message, 'codex exploded');
+            assert.equal(error.scheduledTaskRun.status, 'failed');
+            return true;
+          }
+        );
+        const afterFailure = await rejectService.getTask(task.id);
+        assert.equal(afterFailure.last_run.error, 'codex exploded');
+
+        await assert.rejects(() => writeService.createTask({ prompt: 'nope' }), /disk full/);
+        const leftovers = fs.readdirSync(path.dirname(writePath)).filter((name) => name.endsWith('.tmp'));
+        assert.deepEqual(leftovers, []);
+      } finally {
+        await rejectService.stop();
+        await writeService.stop();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+
+    test('scheduled task arming staggers overdue tasks and re-arms past the timer ceiling', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-scheduled-arming-'));
+      const { createScheduledTaskService } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'core',
+        'services',
+        'create-scheduled-task-service.js'
+      ));
+
+      const staggerPath = path.join(tmpDir, 'scheduled-tasks.json');
+      fs.writeFileSync(staggerPath, JSON.stringify({
+        version: 1,
+        tasks: ['a', 'b', 'c'].map((id) => ({
+          id,
+          prompt: `overdue ${id}`,
+          schedule: { kind: 'once', run_at: '2026-07-19T11:00:00.000Z' }
+        }))
+      }));
+      let staggerClockMs = Date.parse('2026-07-19T12:00:00.000Z');
+      const staggerDelays = [];
+      const staggerService = createScheduledTaskService({
+        fs: fsPromises,
+        path,
+        getScheduledTasksPath: () => staggerPath,
+        now: () => staggerClockMs,
+        setTimer: (callback, delay) => {
+          staggerDelays.push(delay);
+          return { callback, delay, unref() {} };
+        },
+        clearTimer: () => {},
+        runCodexTask: async () => ({ ok: true, text: 'unused' }),
+        consoleObject: { error() {} }
+      });
+
+      const ceilingPath = path.join(tmpDir, 'ceiling', 'scheduled-tasks.json');
+      let ceilingClockMs = Date.parse('2026-07-19T00:00:00.000Z');
+      const ceilingTimers = [];
+      let ceilingRunCount = 0;
+      const ceilingService = createScheduledTaskService({
+        fs: fsPromises,
+        path,
+        getScheduledTasksPath: () => ceilingPath,
+        now: () => ceilingClockMs,
+        setTimer: (callback, delay) => {
+          const timer = { callback, delay, unref() {} };
+          ceilingTimers.push(timer);
+          return timer;
+        },
+        clearTimer: () => {},
+        runCodexTask: async () => {
+          ceilingRunCount += 1;
+          return { ok: true, codex_agent: { answer: 'done' } };
+        },
+        consoleObject: { error() {} }
+      });
+
+      try {
+        await staggerService.start();
+        assert.deepEqual(
+          staggerDelays.slice().sort((left, right) => left - right),
+          [0, 5_000, 10_000]
+        );
+
+        await ceilingService.start();
+        // 60 days out, well past the ~24.8 day setTimeout ceiling.
+        const created = await ceilingService.createTask({
+          prompt: 'far future',
+          schedule: {
+            kind: 'once',
+            run_at: new Date(ceilingClockMs + (60 * 86_400_000)).toISOString()
+          }
+        });
+        assert.equal(ceilingTimers.at(-1).delay, 2_147_000_000);
+
+        ceilingClockMs += 2_147_000_000;
+        await ceilingTimers.at(-1).callback();
+        assert.equal(ceilingRunCount, 0);
+        assert.ok(ceilingTimers.at(-1).delay > 0);
+
+        ceilingClockMs = Date.parse(created.next_run_at);
+        await ceilingTimers.at(-1).callback();
+        assert.equal(ceilingRunCount, 1);
+      } finally {
+        await staggerService.stop();
+        await ceilingService.stop();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+
     test('scheduled task IPC and preload APIs expose the complete CRUD and run surface', async () => {
       const { SCHEDULED_TASK } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
       const { registerScheduledTaskIpc } = require(path.join(

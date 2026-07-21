@@ -396,6 +396,31 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
       assert.doesNotMatch(packagedConfigBlock, /command = "node"/);
       fs.rmSync(fakeNodeDir, { recursive: true, force: true });
     });
+    test('Codex Desktop MCP setup prompt safely routes through Hikari managed config', () => {
+      const {
+        buildHikariCodexDesktopMcpSetupPrompt
+      } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'codex-agent',
+        'desktop-mcp-prompt.js'
+      ));
+      const prompt = buildHikariCodexDesktopMcpSetupPrompt({
+        managedConfigPath: '/Users/example/Library/Application Support/Hikari/Config/codex-cli-home/config.toml'
+      });
+
+      assert.match(prompt, /Perform the setup; do not only explain the steps/);
+      assert.match(prompt, /# HIKARI_MCP_CONFIG_START/);
+      assert.match(prompt, /# HIKARI_MCP_CONFIG_END/);
+      assert.match(prompt, /\$CODEX_HOME\/config\.toml/);
+      assert.match(prompt, /Preserve every unrelated setting/);
+      assert.match(prompt, /Do not print it in chat, logs, command output, or the final response/);
+      assert.match(prompt, /Settings > MCP servers and select Restart/);
+      assert.match(prompt, /Hikari must remain open/);
+      assert.equal(buildHikariCodexDesktopMcpSetupPrompt(), '');
+    });
     test('codex cli launch resolves an env-node shim when the GUI PATH omits Node', () => {
       if (process.platform === 'win32') {
         return;

@@ -21,6 +21,9 @@ function registerSystemIpc(deps = {}) {
     : (() => '');
   const requestCodexCliText = deps.requestCodexCliText;
   const getCodexCliWorkingDirectory = deps.getCodexCliWorkingDirectory;
+  const getCodexDesktopMcpSetupPrompt = typeof deps.getCodexDesktopMcpSetupPrompt === 'function'
+    ? deps.getCodexDesktopMcpSetupPrompt
+    : null;
   const directLlmRegistry = deps.directLlmRegistry && typeof deps.directLlmRegistry === 'object'
     ? deps.directLlmRegistry
     : null;
@@ -177,6 +180,25 @@ function registerSystemIpc(deps = {}) {
       reasoningEffort,
       previousReasoningEffort
     };
+  });
+
+  ipcMain.handle(LLM.CODEX_DESKTOP_MCP_PROMPT, async (_event, payload) => {
+    if (!getCodexDesktopMcpSetupPrompt) {
+      return { ok: false, error: 'Codex Desktop MCP setup is unavailable.' };
+    }
+    try {
+      const normalizedPayload = normalizeJsonPayload(payload, {});
+      return await getCodexDesktopMcpSetupPrompt({
+        storagePath: cleanText(normalizedPayload?.storagePath, 2400),
+        dataFilePath: cleanText(normalizedPayload?.dataFilePath, 2400)
+      });
+    } catch (error) {
+      return {
+        ok: false,
+        error: cleanText(error?.message || error, 2400)
+          || 'Failed to prepare the Codex Desktop MCP setup prompt.'
+      };
+    }
   });
 
   ipcMain.handle(LLM.CODEX_GENERATE, async (_event, payload) => {

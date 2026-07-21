@@ -8,6 +8,7 @@ export function bindAssayEvents({
 }) {
   const {
     onSubmit,
+    startNewAssay,
     resetForm,
     setAssayMode,
     renderNotebookOptions,
@@ -19,6 +20,7 @@ export function bindAssayEvents({
   } = handlers;
 
   elements.assayForm?.addEventListener('submit', onSubmit);
+  elements.assayNewBtn?.addEventListener('click', startNewAssay);
   elements.assayCancelBtn?.addEventListener('click', resetForm);
   elements.assayModeCreateBtn?.addEventListener('click', () => setAssayMode('create'));
   elements.assayModeResultsBtn?.addEventListener('click', () => setAssayMode('results'));

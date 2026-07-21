@@ -6,6 +6,13 @@ const FILE_VERSION = 1;
 const MAX_TIMER_DELAY_MS = 2_147_000_000;
 const MIN_INTERVAL_MINUTES = 1;
 const MAX_INTERVAL_MINUTES = 525_600;
+const SCHEDULE_KEYS = [
+  'kind', 'type', 'cadence', 'runAt', 'run_at',
+  'intervalMinutes', 'interval_minutes', 'anchorAt', 'anchor_at'
+];
+// ponytail: bound the catch-up stampede when many overdue tasks arm at once after
+// the app was closed for a while. Fixed 5s spread, revisit if task counts get large.
+const STAGGER_STEP_MS = 5_000;
 
 function fallbackCleanText(value, maxLength = 2000) {
   const text = String(value || '').trim();
@@ -144,8 +151,7 @@ function createScheduledTaskService({
     const executionInput = ensureObject(readInputValue(source, 'execution', '', existing.execution));
     const existingExecution = ensureObject(existing.execution);
     const hasScheduleInput = hasOwn(source, 'schedule')
-      || ['kind', 'type', 'cadence', 'runAt', 'run_at', 'intervalMinutes', 'interval_minutes', 'anchorAt', 'anchor_at']
-        .some((key) => hasOwn(source, key));
+      || SCHEDULE_KEYS.some((key) => hasOwn(source, key));
     const rawSchedule = hasOwn(source, 'schedule') ? ensureObject(source.schedule) : source;
     const schedule = normalizeSchedule(
       hasScheduleInput ? rawSchedule : ensureObject(existing.schedule),
@@ -185,7 +191,7 @@ function createScheduledTaskService({
     }
 
     return {
-      id: cleanText(existing.id || source.id || createId(), 160),
+      id: cleanText(existing.id || createId(), 160),
       title,
       prompt,
       enabled: enabledRaw !== false,
@@ -297,8 +303,23 @@ function createScheduledTaskService({
     }
     tasks.clear();
     rows.forEach((row) => {
-      const task = normalizeTask(row, row);
+      let task;
+      try {
+        task = normalizeTask(row, row);
+      } catch (error) {
+        // ponytail: drop the bad row instead of failing the load, one hand-edited
+        // entry must not take every other scheduled task down with it.
+        consoleObject.error('Skipping invalid scheduled task row:', error);
+        return;
+      }
       task.updated_at = cleanText(row?.updated_at, 80) || task.updated_at;
+      if (task.last_run?.status === 'running') {
+        // A run marked "running" on disk means the app died mid-run, nothing is
+        // running now. Mark it interrupted so the UI and once-task gating recover.
+        task.last_run.status = 'interrupted';
+        task.last_run.completed_at = task.last_run.completed_at || currentIso();
+        task.last_run.error = task.last_run.error || 'Interrupted before completion.';
+      }
       task.next_run_at = computeNextRunAt(task, currentTimeMs(), { preserveFuture: true });
       tasks.set(task.id, task);
     });
@@ -327,8 +348,13 @@ function createScheduledTaskService({
     writeQueue = writeQueue.catch(() => {}).then(async () => {
       await fs.mkdir(path.dirname(configPath), { recursive: true });
       const temporaryPath = `${configPath}.${process.pid}.tmp`;
-      await fs.writeFile(temporaryPath, JSON.stringify(snapshot, null, 2), 'utf8');
-      await fs.rename(temporaryPath, configPath);
+      try {
+        await fs.writeFile(temporaryPath, JSON.stringify(snapshot, null, 2), 'utf8');
+        await fs.rename(temporaryPath, configPath);
+      } catch (error) {
+        await fs.rm(temporaryPath, { force: true }).catch(() => {});
+        throw error;
+      }
     });
     await writeQueue;
   }
@@ -341,20 +367,28 @@ function createScheduledTaskService({
     }
   }
 
-  function armTask(task) {
+  function armTask(task, staggerMs = 0) {
     clearTaskTimer(task.id);
     if (!started || !task.enabled || !task.next_run_at || runningTaskIds.has(task.id)) {
       return;
     }
-    const delayMs = Math.max(0, parseTimestamp(task.next_run_at) - currentTimeMs());
+    const baseDelayMs = Math.max(0, parseTimestamp(task.next_run_at) - currentTimeMs());
+    // Only overdue tasks (delay already 0) get the catch-up stagger, a future task
+    // keeps its exact time.
+    const delayMs = baseDelayMs === 0 ? staggerMs : baseDelayMs;
     const timer = setTimer(() => {
       timers.delete(task.id);
-      if (delayMs > MAX_TIMER_DELAY_MS) {
-        armTask(task);
-        return;
+      const current = tasks.get(task.id);
+      if (!current) {
+        return undefined;
       }
-      return runTask(task.id, { trigger: 'schedule' }).catch((error) => {
-        consoleObject.error(`Scheduled task "${task.id}" failed:`, error);
+      if (parseTimestamp(current.next_run_at) > currentTimeMs()) {
+        // Delay was clamped to the timer ceiling, arm again for the remainder.
+        armTask(current);
+        return undefined;
+      }
+      return runTask(current.id, { trigger: 'schedule' }).catch((error) => {
+        consoleObject.error(`Scheduled task "${current.id}" failed:`, error);
       });
     }, Math.min(delayMs, MAX_TIMER_DELAY_MS));
     if (timer && typeof timer.unref === 'function') {
@@ -364,7 +398,13 @@ function createScheduledTaskService({
   }
 
   function armAllTasks() {
-    tasks.forEach((task) => armTask(task));
+    let overdueIndex = 0;
+    tasks.forEach((task) => {
+      const isOverdue = task.enabled
+        && task.next_run_at
+        && parseTimestamp(task.next_run_at) <= currentTimeMs();
+      armTask(task, isOverdue ? (overdueIndex++) * STAGGER_STEP_MS : 0);
+    });
   }
 
   async function listTasks() {
@@ -407,10 +447,8 @@ function createScheduledTaskService({
       return null;
     }
     const updated = normalizeTask({ ...ensureObject(updates), id }, existing);
-    updated.id = id;
     const scheduleChanged = hasOwn(ensureObject(updates), 'schedule')
-      || ['kind', 'type', 'cadence', 'runAt', 'run_at', 'intervalMinutes', 'interval_minutes', 'anchorAt', 'anchor_at']
-        .some((key) => hasOwn(ensureObject(updates), key));
+      || SCHEDULE_KEYS.some((key) => hasOwn(ensureObject(updates), key));
     updated.next_run_at = computeNextRunAt(updated, currentTimeMs(), {
       preserveFuture: !scheduleChanged && updated.enabled === existing.enabled
     });
@@ -515,13 +553,17 @@ function createScheduledTaskService({
       return {
         task: currentTask ? { ...publicTask(currentTask), is_running: false } : null,
         run: cloneJson(run),
-        text,
-        result
+        text
       };
-    } catch (error) {
+    } catch (rawError) {
+      // ponytail: a rejection with a primitive would throw on the property
+      // assignment below under strict mode, wrap it instead.
+      const error = rawError instanceof Error
+        ? rawError
+        : new Error(cleanText(rawError, 2400) || 'Codex scheduled task failed.');
       run.status = 'failed';
       run.completed_at = currentIso();
-      run.error = cleanText(error?.message || error, 2400) || 'Codex scheduled task failed.';
+      run.error = cleanText(error.message, 2400) || 'Codex scheduled task failed.';
       const currentTask = tasks.get(id);
       if (currentTask) {
         currentTask.last_run = run;

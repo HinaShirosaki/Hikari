@@ -38,7 +38,6 @@ body.theme-night {
   .workflow-card,
   .workflow-template-name-item,
   .sequence-viewer-library-item,
-  .inventory-container-btn,
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ) {
@@ -60,7 +59,6 @@ body.theme-night {
   .workflow-card,
   .workflow-template-name-item,
   .sequence-viewer-library-item,
-  .inventory-container-btn,
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ):hover,
@@ -77,7 +75,6 @@ body.theme-night {
   .workflow-card,
   .workflow-template-name-item,
   .sequence-viewer-library-item,
-  .inventory-container-btn,
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ):focus-visible {
@@ -98,7 +95,6 @@ body.theme-night {
   .protocol-list-row.list-row-selected,
   .workflow-template-name-item.is-active,
   .sequence-viewer-library-item-active,
-  .inventory-container-btn.active,
   .assay-browser-item.is-active,
   .list-row-selected
 ) {
@@ -121,7 +117,6 @@ body.theme-night {
   .workflow-card,
   .workflow-template-name-item,
   .sequence-viewer-library-item,
-  .inventory-container-btn,
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ):focus-visible {
@@ -141,7 +136,6 @@ body.theme-night {
   .workflow-card h3,
   .workflow-template-name-item,
   .sequence-viewer-library-item-name,
-  .inventory-container-name,
   .assay-browser-item-title,
   .text-list-btn
 ) {
@@ -160,7 +154,6 @@ body.theme-night {
   .protocol-list-row.list-row-selected .protocol-name-text,
   .workflow-template-name-item.is-active,
   .sequence-viewer-library-item-active .sequence-viewer-library-item-name,
-  .inventory-container-btn.active .inventory-container-name,
   .assay-browser-item.is-active .assay-browser-item-title,
   .list-row-selected .text-list-btn
 ) {
@@ -174,8 +167,7 @@ body.theme-night {
   .tool-tile .label,
   .agent-session-folder-row,
   .agent-session-card,
-  .settings-nav-item,
-  .inventory-container-btn
+  .settings-nav-item
 ) {
   transform: none !important;
 }
@@ -192,7 +184,6 @@ body.theme-night {
   .protocol-list-row,
   .workflow-template-name-item,
   .sequence-viewer-library-item,
-  .inventory-container-btn,
   .assay-browser-item,
   .list-row:not(.list-row-header)
 ) {

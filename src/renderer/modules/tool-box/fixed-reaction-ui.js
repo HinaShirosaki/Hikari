@@ -1,6 +1,6 @@
 import { calculateFixedReaction } from '../../lib/bench-calculations.js';
 
-const REACTION_ROW_COUNT = 6;
+const STATIC_ROW_COUNT = 6;
 
 function getElement(doc, id) {
   return doc?.getElementById?.(id) || null;
@@ -32,17 +32,6 @@ function resultTextAfterName(text) {
   return match ? match[1].trim() : source;
 }
 
-function revealNextRow(doc) {
-  for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
-    const row = getElement(doc, `fixed-reaction-row-${index}`);
-    if (row?.hidden) {
-      row.hidden = false;
-      return true;
-    }
-  }
-  return false;
-}
-
 export function initFixedReactionTool(options = {}) {
   const rootDocument = options?.document || globalThis?.document || null;
   if (!rootDocument) {
@@ -57,9 +46,64 @@ export function initFixedReactionTool(options = {}) {
     return;
   }
 
+  // ponytail: rows in the static markup; grows as rows are cloned in.
+  let rowTotal = STATIC_ROW_COUNT;
+
+  function rowCount() {
+    return rowTotal;
+  }
+
+  function bindRowInputs(index) {
+    [
+      `fixed-reaction-name-${index}`,
+      `fixed-reaction-stock-${index}`,
+      `fixed-reaction-final-${index}`,
+      `fixed-reaction-volume-${index}`
+    ].forEach((id) => {
+      const element = getElement(rootDocument, id);
+      addListener(element, 'input', renderReaction);
+      addListener(element, 'change', renderReaction);
+    });
+  }
+
+  // ponytail: clone row 1 instead of a row template/factory; rows are unbounded now.
+  function appendReactionRow() {
+    const template = getElement(rootDocument, 'fixed-reaction-row-1');
+    if (!template?.cloneNode) {
+      return;
+    }
+    const index = rowTotal + 1;
+    const row = template.cloneNode(true);
+    row.hidden = false;
+    row.id = `fixed-reaction-row-${index}`;
+    row.querySelectorAll('[id]').forEach((element) => {
+      element.id = `${element.id.replace(/-\d+$/, '')}-${index}`;
+      element.value = '';
+      element.textContent = '';
+      const label = element.getAttribute?.('aria-label');
+      if (label) {
+        element.setAttribute('aria-label', label.replace(/\d+/, String(index)));
+      }
+    });
+    rowsHost.appendChild(row);
+    rowTotal = index;
+    bindRowInputs(index);
+  }
+
+  function revealOrAddRow() {
+    for (let index = 1; index <= rowCount(); index += 1) {
+      const row = getElement(rootDocument, `fixed-reaction-row-${index}`);
+      if (row?.hidden) {
+        row.hidden = false;
+        return;
+      }
+    }
+    appendReactionRow();
+  }
+
   function collectReactionRows() {
     const rows = [];
-    for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
+    for (let index = 1; index <= rowCount(); index += 1) {
       if (isHidden(getElement(rootDocument, `fixed-reaction-row-${index}`))) {
         continue;
       }
@@ -75,7 +119,7 @@ export function initFixedReactionTool(options = {}) {
   }
 
   function renderReactionTableResult(result) {
-    for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
+    for (let index = 1; index <= rowCount(); index += 1) {
       setText(getElement(rootDocument, `fixed-reaction-output-${index}`), '');
     }
     (Array.isArray(result?.details) ? result.details : []).forEach((detail) => {
@@ -101,7 +145,7 @@ export function initFixedReactionTool(options = {}) {
   }
 
   addRowBtn.addEventListener('click', () => {
-    revealNextRow(rootDocument);
+    revealOrAddRow();
     renderReaction();
   });
 
@@ -114,17 +158,8 @@ export function initFixedReactionTool(options = {}) {
     addListener(element, 'change', renderReaction);
   });
 
-  for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
-    [
-      `fixed-reaction-name-${index}`,
-      `fixed-reaction-stock-${index}`,
-      `fixed-reaction-final-${index}`,
-      `fixed-reaction-volume-${index}`
-    ].forEach((id) => {
-      const element = getElement(rootDocument, id);
-      addListener(element, 'input', renderReaction);
-      addListener(element, 'change', renderReaction);
-    });
+  for (let index = 1; index <= rowCount(); index += 1) {
+    bindRowInputs(index);
   }
 
   renderReaction();

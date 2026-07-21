@@ -57,7 +57,7 @@ export function installSectionNavigation(ctx) {
           data-section="${safeText(section)}"
           title="${safeText(getContainerTypeLabel(container))}"
         >
-          <span class="inventory-container-glyph inventory-container-glyph--${safeText(glyphType)}" aria-hidden="true"></span>
+          <span class="inventory-container-glyph inventory-container-glyph-${safeText(glyphType)}" aria-hidden="true"></span>
           <span class="inventory-container-copy">
             <span class="inventory-container-name">${safeText(container.name)}</span>
             <span class="inventory-container-type">${safeText(getContainerTypeLabel(container))}</span>

@@ -2,6 +2,7 @@
 
 .folder-tree-template,
 .folder-tree-template__node,
+.folder-tree-template__leaf,
 .folder-tree-template__children {
   display: grid;
   min-width: 0;
@@ -14,6 +15,10 @@
 }
 
 .folder-tree-template__node {
+  position: relative;
+}
+
+.folder-tree-template__leaf {
   position: relative;
 }
 
@@ -178,7 +183,7 @@
   background: color-mix(in srgb, var(--theme-border-soft) 82%, transparent);
 }
 
-.folder-tree-template__children > .folder-tree-template__node::before {
+.folder-tree-template__children > :is(.folder-tree-template__node, .folder-tree-template__leaf)::before {
   content: '';
   position: absolute;
   top: 17px;

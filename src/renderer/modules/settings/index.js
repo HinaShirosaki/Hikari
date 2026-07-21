@@ -47,6 +47,8 @@ export function initSettings({
     settingCodexStatus,
     startCodexLoginBtn,
     clearCodexLoginBtn,
+    copyCodexDesktopMcpPromptBtn,
+    settingCodexDesktopMcpStatus,
     settingAgentDeveloperMode,
     settingAgentExternalSkillsEnabled,
     settingExternalSkillsRefreshBtn,
@@ -130,6 +132,9 @@ export function initSettings({
   settingModel?.addEventListener('change', onModelChanged);
   startCodexLoginBtn?.addEventListener('click', onStartCodexLogin);
   clearCodexLoginBtn?.addEventListener('click', onClearCodexLogin);
+  copyCodexDesktopMcpPromptBtn?.addEventListener('click', () => {
+    void onCopyCodexDesktopMcpPrompt();
+  });
   settingAgentExternalSkillsEnabled?.addEventListener('change', externalSkillsController.onGlobalEnabledChanged);
   settingExternalSkillsRefreshBtn?.addEventListener('click', () => {
     void externalSkillsController.refresh();
@@ -495,6 +500,71 @@ export function initSettings({
 
     codexLoginConfig = normalizeCodexLoginStatus(result?.status);
     renderCodexStatus(result?.message || 'Cleared the saved Codex login.');
+  }
+
+  function renderCodexDesktopMcpStatus(message = '', stateName = '') {
+    if (!settingCodexDesktopMcpStatus) {
+      return;
+    }
+    settingCodexDesktopMcpStatus.textContent = String(message || '').trim();
+    settingCodexDesktopMcpStatus.dataset.state = String(stateName || '').trim();
+  }
+
+  async function copyTextToClipboard(value = '') {
+    const text = String(value || '');
+    if (!text) {
+      return false;
+    }
+    if (window.hikariApi?.writeTextToClipboard) {
+      const result = await window.hikariApi.writeTextToClipboard(text);
+      if (result?.ok) {
+        return true;
+      }
+    }
+    const clipboard = window.navigator?.clipboard;
+    if (!clipboard || typeof clipboard.writeText !== 'function') {
+      return false;
+    }
+    await clipboard.writeText(text);
+    return true;
+  }
+
+  async function onCopyCodexDesktopMcpPrompt() {
+    if (!copyCodexDesktopMcpPromptBtn) {
+      return;
+    }
+    copyCodexDesktopMcpPromptBtn.disabled = true;
+    renderCodexDesktopMcpStatus('Preparing live connection...', 'working');
+    try {
+      const storagePath = String(state.settings?.storagePath || '').trim();
+      let dataFilePath = '';
+      if (storagePath && window.hikariApi?.autoSaveDataFile) {
+        const syncResult = await window.hikariApi.autoSaveDataFile(state, '');
+        dataFilePath = String(syncResult?.filePath || '').trim();
+      }
+      if (!window.hikariApi?.getCodexDesktopMcpSetupPrompt) {
+        throw new Error('Codex Desktop MCP setup is unavailable.');
+      }
+      const result = await window.hikariApi.getCodexDesktopMcpSetupPrompt({
+        storagePath,
+        dataFilePath
+      });
+      if (!result?.ok || !result.prompt) {
+        throw new Error(result?.error || 'Hikari could not prepare the setup prompt.');
+      }
+      const copied = await copyTextToClipboard(result.prompt);
+      if (!copied) {
+        throw new Error('The text clipboard is unavailable.');
+      }
+      renderCodexDesktopMcpStatus('Copied. Paste into Codex Desktop.', 'success');
+    } catch (error) {
+      renderCodexDesktopMcpStatus(
+        String(error?.message || error || 'Failed to copy the setup prompt.'),
+        'error'
+      );
+    } finally {
+      copyCodexDesktopMcpPromptBtn.disabled = false;
+    }
   }
 
   async function onSaveLlmSettings(event) {

@@ -3,6 +3,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    Local-first app: everything is bundled, so nothing loads over the network.
+    'wasm-unsafe-eval' is for the onnxruntime colony-counter model; 'unsafe-inline'
+    on style-src covers the <style> blocks the print and sequence-preview documents
+    build at runtime. blob: covers generated PDFs (print iframe + viewer popup).
+  -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'wasm-unsafe-eval';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob:;
+    font-src 'self' data:;
+    connect-src 'self' data: blob:;
+    frame-src 'self' blob:;
+    object-src 'none';
+    base-uri 'none';
+    form-action 'none';
+  " />
   <title>Hikari</title>
   <link rel="icon" type="image/png" href="./assets/icon.png" />
   <link rel="stylesheet" href="styles.css" />

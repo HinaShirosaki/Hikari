@@ -369,23 +369,27 @@ test('personal-inventory creates a linked sample from the side editor for an emp
   assert.ok(persistCalls >= 1);
   assert.equal(sampleChangedCalls, 1);
 });
-test('personal-inventory removes the saved-sample card and deletes containers from the left-rail context menu', () => {
+test('personal-inventory keeps folders nestable while physical containers remain distinct leaves', () => {
   const document = createMockDocument([
     'inventory-sections',
     'inventory-location-nav',
     'inventory-container-context-menu',
     'container-detail',
     'inventory-add-container-btn',
+    'inventory-add-folder-btn',
     'inventory-add-container-overlay',
     'inventory-add-container-form',
     'inventory-add-container-title',
     'inventory-add-container-note',
+    'inventory-add-item-name-label',
     'inventory-add-container-name',
     'inventory-add-container-location',
+    'inventory-add-container-type-field',
     'inventory-add-container-type',
     'inventory-add-container-grid-fields',
     'inventory-add-container-rows',
     'inventory-add-container-cols',
+    'inventory-add-container-submit',
     'inventory-add-container-close',
     'inventory-add-container-cancel'
   ]);
@@ -394,6 +398,7 @@ test('personal-inventory removes the saved-sample card and deletes containers fr
   const containerContextMenu = document.getElementById('inventory-container-context-menu');
   const addContainerOverlay = document.getElementById('inventory-add-container-overlay');
   const addContainerTitle = document.getElementById('inventory-add-container-title');
+  const addFolderBtn = document.getElementById('inventory-add-folder-btn');
   const addContainerNameInput = document.getElementById('inventory-add-container-name');
   const addContainerLocationSelect = document.getElementById('inventory-add-container-location');
   const addContainerForm = document.getElementById('inventory-add-container-form');
@@ -428,19 +433,27 @@ test('personal-inventory removes the saved-sample card and deletes containers fr
           id: 'box-context',
           name: 'Context Box',
           type: 'box81',
+          folderId: 'folder-child',
           wells: [{ name: 'A1', content: '' }]
         }
       ],
       '-80 Degree': [],
       'Liquid Nitrogen': []
+    },
+    inventoryFolders: {
+      '-20 Degree': [
+        { id: 'folder-root', name: 'Projects' },
+        { id: 'folder-child', name: 'Expression', parentFolderId: 'folder-root' }
+      ]
     }
   };
+  const createdIds = ['folder-created', 'container-created'];
   const personalInventory = inventoryModule.initPersonalInventory({
     state,
     persist: () => {
       persistCalls += 1;
     },
-    createId: () => 'container-context',
+    createId: () => createdIds.shift(),
     safeText: shared.safeText,
     cssEscape: shared.cssEscape,
     onInventoryChanged: () => {
@@ -452,7 +465,16 @@ test('personal-inventory removes the saved-sample card and deletes containers fr
   assert.doesNotMatch(inventorySections.innerHTML, /Saved Samples/);
   assert.doesNotMatch(inventorySections.innerHTML, /data-saved-sample-drag/);
   assert.doesNotMatch(inventorySections.innerHTML, /data-container-delete/);
-  assert.match(inventoryLocationNav.innerHTML, /data-container-add-child="box-context"/);
+  assert.match(inventoryLocationNav.innerHTML, /data-inventory-folder-node="folder-root"/);
+  assert.match(inventoryLocationNav.innerHTML, /data-inventory-folder-node="folder-child"/);
+  assert.match(inventoryLocationNav.innerHTML, /folder-tree-template__children/);
+  assert.match(inventoryLocationNav.innerHTML, /inventory-container-glyph-box81/);
+  assert.match(inventoryLocationNav.innerHTML, /81-well cube box/);
+  assert.equal((inventoryLocationNav.innerHTML.match(/left-rail-folder-glyph/g) || []).length, 2);
+  const contextContainerMarkup = inventoryLocationNav.innerHTML.match(/<button\s+type="button"\s+class="inventory-container-btn[^"]*"[\s\S]*?data-container-open="box-context"[\s\S]*?<\/button>/)?.[0] || '';
+  assert.ok(contextContainerMarkup);
+  assert.doesNotMatch(contextContainerMarkup, /left-rail-folder-glyph/);
+  assert.doesNotMatch(inventoryLocationNav.innerHTML, /data-container-add-child/);
   assert.match(inventorySections.innerHTML, /Select one cell to edit well and sample information/);
 
   const containerBtn = inventoryLocationNav.querySelectorAll('[data-container-open]')[0];
@@ -462,50 +484,48 @@ test('personal-inventory removes the saved-sample card and deletes containers fr
   assert.equal(containerContextMenu.style.left, '80px');
   assert.equal(containerContextMenu.style.top, '120px');
 
-  assert.ok(containerContextMenu.querySelector('[data-container-context-add-child]'));
-  const addChildBtn = inventoryLocationNav.querySelector('[data-container-add-child]');
-  addChildBtn.dataset.section = '-20 Degree';
-  trigger(addChildBtn, 'click');
-  assert.equal(containerContextMenu.hidden, true);
+  assert.equal(containerContextMenu.querySelector('[data-container-context-add-child]'), null);
+  assert.ok(containerContextMenu.querySelector('[data-container-context-rename]'));
+  assert.ok(containerContextMenu.querySelector('[data-container-context-delete]'));
+
+  trigger(addFolderBtn, 'click');
   assert.equal(addContainerOverlay.hidden, false);
-  assert.equal(addContainerTitle.textContent, 'Add Container Inside');
+  assert.equal(addContainerTitle.textContent, 'New Folder');
+  addContainerLocationSelect.value = '-20 Degree';
+  addContainerNameInput.value = 'Archive';
+  trigger(addContainerForm, 'submit');
+  const createdFolder = state.inventoryFolders['-20 Degree'].find((folder) => folder.id === 'folder-created');
+  assert.equal(createdFolder.name, 'Archive');
+  assert.equal(createdFolder.parentFolderId, undefined);
+
+  const addToFolderBtn = inventoryLocationNav.querySelectorAll('[data-folder-add-container]')
+    .find((button) => button.dataset.folderAddContainer === 'folder-root');
+  addToFolderBtn.dataset.section = '-20 Degree';
+  trigger(addToFolderBtn, 'click');
+  assert.equal(addContainerTitle.textContent, 'Add Container to Folder');
   assert.equal(addContainerLocationSelect.value, '-20 Degree');
   assert.equal(addContainerLocationSelect.disabled, true);
 
-  addContainerNameInput.value = 'Nested Box';
+  addContainerNameInput.value = 'Project Box';
   trigger(addContainerForm, 'submit');
 
-  const nestedContainer = state.inventory['-20 Degree'].find((container) => container.id === 'container-context');
-  assert.equal(nestedContainer.name, 'Nested Box');
-  assert.equal(nestedContainer.parentContainerId, 'box-context');
-  assert.match(inventoryLocationNav.innerHTML, /inventory-container-children/);
-  assert.match(inventoryLocationNav.innerHTML, /folder-tree-template__children/);
-  assert.match(inventoryLocationNav.innerHTML, /Nested Box/);
+  const createdContainer = state.inventory['-20 Degree'].find((container) => container.id === 'container-created');
+  assert.equal(createdContainer.name, 'Project Box');
+  assert.equal(createdContainer.folderId, 'folder-root');
+  assert.equal(createdContainer.parentContainerId, undefined);
+  assert.match(inventoryLocationNav.innerHTML, /Project Box/);
 
-  let parentToggle = inventoryLocationNav.querySelector('[data-container-toggle]');
-  parentToggle.dataset.section = '-20 Degree';
-  assert.match(inventoryLocationNav.innerHTML, /data-container-toggle="box-context"[\s\S]*?aria-expanded="true"/);
-  trigger(parentToggle, 'click');
-  parentToggle = inventoryLocationNav.querySelector('[data-container-toggle]');
-  parentToggle.dataset.section = '-20 Degree';
-  assert.match(inventoryLocationNav.innerHTML, /data-container-toggle="box-context"[\s\S]*?aria-expanded="false"/);
-  assert.match(inventoryLocationNav.innerHTML, /class="inventory-container-children folder-tree-template__children" hidden/);
-  trigger(parentToggle, 'click');
-
-  state.samples.push({
-    id: 'sample-child',
-    code: 'S-CHILD',
-    name: 'Child Sample',
-    type: 'protein',
-    location: null,
-    inventoryLink: {
-      section: '-20 Degree',
-      containerId: 'container-context',
-      wellIndex: null
-    },
-    chemicalLinks: [],
-    updatedAt: '2026-03-01T00:00:00.000Z'
-  });
+  let folderToggle = inventoryLocationNav.querySelectorAll('[data-inventory-folder-toggle]')
+    .find((button) => button.dataset.inventoryFolderToggle === 'folder-root');
+  folderToggle.dataset.section = '-20 Degree';
+  assert.match(inventoryLocationNav.innerHTML, /data-inventory-folder-toggle="folder-root"[\s\S]*?aria-expanded="true"/);
+  trigger(folderToggle, 'click');
+  folderToggle = inventoryLocationNav.querySelectorAll('[data-inventory-folder-toggle]')
+    .find((button) => button.dataset.inventoryFolderToggle === 'folder-root');
+  folderToggle.dataset.section = '-20 Degree';
+  assert.match(inventoryLocationNav.innerHTML, /data-inventory-folder-toggle="folder-root"[\s\S]*?aria-expanded="false"/);
+  assert.match(inventoryLocationNav.innerHTML, /class="inventory-folder-children folder-tree-template__children" hidden/);
+  trigger(folderToggle, 'click');
 
   const parentBtn = inventoryLocationNav.querySelectorAll('[data-container-open]')
     .find((button) => button.dataset.containerOpen === 'box-context');
@@ -515,11 +535,11 @@ test('personal-inventory removes the saved-sample card and deletes containers fr
   const deleteBtn = containerContextMenu.querySelector('[data-container-context-delete]');
   trigger(deleteBtn, 'click');
 
-  assert.equal(state.inventory['-20 Degree'].length, 0);
+  assert.equal(state.inventory['-20 Degree'].length, 1);
+  assert.equal(state.inventory['-20 Degree'][0].id, 'container-created');
   assert.equal(state.samples[0].inventoryLink, null);
-  assert.equal(state.samples[1].inventoryLink, null);
-  assert.equal(persistCalls, 2);
-  assert.equal(inventoryChangedCalls, 2);
+  assert.equal(persistCalls, 3);
+  assert.equal(inventoryChangedCalls, 3);
   assert.equal(containerContextMenu.hidden, true);
 });
 test('personal-inventory previews a copied structure image before saving a chemical sample', async () => {

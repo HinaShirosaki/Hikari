@@ -1,22 +1,16 @@
 <section id="assay-view" class="view">
       <div class="assay-create-layout left-rail-template">
-        <div class="assay-mode-create-panel assay-create-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <details id="assay-browser-panel" class="assay-browser-panel">
-            <summary class="assay-browser-summary">
-              <span>Existing Assays</span>
-              <span id="assay-browser-count" class="small-note">0</span>
-            </summary>
-            <div class="assay-browser-body">
-              <label>
-                Search Assays
-                <input id="assay-search" placeholder="Search assay plates, projects, or notes" />
-              </label>
-              <div id="assay-list" class="assay-browser-list"></div>
-            </div>
-          </details>
-          <form id="assay-form" class="form-grid assay-form-grid">
+        <div class="assay-mode-create-panel assay-create-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <form id="assay-form" class="form-grid assay-form-grid assay-create-sidebar-pinned left-rail-template__pinned">
             <input type="hidden" id="assay-id" />
             <div class="form-actions assay-form-actions" aria-label="Assay actions">
+              <button type="button" id="assay-new-btn" class="ghost-btn assay-form-icon-btn" aria-label="Create new assay" title="Create new assay">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 5v14"></path>
+                  <path d="M5 12h14"></path>
+                </svg>
+                <span class="sr-only">Create new assay</span>
+              </button>
               <button type="button" id="assay-export-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Export CSV template" title="Export CSV template">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M12 4v12"></path>
@@ -106,6 +100,21 @@
             <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
             <div id="assay-csv-status" class="small-note assay-form-note"></div>
           </form>
+          <div class="assay-create-sidebar-scroll left-rail-template__scroll">
+            <details id="assay-browser-panel" class="assay-browser-panel">
+              <summary class="assay-browser-summary">
+                <span>Existing Assays</span>
+                <span id="assay-browser-count" class="small-note">0</span>
+              </summary>
+              <div class="assay-browser-body">
+                <label>
+                  Search Assays
+                  <input id="assay-search" placeholder="Search assay plates, projects, or notes" />
+                </label>
+                <div id="assay-list" class="assay-browser-list"></div>
+              </div>
+            </details>
+          </div>
         </div>
 
         <div class="panel assay-mode-create-panel assay-create-preview-panel left-rail-template__main">

@@ -20,6 +20,8 @@ export function getSettingsElements(rootDocument = globalThis?.document || null)
     settingCodexStatus: getById('setting-codex-status'),
     startCodexLoginBtn: getById('start-codex-login-btn'),
     clearCodexLoginBtn: getById('clear-codex-login-btn'),
+    copyCodexDesktopMcpPromptBtn: getById('copy-codex-desktop-mcp-prompt-btn'),
+    settingCodexDesktopMcpStatus: getById('setting-codex-desktop-mcp-status'),
     settingAgentDeveloperMode: getById('setting-agent-developer-mode'),
     settingAgentExternalSkillsEnabled: getById('setting-agent-external-skills-enabled'),
     settingExternalSkillsRefreshBtn: getById('setting-external-skills-refresh-btn'),

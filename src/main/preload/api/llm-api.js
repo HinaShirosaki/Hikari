@@ -12,6 +12,9 @@ function createLlmApi(ipcRenderer) {
     setCodexLlmReasoningEffort: (reasoningEffort) => (
       ipcRenderer.invoke(LLM.CODEX_SET_REASONING_EFFORT, { reasoningEffort })
     ),
+    getCodexDesktopMcpSetupPrompt: (payload) => (
+      ipcRenderer.invoke(LLM.CODEX_DESKTOP_MCP_PROMPT, payload)
+    ),
     runCodexLlmPrompt: (payload) => ipcRenderer.invoke(LLM.CODEX_GENERATE, payload),
     getDirectLlmModules: () => ipcRenderer.invoke(LLM.DIRECT_MODULES),
     runDirectLlmPrompt: (payload) => ipcRenderer.invoke(LLM.DIRECT_GENERATE, payload)

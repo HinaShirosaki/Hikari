@@ -309,6 +309,32 @@ test('[EDGE] tool-box buffer and fixed reaction UI use typed table cells', () =>
   document.getElementById('buffer-name-1').value = 'Stored';
   trigger(document.getElementById('buffer-name-1'), 'input');
   assert.match(document.getElementById('buffer-suggestions-1').innerHTML, /Stored Salt/);
+  assert.equal(document.getElementById('buffer-name-1').getAttribute('aria-expanded'), 'true');
+
+  const floatingInput = document.getElementById('buffer-name-1');
+  const floatingMenu = document.getElementById('buffer-suggestions-1');
+  floatingInput.getBoundingClientRect = () => ({
+    top: 720,
+    right: 360,
+    bottom: 760,
+    left: 120,
+    width: 240,
+    height: 40
+  });
+  floatingMenu.scrollHeight = 220;
+  document.documentElement = { clientWidth: 1000, clientHeight: 800 };
+  document.body = {
+    appendChild(element) {
+      element.parentElement = this;
+    }
+  };
+
+  trigger(floatingInput, 'focus');
+  assert.equal(floatingMenu.classList.contains('tool-box-buffer-suggestions--floating'), true);
+  assert.equal(floatingMenu.style.top, 'auto');
+  assert.equal(floatingMenu.style.bottom, '81px');
+  assert.equal(floatingMenu.style.maxHeight, '230px');
+  assert.equal(floatingMenu.style.width, '242px');
 });
 test('[EDGE] sequence-viewer assembleCloningPlan prefers restriction-ligation for simple host-plus-insert cases', () => {
   const plan = sequenceViewerInternals.assembleCloningPlan({

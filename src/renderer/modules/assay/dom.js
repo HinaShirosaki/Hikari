@@ -21,6 +21,7 @@ export function getAssayElements(root = document) {
     assayDilutionFillBtn: root.getElementById('assay-dilution-fill-btn'),
     assayFillModeInput: root.getElementById('assay-fill-mode'),
     assayNotebookEntryInput: root.getElementById('assay-notebook-entry'),
+    assayNewBtn: root.getElementById('assay-new-btn'),
     assayCancelBtn: root.getElementById('assay-cancel-btn'),
     assayBrowserPanel: root.getElementById('assay-browser-panel'),
     assayBrowserCount: root.getElementById('assay-browser-count'),

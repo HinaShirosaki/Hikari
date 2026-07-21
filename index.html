@@ -5,6 +5,24 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!--
+    Local-first app: everything is bundled, so nothing loads over the network.
+    'wasm-unsafe-eval' is for the onnxruntime colony-counter model; 'unsafe-inline'
+    on style-src covers the <style> blocks the print and sequence-preview documents
+    build at runtime. blob: covers generated PDFs (print iframe + viewer popup).
+  -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' 'wasm-unsafe-eval';
+    style-src 'self' 'unsafe-inline';
+    img-src 'self' data: blob:;
+    font-src 'self' data:;
+    connect-src 'self' data: blob:;
+    frame-src 'self' blob:;
+    object-src 'none';
+    base-uri 'none';
+    form-action 'none';
+  " />
   <title>Hikari</title>
   <link rel="icon" type="image/png" href="./assets/icon.png" />
   <link rel="stylesheet" href="styles.css" />
@@ -1043,7 +1061,10 @@
       <div class="personal-inventory-layout left-rail-template">
         <aside class="inventory-rail-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="inventory-rail-pinned left-rail-template__pinned">
-            <button id="inventory-add-container-btn" type="button" class="primary-btn" aria-controls="inventory-add-container-overlay" aria-expanded="false">Add Container</button>
+            <div class="inventory-rail-create-actions">
+              <button id="inventory-add-container-btn" type="button" class="primary-btn" aria-controls="inventory-add-container-overlay" aria-expanded="false">Add Container</button>
+              <button id="inventory-add-folder-btn" type="button" class="ghost-btn" aria-controls="inventory-add-container-overlay" aria-expanded="false">New Folder</button>
+            </div>
           </div>
           <div class="inventory-rail-scroll left-rail-template__scroll">
             <div class="inventory-rail-stack app-left-rail-section">
@@ -1075,7 +1096,7 @@
             <button id="inventory-add-container-close" type="button" class="app-dialog-close-btn" aria-label="Close add container dialog" title="Close"><span aria-hidden="true">&times;</span></button>
           </div>
           <label>
-            Container Name
+            <span id="inventory-add-item-name-label">Container Name</span>
             <input id="inventory-add-container-name" placeholder="e.g. Box A" required />
           </label>
           <label>
@@ -1084,7 +1105,7 @@
               <option value="">Select location</option>
             </select>
           </label>
-          <label>
+          <label id="inventory-add-container-type-field">
             Type
             <select id="inventory-add-container-type">
               <option value="box81">81-well cube box</option>
@@ -1105,7 +1126,7 @@
             <p class="small-note inventory-custom-grid-note">Custom grid boxes reuse the same visual style as the 81-well box.</p>
           </div>
           <div class="form-actions">
-            <button type="submit" class="primary-btn">Save Container</button>
+            <button id="inventory-add-container-submit" type="submit" class="primary-btn">Save Container</button>
             <button id="inventory-add-container-cancel" type="button" class="ghost-btn">Cancel</button>
           </div>
         </form>
@@ -1259,23 +1280,17 @@
 <!-- SOURCE: ui/html/views/assay-view.html -->
 <section id="assay-view" class="view">
       <div class="assay-create-layout left-rail-template">
-        <div class="assay-mode-create-panel assay-create-sidebar app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <details id="assay-browser-panel" class="assay-browser-panel">
-            <summary class="assay-browser-summary">
-              <span>Existing Assays</span>
-              <span id="assay-browser-count" class="small-note">0</span>
-            </summary>
-            <div class="assay-browser-body">
-              <label>
-                Search Assays
-                <input id="assay-search" placeholder="Search assay plates, projects, or notes" />
-              </label>
-              <div id="assay-list" class="assay-browser-list"></div>
-            </div>
-          </details>
-          <form id="assay-form" class="form-grid assay-form-grid">
+        <div class="assay-mode-create-panel assay-create-sidebar app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <form id="assay-form" class="form-grid assay-form-grid assay-create-sidebar-pinned left-rail-template__pinned">
             <input type="hidden" id="assay-id" />
             <div class="form-actions assay-form-actions" aria-label="Assay actions">
+              <button type="button" id="assay-new-btn" class="ghost-btn assay-form-icon-btn" aria-label="Create new assay" title="Create new assay">
+                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                  <path d="M12 5v14"></path>
+                  <path d="M5 12h14"></path>
+                </svg>
+                <span class="sr-only">Create new assay</span>
+              </button>
               <button type="button" id="assay-export-template-btn" class="ghost-btn assay-form-icon-btn" aria-label="Export CSV template" title="Export CSV template">
                 <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
                   <path d="M12 4v12"></path>
@@ -1365,6 +1380,21 @@
             <div id="assay-plate-definition" class="small-note assay-form-note" hidden></div>
             <div id="assay-csv-status" class="small-note assay-form-note"></div>
           </form>
+          <div class="assay-create-sidebar-scroll left-rail-template__scroll">
+            <details id="assay-browser-panel" class="assay-browser-panel">
+              <summary class="assay-browser-summary">
+                <span>Existing Assays</span>
+                <span id="assay-browser-count" class="small-note">0</span>
+              </summary>
+              <div class="assay-browser-body">
+                <label>
+                  Search Assays
+                  <input id="assay-search" placeholder="Search assay plates, projects, or notes" />
+                </label>
+                <div id="assay-list" class="assay-browser-list"></div>
+              </div>
+            </details>
+          </div>
         </div>
 
         <div class="panel assay-mode-create-panel assay-create-preview-panel left-rail-template__main">
@@ -2104,6 +2134,15 @@
                     <button type="button" id="start-codex-login-btn" class="ghost-btn">Login with OpenAI</button>
                     <button type="button" id="clear-codex-login-btn" class="ghost-btn">Clear Saved Login</button>
                   </div>
+                </div>
+                <div class="settings-subsection settings-codex-desktop-mcp">
+                  <h4>Connect Codex Desktop to Hikari</h4>
+                  <p class="small-note">Copy this setup prompt into a Codex Desktop task. It merges Hikari's live MCP connection into your Codex user configuration without replacing other settings.</p>
+                  <div class="form-actions settings-codex-desktop-mcp-actions">
+                    <button type="button" id="copy-codex-desktop-mcp-prompt-btn" class="ghost-btn">Copy Setup Prompt</button>
+                    <span id="setting-codex-desktop-mcp-status" class="small-note" aria-live="polite"></span>
+                  </div>
+                  <p class="small-note">Keep Hikari open. Codex Desktop will need one restart after installing the connection.</p>
                 </div>
                 <label class="inline-row settings-toggle-row">
                   <input id="setting-agent-developer-mode" type="checkbox" />
@@ -2954,7 +2993,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-1">
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-1" />
+                      <input id="buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-1" aria-expanded="false" />
                       <div id="buffer-suggestions-1" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>
@@ -2966,7 +3005,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-2">
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-2" />
+                      <input id="buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-2" aria-expanded="false" />
                       <div id="buffer-suggestions-2" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>
@@ -2978,7 +3017,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-3" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-3" />
+                      <input id="buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-3" aria-expanded="false" />
                       <div id="buffer-suggestions-3" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>
@@ -2990,7 +3029,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-4" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-4" />
+                      <input id="buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-4" aria-expanded="false" />
                       <div id="buffer-suggestions-4" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>
@@ -3002,7 +3041,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-5" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-5" />
+                      <input id="buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-5" aria-expanded="false" />
                       <div id="buffer-suggestions-5" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>
@@ -3014,7 +3053,7 @@
                 <tr class="tool-box-buffer-row" id="buffer-row-6" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
                     <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-6" />
+                      <input id="buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-6" aria-expanded="false" />
                       <div id="buffer-suggestions-6" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
                   </th>

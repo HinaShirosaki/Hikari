@@ -209,6 +209,15 @@
                     <button type="button" id="clear-codex-login-btn" class="ghost-btn">Clear Saved Login</button>
                   </div>
                 </div>
+                <div class="settings-subsection settings-codex-desktop-mcp">
+                  <h4>Connect Codex Desktop to Hikari</h4>
+                  <p class="small-note">Copy this setup prompt into a Codex Desktop task. It merges Hikari's live MCP connection into your Codex user configuration without replacing other settings.</p>
+                  <div class="form-actions settings-codex-desktop-mcp-actions">
+                    <button type="button" id="copy-codex-desktop-mcp-prompt-btn" class="ghost-btn">Copy Setup Prompt</button>
+                    <span id="setting-codex-desktop-mcp-status" class="small-note" aria-live="polite"></span>
+                  </div>
+                  <p class="small-note">Keep Hikari open. Codex Desktop will need one restart after installing the connection.</p>
+                </div>
                 <label class="inline-row settings-toggle-row">
                   <input id="setting-agent-developer-mode" type="checkbox" />
                   <span>Agent Developer Mode (record redacted LLM request/response traces)</span>

@@ -97,6 +97,23 @@
   border-top: 1px solid color-mix(in srgb, var(--theme-border) 70%, transparent);
 }
 
+#setting-view .settings-codex-desktop-mcp {
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--theme-border) 70%, transparent);
+}
+
+#setting-view .settings-codex-desktop-mcp-actions {
+  align-items: center;
+}
+
+#setting-view #setting-codex-desktop-mcp-status[data-state="success"] {
+  color: var(--theme-accent);
+}
+
+#setting-view #setting-codex-desktop-mcp-status[data-state="error"] {
+  color: var(--theme-danger);
+}
+
 #setting-view .settings-location-entry {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

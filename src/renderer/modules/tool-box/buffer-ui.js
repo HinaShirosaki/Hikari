@@ -5,15 +5,17 @@ import {
   resolveBufferCompound
 } from '../../lib/bench-calculations.js';
 
-const BUFFER_ROW_COUNT = 6;
+const BUFFER_STATIC_ROW_COUNT = 6;
+const BUFFER_SUGGESTION_MAX_HEIGHT = 230;
+const BUFFER_SUGGESTION_VIEWPORT_GAP = 8;
 
 function getElement(doc, id) {
   return doc?.getElementById?.(id) || null;
 }
 
-function addListener(element, eventName, handler) {
+function addListener(element, eventName, handler, options) {
   if (element && typeof element.addEventListener === 'function') {
-    element.addEventListener(eventName, handler);
+    element.addEventListener(eventName, handler, options);
   }
 }
 
@@ -66,17 +68,6 @@ function inferCompoundForm(record) {
   return /\b(liquid|solution|ml|ul|l)\b/.test(formText) ? 'liquid' : 'solid';
 }
 
-function revealNextRow(doc) {
-  for (let index = 1; index <= BUFFER_ROW_COUNT; index += 1) {
-    const row = getElement(doc, `buffer-row-${index}`);
-    if (row?.hidden) {
-      row.hidden = false;
-      return true;
-    }
-  }
-  return false;
-}
-
 export function initBufferTool(options = {}) {
   const rootDocument = options?.document || globalThis?.document || null;
   if (!rootDocument) {
@@ -90,6 +81,54 @@ export function initBufferTool(options = {}) {
   const bufferTotalResult = getElement(rootDocument, 'buffer-total-result');
   if (!bufferVolumeInput || !bufferRows || !addBufferChemicalBtn || !bufferTotalResult) {
     return;
+  }
+
+  // ponytail: snapshot row 1 now — its suggestion menu gets reparented to <body> once it floats.
+  const rowTemplate = getElement(rootDocument, 'buffer-row-1')?.cloneNode?.(true) || null;
+  let rowTotal = BUFFER_STATIC_ROW_COUNT;
+
+  function rowCount() {
+    return rowTotal;
+  }
+
+  function appendBufferRow() {
+    if (!rowTemplate?.cloneNode) {
+      return;
+    }
+    const index = rowTotal + 1;
+    const row = rowTemplate.cloneNode(true);
+    row.hidden = false;
+    row.id = `buffer-row-${index}`;
+    row.querySelectorAll('[id]').forEach((element) => {
+      element.id = `${element.id.replace(/-\d+$/, '')}-${index}`;
+      element.value = '';
+      element.textContent = '';
+      const label = element.getAttribute?.('aria-label');
+      if (label) {
+        element.setAttribute('aria-label', label.replace(/\d+/, String(index)));
+      }
+      const controls = element.getAttribute?.('aria-controls');
+      if (controls) {
+        element.setAttribute('aria-controls', controls.replace(/-\d+$/, `-${index}`));
+      }
+      if (element.dataset?.bufferChemicalIndex) {
+        element.dataset.bufferChemicalIndex = String(index);
+      }
+    });
+    bufferRows.appendChild(row);
+    rowTotal = index;
+    bindBufferRow(index);
+  }
+
+  function revealOrAddRow() {
+    for (let index = 1; index <= rowTotal; index += 1) {
+      const row = getElement(rootDocument, `buffer-row-${index}`);
+      if (row?.hidden) {
+        row.hidden = false;
+        return;
+      }
+    }
+    appendBufferRow();
   }
 
   function buildBufferCandidates() {
@@ -160,7 +199,7 @@ export function initBufferTool(options = {}) {
   }
 
   function closeBufferSuggestions(index = null) {
-    for (let rowIndex = 1; rowIndex <= BUFFER_ROW_COUNT; rowIndex += 1) {
+    for (let rowIndex = 1; rowIndex <= rowCount(); rowIndex += 1) {
       if (index && rowIndex !== index) {
         continue;
       }
@@ -168,6 +207,69 @@ export function initBufferTool(options = {}) {
       if (menu) {
         menu.hidden = true;
         menu.innerHTML = '';
+      }
+      getElement(rootDocument, `buffer-name-${rowIndex}`)?.setAttribute?.('aria-expanded', 'false');
+    }
+  }
+
+  function positionBufferSuggestions(index) {
+    const input = getElement(rootDocument, `buffer-name-${index}`);
+    const menu = getElement(rootDocument, `buffer-suggestions-${index}`);
+    const inputRect = input?.getBoundingClientRect?.();
+    const viewportWidth = Number(rootDocument?.documentElement?.clientWidth)
+      || Number(rootDocument?.defaultView?.innerWidth)
+      || 0;
+    const viewportHeight = Number(rootDocument?.documentElement?.clientHeight)
+      || Number(rootDocument?.defaultView?.innerHeight)
+      || 0;
+    if (!inputRect || !viewportWidth || !viewportHeight || !menu?.style) {
+      return false;
+    }
+
+    const overlayRoot = rootDocument?.body;
+    if (overlayRoot && typeof overlayRoot.appendChild === 'function' && menu.parentElement !== overlayRoot) {
+      overlayRoot.appendChild(menu);
+    }
+    menu.classList?.add?.('tool-box-buffer-suggestions--floating');
+
+    const width = Math.min(
+      Math.max(Number(inputRect.width) || 0, 1) + 2,
+      Math.max(viewportWidth - (BUFFER_SUGGESTION_VIEWPORT_GAP * 2), 1)
+    );
+    const left = Math.min(
+      Math.max((Number(inputRect.left) || 0) - 1, BUFFER_SUGGESTION_VIEWPORT_GAP),
+      Math.max(BUFFER_SUGGESTION_VIEWPORT_GAP, viewportWidth - width - BUFFER_SUGGESTION_VIEWPORT_GAP)
+    );
+    const spaceBelow = Math.max(0, viewportHeight - Number(inputRect.bottom) - BUFFER_SUGGESTION_VIEWPORT_GAP);
+    const spaceAbove = Math.max(0, Number(inputRect.top) - BUFFER_SUGGESTION_VIEWPORT_GAP);
+
+    menu.style.left = `${Math.round(left)}px`;
+    menu.style.right = 'auto';
+    menu.style.width = `${Math.round(width)}px`;
+    menu.style.maxHeight = `${Math.round(Math.min(BUFFER_SUGGESTION_MAX_HEIGHT, Math.max(spaceAbove, spaceBelow)))}px`;
+    menu.hidden = false;
+
+    const menuHeight = Math.min(
+      BUFFER_SUGGESTION_MAX_HEIGHT,
+      Number(menu.scrollHeight) || BUFFER_SUGGESTION_MAX_HEIGHT
+    );
+    if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+      menu.style.top = 'auto';
+      menu.style.bottom = `${Math.round(viewportHeight - Number(inputRect.top) + 1)}px`;
+      menu.style.maxHeight = `${Math.round(Math.min(BUFFER_SUGGESTION_MAX_HEIGHT, spaceAbove))}px`;
+    } else {
+      menu.style.top = `${Math.round(Number(inputRect.bottom) - 1)}px`;
+      menu.style.bottom = 'auto';
+      menu.style.maxHeight = `${Math.round(Math.min(BUFFER_SUGGESTION_MAX_HEIGHT, spaceBelow))}px`;
+    }
+    return true;
+  }
+
+  function repositionOpenBufferSuggestions() {
+    for (let index = 1; index <= rowCount(); index += 1) {
+      const menu = getElement(rootDocument, `buffer-suggestions-${index}`);
+      if (menu && !menu.hidden) {
+        positionBufferSuggestions(index);
       }
     }
   }
@@ -206,6 +308,8 @@ export function initBufferTool(options = {}) {
       `;
     }).join('');
     menu.hidden = false;
+    input.setAttribute?.('aria-expanded', 'true');
+    positionBufferSuggestions(index);
   }
 
   function selectBufferCandidate(index, candidateName) {
@@ -237,7 +341,7 @@ export function initBufferTool(options = {}) {
 
   function collectBufferRows() {
     const rows = [];
-    for (let index = 1; index <= BUFFER_ROW_COUNT; index += 1) {
+    for (let index = 1; index <= rowCount(); index += 1) {
       if (isHidden(getElement(rootDocument, `buffer-row-${index}`))) {
         continue;
       }
@@ -256,7 +360,7 @@ export function initBufferTool(options = {}) {
   }
 
   function renderBufferTableResult(result) {
-    for (let index = 1; index <= BUFFER_ROW_COUNT; index += 1) {
+    for (let index = 1; index <= rowCount(); index += 1) {
       setText(getElement(rootDocument, `buffer-output-${index}`), '');
     }
     (Array.isArray(result?.details) ? result.details : []).forEach((detail) => {
@@ -285,15 +389,7 @@ export function initBufferTool(options = {}) {
     bufferTotalResult.hidden = true;
   }
 
-  addBufferChemicalBtn.addEventListener('click', () => {
-    revealNextRow(rootDocument);
-    renderBuffer();
-  });
-
-  addListener(bufferVolumeInput, 'input', renderBuffer);
-  addListener(bufferPhInput, 'input', renderBuffer);
-
-  for (let index = 1; index <= BUFFER_ROW_COUNT; index += 1) {
+  function bindBufferRow(index) {
     const nameInput = getElement(rootDocument, `buffer-name-${index}`);
     const suggestions = getElement(rootDocument, `buffer-suggestions-${index}`);
     addListener(nameInput, 'focus', () => renderBufferSuggestions(index));
@@ -329,11 +425,25 @@ export function initBufferTool(options = {}) {
     });
   }
 
+  addBufferChemicalBtn.addEventListener('click', () => {
+    revealOrAddRow();
+    renderBuffer();
+  });
+
+  addListener(bufferVolumeInput, 'input', renderBuffer);
+  addListener(bufferPhInput, 'input', renderBuffer);
+
+  for (let index = 1; index <= rowCount(); index += 1) {
+    bindBufferRow(index);
+  }
+
   addListener(rootDocument, 'click', (event) => {
-    if (!event?.target?.closest?.('.tool-box-buffer-autocomplete')) {
+    if (!event?.target?.closest?.('.tool-box-buffer-autocomplete, .tool-box-buffer-suggestions')) {
       closeBufferSuggestions();
     }
   });
+  addListener(rootDocument, 'scroll', repositionOpenBufferSuggestions, true);
+  addListener(rootDocument?.defaultView, 'resize', repositionOpenBufferSuggestions);
 
   renderBuffer();
 }

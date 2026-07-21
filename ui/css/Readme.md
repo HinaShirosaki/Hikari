@@ -46,9 +46,12 @@ part of the standard verification path.
 `overrides/folder-tree-template.css` owns recursive folder rows inside a rail:
 
 - `.folder-tree-template` is the tree root.
-- `.folder-tree-template__node` and `.folder-tree-template__children` may nest to any depth.
+- `.folder-tree-template__node` and `.folder-tree-template__children` may nest to any depth; `.folder-tree-template__leaf` connects a non-folder item to the same branch.
 - `.folder-tree-template__row` contains the disclosure control, main folder button, and optional action.
 - `.folder-tree-template__disclosure` wraps the CSS-drawn chevron; do not use text `>` characters.
 
 Modules keep ownership of their data, labels, and commands. They can reuse
 `src/renderer/lib/folder-tree.js` for consistent expanded/collapsed state.
+The Personal Inventory module is the reference for keeping folder nodes separate
+from domain objects: folders use the shared row, while physical containers keep
+their module-owned box, plate, or tube leaf treatment.

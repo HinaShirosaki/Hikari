@@ -370,14 +370,31 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('Assay setup actions stay at the top of the form as accessible compact icons', () => {
       const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+      const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
+      const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
+      const assay = readLocalSource('src', 'renderer', 'modules', 'assay', 'index.js');
 
       assert.match(html, /id="assay-form"[^>]*>[\s\S]*?id="assay-id"[\s\S]*?class="form-actions assay-form-actions"[\s\S]*?class="assay-display-field"/);
+      assert.match(html, /id="assay-new-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Create new assay"[\s\S]*?<svg/);
       assert.match(html, /id="assay-export-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Export CSV template"[\s\S]*?<svg/);
       assert.match(html, /id="assay-import-template-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Import CSV"[\s\S]*?<svg/);
       assert.match(html, /type="submit"[^>]*assay-form-save-icon-btn[^>]*aria-label="Save assay"[\s\S]*?<svg/);
       assert.match(html, /id="assay-cancel-btn"[^>]*assay-form-icon-btn[^>]*aria-label="Cancel edit"[\s\S]*?<svg/);
       assert.doesNotMatch(html, /id="assay-(?:export-template|import-template|cancel)-btn"[^>]*>\s*(?:Export CSV Template|Import CSV|Cancel Edit)\s*<\//);
       assert.match(css, /\.assay-form-actions\s*>\s*\.assay-form-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+      assert.match(dom, /assayNewBtn:\s*root\.getElementById\('assay-new-btn'\)/);
+      assert.match(bindings, /assayNewBtn\?\.addEventListener\('click',\s*startNewAssay\)/);
+      assert.match(assay, /function startNewAssay\(\)\s*\{\s*resetForm\(\);\s*elements\.assayNameInput\?\.focus\(\);\s*\}/s);
+    });
+
+    test('Assay setup form stays pinned above the independently scrolling existing-assays list', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+
+      assert.match(html, /class="assay-mode-create-panel assay-create-sidebar[^\"]*left-rail-template__rail--pinned[^\"]*"[\s\S]*id="assay-form"[^>]*assay-create-sidebar-pinned[^>]*left-rail-template__pinned[\s\S]*class="assay-create-sidebar-scroll left-rail-template__scroll"[\s\S]*id="assay-browser-panel"/);
+      assert.match(css, /\.left-rail-template\.assay-create-layout\s*>\s*\.assay-create-sidebar\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*auto\s+minmax\(0,\s*1fr\);[^}]*overflow:\s*hidden\s*!important;/s);
+      assert.match(css, /\.assay-create-sidebar\s*>\s*\.assay-create-sidebar-scroll\.left-rail-template__scroll\s*\{[^}]*scrollbar-gutter:\s*stable;/s);
+      assert.match(css, /@media \(max-width:\s*1100px\)[\s\S]*?\.assay-create-layout\s*\{[^}]*height:\s*auto;[\s\S]*?\.assay-create-sidebar\.left-rail-template__rail--pinned\s*\{[^}]*align-self:\s*start;[^}]*min-height:\s*auto;[\s\S]*?\.assay-create-sidebar\s*>\s*\.assay-create-sidebar-scroll\.left-rail-template__scroll\s*\{[^}]*max-height:\s*min\(360px,\s*42vh\);/s);
     });
 
     test('Assay plate setup toolbar stays separated from the plate grid', () => {
@@ -428,7 +445,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(cssOrder, /ui\/css\/overrides\/folder-tree-template\.css/);
       assert.match(css, /\.folder-tree-template__children\s*\{[^}]*position:\s*relative;[^}]*padding-left:\s*14px;/s);
       assert.match(css, /\.folder-tree-template__children::before\s*\{/);
-      assert.match(css, /\.folder-tree-template__children\s*>\s*\.folder-tree-template__node::before\s*\{/);
+      assert.match(css, /\.folder-tree-template__children\s*>\s*:is\(\.folder-tree-template__node,\s*\.folder-tree-template__leaf\)::before\s*\{/);
       assert.match(css, /\.folder-tree-template__chevron\s*\{[^}]*border-right:\s*1\.5px solid currentColor;[^}]*transform:\s*rotate\(-45deg\);/s);
       assert.doesNotMatch(css, /content:\s*['\"]>['\"]/);
     });
@@ -813,7 +830,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.doesNotMatch(systemRegistrarSource, /promptRaw\.length > 120000/);
     });
 
-    test('settings expose Codex login recovery controls through preload and system IPC', () => {
+    test('settings expose Codex login and Desktop MCP setup controls through preload and system IPC', () => {
       const mainSource = readMainProcessSource();
       const preloadSource = readPreloadSource();
       const systemRegistrarSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'ipc', 'register-system-ipc.js'), 'utf8');
@@ -824,13 +841,20 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(mainSource, /clearCodexCliStoredLogin/);
       assert.match(preloadSource, /loginCodexLlm:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(LLM\.CODEX_LOGIN\)/);
       assert.match(preloadSource, /clearCodexLlmLogin:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(LLM\.CODEX_CLEAR_LOGIN\)/);
+      assert.match(preloadSource, /getCodexDesktopMcpSetupPrompt:\s*\(payload\)\s*=>\s*\(/);
+      assert.match(preloadSource, /writeTextToClipboard:\s*\(value\)\s*=>\s*writeTextToClipboard/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_LOGIN/);
       assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_CLEAR_LOGIN/);
+      assert.match(systemRegistrarSource, /ipcMain\.handle\(LLM\.CODEX_DESKTOP_MCP_PROMPT/);
       assert.match(settingsSource, /window\.hikariApi\?\.loginCodexLlm/);
       assert.match(settingsSource, /window\.hikariApi\?\.clearCodexLlmLogin/);
+      assert.match(settingsSource, /window\.hikariApi\?\.getCodexDesktopMcpSetupPrompt/);
+      assert.match(settingsSource, /window\.hikariApi\?\.writeTextToClipboard/);
       assert.match(settingsHtml, /id="setting-codex-status"/);
       assert.match(settingsHtml, /id="start-codex-login-btn"/);
       assert.match(settingsHtml, /id="clear-codex-login-btn"/);
+      assert.match(settingsHtml, /id="copy-codex-desktop-mcp-prompt-btn"/);
+      assert.match(settingsHtml, /id="setting-codex-desktop-mcp-status"/);
     });
 
     test('main and preload expose sequence library IPC bridge through the data registrar', () => {

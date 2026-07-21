@@ -286,6 +286,7 @@ function createMainServices(context = {}) {
     setCodexCliModel,
     setCodexCliReasoningEffort,
     requestCodexCliText,
+    getCodexDesktopMcpSetupPrompt: codex.getCodexDesktopMcpSetupPrompt,
     directLlmRegistry: agents.directLlmRegistry,
     getCodexCliWorkingDirectory: appPaths.getCodexCliWorkingDirectory,
     writeSavedTelegramToken: telegram.writeSavedTelegramToken,
