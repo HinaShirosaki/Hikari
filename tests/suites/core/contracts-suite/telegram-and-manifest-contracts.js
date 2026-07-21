@@ -41,7 +41,7 @@ module.exports = function registerTelegramAndManifestContracts(context = {}) {
       assert.equal(packageManifest.scripts['check:dom-ids'], 'node scripts/check-dom-ids.mjs');
       assert.equal(packageManifest.scripts.start, 'npm run build:ui && electron-forge start');
       assert.equal(packageManifest.scripts['check:source-layout'], 'node scripts/check-source-layout.mjs');
-      assert.equal(packageManifest.scripts.test, 'npm run build:ui && npm run check:css-colors && npm run check:dom-ids && npm run check:source-layout && npm run check:sample-registry-csv && npm run check:window-guard && node test.js');
+      assert.equal(packageManifest.scripts.test, 'npm run build:ui && npm run check:css-colors && npm run check:dom-ids && npm run check:source-layout && npm run check:sample-registry-csv && npm run check:window-guard && npm run check:pdf-export-template && node test.js');
       assert.equal(packageManifest.scripts.dist, 'npm run build:ui && electron-forge make');
       assert.equal(packageManifest.scripts['package:app'], 'npm run build:ui && electron-forge package');
       assert.equal(packageManifest.scripts.package, 'npm run build:ui && electron-forge package');

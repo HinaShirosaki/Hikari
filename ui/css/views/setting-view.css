@@ -203,10 +203,27 @@
 }
 
 #setting-view .settings-sample-inventory-location-row {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   padding: 8px 0;
   border: 0;
   border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 62%, transparent);
   background: transparent;
+}
+
+#setting-view .settings-sample-inventory-location-row input {
+  width: 100%;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--theme-text-strong);
+}
+
+#setting-view .settings-sample-inventory-location-row input:focus {
+  outline: 0;
+  background: color-mix(in srgb, var(--theme-surface-subtle) 72%, transparent);
+  box-shadow: none;
 }
 
 #setting-view .settings-sample-inventory-location-row:first-child {
@@ -230,9 +247,59 @@
   list-style: none;
 }
 
-#setting-view .settings-sample-type-add {
+#setting-view :is(.settings-sample-inventory-add, .settings-sample-type-add) {
   width: min(100%, 420px);
   grid-template-columns: minmax(0, 1fr) auto;
+}
+
+#setting-view :is(.settings-sample-inventory-add, .settings-sample-type-add) input {
+  width: 100%;
+  min-width: 0;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
+  background: transparent;
+  box-shadow: none;
+}
+
+#setting-view :is(.settings-sample-inventory-add, .settings-sample-type-add) input:focus {
+  border-bottom-color: var(--theme-accent);
+  outline: 0;
+  box-shadow: none;
+}
+
+#setting-view .settings-inline-icon {
+  display: grid;
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--theme-text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+#setting-view .settings-inline-icon:not(:disabled):hover {
+  background: color-mix(in srgb, var(--theme-surface-subtle) 72%, transparent);
+  color: var(--theme-text-strong);
+}
+
+#setting-view .settings-inline-icon-danger {
+  color: color-mix(in srgb, var(--theme-danger) 72%, var(--theme-text-muted));
+}
+
+#setting-view .settings-inline-icon-danger:not(:disabled):hover {
+  color: var(--theme-danger);
+}
+
+#setting-view .settings-sample-type-save {
+  color: var(--theme-accent);
 }
 
 #setting-view .settings-sample-type-label-row {

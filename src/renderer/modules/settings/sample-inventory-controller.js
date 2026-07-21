@@ -142,8 +142,8 @@ export function createSampleInventorySettingsController({
         <div class="settings-edit-row settings-sample-inventory-location-row">
           <input value="${escapeHtml(location)}" data-sample-inventory-location-input="${index}" aria-label="Sample inventory location ${index + 1}" />
           <span class="small-note">${escapeHtml(`${count} container${count === 1 ? '' : 's'}`)}</span>
-          <button type="button" class="ghost-btn" data-sample-inventory-location-save="${index}">Save</button>
-          <button type="button" class="danger-btn" data-sample-inventory-location-delete="${index}"${count > 0 ? ' disabled title="Move or rename containers before deleting this location."' : ''}>Delete</button>
+          <button type="button" class="ghost-btn settings-inline-icon" data-sample-inventory-location-save="${index}" aria-label="Save ${escapeHtml(location)}" title="Save location">✓</button>
+          <button type="button" class="danger-btn settings-inline-icon settings-inline-icon-danger" data-sample-inventory-location-delete="${index}" aria-label="Delete ${escapeHtml(location)}" title="${count > 0 ? 'Move or rename containers before deleting this location.' : 'Delete location'}"${count > 0 ? ' disabled' : ''}>&times;</button>
         </div>
       `;
     }).join('');

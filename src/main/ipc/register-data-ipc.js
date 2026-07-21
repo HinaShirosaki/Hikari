@@ -13,9 +13,15 @@ const {
   PLUGINS
 } = require('../../shared/ipc/channels');
 const { inspectPluginFolder } = require('../lib/inspect-plugin-folder');
+const { createPluginServerRegistry } = require('../lib/plugin-server');
 const {
   registerSequenceLibraryIpc
 } = require('./register-data-ipc/register-sequence-library-ipc');
+
+// Loopback servers for `serve: true` plugins. Process-lifetime: they are torn
+// down with the app, and reused across renderer reloads so a reload does not
+// leak listeners.
+const pluginServers = createPluginServerRegistry();
 
 function registerDataIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
@@ -413,6 +419,18 @@ function registerDataIpc(deps = {}) {
     }
   });
 
+  // Starts (or reuses) a loopback server for one plugin folder and returns its
+  // base URL. The renderer only ever asks for folders already recorded in
+  // settings, but the registry re-checks the path itself.
+  ipcMain.handle(PLUGINS.SERVE_FOLDER, async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    try {
+      return await pluginServers.serve(normalizedPayload?.id, normalizedPayload?.path);
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
   ipcMain.handle(STORAGE.ENSURE_DIRECTORY, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const targetPath = typeof normalizedPayload?.path === 'string' ? normalizedPayload.path.trim() : '';
@@ -642,5 +660,6 @@ function registerDataIpc(deps = {}) {
 }
 
 module.exports = {
-  registerDataIpc
+  registerDataIpc,
+  pluginServers
 };

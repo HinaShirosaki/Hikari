@@ -61,17 +61,35 @@ function normalizePluginEntries(rawPlugins) {
   return rawPlugins
     .map((entry) => {
       const raw = asObject(entry);
+      // Only https survives here: the renderer grants allow-same-origin to
+      // remote frames, so a persisted file:/http: URL must not reach one.
+      let embedUrl = '';
+      try {
+        const parsed = new URL(String(raw.embedUrl || '').trim());
+        embedUrl = parsed.protocol === 'https:' ? parsed.href : '';
+      } catch {
+        embedUrl = '';
+      }
       return {
         id: String(raw.id || '').trim(),
         name: String(raw.name || '').trim(),
+        version: String(raw.version || '').trim(),
         description: String(raw.description || '').trim(),
+        // A remote embed never holds host permissions, whatever the record says.
+        permissions: (!embedUrl && Array.isArray(raw.permissions))
+          ? raw.permissions.map((permission) => String(permission || '').trim()).filter(Boolean)
+          : [],
         path: String(raw.path || '').trim(),
         entryUrl: String(raw.entryUrl || '').trim(),
+        embedUrl,
+        // A served plugin needs its folder path at boot to start the loopback
+        // server, so `serve` only survives alongside one.
+        serve: raw.serve === true && !embedUrl && Boolean(String(raw.path || '').trim()),
         enabled: raw.enabled !== false
       };
     })
     .filter((entry) => {
-      if (!entry.id || !entry.entryUrl || seenIds.has(entry.id)) {
+      if (!entry.id || (!entry.entryUrl && !entry.embedUrl && !entry.serve) || seenIds.has(entry.id)) {
         return false;
       }
       seenIds.add(entry.id);

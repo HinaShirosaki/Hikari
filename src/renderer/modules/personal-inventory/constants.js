@@ -4,6 +4,7 @@ import {
   getContainerLayout,
   getContainerTypeLabel,
   getWellName,
+  isSupportedContainerType,
   isMultiWellContainer,
   normalizeCustomGridDimensions
 } from '../../lib/inventory-containers.js';
@@ -13,6 +14,7 @@ export {
   getContainerLayout,
   getContainerTypeLabel,
   getWellName,
+  isSupportedContainerType,
   isMultiWellContainer,
   normalizeCustomGridDimensions
 };

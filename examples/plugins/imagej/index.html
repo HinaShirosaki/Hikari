@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>ImageJ</title>
+    <!--
+      The CheerpJ runtime (the JVM itself) is the one piece that must come from
+      leaningtech's CDN: it is free to load from there, but self-hosting it
+      requires a commercial license. Everything under ./ij153 — ImageJ's own
+      jars, plugins, macros and LUTs — is served from this folder by Hikari's
+      loopback plugin server, so images you open never leave the machine.
+    -->
+    <script src="https://cjrtnc.leaningtech.com/20201217_2/loader.js"></script>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="status" role="status">Starting ImageJ…</div>
+    <div id="imagej-container"></div>
+    <script src="./main.js"></script>
+  </body>
+</html>

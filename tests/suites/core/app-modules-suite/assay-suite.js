@@ -140,6 +140,88 @@ test('assay result paste notifies the agent rail context immediately', () => {
   assert.equal(refreshCount, 1);
 });
 
+test('assay dilution fill commits generated concentrations before the layout re-reads the plate', () => {
+  const concentrationUtils = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'concentration-utils.js'
+  ));
+  const shared = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'shared.js'
+  ));
+  const { createConcentrationFill } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'layout',
+    'concentration-fill.js'
+  ), {
+    ...concentrationUtils,
+    ...shared
+  });
+
+  const concentrationInputs = [
+    { value: '1 uM' },
+    { value: '' },
+    { value: '' }
+  ];
+  let axisValues = {
+    sampleValues: ['Sample'],
+    concentrationValues: concentrationInputs.map((input) => input.value)
+  };
+  let statusMessage = '';
+  const readPlateAxisValues = () => ({
+    sampleValues: axisValues.sampleValues.slice(),
+    concentrationValues: concentrationInputs.map((input) => input.value)
+  });
+  const fill = createConcentrationFill({
+    runtime: {},
+    assayFillModeInput: { value: 'factor' },
+    assayDilutionFactorInput: { value: '2', hidden: false },
+    assayPlatePreview: {
+      querySelector(selector) {
+        assert.match(selector, /data-axis-dimension="column"/);
+        const index = Number(selector.match(/data-axis-index="(\d+)"/)?.[1]);
+        return concentrationInputs[index] || null;
+      }
+    },
+    serialDilution: { isOpen: () => false, render() {} },
+    getSampleAxis: () => 'row',
+    getConcentrationUnit: () => 'uM',
+    getAxisTemplateValues: readPlateAxisValues,
+    syncAxisTemplateValues(values) {
+      axisValues = {
+        sampleValues: values.sampleValues.slice(),
+        concentrationValues: values.concentrationValues.slice()
+      };
+    },
+    setLayoutFromAxisAndOverrides() {
+      axisValues = readPlateAxisValues();
+    },
+    renderPlatePreview() {},
+    renderResultTable() {},
+    setLayoutStatus(message) {
+      statusMessage = message;
+    }
+  });
+
+  fill.onFillConcentrations();
+
+  assert.deepEqual(concentrationInputs.map((input) => input.value), ['1 uM', '0.5 uM', '0.25 uM']);
+  assert.deepEqual(axisValues.concentrationValues, ['1 uM', '0.5 uM', '0.25 uM']);
+  assert.equal(statusMessage, 'Auto-filled 2 concentration steps at a 1:2 dilution.');
+});
+
 test('assay analysis grouping hides manual specs and renders visible drag-created groups', () => {
   const { createAssayResultsManager } = loadEsmStyleModule(path.join(
     __dirname,

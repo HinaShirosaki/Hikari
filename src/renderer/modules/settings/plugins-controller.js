@@ -47,9 +47,13 @@ export function createPluginsController({
     plugins.push({
       id: inspected.id,
       name: inspected.name,
+      version: inspected.version,
       description: inspected.description,
+      permissions: Array.isArray(inspected.permissions) ? inspected.permissions : [],
       path: inspected.path,
       entryUrl: inspected.entryUrl,
+      embedUrl: inspected.embedUrl || '',
+      serve: inspected.serve === true,
       enabled: true
     });
     persist();
@@ -96,9 +100,15 @@ export function createPluginsController({
       <div class="settings-skill-row">
         <div class="settings-skill-main">
           <div class="settings-skill-title">
-            <span>${escapeHtml(plugin.name)}</span>
+            <span>${escapeHtml(plugin.name)}${plugin.version ? ` <span class="small-note">v${escapeHtml(plugin.version)}</span>` : ''}</span>
           </div>
           <p class="small-note settings-skill-description">${escapeHtml(plugin.description || 'No description provided.')}</p>
+          <p class="small-note settings-skill-permissions">${plugin.permissions?.length
+            ? `Host access: ${escapeHtml(plugin.permissions.join(', '))}`
+            : 'Host access: none (isolated page)'}</p>
+          ${plugin.embedUrl
+            ? `<p class="small-note settings-skill-embed">Loads remote code from ${escapeHtml(plugin.embedUrl)} — needs internet, and anything you open in it leaves this machine.</p>`
+            : ''}
           <p class="small-note settings-skill-path">${escapeHtml(plugin.path)}</p>
         </div>
         <label class="settings-skill-toggle">

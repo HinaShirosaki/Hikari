@@ -3,6 +3,21 @@ const CUSTOM_GRID_MAX_DIMENSION = 24;
 const CUSTOM_GRID_DEFAULT_ROWS = 9;
 const CUSTOM_GRID_DEFAULT_COLS = 9;
 
+export const GRID_BOX_LAYOUTS = Object.freeze({
+  box25: { rows: 5, cols: 5, label: '25-well grid box' },
+  box49: { rows: 7, cols: 7, label: '49-well grid box' },
+  box64: { rows: 8, cols: 8, label: '64-well grid box' },
+  box81: { rows: 9, cols: 9, label: '81-well cube box' },
+  box100: { rows: 10, cols: 10, label: '100-well grid box' }
+});
+
+const SUPPORTED_CONTAINER_TYPES = new Set([
+  ...Object.keys(GRID_BOX_LAYOUTS),
+  'customGrid',
+  'plate96',
+  'single'
+]);
+
 function clampGridDimension(value, fallback) {
   const parsed = Math.round(Number(value));
   if (!Number.isFinite(parsed)) {
@@ -13,11 +28,23 @@ function clampGridDimension(value, fallback) {
 
 function getContainerType(containerOrType) {
   if (containerOrType && typeof containerOrType === 'object') {
-    const type = String(containerOrType.type || '').trim();
-    return type || 'box81';
+    return normalizeContainerType(containerOrType.type);
   }
-  const type = String(containerOrType || '').trim();
-  return type || 'box81';
+  return normalizeContainerType(containerOrType);
+}
+
+function getCanonicalContainerType(type = '') {
+  const normalized = String(type || '').trim().toLowerCase();
+  return normalized === 'customgrid' ? 'customGrid' : normalized;
+}
+
+export function normalizeContainerType(type = '') {
+  const normalized = getCanonicalContainerType(type);
+  return SUPPORTED_CONTAINER_TYPES.has(normalized) ? normalized : 'box81';
+}
+
+export function isSupportedContainerType(type = '') {
+  return SUPPORTED_CONTAINER_TYPES.has(getCanonicalContainerType(type));
 }
 
 function getCustomGridDimension(containerOrType, primaryKey, fallbackKey, fallback) {
@@ -50,7 +77,7 @@ export function getContainerTypeLabel(containerOrType) {
     const layout = getContainerLayout(containerOrType);
     return `${layout.rows} x ${layout.cols} grid box`;
   }
-  return '81-well cube box';
+  return GRID_BOX_LAYOUTS[type]?.label || GRID_BOX_LAYOUTS.box81.label;
 }
 
 export function getContainerLayout(containerOrType) {
@@ -73,11 +100,12 @@ export function getContainerLayout(containerOrType) {
       helperText: `${rows} x ${cols} custom grid box. Click a cell to set samples on the right side.`
     };
   }
+  const gridBox = GRID_BOX_LAYOUTS[type] || GRID_BOX_LAYOUTS.box81;
   return {
-    rows: 9,
-    cols: 9,
+    rows: gridBox.rows,
+    cols: gridBox.cols,
     className: 'box81',
-    helperText: '9 x 9 square box (81 wells). Click a cell to set samples on the right side.'
+    helperText: `${gridBox.rows} x ${gridBox.cols} grid box. Click a cell to set samples on the right side.`
   };
 }
 

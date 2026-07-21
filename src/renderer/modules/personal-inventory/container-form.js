@@ -1,4 +1,4 @@
-import { createDefaultWells, normalizeCustomGridDimensions } from './constants.js';
+import { createDefaultWells, isSupportedContainerType, normalizeCustomGridDimensions } from './constants.js';
 
 export function installContainerForm(ctx) {
   const { createId, helpers, persist, safeText, state, uiState } = ctx;
@@ -194,7 +194,7 @@ export function installContainerForm(ctx) {
       return;
     }
 
-    const type = ['single', 'plate96', 'customGrid'].includes(addContainerTypeSelect?.value)
+    const type = isSupportedContainerType(addContainerTypeSelect?.value)
       ? addContainerTypeSelect.value
       : 'box81';
     const customGrid = type === 'customGrid'
