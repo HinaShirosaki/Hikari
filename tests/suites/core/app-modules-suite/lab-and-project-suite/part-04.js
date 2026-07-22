@@ -142,6 +142,18 @@ test('notebook pdf export includes linked page content and omits notebook type p
 
     setDrawColor() {}
 
+
+    setTextColor() {}
+
+
+    setLineWidth() {}
+
+
+    line() {}
+
+
+    roundedRect() {}
+
     save(fileName) {
       this.savedFileName = String(fileName || '');
     }
@@ -308,9 +320,10 @@ test('notebook pdf export includes linked page content and omits notebook type p
   const pdf = MockJsPdf.instances[0];
   const allText = pdf.textCalls.join('\n');
 
-  assert.match(allText, /Project: Atlas/);
-  assert.match(allText, /Experiment: Expression Panel A/);
-  assert.match(allText, /Linked Results/);
+  assert.match(allText, /PROJECT/);
+  assert.match(allText, /Atlas/);
+  assert.match(allText, /Expression Panel A/);
+  assert.match(allText, /LINKED RESULTS/);
   assert.match(allText, /Serial Dilution/);
   assert.match(allText, /Initial Dilution/);
   assert.match(allText, /Following Dilution/);
@@ -354,6 +367,18 @@ test('notebook pdf export paginates wrapped notes and draws result tables as cel
     setFontSize() {}
 
     setDrawColor() {}
+
+
+    setTextColor() {}
+
+
+    setLineWidth() {}
+
+
+    line() {}
+
+
+    roundedRect() {}
 
     setFillColor() {}
 
@@ -501,6 +526,18 @@ test('assay pdf export omits mapped well text section', () => {
 
     setDrawColor() {}
 
+
+    setTextColor() {}
+
+
+    setLineWidth() {}
+
+
+    line() {}
+
+
+    roundedRect() {}
+
     save(fileName) {
       this.savedFileName = String(fileName || '');
     }
@@ -534,7 +571,7 @@ test('assay pdf export omits mapped well text section', () => {
   const pdf = MockJsPdf.instances[0];
   const allText = pdf.textCalls.join('\n');
 
-  assert.match(allText, /Well Definition Plot/);
+  assert.match(allText, /WELL DEFINITION PLOT/);
   assert.doesNotMatch(allText, /Mapped Wells/);
   assert.doesNotMatch(allText, /Mapped Well Definitions/);
   assert.match(pdf.savedFileName, /A-001/i);

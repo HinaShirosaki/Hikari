@@ -31,6 +31,15 @@ export function createConcentrationFill({
   }
 
   function commitConcentrationValues(sampleValues, concentrationValues, statusMessage) {
+    const concentrationAxis = oppositeAxis(getSampleAxis());
+    concentrationValues.forEach((value, axisIndex) => {
+      const input = assayPlatePreview?.querySelector(
+        `[data-axis-dimension="${concentrationAxis}"][data-axis-index="${axisIndex}"]`
+      );
+      if (input) {
+        input.value = value;
+      }
+    });
     syncAxisTemplateValues({ sampleValues, concentrationValues });
     setLayoutFromAxisAndOverrides();
     renderPlatePreview();
@@ -105,18 +114,9 @@ export function createConcentrationFill({
       return;
     }
     // Only fill the cells between the endpoints; leave any manual entries in place.
-    const concentrationAxis = oppositeAxis(getSampleAxis());
     for (let step = 1; step < series.length - 1; step += 1) {
       const axisIndex = firstIndex + step;
       concentrationValues[axisIndex] = series[step];
-      // Write into the live plate input too, or the stale-empty cell overwrites it
-      // when getAxisTemplateValues re-reads the DOM during commit.
-      const input = assayPlatePreview?.querySelector(
-        `[data-axis-dimension="${concentrationAxis}"][data-axis-index="${axisIndex}"]`
-      );
-      if (input) {
-        input.value = series[step];
-      }
     }
     commitConcentrationValues(
       values.sampleValues,

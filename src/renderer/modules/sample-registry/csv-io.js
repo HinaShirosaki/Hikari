@@ -1,5 +1,5 @@
 import { escapeCsv } from '../../lib/csv.js';
-import { createDefaultWells, isMultiWellContainer } from '../../lib/inventory-containers.js';
+import { createDefaultWells, isMultiWellContainer, isSupportedContainerType } from '../../lib/inventory-containers.js';
 import { buildLocationFromInventoryLink } from './inventory-links.js';
 
 // Flat sample columns + container placement, so a whole box round-trips.
@@ -8,8 +8,6 @@ export const CSV_COLUMNS = [
   'code', 'name', 'type', 'lot', 'concentration', 'notes',
   'section', 'container', 'container_type', 'well'
 ];
-
-const CONTAINER_TYPES = new Set(['single', 'box81', 'plate96', 'customGrid']);
 
 export function toSamplesCsv(samples, inventory = {}) {
   const rows = (samples || []).map((sample) => {
@@ -130,7 +128,7 @@ function ensureContainer(state, section, name, type, makeId) {
   }
   let container = findContainer(state.inventory[section], name);
   if (!container) {
-    const safeType = CONTAINER_TYPES.has(type) ? type : 'box81';
+    const safeType = isSupportedContainerType(type) ? type : 'box81';
     container = {
       id: `container-${makeId()}`,
       name: String(name).trim(),

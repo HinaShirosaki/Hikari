@@ -1,0 +1,15 @@
+/* Served plugins get their own loopback origin and inherit nothing from the
+   host, so all styling lives here. */
+html, body { margin: 0; height: 100%; }
+body {
+  font: 13px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+}
+#status {
+  padding: 10px 14px;
+  background: #fffbe6;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+}
+#status.is-error { background: #fdecea; color: #a32020; }
+#imagej-container { flex: 1; min-height: 0; }

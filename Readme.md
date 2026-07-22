@@ -24,15 +24,9 @@
 
 </div>
 
-<!--
-  📸 SCREENSHOTS — these are images Claude cannot capture for you.
-  Run the app (`npm run start`), take screenshots, and save them to docs/screenshots/
-  using the exact filenames referenced below. They will appear automatically.
-  See the "Screenshots" section for the full shot list and capture tips.
--->
-
-<!-- Hero shot: save a full-window screenshot of the Home dashboard here -->
 ![Hikari Home dashboard](docs/screenshots/home.png)
+
+<sub>Home dashboard shown with fictional biology demo data. No private project records are included.</sub>
 
 Hikari is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay and gel analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace — no hosted backend required.
 
@@ -44,33 +38,6 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 - Storage-root-backed files for notebooks, projects, papers, and sequence assets.
 - Optional LLM-backed features for `Papers` and `Agent`.
 - Optional Telegram bot for simple remote commands and lookups.
-
-## Screenshots
-
-> **These images do not exist in the repo yet — you need to add them.** Claude cannot launch the
-> desktop app or take screenshots, so this is the one part of the README you must fill in by hand.
->
-> **How to add them:**
-> 1. Run the app: `npm run start`.
-> 2. Open each module and capture the window (macOS: `Cmd+Shift+4` then `Space`, click the window).
-> 3. Create the folder `docs/screenshots/` and save each file with the **exact name** listed below.
-> 4. The images then render automatically here and in the hero above — no Markdown edits needed.
->
-> Keep shots ~1600px wide, PNG, and crop to the app window. Replace any sample data with something
-> you're happy to show publicly before capturing.
-
-| File to save (`docs/screenshots/…`) | What to capture |
-| --- | --- |
-| `home.png` | Home dashboard (also used as the hero image at the top) |
-| `workflows.png` | A workflow graph with a few linked steps |
-| `notebook.png` | A Biology Notebook record with structured fields |
-| `assay.png` | An assay plate layout or analysis view |
-| `gel.png` | A gel image with lane/band annotations |
-| `papers.png` | The Papers library with a summary open |
-| `sequence-viewer.png` | A sequence with annotations / restriction sites |
-| `agent.png` | An Agent answer citing app records |
-
-<!-- Drop the matching PNGs in docs/screenshots/ and uncomment any extra shots you want shown inline. -->
 
 ## App Surface
 

@@ -37,9 +37,7 @@ export function installSectionNavigation(ctx) {
   }
 
   function getContainerGlyphType(container) {
-    return ['single', 'plate96', 'customGrid', 'box81'].includes(container?.type)
-      ? container.type
-      : 'box81';
+    return ['single', 'plate96'].includes(container?.type) ? container.type : 'box81';
   }
 
   function renderContainerLeaf(section, container) {

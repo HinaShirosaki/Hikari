@@ -27,6 +27,8 @@ export function setupSequenceViewerControllers(ctx) {
     setRecords: actions.setRecords,
     setStatus: actions.setStatus,
     readFileAsText: actions.readFileAsText,
+    readFileAsArrayBuffer: actions.readFileAsArrayBuffer,
+    pluginServices: options?.pluginServices || null,
     onParsedRecordsOpened: actions.maybePersistImportedGenbankRecord,
     onRenameLibraryEntry: actions.renameLibraryEntry,
     onCreateLibraryFolder: (name) => actions.upsertLibraryFolder('', name),

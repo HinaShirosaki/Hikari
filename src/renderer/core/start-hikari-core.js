@@ -22,6 +22,8 @@ import {
 } from '../app/navigation-shell.js';
 import { createStorageImportController } from '../app/storage-import.js';
 import { installPlugins } from '../app/plugin-loader.js';
+import { createPluginBridge } from '../app/plugin-bridge.js';
+import { createPluginServiceRegistry } from '../app/plugin-services.js';
 import {
   buildSearchScopeMap,
   buildViewAliasMap,
@@ -100,7 +102,26 @@ export function startHikariCore({
   const state = loadState();
   // Plugin views and registry entries must exist before the navigation shell
   // and search maps below snapshot APP_REGISTRY and the `.view` sections.
-  installPlugins({ state, documentObject, appRegistry: APP_REGISTRY });
+  // The bridge is built here too so each frame can be registered as it mounts;
+  // its dependencies are resolved lazily because rendererServices does not
+  // exist yet and no plugin message can arrive before boot finishes.
+  const pluginBridge = createPluginBridge({
+    state,
+    persist,
+    onNotebookEntriesChanged: () => rendererServices?.notebook?.handleAgentNotebookEntriesChanged?.(),
+    windowObject
+  });
+  // Service plugins register their converters here; the sequence viewer (and
+  // any future consumer) reaches them through the module runtime below.
+  const pluginServices = createPluginServiceRegistry({ windowObject });
+  installPlugins({
+    state,
+    documentObject,
+    appRegistry: APP_REGISTRY,
+    bridge: pluginBridge,
+    services: pluginServices,
+    api: windowObject.hikariApi || null
+  });
   const normalizeAppViewId = (viewId) => normalizeViewId(VIEWS, viewId);
   const globalViewAliases = buildViewAliasMap({
     apps: APP_REGISTRY,
@@ -202,6 +223,7 @@ export function startHikariCore({
     rendererServices,
     moduleRegistry,
     trackGrowthEvent,
+    pluginServices,
     showView: viewController.showView,
     views: VIEWS,
     apiBridge: windowObject.hikariApi || null,

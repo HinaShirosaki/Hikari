@@ -13,9 +13,15 @@ const BODY_FONT_SIZE = 11;
 const LINE_HEIGHT = 14;
 const TABLE_FONT_SIZE = 8.5;
 const TABLE_LINE_HEIGHT = 10.5;
-const TABLE_CELL_PADDING = 4;
-const TABLE_HEADER_FILL = 238;
-const TABLE_BORDER_COLOR = 175;
+const TABLE_CELL_PADDING = 5;
+
+const ACCENT = [24, 95, 165];
+const ACCENT_TINT = [230, 241, 251];
+const ZEBRA_FILL = [247, 247, 245];
+const MUTED_TEXT = [110, 110, 105];
+const RULE_COLOR = [205, 205, 200];
+const FOOTER_BASELINE = 40;
+const LABEL_FONT_SIZE = 7.5;
 
 const PLATE_DEFINITIONS = {
   '6': { rows: 2, columns: 3, label: '6 well' },
@@ -58,6 +64,10 @@ function sanitizeFileName(value, fallback = 'export') {
 
 function createContext({
   title,
+  eyebrow = '',
+  badge = '',
+  meta = [],
+  footerLabel = '',
   orientation = 'p',
   format = 'letter',
   margin = PAGE_MARGIN,
@@ -76,26 +86,141 @@ function createContext({
   });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const maxWidth = pageWidth - (margin * 2);
 
-  let y = margin;
-  doc.setFont(serif ? 'times' : 'helvetica', 'bold');
-  doc.setFontSize(TITLE_FONT_SIZE);
-  y = writeWrappedLines(doc, String(title || 'Export'), margin, y, maxWidth, TITLE_FONT_SIZE + 8);
-  y += 4;
-
-  return {
+  const ctx = {
     doc,
     pageWidth,
     pageHeight,
-    maxWidth,
+    maxWidth: pageWidth - (margin * 2),
     margin,
     orientation,
     format,
-    y,
+    y: margin,
     serif,
+    footerLabel: String(footerLabel || title || ''),
     sectionCount: 0
   };
+
+  writeDocumentHeader(ctx, { title, eyebrow, badge, meta });
+  return ctx;
+}
+
+function font(ctx, style = 'normal') {
+  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', style);
+}
+
+function setTextColor(ctx, color) {
+  ctx.doc.setTextColor(color[0], color[1], color[2]);
+}
+
+function writeLabel(ctx, text, x, y) {
+  font(ctx, 'normal');
+  ctx.doc.setFontSize(LABEL_FONT_SIZE);
+  setTextColor(ctx, MUTED_TEXT);
+  ctx.doc.text(String(text || '').toUpperCase(), x, y);
+  setTextColor(ctx, [0, 0, 0]);
+}
+
+function drawBadge(ctx, text, rightEdge, baselineY) {
+  const label = String(text || '').trim();
+  if (!label) {
+    return;
+  }
+  font(ctx, 'normal');
+  ctx.doc.setFontSize(8);
+  const width = estimateTextWidth(ctx, label, 8) + 14;
+  const height = 15;
+  const x = rightEdge - width;
+  ctx.doc.setFillColor(ACCENT_TINT[0], ACCENT_TINT[1], ACCENT_TINT[2]);
+  ctx.doc.roundedRect(x, baselineY - 11, width, height, 3, 3, 'F');
+  setTextColor(ctx, ACCENT);
+  ctx.doc.text(label, x + 7, baselineY);
+  setTextColor(ctx, [0, 0, 0]);
+}
+
+// ponytail: metadata grid wraps at 4 cells per row, plenty for every current caller
+function writeMetaGrid(ctx, meta) {
+  const cells = (Array.isArray(meta) ? meta : []).filter((cell) => cell && cell.label);
+  if (!cells.length) {
+    return;
+  }
+  const perRow = Math.min(4, cells.length);
+  const cellWidth = ctx.maxWidth / perRow;
+  const rowHeight = 26;
+
+  for (let start = 0; start < cells.length; start += perRow) {
+    const row = cells.slice(start, start + perRow);
+    ensureSpace(ctx, rowHeight + 4);
+    ctx.doc.setDrawColor(RULE_COLOR[0], RULE_COLOR[1], RULE_COLOR[2]);
+    ctx.doc.setLineWidth(0.5);
+    ctx.doc.line(ctx.margin, ctx.y, ctx.margin + ctx.maxWidth, ctx.y);
+    row.forEach((cell, index) => {
+      const x = ctx.margin + (index * cellWidth);
+      writeLabel(ctx, cell.label, x, ctx.y + 10);
+      font(ctx, 'normal');
+      ctx.doc.setFontSize(9.5);
+      const value = ctx.doc.splitTextToSize(safeValue(cell.value), cellWidth - 8)[0] || '-';
+      ctx.doc.text(value, x, ctx.y + 21);
+    });
+    ctx.y += rowHeight;
+    ctx.doc.line(ctx.margin, ctx.y, ctx.margin + ctx.maxWidth, ctx.y);
+  }
+  ctx.y += 28;
+}
+
+function writeDocumentHeader(ctx, { title, eyebrow = '', badge = '', meta = [] }) {
+  ctx.doc.setFillColor(ACCENT[0], ACCENT[1], ACCENT[2]);
+  ctx.doc.rect(0, 0, ctx.pageWidth, 5, 'F');
+
+  ctx.y = ctx.margin;
+  const eyebrowText = String(eyebrow || '').trim();
+  if (eyebrowText) {
+    font(ctx, 'bold');
+    ctx.doc.setFontSize(LABEL_FONT_SIZE + 0.5);
+    setTextColor(ctx, ACCENT);
+    ctx.doc.text(eyebrowText.toUpperCase(), ctx.margin, ctx.y);
+    setTextColor(ctx, [0, 0, 0]);
+    drawBadge(ctx, badge, ctx.margin + ctx.maxWidth, ctx.y);
+    ctx.y += 14;
+  }
+
+  font(ctx, 'bold');
+  ctx.doc.setFontSize(TITLE_FONT_SIZE);
+  ctx.y = writeWrappedLines(ctx.doc, String(title || 'Export'), ctx.margin, ctx.y + 8, ctx.maxWidth, TITLE_FONT_SIZE + 6);
+  ctx.y += 10;
+
+  writeMetaGrid(ctx, meta);
+}
+
+function writePageHeader(ctx, { title, eyebrow = '', badge = '', meta = [] }) {
+  addPage(ctx);
+  writeDocumentHeader(ctx, { title, eyebrow, badge, meta });
+  ctx.sectionCount = 0;
+}
+
+function writeFooters(ctx) {
+  const doc = ctx.doc;
+  if (typeof doc.setPage !== 'function' || typeof doc.internal?.getNumberOfPages !== 'function') {
+    return;
+  }
+  const total = doc.internal.getNumberOfPages();
+  for (let page = 1; page <= total; page += 1) {
+    doc.setPage(page);
+    const width = doc.internal.pageSize.getWidth();
+    const height = doc.internal.pageSize.getHeight();
+    const left = ctx.margin;
+    const right = width - ctx.margin;
+    doc.setDrawColor(RULE_COLOR[0], RULE_COLOR[1], RULE_COLOR[2]);
+    doc.setLineWidth(0.5);
+    doc.line(left, height - FOOTER_BASELINE - 10, right, height - FOOTER_BASELINE - 10);
+    font(ctx, 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(MUTED_TEXT[0], MUTED_TEXT[1], MUTED_TEXT[2]);
+    const label = doc.splitTextToSize(ctx.footerLabel, ctx.maxWidth - 90)[0] || '';
+    doc.text(label, left, height - FOOTER_BASELINE);
+    doc.text(`Page ${page} of ${total}`, right, height - FOOTER_BASELINE, { align: 'right' });
+    doc.setTextColor(0, 0, 0);
+  }
 }
 
 function refreshPageMetrics(ctx) {
@@ -113,8 +238,12 @@ function addPage(ctx, orientation = ctx.orientation) {
   ctx.y = ctx.margin;
 }
 
+function contentBottom(ctx) {
+  return ctx.pageHeight - Math.max(ctx.margin, FOOTER_BASELINE + 24);
+}
+
 function ensureSpace(ctx, neededHeight) {
-  if (ctx.y + neededHeight <= ctx.pageHeight - ctx.margin) {
+  if (ctx.y + neededHeight <= contentBottom(ctx)) {
     return;
   }
   addPage(ctx);
@@ -145,29 +274,67 @@ function writeWrappedBlock(ctx, text, x, maxWidth, lineHeight = LINE_HEIGHT) {
 }
 
 function writeHeading(ctx, heading) {
-  const spacingBefore = ctx.sectionCount > 0 ? 8 : 0;
-  if (spacingBefore > 0) {
-    ensureSpace(ctx, spacingBefore);
-    ctx.y += spacingBefore;
-  }
-  ensureSpace(ctx, HEADING_FONT_SIZE + 12);
-  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'bold');
+  const spacingBefore = ctx.sectionCount > 0 ? 14 : 0;
+  ensureSpace(ctx, spacingBefore + HEADING_FONT_SIZE + 16);
+  ctx.y += spacingBefore;
+  font(ctx, 'bold');
   ctx.doc.setFontSize(HEADING_FONT_SIZE);
-  writeWrappedBlock(ctx, heading, ctx.margin, ctx.maxWidth, HEADING_FONT_SIZE + 8);
-  ctx.y += 4;
+  setTextColor(ctx, ACCENT);
+  ctx.doc.text(String(heading || '').toUpperCase(), ctx.margin, ctx.y);
+  setTextColor(ctx, [0, 0, 0]);
+  ctx.y += 6;
+  ctx.doc.setDrawColor(ACCENT[0], ACCENT[1], ACCENT[2]);
+  ctx.doc.setLineWidth(0.5);
+  ctx.doc.line(ctx.margin, ctx.y, ctx.margin + ctx.maxWidth, ctx.y);
+  ctx.y += 14;
   ctx.sectionCount += 1;
 }
 
 function writeParagraph(ctx, text) {
   ensureSpace(ctx, LINE_HEIGHT + 2);
-  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'normal');
+  font(ctx, 'normal');
   ctx.doc.setFontSize(BODY_FONT_SIZE);
   writeWrappedBlock(ctx, text || '-', ctx.margin, ctx.maxWidth, LINE_HEIGHT);
   ctx.y += 4;
 }
 
+// Numbered step: index sits in a hanging indent so wrapped lines align under the text.
+function writeNumberedItem(ctx, index, text) {
+  const gutter = 22;
+  const bodyWidth = ctx.maxWidth - gutter;
+  const lines = splitWrappedLines(ctx.doc, text, bodyWidth);
+  lines.forEach((line, lineIndex) => {
+    ensureSpace(ctx, LINE_HEIGHT);
+    if (lineIndex === 0) {
+      font(ctx, 'bold');
+      ctx.doc.setFontSize(BODY_FONT_SIZE - 1);
+      setTextColor(ctx, ACCENT);
+      ctx.doc.text(`${index}`, ctx.margin, ctx.y);
+      setTextColor(ctx, [0, 0, 0]);
+    }
+    font(ctx, 'normal');
+    ctx.doc.setFontSize(BODY_FONT_SIZE);
+    ctx.doc.text(String(line || ''), ctx.margin + gutter, ctx.y);
+    ctx.y += LINE_HEIGHT;
+  });
+  ctx.y += 4;
+}
+
 function writeKeyValue(ctx, key, value) {
-  writeParagraph(ctx, `${key}: ${safeValue(value)}`);
+  ensureSpace(ctx, LINE_HEIGHT + 2);
+  const labelWidth = 96;
+  writeLabel(ctx, key, ctx.margin, ctx.y);
+  font(ctx, 'normal');
+  ctx.doc.setFontSize(BODY_FONT_SIZE);
+  const lines = splitWrappedLines(ctx.doc, safeValue(value), ctx.maxWidth - labelWidth);
+  lines.forEach((line, index) => {
+    if (index > 0) {
+      ensureSpace(ctx, LINE_HEIGHT);
+    }
+    ctx.doc.text(String(line || ''), ctx.margin + labelWidth, ctx.y);
+    ctx.y += LINE_HEIGHT;
+  });
+  ctx.y += 2;
 }
 
 function writeBulletLines(ctx, lines) {
@@ -177,16 +344,31 @@ function writeBulletLines(ctx, lines) {
     return;
   }
   values.forEach((line) => {
-    writeParagraph(ctx, `- ${String(line || '').trim()}`);
+    const gutter = 14;
+    const lines = splitWrappedLines(ctx.doc, String(line || '').trim(), ctx.maxWidth - gutter);
+    lines.forEach((part, index) => {
+      ensureSpace(ctx, LINE_HEIGHT);
+      font(ctx, 'normal');
+      ctx.doc.setFontSize(BODY_FONT_SIZE);
+      if (index === 0) {
+        setTextColor(ctx, ACCENT);
+        ctx.doc.text('•', ctx.margin + 3, ctx.y);
+        setTextColor(ctx, [0, 0, 0]);
+      }
+      ctx.doc.text(String(part || ''), ctx.margin + gutter, ctx.y);
+      ctx.y += LINE_HEIGHT;
+    });
   });
+  ctx.y += 4;
 }
 
 function writeMinorHeading(ctx, heading) {
-  ensureSpace(ctx, BODY_FONT_SIZE + 8);
-  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'bold');
+  ensureSpace(ctx, BODY_FONT_SIZE + 12);
+  ctx.y += 6;
+  font(ctx, 'bold');
   ctx.doc.setFontSize(BODY_FONT_SIZE);
   writeWrappedBlock(ctx, heading, ctx.margin, ctx.maxWidth, BODY_FONT_SIZE + 4);
-  ctx.y += 2;
+  ctx.y += 3;
 }
 
 function estimateTextWidth(ctx, text, fontSize = TABLE_FONT_SIZE) {
@@ -267,25 +449,24 @@ function getTableRowHeight(lineGroups) {
   return Math.max(18, (maxLines * TABLE_LINE_HEIGHT) + (TABLE_CELL_PADDING * 2));
 }
 
-function drawTableRow(ctx, lineGroups, widths, { header = false } = {}) {
+// Zebra rows with horizontal rules only — vertical grid lines add noise at this density.
+function drawTableRow(ctx, lineGroups, widths, { header = false, zebra = false } = {}) {
   const rowHeight = getTableRowHeight(lineGroups);
-  let x = ctx.margin;
+  const totalWidth = widths.reduce((sum, width) => sum + width, 0);
 
-  ctx.doc.setDrawColor(TABLE_BORDER_COLOR, TABLE_BORDER_COLOR, TABLE_BORDER_COLOR);
   if (header) {
-    ctx.doc.setFillColor(TABLE_HEADER_FILL, TABLE_HEADER_FILL, TABLE_HEADER_FILL);
-  } else {
-    ctx.doc.setFillColor(255, 255, 255);
+    ctx.doc.setFillColor(ACCENT_TINT[0], ACCENT_TINT[1], ACCENT_TINT[2]);
+    ctx.doc.rect(ctx.margin, ctx.y, totalWidth, rowHeight, 'F');
+  } else if (zebra) {
+    ctx.doc.setFillColor(ZEBRA_FILL[0], ZEBRA_FILL[1], ZEBRA_FILL[2]);
+    ctx.doc.rect(ctx.margin, ctx.y, totalWidth, rowHeight, 'F');
   }
-  ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', header ? 'bold' : 'normal');
+
+  font(ctx, header ? 'bold' : 'normal');
   ctx.doc.setFontSize(TABLE_FONT_SIZE);
+  setTextColor(ctx, header ? ACCENT : [0, 0, 0]);
 
-  widths.forEach((width) => {
-    ctx.doc.rect(x, ctx.y, width, rowHeight, header ? 'FD' : 'S');
-    x += width;
-  });
-
-  x = ctx.margin;
+  let x = ctx.margin;
   lineGroups.forEach((lines, columnIndex) => {
     const cellLines = Array.isArray(lines) && lines.length ? lines : [''];
     let textY = ctx.y + TABLE_CELL_PADDING + TABLE_FONT_SIZE;
@@ -295,8 +476,12 @@ function drawTableRow(ctx, lineGroups, widths, { header = false } = {}) {
     });
     x += widths[columnIndex];
   });
+  setTextColor(ctx, [0, 0, 0]);
 
   ctx.y += rowHeight;
+  ctx.doc.setDrawColor(RULE_COLOR[0], RULE_COLOR[1], RULE_COLOR[2]);
+  ctx.doc.setLineWidth(0.5);
+  ctx.doc.line(ctx.margin, ctx.y, ctx.margin + totalWidth, ctx.y);
 }
 
 function writePdfTable(ctx, headers, rows, { emptyText = '-' } = {}) {
@@ -327,17 +512,17 @@ function writePdfTable(ctx, headers, rows, { emptyText = '-' } = {}) {
   }
 
   writeHeader();
-  safeRows.forEach((cells) => {
+  safeRows.forEach((cells, rowIndex) => {
     const rowCells = safeHeaders.map((_header, index) => String(cells[index] ?? '').trim());
     const rowLines = splitTableCells(ctx, rowCells, widths);
     const rowHeight = getTableRowHeight(rowLines);
-    if (ctx.y + rowHeight > ctx.pageHeight - ctx.margin) {
+    if (ctx.y + rowHeight > contentBottom(ctx)) {
       addPage(ctx);
       writeHeader();
     }
-    drawTableRow(ctx, rowLines, widths);
+    drawTableRow(ctx, rowLines, widths, { zebra: rowIndex % 2 === 1 });
   });
-  ctx.y += 6;
+  ctx.y += 10;
 }
 
 function writeSimpleTable(ctx, headers, rows, { emptyText = '-' } = {}) {
@@ -393,7 +578,16 @@ function hasWideNotebookResultTable(tables) {
 }
 
 function finishAndSave(ctx, fileNameBase) {
+  writeFooters(ctx);
   ctx.doc.save(`${sanitizeFileName(fileNameBase, 'export')}.pdf`);
+}
+
+function notebookEntryMeta(entry) {
+  return [
+    { label: 'Project', value: entry.projectName },
+    { label: 'Protocol', value: entry.protocolName },
+    { label: String(entry.executedAt || '').trim() ? 'Executed' : 'Updated', value: formatTimestamp(entry.executedAt || entry.updatedAt) }
+  ];
 }
 
 function notebookStateLabel(entry) {
@@ -658,22 +852,25 @@ export function exportProtocolPdf(protocol) {
     return false;
   }
 
-  const title = `Protocol: ${safeValue(protocol.name, 'Untitled Protocol')}`;
+  const name = safeValue(protocol.name, 'Untitled Protocol');
+  const steps = Array.isArray(protocol.steps) ? protocol.steps : [];
   const ctx = createContext({
-    title,
+    title: name,
+    eyebrow: 'Protocol',
+    footerLabel: `Protocol · ${name}`,
+    meta: [
+      { label: 'Steps', value: String(steps.length) },
+      { label: 'Materials', value: String(Array.isArray(protocol.materials) ? protocol.materials.length : 0) },
+      { label: 'Created', value: formatTimestamp(protocol.createdAt) },
+      { label: 'Updated', value: formatTimestamp(protocol.updatedAt) }
+    ],
     orientation: 'p',
     format: 'letter',
-    margin: 72,
-    serif: true
+    margin: 72
   });
   if (!ctx) {
     return false;
   }
-
-  writeHeading(ctx, 'Summary');
-  writeKeyValue(ctx, 'Name', protocol.name);
-  writeKeyValue(ctx, 'Created', formatTimestamp(protocol.createdAt));
-  writeKeyValue(ctx, 'Updated', formatTimestamp(protocol.updatedAt));
 
   writeHeading(ctx, 'Purpose');
   writeParagraph(ctx, safeValue(protocol.purpose));
@@ -682,12 +879,11 @@ export function exportProtocolPdf(protocol) {
   writeBulletLines(ctx, Array.isArray(protocol.materials) ? protocol.materials : []);
 
   writeHeading(ctx, 'Steps');
-  const steps = Array.isArray(protocol.steps) ? protocol.steps : [];
   if (!steps.length) {
     writeParagraph(ctx, '-');
   } else {
     steps.forEach((step, index) => {
-      writeParagraph(ctx, `${index + 1}. ${renderStepText(step, null)}`);
+      writeNumberedItem(ctx, index + 1, renderStepText(step, null));
     });
   }
 
@@ -708,25 +904,13 @@ async function writeNotebookEntryBody(ctx, {
 }) {
   const resultTables = normalizeNotebookResultTables(entry.resultTables, entry.resultTable);
 
-  writeHeading(ctx, 'Summary');
-  writeKeyValue(ctx, 'Project', entry.projectName);
-  if (String(entry.experimentName || '').trim()) {
-    writeKeyValue(ctx, 'Experiment', entry.experimentName);
-  }
-  writeKeyValue(ctx, 'Protocol', entry.protocolName);
-  writeKeyValue(ctx, 'State', notebookStateLabel(entry));
-  writeKeyValue(ctx, 'Updated', formatTimestamp(entry.updatedAt));
-  if (String(entry.executedAt || '').trim()) {
-    writeKeyValue(ctx, 'Executed', formatTimestamp(entry.executedAt));
-  }
-
-  writeHeading(ctx, 'Protocol Steps (Filled)');
+  writeHeading(ctx, 'Protocol steps');
   const steps = Array.isArray(protocol?.steps) ? protocol.steps : [];
   if (!steps.length) {
     writeParagraph(ctx, 'No protocol steps available for this entry.');
   } else {
     steps.forEach((step, index) => {
-      writeParagraph(ctx, `${index + 1}. ${renderStepText(step, entry.values || {})}`);
+      writeNumberedItem(ctx, index + 1, renderStepText(step, entry.values || {}));
     });
   }
 
@@ -822,7 +1006,7 @@ async function writeNotebookEntryBody(ctx, {
     }
   }
 
-  writeHeading(ctx, 'Notes / Results');
+  writeHeading(ctx, 'Notes and results');
   writeParagraph(ctx, safeValue(entry.result));
   const toolCalculations = normalizeNotebookToolCalculations(entry.toolCalculations);
   if (toolCalculations.length) {
@@ -861,15 +1045,18 @@ export const exportNotebookEntryPdf = async (params = {}) => {
       return false;
     }
 
-    const title = `Notebook: ${safeValue(entry.projectName)} / ${safeValue(entry.experimentName || entry.protocolName)}`;
+    const title = safeValue(entry.experimentName || entry.protocolName, 'Untitled page');
     const resultTables = normalizeNotebookResultTables(entry.resultTables, entry.resultTable);
     const useWideLayout = hasWideNotebookResultTable(resultTables);
     const ctx = createContext({
       title,
+      eyebrow: 'Notebook page',
+      badge: notebookStateLabel(entry),
+      footerLabel: `${safeValue(entry.projectName)} · ${title}`,
+      meta: notebookEntryMeta(entry),
       orientation: useWideLayout ? 'l' : 'p',
       format: 'letter',
-      margin: useWideLayout ? 54 : 72,
-      serif: true
+      margin: useWideLayout ? 54 : 72
     });
     if (!ctx) {
       return false;
@@ -909,40 +1096,48 @@ export const exportProjectNotebookEntriesPdf = async ({
       return false;
     }
 
-    const title = `Project Notebook: ${safeValue(project.name, 'Untitled Project')}`;
+    const projectName = safeValue(project.name, 'Untitled Project');
     const ctx = createContext({
-      title,
+      title: projectName,
+      eyebrow: 'Project notebook',
+      footerLabel: `Project notebook · ${projectName}`,
+      meta: [
+        { label: 'Pages', value: String(pages.length) },
+        { label: 'Exported', value: formatTimestamp(new Date().toISOString()) }
+      ],
       orientation: 'p',
       format: 'letter',
-      margin: 72,
-      serif: true
+      margin: 72
     });
     if (!ctx) {
       return false;
     }
 
-    writeHeading(ctx, 'Project');
-    writeKeyValue(ctx, 'Name', project.name);
     if (String(project.description || '').trim()) {
-      writeKeyValue(ctx, 'Description', project.description);
+      writeHeading(ctx, 'Description');
+      writeParagraph(ctx, project.description);
     }
-    writeKeyValue(ctx, 'Pages', String(pages.length));
+
+    writeHeading(ctx, 'Contents');
+    writeSimpleTable(
+      ctx,
+      ['#', 'Page', 'Protocol', 'State'],
+      pages.map((entry, index) => [
+        String(index + 1),
+        safeValue(entry.experimentName || entry.protocolName, 'Untitled page'),
+        safeValue(entry.protocolName),
+        notebookStateLabel(entry)
+      ])
+    );
 
     for (let index = 0; index < pages.length; index += 1) {
       const entry = pages[index];
-      addPage(ctx);
-      ctx.sectionCount = 0;
-      ctx.doc.setFont(ctx.serif ? 'times' : 'helvetica', 'bold');
-      ctx.doc.setFontSize(TITLE_FONT_SIZE);
-      ctx.y = writeWrappedLines(
-        ctx.doc,
-        `Page ${index + 1}: ${safeValue(entry.experimentName || entry.protocolName, 'Untitled Page')}`,
-        ctx.margin,
-        ctx.y,
-        ctx.maxWidth,
-        TITLE_FONT_SIZE + 8
-      );
-      ctx.y += 4;
+      writePageHeader(ctx, {
+        title: safeValue(entry.experimentName || entry.protocolName, 'Untitled page'),
+        eyebrow: `Page ${index + 1} of ${pages.length}`,
+        badge: notebookStateLabel(entry),
+        meta: notebookEntryMeta(entry)
+      });
 
       // eslint-disable-next-line no-await-in-loop
       await writeNotebookEntryBody(ctx, {
@@ -973,23 +1168,29 @@ export function exportAssayDefinitionPdf(assay) {
 
   const def = resolveAssayDefinition(assay);
   const isLarge = def.columns > 12;
-  const title = `Assay: ${safeValue(assay.name, assay.assayNumber || 'Unnamed')}`;
-  const ctx = createContext({ title, orientation: isLarge ? 'l' : 'p' });
+  const title = safeValue(assay.name, assay.assayNumber || 'Unnamed');
+  const ctx = createContext({
+    title,
+    eyebrow: 'Assay definition',
+    badge: assay.assayNumber || '',
+    footerLabel: `Assay · ${title}`,
+    meta: [
+      { label: 'Project', value: assay.projectName },
+      { label: 'Plate', value: `${safeValue(def.label)} (${def.rows} x ${def.columns})` },
+      { label: 'Notebook page', value: assay.notebookEntryProtocolName },
+      { label: 'Updated', value: formatTimestamp(assay.updatedAt) }
+    ],
+    orientation: isLarge ? 'l' : 'p'
+  });
   if (!ctx) {
     return false;
   }
 
-  writeHeading(ctx, 'Summary');
-  writeKeyValue(ctx, 'Assay Number', assay.assayNumber || '-');
-  writeKeyValue(ctx, 'Name', assay.name || '-');
-  writeKeyValue(ctx, 'Project', assay.projectName || '-');
-  writeKeyValue(ctx, 'Plate', `${safeValue(def.label)} (${def.rows} x ${def.columns})`);
-  writeKeyValue(ctx, 'Sample Axis', assay.sampleAxis === 'column' ? 'Column' : 'Row');
-  writeKeyValue(ctx, 'Concentration Axis', assay.concentrationAxis === 'column' ? 'Column' : 'Row');
-  writeKeyValue(ctx, 'Notebook Page', assay.notebookEntryProtocolName || '-');
-  writeKeyValue(ctx, 'Updated', formatTimestamp(assay.updatedAt));
+  writeHeading(ctx, 'Axes');
+  writeKeyValue(ctx, 'Sample axis', assay.sampleAxis === 'column' ? 'Column' : 'Row');
+  writeKeyValue(ctx, 'Concentration axis', assay.concentrationAxis === 'column' ? 'Column' : 'Row');
 
-  writeHeading(ctx, 'Well Definition Plot');
+  writeHeading(ctx, 'Well definition plot');
   renderAssayPlot(ctx, assay, def);
 
   finishAndSave(ctx, `assay-${assay.assayNumber || assay.id || assay.name || 'definition'}`);

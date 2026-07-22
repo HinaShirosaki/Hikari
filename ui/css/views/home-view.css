@@ -340,6 +340,35 @@ body.theme-night #home-view {
   height: 22px;
 }
 
+#home-view .home-tile .home-row-action.home-passage-action {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+}
+
+#home-view .home-tile .home-row-action.home-passage-action svg {
+  width: 20px;
+  height: 20px;
+}
+
+#home-view .home-tile .home-row-action.home-passage-action.is-complete {
+  color: var(--theme-accent);
+}
+
+#home-view .home-tile .home-row-action.home-passage-action.is-extend {
+  color: var(--home-warn);
+}
+
+#home-view .home-tile .home-row-action.home-passage-action.is-complete:hover,
+#home-view .home-tile .home-row-action.home-passage-action.is-complete:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 12%, transparent);
+}
+
+#home-view .home-tile .home-row-action.home-passage-action.is-extend:hover,
+#home-view .home-tile .home-row-action.home-passage-action.is-extend:focus-visible {
+  background: color-mix(in srgb, var(--home-warn) 14%, transparent);
+}
+
 
 
 #home-view .dashboard-field {

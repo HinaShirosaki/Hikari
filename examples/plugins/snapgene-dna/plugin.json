@@ -1,0 +1,11 @@
+{
+  "id": "snapgene-dna",
+  "name": "SnapGene .dna importer",
+  "version": "1.0.0",
+  "description": "Lets the sequence viewer open SnapGene .dna files by converting them to GenBank.",
+  "service": {
+    "fileConversions": [
+      { "from": "dna", "to": "gbk" }
+    ]
+  }
+}

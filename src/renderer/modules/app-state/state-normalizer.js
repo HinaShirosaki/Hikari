@@ -61,17 +61,51 @@ function normalizePluginEntries(rawPlugins) {
   return rawPlugins
     .map((entry) => {
       const raw = asObject(entry);
+      // Only https survives here: the renderer grants allow-same-origin to
+      // remote frames, so a persisted file:/http: URL must not reach one.
+      let embedUrl = '';
+      try {
+        const parsed = new URL(String(raw.embedUrl || '').trim());
+        embedUrl = parsed.protocol === 'https:' ? parsed.href : '';
+      } catch {
+        embedUrl = '';
+      }
+      // A service is local code (no embed/serve). Keep only well-formed
+      // conversion pairs so a bad record cannot register a junk converter.
+      let service = null;
+      const rawConversions = asObject(raw.service).fileConversions;
+      if (!embedUrl && !(raw.serve === true) && Array.isArray(rawConversions)) {
+        const fileConversions = rawConversions
+          .map((pair) => ({
+            from: String(pair?.from || '').toLowerCase().trim().replace(/^\./, ''),
+            to: String(pair?.to || '').toLowerCase().trim().replace(/^\./, '')
+          }))
+          .filter((pair) => /^[a-z0-9]+$/.test(pair.from) && /^[a-z0-9]+$/.test(pair.to));
+        if (fileConversions.length) {
+          service = { fileConversions };
+        }
+      }
       return {
         id: String(raw.id || '').trim(),
         name: String(raw.name || '').trim(),
+        version: String(raw.version || '').trim(),
         description: String(raw.description || '').trim(),
+        // A remote embed never holds host permissions, whatever the record says.
+        permissions: (!embedUrl && Array.isArray(raw.permissions))
+          ? raw.permissions.map((permission) => String(permission || '').trim()).filter(Boolean)
+          : [],
         path: String(raw.path || '').trim(),
         entryUrl: String(raw.entryUrl || '').trim(),
+        embedUrl,
+        // A served plugin needs its folder path at boot to start the loopback
+        // server, so `serve` only survives alongside one.
+        serve: raw.serve === true && !embedUrl && Boolean(String(raw.path || '').trim()),
+        service,
         enabled: raw.enabled !== false
       };
     })
     .filter((entry) => {
-      if (!entry.id || !entry.entryUrl || seenIds.has(entry.id)) {
+      if (!entry.id || (!entry.entryUrl && !entry.embedUrl && !entry.serve) || seenIds.has(entry.id)) {
         return false;
       }
       seenIds.add(entry.id);

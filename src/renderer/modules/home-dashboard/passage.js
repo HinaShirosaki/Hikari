@@ -147,15 +147,15 @@ export function initPassageWidget({
     if (action === 'done') {
       return `
         <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-          <circle cx="12" cy="12" r="11" fill="#3a9f5b"></circle>
-          <path d="m7.2 12.4 3.1 3.1 6.5-7.1" fill="none" stroke="#ffffff" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"></path>
+          <circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.8"></circle>
+          <path d="m8.4 12.1 2.35 2.4 4.95-5.25" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"></path>
         </svg>
       `;
     }
     return `
       <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true">
-        <circle cx="12" cy="12" r="11" fill="#d4ab2d"></circle>
-        <path d="M5.7 14.2V9.6h4.8c1.2 0 2 .8 2 1.8v2.8M5.7 13h12.6M18.3 13v3.2M8 13v1.8M6.4 16.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Zm11.2 0a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4Z" fill="none" stroke="#ffffff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+        <rect x="5" y="5.5" width="14" height="13" rx="2.25" fill="none" stroke="currentColor" stroke-width="1.8"></rect>
+        <path d="M8.25 3.75v3.5M15.75 3.75v3.5M5 9.5h14M12 12v4M10 14h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
       </svg>
     `;
   }
@@ -170,7 +170,7 @@ export function initPassageWidget({
     return `
       <button
         type="button"
-        class="home-row-action"
+        class="home-row-action home-passage-action is-complete"
         data-dashboard-passage-action="done"
         data-dashboard-passage-id="${passageId}"
         data-dashboard-passage-source="${passageSource}"
@@ -178,7 +178,7 @@ export function initPassageWidget({
       >${renderPassageActionIcon('done')}</button>
       <button
         type="button"
-        class="home-row-action"
+        class="home-row-action home-passage-action is-extend"
         data-dashboard-passage-action="extend"
         data-dashboard-passage-id="${passageId}"
         data-dashboard-passage-source="${passageSource}"
