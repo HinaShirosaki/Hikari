@@ -31,6 +31,7 @@ export const sequenceViewerManifest = {
     persist,
     createId,
     rendererServices,
+    pluginServices,
     showView,
     views,
     apiBridge,
@@ -39,6 +40,9 @@ export const sequenceViewerManifest = {
   }) => ({
     homeViewId: views.SEQUENCE_VIEWER,
     detailViewId: SEQUENCE_VIEWER_DETAIL_VIEW_ID,
+    // Lets the file picker accept and convert formats a service plugin
+    // provides (e.g. SnapGene .dna via examples/plugins/snapgene-dna).
+    pluginServices: pluginServices || null,
     onNavigateHome: () => {
       showView(views.SEQUENCE_VIEWER);
     },

@@ -165,7 +165,7 @@ function writeMetaGrid(ctx, meta) {
     ctx.y += rowHeight;
     ctx.doc.line(ctx.margin, ctx.y, ctx.margin + ctx.maxWidth, ctx.y);
   }
-  ctx.y += 16;
+  ctx.y += 28;
 }
 
 function writeDocumentHeader(ctx, { title, eyebrow = '', badge = '', meta = [] }) {
@@ -586,8 +586,7 @@ function notebookEntryMeta(entry) {
   return [
     { label: 'Project', value: entry.projectName },
     { label: 'Protocol', value: entry.protocolName },
-    { label: String(entry.executedAt || '').trim() ? 'Executed' : 'Updated', value: formatTimestamp(entry.executedAt || entry.updatedAt) },
-    { label: 'Experiment', value: entry.experimentName }
+    { label: String(entry.executedAt || '').trim() ? 'Executed' : 'Updated', value: formatTimestamp(entry.executedAt || entry.updatedAt) }
   ];
 }
 

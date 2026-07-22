@@ -16,6 +16,7 @@ export function createRendererModuleRuntime(config = {}) {
   const rendererServices = config?.rendererServices || {};
   const moduleRegistry = config?.moduleRegistry;
   const trackGrowthEvent = config?.trackGrowthEvent || (() => {});
+  const pluginServices = config?.pluginServices || null;
   const showView = config?.showView || (() => {});
   const views = config?.views || {};
   const onStoragePathSaved = config?.onStoragePathSaved || (async () => {});
@@ -43,6 +44,7 @@ export function createRendererModuleRuntime(config = {}) {
     rendererServices,
     moduleRegistry,
     trackGrowthEvent,
+    pluginServices,
     showView,
     views,
     onStoragePathSaved,

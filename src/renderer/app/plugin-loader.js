@@ -113,7 +113,27 @@ function buildPluginRail(documentObject, plugin, { isRemote, isServed }) {
   return rail;
 }
 
-export function installPlugins({ state, documentObject, appRegistry, bridge = null, api = null }) {
+// Mounts a service plugin: a hidden, opaque-origin frame that runs the
+// plugin's code with no view, no navigation entry, and no rail. It exists only
+// to answer host->service calls (plugin-services.js). It must be in the
+// document to have a contentWindow, so it is appended hidden.
+function installServiceFrame({ documentObject, host, plugin, services }) {
+  const frameId = `plugin-service-${plugin.id}`;
+  if (documentObject.getElementById(frameId)) {
+    return;
+  }
+  const frame = documentObject.createElement('iframe');
+  frame.id = frameId;
+  frame.className = 'plugin-service-frame';
+  frame.hidden = true;
+  frame.setAttribute('aria-hidden', 'true');
+  frame.setAttribute('sandbox', LOCAL_SANDBOX);
+  frame.src = plugin.entryUrl;
+  host.append(frame);
+  services?.register?.(frame, plugin);
+}
+
+export function installPlugins({ state, documentObject, appRegistry, bridge = null, api = null, services = null }) {
   const plugins = Array.isArray(state?.settings?.plugins) ? state.settings.plugins : [];
   const host = documentObject?.querySelector?.('.workspace-main');
   if (!host || !Array.isArray(appRegistry)) {
@@ -124,6 +144,13 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
   plugins
     .filter((plugin) => plugin.enabled !== false && (plugin.entryUrl || plugin.embedUrl || plugin.serve))
     .forEach((plugin) => {
+      // A service has no view: it mounts a hidden frame and is done — no
+      // section, no registry entry, no rail.
+      if (plugin.service && plugin.entryUrl) {
+        installServiceFrame({ documentObject, host, plugin, services });
+        return;
+      }
+
       const viewId = pluginViewId(plugin.id);
       if (documentObject.getElementById(viewId)) {
         return;

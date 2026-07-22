@@ -9,6 +9,7 @@ const MAX_TEXT_LENGTH = 400;
 
 const PLUGIN_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const PLUGIN_VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
+const FILE_EXTENSION_PATTERN = /^[a-z0-9]+$/;
 
 // Capability names a plugin may request in plugin.json "permissions". The
 // renderer bridge (src/renderer/app/plugin-bridge.js) refuses any verb whose
@@ -45,6 +46,33 @@ function parseEmbedUrl(rawEmbed) {
     return { error: `"embed" must use https (found "${parsed.protocol}//").` };
   }
   return { embedUrl: parsed.href };
+}
+
+// A service plugin has no view — it registers a capability instead. The only
+// capability today is file conversion: a list of { from, to } extension pairs
+// (bare, lower-case, no dot) the plugin can transform. Returns the normalized
+// service block, or { error } / { service: null } when absent.
+function parseService(rawService) {
+  if (rawService === undefined || rawService === null) {
+    return { service: null };
+  }
+  if (typeof rawService !== 'object' || Array.isArray(rawService)) {
+    return { error: '"service" must be an object.' };
+  }
+  const rawConversions = rawService.fileConversions;
+  if (!Array.isArray(rawConversions) || !rawConversions.length) {
+    return { error: '"service" must declare a non-empty "fileConversions" array.' };
+  }
+  const fileConversions = [];
+  for (const entry of rawConversions) {
+    const from = cleanText(entry?.from, 16).toLowerCase().replace(/^\./, '');
+    const to = cleanText(entry?.to, 16).toLowerCase().replace(/^\./, '');
+    if (!FILE_EXTENSION_PATTERN.test(from) || !FILE_EXTENSION_PATTERN.test(to)) {
+      return { error: '"service.fileConversions" needs bare lower-case extensions, e.g. { "from": "dna", "to": "gbk" }.' };
+    }
+    fileConversions.push({ from, to });
+  }
+  return { service: { fileConversions } };
 }
 
 // Validates a user-selected plugin folder and returns the normalized record the
@@ -118,7 +146,19 @@ async function inspectPluginFolder({ fs, folderPath }) {
     return { ok: false, error: `${PLUGIN_MANIFEST_FILE} "serve" must be true or false.` };
   }
 
-  // A local plugin must ship its entry page; a remote one has none.
+  const { service = null, error: serviceError } = parseService(manifest.service);
+  if (serviceError) {
+    return { ok: false, error: `${PLUGIN_MANIFEST_FILE} ${serviceError}` };
+  }
+  // A service is local, opaque-origin code you audited in the folder. Remote
+  // code cannot be a trusted service, and a converter needs no storage, so a
+  // service is neither remote nor served.
+  if (service && (embedUrl || serve)) {
+    return { ok: false, error: `${PLUGIN_MANIFEST_FILE} a "service" plugin cannot also use "embed" or "serve".` };
+  }
+
+  // Every plugin ships its entry page except a remote embed. A service runs its
+  // code in a hidden frame, so it needs index.html too.
   let entryUrl = '';
   if (!embedUrl) {
     const entryPath = path.join(cleanPath, PLUGIN_ENTRY_FILE);
@@ -170,7 +210,8 @@ async function inspectPluginFolder({ fs, folderPath }) {
     path: cleanPath,
     entryUrl,
     embedUrl,
-    serve
+    serve,
+    service
   };
 }
 

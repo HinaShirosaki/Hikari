@@ -54,6 +54,7 @@ export function createPluginsController({
       entryUrl: inspected.entryUrl,
       embedUrl: inspected.embedUrl || '',
       serve: inspected.serve === true,
+      service: inspected.service || null,
       enabled: true
     });
     persist();

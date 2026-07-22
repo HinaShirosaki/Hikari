@@ -70,6 +70,21 @@ function normalizePluginEntries(rawPlugins) {
       } catch {
         embedUrl = '';
       }
+      // A service is local code (no embed/serve). Keep only well-formed
+      // conversion pairs so a bad record cannot register a junk converter.
+      let service = null;
+      const rawConversions = asObject(raw.service).fileConversions;
+      if (!embedUrl && !(raw.serve === true) && Array.isArray(rawConversions)) {
+        const fileConversions = rawConversions
+          .map((pair) => ({
+            from: String(pair?.from || '').toLowerCase().trim().replace(/^\./, ''),
+            to: String(pair?.to || '').toLowerCase().trim().replace(/^\./, '')
+          }))
+          .filter((pair) => /^[a-z0-9]+$/.test(pair.from) && /^[a-z0-9]+$/.test(pair.to));
+        if (fileConversions.length) {
+          service = { fileConversions };
+        }
+      }
       return {
         id: String(raw.id || '').trim(),
         name: String(raw.name || '').trim(),
@@ -85,6 +100,7 @@ function normalizePluginEntries(rawPlugins) {
         // A served plugin needs its folder path at boot to start the loopback
         // server, so `serve` only survives alongside one.
         serve: raw.serve === true && !embedUrl && Boolean(String(raw.path || '').trim()),
+        service,
         enabled: raw.enabled !== false
       };
     })

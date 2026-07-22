@@ -23,6 +23,7 @@ import {
 import { createStorageImportController } from '../app/storage-import.js';
 import { installPlugins } from '../app/plugin-loader.js';
 import { createPluginBridge } from '../app/plugin-bridge.js';
+import { createPluginServiceRegistry } from '../app/plugin-services.js';
 import {
   buildSearchScopeMap,
   buildViewAliasMap,
@@ -110,11 +111,15 @@ export function startHikariCore({
     onNotebookEntriesChanged: () => rendererServices?.notebook?.handleAgentNotebookEntriesChanged?.(),
     windowObject
   });
+  // Service plugins register their converters here; the sequence viewer (and
+  // any future consumer) reaches them through the module runtime below.
+  const pluginServices = createPluginServiceRegistry({ windowObject });
   installPlugins({
     state,
     documentObject,
     appRegistry: APP_REGISTRY,
     bridge: pluginBridge,
+    services: pluginServices,
     api: windowObject.hikariApi || null
   });
   const normalizeAppViewId = (viewId) => normalizeViewId(VIEWS, viewId);
@@ -218,6 +223,7 @@ export function startHikariCore({
     rendererServices,
     moduleRegistry,
     trackGrowthEvent,
+    pluginServices,
     showView: viewController.showView,
     views: VIEWS,
     apiBridge: windowObject.hikariApi || null,
