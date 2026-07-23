@@ -2,6 +2,22 @@
 
 The test runner entrypoint remains `test.js`.
 
+## Running a subset
+
+Each test is tagged with the `tests/suites/` file that registered it, so the
+directory tree is the category list. No manual tagging.
+
+```
+node test.js --list           # groups and test counts
+node test.js '^core/'         # run one branch (npm run test:core)
+node test.js '^edge/'         # npm run test:edge
+node test.js sequence-viewer  # any regex, matched against "<group> <test name>"
+npm test                      # build:ui + static checks + everything
+npm run test:checks           # only the static check:* scripts
+```
+
+The full run prints a `SLOW` list of the ten slowest tests at the end.
+
 Suites are organized by domain under `tests/suites/`:
 
 - `core/agent-suite.js`: loader for agent-focused suites under `core/agent-suite/`

@@ -25,9 +25,23 @@ const {
 fs.mkdirSync(path.join(__dirname, 'tmp'), { recursive: true });
 
 const tests = [];
+const suitesRoot = path.join(__dirname, 'tests', 'suites');
+
+// The suite file that called test() is the category — the tests/suites tree is
+// already the taxonomy, so nothing needs to be tagged by hand.
+function callerGroup() {
+  const frames = String(new Error().stack).split('\n').slice(2);
+  for (const frame of frames) {
+    const file = (frame.match(/\(?(\/[^():]+\.js):\d+:\d+\)?$/) || [])[1];
+    if (file && file.startsWith(suitesRoot)) {
+      return path.relative(suitesRoot, file).replace(/\.js$/, '');
+    }
+  }
+  return 'root';
+}
 
 function test(name, fn) {
-  tests.push({ name, fn });
+  tests.push({ name, fn, group: callerGroup() });
 }
 
 const memoryStorage = createMemoryStorage();
@@ -631,22 +645,51 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
   assert.equal(send(reader, 'notebook.appendResult', { entryId: 'n1' }).ok, false, 'empty writes are rejected');
 });
 
+function selectTests() {
+  const args = process.argv.slice(2);
+  if (args.includes('--list')) {
+    const counts = new Map();
+    for (const item of tests) counts.set(item.group, (counts.get(item.group) || 0) + 1);
+    for (const [group, count] of [...counts].sort()) console.log(`${String(count).padStart(4)}  ${group}`);
+    console.log(`\n${tests.length} tests in ${counts.size} groups. Run a subset: node test.js <regex>`);
+    process.exit(0);
+  }
+  const patterns = args.filter((arg) => !arg.startsWith('-')).map((arg) => new RegExp(arg, 'i'));
+  if (!patterns.length) return tests;
+  return tests.filter((item) => patterns.some((re) => re.test(`${item.group} ${item.name}`)));
+}
+
 async function run() {
   let passed = 0;
+  const selected = selectTests();
+  if (!selected.length) {
+    console.error('No tests matched. Use `node test.js --list` to see the groups.');
+    process.exit(1);
+  }
+  if (selected.length !== tests.length) {
+    console.log(`Running ${selected.length}/${tests.length} tests.\n`);
+  }
+  const slow = [];
 
-  for (const item of tests) {
+  for (const item of selected) {
+    const started = Date.now();
     try {
       await item.fn();
       passed += 1;
       console.log(`PASS ${item.name}`);
     } catch (error) {
-      console.error(`FAIL ${item.name}`);
+      console.error(`FAIL [${item.group}] ${item.name}`);
       console.error(error && error.stack ? error.stack : error);
       process.exitCode = 1;
     }
+    const elapsed = Date.now() - started;
+    if (elapsed >= 1000) slow.push({ elapsed, item });
   }
 
-  console.log(`\n${passed}/${tests.length} tests passed.`);
+  console.log(`\n${passed}/${selected.length} tests passed.`);
+  for (const { elapsed, item } of slow.sort((a, b) => b.elapsed - a.elapsed).slice(0, 10)) {
+    console.log(`SLOW ${(elapsed / 1000).toFixed(1)}s  [${item.group}] ${item.name}`);
+  }
 
   if (process.exitCode) {
     process.exit(process.exitCode);
