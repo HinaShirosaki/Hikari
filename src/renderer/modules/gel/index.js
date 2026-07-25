@@ -40,6 +40,7 @@ export function initGelAnalysis({
     pendingNotebookLink: null,
     persist,
     preprocessedCache: null,
+    reportDialogOpen: false,
     safeText,
     laneProfileHoverY: null,
     laneVertexDrag: null,
@@ -131,6 +132,8 @@ export function initGelAnalysis({
     runtime,
     elements,
     deps: {
+      copyNormalizedImage: imageController.copyNormalizedImage,
+      decodeImageSource: imageController.decodeImageSource,
       imageDataToDataUrl: imageController.imageDataToDataUrl,
       leaveCropMode: () => cropController.leaveCropMode(),
       readEnhancementSettingsFromUi: imageController.readEnhancementSettingsFromUi,
@@ -149,7 +152,8 @@ export function initGelAnalysis({
     safeText,
     deps: {
       getPreprocessedImageForCurrentSettings: imageController.getPreprocessedImageForCurrentSettings,
-      renderLaneTable: () => laneTable.render()
+      renderLaneTable: () => laneTable.render(),
+      setStatus
     }
   });
 
@@ -247,6 +251,10 @@ export function initGelAnalysis({
   elements.gelLaneProfileChart?.addEventListener('mouseleave', rendering.onLaneProfileChartMouseLeave);
   elements.gelOpenPeakEditorBtn?.addEventListener('click', rendering.onPeakEditorOpen);
   elements.gelPeakEditorCloseBtn?.addEventListener('click', rendering.onPeakEditorClose);
+  elements.gelOpenReportBtn?.addEventListener('click', rendering.onReportOpen);
+  elements.gelReportCloseBtn?.addEventListener('click', rendering.onReportClose);
+  elements.gelReportOverlay?.addEventListener('click', rendering.onReportOverlayClick);
+  rootDocument?.addEventListener?.('keydown', rendering.onReportKeyDown);
   elements.gelPeakEditorLaneSelect?.addEventListener('change', rendering.onPeakEditorLaneChange);
   elements.gelPeakEditorBaselineModeBtn?.addEventListener('click', () => rendering.onPeakEditorModeSelected('baseline'));
   elements.gelPeakEditorDividerModeBtn?.addEventListener('click', () => rendering.onPeakEditorModeSelected('divider'));

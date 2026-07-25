@@ -72,7 +72,6 @@ Now a folder (`src/main/ipc/register-agent-ipc/`), not a single file. It is the 
 
 - `agent:chat`, `agent:chat:cancel`, `agent:list-skills`, `agent:generate-protocol`
 - `agent:chat-log:create-session`, `:list-sessions`, `:get-session`
-- `agent:developer:test-tools`, `agent:developer:context-preview`
 - `agent:logs:list-requests`, `agent:logs:replay`
 - plus the `agent-progress` one-way broadcast (main → renderer)
 

@@ -92,6 +92,7 @@ const CODEX_TOOL_LABELS = {
   protocol_lookup: (a) => `Protocol lookup${quotedDetail(firstArgValue(a, ['query', 'project_name']))}`,
   protocol_generation: () => 'Generating protocol',
   notebook_draft: (a) => `Notebook draft${quotedDetail(firstArgValue(a, ['protocol_name', 'protocolName', 'project_name', 'project', 'message']))}`,
+  notebook_append: (a) => `Notebook append${quotedDetail(firstArgValue(a, ['section_title', 'page_title', 'notebook_entry_id']))}`,
   notebook_generation: (a) => `Notebook generation${quotedDetail(firstArgValue(a, ['selected_protocol', 'project']))}`,
   literature_search: (a) => `Literature search${quotedDetail(firstArgValue(a, ['query', 'topic', 'message']))}`,
   paper_download: (a) => `Paper download${quotedDetail(firstArgValue(a, ['paper_title', 'doi', 'action']))}`,

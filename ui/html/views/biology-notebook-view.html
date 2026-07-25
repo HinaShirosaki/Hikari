@@ -13,7 +13,7 @@
           </div>
         </aside>
 
-        <div class="biology-notebook-viewer-column left-rail-template__main">
+        <div id="biology-notebook-viewer-column" class="biology-notebook-viewer-column left-rail-template__main">
           <button id="biology-notebook-tool-mobile-toggle" class="ghost-btn biology-notebook-tool-mobile-toggle" type="button" aria-expanded="false">Bench Tools</button>
           <div id="biology-notebook-page-starter" class="biology-notebook-page-starter" hidden aria-hidden="true">
             <span id="biology-notebook-page-starter-project"></span>
@@ -99,6 +99,7 @@
                     Experiment Result Files
                     <input id="biology-notebook-result-file" type="file" multiple />
                   </label>
+                  <div id="biology-notebook-result-attachments" class="biology-notebook-result-attachments" aria-live="polite" hidden></div>
                   <div class="form-actions">
                     <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
                     <button id="clarify-save-biology-notebook-btn" class="ghost-btn" type="button">Clarify and Save</button>

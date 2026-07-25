@@ -1,6 +1,37 @@
 import { createNotebookHistoryActions } from './history-notebook-actions.js';
 import { trimText } from './shared.js';
 
+function getNotebookAppendFromMessage(message) {
+  const meta = message?.meta && typeof message.meta === 'object' ? message.meta : {};
+  const append = meta.notebookAppend && typeof meta.notebookAppend === 'object'
+    ? meta.notebookAppend
+    : (meta.notebook_append && typeof meta.notebook_append === 'object' ? meta.notebook_append : null);
+  return append?.proposal?.content_markdown ? append : null;
+}
+
+function markNotebookAppendMessage(message, status, reason = '') {
+  const currentAppend = getNotebookAppendFromMessage(message);
+  if (!currentAppend) {
+    return false;
+  }
+  const nextAppend = {
+    ...currentAppend,
+    save: {
+      ...(currentAppend.save && typeof currentAppend.save === 'object' ? currentAppend.save : {}),
+      applied: status === 'approved',
+      status,
+      reason: trimText(reason, 500),
+      reviewed_at: new Date().toISOString()
+    }
+  };
+  message.meta = {
+    ...message.meta,
+    notebook_append: nextAppend,
+    notebookAppend: nextAppend
+  };
+  return true;
+}
+
 export function createHistoryActionController({
   api,
   state,
@@ -12,7 +43,9 @@ export function createHistoryActionController({
   renderHistoryView,
   answerAssistantQuestion,
   notebookDraftAdapter,
-  onOpenNotebookEntry
+  onOpenNotebookEntry,
+  openReviewForMessage = () => {},
+  onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' })
 }) {
   const notebookActions = createNotebookHistoryActions({
     state,
@@ -24,7 +57,75 @@ export function createHistoryActionController({
     onOpenNotebookEntry
   });
 
+  function findMessage(messageId = '') {
+    const normalizedMessageId = trimText(messageId, 120);
+    return state.agentChat?.messages?.find?.((item) => trimText(item?.id, 120) === normalizedMessageId) || null;
+  }
+
+  async function approveNotebookAppend(messageId = '') {
+    const message = findMessage(messageId);
+    const append = getNotebookAppendFromMessage(message);
+    if (!append || append.save?.mode !== 'confirm_before_append') {
+      setStatus('Notebook append proposal is unavailable.');
+      return { ok: false, error: 'Notebook append proposal is unavailable.' };
+    }
+    const result = await onAppendNotebookEntry(append.proposal);
+    if (result?.ok !== true) {
+      setStatus(trimText(result?.error, 500) || 'The notebook append could not be applied.');
+      return result || { ok: false, error: 'The notebook append could not be applied.' };
+    }
+    markNotebookAppendMessage(
+      message,
+      'approved',
+      trimText(result?.summary, 500) || 'Notebook append approved by user.'
+    );
+    persist();
+    renderContextSummary();
+    renderHistoryView({ forceScroll: true });
+    setStatus(trimText(result?.summary, 320) || 'Content appended to notebook page.');
+    return result;
+  }
+
+  function rejectNotebookAppend(messageId = '') {
+    const message = findMessage(messageId);
+    const append = getNotebookAppendFromMessage(message);
+    if (!append || append.save?.mode !== 'confirm_before_append') {
+      setStatus('Notebook append proposal is unavailable.');
+      return false;
+    }
+    markNotebookAppendMessage(message, 'rejected', 'Notebook append rejected by user.');
+    persist();
+    renderHistoryView({ forceScroll: true });
+    setStatus('Notebook append rejected.');
+    return true;
+  }
+
   async function onHistoryClick(event) {
+    const reviewMessageButton = event?.target?.closest?.('[data-agent-review-message]')
+      || (event?.target?.dataset?.agentReviewMessage ? event.target : null);
+    if (reviewMessageButton) {
+      const messageId = trimText(reviewMessageButton.dataset.agentReviewMessage, 120);
+      const message = state.agentChat?.messages?.find?.((item) => trimText(item?.id, 120) === messageId) || null;
+      if (message) {
+        openReviewForMessage(message);
+      }
+      return;
+    }
+
+    const appendNotebookButton = event?.target?.closest?.('[data-agent-append-notebook]')
+      || (event?.target?.dataset?.agentAppendNotebook ? event.target : null);
+    if (appendNotebookButton) {
+      await approveNotebookAppend(appendNotebookButton.dataset.agentAppendNotebook);
+      return;
+    }
+
+    const rejectNotebookAppendButton = event?.target?.closest?.('[data-agent-reject-notebook-append]')
+      || (event?.target?.dataset?.agentRejectNotebookAppend ? event.target : null);
+    if (rejectNotebookAppendButton) {
+      rejectNotebookAppend(rejectNotebookAppendButton.dataset.agentRejectNotebookAppend);
+      return;
+    }
+
     const suggestedPromptButton = event?.target?.closest?.('[data-agent-suggest-prompt]')
       || (event?.target?.dataset?.agentSuggestPrompt ? event.target : null);
     if (suggestedPromptButton) {
@@ -89,5 +190,12 @@ export function createHistoryActionController({
     }
   }
 
-  return { onHistoryClick, notebookActions };
+  return {
+    onHistoryClick,
+    notebookActions,
+    notebookAppendActions: {
+      approve: approveNotebookAppend,
+      reject: rejectNotebookAppend
+    }
+  };
 }

@@ -22,7 +22,7 @@ function buildHikariCodexAgentsInstructions() {
     'Codex runtime rules:',
     '- Use the shared Hikari MCP contract below.',
     '- Use direct Hikari MCP tools for app evidence, routing, inventory, protocols, notebook drafts, and structured app state.',
-    `- Call direct Hikari MCP tools by their raw names, such as \`${toolName('inventory_lookup')}\`, \`${toolName('protocol_generation')}\`, and \`${toolName('notebook_draft')}\`.`,
+    `- Call direct Hikari MCP tools by their raw names, such as \`${toolName('inventory_lookup')}\`, \`${toolName('protocol_generation')}\`, \`${toolName('notebook_draft')}\`, and \`${toolName('notebook_append')}\`.`,
     '- JSON-only prompts require JSON-only replies.',
     '',
     'Shared Hikari MCP contract:',

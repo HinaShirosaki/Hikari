@@ -29,7 +29,6 @@
   --gel-table-placeholder: #90a0b5;
   --gel-table-focus-background: rgba(255, 255, 255, 0.9);
   --gel-table-divider: rgba(148, 163, 184, 0.25);
-  --gel-report-background: rgba(247, 251, 255, 0.9);
   --gel-band-positive: rgb(34, 139, 70);
   --gel-empty-text: rgba(100, 116, 139, 0.85);
 }
@@ -57,5 +56,4 @@ body.theme-night {
   --gel-table-text: #f6f8fc;
   --gel-table-placeholder: #8da6ca;
   --gel-table-focus-background: rgba(34, 51, 80, 0.92);
-  --gel-report-background: rgba(22, 36, 62, 0.9);
 }

@@ -179,7 +179,6 @@ function normalizeSettings(source) {
     agent: {
       ...defaultState.settings.agent,
       ...rawAgent,
-      developerMode: rawAgent.developerMode === true,
       externalSkillsEnabled: rawAgent.externalSkillsEnabled !== false
         && rawAgent.external_skills_enabled !== false,
       disabledExternalSkillNames: rawDisabledExternalSkillNames

@@ -1,6 +1,5 @@
 'use strict';
 
-const startTelegramBot = require('../lib/telegramBot');
 const {
   hasSupportedDataExtension,
   normalizeDataFilePath
@@ -46,6 +45,9 @@ const {
 const {
   transformPaperRecordsToMarkdown
 } = require('../papers/parse/paper-markdown-import.js');
+const {
+  normalizePaperFindingRunResult
+} = require('../papers/finding/paper-finding-task.js');
 const {
   listSequenceEntries,
   getSequenceEntry,
@@ -149,7 +151,8 @@ function createMainServices(context = {}) {
     fs,
     path,
     processObject,
-    startTelegramBot,
+    // ponytail: telegram unwired — swap back to `startTelegramBot` to re-enable.
+    startTelegramBot: () => null,
     getTelegramConfigPath: appPaths.getTelegramConfigPath,
     getMainWindow
   });
@@ -211,7 +214,8 @@ function createMainServices(context = {}) {
     path,
     cleanText,
     getScheduledTasksPath: appPaths.getScheduledTasksPath,
-    runCodexTask: codex.runScheduledTask
+    runCodexTask: codex.runScheduledTask,
+    normalizeRunResult: normalizePaperFindingRunResult
   });
 
   // IPC registration (before app ready).
@@ -224,6 +228,9 @@ function createMainServices(context = {}) {
     DEFAULT_DATA_FILE_NAME,
     hasSupportedDataExtension,
     mainDataHelpers,
+    getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
+    getStorageRootPointerPath: appPaths.getStorageRootPointerPath,
+    getUserDataPath: appPaths.getUserDataPath,
     discoverPapersFromStorageRoot: (input = {}) => discoverPapersFromStorageRoot({
       ...input,
       transformPaperRecordsToMarkdown
@@ -259,7 +266,6 @@ function createMainServices(context = {}) {
     codexAgentRuntime: codex.codexAgentRuntime,
     agentToolRuntime: agents.agentToolRuntime,
     agentChatLogRuntime: agents.agentChatLogRuntime,
-    agentToolSmokeTestRuntime: agents.agentToolSmokeTestRuntime,
     protocolGenerationRuntime: agents.protocolGenerationRuntime,
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     getAgentChatLogPath: appPaths.getAgentChatLogPath,

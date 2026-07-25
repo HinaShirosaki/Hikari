@@ -144,10 +144,6 @@ function registerAgentChatHandler({
 
   ipcMain.handle(AGENT.CHAT, async (event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
-    const executionFlags = controllerUtils.resolveAgentExecutionFlags(
-      normalizedPayload,
-      normalizeJsonPayload(normalizedPayload?.stateSnapshot, {})
-    );
     const requestId = controllerUtils.buildAgentLogRequestId();
     const clientRequestId = cleanText(
       normalizedPayload?.clientRequestId || normalizedPayload?.client_request_id,
@@ -219,8 +215,7 @@ function registerAgentChatHandler({
           project_id: cleanText(normalizedPayload?.projectId, 80),
           project_name: cleanText(normalizedPayload?.projectName, 180),
           allow_write_tools: normalizedPayload?.allowWriteTools === true,
-          provider: cleanText(normalizedPayload?.llm?.provider, 80),
-          developer_mode: executionFlags.developerMode === true
+          provider: cleanText(normalizedPayload?.llm?.provider, 80)
         }
       });
       const requestLogEntry = {
@@ -238,10 +233,7 @@ function registerAgentChatHandler({
         message: cleanText(normalizedPayload?.message, 3000),
         attachments: summarizeAttachments(normalizedPayload?.attachments),
         conversation: controllerUtils.extractConversation(normalizedPayload?.conversation),
-        llm: controllerUtils.summarizeLlmForAgentLog(normalizedPayload?.llm),
-        agent: {
-          developerMode: executionFlags.developerMode === true
-        }
+        llm: controllerUtils.summarizeLlmForAgentLog(normalizedPayload?.llm)
       };
       await appendAgentChatLogEntry(logPath, controllerUtils.formatAgentChatLogEntry(requestLogEntry));
       if (sessionService.getSession()?.id) {
@@ -284,7 +276,9 @@ function registerAgentChatHandler({
         observability.recordLifecycleEvent(lifecycleRecorder, {
           stage: 'response_emitted',
           status: result?.ok === true ? 'ok' : 'error',
-          response_type: result?.notebook_draft
+          response_type: result?.notebook_append
+            ? 'notebook_append'
+            : (result?.notebook_draft
             ? 'notebook_draft'
             : (result?.protocol_to_notebook
               ? 'protocol_to_notebook'
@@ -302,7 +296,7 @@ function registerAgentChatHandler({
                     ? 'general_science_question'
                     : (result?.project_science_question
                       ? 'project_science_question'
-                    : (result?.result_analysis ? 'result_analysis' : 'agent_result'))))))))),
+                    : (result?.result_analysis ? 'result_analysis' : 'agent_result')))))))))),
           routing_intent: cleanText(result?.parser?.primary_intent, 80) || 'unclear',
           failure_reasons: failureReasons,
           message: result?.ok === true

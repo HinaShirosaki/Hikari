@@ -47,7 +47,8 @@ import {
   parseCrisprTargetsInput,
   collectCrisprPamSites,
   computeCrisprOffTargetStats,
-  designCrisprGuides
+  designCrisprGuides,
+  buildCrisprGuideTsv
 } from './sequence-viewer/calculations/crispr.js';
 import {
   calculateMolarityMass,
@@ -98,6 +99,7 @@ export {
   collectCrisprPamSites,
   computeCrisprOffTargetStats,
   designCrisprGuides,
+  buildCrisprGuideTsv,
   calculateMolarityMass,
   calculateMolarityVolume,
   calculateMolarityConcentration,

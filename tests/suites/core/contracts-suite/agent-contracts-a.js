@@ -80,26 +80,18 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'protocol-generation'), true);
     });
 
-    test('agent log replay and developer tool smoke-test IPC bridges remain wired without contract file', () => {
+    test('agent log replay IPC bridges remain wired without contract file', () => {
       const mainSource = readMainProcessSource();
-      const mainAgentServicesSource = fs.readFileSync(path.join(__dirname, 'src', 'main', 'core', 'services', 'create-agent-services.js'), 'utf8');
       const agentChatHandlerSource = fs.readFileSync(agentRegistrarPath('agent-chat-handler.js'), 'utf8');
       const logHandlersSource = fs.readFileSync(agentRegistrarPath('agent-log-handlers.js'), 'utf8');
       const preloadSource = readPreloadSource();
       assert.match(mainSource, /createMainAgentServices/);
-      assert.match(mainAgentServicesSource, /createAgentToolSmokeTestRuntime/);
       assert.match(mainSource, /registerAgentIpc/);
-      assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.DEVELOPER_TEST_TOOLS/);
-      assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.DEVELOPER_CONTEXT_PREVIEW/);
-      assert.match(logHandlersSource, /agentToolSmokeTestRuntime\.runTool/);
-      assert.match(logHandlersSource, /normalizedPayload\?\.toolName/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_LIST_REQUESTS/);
       assert.match(logHandlersSource, /ipcMain\.handle\(AGENT\.LOGS_REPLAY/);
       assert.match(agentChatHandlerSource, /AGENT_PROGRESS_EVENT/);
       assert.match(agentChatHandlerSource, /clientRequestId/);
       assert.match(agentChatHandlerSource, /request_id:/);
-      assert.match(preloadSource, /agentDeveloperTestTools:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.DEVELOPER_TEST_TOOLS, payload\)/);
-      assert.match(preloadSource, /agentDeveloperContextPreview:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.DEVELOPER_CONTEXT_PREVIEW, payload\)/);
       assert.match(preloadSource, /agentLogsListRequests:\s*\(\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.LOGS_LIST_REQUESTS\)/);
       assert.match(preloadSource, /agentLogsReplay:\s*\(payload\)\s*=>\s*ipcRenderer\.invoke\(AGENT\.LOGS_REPLAY, payload\)/);
       assert.match(preloadSource, /onAgentProgress:\s*\(handler\)\s*=>\s*\{/);

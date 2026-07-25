@@ -22,6 +22,15 @@ function loadImageFromFile(file) {
   });
 }
 
+function loadImageFromSource(source) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Failed to read saved gel image.'));
+    image.src = source;
+  });
+}
+
 function isTiffFile(file) {
   const name = String(file?.name || '').toLowerCase();
   const type = String(file?.type || '').toLowerCase();
@@ -177,8 +186,37 @@ async function decodeImageFile(file) {
   });
 }
 
+async function decodeImageSource(source, name = 'saved-gel.png') {
+  const normalizedSource = String(source || '').trim();
+  if (!normalizedSource) {
+    throw new Error('Saved gel image data is empty.');
+  }
+
+  const image = await loadImageFromSource(normalizedSource);
+  const width = Number(image.naturalWidth || image.width || 0);
+  const height = Number(image.naturalHeight || image.height || 0);
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    throw new Error('Could not decode saved gel image dimensions.');
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d', { willReadFrequently: true });
+  context.drawImage(image, 0, 0, width, height);
+  const imageData = context.getImageData(0, 0, width, height);
+
+  return normalizeDecodedImage({
+    name,
+    width,
+    height,
+    imageData
+  });
+}
+
 export {
   decodeImageFile,
+  decodeImageSource,
   isTiffFile,
   isUtifReady,
   loadUtifScript

@@ -128,6 +128,6 @@ That means sub-agents are not only a standalone tool. They are also the executio
 
 ## Smoke tests
 
-`agent-tool-smoke-test.js` is a developer runtime that creates many concrete tools directly and exercises them with lightweight fixtures or mocked structured responders.
+`agent-tool-smoke-test.js` is a test-only runtime that creates many concrete tools directly and exercises them with lightweight fixtures or mocked structured responders.
 
 It is useful for exercising tool runtimes in isolation with lightweight fixtures, independent of the live executor wired up for `agent:chat`.

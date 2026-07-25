@@ -92,7 +92,11 @@ export function createSampleInventorySettingsController({
   function saveLocation(index, rawValue) {
     const locations = getLocations();
     const nextValue = String(rawValue || '').trim().replace(/\s+/g, ' ');
-    if (!nextValue || !Number.isInteger(index) || index < 0 || index >= locations.length) {
+    if (!Number.isInteger(index) || index < 0 || index >= locations.length) {
+      return;
+    }
+    if (!nextValue || nextValue === locations[index]) {
+      renderSampleInventoryLocationList();
       return;
     }
     const duplicate = locations.some((location, locationIndex) => (
@@ -142,16 +146,14 @@ export function createSampleInventorySettingsController({
         <div class="settings-edit-row settings-sample-inventory-location-row">
           <input value="${escapeHtml(location)}" data-sample-inventory-location-input="${index}" aria-label="Sample inventory location ${index + 1}" />
           <span class="small-note">${escapeHtml(`${count} container${count === 1 ? '' : 's'}`)}</span>
-          <button type="button" class="ghost-btn settings-inline-icon" data-sample-inventory-location-save="${index}" aria-label="Save ${escapeHtml(location)}" title="Save location">✓</button>
           <button type="button" class="danger-btn settings-inline-icon settings-inline-icon-danger" data-sample-inventory-location-delete="${index}" aria-label="Delete ${escapeHtml(location)}" title="${count > 0 ? 'Move or rename containers before deleting this location.' : 'Delete location'}"${count > 0 ? ' disabled' : ''}>&times;</button>
         </div>
       `;
     }).join('');
-    sampleInventoryLocationList.querySelectorAll('[data-sample-inventory-location-save]').forEach((button) => {
-      button.addEventListener('click', () => {
-        const index = Number(button.dataset.sampleInventoryLocationSave);
-        const input = sampleInventoryLocationList.querySelector(`[data-sample-inventory-location-input="${index}"]`);
-        saveLocation(index, input?.value);
+    // ponytail: rename commits on change (blur/Enter) instead of a per-row save button
+    sampleInventoryLocationList.querySelectorAll('[data-sample-inventory-location-input]').forEach((input) => {
+      input.addEventListener('change', () => {
+        saveLocation(Number(input.dataset.sampleInventoryLocationInput), input.value);
       });
     });
     sampleInventoryLocationList.querySelectorAll('[data-sample-inventory-location-delete]').forEach((button) => {
@@ -181,10 +183,14 @@ export function createSampleInventorySettingsController({
     sampleTypeLabelList.querySelectorAll('[data-sample-type-delete]').forEach((button) => {
       button.addEventListener('click', () => deleteSampleType(button.dataset.sampleTypeDelete));
     });
+    // ponytail: labels commit on change (blur/Enter), same as location rows
+    sampleTypeLabelList.querySelectorAll('[data-sample-type-label]').forEach((input) => {
+      input.addEventListener('change', onSaveSampleTypeLabels);
+    });
   }
 
   function onSaveSampleTypeLabels(event) {
-    event.preventDefault();
+    event?.preventDefault();
     const nextLabels = normalizeSampleTypeLabels(state.settings.sampleTypeLabels);
     sampleTypeLabelList?.querySelectorAll('[data-sample-type-label]').forEach((input) => {
       const type = String(input.dataset.sampleTypeLabel || '').trim();

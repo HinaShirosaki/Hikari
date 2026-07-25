@@ -439,7 +439,7 @@ export function createTopbarSearchController({
     const biologyNotebookTarget = {
       viewId: VIEWS.BIOLOGY_NOTEBOOK,
       inputId: '',
-      label: 'Biology Notebook'
+      label: 'Notebook'
     };
     asArray(state.notebookEntries).forEach((entry) => {
       if (entry?.notebookType !== 'biology') {
@@ -464,7 +464,7 @@ export function createTopbarSearchController({
     const personalInventoryTarget = {
       viewId: VIEWS.SAMPLE_REGISTRY,
       inputId: '',
-      label: 'Sample & Inventory'
+      label: 'Samples'
     };
     Object.entries(state.inventory || {}).forEach(([zone, containers]) => {
       asArray(containers).forEach((container) => {

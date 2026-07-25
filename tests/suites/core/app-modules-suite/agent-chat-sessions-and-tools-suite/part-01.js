@@ -36,9 +36,7 @@ test('agent-chat loads saved sessions from chat logs and switches sessions from 
         apiEndpoint: 'https://api.openai.com/v1/responses',
         apiKey: 'sk-local-key'
       },
-      agent: {
-        developerMode: false
-      }
+      agent: {}
     },
     agentChat: {
       projectId: '',
@@ -228,7 +226,7 @@ test('agent-chat keeps running requests isolated to their own sessions', async (
     labInventory: { chemicals: [] },
     settings: {
       storagePath: '/tmp/hikari-storage',
-      agent: { developerMode: false }
+      agent: {}
     },
     agentChat: {
       projectId: '',
@@ -362,7 +360,7 @@ test('agent-chat creates project folders, custom folders, and project-scoped cha
     labInventory: { chemicals: [] },
     settings: {
       storagePath: '/tmp/hikari-storage',
-      agent: { developerMode: false }
+      agent: {}
     },
     agentChat: {
       projectId: '',
@@ -465,9 +463,7 @@ test('agent-chat session switching honors nested click targets and replays the l
         apiEndpoint: 'https://api.openai.com/v1/responses',
         apiKey: 'sk-local-key'
       },
-      agent: {
-        developerMode: false
-      }
+      agent: {}
     },
     agentChat: {
       projectId: '',

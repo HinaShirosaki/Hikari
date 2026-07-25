@@ -19,7 +19,9 @@ const FEATURE_LANE_GAP = 12;
 const LABEL_BASE_GAP = 46;
 const LABEL_FONT_SIZE = 15;
 const LABEL_LINE_HEIGHT = 18;
-const LABEL_CHAR_WIDTH = 7.4;
+// This estimate is only used for the first SVG paint. Keep it conservative so
+// labels stay inside their cards before the browser measures the real font.
+const LABEL_CHAR_WIDTH = 9.6;
 const LABEL_MAX_LINE_LENGTH = 20;
 const LABEL_MAX_LENGTH = 60;
 const LABEL_STACK_GAP = 14;
@@ -287,7 +289,11 @@ function normalizeLabelLines(label) {
 }
 
 function estimateLabelWidthPx(lines) {
-  return Math.max(70, Math.max(...lines.map((line) => line.length), 0) * LABEL_CHAR_WIDTH) + 16;
+  const widestLine = Math.max(...lines.map((line) => line.length), 0);
+  return Math.max(
+    86,
+    (widestLine * LABEL_CHAR_WIDTH) + (LABEL_BOX_HORIZONTAL_PADDING * 2)
+  );
 }
 
 function estimateLabelHeightPx(lines) {

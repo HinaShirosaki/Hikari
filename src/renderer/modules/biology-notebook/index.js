@@ -44,6 +44,7 @@ import { createProtocolSnapshotEditor } from './protocol/protocol-snapshot-edito
 import { createLinkedWorkActions } from './results/linked-work-actions.js';
 import { createProjectDashboardRenderer } from './project/project-dashboard-renderer.js';
 import { createNotebookProjectController } from './project/project-controller.js';
+import { createProjectPaperFinderController } from './project/paper-finder-controller.js';
 import { createNotebookToolSidebarController } from './tools/tool-sidebar.js';
 import {
   buildProtocolStepsHtml,
@@ -54,6 +55,10 @@ import {
   mergeImportedResultFiles
 } from './entry/entry-record-builder.js';
 import { registerNotebookSelectionInsightsHost } from './results/selection-insights-host.js';
+import {
+  createResultFileAttachmentController,
+  createResultFileAttachmentLoader
+} from './results/result-file-attachments.js';
 import { isPathInsideRoot } from '../../lib/storage-paths.js';
 import {
   changedFieldList,
@@ -103,6 +108,7 @@ export function initLabNotebook({
   const notebookPageStarter = document.getElementById('biology-notebook-page-starter');
   const notebookPageStarterProject = document.getElementById('biology-notebook-page-starter-project');
   const notebookRail = document.getElementById('biology-notebook-rail');
+  const notebookViewerColumn = document.getElementById('biology-notebook-viewer-column');
   const notebookProjectContextMenu = document.getElementById('biology-notebook-project-context-menu');
   const notebookAddProjectBtn = document.getElementById('biology-notebook-add-project-btn');
   const notebookHeaderAddProjectBtn = document.getElementById('biology-notebook-header-add-project-btn');
@@ -130,6 +136,7 @@ export function initLabNotebook({
   const notebookSteps = document.getElementById('biology-notebook-steps');
   const notebookResult = document.getElementById('biology-notebook-result');
   const notebookResultFile = document.getElementById('biology-notebook-result-file');
+  const notebookResultAttachments = document.getElementById('biology-notebook-result-attachments');
   const notebookAddTableBtn = document.getElementById('biology-notebook-add-table-btn');
   const notebookAddTableRowBtn = document.getElementById('biology-notebook-add-table-row-btn');
   const notebookAddTableColumnBtn = document.getElementById('biology-notebook-add-table-column-btn');
@@ -172,6 +179,14 @@ export function initLabNotebook({
 
   const previewImageLoader = createLinkedPreviewImageLoader({
     readFileBase64: window.hikariApi?.readFileBase64?.bind(window.hikariApi)
+  });
+  const resultFileAttachmentLoader = createResultFileAttachmentLoader({
+    readFileBase64: window.hikariApi?.readFileBase64?.bind(window.hikariApi),
+    getStoragePath: () => state.settings?.storagePath || ''
+  });
+  const resultFileAttachmentController = createResultFileAttachmentController({
+    host: notebookResultAttachments,
+    loader: resultFileAttachmentLoader
   });
 
   const resultTableController = createResultTableController({
@@ -243,6 +258,11 @@ export function initLabNotebook({
     state,
     safeText
   });
+  const projectPaperFinderController = createProjectPaperFinderController({
+    host: notebookProjectDashboard,
+    state,
+    api: window.hikariApi
+  });
 
   const dropdownRenderer = createDropdownRenderer({
     projectSelect: notebookProjectSelect,
@@ -292,6 +312,7 @@ export function initLabNotebook({
     setSettings: (next) => { state.settings = next; },
     persist,
     previewImageLoader,
+    resultFileAttachmentLoader,
     onCreateLinkedGel,
     onCreateLinkedAssay,
     onOpenSampleRecorder
@@ -622,6 +643,13 @@ export function initLabNotebook({
     }
   }
 
+  function renderResultFileAttachments(entry = getActiveEntry()) {
+    void resultFileAttachmentController.render({
+      entry,
+      pendingFiles: getSelectedNotebookResultFiles()
+    });
+  }
+
   function queueNotebookResultFiles(files = []) {
     const incomingFiles = mergeUniqueFiles(Array.isArray(files) ? files : [files]);
     if (!incomingFiles.length) {
@@ -633,6 +661,7 @@ export function initLabNotebook({
     ]);
     const mergedIntoInput = mergeFilesIntoInput(notebookResultFile, mergedFiles, { append: false });
     pendingDroppedResultFiles = mergedIntoInput ? [] : mergedFiles;
+    renderResultFileAttachments();
     showTransientNotice(
       `${incomingFiles.length} file${incomingFiles.length === 1 ? '' : 's'} ready to attach on save.`
     );
@@ -667,6 +696,115 @@ export function initLabNotebook({
     }
     const current = String(notebookResult.value || '').trim();
     notebookResult.value = current ? `${current}\n${cleanLine}` : cleanLine;
+  }
+
+  function normalizeNotebookTargetText(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+
+  function buildAgentAppendText(proposal = {}) {
+    const sectionTitle = String(proposal.section_title || proposal.sectionTitle || '').trim();
+    const content = String(proposal.content_markdown || proposal.contentMarkdown || '').trim();
+    if (!content) {
+      return '';
+    }
+    const sourceLines = (Array.isArray(proposal.sources) ? proposal.sources : [])
+      .map((source) => {
+        const payload = source && typeof source === 'object' ? source : {};
+        const label = String(payload.label || payload.record_id || payload.recordId || payload.url || '').trim();
+        const recordId = String(payload.record_id || payload.recordId || '').trim();
+        const detail = String(payload.detail || '').trim();
+        const url = String(payload.url || '').trim();
+        const identity = [label, recordId && recordId !== label ? `record ${recordId}` : ''].filter(Boolean).join(' — ');
+        return [identity, detail, url].filter(Boolean).join(' — ');
+      })
+      .filter(Boolean);
+    return [
+      sectionTitle ? `## ${sectionTitle}` : '',
+      content,
+      sourceLines.length ? '### Sources' : '',
+      ...sourceLines.map((line) => `- ${line}`)
+    ].filter(Boolean).join('\n');
+  }
+
+  async function appendAgentNotebookContent(proposal = {}) {
+    if (!notebookProtocolArea || notebookProtocolArea.hidden || !notebookResult) {
+      return { ok: false, error: 'Open the target Notebook page before approving this append.' };
+    }
+    const activeEntry = getActiveEntry();
+    const project = resolveViewerProject(activeEntry);
+    const protocol = resolveViewerProtocol(activeEntry);
+    if (!project || !protocol) {
+      return { ok: false, error: 'The active notebook page no longer has a project and protocol binding.' };
+    }
+
+    const proposedEntryId = String(proposal.notebook_entry_id || proposal.notebookEntryId || '').trim();
+    const targetsUnsavedDraft = normalizeNotebookTargetText(proposedEntryId) === 'unsaved draft';
+    if (proposedEntryId && !targetsUnsavedDraft && proposedEntryId !== String(activeEntry?.id || '').trim()) {
+      return { ok: false, error: 'The active notebook page changed after the proposal was prepared. Reopen the target page and ask the agent to enrich it again.' };
+    }
+    if (targetsUnsavedDraft && activeEntry) {
+      return { ok: false, error: 'The proposal targeted an unsaved draft, but a different saved page is now active.' };
+    }
+
+    const expectedTitle = normalizeNotebookTargetText(proposal.page_title || proposal.pageTitle);
+    const activeTitle = normalizeNotebookTargetText(
+      notebookExperimentName?.value || resolveEntryExperimentName(activeEntry, protocol) || protocol.name
+    );
+    const expectedProject = normalizeNotebookTargetText(proposal.project_name || proposal.projectName);
+    const expectedProtocol = normalizeNotebookTargetText(proposal.protocol_name || proposal.protocolName);
+    if (
+      (expectedTitle && expectedTitle !== activeTitle)
+      || (expectedProject && expectedProject !== normalizeNotebookTargetText(project.name))
+      || (expectedProtocol && expectedProtocol !== normalizeNotebookTargetText(protocol.name))
+    ) {
+      return { ok: false, error: 'The active notebook page identity no longer matches this proposal. Ask the agent to re-read the current page.' };
+    }
+
+    const expectedUpdatedAt = String(proposal.expected_updated_at || proposal.expectedUpdatedAt || '').trim();
+    if (activeEntry && expectedUpdatedAt && expectedUpdatedAt !== String(activeEntry.updatedAt || '').trim()) {
+      return { ok: false, error: 'This notebook page was saved again after the proposal was prepared. Ask the agent to refresh and re-propose the append.' };
+    }
+
+    const proposalId = String(proposal.proposal_id || proposal.proposalId || '').trim();
+    const appliedIds = Array.isArray(activeEntry?.agentAppendProposalIds)
+      ? activeEntry.agentAppendProposalIds.map((id) => String(id || '').trim()).filter(Boolean)
+      : [];
+    if (proposalId && appliedIds.includes(proposalId)) {
+      return { ok: true, summary: 'This notebook enrichment was already appended.' };
+    }
+
+    const appendText = buildAgentAppendText(proposal);
+    if (!appendText) {
+      return { ok: false, error: 'The proposal does not contain any notebook content to append.' };
+    }
+    const currentResult = String(notebookResult.value || '').trim();
+    const combinedResult = currentResult ? `${currentResult}\n\n${appendText}` : appendText;
+    notebookResult.value = combinedResult;
+
+    if (!activeEntry) {
+      notifyActiveNotebookPageChanged();
+      return {
+        ok: true,
+        saved: false,
+        summary: 'Content appended to the current notebook draft. Save the page to persist it.'
+      };
+    }
+
+    const savedEntry = await saveEntry({
+      resultText: combinedResult,
+      agentAppendProposalId: proposalId
+    });
+    if (!savedEntry) {
+      notebookResult.value = currentResult;
+      return { ok: false, error: 'Hikari could not save the notebook append.' };
+    }
+    return {
+      ok: true,
+      saved: true,
+      entryId: savedEntry.id,
+      summary: 'Content appended and saved to the notebook page.'
+    };
   }
 
   function syncNotebookTitle(protocol = null) {
@@ -866,6 +1004,14 @@ export function initLabNotebook({
     return text.length > maxLength ? `${text.slice(0, maxLength).trim()}...` : text;
   }
 
+  function compactContextBlock(value, maxLength = 12000) {
+    const text = String(value || '').trim();
+    if (!text) {
+      return '';
+    }
+    return text.length > maxLength ? `${text.slice(0, maxLength).trim()}\n...` : text;
+  }
+
   function getProtocolStepText(step) {
     return compactContextLine(step?.text || step?.instruction || step?.action || step?.description, 1200);
   }
@@ -892,8 +1038,15 @@ export function initLabNotebook({
       .slice(0, 24)
       .map((link) => {
         const placeholder = compactContextLine(link.placeholderName || link.placeholderKey, 120);
-        const sample = compactContextLine(formatSampleLinkValue(link), 180);
-        return [placeholder, sample].filter(Boolean).join(': ');
+        const details = [
+          `sample=${compactContextLine(formatSampleLinkValue(link), 180)}`,
+          link.sampleId ? `id=${compactContextLine(link.sampleId, 120)}` : '',
+          link.sampleType ? `type=${compactContextLine(link.sampleType, 80)}` : '',
+          link.sampleLot ? `lot=${compactContextLine(link.sampleLot, 120)}` : '',
+          link.sampleConcentration ? `recorded concentration=${compactContextLine(link.sampleConcentration, 120)}` : '',
+          link.storageLabel ? `storage=${compactContextLine(link.storageLabel, 220)}` : ''
+        ].filter(Boolean).join('; ');
+        return `${placeholder ? `${placeholder}: ` : ''}${details}`;
       })
       .filter(Boolean);
   }
@@ -912,10 +1065,13 @@ export function initLabNotebook({
       mergeNotebookValues(entry?.values, collectNotebookValues()),
       protocol
     );
-    const resultText = compactContextLine(notebookResult?.value || entry?.result || '', 2000);
+    const resultText = compactContextBlock(notebookResult?.value || entry?.result || '', 12000);
     const resultTables = resultTableController.getCurrentTables();
-    const tableText = compactContextLine(flattenNotebookResultTablesText(resultTables, entry?.resultTable), 1600);
+    const tableText = compactContextBlock(flattenNotebookResultTablesText(resultTables, entry?.resultTable), 12000);
     const toolCalculations = toolSidebarController.getCalculations();
+    const toolCalculationText = compactContextBlock(JSON.stringify(toolCalculations, null, 2), 8000);
+    const linkedGel = entry?.id ? findLatestLinkedRecord(state.gelAnalyses, entry.id) : null;
+    const linkedAssay = entry?.id ? findLatestLinkedRecord(state.assays, entry.id) : null;
     const sampleLinks = buildSampleLinkContextLines(entry, protocol);
     const pageTitle = compactContextLine(
       notebookExperimentName?.value || resolveEntryExperimentName(entry, protocol) || protocol.name,
@@ -926,6 +1082,7 @@ export function initLabNotebook({
       'Active biology notebook page:',
       `Title: ${pageTitle || 'Untitled notebook page'}`,
       `Entry ID: ${entry?.id || 'unsaved draft'}`,
+      entry?.updatedAt ? `Updated at: ${entry.updatedAt}` : '',
       `Notebook state: ${pageState}`,
       `Project: ${compactContextLine(project.name, 220)}${project.id ? ` (${project.id})` : ''}`,
       `Protocol: ${compactContextLine(protocol.name, 220)}${protocol.id ? ` (${protocol.id})` : ''}`,
@@ -937,13 +1094,19 @@ export function initLabNotebook({
       tableText,
       sampleLinks.length ? 'Linked samples:' : '',
       ...sampleLinks,
-      toolCalculations.length ? `Recorded bench calculations: ${toolCalculations.length}` : '',
+      toolCalculationText ? 'Recorded bench calculations:' : '',
+      toolCalculationText,
+      linkedGel ? 'Latest linked gel analysis:' : '',
+      linkedGel ? compactContextBlock(JSON.stringify(linkedGel, null, 2), 6000) : '',
+      linkedAssay ? 'Latest linked assay:' : '',
+      linkedAssay ? compactContextBlock(JSON.stringify(linkedAssay, null, 2), 6000) : '',
       Array.isArray(entry?.resultFiles) && entry.resultFiles.length ? `Result files: ${entry.resultFiles.join(', ')}` : ''
     ].filter((line) => line !== '');
 
     return {
       scopeType: 'notebook',
       notebookEntryId: entry?.id || '',
+      notebookUpdatedAt: String(entry?.updatedAt || '').trim(),
       pageTitle,
       projectId: String(project.id || '').trim(),
       projectName: String(project.name || '').trim(),
@@ -954,6 +1117,7 @@ export function initLabNotebook({
         label: pageTitle ? `Active notebook page: ${pageTitle}` : 'Active notebook page',
         text: lines.join('\n'),
         notebookEntryId: entry?.id || '',
+        notebookUpdatedAt: String(entry?.updatedAt || '').trim(),
         projectName: String(project.name || '').trim(),
         protocolName: String(protocol.name || '').trim()
       }
@@ -1252,7 +1416,11 @@ export function initLabNotebook({
       ...baseEntry,
       experimentNameSource,
       experimentNameGeneratedAt: experimentNameSource === 'generated' ? experimentNameGeneratedAtDraft : '',
-      experimentNameGeneratedModel: experimentNameSource === 'generated' ? experimentNameGeneratedModelDraft : ''
+      experimentNameGeneratedModel: experimentNameSource === 'generated' ? experimentNameGeneratedModelDraft : '',
+      agentAppendProposalIds: Array.from(new Set([
+        ...(Array.isArray(editingEntry?.agentAppendProposalIds) ? editingEntry.agentAppendProposalIds : []),
+        String(options.agentAppendProposalId || '').trim()
+      ].filter(Boolean)))
     };
 
     const index = editingEntry
@@ -1542,6 +1710,7 @@ export function initLabNotebook({
     if (!preserveSelectedFiles) {
       clearPendingNotebookResultFiles();
     }
+    renderResultFileAttachments(entry);
     renderLinkedPreviews(entry);
     updateSaveButtonLabel();
     protocolEditor.syncControls(protocol, entry);
@@ -1556,6 +1725,7 @@ export function initLabNotebook({
 
   function hideProjectDashboard() {
     activeProjectDashboardId = '';
+    loadPaperFinderForProject(null);
     if (!notebookProjectDashboard) {
       return;
     }
@@ -1580,9 +1750,14 @@ export function initLabNotebook({
     });
     renderProjectDashboardActions(project);
     notebookProjectDashboard.hidden = false;
+    loadPaperFinderForProject(project);
     syncViewerVisibility();
     entryListRenderer.renderEntries();
     notifyActiveNotebookPageChanged();
+  }
+
+  function loadPaperFinderForProject(project) {
+    void projectPaperFinderController.load(project);
   }
 
   function renderProjectDashboardActions(project) {
@@ -1635,6 +1810,7 @@ export function initLabNotebook({
     notebookSteps.hidden = false;
     notebookResult.value = '';
     clearPendingNotebookResultFiles();
+    resultFileAttachmentController.clear();
     resultTableController.renderEditor(null);
     toolSidebarController.setCalculations([]);
     if (notebookExperimentName) {
@@ -1896,6 +2072,7 @@ export function initLabNotebook({
   notebookAddTableRowBtn?.addEventListener('click', resultTableController.onAddRow);
   notebookAddTableColumnBtn?.addEventListener('click', resultTableController.onAddColumn);
   notebookRemoveTableBtn?.addEventListener('click', resultTableController.onRemove);
+  notebookResultFile?.addEventListener('change', () => renderResultFileAttachments());
   notebookAddGelBtn?.addEventListener('click', () => { void linkedWorkActions.onAddGelClick(); });
   notebookAddAssayBtn?.addEventListener('click', () => { void linkedWorkActions.onAddAssayClick(); });
   notebookAddSamplesBtn?.addEventListener('click', () => { void linkedWorkActions.onAddSamplesClick(); });
@@ -1907,7 +2084,7 @@ export function initLabNotebook({
   notebookPrintBtn?.addEventListener('click', onPrintButtonClick);
   notebookMarkExecutedBtn?.addEventListener('click', markEntryExecuted);
   bindFileDropTarget({
-    target: notebookProtocolArea || notebookResultFile,
+    target: notebookViewerColumn || notebookProtocolArea || notebookResultFile,
     multiple: true,
     disabled: () => Boolean(notebookProtocolArea?.hidden),
     onFiles: (files) => {
@@ -1952,6 +2129,7 @@ export function initLabNotebook({
       && getCurrentDraftSnapshot() !== savedDraftSnapshot
     ),
     openEntry: editEntry,
+    appendAgentNotebookContent,
     openExperimentDialog,
     openProjectDashboard: showProjectDashboard,
     getAgentChatContext,

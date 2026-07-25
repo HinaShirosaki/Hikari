@@ -49,7 +49,6 @@ export function initSettings({
     clearCodexLoginBtn,
     copyCodexDesktopMcpPromptBtn,
     settingCodexDesktopMcpStatus,
-    settingAgentDeveloperMode,
     settingAgentExternalSkillsEnabled,
     settingExternalSkillsRefreshBtn,
     settingExternalSkillsList,
@@ -300,9 +299,6 @@ export function initSettings({
     settingModel.value = llm.model || '';
     settingModel.placeholder = 'optional, e.g. gpt-5.4';
     refreshLlmModelAndReasoningFields(llmProvider, llm.reasoningEffort);
-    if (settingAgentDeveloperMode) {
-      settingAgentDeveloperMode.checked = state.settings?.agent?.developerMode === true;
-    }
     if (settingAgentExternalSkillsEnabled) {
       settingAgentExternalSkillsEnabled.checked = state.settings?.agent?.externalSkillsEnabled !== false;
     }
@@ -578,11 +574,6 @@ export function initSettings({
       model,
       reasoningEffort
     };
-    state.settings.agent = {
-      ...state.settings.agent,
-      developerMode: settingAgentDeveloperMode?.checked === true
-    };
-
     persist();
 
     try {
@@ -671,8 +662,8 @@ export function initSettings({
       ? journals.map((journal, index) => `
           <div class="settings-edit-row settings-preferred-journal-row" data-preferred-journal-row="${index}">
             <input value="${escapeHtml(journal)}" data-preferred-journal-input="${index}" aria-label="Preferred journal ${index + 1}" />
-            <button type="button" class="ghost-btn" data-preferred-journal-save="${index}">Save</button>
-            <button type="button" class="danger-btn" data-preferred-journal-delete="${index}">Delete</button>
+            <button type="button" class="ghost-btn settings-inline-icon" data-preferred-journal-save="${index}" aria-label="Save ${escapeHtml(journal)}" title="Save journal">&check;</button>
+            <button type="button" class="danger-btn settings-inline-icon settings-inline-icon-danger" data-preferred-journal-delete="${index}" aria-label="Delete ${escapeHtml(journal)}" title="Delete journal">&times;</button>
           </div>
         `).join('')
       : '<p class="small-note">No preferred journals configured.</p>';

@@ -18,6 +18,7 @@ export function createLinkedWorkActions({
   setSettings,
   persist,
   previewImageLoader,
+  resultFileAttachmentLoader,
   onCreateLinkedGel,
   onCreateLinkedAssay,
   onOpenSampleRecorder
@@ -94,9 +95,10 @@ export function createLinkedWorkActions({
     const protocol = resolveEntryProtocol(entry, getProtocols() || []);
     const linkedGel = findLatestLinkedRecord(getGelAnalyses() || [], entry.id);
     const linkedAssay = findLatestLinkedRecord(getAssays() || [], entry.id);
-    const [linkedGelPreviewImage, linkedAssayPlotImage] = await Promise.all([
+    const [linkedGelPreviewImage, linkedAssayPlotImage, resultFileImages] = await Promise.all([
       linkedGel ? previewImageLoader.resolveGelPreviewImage(linkedGel) : Promise.resolve(''),
-      linkedAssay ? previewImageLoader.resolveAssayPlotImage(linkedAssay) : Promise.resolve('')
+      linkedAssay ? previewImageLoader.resolveAssayPlotImage(linkedAssay) : Promise.resolve(''),
+      resultFileAttachmentLoader?.resolveEntryImages?.(entry) || Promise.resolve([])
     ]);
     await exportNotebookEntryPdf({
       entry,
@@ -104,7 +106,8 @@ export function createLinkedWorkActions({
       linkedGel,
       linkedGelPreviewImage,
       linkedAssay,
-      linkedAssayPlotImage
+      linkedAssayPlotImage,
+      resultFileImages
     });
   }
 
@@ -136,6 +139,7 @@ export function createLinkedWorkActions({
     const linkedAssayByEntryId = new Map();
     const linkedGelPreviewImagesByEntryId = new Map();
     const linkedAssayPlotImagesByEntryId = new Map();
+    const resultFileImagesByEntryId = new Map();
 
     const imageTasks = [];
     projectEntries.forEach((entry) => {
@@ -158,6 +162,11 @@ export function createLinkedWorkActions({
           })
         );
       }
+      imageTasks.push(
+        Promise.resolve(resultFileAttachmentLoader?.resolveEntryImages?.(entry) || []).then((images) => {
+          resultFileImagesByEntryId.set(entry.id, Array.isArray(images) ? images : []);
+        })
+      );
     });
 
     await Promise.all(imageTasks);
@@ -169,7 +178,8 @@ export function createLinkedWorkActions({
       linkedGelByEntryId,
       linkedGelPreviewImagesByEntryId,
       linkedAssayByEntryId,
-      linkedAssayPlotImagesByEntryId
+      linkedAssayPlotImagesByEntryId,
+      resultFileImagesByEntryId
     });
   }
 

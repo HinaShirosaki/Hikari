@@ -407,9 +407,25 @@ export function createStorageImportController({
   }
 
   async function hydrateStateFromStorageRoot() {
-    const storagePath = String(state.settings?.storagePath || '').trim();
+    let storagePath = String(state.settings?.storagePath || '').trim();
     if (!storagePath) {
-      return;
+      // localStorage is the only place the renderer keeps the workspace root, and
+      // it can be cleared out from under us. The auto-saved data file still knows
+      // it, so recover from there instead of booting into an empty workspace.
+      let recovered = null;
+      try {
+        recovered = await windowObject.hikariApi?.getLastStorageRoot?.();
+      } catch {
+        recovered = null;
+      }
+      storagePath = String(recovered?.storagePath || '').trim();
+      if (!storagePath) {
+        return;
+      }
+      if (!state.settings || typeof state.settings !== 'object') {
+        state.settings = {};
+      }
+      state.settings.storagePath = storagePath;
     }
     return runStorageRootImport(storagePath, { persistMergedState: false, syncSidecars: true });
   }

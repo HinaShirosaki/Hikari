@@ -86,8 +86,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart02(contex
               judge: 'I have enough evidence to answer with one notebook match.',
               final_synthesize: 'I am summarizing the matched notebook for the user.',
               final_synthesized_question: 'Where is the Atlas binder notebook?'
-            },
-            developer_trace: []
+            }
           },
           requestText: 'Where is the Atlas binder notebook?',
           messageId: 'assistant-fixed-1',
@@ -120,8 +119,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart02(contex
                   supplier: 'Sigma'
                 }
               ]
-            },
-            developer_trace: []
+            }
           },
           requestText: 'Do we have acetic acid?',
           messageId: 'assistant-fixed-2',
@@ -150,8 +148,7 @@ module.exports = function registerAgentContextMemoryAndRuntimeSuitePart02(contex
                 allow_custom: true
               },
               citations: []
-            },
-            developer_trace: []
+            }
           },
           requestText: 'What is mRNA display?',
           messageId: 'assistant-codex-no-question',

@@ -192,6 +192,16 @@
   gap: 4px;
 }
 
+.assay-browser-item-select {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .assay-browser-item-title {
   margin: 0;
   color: var(--theme-text-strong);
@@ -202,6 +212,21 @@
   white-space: nowrap;
 }
 
+.assay-results-browser-list .assay-browser-item {
+  padding-inline: 8px;
+  border-radius: 8px;
+}
+
+.assay-results-browser-list .assay-browser-item.is-active {
+  background: var(--theme-surface-subtle);
+  box-shadow: inset 3px 0 0 var(--theme-accent);
+}
+
+.assay-results-browser-list .assay-browser-item-select:hover .assay-browser-item-title,
+.assay-results-browser-list .assay-browser-item-select:focus-visible .assay-browser-item-title {
+  color: var(--theme-accent);
+}
+
 .assay-browser-item-actions {
   flex: 0 0 auto;
   display: inline-flex;
@@ -210,7 +235,35 @@
 }
 
 .assay-results-controls-panel {
+  gap: 0;
+}
+
+.left-rail-template.assay-results-layout > .assay-results-controls-panel.left-rail-template__rail--pinned {
+  display: grid;
+  grid-template-rows: minmax(148px, 1fr) minmax(0, 3fr);
+  align-content: stretch;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  padding: 0 !important;
+  overflow: hidden !important;
+  scrollbar-gutter: auto !important;
+  background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+}
+
+.assay-results-controls-panel > .assay-results-controls-pinned.left-rail-template__pinned {
+  display: grid;
   gap: 16px;
+  min-height: 0;
+  padding: 14px calc(var(--app-left-rail-padding-inline, 16px) + var(--theme-scrollbar-size, 8px)) 12px var(--app-left-rail-padding-inline, 16px);
+  overflow-y: auto !important;
+  scrollbar-gutter: stable;
+}
+
+.assay-results-controls-panel > .assay-results-browser-scroll.left-rail-template__scroll {
+  padding: 8px var(--app-left-rail-padding-inline, 16px) 16px;
+  border-bottom: 1px solid var(--app-left-rail-divider);
+  scrollbar-gutter: stable;
 }
 
 .assay-results-control-section {
@@ -1193,7 +1246,22 @@
     overflow: visible !important;
   }
 
-  .assay-create-sidebar > .assay-create-sidebar-scroll.left-rail-template__scroll {
+  .left-rail-template.assay-results-layout > .assay-results-controls-panel.left-rail-template__rail--pinned {
+    grid-template-rows: auto auto;
+    align-self: start;
+    height: auto;
+    min-height: auto;
+    max-height: none;
+    overflow: visible !important;
+  }
+
+  .assay-results-controls-panel > .assay-results-controls-pinned.left-rail-template__pinned {
+    overflow: visible;
+    scrollbar-gutter: auto;
+  }
+
+  .assay-create-sidebar > .assay-create-sidebar-scroll.left-rail-template__scroll,
+  .assay-results-controls-panel > .assay-results-browser-scroll.left-rail-template__scroll {
     max-height: min(360px, 42vh);
   }
 

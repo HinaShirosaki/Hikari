@@ -88,6 +88,13 @@ function createMainAppPaths(deps = {}) {
     return path.join(getDefaultAppDataRoot(), 'Config', scheduledTasksFileName);
   }
 
+  // The workspace root otherwise lives only in renderer localStorage, which the
+  // app cannot recover once it is cleared. Auto-save mirrors it here so startup
+  // can find the workspace again.
+  function getStorageRootPointerPath() {
+    return path.join(getDefaultAppDataRoot(), 'Config', 'last-storage-root.json');
+  }
+
   function getAgentChatLogPath() {
     const override = String(processObject.env.HIKARI_AGENT_CHAT_LOG_PATH || '').trim();
     if (override) {
@@ -128,6 +135,8 @@ function createMainAppPaths(deps = {}) {
     getCodexCliHomePath,
     getCodexCliWorkingDirectory,
     getDefaultDataFilePath,
+    getStorageRootPointerPath,
+    getUserDataPath,
     getTelegramConfigPath,
     getScheduledTasksPath,
     getAgentChatLogPath,

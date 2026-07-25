@@ -42,10 +42,6 @@ function createAgentControllerUtils(deps = {}) {
       }
       return text;
     });
-  const appendAgentChatLogEntry = typeof deps.appendAgentChatLogEntry === 'function'
-    ? deps.appendAgentChatLogEntry
-    : (async () => {});
-
   function extractConversation(rawConversation) {
     return asArray(rawConversation)
       .slice(-10)
@@ -67,25 +63,6 @@ function createAgentControllerUtils(deps = {}) {
       apiEndpoint: cleanText(source.apiEndpoint || source.api, 300),
       model: cleanText(source.model, 120),
       apiKeyProvided: Boolean(cleanText(source.apiKey, 12))
-    };
-  }
-
-  function resolveAgentExecutionFlags(payload = {}, snapshot = {}) {
-    const payloadAgent = payload?.agent && typeof payload.agent === 'object' ? payload.agent : {};
-    const snapshotAgent = snapshot?.settings?.agent && typeof snapshot.settings.agent === 'object'
-      ? snapshot.settings.agent
-      : {};
-    const resolveBoolean = (left, right, fallback = false) => {
-      if (typeof left === 'boolean') {
-        return left;
-      }
-      if (typeof right === 'boolean') {
-        return right;
-      }
-      return fallback;
-    };
-    return {
-      developerMode: resolveBoolean(payloadAgent.developerMode, snapshotAgent.developerMode, false)
     };
   }
 
@@ -149,16 +126,12 @@ function createAgentControllerUtils(deps = {}) {
   }
 
   function createAgentLlmTraceContext({
-    enabled = false,
     requestId = '',
-    logPath = '',
     provider = '',
     model = ''
   } = {}) {
     return {
-      enabled: enabled === true,
       requestId: cleanText(requestId, 80),
-      logPath: cleanText(logPath, 1600),
       provider: cleanText(provider, 80),
       model: cleanText(model, 120),
       rows: [],
@@ -173,7 +146,7 @@ function createAgentControllerUtils(deps = {}) {
     });
   }
 
-  async function recordAgentLlmTrace(traceContext, event = {}) {
+  function recordAgentLlmTrace(traceContext, event = {}) {
     const trace = traceContext && typeof traceContext === 'object' ? traceContext : null;
     if (!trace) {
       return;
@@ -207,14 +180,6 @@ function createAgentControllerUtils(deps = {}) {
       response_payload: responsePayload
     };
     trace.entries.push(logEntry);
-    if (trace.enabled !== true) {
-      return;
-    }
-    const logPath = cleanText(trace.logPath, 1600);
-    if (!logPath || !requestId) {
-      return;
-    }
-    await appendAgentChatLogEntry(logPath, formatAgentChatLogEntry(logEntry));
   }
 
   const llmHelpers = createAgentLlmRuntimeHelpers({
@@ -225,16 +190,6 @@ function createAgentControllerUtils(deps = {}) {
     safeParseJson: typeof deps.safeParseJson === 'function' ? deps.safeParseJson : undefined,
     recordAgentLlmTrace
   });
-
-  function normalizeDeveloperTraceForAgentLog(traceRows) {
-    return asArray(traceRows).map((row) => ({
-      stage: cleanText(row?.stage, 120),
-      provider: cleanText(row?.provider, 80),
-      model: cleanText(row?.model, 120),
-      summary: cleanText(row?.summary, 320),
-      timestamp: cleanText(row?.timestamp, 80)
-    })).filter((row) => row.stage || row.summary || row.timestamp);
-  }
 
   function summarizeAgentResultForLog(result) {
     const source = result && typeof result === 'object' ? result : {};
@@ -248,6 +203,9 @@ function createAgentControllerUtils(deps = {}) {
       : null;
     const notebookDraft = source.notebook_draft && typeof source.notebook_draft === 'object'
       ? source.notebook_draft
+      : null;
+    const notebookAppend = source.notebook_append && typeof source.notebook_append === 'object'
+      ? source.notebook_append
       : null;
     const inventoryLookup = source.inventory_lookup && typeof source.inventory_lookup === 'object'
       ? source.inventory_lookup
@@ -372,6 +330,20 @@ function createAgentControllerUtils(deps = {}) {
             : null
         }
         : null,
+      notebook_append: notebookAppend
+        ? {
+          status: cleanText(notebookAppend.status, 40),
+          proposal: notebookAppend.proposal && typeof notebookAppend.proposal === 'object'
+            ? {
+              proposal_id: cleanText(notebookAppend.proposal.proposal_id, 200),
+              notebook_entry_id: cleanText(notebookAppend.proposal.notebook_entry_id, 220),
+              page_title: cleanText(notebookAppend.proposal.page_title, 320),
+              section_title: cleanText(notebookAppend.proposal.section_title, 220),
+              source_count: asArray(notebookAppend.proposal.sources).length
+            }
+            : null
+        }
+        : null,
       inventory_lookup: inventoryLookup
         ? {
           status: cleanText(inventoryLookup.status, 40),
@@ -472,7 +444,6 @@ function createAgentControllerUtils(deps = {}) {
             : 0
         }
         : null,
-      developer_trace: normalizeDeveloperTraceForAgentLog(source.developer_trace),
       error: cleanText(source.error, 2000)
     };
   }
@@ -593,7 +564,6 @@ function createAgentControllerUtils(deps = {}) {
     extractConversation,
     buildAgentLogRequestId,
     summarizeLlmForAgentLog,
-    resolveAgentExecutionFlags,
     createAgentLlmTraceContext,
     recordAgentLlmTrace,
     summarizeAgentResultForLog,

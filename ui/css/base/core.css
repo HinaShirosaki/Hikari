@@ -452,8 +452,18 @@ body.has-shared-left-rail-view .workspace-main {
   border-radius: 8px;
   color: var(--theme-text-strong);
   background: transparent;
-  font: 700 1.1rem/1 var(--font-app);
   cursor: pointer;
+}
+
+.universal-agent-chat-rail__toggle-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .universal-agent-chat-rail__toggle:hover,
@@ -857,6 +867,13 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
   height: 100%;
   border: 0;
   background: transparent;
+}
+
+/* Service plugins are headless. The frame exists only to run their script, so
+   it never renders — enforced here as well as by the `hidden` attribute, so a
+   service cannot show UI even if its document contains markup. */
+.plugin-service-frame {
+  display: none !important;
 }
 
 .plugin-rail__title {

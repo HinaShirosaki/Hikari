@@ -21,7 +21,7 @@ export function createAgentPayloadBuilder({
 
   function getHiddenContextTextLimit(source = {}) {
     const kind = trimText(source.kind || 'selection', 80);
-    return kind === 'assay-page' || kind === 'assay' || trimText(source.assayId, 220)
+    return kind === 'assay-page' || kind === 'assay' || kind === 'notebook-page' || trimText(source.assayId, 220)
       ? 40000
       : 4000;
   }
@@ -42,6 +42,7 @@ export function createAgentPayloadBuilder({
         ? Math.max(1, Math.round(Number(source.pageNumber)))
         : 0,
       notebookEntryId: trimText(source.notebookEntryId, 220),
+      notebookUpdatedAt: trimText(source.notebookUpdatedAt, 80),
       projectName: trimText(source.projectName, 220),
       protocolName: trimText(source.protocolName, 220),
       assayId: trimText(source.assayId, 220),
@@ -110,16 +111,6 @@ export function createAgentPayloadBuilder({
     };
   }
 
-  function summarizeAgentLlmPayload(llmPayload = {}) {
-    return {
-      provider: trimText(llmPayload.provider, 80),
-      model: trimText(llmPayload.model, 120),
-      reasoningEffort: trimText(llmPayload.reasoningEffort, 40),
-      apiEndpoint: trimText(llmPayload.apiEndpoint, 2000),
-      apiKey: trimText(llmPayload.apiKey, 400) ? '[set]' : ''
-    };
-  }
-
   function buildAgentFlagsPayload(options = {}) {
     const agentContext = state.agentChatContext && typeof state.agentChatContext === 'object'
       ? state.agentChatContext
@@ -128,7 +119,6 @@ export function createAgentPayloadBuilder({
     const hiddenContexts = asArray(options.hiddenContexts).map(normalizeHiddenContext).filter(Boolean);
     const isPaperSession = trimText(agentContext.scopeType, 80) === 'paper';
     return {
-      developerMode: state.settings?.agent?.developerMode === true,
       externalSkillsEnabled: state.settings?.agent?.externalSkillsEnabled !== false,
       disabledExternalSkillNames: asArray(state.settings?.agent?.disabledExternalSkillNames)
         .map((item) => trimText(item, 160))
@@ -159,70 +149,13 @@ export function createAgentPayloadBuilder({
     };
   }
 
-  function buildDeveloperContextPreviewPayload(stateSnapshot) {
-    ensureAgentState();
-    const { attachments, messageText, hiddenContexts } = getDraftRequest();
-    const { projectId, projectName } = getCurrentProjectDetails();
-    const llm = buildAgentLlmPayload();
-    return {
-      message: messageText,
-      attachments,
-      projectId,
-      projectName,
-      conversation: toConversation(state.agentChat.messages),
-      stateSnapshot,
-      llm,
-      agent: buildAgentFlagsPayload({ hiddenContexts })
-    };
-  }
-
-  function buildLocalDeveloperContextPreview() {
-    const { projectId } = getCurrentProjectDetails();
-    const stateSnapshot = buildStateSnapshot(state, projectId);
-    const payload = buildDeveloperContextPreviewPayload(stateSnapshot);
-    return {
-      ok: true,
-      local: true,
-      updated_at: new Date().toISOString(),
-      preview: {
-        provider: trimText(payload.llm.provider, 80),
-        model: trimText(payload.llm.model, 120),
-        project: {
-          id: trimText(payload.projectId, 120),
-          name: trimText(payload.projectName, 220)
-        },
-        request: {
-          message: payload.message,
-          conversation: payload.conversation,
-          attachments: asArray(payload.attachments).map((attachment) => ({
-            id: trimText(attachment?.id, 120),
-            name: trimText(attachment?.name, 240),
-            mime_type: trimText(attachment?.mimeType || attachment?.mime_type, 160),
-            kind: trimText(attachment?.kind, 40),
-            size: Number.isFinite(Number(attachment?.size)) ? Number(attachment.size) : 0
-          }))
-        },
-        prompt: {
-          kind: 'renderer_request_envelope',
-          system_prompt: 'Refresh Context to render the backend prompt for the selected provider.'
-        },
-        llm: summarizeAgentLlmPayload(payload.llm),
-        agent: payload.agent,
-        state_snapshot: payload.stateSnapshot
-      }
-    };
-  }
-
   return {
     buildAgentFlagsPayload,
     buildAgentLlmPayload,
-    buildDeveloperContextPreviewPayload,
-    buildLocalDeveloperContextPreview,
     consumeHiddenContexts,
     getCurrentProjectDetails,
     getDraftRequest,
     getPrimedHiddenContexts,
-    primeHiddenContext,
-    summarizeAgentLlmPayload
+    primeHiddenContext
   };
 }

@@ -48,6 +48,38 @@
   margin-top: 0;
 }
 
+#gel-report-overlay.app-dialog-overlay {
+  position: absolute;
+}
+
+.gel-report-dialog.app-dialog-surface {
+  --app-dialog-width: 1040px;
+  --app-dialog-max-height: calc(100% - 36px);
+  --app-dialog-padding: 18px;
+  --app-dialog-gap: 14px;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.gel-report-dialog-head {
+  align-items: center;
+}
+
+.gel-report-dialog-head p {
+  margin-top: 4px;
+}
+
+.gel-report-dialog-body {
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+}
+
+.gel-report-dialog-body .cards {
+  margin: 0;
+}
+
 .gel-setup-panel,
 .gel-viewer-panel {
   padding: 0;
@@ -90,16 +122,6 @@
 }
 
 .gel-lane-profile-picker select {
-  width: 100%;
-}
-
-.gel-ladder-mw-control {
-  display: grid;
-  gap: 6px;
-  min-width: min(100%, 180px);
-}
-
-.gel-ladder-mw-control input {
   width: 100%;
 }
 
@@ -565,10 +587,13 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  min-height: 36px;
+  min-height: 32px;
   padding: 8px 0;
-  color: var(--theme-text-strong);
-  font-weight: 700;
+  color: var(--gel-label);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
   list-style: none;
 }
@@ -593,38 +618,43 @@
 
 .gel-tool-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 34px;
   gap: 8px;
   padding: 0 0 12px;
 }
 
-.gel-tool-actions .ghost-btn {
+.gel-tool-actions .ghost-btn,
+.gel-tool-footer .ghost-btn {
   width: 100%;
-  min-height: 38px;
-  padding: 8px 10px;
+  padding: 0 10px;
   border: 1px solid var(--gel-chart-border);
   background: var(--gel-chart-surface);
-  line-height: 1.15;
-  white-space: normal;
+  font-size: 0.8rem;
+  line-height: 1;
+  white-space: nowrap;
   transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
 }
 
-.gel-tool-actions #gel-add-table-btn[hidden] {
-  display: block !important;
-}
-
-.gel-lane-count-control {
+.gel-tool-field {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  min-height: 38px;
 }
 
-.gel-lane-count-control input {
-  width: 76px;
+.gel-tool-field input {
+  flex: 0 0 88px;
   min-width: 0;
+}
+
+.gel-tool-footer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: 34px;
+  gap: 8px;
+  padding-top: 12px;
 }
 
 .gel-viewer-stage {
@@ -796,21 +826,6 @@
   min-height: 70vh;
 }
 
-.gel-report-json {
-  margin: 10px 0 0;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid var(--gel-chart-border);
-  background: var(--gel-report-background);
-  color: var(--theme-text);
-  overflow: auto;
-  max-height: 420px;
-  font-size: 0.82rem;
-  line-height: 1.35;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 body.theme-night .gel-canvas-shell {
   border-color: var(--gel-table-border);
   background: var(--gel-table-background);
@@ -904,7 +919,8 @@ body.theme-night .gel-tool-group {
 }
 
 body.theme-night .gel-viewer-toolbar .ghost-btn,
-body.theme-night .gel-tool-actions .ghost-btn {
+body.theme-night .gel-tool-actions .ghost-btn,
+body.theme-night .gel-tool-footer .ghost-btn {
   border-color: var(--gel-chart-border);
   background: var(--gel-table-background);
 }
@@ -955,14 +971,9 @@ body.theme-night .gel-lane-table-input:focus {
   }
 
   .gel-secondary-panels {
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
   }
-}
-
-body.theme-night .gel-report-json {
-  border-color: var(--gel-chart-border-strong);
-  background: var(--gel-report-background);
 }
 
 /* Extracted from ui/css/overrides/cross-view-fixes.css */
@@ -994,6 +1005,11 @@ body.theme-night .gel-report-json {
 }
 
 @media (max-width: 720px) {
+  .gel-report-dialog.app-dialog-surface {
+    --app-dialog-max-height: calc(100% - 24px);
+    --app-dialog-padding: 14px;
+  }
+
   .gel-lane-profile-head {
     flex-direction: column;
   }
@@ -1043,8 +1059,7 @@ body.theme-night .gel-report-json {
 
 #gel-view .panel,
 #gel-view .card,
-.gel-canvas-shell,
-.gel-report-json {
+.gel-canvas-shell {
   border: 0;
   border-radius: 0;
   background: transparent;

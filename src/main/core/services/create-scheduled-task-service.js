@@ -6,6 +6,7 @@ const FILE_VERSION = 1;
 const MAX_TIMER_DELAY_MS = 2_147_000_000;
 const MIN_INTERVAL_MINUTES = 1;
 const MAX_INTERVAL_MINUTES = 525_600;
+const MAX_METADATA_JSON_LENGTH = 48_000;
 const SCHEDULE_KEYS = [
   'kind', 'type', 'cadence', 'runAt', 'run_at',
   'intervalMinutes', 'interval_minutes', 'anchorAt', 'anchor_at'
@@ -31,6 +32,20 @@ function hasOwn(object, key) {
   return Object.prototype.hasOwnProperty.call(object, key);
 }
 
+function normalizeMetadata(value) {
+  const source = ensureObject(value);
+  let serialized = '';
+  try {
+    serialized = JSON.stringify(source);
+  } catch {
+    throw new Error('metadata must contain only JSON-safe values.');
+  }
+  if (serialized.length > MAX_METADATA_JSON_LENGTH) {
+    throw new Error(`metadata must be ${MAX_METADATA_JSON_LENGTH} characters or fewer.`);
+  }
+  return JSON.parse(serialized || '{}');
+}
+
 function parseTimestamp(value) {
   const parsed = Date.parse(String(value || '').trim());
   return Number.isFinite(parsed) ? parsed : 0;
@@ -46,6 +61,7 @@ function createScheduledTaskService({
   createId = () => crypto.randomUUID(),
   setTimer = setTimeout,
   clearTimer = clearTimeout,
+  normalizeRunResult = null,
   consoleObject = console
 } = {}) {
   if (!fs || !path || typeof getScheduledTasksPath !== 'function') {
@@ -194,6 +210,13 @@ function createScheduledTaskService({
       id: cleanText(existing.id || createId(), 160),
       title,
       prompt,
+      task_type: cleanText(
+        readInputValue(source, 'taskType', 'task_type', existing.task_type),
+        80
+      ).toLowerCase(),
+      metadata: normalizeMetadata(
+        readInputValue(source, 'metadata', '', existing.metadata)
+      ),
       enabled: enabledRaw !== false,
       schedule,
       project: {
@@ -204,6 +227,15 @@ function createScheduledTaskService({
         name: cleanText(
           readInputValue(projectInput, 'name', 'project_name', existingProject.name),
           320
+        ),
+        description: cleanText(
+          readInputValue(
+            projectInput,
+            'description',
+            'project_description',
+            existingProject.description
+          ),
+          12000
         ),
         storage_path: cleanText(
           readInputValue(projectInput, 'storagePath', 'storage_path', existingProject.storage_path),
@@ -540,6 +572,15 @@ function createScheduledTaskService({
       run.status = 'succeeded';
       run.completed_at = currentIso();
       run.text = cleanText(text, 20000);
+      if (typeof normalizeRunResult === 'function') {
+        const normalizedResult = await normalizeRunResult(publicTask(task), text, {
+          completedAt: run.completed_at,
+          completed_at: run.completed_at
+        });
+        if (normalizedResult && typeof normalizedResult === 'object' && !Array.isArray(normalizedResult)) {
+          run.result = cloneJson(normalizedResult);
+        }
+      }
       const currentTask = tasks.get(id);
       if (currentTask) {
         currentTask.last_run = run;

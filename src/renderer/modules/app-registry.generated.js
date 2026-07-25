@@ -39,7 +39,7 @@ export const APP_REGISTRY = [
   {
     "id": "biology-notebook",
     "viewKey": "BIOLOGY_NOTEBOOK",
-    "label": "Biology Notebook",
+    "label": "Notebook",
     "viewId": "biology-notebook-view",
     "subtitle": "Biology notebook entries and wet-lab context.",
     "icon": "biology-notebook.svg",
@@ -77,7 +77,7 @@ export const APP_REGISTRY = [
   {
     "id": "sample-inventory",
     "viewKey": "SAMPLE_REGISTRY",
-    "label": "Sample & Inventory",
+    "label": "Samples",
     "viewId": "sample-registry-view",
     "subtitle": "Samples, storage containers, and personal inventory in one workspace.",
     "icon": "sample-inventory.svg",

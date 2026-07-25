@@ -11,7 +11,7 @@ how `permissions` are declared and frozen.
 **Local and served plugins only.** A remote plugin (one with `embed` in its
 manifest) cannot hold permissions and its frame is never registered with the
 bridge, so none of this applies to it — the API is absent there, not merely
-denied. See [plugin-system.md §1.0](plugin-system.md#10-three-kinds-of-plugin).
+denied. See [plugin-system.md §1.0](plugin-system.md#10-four-kinds-of-plugin).
 
 ---
 

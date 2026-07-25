@@ -38,7 +38,7 @@ function onChemicalSubmit(event) {
 
   const existingId = chemicalId.value;
   const existing = state.labInventory.chemicals.find((item) => item.id === existingId);
-  const locationCode = assignLocationCode(location, existing?.locationCode || '');
+  const locationCode = assignLocationCode(location, existing?.locationCode || '', casNumber);
   const parsedLocationCode = parseLocationCode(locationCode);
   const locationNumber = Number(parsedLocationCode?.number || existing?.locationNumber || 0);
   state.labInventory.lastLocationNumber = Math.max(Number(state.labInventory.lastLocationNumber) || 0, locationNumber);

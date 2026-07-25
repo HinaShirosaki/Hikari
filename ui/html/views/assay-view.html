@@ -149,94 +149,110 @@
       </div>
 
       <div class="assay-results-layout assay-mode-results-panel left-rail-template" hidden>
-        <div class="assay-results-sheet-panel assay-results-controls-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="assay-results-control-section">
-            <label>
-              Assay Plate
-              <select id="assay-results-assay-select">
+        <div class="assay-results-sheet-panel assay-results-controls-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="assay-results-browser-scroll left-rail-template__scroll">
+            <details id="assay-results-browser-panel" class="assay-browser-panel" open>
+              <summary class="assay-browser-summary">
+                <span>Existing Assays</span>
+                <span id="assay-results-browser-count" class="small-note">0</span>
+              </summary>
+              <div class="assay-browser-body">
+                <label>
+                  Search Assays
+                  <input id="assay-results-search" placeholder="Search assay plates, projects, or notes" />
+                </label>
+                <div id="assay-results-list" class="assay-browser-list assay-results-browser-list"></div>
+              </div>
+            </details>
+          </div>
+          <div class="assay-results-controls-pinned left-rail-template__pinned">
+            <div class="assay-results-control-section">
+              <select id="assay-results-assay-select" hidden>
                 <option value="">Select assay plate</option>
               </select>
-            </label>
-            <div class="form-actions assay-results-actions">
-              <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" title="Attach result file">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                  <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
-                </svg>
-              </button>
-              <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-              <button type="button" id="assay-save-results-btn" class="primary-btn assay-results-icon-btn assay-results-save-icon-btn" aria-label="Save results" title="Save results">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                  <path d="M5 3h12l3 3v15H4V3Z"></path>
-                  <path d="M8 3v6h8V3"></path>
-                  <path d="M8 21v-7h8v7"></path>
-                </svg>
-              </button>
-              <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                  <path d="M3 6h18"></path>
-                  <path d="M8 6V4h8v2"></path>
-                  <path d="m19 6-1 14H6L5 6"></path>
-                  <path d="M10 11v5"></path>
-                  <path d="M14 11v5"></path>
-                </svg>
-              </button>
+              <span class="assay-display-label">Result Data</span>
+              <div class="form-actions assay-results-actions">
+                <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" title="Attach result file">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
+                  </svg>
+                </button>
+                <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+                <button type="button" id="assay-save-results-btn" class="primary-btn assay-results-icon-btn assay-results-save-icon-btn" aria-label="Save results" title="Save results">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M5 3h12l3 3v15H4V3Z"></path>
+                    <path d="M8 3v6h8V3"></path>
+                    <path d="M8 21v-7h8v7"></path>
+                  </svg>
+                </button>
+                <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M3 6h18"></path>
+                    <path d="M8 6V4h8v2"></path>
+                    <path d="m19 6-1 14H6L5 6"></path>
+                    <path d="M10 11v5"></path>
+                    <path d="M14 11v5"></path>
+                  </svg>
+                </button>
+              </div>
+              <div id="assay-active-assay-info" class="small-note"></div>
+              <div id="assay-result-status" class="small-note"></div>
             </div>
-            <div id="assay-active-assay-info" class="small-note"></div>
-            <div id="assay-result-status" class="small-note"></div>
-          </div>
 
-          <div class="assay-results-control-section">
-            <label>
-              Analysis Method
-              <select id="assay-analysis-method">
-                <option value="grouped_summary" selected>Grouped Summary</option>
-                <option value="nested_summary">Nested Summary</option>
-                <option value="row_summary">Row Summary</option>
-                <option value="column_summary">Column Summary</option>
-                <option value="linear_regression">Linear Regression</option>
-                <option value="ec50">EC50 (4PL Fit)</option>
-                <option value="ic50">IC50 (4PL Fit)</option>
-                <option value="survival">Survival %</option>
-                <optgroup label="Standard curves to interpolate">
-                  <option value="standard_curve_line">Line</option>
-                  <option value="standard_curve_4pl_log_concentration">Sigmoidal, 4PL, X is log(concentration)</option>
-                  <option value="standard_curve_4pl_concentration">Sigmoidal, 4PL, X is concentration</option>
-                  <option value="standard_curve_5pl_log_concentration">Asymmetric Sigmoidal, 5PL, X is log(concentration)</option>
-                  <option value="standard_curve_5pl_concentration">Asymmetric Sigmoidal, 5PL, X is concentration</option>
-                  <option value="standard_curve_semilog_line">Semilog line</option>
-                  <option value="standard_curve_hyperbola">Hyperbola (X is concentration)</option>
-                  <option value="standard_curve_quadratic">Second order polynomial (quadratic)</option>
-                  <option value="standard_curve_cubic">Third order polynomial (cubic)</option>
-                  <option value="standard_curve_pade_11">Pade (1,1) approximant</option>
-                </optgroup>
-              </select>
-            </label>
-            <div class="assay-analysis-controls">
-              <input id="assay-analysis-row-groups" type="hidden" />
-              <input id="assay-analysis-column-groups" type="hidden" />
-              <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
+            <div class="assay-results-control-section">
+              <span class="assay-display-label">Groups (optional)</span>
+              <div class="assay-analysis-controls">
+                <input id="assay-analysis-row-groups" type="hidden" />
+                <input id="assay-analysis-column-groups" type="hidden" />
+                <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
+                <label>
+                  Replicate Group Name (optional)
+                  <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
+                </label>
+                <div class="form-actions assay-analysis-group-actions">
+                  <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
+                  <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
+                  <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
+                </div>
+                <div id="assay-analysis-selection-status" class="small-note"></div>
+              </div>
+            </div>
+
+            <div class="assay-results-control-section">
+              <label>
+                Analysis Method
+                <select id="assay-analysis-method">
+                  <option value="grouped_summary" selected>Grouped Summary</option>
+                  <option value="nested_summary">Nested Summary</option>
+                  <option value="row_summary">Row Summary</option>
+                  <option value="column_summary">Column Summary</option>
+                  <option value="linear_regression">Linear Regression</option>
+                  <option value="ec50">EC50 (4PL Fit)</option>
+                  <option value="ic50">IC50 (4PL Fit)</option>
+                  <option value="survival">Survival %</option>
+                  <optgroup label="Standard curves to interpolate">
+                    <option value="standard_curve_line">Line</option>
+                    <option value="standard_curve_4pl_log_concentration">Sigmoidal, 4PL, X is log(concentration)</option>
+                    <option value="standard_curve_4pl_concentration">Sigmoidal, 4PL, X is concentration</option>
+                    <option value="standard_curve_5pl_log_concentration">Asymmetric Sigmoidal, 5PL, X is log(concentration)</option>
+                    <option value="standard_curve_5pl_concentration">Asymmetric Sigmoidal, 5PL, X is concentration</option>
+                    <option value="standard_curve_semilog_line">Semilog line</option>
+                    <option value="standard_curve_hyperbola">Hyperbola (X is concentration)</option>
+                    <option value="standard_curve_quadratic">Second order polynomial (quadratic)</option>
+                    <option value="standard_curve_cubic">Third order polynomial (cubic)</option>
+                    <option value="standard_curve_pade_11">Pade (1,1) approximant</option>
+                  </optgroup>
+                </select>
+              </label>
               <label class="assay-analysis-checkbox">
                 <input id="assay-analysis-error-bars" type="checkbox" />
                 Show SD error bars (for Row/Column Summary)
               </label>
-              <label>
-                Replicate Group Name (optional)
-                <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
-              </label>
-              <div class="form-actions assay-analysis-group-actions">
-                <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
-                <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
-                <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
-              </div>
-              <div id="assay-analysis-selection-status" class="small-note"></div>
+              <div id="assay-analysis-summary" class="small-note"></div>
             </div>
-            <div class="form-actions assay-results-actions">
-              <button type="button" id="assay-analyze-results-btn" class="ghost-btn">Analyze Results</button>
-            </div>
-            <div id="assay-analysis-summary" class="small-note"></div>
-          </div>
 
-          <div id="assay-chart-style-panel" class="assay-results-control-section" data-assay-chart-style-mount></div>
+            <div id="assay-chart-style-panel" class="assay-results-control-section" data-assay-chart-style-mount></div>
+          </div>
         </div>
 
         <div class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main">

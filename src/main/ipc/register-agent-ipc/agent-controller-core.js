@@ -10,7 +10,6 @@ function createAgentControllerCore({
   codexAgentRuntime,
   agentToolRuntime,
   agentChatLogRuntime,
-  getAgentChatLogPath,
   setCodexCliModel,
   setCodexCliReasoningEffort,
   lifecycleService
@@ -335,11 +334,8 @@ function createAgentControllerCore({
       setCodexCliModel(model);
       setCodexCliReasoningEffort(reasoningEffort);
     }
-    const executionFlags = controllerUtils.resolveAgentExecutionFlags(payload, { settings: rawSnapshot?.settings || {} });
     const traceContext = controllerUtils.createAgentLlmTraceContext({
-      enabled: executionFlags.developerMode === true,
       requestId: cleanText(runtime?.requestId, 80),
-      logPath: getAgentChatLogPath(),
       provider,
       model
     });
@@ -376,7 +372,6 @@ function createAgentControllerCore({
         snapshot,
         ...(snapshotDataFilePath ? { dataFilePath: snapshotDataFilePath } : {}),
         ...(snapshotFallbackDataFilePath ? { fallbackDataFilePath: snapshotFallbackDataFilePath } : {}),
-        executionFlags,
         traceContext,
         projectId,
         projectName,
@@ -389,9 +384,6 @@ function createAgentControllerCore({
         emitAgentProgress: runtime?.emitAgentProgress
       });
       throwIfAgentRequestAborted('Agent request stopped after Codex agent runtime.');
-      if (executionFlags.developerMode === true && codexResult && typeof codexResult === 'object') {
-        codexResult.developer_trace = asArray(traceContext?.rows);
-      }
       return codexResult;
     }
 

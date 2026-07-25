@@ -222,6 +222,63 @@ test('assay dilution fill commits generated concentrations before the layout re-
   assert.equal(statusMessage, 'Auto-filled 2 concentration steps at a 1:2 dilution.');
 });
 
+test('assay browser renders the Setup list and selectable Analyze list from the same assays', () => {
+  const shared = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'shared.js'
+  ));
+  const { createAssayBrowserView } = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'assay',
+    'ui',
+    'browser-view.js'
+  ), shared);
+  const setupList = { innerHTML: '' };
+  const resultsList = { innerHTML: '' };
+  const setupCount = { textContent: '' };
+  const resultsCount = { textContent: '' };
+  const state = {
+    assays: [
+      { id: 'assay-1', name: 'Older assay', updatedAt: '2026-07-20T12:00:00.000Z' },
+      { id: 'assay-2', name: 'Current assay', updatedAt: '2026-07-21T12:00:00.000Z' }
+    ],
+    notebookEntries: []
+  };
+  const view = createAssayBrowserView({
+    elements: {
+      assayList: setupList,
+      assayBrowserCount: setupCount,
+      assaySearchInput: { value: '' },
+      assayResultsList: resultsList,
+      assayResultsBrowserCount: resultsCount,
+      assayResultsSearchInput: { value: '' }
+    },
+    state,
+    safeText: (value) => String(value),
+    runtime: { activeResultsAssayId: 'assay-2' },
+    ensureState() {}
+  });
+
+  view.renderList();
+
+  assert.equal(setupCount.textContent, '2');
+  assert.equal(resultsCount.textContent, '2');
+  assert.match(setupList.innerHTML, /Current assay/);
+  assert.match(setupList.innerHTML, /data-assay-edit="assay-2"/);
+  assert.match(resultsList.innerHTML, /data-assay-results-select="assay-2"/);
+  assert.match(resultsList.innerHTML, /aria-label="Analyze Current assay"/);
+  assert.match(resultsList.innerHTML, /class="assay-browser-item is-active"/);
+  assert.match(resultsList.innerHTML, /aria-pressed="true"/);
+  assert.match(resultsList.innerHTML, /data-assay-delete="assay-2"/);
+});
+
 test('assay analysis grouping hides manual specs and renders visible drag-created groups', () => {
   const { createAssayResultsManager } = loadEsmStyleModule(path.join(
     __dirname,

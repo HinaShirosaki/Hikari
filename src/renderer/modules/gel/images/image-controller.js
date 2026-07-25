@@ -1,4 +1,4 @@
-import { decodeImageFile, isTiffFile, normalizeDecodedImage } from './image-io.js';
+import { decodeImageFile, decodeImageSource, isTiffFile, normalizeDecodedImage } from './image-io.js';
 import { normalizeEnhancementSettings, preprocessWithJs } from '../analysis/image-processing.js';
 import { createEmptyManualOverrides } from '../shared.js';
 
@@ -166,6 +166,7 @@ export function createImageController({ runtime, elements, deps }) {
 
   return {
     copyNormalizedImage,
+    decodeImageSource,
     getPreprocessedImageForCurrentSettings,
     imageDataToDataUrl,
     loadImageFile,

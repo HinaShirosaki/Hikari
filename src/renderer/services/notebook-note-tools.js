@@ -4,7 +4,12 @@ let activeToastTimer = 0;
 let activeToastFadeTimer = 0;
 
 function ensureToastElement() {
-  let toast = document.querySelector('[data-hikari-transient-toast]');
+  if (typeof document?.createElement !== 'function' || !document?.body?.appendChild) {
+    return null;
+  }
+  let toast = typeof document?.querySelector === 'function'
+    ? document.querySelector('[data-hikari-transient-toast]')
+    : null;
   if (toast) {
     return toast;
   }
@@ -34,6 +39,9 @@ function ensureToastElement() {
 
 export function showTransientNotice(message, { type = 'success', durationMs = 5000 } = {}) {
   const toast = ensureToastElement();
+  if (!toast) {
+    return;
+  }
   toast.textContent = String(message || '').trim();
   toast.style.background = type === 'error'
     ? 'rgba(156, 54, 48, 0.96)'
@@ -42,13 +50,16 @@ export function showTransientNotice(message, { type = 'success', durationMs = 50
   toast.style.opacity = '1';
   toast.style.transform = 'translateY(0)';
 
-  window.clearTimeout(activeToastTimer);
-  window.clearTimeout(activeToastFadeTimer);
+  const timerHost = typeof window?.setTimeout === 'function' && typeof window?.clearTimeout === 'function'
+    ? window
+    : globalThis;
+  timerHost.clearTimeout(activeToastTimer);
+  timerHost.clearTimeout(activeToastFadeTimer);
 
-  activeToastTimer = window.setTimeout(() => {
+  activeToastTimer = timerHost.setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transform = 'translateY(-6px)';
-    activeToastFadeTimer = window.setTimeout(() => {
+    activeToastFadeTimer = timerHost.setTimeout(() => {
       toast.hidden = true;
     }, 180);
   }, Math.max(1000, Number(durationMs) || 5000));

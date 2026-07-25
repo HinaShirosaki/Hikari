@@ -8,8 +8,5 @@ export function createAgentChatRuntimeState() {
     canceledClientRequestIds: new Set(),
     stopRequested: false,
     stopInProgress: false,
-    developerResponseSimulatorFolded: false,
-    developerContextPreview: null,
-    developerContextPreviewText: ''
   };
 }

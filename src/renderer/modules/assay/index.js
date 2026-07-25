@@ -370,6 +370,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
     analysisView.loadChartStyle(assay.chartStyle);
     analysisView.clearOutput();
     markLoadedAssayDraftsSaved();
+    renderList();
     notifyActiveAssayChanged();
   }
 
@@ -650,6 +651,16 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
   }
 
   function onListClick(event) {
+    const resultsSelectBtn = event.target.closest('[data-assay-results-select]');
+    if (resultsSelectBtn) {
+      const assayId = resultsSelectBtn.dataset.assayResultsSelect || '';
+      if (elements.assayResultsAssaySelect) {
+        elements.assayResultsAssaySelect.value = assayId;
+      }
+      loadAssayForResults(assayId);
+      return;
+    }
+
     const editBtn = event.target.closest('[data-assay-edit]');
     if (editBtn) {
       setAssayMode('create');

@@ -38,6 +38,17 @@ function registerDataIpc(deps = {}) {
       return text;
     });
   const mainDataHelpers = deps.mainDataHelpers;
+  const getDefaultDataFilePath = typeof deps.getDefaultDataFilePath === 'function'
+    ? deps.getDefaultDataFilePath
+    : (() => '');
+  const getStorageRootPointerPath = typeof deps.getStorageRootPointerPath === 'function'
+    ? deps.getStorageRootPointerPath
+    : (() => '');
+  const getUserDataPath = typeof deps.getUserDataPath === 'function' ? deps.getUserDataPath : (() => '');
+  const legacyUserDataFilePath = () => {
+    const userDataPath = cleanText(getUserDataPath(), 2400);
+    return userDataPath ? path.join(userDataPath, 'enana-data.json') : '';
+  };
   const importStorageRoot = deps.importStorageRoot;
   const discoverPapersFromStorageRoot = deps.discoverPapersFromStorageRoot;
   const syncSqliteBundleFromSnapshot = deps.syncSqliteBundleFromSnapshot;
@@ -360,13 +371,61 @@ function registerDataIpc(deps = {}) {
     };
   }
 
+  // The workspace root otherwise lives only in renderer localStorage, so a
+  // cleared profile used to boot into an empty workspace with no way back.
+  let mirroredStorageRoot = '';
+
+  async function mirrorStorageRoot(storagePath) {
+    const nextPath = cleanText(storagePath, 2400);
+    const pointerPath = cleanText(getStorageRootPointerPath(), 2400);
+    if (!nextPath || !pointerPath || nextPath === mirroredStorageRoot) {
+      return;
+    }
+    try {
+      await fs.mkdir(path.dirname(pointerPath), { recursive: true });
+      await fs.writeFile(pointerPath, `${JSON.stringify({ storagePath: nextPath }, null, 2)}\n`, 'utf8');
+      mirroredStorageRoot = nextPath;
+    } catch {
+      // A missing pointer only costs the startup recovery below; never fail the save.
+    }
+  }
+
+  async function readStorageRootFrom(filePath, field) {
+    const targetPath = cleanText(filePath, 2400);
+    if (!targetPath) {
+      return '';
+    }
+    try {
+      const snapshot = safeParseJson(await fs.readFile(targetPath, 'utf8'), {});
+      return cleanText(field === 'pointer' ? snapshot?.storagePath : snapshot?.settings?.storagePath, 2400);
+    } catch {
+      return '';
+    }
+  }
+
   ipcMain.handle(STORAGE.AUTO_SAVE, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     const { data, filePath } = normalizedPayload;
     if (!data) {
       return { ok: false, error: 'Missing data payload.' };
     }
-    return mainDataHelpers.autoSaveDataFile({ data, filePath });
+    const result = await mainDataHelpers.autoSaveDataFile({ data, filePath });
+    if (result?.ok) {
+      await mirrorStorageRoot(data?.settings?.storagePath);
+    }
+    return result;
+  });
+
+  ipcMain.handle(STORAGE.LAST_ROOT, async () => {
+    const pointerRoot = await readStorageRootFrom(getStorageRootPointerPath(), 'pointer');
+    if (pointerRoot) {
+      return { ok: true, storagePath: pointerRoot };
+    }
+    // ponytail: pre-pointer installs only recorded the root inside a saved
+    // snapshot, so fall back to those. Drop once no one is upgrading from them.
+    const snapshotRoot = await readStorageRootFrom(getDefaultDataFilePath(), 'snapshot')
+      || await readStorageRootFrom(legacyUserDataFilePath(), 'snapshot');
+    return { ok: Boolean(snapshotRoot), storagePath: snapshotRoot };
   });
 
   ipcMain.handle(STORAGE.SYNC_SQLITE_BUNDLE, async (_event, payload) => {

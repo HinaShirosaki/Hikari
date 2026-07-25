@@ -64,10 +64,7 @@ function registerAgentIpc(deps = {}) {
     getAgentChatLogPath: deps.getAgentChatLogPath,
     getAgentChatSessionStoragePath: deps.getAgentChatSessionStoragePath,
     agentToolRuntime: deps.agentToolRuntime || {},
-    agentToolSmokeTestRuntime: deps.agentToolSmokeTestRuntime,
-    codexAgentRuntime: deps.codexAgentRuntime || null,
     protocolGenerationRuntime: deps.protocolGenerationRuntime || null,
-    controllerUtils: deps.controllerUtils || {},
     lifecycleService
   });
 }

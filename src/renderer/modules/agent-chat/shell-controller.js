@@ -44,6 +44,10 @@ const QUICK_PROMPT_PRESETS = {
     placeholder: 'Ask Hikari about this notebook page.',
     prompts: [
       {
+        label: 'Research & append',
+        prompt: 'Read the complete hidden context for this active notebook page before doing anything. Identify only information that would make this specific experiment more executable or traceable. Search Hikari local data first: use inventory_lookup with exact linked sample or protein ids/codes for recorded concentration, lot, storage, notes, molecular weight, or other available fields; use chemical_lookup for local reagent stock. Use literature_search only when trustworthy external evidence is needed. For any named buffer without a formulation, such as PBS, prepare a clearly labeled recipe and state the assumed final volume, concentration, and pH. Never invent missing measurements or records. Then call notebook_append once with the active entry id (or “unsaved draft”), page title, project, protocol, current Updated at timestamp when present, a concise section title, evidence-backed markdown, rationale, and exact source records or URLs. Propose an append for my approval; do not create a new page, replace existing notes, or merely summarize.'
+      },
+      {
         label: 'Summarize page',
         prompt: 'Summarize this notebook page and flag any missing experimental details.'
       },
@@ -297,17 +301,6 @@ export function createAgentChatShellController({
       dom.stopBtn.disabled = !runtime.inFlight || runtime.stopInProgress;
       dom.stopBtn.textContent = runtime.stopInProgress ? 'Stopping...' : 'Stop';
     }
-    [
-      dom.developerTestToolsBtn,
-      dom.developerRunToolBtn,
-      dom.developerToolSelect,
-      dom.developerToolMessageInput,
-      dom.developerRefreshContextBtn,
-      dom.developerUseMockResponseBtn,
-      dom.developerMockResponseInput
-    ].filter(Boolean).forEach((node) => {
-      node.disabled = runtime.inFlight;
-    });
     if (dom.projectSelect) {
       dom.projectSelect.disabled = runtime.inFlight;
     }

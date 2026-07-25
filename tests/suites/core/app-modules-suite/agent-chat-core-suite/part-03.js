@@ -162,9 +162,7 @@ test('agent-chat sends settings API key to main process and stores assistant res
         apiEndpoint: 'https://api.openai.com/v1/responses',
         apiKey: 'sk-local-key'
       },
-      agent: {
-        developerMode: false
-      }
+      agent: {}
     },
     agentChat: { projectId: '', messages: [] }
   };
@@ -271,15 +269,6 @@ test('agent-chat sends settings API key to main process and stores assistant res
               }
             }
           },
-          developer_trace: [
-            {
-              stage: 'codex_agent_started',
-              provider: 'codex',
-              model: 'gpt-5',
-              summary: 'Codex agent request started.',
-              timestamp: '2026-03-11T12:00:00.000Z'
-            }
-          ]
         };
       }
     }
@@ -318,7 +307,6 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.equal(payloadSeen.llm.model, 'gpt-5');
   assert.equal(payloadSeen.llm.apiEndpoint, 'https://api.openai.com/v1/responses');
   assert.equal(payloadSeen.llm.apiKey, 'sk-local-key');
-  assert.equal(payloadSeen.agent.developerMode, false);
   assert.equal(Object.hasOwn(payloadSeen.agent, 'deepResearchEnabled'), false);
   assert.equal(payloadSeen.projectId, 'p1');
   assert.equal(payloadSeen.stateSnapshot.snapshot_mode, 'thin');
@@ -375,11 +363,8 @@ test('agent-chat sends settings API key to main process and stores assistant res
   assert.doesNotMatch(history.innerHTML, /Entities/);
   assert.doesNotMatch(history.innerHTML, /Reasoning Summary/);
   assert.doesNotMatch(history.innerHTML, /LLM Activity/);
-  assert.equal(/Developer Trace/.test(history.innerHTML), false);
 
-  state.settings.agent.developerMode = true;
   agent.render();
-  assert.equal(/Developer Trace/.test(history.innerHTML), false);
   assert.equal(sendBtn.disabled, false);
   assert.equal(newChatBtn.disabled, false);
   assert.equal(projectSelect.disabled, false);
@@ -483,7 +468,7 @@ test('notebook-scoped agent chat stores page sessions and exposes hidden page co
       hiddenContext: {
         kind: 'notebook-page',
         label: 'Active notebook page: Atlas transfection',
-        text: 'Active biology notebook page:\nStep 1: Seed cells.',
+        text: `Active biology notebook page:\nStep 1: Seed cells.\n${'x'.repeat(5000)}`,
         notebookEntryId: 'note-1',
         projectName: 'Atlas',
         protocolName: 'HEK293 Transfection'
@@ -494,8 +479,11 @@ test('notebook-scoped agent chat stores page sessions and exposes hidden page co
   assert.equal(scopedState.agentChat.projectId, 'p1');
   assert.equal(Object.keys(rootState.paperAgentChatSessions).join(','), 'notebook:note-1');
   assert.match(scopedState.agentChatContext.sessionPrompt, /Biology Notebook right-rail/);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /notebook_append/);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /inventory_lookup/);
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].kind, 'notebook-page');
   assert.equal(scopedState.agentChatContext.hiddenContexts[0].notebookEntryId, 'note-1');
+  assert.equal(scopedState.agentChatContext.hiddenContexts[0].text.length > 4000, true);
 
   const normalized = scopedStateModule.normalizePaperAgentChatSessions({
     'notebook:note-1': {
@@ -583,7 +571,7 @@ test('paper rail selected text is carried as hidden one-shot agent context', () 
     projects: [],
     settings: {
       llm: { provider: 'codex', model: 'gpt-5' },
-      agent: { developerMode: false }
+      agent: {}
     },
     agentChat: { projectId: '', messages: [] },
     agentChatContext: {
@@ -698,7 +686,7 @@ test('notebook rail automatically carries active page content as hidden agent co
     projects: [{ id: 'p1', name: 'Atlas' }],
     settings: {
       llm: { provider: 'codex', model: 'gpt-5' },
-      agent: { developerMode: false }
+      agent: {}
     },
     agentChat: { projectId: 'p1', messages: [] },
     agentChatContext: {
@@ -763,7 +751,7 @@ test('assay rail automatically carries active assay content as hidden agent cont
     projects: [{ id: 'p1', name: 'Atlas' }],
     settings: {
       llm: { provider: 'codex', model: 'gpt-5' },
-      agent: { developerMode: false }
+      agent: {}
     },
     agentChat: { projectId: 'p1', messages: [] },
     agentChatContext: {
@@ -951,8 +939,10 @@ test('notebook rail quick prompts initialize notebook composer and load page pro
 
   assert.equal(messageInput.placeholder, 'Ask Hikari about this notebook page.');
   assert.equal(quickPrompts.getAttribute('aria-label'), 'Common notebook prompts');
-  assert.equal(buttons[0].textContent, 'Summarize page');
-  assert.match(prompt, /notebook page/);
+  assert.equal(buttons[0].textContent, 'Research & append');
+  assert.match(prompt, /complete hidden context/);
+  assert.match(prompt, /notebook_append/);
+  assert.match(prompt, /inventory_lookup/);
   assert.doesNotMatch(prompt, /this paper/i);
   assert.equal(paperScreenshotBtn.hidden, true);
 
@@ -1046,7 +1036,7 @@ test('unscoped session prompts do not masquerade as paper sessions', () => {
   ));
   const state = {
     projects: [],
-    settings: { agent: { developerMode: false } },
+    settings: { agent: {} },
     agentChat: { projectId: '', messages: [] },
     agentChatContext: {
       sessionPrompt: 'You are reading shared workspace context.'

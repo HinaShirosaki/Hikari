@@ -22,20 +22,25 @@ shapes below. The rules are strict on purpose: identity is declared, never
 inferred, so a plugin keeps its id (and therefore its stored settings) when its
 title changes.
 
-### 1.0 Three kinds of plugin
+### 1.0 Four kinds of plugin
 
-|  | **Local** | **Served** | **Remote** |
-| --- | --- | --- | --- |
-| Ships | `index.html` + assets | `index.html` + assets | nothing but `plugin.json` |
-| Manifest | neither flag | `serve: true` | `embed: "https://…"` |
-| Loaded from | `file://` | `http://127.0.0.1:<port>` | the remote URL |
-| Runs as | opaque origin (`null`) | its own loopback origin | the remote site's origin |
-| Sandbox | `allow-scripts allow-forms allow-modals allow-popups` | the same **+ `allow-same-origin`** | the same **+ `allow-same-origin`** |
-| `localStorage` / `IndexedDB` | **denied** (`SecurityError`) | works | works |
-| Host API | may hold permissions | may hold permissions | **never** — barred at install |
-| Left rail | host-drawn, mandatory | host-drawn, mandatory | host-drawn, mandatory |
-| Code you can audit | yes | yes | no |
-| Example | [`hello-world`](../../examples/plugins/hello-world/) | [`imagej`](../../examples/plugins/imagej/) | — |
+The first three are **view** plugins — they open a workspace. The fourth is a
+**service** — no view, it registers a capability instead. All four install and
+are managed identically in Settings; the kind is a manifest fact, not a
+different install flow.
+
+|  | **Local** | **Served** | **Remote** | **Service** |
+| --- | --- | --- | --- | --- |
+| Ships | `index.html` + assets | `index.html` + assets | nothing but `plugin.json` | `index.html` + assets |
+| Manifest | no flag | `serve: true` | `embed: "https://…"` | `service: {…}` |
+| Loaded from | `file://` | `http://127.0.0.1:<port>` | the remote URL | `file://` (hidden) |
+| Runs as | opaque origin (`null`) | its own loopback origin | the remote site's origin | opaque origin (`null`) |
+| Sandbox | `allow-scripts allow-forms allow-modals allow-popups` | the same **+ `allow-same-origin`** | the same **+ `allow-same-origin`** | same as local |
+| `localStorage` / `IndexedDB` | **denied** | works | works | **denied** |
+| Scripts | classic **or** module | classic or module | (remote's own) | **classic only** (§5.4) |
+| Has a view | yes (mandatory rail) | yes | yes | **no** — headless |
+| Host API | may hold permissions | may hold permissions | **never** | may hold permissions |
+| Example | [`hello-world`](../../examples/plugins/hello-world/) | [`imagej`](../../examples/plugins/imagej/) | — | [`snapgene-dna`](../../examples/plugins/snapgene-dna/) |
 
 **Which to write:**
 
@@ -45,6 +50,9 @@ title changes.
   of it, so this is not a preference but a hard requirement (§5.1).
 - **Remote** only to embed an existing web app you cannot bundle. It buys
   nothing except someone else's hosting, and costs you the host API entirely.
+- **Service** to extend a built-in feature rather than add a workspace — today,
+  teaching a feature to open a file format via conversion. Full details in
+  [service-plugins.md](service-plugins.md).
 
 Served and remote plugins differ in one thing that matters more than the
 mechanics: with a served plugin the code is in the folder you installed and
@@ -93,11 +101,13 @@ imagej/
 | `name` present | `plugin.json is missing the required "name" field.` |
 | `version` present, `major.minor.patch` | `plugin.json needs a "version" like "1.0.0"…` |
 | `permissions`, if present, is an array of known capability names | `Unknown permission "X". Allowed: …` |
-| `index.html` at the folder root — **local and served** | `Plugin folder does not contain index.html.` |
+| `index.html` at the folder root — everything except **remote** (for a service it is a script host, not a page — §1.6) | `Plugin folder does not contain index.html.` |
 | `embed`, if present, is an absolute **https** URL | `plugin.json "embed" must use https…` |
 | `embed` and `permissions` are mutually exclusive | `A plugin with "embed" cannot request host permissions…` |
 | `serve`, if present, is a boolean | `plugin.json "serve" must be true or false.` |
 | `serve` and `embed` are mutually exclusive | `plugin.json cannot set both "serve" and "embed".` |
+| `service`, if present, declares a non-empty `fileConversions` array of bare lower-case `{ from, to }` extensions | `plugin.json "service" must declare a non-empty "fileConversions" array.` |
+| `service` excludes `embed` and `serve` | `plugin.json a "service" plugin cannot also use "embed" or "serve".` |
 
 Source of truth:
 [`src/main/lib/inspect-plugin-folder.js`](../../src/main/lib/inspect-plugin-folder.js).
@@ -123,6 +133,7 @@ Source of truth:
 | `permissions` | string[] | no | Host API capabilities. Defaults to `[]`. Rejected alongside `embed`. |
 | `serve` | boolean | no | Serve the folder over `http://127.0.0.1:<port>` instead of `file://`, giving the plugin a real origin with working storage. Rejected alongside `embed`. |
 | `embed` | string | no | Absolute **https** URL. Makes this a remote plugin: `index.html` is not required and host permissions are refused. |
+| `service` | object | no | Makes this a headless service. `{ "fileConversions": [{ "from": "dna", "to": "gbk" }] }`. No view is created. Rejected alongside `embed`/`serve`. See [service-plugins.md](service-plugins.md). |
 
 Unknown fields are ignored, so new optional fields can land later without
 breaking existing plugins.
@@ -150,6 +161,24 @@ and `permissions` is rejected at install. A permission is a grant to code the
 user could read in the folder they installed; remote code can change after
 review, so it never receives one. The frame is also never registered with the
 bridge, so the API is absent rather than merely denied.
+
+### 1.6 A service has no UI
+
+A service plugin is headless. It has no view, no navigation entry, no rail, and
+it must not render anything:
+
+- **It ships no page.** Its `index.html` is a *script host*, not a UI: the
+  sandbox needs a document to run a script in, and that is all this file is. It
+  should contain nothing but `<script>` tags — no markup, no styles.
+- **Its code touches no DOM.** A service listens for host calls and answers
+  them. Reaching for `document` is the signal that what you are building is a
+  view plugin, not a service.
+- **The host enforces it.** The service frame is mounted `hidden` *and* pinned
+  to `display: none` by `.plugin-service-frame`, so a service cannot show UI
+  even if its document does contain markup.
+
+If your extension needs to show something, it is a view plugin (§1.0) — a
+plugin may be one or the other, not both.
 
 ---
 
@@ -401,6 +430,25 @@ with a workspace around it.
 Only install plugin folders you trust, and for remote plugins, only embed sites
 you trust.
 
+### 5.4 Opaque origins cannot load ES modules
+
+A side effect of the opaque-origin sandbox worth knowing when you write a
+**local** or **service** plugin: a `null`-origin document cannot fetch a
+relative ES module. `<script type="module" src="./main.js">` (or any inline
+module with a relative `import`) is silently CORS-blocked, so the script never
+runs and the plugin does nothing — no error in the host console.
+
+Use **classic scripts** in local and service plugins:
+
+```html
+<script src="./lib.js"></script>   <!-- defines a global -->
+<script src="./main.js"></script>  <!-- uses it -->
+```
+
+Served and remote plugins have a real origin and are unaffected — modules work
+there. This was verified directly: the same service page fails to run as a
+module in an opaque frame and succeeds as classic scripts.
+
 ---
 
 ## 6. Limitations
@@ -623,6 +671,8 @@ external skill folders only for user- or site-specific additions.
   contains one `left-rail-template` layout, one `[data-sync-left-rail]` rail,
   the frame nested in the main pane, and rail text naming the plugin and its
   host access.
+- Service plugins have their own suite — see
+  [service-plugins.md §7](service-plugins.md#7-testing).
 
 All live in [`test.js`](../../test.js). For manual end-to-end checks, install
 [`examples/plugins/notebook-results/`](../../examples/plugins/notebook-results/)

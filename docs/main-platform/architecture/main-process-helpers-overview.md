@@ -37,7 +37,7 @@ The renderer-facing surface is still dominated by three registrars under `src/ma
 | Registrar | Primary audience | What it exposes |
 | --- | --- | --- |
 | `register-data-ipc.js` + `register-data-ipc/` | renderer data and storage flows | save/load, storage-root helpers, grouped sequence endpoints, import parsers |
-| `register-agent-ipc/` | renderer chat/assistant flows | `agent:chat`, chat-log session helpers, developer tool tests, log replay |
+| `register-agent-ipc/` | renderer chat/assistant flows | `agent:chat`, chat-log session helpers, log replay |
 | `register-system-ipc.js` | renderer settings/system panels | Codex CLI + direct LLM, Telegram config, open-external-url |
 
 Channel names are centralized in `src/shared/ipc/channels.js`. See [ipc-registrars.md](../ipc/ipc-registrars.md).

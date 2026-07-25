@@ -15,8 +15,7 @@ test('[EDGE] tool-box designCrisprGuides respects GC filtering', () => {
     pamPattern: toolBox.normalizeIupacPattern('NGG'),
     minGc: 50,
     maxGc: 100,
-    topCount: 10,
-    genomeMultiplier: 1
+    topCount: 10
   });
   assert.equal(result.totalPamMatches, 1);
   assert.equal(result.filteredCandidateCount, 0);

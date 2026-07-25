@@ -42,7 +42,6 @@ export function createExternalSkillsController({
       : {};
     state.settings.agent = {
       ...current,
-      developerMode: current.developerMode === true,
       externalSkillsEnabled: current.externalSkillsEnabled !== false,
       disabledExternalSkillNames: normalizeDisabledNames(current.disabledExternalSkillNames)
     };

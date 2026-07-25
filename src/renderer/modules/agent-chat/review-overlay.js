@@ -58,6 +58,45 @@ function markSequenceEditReview(messages, messageId, token, status, reason = '')
   return true;
 }
 
+function getNotebookAppend(meta = {}) {
+  const source = meta.notebookAppend && typeof meta.notebookAppend === 'object'
+    ? meta.notebookAppend
+    : (meta.notebook_append && typeof meta.notebook_append === 'object' ? meta.notebook_append : null);
+  if (!source?.proposal?.content_markdown) {
+    return null;
+  }
+  return source;
+}
+
+function markNotebookAppendReview(messages, messageId, status, reason = '') {
+  const normalizedMessageId = trimText(messageId, 120);
+  const message = asArray(messages).find((item) => trimText(item?.id, 120) === normalizedMessageId);
+  if (!message || message.role !== 'assistant') {
+    return false;
+  }
+  const currentMeta = message.meta && typeof message.meta === 'object' ? message.meta : {};
+  const currentAppend = getNotebookAppend(currentMeta);
+  if (!currentAppend) {
+    return false;
+  }
+  const nextAppend = {
+    ...currentAppend,
+    save: {
+      ...(currentAppend.save && typeof currentAppend.save === 'object' ? currentAppend.save : {}),
+      applied: status === 'approved',
+      status,
+      reason: trimText(reason, 500),
+      reviewed_at: new Date().toISOString()
+    }
+  };
+  message.meta = {
+    ...currentMeta,
+    notebook_append: nextAppend,
+    notebookAppend: nextAppend
+  };
+  return true;
+}
+
 function collectReviewItemsForMessage(message, {
   notebookDraftAdapter,
   protocolReviewAdapter
@@ -83,6 +122,23 @@ function collectReviewItemsForMessage(message, {
       type: 'notebook',
       messageId,
       draft: notebookDraft
+    });
+  }
+
+
+  const notebookAppend = getNotebookAppend(meta);
+  if (
+    notebookAppend
+    && notebookAppend.save?.mode === 'confirm_before_append'
+    && notebookAppend.save?.applied !== true
+    && trimText(notebookAppend.save?.status, 80) !== 'rejected'
+  ) {
+    const proposalId = trimText(notebookAppend?.proposal?.proposal_id, 200) || 'append';
+    items.push({
+      id: `notebook-append:${messageId}:${proposalId}`,
+      type: 'notebook-append',
+      messageId,
+      append: notebookAppend
     });
   }
 
@@ -267,6 +323,52 @@ function renderSequenceEditPreview(item, safeText) {
   `;
 }
 
+function renderNotebookAppendPreview(item, safeText) {
+  const append = item.append || {};
+  const proposal = append.proposal || {};
+  const sourceLabels = asArray(proposal.sources).map((source) => {
+    const label = trimText(source?.label || source?.record_id || source?.url, 320);
+    const detail = trimText(source?.detail, 500);
+    return [label, detail].filter(Boolean).join(' — ');
+  }).filter(Boolean);
+  const target = [
+    trimText(proposal.page_title, 320),
+    trimText(proposal.project_name, 220),
+    trimText(proposal.protocol_name, 220)
+  ].filter(Boolean);
+  return `
+    <article class="agent-review-card" data-agent-review-card="${safeText(item.id)}">
+      <div class="agent-review-card-header">
+        <span class="agent-review-type">Notebook Append</span>
+        <h4>${safeText(trimText(proposal.section_title, 220) || 'Suggested enrichment')}</h4>
+        ${target.length ? `<p>${safeText(target.join(' / '))}</p>` : ''}
+      </div>
+      <div class="agent-review-content">
+        ${proposal.rationale ? `
+          <section class="agent-review-section">
+            <h5>Why this is useful</h5>
+            <p>${safeText(proposal.rationale)}</p>
+          </section>
+        ` : ''}
+        <section class="agent-review-section">
+          <h5>Content to append</h5>
+          <p class="agent-review-append-text">${safeText(proposal.content_markdown)}</p>
+        </section>
+        ${sourceLabels.length ? `
+          <section class="agent-review-section">
+            <h5>Sources used</h5>
+            ${renderList(sourceLabels, safeText)}
+          </section>
+        ` : ''}
+      </div>
+      <div class="agent-review-actions">
+        <button type="button" class="primary-btn" data-agent-review-approve="${safeText(item.id)}">Append to Page</button>
+        <button type="button" class="ghost-btn" data-agent-review-reject="${safeText(item.id)}">Reject</button>
+      </div>
+    </article>
+  `;
+}
+
 export function createAgentReviewOverlayController({
   dom,
   state,
@@ -277,7 +379,8 @@ export function createAgentReviewOverlayController({
   renderHistoryView,
   notebookActions,
   notebookDraftAdapter,
-  protocolReviewAdapter
+  protocolReviewAdapter,
+  onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' })
 }) {
   let reviewItems = [];
   let activeIndex = 0;
@@ -322,6 +425,9 @@ export function createAgentReviewOverlayController({
       }
       if (item.type === 'sequence-edit') {
         return renderSequenceEditPreview(item, safeText);
+      }
+      if (item.type === 'notebook-append') {
+        return renderNotebookAppendPreview(item, safeText);
       }
       return renderNotebookPreview(item, safeText);
     }).join('');
@@ -403,6 +509,38 @@ export function createAgentReviewOverlayController({
     removeItem(item.id);
   }
 
+  async function approveNotebookAppend(item) {
+    const result = await onAppendNotebookEntry(item.append?.proposal || {});
+    if (result?.ok !== true) {
+      setStatus?.(trimText(result?.error, 500) || 'The notebook append could not be applied.');
+      return;
+    }
+    markNotebookAppendReview(
+      state.agentChat?.messages,
+      item.messageId,
+      'approved',
+      trimText(result?.summary, 500) || 'Notebook append approved by user.'
+    );
+    persist();
+    renderContextSummary?.();
+    renderHistoryView?.({ forceScroll: true });
+    setStatus?.(trimText(result?.summary, 320) || 'Content appended to notebook page.');
+    removeItem(item.id);
+  }
+
+  function rejectNotebookAppend(item) {
+    markNotebookAppendReview(
+      state.agentChat?.messages,
+      item.messageId,
+      'rejected',
+      'Notebook append rejected by user.'
+    );
+    persist();
+    renderHistoryView?.({ forceScroll: true });
+    setStatus?.('Notebook append rejected.');
+    removeItem(item.id);
+  }
+
   function findItem(itemId = '') {
     const normalizedItemId = trimText(itemId, 180);
     return reviewItems.find((item) => item.id === normalizedItemId) || null;
@@ -421,6 +559,10 @@ export function createAgentReviewOverlayController({
       void approveSequenceEdit(item);
       return;
     }
+    if (item.type === 'notebook-append') {
+      void approveNotebookAppend(item);
+      return;
+    }
     approveNotebook(item);
   }
 
@@ -435,6 +577,10 @@ export function createAgentReviewOverlayController({
     }
     if (item.type === 'sequence-edit') {
       rejectSequenceEdit(item);
+      return;
+    }
+    if (item.type === 'notebook-append') {
+      rejectNotebookAppend(item);
       return;
     }
     rejectNotebook(item);

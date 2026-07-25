@@ -126,6 +126,24 @@ export function createNavigationShell({
     return app?.agentChatRail === true;
   }
 
+  function agentChatRailToggleIcon(expanded) {
+    if (expanded) {
+      return `
+        <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+          <rect x="4.5" y="4.5" width="15" height="15" rx="2.25"></rect>
+          <path d="M9 4.5v15M15.25 9.25 18 12l-2.75 2.75"></path>
+        </svg>
+      `;
+    }
+    return `
+      <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+        <path d="M6.25 6.75A2.75 2.75 0 0 1 9 4h6.25A2.75 2.75 0 0 1 18 6.75v6.5A2.75 2.75 0 0 1 15.25 16H10l-4 3v-3.5a2.75 2.75 0 0 1-2.25-2.7v-6.05Z"></path>
+        <path d="M9.25 10h5.5M12 7.25v5.5"></path>
+        <path d="M19.5 3.5v2.5M18.25 4.75h2.5"></path>
+      </svg>
+    `;
+  }
+
   function syncAgentChatRailExpansion(enabled) {
     const expanded = enabled && agentChatRailExpanded;
     documentObject.body.classList.toggle('has-agent-chat-rail-expanded', expanded);
@@ -135,7 +153,7 @@ export function createNavigationShell({
       agentChatRail.dataset.state = expanded ? 'expanded' : 'collapsed';
     }
     if (agentChatRailToggleBtn) {
-      agentChatRailToggleBtn.textContent = expanded ? '>' : '<';
+      agentChatRailToggleBtn.innerHTML = agentChatRailToggleIcon(expanded);
       agentChatRailToggleBtn.setAttribute('aria-expanded', String(expanded));
       const label = expanded ? 'Fold agent chat rail' : 'Open agent chat rail';
       agentChatRailToggleBtn.setAttribute('aria-label', label);

@@ -263,6 +263,9 @@ function createCodexAgentRuntime(deps = {}) {
           notebookDraft: streamState.streamedNotebookDraftPayload.notebook
         }
         : {}),
+      ...(streamState.streamedNotebookAppendPayload
+        ? { notebook_append: streamState.streamedNotebookAppendPayload }
+        : {}),
       ...(protocolGenerationArtifact ? { protocol_generation: protocolGenerationArtifact } : {}),
       ...(streamState.streamedSequenceEditProposals?.length
         ? { sequence_edit: { proposals: streamState.streamedSequenceEditProposals } }

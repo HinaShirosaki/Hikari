@@ -697,6 +697,18 @@ function registerAgentToolExecutors(deps = {}) {
   });
 
   genericAgentToolRuntime.registerToolExecutor('paper-download', async ({ args, context }) => {
+    const scheduledTaskContext = ensureObject(
+      ensureObject(context?.snapshot).scheduled_task
+        || ensureObject(context?.snapshot).scheduledTask
+    );
+    if (scheduledTaskContext.deny_paper_download === true || scheduledTaskContext.denyPaperDownload === true) {
+      return {
+        ok: false,
+        status: 'blocked',
+        error: 'Paper downloads are disabled for this metadata-only scheduled task.',
+        summary: 'Paper download was blocked by the scheduled task policy.'
+      };
+    }
     if (!paperDownloadRuntime || typeof paperDownloadRuntime.downloadPaper !== 'function') {
       return {
         ok: false,

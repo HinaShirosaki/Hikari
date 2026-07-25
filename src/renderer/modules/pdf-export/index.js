@@ -900,7 +900,8 @@ async function writeNotebookEntryBody(ctx, {
   linkedGel = null,
   linkedGelPreviewImage = '',
   linkedAssay = null,
-  linkedAssayPlotImage = ''
+  linkedAssayPlotImage = '',
+  resultFileImages = []
 }) {
   const resultTables = normalizeNotebookResultTables(entry.resultTables, entry.resultTable);
 
@@ -1032,9 +1033,23 @@ async function writeNotebookEntryBody(ctx, {
       writeNotebookResultTable(ctx, table);
     });
   }
-  if (Array.isArray(entry.resultFiles) && entry.resultFiles.length) {
+  const resultFileNames = Array.isArray(entry.resultFiles) ? entry.resultFiles : [];
+  const attachedImages = Array.isArray(resultFileImages) ? resultFileImages : [];
+  if (resultFileNames.length || attachedImages.length) {
     writeMinorHeading(ctx, 'Result Files');
-    writeBulletLines(ctx, entry.resultFiles);
+  }
+  if (resultFileNames.length) {
+    writeBulletLines(ctx, resultFileNames);
+  }
+  for (const image of attachedImages) {
+    if (!String(image?.dataUrl || '').trim()) {
+      continue;
+    }
+    // eslint-disable-next-line no-await-in-loop
+    await writeImageFigure(ctx, image.dataUrl, {
+      caption: safeValue(image.name, 'Attached image'),
+      maxHeight: 320
+    });
   }
 }
 
@@ -1082,7 +1097,8 @@ export const exportProjectNotebookEntriesPdf = async ({
   linkedGelByEntryId = new Map(),
   linkedGelPreviewImagesByEntryId = new Map(),
   linkedAssayByEntryId = new Map(),
-  linkedAssayPlotImagesByEntryId = new Map()
+  linkedAssayPlotImagesByEntryId = new Map(),
+  resultFileImagesByEntryId = new Map()
 } = {}) => {
   try {
     if (!project) {
@@ -1146,7 +1162,8 @@ export const exportProjectNotebookEntriesPdf = async ({
         linkedGel: linkedGelByEntryId.get(entry.id) || null,
         linkedGelPreviewImage: linkedGelPreviewImagesByEntryId.get(entry.id) || '',
         linkedAssay: linkedAssayByEntryId.get(entry.id) || null,
-        linkedAssayPlotImage: linkedAssayPlotImagesByEntryId.get(entry.id) || ''
+        linkedAssayPlotImage: linkedAssayPlotImagesByEntryId.get(entry.id) || '',
+        resultFileImages: resultFileImagesByEntryId.get(entry.id) || []
       });
     }
 

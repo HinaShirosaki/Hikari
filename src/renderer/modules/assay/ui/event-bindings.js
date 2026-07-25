@@ -53,6 +53,7 @@ export function bindAssayEvents({
   elements.assaySerialDilutionOverlay?.addEventListener('click', layoutManager.onSerialDilutionOverlayClick);
   elements.assaySerialDilutionOverlay?.addEventListener('input', layoutManager.onSerialDilutionDialogInput);
   elements.assaySearchInput?.addEventListener('input', renderList);
+  elements.assayResultsSearchInput?.addEventListener('input', renderList);
   elements.assayExportTemplateBtn?.addEventListener('click', layoutManager.exportCsvTemplate);
   elements.assayImportTemplateBtn?.addEventListener('click', () => elements.assayImportFile?.click());
   elements.assayImportFile?.addEventListener('change', layoutManager.onImportCsv);
@@ -73,7 +74,6 @@ export function bindAssayEvents({
   elements.assayResultImportApplyBtn?.addEventListener('click', resultsManager.applySelectedResultImportCandidate);
   elements.assaySaveResultsBtn?.addEventListener('click', onSaveResults);
   elements.assayClearResultsBtn?.addEventListener('click', resultsManager.onClearResults);
-  elements.assayAnalyzeResultsBtn?.addEventListener('click', analysisView.onAnalyzeResults);
   elements.assayResultTable?.addEventListener('paste', resultsManager.onResultTablePaste);
   elements.assayPlatePreview?.addEventListener('input', layoutManager.onPlatePreviewInput);
   elements.assayPlatePreview?.addEventListener('change', layoutManager.onPlatePreviewChange);
@@ -83,6 +83,7 @@ export function bindAssayEvents({
   elements.assayPlatePreview?.addEventListener('contextmenu', layoutManager.onPlatePreviewContextMenu);
   elements.assayPlatePreview?.addEventListener('scroll', layoutManager.onPlatePreviewScroll, true);
   elements.assayList?.addEventListener('click', onListClick);
+  elements.assayResultsList?.addEventListener('click', onListClick);
   globalThis.addEventListener?.('pointerdown', layoutManager.onGlobalPointerDown);
   globalThis.addEventListener?.('keydown', layoutManager.onGlobalKeyDown);
 }

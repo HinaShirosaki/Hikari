@@ -353,6 +353,15 @@ function summarizeNotebookDraft(payload) {
   return '';
 }
 
+function summarizeNotebookAppend(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  if (cleanText(source.status, 40) !== 'proposal_ready') {
+    return '';
+  }
+  const sectionTitle = cleanText(source?.proposal?.section_title, 220);
+  return `Notebook enrichment is ready for review${sectionTitle ? `: ${sectionTitle}` : ''}.`;
+}
+
 function summarizeProtocolGeneration(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
   const protocols = asArray(source.protocols).length
@@ -402,6 +411,9 @@ function buildAssistantMetaFromResult(result, requestText = '') {
   const notebookDraftWorkflow = payload.notebook_draft && typeof payload.notebook_draft === 'object'
     ? payload.notebook_draft
     : null;
+  const notebookAppendWorkflow = payload.notebook_append && typeof payload.notebook_append === 'object'
+    ? payload.notebook_append
+    : null;
   const protocolGeneration = payload.protocol_generation && typeof payload.protocol_generation === 'object'
     ? payload.protocol_generation
     : null;
@@ -428,6 +440,7 @@ function buildAssistantMetaFromResult(result, requestText = '') {
     codex_session_id: extractCodexSessionId(payload),
     protocol_to_notebook: protocolWorkflow ? cloneJson(protocolWorkflow, null) : null,
     notebook_draft: notebookDraftWorkflow ? cloneJson(notebookDraftWorkflow, null) : null,
+    notebook_append: notebookAppendWorkflow ? cloneJson(notebookAppendWorkflow, null) : null,
     protocol_generation: protocolGeneration ? cloneJson(protocolGeneration, null) : null,
     codex_agent: payload.codex_agent && typeof payload.codex_agent === 'object'
       ? cloneJson(payload.codex_agent, null)
@@ -458,7 +471,7 @@ function buildAssistantMetaFromResult(result, requestText = '') {
       : null,
     thinking_trace: extractStructuredThinkingTrace(payload),
     notebookDraft: notebookPayload ? cloneJson(notebookPayload, null) : null,
-    developer_trace: cloneJson(asArray(payload.developer_trace), []),
+    notebookAppend: notebookAppendWorkflow ? cloneJson(notebookAppendWorkflow, null) : null,
     requestText: cleanText(requestText, 3000)
   };
 }
@@ -472,6 +485,9 @@ function buildAssistantTextFromResult(result) {
     : null;
   const notebookDraftWorkflow = payload.notebook_draft && typeof payload.notebook_draft === 'object'
     ? payload.notebook_draft
+    : null;
+  const notebookAppendWorkflow = payload.notebook_append && typeof payload.notebook_append === 'object'
+    ? payload.notebook_append
     : null;
   const protocolGeneration = payload.protocol_generation && typeof payload.protocol_generation === 'object'
     ? payload.protocol_generation
@@ -515,10 +531,14 @@ function buildAssistantTextFromResult(result) {
   const codexAgentText = summarizeCodexAgent(codexAgent);
   const skillCommandText = summarizeSkillCommand(skillCommand);
   const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
+  const notebookAppendText = summarizeNotebookAppend(notebookAppendWorkflow);
   const protocolGenerationText = summarizeProtocolGeneration(protocolGeneration);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
     || summarizeScienceResult(projectScienceQuestion)
     || summarizeScienceResult(resultAnalysis);
+  if (notebookAppendText) {
+    return notebookAppendText;
+  }
   if (notebookDraftText) {
     return notebookDraftText;
   }
@@ -584,6 +604,7 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
       },
       protocol_to_notebook: null,
       notebook_draft: null,
+      notebook_append: null,
       protocol_generation: null,
       codex_agent: null,
       purchase_recommendation: null,
@@ -594,7 +615,7 @@ function buildAssistantMessageFromError({ errorMessage = '', requestText = '', m
       result_analysis: null,
       thinking_trace: null,
       notebookDraft: null,
-      developer_trace: [],
+      notebookAppend: null,
       requestText: cleanText(requestText, 3000)
     }
   };

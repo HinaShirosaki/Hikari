@@ -1631,13 +1631,24 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
   }
 
   function renderReport() {
-    if (!elements.gelReportSummary || !elements.gelReportJson) {
+    const hasReport = Boolean(runtime.currentReport);
+    if (elements.gelOpenReportBtn) {
+      elements.gelOpenReportBtn.disabled = !hasReport;
+      elements.gelOpenReportBtn.setAttribute?.('aria-expanded', String(hasReport && runtime.reportDialogOpen));
+    }
+    if (!hasReport) {
+      runtime.reportDialogOpen = false;
+    }
+    if (elements.gelReportOverlay) {
+      elements.gelReportOverlay.hidden = !hasReport || !runtime.reportDialogOpen;
+    }
+
+    if (!elements.gelReportSummary) {
       return;
     }
 
-    if (!runtime.currentReport) {
+    if (!hasReport) {
       elements.gelReportSummary.innerHTML = '<p class="small-note">No analysis report yet.</p>';
-      elements.gelReportJson.textContent = '';
       return;
     }
 
@@ -1671,8 +1682,39 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
         <p>${safeText((runtime.currentReport.warnings || []).join(' | ') || 'None')}</p>
       </article>
     `;
+  }
 
-    elements.gelReportJson.textContent = JSON.stringify(runtime.currentReport, null, 2);
+  function onReportOpen() {
+    if (!runtime.currentReport) {
+      deps.setStatus?.('Run a gel analysis before opening the report.');
+      return;
+    }
+    runtime.reportDialogOpen = true;
+    renderReport();
+    elements.gelReportCloseBtn?.focus?.();
+  }
+
+  function onReportClose() {
+    if (!runtime.reportDialogOpen) {
+      return;
+    }
+    runtime.reportDialogOpen = false;
+    renderReport();
+    elements.gelOpenReportBtn?.focus?.();
+  }
+
+  function onReportOverlayClick(event) {
+    if (event?.target === elements.gelReportOverlay) {
+      onReportClose();
+    }
+  }
+
+  function onReportKeyDown(event) {
+    if (event?.key !== 'Escape' || !runtime.reportDialogOpen) {
+      return;
+    }
+    event.preventDefault?.();
+    onReportClose();
   }
 
   return {
@@ -1689,6 +1731,10 @@ export function createRenderingController({ runtime, elements, safeText, deps = 
     onPeakEditorLaneChange,
     onPeakEditorModeSelected,
     onPeakEditorOpen,
+    onReportClose,
+    onReportKeyDown,
+    onReportOpen,
+    onReportOverlayClick,
     renderCanvas,
     renderCellTable,
     renderLaneProfile,

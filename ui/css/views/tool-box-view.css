@@ -213,10 +213,41 @@
 .tool-box-buffer-chemical-cell {
   position: relative;
   padding: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
 }
 
 .tool-box-buffer-autocomplete {
   position: relative;
+  min-width: 0;
+}
+
+.tool-box-reaction-item-cell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+}
+
+.tool-box-sheet-row-remove {
+  display: grid;
+  width: 34px;
+  min-width: 0;
+  min-height: 40px;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--theme-border-soft);
+  border-radius: 0;
+  background: transparent;
+  color: var(--theme-text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.tool-box-sheet-row-remove:hover,
+.tool-box-sheet-row-remove:focus-visible {
+  background: color-mix(in srgb, var(--theme-danger) 8%, transparent);
+  color: var(--theme-danger);
 }
 
 .tool-box-buffer-suggestions {

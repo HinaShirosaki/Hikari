@@ -3,7 +3,7 @@ const EDITOR_SOURCES = Object.freeze([
   { key: 'protocol', label: 'Protocol' },
   { key: 'assay', label: 'Assay' },
   { key: 'gel', label: 'Gel' },
-  { key: 'biologyNotebook', label: 'Biology Notebook' }
+  { key: 'biologyNotebook', label: 'Notebook' }
 ]);
 
 function safeHasUnsavedChanges(moduleApi) {

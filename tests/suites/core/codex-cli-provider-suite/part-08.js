@@ -432,6 +432,478 @@ module.exports = function registerCodexCliProviderSuitePart08(context = {}) {
       assert.deepEqual(calls[3].payload, { enabled: false, id: 'task-1' });
     });
 
+    test('paper finding maps human cadence and project context into a metadata-only scheduled task', () => {
+      const {
+        PAPER_FINDING_TASK_TYPE,
+        buildPaperFindingScheduledTaskInput,
+        normalizePaperFindingFrequency
+      } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'papers',
+        'finding',
+        'paper-finding-task.js'
+      ));
+
+      const daily = buildPaperFindingScheduledTaskInput({
+        project: {
+          id: 'project-1',
+          name: 'Atlas',
+          description: 'Engineer ncAA-compatible translation systems.',
+          storage_path: '/tmp/hikari-storage'
+        },
+        frequency: '1 day',
+        preferred_journals: ['Nature Chemical Biology', 'Science'],
+        requirements: ''
+      });
+
+      assert.equal(daily.task_type, PAPER_FINDING_TASK_TYPE);
+      assert.equal(daily.schedule.kind, 'interval');
+      assert.equal(daily.schedule.interval_minutes, 1440);
+      assert.equal(daily.metadata.paper_finding.frequency_label, 'Every 1 day');
+      assert.equal(daily.metadata.paper_finding.download_policy, 'metadata_only');
+      assert.equal(daily.project.description, 'Engineer ncAA-compatible translation systems.');
+      assert.equal(daily.execution.enable_web_search, true);
+      assert.match(daily.prompt, /current project MEMORY\.md/);
+      assert.match(daily.prompt, /Do not call `paper_download`/);
+      assert.match(daily.prompt, /metadata-only/);
+      assert.match(daily.prompt, /Engineer ncAA-compatible translation systems/);
+      assert.doesNotMatch(daily.prompt, /download_selected_papers/);
+
+      assert.deepEqual(
+        normalizePaperFindingFrequency({ frequency: { value: 1, unit: 'week' } }),
+        {
+          value: 1,
+          unit: 'week',
+          interval_minutes: 10080,
+          label: 'Every 1 week'
+        }
+      );
+      assert.throws(
+        () => normalizePaperFindingFrequency({ frequency: '2 years' }),
+        /between 1 minute/
+      );
+    });
+
+    test('paper finding normalizes task output into deduplicated Home-card metadata without PDF fields', () => {
+      const {
+        normalizePaperFindingRunResult
+      } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'papers',
+        'finding',
+        'paper-finding-task.js'
+      ));
+      const text = JSON.stringify({
+        type: 'paper_finding_result',
+        query: 'genetic code expansion ncAA',
+        summary: 'Selected one useful paper.',
+        papers: [
+          {
+            title: 'Expanded genetic codes in cells',
+            authors: ['A. Author', 'B. Scientist'],
+            journal: 'Nature Chemical Biology',
+            published_at: '2026',
+            doi: '10.1000/example',
+            url: 'https://doi.org/10.1000/example',
+            pdf_urls: ['https://example.test/paper.pdf'],
+            file_path: '/tmp/paper.pdf',
+            relevance_reason: 'Directly addresses the project.',
+            source: 'PubMed'
+          },
+          {
+            title: 'Expanded genetic codes in cells',
+            doi: '10.1000/example',
+            url: 'https://example.test/duplicate'
+          }
+        ]
+      });
+      const result = normalizePaperFindingRunResult({
+        task_type: 'paper_finding',
+        metadata: {
+          paper_finding: { max_results: 12 }
+        }
+      }, text, {
+        completedAt: '2026-07-24T12:00:00.000Z'
+      });
+
+      assert.equal(result.type, 'paper_finding_result');
+      assert.equal(result.status, 'completed');
+      assert.equal(result.generated_at, '2026-07-24T12:00:00.000Z');
+      assert.equal(result.papers.length, 1);
+      assert.equal(result.papers[0].doi, '10.1000/example');
+      assert.equal(result.papers[0].download_status, 'not_requested');
+      assert.equal(Object.hasOwn(result.papers[0], 'pdf_urls'), false);
+      assert.equal(Object.hasOwn(result.papers[0], 'file_path'), false);
+      assert.equal(result.download_policy, 'metadata_only');
+    });
+
+    test('scheduled task service persists normalized paper cards on the completed run', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-paper-finding-'));
+      const configPath = path.join(tmpDir, 'scheduled-tasks.json');
+      const { createScheduledTaskService } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'core',
+        'services',
+        'create-scheduled-task-service.js'
+      ));
+      const {
+        buildPaperFindingScheduledTaskInput,
+        normalizePaperFindingRunResult
+      } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'papers',
+        'finding',
+        'paper-finding-task.js'
+      ));
+      const ids = ['paper-task-1', 'paper-run-1'];
+      const service = createScheduledTaskService({
+        fs: fsPromises,
+        path,
+        getScheduledTasksPath: () => configPath,
+        createId: () => ids.shift(),
+        setTimer: () => ({ unref() {} }),
+        clearTimer: () => {},
+        normalizeRunResult: normalizePaperFindingRunResult,
+        runCodexTask: async () => ({
+          ok: true,
+          codex_agent: {
+            answer: JSON.stringify({
+              type: 'paper_finding_result',
+              query: 'ncAA translation',
+              papers: [{
+                title: 'A scheduled paper',
+                doi: '10.1000/scheduled',
+                summary: 'Metadata only.'
+              }]
+            })
+          }
+        })
+      });
+
+      try {
+        const task = await service.createTask(buildPaperFindingScheduledTaskInput({
+          project: { id: 'project-1', name: 'Atlas' },
+          frequency: '1 week'
+        }));
+        const completed = await service.runTask(task.id);
+        assert.equal(completed.run.result.type, 'paper_finding_result');
+        assert.equal(completed.run.result.papers.length, 1);
+        assert.equal(completed.task.last_run.result.papers[0].download_status, 'not_requested');
+        const persisted = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        assert.equal(persisted.tasks[0].task_type, 'paper_finding');
+        assert.equal(persisted.tasks[0].metadata.paper_finding.project_id, 'project-1');
+        assert.equal(persisted.tasks[0].last_run.result.papers[0].doi, '10.1000/scheduled');
+      } finally {
+        await service.stop();
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+
+    test('paper finding preload helper creates and upserts through scheduled-task IPC', async () => {
+      const { SCHEDULED_TASK } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+      const { createScheduledTaskApi } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'preload',
+        'api',
+        'scheduled-task-api.js'
+      ));
+      const calls = [];
+      let existingTask = null;
+      const ipcRenderer = {
+        async invoke(channel, payload) {
+          calls.push({ channel, payload });
+          if (channel === SCHEDULED_TASK.LIST) {
+            return { ok: true, tasks: existingTask ? [existingTask] : [] };
+          }
+          if (channel === SCHEDULED_TASK.GET) {
+            return { ok: true, task: existingTask };
+          }
+          if (channel === SCHEDULED_TASK.CREATE) {
+            existingTask = {
+              id: 'paper-finding-1',
+              ...payload,
+              next_run_at: '2026-07-25T12:00:00.000Z'
+            };
+            return { ok: true, task: existingTask };
+          }
+          if (channel === SCHEDULED_TASK.UPDATE) {
+            existingTask = { ...existingTask, ...payload };
+            return { ok: true, task: existingTask };
+          }
+          return { ok: true };
+        }
+      };
+      const api = createScheduledTaskApi(ipcRenderer);
+      const input = {
+        project: {
+          id: 'project-1',
+          name: 'Atlas',
+          description: 'Initial project description.'
+        },
+        frequency: { value: 1, unit: 'week' }
+      };
+
+      const created = await api.schedulePaperFinding(input);
+      assert.equal(created.ok, true);
+      assert.equal(created.task.task_type, 'paper_finding');
+      assert.equal(calls[0].channel, SCHEDULED_TASK.LIST);
+      assert.equal(calls[1].channel, SCHEDULED_TASK.CREATE);
+
+      const updated = await api.schedulePaperFinding({
+        ...input,
+        requirements: 'Primary studies published since 2024.'
+      });
+      assert.equal(updated.ok, true);
+      assert.equal(calls.at(-2).channel, SCHEDULED_TASK.GET);
+      assert.equal(calls.at(-1).channel, SCHEDULED_TASK.UPDATE);
+      assert.equal(
+        calls.at(-1).payload.metadata.paper_finding.requirements,
+        'Primary studies published since 2024.'
+      );
+      assert.equal(Object.hasOwn(calls.at(-1).payload, 'schedule'), false);
+    });
+
+    test('paper finding policy blocks the paper-download executor before acquisition starts', async () => {
+      const { registerAgentToolExecutors } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'tools',
+        'register-agent-tool-executors.js'
+      ));
+      const executors = new Map();
+      let downloadCalls = 0;
+      registerAgentToolExecutors({
+        genericAgentToolRuntime: {
+          registerToolExecutor(name, handler) {
+            executors.set(name, handler);
+          }
+        },
+        paperDownloadRuntime: {
+          async downloadPaper() {
+            downloadCalls += 1;
+            return { ok: true };
+          }
+        }
+      });
+
+      const result = await executors.get('paper-download')({
+        args: { doi: '10.1000/example' },
+        context: {
+          snapshot: {
+            scheduled_task: {
+              task_type: 'paper_finding',
+              deny_paper_download: true
+            }
+          }
+        }
+      });
+      assert.equal(result.ok, false);
+      assert.equal(result.status, 'blocked');
+      assert.equal(downloadCalls, 0);
+    });
+
+    test('paper finding policy survives agent snapshot normalization', () => {
+      const { createAgentRuntimeSupport } = require(path.join(
+        __dirname,
+        'src',
+        'main',
+        'agent',
+        'runtime',
+        'agent-runtime-support.js'
+      ));
+      const { normalizeAgentSnapshot } = createAgentRuntimeSupport({
+        asArray: (value) => (Array.isArray(value) ? value : []),
+        cleanText: (value, max = 2000) => String(value || '').trim().slice(0, max)
+      });
+
+      // Every MCP tool call goes through this normalizer, so the deny flag has
+      // to arrive at the paper-download executor on the other side of it.
+      const normalized = normalizeAgentSnapshot({
+        projects: [{ id: 'project-1', name: 'Project One' }],
+        scheduled_task: { id: 'task-1', task_type: 'paper_finding', deny_paper_download: true }
+      });
+      assert.equal(normalized.scheduled_task.task_type, 'paper_finding');
+      assert.equal(normalized.scheduled_task.deny_paper_download, true);
+
+      assert.equal(
+        normalizeAgentSnapshot({ scheduledTask: { denyPaperDownload: true } }).scheduled_task.deny_paper_download,
+        true,
+        'camelCase input is accepted too'
+      );
+      assert.equal(
+        Object.hasOwn(normalizeAgentSnapshot({ projects: [] }), 'scheduled_task'),
+        false,
+        'interactive chat snapshots stay unchanged'
+      );
+    });
+
+    test('project paper finder controller schedules a user-selected cadence and optional requirements', async () => {
+      const projectState = {
+        projects: [{
+          id: 'project-1',
+          name: 'Atlas',
+          description: 'Engineer ncAA-compatible translation systems.'
+        }],
+        settings: {
+          storagePath: '/tmp/hikari-storage',
+          preferredJournals: ['Nature Chemical Biology'],
+          llm: {
+            model: 'gpt-test',
+            reasoningEffort: 'high'
+          }
+        }
+      };
+      const document = createMockDocument(['paper-finder-host']);
+      const host = document.getElementById('paper-finder-host');
+      const rendererModule = loadEsmStyleModule(path.join(
+        __dirname,
+        'src',
+        'renderer',
+        'modules',
+        'biology-notebook',
+        'project',
+        'project-dashboard-renderer.js'
+      ));
+      const controllerModule = loadEsmStyleModule(path.join(
+        __dirname,
+        'src',
+        'renderer',
+        'modules',
+        'biology-notebook',
+        'project',
+        'paper-finder-controller.js'
+      ));
+      rendererModule.createProjectDashboardRenderer({
+        state: {
+          ...projectState,
+          workflows: [],
+          notebookEntries: [],
+          assays: [],
+          gelAnalyses: [],
+          papers: [],
+          samples: [],
+          paperExperimentLinks: []
+        },
+        safeText: shared.safeText
+      }).renderDashboardInto(host, 'project-1');
+
+      const savedInputs = [];
+      const controller = controllerModule.createProjectPaperFinderController({
+        host,
+        state: projectState,
+        api: {
+          listPaperFindingTasks: async () => ({ ok: true, tasks: [] }),
+          schedulePaperFinding: async (input) => {
+            savedInputs.push(input);
+            return {
+              ok: true,
+              task: {
+                id: 'paper-finding-1',
+                enabled: true,
+                next_run_at: '2026-07-31T12:00:00.000Z',
+                project: input.project,
+                metadata: {
+                  paper_finding: {
+                    frequency_value: input.frequency.value,
+                    frequency_unit: input.frequency.unit,
+                    requirements: input.requirements
+                  }
+                }
+              }
+            };
+          }
+        }
+      });
+
+      await controller.load(projectState.projects[0]);
+      const frequencyValue = host.querySelector('[data-paper-finder-frequency-value]');
+      const frequencyUnit = host.querySelector('[data-paper-finder-frequency-unit]');
+      const requirements = host.querySelector('[data-paper-finder-requirements]');
+      frequencyValue.value = '1';
+      frequencyUnit.value = 'day';
+      requirements.value = 'Prefer recent primary studies.';
+      await controller.save({ preventDefault() {} });
+
+      assert.equal(savedInputs.length, 1);
+      assert.equal(savedInputs[0].frequency.value, 1);
+      assert.equal(savedInputs[0].frequency.unit, 'day');
+      assert.equal(savedInputs[0].requirements, 'Prefer recent primary studies.');
+      assert.equal(savedInputs[0].project.description, 'Engineer ncAA-compatible translation systems.');
+      assert.equal(Array.from(savedInputs[0].preferred_journals).join('|'), 'Nature Chemical Biology');
+      assert.equal(host.querySelector('[data-paper-finder-save]').textContent, 'Save schedule');
+      assert.equal(host.querySelector('[data-paper-finder-run]').hidden, false);
+    });
+
+    test('project paper finder controller renders found papers and escapes their text', async () => {
+      const project = { id: 'project-1', name: 'Atlas', description: '' };
+      const document = createMockDocument(['paper-finder-host']);
+      const host = document.getElementById('paper-finder-host');
+      const rendererModule = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'project', 'project-dashboard-renderer.js'
+      ));
+      const controllerModule = loadEsmStyleModule(path.join(
+        __dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'project', 'paper-finder-controller.js'
+      ));
+      rendererModule.createProjectDashboardRenderer({
+        state: {
+          projects: [project],
+          settings: {},
+          workflows: [],
+          notebookEntries: [],
+          assays: [],
+          gelAnalyses: [],
+          papers: [],
+          samples: [],
+          paperExperimentLinks: []
+        },
+        safeText: shared.safeText
+      }).renderDashboardInto(host, 'project-1');
+
+      const taskWithResult = {
+        id: 'paper-finding-1',
+        enabled: true,
+        project,
+        metadata: { paper_finding: {} },
+        last_run: {
+          status: 'succeeded',
+          result: {
+            summary: 'Found 2 papers.',
+            papers: [
+              { title: 'Clean paper', url: 'https://example.org/a', journal: 'Nature', relevance_reason: 'On topic.' },
+              { title: '<script>alert(1)</script>', url: 'javascript:alert(1)' }
+            ]
+          }
+        }
+      };
+      const controller = controllerModule.createProjectPaperFinderController({
+        host,
+        state: { settings: {} },
+        api: { listPaperFindingTasks: async () => ({ ok: true, tasks: [taskWithResult] }) }
+      });
+
+      await controller.load(project);
+      const results = host.querySelector('[data-paper-finder-results]');
+      assert.equal(results.hidden, false);
+      assert.equal(results.querySelectorAll('[data-paper-finder-result]').length, 2);
+      assert.ok(results.innerHTML.includes('Clean paper'));
+      // Script text is escaped, not live markup, and the javascript: URL is dropped.
+      assert.ok(results.innerHTML.includes('&lt;script&gt;'));
+      assert.ok(!results.innerHTML.includes('<script>'));
+      assert.ok(!results.innerHTML.includes('javascript:alert'));
+    });
+
     test('main Codex service maps scheduled task settings to the project-scoped CLI runtime', async () => {
       const { createMainCodexService } = require(path.join(
         __dirname,
@@ -480,12 +952,19 @@ module.exports = function registerCodexCliProviderSuitePart08(context = {}) {
 
       const result = await codex.runScheduledTask({
         id: 'task-1',
+        task_type: 'paper_finding',
         prompt: 'Review the project.',
         project: {
           id: 'project-1',
           name: 'Project One',
+          description: 'Find better expression conditions.',
           storage_path: '/tmp/storage',
           data_file_path: '/tmp/storage/hikari-data.json'
+        },
+        metadata: {
+          paper_finding: {
+            preferred_journals: ['Nature Methods']
+          }
         },
         execution: {
           model: 'gpt-test',
@@ -503,6 +982,11 @@ module.exports = function registerCodexCliProviderSuitePart08(context = {}) {
       assert.equal(requests[0].enableWebSearch, false);
       assert.equal(requests[0].timeoutMs, 15000);
       assert.match(requests[0].envOverrides.HIKARI_CODEX_REQUEST_CONTEXT, /Project One/);
+      const requestContext = JSON.parse(requests[0].envOverrides.HIKARI_CODEX_REQUEST_CONTEXT);
+      assert.equal(requestContext.snapshot.projects[0].description, 'Find better expression conditions.');
+      assert.deepEqual(requestContext.snapshot.settings.preferredJournals, ['Nature Methods']);
+      assert.equal(requestContext.snapshot.scheduled_task.task_type, 'paper_finding');
+      assert.equal(requestContext.snapshot.scheduled_task.deny_paper_download, true);
       assert.equal(syncCallCount, 0);
       assert.equal(processObject.env.HIKARI_CODEX_HOME, '/tmp/hikari-codex-home');
     });

@@ -6,6 +6,7 @@ import {
 import { initContributionWidget } from './home-dashboard/contribution.js';
 import { initIncubationWidget } from './home-dashboard/incubation.js';
 import { initNotebookWidget } from './home-dashboard/notebook.js';
+import { initPaperFindingWidget } from './home-dashboard/paper-finding.js';
 import { initPassageWidget } from './home-dashboard/passage.js';
 import { initQuickLogWidget } from './home-dashboard/quick-log.js';
 import { initTimerWidget } from './home-dashboard/timer.js';
@@ -26,7 +27,8 @@ export function initHomeDashboard({
   onOpenNotebook = () => {},
   onOpenWorkflow = () => {},
   onOpenAssistant = () => {},
-  onSendQuickLogToAgent = () => false
+  onSendQuickLogToAgent = () => false,
+  api = null
 }) {
   const passageElements = {
     summary: document.getElementById('dashboard-passage-summary'),
@@ -44,6 +46,12 @@ export function initHomeDashboard({
     grid: document.getElementById('dashboard-contribution-grid'),
     streak: document.getElementById('dashboard-contribution-streak'),
     summary: document.getElementById('dashboard-contribution-summary')
+  };
+
+  const paperFindingElements = {
+    summary: document.getElementById('dashboard-paper-finding-summary'),
+    list: document.getElementById('dashboard-paper-finding-list'),
+    openBtn: document.getElementById('dashboard-paper-finding-open-btn')
   };
 
   const notebookOpenBtn = document.getElementById('dashboard-notebook-open-btn');
@@ -130,6 +138,12 @@ export function initHomeDashboard({
       state,
       safeText,
       elements: contributionElements
+    }),
+    paperFinding: initPaperFindingWidget({
+      api,
+      safeText,
+      onOpenNotebook,
+      elements: paperFindingElements
     }),
     passage: initPassageWidget({
       state,

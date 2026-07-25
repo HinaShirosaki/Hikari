@@ -4,6 +4,8 @@ import { normalizeEnhancementSettings } from './analysis/image-processing.js';
 import { clamp, createEmptyManualOverrides, normalizeManualOverrides, safeFilePart } from './shared.js';
 
 export function createRecordsManager({ runtime, elements, deps }) {
+  let recordLoadRequest = 0;
+
   function ensureState() {
     if (!Array.isArray(runtime.state.gelAnalyses)) {
       runtime.state.gelAnalyses = [];
@@ -119,16 +121,21 @@ export function createRecordsManager({ runtime, elements, deps }) {
   async function persistNotebookPreviewImage(record, existingRecord = null) {
     const existingPath = String(existingRecord?.previewImagePath || '').trim();
     const existingRelativePath = String(existingRecord?.previewImageRelativePath || '').trim();
-    const previewDataUrl = captureNotebookPreviewImage(String(existingRecord?.previewImageDataUrl || '').trim());
+    const targetFolder = buildGelArtifactFolder(record);
+    const existingDataUrl = String(existingRecord?.previewImageDataUrl || '').trim();
+    const previewDataUrl = targetFolder
+      ? captureNotebookPreviewImage(existingDataUrl)
+      : runtime.currentImage?.imageData
+        ? deps.imageDataToDataUrl(runtime.currentImage.imageData)
+        : existingDataUrl;
     if (!previewDataUrl) {
       return {
         previewImagePath: existingPath,
         previewImageRelativePath: existingRelativePath,
-        previewImageDataUrl: String(existingRecord?.previewImageDataUrl || '').trim()
+        previewImageDataUrl: String(existingRecord?.previewImageDataUrl || '').trim(),
+        previewImageIsSource: Boolean(existingRecord?.previewImageIsSource)
       };
     }
-
-    const targetFolder = buildGelArtifactFolder(record);
 
     if (targetFolder) {
       try {
@@ -141,7 +148,8 @@ export function createRecordsManager({ runtime, elements, deps }) {
           return {
             previewImagePath: stored.filePath,
             previewImageRelativePath: stored.relativePath || '',
-            previewImageDataUrl: ''
+            previewImageDataUrl: '',
+            previewImageIsSource: false
           };
         }
       } catch (error) {
@@ -152,7 +160,10 @@ export function createRecordsManager({ runtime, elements, deps }) {
     return {
       previewImagePath: existingPath,
       previewImageRelativePath: existingRelativePath,
-      previewImageDataUrl: previewDataUrl
+      previewImageDataUrl: previewDataUrl,
+      previewImageIsSource: targetFolder
+        ? false
+        : Boolean(runtime.currentImage?.imageData || existingRecord?.previewImageIsSource)
     };
   }
 
@@ -338,6 +349,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
   }
 
   function resetForm() {
+    recordLoadRequest += 1;
     elements.gelIdInput.value = '';
     elements.gelForm.reset();
     elements.gelTypeInput.value = 'sds-page';
@@ -369,7 +381,103 @@ export function createRecordsManager({ runtime, elements, deps }) {
     runtime.markDraftSaved?.();
   }
 
-  function fillFromRecord(record) {
+  function resolveStoredImagePath(pathValue, relativePathValue) {
+    const storedPath = String(pathValue || '').trim();
+    if (storedPath) {
+      return storedPath;
+    }
+    const relativePath = String(relativePathValue || '').trim();
+    const storageRoot = getStorageRoot();
+    if (!relativePath || !storageRoot) {
+      return '';
+    }
+    return `${storageRoot.replace(/[\\/]+$/, '')}/${relativePath.replace(/^[\\/]+/, '')}`;
+  }
+
+  function inferImageMimeType(pathValue) {
+    const normalizedPath = String(pathValue || '').toLowerCase();
+    if (normalizedPath.endsWith('.jpg') || normalizedPath.endsWith('.jpeg')) {
+      return 'image/jpeg';
+    }
+    if (normalizedPath.endsWith('.webp')) {
+      return 'image/webp';
+    }
+    if (normalizedPath.endsWith('.gif')) {
+      return 'image/gif';
+    }
+    return 'image/png';
+  }
+
+  async function readStoredImageDataUrl(pathValue) {
+    const storedPath = String(pathValue || '').trim();
+    if (!storedPath || typeof window.hikariApi?.readFileBase64 !== 'function') {
+      return '';
+    }
+    const response = await window.hikariApi.readFileBase64(storedPath);
+    if (!response?.ok || !response.dataBase64) {
+      return '';
+    }
+    return `data:${inferImageMimeType(storedPath)};base64,${response.dataBase64}`;
+  }
+
+  async function restoreRecordImage(record) {
+    const sourcePath = resolveStoredImagePath(record.sourceImagePath, record.sourceImageRelativePath);
+    const previewPath = resolveStoredImagePath(record.previewImagePath, record.previewImageRelativePath);
+    const candidates = [
+      {
+        kind: 'source',
+        dataUrl: String(record.sourceImageDataUrl || '').trim(),
+        path: ''
+      },
+      {
+        kind: 'source',
+        dataUrl: '',
+        path: sourcePath
+      },
+      {
+        kind: record.previewImageIsSource ? 'source' : 'preview',
+        dataUrl: String(record.previewImageDataUrl || '').trim(),
+        path: ''
+      },
+      {
+        kind: record.previewImageIsSource ? 'source' : 'preview',
+        dataUrl: '',
+        path: previewPath
+      }
+    ].filter((candidate) => candidate.dataUrl || candidate.path);
+
+    let lastError = null;
+    for (const candidate of candidates) {
+      try {
+        const dataUrl = candidate.dataUrl || await readStoredImageDataUrl(candidate.path);
+        if (!dataUrl) {
+          continue;
+        }
+        const image = await deps.decodeImageSource(
+          dataUrl,
+          String(record.imageName || candidate.path || 'saved-gel.png')
+        );
+        return {
+          image,
+          kind: candidate.kind,
+          hadCandidate: true,
+          error: null
+        };
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    return {
+      image: null,
+      kind: '',
+      hadCandidate: candidates.length > 0,
+      error: lastError
+    };
+  }
+
+  async function fillFromRecord(record) {
+    const loadRequest = recordLoadRequest += 1;
     elements.gelIdInput.value = record.id;
     elements.gelNameInput.value = record.name || '';
     runtime.pendingNotebookLink = {
@@ -398,13 +506,39 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
     runtime.currentReport = record.report || null;
     deps.setCurrentImage(null);
+    const clearedImageRevision = runtime.imageRevision;
     runtime.originalImage = null;
     runtime.cropApplied = false;
     deps.leaveCropMode();
     deps.renderManualProgress();
     deps.renderCanvas();
     deps.renderReport();
-    deps.setStatus('Loaded saved report. Upload original image to view overlay.');
+    deps.setStatus('Loading saved gel image...');
+
+    const restored = await restoreRecordImage(record);
+    if (
+      loadRequest !== recordLoadRequest
+      || elements.gelIdInput.value !== record.id
+      || runtime.imageRevision !== clearedImageRevision
+    ) {
+      return;
+    }
+
+    if (restored.image) {
+      deps.setCurrentImage(restored.image);
+      runtime.originalImage = deps.copyNormalizedImage(restored.image);
+      deps.leaveCropMode();
+      deps.renderCanvas();
+      deps.renderReport();
+      deps.setStatus(restored.kind === 'source'
+        ? `Loaded saved gel: ${record.name || record.id}.`
+        : `Loaded saved gel preview: ${record.name || record.id}. Upload the original image before reanalyzing.`);
+    } else if (restored.hadCandidate) {
+      const reason = restored.error instanceof Error ? ` ${restored.error.message}` : '';
+      deps.setStatus(`Loaded saved report, but its image could not be restored.${reason}`);
+    } else {
+      deps.setStatus('Loaded saved report. This older record has no stored image; upload the original to restore the viewer.');
+    }
     runtime.markDraftSaved?.();
   }
 
@@ -421,12 +555,12 @@ export function createRecordsManager({ runtime, elements, deps }) {
     }
   }
 
-  function onListClick(event) {
+  async function onListClick(event) {
     const editBtn = event.target.closest('[data-gel-edit]');
     if (editBtn) {
       const record = (runtime.state.gelAnalyses || []).find((item) => item.id === editBtn.dataset.gelEdit);
       if (record) {
-        fillFromRecord(record);
+        await fillFromRecord(record);
       }
       return;
     }

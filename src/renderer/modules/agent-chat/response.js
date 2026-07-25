@@ -85,6 +85,21 @@ export function collectAgentActivityRows(meta) {
     upsertRow('pending', `Planned draft missing placeholders: ${notebookDraftMissingCount}`);
   }
 
+  const notebookAppendWorkflow = meta.notebook_append && typeof meta.notebook_append === 'object'
+    ? meta.notebook_append
+    : {};
+  const notebookAppendStatus = trimText(notebookAppendWorkflow.status, 40);
+  if (notebookAppendStatus) {
+    upsertRow(
+      notebookAppendStatus === 'proposal_ready' ? 'pending' : 'done',
+      `Notebook append status: ${notebookAppendStatus}`
+    );
+  }
+  const notebookAppendSection = trimText(notebookAppendWorkflow?.proposal?.section_title, 220);
+  if (notebookAppendSection) {
+    upsertRow('pending', `Append awaiting review: ${notebookAppendSection}`);
+  }
+
   const protocolGeneration = meta.protocol_generation && typeof meta.protocol_generation === 'object'
     ? meta.protocol_generation
     : {};
@@ -172,13 +187,6 @@ export function collectAgentActivityRows(meta) {
     const citationCount = asArray(source.citations).length;
     if (citationCount > 0) {
       upsertRow('done', `${label} citations: ${citationCount}`);
-    }
-  });
-
-  asArray(meta.developer_trace).forEach((trace) => {
-    const stage = trimText(trace?.stage, 120);
-    if (stage) {
-      upsertRow('done', `Trace stage: ${stage}`);
     }
   });
 
@@ -363,6 +371,15 @@ export function summarizeNotebookDraft(payload) {
   return '';
 }
 
+export function summarizeNotebookAppend(payload) {
+  const source = payload && typeof payload === 'object' ? payload : {};
+  if (trimText(source.status, 40) !== 'proposal_ready') {
+    return '';
+  }
+  const sectionTitle = trimText(source?.proposal?.section_title, 220);
+  return `Notebook enrichment is ready for review${sectionTitle ? `: ${sectionTitle}` : ''}.`;
+}
+
 export function summarizeProtocolGeneration(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
   const protocols = asArray(source.protocols).length
@@ -403,6 +420,9 @@ export function normalizeAgentResponse(result) {
     : null;
   const notebookDraftWorkflow = result?.notebook_draft && typeof result.notebook_draft === 'object'
     ? result.notebook_draft
+    : null;
+  const notebookAppendWorkflow = result?.notebook_append && typeof result.notebook_append === 'object'
+    ? result.notebook_append
     : null;
   const protocolGeneration = result?.protocol_generation && typeof result.protocol_generation === 'object'
     ? result.protocol_generation
@@ -465,11 +485,13 @@ export function normalizeAgentResponse(result) {
   const purchaseRecommendationText = summarizePurchaseRecommendation(purchaseRecommendation);
   const codexAgentText = summarizeCodexAgent(codexAgent);
   const notebookDraftText = summarizeNotebookDraft(notebookDraftWorkflow);
+  const notebookAppendText = summarizeNotebookAppend(notebookAppendWorkflow);
   const protocolGenerationText = summarizeProtocolGeneration(protocolGeneration);
   const scienceAnswerText = summarizeScienceResult(generalScienceQuestion)
     || summarizeScienceResult(projectScienceQuestion)
     || summarizeScienceResult(resultAnalysis);
-  const assistantText = notebookDraftText
+  const assistantText = notebookAppendText
+    || notebookDraftText
     || protocolGenerationText
     || codexAgentText
     || (protocolStatus === 'completed'
@@ -488,6 +510,7 @@ export function normalizeAgentResponse(result) {
     parser,
     protocolWorkflow,
     notebookDraftWorkflow,
+    notebookAppendWorkflow,
     protocolGeneration,
     notebookPayload,
     purchaseRecommendation,
@@ -499,7 +522,6 @@ export function normalizeAgentResponse(result) {
     projectScienceQuestion,
     resultAnalysis,
     thinkingTrace: extractStructuredThinkingTrace(result),
-    developerTrace: asArray(result?.developer_trace),
     sequenceEditProposals: asArray(result?.sequence_edit?.proposals)
       .filter((proposal) => proposal && typeof proposal === 'object' && proposal.approvalToken),
     assistantText

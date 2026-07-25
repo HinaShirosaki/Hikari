@@ -35,9 +35,7 @@ test('agent-chat replaces the live placeholder with a persisted error response o
         apiEndpoint: 'https://api.openai.com/v1/responses',
         apiKey: 'sk-local-key'
       },
-      agent: {
-        developerMode: false
-      }
+      agent: {}
     },
     agentChat: {
       projectId: '',

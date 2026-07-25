@@ -361,6 +361,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(mcpToolNames.includes('protocol_generation'), true);
       assert.equal(mcpToolNames.includes('protocol_save'), false);
       assert.equal(mcpToolNames.includes('notebook_draft'), true);
+      assert.equal(mcpToolNames.includes('notebook_append'), true);
       assert.equal(mcpToolNames.includes('notebook_lookup'), true);
       const retiredDirectToolName = ['record', 'lookup'].join('_');
       assert.equal(mcpToolNames.includes(retiredDirectToolName), false);
@@ -388,6 +389,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       const askUserDefinition = mcpTools.find((tool) => tool.name === 'ask_user');
       const protocolGenerationDefinition = mcpTools.find((tool) => tool.name === 'protocol_generation');
       const notebookDraftDefinition = mcpTools.find((tool) => tool.name === 'notebook_draft');
+      const notebookAppendDefinition = mcpTools.find((tool) => tool.name === 'notebook_append');
       const notebookLookupDefinition = mcpTools.find((tool) => tool.name === 'notebook_lookup');
       const containerDefinition = mcpTools.find((tool) => tool.name === 'container');
       const assayTableDefinition = mcpTools.find((tool) => tool.name === 'assay_table');
@@ -402,6 +404,16 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(protocolGenerationDefinition.annotations.destructiveHint, false);
       assert.equal(notebookDraftDefinition.annotations.readOnlyHint, true);
       assert.equal(notebookDraftDefinition.annotations.idempotentHint, false);
+      assert.equal(notebookAppendDefinition.annotations.readOnlyHint, true);
+      assert.equal(notebookAppendDefinition.annotations.destructiveHint, false);
+      assert.equal(notebookAppendDefinition.annotations.idempotentHint, false);
+      assert.deepEqual(notebookAppendDefinition.inputSchema.required, [
+        'notebook_entry_id',
+        'page_title',
+        'project_name',
+        'protocol_name',
+        'content_markdown'
+      ]);
       assert.equal(notebookLookupDefinition.annotations.readOnlyHint, true);
       assert.equal(notebookLookupDefinition.inputSchema.properties.action, undefined);
       assert.equal(notebookLookupDefinition.inputSchema.properties.entry_id, undefined);
@@ -535,6 +547,39 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(Object.prototype.hasOwnProperty.call(calls[calls.length - 1].args.project, 'project_name'), false);
       assert.deepEqual(calls[calls.length - 1].args.protocol_candidates, ['Protein purification']);
       assert.equal(calls[calls.length - 1].context.parserPayload.primary_intent, 'notebook_draft');
+
+      const notebookAppendResult = await gateway.callGatewayTool('notebook_append', {
+        notebook_entry_id: 'entry-1',
+        page_title: 'Protein purification',
+        project_name: 'Atlas',
+        protocol_name: 'Protein purification',
+        expected_updated_at: '2026-07-21T12:00:00.000Z',
+        section_title: 'PBS recipe and protein record',
+        content_markdown: 'PBS recipe: prepare 1 L at pH 7.4.\n\nProtein concentration: 2.1 mg/mL.',
+        sources: [
+          { kind: 'inventory', record_id: 'protein-1', label: 'His-tagged protein' }
+        ]
+      }, {
+        requestId: 'req-notebook-append'
+      });
+      assert.equal(notebookAppendResult.ok, true);
+      assert.equal(notebookAppendResult.status, 'proposal_ready');
+      assert.equal(notebookAppendResult.mcp_tool, 'notebook_append');
+      assert.equal(notebookAppendResult.proposal.notebook_entry_id, 'entry-1');
+      assert.match(notebookAppendResult.proposal.proposal_id, /^notebook-append-/);
+      assert.equal(notebookAppendResult.save.mode, 'confirm_before_append');
+      assert.equal(calls[calls.length - 1].toolId, 'notebook-draft');
+
+      const staleUnsafeNotebookAppend = await gateway.callGatewayTool('notebook_append', {
+        notebook_entry_id: 'entry-1',
+        page_title: 'Protein purification',
+        project_name: 'Atlas',
+        protocol_name: 'Protein purification',
+        content_markdown: 'Append without a page version.'
+      });
+      assert.equal(staleUnsafeNotebookAppend.ok, false);
+      assert.equal(staleUnsafeNotebookAppend.status, 'needs_more_info');
+      assert.match(staleUnsafeNotebookAppend.error, /expected_updated_at/);
 
       const askUserResult = await gateway.callGatewayTool('ask_user', {
         question: 'Which project should I use?',

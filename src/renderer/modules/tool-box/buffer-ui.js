@@ -91,6 +91,18 @@ export function initBufferTool(options = {}) {
     return rowTotal;
   }
 
+  function insertBufferRowBeforeAdjustment(row) {
+    const adjustmentRow = getElement(rootDocument, 'buffer-adjustment-row');
+    if (
+      adjustmentRow?.parentElement === bufferRows
+      && typeof bufferRows.insertBefore === 'function'
+    ) {
+      bufferRows.insertBefore(row, adjustmentRow);
+      return;
+    }
+    bufferRows.appendChild(row);
+  }
+
   function appendBufferRow() {
     if (!rowTemplate?.cloneNode) {
       return;
@@ -115,7 +127,7 @@ export function initBufferTool(options = {}) {
         element.dataset.bufferChemicalIndex = String(index);
       }
     });
-    bufferRows.appendChild(row);
+    insertBufferRowBeforeAdjustment(row);
     rowTotal = index;
     bindBufferRow(index);
   }
@@ -129,6 +141,27 @@ export function initBufferTool(options = {}) {
       }
     }
     appendBufferRow();
+  }
+
+  function removeBufferRow(index) {
+    const row = getElement(rootDocument, `buffer-row-${index}`);
+    if (!row || row.hidden) {
+      return;
+    }
+    closeBufferSuggestions(index);
+    [
+      `buffer-name-${index}`,
+      `buffer-mw-${index}`,
+      `buffer-stock-${index}`,
+      `buffer-final-${index}`
+    ].forEach((id) => {
+      const input = getElement(rootDocument, id);
+      if (input) {
+        input.value = '';
+      }
+    });
+    setText(getElement(rootDocument, `buffer-output-${index}`), '');
+    row.hidden = true;
   }
 
   function buildBufferCandidates() {
@@ -427,6 +460,17 @@ export function initBufferTool(options = {}) {
 
   addBufferChemicalBtn.addEventListener('click', () => {
     revealOrAddRow();
+    renderBuffer();
+  });
+
+  addListener(bufferRows, 'click', (event) => {
+    const removeButton = event?.target?.closest?.('[data-buffer-row-remove]');
+    const row = removeButton?.closest?.('.tool-box-buffer-row');
+    const rowIndex = Number(String(row?.id || '').match(/^buffer-row-(\d+)$/)?.[1]);
+    if (!rowIndex) {
+      return;
+    }
+    removeBufferRow(rowIndex);
     renderBuffer();
   });
 

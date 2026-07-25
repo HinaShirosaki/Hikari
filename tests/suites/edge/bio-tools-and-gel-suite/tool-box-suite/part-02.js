@@ -666,6 +666,98 @@ acgu---
   assert.equal(parsed[1].name, 'Target_B');
   assert.equal(parsed[1].sequence, 'ACGT');
 });
+test('[EDGE] tool-box parseCrisprTargetsInput keeps sequences when a prose line is present', () => {
+  const parsed = toolBox.parseCrisprTargetsInput([
+    'Source: Addgene plasmid',
+    'GAGTCCGAGCAGAAGAAGAAGGGACGTACGTACGT',
+    'ACGTACGTACGTTTTACGTACGTACGTAGGACGTA'
+  ].join('\n'));
+  const sequences = parsed.map((target) => target.sequence);
+  assert.equal(sequences.includes('GAGTCCGAGCAGAAGAAGAAGGGACGTACGTACGT'), true);
+  assert.equal(sequences.includes('ACGTACGTACGTTTTACGTACGTACGTAGGACGTA'), true);
+});
+test('[EDGE] tool-box parseCrisprTargetsInput splits ragged lines instead of fusing them', () => {
+  const parsed = toolBox.parseCrisprTargetsInput('ACGTACGTACGTACGTACGTACGTAGG\nACGTACGT');
+  assert.equal(parsed.length, 2);
+  assert.equal(parsed[0].sequence, 'ACGTACGTACGTACGTACGTACGTAGG');
+  assert.equal(parsed[1].sequence, 'ACGTACGT');
+});
+test('[EDGE] tool-box parseCrisprTargetsInput joins one fixed-width wrapped sequence', () => {
+  const lines = ['ACGTACGTAC'.repeat(6), 'TTGGCCAATT'.repeat(6), 'ACGTAGG'];
+  const parsed = toolBox.parseCrisprTargetsInput(lines.join('\n'));
+  assert.equal(parsed.length, 1);
+  assert.equal(parsed[0].sequence, lines.join(''));
+});
+test('[EDGE] tool-box parseCrisprTargetsInput names every line of a fully named list', () => {
+  const parsed = toolBox.parseCrisprTargetsInput('TP53: ACGTACGTACGTACGTACGT\nBRCA1 | GGGGACGTACGTACGTACGT');
+  assert.equal(parsed.length, 2);
+  assert.equal(parsed[0].name, 'TP53');
+  assert.equal(parsed[0].id, 'target-1');
+  assert.equal(parsed[1].name, 'BRCA1');
+  assert.equal(parsed[1].id, 'target-2');
+});
+test('[EDGE] tool-box designCrisprGuides handles targets with over 130k PAM sites', () => {
+  // Every position is an NGG site, so this clears the ~130k spread-argument limit cheaply.
+  const targets = [{ id: 'target-1', name: 'Big', sequence: 'G'.repeat(150000) }];
+  const result = toolBox.designCrisprGuides({
+    selectedTargets: targets,
+    backgroundTargets: targets,
+    guideLength: 20,
+    pamPattern: 'NGG',
+    minGc: 0,
+    maxGc: 100,
+    topCount: 5
+  });
+  assert.equal(result.totalPamMatches > 130000, true);
+  assert.equal(result.candidates.length, 5);
+});
+test('[EDGE] tool-box designCrisprGuides flags guides needing a U6 G prefix', () => {
+  const withG = toolBox.designCrisprGuides({
+    selectedTargets: [{ id: 'target-1', name: 'T', sequence: 'ATATGTATAGGAAAA' }],
+    backgroundTargets: [],
+    guideLength: 4,
+    pamPattern: 'NGG',
+    minGc: 0,
+    maxGc: 100,
+    topCount: 5
+  });
+  const withoutG = toolBox.designCrisprGuides({
+    selectedTargets: [{ id: 'target-1', name: 'T', sequence: 'ATATATATAGGAAAA' }],
+    backgroundTargets: [],
+    guideLength: 4,
+    pamPattern: 'NGG',
+    minGc: 0,
+    maxGc: 100,
+    topCount: 5
+  });
+  assert.equal(withG.candidates[0].guideSequence, 'GTAT');
+  assert.equal(withG.candidates[0].notes.includes('prepend G for U6'), false);
+  assert.equal(withoutG.candidates[0].guideSequence, 'ATAT');
+  assert.equal(withoutG.candidates[0].notes.includes('prepend G for U6'), true);
+});
+test('[EDGE] tool-box buildCrisprGuideTsv emits a header plus one row per guide', () => {
+  const result = toolBox.designCrisprGuides({
+    selectedTargets: [{ id: 'target-1', name: 'Target\tOne', sequence: 'ATATATATAGGAAAA' }],
+    backgroundTargets: [],
+    guideLength: 4,
+    pamPattern: 'NGG',
+    minGc: 0,
+    maxGc: 100,
+    topCount: 5
+  });
+  const lines = toolBox.buildCrisprGuideTsv(result.candidates).split('\n');
+  assert.equal(lines.length, 2);
+  assert.equal(lines[0].split('\t').length, 13);
+  const cells = lines[1].split('\t');
+  assert.equal(cells.length, 13, 'a tab in the target name must not add a column');
+  assert.equal(cells[0], '1');
+  assert.equal(cells[1], 'Target One');
+  assert.equal(cells[5], 'ATAT');
+  assert.equal(cells[6], 'AGG');
+});
+test('[EDGE] tool-box buildCrisprGuideTsv returns just the header with no guides', () => {
+  assert.equal(toolBox.buildCrisprGuideTsv([]).split('\n').length, 1);
+});
 test('[EDGE] tool-box collectCrisprPamSites finds forward NGG protospacers', () => {
   const target = {
     id: 'target-1',
@@ -693,7 +785,7 @@ test('[EDGE] tool-box computeCrisprOffTargetStats buckets mismatch counts', () =
     { key: 'k5', guideSequence: 'CCCAAAAAAAAAAAAAAAAA' },
     { key: 'k6', guideSequence: 'CCCCAAAAAAAAAAAAAAAA' }
   ];
-  const stats = toolBox.computeCrisprOffTargetStats(candidate, background, 1);
+  const stats = toolBox.computeCrisprOffTargetStats(candidate, background);
   assert.equal(stats.mismatchCounts.exact, 1);
   assert.equal(stats.mismatchCounts.mismatch1, 1);
   assert.equal(stats.mismatchCounts.mismatch2, 1);
@@ -714,8 +806,7 @@ test('[EDGE] tool-box designCrisprGuides returns ranked sgRNA candidates', () =>
     pamPattern: toolBox.normalizeIupacPattern('NGG'),
     minGc: 0,
     maxGc: 100,
-    topCount: 10,
-    genomeMultiplier: 1
+    topCount: 10
   });
   assert.equal(result.totalPamMatches, 1);
   assert.equal(result.candidates.length, 1);

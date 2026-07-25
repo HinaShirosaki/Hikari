@@ -111,6 +111,16 @@ test('biology-notebook prefers stored protocol snapshots over live protocol reco
   assert.doesNotMatch(document.getElementById('biology-notebook-steps').innerHTML, /Live library step/);
   assert.equal(document.getElementById('biology-notebook-page-starter').hidden, true);
 
+  const notebookWorkspace = document.getElementById('biology-notebook-viewer-column');
+  const droppedImage = { name: 'workspace-drop.png', type: 'image/png', size: 128, lastModified: 1 };
+  const dataTransfer = { types: ['Files'], files: [droppedImage], dropEffect: '' };
+  assert.equal(notebookWorkspace.classList.contains('app-file-drop-target'), true);
+  trigger(notebookWorkspace, 'dragenter', { dataTransfer });
+  assert.equal(notebookWorkspace.classList.contains('is-file-drop-active'), true);
+  trigger(notebookWorkspace, 'drop', { dataTransfer });
+  assert.equal(notebookWorkspace.classList.contains('is-file-drop-active'), false);
+  assert.match(document.getElementById('biology-notebook-result-attachments').innerHTML, /workspace-drop\.png/);
+
   trigger(document.getElementById('biology-notebook-protocol-title'), 'dblclick');
   assert.equal(document.getElementById('biology-notebook-protocol-title').hidden, true);
   assert.equal(document.getElementById('biology-notebook-experiment-name').hidden, false);
@@ -332,6 +342,121 @@ test('biology-notebook page naming recognizes completion and legacy rename state
     experimentName: 'Generated expression name',
     experimentNameSource: 'generated'
   }, protocol), 'generated');
+});
+test('biology-notebook attachment images resolve from portable records for rendering and PDF export', async () => {
+  class AttachmentFileReader {
+    readAsDataURL() {
+      this.result = 'data:application/octet-stream;base64,aW1hZ2U=';
+      this.onload?.();
+    }
+  }
+  const attachmentModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'biology-notebook',
+    'results',
+    'result-file-attachments.js'
+  ), { FileReader: AttachmentFileReader });
+  assert.equal(attachmentModule.inferAttachmentImageMimeType({ name: 'gel.PNG' }), 'image/png');
+  assert.equal(attachmentModule.inferAttachmentImageMimeType({ name: 'capture.bin', mimeType: 'image/webp' }), 'image/webp');
+  assert.equal(attachmentModule.isImageAttachment({ name: 'measurements.csv' }), false);
+  assert.equal(
+    attachmentModule.resolveResultFileRecordPath(
+      { relativePath: 'Project/Atlas/Notebook/page/ResultFiles/gel.png' },
+      '/data/hikari'
+    ),
+    '/data/hikari/Project/Atlas/Notebook/page/ResultFiles/gel.png'
+  );
+
+  const readPaths = [];
+  const loader = attachmentModule.createResultFileAttachmentLoader({
+    getStoragePath: () => '/data/hikari',
+    readFileBase64: async (filePath) => {
+      readPaths.push(filePath);
+      return { ok: true, dataBase64: 'aW1hZ2U=' };
+    }
+  });
+  const entry = {
+    resultFiles: ['gel.png', 'measurements.csv'],
+    resultFileRecords: [
+      {
+        name: 'gel.png',
+        relativePath: 'Project/Atlas/Notebook/page/ResultFiles/gel.png',
+        mimeType: 'image/png'
+      }
+    ]
+  };
+  const displayItems = attachmentModule.buildAttachmentDisplayItems(entry, [
+    { name: 'microscope.jpg', type: 'image/jpeg', size: 10, lastModified: 1 }
+  ]);
+  assert.equal(displayItems.length, 3);
+  assert.equal(displayItems.filter((item) => item.imageMimeType).length, 2);
+
+  const images = await loader.resolveEntryImages(entry);
+  assert.equal(images.length, 1);
+  assert.equal(images[0].name, 'gel.png');
+  assert.equal(images[0].dataUrl, 'data:image/png;base64,aW1hZ2U=');
+  assert.deepEqual(readPaths, ['/data/hikari/Project/Atlas/Notebook/page/ResultFiles/gel.png']);
+
+  await loader.resolveEntryImages(entry);
+  assert.equal(readPaths.length, 1, 'saved image reads are cached across page render and PDF export');
+
+  const pendingImage = await loader.resolvePendingImage({ name: 'fallback.png', type: '' });
+  assert.equal(pendingImage.dataUrl, 'data:image/png;base64,aW1hZ2U=');
+
+  const notebookCss = fs.readFileSync(path.join(
+    __dirname,
+    'ui',
+    'css',
+    'views',
+    'biology-notebook-view.css'
+  ), 'utf8');
+  assert.match(notebookCss, /\.biology-notebook-attachment-grid\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fill,\s*minmax\(180px,\s*320px\)\)/s);
+  assert.match(notebookCss, /\.biology-notebook-attachment-image\s*\{[^}]*width:\s*fit-content[^}]*border:\s*0/s);
+  assert.match(notebookCss, /\.biology-notebook-attachment-image img\s*\{[^}]*width:\s*auto[^}]*height:\s*auto[^}]*max-height:\s*260px[^}]*border:\s*0/s);
+  assert.doesNotMatch(notebookCss, /\.biology-notebook-attachment-image img\s*\{[^}]*height:\s*clamp\(/s);
+});
+test('biology-notebook page metadata omits redundant result file and table summaries', () => {
+  const viewerModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'biology-notebook',
+    'entry',
+    'viewer-renderer.js'
+  ));
+  const meta = viewerModule.buildViewerMeta({
+    projects: [{ id: 'project-1', name: 'Atlas' }],
+    entry: {
+      id: 'entry-1',
+      projectId: 'project-1',
+      projectName: 'Atlas',
+      protocolName: 'Binding assay',
+      experimentName: 'Binding assay',
+      notebookState: 'executed',
+      updatedAt: '2026-07-24T12:00:00.000Z',
+      resultFiles: ['VennR4.png'],
+      resultTables: [{
+        columns: [{ field: 'a' }, { field: 'b' }, { field: 'c' }],
+        rows: [{}, {}, {}]
+      }],
+      toolCalculations: [{
+        id: 'calculation-1',
+        type: 'molarity',
+        title: 'Molarity',
+        result: 'Mass needed: 5 mg'
+      }],
+      sampleLinks: [{ sampleId: 'sample-1' }]
+    },
+    isSavedEntry: true
+  });
+  assert.doesNotMatch(meta, /Result files:/);
+  assert.doesNotMatch(meta, /Result table:/);
+  assert.match(meta, /Tool calculations: 1 calculation \(Molarity\)\./);
+  assert.match(meta, /Linked samples: 1\./);
 });
 test('biology-notebook edits only the saved page protocol copy and keeps the original protocol unchanged', () => {
   const document = createMockDocument([

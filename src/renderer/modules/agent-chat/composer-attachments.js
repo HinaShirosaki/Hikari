@@ -57,9 +57,7 @@ export function createComposerAttachmentsController({
   attachmentList,
   createId,
   safeText,
-  setStatus,
-  invalidateDeveloperContextPreview,
-  renderDeveloperResponseSimulator
+  setStatus
 }) {
   let composerAttachments = [];
 
@@ -129,7 +127,6 @@ export function createComposerAttachmentsController({
     if (attachmentInput) {
       attachmentInput.value = '';
     }
-    invalidateDeveloperContextPreview();
     render();
   }
 
@@ -139,9 +136,7 @@ export function createComposerAttachmentsController({
       return null;
     }
     composerAttachments = [...composerAttachments, normalized].slice(-8);
-    invalidateDeveloperContextPreview();
     render();
-    renderDeveloperResponseSimulator();
     if (options.announce !== false) {
       setStatus(`${composerAttachments.length} attachment${composerAttachments.length === 1 ? '' : 's'} ready.`);
     }
@@ -156,10 +151,8 @@ export function createComposerAttachmentsController({
     try {
       const nextAttachments = await Promise.all(incomingFiles.map((file) => normalizeAttachmentFile(file)));
       composerAttachments = [...composerAttachments, ...nextAttachments].slice(-8);
-      invalidateDeveloperContextPreview();
-      render();
-      renderDeveloperResponseSimulator();
-      setStatus(`${composerAttachments.length} attachment${composerAttachments.length === 1 ? '' : 's'} ready.`);
+        render();
+        setStatus(`${composerAttachments.length} attachment${composerAttachments.length === 1 ? '' : 's'} ready.`);
     } catch (error) {
       setStatus(String(error?.message || error || 'Failed to load attachments.'));
     }
@@ -171,9 +164,7 @@ export function createComposerAttachmentsController({
       return;
     }
     composerAttachments = composerAttachments.filter((attachment) => trimText(attachment?.id, 120) !== targetId);
-    invalidateDeveloperContextPreview();
     render();
-    renderDeveloperResponseSimulator();
   }
 
   return {

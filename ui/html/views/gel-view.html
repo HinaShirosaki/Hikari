@@ -113,40 +113,43 @@
                     <details class="gel-tool-group" open>
                       <summary>Lane</summary>
                       <div class="gel-tool-actions">
-                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" title="Outermost dividers define the gel edges">Set lane dividers</button>
-                        <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
-                        <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Adjust lane vertices</button>
-                        <label class="small-note gel-lane-count-control">
-                          Lanes:
+                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" title="Outermost dividers define the gel edges">Lane dividers</button>
+                        <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Ladder lane</button>
+                        <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Lane vertices</button>
+                        <label class="small-note gel-tool-field">
+                          Lanes
                           <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" />
                         </label>
-                        <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect lanes</button>
+                        <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect</button>
                       </div>
                     </details>
 
                     <details class="gel-tool-group" open>
                       <summary>Band</summary>
                       <div class="gel-tool-actions">
-                        <button type="button" id="gel-tool-band-top-btn" class="ghost-btn">Set band top line</button>
-                        <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn">Set band bottom line</button>
-                        <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false">Lane-by-lane band</button>
+                        <button type="button" id="gel-tool-band-top-btn" class="ghost-btn">Band top</button>
+                        <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn">Band bottom</button>
+                        <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false">Per-lane band</button>
                       </div>
                     </details>
 
                     <details class="gel-tool-group" open>
                       <summary>Analysis</summary>
                       <div class="gel-tool-actions">
-                        <label class="small-note gel-ladder-mw-control">
-                          Ladder MW (kDa)
-                          <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="e.g. 50" />
+                        <label class="small-note gel-tool-field">
+                          Ladder MW
+                          <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="50 kDa" />
                         </label>
                         <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
-                        <button type="button" id="gel-measure-intensity-btn" class="ghost-btn">Measure intensity</button>
+                        <button type="button" id="gel-measure-intensity-btn" class="ghost-btn">Measure</button>
                         <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn">Peak editor</button>
-                        <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
-                        <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Tools</button>
+                        <button type="button" id="gel-open-report-btn" class="ghost-btn" aria-haspopup="dialog" aria-controls="gel-report-overlay" aria-expanded="false" title="Open analysis report" disabled>Report</button>
                       </div>
                     </details>
+                  </div>
+                  <div class="gel-tool-footer">
+                    <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done</button>
+                    <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset</button>
                   </div>
                 </section>
 
@@ -184,12 +187,22 @@
                 <div id="gel-cell-table-summary" class="small-note"></div>
                 <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
               </section>
-              <div class="panel gel-report-panel">
-                <h3>Analysis Report</h3>
-                <div id="gel-report-summary" class="cards"></div>
-                <pre id="gel-report-json" class="gel-report-json"></pre>
-              </div>
             </div>
+          </div>
+
+          <div id="gel-report-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
+            <section class="gel-report-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="gel-report-title" aria-describedby="gel-report-description">
+              <header class="app-dialog-head gel-report-dialog-head">
+                <div>
+                  <h3 id="gel-report-title">Analysis Report</h3>
+                  <p id="gel-report-description" class="small-note">Summary and complete data from the current gel analysis.</p>
+                </div>
+                <button type="button" id="gel-report-close-btn" class="app-dialog-close-btn" aria-label="Close analysis report" title="Close"><span aria-hidden="true">&times;</span></button>
+              </header>
+              <div class="gel-report-dialog-body">
+                <div id="gel-report-summary" class="cards"></div>
+              </div>
+            </section>
           </div>
 
           <div id="gel-peak-editor-overlay" class="gel-peak-editor-overlay" hidden>

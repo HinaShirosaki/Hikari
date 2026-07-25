@@ -13,14 +13,10 @@ export function bindAgentChatEvents({
   shell,
   attachmentsController,
   payloadBuilder,
-  developerContextController,
   requestController,
-  developerMockController,
-  developerToolTestController,
   historyController,
   captureImageAttachment,
-  onPlotlyGraphArtifact = () => {},
-  renderDeveloperToolHint
+  onPlotlyGraphArtifact = () => {}
 }) {
   function applySuggestedPrompt(event) {
     const suggestedPromptButton = event?.target?.closest?.('[data-agent-suggest-prompt]')
@@ -42,7 +38,6 @@ export function bindAgentChatEvents({
   dom.projectSelect?.addEventListener('change', () => {
     shell.ensureAgentState();
     state.agentChat.projectId = dom.projectSelect.value || '';
-    developerContextController.invalidate();
     persist();
     render();
   });
@@ -53,31 +48,6 @@ export function bindAgentChatEvents({
 
   dom.stopBtn?.addEventListener('click', () => {
     void requestController.stopMessage();
-  });
-
-  dom.developerTestToolsBtn?.addEventListener('click', () => {
-    void developerToolTestController.runDeveloperToolSmokeTest();
-  });
-
-  dom.developerRunToolBtn?.addEventListener('click', () => {
-    void developerToolTestController.runDeveloperSingleToolTest();
-  });
-
-  dom.developerToolSelect?.addEventListener('change', () => {
-    renderDeveloperToolHint();
-  });
-
-  dom.developerResponseFoldBtn?.addEventListener('click', () => {
-    runtime.developerResponseSimulatorFolded = !runtime.developerResponseSimulatorFolded;
-    developerContextController.render();
-  });
-
-  dom.developerRefreshContextBtn?.addEventListener('click', () => {
-    void developerContextController.refresh();
-  });
-
-  dom.developerUseMockResponseBtn?.addEventListener('click', () => {
-    void developerMockController.useDeveloperMockResponse();
   });
 
   dom.newChatBtn?.addEventListener('click', () => {
@@ -114,8 +84,6 @@ export function bindAgentChatEvents({
 
   dom.input.addEventListener('input', () => {
     shell.syncComposerHeight();
-    developerContextController.invalidate();
-    developerContextController.render();
   });
 
   dom.attachBtn?.addEventListener('click', () => {
@@ -176,8 +144,6 @@ export function bindAgentChatEvents({
       || (event?.target?.dataset?.agentRemoveHiddenContext !== undefined ? event.target : null);
     if (removeButton) {
       payloadBuilder.consumeHiddenContexts?.();
-      developerContextController.invalidate();
-      developerContextController.render();
     }
   });
 

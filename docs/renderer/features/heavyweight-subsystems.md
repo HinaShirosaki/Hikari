@@ -27,7 +27,6 @@ That file owns the renderer-side chat experience:
 - history rendering
 - session selection and creation
 - review-card presentation and dispatch to feature-owned agent adapters
-- developer-tool testing UI
 
 Subfiles are split cleanly:
 
@@ -36,7 +35,6 @@ Subfiles are split cleanly:
 - `response.js`: normalization and summary helpers for returned agent payloads
 - `state-snapshot.js`: compact experiment/context snapshot generation
 - `review-overlay.js`: generic approval/rejection UI dispatched through feature adapters
-- `developer-tools.js`: the developer-mode tool picker/hints
 
 Notebook draft normalization/persistence lives under `biology-notebook/agent/`; generated-protocol normalization/persistence lives under `protocol/agent/`. Agent Chat consumes those owner APIs without defining either record schema itself. This folder is the best example of a renderer module that is mostly orchestration around the agent subsystem documented elsewhere in [agent/README.md](../../agent/README.md).
 

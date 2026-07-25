@@ -61,9 +61,7 @@ test('agent-chat keeps notebook-draft proposals confirm-first and creates one pl
         apiEndpoint: 'https://api.openai.com/v1/responses',
         apiKey: 'sk-local-key'
       },
-      agent: {
-        developerMode: false
-      }
+      agent: {}
     },
     agentChat: { projectId: '', messages: [] }
   };
@@ -385,6 +383,168 @@ test('agent-chat releases the composer immediately when cancellation is acknowle
   assert.equal(state.agentChat.messages.length, 2);
   assert.deepEqual(inFlightUpdates, [true, false]);
 });
+test('agent-chat requires approval before applying a notebook append proposal', async () => {
+  const document = createMockDocument([
+    'agent-review-overlay',
+    'agent-review-track',
+    'agent-review-close-btn',
+    'agent-review-prev-btn',
+    'agent-review-next-btn',
+    'agent-review-page-label'
+  ]);
+  const message = {
+    id: 'message-append-1',
+    role: 'assistant',
+    text: 'Notebook enrichment is ready for review.',
+    meta: {
+      notebook_append: {
+        status: 'proposal_ready',
+        proposal: {
+          proposal_id: 'proposal-append-1',
+          notebook_entry_id: 'entry-1',
+          page_title: 'Protein purification',
+          section_title: 'PBS recipe',
+          content_markdown: 'Prepare 1 L of 1× PBS at pH 7.4.',
+          sources: [{ record_id: 'sample-1', label: 'Purified protein' }]
+        },
+        save: {
+          mode: 'confirm_before_append',
+          applied: false,
+          status: 'pending'
+        }
+      }
+    }
+  };
+  const state = { agentChat: { messages: [message] } };
+  let appendedProposal = null;
+  const statuses = [];
+  const reviewModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'review-overlay.js'
+  ));
+  const controller = reviewModule.createAgentReviewOverlayController({
+    dom: {
+      reviewOverlay: document.getElementById('agent-review-overlay'),
+      reviewTrack: document.getElementById('agent-review-track'),
+      reviewCloseBtn: document.getElementById('agent-review-close-btn'),
+      reviewPrevBtn: document.getElementById('agent-review-prev-btn'),
+      reviewNextBtn: document.getElementById('agent-review-next-btn'),
+      reviewPageLabel: document.getElementById('agent-review-page-label')
+    },
+    state,
+    persist: () => {},
+    safeText: shared.safeText,
+    setStatus: (value) => statuses.push(value),
+    renderContextSummary: () => {},
+    renderHistoryView: () => {},
+    notebookActions: {},
+    notebookDraftAdapter: {},
+    protocolReviewAdapter: {},
+    onAppendNotebookEntry: async (proposal) => {
+      appendedProposal = proposal;
+      return { ok: true, summary: 'Content appended and saved to the notebook page.' };
+    }
+  });
+
+  controller.openForMessage(message);
+  assert.equal(document.getElementById('agent-review-overlay').hidden, false);
+  assert.match(document.getElementById('agent-review-track').innerHTML, /Append to Page/);
+  assert.match(document.getElementById('agent-review-track').innerHTML, /Prepare 1 L of 1× PBS/);
+  assert.equal(appendedProposal, null);
+
+  controller.approveItem('notebook-append:message-append-1:proposal-append-1');
+  await flushAsync();
+  assert.equal(appendedProposal.notebook_entry_id, 'entry-1');
+  assert.equal(message.meta.notebookAppend.save.applied, true);
+  assert.equal(message.meta.notebookAppend.save.status, 'approved');
+  assert.equal(statuses.at(-1), 'Content appended and saved to the notebook page.');
+});
+
+test('agent-chat rail renders and applies notebook append proposals inline', async () => {
+  const appendWorkflow = {
+    status: 'proposal_ready',
+    proposal: {
+      proposal_id: 'proposal-inline-1',
+      notebook_entry_id: 'entry-inline-1',
+      section_title: 'Protein record',
+      content_markdown: 'Recorded concentration: 2.1 mg/mL.',
+      sources: [{ record_id: 'protein-1', label: 'Purified protein' }]
+    },
+    save: {
+      mode: 'confirm_before_append',
+      applied: false,
+      status: 'pending'
+    }
+  };
+  const message = {
+    id: 'message-inline-1',
+    role: 'assistant',
+    text: 'Notebook enrichment is ready for review.',
+    meta: {
+      notebook_append: appendWorkflow,
+      notebookAppend: appendWorkflow
+    }
+  };
+  const renderingMetaModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'rendering-meta.js'
+  ));
+  const html = renderingMetaModule.renderAssistantMeta(message.meta, message.id, {
+    safeText: shared.safeText,
+    notebookDraftAdapter: {}
+  });
+  assert.match(html, /Protein record/);
+  assert.match(html, /Recorded concentration: 2\.1 mg\/mL\./);
+  assert.match(html, /data-agent-append-notebook="message-inline-1"/);
+  assert.match(html, /Append to Page/);
+
+  const state = { agentChat: { messages: [message] } };
+  let appliedProposal = null;
+  const historyModule = loadEsmStyleModule(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'agent-chat',
+    'history-actions.js'
+  ));
+  const history = historyModule.createHistoryActionController({
+    state,
+    input: {},
+    persist: () => {},
+    setStatus: () => {},
+    syncComposerHeight: () => {},
+    renderContextSummary: () => {},
+    renderHistoryView: () => {},
+    answerAssistantQuestion: async () => {},
+    notebookDraftAdapter: {},
+    onOpenNotebookEntry: () => {},
+    onAppendNotebookEntry: async (proposal) => {
+      appliedProposal = proposal;
+      return { ok: true, summary: 'Content appended and saved to the notebook page.' };
+    }
+  });
+  await history.onHistoryClick({
+    target: {
+      dataset: { agentAppendNotebook: 'message-inline-1' },
+      closest(selector) {
+        return selector === '[data-agent-append-notebook]' ? this : null;
+      }
+    }
+  });
+  assert.equal(appliedProposal.notebook_entry_id, 'entry-inline-1');
+  assert.equal(message.meta.notebookAppend.save.applied, true);
+  assert.equal(message.meta.notebookAppend.save.status, 'approved');
+});
+
 test('agent-chat delegates notebook and protocol domain records to owner adapters', () => {
   const agentChatRoot = path.join(__dirname, 'src', 'renderer', 'modules', 'agent-chat');
   const reviewSource = fs.readFileSync(path.join(agentChatRoot, 'review-overlay.js'), 'utf8');

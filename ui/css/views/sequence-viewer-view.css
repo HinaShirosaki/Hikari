@@ -1364,6 +1364,20 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   gap: 8px;
 }
 
+/* Inside dropdowns the toggles read as a list, one per row, not a wrapped grid. */
+.sequence-viewer-toolbar-menu .sequence-viewer-inline-toggle-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  flex-wrap: nowrap;
+  gap: 2px;
+}
+
+.sequence-viewer-toolbar-menu .sequence-viewer-inline-toggle {
+  display: flex;
+  width: 100%;
+}
+
 .sequence-viewer-results {
   display: flex;
   flex: 1 1 auto;

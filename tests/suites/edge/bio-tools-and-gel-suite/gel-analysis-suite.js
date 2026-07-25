@@ -52,6 +52,208 @@ test('[EDGE] gel-analysis viewer image selection handles empty input', () => {
   assert.equal(gelAnalysisInternals.selectViewerBaseImageData(null, { previewImageData: { tag: 'preview' } }), null);
 });
 
+test('[EDGE] gel-analysis edit restores saved source images and legacy inline previews', async () => {
+  const readPaths = [];
+  const decodedSources = [];
+  const recordsModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'records-manager.js'),
+    {
+      window: {
+        hikariApi: {
+          async readFileBase64(filePath) {
+            readPaths.push(filePath);
+            return {
+              ok: true,
+              dataBase64: 'c2F2ZWQtZ2Vs'
+            };
+          }
+        }
+      }
+    }
+  );
+  const sourceRecord = {
+    id: 'gel-source',
+    name: 'Stored source gel',
+    analysisType: 'sds-page',
+    imageName: 'source.png',
+    sourceImagePath: '/workspace/Gels/gel-source/source.png',
+    parameters: {},
+    manualOverrides: {},
+    report: { lanes: [], warnings: [] }
+  };
+  const previewRecord = {
+    id: 'gel-preview',
+    name: 'Legacy preview gel',
+    analysisType: 'western',
+    imageName: 'legacy.png',
+    previewImageDataUrl: 'data:image/png;base64,bGVnYWN5LXByZXZpZXc=',
+    parameters: {},
+    manualOverrides: {},
+    report: { lanes: [], warnings: [] }
+  };
+  const reportOnlyRecord = {
+    id: 'gel-report-only',
+    name: 'Report-only gel',
+    analysisType: 'agarose',
+    parameters: {},
+    manualOverrides: {},
+    report: { lanes: [], warnings: [] }
+  };
+  const runtime = {
+    state: {
+      settings: { storagePath: '/workspace' },
+      gelAnalyses: [sourceRecord, previewRecord, reportOnlyRecord],
+      notebookEntries: []
+    },
+    currentImage: null,
+    currentReport: null,
+    imageRevision: 0,
+    manualOverrides: {},
+    persist() {},
+    safeText: (value) => String(value)
+  };
+  const elements = {
+    gelIdInput: new MockElement('gel-id'),
+    gelNameInput: new MockElement('gel-name'),
+    gelTypeInput: new MockElement('gel-type'),
+    gelLadderLaneInput: new MockElement('gel-ladder-lane'),
+    gelNormalizationInput: new MockElement('gel-normalization'),
+    gelDenoiseStrengthInput: new MockElement('gel-denoise'),
+    gelContrastStrengthInput: new MockElement('gel-contrast')
+  };
+  const statuses = [];
+  let renderedCanvases = 0;
+  const controller = recordsModule.createRecordsManager({
+    runtime,
+    elements,
+    deps: {
+      copyNormalizedImage(image) {
+        return { ...image, copied: true };
+      },
+      async decodeImageSource(dataUrl, name) {
+        decodedSources.push({ dataUrl, name });
+        return {
+          name,
+          width: 8,
+          height: 6,
+          imageData: { width: 8, height: 6 },
+          gray: new Float32Array(48)
+        };
+      },
+      leaveCropMode() {},
+      renderCanvas() {
+        renderedCanvases += 1;
+      },
+      renderEnhancementValues() {},
+      renderManualProgress() {},
+      renderOverrideStatus() {},
+      renderReport() {},
+      setCurrentImage(image) {
+        runtime.currentImage = image;
+        runtime.imageRevision += 1;
+      },
+      setStatus(message) {
+        statuses.push(message);
+      }
+    }
+  });
+
+  const editEvent = (recordId) => ({
+    target: {
+      closest(selector) {
+        return selector === '[data-gel-edit]'
+          ? { dataset: { gelEdit: recordId } }
+          : null;
+      }
+    }
+  });
+
+  await controller.onListClick(editEvent(sourceRecord.id));
+  assert.deepEqual(readPaths, [sourceRecord.sourceImagePath]);
+  assert.equal(decodedSources[0].dataUrl, 'data:image/png;base64,c2F2ZWQtZ2Vs');
+  assert.equal(runtime.currentImage.name, sourceRecord.imageName);
+  assert.equal(runtime.originalImage.copied, true);
+  assert.equal(runtime.currentReport, sourceRecord.report);
+  assert.equal(elements.gelNameInput.value, sourceRecord.name);
+  assert.equal(statuses.at(-1), `Loaded saved gel: ${sourceRecord.name}.`);
+
+  await controller.onListClick(editEvent(previewRecord.id));
+  assert.equal(decodedSources[1].dataUrl, previewRecord.previewImageDataUrl);
+  assert.equal(runtime.currentImage.name, previewRecord.imageName);
+  assert.equal(runtime.currentReport, previewRecord.report);
+  assert.equal(elements.gelTypeInput.value, 'western');
+  assert.match(statuses.at(-1), /Loaded saved gel preview/);
+  assert.ok(renderedCanvases >= 4);
+
+  await controller.onListClick(editEvent(reportOnlyRecord.id));
+  assert.equal(runtime.currentImage, null);
+  assert.equal(runtime.currentReport, reportOnlyRecord.report);
+  assert.equal(elements.gelTypeInput.value, 'agarose');
+  assert.match(statuses.at(-1), /older record has no stored image/);
+});
+
+test('[EDGE] gel-analysis report opens in an overlapping window only when report data exists', () => {
+  const renderingModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering', 'index.js'));
+  const runtime = {
+    currentReport: null,
+    reportDialogOpen: false
+  };
+  const elements = {
+    gelOpenReportBtn: new MockElement('gel-open-report-btn'),
+    gelReportOverlay: new MockElement('gel-report-overlay'),
+    gelReportCloseBtn: new MockElement('gel-report-close-btn'),
+    gelReportSummary: new MockElement('gel-report-summary')
+  };
+  let closeFocused = 0;
+  let openerFocused = 0;
+  elements.gelReportCloseBtn.focus = () => {
+    closeFocused += 1;
+  };
+  elements.gelOpenReportBtn.focus = () => {
+    openerFocused += 1;
+  };
+  const controller = renderingModule.createRenderingController({
+    runtime,
+    elements,
+    safeText: (value) => String(value),
+    deps: {}
+  });
+
+  controller.renderReport();
+  assert.equal(elements.gelOpenReportBtn.disabled, true);
+  assert.equal(elements.gelReportOverlay.hidden, true);
+
+  runtime.currentReport = {
+    analysisType: 'sds-page',
+    lanes: [],
+    bandGroups: [],
+    warnings: [],
+    preprocessing: {},
+    confidence: {}
+  };
+  controller.renderReport();
+  assert.equal(elements.gelOpenReportBtn.disabled, false);
+  assert.equal(elements.gelReportOverlay.hidden, true);
+
+  controller.onReportOpen();
+  assert.equal(elements.gelReportOverlay.hidden, false);
+  assert.equal(elements.gelOpenReportBtn.getAttribute('aria-expanded'), 'true');
+  assert.equal(closeFocused, 1);
+  assert.match(elements.gelReportSummary.innerHTML, /SDS-PAGE/);
+
+  let escapePrevented = false;
+  controller.onReportKeyDown({
+    key: 'Escape',
+    preventDefault() {
+      escapePrevented = true;
+    }
+  });
+  assert.equal(escapePrevented, true);
+  assert.equal(elements.gelReportOverlay.hidden, true);
+  assert.equal(elements.gelOpenReportBtn.getAttribute('aria-expanded'), 'false');
+  assert.equal(openerFocused, 1);
+});
+
 test('[EDGE] gel-analysis crop rotation follows free drag away from crop borders', () => {
   const cropModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'images', 'crop-controller.js'));
   const rotationCalls = [];
@@ -261,12 +463,14 @@ test('[EDGE] gel-analysis outermost lane dividers define gel edges without separ
   controller.onCanvasClick({ clientX: 20, clientY: 50 });
   assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, 20);
   assert.equal(runtime.manualOverrides.laneSegmentation.gelRight, 60);
-  assert.deepEqual(runtime.manualOverrides.laneSegmentation.dividers, []);
+  // Array.from: the overrides come from a vm-loaded module, so a bare deepEqual
+  // would compare prototypes across realms and fail on identical contents.
+  assert.deepEqual(Array.from(runtime.manualOverrides.laneSegmentation.dividers), []);
 
   controller.onCanvasClick({ clientX: 80, clientY: 50 });
   assert.equal(runtime.manualOverrides.laneSegmentation.gelLeft, 20);
   assert.equal(runtime.manualOverrides.laneSegmentation.gelRight, 80);
-  assert.deepEqual(runtime.manualOverrides.laneSegmentation.dividers, [60]);
+  assert.deepEqual(Array.from(runtime.manualOverrides.laneSegmentation.dividers), [60]);
 
   controller.onManualNextStep();
   assert.equal(runtime.manualOverrides.laneSegmentation.dividerDone, true);

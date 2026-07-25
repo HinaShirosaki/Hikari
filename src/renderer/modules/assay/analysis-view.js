@@ -470,16 +470,11 @@ export function createAssayAnalysisView({
     renderAnalysis();
   }
 
-  function onAnalyzeResults() {
-    renderAnalysis();
-  }
-
   return {
     clearOutput,
     renderAnalysis,
     onAnalysisMethodChange,
     onAnalysisConfigChange,
-    onAnalyzeResults,
     getChartStyle,
     loadChartStyle,
     refreshChartControls,

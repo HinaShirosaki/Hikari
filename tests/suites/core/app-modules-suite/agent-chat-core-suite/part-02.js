@@ -56,9 +56,7 @@ test('agent-chat renders python sandbox text and image outputs inline from resul
     ],
     state: {
       settings: {
-        agent: {
-          developerMode: false
-        }
+        agent: {}
       }
     },
     safeText: shared.safeText
@@ -116,9 +114,7 @@ test('agent-chat renders purchase recommendation tiles with unified image stage 
     ],
     state: {
       settings: {
-        agent: {
-          developerMode: false
-        }
+        agent: {}
       }
     },
     safeText: shared.safeText

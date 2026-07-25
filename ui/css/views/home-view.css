@@ -19,10 +19,13 @@
   --home-bottom-row: minmax(0, 1.84fr);
   --contribution-cell-size: 12px;
   --contribution-cell-gap: 3px;
+  --contribution-day-count: 7;
+  --contribution-week-count: 18;
   --contribution-weekday-width: 28px;
   --contribution-body-gap: 9px;
   --contribution-grid-width: calc(
-    (18 * var(--contribution-cell-size)) + (17 * var(--contribution-cell-gap))
+    (var(--contribution-day-count) * var(--contribution-cell-size))
+    + ((var(--contribution-day-count) - 1) * var(--contribution-cell-gap))
   );
   --contribution-map-width: var(--contribution-grid-width);
   height: 100%;
@@ -52,11 +55,11 @@ body.theme-night #home-view {
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-columns: minmax(0, 1.42fr) minmax(0, 1.05fr) minmax(0, 1.05fr);
+  grid-template-columns: minmax(0, 0.71fr) minmax(0, 0.71fr) minmax(0, 1.05fr) minmax(0, 1.05fr);
   grid-template-areas:
-    "timer notebook quicklog"
-    "timer notebook quicklog"
-    "contribution passage incubation";
+    "timer timer notebook quicklog"
+    "timer timer notebook quicklog"
+    "contribution paper-finding passage incubation";
   grid-template-rows: var(--home-top-row) var(--home-middle-row) var(--home-bottom-row);
   gap: var(--home-gap);
 }
@@ -87,6 +90,11 @@ body.theme-night #home-view {
   grid-area: contribution;
   grid-template-rows: auto minmax(0, 1fr);
   overflow: hidden;
+}
+
+#home-view .home-tile-paper-finding {
+  grid-area: paper-finding;
+  grid-template-rows: auto minmax(0, 1fr);
 }
 
 #home-view .home-tile-timer {
@@ -284,6 +292,10 @@ body.theme-night #home-view {
   color: var(--home-tile-muted);
 }
 
+#home-view .home-paper-finding-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 #home-view .home-row-meta {
   margin: 1px 0 0;
   font-size: 0.76rem;
@@ -475,9 +487,9 @@ body.theme-night #home-view {
 
 #home-view .home-contribution-grid {
   display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(7, var(--contribution-cell-size));
-  grid-auto-columns: var(--contribution-cell-size);
+  grid-auto-flow: row;
+  grid-template-columns: repeat(var(--contribution-day-count), var(--contribution-cell-size));
+  grid-auto-rows: var(--contribution-cell-size);
   gap: var(--contribution-cell-gap);
   min-width: 0;
 }
@@ -1118,6 +1130,12 @@ body.theme-night #home-view .home-incubation-delete-btn:focus-visible {
   }
 }
 
+@media (max-height: 760px) and (min-width: 901px) {
+  #home-view {
+    --contribution-cell-size: 9px;
+  }
+}
+
 @media (max-width: 1179px) {
   #home-view {
     height: auto;
@@ -1131,7 +1149,7 @@ body.theme-night #home-view .home-incubation-delete-btn:focus-visible {
       "timer notebook"
       "timer notebook"
       "quicklog quicklog"
-      "contribution contribution"
+      "contribution paper-finding"
       "passage incubation";
     grid-template-rows: repeat(2, minmax(220px, auto)) minmax(200px, auto) minmax(200px, auto) minmax(180px, auto);
     height: auto;
@@ -1157,6 +1175,7 @@ body.theme-night #home-view .home-incubation-delete-btn:focus-visible {
       "quicklog"
       "notebook"
       "contribution"
+      "paper-finding"
       "passage"
       "incubation";
     grid-template-rows: none;

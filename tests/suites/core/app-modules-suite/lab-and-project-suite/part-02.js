@@ -377,7 +377,7 @@ test('biology-notebook opens workflow-created pages from saved protocol snapshot
   assert.equal((document.getElementById('biology-notebook-entry-list').innerHTML.match(/biology-notebook-folder-name">Clone 12</g) || []).length, 1);
   assert.match(document.getElementById('biology-notebook-entry-list').innerHTML, /Ni-NTA Purification/);
 });
-test('biology-notebook project folder click renders the project dashboard in place', () => {
+test('biology-notebook project folder click renders the project dashboard in place', async () => {
   const document = createMockDocument([
     'biology-notebook-project-select',
     'biology-notebook-protocol-search',
@@ -532,6 +532,23 @@ test('biology-notebook project folder click renders the project dashboard in pla
   assert.match(agentContext.hiddenContext.text, /Active biology notebook page/);
   assert.match(agentContext.hiddenContext.text, /Run the fresh protocol/);
   assert.match(agentContext.hiddenContext.text, /Observed healthy cells/);
+  assert.match(agentContext.hiddenContext.text, /Entry ID: unsaved draft/);
+
+  const appendResult = await notebook.appendAgentNotebookContent({
+    notebook_entry_id: 'unsaved draft',
+    page_title: 'Fresh Protocol',
+    project_name: 'Atlas',
+    protocol_name: 'Fresh Protocol',
+    section_title: 'PBS preparation',
+    content_markdown: 'Prepare 1 L of 1× PBS and adjust to pH 7.4.',
+    sources: [
+      { label: 'PBS formulation', detail: 'Agent-prepared routine buffer recipe.' }
+    ]
+  });
+  assert.equal(appendResult.ok, true);
+  assert.equal(appendResult.saved, false);
+  assert.match(document.getElementById('biology-notebook-result').value, /## PBS preparation/);
+  assert.match(document.getElementById('biology-notebook-result').value, /### Sources/);
 });
   }
 };

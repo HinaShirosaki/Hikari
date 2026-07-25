@@ -32,9 +32,7 @@ test('agent-chat prioritizes inventory lookup summary text and renders lookup me
         apiEndpoint: 'https://api.openai.com/v1/responses',
         apiKey: 'sk-local-key'
       },
-      agent: {
-        developerMode: false
-      }
+      agent: {}
     },
     agentChat: { projectId: '', messages: [] }
   };
@@ -98,8 +96,7 @@ test('agent-chat prioritizes inventory lookup summary text and renders lookup me
               title: 'Transformation Run'
             }
           ]
-        },
-        developer_trace: []
+        }
       })
     }
   };
@@ -166,9 +163,7 @@ test('agent-chat uses notebook lookup summary when inventory lookup payload is a
         apiEndpoint: 'https://api.openai.com/v1/responses',
         apiKey: 'sk-local-key'
       },
-      agent: {
-        developerMode: false
-      }
+      agent: {}
     },
     agentChat: { projectId: '', messages: [] }
   };
@@ -203,8 +198,7 @@ test('agent-chat uses notebook lookup summary when inventory lookup payload is a
           source: 'sqlite',
           backfilled_sql: false,
           items: []
-        },
-        developer_trace: []
+        }
       })
     }
   };
@@ -268,9 +262,7 @@ test('agent-chat prioritizes purchase recommendation summary, renders shopping t
         apiEndpoint: 'https://api.openai.com/v1/responses',
         apiKey: 'sk-local-key'
       },
-      agent: {
-        developerMode: false
-      }
+      agent: {}
     },
     agentChat: { projectId: '', messages: [] }
   };
@@ -357,8 +349,7 @@ test('agent-chat prioritizes purchase recommendation summary, renders shopping t
               location: 'Drawer 4'
             }
           ]
-        },
-        developer_trace: []
+        }
       })
     }
   };

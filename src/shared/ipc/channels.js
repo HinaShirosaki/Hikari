@@ -19,8 +19,6 @@ const AGENT = Object.freeze({
   CHAT_LOG_CREATE_SESSION: 'agent:chat-log:create-session',
   CHAT_LOG_LIST_SESSIONS: 'agent:chat-log:list-sessions',
   CHAT_LOG_GET_SESSION: 'agent:chat-log:get-session',
-  DEVELOPER_TEST_TOOLS: 'agent:developer:test-tools',
-  DEVELOPER_CONTEXT_PREVIEW: 'agent:developer:context-preview',
   LOGS_LIST_REQUESTS: 'agent:logs:list-requests',
   LOGS_REPLAY: 'agent:logs:replay'
 });
@@ -35,6 +33,7 @@ const STORAGE = Object.freeze({
   PICK_DIRECTORY: 'storage:pick-directory',
   ENSURE_DIRECTORY: 'storage:ensure-directory',
   IMPORT_ROOT: 'storage:import-root',
+  LAST_ROOT: 'storage:last-root',
   STORE_IMPORTED_FILE: 'storage:store-imported-file',
   MOVE_STORED_FILE: 'storage:move-stored-file',
   WRITE_JSON_FILE: 'storage:write-json-file',

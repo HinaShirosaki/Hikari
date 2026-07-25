@@ -158,6 +158,72 @@ module.exports = function registerStorageAndImportContractsPart02(context = {}) 
       assert.equal(autoSavedPayload.data.projects.some((project) => project.name === 'Atlas'), true);
       assert.equal(persistedState.projects.some((project) => project.name === 'Atlas'), true);
     });
+    test('startup hydration recovers the workspace root when localStorage lost it', async () => {
+      const { createStorageImportController } = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'app', 'storage-import.js'),
+        { window: {} }
+      );
+      const state = structuredClone(shared.defaultState);
+      state.settings.storagePath = '';
+      let importedPath = '';
+      const controller = createStorageImportController({
+        state,
+        persist: () => {},
+        persistState: () => {},
+        normalizeStateStoragePaths: () => {},
+        windowObject: {
+          hikariApi: {
+            getLastStorageRoot: async () => ({ ok: true, storagePath: '/recovered/root' }),
+            ensureStorageDirectory: async (storagePath) => ({ ok: true, path: storagePath }),
+            importStorageRoot: async (storagePath) => {
+              importedPath = storagePath;
+              return {
+                ok: true,
+                statePatch: { gelAnalyses: [{ id: 'gel-1', name: 'Saved Gel' }] },
+                summary: {},
+                warnings: [],
+                manifestPath: ''
+              };
+            },
+            autoSaveDataFile: async () => ({ ok: true, filePath: '', sidecarPaths: {} })
+          }
+        }
+      });
+
+      const result = await controller.hydrateStateFromStorageRoot();
+      assert.equal(result.ok, true);
+      assert.equal(importedPath, '/recovered/root');
+      assert.equal(state.settings.storagePath, '/recovered/root');
+      assert.equal(state.gelAnalyses.some((gel) => gel.id === 'gel-1'), true);
+    });
+    test('startup hydration stays a no-op when no workspace root can be recovered', async () => {
+      const { createStorageImportController } = loadEsmStyleModule(
+        path.join(__dirname, 'src', 'renderer', 'app', 'storage-import.js'),
+        { window: {} }
+      );
+      const state = structuredClone(shared.defaultState);
+      state.settings.storagePath = '';
+      let imported = false;
+      const controller = createStorageImportController({
+        state,
+        persist: () => {},
+        persistState: () => {},
+        normalizeStateStoragePaths: () => {},
+        windowObject: {
+          hikariApi: {
+            getLastStorageRoot: async () => ({ ok: false, storagePath: '' }),
+            importStorageRoot: async () => {
+              imported = true;
+              return { ok: true, statePatch: {} };
+            }
+          }
+        }
+      });
+
+      assert.equal(await controller.hydrateStateFromStorageRoot(), undefined);
+      assert.equal(imported, false);
+      assert.equal(state.settings.storagePath, '');
+    });
     test('renderer storage import wiring runs on save callback and startup hydration path', () => {
       const rendererSource = readRendererStorageSource();
       const settingsSource = readLocalSource('src', 'renderer', 'modules', 'settings', 'index.js');

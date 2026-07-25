@@ -120,7 +120,8 @@ const toolBox = loadEsmStyleModule(
     'parseCrisprTargetsInput',
     'collectCrisprPamSites',
     'computeCrisprOffTargetStats',
-    'designCrisprGuides'
+    'designCrisprGuides',
+    'buildCrisprGuideTsv'
   ]
 );
 const sequenceViewerInternals = loadEsmStyleModule(
@@ -358,6 +359,167 @@ test('plugin system: remote plugins require https and cannot hold host permissio
     const rejected = await inspectPluginFolder({ fs: fsPromises, folderPath: dir });
     assert.equal(rejected.ok, false, `${label} must be rejected`);
   }
+});
+
+test('plugin system: service plugins declare file conversions and stay local', async () => {
+  const { inspectPluginFolder } = require(path.join(__dirname, 'src', 'main', 'lib', 'inspect-plugin-folder.js'));
+  const dir = path.join(__dirname, 'tmp', 'svc-plugin');
+  await fsPromises.rm(dir, { recursive: true, force: true });
+  await fsPromises.mkdir(dir, { recursive: true });
+  await fsPromises.writeFile(path.join(dir, 'index.html'), '<!doctype html><title>svc</title>');
+  const writeManifest = (manifest) => fsPromises.writeFile(path.join(dir, 'plugin.json'), JSON.stringify(manifest));
+  const valid = { id: 'svc-plugin', name: 'Svc', version: '1.0.0', service: { fileConversions: [{ from: '.DNA', to: 'gbk' }] } };
+
+  await writeManifest(valid);
+  const ok = await inspectPluginFolder({ fs: fsPromises, folderPath: dir });
+  assert.equal(ok.ok, true);
+  assert.deepEqual(ok.service, { fileConversions: [{ from: 'dna', to: 'gbk' }] }, 'extensions normalized (lower-case, no dot)');
+  assert.equal(ok.embedUrl, '', 'a service is not a remote embed');
+  assert.equal(ok.serve, false, 'a service is not served');
+
+  for (const [label, manifest] of [
+    ['service not an object', { ...valid, service: 'dna' }],
+    ['empty conversions', { ...valid, service: { fileConversions: [] }}],
+    ['bad extension', { ...valid, service: { fileConversions: [{ from: 'd.n.a', to: 'gbk' }] }}],
+    ['service plus embed', { ...valid, embed: 'https://x.test/', service: valid.service }],
+    ['service plus serve', { ...valid, serve: true }]
+  ]) {
+    await writeManifest(manifest);
+    const rejected = await inspectPluginFolder({ fs: fsPromises, folderPath: dir });
+    assert.equal(rejected.ok, false, `${label} must be rejected`);
+  }
+});
+
+test('plugin service registry routes a conversion to the owning frame', async () => {
+  const { createPluginServiceRegistry } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-services.js')).href
+  );
+
+  let messageHandler = null;
+  const registry = createPluginServiceRegistry({
+    windowObject: { addEventListener: (_type, fn) => { messageHandler = fn; } }
+  });
+
+  const posted = [];
+  const frame = { contentWindow: { postMessage: (payload) => posted.push(payload) } };
+  registry.register(frame, { id: 'snapgene-dna', service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } });
+
+  assert.equal(registry.acceptExtensions(), '.dna');
+  assert.equal(registry.getConverter('DNA')?.pluginId, 'snapgene-dna', 'lookup is case/dot-insensitive');
+  assert.equal(registry.getConverter('gbk'), null, 'only registered extensions resolve');
+
+  const bytes = new Uint8Array([1, 2, 3]);
+  const resultPromise = registry.convert({ extension: 'dna', filename: 'p.dna', bytes });
+  assert.equal(posted.length, 1, 'the owning frame was posted to');
+  assert.equal(posted[0].call, 'convert');
+  assert.equal(posted[0].bytes, bytes);
+  const callId = posted[0].id;
+
+  // The frame answers on the shared message channel.
+  messageHandler({ data: { hikari: 1, call: 'convert:result', id: callId, ok: true, text: 'LOCUS ...' } });
+  const result = await resultPromise;
+  assert.equal(result.text, 'LOCUS ...');
+
+  // A service-reported failure rejects.
+  const failing = registry.convert({ extension: 'dna', filename: 'bad.dna', bytes });
+  const failId = posted[posted.length - 1].id;
+  messageHandler({ data: { hikari: 1, call: 'convert:result', id: failId, ok: false, error: 'boom' } });
+  await assert.rejects(failing, /boom/);
+
+  await assert.rejects(registry.convert({ extension: 'ab1', bytes }), /No installed service converts/);
+});
+
+test('plugin service: .dna converts to GenBank the sequence viewer can parse', async () => {
+  const { buildSnapGeneDnaFixture, convertDnaToGenBank } = require(
+    path.join(__dirname, 'examples', 'plugins', 'snapgene-dna', 'dna-to-genbank.js')
+  );
+  const { parseGenBankRecords } = sequenceViewerInternals;
+
+  const sequence = 'ATGCAAACCCGGGTTTAAACCGGTTAACCGGTTAACCATGC';
+  const featuresXml = '<Features><Feature name="ori" type="rep_origin" directionality="1">'
+    + '<Segment range="5-20"/></Feature></Features>';
+  const dna = buildSnapGeneDnaFixture({ sequence, circular: true, featuresXml });
+
+  const gbk = convertDnaToGenBank(dna, { name: 'pDemo' });
+  const { records } = parseGenBankRecords(gbk);
+  assert.ok(records && records.length, 'the converted GenBank parses');
+  assert.equal(records[0].sequence.toUpperCase(), sequence, 'sequence survives .dna -> gbk -> parse');
+  assert.equal(records[0].topology, 'circular', 'topology survives the round-trip');
+});
+
+test('plugin system: a service plugin mounts a hidden frame and no view', async () => {
+  const { installPlugins } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-loader.js')).href
+  );
+  function makeNode(tag) {
+    return {
+      tagName: String(tag).toUpperCase(), id: '', className: '', hidden: false, src: '',
+      children: [], attributes: new Map(),
+      setAttribute(n, v) { this.attributes.set(n, String(v)); },
+      getAttribute(n) { return this.attributes.has(n) ? this.attributes.get(n) : null; },
+      append(...kids) { this.children.push(...kids); }
+    };
+  }
+  const workspace = makeNode('div');
+  workspace.className = 'workspace-main';
+  const documentObject = {
+    createElement: (tag) => makeNode(tag),
+    querySelector: (sel) => (sel === '.workspace-main' ? workspace : null),
+    getElementById: (id) => {
+      const find = (node) => {
+        for (const child of node.children) {
+          if (child.id === id) return child;
+          const nested = find(child);
+          if (nested) return nested;
+        }
+        return null;
+      };
+      return find(workspace);
+    }
+  };
+  const registered = [];
+  const services = { register: (frame, plugin) => registered.push({ frame, plugin }) };
+  const appRegistry = [];
+
+  const state = { settings: { plugins: [
+    { id: 'snapgene-dna', name: 'Svc', entryUrl: 'file:///tmp/snapgene-dna/index.html', path: '/tmp/snapgene-dna', service: { fileConversions: [{ from: 'dna', to: 'gbk' }] } }
+  ] } };
+  installPlugins({ state, documentObject, appRegistry, services });
+
+  assert.equal(documentObject.getElementById('plugin-snapgene-dna-view'), null, 'a service has no view section');
+  assert.equal(appRegistry.length, 0, 'a service adds no navigation entry');
+  const frame = documentObject.getElementById('plugin-service-snapgene-dna');
+  assert.ok(frame, 'a hidden service frame is mounted');
+  assert.equal(frame.hidden, true, 'the service frame is hidden');
+  assert.ok(
+    String(frame.className).split(/\s+/).includes('plugin-service-frame'),
+    'the frame carries the class that pins it to display:none'
+  );
+  assert.equal(frame.getAttribute('sandbox'), 'allow-scripts allow-forms allow-modals allow-popups', 'opaque-origin sandbox, no allow-same-origin');
+  assert.equal(registered.length, 1, 'the frame is registered with the service registry');
+  assert.equal(registered[0].plugin.id, 'snapgene-dna');
+
+  // The host must pin service frames to display:none, not merely rely on the
+  // `hidden` attribute, so a service cannot render even with markup.
+  assert.match(
+    readSource(path.join('ui', 'css', 'base', 'core.css')),
+    /\.plugin-service-frame\s*\{[^}]*display:\s*none\s*!important/,
+    'core.css pins .plugin-service-frame to display:none'
+  );
+});
+
+test('plugin service: the example service ships no UI', () => {
+  const html = readSource(path.join('examples', 'plugins', 'snapgene-dna', 'index.html'));
+  // Strip comments, then the body should hold script tags and nothing else.
+  const body = (/<body[^>]*>([\s\S]*?)<\/body>/i.exec(html) || [])[1] || '';
+  const withoutComments = body.replace(/<!--[\s\S]*?-->/g, '');
+  const withoutScripts = withoutComments.replace(/<script\b[\s\S]*?<\/script>/gi, '');
+  assert.equal(withoutScripts.trim(), '', 'a service page renders nothing: only script tags in the body');
+  assert.equal(/\bstyle\s*=|<style\b/i.test(html), false, 'a service page carries no styling');
+
+  // The service worker must not touch the DOM.
+  const worker = readSource(path.join('examples', 'plugins', 'snapgene-dna', 'main.js'));
+  assert.equal(/\bdocument\./.test(worker), false, 'the service worker touches no DOM');
 });
 
 test('plugin system: only non-host origins get allow-same-origin', async () => {

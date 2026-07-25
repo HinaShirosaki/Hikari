@@ -24,11 +24,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart04(context = {}
           resolveAgentModel: () => '',
           resolveAgentApiKey: () => '',
           extractConversation: (conversation) => (Array.isArray(conversation) ? conversation : []),
-          resolveAgentExecutionFlags: () => ({ developerMode: false }),
           createAgentLlmTraceContext: () => ({
-            enabled: false,
             requestId: 'req-skill-command',
-            logPath: '',
             provider: '',
             model: '',
             rows: [],

@@ -26,7 +26,7 @@
               <small>Shared location vocabulary</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="sample-inventory">
-              <span>Sample &amp; Inventory</span>
+              <span>Samples</span>
               <small>Storage locations and type names</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="preferred-journal">
@@ -45,7 +45,8 @@
               <span>Plugins</span>
               <small>User plugin folders</small>
             </button>
-            <button type="button" class="settings-nav-item" data-settings-target="telegram">
+            <!-- ponytail: telegram unwired in main-services; drop `hidden` to bring it back. -->
+            <button type="button" class="settings-nav-item" data-settings-target="telegram" hidden>
               <span>Telegram Bot</span>
               <small>Bot token and status</small>
             </button>
@@ -107,9 +108,9 @@
                   <select id="setting-startup-default-view">
                     <option value="home-view">Home</option>
                     <option value="protocol-management-view">Protocols</option>
-                    <option value="biology-notebook-view">Biology Notebook</option>
+                    <option value="biology-notebook-view">Notebook</option>
                     <option value="lab-common-inventory-view">Chemicals</option>
-                    <option value="sample-registry-view">Sample &amp; Inventory</option>
+                    <option value="sample-registry-view">Samples</option>
                     <option value="assay-view">Assay</option>
                     <option value="gel-view">Gel</option>
                     <option value="workflow-management-view">Workflows</option>
@@ -145,7 +146,7 @@
 
             <section class="settings-section" data-settings-panel="sample-inventory" hidden>
               <div class="settings-section-head">
-                <h3>Sample &amp; Inventory</h3>
+                <h3>Samples</h3>
               </div>
               <div class="stack-form">
                 <div class="settings-subsection">
@@ -163,9 +164,6 @@
                     <button type="button" id="setting-sample-type-add-btn" class="ghost-btn settings-inline-icon" aria-label="Add sample type" title="Add sample type">+</button>
                   </div>
                   <ul id="setting-sample-type-label-list" class="settings-sample-type-label-list"></ul>
-                  <div class="form-actions">
-                    <button type="submit" class="primary-btn settings-inline-icon settings-sample-type-save" aria-label="Save sample type names" title="Save sample type names">✓</button>
-                  </div>
                 </form>
               </div>
             </section>
@@ -218,10 +216,6 @@
                   </div>
                   <p class="small-note">Keep Hikari open. Codex Desktop will need one restart after installing the connection.</p>
                 </div>
-                <label class="inline-row settings-toggle-row">
-                  <input id="setting-agent-developer-mode" type="checkbox" />
-                  <span>Agent Developer Mode (record redacted LLM request/response traces)</span>
-                </label>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn">Save LLM Settings</button>
                 </div>

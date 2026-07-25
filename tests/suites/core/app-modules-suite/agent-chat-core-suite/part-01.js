@@ -296,9 +296,7 @@ test('agent-chat renders assistant markdown with emphasis, tables, and escaped H
     ],
     state: {
       settings: {
-        agent: {
-          developerMode: false
-        }
+        agent: {}
       }
     },
     safeText: shared.safeText
@@ -409,9 +407,7 @@ test('agent-chat renders Codex user questions and returns option answers', async
         model: 'gpt-5.4',
         reasoningEffort: 'medium'
       },
-      agent: {
-        developerMode: false
-      }
+      agent: {}
     },
     agentChat: { projectId: '', messages: [] }
   };
@@ -558,9 +554,7 @@ test('agent-chat renders completed science thinking trace details in assistant m
     ],
     state: {
       settings: {
-        agent: {
-          developerMode: false
-        }
+        agent: {}
       }
     },
     safeText: shared.safeText

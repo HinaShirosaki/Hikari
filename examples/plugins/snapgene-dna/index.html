@@ -2,15 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>SnapGene .dna importer</title>
+    <title>SnapGene .dna importer (service)</title>
   </head>
   <body>
     <!--
-      This is a service plugin: it has no view and runs hidden. The markup
-      exists only so the page is a valid document and so the converter has a
-      status line to write to when you inspect the frame during debugging.
+      A service plugin has NO user interface. This file is not a page: it is
+      only the script host the sandbox needs in order to run the service, and
+      it renders nothing. Do not add markup, styles, or DOM code here — the
+      frame is mounted hidden and a service must never try to show anything.
+
+      Both scripts are CLASSIC (no type="module"): a service runs in an
+      opaque-origin sandbox where relative ES module fetches are CORS-blocked.
     -->
-    <p id="status" style="font:12px system-ui;color:#555">SnapGene .dna importer ready.</p>
-    <script type="module" src="./main.js"></script>
+    <script src="./dna-to-genbank.js"></script>
+    <script src="./main.js"></script>
   </body>
 </html>

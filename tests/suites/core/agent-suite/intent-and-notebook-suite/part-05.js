@@ -30,11 +30,8 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
           }),
           resolveAgentProvider: () => 'codex',
           extractConversation: (conversation) => (Array.isArray(conversation) ? conversation : []),
-          resolveAgentExecutionFlags: () => ({ developerMode: true }),
           createAgentLlmTraceContext: () => ({
-            enabled: true,
             requestId: 'req-codex-agent-controller',
-            logPath: '',
             provider: 'codex',
             model: 'gpt-5.4',
             rows: [
@@ -181,10 +178,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
         stateSnapshot: {
           settings: {
             storagePath: '/tmp/hikari-storage',
-            preferredJournals: ['Nature Biotechnology', 'Cell'],
-            agent: {
-              developerMode: true
-            }
+            preferredJournals: ['Nature Biotechnology', 'Cell']
           }
         }
       }, {
@@ -202,7 +196,6 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
       assert.equal(result.ok, true);
       assert.equal(result.parser.primary_intent, 'codex_agent');
       assert.equal(result.codex_agent.answer, 'Codex final answer.');
-      assert.equal(result.developer_trace.length, 1);
       assert.equal(codexRunInput.model, 'gpt-5.4');
       assert.equal(codexRunInput.reasoningEffort, 'high');
       assert.equal(codexRunInput.projectName, 'Atlas');
@@ -243,9 +236,7 @@ module.exports = function registerAgentIntentAndNotebookSuitePart05(context = {}
           }),
           resolveAgentProvider: () => 'openai',
           extractConversation: () => [],
-          resolveAgentExecutionFlags: () => ({ developerMode: false }),
           createAgentLlmTraceContext: () => ({
-            enabled: false,
             rows: [],
             entries: []
           })

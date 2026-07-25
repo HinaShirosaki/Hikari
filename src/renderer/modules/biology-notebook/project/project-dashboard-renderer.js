@@ -564,6 +564,61 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
     `;
   }
 
+  function renderProjectPaperFinder(project) {
+    return `
+      <section class="panel project-paper-finder-panel" aria-labelledby="project-paper-finder-heading">
+        <div class="project-panel-head project-paper-finder-head">
+          <div class="project-panel-copy">
+            <h3 id="project-paper-finder-heading">Paper Finder</h3>
+            <p class="small-note">Periodically find relevant papers for this project. Results stay metadata-only; PDFs are not downloaded.</p>
+          </div>
+          <span class="project-paper-finder-state" data-paper-finder-state>Not scheduled</span>
+        </div>
+        <form class="project-paper-finder-form" data-paper-finder-form data-project-id="${escapeText(project?.id || '')}">
+          <div class="project-paper-finder-fields">
+            <label class="project-paper-finder-frequency">
+              <span>Find papers every</span>
+              <span class="project-paper-finder-frequency-controls">
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value="1"
+                  aria-label="Paper finding frequency"
+                  data-paper-finder-frequency-value
+                  required
+                />
+                <select aria-label="Paper finding frequency unit" data-paper-finder-frequency-unit>
+                  <option value="day">day</option>
+                  <option value="week" selected>week</option>
+                  <option value="month">month</option>
+                </select>
+              </span>
+            </label>
+            <label class="project-paper-finder-requirements">
+              <span>Requirements <span class="small-note">(optional)</span></span>
+              <textarea
+                rows="4"
+                maxlength="12000"
+                data-paper-finder-requirements
+                placeholder="e.g. recent primary research on delivery efficiency and off-target effects"
+              ></textarea>
+            </label>
+          </div>
+          <p class="small-note project-paper-finder-hint">Leave requirements empty to use the project description, current project memory, and related durable memory.</p>
+          <div class="project-paper-finder-actions">
+            <button type="submit" class="primary-btn" data-paper-finder-save>Schedule</button>
+            <button type="button" class="ghost-btn" data-paper-finder-run hidden>Run now</button>
+            <button type="button" class="ghost-btn" data-paper-finder-toggle hidden>Pause</button>
+            <button type="button" class="ghost-btn danger-btn" data-paper-finder-remove hidden>Remove</button>
+            <span class="small-note project-paper-finder-status" role="status" aria-live="polite" data-paper-finder-status></span>
+          </div>
+        </form>
+        <div class="project-paper-finder-results" data-paper-finder-results hidden></div>
+      </section>
+    `;
+  }
+
   function renderStatCard({ label, value, note }) {
     return `
       <article class="project-stat-card">
@@ -695,6 +750,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
       </section>
       ${renderStats(summary)}
       ${renderProjectOverview(project, summary, { headingId: contributionHeadingId })}
+      ${renderProjectPaperFinder(project)}
     `;
   }
 

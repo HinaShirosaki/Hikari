@@ -65,7 +65,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const sampleEntry = registry.apps.find((app) => app.id === 'sample-inventory');
       assert.ok(sampleEntry);
       assert.equal(sampleEntry.viewId, 'sample-registry-view');
-      assert.equal(sampleEntry.label, 'Sample & Inventory');
+      assert.equal(sampleEntry.label, 'Samples');
       assert.equal(sampleEntry.placement, 'dock');
       assert.equal(registry.apps.some((app) => app.viewId === 'personal-inventory-view'), false);
     });
@@ -286,6 +286,38 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(html, /id="assay-clear-results-btn"[^>]*assay-results-icon-btn[^>]*aria-label="Clear results"[\s\S]*?<svg/);
       assert.doesNotMatch(html, /id="assay-(?:attach-result-file|save-results|clear-results)-btn"[^>]*>\s*(?:Attach Result File|Save Results|Clear Results)\s*<\//);
       assert.match(css, /\.assay-results-actions\s*>\s*\.assay-results-icon-btn\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;/s);
+    });
+
+    test('Assay Analyze uses the same searchable Existing Assays browser as Setup', () => {
+      const html = readLocalSource('ui', 'html', 'views', 'assay-view.html');
+      const css = readLocalSource('ui', 'css', 'views', 'assay-view.css');
+      const dom = readLocalSource('src', 'renderer', 'modules', 'assay', 'dom.js');
+      const browserView = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'browser-view.js');
+      const bindings = readLocalSource('src', 'renderer', 'modules', 'assay', 'ui', 'event-bindings.js');
+
+      assert.match(html, /class="assay-results-browser-scroll left-rail-template__scroll"[\s\S]*?id="assay-results-browser-panel"[^>]*assay-browser-panel[^>]*open[\s\S]*?Existing Assays[\s\S]*?id="assay-results-search"[\s\S]*?id="assay-results-list"[^>]*assay-browser-list[\s\S]*?class="assay-results-controls-pinned left-rail-template__pinned"[\s\S]*?id="assay-chart-style-panel"/);
+      assert.match(html, /id="assay-results-assay-select" hidden/);
+      assert.match(css, /\.assay-results-controls-panel\.left-rail-template__rail--pinned\s*\{[^}]*grid-template-rows:\s*minmax\(148px,\s*1fr\) minmax\(0,\s*3fr\);/s);
+      assert.match(css, /\.assay-results-controls-pinned\.left-rail-template__pinned\s*\{[^}]*min-height:\s*0;[^}]*overflow-y:\s*auto !important;[^}]*scrollbar-gutter:\s*stable;/s);
+      assert.match(dom, /assayResultsList:\s*root\.getElementById\('assay-results-list'\)/);
+      assert.match(browserView, /data-assay-results-select=/);
+      assert.match(bindings, /assayResultsList\?\.addEventListener\('click',\s*onListClick\)/);
+
+      const workflowIds = [
+        'assay-results-list',
+        'assay-result-file-input',
+        'assay-analysis-group-visualization',
+        'assay-analysis-method',
+        'assay-chart-style-panel'
+      ];
+      const workflowPositions = workflowIds.map((id) => html.indexOf(`id="${id}"`));
+      assert.equal(workflowPositions.every((position) => position >= 0), true);
+      assert.equal(workflowPositions.every((position, index) => index === 0 || position > workflowPositions[index - 1]), true);
+      assert.match(html, /assay-display-label">Result Data</);
+      assert.match(html, /assay-display-label">Groups \(optional\)</);
+      assert.doesNotMatch(html, /assay-analyze-results-btn|Analyze Results/);
+      assert.doesNotMatch(dom, /assayAnalyzeResultsBtn/);
+      assert.doesNotMatch(bindings, /onAnalyzeResults/);
     });
 
     test('Assay setup actions stay at the top of the form as accessible compact icons', () => {

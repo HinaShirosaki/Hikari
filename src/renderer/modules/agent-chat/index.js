@@ -2,18 +2,14 @@ import { createAgentChatSessionManager } from './session-manager.js';
 import { createAgentChatShellController } from './shell-controller.js';
 import { createAgentPayloadBuilder } from './payload-builder.js';
 import { createComposerAttachmentsController } from './composer-attachments.js';
-import { createDeveloperContextController } from './developer-context.js';
 import { createAssistantQuestionController } from './assistant-questions.js';
 import { createHistoryActionController } from './history-actions.js';
 import { createAgentReviewOverlayController } from './review-overlay.js';
 import { createAgentRequestController } from './agent-request-controller.js';
-import { createDeveloperMockResponseController } from './developer-mock-response.js';
-import { createDeveloperToolTestController } from './developer-tool-tests.js';
 import { bindAgentChatEvents } from './event-bindings.js';
 import { collectAgentChatDom, hasRequiredAgentChatDom } from './dom-bindings.js';
 import { buildSyncedStateSnapshot } from './state-sync.js';
 import { createAgentChatRuntimeState } from './runtime-state.js';
-import { createDeveloperToolUi } from './developer-tool-ui.js';
 import { renderAgentChat } from './render-cycle.js';
 import { mapExperimentDataToLlmJson } from './state-snapshot.js';
 import { createNotebookDraftAgentAdapter } from '../biology-notebook/agent/index.js';
@@ -32,6 +28,7 @@ export function initAgentChat({
   safeText,
   onNotebookEntriesChanged,
   onOpenNotebookEntry = () => {},
+  onAppendNotebookEntry = async () => ({ ok: false, error: 'Notebook append is unavailable.' }),
   onProtocolsChanged = () => {},
   notebookDraftAdapter: providedNotebookDraftAdapter = null,
   protocolReviewAdapter: providedProtocolReviewAdapter = null,
@@ -66,16 +63,14 @@ export function initAgentChat({
     notebookDraftAdapter,
     hasImageCapture: typeof captureImageAttachment === 'function'
   });
-  let developerContextController = null;
   let requestController = null;
+  let reviewController = null;
   const attachmentsController = createComposerAttachmentsController({
     attachmentInput: dom.attachmentInput,
     attachmentList: dom.attachmentList,
     createId,
     safeText,
-    setStatus: shell.setStatus,
-    invalidateDeveloperContextPreview: () => developerContextController?.invalidate(),
-    renderDeveloperResponseSimulator: () => developerContextController?.render()
+    setStatus: shell.setStatus
   });
   const payloadBuilder = createAgentPayloadBuilder({
     state,
@@ -84,8 +79,6 @@ export function initAgentChat({
     ensureAgentState: shell.ensureAgentState,
     onHiddenDraftContextsChanged: (contexts) => {
       renderHiddenContextIndicator(contexts);
-      developerContextController?.invalidate();
-      developerContextController?.render();
     }
   });
 
@@ -115,17 +108,6 @@ export function initAgentChat({
     `;
   }
   const syncStateSnapshot = (projectId) => buildSyncedStateSnapshot({ api, state, projectId });
-  developerContextController = createDeveloperContextController({
-    api,
-    state,
-    dom,
-    runtime,
-    setStatus: shell.setStatus,
-    ensureAgentState: shell.ensureAgentState,
-    buildSyncedStateSnapshot: syncStateSnapshot,
-    payloadBuilder
-  });
-  const developerToolUi = createDeveloperToolUi({ dom, safeText });
   const sessionManager = createAgentChatSessionManager({
     api,
     state,
@@ -153,10 +135,7 @@ export function initAgentChat({
     onActiveSessionChanged: () => {
       shell.syncActiveRequestState();
     },
-    onProjectScopeChanged: () => {
-      developerContextController?.invalidate();
-      developerContextController?.render();
-    }
+    onProjectScopeChanged: () => {}
   });
   shell.setSessionManager(sessionManager);
   sessionManager.bindEvents();
@@ -184,10 +163,12 @@ export function initAgentChat({
     renderHistoryView: shell.renderHistoryView,
     answerAssistantQuestion: questionController.answerAssistantQuestion,
     notebookDraftAdapter,
-    onOpenNotebookEntry
+    onOpenNotebookEntry,
+    openReviewForMessage: (message) => reviewController?.openForMessage?.(message),
+    onAppendNotebookEntry
   });
 
-  const reviewController = createAgentReviewOverlayController({
+  reviewController = createAgentReviewOverlayController({
     dom,
     state,
     persist,
@@ -197,7 +178,8 @@ export function initAgentChat({
     renderHistoryView: shell.renderHistoryView,
     notebookActions: historyController.notebookActions,
     notebookDraftAdapter,
-    protocolReviewAdapter
+    protocolReviewAdapter,
+    onAppendNotebookEntry
   });
 
   requestController = createAgentRequestController({
@@ -222,41 +204,6 @@ export function initAgentChat({
     openReviewForMessage: reviewController.openForMessage
   });
 
-  const developerMockController = createDeveloperMockResponseController({
-    state,
-    runtime,
-    dom,
-    createId,
-    persist,
-    payloadBuilder,
-    attachmentsController,
-    sessionManager,
-    developerContextController,
-    renderContextSummary: shell.renderContextSummary,
-    renderHistoryView: shell.renderHistoryView,
-    setStatus: shell.setStatus,
-    syncComposerHeight: shell.syncComposerHeight,
-    updateInFlightState: shell.updateInFlightState,
-    ensureAgentState: shell.ensureAgentState,
-    notebookDraftAdapter,
-    openReviewForMessage: reviewController.openForMessage
-  });
-
-  const developerToolTestController = createDeveloperToolTestController({
-    api,
-    state,
-    runtime,
-    dom,
-    createId,
-    persist,
-    payloadBuilder,
-    buildSyncedStateSnapshot: syncStateSnapshot,
-    ensureAgentState: shell.ensureAgentState,
-    renderHistoryView: shell.renderHistoryView,
-    setStatus: shell.setStatus,
-    updateInFlightState: shell.updateInFlightState
-  });
-
   const render = () => {
     renderAgentChat({
       api,
@@ -265,8 +212,6 @@ export function initAgentChat({
       runtime,
       shell,
       sessionManager,
-      developerToolUi,
-      developerContextController,
       attachmentsController,
       loadPersistentSessions
     });
@@ -298,14 +243,10 @@ export function initAgentChat({
     shell,
     attachmentsController,
     payloadBuilder,
-    developerContextController,
     requestController,
-    developerMockController,
-    developerToolTestController,
     historyController,
     captureImageAttachment,
-    onPlotlyGraphArtifact,
-    renderDeveloperToolHint: developerToolUi.renderDeveloperToolHint
+    onPlotlyGraphArtifact
   });
 
   return {

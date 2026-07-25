@@ -102,7 +102,6 @@ export const defaultState = {
       reasoningEffort: ''
     },
     agent: {
-      developerMode: false,
       externalSkillsEnabled: true,
       disabledExternalSkillNames: []
     },

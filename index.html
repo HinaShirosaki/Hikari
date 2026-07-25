@@ -207,6 +207,19 @@
           </div>
         </section>
 
+        <section class="home-tile home-tile-paper-finding" aria-labelledby="dashboard-paper-finding-heading">
+          <div class="home-tile-head">
+            <div class="home-tile-titles">
+              <h2 id="dashboard-paper-finding-heading">Scheduled paper finding</h2>
+              <p id="dashboard-paper-finding-summary" class="small-note">Loading schedules…</p>
+            </div>
+            <button type="button" id="dashboard-paper-finding-open-btn" class="home-link-btn">Manage →</button>
+          </div>
+          <div class="home-tile-scroll">
+            <div id="dashboard-paper-finding-list" class="dashboard-list"></div>
+          </div>
+        </section>
+
         <section class="home-tile home-tile-soft home-tile-passage" aria-labelledby="dashboard-passage-heading">
           <div class="home-tile-head">
             <div class="home-tile-titles">
@@ -631,7 +644,7 @@
           </div>
         </aside>
 
-        <div class="biology-notebook-viewer-column left-rail-template__main">
+        <div id="biology-notebook-viewer-column" class="biology-notebook-viewer-column left-rail-template__main">
           <button id="biology-notebook-tool-mobile-toggle" class="ghost-btn biology-notebook-tool-mobile-toggle" type="button" aria-expanded="false">Bench Tools</button>
           <div id="biology-notebook-page-starter" class="biology-notebook-page-starter" hidden aria-hidden="true">
             <span id="biology-notebook-page-starter-project"></span>
@@ -717,6 +730,7 @@
                     Experiment Result Files
                     <input id="biology-notebook-result-file" type="file" multiple />
                   </label>
+                  <div id="biology-notebook-result-attachments" class="biology-notebook-result-attachments" aria-live="polite" hidden></div>
                   <div class="form-actions">
                     <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
                     <button id="clarify-save-biology-notebook-btn" class="ghost-btn" type="button">Clarify and Save</button>
@@ -1141,7 +1155,7 @@
 <section id="sample-registry-view" class="view">
       <div class="sample-layout left-rail-template">
         <div class="sample-editor-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <h2>Sample &amp; Inventory</h2>
+          <h2>Samples</h2>
           <label class="sample-top-search">
             Search Samples
             <input id="sample-search" type="search" placeholder="Code, name, lot, location..." />
@@ -1433,94 +1447,110 @@
       </div>
 
       <div class="assay-results-layout assay-mode-results-panel left-rail-template" hidden>
-        <div class="assay-results-sheet-panel assay-results-controls-panel app-left-rail left-rail-template__rail" data-sync-left-rail>
-          <div class="assay-results-control-section">
-            <label>
-              Assay Plate
-              <select id="assay-results-assay-select">
+        <div class="assay-results-sheet-panel assay-results-controls-panel app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
+          <div class="assay-results-browser-scroll left-rail-template__scroll">
+            <details id="assay-results-browser-panel" class="assay-browser-panel" open>
+              <summary class="assay-browser-summary">
+                <span>Existing Assays</span>
+                <span id="assay-results-browser-count" class="small-note">0</span>
+              </summary>
+              <div class="assay-browser-body">
+                <label>
+                  Search Assays
+                  <input id="assay-results-search" placeholder="Search assay plates, projects, or notes" />
+                </label>
+                <div id="assay-results-list" class="assay-browser-list assay-results-browser-list"></div>
+              </div>
+            </details>
+          </div>
+          <div class="assay-results-controls-pinned left-rail-template__pinned">
+            <div class="assay-results-control-section">
+              <select id="assay-results-assay-select" hidden>
                 <option value="">Select assay plate</option>
               </select>
-            </label>
-            <div class="form-actions assay-results-actions">
-              <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" title="Attach result file">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                  <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
-                </svg>
-              </button>
-              <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
-              <button type="button" id="assay-save-results-btn" class="primary-btn assay-results-icon-btn assay-results-save-icon-btn" aria-label="Save results" title="Save results">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                  <path d="M5 3h12l3 3v15H4V3Z"></path>
-                  <path d="M8 3v6h8V3"></path>
-                  <path d="M8 21v-7h8v7"></path>
-                </svg>
-              </button>
-              <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
-                <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
-                  <path d="M3 6h18"></path>
-                  <path d="M8 6V4h8v2"></path>
-                  <path d="m19 6-1 14H6L5 6"></path>
-                  <path d="M10 11v5"></path>
-                  <path d="M14 11v5"></path>
-                </svg>
-              </button>
+              <span class="assay-display-label">Result Data</span>
+              <div class="form-actions assay-results-actions">
+                <button type="button" id="assay-attach-result-file-btn" class="ghost-btn assay-results-icon-btn" aria-label="Attach result file" title="Attach result file">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="m21.4 11.6-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 1 1-2.8-2.8l8.5-8.5"></path>
+                  </svg>
+                </button>
+                <input id="assay-result-file-input" type="file" accept=".csv,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
+                <button type="button" id="assay-save-results-btn" class="primary-btn assay-results-icon-btn assay-results-save-icon-btn" aria-label="Save results" title="Save results">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M5 3h12l3 3v15H4V3Z"></path>
+                    <path d="M8 3v6h8V3"></path>
+                    <path d="M8 21v-7h8v7"></path>
+                  </svg>
+                </button>
+                <button type="button" id="assay-clear-results-btn" class="ghost-btn assay-results-icon-btn row-action-icon-btn-danger" aria-label="Clear results" title="Clear results">
+                  <svg viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+                    <path d="M3 6h18"></path>
+                    <path d="M8 6V4h8v2"></path>
+                    <path d="m19 6-1 14H6L5 6"></path>
+                    <path d="M10 11v5"></path>
+                    <path d="M14 11v5"></path>
+                  </svg>
+                </button>
+              </div>
+              <div id="assay-active-assay-info" class="small-note"></div>
+              <div id="assay-result-status" class="small-note"></div>
             </div>
-            <div id="assay-active-assay-info" class="small-note"></div>
-            <div id="assay-result-status" class="small-note"></div>
-          </div>
 
-          <div class="assay-results-control-section">
-            <label>
-              Analysis Method
-              <select id="assay-analysis-method">
-                <option value="grouped_summary" selected>Grouped Summary</option>
-                <option value="nested_summary">Nested Summary</option>
-                <option value="row_summary">Row Summary</option>
-                <option value="column_summary">Column Summary</option>
-                <option value="linear_regression">Linear Regression</option>
-                <option value="ec50">EC50 (4PL Fit)</option>
-                <option value="ic50">IC50 (4PL Fit)</option>
-                <option value="survival">Survival %</option>
-                <optgroup label="Standard curves to interpolate">
-                  <option value="standard_curve_line">Line</option>
-                  <option value="standard_curve_4pl_log_concentration">Sigmoidal, 4PL, X is log(concentration)</option>
-                  <option value="standard_curve_4pl_concentration">Sigmoidal, 4PL, X is concentration</option>
-                  <option value="standard_curve_5pl_log_concentration">Asymmetric Sigmoidal, 5PL, X is log(concentration)</option>
-                  <option value="standard_curve_5pl_concentration">Asymmetric Sigmoidal, 5PL, X is concentration</option>
-                  <option value="standard_curve_semilog_line">Semilog line</option>
-                  <option value="standard_curve_hyperbola">Hyperbola (X is concentration)</option>
-                  <option value="standard_curve_quadratic">Second order polynomial (quadratic)</option>
-                  <option value="standard_curve_cubic">Third order polynomial (cubic)</option>
-                  <option value="standard_curve_pade_11">Pade (1,1) approximant</option>
-                </optgroup>
-              </select>
-            </label>
-            <div class="assay-analysis-controls">
-              <input id="assay-analysis-row-groups" type="hidden" />
-              <input id="assay-analysis-column-groups" type="hidden" />
-              <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
+            <div class="assay-results-control-section">
+              <span class="assay-display-label">Groups (optional)</span>
+              <div class="assay-analysis-controls">
+                <input id="assay-analysis-row-groups" type="hidden" />
+                <input id="assay-analysis-column-groups" type="hidden" />
+                <div id="assay-analysis-group-visualization" class="assay-analysis-group-visualization" aria-live="polite"></div>
+                <label>
+                  Replicate Group Name (optional)
+                  <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
+                </label>
+                <div class="form-actions assay-analysis-group-actions">
+                  <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
+                  <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
+                  <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
+                </div>
+                <div id="assay-analysis-selection-status" class="small-note"></div>
+              </div>
+            </div>
+
+            <div class="assay-results-control-section">
+              <label>
+                Analysis Method
+                <select id="assay-analysis-method">
+                  <option value="grouped_summary" selected>Grouped Summary</option>
+                  <option value="nested_summary">Nested Summary</option>
+                  <option value="row_summary">Row Summary</option>
+                  <option value="column_summary">Column Summary</option>
+                  <option value="linear_regression">Linear Regression</option>
+                  <option value="ec50">EC50 (4PL Fit)</option>
+                  <option value="ic50">IC50 (4PL Fit)</option>
+                  <option value="survival">Survival %</option>
+                  <optgroup label="Standard curves to interpolate">
+                    <option value="standard_curve_line">Line</option>
+                    <option value="standard_curve_4pl_log_concentration">Sigmoidal, 4PL, X is log(concentration)</option>
+                    <option value="standard_curve_4pl_concentration">Sigmoidal, 4PL, X is concentration</option>
+                    <option value="standard_curve_5pl_log_concentration">Asymmetric Sigmoidal, 5PL, X is log(concentration)</option>
+                    <option value="standard_curve_5pl_concentration">Asymmetric Sigmoidal, 5PL, X is concentration</option>
+                    <option value="standard_curve_semilog_line">Semilog line</option>
+                    <option value="standard_curve_hyperbola">Hyperbola (X is concentration)</option>
+                    <option value="standard_curve_quadratic">Second order polynomial (quadratic)</option>
+                    <option value="standard_curve_cubic">Third order polynomial (cubic)</option>
+                    <option value="standard_curve_pade_11">Pade (1,1) approximant</option>
+                  </optgroup>
+                </select>
+              </label>
               <label class="assay-analysis-checkbox">
                 <input id="assay-analysis-error-bars" type="checkbox" />
                 Show SD error bars (for Row/Column Summary)
               </label>
-              <label>
-                Replicate Group Name (optional)
-                <input id="assay-analysis-group-name" placeholder="e.g. Control replicate" />
-              </label>
-              <div class="form-actions assay-analysis-group-actions">
-                <button type="button" id="assay-analysis-add-row-group-btn" class="ghost-btn">Add Selected as Row Group</button>
-                <button type="button" id="assay-analysis-add-column-group-btn" class="ghost-btn">Add Selected as Column Group</button>
-                <button type="button" id="assay-analysis-clear-groups-btn" class="ghost-btn">Clear Groups</button>
-              </div>
-              <div id="assay-analysis-selection-status" class="small-note"></div>
+              <div id="assay-analysis-summary" class="small-note"></div>
             </div>
-            <div class="form-actions assay-results-actions">
-              <button type="button" id="assay-analyze-results-btn" class="ghost-btn">Analyze Results</button>
-            </div>
-            <div id="assay-analysis-summary" class="small-note"></div>
-          </div>
 
-          <div id="assay-chart-style-panel" class="assay-results-control-section" data-assay-chart-style-mount></div>
+            <div id="assay-chart-style-panel" class="assay-results-control-section" data-assay-chart-style-mount></div>
+          </div>
         </div>
 
         <div class="panel assay-results-analysis-panel assay-results-workspace left-rail-template__main">
@@ -1688,40 +1718,43 @@
                     <details class="gel-tool-group" open>
                       <summary>Lane</summary>
                       <div class="gel-tool-actions">
-                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" title="Outermost dividers define the gel edges">Set lane dividers</button>
-                        <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Set ladder lane</button>
-                        <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Adjust lane vertices</button>
-                        <label class="small-note gel-lane-count-control">
-                          Lanes:
+                        <button type="button" id="gel-tool-dividers-btn" class="ghost-btn" title="Outermost dividers define the gel edges">Lane dividers</button>
+                        <button type="button" id="gel-tool-ladder-lane-btn" class="ghost-btn">Ladder lane</button>
+                        <button type="button" id="gel-tool-lane-vertices-btn" class="ghost-btn">Lane vertices</button>
+                        <label class="small-note gel-tool-field">
+                          Lanes
                           <input type="number" id="gel-expected-lane-count" min="2" max="40" step="1" placeholder="auto" />
                         </label>
-                        <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect lanes</button>
+                        <button type="button" id="gel-auto-detect-lanes-btn" class="ghost-btn">Auto-detect</button>
                       </div>
                     </details>
 
                     <details class="gel-tool-group" open>
                       <summary>Band</summary>
                       <div class="gel-tool-actions">
-                        <button type="button" id="gel-tool-band-top-btn" class="ghost-btn">Set band top line</button>
-                        <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn">Set band bottom line</button>
-                        <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false">Lane-by-lane band</button>
+                        <button type="button" id="gel-tool-band-top-btn" class="ghost-btn">Band top</button>
+                        <button type="button" id="gel-tool-band-bottom-btn" class="ghost-btn">Band bottom</button>
+                        <button type="button" id="gel-lane-band-mode-btn" class="ghost-btn" aria-pressed="false">Per-lane band</button>
                       </div>
                     </details>
 
                     <details class="gel-tool-group" open>
                       <summary>Analysis</summary>
                       <div class="gel-tool-actions">
-                        <label class="small-note gel-ladder-mw-control">
-                          Ladder MW (kDa)
-                          <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="e.g. 50" />
+                        <label class="small-note gel-tool-field">
+                          Ladder MW
+                          <input id="gel-ladder-band-mw" type="number" min="0" step="0.1" placeholder="50 kDa" />
                         </label>
                         <button type="button" id="gel-add-table-btn" class="ghost-btn" disabled>Add table</button>
-                        <button type="button" id="gel-measure-intensity-btn" class="ghost-btn">Measure intensity</button>
+                        <button type="button" id="gel-measure-intensity-btn" class="ghost-btn">Measure</button>
                         <button type="button" id="gel-open-peak-editor-btn" class="ghost-btn">Peak editor</button>
-                        <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done Dividers</button>
-                        <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset Tools</button>
+                        <button type="button" id="gel-open-report-btn" class="ghost-btn" aria-haspopup="dialog" aria-controls="gel-report-overlay" aria-expanded="false" title="Open analysis report" disabled>Report</button>
                       </div>
                     </details>
+                  </div>
+                  <div class="gel-tool-footer">
+                    <button type="button" id="gel-manual-next-btn" class="ghost-btn">Done</button>
+                    <button type="button" id="gel-manual-reset-btn" class="ghost-btn">Reset</button>
                   </div>
                 </section>
 
@@ -1759,12 +1792,22 @@
                 <div id="gel-cell-table-summary" class="small-note"></div>
                 <div id="gel-cell-table-host" class="gel-cell-table-host"></div>
               </section>
-              <div class="panel gel-report-panel">
-                <h3>Analysis Report</h3>
-                <div id="gel-report-summary" class="cards"></div>
-                <pre id="gel-report-json" class="gel-report-json"></pre>
-              </div>
             </div>
+          </div>
+
+          <div id="gel-report-overlay" class="app-dialog-overlay app-dialog-overlay--center" hidden>
+            <section class="gel-report-dialog app-dialog-surface" role="dialog" aria-modal="true" aria-labelledby="gel-report-title" aria-describedby="gel-report-description">
+              <header class="app-dialog-head gel-report-dialog-head">
+                <div>
+                  <h3 id="gel-report-title">Analysis Report</h3>
+                  <p id="gel-report-description" class="small-note">Summary and complete data from the current gel analysis.</p>
+                </div>
+                <button type="button" id="gel-report-close-btn" class="app-dialog-close-btn" aria-label="Close analysis report" title="Close"><span aria-hidden="true">&times;</span></button>
+              </header>
+              <div class="gel-report-dialog-body">
+                <div id="gel-report-summary" class="cards"></div>
+              </div>
+            </section>
           </div>
 
           <div id="gel-peak-editor-overlay" class="gel-peak-editor-overlay" hidden>
@@ -1956,7 +1999,7 @@
               <small>Shared location vocabulary</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="sample-inventory">
-              <span>Sample &amp; Inventory</span>
+              <span>Samples</span>
               <small>Storage locations and type names</small>
             </button>
             <button type="button" class="settings-nav-item" data-settings-target="preferred-journal">
@@ -1975,7 +2018,8 @@
               <span>Plugins</span>
               <small>User plugin folders</small>
             </button>
-            <button type="button" class="settings-nav-item" data-settings-target="telegram">
+            <!-- ponytail: telegram unwired in main-services; drop `hidden` to bring it back. -->
+            <button type="button" class="settings-nav-item" data-settings-target="telegram" hidden>
               <span>Telegram Bot</span>
               <small>Bot token and status</small>
             </button>
@@ -2037,9 +2081,9 @@
                   <select id="setting-startup-default-view">
                     <option value="home-view">Home</option>
                     <option value="protocol-management-view">Protocols</option>
-                    <option value="biology-notebook-view">Biology Notebook</option>
+                    <option value="biology-notebook-view">Notebook</option>
                     <option value="lab-common-inventory-view">Chemicals</option>
-                    <option value="sample-registry-view">Sample &amp; Inventory</option>
+                    <option value="sample-registry-view">Samples</option>
                     <option value="assay-view">Assay</option>
                     <option value="gel-view">Gel</option>
                     <option value="workflow-management-view">Workflows</option>
@@ -2075,7 +2119,7 @@
 
             <section class="settings-section" data-settings-panel="sample-inventory" hidden>
               <div class="settings-section-head">
-                <h3>Sample &amp; Inventory</h3>
+                <h3>Samples</h3>
               </div>
               <div class="stack-form">
                 <div class="settings-subsection">
@@ -2093,9 +2137,6 @@
                     <button type="button" id="setting-sample-type-add-btn" class="ghost-btn settings-inline-icon" aria-label="Add sample type" title="Add sample type">+</button>
                   </div>
                   <ul id="setting-sample-type-label-list" class="settings-sample-type-label-list"></ul>
-                  <div class="form-actions">
-                    <button type="submit" class="primary-btn settings-inline-icon settings-sample-type-save" aria-label="Save sample type names" title="Save sample type names">✓</button>
-                  </div>
                 </form>
               </div>
             </section>
@@ -2148,10 +2189,6 @@
                   </div>
                   <p class="small-note">Keep Hikari open. Codex Desktop will need one restart after installing the connection.</p>
                 </div>
-                <label class="inline-row settings-toggle-row">
-                  <input id="setting-agent-developer-mode" type="checkbox" />
-                  <span>Agent Developer Mode (record redacted LLM request/response traces)</span>
-                </label>
                 <div class="form-actions">
                   <button type="submit" class="primary-btn">Save LLM Settings</button>
                 </div>
@@ -2628,50 +2665,6 @@
         <div class="panel agent-chat-panel left-rail-template__main">
           <div class="agent-chat-stage">
             <p id="agent-status" class="small-note agent-status-pill" hidden>Ready.</p>
-            <div id="agent-developer-tools" class="agent-developer-tools" hidden>
-              <div class="agent-developer-tools-actions">
-                <button type="button" id="agent-dev-test-tools-btn" class="ghost-btn">Test All Tools</button>
-                <span class="small-note">Developer mode only. Run the full smoke suite or target one tool with a manual message and inspect the raw result in chat.</span>
-              </div>
-              <div class="agent-developer-tool-grid">
-                <label>
-                  Tool
-                  <select id="agent-dev-tool-select"></select>
-                </label>
-                <label class="agent-developer-tool-message">
-                  Manual Test Message
-                  <textarea id="agent-dev-tool-message" rows="3" placeholder="Enter a tool-directed test message."></textarea>
-                </label>
-                <div class="form-actions">
-                  <button type="button" id="agent-dev-run-tool-btn" class="ghost-btn">Run Selected Tool</button>
-                  <span id="agent-dev-tool-hint" class="small-note"></span>
-                </div>
-              </div>
-            </div>
-            <div id="agent-dev-response-simulator" class="agent-dev-response-simulator" hidden>
-              <div class="agent-dev-response-header">
-                <div>
-                  <strong>LLM Response Simulator</strong>
-                  <span id="agent-dev-response-summary" class="small-note">Developer mode</span>
-                </div>
-                <button type="button" id="agent-dev-response-fold-btn" class="ghost-btn" aria-expanded="true">Fold</button>
-              </div>
-              <div id="agent-dev-response-body" class="agent-dev-response-body">
-                <label class="agent-dev-context-field">
-                  Agent Visible Context
-                  <textarea id="agent-dev-visible-context" rows="10" readonly></textarea>
-                </label>
-                <label class="agent-dev-context-field">
-                  Typed LLM Response
-                  <textarea id="agent-dev-mock-response" rows="6" placeholder="Type the exact assistant response to inject."></textarea>
-                </label>
-                <div class="agent-dev-response-actions">
-                  <button type="button" id="agent-dev-refresh-context-btn" class="ghost-btn">Refresh Context</button>
-                  <button type="button" id="agent-dev-use-mock-response-btn" class="primary-btn">Use As Response</button>
-                  <span id="agent-dev-response-hint" class="small-note"></span>
-                </div>
-              </div>
-            </div>
             <div class="agent-conversation-shell">
               <div class="agent-history-viewport">
                 <div id="agent-chat-history" class="agent-chat-history" aria-live="polite"></div>
@@ -3000,6 +2993,7 @@
                       <input id="buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-1" aria-expanded="false" />
                       <div id="buffer-suggestions-1" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
+                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" value="121.14" aria-label="Ingredient 1 molecular weight" /></td>
                   <td><input id="buffer-stock-1" placeholder="empty or 1 M" aria-label="Ingredient 1 stock concentration" /></td>
@@ -3012,6 +3006,7 @@
                       <input id="buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-2" aria-expanded="false" />
                       <div id="buffer-suggestions-2" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
+                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 2 molecular weight" /></td>
                   <td><input id="buffer-stock-2" placeholder="2000x" aria-label="Ingredient 2 stock concentration" /></td>
@@ -3024,6 +3019,7 @@
                       <input id="buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-3" aria-expanded="false" />
                       <div id="buffer-suggestions-3" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
+                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 3 molecular weight" /></td>
                   <td><input id="buffer-stock-3" placeholder="10% v/v" aria-label="Ingredient 3 stock concentration" /></td>
@@ -3036,6 +3032,7 @@
                       <input id="buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-4" aria-expanded="false" />
                       <div id="buffer-suggestions-4" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
+                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 4 molecular weight" /></td>
                   <td><input id="buffer-stock-4" placeholder="stock" aria-label="Ingredient 4 stock concentration" /></td>
@@ -3048,6 +3045,7 @@
                       <input id="buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-5" aria-expanded="false" />
                       <div id="buffer-suggestions-5" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
+                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-5" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 5 molecular weight" /></td>
                   <td><input id="buffer-stock-5" placeholder="stock" aria-label="Ingredient 5 stock concentration" /></td>
@@ -3060,13 +3058,14 @@
                       <input id="buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-6" aria-expanded="false" />
                       <div id="buffer-suggestions-6" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
                     </div>
+                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-6" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 6 molecular weight" /></td>
                   <td><input id="buffer-stock-6" placeholder="stock" aria-label="Ingredient 6 stock concentration" /></td>
                   <td><input id="buffer-final-6" placeholder="final" aria-label="Ingredient 6 final concentration" /></td>
                   <td><output id="buffer-output-6" aria-live="polite"></output></td>
                 </tr>
-                <tr class="tool-box-buffer-adjustment-row">
+                <tr id="buffer-adjustment-row" class="tool-box-buffer-adjustment-row">
                   <th scope="row">Solvent to add <output id="buffer-solvent-output" aria-live="polite"></output></th>
                   <td></td>
                   <th scope="row">6 M NaOH <output id="buffer-naoh-output" aria-live="polite"></output></th>
@@ -3106,42 +3105,42 @@
                   <th scope="col">Volume</th>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-1">
-                  <td><input id="fixed-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1" /></td>
+                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
                   <td><input id="fixed-reaction-stock-1" type="text" placeholder="10 mM" aria-label="Stock concentration for reaction item 1" /></td>
                   <td><input id="fixed-reaction-final-1" type="text" placeholder="1 uM" aria-label="Final concentration for reaction item 1" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-1" type="text" placeholder="auto" aria-label="Manual volume for reaction item 1" /><output id="fixed-reaction-output-1" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-2" hidden>
-                  <td><input id="fixed-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2" /></td>
+                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
                   <td><input id="fixed-reaction-stock-2" type="text" placeholder="2000x" aria-label="Stock concentration for reaction item 2" /></td>
                   <td><input id="fixed-reaction-final-2" type="text" placeholder="1x" aria-label="Final concentration for reaction item 2" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-2" type="text" placeholder="auto" aria-label="Manual volume for reaction item 2" /><output id="fixed-reaction-output-2" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-3" hidden>
-                  <td><input id="fixed-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3" /></td>
+                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
                   <td><input id="fixed-reaction-stock-3" type="text" placeholder="2%" aria-label="Stock concentration for reaction item 3" /></td>
                   <td><input id="fixed-reaction-final-3" type="text" placeholder="0.1% v/v" aria-label="Final concentration for reaction item 3" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-3" type="text" placeholder="auto" aria-label="Manual volume for reaction item 3" /><output id="fixed-reaction-output-3" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-4" hidden>
-                  <td><input id="fixed-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4" /></td>
+                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
                   <td><input id="fixed-reaction-stock-4" type="text" placeholder="1 mg/mL" aria-label="Stock concentration for reaction item 4" /></td>
                   <td><input id="fixed-reaction-final-4" type="text" placeholder="100 ng/uL" aria-label="Final concentration for reaction item 4" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-4" type="text" placeholder="auto" aria-label="Manual volume for reaction item 4" /><output id="fixed-reaction-output-4" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-5" hidden>
-                  <td><input id="fixed-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5" /></td>
+                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
                   <td><input id="fixed-reaction-stock-5" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 5" /></td>
                   <td><input id="fixed-reaction-final-5" type="text" placeholder="Final" aria-label="Final concentration for reaction item 5" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-5" type="text" placeholder="auto" aria-label="Manual volume for reaction item 5" /><output id="fixed-reaction-output-5" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-6" hidden>
-                  <td><input id="fixed-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6" /></td>
+                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
                   <td><input id="fixed-reaction-stock-6" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 6" /></td>
                   <td><input id="fixed-reaction-final-6" type="text" placeholder="Final" aria-label="Final concentration for reaction item 6" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6" /><output id="fixed-reaction-output-6" aria-live="polite"></output></td>
                 </tr>
-                <tr class="tool-box-reaction-solvent-row">
+                <tr id="fixed-reaction-solvent-row" class="tool-box-reaction-solvent-row">
                   <th scope="row"><input id="fixed-reaction-fill-name" value="Solvent" aria-label="Reaction solvent name" /></th>
                   <td></td>
                   <td></td>
@@ -3277,10 +3276,6 @@
           <form id="crispr-form" class="stack-form crispr-controls" autocomplete="off">
             <div class="form-grid">
               <label>
-                Reference Genome
-                <select id="crispr-reference-genome"></select>
-              </label>
-              <label>
                 PAM Pattern
                 <select id="crispr-pam-pattern">
                   <option value="NGG" selected>SpCas9 (NGG)</option>
@@ -3304,7 +3299,7 @@
                 <input id="crispr-max-gc" type="number" min="0" max="100" step="1" value="75" />
               </label>
             </div>
-            <p id="crispr-reference-note" class="small-note">Genome profile not selected.</p>
+            <p class="small-note">Off-target counts cover only the sequences submitted below. No reference genome is searched.</p>
             <label>
               Target Sequences (FASTA recommended)
               <textarea id="crispr-target-input" rows="8" placeholder=">Target_A&#10;GAGTCCGAGCAGAAGAAGAAGGG...&#10;>Target_B&#10;ACTG..." spellcheck="false"></textarea>
@@ -3321,7 +3316,8 @@
             </div>
 
             <div class="form-actions">
-              <button type="submit" class="primary-btn">Design sgRNAs</button>
+              <button type="submit" id="crispr-run-btn" class="primary-btn">Design sgRNAs</button>
+              <button type="button" id="crispr-copy-tsv-btn" class="ghost-btn" disabled>Copy Results (TSV)</button>
               <button type="button" id="crispr-select-all-btn" class="ghost-btn">Select All Targets</button>
               <button type="button" id="crispr-clear-btn" class="ghost-btn">Clear</button>
             </div>
@@ -3343,9 +3339,9 @@
                   <th>PAM</th>
                   <th>GC%</th>
                   <th>On-target</th>
-                  <th>Off-target rate</th>
-                  <th>Specificity</th>
-                  <th>Off-target hits (0/1/2/3 mm)</th>
+                  <th>Off-target rate (submitted seqs)</th>
+                  <th>Score</th>
+                  <th>Near-matches in submitted seqs (0/1/2/3 mm)</th>
                   <th>Notes</th>
                 </tr>
               </thead>
@@ -4099,7 +4095,13 @@
     </section>
 </section>
       <aside id="universal-agent-chat-rail" class="universal-agent-chat-rail" aria-label="Agent Chat Rail" aria-hidden="true" data-state="collapsed" hidden>
-        <button type="button" id="agent-chat-rail-toggle-btn" class="universal-agent-chat-rail__toggle" aria-label="Open agent chat rail" aria-expanded="false" title="Open chat">&lt;</button>
+        <button type="button" id="agent-chat-rail-toggle-btn" class="universal-agent-chat-rail__toggle" aria-label="Open agent chat rail" aria-expanded="false" title="Open chat">
+          <svg class="universal-agent-chat-rail__toggle-icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+            <path d="M6.25 6.75A2.75 2.75 0 0 1 9 4h6.25A2.75 2.75 0 0 1 18 6.75v6.5A2.75 2.75 0 0 1 15.25 16H10l-4 3v-3.5a2.75 2.75 0 0 1-2.25-2.7v-6.05Z"></path>
+            <path d="M9.25 10h5.5M12 7.25v5.5"></path>
+            <path d="M19.5 3.5v2.5M18.25 4.75h2.5"></path>
+          </svg>
+        </button>
         <div class="universal-agent-chat-rail__content">
           <header class="universal-agent-chat-rail__header">
             <div>
