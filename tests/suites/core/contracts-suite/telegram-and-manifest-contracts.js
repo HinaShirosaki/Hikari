@@ -42,8 +42,14 @@ module.exports = function registerTelegramAndManifestContracts(context = {}) {
       assert.equal(packageManifest.scripts.start, 'npm run build:ui && electron-forge start');
       assert.equal(packageManifest.scripts['check:source-layout'], 'node scripts/check-source-layout.mjs');
       // The gate builds the UI, runs the static checks, then the test runner.
-      assert.match(packageManifest.scripts.test, /^npm run build:ui && npm run test:checks && node test\.js$/);
+      assert.match(packageManifest.scripts.test, /^npm run build:ui/);
+      assert.match(packageManifest.scripts.test, /npm run test:checks/);
+      assert.match(packageManifest.scripts.test, /node test\.js/);
       assert.match(packageManifest.scripts['test:checks'], /check:css-colors[\s\S]*check:dom-ids[\s\S]*check:source-layout[\s\S]*check:selfchecks/);
+      // Neither level may && past a failure: one broken check must not silently
+      // skip every check after it, nor the whole suite run.
+      assert.doesNotMatch(packageManifest.scripts.test, /test:checks\s*&&/);
+      assert.doesNotMatch(packageManifest.scripts['test:checks'], /&&/);
       assert.equal(packageManifest.scripts.dist, 'npm run build:ui && electron-forge make');
       assert.equal(packageManifest.scripts['package:app'], 'npm run build:ui && electron-forge package');
       assert.equal(packageManifest.scripts.package, 'npm run build:ui && electron-forge package');

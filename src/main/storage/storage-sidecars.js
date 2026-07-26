@@ -7,8 +7,8 @@ const {
   CODEX_AGENTS_FOLDER_NAME,
   CODEX_SKILLS_FOLDER_NAME,
   MEMORY_FILE_NAME,
-  buildProjectMemoryMarkdown,
-  collectProjectMemoryRecords
+  collectProjectMemoryRecords,
+  writeProjectMemoryFile
 } = require('./storage-memory');
 const {
   writeChemicalSqliteBundleIndex,
@@ -166,7 +166,12 @@ async function writeNotebookPageFolders(storageRootPath, snapshot, updatedAt) {
   return writtenPaths;
 }
 
-async function writeProjectMemoryFiles(storageRootPath, snapshot, releaseOfficialSkills) {
+async function writeProjectMemoryFiles(
+  storageRootPath,
+  snapshot,
+  releaseOfficialSkills,
+  requestNotebookConclusion
+) {
   if (!storageRootPath) {
     return [];
   }
@@ -180,8 +185,14 @@ async function writeProjectMemoryFiles(storageRootPath, snapshot, releaseOfficia
     await fs.mkdir(folderPath, { recursive: true });
     await fs.mkdir(path.join(folderPath, CODEX_AGENTS_FOLDER_NAME, CODEX_SKILLS_FOLDER_NAME), { recursive: true });
     await releaseOfficialSkills(folderPath);
-    await fs.writeFile(filePath, buildProjectMemoryMarkdown(projectRecord), 'utf8');
-    writtenPaths.push(filePath);
+    const result = await writeProjectMemoryFile({
+      storageRootPath,
+      folderPath,
+      snapshot,
+      projectRecord,
+      requestNotebookConclusion
+    });
+    writtenPaths.push(result.filePath || filePath);
   }
   return writtenPaths;
 }
@@ -203,7 +214,8 @@ async function syncBundleFromSnapshot({
   dataFilePath,
   snapshot,
   fallbackDataFilePath = '',
-  releaseOfficialMcpSkillsForWorkspace = async () => {}
+  releaseOfficialMcpSkillsForWorkspace = async () => {},
+  requestProjectMemoryConclusion = null
 } = {}) {
   const safeSnapshot = ensureObject(snapshot);
   const bundlePaths = getBundlePaths({
@@ -240,7 +252,8 @@ async function syncBundleFromSnapshot({
     ? await writeProjectMemoryFiles(
       bundlePaths.storageRootPath,
       safeSnapshot,
-      releaseOfficialMcpSkillsForWorkspace
+      releaseOfficialMcpSkillsForWorkspace,
+      requestProjectMemoryConclusion
     )
     : [];
   await fs.rm(bundlePaths.notebookPagesPath, { force: true }).catch(() => {});

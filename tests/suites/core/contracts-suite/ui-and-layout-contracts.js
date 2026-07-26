@@ -147,7 +147,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
 
       assert.match(html, /id="inventory-add-container-note"[^>]*hidden><\/p>/);
       assert.doesNotMatch(html, /Create a storage box, plate, tube, or custom grid\./);
-      assert.match(containerForm, /addContainerNote\.hidden\s*=\s*!parent;/);
+      // The note is contextual: it only has copy when a parent folder is targeted,
+      // and it stays hidden the rest of the time.
+      assert.match(containerForm, /const note = target\?\.folder[\s\S]*?:\s*'';/);
+      assert.match(containerForm, /addContainerNote\.hidden\s*=\s*!note;/);
       assert.doesNotMatch(containerForm, /Create a storage box, plate, tube, or custom grid\./);
       assert.doesNotMatch(sectionNavigation, /container\(s\) and .*linked sample\(s\)/);
     });

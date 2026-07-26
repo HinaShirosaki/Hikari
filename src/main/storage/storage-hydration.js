@@ -9,6 +9,10 @@ const {
   readProtocolRowsFromSqlite,
   readSqliteBundleIndex
 } = require('./storage-sql-read');
+const {
+  PROJECT_MEMORY_AUTO_END,
+  PROJECT_MEMORY_AUTO_START
+} = require('./storage-memory');
 const { asArray, cleanText, cloneJson, ensureObject, parseJsonObject, readJsonFile } = require('./storage-utils');
 const { hydrateWorkflowRootFromStoragePath } = require('./workflow-storage');
 
@@ -246,8 +250,15 @@ function parseProjectMemoryMarkdown(rawMarkdown) {
   if (!markdown.trim()) {
     return {};
   }
+  const markerStart = markdown.indexOf(PROJECT_MEMORY_AUTO_START);
+  const markerEnd = markerStart >= 0
+    ? markdown.indexOf(PROJECT_MEMORY_AUTO_END, markerStart + PROJECT_MEMORY_AUTO_START.length)
+    : -1;
+  const metadataMarkdown = markerStart >= 0 && markerEnd >= 0
+    ? markdown.slice(markerStart + PROJECT_MEMORY_AUTO_START.length, markerEnd)
+    : markdown;
   const out = {};
-  markdown.split(/\r?\n/).forEach((line) => {
+  metadataMarkdown.split(/\r?\n/).forEach((line) => {
     const match = line.match(/^([A-Za-z ]+):\s*(.*)$/);
     if (!match) {
       return;

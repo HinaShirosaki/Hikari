@@ -159,6 +159,8 @@ export function initLabNotebook({
   let linkedPreviewRenderToken = 0;
   let sampleLinkDrafts = new Map();
   let pendingDroppedResultFiles = [];
+  let agentAppendQueue = Promise.resolve();
+  const appliedAgentAppendProposalIds = new Set();
   let savedDraftSnapshot = '';
   let experimentDialogPreviousSelection = null;
   let experimentDialogWorkspaceProjectId = '';
@@ -727,7 +729,16 @@ export function initLabNotebook({
     ].filter(Boolean).join('\n');
   }
 
-  async function appendAgentNotebookContent(proposal = {}) {
+  // Overlapping appends both read notebookResult.value before either writes it,
+  // so a double-click duplicates the text and two proposals lose one of the two.
+  // Queued, the second run sees the saved agentAppendProposalIds and no-ops.
+  function appendAgentNotebookContent(proposal = {}) {
+    const result = agentAppendQueue.then(() => runAgentNotebookAppend(proposal));
+    agentAppendQueue = result.catch(() => {});
+    return result;
+  }
+
+  async function runAgentNotebookAppend(proposal = {}) {
     if (!notebookProtocolArea || notebookProtocolArea.hidden || !notebookResult) {
       return { ok: false, error: 'Open the target Notebook page before approving this append.' };
     }
@@ -766,23 +777,27 @@ export function initLabNotebook({
       return { ok: false, error: 'This notebook page was saved again after the proposal was prepared. Ask the agent to refresh and re-propose the append.' };
     }
 
-    const proposalId = String(proposal.proposal_id || proposal.proposalId || '').trim();
-    const appliedIds = Array.isArray(activeEntry?.agentAppendProposalIds)
-      ? activeEntry.agentAppendProposalIds.map((id) => String(id || '').trim()).filter(Boolean)
-      : [];
-    if (proposalId && appliedIds.includes(proposalId)) {
-      return { ok: true, summary: 'This notebook enrichment was already appended.' };
-    }
-
     const appendText = buildAgentAppendText(proposal);
     if (!appendText) {
       return { ok: false, error: 'The proposal does not contain any notebook content to append.' };
     }
+    const proposalId = String(proposal.proposal_id || proposal.proposalId || '').trim();
+    const appliedIds = Array.isArray(activeEntry?.agentAppendProposalIds)
+      ? activeEntry.agentAppendProposalIds.map((id) => String(id || '').trim()).filter(Boolean)
+      : [];
+    // An unsaved draft has no entry to record the id on, and a proposal can
+    // arrive without one, so keep a local key as well.
+    const appendKey = proposalId || appendText;
+    if ((proposalId && appliedIds.includes(proposalId)) || appliedAgentAppendProposalIds.has(appendKey)) {
+      return { ok: true, summary: 'This notebook enrichment was already appended.' };
+    }
+
     const currentResult = String(notebookResult.value || '').trim();
     const combinedResult = currentResult ? `${currentResult}\n\n${appendText}` : appendText;
     notebookResult.value = combinedResult;
 
     if (!activeEntry) {
+      appliedAgentAppendProposalIds.add(appendKey);
       notifyActiveNotebookPageChanged();
       return {
         ok: true,
@@ -799,6 +814,7 @@ export function initLabNotebook({
       notebookResult.value = currentResult;
       return { ok: false, error: 'Hikari could not save the notebook append.' };
     }
+    appliedAgentAppendProposalIds.add(appendKey);
     return {
       ok: true,
       saved: true,

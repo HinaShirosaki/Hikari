@@ -1,5 +1,5 @@
 {
-  "exported_at": "2026-07-19T04:23:03.535Z",
+  "exported_at": "2026-07-26T01:54:35.000Z",
   "source_files": {
     "mcp_instructions": "src/main/agent/mcp-contract/instructions.js",
     "mcp_stdio_server": "src/main/agent/mcp-contract/stdio-server.js",
@@ -327,7 +327,7 @@
       },
       {
         "name": "literature_search",
-        "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `sources` to name specific databases, or leave it empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search.",
+        "description": "Use this tool when the user wants papers, references, recent literature, external evidence, or protein knowledgebase entries rather than a summary of one already-identified paper. Provide `query` when possible, and prefer short keyword or entity phrases instead of full-sentence prompts, for example `MAPK inhibitor resistance mechanism review` or `PD-1 ubiquitination stability`. Use `sources` to name specific databases, or leave it empty for auto mode, which searches literature APIs and provider/Codex web search in the same request. The literature workflow searches candidates, ranks selected papers, returns download-ready metadata, and loads selected context from abstracts or already-ingested paper markdown; it does not start new PDF downloads automatically. Users download selected papers later with the paper download button or an explicit paper-download action. Prefer `pubmed`, `crossref`, and `europe_pmc` for papers, `uniprot` for protein/gene knowledge, and `web` for generic recency-aware external search. Use `journals` to scope the search to named journals; a scope that matches nothing widens to an unfiltered search automatically, so set `allow_unfiltered_fallback` to false only when the user wants those journals or no results at all.",
         "annotations": {
           "title": "Literature Search",
           "readOnlyHint": false,
@@ -356,6 +356,9 @@
                 "type": "string",
                 "maxLength": 180
               }
+            },
+            "allow_unfiltered_fallback": {
+              "type": "boolean"
             },
             "prefer_recent": {
               "type": "boolean"

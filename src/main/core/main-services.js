@@ -78,6 +78,7 @@ const { registerSystemIpc } = require('../ipc/register-system-ipc');
 
 const AGENT_CHAT_LOG_FILE_NAME = 'agent-chat.log';
 const DEFAULT_DATA_FILE_NAME = 'hikari-data.json';
+const PROJECT_MEMORY_NOTEBOOK_MODEL = 'gpt-5.4-mini';
 const TELEGRAM_CONFIG_FILE_NAME = 'telegram-bot.json';
 
 // Constructs every main-process service in dependency order and registers all
@@ -110,9 +111,11 @@ function createMainServices(context = {}) {
     agentChatLogFileName: AGENT_CHAT_LOG_FILE_NAME
   });
   const appIconPath = path.join(projectRoot, 'assets', 'icon.png');
+  let requestProjectMemoryConclusion = null;
   const syncBundleFromSnapshot = (input = {}) => syncBundleFromSnapshotBase({
     ...input,
-    releaseOfficialMcpSkillsForWorkspace
+    releaseOfficialMcpSkillsForWorkspace,
+    requestProjectMemoryConclusion
   });
 
   // Storage.
@@ -189,6 +192,17 @@ function createMainServices(context = {}) {
       return codex.runSubAgentTurn(input);
     }
   });
+  requestProjectMemoryConclusion = async (input = {}) => {
+    const result = await agents.directLlmRegistry.requestModuleLlm({
+      ...input,
+      model: PROJECT_MEMORY_NOTEBOOK_MODEL,
+      reasoningEffort: 'low'
+    });
+    return {
+      ...result,
+      model: PROJECT_MEMORY_NOTEBOOK_MODEL
+    };
+  };
 
   const mcp = createMainMcpService({
     agentToolRuntime: agents.agentToolRuntime,

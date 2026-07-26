@@ -429,7 +429,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(literatureSearchDefinition.annotations.openWorldHint, true);
       assert.equal(literatureSearchDefinition.inputSchema.type, 'object');
       assert.deepEqual(Object.keys(literatureSearchDefinition.inputSchema.properties).sort(), [
-        'journals', 'prefer_recent', 'query', 'sources'
+        'allow_unfiltered_fallback', 'journals', 'prefer_recent', 'query', 'sources'
       ]);
       assert.equal(literatureSearchDefinition.inputSchema.properties.source, undefined);
       assert.equal(literatureSearchDefinition.inputSchema.properties.limit, undefined);
@@ -437,6 +437,16 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(literatureSearchDefinition.inputSchema.properties.storage_path, undefined);
       assert.equal(literatureSearchDefinition.inputSchema.properties.parser_payload, undefined);
       assert.equal(literatureSearchDefinition.inputSchema.properties.preferred_literature_source, undefined);
+      const checkedContract = JSON.parse(fs.readFileSync(
+        path.join(__dirname, 'docs', 'agent', 'mcp-contract', 'mcp-contract.json'),
+        'utf8'
+      ));
+      const checkedLiteratureSearch = checkedContract.mcp.tools.find((tool) => tool.name === 'literature_search');
+      assert.equal(checkedLiteratureSearch.description, literatureSearchDefinition.description);
+      assert.deepEqual(
+        Object.keys(checkedLiteratureSearch.inputSchema.properties).sort(),
+        Object.keys(literatureSearchDefinition.inputSchema.properties).sort()
+      );
       assert.equal(paperDownloadDefinition.annotations.readOnlyHint, false);
       assert.equal(paperDownloadDefinition.annotations.openWorldHint, true);
 

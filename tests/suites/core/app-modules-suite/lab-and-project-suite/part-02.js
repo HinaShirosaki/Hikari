@@ -549,6 +549,28 @@ test('biology-notebook project folder click renders the project dashboard in pla
   assert.equal(appendResult.saved, false);
   assert.match(document.getElementById('biology-notebook-result').value, /## PBS preparation/);
   assert.match(document.getElementById('biology-notebook-result').value, /### Sources/);
+
+  // A double-click must not append the same enrichment twice.
+  const appendProposal = {
+    proposal_id: 'proposal-append-1',
+    notebook_entry_id: 'unsaved draft',
+    page_title: 'Fresh Protocol',
+    project_name: 'Atlas',
+    protocol_name: 'Fresh Protocol',
+    section_title: 'Wash buffer',
+    content_markdown: 'Prepare 500 mL of wash buffer.'
+  };
+  const [firstAppend, secondAppend] = await Promise.all([
+    notebook.appendAgentNotebookContent(appendProposal),
+    notebook.appendAgentNotebookContent(appendProposal)
+  ]);
+  assert.equal(firstAppend.ok, true);
+  assert.equal(secondAppend.ok, true);
+  assert.equal(secondAppend.summary, 'This notebook enrichment was already appended.');
+  assert.equal(
+    document.getElementById('biology-notebook-result').value.split('## Wash buffer').length - 1,
+    1
+  );
 });
   }
 };
