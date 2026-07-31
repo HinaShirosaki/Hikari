@@ -32,7 +32,10 @@ test('[EDGE] sequence-viewer internal functions are exposed for unit tests', () 
     'countAmbiguousBases',
     'summarizeFastqQuality',
     'buildAlignmentSequenceTrack',
-    'buildCircularPreviewHtmlDocument',
+    'buildSequenceMapSvg',
+    'clampMapZoom',
+    'getMapKind',
+    'resolveBaseFromPoint',
     'assembleCloningPlan',
     'evaluateOverlapPcr',
     'evaluateGibsonAssembly',
@@ -556,6 +559,23 @@ ORIGIN
   assert.equal(parsed.records[0].features.length, 1);
   assert.equal(parsed.records[0].features[0].type, 'cds');
   assert.equal(parsed.records[0].features[0].translation, 'MKP*');
+});
+test('[EDGE] sequence-viewer parses the GenBank primer_bind key with strand direction', () => {
+  const parsed = sequenceViewerInternals.parseGenBankRecords(`
+LOCUS       PRIMERSEQ      24 bp    DNA     linear   SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+     primer_bind     complement(3..20)
+                     /label="Primer_R"
+ORIGIN
+        1 acgtacgtac gtacgtacgt acgt
+//
+`);
+
+  assert.equal(parsed.records.length, 1);
+  assert.equal(parsed.records[0].features.length, 1);
+  assert.equal(parsed.records[0].features[0].name, 'Primer_R');
+  assert.equal(parsed.records[0].features[0].type, 'primer_bind');
+  assert.equal(parsed.records[0].features[0].strand, -1);
 });
   }
 };

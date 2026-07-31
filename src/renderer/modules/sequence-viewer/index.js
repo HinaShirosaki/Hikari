@@ -23,7 +23,8 @@ export function initSequenceViewer(options = {}) {
     annotation: null,
     alignment: null,
     cloningDesign: null,
-    proteinBuilder: null
+    proteinBuilder: null,
+    vectorBuilder: null
   };
   const actions = {};
   const dialogs = {};

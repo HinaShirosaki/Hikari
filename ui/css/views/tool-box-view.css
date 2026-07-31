@@ -98,6 +98,38 @@
   gap: 12px;
 }
 
+.tool-box-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tool-box-sheet-header h3 {
+  margin: 0;
+}
+
+.tool-box-sheet-add-btn {
+  display: grid;
+  width: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--theme-text);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.tool-box-sheet-add-btn:hover,
+.tool-box-sheet-add-btn:focus-visible {
+  background: var(--theme-surface-subtle);
+}
+
 .tool-box-buffer-sheet-wrap,
 .tool-box-reaction-sheet-wrap {
   max-width: 100%;
@@ -213,8 +245,14 @@
 .tool-box-buffer-chemical-cell {
   position: relative;
   padding: 0;
+}
+
+.tool-box-buffer-ingredient-control,
+.tool-box-reaction-item-control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 34px;
+  width: 100%;
+  min-width: 0;
 }
 
 .tool-box-buffer-autocomplete {
@@ -223,8 +261,7 @@
 }
 
 .tool-box-reaction-item-cell {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 34px;
+  padding: 0;
 }
 
 .tool-box-sheet-row-remove {

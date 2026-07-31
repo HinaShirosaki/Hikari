@@ -760,7 +760,7 @@
     }
   },
   "container": {
-    "description": "Use this tool for temporary exact string or number containers. Create a container with a human-readable name and an exact copied value when possible; the tool returns short IDs such as `1` or `2`. Use `read` or `list` to refresh IDs, `update` to replace a value, and `replace_range` to edit a string by zero-based start/end offsets.",
+    "description": "Use this tool for temporary exact string or number containers. Create a container with a human-readable name, an exact copied value when possible, and optional `source` provenance; the tool returns short IDs such as `1` or `2`. Use `read` or `list` to refresh IDs, optional `limit` to bound a list, `update` to replace a value, and `replace_range` to edit a string by zero-based start/end offsets.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -803,6 +803,15 @@
               "type": "number"
             }
           ]
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 1200
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50
         },
         "start": {
           "type": "integer",
@@ -927,7 +936,7 @@
     }
   },
   "plotly-graph": {
-    "description": "Use this tool to create and iteratively adjust scratch Plotly.js graphs from `data` (the traces) and `layout`. Use `inspect` after `create` or `update` to review trace types, axis/title coverage, and x/y length mismatches before answering.",
+    "description": "Use this tool to create and iteratively adjust scratch Plotly.js graphs from `data` (the traces), `layout`, and optional `config`. Use `inspect` after `create` or `update` to review trace types, axis/title coverage, and x/y length mismatches before answering.",
     "input_schema": {
       "type": "object",
       "additionalProperties": false,
@@ -964,6 +973,10 @@
           "maxItems": 80
         },
         "layout": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "config": {
           "type": "object",
           "additionalProperties": true
         },

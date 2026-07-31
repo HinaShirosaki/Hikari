@@ -1108,7 +1108,6 @@ body.ui-neutral-compact.theme-night .agent-meta-grid details {
   position: relative;
   min-height: 0;
   overflow: hidden;
-  border-top: 1px solid color-mix(in srgb, var(--theme-border) 72%, transparent);
 }
 
 .agent-chat-history {

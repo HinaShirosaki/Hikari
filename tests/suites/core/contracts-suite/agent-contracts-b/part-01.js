@@ -60,7 +60,20 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(containerSource, /function allocateId\(\)/);
       assert.match(containerSource, /function replaceRange\(input = \{\}\)/);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'container'), true);
+      assert.match(
+        toolsCatalog.find((entry) => entry?.name === 'container')?.description || '',
+        /list, read,[^\n]+optional source provenance/
+      );
       assert.deepEqual(toolCallCatalog.container?.input_schema?.properties?.action?.enum, ['create', 'read', 'list', 'update', 'replace_range', 'rename', 'delete', 'clear']);
+      assert.deepEqual(toolCallCatalog.container?.input_schema?.properties?.source, {
+        type: 'string',
+        maxLength: 1200
+      });
+      assert.deepEqual(toolCallCatalog.container?.input_schema?.properties?.limit, {
+        type: 'integer',
+        minimum: 1,
+        maximum: 50
+      });
     });
     test('assay table and Plotly graph helpers expose reusable runtime action contracts', () => {
       const assayTableSource = fs.readFileSync(agentPath('tools', 'agent-assay-table.js'), 'utf8');
@@ -77,8 +90,130 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       assert.match(plotlyGraphSource, /function inspectFigure\(figure = \{\}\)/);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'assay-table'), true);
       assert.equal(toolsCatalog.some((entry) => entry?.name === 'plotly-graph'), true);
+      assert.match(
+        toolsCatalog.find((entry) => entry?.name === 'plotly-graph')?.description || '',
+        /canonical data, layout, and optional config/
+      );
       assert.deepEqual(toolCallCatalog['assay-table']?.input_schema?.properties?.action?.enum, ['create', 'read', 'list', 'derive', 'add_column', 'python', 'delete', 'clear']);
+      assert.equal(toolCallCatalog['assay-table']?.input_schema?.properties?.source_table_id, undefined);
       assert.deepEqual(toolCallCatalog['plotly-graph']?.input_schema?.properties?.action?.enum, ['create', 'read', 'list', 'update', 'inspect', 'delete', 'clear']);
+      assert.deepEqual(toolCallCatalog['plotly-graph']?.input_schema?.properties?.config, {
+        type: 'object',
+        additionalProperties: true
+      });
+      assert.equal(toolCallCatalog['plotly-graph']?.input_schema?.properties?.traces, undefined);
+      assert.equal(toolCallCatalog['plotly-graph']?.input_schema?.properties?.frames, undefined);
+    });
+    test('official MCP skill metadata matches Codex frontmatter constraints', () => {
+      const { OFFICIAL_MCP_SKILLS } = require(agentPath(
+        'codex-agent',
+        'official-mcp-skills.js'
+      ));
+
+      for (const skill of OFFICIAL_MCP_SKILLS) {
+        const frontmatter = skill.content.match(
+          /^---\nname: (.+)\ndescription: (.+)\n---/u
+        );
+        assert.ok(frontmatter, `${skill.id} has malformed frontmatter`);
+        const name = JSON.parse(frontmatter[1]);
+        const description = JSON.parse(frontmatter[2]);
+        assert.match(name, /^[a-z0-9-]+$/u);
+        assert.equal(name.length <= 64, true);
+        assert.equal(description.length <= 1024, true);
+        assert.doesNotMatch(description, /[<>]/u);
+      }
+    });
+    test('official MCP skill direct-call JSON examples pass production validation', async () => {
+      const { OFFICIAL_MCP_SKILLS } = require(agentPath(
+        'codex-agent',
+        'official-mcp-skills.js'
+      ));
+      const { createDirectMcpToolRouter } = require(agentPath(
+        'mcp-contract',
+        'direct-tools',
+        'index.js'
+      ));
+      const executedCalls = [];
+      const router = createDirectMcpToolRouter({
+        runTool: async (toolId, args) => {
+          executedCalls.push({ toolId, args });
+          return {
+            ok: true,
+            status: 'completed'
+          };
+        }
+      });
+      const extractActionExamples = (markdown = '') => Array.from(
+        String(markdown || '').matchAll(/`(\{[^\n`]*"action"[^\n`]*\})`/gu),
+        (match) => JSON.parse(match[1])
+      );
+      const containerSkill = OFFICIAL_MCP_SKILLS.find((skill) => skill.id === 'container');
+      const assayPlotlySkill = OFFICIAL_MCP_SKILLS.find((skill) => skill.id === 'assay-plotly');
+      const plotlySectionIndex = assayPlotlySkill?.content?.indexOf('Plotly workflow:') ?? -1;
+
+      assert.ok(containerSkill);
+      assert.ok(assayPlotlySkill);
+      assert.notEqual(plotlySectionIndex, -1);
+
+      const groups = [
+        {
+          directTool: 'container',
+          appTool: 'container',
+          examples: extractActionExamples(containerSkill.content),
+          expectedCount: 7
+        },
+        {
+          directTool: 'assay_table',
+          appTool: 'assay-table',
+          examples: extractActionExamples(assayPlotlySkill.content.slice(0, plotlySectionIndex)),
+          expectedCount: 2
+        },
+        {
+          directTool: 'plotly_graph',
+          appTool: 'plotly-graph',
+          examples: extractActionExamples(assayPlotlySkill.content.slice(plotlySectionIndex)),
+          expectedCount: 1
+        }
+      ];
+
+      for (const group of groups) {
+        assert.equal(group.examples.length, group.expectedCount);
+        for (const args of group.examples) {
+          const callCount = executedCalls.length;
+          const result = await router.callTool(group.directTool, args, {});
+          assert.notEqual(
+            result.status,
+            'invalid_arguments',
+            `${group.directTool} rejected ${JSON.stringify(args)}: ${result.error || 'unknown validation error'}`
+          );
+          assert.equal(executedCalls.length, callCount + 1);
+          assert.equal(executedCalls.at(-1).toolId, group.appTool);
+        }
+      }
+
+      assert.equal(
+        groups[1].examples.some((example) => Object.prototype.hasOwnProperty.call(example, 'source_table_id')),
+        false
+      );
+      assert.equal(
+        groups[2].examples.some((example) => Object.prototype.hasOwnProperty.call(example, 'traces')),
+        false
+      );
+      assert.equal(groups[2].examples[0].config?.responsive, true);
+
+      const validCallCount = executedCalls.length;
+      const deprecatedAssayAlias = await router.callTool('assay_table', {
+        action: 'derive',
+        source_table_id: '1',
+        columns: []
+      }, {});
+      const deprecatedPlotlyAlias = await router.callTool('plotly_graph', {
+        action: 'create',
+        traces: [{ type: 'scatter', x: [1], y: [2] }]
+      }, {});
+      assert.equal(deprecatedAssayAlias.status, 'invalid_arguments');
+      assert.equal(deprecatedPlotlyAlias.status, 'invalid_arguments');
+      assert.equal(executedCalls.length, validCallCount);
     });
     test('agent chat log helper exports reusable session log runtime and renderer consumes session UI ids', () => {
       const helperSource = fs.readFileSync(agentPath('context', 'agent-chat-log.js'), 'utf8');
@@ -268,6 +403,44 @@ module.exports = function registerAgentContractsBPart01(context = {}) {
       });
       assert.equal(missing.ok, false);
       assert.match(missing.error, /not registered/);
+    });
+    test('Codex structured requests forward their declared output schema', async () => {
+      const { createCodexAgentLlmProvider } = require(agentPath(
+        'shared',
+        'llm-providers',
+        'codex-agent-provider.js'
+      ));
+      const calls = [];
+      const schema = {
+        type: 'object',
+        additionalProperties: false,
+        required: ['conclusion', 'quotes'],
+        properties: {
+          conclusion: { type: 'string' },
+          quotes: {
+            type: 'array',
+            items: { type: 'string' }
+          }
+        }
+      };
+      const provider = createCodexAgentLlmProvider({
+        cleanText: (value) => String(value || '').trim(),
+        requestCodexCliText: async (input = {}) => {
+          calls.push(input);
+          return '{"conclusion":"Recorded result.","quotes":["Recorded result."]}';
+        },
+        getWorkingDirectory: () => '/tmp/hikari',
+        parseJsonObjectFromText: (raw) => JSON.parse(raw)
+      });
+
+      const result = await provider.requestText({
+        userPrompt: 'Summarize the saved result.',
+        expectJson: true,
+        schema
+      });
+
+      assert.equal(result.ok, true);
+      assert.deepEqual(calls[0].outputSchema, schema);
     });
     test('direct LLM module registry is wired through main IPC and preload', () => {
       const channelsSource = readLocalSource('src', 'shared', 'ipc', 'channels.js');

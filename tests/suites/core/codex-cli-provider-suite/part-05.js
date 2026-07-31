@@ -93,7 +93,10 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
         "process.stdin.on('end', () => {",
         "  const outputIndex = args.indexOf('--output-last-message');",
         "  const outputFile = outputIndex >= 0 ? args[outputIndex + 1] : '';",
-        '  fs.writeFileSync(process.env.HIKARI_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME }, null, 2));',
+        "  const schemaIndex = args.indexOf('--output-schema');",
+        "  const outputSchemaFile = schemaIndex >= 0 ? args[schemaIndex + 1] : '';",
+        "  const outputSchema = outputSchemaFile && fs.existsSync(outputSchemaFile) ? JSON.parse(fs.readFileSync(outputSchemaFile, 'utf8')) : null;",
+        '  fs.writeFileSync(process.env.HIKARI_FAKE_CODEX_CAPTURE, JSON.stringify({ args, stdin, cwd: process.cwd(), codexHome: process.env.CODEX_HOME, outputSchemaFile, outputSchema }, null, 2));',
         "  if (process.env.HIKARI_FAKE_CODEX_STDOUT) { process.stdout.write(process.env.HIKARI_FAKE_CODEX_STDOUT); }",
         "  if (process.env.HIKARI_FAKE_CODEX_STDERR) { process.stderr.write(process.env.HIKARI_FAKE_CODEX_STDERR); }",
         "  const exitCode = Number(process.env.HIKARI_FAKE_CODEX_EXIT_CODE || 0);",
@@ -171,6 +174,14 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
             prompt: 'Return OK only.',
             cwd: workspaceDir,
             enableWebSearch: true,
+            outputSchema: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['answer'],
+              properties: {
+                answer: { type: 'string' }
+              }
+            },
             envOverrides: {
               HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
               HIKARI_AGENT_MCP_REQUEST_CONTEXT: requestContext,
@@ -186,6 +197,16 @@ module.exports = function registerCodexCliProviderSuitePart05(context = {}) {
           assert.equal(captured.args.includes('--search'), true);
           assert.equal(captured.args.includes('non_prefixed_mcp_tool_names'), false);
           assert.equal(captured.args.includes('--output-last-message'), true);
+          assert.equal(captured.args.includes('--output-schema'), true);
+          assert.deepEqual(captured.outputSchema, {
+            type: 'object',
+            additionalProperties: false,
+            required: ['answer'],
+            properties: {
+              answer: { type: 'string' }
+            }
+          });
+          assert.equal(fs.existsSync(captured.outputSchemaFile), false);
           assert.match(captured.stdin, /Return OK only\./);
           assert.equal(fs.existsSync(path.join(workspaceDir, 'AGENTS.md')), true);
           assert.match(runtimeConfig, /\[mcp_servers\.hikari\]/);

@@ -10,6 +10,7 @@ import * as detailAlignment from './detail-alignment.js';
 import { bindSequenceViewerDetailEvents } from './detail-events.js';
 import { createSequenceViewerFeatureEditingController } from './detail-feature-editing.js';
 import { createSequenceHoverTooltipController } from './detail-hover.js';
+import { resolveSequenceBoundaryFromEvent as resolveSequenceBoundaryFromEventShared } from './detail-layout.js';
 import { createSequenceViewerDetailRenderingController } from './detail-rendering.js';
 import { createSequenceViewerSequenceEditingController } from './detail-sequence-editing.js';
 import { normalizeRestrictionVendorFilter } from './restriction-analysis.js';
@@ -245,48 +246,11 @@ export function createSequenceViewerDetailController(config = {}) {
   });
 
   function resolveSequenceBoundaryFromEvent(event, record) {
-    const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
-    if (!sequenceLength) {
-      return null;
-    }
-
-    const target = event?.target;
-    const lineElement = target?.closest?.('.sequence-viewer-dual-line') || null;
-    if (!lineElement) {
-      return null;
-    }
-
-    const lineStart = Number(lineElement?.dataset?.lineStart);
-    const lineEnd = Number(lineElement?.dataset?.lineEnd);
-    if (!Number.isFinite(lineStart) || !Number.isFinite(lineEnd) || lineEnd <= lineStart) {
-      return null;
-    }
-
-    const lineSpan = lineEnd - lineStart;
-    const seqTextElement = lineElement.querySelector?.('.sequence-viewer-strand-row-top .sequence-viewer-seq-text');
-    const rawX = Number(event?.clientX);
-    const safeAdvance = Math.max(1, Number(state.sequenceLayout?.charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX);
-
-    let relativeX = null;
-    if (seqTextElement && Number.isFinite(rawX) && typeof seqTextElement.getBoundingClientRect === 'function') {
-      const rect = seqTextElement.getBoundingClientRect();
-      if (Number.isFinite(rect?.left) && Number.isFinite(rect?.width) && rect.width > 0) {
-        relativeX = clamp(rawX - rect.left, 0, rect.width);
-      }
-    }
-
-    if (!Number.isFinite(relativeX)) {
-      const fallbackOffsetX = Number(event?.offsetX);
-      if (Number.isFinite(fallbackOffsetX)) {
-        relativeX = Math.max(0, fallbackOffsetX);
-      }
-    }
-    if (!Number.isFinite(relativeX)) {
-      return null;
-    }
-
-    const localBoundary = clamp(Math.round(relativeX / safeAdvance), 0, lineSpan);
-    return clamp(lineStart + localBoundary, 0, sequenceLength);
+    return resolveSequenceBoundaryFromEventShared(
+      event,
+      record,
+      Number(state.sequenceLayout?.charAdvancePx) || FALLBACK_CHAR_ADVANCE_PX
+    );
   }
 
   function syncActionButtonsState() {

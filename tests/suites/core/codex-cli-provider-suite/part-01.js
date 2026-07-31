@@ -194,6 +194,24 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         assert.equal(execIndex > searchIndex, true);
       });
     });
+    test('codex cli provider forwards output schemas to new and resumed exec requests', () => {
+      withCodexHome({}, () => {
+        const provider = loadProvider();
+        const outputSchemaFile = '/tmp/hikari-output-schema.json';
+        const newArgs = provider.buildCodexCliExecArgs({
+          outputFile: '/tmp/codex-last-message.txt',
+          outputSchemaFile
+        });
+        const resumedArgs = provider.buildCodexCliExecResumeArgs({
+          outputFile: '/tmp/codex-last-message.txt',
+          outputSchemaFile,
+          sessionId: 'codex-session-1'
+        });
+
+        assert.equal(newArgs[newArgs.indexOf('--output-schema') + 1], outputSchemaFile);
+        assert.equal(resumedArgs[resumedArgs.indexOf('--output-schema') + 1], outputSchemaFile);
+      });
+    });
     test('codex cli provider keeps Codex MCP tool names prefixed before exec', () => {
       withCodexHome({}, () => {
         const provider = loadProvider();

@@ -147,7 +147,10 @@ const sequenceViewerInternals = loadEsmStyleModule(
     'computeGcPercent',
     'countAmbiguousBases',
     'summarizeFastqQuality',
-    'buildCircularPreviewHtmlDocument'
+    'buildSequenceMapSvg',
+    'clampMapZoom',
+    'getMapKind',
+    'resolveBaseFromPoint'
   ]
 );
 const gelAnalysisInternals = loadEsmStyleModule(

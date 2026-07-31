@@ -105,6 +105,24 @@ body.has-shared-left-rail-view .left-rail-template > .left-rail-template__rail {
   border-top: 1px solid var(--theme-border-soft);
 }
 
+@media (min-width: 981px) {
+  .left-rail-template[data-left-rail-foldable="true"].is-left-rail-folded {
+    grid-template-columns: var(--shared-left-rail-folded-width) minmax(0, 1fr) !important;
+    gap: 0 !important;
+  }
+
+  .left-rail-template[data-left-rail-foldable="true"].is-left-rail-folded > .left-rail-template__rail {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(-100%);
+  }
+
+  .left-rail-template[data-left-rail-foldable="true"].is-left-rail-folded > .left-rail-template__main {
+    padding-left: 0 !important;
+  }
+}
+
 
 @media (max-width: 980px) {
   .left-rail-template:not(.left-rail-template--preserve-columns-on-narrow) {

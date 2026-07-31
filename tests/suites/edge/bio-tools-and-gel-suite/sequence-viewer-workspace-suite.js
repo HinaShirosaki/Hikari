@@ -6,7 +6,8 @@ module.exports = function registerEdgeSequenceViewerWorkspaceSuite(context = {})
     require('./sequence-viewer-workspace-suite/part-04.js'),
     require('./sequence-viewer-workspace-suite/part-05.js'),
     require('./sequence-viewer-workspace-suite/part-06.js'),
-    require('./sequence-viewer-workspace-suite/part-07.js')
+    require('./sequence-viewer-workspace-suite/part-07.js'),
+    require('./sequence-viewer-workspace-suite/part-08.js')
   ];
 
   registerParts.forEach((registerPart) => registerPart(context));

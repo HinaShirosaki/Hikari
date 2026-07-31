@@ -51,6 +51,10 @@ function registerDataIpc(deps = {}) {
   };
   const importStorageRoot = deps.importStorageRoot;
   const discoverPapersFromStorageRoot = deps.discoverPapersFromStorageRoot;
+  const paperKnowledgeDatabaseRuntime = deps.paperKnowledgeDatabaseRuntime
+    && typeof deps.paperKnowledgeDatabaseRuntime.ingestPaperPdf === 'function'
+    ? deps.paperKnowledgeDatabaseRuntime
+    : null;
   const syncSqliteBundleFromSnapshot = deps.syncSqliteBundleFromSnapshot;
   const listSequenceEntries = deps.listSequenceEntries;
   const getSequenceEntry = deps.getSequenceEntry;
@@ -210,6 +214,7 @@ function registerDataIpc(deps = {}) {
           linkedName: payload?.linkedName,
           doi: payload?.doi
         },
+        paperKnowledgeDatabaseRuntime,
         skipExistingMarkdown: false,
         source: 'manual-import'
       }).catch((error) => ({
@@ -228,7 +233,9 @@ function registerDataIpc(deps = {}) {
       knowledgeExtractedTextRelativePath: cleanText(paperMarkdown?.extracted_text_relative_path, 2400),
       knowledgeMetaRelativePath: cleanText(paperMarkdown?.meta_relative_path, 2400),
       knowledgeStatus: cleanText(paperMarkdown?.status, 80),
-      knowledgeError: cleanText(paperMarkdown?.error, 1200)
+      knowledgeError: cleanText(paperMarkdown?.error || paperMarkdown?.paper_intake_error, 1200),
+      paperIntakeStatus: cleanText(paperMarkdown?.paper_intake_status, 80),
+      paperIntakeError: cleanText(paperMarkdown?.paper_intake_error, 1200)
     };
   }
 

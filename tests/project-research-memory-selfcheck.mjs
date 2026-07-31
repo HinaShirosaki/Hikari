@@ -9,6 +9,7 @@ const {
   NOTEBOOK_MEMORY_MODEL_FALLBACK,
   PROJECT_MEMORY_AUTO_END,
   PROJECT_MEMORY_AUTO_START,
+  buildNotebookConclusionRequest,
   collectProjectMemoryRecords,
   mergeProjectMemoryMarkdown,
   waitForProjectMemoryQueue,
@@ -135,6 +136,14 @@ try {
     gelAnalyses: []
   };
   const projectRecord = collectProjectMemoryRecords(snapshot)[0];
+  const conclusionRequest = buildNotebookConclusionRequest({
+    id: entry.id,
+    title: entry.experimentName,
+    protocolName: entry.protocolName,
+    corpus: entry.result
+  });
+  assert.deepEqual(conclusionRequest.schema.required, ['conclusion', 'quotes']);
+  assert.match(conclusionRequest.prompt, /exactly two JSON fields: "conclusion".*"quotes"/);
   let modelCalls = 0;
   const validGenerator = async () => {
     modelCalls += 1;
@@ -143,7 +152,7 @@ try {
       model: 'test-mini',
       payload: {
         conclusion: 'Purification produced a recorded yield of 42 mg.',
-        quotes: ['Yield increased to 42 mg after purification.']
+        supporting_quotes: ['"Yield increased to 42 mg after purification."']
       }
     };
   };

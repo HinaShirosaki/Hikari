@@ -59,7 +59,6 @@ function registerSequenceLibraryIpc(deps = {}) {
     storagePath: requireStoragePath(payload),
     id: requireEntryId(payload),
     includeGbk: payload?.includeGbk === true,
-    includeHtml: payload?.includeHtml === true,
     includeAlignments: payload?.includeAlignments === true
   }));
 
@@ -75,7 +74,6 @@ function registerSequenceLibraryIpc(deps = {}) {
     sequence: String(payload?.sequence || ''),
     features: Array.isArray(payload?.features) ? payload.features : [],
     gbkText: String(payload?.gbkText || ''),
-    htmlText: String(payload?.htmlText || ''),
     alignmentSessions: Array.isArray(payload?.alignmentSessions) ? payload.alignmentSessions : null
   }));
 

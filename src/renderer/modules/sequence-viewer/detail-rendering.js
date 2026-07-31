@@ -5,6 +5,7 @@ import {
   buildFeatureLocationText,
   hashTypeToColor
 } from './feature-model.js';
+import { isPrimerBindingFeature } from './feature-types.js';
 import { buildSelectedOrfTranslationContext } from './orf-analysis.js';
 import { summarizeFastqQuality } from './parsing.js';
 import { computeSequenceLayoutMetrics } from './detail-layout.js';
@@ -46,6 +47,10 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
       const colorKey = feature.type === 'restriction_site' ? `${feature.type}:${feature.name}` : feature.type;
       const color = hashTypeToColor(colorKey);
       const locationText = buildFeatureLocationText(feature, sequenceLength);
+      const isPrimer = isPrimerBindingFeature(feature?.type);
+      const primerDirectionClass = feature?.strand === -1
+        ? 'sequence-viewer-feature-primer-reverse'
+        : 'sequence-viewer-feature-primer-forward';
       return (Array.isArray(feature.segments) ? feature.segments : [])
         .map((segment) => {
           const left = ((segment.start / sequenceLength) * 100).toFixed(3);
@@ -53,14 +58,28 @@ export function createSequenceViewerDetailRenderingController(config = {}) {
           const top = (feature.lane * 18) + 8;
           const isActive = index === state.selectedFeatureIndex;
           const title = `${feature.name || '-'} (${locationText})`;
+          const className = [
+            'sequence-viewer-feature-bar',
+            isPrimer ? 'sequence-viewer-feature-primer-overview' : '',
+            isPrimer ? primerDirectionClass : '',
+            isActive ? 'sequence-viewer-feature-bar-active' : ''
+          ].filter(Boolean).join(' ');
+          const style = isPrimer
+            ? `left:${left}%;width:${width}%;max-width:calc(100% - ${left}%);top:${top}px;--sequence-viewer-primer-color:${color};`
+            : `left:${left}%;width:${width}%;top:${top}px;background:${color};`;
           return `
             <button
-              class="sequence-viewer-feature-bar${isActive ? ' sequence-viewer-feature-bar-active' : ''}"
+              class="${className}"
               type="button"
               data-feature-index="${index}"
-              style="left:${left}%;width:${width}%;top:${top}px;background:${color};"
+              style="${style}"
               title="${escapeHtml(title)}"
-            ></button>
+              aria-label="${escapeHtml(title)}"
+            >${isPrimer ? `
+              <span class="sequence-viewer-feature-primer-cap" aria-hidden="true"></span>
+              <span class="sequence-viewer-feature-primer-line" aria-hidden="true"></span>
+              <span class="sequence-viewer-feature-primer-arrow" aria-hidden="true"></span>
+            ` : ''}</button>
           `;
         })
         .join('');

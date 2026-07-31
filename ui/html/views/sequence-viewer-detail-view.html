@@ -22,7 +22,7 @@
                   <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
                   <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open</button>
                   <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
-                  <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+                  <button id="sequence-viewer-vector-builder-btn" type="button" class="ghost-btn">Vector Builder</button>
                 </div>
               </section>
             </div>
@@ -30,7 +30,6 @@
               <section class="sequence-viewer-library-card left-rail-template__section">
                 <div class="result-card-head sequence-viewer-library-head">
                   <h4>Sequence Library</h4>
-                  <button id="sequence-viewer-detail-library-new-folder-btn" type="button" class="ghost-btn sequence-viewer-library-new-folder-btn">New Folder</button>
                 </div>
                 <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
                   <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
@@ -75,6 +74,7 @@
 
           <div class="form-actions">
             <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
+            <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
             <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
             <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
             <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn">Recognize Backbone/Insert</button>
@@ -337,6 +337,98 @@
           </div>
         </div>
           </div>
+        </div>
+      </div>
+
+      <div id="sequence-viewer-vector-builder-workspace" class="sequence-viewer-vector-builder-workspace" hidden>
+        <div class="sequence-viewer-vector-builder-toolbar">
+          <div class="sequence-viewer-vector-builder-toolbar-nav">
+            <button id="sequence-viewer-vector-builder-back-btn" type="button" class="ghost-btn">Back to Sequence Viewer</button>
+            <h3 id="sequence-viewer-vector-builder-title">No sequence open</h3>
+          </div>
+          <div class="form-actions sequence-viewer-vector-builder-toolbar-actions">
+            <label class="sequence-viewer-inline-toggle" title="Overlay unique NEB/Thermo cutter sites on the map.">
+              <input id="sequence-viewer-vector-builder-cutters-toggle" type="checkbox" />
+              <span>Cutters</span>
+            </label>
+            <button id="sequence-viewer-vector-builder-protein-builder-btn" type="button" class="ghost-btn">Insert Protein Construct</button>
+            <button id="sequence-viewer-vector-builder-cloning-design-btn" type="button" class="primary-btn">Cloning Design</button>
+          </div>
+        </div>
+
+        <div class="sequence-viewer-vector-builder-layout">
+          <section class="result-card sequence-viewer-vector-builder-map-card">
+            <div id="sequence-viewer-vector-builder-map" class="sequence-viewer-vector-builder-map">
+              <p class="small-note">Open a sequence record to build a vector.</p>
+            </div>
+          </section>
+
+          <section class="result-card sequence-viewer-vector-builder-sequence-card">
+            <div class="result-card-head">
+              <h4>Bases</h4>
+            </div>
+            <div id="sequence-viewer-vector-builder-sequence" class="sequence-viewer-vector-builder-sequence sequence-viewer-sequence-host">
+              <p class="small-note">No sequence loaded.</p>
+            </div>
+          </section>
+        </div>
+
+        <div id="sequence-viewer-vector-builder-context-menu" class="sequence-viewer-context-menu" hidden></div>
+
+        <div id="sequence-viewer-vector-builder-feature-replace-overlay" class="sequence-viewer-feature-editor-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+          <form id="sequence-viewer-vector-builder-feature-replace-form" class="sequence-viewer-feature-editor app-dialog-surface" autocomplete="off">
+            <div class="result-card-head sequence-viewer-feature-editor-head app-dialog-head">
+              <h4>Replace Feature</h4>
+              <button id="sequence-viewer-vector-builder-feature-replace-close" type="button" class="app-dialog-close-btn" aria-label="Close replace feature dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <p id="sequence-viewer-vector-builder-feature-replace-note" class="small-note">Choose a recorded feature to replace.</p>
+
+            <label>
+              Recorded Feature
+              <select id="sequence-viewer-vector-builder-feature-replace-select"></select>
+            </label>
+
+            <div class="sequence-viewer-protein-builder-feature-controls">
+              <input
+                id="sequence-viewer-vector-builder-feature-replace-search"
+                type="search"
+                placeholder="Search stored features"
+                autocomplete="off"
+                aria-label="Search stored features"
+              />
+              <button id="sequence-viewer-vector-builder-feature-replace-search-btn" type="button" class="ghost-btn">Search</button>
+            </div>
+            <span id="sequence-viewer-vector-builder-feature-replace-status" class="small-note">Search the stored feature database for a replacement.</span>
+
+            <div id="sequence-viewer-vector-builder-feature-replace-results" class="sequence-viewer-protein-builder-feature-search-results">
+              <p class="small-note">Search by feature name or stored sequence.</p>
+            </div>
+
+            <div class="form-actions">
+              <button id="sequence-viewer-vector-builder-feature-replace-cancel" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="sequence-viewer-vector-builder-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+          <form id="sequence-viewer-vector-builder-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
+            <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
+              <h4 id="sequence-viewer-vector-builder-sequence-edit-title">Edit Bases</h4>
+              <button id="sequence-viewer-vector-builder-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <p id="sequence-viewer-vector-builder-sequence-edit-note" class="small-note">Type the bases to apply.</p>
+
+            <label id="sequence-viewer-vector-builder-sequence-edit-input-wrap" class="sequence-viewer-sequence-edit-input-wrap">
+              Sequence
+              <textarea id="sequence-viewer-vector-builder-sequence-edit-textarea" rows="3" spellcheck="false" placeholder="ACGT"></textarea>
+            </label>
+            <div id="sequence-viewer-vector-builder-sequence-edit-delete-message" class="sequence-viewer-sequence-edit-delete-message calc-output" hidden></div>
+
+            <div class="form-actions">
+              <button id="sequence-viewer-vector-builder-sequence-edit-confirm" type="submit" class="primary-btn">Apply</button>
+              <button id="sequence-viewer-vector-builder-sequence-edit-cancel" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </form>
         </div>
       </div>
 

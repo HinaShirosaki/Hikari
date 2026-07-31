@@ -166,6 +166,11 @@ export function createPapersActions(context) {
     }
 
     const now = new Date().toISOString();
+    const paperIntakeError = String(
+      storedFile.paperIntakeError
+        || storedFile.knowledgeDatabase?.paper_intake_error
+        || ''
+    ).trim();
     const paper = {
       id: createId(),
       title: elements.paperTitleInput?.value?.trim() || file.name.replace(/\.pdf$/i, ''),
@@ -193,9 +198,9 @@ export function createPapersActions(context) {
       knowledgeGenerationMethod: storedFile.knowledgeDatabase?.wiki_generation_method || '',
       deepReadReady: false,
       availabilityStatus: 'uploaded_pdf',
-      ingestionStatus: 'uploaded',
+      ingestionStatus: paperIntakeError ? 'error' : 'uploaded',
       ingestionUpdatedAt: now,
-      ingestionErrors: [],
+      ingestionErrors: paperIntakeError ? [paperIntakeError] : [],
       createdAt: now,
       updatedAt: now
     };
@@ -207,7 +212,28 @@ export function createPapersActions(context) {
     libraryState.selectedFolderKey = buildFolderKey(paper.linkedType, paper.linkedId);
     context.library?.ensureFolderExpanded?.(libraryState.selectedFolderKey);
     context.render?.();
+    // Intake failures are reported once per batch by uploadPaperFiles; they are
+    // correlated (missing key, offline model), so alerting here would stack one
+    // blocking modal per dropped PDF.
     return paper;
+  }
+
+  const MAX_LISTED_INTAKE_FAILURES = 5;
+
+  function reportPaperIntakeFailures(papers = []) {
+    const failed = papers.filter((paper) => paper?.ingestionStatus === 'error');
+    if (!failed.length) {
+      return;
+    }
+    const listed = failed.slice(0, MAX_LISTED_INTAKE_FAILURES).map((paper) => (
+      `- ${paper.fileName}: ${paper.ingestionErrors?.[0] || 'Unknown intake error.'}`
+    ));
+    const remaining = failed.length - listed.length;
+    windowRef?.alert?.([
+      `${failed.length} PDF${failed.length === 1 ? ' was' : 's were'} stored, but automatic paper intake failed:`,
+      ...listed,
+      ...(remaining > 0 ? [`- and ${remaining} more.`] : [])
+    ].join('\n'));
   }
 
   async function uploadPaperFiles(files = []) {
@@ -230,6 +256,7 @@ export function createPapersActions(context) {
     }
     elements.paperForm?.reset?.();
     context.render?.();
+    reportPaperIntakeFailures(uploaded);
     return uploaded;
   }
 

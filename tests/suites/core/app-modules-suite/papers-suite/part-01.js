@@ -475,6 +475,99 @@ test('papers viewer imports and opens a PDF dropped on the viewer workspace', as
   assert.equal(harness.viewerFactory.controller.activePaperId, importedPaper.id);
   assert.equal(viewerShell.classList.contains('is-file-drop-active'), false);
 });
+test('papers viewer preserves and surfaces automatic intake failures after storing a PDF', async () => {
+  const harness = buildPapersManagementHarness();
+  const viewerShell = harness.document.getElementById('paper-viewer-shell');
+  const alerts = [];
+  const pdfBytes = new Uint8Array([37, 80, 68, 70]);
+  harness.state.settings.storagePath = '/tmp/hikari-storage';
+  harness.window.alert = (message) => alerts.push(String(message || ''));
+  harness.window.hikariApi.storeImportedFile = async (payload) => ({
+    ok: true,
+    fileName: payload.fileName,
+    filePath: '/tmp/hikari-storage/Project/Cancer_Study/Papers/intake-failed.pdf',
+    relativePath: 'Project/Cancer_Study/Papers/intake-failed.pdf',
+    knowledgeStatus: 'ready',
+    paperIntakeStatus: 'failed',
+    paperIntakeError: 'Structured intake response failed validation.'
+  });
+
+  trigger(viewerShell, 'drop', {
+    dataTransfer: {
+      files: [{
+        name: 'intake-failed.pdf',
+        type: 'application/pdf',
+        arrayBuffer: async () => pdfBytes.buffer
+      }],
+      types: ['Files'],
+      dropEffect: ''
+    }
+  });
+  await flushAsync();
+  await flushAsync();
+
+  const paper = harness.state.papers.find((item) => item.fileName === 'intake-failed.pdf');
+  assert.equal(paper.ingestionStatus, 'error');
+  assert.deepEqual(
+    Array.from(paper.ingestionErrors),
+    ['Structured intake response failed validation.']
+  );
+  assert.match(alerts[0], /automatic paper intake failed/i);
+  assert.equal(alerts.length, 1);
+});
+test('papers viewer reports batched intake failures in one alert', async () => {
+  const harness = buildPapersManagementHarness();
+  const journalClubList = harness.document.getElementById('journal-club-list');
+  const papersLibraryRail = harness.document.getElementById('papers-library-rail');
+  const alerts = [];
+  const pdfBytes = new Uint8Array([37, 80, 68, 70]);
+  const droppedNames = ['one.pdf', 'two.pdf', 'three.pdf'];
+  harness.state.settings.storagePath = '/tmp/hikari-storage';
+
+  // The library rail is the multi-file drop target; the viewer shell takes files[0] only.
+  trigger(journalClubList, 'click', {
+    target: {
+      closest(selector) {
+        return selector === '[data-folder-select]'
+          ? { dataset: { folderSelect: 'project:p1' } }
+          : null;
+      }
+    }
+  });
+  harness.window.alert = (message) => alerts.push(String(message || ''));
+  harness.window.hikariApi.storeImportedFile = async (payload) => ({
+    ok: true,
+    fileName: payload.fileName,
+    filePath: `/tmp/hikari-storage/Project/Cancer_Study/Papers/${payload.fileName}`,
+    relativePath: `Project/Cancer_Study/Papers/${payload.fileName}`,
+    knowledgeStatus: 'ready',
+    paperIntakeStatus: 'failed',
+    paperIntakeError: 'Structured intake response failed validation.'
+  });
+
+  trigger(papersLibraryRail, 'drop', {
+    dataTransfer: {
+      files: droppedNames.map((name) => ({
+        name,
+        type: 'application/pdf',
+        arrayBuffer: async () => pdfBytes.buffer
+      })),
+      types: ['Files'],
+      dropEffect: ''
+    }
+  });
+  await flushAsync();
+  await flushAsync();
+  await flushAsync();
+
+  // One modal for the whole batch, not one per dropped PDF.
+  assert.equal(alerts.length, 1);
+  for (const name of droppedNames) {
+    assert.equal(harness.state.papers.find((item) => item.fileName === name)?.ingestionStatus, 'error');
+    assert.ok(alerts[0].includes(name), `${name} is named in the summary`);
+  }
+  assert.match(alerts[0], /^3 PDFs were stored, but automatic paper intake failed:/);
+});
 test('papers module drags a paper between folders and moves the stored PDF', async () => {
   const harness = buildPapersManagementHarness();
   const paper = harness.state.papers.find((item) => item.id === 'paper-1');

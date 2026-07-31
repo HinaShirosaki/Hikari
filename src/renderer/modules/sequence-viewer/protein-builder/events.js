@@ -5,12 +5,8 @@ export function installProteinBuilderEvents(ctx) {
   const { elements, state } = ctx;
 
   ctx.bindEvents = function bindEvents() {
-    elements.homeProteinBuilderBtn?.addEventListener('click', () => {
-      ctx.onNavigateBuilder();
-      ctx.setStatus('Opened Protein Builder.');
-      ctx.setBuilderStatus('Protein Builder is ready.');
-    });
-
+    // Home enters through Vector Builder now; Protein Builder is reached from an
+    // open record, either from the detail rail or from a site picked on the map.
     elements.detailProteinBuilderBtn?.addEventListener('click', () => {
       ctx.onNavigateBuilder();
       ctx.setStatus('Opened Protein Builder.');
@@ -43,6 +39,15 @@ export function installProteinBuilderEvents(ctx) {
 
     elements.proteinBuilderAssembleBtn?.addEventListener('click', () => {
       void ctx.openAssemblyDialog();
+    });
+
+    elements.proteinBuilderInsertVectorBtn?.addEventListener('click', () => {
+      void ctx.insertConstructIntoVector();
+    });
+
+    elements.proteinBuilderCancelVectorBtn?.addEventListener('click', () => {
+      ctx.onCancelVectorInsert();
+      ctx.setBuilderStatus('Cancelled the vector insertion target.');
     });
 
     elements.proteinBuilderCommonBlocks?.addEventListener('click', (event) => {

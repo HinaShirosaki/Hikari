@@ -56,7 +56,7 @@ export function createPlatePreviewEvents({
       }
       renderPlatePreview();
       renderResultTable();
-      setLayoutStatus('Updated axis-based mapping from in-plate row/column definitions.');
+      setLayoutStatus('');
       setCsvStatus(`Mapped wells: ${runtime.currentLayout.length}.`);
       return;
     }

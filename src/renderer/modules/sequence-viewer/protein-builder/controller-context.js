@@ -33,6 +33,9 @@ export function createProteinBuilderContext(config = {}) {
     onNavigateHome: typeof config?.onNavigateHome === 'function' ? config.onNavigateHome : (() => {}),
     onNavigateBuilder: typeof config?.onNavigateBuilder === 'function' ? config.onNavigateBuilder : (() => {}),
     loadExternalRecord: typeof config?.loadExternalRecord === 'function' ? config.loadExternalRecord : (() => {}),
+    getVectorInsertTarget: typeof config?.getVectorInsertTarget === 'function' ? config.getVectorInsertTarget : (() => null),
+    onInsertIntoVector: typeof config?.onInsertIntoVector === 'function' ? config.onInsertIntoVector : (async () => false),
+    onCancelVectorInsert: typeof config?.onCancelVectorInsert === 'function' ? config.onCancelVectorInsert : (() => {}),
     appState: config?.state && typeof config.state === 'object' ? config.state : null,
     persist: typeof config?.persist === 'function' ? config.persist : null,
     createId: typeof config?.createId === 'function' ? config.createId : null,
@@ -57,6 +60,57 @@ export function createProteinBuilderContext(config = {}) {
     }
     elements.proteinBuilderFeatureSearchStatus.textContent = String(message || '');
     elements.proteinBuilderFeatureSearchStatus.style.color = isError ? 'var(--theme-danger)' : '';
+  };
+
+  // When the Vector Builder sent us here with a target site, the primary action
+  // becomes "splice into the open vector" instead of the stored-backbone
+  // assembly, which stays available as the standalone entry point.
+  ctx.syncVectorInsertControls = function syncVectorInsertControls() {
+    const target = ctx.getVectorInsertTarget();
+    const active = Boolean(target);
+    if (elements.proteinBuilderVectorTargetNote) {
+      elements.proteinBuilderVectorTargetNote.hidden = !active;
+      elements.proteinBuilderVectorTargetNote.textContent = active
+        ? `Target: ${cleanText(target.label, 120)} in ${cleanText(target.recordName, 120) || 'the open vector'}`
+        : '';
+    }
+    if (elements.proteinBuilderInsertVectorBtn) {
+      elements.proteinBuilderInsertVectorBtn.hidden = !active;
+      elements.proteinBuilderInsertVectorBtn.disabled = Boolean(state.isPreparingAssembly);
+    }
+    if (elements.proteinBuilderCancelVectorBtn) {
+      elements.proteinBuilderCancelVectorBtn.hidden = !active;
+    }
+    if (elements.proteinBuilderAssembleBtn) {
+      elements.proteinBuilderAssembleBtn.hidden = active;
+    }
+  };
+
+  ctx.insertConstructIntoVector = async function insertConstructIntoVector() {
+    if (!state.dnaConstruct?.ok || !state.dnaConstruct?.sequence) {
+      ctx.buildCurrentDnaSequence();
+      if (!state.dnaConstruct?.ok || !state.dnaConstruct?.sequence) {
+        ctx.setBuilderStatus('Resolve the construct errors before inserting it into the vector.', true);
+        return;
+      }
+    }
+
+    state.isPreparingAssembly = true;
+    ctx.syncVectorInsertControls();
+    try {
+      const applied = await ctx.onInsertIntoVector({
+        constructName: cleanText(elements.proteinBuilderNameInput?.value, 140) || 'Protein Builder Insert',
+        dnaConstruct: state.dnaConstruct
+      });
+      if (applied) {
+        ctx.setBuilderStatus('Inserted the construct into the open vector.');
+      }
+    } catch (error) {
+      ctx.setBuilderStatus(error?.message || 'Failed to insert the construct into the vector.', true);
+    } finally {
+      state.isPreparingAssembly = false;
+      ctx.syncVectorInsertControls();
+    }
   };
 
   ctx.syncFeatureSearchControls = function syncFeatureSearchControls() {

@@ -458,6 +458,80 @@ test('biology-notebook page metadata omits redundant result file and table summa
   assert.match(meta, /Tool calculations: 1 calculation \(Molarity\)\./);
   assert.match(meta, /Linked samples: 1\./);
 });
+test('biology-notebook places Clarify and Save inside the notes composer', () => {
+  const html = fs.readFileSync(path.join(
+    __dirname,
+    'ui',
+    'html',
+    'views',
+    'biology-notebook-view.html'
+  ), 'utf8');
+  const css = fs.readFileSync(path.join(
+    __dirname,
+    'ui',
+    'css',
+    'views',
+    'biology-notebook-view.css'
+  ), 'utf8');
+  assert.match(html, /class="biology-notebook-notes-field"[\s\S]*?for="biology-notebook-result"[\s\S]*?class="biology-notebook-notes-composer"[\s\S]*?id="biology-notebook-result"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
+  assert.doesNotMatch(html, /class="form-actions"[\s\S]*?id="clarify-save-biology-notebook-btn"/);
+  assert.match(css, /\.biology-notebook-notes-composer\s*\{[^}]*position:\s*relative;/s);
+  assert.match(css, /\.biology-notebook-notes-composer textarea\s*\{[^}]*padding:\s*10px\s+12px\s+50px;/s);
+  assert.match(css, /\.biology-notebook-notes-clarify-btn\s*\{[^}]*position:\s*absolute;[^}]*right:\s*8px;[^}]*bottom:\s*8px;/s);
+});
+test('biology-notebook buffer preparer floats one autocomplete menu and appends ingredients beyond its starter rows', () => {
+  const source = fs.readFileSync(path.join(
+    __dirname,
+    'src',
+    'renderer',
+    'modules',
+    'biology-notebook',
+    'tools',
+    'tool-sidebar.js'
+  ), 'utf8');
+  const html = fs.readFileSync(path.join(
+    __dirname,
+    'ui',
+    'html',
+    'views',
+    'biology-notebook-view.html'
+  ), 'utf8');
+  const css = fs.readFileSync(path.join(
+    __dirname,
+    'ui',
+    'css',
+    'views',
+    'biology-notebook-view.css'
+  ), 'utf8');
+  assert.match(source, /const INITIAL_BUFFER_ROW_COUNT = 6;/);
+  assert.match(source, /function closeOtherBufferSuggestions\(activeIndex\)/);
+  assert.match(source, /function renderBufferSuggestions\(index\)[\s\S]*?closeOtherBufferSuggestions\(index\)[\s\S]*?positionBufferSuggestions\(index\);/);
+  assert.match(source, /function appendBufferRow\(\)[\s\S]*?bufferRowTotal = index;[\s\S]*?bindBufferRow\(index\);/);
+  assert.match(source, /function insertBufferRowBeforeAddRow\(row\)[\s\S]*?biology-notebook-tool-buffer-add-row-anchor/);
+  assert.doesNotMatch(source, /revealNextRow\('biology-notebook-tool-buffer-row'/);
+  assert.match(source, /addListener\(doc, 'scroll', repositionOpenBufferSuggestions, true\);/);
+  assert.match(html, /<tbody id="biology-notebook-tool-buffer-rows">/);
+  assert.match(html, /id="biology-notebook-tool-buffer-add-row-anchor"[\s\S]*?id="biology-notebook-tool-buffer-add-row"[\s\S]*?>\+<\/button>/);
+  assert.match(html, /id="biology-notebook-tool-buffer-adjustment-row"/);
+  assert.match(css, /\.biology-notebook-buffer-suggestions--floating\s*\{[^}]*position:\s*fixed;[^}]*z-index:\s*120;/s);
+});
+test('biology-notebook buffer preparer starts blank, has one insert-and-record action, and exposes compound pKa data', () => {
+  const html = fs.readFileSync(path.join(__dirname, 'ui', 'html', 'views', 'biology-notebook-view.html'), 'utf8');
+  const toolSource = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'modules', 'biology-notebook', 'tools', 'tool-sidebar.js'), 'utf8');
+  const compounds = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'lib', 'chemistry', 'buffer-compounds.js'), 'utf8');
+  const calculations = fs.readFileSync(path.join(__dirname, 'src', 'renderer', 'lib', 'bench-calculations.js'), 'utf8');
+  const bufferSection = html.slice(
+    html.indexOf('id="biology-notebook-tool-panel-buffer"'),
+    html.indexOf('id="biology-notebook-tool-panel-reaction"')
+  );
+  assert.doesNotMatch(bufferSection, /value="100"|placeholder="(?:Tris Base|NaCl|Tween 20|Ingredient|MW|empty or 1 M|2000x|50 mM|150 mM|10% v\/v|0\.1% v\/v|stock|final|7\.4)"/);
+  assert.match(html, /id="biology-notebook-tool-insert-notes-btn"[^>]*>Insert &amp; Record<\/button>/);
+  assert.doesNotMatch(html, /biology-notebook-tool-use-placeholder-btn|biology-notebook-tool-record-btn/);
+  assert.doesNotMatch(toolSource, /stepsHost|useForActivePlaceholder|recordBtn|usePlaceholderBtn/);
+  assert.match(compounds, /name: 'Bis-Tris',[^\n]*pKa: 6\.5/);
+  assert.match(compounds, /name: 'CAPS',[^\n]*pKa: 10\.4/);
+  assert.match(calculations, /const compound = resolveBufferCompound\(source\);[\s\S]*?return \{ pKa, label: compound\.name \};/);
+});
 test('biology-notebook edits only the saved page protocol copy and keeps the original protocol unchanged', () => {
   const document = createMockDocument([
     'biology-notebook-project-select',
@@ -952,7 +1026,7 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   document.getElementById('biology-notebook-tool-buffer-final-1').value = '150 mM';
   trigger(document.getElementById('biology-notebook-tool-buffer-final-1'), 'input');
   assert.match(document.getElementById('biology-notebook-tool-buffer-output-1').textContent, /8766 mg/i);
-  trigger(document.getElementById('biology-notebook-tool-record-btn'), 'click');
+  trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
 
   trigger(document.getElementById('biology-notebook-tool-tab-reaction'), 'click');
   document.getElementById('biology-notebook-tool-reaction-total-volume').value = '100 uL';
@@ -963,7 +1037,7 @@ test('biology-notebook sidebar records bench calculations and inserts readable n
   trigger(document.getElementById('biology-notebook-tool-reaction-final-1'), 'input');
   assert.match(document.getElementById('biology-notebook-tool-reaction-output-1').textContent, /10 uL/i);
   assert.match(document.getElementById('biology-notebook-tool-reaction-solvent-output').textContent, /90 uL/i);
-  trigger(document.getElementById('biology-notebook-tool-record-btn'), 'click');
+  trigger(document.getElementById('biology-notebook-tool-insert-notes-btn'), 'click');
 
   trigger(document.getElementById('save-biology-notebook-btn'), 'click');
   await flushAsync();

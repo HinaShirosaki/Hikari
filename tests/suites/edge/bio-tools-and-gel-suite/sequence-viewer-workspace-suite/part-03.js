@@ -29,8 +29,7 @@ test('[EDGE] sequence-viewer library search filters the library list by name', a
       sequenceLibraryList: async () => ({ ok: true, entries }),
       sequenceLibraryGet: async () => ({
         ok: true,
-        entry: entries[0],
-        htmlText: '<html><body>preview</body></html>'
+        entry: entries[0]
       })
     }
   };
@@ -73,7 +72,8 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
     'sequence-viewer-home-workspace',
     'sequence-viewer-protein-builder-workspace',
     'sequence-viewer-detail-workspace',
-    'sequence-viewer-home-protein-builder-btn',
+    'sequence-viewer-home-vector-builder-btn',
+    'sequence-viewer-detail-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
@@ -131,7 +131,7 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   moduleWithDom.initSequenceViewer();
   await flushAsync();
 
-  trigger(document.getElementById('sequence-viewer-home-protein-builder-btn'), 'click');
+  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
   assert.equal(Boolean(document.getElementById('sequence-viewer-protein-builder-workspace').hidden), false);
 
   const searchInput = document.getElementById('sequence-viewer-protein-builder-feature-search-input');

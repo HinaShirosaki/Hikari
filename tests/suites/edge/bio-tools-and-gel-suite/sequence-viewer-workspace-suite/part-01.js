@@ -99,8 +99,7 @@ test('[EDGE] sequence-viewer refreshes the library from the live storage root af
         id: payload.id,
         name: payload.id === 'new-entry' ? 'New root sequence' : 'Old root sequence',
         status: 'saved'
-      },
-      htmlText: '<html><body>preview</body></html>'
+      }
     })
   };
   const moduleWithDom = loadEsmStyleModule(
@@ -281,7 +280,8 @@ test('[EDGE] sequence-viewer render sync keeps Protein Builder visible inside th
     'sequence-viewer-protein-builder-confirmation-back-btn',
     'sequence-viewer-protein-builder-confirmation-confirm-btn',
     'sequence-viewer-detail-protein-builder-btn',
-    'sequence-viewer-home-protein-builder-btn',
+    'sequence-viewer-home-vector-builder-btn',
+    'sequence-viewer-detail-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
@@ -480,7 +480,7 @@ ORIGIN
         if (payload?.includeGbk) {
           return { ok: true, entry, gbkText };
         }
-        return { ok: true, entry, htmlText: '<html><body>preview</body></html>' };
+        return { ok: true, entry };
       }
     }
   };

@@ -104,6 +104,7 @@ export function createSequenceEditActions(ctx) {
     controllers.detail?.updateRecordSelect?.();
     controllers.detail?.renderActiveRecord?.();
     controllers.cloningDesign?.render?.();
+    controllers.vectorBuilder?.render?.();
     controllers.alignment?.handleReferenceRecordChanged?.();
   }
 }

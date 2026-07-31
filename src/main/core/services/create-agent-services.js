@@ -161,6 +161,13 @@ function createMainAgentServices(deps = {}) {
   const agentLlmRuntimeHelpers = createAgentLlmRuntimeHelpers({
     ...sharedAgentLlmDeps
   });
+  const paperIntakeProvider = DEFAULT_LLM_PROVIDER || LLM_PROVIDERS.CODEX;
+  const requestPaperIntakeStructuredJson = (options = {}) => (
+    agentLlmRuntimeHelpers.requestStructuredJsonPayload({
+      ...options,
+      provider: cleanText(options.provider, 80) || paperIntakeProvider
+    })
+  );
   const directLlmRegistry = registerDefaultDirectLlmModules(createDirectLlmModuleRegistry({
     cleanText,
     LLM_PROVIDERS,
@@ -341,6 +348,7 @@ function createMainAgentServices(deps = {}) {
   const paperWikiSearchRuntime = createPaperWikiSearchRuntime();
   const paperKnowledgeDatabaseRuntime = createPaperKnowledgeDatabaseRuntime({
     ...sharedAgentLlmDeps,
+    requestStructuredJsonPayload: requestPaperIntakeStructuredJson,
     pdfTextExtractionRuntime,
     paperWikiChunkerRuntime
   });
@@ -429,6 +437,7 @@ function createMainAgentServices(deps = {}) {
     notebookLookupRuntime,
     agentAppApi,
     webSearchRuntime,
+    paperKnowledgeDatabaseRuntime,
     paperDownloadRuntime,
     literatureSearchWorkflowRuntime,
     directLlmRegistry

@@ -133,6 +133,7 @@ export function installProteinBuilderWorkflowRendering(ctx) {
     ctx.renderSummary();
     ctx.renderDnaConstruct();
     ctx.renderAssemblyDialog();
+    ctx.syncVectorInsertControls();
     ctx.syncFeatureSearchControls();
     if (!state.featureSearchQuery) {
       ctx.setFeatureSearchStatus(

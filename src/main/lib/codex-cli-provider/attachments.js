@@ -40,6 +40,21 @@ async function createCodexOutputFilePath(cwd = '') {
   return path.join(outputDir, `last-message-${Date.now()}-${Math.random().toString(16).slice(2)}.txt`);
 }
 
+async function stageCodexOutputSchema(cwd = '', outputSchema = null) {
+  if (!outputSchema || typeof outputSchema !== 'object' || Array.isArray(outputSchema)) {
+    return '';
+  }
+  const safeCwd = resolveWorkingDirectory(cwd);
+  const outputDir = path.join(safeCwd, 'Tmp', CODEX_TMP_DIR_NAME);
+  await fs.mkdir(outputDir, { recursive: true });
+  const filePath = path.join(
+    outputDir,
+    `output-schema-${Date.now()}-${Math.random().toString(16).slice(2)}.json`
+  );
+  await fs.writeFile(filePath, `${JSON.stringify(outputSchema, null, 2)}\n`, 'utf8');
+  return filePath;
+}
+
 async function stageCodexPromptAttachments({
   cwd = '',
   fileName = '',
@@ -132,5 +147,6 @@ module.exports = {
   parseBase64DataUrl,
   sanitizeAttachmentFileName,
   sanitizeFileName,
+  stageCodexOutputSchema,
   stageCodexPromptAttachments
 };

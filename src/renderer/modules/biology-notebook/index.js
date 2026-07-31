@@ -326,7 +326,6 @@ export function initLabNotebook({
     safeText,
     createId,
     notesInput: notebookResult,
-    stepsHost: notebookSteps,
     calculationsHost: notebookToolCalculations,
     getStoredCompounds: () => (Array.isArray(state.labInventory?.chemicals) ? state.labInventory.chemicals : []),
     onAppendNote: appendNotebookResultLine

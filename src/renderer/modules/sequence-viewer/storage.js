@@ -1,4 +1,3 @@
-import { buildDnaFeatureViewerPreviewHtmlDocument } from './dna-feature-viewer-preview.js';
 import {
   getFeatureTypeGenbankKey,
   normalizeFeatureType
@@ -193,6 +192,3 @@ export function buildRecordGenbankText(record) {
   return `${lines.join('\n')}\n`;
 }
 
-export function buildCircularPreviewHtmlDocument(record) {
-  return buildDnaFeatureViewerPreviewHtmlDocument(record);
-}

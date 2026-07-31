@@ -451,22 +451,26 @@ export function createWorkflowRenderer(config = {}) {
       : '';
     const placeholderMarkup = protocol && placeholderFields.length
       ? `
-        <div class="workflow-placeholder-list">
+        <table class="workflow-placeholder-table" aria-label="Protocol placeholder values">
+          <tbody>
           ${placeholderFields.map((field) => `
-            <label class="workflow-placeholder-field">
-              <span class="workflow-placeholder-field-label">${safeText(field.placeholderName)}</span>
-              <input
-                data-workflow-step-value="${safeText(field.key)}"
-                data-workflow-entry-id="${safeText(entry.id)}"
-                data-workflow-workflow-id="${safeText(workflow.id)}"
-                data-workflow-block-id="${safeText(block.id)}"
-                value="${safeText(stepState.values[field.key] || '')}"
-                placeholder="Enter value"
-                aria-label="${safeText(field.placeholderName)}"
-              />
-            </label>
+            <tr>
+              <th scope="row">${safeText(field.placeholderName)}</th>
+              <td>
+                <input
+                  data-workflow-step-value="${safeText(field.key)}"
+                  data-workflow-entry-id="${safeText(entry.id)}"
+                  data-workflow-workflow-id="${safeText(workflow.id)}"
+                  data-workflow-block-id="${safeText(block.id)}"
+                  value="${safeText(stepState.values[field.key] || '')}"
+                  placeholder="Enter value"
+                  aria-label="${safeText(field.placeholderName)}"
+                />
+              </td>
+            </tr>
           `).join('')}
-        </div>
+          </tbody>
+        </table>
       `
       : '';
     const emptyMarkup = !instructionMarkup && !placeholderMarkup

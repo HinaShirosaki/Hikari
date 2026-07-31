@@ -57,8 +57,8 @@ test('[EDGE] sequence-viewer creates real folders and moves sequences into them'
     'sequence-viewer-home-status',
     'sequence-viewer-library-filter-saved',
     'sequence-viewer-library-filter-temporary',
-    'sequence-viewer-library-new-folder-btn',
     'sequence-viewer-library-list',
+    'sequence-viewer-library-context-menu',
     'sequence-viewer-preview-host'
   ];
   const folders = [];
@@ -99,11 +99,21 @@ test('[EDGE] sequence-viewer creates real folders and moves sequences into them'
   moduleWithDom.initSequenceViewer();
   await flushAsync();
 
-  trigger(document.getElementById('sequence-viewer-library-new-folder-btn'), 'click');
+  const libraryList = document.getElementById('sequence-viewer-library-list');
+  const contextMenu = document.getElementById('sequence-viewer-library-context-menu');
+  trigger(libraryList, 'contextmenu', { target: libraryList, clientX: 44, clientY: 72 });
+  assert.equal(contextMenu.hidden, false);
+  const newFolderTarget = {
+    closest(selector) {
+      return selector === '[data-sequence-library-action]'
+        ? { dataset: { sequenceLibraryAction: 'new-folder' } }
+        : null;
+    }
+  };
+  trigger(contextMenu, 'click', { target: newFolderTarget });
   await flushAsync();
   await flushAsync();
 
-  const libraryList = document.getElementById('sequence-viewer-library-list');
   assert.match(libraryList.innerHTML, /sequence-viewer-library-folder-row/);
   assert.match(libraryList.innerHTML, /Cloning/);
   assert.match(libraryList.innerHTML, /Alpha Vector/);

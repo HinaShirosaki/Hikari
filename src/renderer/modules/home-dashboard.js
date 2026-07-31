@@ -44,7 +44,6 @@ export function initHomeDashboard({
   const contributionElements = {
     monthLabels: document.getElementById('dashboard-contribution-months'),
     grid: document.getElementById('dashboard-contribution-grid'),
-    streak: document.getElementById('dashboard-contribution-streak'),
     summary: document.getElementById('dashboard-contribution-summary')
   };
 

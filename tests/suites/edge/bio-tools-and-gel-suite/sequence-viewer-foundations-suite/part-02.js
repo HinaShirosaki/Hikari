@@ -38,6 +38,10 @@ test('[EDGE] sequence-viewer normalizes common feature type aliases', () => {
   assert.equal(sequenceViewerInternals.normalizeFeatureType("5' UTR"), '5_utr');
   assert.equal(sequenceViewerInternals.normalizeFeatureType('origin of replication'), 'rep_origin');
   assert.equal(sequenceViewerInternals.normalizeFeatureType('primer binding site'), 'primer_bind');
+  assert.equal(sequenceViewerInternals.normalizeFeatureType('primer_binding'), 'primer_bind');
+  assert.equal(sequenceViewerInternals.isPrimerBindingFeature('primer_bind'), true);
+  assert.equal(sequenceViewerInternals.isPrimerBindingFeature('primer binding region'), true);
+  assert.equal(sequenceViewerInternals.isPrimerBindingFeature('promoter'), false);
   assert.equal(sequenceViewerInternals.getFeatureTypeGenbankKey('cds'), 'CDS');
   assert.equal(sequenceViewerInternals.getFeatureTypeGenbankKey('3 utr'), "3'UTR");
   assert.equal(sequenceViewerInternals.getFeatureTypeGenbankKey('mrna'), 'mRNA');
@@ -340,6 +344,35 @@ test('[EDGE] sequence-viewer ORF features render as line-local span bars', () =>
   assert.equal(orfFeatures.length > 0, true);
   assert.match(html, /sequence-viewer-line-feature-bar/);
   assert.match(html, /ORF \+1/);
+});
+test('[EDGE] sequence-viewer primer features render as directional 5-prime to 3-prime oligos', () => {
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('A'.repeat(48), [], {
+    lineLength: 48,
+    charAdvancePx: 8,
+    sequenceLineHeightPx: 16,
+    features: [
+      {
+        name: 'Forward primer',
+        type: 'primer_binding',
+        strand: 1,
+        segments: [{ start: 2, end: 20 }]
+      },
+      {
+        name: 'Reverse primer',
+        type: 'primer_bind',
+        strand: -1,
+        segments: [{ start: 24, end: 44 }]
+      }
+    ]
+  });
+
+  assert.match(html, /sequence-viewer-line-feature-primer-forward/);
+  assert.match(html, /sequence-viewer-line-feature-primer-reverse/);
+  assert.equal((html.match(/sequence-viewer-primer-end-five/g) || []).length, 2);
+  assert.equal((html.match(/sequence-viewer-primer-end-three/g) || []).length, 2);
+  assert.equal((html.match(/sequence-viewer-primer-arrow/g) || []).length, 2);
+  assert.match(html, /5′/);
+  assert.match(html, /3′/);
 });
 test('[EDGE] sequence-viewer selected ORF translation context uses genomic left-to-right anchors on reverse strand', () => {
   const sequence = 'CTATTTCAT';

@@ -22,6 +22,7 @@ export {
 
 export {
   getFeatureTypeGenbankKey,
+  isPrimerBindingFeature,
   normalizeFeatureType
 } from './feature-types.js';
 
@@ -43,7 +44,12 @@ export {
 
 export { alignSequenceToReference } from './alignment.js';
 export { buildAlignmentSequenceTrack } from './detail-alignment.js';
-export { buildCircularPreviewHtmlDocument } from './storage.js';
+export {
+  buildSequenceMapSvg,
+  clampMapZoom,
+  getMapKind,
+  resolveBaseFromPoint
+} from './vector-builder/sequence-map.js';
 export {
   assembleCloningPlan,
   designCloningPrimers,

@@ -55,7 +55,12 @@ const FEATURE_TYPE_ALIASES = Object.freeze({
   poly_a_site: 'poly_a_site',
   polya_signal: 'poly_a_signal',
   polya_site: 'poly_a_site',
+  primer: 'primer_bind',
+  primer_bind_site: 'primer_bind',
+  primer_binding: 'primer_bind',
+  primer_binding_region: 'primer_bind',
   primer_binding_site: 'primer_bind',
+  primer_site: 'primer_bind',
   protein_binding_site: 'protein_bind',
   rbs: 'rbs',
   rep_origin: 'rep_origin',
@@ -100,4 +105,8 @@ export function getFeatureTypeColor(type) {
 
 export function getFeatureTypeGenbankKey(type) {
   return getFeatureTypeDefinition(type)?.genbankKey || '';
+}
+
+export function isPrimerBindingFeature(type) {
+  return normalizeFeatureType(type, '') === 'primer_bind';
 }

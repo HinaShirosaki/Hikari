@@ -70,9 +70,11 @@ const { createTelegramService } = require('./services/create-telegram-service');
 const { createNpmUpdaterService } = require('./services/create-npm-updater-service');
 const { createMainMcpService } = require('./services/create-mcp-service');
 const { createMainCodexService } = require('./services/create-codex-service');
+const { createGenomeService } = require('./services/create-genome-service');
 const { createScheduledTaskService } = require('./services/create-scheduled-task-service');
 const { registerDataIpc } = require('../ipc/register-data-ipc');
 const { registerAgentIpc } = require('../ipc/register-agent-ipc');
+const { registerGenomeIpc } = require('../ipc/register-genome-ipc');
 const { registerScheduledTaskIpc } = require('../ipc/register-scheduled-task-ipc');
 const { registerSystemIpc } = require('../ipc/register-system-ipc');
 
@@ -203,6 +205,10 @@ function createMainServices(context = {}) {
       model: PROJECT_MEMORY_NOTEBOOK_MODEL
     };
   };
+  const transformPaperRecordsWithAgentRuntime = (input = {}) => transformPaperRecordsToMarkdown({
+    ...input,
+    paperKnowledgeDatabaseRuntime: agents.paperKnowledgeDatabaseRuntime
+  });
 
   const mcp = createMainMcpService({
     agentToolRuntime: agents.agentToolRuntime,
@@ -232,6 +238,28 @@ function createMainServices(context = {}) {
     normalizeRunResult: normalizePaperFindingRunResult
   });
 
+  const genomes = createGenomeService({
+    fs,
+    path,
+    cleanText,
+    getGenomeLibraryPath: appPaths.getGenomeLibraryPath,
+    // The picker lives here so the service stays testable without Electron, and so a genome path
+    // can only ever enter the library through a dialog the user drove themselves.
+    pickGenomeFile: async () => {
+      const result = await dialog.showOpenDialog({
+        title: 'Select Genome FASTA File',
+        properties: ['openFile'],
+        filters: [
+          { name: 'Genome FASTA', extensions: ['fa', 'fasta', 'fna', 'fas', 'ffn', 'seq'] }
+        ]
+      });
+      if (result.canceled || !result.filePaths.length) {
+        return { filePath: '' };
+      }
+      return { filePath: result.filePaths[0] };
+    }
+  });
+
   // IPC registration (before app ready).
   registerDataIpc({
     ipcMain,
@@ -245,14 +273,15 @@ function createMainServices(context = {}) {
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     getStorageRootPointerPath: appPaths.getStorageRootPointerPath,
     getUserDataPath: appPaths.getUserDataPath,
+    paperKnowledgeDatabaseRuntime: agents.paperKnowledgeDatabaseRuntime,
     discoverPapersFromStorageRoot: (input = {}) => discoverPapersFromStorageRoot({
       ...input,
-      transformPaperRecordsToMarkdown
+      transformPaperRecordsToMarkdown: transformPaperRecordsWithAgentRuntime
     }),
     syncSqliteBundleFromSnapshot,
     importStorageRoot: (input = {}) => importStorageRoot({
       ...input,
-      transformPaperRecordsToMarkdown
+      transformPaperRecordsToMarkdown: transformPaperRecordsWithAgentRuntime
     }),
     listSequenceEntries,
     getSequenceEntry,
@@ -285,6 +314,12 @@ function createMainServices(context = {}) {
     getAgentChatLogPath: appPaths.getAgentChatLogPath,
     getAgentChatSessionStoragePath,
     appendAgentChatLogEntry: agentLogService.appendAgentChatLogEntry
+  });
+
+  registerGenomeIpc({
+    ipcMain,
+    genomeService: genomes,
+    cleanText
   });
 
   registerScheduledTaskIpc({

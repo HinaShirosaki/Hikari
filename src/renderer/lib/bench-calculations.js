@@ -23,16 +23,25 @@ const BUFFER_VOLUME_FACTORS_L = {
 };
 
 const BUFFER_PKA_HINTS = [
-  { pattern: /\bmes\b/i, pKa: 6.15, label: 'MES' },
-  { pattern: /\bpipes\b/i, pKa: 6.8, label: 'PIPES' },
+  { pattern: /\bmes\b/i, pKa: 6.1, label: 'MES' },
+  { pattern: /\bbis[- ]?tris\b/i, pKa: 6.5, label: 'Bis-Tris' },
+  { pattern: /\baces\b/i, pKa: 6.73, label: 'ACES' },
+  { pattern: /\bpipes\b/i, pKa: 6.76, label: 'PIPES' },
+  { pattern: /\bbes\b/i, pKa: 7.09, label: 'BES' },
   { pattern: /\bmops\b/i, pKa: 7.2, label: 'MOPS' },
   { pattern: /\b(?:phosphate|hpo4|h2po4|kh2po4|na2hpo4|nah2po4)\b/i, pKa: 7.21, label: 'phosphate' },
-  { pattern: /\bhepes\b/i, pKa: 7.55, label: 'HEPES' },
+  { pattern: /\btes\b/i, pKa: 7.4, label: 'TES' },
+  { pattern: /\bhepes\b/i, pKa: 7.48, label: 'HEPES' },
   { pattern: /\b(?:tris|tris-hcl)\b/i, pKa: 8.06, label: 'Tris' },
-  { pattern: /\btricine\b/i, pKa: 8.15, label: 'Tricine' },
+  { pattern: /\btricine\b/i, pKa: 8.05, label: 'Tricine' },
   { pattern: /\bbicine\b/i, pKa: 8.35, label: 'Bicine' },
   { pattern: /\btaps\b/i, pKa: 8.4, label: 'TAPS' },
+  { pattern: /\b(?:epps|hepps)\b/i, pKa: 8, label: 'EPPS' },
+  { pattern: /\b(?:gly[- ]?gly|glycylglycine)\b/i, pKa: 8.2, label: 'Gly-Gly' },
+  { pattern: /\bches\b/i, pKa: 9.3, label: 'CHES' },
   { pattern: /\bglycine\b/i, pKa: 9.78, label: 'Glycine' },
+  { pattern: /\b(?:carbonate|bicarbonate)\b/i, pKa: 10.33, label: 'carbonate' },
+  { pattern: /\bcaps\b/i, pKa: 10.4, label: 'CAPS' },
   { pattern: /\bacetate\b/i, pKa: 4.76, label: 'acetate' }
 ];
 
@@ -404,6 +413,11 @@ function formatBufferMassDual(valueG) {
 
 function findBufferPkaHint(name) {
   const source = String(name || '').trim();
+  const compound = resolveBufferCompound(source);
+  const pKa = Number(compound?.pKa);
+  if (Number.isFinite(pKa)) {
+    return { pKa, label: compound.name };
+  }
   return BUFFER_PKA_HINTS.find((hint) => hint.pattern.test(source)) || null;
 }
 

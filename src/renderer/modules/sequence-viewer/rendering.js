@@ -16,6 +16,7 @@ import {
   getContrastTextColor,
   hashTypeToColor
 } from './feature-model.js';
+import { isPrimerBindingFeature } from './feature-types.js';
 import { isOrfFeature } from './orf-analysis.js';
 import { getCdsProteinProperties } from './protein-properties.js';
 import {
@@ -499,6 +500,8 @@ function renderLineFeatureButtonsHtml(
       const title = `${feature.name || '-'} (${location})`;
       const color = hashTypeToColor(String(feature?.type || 'misc_feature'));
       const textColor = getContrastTextColor(color);
+      const isPrimer = isPrimerBindingFeature(feature?.type);
+      const direction = feature?.strand === -1 ? -1 : 1;
       return segments
         .map((segment) => {
           const geometry = computeRestrictionAnnotationGeometry(segment, lineStart, lineEnd, safeAdvance);
@@ -511,6 +514,14 @@ function renderLineFeatureButtonsHtml(
             title,
             color,
             textColor,
+            isPrimer,
+            direction,
+            hasFivePrime: isPrimer && (direction === -1
+              ? geometry.overlapEnd === Number(segment?.end)
+              : geometry.overlapStart === Number(segment?.start)),
+            hasThreePrime: isPrimer && (direction === -1
+              ? geometry.overlapStart === Number(segment?.start)
+              : geometry.overlapEnd === Number(segment?.end)),
             leftPx: geometry.leftPx,
             widthPx: geometry.widthPx,
             rightPx: geometry.leftPx + geometry.widthPx
@@ -549,7 +560,34 @@ function renderLineFeatureButtonsHtml(
       const isActive = fragment.index === selectedFeatureIndex;
       const label = String(fragment.feature?.name || `feature_${fragment.index + 1}`);
       const labelWidthPx = (label.length * safeAdvance) + (LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX * 2);
-      const showLabel = fragment.widthPx >= labelWidthPx;
+      const showLabel = fragment.widthPx >= (labelWidthPx + (fragment.isPrimer ? 38 : 0));
+      if (fragment.isPrimer) {
+        const directionClass = fragment.direction === -1
+          ? 'sequence-viewer-line-feature-primer-reverse'
+          : 'sequence-viewer-line-feature-primer-forward';
+        const endClasses = [
+          fragment.hasFivePrime ? 'sequence-viewer-line-feature-primer-has-five' : '',
+          fragment.hasThreePrime ? 'sequence-viewer-line-feature-primer-has-three' : ''
+        ].filter(Boolean).join(' ');
+        return `
+          <button
+            type="button"
+            class="sequence-viewer-line-feature sequence-viewer-line-feature-primer ${directionClass}${endClasses ? ` ${endClasses}` : ''}${isActive ? ' sequence-viewer-line-feature-active' : ''}"
+            data-feature-index="${fragment.index}"
+            style="left:${fragment.leftPx.toFixed(3)}px;width:${fragment.widthPx.toFixed(3)}px;top:${topPx.toFixed(3)}px;--sequence-viewer-primer-color:${fragment.color};color:${fragment.color};"
+            title="${escapeHtml(fragment.title)}"
+            aria-label="${escapeHtml(fragment.title)}"
+          >
+            <span class="sequence-viewer-primer-oligo-line" aria-hidden="true"></span>
+            ${fragment.hasFivePrime ? '<span class="sequence-viewer-primer-end sequence-viewer-primer-end-five" aria-hidden="true">5′</span>' : ''}
+            ${fragment.hasThreePrime ? `
+              <span class="sequence-viewer-primer-end sequence-viewer-primer-end-three" aria-hidden="true">3′</span>
+              <span class="sequence-viewer-primer-arrow" aria-hidden="true"></span>
+            ` : ''}
+            ${showLabel ? `<span class="sequence-viewer-line-feature-label sequence-viewer-primer-label">${escapeHtml(label)}</span>` : ''}
+          </button>
+        `;
+      }
       return `
         <button
           type="button"

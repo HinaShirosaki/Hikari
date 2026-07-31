@@ -2,6 +2,9 @@ import { escapeHtml } from '../../lib/html.js';
 import { DEFAULT_MAX_RECORDS } from './constants.js';
 import { parseInputRecords } from './parsing.js';
 import { cleanText } from './shared.js';
+import { attachMapHoverLabel } from './vector-builder/map-hover.js';
+import { attachMapZoomGestures } from './vector-builder/map-zoom.js';
+import { buildSequenceMapSvg } from './vector-builder/sequence-map.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
 
 export function createSequenceViewerHomeController(config = {}) {
@@ -38,6 +41,7 @@ export function createSequenceViewerHomeController(config = {}) {
     : () => {};
   const libraryPreviewDelayMs = 320;
   let libraryPreviewTimer = null;
+  let previewedEntryId = '';
   let libraryContextType = '';
   let libraryContextId = '';
   let draggedLibraryEntryId = '';
@@ -68,10 +72,6 @@ export function createSequenceViewerHomeController(config = {}) {
 
   function getLibraryContextMenus() {
     return compactElementList(elements.libraryContextMenu, elements.detailLibraryContextMenu);
-  }
-
-  function getLibraryNewFolderButtons() {
-    return compactElementList(elements.libraryNewFolderBtn, elements.detailLibraryNewFolderBtn);
   }
 
   function hideLibraryContextMenus() {
@@ -278,34 +278,6 @@ export function createSequenceViewerHomeController(config = {}) {
     });
   }
 
-  function applyPreviewFrameSurfaceBridge(frame) {
-    const previewDocument = frame?.contentDocument || frame?.contentWindow?.document || null;
-    const previewHead = previewDocument?.head || previewDocument?.querySelector?.('head') || null;
-    if (!previewDocument || !previewHead || typeof previewDocument.createElement !== 'function') {
-      return;
-    }
-
-    let styleNode = previewDocument.getElementById?.('sequence-viewer-preview-surface-bridge') || null;
-    if (!styleNode) {
-      styleNode = previewDocument.createElement('style');
-      styleNode.id = 'sequence-viewer-preview-surface-bridge';
-      previewHead.appendChild(styleNode);
-    }
-
-    styleNode.textContent = `
-      .circular-preview__hover-tooltip {
-        border-radius: 8px !important;
-        border: 1px solid rgba(216, 206, 193, 0.96) !important;
-        background: rgba(255, 252, 247, 0.98) !important;
-        box-shadow: 0 2px 8px rgba(27, 20, 14, 0.1) !important;
-        color: #17120e !important;
-      }
-      .circular-preview__hover-description {
-        color: #72675d !important;
-      }
-    `;
-  }
-
   function setLocalWorkspaceVisibility(mode) {
     const next = mode === 'detail'
       ? 'detail'
@@ -315,7 +287,9 @@ export function createSequenceViewerHomeController(config = {}) {
           ? 'builder'
           : mode === 'cloning'
             ? 'cloning'
-            : 'home';
+            : mode === 'vector'
+              ? 'vector'
+              : 'home';
     state.localWorkspaceMode = next;
     rootDocument?.body?.classList?.toggle?.('sequence-viewer-fixed-scroll', next === 'builder' || next === 'alignment');
     if (elements.homeWorkspace) {
@@ -329,6 +303,9 @@ export function createSequenceViewerHomeController(config = {}) {
     }
     if (elements.cloningDesignWorkspace) {
       elements.cloningDesignWorkspace.hidden = next !== 'cloning';
+    }
+    if (elements.vectorBuilderWorkspace) {
+      elements.vectorBuilderWorkspace.hidden = next !== 'vector';
     }
     if (elements.alignmentWorkspace) {
       elements.alignmentWorkspace.hidden = next !== 'alignment';
@@ -377,91 +354,40 @@ export function createSequenceViewerHomeController(config = {}) {
     getLibraryTemporaryFilterButtons().forEach((button) => {
       button.disabled = !hasStorage;
     });
-    getLibraryNewFolderButtons().forEach((button) => {
-      button.disabled = !hasStorage;
-    });
     if (elements.librarySearchInput) {
       elements.librarySearchInput.disabled = !hasStorage;
     }
   }
 
-  function renderPreviewFromHtml(entry, htmlText) {
+  const previewHover = attachMapHoverLabel({
+    host: () => elements.previewHost,
+    rootDocument
+  });
+
+  const previewZoom = attachMapZoomGestures({
+    host: () => elements.previewHost,
+    getZoom: () => state.previewZoom,
+    setZoom: (value) => {
+      state.previewZoom = value;
+    }
+  });
+
+  // The preview is drawn straight from the entry's stored GenBank text as inline
+  // SVG. No iframe, so it inherits the app theme and needs no height syncing,
+  // and no preview document has to be generated or kept on disk.
+  function renderPreview(record) {
     if (!elements.previewHost) {
       return;
     }
-    if (!entry || !String(htmlText || '').trim()) {
+    if (!record?.sequence?.length) {
       elements.previewHost.innerHTML = '<p class="small-note">Select a sequence in the library to preview.</p>';
       return;
     }
-
-    const title = String(entry?.name || 'Sequence preview');
-    if (typeof rootDocument?.createElement === 'function' && typeof elements.previewHost?.replaceChildren === 'function') {
-      const frame = rootDocument.createElement('iframe');
-      frame.className = 'sequence-viewer-preview-frame';
-      frame.loading = 'lazy';
-      frame.title = title;
-      frame.setAttribute('scrolling', 'no');
-      frame.srcdoc = String(htmlText);
-      frame.addEventListener('load', () => {
-        applyPreviewFrameSurfaceBridge(frame);
-        schedulePreviewFrameHeightSync(frame);
-      }, { once: true });
-      elements.previewHost.replaceChildren(frame);
-      schedulePreviewFrameHeightSync(frame);
-      return;
-    }
-
-    const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(String(htmlText))}`;
-    elements.previewHost.innerHTML = `<iframe class="sequence-viewer-preview-frame" src="${dataUrl}" loading="lazy" scrolling="no" title="${escapeHtml(title)}"></iframe>`;
-  }
-
-  function getPreviewFrameElement() {
-    if (!elements.previewHost || typeof elements.previewHost.querySelector !== 'function') {
-      return null;
-    }
-    return elements.previewHost.querySelector('.sequence-viewer-preview-frame');
-  }
-
-  function syncPreviewFrameHeight(frame = getPreviewFrameElement()) {
-    if (!frame) {
-      return;
-    }
-
-    const hostRect = typeof elements.previewHost?.getBoundingClientRect === 'function'
-      ? elements.previewHost.getBoundingClientRect()
-      : null;
-    const frameRect = typeof frame.getBoundingClientRect === 'function'
-      ? frame.getBoundingClientRect()
-      : null;
-    const viewWindow = rootDocument?.defaultView || globalThis || null;
-    const viewportHeight = Math.max(0, Number(viewWindow?.innerHeight) || 0);
-    const previewWidth = Math.max(
-      0,
-      Number(frameRect?.width) || Number(hostRect?.width) || Number(elements.previewHost?.clientWidth) || 0
-    );
-    const previewTop = Math.max(0, Number(hostRect?.top) || Number(frameRect?.top) || 0);
-    const availableHeight = viewportHeight > 0
-      ? Math.max(280, viewportHeight - previewTop - 28)
-      : 520;
-    const fallbackSize = Math.max(280, Math.min(availableHeight, 520));
-    const widthBound = previewWidth > 0 ? previewWidth : fallbackSize;
-    const nextSize = Math.min(widthBound, availableHeight, 1120);
-
-    frame.style.height = `${Math.round(nextSize > 0 ? nextSize : fallbackSize)}px`;
-  }
-
-  function schedulePreviewFrameHeightSync(frame = getPreviewFrameElement()) {
-    if (!frame) {
-      return;
-    }
-
-    syncPreviewFrameHeight(frame);
-    globalThis?.requestAnimationFrame?.(() => {
-      syncPreviewFrameHeight(frame);
+    elements.previewHost.innerHTML = buildSequenceMapSvg(record, {
+      features: Array.isArray(record.features) ? record.features : []
     });
-    globalThis?.setTimeout?.(() => {
-      syncPreviewFrameHeight(frame);
-    }, 120);
+    // Redrawing replaces the SVG, so the current zoom has to be re-applied.
+    previewZoom.apply();
   }
 
   function renderLibraryList() {
@@ -581,14 +507,20 @@ export function createSequenceViewerHomeController(config = {}) {
   async function loadSelectedLibraryPreview() {
     const entryId = cleanText(state.selectedLibraryEntryId, 200);
     const storagePath = getStoragePath();
+    // Start a newly previewed entry at fit, but leave the zoom alone when the
+    // same entry is just being redrawn after a silent library refresh.
+    if (entryId !== previewedEntryId) {
+      previewedEntryId = entryId;
+      previewZoom.reset();
+    }
     if (!entryId || !storagePath) {
-      renderPreviewFromHtml(null, '');
+      renderPreview(null);
       return;
     }
 
     const bridge = getBridge();
     if (!bridge?.sequenceLibraryGet) {
-      renderPreviewFromHtml(null, '');
+      renderPreview(null);
       return;
     }
 
@@ -596,14 +528,19 @@ export function createSequenceViewerHomeController(config = {}) {
       const response = await bridge.sequenceLibraryGet({
         storagePath,
         id: entryId,
-        includeHtml: true
+        includeGbk: true
       });
       if (!response?.ok || !response?.entry) {
         throw new Error(response?.error || 'Failed to load preview.');
       }
-      renderPreviewFromHtml(response.entry, response.htmlText || '');
+      const parsed = parseInputRecords(String(response.gbkText || ''));
+      const record = Array.isArray(parsed?.records) ? parsed.records[0] : null;
+      if (!record?.sequence?.length) {
+        throw new Error(parsed?.errors?.[0] || 'Stored sequence entry contains no valid record.');
+      }
+      renderPreview({ ...record, name: cleanText(response.entry.name, 200) || record.name });
     } catch (error) {
-      renderPreviewFromHtml(null, '');
+      renderPreview(null);
       setHomeStatus(error?.message || 'Failed to load preview.', true);
     }
   }
@@ -624,7 +561,7 @@ export function createSequenceViewerHomeController(config = {}) {
       state.libraryStoragePath = '';
       state.selectedLibraryEntryId = '';
       renderLibraryList();
-      renderPreviewFromHtml(null, '');
+      renderPreview(null);
       setHomeStatus('Use New or Open to continue. Set Storage Folder Path in Settings to enable the saved/unsaved library.');
       return;
     }
@@ -683,7 +620,7 @@ export function createSequenceViewerHomeController(config = {}) {
       state.libraryFolders = [];
       state.selectedLibraryEntryId = '';
       renderLibraryList();
-      renderPreviewFromHtml(null, '');
+      renderPreview(null);
       setHomeStatus(error?.message || 'Failed to load sequence library.', true);
     }
   }
@@ -899,16 +836,8 @@ export function createSequenceViewerHomeController(config = {}) {
   }
 
   function bindEvents() {
-    const ResizeObserverCtor = rootDocument?.defaultView?.ResizeObserver || globalThis?.ResizeObserver;
-    if (elements.previewHost && typeof ResizeObserverCtor === 'function') {
-      const previewResizeObserver = new ResizeObserverCtor(() => {
-        schedulePreviewFrameHeightSync();
-      });
-      previewResizeObserver.observe(elements.previewHost);
-    }
-    globalThis.addEventListener?.('resize', () => {
-      schedulePreviewFrameHeightSync();
-    });
+    previewZoom.bind();
+    previewHover.bind();
 
     // Widen the picker to whatever installed service plugins can convert, so a
     // SnapGene .dna file is selectable alongside the native formats.
@@ -970,12 +899,6 @@ export function createSequenceViewerHomeController(config = {}) {
         clearLibraryPreviewTimer();
         setLibraryFilter(libraryStatusTemporary);
         void refreshLibraryEntries({ silent: true });
-      });
-    });
-
-    getLibraryNewFolderButtons().forEach((button) => {
-      button.addEventListener('click', () => {
-        void createLibraryFolderFromPrompt();
       });
     });
 

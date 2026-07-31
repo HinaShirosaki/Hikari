@@ -5,6 +5,19 @@ const MAX_WIDTH = 400;
 const MOBILE_BREAKPOINT = 980;
 const HANDLE_CLASS = 'app-left-rail-handle';
 const HANDLE_ATTR = 'data-shared-left-rail-handle';
+const FOLDABLE_ATTR = 'data-left-rail-foldable';
+const FOLD_TOGGLE_CLASS = 'app-left-rail-fold-toggle';
+const FOLDED_CLASS = 'is-left-rail-folded';
+
+function foldToggleIconMarkup() {
+  return `
+    <svg class="app-left-rail-fold-toggle__icon" viewBox="0 0 24 24" role="presentation" aria-hidden="true" focusable="false">
+      <rect x="4.5" y="4.5" width="15" height="15" rx="2.25"></rect>
+      <path d="M9 4.5v15"></path>
+      <path class="app-left-rail-fold-toggle__chevron" d="m15 9-3 3 3 3"></path>
+    </svg>
+  `;
+}
 
 function clampWidth(width, windowObject) {
   const raw = Number(width);
@@ -116,6 +129,68 @@ export function initSharedLeftRailResizers({
     rootDocument.addEventListener('pointercancel', onPointerUp);
   }
 
+  function syncFoldState(layout, rail, toggle, resizeHandle) {
+    const folded = layout.classList.contains(FOLDED_CLASS);
+    layout.dataset.leftRailState = folded ? 'folded' : 'expanded';
+    rail.setAttribute('aria-hidden', folded ? 'true' : 'false');
+    rail.inert = folded;
+    if (resizeHandle) {
+      resizeHandle.hidden = folded;
+    }
+    toggle.classList.toggle('is-folded', folded);
+    toggle.setAttribute('aria-expanded', String(!folded));
+    toggle.setAttribute('aria-label', folded ? 'Open left rail' : 'Fold left rail');
+    toggle.title = folded ? 'Open left rail' : 'Fold left rail';
+
+    const closestView = layout.closest?.('.view');
+    if (!closestView || closestView.classList?.contains('is-active')) {
+      rootDocument.body?.classList?.toggle('has-folded-shared-left-rail', folded);
+    }
+  }
+
+  function ensureFoldToggle(layout, rail, resizeHandle) {
+    const foldable = layout.getAttribute(FOLDABLE_ATTR) === 'true';
+    const existingToggles = [...layout.querySelectorAll(`.${FOLD_TOGGLE_CLASS}`)];
+
+    if (!foldable) {
+      existingToggles.forEach((toggle) => toggle.remove());
+      layout.classList.remove(FOLDED_CLASS);
+      layout.removeAttribute('data-left-rail-state');
+      rail.removeAttribute('aria-hidden');
+      rail.inert = false;
+      if (resizeHandle) {
+        resizeHandle.hidden = false;
+      }
+      const closestView = layout.closest?.('.view');
+      if (!closestView || closestView.classList?.contains('is-active')) {
+        rootDocument.body?.classList?.remove('has-folded-shared-left-rail');
+      }
+      return;
+    }
+
+    if (windowObject.innerWidth <= MOBILE_BREAKPOINT) {
+      layout.classList.remove(FOLDED_CLASS);
+    }
+
+    const toggle = existingToggles.shift() || rootDocument.createElement('button');
+    existingToggles.forEach((extraToggle) => extraToggle.remove());
+    if (!toggle.isConnected) {
+      toggle.type = 'button';
+      toggle.className = FOLD_TOGGLE_CLASS;
+      toggle.innerHTML = foldToggleIconMarkup();
+      toggle.setAttribute('data-left-rail-fold-toggle', 'true');
+      toggle.addEventListener('click', () => {
+        layout.classList.toggle(FOLDED_CLASS);
+        syncFoldState(layout, rail, toggle, resizeHandle);
+      });
+      layout.append(toggle);
+    }
+    if (rail.id) {
+      toggle.setAttribute('aria-controls', rail.id);
+    }
+    syncFoldState(layout, rail, toggle, resizeHandle);
+  }
+
   function ensureHandles() {
     const rails = [...rootDocument.querySelectorAll('[data-sync-left-rail]')];
     rails.forEach((rail) => {
@@ -129,19 +204,18 @@ export function initSharedLeftRailResizers({
 
       [...rail.querySelectorAll(`.${HANDLE_CLASS}`)].forEach((node) => node.remove());
 
-      const existingHandle = layout.querySelector(`[${HANDLE_ATTR}="true"]`);
-      if (existingHandle) {
-        return;
+      let resizeHandle = layout.querySelector(`[${HANDLE_ATTR}="true"]`);
+      if (!resizeHandle) {
+        resizeHandle = rootDocument.createElement('button');
+        resizeHandle.type = 'button';
+        resizeHandle.className = HANDLE_CLASS;
+        resizeHandle.tabIndex = -1;
+        resizeHandle.setAttribute('aria-hidden', 'true');
+        resizeHandle.setAttribute(HANDLE_ATTR, 'true');
+        resizeHandle.addEventListener('pointerdown', (event) => onPointerDown(event, rail));
+        layout.append(resizeHandle);
       }
-
-      const handle = rootDocument.createElement('button');
-      handle.type = 'button';
-      handle.className = HANDLE_CLASS;
-      handle.tabIndex = -1;
-      handle.setAttribute('aria-hidden', 'true');
-      handle.setAttribute(HANDLE_ATTR, 'true');
-      handle.addEventListener('pointerdown', (event) => onPointerDown(event, rail));
-      layout.append(handle);
+      ensureFoldToggle(layout, rail, resizeHandle);
     });
   }
 

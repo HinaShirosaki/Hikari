@@ -244,11 +244,11 @@
       </div>
 
       <div id="tool-buffer-view" class="panel tool-subview" hidden>
-        <h3>Buffer Preparer</h3>
+        <div class="tool-box-sheet-header">
+          <h3>Buffer Preparer</h3>
+          <button id="add-buffer-chemical-btn" type="button" class="ghost-btn tool-box-sheet-add-btn" aria-label="Add ingredient" title="Add ingredient">+</button>
+        </div>
         <div class="stack-form tool-box-sheet-shell">
-          <div class="form-actions">
-            <button id="add-buffer-chemical-btn" type="button" class="ghost-btn">Add Ingredient</button>
-          </div>
           <div class="tool-box-buffer-sheet-wrap">
             <table class="tool-box-buffer-sheet" aria-label="Buffer preparer table">
               <tbody id="buffer-rows">
@@ -268,11 +268,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-1">
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-1" aria-expanded="false" />
-                      <div id="buffer-suggestions-1" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-1" aria-expanded="false" />
+                        <div id="buffer-suggestions-1" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" value="121.14" aria-label="Ingredient 1 molecular weight" /></td>
                   <td><input id="buffer-stock-1" placeholder="empty or 1 M" aria-label="Ingredient 1 stock concentration" /></td>
@@ -281,11 +283,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-2">
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-2" aria-expanded="false" />
-                      <div id="buffer-suggestions-2" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-2" aria-expanded="false" />
+                        <div id="buffer-suggestions-2" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 2 molecular weight" /></td>
                   <td><input id="buffer-stock-2" placeholder="2000x" aria-label="Ingredient 2 stock concentration" /></td>
@@ -294,11 +298,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-3" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-3" aria-expanded="false" />
-                      <div id="buffer-suggestions-3" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-3" aria-expanded="false" />
+                        <div id="buffer-suggestions-3" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 3 molecular weight" /></td>
                   <td><input id="buffer-stock-3" placeholder="10% v/v" aria-label="Ingredient 3 stock concentration" /></td>
@@ -307,11 +313,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-4" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-4" aria-expanded="false" />
-                      <div id="buffer-suggestions-4" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-4" aria-expanded="false" />
+                        <div id="buffer-suggestions-4" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 4 molecular weight" /></td>
                   <td><input id="buffer-stock-4" placeholder="stock" aria-label="Ingredient 4 stock concentration" /></td>
@@ -320,11 +328,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-5" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-5" aria-expanded="false" />
-                      <div id="buffer-suggestions-5" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-5" aria-expanded="false" />
+                        <div id="buffer-suggestions-5" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-5" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 5 molecular weight" /></td>
                   <td><input id="buffer-stock-5" placeholder="stock" aria-label="Ingredient 5 stock concentration" /></td>
@@ -333,11 +343,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-6" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-6" aria-expanded="false" />
-                      <div id="buffer-suggestions-6" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-6" aria-expanded="false" />
+                        <div id="buffer-suggestions-6" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-6" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 6 molecular weight" /></td>
                   <td><input id="buffer-stock-6" placeholder="stock" aria-label="Ingredient 6 stock concentration" /></td>
@@ -384,37 +396,37 @@
                   <th scope="col">Volume</th>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-1">
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-1" type="text" placeholder="10 mM" aria-label="Stock concentration for reaction item 1" /></td>
                   <td><input id="fixed-reaction-final-1" type="text" placeholder="1 uM" aria-label="Final concentration for reaction item 1" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-1" type="text" placeholder="auto" aria-label="Manual volume for reaction item 1" /><output id="fixed-reaction-output-1" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-2" hidden>
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-2" type="text" placeholder="2000x" aria-label="Stock concentration for reaction item 2" /></td>
                   <td><input id="fixed-reaction-final-2" type="text" placeholder="1x" aria-label="Final concentration for reaction item 2" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-2" type="text" placeholder="auto" aria-label="Manual volume for reaction item 2" /><output id="fixed-reaction-output-2" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-3" hidden>
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-3" type="text" placeholder="2%" aria-label="Stock concentration for reaction item 3" /></td>
                   <td><input id="fixed-reaction-final-3" type="text" placeholder="0.1% v/v" aria-label="Final concentration for reaction item 3" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-3" type="text" placeholder="auto" aria-label="Manual volume for reaction item 3" /><output id="fixed-reaction-output-3" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-4" hidden>
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-4" type="text" placeholder="1 mg/mL" aria-label="Stock concentration for reaction item 4" /></td>
                   <td><input id="fixed-reaction-final-4" type="text" placeholder="100 ng/uL" aria-label="Final concentration for reaction item 4" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-4" type="text" placeholder="auto" aria-label="Manual volume for reaction item 4" /><output id="fixed-reaction-output-4" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-5" hidden>
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-5" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 5" /></td>
                   <td><input id="fixed-reaction-final-5" type="text" placeholder="Final" aria-label="Final concentration for reaction item 5" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-5" type="text" placeholder="auto" aria-label="Manual volume for reaction item 5" /><output id="fixed-reaction-output-5" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-6" hidden>
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-6" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 6" /></td>
                   <td><input id="fixed-reaction-final-6" type="text" placeholder="Final" aria-label="Final concentration for reaction item 6" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6" /><output id="fixed-reaction-output-6" aria-live="polite"></output></td>

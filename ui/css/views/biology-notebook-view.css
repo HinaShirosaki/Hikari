@@ -651,6 +651,30 @@
   padding: 0;
 }
 
+.biology-notebook-buffer-add-row td {
+  padding: 0;
+}
+
+.biology-notebook-buffer-add-row-button {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 32px;
+  padding: 3px 8px;
+  border: 0;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--theme-panel) 78%, var(--theme-surface));
+  color: var(--theme-text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.biology-notebook-buffer-add-row-button:hover,
+.biology-notebook-buffer-add-row-button:focus-visible {
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
+  color: var(--theme-text-strong);
+}
+
 .biology-notebook-reaction-volume-cell input {
   height: 26px;
   padding-block: 4px;
@@ -688,6 +712,12 @@
   border: 1px solid color-mix(in srgb, var(--theme-accent) 52%, var(--theme-border));
   background: var(--theme-surface-elevated);
   box-shadow: 0 14px 28px var(--theme-shadow-color);
+}
+
+.biology-notebook-buffer-suggestions--floating {
+  position: fixed;
+  z-index: 120;
+  inset: auto;
 }
 
 .biology-notebook-buffer-suggestions[hidden] {
@@ -751,18 +781,13 @@
 }
 
 .biology-notebook-tool-actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  display: flex;
 }
 
 .biology-notebook-tool-actions button {
+  width: 100%;
   min-width: 0;
   white-space: normal;
-}
-
-.biology-notebook-tool-actions button:last-child {
-  grid-column: 1 / -1;
 }
 
 .biology-notebook-tool-calculations {
@@ -1269,6 +1294,31 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
 
 .biology-notebook-result-attachments[hidden] {
   display: none;
+}
+
+.biology-notebook-notes-field {
+  display: grid;
+  gap: 6px;
+}
+
+.biology-notebook-notes-composer {
+  position: relative;
+}
+
+.biology-notebook-notes-composer textarea {
+  min-height: 132px;
+  padding: 10px 12px 50px;
+  resize: vertical;
+}
+
+.biology-notebook-notes-clarify-btn {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  min-height: 32px;
+  padding: 5px 10px;
+  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-panel));
 }
 
 .biology-notebook-attachment-head {

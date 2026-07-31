@@ -230,15 +230,31 @@ export function createNavigationShell({
   function getDockCapacity() {
     const viewportWidth = windowObject.innerWidth || documentObject.documentElement?.clientWidth || 0;
     const topbar = documentObject.querySelector('.topbar');
+    const topbarBrand = documentObject.querySelector('.topbar-brand');
+    const topbarTools = documentObject.querySelector('.topbar-tools');
     const dockViewportMargin = viewportWidth <= 960 ? 20 : 32;
     const dockHostWidth = topbar?.clientWidth || viewportWidth;
-    const effectiveWidth = Math.min(
+    const fallbackWidth = Math.min(
       Math.max(240, Math.floor(viewportWidth <= 960 ? dockHostWidth - dockViewportMargin : viewportWidth * 0.56)),
       Math.max(240, dockHostWidth - (viewportWidth <= 960 ? dockViewportMargin : 360)),
       Math.max(240, viewportWidth - dockViewportMargin)
     );
+    const topbarRect = topbar?.getBoundingClientRect?.();
+    const brandRect = topbarBrand?.getBoundingClientRect?.();
+    const toolsRect = topbarTools?.getBoundingClientRect?.();
+    const isSingleRowDesktop = viewportWidth > 1180;
+    const hasMeasuredClearance = isSingleRowDesktop
+      && topbarRect?.width > 0
+      && brandRect?.width > 0
+      && toolsRect?.width > 0;
+    const effectiveWidth = hasMeasuredClearance
+      ? Math.max(0, Math.floor(2 * Math.min(
+        (topbarRect.left + (topbarRect.width / 2)) - brandRect.right - 14,
+        toolsRect.left - (topbarRect.left + (topbarRect.width / 2)) - 14
+      )))
+      : fallbackWidth;
     if (!effectiveWidth) {
-      return dockApps.length;
+      return 1;
     }
     const dockHorizontalPadding = viewportWidth <= 720 ? 20 : 24;
     const dividerWidth = 1;
@@ -314,6 +330,9 @@ export function createNavigationShell({
     if (appDockDivider) {
       appDockDivider.hidden = overflowApps.length === 0;
     }
+    if (!overflowApps.length) {
+      closeMoreMenu();
+    }
   }
 
   function syncNavigationState(activeViewId) {
@@ -361,6 +380,10 @@ export function createNavigationShell({
     const visibleRailShell = railShells.find((shell) => !shell.closest('[hidden]')) || null;
     const hasSharedLeftRailView = Boolean(visibleRailShell?.querySelector?.('[data-sync-left-rail]'));
     documentObject.body.classList.toggle('has-shared-left-rail-view', hasSharedLeftRailView);
+    documentObject.body.classList.toggle(
+      'has-folded-shared-left-rail',
+      hasSharedLeftRailView && visibleRailShell?.classList.contains('is-left-rail-folded')
+    );
   }
 
   let suggestionsState = {

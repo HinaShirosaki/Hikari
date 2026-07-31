@@ -18,6 +18,7 @@ function createMainAppPaths(deps = {}) {
   const telegramConfigFileName = String(deps.telegramConfigFileName || 'telegram-bot.json').trim() || 'telegram-bot.json';
   const scheduledTasksFileName = String(deps.scheduledTasksFileName || 'scheduled-tasks.json').trim()
     || 'scheduled-tasks.json';
+  const genomeLibraryFileName = String(deps.genomeLibraryFileName || 'genome-library.json').trim() || 'genome-library.json';
   const agentChatLogFileName = String(deps.agentChatLogFileName || 'agent-chat.log').trim() || 'agent-chat.log';
 
   function getUserDataPath() {
@@ -88,6 +89,10 @@ function createMainAppPaths(deps = {}) {
     return path.join(getDefaultAppDataRoot(), 'Config', scheduledTasksFileName);
   }
 
+  function getGenomeLibraryPath() {
+    return path.join(getDefaultAppDataRoot(), 'Config', genomeLibraryFileName);
+  }
+
   // The workspace root otherwise lives only in renderer localStorage, which the
   // app cannot recover once it is cleared. Auto-save mirrors it here so startup
   // can find the workspace again.
@@ -139,6 +144,7 @@ function createMainAppPaths(deps = {}) {
     getUserDataPath,
     getTelegramConfigPath,
     getScheduledTasksPath,
+    getGenomeLibraryPath,
     getAgentChatLogPath,
     getAgentPythonSandboxRoot,
     getAgentMemoryFilePath,

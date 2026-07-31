@@ -43,6 +43,18 @@
                 </svg>
                 <span class="sr-only">Cancel edit</span>
               </button>
+              <label class="assay-plate-type-field">
+                <span class="sr-only">Plate Type</span>
+                <select id="assay-plate-type" aria-label="Plate Type">
+                  <option value="6">6 well</option>
+                  <option value="12">12 well</option>
+                  <option value="24">24 well</option>
+                  <option value="48">48 well</option>
+                  <option value="96" selected>96 well</option>
+                  <option value="384">384 well</option>
+                  <option value="1536">1536 well</option>
+                </select>
+              </label>
             </div>
             <div class="assay-display-field">
               <span class="assay-display-label">Assay Number</span>
@@ -56,18 +68,6 @@
               Project
               <select id="assay-project">
                 <option value="">Select project</option>
-              </select>
-            </label>
-            <label>
-              Plate Type
-              <select id="assay-plate-type">
-                <option value="6">6 well</option>
-                <option value="12">12 well</option>
-                <option value="24">24 well</option>
-                <option value="48">48 well</option>
-                <option value="96" selected>96 well</option>
-                <option value="384">384 well</option>
-                <option value="1536">1536 well</option>
               </select>
             </label>
             <div class="assay-axis-config-grid">

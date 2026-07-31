@@ -41,7 +41,7 @@
   },
   {
     "name": "container",
-    "description": "Store, name, read, update, and position-edit temporary string or number containers with short runtime IDs."
+    "description": "Store, name, list, read, update, and position-edit temporary string or number containers with short runtime IDs and optional source provenance."
   },
   {
     "name": "assay-table",
@@ -49,7 +49,7 @@
   },
   {
     "name": "plotly-graph",
-    "description": "Create, update, read, and inspect scratch Plotly.js graph specifications using Plotly figure arguments."
+    "description": "Create, update, read, and inspect scratch Plotly.js graph specifications using canonical data, layout, and optional config arguments."
   },
   {
     "name": "sequence-viewer",

@@ -10,16 +10,18 @@ import {
   normalizeNotebookToolCalculations
 } from '../../../lib/notebook-tool-calculations.js';
 
-const BUFFER_ROW_COUNT = 6;
+const INITIAL_BUFFER_ROW_COUNT = 6;
 const REACTION_ROW_COUNT = 6;
+const BUFFER_SUGGESTION_MAX_HEIGHT = 230;
+const BUFFER_SUGGESTION_VIEWPORT_GAP = 8;
 
 function getElement(doc, id) {
   return doc?.getElementById?.(id) || null;
 }
 
-function addListener(element, eventName, handler) {
+function addListener(element, eventName, handler, options) {
   if (element && typeof element.addEventListener === 'function') {
-    element.addEventListener(eventName, handler);
+    element.addEventListener(eventName, handler, options);
   }
 }
 
@@ -37,15 +39,6 @@ function isHidden(element) {
   return Boolean(element?.hidden);
 }
 
-function extractPrimaryValue(text) {
-  const source = String(text || '').trim();
-  const colonMatch = source.match(/:\s*([^.\n]+)\.?/);
-  if (colonMatch) {
-    return colonMatch[1].trim();
-  }
-  return source.replace(/\.$/, '');
-}
-
 function createNoopController() {
   return {
     getCalculations: () => [],
@@ -61,7 +54,6 @@ export function createNotebookToolSidebarController({
   safeText,
   createId,
   notesInput,
-  stepsHost,
   calculationsHost,
   getStoredCompounds = () => [],
   onAppendNote
@@ -85,17 +77,29 @@ export function createNotebookToolSidebarController({
   const formulaEl = getElement(doc, 'biology-notebook-tool-formula');
   const statusEl = getElement(doc, 'biology-notebook-tool-status');
   const insertNotesBtn = getElement(doc, 'biology-notebook-tool-insert-notes-btn');
-  const usePlaceholderBtn = getElement(doc, 'biology-notebook-tool-use-placeholder-btn');
-  const recordBtn = getElement(doc, 'biology-notebook-tool-record-btn');
+  const bufferRows = getElement(doc, 'biology-notebook-tool-buffer-rows');
+  const bufferRowTemplate = getElement(doc, 'biology-notebook-tool-buffer-row-1')?.cloneNode?.(true) || null;
 
   let activeTool = 'molarity';
-  let activePlaceholderKey = '';
   let currentResult = null;
   let toolCalculations = [];
+  let bufferRowTotal = INITIAL_BUFFER_ROW_COUNT;
 
   function extractCompoundMw(record) {
     const source = record && typeof record === 'object' ? record : {};
     const keys = ['mw', 'molecularWeight', 'molecular_weight', 'formulaWeight', 'formula_weight', 'formulaMass', 'molarMass', 'fw'];
+    for (const key of keys) {
+      const parsed = Number(source[key]);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        return parsed;
+      }
+    }
+    return '';
+  }
+
+  function extractCompoundPka(record) {
+    const source = record && typeof record === 'object' ? record : {};
+    const keys = ['pKa', 'pka', 'pkaValue', 'pka_value'];
     for (const key of keys) {
       const parsed = Number(source[key]);
       if (Number.isFinite(parsed) && parsed > 0) {
@@ -144,7 +148,8 @@ export function createNotebookToolSidebarController({
           ...candidate,
           mw: candidate.mw || existing.mw,
           form: candidate.form || existing.form,
-          category: candidate.category || existing.category
+          category: candidate.category || existing.category,
+          pKa: candidate.pKa || existing.pKa
         });
         return;
       }
@@ -152,7 +157,8 @@ export function createNotebookToolSidebarController({
         ...existing,
         mw: existing.mw || candidate.mw,
         form: existing.form || candidate.form,
-        category: existing.category || candidate.category
+        category: existing.category || candidate.category,
+        pKa: existing.pKa || candidate.pKa
       });
     }
 
@@ -161,6 +167,7 @@ export function createNotebookToolSidebarController({
         source: 'Stored',
         name: record?.name,
         mw: extractCompoundMw(record),
+        pKa: extractCompoundPka(record),
         form: inferCompoundForm(record),
         category: record?.casNumber ? `CAS ${record.casNumber}` : 'Stored compound'
       });
@@ -170,6 +177,7 @@ export function createNotebookToolSidebarController({
         source: 'Tools',
         name: compound.name,
         mw: compound.mw,
+        pKa: compound.pKa,
         form: compound.form === 'liquid' ? 'liquid' : 'solid',
         category: compound.category || 'Buffer compound'
       });
@@ -192,8 +200,12 @@ export function createNotebookToolSidebarController({
     return candidate?.form === 'liquid' ? 'liquid' : 'solid';
   }
 
+  function bufferRowCount() {
+    return bufferRowTotal;
+  }
+
   function closeBufferSuggestions(index = null) {
-    for (let rowIndex = 1; rowIndex <= BUFFER_ROW_COUNT; rowIndex += 1) {
+    for (let rowIndex = 1; rowIndex <= bufferRowCount(); rowIndex += 1) {
       if (index && rowIndex !== index) {
         continue;
       }
@@ -201,6 +213,76 @@ export function createNotebookToolSidebarController({
       if (menu) {
         menu.hidden = true;
         menu.innerHTML = '';
+      }
+      getElement(doc, `biology-notebook-tool-buffer-name-${rowIndex}`)?.setAttribute?.('aria-expanded', 'false');
+    }
+  }
+
+  function closeOtherBufferSuggestions(activeIndex) {
+    for (let rowIndex = 1; rowIndex <= bufferRowCount(); rowIndex += 1) {
+      if (rowIndex !== activeIndex) {
+        closeBufferSuggestions(rowIndex);
+      }
+    }
+  }
+
+  function positionBufferSuggestions(index) {
+    const input = getElement(doc, `biology-notebook-tool-buffer-name-${index}`);
+    const menu = getElement(doc, `biology-notebook-tool-buffer-suggestions-${index}`);
+    const inputRect = input?.getBoundingClientRect?.();
+    const viewportWidth = Number(doc?.documentElement?.clientWidth)
+      || Number(win?.innerWidth)
+      || 0;
+    const viewportHeight = Number(doc?.documentElement?.clientHeight)
+      || Number(win?.innerHeight)
+      || 0;
+    if (!inputRect || !viewportWidth || !viewportHeight || !menu?.style) {
+      return false;
+    }
+
+    const overlayRoot = doc?.body;
+    if (overlayRoot && typeof overlayRoot.appendChild === 'function' && menu.parentElement !== overlayRoot) {
+      overlayRoot.appendChild(menu);
+    }
+    menu.classList?.add?.('biology-notebook-buffer-suggestions--floating');
+
+    const width = Math.min(
+      Math.max(Number(inputRect.width) || 0, 1) + 2,
+      Math.max(viewportWidth - (BUFFER_SUGGESTION_VIEWPORT_GAP * 2), 1)
+    );
+    const left = Math.min(
+      Math.max((Number(inputRect.left) || 0) - 1, BUFFER_SUGGESTION_VIEWPORT_GAP),
+      Math.max(BUFFER_SUGGESTION_VIEWPORT_GAP, viewportWidth - width - BUFFER_SUGGESTION_VIEWPORT_GAP)
+    );
+    const spaceBelow = Math.max(0, viewportHeight - Number(inputRect.bottom) - BUFFER_SUGGESTION_VIEWPORT_GAP);
+    const spaceAbove = Math.max(0, Number(inputRect.top) - BUFFER_SUGGESTION_VIEWPORT_GAP);
+
+    menu.style.left = `${Math.round(left)}px`;
+    menu.style.right = 'auto';
+    menu.style.width = `${Math.round(width)}px`;
+    menu.hidden = false;
+
+    const menuHeight = Math.min(
+      BUFFER_SUGGESTION_MAX_HEIGHT,
+      Number(menu.scrollHeight) || BUFFER_SUGGESTION_MAX_HEIGHT
+    );
+    if (spaceBelow < menuHeight && spaceAbove > spaceBelow) {
+      menu.style.top = 'auto';
+      menu.style.bottom = `${Math.round(viewportHeight - Number(inputRect.top) + 1)}px`;
+      menu.style.maxHeight = `${Math.round(Math.min(BUFFER_SUGGESTION_MAX_HEIGHT, spaceAbove))}px`;
+    } else {
+      menu.style.top = `${Math.round(Number(inputRect.bottom) - 1)}px`;
+      menu.style.bottom = 'auto';
+      menu.style.maxHeight = `${Math.round(Math.min(BUFFER_SUGGESTION_MAX_HEIGHT, spaceBelow))}px`;
+    }
+    return true;
+  }
+
+  function repositionOpenBufferSuggestions() {
+    for (let index = 1; index <= bufferRowCount(); index += 1) {
+      const menu = getElement(doc, `biology-notebook-tool-buffer-suggestions-${index}`);
+      if (menu && !menu.hidden) {
+        positionBufferSuggestions(index);
       }
     }
   }
@@ -211,6 +293,7 @@ export function createNotebookToolSidebarController({
     if (!input || !menu) {
       return;
     }
+    closeOtherBufferSuggestions(index);
     const query = String(input.value || '').trim().toLowerCase();
     const matches = buildBufferCandidates()
       .filter((candidate) => {
@@ -229,6 +312,7 @@ export function createNotebookToolSidebarController({
     menu.innerHTML = matches.map((candidate) => {
       const meta = [
         candidate.mw ? `${candidate.mw} g/mol` : '',
+        candidate.pKa ? `pKa ${candidate.pKa}` : '',
         candidate.category,
         candidate.source
       ].filter(Boolean).join(' · ');
@@ -240,6 +324,8 @@ export function createNotebookToolSidebarController({
       `;
     }).join('');
     menu.hidden = false;
+    input.setAttribute?.('aria-expanded', 'true');
+    positionBufferSuggestions(index);
   }
 
   function selectBufferCandidate(index, candidateName) {
@@ -297,6 +383,9 @@ export function createNotebookToolSidebarController({
 
   function togglePanel(toolId) {
     activeTool = toolId || 'molarity';
+    if (activeTool !== 'buffer') {
+      closeBufferSuggestions();
+    }
     showToolWorkspace();
     ['molarity', 'buffer', 'reaction'].forEach((id) => {
       const tab = getElement(doc, `biology-notebook-tool-tab-${id}`);
@@ -391,7 +480,7 @@ export function createNotebookToolSidebarController({
 
   function collectBufferRows() {
     const rows = [];
-    for (let index = 1; index <= BUFFER_ROW_COUNT; index += 1) {
+    for (let index = 1; index <= bufferRowCount(); index += 1) {
       if (isHidden(getElement(doc, `biology-notebook-tool-buffer-row-${index}`))) {
         continue;
       }
@@ -460,7 +549,7 @@ export function createNotebookToolSidebarController({
   }
 
   function renderBufferTableResult(result) {
-    for (let index = 1; index <= BUFFER_ROW_COUNT; index += 1) {
+    for (let index = 1; index <= bufferRowCount(); index += 1) {
       setText(getElement(doc, `biology-notebook-tool-buffer-output-${index}`), '');
     }
     (Array.isArray(result?.details) ? result.details : []).forEach((detail) => {
@@ -683,57 +772,6 @@ export function createNotebookToolSidebarController({
     }
   }
 
-  function rememberActivePlaceholder(event) {
-    const target = event?.target;
-    const placeholderElement = target?.closest?.('[data-inline-token], [data-inline-input], [data-nb-key]');
-    const key = String(
-      placeholderElement?.dataset?.nbKey
-      || placeholderElement?.dataset?.nbKeyRef
-      || ''
-    ).trim();
-    if (key) {
-      activePlaceholderKey = key;
-    }
-  }
-
-  function useForActivePlaceholder() {
-    if (!activePlaceholderKey || !stepsHost?.querySelector) {
-      setStatus('Click a protocol placeholder first.');
-      return;
-    }
-    const result = currentResult || calculateActiveTool();
-    const value = extractPrimaryValue(result?.resultText || result?.formulaText || '');
-    if (!value) {
-      setStatus('Enter a calculation before filling a placeholder.');
-      return;
-    }
-    const hiddenInput = stepsHost.querySelector(`[data-nb-key="${activePlaceholderKey}"]`);
-    if (!hiddenInput) {
-      setStatus('Click a protocol placeholder first.');
-      return;
-    }
-    hiddenInput.value = value;
-    const wrap = hiddenInput.closest?.('[data-inline-placeholder]');
-    const token = wrap?.querySelector?.('[data-inline-token]');
-    const editor = wrap?.querySelector?.('[data-inline-input]');
-    if (token) {
-      token.textContent = value;
-      token.hidden = false;
-      token.classList?.toggle('is-empty', false);
-    }
-    if (editor) {
-      editor.value = value;
-      editor.hidden = true;
-    }
-    if (typeof win?.Event === 'function') {
-      hiddenInput.dispatchEvent?.(new win.Event('input', { bubbles: true }));
-    }
-    const record = recordCurrentCalculation();
-    if (record) {
-      setStatus('Placeholder filled and calculation recorded for the next save.');
-    }
-  }
-
   function revealNextRow(prefix, count) {
     for (let index = 1; index <= count; index += 1) {
       const row = getElement(doc, `${prefix}-${index}`);
@@ -746,17 +784,23 @@ export function createNotebookToolSidebarController({
     setStatus('All available rows are already visible.');
   }
 
-  ['molarity', 'buffer', 'reaction'].forEach((id) => {
-    addListener(getElement(doc, `biology-notebook-tool-tab-${id}`), 'click', () => togglePanel(id));
-  });
-  addListener(getElement(doc, 'biology-notebook-tool-molarity-mode'), 'change', renderCurrentTool);
-  addListener(getElement(doc, 'biology-notebook-tool-buffer-add-row'), 'click', () => {
-    revealNextRow('biology-notebook-tool-buffer-row', BUFFER_ROW_COUNT);
-  });
-  addListener(getElement(doc, 'biology-notebook-tool-reaction-add-row'), 'click', () => {
-    revealNextRow('biology-notebook-tool-reaction-row', REACTION_ROW_COUNT);
-  });
-  for (let index = 1; index <= BUFFER_ROW_COUNT; index += 1) {
+  function insertBufferRowBeforeAddRow(row) {
+    const addRow = getElement(doc, 'biology-notebook-tool-buffer-add-row-anchor');
+    if (
+      addRow?.parentElement === bufferRows
+      && typeof bufferRows?.insertBefore === 'function'
+    ) {
+      bufferRows.insertBefore(row, addRow);
+      return true;
+    }
+    if (typeof bufferRows?.appendChild === 'function') {
+      bufferRows.appendChild(row);
+      return true;
+    }
+    return false;
+  }
+
+  function bindBufferRow(index) {
     const nameInput = getElement(doc, `biology-notebook-tool-buffer-name-${index}`);
     const suggestions = getElement(doc, `biology-notebook-tool-buffer-suggestions-${index}`);
     addListener(nameInput, 'focus', () => renderBufferSuggestions(index));
@@ -781,19 +825,86 @@ export function createNotebookToolSidebarController({
         selectBufferCandidate(index, candidateName);
       }
     });
+    [
+      `biology-notebook-tool-buffer-mw-${index}`,
+      `biology-notebook-tool-buffer-stock-${index}`,
+      `biology-notebook-tool-buffer-final-${index}`
+    ].forEach((id) => {
+      const element = getElement(doc, id);
+      addListener(element, 'input', renderCurrentTool);
+      addListener(element, 'change', renderCurrentTool);
+    });
   }
-  addListener(recordBtn, 'click', recordCurrentCalculation);
+
+  function appendBufferRow() {
+    if (!bufferRowTemplate?.cloneNode) {
+      return;
+    }
+    const index = bufferRowCount() + 1;
+    const row = bufferRowTemplate.cloneNode(true);
+    row.hidden = false;
+    row.id = `biology-notebook-tool-buffer-row-${index}`;
+    row.querySelectorAll?.('[id]').forEach((element) => {
+      element.id = `${element.id.replace(/-\d+$/, '')}-${index}`;
+      element.value = '';
+      element.textContent = '';
+      const label = element.getAttribute?.('aria-label');
+      if (label) {
+        element.setAttribute('aria-label', label.replace(/\d+/, String(index)));
+      }
+      const controls = element.getAttribute?.('aria-controls');
+      if (controls) {
+        element.setAttribute('aria-controls', controls.replace(/-\d+$/, `-${index}`));
+      }
+      if (element.dataset?.bufferChemicalIndex) {
+        element.dataset.bufferChemicalIndex = String(index);
+      }
+    });
+    const menu = row.querySelector?.('.biology-notebook-buffer-suggestions');
+    if (menu) {
+      menu.hidden = true;
+      menu.innerHTML = '';
+    }
+    if (!insertBufferRowBeforeAddRow(row)) {
+      return;
+    }
+    bufferRowTotal = index;
+    bindBufferRow(index);
+  }
+
+  function revealOrAddBufferRow() {
+    for (let index = 1; index <= bufferRowCount(); index += 1) {
+      const row = getElement(doc, `biology-notebook-tool-buffer-row-${index}`);
+      if (row?.hidden) {
+        row.hidden = false;
+        renderCurrentTool();
+        return;
+      }
+    }
+    appendBufferRow();
+    renderCurrentTool();
+  }
+
+  ['molarity', 'buffer', 'reaction'].forEach((id) => {
+    addListener(getElement(doc, `biology-notebook-tool-tab-${id}`), 'click', () => togglePanel(id));
+  });
+  addListener(getElement(doc, 'biology-notebook-tool-molarity-mode'), 'change', renderCurrentTool);
+  addListener(getElement(doc, 'biology-notebook-tool-buffer-add-row'), 'click', () => {
+    revealOrAddBufferRow();
+  });
+  addListener(getElement(doc, 'biology-notebook-tool-reaction-add-row'), 'click', () => {
+    revealNextRow('biology-notebook-tool-reaction-row', REACTION_ROW_COUNT);
+  });
+  for (let index = 1; index <= bufferRowCount(); index += 1) {
+    bindBufferRow(index);
+  }
   addListener(insertNotesBtn, 'click', insertCurrentIntoNotes);
-  addListener(usePlaceholderBtn, 'click', useForActivePlaceholder);
   addListener(collapseBtn, 'click', () => setSidebarOpen(false));
   addListener(foldToggle, 'click', () => setSidebarOpen(true));
   addListener(mobileToggle, 'click', () => {
     const isOpen = layout?.classList?.contains?.('is-tool-sidebar-open');
     setSidebarOpen(!isOpen);
   });
-  addListener(stepsHost, 'click', rememberActivePlaceholder);
-  addListener(stepsHost, 'focusin', rememberActivePlaceholder);
-
   const interactiveIds = [
     'biology-notebook-tool-molarity-mode',
     'biology-notebook-tool-mass-concentration',
@@ -822,14 +933,6 @@ export function createNotebookToolSidebarController({
     'biology-notebook-tool-reaction-total-volume',
     'biology-notebook-tool-reaction-fill-name'
   ];
-  for (let index = 1; index <= BUFFER_ROW_COUNT; index += 1) {
-    interactiveIds.push(
-      `biology-notebook-tool-buffer-name-${index}`,
-      `biology-notebook-tool-buffer-mw-${index}`,
-      `biology-notebook-tool-buffer-stock-${index}`,
-      `biology-notebook-tool-buffer-final-${index}`
-    );
-  }
   for (let index = 1; index <= REACTION_ROW_COUNT; index += 1) {
     interactiveIds.push(
       `biology-notebook-tool-reaction-name-${index}`,
@@ -843,6 +946,14 @@ export function createNotebookToolSidebarController({
     addListener(element, 'input', renderCurrentTool);
     addListener(element, 'change', renderCurrentTool);
   });
+
+  addListener(doc, 'click', (event) => {
+    if (!event?.target?.closest?.('.biology-notebook-buffer-autocomplete, .biology-notebook-buffer-suggestions')) {
+      closeBufferSuggestions();
+    }
+  });
+  addListener(doc, 'scroll', repositionOpenBufferSuggestions, true);
+  addListener(win, 'resize', repositionOpenBufferSuggestions);
 
   syncMolarityMode();
   renderCurrentTool();

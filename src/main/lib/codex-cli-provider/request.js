@@ -10,6 +10,7 @@ const {
 const {
   buildCodexPromptWithStagedAttachments,
   createCodexOutputFilePath,
+  stageCodexOutputSchema,
   stageCodexPromptAttachments
 } = require('./attachments');
 const { removeFileIfExists } = require('./fs-utils');
@@ -41,6 +42,7 @@ async function requestCodexCliText({
   imageDataUrl = '',
   imageUrl = '',
   attachments = [],
+  outputSchema = null,
   envOverrides = {},
   stream = false,
   onStream = null,
@@ -72,6 +74,7 @@ async function requestCodexCliText({
     imageDataUrl,
     imageUrl,
     attachments,
+    outputSchema,
     envOverrides
   });
   const streamingEnabled = stream === true && typeof onStream === 'function';
@@ -84,6 +87,7 @@ async function requestCodexCliText({
   });
   const args = buildRequestArgs({
     outputFile: requestState.outputFile,
+    outputSchemaFile: requestState.outputSchemaFile,
     cleanResumeSessionId,
     model,
     reasoningEffort,
@@ -100,31 +104,34 @@ async function requestCodexCliText({
       intervalMs: process.env.HIKARI_CODEX_TRANSCRIPT_FOLLOW_INTERVAL_MS
     })
     : null;
-  let commandResult;
   try {
-    commandResult = await runCodexCommand({
-      args,
-      cwd: safeCwd,
-      env: requestState.env,
-      input: requestState.promptWithAttachments,
-      timeoutMs,
-      onJsonEvent: collectJsonEvents ? streamHandler.handleJsonEvent : null
+    let commandResult;
+    try {
+      commandResult = await runCodexCommand({
+        args,
+        cwd: safeCwd,
+        env: requestState.env,
+        input: requestState.promptWithAttachments,
+        timeoutMs,
+        onJsonEvent: collectJsonEvents ? streamHandler.handleJsonEvent : null
+      });
+    } finally {
+      await transcriptFollower?.stop?.();
+    }
+    return await readCodexRequestResult({
+      commandResult,
+      outputFile: requestState.outputFile,
+      streamingEnabled,
+      cleanResumeSessionId,
+      returnMetadata,
+      safeCwd,
+      onStream,
+      streamHandler,
+      requestStartedAtMs
     });
   } finally {
-    await transcriptFollower?.stop?.();
+    await removeFileIfExists(requestState.outputSchemaFile).catch(() => {});
   }
-
-  return readCodexRequestResult({
-    commandResult,
-    outputFile: requestState.outputFile,
-    streamingEnabled,
-    cleanResumeSessionId,
-    returnMetadata,
-    safeCwd,
-    onStream,
-    streamHandler,
-    requestStartedAtMs
-  });
 }
 
 async function prepareCodexRequest({
@@ -135,6 +142,7 @@ async function prepareCodexRequest({
   imageDataUrl,
   imageUrl,
   attachments,
+  outputSchema,
   envOverrides
 }) {
   const stagedAttachments = await stageCodexPromptAttachments({
@@ -147,6 +155,7 @@ async function prepareCodexRequest({
   });
   const promptWithAttachments = buildCodexPromptWithStagedAttachments(cleanPrompt, stagedAttachments);
   const outputFile = await createCodexOutputFilePath(cwd);
+  const outputSchemaFile = await stageCodexOutputSchema(cwd, outputSchema);
   const baseEnv = await buildCodexCommandEnv(cwd, {
     envOverrides
   });
@@ -156,12 +165,14 @@ async function prepareCodexRequest({
       ...(envOverrides && typeof envOverrides === 'object' ? envOverrides : {})
     },
     outputFile,
+    outputSchemaFile,
     promptWithAttachments
   };
 }
 
 function buildRequestArgs({
   outputFile,
+  outputSchemaFile,
   cleanResumeSessionId,
   model,
   reasoningEffort,
@@ -171,6 +182,7 @@ function buildRequestArgs({
   return cleanResumeSessionId
     ? buildCodexCliExecResumeArgs({
       outputFile,
+      outputSchemaFile,
       sessionId: cleanResumeSessionId,
       model,
       reasoningEffort,
@@ -179,6 +191,7 @@ function buildRequestArgs({
     })
     : buildCodexCliExecArgs({
       outputFile,
+      outputSchemaFile,
       model,
       reasoningEffort,
       enableWebSearch,

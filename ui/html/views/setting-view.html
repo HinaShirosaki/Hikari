@@ -41,6 +41,10 @@
               <span>External Skills</span>
               <small>Agent skill files</small>
             </button>
+            <button type="button" class="settings-nav-item" data-settings-target="genomes">
+              <span>Genomes</span>
+              <small>User plugin folders</small>
+            </button>
             <button type="button" class="settings-nav-item" data-settings-target="plugins">
               <span>Plugins</span>
               <small>User plugin folders</small>
@@ -235,6 +239,21 @@
                 <button type="button" id="setting-external-skills-refresh-btn" class="ghost-btn">Refresh Skills</button>
               </div>
               <div id="setting-external-skills-list" class="settings-skill-list" aria-live="polite"></div>
+            </div>
+          </section>
+
+          <section class="settings-section" data-settings-panel="genomes" hidden>
+            <div class="settings-section-head">
+              <h3>Genomes</h3>
+            </div>
+            <div class="stack-form">
+              <p class="small-note">Connect reference genome FASTA files already on this computer. Hikari indexes each file in place and never copies or modifies it.</p>
+              <div class="form-actions">
+                <button type="button" id="setting-genomes-add-btn" class="primary-btn">Connect Genome File</button>
+                <button type="button" id="setting-genomes-refresh-btn" class="ghost-btn">Refresh</button>
+              </div>
+              <p id="setting-genomes-status" class="small-note" aria-live="polite"></p>
+              <div id="setting-genomes-list" class="settings-skill-list" aria-live="polite"></div>
             </div>
           </section>
 

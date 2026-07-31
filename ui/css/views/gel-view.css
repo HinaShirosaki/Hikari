@@ -42,6 +42,68 @@
   min-width: 0;
 }
 
+/* Keep the Gel workspace frame fixed on desktop. The viewer and tool rail own
+ * their overflow so a large image or long tool list cannot scroll the module
+ * itself. */
+@media (min-width: 981px) {
+  #gel-view {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .left-rail-template.gel-workspace {
+    overflow: hidden;
+  }
+
+  .left-rail-template.gel-workspace > .gel-main.left-rail-template__main {
+    overflow: hidden;
+    scrollbar-gutter: auto;
+  }
+
+  .gel-main-stack {
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr) auto;
+    overflow: hidden;
+  }
+
+  .gel-main-grid {
+    height: 100%;
+    min-height: 0;
+    align-items: stretch;
+    overflow: hidden;
+  }
+
+  .gel-viewer-panel {
+    min-height: 0;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .gel-viewer-stage {
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .gel-side-rail {
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+
+  .gel-secondary-panels {
+    min-height: 0;
+    max-height: min(34vh, 300px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+  }
+}
+
 .gel-workspace > .panel,
 .gel-side-rail > .panel,
 .gel-secondary-panels > .panel {

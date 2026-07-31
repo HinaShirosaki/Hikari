@@ -55,7 +55,7 @@ body.theme-night #home-view {
   display: grid;
   height: 100%;
   min-height: 0;
-  grid-template-columns: minmax(0, 0.71fr) minmax(0, 0.71fr) minmax(0, 1.05fr) minmax(0, 1.05fr);
+  grid-template-columns: minmax(0, 0.52fr) minmax(0, 0.90fr) minmax(0, 1.05fr) minmax(0, 1.05fr);
   grid-template-areas:
     "timer timer notebook quicklog"
     "timer timer notebook quicklog"
@@ -392,9 +392,7 @@ body.theme-night #home-view {
 
 #home-view .home-contribution-display {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 16px;
   min-height: 0;
   overflow: hidden;
 }
@@ -407,30 +405,6 @@ body.theme-night #home-view {
   min-width: 0;
   overflow: hidden;
   padding: 2px 0;
-}
-
-#home-view .home-contribution-streak {
-  display: grid;
-  justify-items: end;
-  align-content: center;
-  justify-self: end;
-  gap: 2px;
-  max-width: 132px;
-  text-align: right;
-}
-
-#home-view .home-contribution-streak-num {
-  font-size: clamp(1.5rem, 2.4vw, 2rem);
-  font-weight: 650;
-  line-height: 0.95;
-  letter-spacing: -0.01em;
-  color: var(--home-tile-text);
-  font-variant-numeric: tabular-nums;
-}
-
-#home-view .home-contribution-streak-label {
-  font-size: 0.78rem;
-  color: var(--home-tile-muted);
 }
 
 #home-view .home-contribution-months {
@@ -494,8 +468,7 @@ body.theme-night #home-view {
   min-width: 0;
 }
 
-#home-view .home-contribution-cell,
-#home-view .home-contribution-legend-cell {
+#home-view .home-contribution-cell {
   width: var(--contribution-cell-size);
   height: var(--contribution-cell-size);
   border: 1px solid var(--home-contribution-border);
@@ -515,33 +488,20 @@ body.theme-night #home-view {
   outline-offset: 1px;
 }
 
-#home-view .home-contribution-cell[data-level="1"],
-#home-view .home-contribution-legend-cell[data-level="1"] {
+#home-view .home-contribution-cell[data-level="1"] {
   background: var(--home-contribution-level-1);
 }
 
-#home-view .home-contribution-cell[data-level="2"],
-#home-view .home-contribution-legend-cell[data-level="2"] {
+#home-view .home-contribution-cell[data-level="2"] {
   background: var(--home-contribution-level-2);
 }
 
-#home-view .home-contribution-cell[data-level="3"],
-#home-view .home-contribution-legend-cell[data-level="3"] {
+#home-view .home-contribution-cell[data-level="3"] {
   background: var(--home-contribution-level-3);
 }
 
-#home-view .home-contribution-cell[data-level="4"],
-#home-view .home-contribution-legend-cell[data-level="4"] {
+#home-view .home-contribution-cell[data-level="4"] {
   background: var(--home-contribution-level-4);
-}
-
-#home-view .home-contribution-legend {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 5px;
-  color: var(--home-tile-muted);
-  font-size: 0.72rem;
 }
 
 #home-view .home-quicklog-body {
@@ -700,29 +660,24 @@ body.theme-night #home-view .home-tile button:focus-visible {
   background: var(--home-tile-control-bg-hover);
 }
 
-body.theme-night #home-view .home-contribution-cell,
-body.theme-night #home-view .home-contribution-legend-cell {
+body.theme-night #home-view .home-contribution-cell {
   border-color: color-mix(in srgb, var(--home-tile-line-soft) 88%, transparent);
   background: var(--home-contribution-empty-bg);
 }
 
-body.theme-night #home-view .home-contribution-cell[data-level="1"],
-body.theme-night #home-view .home-contribution-legend-cell[data-level="1"] {
+body.theme-night #home-view .home-contribution-cell[data-level="1"] {
   background: var(--home-contribution-level-1);
 }
 
-body.theme-night #home-view .home-contribution-cell[data-level="2"],
-body.theme-night #home-view .home-contribution-legend-cell[data-level="2"] {
+body.theme-night #home-view .home-contribution-cell[data-level="2"] {
   background: var(--home-contribution-level-2);
 }
 
-body.theme-night #home-view .home-contribution-cell[data-level="3"],
-body.theme-night #home-view .home-contribution-legend-cell[data-level="3"] {
+body.theme-night #home-view .home-contribution-cell[data-level="3"] {
   background: var(--home-contribution-level-3);
 }
 
-body.theme-night #home-view .home-contribution-cell[data-level="4"],
-body.theme-night #home-view .home-contribution-legend-cell[data-level="4"] {
+body.theme-night #home-view .home-contribution-cell[data-level="4"] {
   background: var(--home-contribution-level-4);
 }
 

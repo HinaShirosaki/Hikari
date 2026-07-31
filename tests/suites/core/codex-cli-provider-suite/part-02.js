@@ -442,10 +442,22 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         'utf8'
       ));
       const checkedLiteratureSearch = checkedContract.mcp.tools.find((tool) => tool.name === 'literature_search');
+      const checkedContainer = checkedContract.mcp.tools.find((tool) => tool.name === 'container');
+      const checkedPlotlyGraph = checkedContract.mcp.tools.find((tool) => tool.name === 'plotly_graph');
       assert.equal(checkedLiteratureSearch.description, literatureSearchDefinition.description);
       assert.deepEqual(
         Object.keys(checkedLiteratureSearch.inputSchema.properties).sort(),
         Object.keys(literatureSearchDefinition.inputSchema.properties).sort()
+      );
+      assert.deepEqual(checkedContainer, containerDefinition);
+      assert.deepEqual(checkedPlotlyGraph, plotlyGraphDefinition);
+      assert.match(
+        checkedContract.agent_mcp_instructions,
+        /`container`: store, name, list, read, update,[^\n]+optional source provenance/
+      );
+      assert.match(
+        checkedContract.agent_mcp_instructions,
+        /`plotly_graph`:[^\n]+canonical `data`, `layout`, and optional `config`/
       );
       assert.equal(paperDownloadDefinition.annotations.readOnlyHint, false);
       assert.equal(paperDownloadDefinition.annotations.openWorldHint, true);
@@ -613,7 +625,8 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       const containerCreateResult = await gateway.callGatewayTool('container', {
         action: 'create',
         name: 'copied phrase',
-        value: 'alpha beta'
+        value: 'alpha beta',
+        source: 'copied:test-fixture'
       }, {
         requestId: 'req-container-create'
       });
@@ -622,6 +635,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(containerCreateResult.container.id, '1');
       assert.equal(containerCreateResult.container.name, 'copied phrase');
       assert.equal(containerCreateResult.container.value, 'alpha beta');
+      assert.equal(containerCreateResult.container.source, 'copied:test-fixture');
       assert.equal(calls[calls.length - 1].toolId, 'container');
 
       const containerEditResult = await gateway.callGatewayTool('container', {
@@ -642,6 +656,18 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
         end: 10,
         inserted_length: 5
       });
+
+      const containerListResult = await gateway.callGatewayTool('container', {
+        action: 'list',
+        limit: 1
+      }, {
+        requestId: 'req-container-list'
+      });
+      assert.equal(containerListResult.ok, true);
+      assert.equal(containerListResult.status, 'listed');
+      assert.equal(containerListResult.count, 1);
+      assert.equal(containerListResult.total_count, 1);
+      assert.equal(calls[calls.length - 1].toolId, 'container');
 
       const assayTableResult = await gateway.callGatewayTool('assay_table', {
         action: 'create',
@@ -680,6 +706,10 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
           title: { text: 'Assay response' },
           xaxis: { title: { text: 'Condition' } },
           yaxis: { title: { text: 'Response' } }
+        },
+        config: {
+          responsive: true,
+          displaylogo: false
         }
       }, {
         requestId: 'req-plotly-create'
@@ -688,6 +718,10 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(plotlyCreateResult.status, 'created');
       assert.equal(plotlyCreateResult.graph.id, '1');
       assert.equal(plotlyCreateResult.graph.inspection.trace_count, 1);
+      assert.deepEqual(plotlyCreateResult.graph.figure.config, {
+        responsive: true,
+        displaylogo: false
+      });
       assert.equal(calls[calls.length - 1].toolId, 'plotly-graph');
 
       const plotlyInspectResult = await gateway.callGatewayTool('plotly_graph', {

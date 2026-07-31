@@ -105,8 +105,7 @@ FEATURES             Location/Qualifiers
 ORIGIN
         1 ${hostSequence.toLowerCase()}
 //
-`,
-          htmlText: '<html><body>host</body></html>'
+`
         });
 
         const result = await sequenceLibrary.recognizeSequenceBackbone({ storagePath: storageRoot, sequence: querySequence });

@@ -74,7 +74,7 @@ async function listSequenceEntries({ storagePath, status = '' }) {
   }
 }
 
-async function getSequenceEntry({ storagePath, id, includeGbk = false, includeHtml = false, includeAlignments = false }) {
+async function getSequenceEntry({ storagePath, id, includeGbk = false, includeAlignments = false }) {
   const safeId = cleanText(id, 200);
   if (!safeId) {
     throw new Error('Missing sequence entry id.');
@@ -89,19 +89,16 @@ async function getSequenceEntry({ storagePath, id, includeGbk = false, includeHt
     if (!entry) {
       return { entry: null };
     }
-    return buildEntryPayload({ paths, entry, includeGbk, includeHtml, includeAlignments });
+    return buildEntryPayload({ paths, entry, includeGbk, includeAlignments });
   } finally {
     db.close();
   }
 }
 
-async function buildEntryPayload({ paths, entry, includeGbk, includeHtml, includeAlignments }) {
+async function buildEntryPayload({ paths, entry, includeGbk, includeAlignments }) {
   const result = { entry };
   if (includeGbk) {
     result.gbkText = await fs.readFile(ensurePathWithinRoot(paths.libraryRoot, entry.gbkRelPath), 'utf8');
-  }
-  if (includeHtml) {
-    result.htmlText = await fs.readFile(ensurePathWithinRoot(paths.libraryRoot, entry.htmlRelPath), 'utf8');
   }
   if (includeAlignments) {
     const entryDir = path.join(paths.entriesRoot, entry.id);

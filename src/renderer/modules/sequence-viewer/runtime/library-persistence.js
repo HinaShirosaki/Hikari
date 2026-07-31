@@ -1,7 +1,4 @@
-import {
-  buildCircularPreviewHtmlDocument,
-  buildRecordGenbankText
-} from '../storage.js';
+import { buildRecordGenbankText } from '../storage.js';
 import { parseInputRecords } from '../parsing.js';
 import {
   buildSequenceSignature,
@@ -53,7 +50,6 @@ export function createLibraryPersistenceActions(ctx) {
       sequence: safeRecord.sequence,
       features: Array.isArray(safeRecord.features) ? safeRecord.features : [],
       gbkText,
-      htmlText: buildCircularPreviewHtmlDocument(safeRecord),
       alignmentSessions: Array.isArray(persistOptions?.alignmentSessions) ? persistOptions.alignmentSessions : undefined
     });
     if (!response?.ok || !response?.entry) {
@@ -128,7 +124,6 @@ export function createLibraryPersistenceActions(ctx) {
       sequence: record.sequence,
       features: Array.isArray(record.features) ? record.features : [],
       gbkText: buildRecordGenbankText(record),
-      htmlText: buildCircularPreviewHtmlDocument(record),
       alignmentSessions: Array.isArray(current.alignments) ? current.alignments : []
     });
     if (!response?.ok || !response?.entry) {

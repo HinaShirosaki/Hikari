@@ -42,6 +42,7 @@ function appendCodexProjectMemoryConfigArgs(args) {
 
 function buildCodexCliExecArgs({
   outputFile = '',
+  outputSchemaFile = '',
   model = '',
   reasoningEffort = '',
   enableWebSearch = false,
@@ -64,6 +65,9 @@ function buildCodexCliExecArgs({
   if (streamJson === true) {
     args.push('--json');
   }
+  if (outputSchemaFile) {
+    args.push('--output-schema', outputSchemaFile);
+  }
   appendCodexCliModelArgs(args, { model, reasoningEffort, catalog });
   appendCodexProjectMemoryConfigArgs(args);
   args.push('-');
@@ -72,6 +76,7 @@ function buildCodexCliExecArgs({
 
 function buildCodexCliExecResumeArgs({
   outputFile = '',
+  outputSchemaFile = '',
   sessionId = '',
   useLastSession = false,
   model = '',
@@ -95,6 +100,9 @@ function buildCodexCliExecResumeArgs({
   );
   if (streamJson === true) {
     args.push('--json');
+  }
+  if (outputSchemaFile) {
+    args.push('--output-schema', outputSchemaFile);
   }
   appendCodexCliModelArgs(args, { model, reasoningEffort, catalog });
   appendCodexProjectMemoryConfigArgs(args);

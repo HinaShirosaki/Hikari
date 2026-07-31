@@ -14,8 +14,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
           topology: 'circular',
           sequenceLength: 1200,
           featureCount: 2,
-          gbkText: 'LOCUS       VectorA           10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtac\n//\n',
-          htmlText: '<html><body>preview A</body></html>'
+          gbkText: 'LOCUS       VectorA           10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtac\n//\n'
         });
 
         const secondSaved = await sequenceLibrary.upsertSequenceEntry({
@@ -26,8 +25,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
           topology: 'circular',
           sequenceLength: 1300,
           featureCount: 3,
-          gbkText: 'LOCUS       VectorB           10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 tttttttttt\n//\n',
-          htmlText: '<html><body>preview B</body></html>'
+          gbkText: 'LOCUS       VectorB           10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 tttttttttt\n//\n'
         });
 
         const temporary = await sequenceLibrary.upsertSequenceEntry({
@@ -38,8 +36,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
           topology: 'linear',
           sequenceLength: 900,
           featureCount: 1,
-          gbkText: 'LOCUS       Draft             10 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 gggggggggg\n//\n',
-          htmlText: '<html><body>preview draft</body></html>'
+          gbkText: 'LOCUS       Draft             10 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 gggggggggg\n//\n'
         });
 
         assert.equal(firstSaved.entry.name, 'VectorA');
@@ -70,8 +67,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
           topology: 'circular',
           sequenceLength: 10,
           featureCount: 0,
-          gbkText: 'LOCUS       FolderVector      10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtac\n//\n',
-          htmlText: '<html><body>folder vector</body></html>'
+          gbkText: 'LOCUS       FolderVector      10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtac\n//\n'
         });
         const created = await sequenceLibrary.upsertSequenceFolder({
           storagePath: storageRoot,
@@ -115,7 +111,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
-    test('sequence library helper returns stored GBK/HTML and promotes temporary entries to saved names', async () => {
+    test('sequence library helper stores only GBK and promotes temporary entries to saved names', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-promote-'));
       try {
         const saved = await sequenceLibrary.upsertSequenceEntry({
@@ -126,8 +122,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
           topology: 'circular',
           sequenceLength: 1000,
           featureCount: 0,
-          gbkText: 'LOCUS       Reference         10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtac\n//\n',
-          htmlText: '<html><body>reference</body></html>'
+          gbkText: 'LOCUS       Reference         10 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtac\n//\n'
         });
 
         const temp = await sequenceLibrary.upsertSequenceEntry({
@@ -138,8 +133,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
           topology: 'linear',
           sequenceLength: 800,
           featureCount: 0,
-          gbkText: 'LOCUS       Draft             10 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 tttttttttt\n//\n',
-          htmlText: '<html><body>draft</body></html>'
+          gbkText: 'LOCUS       Draft             10 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 tttttttttt\n//\n'
         });
 
         const promoted = await sequenceLibrary.promoteSequenceEntry({
@@ -153,11 +147,16 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
         const fetched = await sequenceLibrary.getSequenceEntry({
           storagePath: storageRoot,
           id: saved.entry.id,
-          includeGbk: true,
-          includeHtml: true
+          includeGbk: true
         });
         assert.match(String(fetched.gbkText || ''), /LOCUS\s+Reference/);
-        assert.match(String(fetched.htmlText || ''), /reference/);
+
+        // Previews render from the .gbk now, so no preview document is written.
+        const entryFiles = await fsPromises.readdir(
+          path.join(storageRoot, 'SequenceViewer', 'entries', saved.entry.id)
+        );
+        assert.equal(entryFiles.some((name) => name.endsWith('.gbk')), true);
+        assert.equal(entryFiles.some((name) => name.endsWith('.html')), false);
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
@@ -173,8 +172,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
           topology: 'linear',
           sequenceLength: 12,
           featureCount: 0,
-          gbkText: 'LOCUS       AlignmentHost    12 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtacgt\n//\n',
-          htmlText: '<html><body>alignment host</body></html>'
+          gbkText: 'LOCUS       AlignmentHost    12 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 acgtacgtacgt\n//\n'
         });
 
         const alignmentsDir = path.join(storageRoot, 'SequenceViewer', 'entries', saved.entry.id, 'alignments');
@@ -232,8 +230,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
           sequenceLength: 12,
           featureCount: 1,
           features: [{ name: 'SharedProm', type: 'promoter', strand: 1, source: 'import', segments: [{ start: 0, end: 6 }] }],
-          gbkText: 'LOCUS       VectorAlpha       12 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 atgcgatttaaa\n//\n',
-          htmlText: '<html><body>alpha</body></html>'
+          gbkText: 'LOCUS       VectorAlpha       12 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 atgcgatttaaa\n//\n'
         });
 
         const second = await sequenceLibrary.upsertSequenceEntry({
@@ -246,8 +243,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
           sequenceLength: 12,
           featureCount: 1,
           features: [{ name: 'SharedProm', type: 'promoter', strand: 1, source: 'annotation', segments: [{ start: 3, end: 9 }] }],
-          gbkText: 'LOCUS       VectorBeta        12 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 cccatgcgaggg\n//\n',
-          htmlText: '<html><body>beta</body></html>'
+          gbkText: 'LOCUS       VectorBeta        12 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 cccatgcgaggg\n//\n'
         });
 
         const byName = await sequenceLibrary.searchSequenceFeatures({ storagePath: storageRoot, query: 'SharedProm' });
@@ -311,8 +307,7 @@ module.exports = function registerAgentSequenceLibraryContractsPart01(context = 
               segments: [{ start: 18, end: 27 }]
             }
           ],
-          gbkText: 'LOCUS       ProteinVector    27 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 atgaaataaatgggccctatgtaaatg\n//\n',
-          htmlText: '<html><body>protein vector</body></html>'
+          gbkText: 'LOCUS       ProteinVector    27 bp    DNA     linear   SYN 01-JAN-2026\nORIGIN\n        1 atgaaataaatgggccctatgtaaatg\n//\n'
         });
 
         const { loadSqlJs } = require(path.join(__dirname, 'src', 'main', 'storage', 'storage-utils.js'));
@@ -418,8 +413,7 @@ FEATURES             Location/Qualifiers
 ORIGIN
         1 ${hostSequence.toLowerCase()}
 //
-`,
-          htmlText: '<html><body>annotation host</body></html>'
+`
         });
 
         const annotated = await sequenceLibrary.annotateSequenceRecord({
@@ -455,8 +449,7 @@ ORIGIN
           sequenceLength: hostSequence.length,
           featureCount: 0,
           features: [],
-          gbkText: 'LOCUS       HostVector       24 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 atgcgtacgctagttaccggatca\n//\n',
-          htmlText: '<html><body>host</body></html>'
+          gbkText: 'LOCUS       HostVector       24 bp    DNA     circular SYN 01-JAN-2026\nORIGIN\n        1 atgcgtacgctagttaccggatca\n//\n'
         });
 
         const result = await sequenceLibrary.recognizeSequenceBackbone({ storagePath: storageRoot, sequence: querySequence });

@@ -255,7 +255,7 @@ function createAgentPlotlyGraphRuntime(deps = {}) {
       return {
         ok: false,
         status: 'invalid_figure',
-        error: 'plotly-graph create requires at least one trace in data or traces.'
+        error: 'plotly-graph create requires at least one trace in data.'
       };
     }
     const timestamp = now();

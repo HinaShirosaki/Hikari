@@ -103,19 +103,16 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   padding: 0;
 }
 
-.sequence-viewer-library-head {
-  align-items: center;
-  gap: 8px;
-}
-
-.sequence-viewer-library-new-folder-btn.ghost-btn {
-  min-height: 28px;
-  padding: 4px 7px;
-  font-size: 0.76rem;
-}
-
 .sequence-viewer-preview-card {
   margin: 0;
+  /* No card chrome around the map: the boundary only boxed it in, and dropping
+     it lets the map use the full column. */
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-height: 0;
+  border: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .sequence-viewer-library-switch {
@@ -283,24 +280,28 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 }
 
 .sequence-viewer-preview-host {
-  min-height: 520px;
-  display: grid;
-  align-content: start;
+  /* A definite height gives the map a viewport to fit into, so percentage
+     sizing works and zooming past 100% scrolls instead of stretching the card. */
+  height: calc(100vh - 150px);
+  min-height: 420px;
+  display: flex;
   border: 0;
   border-radius: 0;
   background: transparent;
   padding: 0;
-  overflow: hidden;
+  overflow: auto;
 }
 
-.sequence-viewer-preview-frame {
+.sequence-viewer-preview-host > .vector-map {
   width: 100%;
-  min-height: 520px;
-  display: block;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  overflow: hidden;
+  height: 100%;
+  /* flex would otherwise shrink the zoomed box back to the pane; margin:auto
+     centres it while it fits without clipping the top/left edge once it does
+     not. */
+  flex: 0 0 auto;
+  margin: auto;
+  touch-action: none;
+  user-select: none;
 }
 
 .sequence-viewer-preview-host > .small-note {
@@ -1188,12 +1189,10 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   overflow: hidden;
 }
 
-.sequence-viewer-backbone-dialog-preview .sequence-viewer-preview-frame {
+.sequence-viewer-backbone-dialog-preview > .vector-map {
   width: 100%;
-  min-height: 560px;
-  border: 0;
-  display: block;
-  background: transparent;
+  height: auto;
+  max-height: 60vh;
 }
 
 .sequence-viewer-alignment-dialog {
@@ -1425,6 +1424,78 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
 .sequence-viewer-feature-bar-active {
   box-shadow: 0 0 0 2px var(--sequence-viewer-active-ring);
   opacity: 1;
+}
+
+.sequence-viewer-feature-primer-overview {
+  min-width: 12px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--sequence-viewer-primer-color);
+  overflow: visible;
+  opacity: 1;
+}
+
+.sequence-viewer-feature-primer-line {
+  position: absolute;
+  top: 5px;
+  height: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--sequence-viewer-primer-color) 0 4px,
+    transparent 4px 6px
+  );
+}
+
+.sequence-viewer-feature-primer-cap {
+  position: absolute;
+  top: 2px;
+  width: 2px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--sequence-viewer-primer-color);
+}
+
+.sequence-viewer-feature-primer-arrow {
+  position: absolute;
+  top: 2px;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+}
+
+.sequence-viewer-feature-primer-forward .sequence-viewer-feature-primer-line {
+  left: 1px;
+  right: 5px;
+}
+
+.sequence-viewer-feature-primer-forward .sequence-viewer-feature-primer-cap {
+  left: 0;
+}
+
+.sequence-viewer-feature-primer-forward .sequence-viewer-feature-primer-arrow {
+  right: 0;
+  border-left: 6px solid var(--sequence-viewer-primer-color);
+}
+
+.sequence-viewer-feature-primer-reverse .sequence-viewer-feature-primer-line {
+  left: 5px;
+  right: 1px;
+}
+
+.sequence-viewer-feature-primer-reverse .sequence-viewer-feature-primer-cap {
+  right: 0;
+}
+
+.sequence-viewer-feature-primer-reverse .sequence-viewer-feature-primer-arrow {
+  left: 0;
+  border-right: 6px solid var(--sequence-viewer-primer-color);
+}
+
+.sequence-viewer-feature-primer-overview:hover,
+.sequence-viewer-feature-primer-overview:focus-visible {
+  background: transparent;
 }
 
 .sequence-viewer-feature-axis {
@@ -1922,6 +1993,107 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   padding: 0;
 }
 
+.sequence-viewer-line-feature-primer {
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  padding: 0;
+  overflow: visible;
+  opacity: 1;
+}
+
+.sequence-viewer-primer-oligo-line {
+  position: absolute;
+  top: 11px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--sequence-viewer-primer-color) 0 5px,
+    transparent 5px 7px
+  );
+  pointer-events: none;
+}
+
+.sequence-viewer-line-feature-primer-forward.sequence-viewer-line-feature-primer-has-five .sequence-viewer-primer-oligo-line {
+  left: 12px;
+}
+
+.sequence-viewer-line-feature-primer-forward.sequence-viewer-line-feature-primer-has-three .sequence-viewer-primer-oligo-line {
+  right: 9px;
+}
+
+.sequence-viewer-line-feature-primer-reverse.sequence-viewer-line-feature-primer-has-five .sequence-viewer-primer-oligo-line {
+  right: 12px;
+}
+
+.sequence-viewer-line-feature-primer-reverse.sequence-viewer-line-feature-primer-has-three .sequence-viewer-primer-oligo-line {
+  left: 9px;
+}
+
+.sequence-viewer-primer-end {
+  position: absolute;
+  top: -1px;
+  color: var(--sequence-viewer-primer-color);
+  font-size: 0.54rem;
+  font-weight: 750;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.sequence-viewer-line-feature-primer-forward .sequence-viewer-primer-end-five,
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-end-three {
+  left: 0;
+}
+
+.sequence-viewer-line-feature-primer-forward .sequence-viewer-primer-end-three,
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-end-five {
+  right: 0;
+}
+
+.sequence-viewer-primer-arrow {
+  position: absolute;
+  top: 8px;
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  pointer-events: none;
+}
+
+.sequence-viewer-line-feature-primer-forward .sequence-viewer-primer-arrow {
+  right: 0;
+  border-left: 7px solid var(--sequence-viewer-primer-color);
+}
+
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-arrow {
+  left: 0;
+  border-right: 7px solid var(--sequence-viewer-primer-color);
+}
+
+.sequence-viewer-primer-label {
+  position: absolute;
+  top: -2px;
+  left: 20px;
+  right: 20px;
+  width: auto;
+  color: var(--sequence-viewer-primer-color);
+  font-size: 0.58rem;
+  font-weight: 700;
+}
+
+.sequence-viewer-line-feature-primer.sequence-viewer-line-feature-active {
+  border: 0;
+  box-shadow: 0 0 0 2px var(--sequence-viewer-active-ring);
+}
+
+.sequence-viewer-line-feature-primer:hover,
+.sequence-viewer-line-feature-primer:focus-visible {
+  background: transparent;
+}
+
 .sequence-viewer-line-feature-active {
   border-color: var(--sequence-viewer-active-blue);
   box-shadow: none;
@@ -2256,8 +2428,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
     max-height: none;
   }
 
-  .sequence-viewer-backbone-dialog-preview,
-.sequence-viewer-backbone-dialog-preview .sequence-viewer-preview-frame {
+  .sequence-viewer-backbone-dialog-preview {
     min-height: 420px;
   }
 }
@@ -2500,5 +2671,266 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
     padding: 0 !important;
     overflow: hidden !important;
     background: var(--app-left-rail-surface, var(--theme-surface)) !important;
+  }
+}
+
+/* ---------- Vector Builder ---------- */
+
+.sequence-viewer-vector-builder-workspace {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+}
+
+.sequence-viewer-vector-builder-workspace[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-vector-builder-toolbar {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface);
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+}
+
+.sequence-viewer-vector-builder-toolbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sequence-viewer-vector-builder-toolbar-nav h3 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--theme-text-strong);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sequence-viewer-vector-builder-toolbar-nav .ghost-btn {
+  background: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface-elevated));
+  border-color: var(--theme-accent);
+  color: var(--theme-text-strong);
+}
+
+.sequence-viewer-vector-builder-toolbar-nav .ghost-btn:hover {
+  background: color-mix(in srgb, var(--theme-accent) 26%, var(--theme-surface-elevated));
+}
+
+.sequence-viewer-vector-builder-toolbar-actions {
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.sequence-viewer-vector-builder-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 0;
+  align-items: stretch;
+}
+
+.sequence-viewer-vector-builder-map-card,
+.sequence-viewer-vector-builder-sequence-card {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  gap: 10px;
+}
+
+.sequence-viewer-vector-builder-sequence-card {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.sequence-viewer-vector-builder-map {
+  min-height: 0;
+  display: flex;
+  /* Zoom grows the map past the pane; native scrolling then pans it. */
+  overflow: auto;
+}
+
+.sequence-viewer-vector-builder-map .vector-map {
+  width: 100%;
+  height: 100%;
+  /* flex would otherwise shrink the zoomed box back to the pane. margin:auto
+     centres it while it still fits, without clipping the top/left edge once it
+     overflows the way align-items:center would. */
+  flex: 0 0 auto;
+  margin: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.sequence-viewer-vector-builder-sequence {
+  min-height: 0;
+  overflow: auto;
+}
+
+.vector-map__backbone {
+  fill: none;
+  stroke: var(--theme-border);
+  stroke-width: 4;
+}
+
+/* The linear track is a <line>, so it needs a thinner, squared stroke than the
+   circular backbone ring. */
+.vector-map--linear .vector-map__backbone {
+  stroke-width: 2;
+}
+
+.vector-map__intron {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.vector-map__label-text--on-bar {
+  font-size: 11px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.vector-map__tick {
+  stroke: var(--theme-border);
+  stroke-width: 1;
+}
+
+.vector-map__tick-label {
+  fill: var(--theme-text-muted);
+  font-size: 11px;
+}
+
+.vector-map__feature {
+  stroke: var(--theme-surface);
+  stroke-width: 0.75;
+  cursor: pointer;
+}
+
+.vector-map__feature:hover {
+  stroke: var(--theme-text-strong);
+  stroke-width: 1.5;
+}
+
+.vector-map__feature--active {
+  /* Feature fills come from a hash of the feature type, so an accent-coloured
+     outline can vanish on a blue feature. Outline in the text colour instead:
+     it contrasts against every generated fill. */
+  stroke: var(--theme-text-strong);
+  stroke-width: 3;
+}
+
+/* An `outline` on an SVG shape is drawn around its rectangular bounding box,
+   which reads as a box floating outside the feature. Suppress it and mark
+   focus on the shape itself instead. */
+.vector-map__feature:focus,
+.vector-map__label:focus,
+.vector-map__feature:focus-visible,
+.vector-map__label:focus-visible {
+  outline: none;
+}
+
+.vector-map__feature:focus-visible {
+  stroke: var(--theme-text-strong);
+  stroke-width: 3;
+}
+
+.vector-map__label:focus-visible .vector-map__label-text {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.vector-map__selection {
+  fill: color-mix(in srgb, var(--theme-accent) 45%, transparent);
+  stroke: var(--theme-accent);
+  stroke-width: 1;
+  pointer-events: none;
+}
+
+.vector-map--linear .vector-map__selection {
+  fill: color-mix(in srgb, var(--theme-accent) 22%, transparent);
+}
+
+.vector-map__caret {
+  stroke: var(--theme-accent);
+  stroke-width: 2.5;
+  pointer-events: none;
+}
+
+.vector-map__leader {
+  fill: none;
+  stroke: var(--theme-border);
+  stroke-width: 1;
+}
+
+.vector-map__label {
+  cursor: pointer;
+}
+
+.vector-map__label-text {
+  font-size: 13px;
+}
+
+.vector-map__label:hover .vector-map__label-text {
+  font-weight: 600;
+}
+
+.vector-map__label--active .vector-map__label-text {
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.vector-map__title {
+  fill: var(--theme-text-strong);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.vector-map__subtitle {
+  fill: var(--theme-text-muted);
+  font-size: 12px;
+}
+
+.vector-map__tooltip {
+  position: fixed;
+  z-index: 2700;
+  max-width: 280px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-surface-elevated);
+  box-shadow: var(--theme-shadow-small);
+  color: var(--theme-text);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  /* Must never sit between the cursor and the feature it describes. */
+  pointer-events: none;
+}
+
+.vector-map__tooltip[hidden] {
+  display: none !important;
+}
+
+.sequence-viewer-context-divider {
+  border: 0;
+  border-top: 1px solid var(--theme-border);
+  margin: 3px 0;
+}
+
+.sequence-viewer-protein-builder-vector-target {
+  padding-right: 4px;
+}
+
+@media (max-width: 1100px) {
+  .sequence-viewer-vector-builder-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

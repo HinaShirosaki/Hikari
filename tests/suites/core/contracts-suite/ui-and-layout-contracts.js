@@ -129,6 +129,22 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       }
     });
 
+    test('only Papers and Agent opt into the shared left-rail fold control', () => {
+      const sharedController = readLocalSource('src', 'renderer', 'app', 'shared-left-rail.js');
+      const sharedCss = readLocalSource('ui', 'css', 'overrides', 'left-rail-template.css');
+      const viewFiles = fs.readdirSync(path.join(__dirname, 'ui', 'html', 'views'))
+        .filter((fileName) => fileName.endsWith('.html'));
+      const optedInViews = viewFiles
+        .filter((fileName) => readLocalSource('ui', 'html', 'views', fileName).includes('data-left-rail-foldable="true"'))
+        .sort();
+
+      assert.deepEqual(optedInViews, ['agent-view.html', 'papers-view.html']);
+      assert.match(sharedController, /layout\.getAttribute\(FOLDABLE_ATTR\) === 'true'/);
+      assert.match(sharedController, /folded \? 'Open left rail' : 'Fold left rail'/);
+      assert.match(sharedController, /rail\.inert = folded/);
+      assert.match(sharedCss, /\[data-left-rail-foldable="true"\]\.is-left-rail-folded\s*\{[^}]*grid-template-columns:\s*var\(--shared-left-rail-folded-width\) minmax\(0,\s*1fr\) !important;/s);
+    });
+
     test('biology notebook page header stays fixed above its detail scroller', () => {
       const html = readLocalSource('ui', 'html', 'views', 'biology-notebook-view.html');
       const css = readLocalSource('ui', 'css', 'views', 'biology-notebook-view.css');
@@ -498,12 +514,13 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(homeBlock, /id="sequence-viewer-protein-builder-workspace"/);
       assert.match(homeBlock, /id="sequence-viewer-home-paste-btn"/);
       assert.match(homeBlock, /id="sequence-viewer-home-open-btn"/);
-      assert.match(homeBlock, /id="sequence-viewer-home-protein-builder-btn"/);
+      assert.match(homeBlock, /id="sequence-viewer-home-vector-builder-btn"/);
+      // Protein Builder folds into Vector Builder; it is no longer a home entry point.
+      assert.equal(homeBlock.includes('id="sequence-viewer-home-protein-builder-btn"'), false);
       assert.match(homeBlock, /class="sequence-viewer-rail-actions-section left-rail-template__section"/);
       assert.equal(homeBlock.includes('id="sequence-viewer-home-import-btn"'), false);
       assert.match(homeBlock, /id="sequence-viewer-library-filter-saved"/);
       assert.match(homeBlock, /id="sequence-viewer-library-filter-temporary"/);
-      assert.match(homeBlock, /id="sequence-viewer-library-new-folder-btn"/);
       assert.match(homeBlock, /id="sequence-viewer-library-list"/);
       assert.match(homeBlock, /id="sequence-viewer-preview-host"/);
       assert.equal(homeBlock.includes('<h2>Sequence Viewer</h2>'), false);
@@ -513,13 +530,17 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(detailBlock, /id="sequence-viewer-detail-workspace"/);
       assert.equal(detailBlock.includes('id="sequence-viewer-back-btn"'), false);
       assert.equal(detailBlock.includes('Back to Library'), false);
-      assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-detail-protein-builder-btn"[\s\S]*<h4>Sequence Library<\/h4>/);
+      assert.match(detailBlock, /class="sequence-viewer-detail-sidebar[\s\S]*class="sequence-viewer-rail-actions-section left-rail-template__section"[\s\S]*id="sequence-viewer-detail-new-btn"[\s\S]*id="sequence-viewer-detail-open-btn"[\s\S]*id="sequence-viewer-vector-builder-btn"[\s\S]*<h4>Sequence Library<\/h4>/);
+      // The rail's third action stays "Vector Builder" across home and detail so the
+      // slot does not appear to rename itself; Protein Builder moved to the toolbar.
+      assert.match(homeBlock, /id="sequence-viewer-home-vector-builder-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-detail-protein-builder-btn"/);
-      assert.match(detailBlock, /id="sequence-viewer-detail-library-new-folder-btn"/);
       assert.equal(detailBlock.includes('id="sequence-viewer-save-btn"'), false);
       assert.equal(detailBlock.includes('id="sequence-viewer-save-name"'), false);
       assert.match(detailBlock, /id="sequence-viewer-detail-library-context-menu"[\s\S]*data-sequence-library-action="rename"/);
       assert.match(homeBlock, /id="sequence-viewer-library-context-menu"[\s\S]*data-sequence-library-action="rename"/);
+      assert.match(detailBlock, /id="sequence-viewer-detail-library-context-menu"[\s\S]*data-sequence-library-action="new-folder"/);
+      assert.match(homeBlock, /id="sequence-viewer-library-context-menu"[\s\S]*data-sequence-library-action="new-folder"/);
       assert.match(detailBlock, /id="sequence-viewer-annotate-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-recognize-backbone-btn"/);
       assert.match(detailBlock, /id="sequence-viewer-orf-toggle"/);

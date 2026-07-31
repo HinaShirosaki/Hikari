@@ -145,8 +145,6 @@ export function createContainerDetailRenderer({
                     <div class="plate96-col-labels" aria-hidden="true">${columnLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
                     <div class="plate96-row-labels" aria-hidden="true">${rowLabels.map((label) => `<span>${safeText(label)}</span>`).join('')}</div>
                     <div class="plate96-well-area">
-                      <span class="plate96-skirt-shape" aria-hidden="true"></span>
-                      <span class="plate96-skirt-edge" aria-hidden="true"></span>
                       <div class="well-grid well-grid-${safeText(layout.className)}" style="${gridStyle}">${grid}</div>
                     </div>
                   </div>

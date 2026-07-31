@@ -91,10 +91,13 @@
                     </div>
                     <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables"></div>
                   </div>
-                  <label>
-                    Experiment Results File / Notes
-                    <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
-                  </label>
+                  <div class="biology-notebook-notes-field">
+                    <label for="biology-notebook-result">Experiment Results File / Notes</label>
+                    <div class="biology-notebook-notes-composer">
+                      <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+                      <button id="clarify-save-biology-notebook-btn" class="ghost-btn biology-notebook-notes-clarify-btn" type="button">Clarify and Save</button>
+                    </div>
+                  </div>
                   <label>
                     Experiment Result Files
                     <input id="biology-notebook-result-file" type="file" multiple />
@@ -102,7 +105,6 @@
                   <div id="biology-notebook-result-attachments" class="biology-notebook-result-attachments" aria-live="polite" hidden></div>
                   <div class="form-actions">
                     <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
-                    <button id="clarify-save-biology-notebook-btn" class="ghost-btn" type="button">Clarify and Save</button>
                     <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
                   </div>
                 </div>
@@ -190,17 +192,14 @@
             </section>
 
             <section id="biology-notebook-tool-panel-buffer" class="biology-notebook-tool-panel" data-notebook-tool-panel="buffer" hidden>
-              <div class="form-actions">
-                <button id="biology-notebook-tool-buffer-add-row" class="ghost-btn" type="button">Add Ingredient</button>
-              </div>
               <div class="biology-notebook-buffer-sheet-wrap">
                 <table class="biology-notebook-buffer-sheet" aria-label="Buffer preparer table">
-                  <tbody>
+                  <tbody id="biology-notebook-tool-buffer-rows">
                     <tr class="biology-notebook-buffer-meta-row">
                       <th scope="row">Volume</th>
-                      <td><input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" value="100" aria-label="Buffer volume in mL" /></td>
+                      <td><input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" aria-label="Buffer volume in mL" /></td>
                       <th scope="row">pH</th>
-                      <td><input id="biology-notebook-tool-buffer-ph" type="number" min="0" max="14" step="0.01" placeholder="7.4" aria-label="Target pH" /></td>
+                      <td><input id="biology-notebook-tool-buffer-ph" type="number" min="0" max="14" step="0.01" aria-label="Target pH" /></td>
                       <td></td>
                     </tr>
                     <tr class="biology-notebook-buffer-header-row">
@@ -213,76 +212,79 @@
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-1">
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-1" />
+                          <input id="biology-notebook-tool-buffer-name-1" data-buffer-chemical-index="1" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-1" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-1" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" value="121.14" aria-label="Ingredient 1 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-1" placeholder="empty or 1 M" aria-label="Ingredient 1 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-1" placeholder="50 mM" aria-label="Ingredient 1 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" aria-label="Ingredient 1 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-1" aria-label="Ingredient 1 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-1" aria-label="Ingredient 1 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-1" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-2">
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-2" />
+                          <input id="biology-notebook-tool-buffer-name-2" data-buffer-chemical-index="2" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-2" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-2" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 2 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-2" placeholder="2000x" aria-label="Ingredient 2 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-2" placeholder="150 mM" aria-label="Ingredient 2 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" aria-label="Ingredient 2 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-2" aria-label="Ingredient 2 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-2" aria-label="Ingredient 2 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-2" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-3" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-3" />
+                          <input id="biology-notebook-tool-buffer-name-3" data-buffer-chemical-index="3" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-3" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-3" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 3 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-3" placeholder="10% v/v" aria-label="Ingredient 3 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-3" placeholder="0.1% v/v" aria-label="Ingredient 3 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" aria-label="Ingredient 3 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-3" aria-label="Ingredient 3 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-3" aria-label="Ingredient 3 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-3" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-4" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-4" />
+                          <input id="biology-notebook-tool-buffer-name-4" data-buffer-chemical-index="4" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-4" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-4" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 4 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-4" placeholder="stock" aria-label="Ingredient 4 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-4" placeholder="final" aria-label="Ingredient 4 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" aria-label="Ingredient 4 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-4" aria-label="Ingredient 4 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-4" aria-label="Ingredient 4 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-4" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-5" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-5" />
+                          <input id="biology-notebook-tool-buffer-name-5" data-buffer-chemical-index="5" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-5" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-5" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-5" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 5 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-5" placeholder="stock" aria-label="Ingredient 5 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-5" placeholder="final" aria-label="Ingredient 5 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-5" type="number" min="0" step="0.001" aria-label="Ingredient 5 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-5" aria-label="Ingredient 5 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-5" aria-label="Ingredient 5 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-5" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-6" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-6" />
+                          <input id="biology-notebook-tool-buffer-name-6" data-buffer-chemical-index="6" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-6" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-6" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-6" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 6 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-6" placeholder="stock" aria-label="Ingredient 6 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-6" placeholder="final" aria-label="Ingredient 6 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-6" type="number" min="0" step="0.001" aria-label="Ingredient 6 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-6" aria-label="Ingredient 6 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-6" aria-label="Ingredient 6 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-6" aria-live="polite"></output></td>
                     </tr>
-                    <tr class="biology-notebook-buffer-adjustment-row">
+                    <tr id="biology-notebook-tool-buffer-add-row-anchor" class="biology-notebook-buffer-add-row">
+                      <td colspan="5"><button id="biology-notebook-tool-buffer-add-row" class="biology-notebook-buffer-add-row-button" type="button" aria-label="Add ingredient" title="Add ingredient">+</button></td>
+                    </tr>
+                    <tr id="biology-notebook-tool-buffer-adjustment-row" class="biology-notebook-buffer-adjustment-row">
                       <th scope="row">Solvent to add <output id="biology-notebook-tool-buffer-solvent-output" aria-live="polite"></output></th>
                       <td></td>
                       <th scope="row">6 M NaOH <output id="biology-notebook-tool-buffer-naoh-output" aria-live="polite"></output></th>
@@ -369,9 +371,7 @@
               <p id="biology-notebook-tool-formula" class="small-note"></p>
             </div>
             <div class="form-actions biology-notebook-tool-actions">
-              <button id="biology-notebook-tool-insert-notes-btn" class="ghost-btn" type="button">Insert into Notes</button>
-              <button id="biology-notebook-tool-use-placeholder-btn" class="ghost-btn" type="button">Use for Placeholder</button>
-              <button id="biology-notebook-tool-record-btn" class="primary-btn" type="button">Record</button>
+              <button id="biology-notebook-tool-insert-notes-btn" class="primary-btn" type="button">Insert &amp; Record</button>
             </div>
               <p id="biology-notebook-tool-status" class="small-note"></p>
             </div>

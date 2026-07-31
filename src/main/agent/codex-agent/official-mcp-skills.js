@@ -39,7 +39,7 @@ const OFFICIAL_MCP_SKILLS = Object.freeze([
     content: buildSkillMarkdown({
       id: 'paper-intake',
       name: 'hikari-paper-intake',
-      description: 'Use immediately after a paper PDF is ingested into `knowledgebase/papers.md/<id>/paper.md` to classify the document, produce a one-sentence summary, and list every experiment. Falls back to extracted figures or the original PDF only when the markdown is insufficient.',
+      description: 'Use immediately after a paper PDF is ingested into `knowledgebase/papers.md/{paper_id}/paper.md` to classify the document, produce a one-sentence summary, and list every experiment. Falls back to extracted figures or the original PDF only when the markdown is insufficient.',
       body: `
 # Hikari Paper Intake
 
@@ -134,8 +134,8 @@ Retrieval workflow:
 1. Decide the narrowest retrieval mode:
    - Use \`${PAPER_INTAKE_SEARCH_SUMMARIES_TOOL_NAME}\` for "find papers about...", title/topic/finding questions, or when the user wants candidate papers.
    - Use \`${PAPER_INTAKE_SEARCH_EXPERIMENTS_TOOL_NAME}\` for "which paper did assay X?", "find experiments using technique Y", condition/outcome questions, or figure-level experiment lookup.
-   - Use \`${PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME}\` when the user gives a project id/name and wants papers attached to that project.
-2. Call the chosen MCP tool with a short keyword query. Preserve technical terms such as assay names, proteins, cell lines, compounds, figure labels, and paper-specific tags.
+   - Use \`${PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME}\` when the user gives a project name, or has an active project, and wants papers attached to that project.
+2. For either search tool, use a short keyword \`query\` and preserve technical terms such as assay names, proteins, cell lines, compounds, figure labels, and paper-specific tags. For the project roll-up, pass \`project_name\` when supplied or rely on active-project context; do not add \`query\`.
 3. Inspect \`status\`, \`items\`, \`matched_terms\`, \`score\`, \`doc_type\`, \`paper_id\`, \`title\`, \`one_sentence_summary\`, \`experiment\`, and \`source_paths\`.
 4. If the returned fields answer the question, answer from the tool result and cite the returned \`paper_id\`, \`title\`, and \`source_paths.paper_md\`.
 5. If the user asks for details that are not in the summary or experiment entry, read the returned \`source_paths.paper_md\` from the current workspace before answering. Use \`extracted.txt\`, figures, or the original PDF only when \`paper.md\` leaves a concrete question unanswered.
@@ -225,21 +225,22 @@ Table workflow:
 1. Start from the active assay context or user-provided data and create an original table with \`${ASSAY_TABLE_TOOL_NAME}\`.
    - In the Assay right rail, the active assay context includes TSV blocks such as \`Assay plate data (TSV...)\` and sometimes \`Latest analysis table (TSV)\`.
    - To retrieve the data in a chat turn, find the \`Assay plate data (TSV...)\` block in the hidden context, read the header line, then parse each following non-empty TSV row until the next blank line or section. Each row becomes one object for \`create\`.
-   - Convert that TSV into explicit \`rows\` for \`create\`; do not call \`create\` with only \`source: "active_assay"\`.
+   - Convert that TSV into explicit \`rows\` for \`create\`; do not omit \`rows\` and merely refer to the active assay.
    - Preserve the columns \`well\`, \`row\`, \`column\`, \`sample\`, \`concentration\`, and \`result\` when they are present, because downstream calculations and Plotly traces often need the plate location as well as values.
    - If the block says rows exist but no body rows are present, say the active assay context omitted the row data and ask for a refreshed context.
    - Do not use local lookup tools to fetch the active assay plate data; the current plate data must come from the right-rail context TSV or from user-provided rows.
 2. Use \`derive\` or \`add_column\` for common calculations: \`+\`, \`-\`, \`*\`, \`/\`, \`max\`, \`min\`, \`avg\`, \`sd\`, \`median\`, \`count\`, \`log10\`, \`ln\`, and \`pow\`.
 3. Use row-wise \`operands\` when each row contains replicate columns. Example:
-   \`{ "action": "derive", "source_table_id": "1", "include_source_columns": true, "columns": [{ "name": "avg_response", "op": "avg", "operands": ["rep1", "rep2", "rep3"] }, { "name": "sd_response", "op": "sd", "operands": ["rep1", "rep2", "rep3"] }] }\`
-4. Use \`group_by\` plus \`source\` for grouped summaries. Example:
-   \`{ "action": "derive", "source_table_id": "1", "group_by": ["condition", "dose"], "columns": [{ "name": "mean", "op": "avg", "source": "response" }, { "name": "sd", "op": "sd", "source": "response" }, { "name": "n", "op": "count", "source": "response" }] }\`
+   \`{ "action": "derive", "table_id": "1", "include_source_columns": true, "columns": [{ "name": "avg_response", "op": "avg", "operands": ["rep1", "rep2", "rep3"] }, { "name": "sd_response", "op": "sd", "operands": ["rep1", "rep2", "rep3"] }] }\`
+4. Use \`group_by\` plus \`source\` on each calculation-column object for grouped summaries. Example:
+   \`{ "action": "derive", "table_id": "1", "group_by": ["condition", "dose"], "columns": [{ "name": "mean", "op": "avg", "source": "response" }, { "name": "sd", "op": "sd", "source": "response" }, { "name": "n", "op": "count", "source": "response" }] }\`
 5. Use the \`python\` action only when built-in calculations are not enough. The tool stages \`input_table.json\` and \`tables.json\`; your code must write \`output_table.json\` with \`{ "columns": [...], "rows": [...] }\` or a JSON array of row objects. Prefer \`python3\`; the runtime falls back to \`python\` when needed.
 
 Plotly workflow:
 
 1. Build the table first when calculations, grouping, normalization, or replicate summaries are needed.
-2. Call \`${PLOTLY_GRAPH_TOOL_NAME}\` with \`action: "create"\` and normal Plotly arguments: \`data\` (or \`traces\`), \`layout\`, \`config\`, and optional \`frames\`.
+2. Call \`${PLOTLY_GRAPH_TOOL_NAME}\` with \`action: "create"\` and canonical Plotly arguments: \`data\`, \`layout\`, and optional \`config\`. Example:
+   \`{ "action": "create", "name": "dose response", "data": [{ "type": "scatter", "mode": "markers", "x": [1, 10], "y": [20, 75] }], "layout": { "title": { "text": "Dose response" } }, "config": { "responsive": true, "displaylogo": false } }\`
 3. Call \`inspect\` after every \`create\` or meaningful \`update\`. Treat returned \`issues\` and \`suggestions\` as the graph review loop.
 4. Use \`update\` to adjust titles, axes, trace names, colors, error bars, log axes, or hover labels before answering.
 5. In the final response, report the table id and graph id, and summarize the decisions made during inspection.

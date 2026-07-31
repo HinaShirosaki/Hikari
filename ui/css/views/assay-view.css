@@ -415,6 +415,20 @@
   border-color: transparent;
 }
 
+.assay-form-actions > .assay-plate-type-field {
+  display: block;
+  flex: 0 0 104px;
+  width: 104px;
+  margin: 0 0 0 4px;
+}
+
+.assay-form-actions > .assay-plate-type-field select {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 26px 6px 9px;
+  font-size: 0.88rem;
+}
+
 .assay-create-preview-panel {
   display: flex;
   flex-direction: column;

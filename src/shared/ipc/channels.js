@@ -93,6 +93,14 @@ const TELEGRAM = Object.freeze({
 
 const TELEGRAM_COMMAND_EVENT = 'telegram-command';
 
+const GENOME = Object.freeze({
+  LIST: 'genome:list',
+  GET: 'genome:get',
+  ADD: 'genome:add',
+  REMOVE: 'genome:remove',
+  READ_REGION: 'genome:read-region'
+});
+
 const SCHEDULED_TASK = Object.freeze({
   LIST: 'scheduled-task:list',
   GET: 'scheduled-task:get',
@@ -128,5 +136,6 @@ module.exports = {
   TELEGRAM,
   TELEGRAM_COMMAND_EVENT,
   SCHEDULED_TASK,
+  GENOME,
   LLM
 };

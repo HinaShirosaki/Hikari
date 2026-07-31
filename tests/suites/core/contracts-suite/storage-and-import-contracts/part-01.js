@@ -231,6 +231,97 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
         await fsPromises.rm(tempDir, { recursive: true, force: true });
       }
     });
+    test('storage PDF import uses the composed paper knowledge runtime for intake', async () => {
+      const { registerDataIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'));
+      const { STORAGE } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+      const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-paper-intake-runtime-'));
+      const handlers = new Map();
+      const intakeCalls = [];
+      const ipcMain = {
+        handle(channel, handler) {
+          handlers.set(channel, handler);
+        }
+      };
+      try {
+        registerDataIpc({
+          ipcMain,
+          fs: fsPromises,
+          dialog: {},
+          shell: {},
+          mainDataHelpers: {},
+          paperKnowledgeDatabaseRuntime: {
+            async ingestPaperPdf(input = {}) {
+              intakeCalls.push(input);
+              return {
+                ok: true,
+                status: 'ready',
+                markdown_relative_path: 'KnowledgeBase/papers.md/paper-one/paper.md',
+                extracted_text_relative_path: 'KnowledgeBase/papers.md/paper-one/extracted.txt',
+                meta_relative_path: 'KnowledgeBase/papers.md/paper-one/meta.json',
+                paper_intake_status: 'ready'
+              };
+            }
+          },
+          importStorageRoot: async () => ({}),
+          discoverPapersFromStorageRoot: async () => ({}),
+          syncSqliteBundleFromSnapshot: async () => ({})
+        });
+
+        const result = await handlers.get(STORAGE.STORE_IMPORTED_FILE)(null, {
+          storagePath: tempDir,
+          targetFolder: path.join(tempDir, 'Project', 'Atlas', 'Papers'),
+          fileName: 'paper-one.pdf',
+          dataBase64: Buffer.from('%PDF-1.4\n').toString('base64'),
+          transformPdfToMarkdown: true,
+          paperTitle: 'Paper One',
+          linkedType: 'project',
+          linkedName: 'Atlas'
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(intakeCalls.length, 1);
+        assert.equal(intakeCalls[0].source, 'manual-import');
+        assert.equal(result.knowledgeDatabase?.paper_intake_status, 'ready');
+        assert.equal(result.paperIntakeStatus, 'ready');
+        assert.equal(result.paperIntakeError, '');
+        assert.equal(
+          result.knowledgeMarkdownRelativePath,
+          'KnowledgeBase/papers.md/paper-one/paper.md'
+        );
+
+        const mainServicesSource = readLocalSource('src', 'main', 'core', 'main-services.js');
+        const agentServicesSource = readLocalSource(
+          'src',
+          'main',
+          'core',
+          'services',
+          'create-agent-services.js'
+        );
+        assert.match(
+          mainServicesSource,
+          /paperKnowledgeDatabaseRuntime:\s*agents\.paperKnowledgeDatabaseRuntime/
+        );
+        assert.match(
+          mainServicesSource,
+          /transformPaperRecordsToMarkdown:\s*transformPaperRecordsWithAgentRuntime/
+        );
+        assert.match(
+          agentServicesSource,
+          /paperIntakeProvider\s*=\s*DEFAULT_LLM_PROVIDER\s*\|\|\s*LLM_PROVIDERS\.CODEX/
+        );
+        assert.match(
+          agentServicesSource,
+          /provider:\s*cleanText\(options\.provider,\s*80\)\s*\|\|\s*paperIntakeProvider/
+        );
+        assert.match(
+          agentServicesSource,
+          /createPaperKnowledgeDatabaseRuntime\(\{[\s\S]*requestStructuredJsonPayload:\s*requestPaperIntakeStructuredJson/
+        );
+        assert.match(agentServicesSource, /paperKnowledgeDatabaseRuntime,[\s\S]*directLlmRegistry/);
+      } finally {
+        await fsPromises.rm(tempDir, { recursive: true, force: true });
+      }
+    });
     test('storage bundle writes project memory and codex skill folders for project records', async () => {
       const bundleHelpers = require(path.join(__dirname, 'src', 'main', 'storage', 'index.js'));
       const tempDir = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'storage-project-skills-'));

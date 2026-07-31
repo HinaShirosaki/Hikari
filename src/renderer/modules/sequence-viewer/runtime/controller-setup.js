@@ -4,6 +4,7 @@ import { createSequenceViewerCloningDesignController } from '../cloning-design.j
 import { createSequenceViewerDetailController } from '../detail-controller.js';
 import { createSequenceViewerHomeController } from '../home-controller.js';
 import { createSequenceViewerProteinBuilderController } from '../protein-builder.js';
+import { createSequenceViewerVectorBuilderController } from '../vector-builder/controller.js';
 import {
   FILE_ACCEPT,
   LIBRARY_STATUS_SAVED,
@@ -103,6 +104,26 @@ export function setupSequenceViewerControllers(ctx) {
     onReturnToDetail: actions.returnToSequenceDetailFromCloningDesign
   });
 
+  controllers.vectorBuilder = createSequenceViewerVectorBuilderController({
+    rootDocument,
+    elements,
+    state,
+    getSelectedRecord: actions.getSelectedRecord,
+    getBridge: actions.getBridge,
+    getStoragePath: actions.getStoragePath,
+    setStatus: actions.setStatus,
+    persistFeatureMutation: actions.persistFeatureMutation,
+    onApplySequenceEdit: actions.applySequenceEdit,
+    onNavigateVectorBuilder: actions.showVectorBuilderWorkspace,
+    onReturnToDetail: actions.returnToSequenceDetailFromVectorBuilder,
+    onRequestCloningDesign: () => controllers.cloningDesign?.open?.(),
+    onRequestProteinInsert: () => {
+      actions.showProteinBuilderWorkspace();
+      controllers.proteinBuilder?.render?.();
+      actions.setStatus('Compose the construct, then use Insert Into Vector to splice it into the open plasmid.');
+    }
+  });
+
   controllers.proteinBuilder = createSequenceViewerProteinBuilderController({
     elements,
     state: options?.state,
@@ -120,7 +141,13 @@ export function setupSequenceViewerControllers(ctx) {
       controllers.home.navigateToHome();
     },
     onNavigateBuilder: actions.showProteinBuilderWorkspace,
-    loadExternalRecord: actions.loadFromExternal
+    loadExternalRecord: actions.loadFromExternal,
+    getVectorInsertTarget: () => controllers.vectorBuilder?.getInsertTarget?.() || null,
+    onInsertIntoVector: async (payload) => await controllers.vectorBuilder?.applyProteinConstruct?.(payload),
+    onCancelVectorInsert: () => {
+      controllers.vectorBuilder?.clearInsertTarget?.();
+      controllers.proteinBuilder?.render?.();
+    }
   });
 }
 

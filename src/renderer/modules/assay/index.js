@@ -623,7 +623,7 @@ export function initAssay({ state, persist, createId, safeText, onAssaysChanged,
       elements.assayNotebookEntryInput.append(option);
       elements.assayNotebookEntryInput.value = assay.notebookEntryId;
     }
-    setCsvStatus(assay.wellLayout?.length ? `Loaded ${assay.wellLayout.length} mapped wells from saved assay.` : '');
+    setCsvStatus('');
     setResultStatus(`Loaded ${Object.keys(runtime.currentResults).length} result value(s) from saved assay.`);
     setLayoutStatus('');
     analysisView.clearOutput();

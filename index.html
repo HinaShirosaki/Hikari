@@ -178,15 +178,6 @@
               <h2 id="dashboard-contribution-heading">Contribution heatmap</h2>
               <p id="dashboard-contribution-summary" class="small-note"></p>
             </div>
-            <div class="home-contribution-legend" aria-hidden="true">
-              <span>Less</span>
-              <span class="home-contribution-legend-cell" data-level="0"></span>
-              <span class="home-contribution-legend-cell" data-level="1"></span>
-              <span class="home-contribution-legend-cell" data-level="2"></span>
-              <span class="home-contribution-legend-cell" data-level="3"></span>
-              <span class="home-contribution-legend-cell" data-level="4"></span>
-              <span>More</span>
-            </div>
           </div>
           <div class="home-contribution-display">
             <div class="home-contribution-map" aria-label="Lab activity contribution heatmap">
@@ -199,10 +190,6 @@
                 </div>
                 <div id="dashboard-contribution-grid" class="home-contribution-grid" role="grid" aria-label="Daily lab activity"></div>
               </div>
-            </div>
-            <div class="home-contribution-streak" role="group" aria-label="Logging streak">
-              <span id="dashboard-contribution-streak" class="home-contribution-streak-num">0</span>
-              <span class="home-contribution-streak-label">day logging streak</span>
             </div>
           </div>
         </section>
@@ -722,10 +709,13 @@
                     </div>
                     <div id="biology-notebook-result-table" class="biology-notebook-result-table-list" aria-label="Notebook result tables"></div>
                   </div>
-                  <label>
-                    Experiment Results File / Notes
-                    <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
-                  </label>
+                  <div class="biology-notebook-notes-field">
+                    <label for="biology-notebook-result">Experiment Results File / Notes</label>
+                    <div class="biology-notebook-notes-composer">
+                      <textarea id="biology-notebook-result" rows="4" placeholder="Path, summary, or notes"></textarea>
+                      <button id="clarify-save-biology-notebook-btn" class="ghost-btn biology-notebook-notes-clarify-btn" type="button">Clarify and Save</button>
+                    </div>
+                  </div>
                   <label>
                     Experiment Result Files
                     <input id="biology-notebook-result-file" type="file" multiple />
@@ -733,7 +723,6 @@
                   <div id="biology-notebook-result-attachments" class="biology-notebook-result-attachments" aria-live="polite" hidden></div>
                   <div class="form-actions">
                     <button id="save-biology-notebook-btn" class="primary-btn" type="button">Save</button>
-                    <button id="clarify-save-biology-notebook-btn" class="ghost-btn" type="button">Clarify and Save</button>
                     <button id="cancel-biology-notebook-edit-btn" class="ghost-btn" type="button" hidden>Cancel Edit</button>
                   </div>
                 </div>
@@ -821,17 +810,14 @@
             </section>
 
             <section id="biology-notebook-tool-panel-buffer" class="biology-notebook-tool-panel" data-notebook-tool-panel="buffer" hidden>
-              <div class="form-actions">
-                <button id="biology-notebook-tool-buffer-add-row" class="ghost-btn" type="button">Add Ingredient</button>
-              </div>
               <div class="biology-notebook-buffer-sheet-wrap">
                 <table class="biology-notebook-buffer-sheet" aria-label="Buffer preparer table">
-                  <tbody>
+                  <tbody id="biology-notebook-tool-buffer-rows">
                     <tr class="biology-notebook-buffer-meta-row">
                       <th scope="row">Volume</th>
-                      <td><input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" value="100" aria-label="Buffer volume in mL" /></td>
+                      <td><input id="biology-notebook-tool-buffer-volume" type="number" min="0" step="0.001" aria-label="Buffer volume in mL" /></td>
                       <th scope="row">pH</th>
-                      <td><input id="biology-notebook-tool-buffer-ph" type="number" min="0" max="14" step="0.01" placeholder="7.4" aria-label="Target pH" /></td>
+                      <td><input id="biology-notebook-tool-buffer-ph" type="number" min="0" max="14" step="0.01" aria-label="Target pH" /></td>
                       <td></td>
                     </tr>
                     <tr class="biology-notebook-buffer-header-row">
@@ -844,76 +830,79 @@
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-1">
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-1" />
+                          <input id="biology-notebook-tool-buffer-name-1" data-buffer-chemical-index="1" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-1" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-1" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" value="121.14" aria-label="Ingredient 1 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-1" placeholder="empty or 1 M" aria-label="Ingredient 1 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-1" placeholder="50 mM" aria-label="Ingredient 1 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-1" type="number" min="0" step="0.001" aria-label="Ingredient 1 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-1" aria-label="Ingredient 1 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-1" aria-label="Ingredient 1 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-1" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-2">
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-2" />
+                          <input id="biology-notebook-tool-buffer-name-2" data-buffer-chemical-index="2" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-2" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-2" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 2 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-2" placeholder="2000x" aria-label="Ingredient 2 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-2" placeholder="150 mM" aria-label="Ingredient 2 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-2" type="number" min="0" step="0.001" aria-label="Ingredient 2 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-2" aria-label="Ingredient 2 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-2" aria-label="Ingredient 2 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-2" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-3" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-3" />
+                          <input id="biology-notebook-tool-buffer-name-3" data-buffer-chemical-index="3" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-3" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-3" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 3 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-3" placeholder="10% v/v" aria-label="Ingredient 3 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-3" placeholder="0.1% v/v" aria-label="Ingredient 3 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-3" type="number" min="0" step="0.001" aria-label="Ingredient 3 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-3" aria-label="Ingredient 3 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-3" aria-label="Ingredient 3 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-3" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-4" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-4" />
+                          <input id="biology-notebook-tool-buffer-name-4" data-buffer-chemical-index="4" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-4" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-4" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 4 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-4" placeholder="stock" aria-label="Ingredient 4 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-4" placeholder="final" aria-label="Ingredient 4 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-4" type="number" min="0" step="0.001" aria-label="Ingredient 4 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-4" aria-label="Ingredient 4 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-4" aria-label="Ingredient 4 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-4" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-5" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-5" />
+                          <input id="biology-notebook-tool-buffer-name-5" data-buffer-chemical-index="5" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-5" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-5" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-5" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 5 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-5" placeholder="stock" aria-label="Ingredient 5 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-5" placeholder="final" aria-label="Ingredient 5 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-5" type="number" min="0" step="0.001" aria-label="Ingredient 5 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-5" aria-label="Ingredient 5 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-5" aria-label="Ingredient 5 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-5" aria-live="polite"></output></td>
                     </tr>
                     <tr class="biology-notebook-tool-row biology-notebook-buffer-ingredient-row" id="biology-notebook-tool-buffer-row-6" hidden>
                       <th scope="row" class="biology-notebook-buffer-chemical-cell">
                         <div class="biology-notebook-buffer-autocomplete">
-                          <input id="biology-notebook-tool-buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-6" />
+                          <input id="biology-notebook-tool-buffer-name-6" data-buffer-chemical-index="6" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="biology-notebook-tool-buffer-suggestions-6" aria-expanded="false" />
                           <div id="biology-notebook-tool-buffer-suggestions-6" class="biology-notebook-buffer-suggestions" role="listbox" hidden></div>
                         </div>
                       </th>
-                      <td><input id="biology-notebook-tool-buffer-mw-6" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 6 molecular weight" /></td>
-                      <td><input id="biology-notebook-tool-buffer-stock-6" placeholder="stock" aria-label="Ingredient 6 stock concentration" /></td>
-                      <td><input id="biology-notebook-tool-buffer-final-6" placeholder="final" aria-label="Ingredient 6 final concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-mw-6" type="number" min="0" step="0.001" aria-label="Ingredient 6 molecular weight" /></td>
+                      <td><input id="biology-notebook-tool-buffer-stock-6" aria-label="Ingredient 6 stock concentration" /></td>
+                      <td><input id="biology-notebook-tool-buffer-final-6" aria-label="Ingredient 6 final concentration" /></td>
                       <td><output id="biology-notebook-tool-buffer-output-6" aria-live="polite"></output></td>
                     </tr>
-                    <tr class="biology-notebook-buffer-adjustment-row">
+                    <tr id="biology-notebook-tool-buffer-add-row-anchor" class="biology-notebook-buffer-add-row">
+                      <td colspan="5"><button id="biology-notebook-tool-buffer-add-row" class="biology-notebook-buffer-add-row-button" type="button" aria-label="Add ingredient" title="Add ingredient">+</button></td>
+                    </tr>
+                    <tr id="biology-notebook-tool-buffer-adjustment-row" class="biology-notebook-buffer-adjustment-row">
                       <th scope="row">Solvent to add <output id="biology-notebook-tool-buffer-solvent-output" aria-live="polite"></output></th>
                       <td></td>
                       <th scope="row">6 M NaOH <output id="biology-notebook-tool-buffer-naoh-output" aria-live="polite"></output></th>
@@ -1000,9 +989,7 @@
               <p id="biology-notebook-tool-formula" class="small-note"></p>
             </div>
             <div class="form-actions biology-notebook-tool-actions">
-              <button id="biology-notebook-tool-insert-notes-btn" class="ghost-btn" type="button">Insert into Notes</button>
-              <button id="biology-notebook-tool-use-placeholder-btn" class="ghost-btn" type="button">Use for Placeholder</button>
-              <button id="biology-notebook-tool-record-btn" class="primary-btn" type="button">Record</button>
+              <button id="biology-notebook-tool-insert-notes-btn" class="primary-btn" type="button">Insert &amp; Record</button>
             </div>
               <p id="biology-notebook-tool-status" class="small-note"></p>
             </div>
@@ -1341,6 +1328,18 @@
                 </svg>
                 <span class="sr-only">Cancel edit</span>
               </button>
+              <label class="assay-plate-type-field">
+                <span class="sr-only">Plate Type</span>
+                <select id="assay-plate-type" aria-label="Plate Type">
+                  <option value="6">6 well</option>
+                  <option value="12">12 well</option>
+                  <option value="24">24 well</option>
+                  <option value="48">48 well</option>
+                  <option value="96" selected>96 well</option>
+                  <option value="384">384 well</option>
+                  <option value="1536">1536 well</option>
+                </select>
+              </label>
             </div>
             <div class="assay-display-field">
               <span class="assay-display-label">Assay Number</span>
@@ -1354,18 +1353,6 @@
               Project
               <select id="assay-project">
                 <option value="">Select project</option>
-              </select>
-            </label>
-            <label>
-              Plate Type
-              <select id="assay-plate-type">
-                <option value="6">6 well</option>
-                <option value="12">12 well</option>
-                <option value="24">24 well</option>
-                <option value="48">48 well</option>
-                <option value="96" selected>96 well</option>
-                <option value="384">384 well</option>
-                <option value="1536">1536 well</option>
               </select>
             </label>
             <div class="assay-axis-config-grid">
@@ -2014,6 +2001,10 @@
               <span>External Skills</span>
               <small>Agent skill files</small>
             </button>
+            <button type="button" class="settings-nav-item" data-settings-target="genomes">
+              <span>Genomes</span>
+              <small>User plugin folders</small>
+            </button>
             <button type="button" class="settings-nav-item" data-settings-target="plugins">
               <span>Plugins</span>
               <small>User plugin folders</small>
@@ -2211,6 +2202,21 @@
             </div>
           </section>
 
+          <section class="settings-section" data-settings-panel="genomes" hidden>
+            <div class="settings-section-head">
+              <h3>Genomes</h3>
+            </div>
+            <div class="stack-form">
+              <p class="small-note">Connect reference genome FASTA files already on this computer. Hikari indexes each file in place and never copies or modifies it.</p>
+              <div class="form-actions">
+                <button type="button" id="setting-genomes-add-btn" class="primary-btn">Connect Genome File</button>
+                <button type="button" id="setting-genomes-refresh-btn" class="ghost-btn">Refresh</button>
+              </div>
+              <p id="setting-genomes-status" class="small-note" aria-live="polite"></p>
+              <div id="setting-genomes-list" class="settings-skill-list" aria-live="polite"></div>
+            </div>
+          </section>
+
           <section class="settings-section" data-settings-panel="plugins" hidden>
             <div class="settings-section-head">
               <h3>Plugins</h3>
@@ -2378,7 +2384,7 @@
 
 <!-- SOURCE: ui/html/views/papers-view.html -->
 <section id="papers-view" class="view">
-      <div id="papers-layout" class="papers-layout left-rail-template left-rail-template--preserve-columns-on-narrow">
+      <div id="papers-layout" class="papers-layout left-rail-template left-rail-template--preserve-columns-on-narrow" data-left-rail-foldable="true">
         <aside id="papers-library-rail" class="papers-library-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="papers-library-pinned left-rail-template__pinned">
             <div class="papers-library-topbar">
@@ -2640,7 +2646,7 @@
 
 <!-- SOURCE: ui/html/views/agent-view.html -->
 <section id="agent-view" class="view">
-      <div class="agent-chat-layout left-rail-template">
+      <div class="agent-chat-layout left-rail-template" data-left-rail-foldable="true">
         <aside id="agent-session-rail" class="agent-session-rail app-left-rail left-rail-template__rail left-rail-template__rail--pinned" data-sync-left-rail>
           <div class="agent-session-toolbar left-rail-template__pinned">
             <div class="agent-session-toolbar-copy">
@@ -2965,11 +2971,11 @@
       </div>
 
       <div id="tool-buffer-view" class="panel tool-subview" hidden>
-        <h3>Buffer Preparer</h3>
+        <div class="tool-box-sheet-header">
+          <h3>Buffer Preparer</h3>
+          <button id="add-buffer-chemical-btn" type="button" class="ghost-btn tool-box-sheet-add-btn" aria-label="Add ingredient" title="Add ingredient">+</button>
+        </div>
         <div class="stack-form tool-box-sheet-shell">
-          <div class="form-actions">
-            <button id="add-buffer-chemical-btn" type="button" class="ghost-btn">Add Ingredient</button>
-          </div>
           <div class="tool-box-buffer-sheet-wrap">
             <table class="tool-box-buffer-sheet" aria-label="Buffer preparer table">
               <tbody id="buffer-rows">
@@ -2989,11 +2995,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-1">
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-1" aria-expanded="false" />
-                      <div id="buffer-suggestions-1" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-1" data-buffer-chemical-index="1" placeholder="Tris Base" value="Tris Base" autocomplete="off" aria-label="Ingredient 1 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-1" aria-expanded="false" />
+                        <div id="buffer-suggestions-1" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-1" type="number" min="0" step="0.001" placeholder="MW" value="121.14" aria-label="Ingredient 1 molecular weight" /></td>
                   <td><input id="buffer-stock-1" placeholder="empty or 1 M" aria-label="Ingredient 1 stock concentration" /></td>
@@ -3002,11 +3010,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-2">
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-2" aria-expanded="false" />
-                      <div id="buffer-suggestions-2" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-2" data-buffer-chemical-index="2" placeholder="NaCl" autocomplete="off" aria-label="Ingredient 2 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-2" aria-expanded="false" />
+                        <div id="buffer-suggestions-2" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-2" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 2 molecular weight" /></td>
                   <td><input id="buffer-stock-2" placeholder="2000x" aria-label="Ingredient 2 stock concentration" /></td>
@@ -3015,11 +3025,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-3" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-3" aria-expanded="false" />
-                      <div id="buffer-suggestions-3" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-3" data-buffer-chemical-index="3" placeholder="Tween 20" autocomplete="off" aria-label="Ingredient 3 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-3" aria-expanded="false" />
+                        <div id="buffer-suggestions-3" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-3" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 3 molecular weight" /></td>
                   <td><input id="buffer-stock-3" placeholder="10% v/v" aria-label="Ingredient 3 stock concentration" /></td>
@@ -3028,11 +3040,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-4" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-4" aria-expanded="false" />
-                      <div id="buffer-suggestions-4" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-4" data-buffer-chemical-index="4" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 4 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-4" aria-expanded="false" />
+                        <div id="buffer-suggestions-4" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-4" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 4 molecular weight" /></td>
                   <td><input id="buffer-stock-4" placeholder="stock" aria-label="Ingredient 4 stock concentration" /></td>
@@ -3041,11 +3055,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-5" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-5" aria-expanded="false" />
-                      <div id="buffer-suggestions-5" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-5" data-buffer-chemical-index="5" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 5 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-5" aria-expanded="false" />
+                        <div id="buffer-suggestions-5" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-5" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 5 molecular weight" /></td>
                   <td><input id="buffer-stock-5" placeholder="stock" aria-label="Ingredient 5 stock concentration" /></td>
@@ -3054,11 +3070,13 @@
                 </tr>
                 <tr class="tool-box-buffer-row" id="buffer-row-6" hidden>
                   <th scope="row" class="tool-box-buffer-chemical-cell">
-                    <div class="tool-box-buffer-autocomplete">
-                      <input id="buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-6" aria-expanded="false" />
-                      <div id="buffer-suggestions-6" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                    <div class="tool-box-buffer-ingredient-control">
+                      <div class="tool-box-buffer-autocomplete">
+                        <input id="buffer-name-6" data-buffer-chemical-index="6" placeholder="Ingredient" autocomplete="off" aria-label="Ingredient 6 chemical" aria-autocomplete="list" aria-controls="buffer-suggestions-6" aria-expanded="false" />
+                        <div id="buffer-suggestions-6" class="tool-box-buffer-suggestions" role="listbox" hidden></div>
+                      </div>
+                      <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                     </div>
-                    <button type="button" class="tool-box-sheet-row-remove" data-buffer-row-remove aria-label="Remove ingredient" title="Remove ingredient">&times;</button>
                   </th>
                   <td><input id="buffer-mw-6" type="number" min="0" step="0.001" placeholder="MW" aria-label="Ingredient 6 molecular weight" /></td>
                   <td><input id="buffer-stock-6" placeholder="stock" aria-label="Ingredient 6 stock concentration" /></td>
@@ -3105,37 +3123,37 @@
                   <th scope="col">Volume</th>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-1">
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-1" placeholder="Reagent" aria-label="Reaction item 1" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-1" type="text" placeholder="10 mM" aria-label="Stock concentration for reaction item 1" /></td>
                   <td><input id="fixed-reaction-final-1" type="text" placeholder="1 uM" aria-label="Final concentration for reaction item 1" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-1" type="text" placeholder="auto" aria-label="Manual volume for reaction item 1" /><output id="fixed-reaction-output-1" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-2" hidden>
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-2" placeholder="Reagent" aria-label="Reaction item 2" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-2" type="text" placeholder="2000x" aria-label="Stock concentration for reaction item 2" /></td>
                   <td><input id="fixed-reaction-final-2" type="text" placeholder="1x" aria-label="Final concentration for reaction item 2" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-2" type="text" placeholder="auto" aria-label="Manual volume for reaction item 2" /><output id="fixed-reaction-output-2" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-3" hidden>
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-3" placeholder="Reagent" aria-label="Reaction item 3" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-3" type="text" placeholder="2%" aria-label="Stock concentration for reaction item 3" /></td>
                   <td><input id="fixed-reaction-final-3" type="text" placeholder="0.1% v/v" aria-label="Final concentration for reaction item 3" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-3" type="text" placeholder="auto" aria-label="Manual volume for reaction item 3" /><output id="fixed-reaction-output-3" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-4" hidden>
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-4" placeholder="Reagent" aria-label="Reaction item 4" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-4" type="text" placeholder="1 mg/mL" aria-label="Stock concentration for reaction item 4" /></td>
                   <td><input id="fixed-reaction-final-4" type="text" placeholder="100 ng/uL" aria-label="Final concentration for reaction item 4" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-4" type="text" placeholder="auto" aria-label="Manual volume for reaction item 4" /><output id="fixed-reaction-output-4" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-5" hidden>
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-5" placeholder="Reagent" aria-label="Reaction item 5" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-5" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 5" /></td>
                   <td><input id="fixed-reaction-final-5" type="text" placeholder="Final" aria-label="Final concentration for reaction item 5" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-5" type="text" placeholder="auto" aria-label="Manual volume for reaction item 5" /><output id="fixed-reaction-output-5" aria-live="polite"></output></td>
                 </tr>
                 <tr class="tool-box-reaction-row" id="fixed-reaction-row-6" hidden>
-                  <td class="tool-box-reaction-item-cell"><input id="fixed-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></td>
+                  <td class="tool-box-reaction-item-cell"><div class="tool-box-reaction-item-control"><input id="fixed-reaction-name-6" placeholder="Reagent" aria-label="Reaction item 6" /><button type="button" class="tool-box-sheet-row-remove" data-fixed-reaction-row-remove aria-label="Remove reagent" title="Remove reagent">&times;</button></div></td>
                   <td><input id="fixed-reaction-stock-6" type="text" placeholder="Stock" aria-label="Stock concentration for reaction item 6" /></td>
                   <td><input id="fixed-reaction-final-6" type="text" placeholder="Final" aria-label="Final concentration for reaction item 6" /></td>
                   <td class="tool-box-reaction-volume-cell"><input id="fixed-reaction-volume-6" type="text" placeholder="auto" aria-label="Manual volume for reaction item 6" /><output id="fixed-reaction-output-6" aria-live="polite"></output></td>
@@ -3459,7 +3477,7 @@
                   <div class="form-actions sequence-viewer-rail-nav-actions">
                     <button id="sequence-viewer-home-paste-btn" type="button" class="primary-btn">New</button>
                     <button id="sequence-viewer-home-open-btn" type="button" class="ghost-btn">Open</button>
-                    <button id="sequence-viewer-home-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+                    <button id="sequence-viewer-home-vector-builder-btn" type="button" class="ghost-btn">Vector Builder</button>
                     <span id="sequence-viewer-home-status" class="small-note"></span>
                   </div>
                   <input id="sequence-viewer-home-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
@@ -3470,7 +3488,6 @@
                 <section class="sequence-viewer-library-card left-rail-template__section">
               <div class="result-card-head sequence-viewer-library-head">
                 <h4>Sequence Library</h4>
-                <button id="sequence-viewer-library-new-folder-btn" type="button" class="ghost-btn sequence-viewer-library-new-folder-btn">New Folder</button>
               </div>
               <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
                 <button id="sequence-viewer-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
@@ -3502,7 +3519,7 @@
               <div class="left-rail-template__stack">
                 <section class="result-card sequence-viewer-preview-card">
                   <div class="result-card-head">
-                    <h4>Circular Plasmid Preview</h4>
+                    <h4>Sequence Map Preview</h4>
                   </div>
                   <div id="sequence-viewer-preview-host" class="sequence-viewer-preview-host">
                     <p class="small-note">Select a sequence in the library to preview.</p>
@@ -3525,6 +3542,9 @@
               <span id="sequence-viewer-protein-builder-status" class="small-note">Linear chain: each block accepts one upstream and one downstream connection.</span>
             </div>
             <div class="form-actions sequence-viewer-protein-builder-toolbar-actions">
+              <span id="sequence-viewer-protein-builder-vector-target" class="small-note sequence-viewer-protein-builder-vector-target" hidden></span>
+              <button id="sequence-viewer-protein-builder-cancel-vector-btn" type="button" class="ghost-btn" hidden>Cancel Vector Insert</button>
+              <button id="sequence-viewer-protein-builder-insert-vector-btn" type="button" class="primary-btn" hidden>Insert Into Vector <span aria-hidden="true">&rarr;</span></button>
               <button id="sequence-viewer-protein-builder-assemble-btn" type="button" class="primary-btn">Assemble Plasmid <span aria-hidden="true">&rarr;</span></button>
             </div>
           </div>
@@ -3677,7 +3697,7 @@
                   <button id="sequence-viewer-detail-new-btn" type="button" class="ghost-btn">New</button>
                   <button id="sequence-viewer-detail-open-btn" type="button" class="ghost-btn">Open</button>
                   <input id="sequence-viewer-detail-open-input" type="file" accept=".gbk,.gb,.gbff,.fasta,.fa,.fas,.fna,.fastq,.fq,.txt,.seq" hidden />
-                  <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
+                  <button id="sequence-viewer-vector-builder-btn" type="button" class="ghost-btn">Vector Builder</button>
                 </div>
               </section>
             </div>
@@ -3685,7 +3705,6 @@
               <section class="sequence-viewer-library-card left-rail-template__section">
                 <div class="result-card-head sequence-viewer-library-head">
                   <h4>Sequence Library</h4>
-                  <button id="sequence-viewer-detail-library-new-folder-btn" type="button" class="ghost-btn sequence-viewer-library-new-folder-btn">New Folder</button>
                 </div>
                 <div class="sequence-viewer-library-switch" role="tablist" aria-label="Sequence library filter">
                   <button id="sequence-viewer-detail-library-filter-saved" class="sequence-viewer-library-switch-btn sequence-viewer-library-switch-btn-active" type="button">Saved</button>
@@ -3730,6 +3749,7 @@
 
           <div class="form-actions">
             <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
+            <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
             <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
             <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
             <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn">Recognize Backbone/Insert</button>
@@ -3992,6 +4012,98 @@
           </div>
         </div>
           </div>
+        </div>
+      </div>
+
+      <div id="sequence-viewer-vector-builder-workspace" class="sequence-viewer-vector-builder-workspace" hidden>
+        <div class="sequence-viewer-vector-builder-toolbar">
+          <div class="sequence-viewer-vector-builder-toolbar-nav">
+            <button id="sequence-viewer-vector-builder-back-btn" type="button" class="ghost-btn">Back to Sequence Viewer</button>
+            <h3 id="sequence-viewer-vector-builder-title">No sequence open</h3>
+          </div>
+          <div class="form-actions sequence-viewer-vector-builder-toolbar-actions">
+            <label class="sequence-viewer-inline-toggle" title="Overlay unique NEB/Thermo cutter sites on the map.">
+              <input id="sequence-viewer-vector-builder-cutters-toggle" type="checkbox" />
+              <span>Cutters</span>
+            </label>
+            <button id="sequence-viewer-vector-builder-protein-builder-btn" type="button" class="ghost-btn">Insert Protein Construct</button>
+            <button id="sequence-viewer-vector-builder-cloning-design-btn" type="button" class="primary-btn">Cloning Design</button>
+          </div>
+        </div>
+
+        <div class="sequence-viewer-vector-builder-layout">
+          <section class="result-card sequence-viewer-vector-builder-map-card">
+            <div id="sequence-viewer-vector-builder-map" class="sequence-viewer-vector-builder-map">
+              <p class="small-note">Open a sequence record to build a vector.</p>
+            </div>
+          </section>
+
+          <section class="result-card sequence-viewer-vector-builder-sequence-card">
+            <div class="result-card-head">
+              <h4>Bases</h4>
+            </div>
+            <div id="sequence-viewer-vector-builder-sequence" class="sequence-viewer-vector-builder-sequence sequence-viewer-sequence-host">
+              <p class="small-note">No sequence loaded.</p>
+            </div>
+          </section>
+        </div>
+
+        <div id="sequence-viewer-vector-builder-context-menu" class="sequence-viewer-context-menu" hidden></div>
+
+        <div id="sequence-viewer-vector-builder-feature-replace-overlay" class="sequence-viewer-feature-editor-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+          <form id="sequence-viewer-vector-builder-feature-replace-form" class="sequence-viewer-feature-editor app-dialog-surface" autocomplete="off">
+            <div class="result-card-head sequence-viewer-feature-editor-head app-dialog-head">
+              <h4>Replace Feature</h4>
+              <button id="sequence-viewer-vector-builder-feature-replace-close" type="button" class="app-dialog-close-btn" aria-label="Close replace feature dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <p id="sequence-viewer-vector-builder-feature-replace-note" class="small-note">Choose a recorded feature to replace.</p>
+
+            <label>
+              Recorded Feature
+              <select id="sequence-viewer-vector-builder-feature-replace-select"></select>
+            </label>
+
+            <div class="sequence-viewer-protein-builder-feature-controls">
+              <input
+                id="sequence-viewer-vector-builder-feature-replace-search"
+                type="search"
+                placeholder="Search stored features"
+                autocomplete="off"
+                aria-label="Search stored features"
+              />
+              <button id="sequence-viewer-vector-builder-feature-replace-search-btn" type="button" class="ghost-btn">Search</button>
+            </div>
+            <span id="sequence-viewer-vector-builder-feature-replace-status" class="small-note">Search the stored feature database for a replacement.</span>
+
+            <div id="sequence-viewer-vector-builder-feature-replace-results" class="sequence-viewer-protein-builder-feature-search-results">
+              <p class="small-note">Search by feature name or stored sequence.</p>
+            </div>
+
+            <div class="form-actions">
+              <button id="sequence-viewer-vector-builder-feature-replace-cancel" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="sequence-viewer-vector-builder-sequence-edit-overlay" class="sequence-viewer-sequence-edit-overlay app-dialog-overlay app-dialog-overlay--center" hidden>
+          <form id="sequence-viewer-vector-builder-sequence-edit-form" class="sequence-viewer-sequence-edit-dialog app-dialog-surface" autocomplete="off">
+            <div class="result-card-head sequence-viewer-sequence-edit-head app-dialog-head">
+              <h4 id="sequence-viewer-vector-builder-sequence-edit-title">Edit Bases</h4>
+              <button id="sequence-viewer-vector-builder-sequence-edit-close" type="button" class="app-dialog-close-btn" aria-label="Close sequence edit dialog" title="Close"><span aria-hidden="true">&times;</span></button>
+            </div>
+            <p id="sequence-viewer-vector-builder-sequence-edit-note" class="small-note">Type the bases to apply.</p>
+
+            <label id="sequence-viewer-vector-builder-sequence-edit-input-wrap" class="sequence-viewer-sequence-edit-input-wrap">
+              Sequence
+              <textarea id="sequence-viewer-vector-builder-sequence-edit-textarea" rows="3" spellcheck="false" placeholder="ACGT"></textarea>
+            </label>
+            <div id="sequence-viewer-vector-builder-sequence-edit-delete-message" class="sequence-viewer-sequence-edit-delete-message calc-output" hidden></div>
+
+            <div class="form-actions">
+              <button id="sequence-viewer-vector-builder-sequence-edit-confirm" type="submit" class="primary-btn">Apply</button>
+              <button id="sequence-viewer-vector-builder-sequence-edit-cancel" type="button" class="ghost-btn">Cancel</button>
+            </div>
+          </form>
         </div>
       </div>
 
