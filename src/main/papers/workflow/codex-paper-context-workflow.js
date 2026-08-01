@@ -131,7 +131,7 @@ function buildCodexPaperContextSystemPrompt() {
     'The main Hikari agent already searched paper databases, selected candidate records, downloaded available PDFs, and extracted downloaded PDFs into LLM-facing Markdown.',
     'Your job is to read one provided Markdown file at a time, choose the smallest useful line ranges for the main agent context, and return structured JSON only.',
     'Do not call Hikari paper_analysis, literature_search, or paper_download from this sub-agent task. Re-entering those tools would loop back into the main workflow.',
-    'Do not write excerpts or quote paper text in your response. Hikari will retrieve the exact source lines from paper.md after you return line numbers.'
+    'Do not write excerpts or quote paper text in your response. Hikari will retrieve the exact source lines from the provided paper Markdown file after you return line numbers.'
   ].join(' ');
 }
 
@@ -178,9 +178,9 @@ function buildCodexPaperContextMessage(input = {}, helpers = {}) {
     '- Work on this paper only. Because the task is one-paper scoped, do not include paper_id, paper title, or file path in the response.',
     '- Choose only context that directly helps answer the main-agent request.',
     `- Return at most ${maxBlocks} selected line-range objects for this paper.`,
-    '- Read paper.md with a true line-numbered command such as `nl -ba`, or an equivalent reader that shows physical file line numbers.',
+    '- Read the exact `download.knowledge_markdown_path` with a true line-numbered command such as `nl -ba`, or an equivalent reader that shows physical file line numbers.',
     '- Use those 1-based physical line numbers exactly. Do not count visual line wrapping as additional lines.',
-    '- Before returning, verify that every start line exists in paper.md.',
+    '- Before returning, verify that every start line exists in that Markdown file.',
     '- Use multiple `line_ranges` in one object when the same evidence is split across non-contiguous lines.',
     '- Keep each range narrow enough for prompt context; prefer paragraphs or compact table rows over whole sections.',
     '- Return only line numbers and reasons. Do not include excerpt, text, content, quotes, paper_id, or file path. Hikari retrieves source text.',
@@ -255,7 +255,7 @@ async function hydrateLineSelectionsForPaper({
   } catch (error) {
     return {
       blocks: [],
-      notes: [`Could not read paper.md: ${cleanText(error?.message || error, 300)}`]
+      notes: [`Could not read paper Markdown: ${cleanText(error?.message || error, 300)}`]
     };
   }
 
@@ -274,7 +274,7 @@ async function hydrateLineSelectionsForPaper({
       const hydrated = readLineRangesFromText(markdown, lineRanges);
       if (hydrated.rejected_ranges.length) {
         notes.push(
-          `Ignored ${hydrated.rejected_ranges.length} line range(s) beyond the ${hydrated.line_count}-line paper.md for ${paperTitle || paperId || 'paper'}.`
+          `Ignored ${hydrated.rejected_ranges.length} line range(s) beyond the ${hydrated.line_count}-line paper Markdown for ${paperTitle || paperId || 'paper'}.`
         );
       }
       if (!hydrated.excerpt) {
@@ -360,7 +360,7 @@ async function runCodexPaperContextSubAgent(input = {}, helpers = {}) {
       selected_papers: [],
       loaded_context_blocks: [],
       papers_read_count: 0,
-      notes: ['No downloaded paper.md files were available for exact line retrieval.'],
+      notes: ['No downloaded paper Markdown files were available for exact line retrieval.'],
       summary: 'No extracted paper markdown files were available for line-range loading.',
       paper_targets: paperTargets
     };

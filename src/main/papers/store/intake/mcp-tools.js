@@ -107,6 +107,7 @@ function projectionForListing(record) {
     title: record.title,
     doi: record.doi,
     doc_type: record.doc_type,
+    intake_status: record.intake_status,
     one_sentence_summary: record.one_sentence_summary,
     experiment_count: asArray(record.experiments).length,
     source_paths: compact(record.source_paths)
@@ -118,6 +119,7 @@ function projectionForSummaryMatch(record, score, matchedTerms) {
     paper_id: record.paper_id,
     title: record.title,
     doc_type: record.doc_type,
+    intake_status: record.intake_status,
     one_sentence_summary: record.one_sentence_summary,
     score: Math.round(score * 1000) / 1000,
     matched_terms: matchedTerms,
@@ -173,7 +175,7 @@ const LIST_PROJECT_SUMMARIES_DEFINITION = Object.freeze({
   description: [
     'List one-sentence summaries for every paper currently attached to a Hikari project.',
     'Uses the paper-intake summary knowledge base produced by the `hikari-paper-intake` skill',
-    'after each PDF is transferred into `KnowledgeBase/papers.md/<paper_id>/paper.md`.',
+    'after each PDF is transferred into a title-named Markdown file under `KnowledgeBase/papers.md/<paper_id>/`.',
     'Returns title, DOI, document type, and the count of recorded experiments for each paper.',
     'Use this when the user asks what papers a project contains or wants a roll-up of recent reading.'
   ].join(' '),
@@ -320,7 +322,7 @@ async function callSearchSummaries(input = {}, context = {}, deps = {}) {
     });
   }
   if (docTypes.length) {
-    candidates = candidates.filter((record) => docTypes.includes(record.doc_type));
+    candidates = candidates.filter((record) => !record.doc_type || docTypes.includes(record.doc_type));
   }
 
   const scored = candidates

@@ -9,6 +9,14 @@ const {
   createPaperKnowledgeDatabaseRuntime,
   normalizeDoi
 } = require('../store/agent-paper-knowledge-database.js');
+const {
+  findExistingPaperRow,
+  openKnowledgeDatabase,
+  persistKnowledgeDatabase,
+  queryRows,
+  runStatement,
+  updateJsonIndex
+} = require('../store/paper-knowledge-store.js');
 
 function cleanText(value, maxLength = 4000) {
   const text = String(value || '').trim();
@@ -71,6 +79,116 @@ async function pathExists(targetPath) {
   }
 }
 
+async function updateJsonFileIfPresent(filePath, updater) {
+  if (!(await pathExists(filePath))) {
+    return false;
+  }
+  let parsed = null;
+  try {
+    parsed = JSON.parse(await fsPromises.readFile(filePath, 'utf8'));
+  } catch {
+    return false;
+  }
+  const next = updater(ensureObject(parsed));
+  if (!next || typeof next !== 'object') {
+    return false;
+  }
+  if (JSON.stringify(parsed) === JSON.stringify(next)) {
+    return false;
+  }
+  await fsPromises.writeFile(filePath, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
+  return true;
+}
+
+async function synchronizeTitleMarkdownReferences({
+  storagePath,
+  paths,
+  title,
+  doi
+} = {}) {
+  const markdownRelativePath = toPosixRelative(storagePath, paths.markdown_path);
+  const nowIso = new Date().toISOString();
+  await updateJsonFileIfPresent(paths.meta_path, (meta) => {
+    const markdownFileName = path.basename(paths.markdown_path);
+    const storedTitle = cleanText(meta.title, 320) || title;
+    if (
+      cleanText(meta.markdown_path || meta.markdownPath, 2400) === markdownRelativePath
+      && cleanText(meta.markdown_file_name || meta.markdownFileName, 400) === markdownFileName
+      && cleanText(meta.title, 320) === storedTitle
+    ) {
+      return meta;
+    }
+    return {
+      ...meta,
+      title: storedTitle,
+      markdown_file_name: markdownFileName,
+      markdown_path: markdownRelativePath,
+      updated_at: nowIso
+    };
+  });
+  await updateJsonFileIfPresent(path.join(paths.paper_folder_path, 'intake.json'), (intake) => {
+    const sourcePaths = ensureObject(intake.source_paths);
+    if (cleanText(sourcePaths.paper_md, 2400) === markdownRelativePath) {
+      return intake;
+    }
+    return {
+      ...intake,
+      source_paths: {
+        ...sourcePaths,
+        paper_md: markdownRelativePath
+      },
+      updated_at: nowIso
+    };
+  });
+
+  if (!(await pathExists(paths.sqlite_path))) {
+    return;
+  }
+  const db = await openKnowledgeDatabase(paths.sqlite_path);
+  try {
+    const paper = findExistingPaperRow(db, { doi, title });
+    if (!paper) {
+      return;
+    }
+    if (cleanText(paper.wiki_path, 2400) === markdownRelativePath) {
+      return;
+    }
+    runStatement(
+      db,
+      'UPDATE papers SET wiki_path = ?, updated_at = ? WHERE id = ?',
+      [markdownRelativePath, nowIso, paper.id]
+    );
+    await persistKnowledgeDatabase(paths.sqlite_path, db);
+    const updated = queryRows(db, 'SELECT * FROM papers WHERE id = ? LIMIT 1', [paper.id])[0];
+    if (updated) {
+      await updateJsonIndex(paths.json_index_path, updated);
+    }
+  } finally {
+    db.close();
+  }
+}
+
+async function ensureTitleNamedKnowledgeMarkdown({ storagePath, paths, title, doi } = {}) {
+  if (!paths?.markdown_path || paths.markdown_path === paths.legacy_markdown_path) {
+    return { ready: await pathExists(paths?.markdown_path || ''), migrated: false, warning: '' };
+  }
+  let migrated = false;
+  if (!(await pathExists(paths.markdown_path))) {
+    if (!(await pathExists(paths.legacy_markdown_path))) {
+      return { ready: false, migrated: false, warning: '' };
+    }
+    await fsPromises.copyFile(paths.legacy_markdown_path, paths.markdown_path);
+    migrated = true;
+  }
+  let warning = '';
+  try {
+    await synchronizeTitleMarkdownReferences({ storagePath, paths, title, doi });
+  } catch (error) {
+    warning = `Title-named Markdown was created, but stored references could not all be updated: ${cleanText(error?.message || error, 600)}`;
+  }
+  return { ready: true, migrated, warning };
+}
+
 function resolvePaperPdfPath(storagePath, paper = {}, filePath = '') {
   const source = ensureObject(paper);
   const explicitPath = resolvePathInsideRoot(storagePath, filePath);
@@ -82,9 +200,39 @@ function resolvePaperPdfPath(storagePath, paper = {}, filePath = '') {
     || '';
 }
 
+function rebaseKnowledgePathsToRecordedFolder(storagePath, paths = {}, paper = {}) {
+  const source = ensureObject(paper);
+  const recordedPath = resolvePathInsideRoot(
+    storagePath,
+    source.knowledgeMarkdownRelativePath
+      || source.knowledge_markdown_relative_path
+      || source.transformed_markdown_relative_path
+  );
+  if (!recordedPath) {
+    return paths;
+  }
+  const paperFolderPath = path.dirname(recordedPath);
+  const paperRootPath = path.resolve(paths.papers_path || '');
+  if (!paperRootPath || !isPathInside(paperRootPath, paperFolderPath)) {
+    return paths;
+  }
+  return {
+    ...paths,
+    paper_folder_name: path.basename(paperFolderPath),
+    paper_folder_path: paperFolderPath,
+    markdown_path: path.join(paperFolderPath, paths.markdown_file_name || path.basename(paths.markdown_path)),
+    legacy_markdown_path: path.join(paperFolderPath, 'paper.md'),
+    extracted_text_path: path.join(paperFolderPath, 'extracted.txt'),
+    meta_path: path.join(paperFolderPath, 'meta.json'),
+    figures_path: path.join(paperFolderPath, 'figures')
+  };
+}
+
 function getPaperTitle(paper = {}, filePath = '') {
   const source = ensureObject(paper);
-  return cleanText(source.title || source.paper_title || source.paperTitle, 320)
+  const pdfMetadata = ensureObject(source.pdfMetadata || source.pdf_metadata);
+  return cleanText(pdfMetadata.title, 320)
+    || cleanText(source.title || source.paper_title || source.paperTitle, 320)
     || cleanText(source.fileName || source.file_name, 320).replace(/\.pdf$/i, '')
     || cleanText(path.basename(filePath || ''), 320).replace(/\.pdf$/i, '')
     || 'Untitled paper';
@@ -160,16 +308,26 @@ async function transformPaperPdfToMarkdown({
 
   const title = getPaperTitle(normalizedPaper, resolvedFilePath);
   const doi = getPaperDoi(normalizedPaper);
-  const expectedPaths = buildKnowledgeDatabasePaths({
+  const expectedPaths = rebaseKnowledgePathsToRecordedFolder(resolvedStoragePath, buildKnowledgeDatabasePaths({
     storagePath: resolvedStoragePath,
     doi,
     title
-  });
-  if (skipExistingMarkdown && await pathExists(expectedPaths.markdown_path)) {
+  }), normalizedPaper);
+  const existingMarkdown = skipExistingMarkdown
+    ? await ensureTitleNamedKnowledgeMarkdown({
+      storagePath: resolvedStoragePath,
+      paths: expectedPaths,
+      title,
+      doi
+    })
+    : { ready: false, migrated: false };
+  if (skipExistingMarkdown && existingMarkdown.ready) {
     const skipped = {
       ok: true,
       status: 'ready',
       skipped: true,
+      migrated_legacy_markdown: existingMarkdown.migrated,
+      warning: existingMarkdown.warning,
       markdown_path: expectedPaths.markdown_path,
       markdown_relative_path: toPosixRelative(resolvedStoragePath, expectedPaths.markdown_path),
       extracted_text_path: expectedPaths.extracted_text_path,
@@ -265,6 +423,8 @@ async function transformPaperRecordsToMarkdown({
 
 module.exports = {
   applyKnowledgeResultToPaper,
+  ensureTitleNamedKnowledgeMarkdown,
+  rebaseKnowledgePathsToRecordedFolder,
   resolvePaperPdfPath,
   transformPaperPdfToMarkdown,
   transformPaperRecordsToMarkdown

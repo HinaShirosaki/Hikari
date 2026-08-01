@@ -316,6 +316,7 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
         models: [{
           slug: 'gpt-5.5',
           default_reasoning_level: 'max',
+          default_reasoning_summary: 'none',
           supported_reasoning_levels: [
             { effort: 'high' },
             { effort: 'xhigh' },
@@ -337,6 +338,7 @@ module.exports = function registerCodexCliProviderSuitePart01(context = {}) {
           ['high', 'xhigh']
         );
         assert.equal(copied.models[0].default_reasoning_level, 'xhigh');
+        assert.equal(copied.models[0].supports_reasoning_summaries, true);
       } finally {
         if (typeof previousCodexHome === 'string') {
           process.env.CODEX_HOME = previousCodexHome;

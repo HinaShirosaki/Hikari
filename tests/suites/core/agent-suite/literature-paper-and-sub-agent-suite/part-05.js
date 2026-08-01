@@ -2,6 +2,19 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
   const scope = context.scope || {};
   const __dirname = context.__dirname || process.cwd();
   with (scope) {
+    test('pdf text extraction prefers the embedded PDF title metadata used for Markdown naming', () => {
+      const pdfTextExtraction = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'agent-pdf-text-extraction.js'));
+      const metadata = new Map([
+        ['dc:title', 'Continuous evolution of compact protein degradation tags'],
+        ['dc:creator', 'Example Author']
+      ]);
+      const normalized = pdfTextExtraction.normalizeEmbeddedPdfMetadata({
+        info: { Title: 'Fallback filename title' },
+        metadata: { get: (key) => metadata.get(key) }
+      });
+      assert.equal(normalized.title, 'Continuous evolution of compact protein degradation tags');
+      assert.equal(normalized.author, 'Example Author');
+    });
     test('pdf joinTextItems reconstructs a markdown table when the header wraps across multiple lines', () => {
       const pdfTextLayout = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'pdf-text-layout.js'));
       const fontSize = 10;
@@ -218,6 +231,68 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart05(con
         assert.equal(result.ok, true);
         assert.equal(paper.knowledgeMarkdownRelativePath, 'KnowledgeBase/papers.md/Engineered_MAPK_Study/paper.md');
         assert.equal(paper.knowledgeStatus, 'ready');
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+    test('paper markdown import migrates legacy paper.md to a title-named compatibility path without re-extraction', async () => {
+      const { transformPaperPdfToMarkdown } = require(path.join(__dirname, 'src', 'main', 'papers', 'parse', 'paper-markdown-import.js'));
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-markdown-title-migration-'));
+      const pdfPath = path.join(storageRoot, 'Papers', 'Atlas', 'mapk.pdf');
+      const knowledgeFolder = path.join(storageRoot, 'KnowledgeBase', 'papers.md', 'Engineered_MAPK_Study');
+      const legacyMarkdownPath = path.join(knowledgeFolder, 'paper.md');
+      const titledMarkdownPath = path.join(knowledgeFolder, 'Engineered_MAPK_Study.md');
+      const metaPath = path.join(knowledgeFolder, 'meta.json');
+      const intakePath = path.join(knowledgeFolder, 'intake.json');
+      try {
+        await fsPromises.mkdir(path.dirname(pdfPath), { recursive: true });
+        await fsPromises.mkdir(knowledgeFolder, { recursive: true });
+        await fsPromises.writeFile(pdfPath, Buffer.from('%PDF-1.7\nfake pdf bytes\n'));
+        await fsPromises.writeFile(legacyMarkdownPath, '# Engineered MAPK Study\n', 'utf8');
+        await fsPromises.writeFile(metaPath, `${JSON.stringify({
+          title: 'Engineered MAPK Study',
+          markdown_path: 'KnowledgeBase/papers.md/Engineered_MAPK_Study/paper.md'
+        })}\n`, 'utf8');
+        await fsPromises.writeFile(intakePath, `${JSON.stringify({
+          paper_id: 'Engineered_MAPK_Study',
+          source_paths: {
+            paper_md: 'KnowledgeBase/papers.md/Engineered_MAPK_Study/paper.md'
+          }
+        })}\n`, 'utf8');
+        const paper = {
+          id: 'paper-1',
+          title: 'Engineered MAPK Study',
+          doi: '10.1000/mapk',
+          storedRelativePath: 'Papers/Atlas/mapk.pdf',
+          knowledgeMarkdownRelativePath: 'KnowledgeBase/papers.md/Engineered_MAPK_Study/paper.md'
+        };
+        const result = await transformPaperPdfToMarkdown({
+          storagePath: storageRoot,
+          paper,
+          paperKnowledgeDatabaseRuntime: {
+            ingestPaperPdf: async () => {
+              throw new Error('Legacy Markdown migration must not re-extract the PDF.');
+            }
+          }
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.skipped, true);
+        assert.equal(result.migrated_legacy_markdown, true);
+        assert.equal(result.markdown_path, titledMarkdownPath);
+        assert.equal(await fsPromises.readFile(titledMarkdownPath, 'utf8'), '# Engineered MAPK Study\n');
+        assert.equal(
+          JSON.parse(await fsPromises.readFile(metaPath, 'utf8')).markdown_path,
+          'KnowledgeBase/papers.md/Engineered_MAPK_Study/Engineered_MAPK_Study.md'
+        );
+        assert.equal(
+          JSON.parse(await fsPromises.readFile(intakePath, 'utf8')).source_paths.paper_md,
+          'KnowledgeBase/papers.md/Engineered_MAPK_Study/Engineered_MAPK_Study.md'
+        );
+        assert.equal(
+          paper.knowledgeMarkdownRelativePath,
+          'KnowledgeBase/papers.md/Engineered_MAPK_Study/Engineered_MAPK_Study.md'
+        );
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }

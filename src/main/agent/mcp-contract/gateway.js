@@ -22,8 +22,23 @@ function createAgentMcpGateway(deps = {}) {
     const safeContext = context && typeof context === 'object' && !Array.isArray(context)
       ? context
       : {};
+    const contextSnapshot = safeContext.snapshot && typeof safeContext.snapshot === 'object'
+      ? safeContext.snapshot
+      : {};
+    const contextSettings = contextSnapshot.settings && typeof contextSnapshot.settings === 'object'
+      ? contextSnapshot.settings
+      : {};
     const workspacePath = cleanText(
-      deps.workspacePath
+      deps.storagePath
+        || deps.storage_path
+        || env.HIKARI_AGENT_STORAGE_PATH
+        || safeContext.storagePath
+        || safeContext.storage_path
+        || contextSettings.storagePath
+        || contextSettings.storage_path
+        || contextSnapshot.storagePath
+        || contextSnapshot.storage_path
+        || deps.workspacePath
         || deps.workspace_path
         || env.HIKARI_AGENT_MCP_WORKSPACE
         || env.HIKARI_CODEX_WORKSPACE

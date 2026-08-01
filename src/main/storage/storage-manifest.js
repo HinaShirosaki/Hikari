@@ -56,7 +56,8 @@ function detectManifestRole(relativePath) {
     return 'paper_knowledge_json_index';
   }
   if (normalized.startsWith('knowledgebase/papers.md/')) {
-    if (normalized.endsWith('/paper.md')) {
+    const paperArtifactPath = normalized.slice('knowledgebase/papers.md/'.length);
+    if (/^[^/]+\/[^/]+\.md$/i.test(paperArtifactPath)) {
       return 'paper_knowledge_markdown';
     }
     if (normalized.endsWith('/extracted.txt')) {

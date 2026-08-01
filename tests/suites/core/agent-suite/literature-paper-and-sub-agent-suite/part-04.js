@@ -205,6 +205,9 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
               ok: true,
               status: 'completed',
               page_count: 2,
+              embedded_metadata: {
+                title: 'PDF Metadata MAPK Study'
+              },
               text: 'Intake MAPK Study\nMethods\nCells were treated with inhibitor.\nResults\nWestern blot signal changed.',
               pages: [
                 {
@@ -237,7 +240,7 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
           requestStructuredJsonPayload: async (options = {}) => {
             stages.push(options.stage);
             if (options.stage === 'paper_intake_classification') {
-              assert.match(options.userPrompt, /Intake MAPK Study/);
+              assert.match(options.userPrompt, /PDF Metadata MAPK Study/);
               return {
                 ok: true,
                 payload: {
@@ -332,15 +335,59 @@ module.exports = function registerAgentLiteraturePaperAndSubAgentSuitePart04(con
         ]);
         assert.equal(result.paper_intake.pages_read, 2);
         assert.equal(result.paper_intake.rejected_experiment_count, 1);
-        assert.equal(result.markdown_relative_path, 'KnowledgeBase/papers.md/10.1000_intake.test/paper.md');
+        assert.equal(
+          result.markdown_relative_path,
+          'KnowledgeBase/papers.md/10.1000_intake.test/PDF_Metadata_MAPK_Study.md'
+        );
         const intakePath = path.join(storageRoot, 'KnowledgeBase', 'papers.md', '10.1000_intake.test', 'intake.json');
         const intake = JSON.parse(await fsPromises.readFile(intakePath, 'utf8'));
         assert.equal(intake.paper_id, '10.1000_intake.test');
         assert.equal(intake.doc_type, 'research_paper');
-        assert.equal(intake.source_paths.paper_md, 'KnowledgeBase/papers.md/10.1000_intake.test/paper.md');
+        assert.equal(
+          intake.source_paths.paper_md,
+          'KnowledgeBase/papers.md/10.1000_intake.test/PDF_Metadata_MAPK_Study.md'
+        );
+        assert.equal(intake.title, 'PDF Metadata MAPK Study');
         assert.equal(intake.experiments.length, 2);
         assert.equal(intake.experiments[1].technique, 'western blot');
         assert.equal(intake.experiments[1].evidence, 'Western blot signal changed.');
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
+    test('paper intake summary search finds metadata-only legacy papers by exact title', async () => {
+      const intakeTools = require(path.join(__dirname, 'src', 'main', 'papers', 'store', 'intake', 'mcp-tools.js'));
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'paper-intake-metadata-fallback-'));
+      const paperFolder = path.join(storageRoot, 'KnowledgeBase', 'papers.md', '10.1126_science.adk4422');
+      const title = 'Continuous evolution of compact protein degradation tags regulated by selective molecular glues';
+      const markdownFileName = 'Continuous_evolution_of_compact_protein_degradation_tags_regulated_by_selective_molecular_glues.md';
+      try {
+        await fsPromises.mkdir(paperFolder, { recursive: true });
+        await fsPromises.writeFile(path.join(paperFolder, markdownFileName), `# ${title}\n`, 'utf8');
+        await fsPromises.writeFile(path.join(paperFolder, 'meta.json'), `${JSON.stringify({
+          title,
+          doi: '10.1126/science.adk4422',
+          markdown_path: `KnowledgeBase/papers.md/10.1126_science.adk4422/${markdownFileName}`
+        })}\n`, 'utf8');
+
+        const result = await intakeTools.callSearchSummaries({
+          query: title,
+          doc_types: ['research_paper'],
+          limit: 5
+        }, {}, {
+          workspacePath: storageRoot,
+          fs: fsPromises
+        });
+
+        assert.equal(result.ok, true);
+        assert.equal(result.status, 'matched');
+        assert.equal(result.items.length, 1);
+        assert.equal(result.items[0].title, title);
+        assert.equal(result.items[0].intake_status, 'metadata_only');
+        assert.equal(
+          result.items[0].source_paths.paper_md,
+          `KnowledgeBase/papers.md/10.1126_science.adk4422/${markdownFileName}`
+        );
       } finally {
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }

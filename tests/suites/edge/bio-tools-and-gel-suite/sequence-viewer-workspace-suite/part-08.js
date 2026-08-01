@@ -28,6 +28,8 @@ const VECTOR_BUILDER_IDS = [
   'sequence-viewer-vector-builder-sequence-edit-overlay',
   'sequence-viewer-vector-builder-sequence-edit-form',
   'sequence-viewer-vector-builder-sequence-edit-textarea',
+  'sequence-viewer-vector-builder-sequence-edit-note',
+  'sequence-viewer-vector-builder-sequence-edit-cancel',
   'sequence-viewer-protein-builder-vector-target',
   'sequence-viewer-protein-builder-insert-vector-btn',
   'sequence-viewer-protein-builder-assemble-btn',
@@ -211,7 +213,8 @@ test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored d
           ok: true,
           results: [
             { id: 'feat_flag', name: 'FLAG tag', type: 'CDS', sequence: 'GATTACAAAGAT', sequenceLength: 12, hostCount: 2 },
-            { id: 'feat_empty', name: 'No sequence', type: 'CDS', sequence: '', sequenceLength: 0, hostCount: 1 }
+            { id: 'feat_empty', name: 'No sequence', type: 'CDS', sequence: '', sequenceLength: 0, hostCount: 1 },
+            { id: 'feat_primer', name: 'M13 tag primer', type: 'primer_bind', sequence: 'GTAAAACGACGGCCAGT', sequenceLength: 17, hostCount: 4 }
           ]
         };
       }
@@ -269,6 +272,8 @@ test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored d
   assert.match(results.innerHTML, /in 2 vectors/);
   // A stored feature with no sequence cannot be spliced, so it is filtered out.
   assert.equal(/No sequence/.test(results.innerHTML), false);
+  // Primer binding sites are annealing marks, not construct parts to splice in.
+  assert.equal(/M13 tag primer/.test(results.innerHTML), false);
 
   trigger(results, 'click', {
     target: {
@@ -289,6 +294,68 @@ test('[EDGE] sequence-viewer vector builder swaps in a feature from the stored d
   assert.match(map.innerHTML, /FLAG tag/);
   assert.equal(/His6/.test(map.innerHTML), false);
   assert.match(map.innerHTML, /Terminator/);
+});
+
+test('[EDGE] sequence-viewer vector builder inserts on the chosen side, in strand order', async () => {
+  // His6 is forward 7-24; Terminator is reverse 31-50.
+  const { document } = bootVectorBuilder([
+    { name: 'His6', type: 'CDS', strand: 1, source: 'external', segments: [{ start: 6, end: 24 }] },
+    { name: 'Terminator', type: 'terminator', strand: -1, source: 'external', segments: [{ start: 30, end: 50 }] }
+  ]);
+
+  const map = document.getElementById('sequence-viewer-vector-builder-map');
+  const contextMenu = document.getElementById('sequence-viewer-vector-builder-context-menu');
+  const note = document.getElementById('sequence-viewer-vector-builder-sequence-edit-note');
+
+  trigger(map, 'mousedown', { button: 0, target: featureTarget(0) });
+  trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
+
+  // A span offers both sides; the caret-only case keeps a single entry.
+  assert.match(contextMenu.innerHTML, /Insert Bases Before 5'\.\.\./);
+  assert.match(contextMenu.innerHTML, /Insert Bases After 3'\.\.\./);
+  assert.match(contextMenu.innerHTML, /Insert Protein Construct Before 5'/);
+  assert.match(contextMenu.innerHTML, /Insert Protein Construct After 3'/);
+
+  // Forward feature: 5' is the low coordinate (base 7), 3' the high one (24).
+  trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-five') });
+  assert.match(note.innerHTML, /\b7\b/);
+  trigger(document.getElementById('sequence-viewer-vector-builder-sequence-edit-cancel'), 'click');
+
+  trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
+  trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-three') });
+  assert.match(note.innerHTML, /\b25\b/);
+  trigger(document.getElementById('sequence-viewer-vector-builder-sequence-edit-cancel'), 'click');
+
+  // Reverse feature: the sides swap, because 5' sits at the higher coordinate.
+  trigger(map, 'mousedown', { button: 0, target: featureTarget(1) });
+  trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(1) });
+  trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-five') });
+  assert.match(note.innerHTML, /\b51\b/);
+  trigger(document.getElementById('sequence-viewer-vector-builder-sequence-edit-cancel'), 'click');
+
+  trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(1) });
+  trigger(contextMenu, 'click', { target: contextActionTarget('insert-bases-three') });
+  assert.match(note.innerHTML, /\b31\b/);
+});
+
+test('[EDGE] sequence-viewer vector builder refuses to replace a primer binding site', () => {
+  const { document } = bootVectorBuilder([
+    { name: 'M13 fwd', type: 'primer_bind', strand: 1, source: 'external', segments: [{ start: 6, end: 24 }] },
+    { name: 'Terminator', type: 'terminator', strand: -1, source: 'external', segments: [{ start: 30, end: 50 }] }
+  ]);
+
+  const map = document.getElementById('sequence-viewer-vector-builder-map');
+  const contextMenu = document.getElementById('sequence-viewer-vector-builder-context-menu');
+  const overlay = document.getElementById('sequence-viewer-vector-builder-feature-replace-overlay');
+  const status = document.getElementById('sequence-viewer-status');
+
+  trigger(map, 'mousedown', { button: 0, target: featureTarget(0) });
+  trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
+  trigger(contextMenu, 'click', { target: contextActionTarget('replace-feature') });
+
+  // The primer is the only feature in range, so there is nothing to replace.
+  assert.equal(overlay.hidden, true);
+  assert.match(status.textContent, /Primer binding sites cannot be replaced/);
 });
 
 test('[EDGE] sequence-viewer vector builder folds Protein Builder in as an on-map insert designer', async () => {

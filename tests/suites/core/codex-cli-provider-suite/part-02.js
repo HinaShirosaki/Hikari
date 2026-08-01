@@ -482,6 +482,7 @@ module.exports = function registerCodexCliProviderSuitePart02(context = {}) {
       assert.equal(calls.length, 1);
       assert.equal(calls[0].toolId, 'notebook-lookup');
       assert.equal(calls[0].args.query, 'Protein purification');
+      assert.equal(Object.prototype.hasOwnProperty.call(calls[0].args, 'action'), false);
       assert.equal(calls[0].snapshot.inventory.length, 0);
       assert.equal(calls[0].context.requestId, 'req-1');
 

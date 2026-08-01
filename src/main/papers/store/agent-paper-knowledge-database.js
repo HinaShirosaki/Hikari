@@ -24,6 +24,7 @@ const {
   extractDoiFromText,
   normalizeYear,
   buildKnowledgePaperSlug,
+  buildKnowledgeMarkdownFileName,
   ensurePathWithinRoot,
   buildRelativePath,
   resolveRelativeStoragePath,
@@ -229,6 +230,7 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
 
   function normalizeMetadata(input = {}, extraction = {}, pdfSha256 = '') {
     const source = ensureObject(input);
+    const embeddedMetadata = ensureObject(extraction.embedded_metadata || extraction.embeddedMetadata);
     const extractedText = String(extraction.text || '');
     const doi = normalizeDoi(
       source.doi
@@ -241,7 +243,8 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       .filter(Boolean)
       .slice(0, 80);
     const title = cleanText(
-      source.title
+      embeddedMetadata.title
+      || source.title
       || source.paper_title
       || source.paperTitle
       || source.file_name
@@ -630,6 +633,7 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       wiki_status: wikiStatus,
       wiki_generation_method: markdownResult?.method || '',
       extracted_text_path: buildRelativePath(resolvedStoragePath, paths.extracted_text_path),
+      markdown_file_name: paths.markdown_file_name,
       markdown_path: buildRelativePath(resolvedStoragePath, paths.markdown_path),
       sqlite_path: buildRelativePath(resolvedStoragePath, paths.sqlite_path),
       figures_path: figuresRelativeDir,
@@ -824,6 +828,7 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     buildKnowledgeDatabasePaths,
     buildLegacyKnowledgeDatabasePaths,
     buildKnowledgePaperSlug,
+    buildKnowledgeMarkdownFileName,
     generateKnowledgeMarkdown,
     ingestPaperPdf,
     lookupPaper
@@ -847,6 +852,7 @@ module.exports = {
   buildKnowledgeDatabasePaths,
   buildLegacyKnowledgeDatabasePaths,
   buildKnowledgePaperSlug,
+  buildKnowledgeMarkdownFileName,
   normalizeDoi,
   createPaperKnowledgeDatabaseRuntime,
   openKnowledgeDatabase,

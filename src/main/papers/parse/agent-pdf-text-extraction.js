@@ -138,6 +138,39 @@ function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
+function readPdfMetadataValue(metadata, keys = []) {
+  const source = ensureObject(metadata);
+  for (const key of keys) {
+    let value = '';
+    try {
+      value = typeof metadata?.get === 'function' ? metadata.get(key) : source[key];
+    } catch {
+      value = '';
+    }
+    const cleaned = defaultCleanText(value, 1000).trim();
+    if (cleaned) {
+      return cleaned;
+    }
+  }
+  return '';
+}
+
+function normalizeEmbeddedPdfMetadata(payload = {}) {
+  const source = ensureObject(payload);
+  const info = ensureObject(source.info);
+  const metadata = source.metadata;
+  return {
+    title: readPdfMetadataValue(metadata, ['dc:title', 'citation_title', 'prism:title', 'title'])
+      || defaultCleanText(info.Title, 320).trim(),
+    author: readPdfMetadataValue(metadata, ['dc:creator', 'citation_author', 'author'])
+      || defaultCleanText(info.Author, 1000).trim(),
+    subject: readPdfMetadataValue(metadata, ['dc:description', 'description', 'subject'])
+      || defaultCleanText(info.Subject, 2000).trim(),
+    keywords: readPdfMetadataValue(metadata, ['pdf:keywords', 'keywords'])
+      || defaultCleanText(info.Keywords, 2000).trim()
+  };
+}
+
 function numberOrDefault(value, fallback) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -724,6 +757,14 @@ function createPdfTextExtractionRuntime(deps = {}) {
         isEvalSupported: false
       });
       pdfDocument = await loadingTask.promise;
+      let embeddedMetadata = {};
+      if (typeof pdfDocument?.getMetadata === 'function') {
+        try {
+          embeddedMetadata = normalizeEmbeddedPdfMetadata(await pdfDocument.getMetadata());
+        } catch {
+          embeddedMetadata = {};
+        }
+      }
 
       const totalPages = Number(pdfDocument?.numPages) || 0;
       if (!totalPages) {
@@ -734,6 +775,7 @@ function createPdfTextExtractionRuntime(deps = {}) {
           extracted_page_count: 0,
           total_characters: 0,
           truncated: false,
+          embedded_metadata: embeddedMetadata,
           text: '',
           pages: includePages ? [] : undefined,
           sections: includeSections ? [] : undefined,
@@ -858,6 +900,7 @@ function createPdfTextExtractionRuntime(deps = {}) {
         truncation_reason: truncatedByTotal
           ? 'max_total_chars'
           : (truncatedByPageLimit ? 'max_pages' : ''),
+        embedded_metadata: embeddedMetadata,
         text: fullText,
         pages: includePages ? internalPages : undefined,
         sections: includeSections ? sections : undefined,
@@ -927,5 +970,6 @@ module.exports = {
   detectHeadingFromLine,
   detectHeadingsFromPages,
   buildSectionsFromHeadings,
+  normalizeEmbeddedPdfMetadata,
   createPdfTextExtractionRuntime
 };

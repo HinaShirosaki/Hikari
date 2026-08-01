@@ -33,7 +33,7 @@ function buildHikariCodexAgentsInstructions() {
     '- If the user goal is ambiguous, ask one blocking clarification instead of choosing a tool-heavy path.',
     '',
     'Codex-specific paper rules:',
-    '- In a Codex paper-context sub-agent, read the provided `KnowledgeBase/papers.md/.../paper.md` files and return the requested context JSON.',
+    '- In a Codex paper-context sub-agent, read the exact title-named Markdown paths provided under `KnowledgeBase/papers.md/.../` and return the requested context JSON. Legacy records may still use `paper.md`.',
     '- Claim downloads, full text, figures, or chunks only when a tool result proves them.',
     '',
     'Keep tool calls small and targeted. Use the MCP bridge over shell commands for app data, papers, protocols, notebook drafts, inventory, and structured Hikari state.',

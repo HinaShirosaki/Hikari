@@ -605,7 +605,7 @@ export function createAssayLayoutManager({
     if (typeof clearAnalysisOutput === 'function') {
       clearAnalysisOutput();
     }
-    setCsvStatus(`Mapped wells: ${runtime.currentLayout.length}. Result wells: ${Object.keys(runtime.currentResults || {}).length}.`);
+    setCsvStatus('');
   }
 
   const { exportCsvTemplate, onImportCsv } = createLayoutCsv({

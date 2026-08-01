@@ -77,7 +77,7 @@
   },
   {
     "name": "paper-search",
-    "description": "Full-text search across the LLM-facing paper wiki (per-paper `paper.md` files in the local KnowledgeBase). Returns ranked section matches with title, DOI, section heading, page citation, and a snippet. Scope the search to a single paper, a project, or a journal club when relevant."
+    "description": "Full-text search across the LLM-facing paper wiki (per-paper title-named Markdown files in the local KnowledgeBase; legacy records may use `paper.md`). Returns ranked section matches with title, DOI, section heading, page citation, and a snippet. Scope the search to a single paper, a project, or a journal club when relevant."
   },
   {
     "name": "protocol-generation",

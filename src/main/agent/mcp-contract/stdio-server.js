@@ -229,7 +229,7 @@ function buildLiteratureSearchModelPayload(toolName = '', result = {}) {
       loaded_context_blocks: Math.max(0, loadedContextBlocks.length - MAX_MODEL_CONTEXT_BLOCKS)
     },
     full_result_available_in_structured_content: true,
-    model_note: 'Use selected_papers, downloaded_papers, and loaded_context_blocks above as the source of truth. In line-backed context blocks, source_lines are verbatim application-extracted paper.md lines selected by line_ranges; do not attribute text that is absent from source_lines. Treat related_comments as local user comments, not paper text.'
+    model_note: 'Use selected_papers, downloaded_papers, and loaded_context_blocks above as the source of truth. In line-backed context blocks, source_lines are verbatim application-extracted paper Markdown lines selected by line_ranges; do not attribute text that is absent from source_lines. Treat related_comments as local user comments, not paper text. When citing a local source_path, use paper_title as the visible link label instead of the raw Markdown filename.'
   };
 }
 

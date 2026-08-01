@@ -644,6 +644,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
     });
     test('agent MCP stdio server registers paper-intake direct tools', async () => {
       const workspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-paper-intake-'));
+      const sessionWorkspaceDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hikari-mcp-session-workspace-'));
       const paperId = 'continuous_evolution_glue_tags';
       const paperDir = path.join(workspaceDir, 'KnowledgeBase', 'papers.md', paperId);
       fs.mkdirSync(paperDir, { recursive: true });
@@ -678,8 +679,11 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
 
       const { server, connect } = createAgentMcpStdioServer({
         env: {
-          HIKARI_AGENT_MCP_WORKSPACE: workspaceDir,
-          HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify({ project: { id: 'project-1' } })
+          HIKARI_AGENT_MCP_WORKSPACE: sessionWorkspaceDir,
+          HIKARI_AGENT_MCP_REQUEST_CONTEXT: JSON.stringify({
+            project: { id: 'project-1' },
+            snapshot: { settings: { storagePath: workspaceDir } }
+          })
         }
       });
       const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -730,6 +734,7 @@ module.exports = function registerCodexCliProviderSuitePart04(context = {}) {
         await client.close();
         await server.close();
         fs.rmSync(workspaceDir, { recursive: true, force: true });
+        fs.rmSync(sessionWorkspaceDir, { recursive: true, force: true });
       }
     });
     test('agent MCP app host executes app tools through the SDK streamable HTTP bridge', async () => {

@@ -4,11 +4,11 @@
  * Paper-intake summary knowledge base — storage layer.
  *
  * Holds the per-paper one-sentence summary and structured experiment list that the
- * `hikari-paper-intake` skill produces after a PDF is transferred into
- * `KnowledgeBase/papers.md/<paper_id>/paper.md`. This is a separate KB from the
- * existing LLM-wiki chunk store: the intake KB is *one record per paper*, schema
- * is fixed, and queries operate on whole summaries and experiment entries — not
- * on free-form chunks.
+ * `hikari-paper-intake` skill produces after a PDF is transferred into a
+ * title-named Markdown file under `KnowledgeBase/papers.md/<paper_id>/`. This is
+ * a separate KB from the existing LLM-wiki chunk store: the intake KB is *one
+ * record per paper*, schema is fixed, and queries operate on whole summaries and
+ * experiment entries — not on free-form chunks.
  *
  * All filesystem access is injected so live code can plug in workspace storage
  * helpers, and tests can plug in an in-memory map.
@@ -19,6 +19,9 @@ const {
   KNOWLEDGE_BASE_ROOT_FOLDER_NAME,
   PAPER_MARKDOWN_ROOT_FOLDER_NAME
 } = require('../../../storage/storage-paths.js');
+const {
+  buildKnowledgeMarkdownFileName
+} = require('../paper-knowledge-paths.js');
 
 const INTAKE_SCHEMA_VERSION = 1;
 const INTAKE_FILE_NAME = 'intake.json';
@@ -146,14 +149,19 @@ function intakeRelativePath(paperId = '') {
   return path.posix.join(PAPERS_ROOT_REL, id, INTAKE_FILE_NAME);
 }
 
-function defaultSourcePaths(paperId = '') {
+function defaultSourcePaths(paperId = '', options = {}) {
   const id = cleanText(paperId, 200);
   if (!id) {
     return { paper_md: '', figures_dir: '', pdf_path: '' };
   }
+  const source = typeof options === 'string' ? { paper_md: options } : ensureObject(options);
   const dir = path.posix.join(PAPERS_ROOT_REL, id);
+  const explicitPaperMd = cleanText(source.paper_md || source.paperMd, 400);
+  const markdownFileName = explicitPaperMd
+    ? ''
+    : buildKnowledgeMarkdownFileName({ title: cleanText(source.title, 400) });
   return {
-    paper_md: path.posix.join(dir, 'paper.md'),
+    paper_md: explicitPaperMd || path.posix.join(dir, markdownFileName),
     figures_dir: path.posix.join(dir, 'figures'),
     pdf_path: ''
   };
@@ -223,9 +231,29 @@ function createIntakeStore(deps = {}) {
     return path.join(workspacePath, PAPERS_ROOT_REL, id);
   }
 
+  function isInsidePaperFolder(paperId, candidatePath) {
+    const folder = path.resolve(paperFolderAbsolute(paperId));
+    const candidate = path.resolve(candidatePath);
+    return candidate === folder || candidate.startsWith(`${folder}${path.sep}`);
+  }
+
+  function addMarkdownCandidate(candidates, paperId, maybePath) {
+    const source = cleanText(maybePath, 4000);
+    if (!source) {
+      return;
+    }
+    const candidate = path.isAbsolute(source)
+      ? path.resolve(source)
+      : path.resolve(workspacePath, source);
+    if (isInsidePaperFolder(paperId, candidate) && !candidates.includes(candidate)) {
+      candidates.push(candidate);
+    }
+  }
+
   /**
-   * Read the transferred `paper.md` for a paper. This is the primary source the
-   * intake pipeline classifies and summarizes. Returns `{ ok, status, markdown }`.
+   * Read the transferred title-named Markdown file for a paper. Metadata is the
+   * primary locator; legacy `paper.md` and a folder scan keep older libraries
+   * readable. Returns the resolved path together with the Markdown content.
    */
   async function readPaperMarkdown(paperId) {
     const guard = ensureReady();
@@ -236,21 +264,62 @@ function createIntakeStore(deps = {}) {
     if (!id) {
       return { ok: false, status: 'invalid_arguments', error: 'paper_id is required.' };
     }
-    const absPath = path.join(paperFolderAbsolute(id), 'paper.md');
+    const meta = ensureObject((await readPaperMeta(id))?.meta);
+    const candidates = [];
+    addMarkdownCandidate(candidates, id, meta.markdown_path || meta.markdownPath);
+    addMarkdownCandidate(
+      candidates,
+      id,
+      path.join(paperFolderAbsolute(id), buildKnowledgeMarkdownFileName({
+        title: meta.title || meta.paper_title
+      }))
+    );
+    addMarkdownCandidate(candidates, id, path.join(paperFolderAbsolute(id), 'paper.md'));
+
     try {
-      const markdown = await fs.readFile(absPath, 'utf8');
-      return { ok: true, status: 'loaded', paper_id: id, markdown: String(markdown || '') };
-    } catch (error) {
-      if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
-        return { ok: false, status: 'not_found', paper_id: id };
+      const entries = await fs.readdir(paperFolderAbsolute(id), { withFileTypes: true });
+      asArray(entries).forEach((entry) => {
+        const name = typeof entry === 'string' ? entry : entry?.name;
+        const isFile = typeof entry === 'string'
+          || typeof entry?.isFile !== 'function'
+          || entry.isFile();
+        if (isFile && /\.md$/i.test(String(name || ''))) {
+          addMarkdownCandidate(candidates, id, path.join(paperFolderAbsolute(id), name));
+        }
+      });
+    } catch {
+      // Candidate reads below provide the useful not-found/read-failed status.
+    }
+
+    let lastError = null;
+    for (const absPath of candidates) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const markdown = await fs.readFile(absPath, 'utf8');
+        return {
+          ok: true,
+          status: 'loaded',
+          paper_id: id,
+          markdown: String(markdown || ''),
+          paper_md: path.relative(workspacePath, absPath).split(path.sep).join('/'),
+          paper_md_absolute_path: absPath,
+          markdown_file_name: path.basename(absPath)
+        };
+      } catch (error) {
+        if (!error || (error.code !== 'ENOENT' && error.code !== 'ENOTDIR')) {
+          lastError = error;
+        }
       }
+    }
+    if (lastError) {
       return {
         ok: false,
         status: 'read_failed',
         paper_id: id,
-        error: cleanText(error?.message || error, 600)
+        error: cleanText(lastError?.message || lastError, 600)
       };
     }
+    return { ok: false, status: 'not_found', paper_id: id };
   }
 
   /**
@@ -381,7 +450,16 @@ function createIntakeStore(deps = {}) {
     }
     const record = normalizeIntakeRecord({ ...parsed, paper_id: parsed?.paper_id || id });
     if (!record.source_paths.paper_md) {
-      record.source_paths = { ...defaultSourcePaths(id), ...record.source_paths };
+      const markdown = await readPaperMarkdown(id);
+      const defaults = defaultSourcePaths(id, {
+        paper_md: markdown?.paper_md,
+        title: record.title
+      });
+      record.source_paths = {
+        paper_md: defaults.paper_md,
+        figures_dir: record.source_paths.figures_dir || defaults.figures_dir,
+        pdf_path: record.source_paths.pdf_path || defaults.pdf_path
+      };
     }
     return { ok: true, status: 'loaded', paper_id: id, record };
   }
@@ -401,11 +479,26 @@ function createIntakeStore(deps = {}) {
     const now = new Date().toISOString();
     const previous = await readIntake(id);
     const previousRecord = previous.ok ? previous.record : {};
+    const nextRecord = ensureObject(record);
+    const defaults = defaultSourcePaths(id, { title: nextRecord.title || previousRecord.title });
+    const previousSourcePaths = ensureObject(previousRecord.source_paths);
+    const nextSourcePaths = ensureObject(nextRecord.source_paths);
+    const sourcePaths = {
+      paper_md: cleanText(nextSourcePaths.paper_md, 400)
+        || cleanText(previousSourcePaths.paper_md, 400)
+        || defaults.paper_md,
+      figures_dir: cleanText(nextSourcePaths.figures_dir, 400)
+        || cleanText(previousSourcePaths.figures_dir, 400)
+        || defaults.figures_dir,
+      pdf_path: cleanText(nextSourcePaths.pdf_path, 400)
+        || cleanText(previousSourcePaths.pdf_path, 400)
+        || defaults.pdf_path
+    };
     const merged = normalizeIntakeRecord({
-      ...defaultSourcePaths(id),
       ...previousRecord,
-      ...ensureObject(record),
+      ...nextRecord,
       paper_id: id,
+      source_paths: sourcePaths,
       created_at: previousRecord.created_at || now,
       updated_at: now
     });
@@ -436,6 +529,37 @@ function createIntakeStore(deps = {}) {
       const result = await readIntake(paperId);
       if (result.ok) {
         records.push(result.record);
+      } else if (result.status === 'not_found') {
+        // Older converted papers may predate intake.json. Keep their metadata
+        // title discoverable so the agent can route to full-paper analysis
+        // instead of incorrectly reporting that the local paper is absent.
+        // eslint-disable-next-line no-await-in-loop
+        const metaResult = await readPaperMeta(paperId);
+        const meta = ensureObject(metaResult?.meta);
+        // eslint-disable-next-line no-await-in-loop
+        const markdown = await readPaperMarkdown(paperId);
+        const title = cleanText(meta.title || meta.paper_title, 400);
+        if (title && markdown?.ok) {
+          records.push({
+            schema_version: INTAKE_SCHEMA_VERSION,
+            paper_id: paperId,
+            doc_type: '',
+            intake_status: 'metadata_only',
+            title,
+            doi: cleanText(meta.doi, 200),
+            one_sentence_summary: '',
+            project_ids: [],
+            experiments: [],
+            structure_outline: [],
+            notable_claims: [],
+            source_paths: {
+              ...defaultSourcePaths(paperId, { paper_md: markdown.paper_md }),
+              pdf_path: cleanText(meta.pdf_path || meta.pdfPath || meta.source_pdf_path, 400)
+            },
+            created_at: '',
+            updated_at: cleanText(meta.updated_at, 60)
+          });
+        }
       } else if (result.status && result.status !== 'not_found') {
         errors.push({ paper_id: paperId, status: result.status, error: result.error });
       }

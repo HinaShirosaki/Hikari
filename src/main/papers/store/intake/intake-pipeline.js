@@ -4,9 +4,10 @@
  * Paper-intake pipeline (write side).
  *
  * Runs automatically for every imported paper AFTER its PDF has been transferred
- * into `KnowledgeBase/papers.md/<paper_id>/paper.md`. The pipeline:
+ * into a title-named Markdown file under
+ * `KnowledgeBase/papers.md/<paper_id>/`. The pipeline:
  *
- *   1. Reads `paper.md`, page-delimited `extracted.txt`, and metadata through the store.
+ *   1. Reads the paper Markdown, page-delimited `extracted.txt`, and metadata through the store.
  *   2. Classifies the document type with the injected LLM (research_paper vs
  *      review / book / book_chapter / other).
  *   3. Branches:
@@ -183,7 +184,7 @@ function buildClassificationPrompt({ title, doi, markdown }) {
     'Classify the document below into one of: research_paper, review, book, book_chapter, other.',
     `Title hint: ${title || '-'}`,
     `DOI hint: ${doi || '-'}`,
-    'Document Markdown (from paper.md):',
+    'Converted paper Markdown:',
     markdown || '-',
     'Return JSON with doc_type, confidence (0-1), and a short reason.'
   ].join('\n\n');
@@ -232,7 +233,7 @@ function buildNonResearchPrompt({ title, docType, markdown }) {
   return [
     `Summarize the ${docType.replace(/_/gu, ' ')} below. Do not list experiments.`,
     `Title: ${title || '-'}`,
-    'Document Markdown (from paper.md):',
+    'Converted paper Markdown:',
     markdown || '-',
     'Return JSON with one_sentence_summary, structure_outline[] (section, summary), and notable_claims[] (section, claim).'
   ].join('\n\n');
@@ -548,6 +549,10 @@ function createIntakePipeline(deps = {}) {
     }
 
     let markdown = cleanText(options.markdown, 0);
+    let paperMarkdownRelativePath = cleanText(
+      options.paperMarkdownRelativePath || options.paper_markdown_relative_path,
+      400
+    );
     if (!markdown) {
       const mdResult = await store.readPaperMarkdown(paperId);
       if (!mdResult.ok) {
@@ -555,17 +560,18 @@ function createIntakePipeline(deps = {}) {
           ok: false,
           status: mdResult.status || 'paper_md_unavailable',
           paper_id: paperId,
-          error: mdResult.error || 'paper.md is not available for this paper yet.'
+          error: mdResult.error || 'The converted paper Markdown is not available for this paper yet.'
         };
       }
       markdown = mdResult.markdown;
+      paperMarkdownRelativePath = cleanText(mdResult.paper_md, 400);
     }
     if (!cleanText(markdown, 200)) {
       return {
         ok: false,
         status: 'empty_paper_md',
         paper_id: paperId,
-        error: 'paper.md is empty; nothing to classify.'
+        error: 'The converted paper Markdown is empty; nothing to classify.'
       };
     }
 
@@ -634,8 +640,11 @@ function createIntakePipeline(deps = {}) {
       structure_outline: treatAsResearch ? [] : summary.structure_outline,
       notable_claims: treatAsResearch ? [] : summary.notable_claims,
       source_paths: {
-        ...store.defaultSourcePaths(paperId),
-        pdf_path: cleanText(meta.pdf_path || meta.pdfPath, 400)
+        ...store.defaultSourcePaths(paperId, {
+          title,
+          paper_md: paperMarkdownRelativePath
+        }),
+        pdf_path: cleanText(meta.pdf_path || meta.pdfPath || meta.source_pdf_path, 400)
       }
     };
 

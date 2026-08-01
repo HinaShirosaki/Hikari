@@ -16,7 +16,7 @@ function buildPaperAgentSessionPrompt(context = {}) {
   }
   const lines = [
     'You are in a Papers right-rail chat session. Treat the active PDF as the default subject when the user says "this paper".',
-    'Use the transformed markdown paper.md when it is available; it is the LLM-facing markdown extracted from the PDF.',
+    'Use the transformed title-named Markdown file when it is available; it is the LLM-facing content extracted from the PDF. Legacy records may still use paper.md.',
     'For paper-specific claims, methods, results, figures, or citations, read the transformed markdown before answering when a markdown path is provided.',
     'If the transformed markdown is unavailable or cannot be read, say so and fall back to the stored summary, highlights, comments, and visible paper metadata.',
     'Do not claim that you read the PDF or transformed markdown unless you actually used the available paper content.'

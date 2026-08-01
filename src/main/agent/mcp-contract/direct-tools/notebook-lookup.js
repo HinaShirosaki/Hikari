@@ -62,7 +62,6 @@ async function callNotebookLookup(input = {}, context = {}, deps = {}) {
     runTool: deps.runTool,
     toolId: 'notebook-lookup',
     args: compactObject({
-      action: 'search',
       query,
       limit,
       project_name: projectName,

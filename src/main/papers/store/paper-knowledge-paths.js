@@ -49,6 +49,24 @@ function sanitizeStorageName(value, fallback = 'paper') {
   return cleaned || fallback;
 }
 
+function truncateUtf8(value, maxBytes = 180) {
+  const text = String(value || '');
+  if (Buffer.byteLength(text, 'utf8') <= maxBytes) {
+    return text;
+  }
+  let end = text.length;
+  while (end > 0 && Buffer.byteLength(text.slice(0, end), 'utf8') > maxBytes) {
+    end -= 1;
+  }
+  return text.slice(0, end).replace(/_+$/g, '');
+}
+
+function buildKnowledgeMarkdownFileName({ title = '' } = {}) {
+  const normalizedTitle = String(title || '').trim().replace(/\.(?:pdf|md)$/i, '');
+  const safeTitle = truncateUtf8(sanitizeStorageName(normalizedTitle, ''), 180);
+  return safeTitle ? `${safeTitle}.md` : 'paper.md';
+}
+
 function normalizeYear(value) {
   const direct = String(value || '').trim();
   if (/^\d{4}$/.test(direct)) {
@@ -117,13 +135,16 @@ function buildKnowledgeDatabasePaths({
   const papersPath = path.join(rootPath, papersFolderName);
   const paperFolderName = buildKnowledgePaperSlug({ doi, title, pdfSha256 });
   const paperFolderPath = path.join(papersPath, paperFolderName);
+  const markdownFileName = buildKnowledgeMarkdownFileName({ title });
   return {
     storage_path: resolvedStoragePath,
     root_path: rootPath,
     papers_path: papersPath,
     paper_folder_name: paperFolderName,
     paper_folder_path: paperFolderPath,
-    markdown_path: path.join(paperFolderPath, 'paper.md'),
+    markdown_file_name: markdownFileName,
+    markdown_path: path.join(paperFolderPath, markdownFileName),
+    legacy_markdown_path: path.join(paperFolderPath, 'paper.md'),
     extracted_text_path: path.join(paperFolderPath, 'extracted.txt'),
     meta_path: path.join(paperFolderPath, 'meta.json'),
     figures_path: path.join(paperFolderPath, 'figures'),
@@ -166,6 +187,7 @@ module.exports = {
   normalizeDoi,
   extractDoiFromText,
   sanitizeStorageName,
+  buildKnowledgeMarkdownFileName,
   normalizeYear,
   buildKnowledgePaperSlug,
   ensurePathWithinRoot,

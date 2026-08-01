@@ -39,25 +39,25 @@ const OFFICIAL_MCP_SKILLS = Object.freeze([
     content: buildSkillMarkdown({
       id: 'paper-intake',
       name: 'hikari-paper-intake',
-      description: 'Use immediately after a paper PDF is ingested into `knowledgebase/papers.md/{paper_id}/paper.md` to classify the document, produce a one-sentence summary, and list every experiment. Falls back to extracted figures or the original PDF only when the markdown is insufficient.',
+      description: 'Use immediately after a paper PDF is ingested into `knowledgebase/papers.md/{paper_id}/{paper-title}.md` to classify the document, produce a one-sentence summary, and list every experiment. Falls back to extracted figures or the original PDF only when the markdown is insufficient.',
       body: `
 # Hikari Paper Intake
 
-Trigger this skill the first time a freshly uploaded paper PDF lands in \`knowledgebase/papers.md/<paper_id>/paper.md\`. The transfer is what arms the skill: do not run it on user chat, on already-summarized papers, or before \`paper.md\` exists.
+Trigger this skill the first time a freshly uploaded paper PDF lands as a title-named Markdown file under \`knowledgebase/papers.md/<paper_id>/\`. The transfer is what arms the skill: do not run it on user chat, on already-summarized papers, or before the Markdown file exists. Legacy libraries may still use \`paper.md\`.
 
 ## Inputs you can rely on
 
-For the active \`<paper_id>\`, the following artifacts are written next to \`paper.md\`:
+For the active \`<paper_id>\`, the following artifacts are written together:
 
-- \`paper.md\` — primary markdown rewrite of the paper (always read this first, end to end).
+- \`<paper-title>.md\` — primary Markdown rewrite of the paper (always read the exact path from metadata or tool output first, end to end).
 - \`extracted.txt\` — raw text fallback when the markdown elides a section.
-- \`meta.json\` — title, authors, DOI, source PDF filename, page count.
-- \`figures/page-<N>-img-<i>.png\` — images extracted from the PDF, one file per figure. \`paper.md\` references each one inline, at the section it belongs to, as \`![Figure on page N](figures/page-<N>-img-<i>.png)\`. The relative path in that link is the exact file on disk: open it directly to view that figure. Any figure on a page no section covered is listed under a trailing \`## Figures\` heading instead.
-- Original PDF — path is in \`meta.json.pdf_path\`; only open it when text+figures still leave a question unanswered.
+- \`meta.json\` — title, authors, DOI, and the source PDF path.
+- \`figures/page-<N>-img-<i>.png\` — images extracted from the PDF, one file per figure. The paper Markdown references each one inline, at the section it belongs to, as \`![Figure on page N](figures/page-<N>-img-<i>.png)\`. The relative path in that link is the exact file on disk: open it directly to view that figure. Any figure on a page no section covered is listed under a trailing \`## Figures\` heading instead.
+- Original PDF — path is in \`meta.json.source_pdf_path\` (legacy records may use \`pdf_path\`); only open it when text+figures still leave a question unanswered.
 
 ## Step 1 — Classify the document
 
-Read \`paper.md\` (and \`meta.json\` if the type is ambiguous). Pick exactly one class:
+Read the title-named paper Markdown file (and \`meta.json\` if the type is ambiguous). Pick exactly one class:
 
 - **research_paper** — primary report of original experiments or analyses (computational, wet-lab, clinical, simulation). Has a Methods/Experiments section and reports new results.
 - **review** — synthesizes prior literature without reporting new experiments. Includes systematic reviews and meta-analyses (meta-analyses are reviews here, not research_paper, even when they compute new statistics).
@@ -94,17 +94,17 @@ State the detected class explicitly at the top of your reply (e.g., \`Document t
 
 ## Step 3 — When to consult figures or the original PDF
 
-Stay in \`paper.md\` by default. Escalate only when you have a concrete question the markdown cannot answer:
+Stay in the paper Markdown by default. Escalate only when you have a concrete question the markdown cannot answer:
 
-- Open a file under \`figures/\` when a figure caption is the only place a quantitative result or experimental condition is reported, when reading a panel label is required to attribute results to an experiment, or when the markdown explicitly shows the figure inline and you need to see it to describe the outcome. The inline \`![...](figures/...)\` link in \`paper.md\` already points at the exact image for that spot — read that path; you do not have to guess which file matches.
-- Open the original PDF (from \`meta.json.pdf_path\`) only when \`paper.md\` and \`extracted.txt\` both omit content you can see was present in the source (e.g., tables that were dropped, equations rendered as images without alt text, a supplementary section). Read the minimum page range needed.
+- Open a file under \`figures/\` when a figure caption is the only place a quantitative result or experimental condition is reported, when reading a panel label is required to attribute results to an experiment, or when the markdown explicitly shows the figure inline and you need to see it to describe the outcome. The inline \`![...](figures/...)\` link already points at the exact image for that spot — read that path; you do not have to guess which file matches.
+- Open the original PDF (from \`meta.json.source_pdf_path\`, or legacy \`pdf_path\`) only when the paper Markdown and \`extracted.txt\` both omit content you can see was present in the source (e.g., tables that were dropped, equations rendered as images without alt text, a supplementary section). Read the minimum page range needed.
 - Never paste figure pixels or PDF pages into the reply; cite them by path or page number.
 
 ## Output rules
 
 - Keep the one-sentence summary literally one sentence.
 - Use the paper's own terminology for assay/technique names; do not paraphrase domain terms.
-- If a section is missing from \`paper.md\` and you did not escalate to the PDF, say so rather than guessing.
+- If a section is missing from the paper Markdown and you did not escalate to the PDF, say so rather than guessing.
 - Do not invoke this skill again for the same \`<paper_id>\` unless the markdown was regenerated.
 `
     })
@@ -121,7 +121,7 @@ Stay in \`paper.md\` by default. Escalate only when you have a concrete question
 
 Use this skill when the user asks about papers that are already in Hikari, asks which ingested paper covers a topic, asks what experiments an ingested paper ran, or asks for a project-level roll-up of previously ingested papers.
 
-Do not use this skill to download new papers. For new external literature search or PDF download, use the literature or paper-download flow first. This skill is for the local paper-intake knowledge base produced after \`KnowledgeBase/papers.md/<paper_id>/paper.md\` exists and the paper-intake summary has been saved.
+Do not use this skill to download new papers. For new external literature search or PDF download, use the literature or paper-download flow first. This skill is for the local paper-intake knowledge base produced after a title-named Markdown file exists under \`KnowledgeBase/papers.md/<paper_id>/\` and the paper-intake summary has been saved.
 
 Direct tools:
 
@@ -138,7 +138,7 @@ Retrieval workflow:
 2. For either search tool, use a short keyword \`query\` and preserve technical terms such as assay names, proteins, cell lines, compounds, figure labels, and paper-specific tags. For the project roll-up, pass \`project_name\` when supplied or rely on active-project context; do not add \`query\`.
 3. Inspect \`status\`, \`items\`, \`matched_terms\`, \`score\`, \`doc_type\`, \`paper_id\`, \`title\`, \`one_sentence_summary\`, \`experiment\`, and \`source_paths\`.
 4. If the returned fields answer the question, answer from the tool result and cite the returned \`paper_id\`, \`title\`, and \`source_paths.paper_md\`.
-5. If the user asks for details that are not in the summary or experiment entry, read the returned \`source_paths.paper_md\` from the current workspace before answering. Use \`extracted.txt\`, figures, or the original PDF only when \`paper.md\` leaves a concrete question unanswered.
+5. If the user asks for details that are not in the summary or experiment entry, read the returned \`source_paths.paper_md\` from the current workspace before answering. Use \`extracted.txt\`, figures, or the original PDF only when that Markdown file leaves a concrete question unanswered.
 6. If no intake item matches, say that the local paper-intake KB had no match. Then ask whether to search external literature or download/ingest a new paper if that would help.
 
 Argument patterns:
@@ -154,9 +154,9 @@ Answering rules:
 
 - Prefer the paper-intake MCP result over memory or guesses for local paper availability.
 - Do not imply a paper is attached to a project unless \`${PAPER_INTAKE_LIST_PROJECT_SUMMARIES_TOOL_NAME}\` or the returned \`project_ids\` supports it.
-- Do not claim the full paper supports a detail unless you read \`paper.md\` or the detail appears in the returned \`experiment\` or \`one_sentence_summary\`.
+- Do not claim the full paper supports a detail unless you read the returned \`source_paths.paper_md\` or the detail appears in the returned \`experiment\` or \`one_sentence_summary\`.
 - For reviews, books, or non-research documents, do not invent experiments; use \`doc_type\`, \`structure_outline\`, or \`notable_claims\` only when the returned record provides them.
-- Keep citations local and concrete: use \`paper_id\`, title, and \`source_paths.paper_md\` rather than invented source labels.
+- Keep citations local and concrete: use \`paper_id\`, title, and \`source_paths.paper_md\` rather than invented source labels. Use the paper title, not the raw Markdown basename, as the visible citation label.
 `
     })
   }),

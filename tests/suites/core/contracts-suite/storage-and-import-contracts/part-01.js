@@ -899,6 +899,10 @@ module.exports = function registerStorageAndImportContractsPart01(context = {}) 
       assert.equal(detectManifestRole('KnowledgeBase'), 'knowledge_base_root');
       assert.equal(detectManifestRole('KnowledgeBase/papers.md'), 'paper_markdown_root');
       assert.equal(detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/paper.md'), 'paper_knowledge_markdown');
+      assert.equal(
+        detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/Engineered_MAPK_Study.md'),
+        'paper_knowledge_markdown'
+      );
       assert.equal(detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/extracted.txt'), 'paper_knowledge_extracted_text');
       assert.equal(detectManifestRole('KnowledgeBase/papers.md/10.1000_mapk/meta.json'), 'paper_knowledge_metadata');
       assert.equal(detectManifestRole('KnowledgeBase/knowledge.index.sqlite'), 'paper_knowledge_index');

@@ -190,6 +190,7 @@ module.exports = function registerAgentContractsA(context = {}) {
     test('agent tool loading and execution helpers expose catalogs and generic executor registry', () => {
       const loadingSource = fs.readFileSync(agentPath('tools', 'agent-tool-loading.js'), 'utf8');
       const executionSource = fs.readFileSync(agentPath('tools', 'agent-tool-execution.js'), 'utf8');
+      const { normalizeToolArgumentsPayload } = require(agentPath('tools', 'agent-tool-loading.js'));
       const toolsCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tools.json'), 'utf8'));
       const toolCallCatalog = JSON.parse(fs.readFileSync(agentPath('tools', 'Tool-call.json'), 'utf8'));
       assert.equal(Array.isArray(toolsCatalog), true);
@@ -224,6 +225,34 @@ module.exports = function registerAgentContractsA(context = {}) {
       assert.equal(Boolean(toolCallCatalog['protocol-generation']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['assay-table']?.input_schema), true);
       assert.equal(Boolean(toolCallCatalog['plotly-graph']?.input_schema), true);
+      assert.deepEqual(toolCallCatalog['inventory-lookup']?.input_schema?.properties?.kinds, {
+        type: 'array',
+        items: {
+          type: 'string',
+          enum: ['chemical', 'personal_container', 'personal_sample']
+        },
+        minItems: 1,
+        maxItems: 3,
+        uniqueItems: true
+      });
+      assert.equal(normalizeToolArgumentsPayload({
+        tool_calls: [{
+          tool_name: 'inventory-lookup',
+          arguments: {
+            query: 'BL21(DE3)',
+            kinds: ['personal_container', 'personal_sample']
+          }
+        }]
+      }).ok, true);
+      assert.equal(normalizeToolArgumentsPayload({
+        tool_calls: [{
+          tool_name: 'notebook-lookup',
+          arguments: {
+            query: 'BL21(DE3)',
+            detail: 'full'
+          }
+        }]
+      }).ok, true);
       assert.equal(typeof toolCallCatalog['inventory-lookup']?.description, 'string');
       assert.equal(typeof toolCallCatalog['command-line']?.description, 'string');
       assert.equal(typeof toolCallCatalog.memory?.description, 'string');

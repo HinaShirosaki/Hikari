@@ -6,7 +6,7 @@ import {
 } from '../detail-layout.js';
 import { createSequenceViewerSequenceEditingController } from '../detail-sequence-editing.js';
 import { getRenderableFeaturesForRecord } from '../feature-model.js';
-import { normalizeFeatureType } from '../feature-types.js';
+import { isPrimerBindingFeature, normalizeFeatureType } from '../feature-types.js';
 import {
   normalizeHighlightSegments,
   renderDualStrandSequenceLinesHtml
@@ -41,6 +41,13 @@ function positionFloatingMenu(element, clientX, clientY) {
   const top = viewHeight ? Math.min(Math.max(8, clientY), Math.max(8, viewHeight - height - 8)) : Math.max(8, clientY);
   element.style.left = `${left}px`;
   element.style.top = `${top}px`;
+}
+
+// Primer binding sites mark where an oligo anneals; they are not construct
+// parts, so they are neither replaceable targets nor usable replacements.
+// Matches the canonical primer_bind type plus looser vendor spellings.
+function isPrimerRelatedType(type) {
+  return isPrimerBindingFeature(type) || /primer/i.test(String(type || ''));
 }
 
 function formatRangeLabel(range) {
@@ -169,7 +176,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
 
   // Replace Feature works on the record's *recorded* features -- the annotations
   // actually stored in the GenBank -- not on the derived overlays (restriction
-  // sites), which have nothing to rewrite.
+  // sites), which have nothing to rewrite, nor on primer binding sites.
   let featureReplaceIndex = -1;
   let featureReplaceQuery = '';
   let featureReplaceResults = [];
@@ -180,7 +187,10 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     const end = Math.max(start, Number(range?.end) || start);
     return (Array.isArray(record?.features) ? record.features : [])
       .map((feature, index) => ({ feature, index, range: getFeatureRange(feature, sequenceLength) }))
-      .filter((entry) => entry.range && entry.range.start < end && start < entry.range.end);
+      .filter((entry) => entry.range
+        && entry.range.start < end
+        && start < entry.range.end
+        && !isPrimerRelatedType(entry.feature?.type));
   }
 
   function hideFeatureReplaceDialog() {
@@ -270,7 +280,8 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
         throw new Error(response?.error || 'Failed to search stored features.');
       }
       featureReplaceResults = (Array.isArray(response.results) ? response.results : [])
-        .filter((feature) => normalizeSequenceText(feature?.sequence || '').length > 0);
+        .filter((feature) => normalizeSequenceText(feature?.sequence || '').length > 0)
+        .filter((feature) => !isPrimerRelatedType(feature?.type));
       renderFeatureReplaceResults();
       setFeatureReplaceStatus(`Found ${featureReplaceResults.length} stored feature${featureReplaceResults.length === 1 ? '' : 's'}.`);
     } catch (error) {
@@ -289,7 +300,7 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
   function openFeatureReplaceDialog(record, range) {
     const candidates = getRecordedFeaturesInRange(record, range);
     if (!candidates.length) {
-      setStatus('No recorded feature in that range to replace.', true);
+      setStatus('No replaceable feature in that range. Primer binding sites cannot be replaced.', true);
       return;
     }
 
@@ -408,22 +419,44 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
 
   // The range every base-level action operates on: an explicit drag selection
   // wins, otherwise the selected feature's own span, otherwise the caret.
-  function getActionRange(record) {
+  function getActionContext(record) {
     const sequenceLength = Math.max(0, Number(record?.sequence?.length) || 0);
     const selection = getSelectionRange(record);
     if (selection) {
-      return selection;
+      return { range: selection, strand: 1, feature: null };
     }
     const feature = getFeatureByIndex(record, vb().selectedFeatureIndex);
     const featureRange = getFeatureRange(feature, sequenceLength);
     if (featureRange) {
-      return featureRange;
+      return { range: featureRange, strand: Number(feature?.strand) === -1 ? -1 : 1, feature };
     }
     const cursor = Number(vb().cursorBase);
     if (Number.isFinite(cursor)) {
-      return { start: cursor, end: cursor };
+      return { range: { start: cursor, end: cursor }, strand: 1, feature: null };
     }
     return null;
+  }
+
+  function getActionRange(record) {
+    return getActionContext(record)?.range || null;
+  }
+
+  // 5'/3' are read in the target's own orientation: a reverse-strand feature's
+  // 5' end sits at the higher coordinate, so inserting "before 5'" there means
+  // inserting at the end of its span, not the start. A bare drag selection has
+  // no orientation, so it follows the plus strand.
+  function resolveInsertAnchor(context, side) {
+    const range = context?.range;
+    if (!range) {
+      return null;
+    }
+    if (range.end <= range.start) {
+      return range.start;
+    }
+    const atFivePrime = side === 'five';
+    return Number(context.strand) === -1
+      ? (atFivePrime ? range.end : range.start)
+      : (atFivePrime ? range.start : range.end);
   }
 
   function renderContextMenu(record, event) {
@@ -437,13 +470,24 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     const rangeLabel = range ? formatRangeLabel(range) : '';
     const disabledRange = hasRange ? '' : ' disabled';
 
+    // With a span selected, an insert has two meaningful sides; at a bare caret
+    // there is only the one position, so offering sides would be noise.
+    const insertBaseItems = hasRange
+      ? `<button type="button" class="sequence-viewer-context-item" data-vector-action="insert-bases-five">Insert Bases Before 5'...</button>
+      <button type="button" class="sequence-viewer-context-item" data-vector-action="insert-bases-three">Insert Bases After 3'...</button>`
+      : '<button type="button" class="sequence-viewer-context-item" data-vector-action="insert-bases">Insert Bases...</button>';
+    const insertProteinItems = hasRange
+      ? `<button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert-five">Insert Protein Construct Before 5'...</button>
+      <button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert-three">Insert Protein Construct After 3'...</button>`
+      : '<button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert">Insert Protein Construct...</button>';
+
     menu.innerHTML = `
       ${rangeLabel ? `<p class="small-note">${escapeHtml(rangeLabel)}</p>` : ''}
-      <button type="button" class="sequence-viewer-context-item" data-vector-action="insert-bases">Insert Bases...</button>
+      ${insertBaseItems}
       <button type="button" class="sequence-viewer-context-item" data-vector-action="replace-feature"${disabledRange}>Replace Feature...</button>
       <button type="button" class="sequence-viewer-context-item sequence-viewer-context-item-danger" data-vector-action="delete-bases"${disabledRange}>Delete Bases${hasRange ? ` (${(range.end - range.start).toLocaleString()} bp)` : ''}</button>
       <hr class="sequence-viewer-context-divider" />
-      <button type="button" class="sequence-viewer-context-item" data-vector-action="protein-insert">Insert Protein Construct...</button>
+      ${insertProteinItems}
       <button type="button" class="sequence-viewer-context-item" data-vector-action="protein-replace"${disabledRange}>Replace With Protein Construct...</button>
     `;
     menu.hidden = false;
@@ -456,34 +500,43 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     if (!record?.sequence?.length) {
       return;
     }
-    const range = getActionRange(record);
+    const context = getActionContext(record);
+    const range = context?.range || null;
     const caret = Number.isFinite(Number(vb().cursorBase))
       ? Number(vb().cursorBase)
       : Math.max(0, Number(range?.start) || 0);
 
-    if (action === 'protein-insert' || action === 'protein-replace') {
+    const insertSide = action.endsWith('-five')
+      ? 'five'
+      : (action.endsWith('-three') ? 'three' : null);
+    const insertAt = insertSide ? resolveInsertAnchor(context, insertSide) : caret;
+    const sideLabel = insertSide === 'five' ? "5'" : (insertSide === 'three' ? "3'" : '');
+    const targetName = cleanText(context?.feature?.name, 120);
+
+    if (action.startsWith('protein-insert') || action === 'protein-replace') {
       const isReplace = action === 'protein-replace';
       if (isReplace && !(range && range.end > range.start)) {
         setStatus('Select a range or feature before replacing it with a protein construct.', true);
         return;
       }
+      const at = isReplace ? range.start : insertAt;
       hideOverlays();
       vb().insertTarget = {
         mode: isReplace ? 'replace' : 'insert',
-        start: isReplace ? range.start : caret,
-        end: isReplace ? range.end : caret,
+        start: at,
+        end: isReplace ? range.end : at,
         recordName: String(record?.name || 'vector'),
         label: isReplace
           ? `Replace ${formatRangeLabel(range)}`
-          : `Insert at ${(caret + 1).toLocaleString()}`
+          : `Insert at ${(at + 1).toLocaleString()}${sideLabel ? ` (${sideLabel}${targetName ? ` of ${targetName}` : ''})` : ''}`
       };
       onRequestProteinInsert(vb().insertTarget);
       return;
     }
 
-    if (action === 'insert-bases') {
+    if (action.startsWith('insert-bases')) {
       hideContextMenu();
-      sequenceEditing.openSequenceEditDialog('insert', { range: { start: caret, end: caret } });
+      sequenceEditing.openSequenceEditDialog('insert', { range: { start: insertAt, end: insertAt } });
       return;
     }
     if (!range || range.end <= range.start) {
