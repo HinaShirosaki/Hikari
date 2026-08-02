@@ -17,7 +17,6 @@ export const sampleRegistryManifest = {
     onNotebookSampleCaptured: rendererServices.notebook.handleNotebookEntriesChanged
   }),
   render: ({ modules }) => {
-    modules.personalInventory.renderSections();
     modules.sampleRegistry.render();
   }
 };

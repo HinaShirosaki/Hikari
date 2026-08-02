@@ -1,13 +1,18 @@
 {
   "dockOrder": [
     "home",
+    "protocols",
+    "biology-notebook",
+    "papers",
     "sample-inventory",
+    "chemicals",
+    "workflows",
+    "agent",
+    "sequence-viewer",
     "assay",
     "gel",
-    "protocols",
-    "workflows",
-    "papers",
-    "sequence-viewer"
+    "tools",
+    "settings"
   ],
   "viewOrder": [
     "home-view",
@@ -56,7 +61,7 @@
       "viewId": "biology-notebook-view",
       "subtitle": "Biology notebook entries and wet-lab context.",
       "icon": "biology-notebook.svg",
-      "placement": "more",
+      "placement": "dock",
       "aliases": ["biology", "bio notebook", "wet lab", "project", "projects"],
       "searchInputId": "",
       "agentChatRail": true
@@ -68,7 +73,7 @@
       "viewId": "lab-common-inventory-view",
       "subtitle": "Chemical inventory, locations, and stock records.",
       "icon": "chemicals.svg",
-      "placement": "more",
+      "placement": "dock",
       "aliases": ["chemical", "reagents", "inventory chemicals"],
       "searchInputId": "chemical-search"
     },
@@ -77,7 +82,7 @@
       "viewKey": "SAMPLE_REGISTRY",
       "label": "Samples",
       "viewId": "sample-registry-view",
-      "subtitle": "Samples, storage containers, and personal inventory in one workspace.",
+      "subtitle": "Sample records, storage details, and locations in one table.",
       "icon": "sample-inventory.svg",
       "placement": "dock",
       "aliases": ["sample", "samples", "inventory", "sample inventory", "sampleinventory"],
@@ -136,7 +141,7 @@
       "viewId": "agent-view",
       "subtitle": "Assistant sessions with project context and evidence-grounded responses.",
       "icon": "agent.svg",
-      "placement": "more",
+      "placement": "dock",
       "aliases": ["assistant", "chat", "lab assistant"],
       "searchInputId": ""
     },
@@ -158,7 +163,7 @@
       "viewId": "tool-box-view",
       "subtitle": "Bench calculators, sequence utilities, and quick analysis tools.",
       "icon": "tools.svg",
-      "placement": "more",
+      "placement": "dock",
       "aliases": ["tool", "toolbox", "calculator"],
       "searchInputId": ""
     },
@@ -169,7 +174,7 @@
       "viewId": "setting-view",
       "subtitle": "Workspace appearance, startup, storage, and model settings.",
       "icon": "settings.svg",
-      "placement": "more",
+      "placement": "dock",
       "aliases": ["setting", "preferences"],
       "searchInputId": ""
     }
@@ -178,7 +183,7 @@
     {
       "viewKey": "PERSONAL_INVENTORY",
       "viewId": "personal-inventory-view",
-      "subtitle": "Samples, storage containers, and personal inventory in one workspace."
+      "subtitle": "Sample records, storage details, and locations in one table."
     },
     {
       "viewId": "sequence-viewer-detail-view",

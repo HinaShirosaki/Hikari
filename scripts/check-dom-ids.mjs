@@ -97,7 +97,11 @@ function lineNumberForIndex(source, index) {
 
 function collectDocumentGetElementByIdCalls(jsText) {
   // Only track direct global-document calls; this avoids iframe/local document false positives.
-  const regex = /(?<![\w$.])document\.getElementById\(\s*['"]([^'"]+)['"]\s*\)/g;
+  // Any document-like receiver, with or without optional chaining: renderer
+  // modules take the document as a parameter (rootDocument?.getElementById?.()),
+  // and matching only the literal `document.` spelling left whole feature
+  // element maps unchecked.
+  const regex = /(?<![\w$.])[A-Za-z_$][\w$]*\??\.getElementById(?:\?\.)?\(\s*['"]([^'"]+)['"]\s*\)/g;
   const matches = [];
   let match = regex.exec(jsText);
   while (match) {

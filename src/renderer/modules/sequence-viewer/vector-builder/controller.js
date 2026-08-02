@@ -428,13 +428,35 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     const feature = getFeatureByIndex(record, vb().selectedFeatureIndex);
     const featureRange = getFeatureRange(feature, sequenceLength);
     if (featureRange) {
-      return { range: featureRange, strand: Number(feature?.strand) === -1 ? -1 : 1, feature };
+      return {
+        range: featureRange,
+        strand: Number(feature?.strand) === -1 ? -1 : 1,
+        feature,
+        sequenceLength
+      };
     }
     const cursor = Number(vb().cursorBase);
     if (Number.isFinite(cursor)) {
-      return { range: { start: cursor, end: cursor }, strand: 1, feature: null };
+      return { range: { start: cursor, end: cursor }, strand: 1, feature: null, sequenceLength };
     }
     return null;
+  }
+
+  // A feature's termini are its first and last recorded segment boundaries, not
+  // the edges of its flattened span. For a joined or origin-spanning feature the
+  // flattened min/max lands inside an intron or on the wrong side of the origin.
+  function getFeatureTerminus(feature, side, sequenceLength) {
+    const segments = Array.isArray(feature?.segments) ? feature.segments : [];
+    if (!segments.length) {
+      return null;
+    }
+    const clamp = (value) => Math.min(Math.max(0, Number(value) || 0), Math.max(0, sequenceLength));
+    const first = clamp(segments[0]?.start);
+    const last = clamp(segments[segments.length - 1]?.end);
+    const atFivePrime = side === 'five';
+    return Number(feature?.strand) === -1
+      ? (atFivePrime ? last : first)
+      : (atFivePrime ? first : last);
   }
 
   function getActionRange(record) {
@@ -452,6 +474,10 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     }
     if (range.end <= range.start) {
       return range.start;
+    }
+    const terminus = getFeatureTerminus(context.feature, side, context.sequenceLength);
+    if (terminus !== null) {
+      return terminus;
     }
     const atFivePrime = side === 'five';
     return Number(context.strand) === -1

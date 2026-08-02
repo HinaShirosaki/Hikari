@@ -172,7 +172,6 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
   assert.equal(Boolean(document.getElementById('sequence-viewer-detail-workspace').hidden), false);
   assert.equal(Boolean(confirmationBanner.hidden), false);
   assert.equal(confirmationSummary.innerHTML.includes('HostVector'), true);
-  assert.equal(document.getElementById('sequence-viewer-save-name').value, 'GFP Insert (HostVector)');
   assert.match(document.getElementById('sequence-viewer-status').textContent, /Review the assembled plasmid.*HostVector.*confirm the construct/i);
   assert.match(document.getElementById('sequence-viewer-stat-topology').textContent, /circular/i);
   assert.equal(Boolean(loadBtn.hidden), true);

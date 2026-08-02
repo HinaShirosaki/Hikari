@@ -21,9 +21,6 @@ export function createRecordWorkflowActions(ctx) {
     dialogs.closeBackboneRecognitionDialog();
     state.selectedRecordIndex = 0;
     state.selectedFeatureIndex = -1;
-    if (elements.saveNameInput) {
-      elements.saveNameInput.value = state.records[0]?.name || '';
-    }
     actions.resetAlignmentState();
     resetDetailSurfaces();
     controllers.detail?.updateRecordSelect();

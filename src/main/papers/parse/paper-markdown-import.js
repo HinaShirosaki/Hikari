@@ -9,6 +9,7 @@ const {
   createPaperKnowledgeDatabaseRuntime,
   normalizeDoi
 } = require('../store/agent-paper-knowledge-database.js');
+const { isLikelyJunkPdfTitle } = require('../store/paper-knowledge-paths.js');
 const {
   findExistingPaperRow,
   openKnowledgeDatabase,
@@ -142,16 +143,23 @@ async function synchronizeTitleMarkdownReferences({
   });
 
   if (!(await pathExists(paths.sqlite_path))) {
-    return;
+    return '';
   }
+  const folderRelativePrefix = `${toPosixRelative(storagePath, paths.paper_folder_path)}/`;
   const db = await openKnowledgeDatabase(paths.sqlite_path);
   try {
-    const paper = findExistingPaperRow(db, { doi, title });
+    // The stored title can differ from the import-side title (it may have come
+    // from embedded PDF metadata), so fall back to the row that already points
+    // into this folder -- the only row whose wiki_path the rename can dangle.
+    const paper = findExistingPaperRow(db, { doi, title })
+      || queryRows(db, 'SELECT * FROM papers', [])
+        .find((row) => cleanText(row?.wiki_path, 2400).startsWith(folderRelativePrefix))
+      || null;
     if (!paper) {
-      return;
+      return 'the knowledge index has no row pointing at this paper folder';
     }
     if (cleanText(paper.wiki_path, 2400) === markdownRelativePath) {
-      return;
+      return '';
     }
     runStatement(
       db,
@@ -163,6 +171,7 @@ async function synchronizeTitleMarkdownReferences({
     if (updated) {
       await updateJsonIndex(paths.json_index_path, updated);
     }
+    return '';
   } finally {
     db.close();
   }
@@ -174,17 +183,34 @@ async function ensureTitleNamedKnowledgeMarkdown({ storagePath, paths, title, do
   }
   let migrated = false;
   if (!(await pathExists(paths.markdown_path))) {
-    if (!(await pathExists(paths.legacy_markdown_path))) {
+    // The recorded path is the name actually on disk. Without it, a paper whose
+    // title changed after ingest matches neither the title-derived name nor
+    // `paper.md`, and the caller re-extracts the whole PDF on every scan.
+    const recorded = paths.recorded_markdown_path;
+    const source = (recorded && recorded !== paths.markdown_path && await pathExists(recorded))
+      ? recorded
+      : ((await pathExists(paths.legacy_markdown_path)) ? paths.legacy_markdown_path : '');
+    if (!source) {
       return { ready: false, migrated: false, warning: '' };
     }
-    await fsPromises.copyFile(paths.legacy_markdown_path, paths.markdown_path);
+    // Move, not copy: a second stale Markdown in the folder outlives every
+    // refresh and can win the reader's candidate scan.
+    await fsPromises.rename(source, paths.markdown_path);
     migrated = true;
   }
   let warning = '';
-  try {
-    await synchronizeTitleMarkdownReferences({ storagePath, paths, title, doi });
-  } catch (error) {
-    warning = `Title-named Markdown was created, but stored references could not all be updated: ${cleanText(error?.message || error, 600)}`;
+  // Only a real migration needs the reference sweep. Running it on every
+  // already-converted paper reloads and re-serializes the whole SQLite index
+  // once per paper, on a path that is awaited before the UI hydrates.
+  if (migrated) {
+    try {
+      const issue = await synchronizeTitleMarkdownReferences({ storagePath, paths, title, doi });
+      if (issue) {
+        warning = `Title-named Markdown is in place, but ${issue}.`;
+      }
+    } catch (error) {
+      warning = `Title-named Markdown was created, but stored references could not all be updated: ${cleanText(error?.message || error, 600)}`;
+    }
   }
   return { ready: true, migrated, warning };
 }
@@ -220,6 +246,9 @@ function rebaseKnowledgePathsToRecordedFolder(storagePath, paths = {}, paper = {
     ...paths,
     paper_folder_name: path.basename(paperFolderPath),
     paper_folder_path: paperFolderPath,
+    // Kept so the caller can find the file that actually exists on disk, whose
+    // name may predate the current title.
+    recorded_markdown_path: recordedPath,
     markdown_path: path.join(paperFolderPath, paths.markdown_file_name || path.basename(paths.markdown_path)),
     legacy_markdown_path: path.join(paperFolderPath, 'paper.md'),
     extracted_text_path: path.join(paperFolderPath, 'extracted.txt'),
@@ -231,7 +260,8 @@ function rebaseKnowledgePathsToRecordedFolder(storagePath, paths = {}, paper = {
 function getPaperTitle(paper = {}, filePath = '') {
   const source = ensureObject(paper);
   const pdfMetadata = ensureObject(source.pdfMetadata || source.pdf_metadata);
-  return cleanText(pdfMetadata.title, 320)
+  const embeddedTitle = isLikelyJunkPdfTitle(pdfMetadata.title) ? '' : pdfMetadata.title;
+  return cleanText(embeddedTitle, 320)
     || cleanText(source.title || source.paper_title || source.paperTitle, 320)
     || cleanText(source.fileName || source.file_name, 320).replace(/\.pdf$/i, '')
     || cleanText(path.basename(filePath || ''), 320).replace(/\.pdf$/i, '')

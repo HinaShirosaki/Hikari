@@ -2934,3 +2934,9 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.sequence-viewer-status-note {
+  align-self: center;
+  min-width: 0;
+  flex: 1 1 auto;
+}

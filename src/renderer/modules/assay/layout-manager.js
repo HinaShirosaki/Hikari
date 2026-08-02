@@ -595,7 +595,12 @@ export function createAssayLayoutManager({
   }
 
   function onPlateTypeChange() {
+    // normalizeResults silently discards every well outside the new plate, so
+    // capture the count first -- resizing a filled plate is destructive and the
+    // user gets no other signal that measurements were dropped.
+    const resultsBefore = Object.keys(runtime.currentResults || {}).length;
     runtime.currentResults = normalizeResults(runtime.currentResults, getCurrentDefinition());
+    const droppedResults = resultsBefore - Object.keys(runtime.currentResults || {}).length;
     setLayoutFromAxisAndOverrides();
     runtime.activeWellEditorId = '';
     syncAxisTemplateValues();
@@ -605,7 +610,9 @@ export function createAssayLayoutManager({
     if (typeof clearAnalysisOutput === 'function') {
       clearAnalysisOutput();
     }
-    setCsvStatus('');
+    setCsvStatus(droppedResults > 0
+      ? `Plate resized. ${droppedResults} result${droppedResults === 1 ? '' : 's'} outside the new layout were dropped.`
+      : '');
   }
 
   const { exportCsvTemplate, onImportCsv } = createLayoutCsv({

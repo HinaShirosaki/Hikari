@@ -44,7 +44,7 @@ export const APP_REGISTRY = [
     "subtitle": "Biology notebook entries and wet-lab context.",
     "icon": "biology-notebook.svg",
     "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M5.5 5.5c2.8 0 4.8 1.1 6.5 3 1.7-1.9 3.7-3 6.5-3v13c-2.8 0-4.8 1.1-6.5 3-1.7-1.9-3.7-3-6.5-3Z\" />\n  <path d=\"M12 8.5v13\" />\n  <path d=\"M8 11h2M14 11h2\" />\n</svg>",
-    "placement": "more",
+    "placement": "dock",
     "aliases": [
       "biology",
       "bio notebook",
@@ -64,7 +64,7 @@ export const APP_REGISTRY = [
     "subtitle": "Chemical inventory, locations, and stock records.",
     "icon": "chemicals.svg",
     "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M10 4h4M11 4v5l-4.5 7.2A2 2 0 0 0 8.2 20h7.6a2 2 0 0 0 1.7-3.1L13 9V4\" />\n  <path d=\"M8.8 14.5h6.4\" />\n</svg>",
-    "placement": "more",
+    "placement": "dock",
     "aliases": [
       "chemical",
       "reagents",
@@ -79,7 +79,7 @@ export const APP_REGISTRY = [
     "viewKey": "SAMPLE_REGISTRY",
     "label": "Samples",
     "viewId": "sample-registry-view",
-    "subtitle": "Samples, storage containers, and personal inventory in one workspace.",
+    "subtitle": "Sample records, storage details, and locations in one table.",
     "icon": "sample-inventory.svg",
     "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M6 5.5h12v3H6Z\" />\n  <path d=\"M8 8.5v7.25a1.5 1.5 0 0 0 3 0V8.5M13 8.5v7.25a1.5 1.5 0 0 0 3 0V8.5\" />\n  <path d=\"M5 18.5h14\" />\n</svg>",
     "placement": "dock",
@@ -171,7 +171,7 @@ export const APP_REGISTRY = [
     "subtitle": "Assistant sessions with project context and evidence-grounded responses.",
     "icon": "agent.svg",
     "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M5.5 5.5h13v10H11l-4 3v-3H5.5Z\" />\n  <path d=\"M12 8v5M9.5 10.5h5\" />\n</svg>",
-    "placement": "more",
+    "placement": "dock",
     "aliases": [
       "assistant",
       "chat",
@@ -208,7 +208,7 @@ export const APP_REGISTRY = [
     "subtitle": "Bench calculators, sequence utilities, and quick analysis tools.",
     "icon": "tools.svg",
     "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M5 8h14v10H5Z\" />\n  <path d=\"M9 8V6.5h6V8M9 13h6M12 13v2\" />\n</svg>",
-    "placement": "more",
+    "placement": "dock",
     "aliases": [
       "tool",
       "toolbox",
@@ -226,7 +226,7 @@ export const APP_REGISTRY = [
     "subtitle": "Workspace appearance, startup, storage, and model settings.",
     "icon": "settings.svg",
     "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M6 5v14M12 5v14M18 5v14\" />\n  <circle cx=\"6\" cy=\"9\" r=\"1.75\" />\n  <circle cx=\"12\" cy=\"15\" r=\"1.75\" />\n  <circle cx=\"18\" cy=\"10.5\" r=\"1.75\" />\n</svg>",
-    "placement": "more",
+    "placement": "dock",
     "aliases": [
       "setting",
       "preferences"
@@ -239,11 +239,16 @@ export const APP_REGISTRY = [
 
 export const APP_DOCK_ORDER = [
   "home",
+  "protocols",
+  "biology-notebook",
+  "papers",
   "sample-inventory",
+  "chemicals",
+  "workflows",
+  "agent",
+  "sequence-viewer",
   "assay",
   "gel",
-  "protocols",
-  "workflows",
-  "papers",
-  "sequence-viewer"
+  "tools",
+  "settings"
 ];

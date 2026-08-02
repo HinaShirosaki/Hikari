@@ -431,7 +431,7 @@ test('paper-scoped agent chat snapshot includes the active transformed markdown 
     })
   });
 
-  assert.match(scopedState.agentChatContext.sessionPrompt, /transformed markdown paper\.md/);
+  assert.match(scopedState.agentChatContext.sessionPrompt, /transformed title-named Markdown file/);
   assert.match(scopedState.agentChatContext.sessionPrompt, /Atlas Uploaded Paper/);
 
   const snapshot = snapshotModule.buildStateSnapshot(scopedState, 'p1');

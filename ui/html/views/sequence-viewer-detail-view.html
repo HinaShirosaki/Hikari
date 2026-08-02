@@ -78,6 +78,7 @@
             <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
             <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
             <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn">Recognize Backbone/Insert</button>
+            <span id="sequence-viewer-status" class="small-note sequence-viewer-status-note"></span>
             <div class="sequence-viewer-menu-anchor">
               <button id="sequence-viewer-alignment-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">Alignment ▾</button>
               <div id="sequence-viewer-alignment-menu" class="sequence-viewer-context-menu sequence-viewer-toolbar-menu" hidden>
@@ -345,6 +346,7 @@
           <div class="sequence-viewer-vector-builder-toolbar-nav">
             <button id="sequence-viewer-vector-builder-back-btn" type="button" class="ghost-btn">Back to Sequence Viewer</button>
             <h3 id="sequence-viewer-vector-builder-title">No sequence open</h3>
+            <span id="sequence-viewer-vector-builder-status-note" class="small-note sequence-viewer-status-note"></span>
           </div>
           <div class="form-actions sequence-viewer-vector-builder-toolbar-actions">
             <label class="sequence-viewer-inline-toggle" title="Overlay unique NEB/Thermo cutter sites on the map.">
@@ -514,6 +516,7 @@
               />
               <div class="inline-row">
                 <button id="sequence-viewer-alignment-query-choose" type="button" class="ghost-btn">Choose Query File</button>
+                <span id="sequence-viewer-alignment-query-file-name" class="small-note">No query file selected</span>
               </div>
             </div>
 
@@ -521,10 +524,15 @@
               Query Record
               <select id="sequence-viewer-alignment-query-record-select"></select>
             </label>
+
+            <span id="sequence-viewer-alignment-query-summary" class="small-note">No query loaded.</span>
+            <span id="sequence-viewer-alignment-query-status" class="small-note"></span>
           </section>
 
           <div class="form-actions sequence-viewer-alignment-actions">
             <button id="sequence-viewer-alignment-run-btn" type="button" class="primary-btn">Run Alignment</button>
+            <button id="sequence-viewer-alignment-reset-btn" type="button" class="ghost-btn">Reset</button>
+            <span id="sequence-viewer-alignment-status" class="small-note sequence-viewer-status-note"></span>
           </div>
 
         </div>

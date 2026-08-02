@@ -56,12 +56,16 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
     }
   }
 
+  // Detail and Vector Builder are separate workspaces, so status has to land on
+  // both surfaces -- only one of them is on screen at a time.
   function setStatus(message, isError = false) {
-    if (!elements.statusNote) {
-      return;
-    }
-    elements.statusNote.textContent = message;
-    elements.statusNote.style.color = isError ? 'var(--theme-danger)' : '';
+    [elements.statusNote, elements.vectorBuilderStatusNote].forEach((node) => {
+      if (!node) {
+        return;
+      }
+      node.textContent = message;
+      node.style.color = isError ? 'var(--theme-danger)' : '';
+    });
   }
 
   function updateMessages() {

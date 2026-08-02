@@ -452,9 +452,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(coreCss, /body\.has-agent-chat-rail\.has-agent-chat-rail-expanded \.workspace-shell/);
     });
 
-    test('renderer routes personal inventory aliases to merged sample workspace', () => {
+    test('renderer routes inventory aliases to the single samples table', () => {
       const source = readRendererShellSource();
       const moduleRuntimeSource = readRendererModuleRuntimeSource();
+      const sampleHtml = readLocalSource('ui', 'html', 'views', 'sample-registry-view.html');
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const sampleEntry = registry.apps.find((app) => app.id === 'sample-inventory');
       assert.match(source, /function normalizeViewId\(VIEWS, viewId\)\s*\{\s*return viewId === VIEWS\.PERSONAL_INVENTORY \? VIEWS\.SAMPLE_REGISTRY : viewId;\s*\}/);
@@ -462,9 +463,14 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.ok(sampleEntry.aliases.includes('inventory'));
       assert.equal(sampleEntry.searchInputId, 'sample-search');
       assert.match(source, /const searchScopeTargets = buildSearchScopeMap\(\{\s*apps: APP_REGISTRY,/);
-      assert.match(source, /const showSampleInventoryWorkspace = nextView === VIEWS\.SAMPLE_REGISTRY;/);
+      assert.doesNotMatch(source, /showSampleInventoryWorkspace/);
+      assert.match(source, /view\.classList\.toggle\('is-active', view\.id === nextView\);/);
+      assert.doesNotMatch(source, /const personalInventoryTarget =/);
       assert.match(source, /moduleRuntime\.renderView\(nextView\);/);
-      assert.match(moduleRuntimeSource, /key:\s*'sampleRegistry'[\s\S]*viewKey:\s*'SAMPLE_REGISTRY'[\s\S]*modules\.personalInventory\.renderSections\(\);[\s\S]*modules\.sampleRegistry\.render\(\);/);
+      assert.match(moduleRuntimeSource, /key:\s*'sampleRegistry'[\s\S]*viewKey:\s*'SAMPLE_REGISTRY'[\s\S]*modules\.sampleRegistry\.render\(\);/);
+      assert.doesNotMatch(moduleRuntimeSource, /modules\.personalInventory\.renderSections\(\);/);
+      assert.match(sampleHtml, /<label hidden>\s*Link Personal Inventory Container/);
+      assert.match(sampleHtml, /<label hidden>\s*Link Position \/ Slot/);
       assert.doesNotMatch(moduleRuntimeSource, /\[views\.SAMPLE_REGISTRY,\s*\(\)\s*=>/);
     });
 

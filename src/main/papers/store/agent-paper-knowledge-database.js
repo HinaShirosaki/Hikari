@@ -25,6 +25,7 @@ const {
   normalizeYear,
   buildKnowledgePaperSlug,
   buildKnowledgeMarkdownFileName,
+  isLikelyJunkPdfTitle,
   ensurePathWithinRoot,
   buildRelativePath,
   resolveRelativeStoragePath,
@@ -51,6 +52,9 @@ const {
 } = require('./paper-knowledge-store.js');
 
 const DEFAULT_MARKDOWN_PROMPT_CHAR_LIMIT = 120000;
+// Scratch area for figures extracted before the paper's canonical folder is
+// known. Lives beside papers.md so listPaperIds() never enumerates it.
+const FIGURE_STAGING_FOLDER_NAME = '.figures-staging';
 
 function ensureObject(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
@@ -242,8 +246,9 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       .map((author) => cleanText(typeof author === 'string' ? author : (author?.name || author?.family || ''), 240))
       .filter(Boolean)
       .slice(0, 80);
+    const embeddedTitle = isLikelyJunkPdfTitle(embeddedMetadata.title) ? '' : embeddedMetadata.title;
     const title = cleanText(
-      embeddedMetadata.title
+      embeddedTitle
       || source.title
       || source.paper_title
       || source.paperTitle
@@ -532,17 +537,15 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
     }
 
     const pdfSha256 = sha256Buffer(pdfBuffer);
-    const provisionalSlug = buildKnowledgePaperSlug({
-      doi: normalizeDoi(source.doi || source.paper_doi || source.paperDoi),
-      title: cleanText(source.title || source.paper_title || source.paperTitle, 320),
-      pdfSha256
-    });
+    // Figures are extracted before the canonical title is known, so stage them
+    // under a content-addressed scratch folder OUTSIDE papers.md. A title-derived
+    // provisional folder can collide with a different paper's real folder, and
+    // reconcileFiguresDir would then rm/rename that paper's figures away.
     const provisionalFiguresDir = path.join(
       resolvedStoragePath,
       KNOWLEDGE_BASE_FOLDER_NAME,
-      KNOWLEDGE_PAPER_MARKDOWN_FOLDER_NAME,
-      provisionalSlug,
-      'figures'
+      FIGURE_STAGING_FOLDER_NAME,
+      `paper-${String(pdfSha256).slice(0, 16)}`
     );
     const figuresEnabled = source.extract_figures !== false && source.extractFigures !== false;
     const extraction = await pdfTextExtractionRuntime.extractText({
@@ -567,10 +570,16 @@ function createPaperKnowledgeDatabaseRuntime(deps = {}) {
       linked_name: cleanText(source.linked_name || source.linkedName, 220)
     };
     const explicitDoi = normalizeDoi(source.doi || source.paper_doi || source.paperDoi);
+    // The folder is the paper's identity, so it stays keyed on the title the
+    // caller supplied. Letting embedded PDF metadata move it would re-home an
+    // already-ingested paper and defeat title-based dedup.
+    const identityTitle = cleanText(source.title || source.paper_title || source.paperTitle, 320)
+      || metadata.title;
     const paths = buildKnowledgeDatabasePaths({
       storagePath: resolvedStoragePath,
       doi: explicitDoi,
-      title: metadata.title,
+      title: identityTitle,
+      markdownTitle: metadata.title,
       pdfSha256
     });
 

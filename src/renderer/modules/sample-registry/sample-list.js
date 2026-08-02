@@ -117,7 +117,6 @@ export function renderSampleDetail(ctx) {
     { label: 'Lot / Batch', value: selected.lot || '-' },
     { label: 'Concentration', value: selected.concentration || '-' },
     { label: 'Location', value: formatLocation(selected.location) },
-    { label: 'Inventory Link', value: formatInventoryLink(ctx, selected.inventoryLink) },
     { label: 'Related Chemicals', value: formatChemicalLinks(ctx, selected.chemicalLinks), wide: true }
   ];
   if (selected.type === 'cell_line') {

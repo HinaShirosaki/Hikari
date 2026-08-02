@@ -461,31 +461,6 @@ export function createTopbarSearchController({
       });
     });
 
-    const personalInventoryTarget = {
-      viewId: VIEWS.SAMPLE_REGISTRY,
-      inputId: '',
-      label: 'Samples'
-    };
-    Object.entries(state.inventory || {}).forEach(([zone, containers]) => {
-      asArray(containers).forEach((container) => {
-        const label = container?.name;
-        addCandidate(personalInventoryTarget, [
-          zone,
-          container?.name,
-          container?.type,
-          container?.singleContent,
-          asArray(container?.wells)
-            .map((well) => (typeof well === 'string' ? well : `${well?.name || ''} ${well?.content || ''}`))
-            .join(' ')
-        ].join(' '), {
-          label,
-          sublabel: joinSublabel([container?.type, zone]),
-          kind: 'Container',
-          applyQuery: ''
-        });
-      });
-    });
-
     return candidates;
   }
 

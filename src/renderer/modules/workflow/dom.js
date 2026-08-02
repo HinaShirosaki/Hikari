@@ -17,7 +17,6 @@ export function getWorkflowElements(rootDocument) {
     workflowBlockTextField: rootDocument?.getElementById?.('workflow-block-text-field'),
     workflowBlockTextInput: rootDocument?.getElementById?.('workflow-block-text'),
     workflowBlockAddBtn: rootDocument?.getElementById?.('workflow-block-add-btn'),
-    workflowBlockList: rootDocument?.getElementById?.('workflow-block-list'),
     workflowGraphCanvas: rootDocument?.getElementById?.('workflow-graph-canvas'),
     workflowGraphBoard: rootDocument?.getElementById?.('workflow-graph-board'),
     workflowGraphSvg: rootDocument?.getElementById?.('workflow-graph-svg'),

@@ -251,11 +251,14 @@ function createIntakeStore(deps = {}) {
   }
 
   /**
-   * Read the transferred title-named Markdown file for a paper. Metadata is the
-   * primary locator; legacy `paper.md` and a folder scan keep older libraries
-   * readable. Returns the resolved path together with the Markdown content.
+   * Locate the transferred title-named Markdown file for a paper WITHOUT reading
+   * its body. Metadata is the primary locator; legacy `paper.md` and a folder
+   * scan keep older libraries readable. Callers that only need the path (the
+   * intake record's `source_paths.paper_md`) must use this rather than
+   * `readPaperMarkdown`, which pulls the whole document into memory.
+   * Pass `knownMeta` when meta.json has already been read to avoid a second read.
    */
-  async function readPaperMarkdown(paperId) {
+  async function resolvePaperMarkdownPath(paperId, knownMeta = null) {
     const guard = ensureReady();
     if (guard) {
       return guard;
@@ -264,7 +267,7 @@ function createIntakeStore(deps = {}) {
     if (!id) {
       return { ok: false, status: 'invalid_arguments', error: 'paper_id is required.' };
     }
-    const meta = ensureObject((await readPaperMeta(id))?.meta);
+    const meta = knownMeta ? ensureObject(knownMeta) : ensureObject((await readPaperMeta(id))?.meta);
     const candidates = [];
     addMarkdownCandidate(candidates, id, meta.markdown_path || meta.markdownPath);
     addMarkdownCandidate(
@@ -295,18 +298,25 @@ function createIntakeStore(deps = {}) {
     for (const absPath of candidates) {
       try {
         // eslint-disable-next-line no-await-in-loop
-        const markdown = await fs.readFile(absPath, 'utf8');
+        const stats = typeof fs.stat === 'function' ? await fs.stat(absPath) : null;
+        if (stats && typeof stats.isFile === 'function' && !stats.isFile()) {
+          continue;
+        }
+        if (!stats) {
+          // Injected filesystems without stat still have to prove readability.
+          // eslint-disable-next-line no-await-in-loop
+          await fs.readFile(absPath, 'utf8');
+        }
         return {
           ok: true,
-          status: 'loaded',
+          status: 'located',
           paper_id: id,
-          markdown: String(markdown || ''),
           paper_md: path.relative(workspacePath, absPath).split(path.sep).join('/'),
           paper_md_absolute_path: absPath,
           markdown_file_name: path.basename(absPath)
         };
       } catch (error) {
-        if (!error || (error.code !== 'ENOENT' && error.code !== 'ENOTDIR')) {
+        if (!error || (error.code !== 'ENOENT' && error.code !== 'ENOTDIR' && error.code !== 'EISDIR')) {
           lastError = error;
         }
       }
@@ -320,6 +330,31 @@ function createIntakeStore(deps = {}) {
       };
     }
     return { ok: false, status: 'not_found', paper_id: id };
+  }
+
+  /**
+   * Resolve the paper Markdown and return its content. Thin wrapper over
+   * `resolvePaperMarkdownPath` so path resolution has exactly one implementation.
+   */
+  async function readPaperMarkdown(paperId, knownMeta = null) {
+    const located = await resolvePaperMarkdownPath(paperId, knownMeta);
+    if (!located.ok) {
+      return located;
+    }
+    try {
+      const markdown = await fs.readFile(located.paper_md_absolute_path, 'utf8');
+      return { ...located, status: 'loaded', markdown: String(markdown || '') };
+    } catch (error) {
+      if (error && (error.code === 'ENOENT' || error.code === 'ENOTDIR')) {
+        return { ok: false, status: 'not_found', paper_id: located.paper_id };
+      }
+      return {
+        ok: false,
+        status: 'read_failed',
+        paper_id: located.paper_id,
+        error: cleanText(error?.message || error, 600)
+      };
+    }
   }
 
   /**
@@ -450,9 +485,9 @@ function createIntakeStore(deps = {}) {
     }
     const record = normalizeIntakeRecord({ ...parsed, paper_id: parsed?.paper_id || id });
     if (!record.source_paths.paper_md) {
-      const markdown = await readPaperMarkdown(id);
+      const located = await resolvePaperMarkdownPath(id);
       const defaults = defaultSourcePaths(id, {
-        paper_md: markdown?.paper_md,
+        paper_md: located?.paper_md,
         title: record.title
       });
       record.source_paths = {
@@ -537,9 +572,9 @@ function createIntakeStore(deps = {}) {
         const metaResult = await readPaperMeta(paperId);
         const meta = ensureObject(metaResult?.meta);
         // eslint-disable-next-line no-await-in-loop
-        const markdown = await readPaperMarkdown(paperId);
+        const located = await resolvePaperMarkdownPath(paperId, meta);
         const title = cleanText(meta.title || meta.paper_title, 400);
-        if (title && markdown?.ok) {
+        if (title && located?.ok) {
           records.push({
             schema_version: INTAKE_SCHEMA_VERSION,
             paper_id: paperId,
@@ -553,7 +588,7 @@ function createIntakeStore(deps = {}) {
             structure_outline: [],
             notable_claims: [],
             source_paths: {
-              ...defaultSourcePaths(paperId, { paper_md: markdown.paper_md }),
+              ...defaultSourcePaths(paperId, { paper_md: located.paper_md }),
               pdf_path: cleanText(meta.pdf_path || meta.pdfPath || meta.source_pdf_path, 400)
             },
             created_at: '',
@@ -624,6 +659,7 @@ function createIntakeStore(deps = {}) {
     loadAll,
     listPaperIds,
     readPaperMarkdown,
+    resolvePaperMarkdownPath,
     readPaperExtractedText,
     readPaperMeta,
     effectiveProjectIds,

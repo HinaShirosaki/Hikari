@@ -101,6 +101,17 @@ function compact(object) {
   return out;
 }
 
+// A metadata-only record predates classification, so it has no doc_type to test.
+// Surfacing it beats reporting the paper absent, but it must not masquerade as a
+// match for the type the caller asked for -- both listing tools apply this, so
+// the project roll-up and summary search never disagree about the same library.
+function matchesDocTypes(record, docTypes) {
+  if (record?.intake_status === 'metadata_only') {
+    return true;
+  }
+  return docTypes.includes(record?.doc_type);
+}
+
 function projectionForListing(record) {
   return compact({
     paper_id: record.paper_id,
@@ -188,7 +199,8 @@ const LIST_PROJECT_SUMMARIES_DEFINITION = Object.freeze({
       doc_types: {
         type: 'array',
         items: { type: 'string', enum: [...DOC_TYPES] },
-        maxItems: DOC_TYPES.length
+        maxItems: DOC_TYPES.length,
+        description: 'Restrict results to these document types. Papers that have not been classified yet are still returned, marked `intake_status: "metadata_only"`; treat those as unclassified rather than as matching the requested type.'
       },
       limit: { type: 'integer', minimum: 1, maximum: MAX_LIMIT }
     }
@@ -227,7 +239,7 @@ async function callListProjectSummaries(input = {}, context = {}, deps = {}) {
     project_name: projectName
   });
   const filtered = docTypes.length
-    ? projectRecords.filter((record) => docTypes.includes(record.doc_type))
+    ? projectRecords.filter((record) => matchesDocTypes(record, docTypes))
     : projectRecords;
   const items = filtered.slice(0, limit).map(projectionForListing);
 
@@ -267,7 +279,8 @@ const SEARCH_SUMMARIES_DEFINITION = Object.freeze({
       doc_types: {
         type: 'array',
         items: { type: 'string', enum: [...DOC_TYPES] },
-        maxItems: DOC_TYPES.length
+        maxItems: DOC_TYPES.length,
+        description: 'Restrict results to these document types. Papers that have not been classified yet are still returned, marked `intake_status: "metadata_only"`; treat those as unclassified rather than as matching the requested type.'
       },
       limit: { type: 'integer', minimum: 1, maximum: MAX_LIMIT }
     }
@@ -322,7 +335,7 @@ async function callSearchSummaries(input = {}, context = {}, deps = {}) {
     });
   }
   if (docTypes.length) {
-    candidates = candidates.filter((record) => !record.doc_type || docTypes.includes(record.doc_type));
+    candidates = candidates.filter((record) => matchesDocTypes(record, docTypes));
   }
 
   const scored = candidates

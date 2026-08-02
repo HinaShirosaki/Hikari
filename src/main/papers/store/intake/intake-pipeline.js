@@ -565,6 +565,12 @@ function createIntakePipeline(deps = {}) {
       }
       markdown = mdResult.markdown;
       paperMarkdownRelativePath = cleanText(mdResult.paper_md, 400);
+    } else if (!paperMarkdownRelativePath && typeof store.resolvePaperMarkdownPath === 'function') {
+      // A caller-supplied `markdown` still needs the real on-disk path recorded,
+      // otherwise source_paths.paper_md is invented from the title and points at
+      // a file that need not exist.
+      const located = await store.resolvePaperMarkdownPath(paperId);
+      paperMarkdownRelativePath = located?.ok ? cleanText(located.paper_md, 400) : '';
     }
     if (!cleanText(markdown, 200)) {
       return {

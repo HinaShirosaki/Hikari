@@ -81,6 +81,82 @@ function bootVectorBuilder(features) {
   return { document, viewer };
 }
 
+test('[EDGE] sequence-viewer alignment workspace surfaces its status and reset control', () => {
+  // These elements were referenced by the alignment controller but absent from
+  // the markup, so query parsing, run status and Reset were all inert.
+  const ids = [
+    'sequence-viewer-alignment-workspace',
+    'sequence-viewer-alignment-open-btn',
+    'sequence-viewer-alignment-status',
+    'sequence-viewer-alignment-reset-btn',
+    'sequence-viewer-alignment-query-status',
+    'sequence-viewer-alignment-query-summary',
+    'sequence-viewer-alignment-query-file-name',
+    'sequence-viewer-alignment-query-textarea',
+    'sequence-viewer-alignment-run-btn',
+    'sequence-viewer-status',
+    'sequence-viewer-sequence-host'
+  ];
+  const document = createMockDocument(ids);
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
+    { document }
+  );
+  const viewer = viewerModule.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'pRef',
+    sequence: 'ATGGCGCATCATCATCATCATCATTAAGGCCTTAACC',
+    topology: 'circular',
+    source: 'external',
+    features: []
+  });
+
+  viewer.openSequencingAlignmentWorkspace();
+
+  // Opening reports through the alignment status line, and Reset starts
+  // disabled because there is nothing loaded to clear yet.
+  assert.equal(document.getElementById('sequence-viewer-alignment-workspace').hidden, false);
+  assert.match(document.getElementById('sequence-viewer-alignment-status').textContent, /\S/);
+  assert.equal(document.getElementById('sequence-viewer-alignment-reset-btn').disabled, true);
+  assert.equal(
+    document.getElementById('sequence-viewer-alignment-query-file-name').textContent,
+    'No query file selected'
+  );
+  assert.equal(
+    document.getElementById('sequence-viewer-alignment-query-summary').textContent,
+    'No query loaded.'
+  );
+  assert.match(document.getElementById('sequence-viewer-alignment-query-status').textContent, /\S/);
+});
+
+test('[EDGE] sequence-viewer status feedback reaches a surface in both workspaces', () => {
+  // setStatus() is how Annotate, backbone recognition and every Vector Builder
+  // action report back. With no status element in the markup it returned early
+  // and the whole app went silent, so the elements have to exist and receive it.
+  const document = createMockDocument([...VECTOR_BUILDER_IDS, 'sequence-viewer-vector-builder-status-note']);
+  const viewerModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'public-api.js'),
+    { document }
+  );
+  const viewer = viewerModule.initSequenceViewer();
+  viewer.loadFromExternal({
+    name: 'pVector',
+    sequence: 'ATGGCGCATCATCATCATCATCATTAAGGCCTTAACCGGTTACGTACGTAAGGCCTTAACC',
+    topology: 'circular',
+    source: 'external',
+    features: [{ name: 'His6', type: 'CDS', strand: 1, source: 'external', segments: [{ start: 6, end: 24 }] }]
+  });
+
+  const detailStatus = document.getElementById('sequence-viewer-status');
+  const vectorStatus = document.getElementById('sequence-viewer-vector-builder-status-note');
+
+  // Opening Vector Builder reports through setStatus; both surfaces carry it,
+  // since only one workspace is on screen at a time.
+  trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
+  assert.match(detailStatus.textContent, /Vector Builder open for pVector/);
+  assert.match(vectorStatus.textContent, /Vector Builder open for pVector/);
+});
+
 test('[EDGE] sequence-viewer home Vector Builder button opens the previewed library entry', async () => {
   const entry = {
     id: 'entry_vb',
