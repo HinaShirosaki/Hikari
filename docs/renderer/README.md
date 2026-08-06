@@ -19,7 +19,7 @@ If `docs/main-platform/` explains the main-process bridge, this folder explains 
 - app-shell boot in `renderer.js` and `core/start-hikari-core.js`
 - renderer-local state load, normalization, persistence, and appearance
 - dock navigation, topbar search/result routing, startup-view resolution, and Telegram command routing
-- feature controllers for inventory, notebooks, protocols, workflows, papers, assays, gels, agent chat, sequence viewing, and bench tools
+- feature controllers for inventory, notebooks, protocols, workflows, papers, assays, agent chat, sequence viewing, and bench tools
 - a small registry/service layer used to fan state changes across feature modules
 - pure helper wrappers that expose algorithm-heavy code to tests or other renderer modules
 

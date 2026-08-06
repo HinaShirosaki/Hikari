@@ -7,6 +7,12 @@ This is the reference example for the **host API**: it uses a read verb
 (`notebook.list`) and the write verb (`notebook.appendResult`), and declares
 exactly those two permissions and nothing else.
 
+It is also the copyable reference for a **local** plugin. Its scripts are
+classic scripts loaded in dependency order because opaque-origin local frames
+cannot fetch relative ES modules. The UI keeps loading, empty, failure, retry,
+and in-progress states visible instead of leaving a blank or double-submitting
+an attachment.
+
 > Looking for ImageJ itself? That is [`../imagej/`](../imagej/), a *remote*
 > plugin that embeds the real application. Remote plugins cannot hold host
 > permissions, which is why importing results is a separate local plugin.
@@ -33,9 +39,10 @@ Paste this, choose an entry, click **Attach**:
 | --- | --- |
 | `plugin.json` | Manifest. `id` must match this folder's name. |
 | `index.html` | Entry page — required at the folder root for a local plugin. |
-| `main.js` | UI wiring and the host API calls. |
-| `parse-results.js` | CSV/TSV parser. Run `node parse-results.js` for its self-check. |
-| `hikari.js` | Host API client. Copy this verbatim into your own plugin. |
+| `main.js` | Classic UI script: safe DOM rendering, retry, and duplicate-submit protection. |
+| `parse-results.js` | Classic CSV/TSV parser. Run `node parse-results.js` for its self-check. |
+| `hikari.js` | Classic host API client. Copy this verbatim into your own local or served plugin. |
 | `style.css` | All styling — plugins inherit nothing from the host. |
 
-Walkthrough: [`docs/plugins/imagej-walkthrough.md`](../../../docs/plugins/imagej-walkthrough.md).
+Start a plugin: [`docs/plugins/quickstart.md`](../../../docs/plugins/quickstart.md).
+ImageJ walkthrough: [`docs/plugins/imagej-walkthrough.md`](../../../docs/plugins/imagej-walkthrough.md).

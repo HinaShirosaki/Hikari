@@ -1,0 +1,12 @@
+{
+  "id": "gel",
+  "name": "Gel Analysis",
+  "version": "2.0.0",
+  "description": "Gel image analysis: lane segmentation, band quantification, ladder calibration, and saved gel records.",
+  "serve": true,
+  "permissions": [
+    "storage",
+    "files",
+    "downloads"
+  ]
+}

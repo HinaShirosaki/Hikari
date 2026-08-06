@@ -523,8 +523,12 @@ export function createNavigationShell({
       documentObject.body.classList.remove('sequence-viewer-fixed-scroll');
     }
 
+    const showContainerWorkspace = nextView === VIEWS.SAMPLE_REGISTRY;
     views.forEach((view) => {
-      view.classList.toggle('is-active', view.id === nextView);
+      const active = showContainerWorkspace
+        ? view.id === VIEWS.PERSONAL_INVENTORY
+        : view.id === nextView;
+      view.classList.toggle('is-active', active);
     });
 
     const activeNavView = resolveNavigationViewId(nextView);

@@ -5,6 +5,7 @@
 // - populate inline placeholder editors from protocol step definitions
 // - save notebook entries plus imported result files into app state
 // - support editing existing entries and exporting them to PDF
+import { getGelAnalyses } from '../../lib/gel-records.js';
 import { findLatestLinkedRecord } from '../../services/notebook-linked-previews.js';
 import { buildClarifiedNotebookNote, clarifyNotebookNote, showTransientNotice } from '../../services/notebook-note-tools.js';
 import {
@@ -84,7 +85,6 @@ export function initLabNotebook({
   safeText,
   onNotebookEntriesChanged,
   onCreateLinkedAssay,
-  onCreateLinkedGel,
   onOpenSampleRecorder,
   onProjectsChanged,
   selectionInsightsController = null,
@@ -144,7 +144,6 @@ export function initLabNotebook({
   const notebookResultTableWrap = document.getElementById('biology-notebook-result-table-wrap');
   const notebookResultTableHost = document.getElementById('biology-notebook-result-table');
   const notebookResultTableStatus = document.getElementById('biology-notebook-result-table-status');
-  const notebookAddGelBtn = document.getElementById('biology-notebook-add-gel-btn');
   const notebookAddAssayBtn = document.getElementById('biology-notebook-add-assay-btn');
   const notebookAddSamplesBtn = document.getElementById('biology-notebook-add-samples-btn');
   const notebookLinkedResults = document.getElementById('biology-notebook-linked-results');
@@ -308,14 +307,13 @@ export function initLabNotebook({
     ensureEntry: () => ensureNotebookEntryForLinkedWork(),
     getNotebookEntries: () => state.notebookEntries,
     getProtocols: () => state.protocols,
-    getGelAnalyses: () => state.gelAnalyses,
+    getGelAnalyses: () => getGelAnalyses(state),
     getAssays: () => state.assays,
     getSettings: () => state.settings,
     setSettings: (next) => { state.settings = next; },
     persist,
     previewImageLoader,
     resultFileAttachmentLoader,
-    onCreateLinkedGel,
     onCreateLinkedAssay,
     onOpenSampleRecorder
   });
@@ -1085,7 +1083,7 @@ export function initLabNotebook({
     const tableText = compactContextBlock(flattenNotebookResultTablesText(resultTables, entry?.resultTable), 12000);
     const toolCalculations = toolSidebarController.getCalculations();
     const toolCalculationText = compactContextBlock(JSON.stringify(toolCalculations, null, 2), 8000);
-    const linkedGel = entry?.id ? findLatestLinkedRecord(state.gelAnalyses, entry.id) : null;
+    const linkedGel = entry?.id ? findLatestLinkedRecord(getGelAnalyses(state), entry.id) : null;
     const linkedAssay = entry?.id ? findLatestLinkedRecord(state.assays, entry.id) : null;
     const sampleLinks = buildSampleLinkContextLines(entry, protocol);
     const pageTitle = compactContextLine(
@@ -1554,7 +1552,7 @@ export function initLabNotebook({
       return;
     }
 
-    const linkedGel = findLatestLinkedRecord(state.gelAnalyses, activeEntry.id);
+    const linkedGel = findLatestLinkedRecord(getGelAnalyses(state), activeEntry.id);
     const linkedAssay = findLatestLinkedRecord(state.assays, activeEntry.id);
     const parts = [];
 
@@ -2088,7 +2086,6 @@ export function initLabNotebook({
   notebookAddTableColumnBtn?.addEventListener('click', resultTableController.onAddColumn);
   notebookRemoveTableBtn?.addEventListener('click', resultTableController.onRemove);
   notebookResultFile?.addEventListener('change', () => renderResultFileAttachments());
-  notebookAddGelBtn?.addEventListener('click', () => { void linkedWorkActions.onAddGelClick(); });
   notebookAddAssayBtn?.addEventListener('click', () => { void linkedWorkActions.onAddAssayClick(); });
   notebookAddSamplesBtn?.addEventListener('click', () => { void linkedWorkActions.onAddSamplesClick(); });
   cancelEditBtn?.addEventListener('click', cancelEdit);

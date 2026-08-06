@@ -23,7 +23,6 @@ export const biologyNotebookManifest = {
     notebookType: 'biology',
     importProtocolsFromJson: rendererServices.protocol.importProtocolsFromJson,
     onCreateLinkedAssay: rendererServices.analysis.openAssayForNotebook,
-    onCreateLinkedGel: rendererServices.analysis.openGelForNotebook,
     onOpenSampleRecorder: (context = {}) => {
       showView(views.SAMPLE_REGISTRY);
       modules.sampleRegistry?.startNotebookSampleCapture?.(context);

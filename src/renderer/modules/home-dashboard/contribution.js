@@ -1,3 +1,4 @@
+import { getGelAnalyses } from '../../lib/gel-records.js';
 import { formatDateLocal, normalizeNotebookState } from './utils.js';
 
 // GitHub-style contribution heatmap covering the past 18 weeks. Aggregates
@@ -129,7 +130,7 @@ export function initContributionWidget({ state, safeText, elements }) {
       }
     });
 
-    (Array.isArray(state.gelAnalyses) ? state.gelAnalyses : []).forEach((analysis) => {
+    getGelAnalyses(state).forEach((analysis) => {
       const timestamp = analysis?.updatedAt || analysis?.createdAt;
       if (analysis?.imageName || analysis?.report || analysis?.previewImagePath || analysis?.previewImageDataUrl) {
         addContributionActivity(dayMap, timestamp, 'dataUploads');

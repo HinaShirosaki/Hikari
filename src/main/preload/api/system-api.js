@@ -42,6 +42,7 @@ function createSystemApi(ipcRenderer, deps = {}) {
     openExternalUrl: (url) => ipcRenderer.invoke(SYSTEM.OPEN_EXTERNAL_URL, { url }),
     inspectPluginFolder: (path) => ipcRenderer.invoke(PLUGINS.INSPECT_FOLDER, { path }),
     servePluginFolder: (id, path) => ipcRenderer.invoke(PLUGINS.SERVE_FOLDER, { id, path }),
+    exportPluginFile: (payload) => ipcRenderer.invoke(PLUGINS.EXPORT_FILE, payload),
     onAppCloseRequested: (handler) => {
       if (typeof handler !== 'function') {
         return () => {};

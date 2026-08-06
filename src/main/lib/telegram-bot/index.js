@@ -938,16 +938,10 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     ctx.reply(result.message);
   });
 
-  registerCommandAlias('gel', ['gels'], (ctx) => {
-    const query = getCommandArgs(ctx.message?.text);
-    const result = performSearchScope('gel', query);
-    ctx.reply(result.message);
-  });
-
   registerCommandAlias('search', [], (ctx) => {
     const { first: scopeArg, rest: query } = splitFirstToken(getCommandArgs(ctx.message?.text));
     if (!scopeArg || !query) {
-      ctx.reply('Usage: /search <scope> <query>. Scopes: chemicals, samples, assay, gel, protocol, project, papers');
+      ctx.reply('Usage: /search <scope> <query>. Scopes: chemicals, samples, assay, protocol, project, papers');
       return;
     }
     const result = performSearchScope(scopeArg, query);
@@ -961,7 +955,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
       const current = getDefaultSearchTarget(ctx);
       ctx.reply(current
         ? `Default search scope is "${current.scope}". Use /q <query>.`
-        : 'No default search scope set. Use /scope <chemicals|samples|assay|gel>.');
+        : 'No default search scope set. Use /scope <chemicals|samples|assay>.');
       return;
     }
 
@@ -973,7 +967,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
 
     const target = getSearchTarget(scopeArg);
     if (!target) {
-      ctx.reply('Unknown scope for /scope. Use chemicals, samples, assay, or gel.');
+      ctx.reply('Unknown scope for /scope. Use chemicals, samples, or assay.');
       return;
     }
 
@@ -989,7 +983,7 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
     }
     const target = getDefaultSearchTarget(ctx);
     if (!target) {
-      ctx.reply('No default search scope set. Use /scope <chemicals|samples|assay|gel> first.');
+      ctx.reply('No default search scope set. Use /scope <chemicals|samples|assay> first.');
       return;
     }
     const sent = sendSearchCommand(getMainWindow, target, query);
@@ -1358,7 +1352,6 @@ function startTelegramBot(getMainWindow, tokenOverride = '') {
       'samples',
       'sample',
       'assay',
-      'gel',
       'protocol',
       'project',
       'papers'

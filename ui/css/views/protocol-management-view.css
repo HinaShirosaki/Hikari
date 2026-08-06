@@ -170,6 +170,10 @@
 }
 
 .protocol-list-row-selected {
+  box-sizing: border-box;
+  width: calc(100% + var(--app-left-rail-padding-inline, 16px) + var(--app-left-rail-padding-inline, 16px));
+  margin-inline: calc(-1 * var(--app-left-rail-padding-inline, 16px));
+  padding-inline: var(--app-left-rail-padding-inline, 16px) !important;
   background: linear-gradient(90deg, color-mix(in srgb, var(--theme-accent) 10%, transparent), transparent 82%);
 }
 

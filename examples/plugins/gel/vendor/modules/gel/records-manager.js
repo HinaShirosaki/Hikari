@@ -5,6 +5,10 @@ import { clamp, createEmptyManualOverrides, normalizeManualOverrides, safeFilePa
 
 export function createRecordsManager({ runtime, elements, deps }) {
   let recordLoadRequest = 0;
+  let savePromise = null;
+  let exportPromise = null;
+  let saveLockedControls = [];
+  const deleteRequests = new Set();
 
   function ensureState() {
     if (!Array.isArray(runtime.state.gelAnalyses)) {
@@ -43,6 +47,15 @@ export function createRecordsManager({ runtime, elements, deps }) {
     if (!storageRoot || !record) {
       return '';
     }
+    // A record that already has a folder keeps it. Recomputing would move the
+    // artifacts whenever the name changed, and the v1 migration sanitizes the
+    // folder name differently from safeFilePart ("Old Gel" -> Old_Gel there,
+    // Old-Gel here) — so a migrated record would orphan its whole artifact
+    // tree on its first re-save.
+    const existingFolder = String(record.storageFolder || '').trim();
+    if (existingFolder) {
+      return existingFolder;
+    }
     const linkedEntry = (runtime.state.notebookEntries || []).find((entry) => entry.id === record.notebookEntryId);
     const folderName = `${safeFilePart(record.name || record.id, 'gel')}__${safeFilePart(record.id, 'gel')}`;
     if (linkedEntry?.storageFolder) {
@@ -63,7 +76,10 @@ export function createRecordsManager({ runtime, elements, deps }) {
       fileName,
       dataBase64
     });
-    return result?.ok ? result : null;
+    if (!result?.ok) {
+      throw new Error(result?.error || `Could not store ${fileName}.`);
+    }
+    return result;
   }
 
   function arraysEqual(left, right) {
@@ -153,25 +169,19 @@ export function createRecordsManager({ runtime, elements, deps }) {
           };
         }
       } catch (error) {
-        console.warn('Failed to persist gel preview image:', error);
+        throw new Error(`Could not save the gel preview: ${error?.message || error}`);
       }
+      throw new Error('Could not save the gel preview image.');
     }
 
-    return {
-      previewImagePath: existingPath,
-      previewImageRelativePath: existingRelativePath,
-      previewImageDataUrl: previewDataUrl,
-      previewImageIsSource: targetFolder
-        ? false
-        : Boolean(runtime.currentImage?.imageData || existingRecord?.previewImageIsSource)
-    };
+    throw new Error('Choose a storage folder in Hikari Settings before saving gels.');
   }
 
   async function persistGelRecordArtifacts(record, existingRecord = null) {
     const storageRoot = getStorageRoot();
     const targetFolder = buildGelArtifactFolder(record);
     if (!storageRoot || !targetFolder || !window.hikariApi?.writeJsonFile) {
-      return {};
+      throw new Error('Gel artifact storage is unavailable. Choose a storage folder in Hikari Settings.');
     }
 
     const sourceImageDataUrl = runtime.currentImage?.imageData
@@ -217,8 +227,23 @@ export function createRecordsManager({ runtime, elements, deps }) {
           : Promise.resolve(null)
       ]);
     } catch (error) {
-      console.warn('Failed to persist gel record artifacts:', error);
-      return {};
+      throw new Error(`Could not save gel artifacts: ${error?.message || error}`);
+    }
+
+    // A null here is a *failure*, not "nothing to do": persistDataUrlArtifact
+    // returns null when the payload encodes empty (an oversized canvas yields
+    // the literal "data:,"). Treating it as success dropped the source image
+    // while the save reported "Saved gel analysis".
+    if (sourceImageDataUrl && !sourceImageResult) {
+      throw new Error('Could not save gel artifacts: the source image could not be encoded.');
+    }
+    const failedResult = [reportResult, metadataResult, sourceImageDataUrl ? sourceImageResult : null]
+      .find((result) => result && result.ok !== true);
+    if (failedResult) {
+      throw new Error(`Could not save gel artifacts: ${failedResult.error || 'the host did not confirm the write.'}`);
+    }
+    if (!reportResult?.filePath || !metadataResult?.filePath) {
+      throw new Error('Could not save gel artifacts: required report or metadata paths are missing.');
     }
 
     return {
@@ -281,8 +306,7 @@ export function createRecordsManager({ runtime, elements, deps }) {
     };
   }
 
-  async function onSaveAnalysis(event) {
-    event.preventDefault();
+  async function performSaveAnalysis() {
     ensureState();
 
     const name = elements.gelNameInput?.value.trim() || '';
@@ -295,10 +319,16 @@ export function createRecordsManager({ runtime, elements, deps }) {
     const existing = runtime.state.gelAnalyses.find((item) => item.id === editingId);
     const record = buildRecordFromCurrentReport(existing?.id || '');
     record.name = name;
-    Object.assign(record, await persistNotebookPreviewImage(record, existing));
-    Object.assign(record, await persistGelRecordArtifacts(record, existing));
+    try {
+      Object.assign(record, await persistNotebookPreviewImage(record, existing));
+      Object.assign(record, await persistGelRecordArtifacts(record, existing));
+    } catch (error) {
+      deps.setStatus(error instanceof Error ? error.message : 'Could not save gel artifacts.');
+      return null;
+    }
 
     const index = runtime.state.gelAnalyses.findIndex((item) => item.id === record.id);
+    const previousRecord = index >= 0 ? runtime.state.gelAnalyses[index] : null;
     if (index >= 0) {
       runtime.state.gelAnalyses[index] = record;
     } else {
@@ -306,7 +336,18 @@ export function createRecordsManager({ runtime, elements, deps }) {
     }
 
     syncNotebookGelLinks();
-    runtime.persist();
+    try {
+      await runtime.persist();
+    } catch (error) {
+      if (index >= 0) {
+        runtime.state.gelAnalyses[index] = previousRecord;
+      } else {
+        runtime.state.gelAnalyses = runtime.state.gelAnalyses.filter((item) => item.id !== record.id);
+      }
+      syncNotebookGelLinks();
+      deps.setStatus(`Could not save gel: ${error?.message || error}`);
+      return null;
+    }
     renderList();
     if (typeof runtime.onGelAnalysesChanged === 'function') {
       runtime.onGelAnalysesChanged();
@@ -318,38 +359,138 @@ export function createRecordsManager({ runtime, elements, deps }) {
     return record;
   }
 
+  function setSaveBusy(isBusy) {
+    if (isBusy) {
+      saveLockedControls = Array.from(
+        elements.gelForm?.querySelectorAll?.('input, select, textarea, button') || []
+      ).map((control) => ({ control, disabled: Boolean(control.disabled) }));
+      saveLockedControls.forEach(({ control }) => {
+        control.disabled = true;
+      });
+    } else {
+      saveLockedControls.forEach(({ control, disabled }) => {
+        control.disabled = disabled;
+      });
+      saveLockedControls = [];
+    }
+    if (elements.gelSaveBtn) {
+      elements.gelSaveBtn.disabled = isBusy;
+      elements.gelSaveBtn.textContent = isBusy ? 'Saving…' : 'Save Analysis';
+      elements.gelSaveBtn.setAttribute('aria-busy', String(isBusy));
+    }
+    elements.gelForm?.setAttribute('aria-busy', String(isBusy));
+  }
+
+  function onSaveAnalysis(event) {
+    event?.preventDefault?.();
+    if (savePromise) {
+      return savePromise;
+    }
+    setSaveBusy(true);
+    deps.setStatus('Saving gel analysis…');
+    savePromise = performSaveAnalysis().finally(() => {
+      setSaveBusy(false);
+      savePromise = null;
+    });
+    return savePromise;
+  }
+
+  function runExclusiveExport(activeButton, action) {
+    if (exportPromise) {
+      return exportPromise;
+    }
+    const originalLabel = activeButton?.textContent || '';
+    // Restore what each button was, not an assumed "enabled": these live inside
+    // #gel-form, so a save running concurrently snapshots them and restores its
+    // own copy afterwards. Forcing false here loses that race and leaves both
+    // export buttons dead until the plugin reloads.
+    const lockedExportButtons = [elements.gelExportJsonBtn, elements.gelExportCsvBtn]
+      .filter(Boolean)
+      .map((button) => ({ button, disabled: Boolean(button.disabled) }));
+    lockedExportButtons.forEach(({ button }) => {
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+    });
+    if (activeButton) {
+      activeButton.textContent = 'Exporting…';
+    }
+    exportPromise = Promise.resolve()
+      .then(action)
+      .finally(() => {
+        lockedExportButtons.forEach(({ button, disabled }) => {
+          button.disabled = disabled;
+          button.removeAttribute('aria-busy');
+        });
+        if (activeButton) {
+          activeButton.textContent = originalLabel;
+        }
+        exportPromise = null;
+      });
+    return exportPromise;
+  }
+
   function onExportJson() {
+    if (exportPromise) {
+      return exportPromise;
+    }
     if (!runtime.currentReport) {
       deps.setStatus('No analysis report to export.');
-      return;
+      return Promise.resolve(null);
     }
 
     const fileName = `${safeFilePart(elements.gelNameInput?.value, 'gel-analysis')}.json`;
-    downloadTextFile({
-      content: `${JSON.stringify(runtime.currentReport, null, 2)}\n`,
-      fileName,
-      mimeType: 'application/json;charset=utf-8;'
+    return runExclusiveExport(elements.gelExportJsonBtn, async () => {
+      try {
+        const result = await downloadTextFile({
+          content: `${JSON.stringify(runtime.currentReport, null, 2)}\n`,
+          fileName,
+          mimeType: 'application/json;charset=utf-8;'
+        });
+        deps.setStatus(result?.canceled ? 'Export canceled.' : `Exported ${result?.fileName || fileName}.`);
+        return result;
+      } catch (error) {
+        deps.setStatus(`Could not export JSON: ${error?.message || error}`);
+        return null;
+      }
     });
-    deps.setStatus(`Exported ${fileName}.`);
   }
 
   function onExportCsv() {
+    if (exportPromise) {
+      return exportPromise;
+    }
     if (!runtime.currentReport) {
       deps.setStatus('No analysis report to export.');
-      return;
+      return Promise.resolve(null);
     }
 
     const fileName = `${safeFilePart(elements.gelNameInput?.value, 'gel-analysis')}.csv`;
-    downloadTextFile({
-      content: createBandsCsv(runtime.currentReport),
-      fileName,
-      mimeType: 'text/csv;charset=utf-8;'
+    return runExclusiveExport(elements.gelExportCsvBtn, async () => {
+      try {
+        const result = await downloadTextFile({
+          content: createBandsCsv(runtime.currentReport),
+          fileName,
+          mimeType: 'text/csv;charset=utf-8;'
+        });
+        deps.setStatus(result?.canceled ? 'Export canceled.' : `Exported ${result?.fileName || fileName}.`);
+        return result;
+      } catch (error) {
+        deps.setStatus(`Could not export CSV: ${error?.message || error}`);
+        return null;
+      }
     });
-    deps.setStatus(`Exported ${fileName}.`);
   }
 
   function resetForm() {
+    if (savePromise) {
+      deps.setStatus('Wait for the current save to finish before clearing the form.');
+      return;
+    }
     recordLoadRequest += 1;
+    elements.gelForm?.setAttribute('aria-busy', 'false');
+    if (elements.gelSaveBtn) {
+      elements.gelSaveBtn.disabled = false;
+    }
     elements.gelIdInput.value = '';
     elements.gelForm.reset();
     elements.gelTypeInput.value = 'sds-page';
@@ -478,6 +619,10 @@ export function createRecordsManager({ runtime, elements, deps }) {
 
   async function fillFromRecord(record) {
     const loadRequest = recordLoadRequest += 1;
+    elements.gelForm?.setAttribute('aria-busy', 'true');
+    if (elements.gelSaveBtn) {
+      elements.gelSaveBtn.disabled = true;
+    }
     elements.gelIdInput.value = record.id;
     elements.gelNameInput.value = record.name || '';
     runtime.pendingNotebookLink = {
@@ -516,11 +661,15 @@ export function createRecordsManager({ runtime, elements, deps }) {
     deps.setStatus('Loading saved gel image...');
 
     const restored = await restoreRecordImage(record);
-    if (
-      loadRequest !== recordLoadRequest
-      || elements.gelIdInput.value !== record.id
-      || runtime.imageRevision !== clearedImageRevision
-    ) {
+    if (loadRequest !== recordLoadRequest || elements.gelIdInput.value !== record.id) {
+      return;
+    }
+
+    elements.gelForm?.setAttribute('aria-busy', 'false');
+    if (elements.gelSaveBtn) {
+      elements.gelSaveBtn.disabled = false;
+    }
+    if (runtime.imageRevision !== clearedImageRevision) {
       return;
     }
 
@@ -542,10 +691,32 @@ export function createRecordsManager({ runtime, elements, deps }) {
     runtime.markDraftSaved?.();
   }
 
-  function deleteRecord(recordId) {
-    runtime.state.gelAnalyses = (runtime.state.gelAnalyses || []).filter((item) => item.id !== recordId);
+  async function deleteRecord(recordId) {
+    if (!recordId || deleteRequests.has(recordId)) {
+      return;
+    }
+    const record = (runtime.state.gelAnalyses || []).find((item) => item.id === recordId);
+    if (!record) {
+      return;
+    }
+    if (typeof deps.confirmDelete === 'function' && !deps.confirmDelete(record)) {
+      deps.setStatus('Delete canceled.');
+      return;
+    }
+    deleteRequests.add(recordId);
+    const previousRecords = runtime.state.gelAnalyses || [];
+    runtime.state.gelAnalyses = previousRecords.filter((item) => item.id !== recordId);
     syncNotebookGelLinks();
-    runtime.persist();
+    try {
+      await runtime.persist();
+    } catch (error) {
+      runtime.state.gelAnalyses = previousRecords;
+      syncNotebookGelLinks();
+      deps.setStatus(`Could not delete gel: ${error?.message || error}`);
+      return;
+    } finally {
+      deleteRequests.delete(recordId);
+    }
     renderList();
     if (typeof runtime.onGelAnalysesChanged === 'function') {
       runtime.onGelAnalysesChanged();
@@ -553,10 +724,19 @@ export function createRecordsManager({ runtime, elements, deps }) {
     if (elements.gelIdInput?.value === recordId) {
       resetForm();
     }
+    deps.setStatus(`Removed saved gel record: ${record.name || record.id}. Stored artifact files were left in place.`);
   }
 
   async function onListClick(event) {
-    const editBtn = event.target.closest('[data-gel-edit]');
+    if (savePromise) {
+      deps.setStatus('Wait for the current save to finish before opening or deleting another record.');
+      return;
+    }
+    const target = event?.target;
+    if (typeof target?.closest !== 'function') {
+      return;
+    }
+    const editBtn = target.closest('[data-gel-edit]');
     if (editBtn) {
       const record = (runtime.state.gelAnalyses || []).find((item) => item.id === editBtn.dataset.gelEdit);
       if (record) {
@@ -565,9 +745,9 @@ export function createRecordsManager({ runtime, elements, deps }) {
       return;
     }
 
-    const deleteBtn = event.target.closest('[data-gel-delete]');
+    const deleteBtn = target.closest('[data-gel-delete]');
     if (deleteBtn) {
-      deleteRecord(deleteBtn.dataset.gelDelete);
+      await deleteRecord(deleteBtn.dataset.gelDelete);
     }
   }
 

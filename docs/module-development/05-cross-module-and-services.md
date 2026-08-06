@@ -53,7 +53,7 @@ The pre-seeded keys (passed in by the renderer core as `uiBridge`):
 | `setSearchInputValue` | `(inputId, value) => boolean`, used to drive in-view search inputs |
 | `VIEWS` | the `VIEWS` constants map |
 
-After init, every module is also registered under its own key. Current keys: `biologyNotebook`, `protocol`, `agentChat`, `agentChatRail`, `workflowManagement`, `papers`, `labCommonInventory`, `personalInventory`, `sampleRegistry`, `assay`, `gel`, `sequenceViewer`, `toolBox`, `settings`, `homeDashboard`.
+After init, every module is also registered under its own key. Current keys: `biologyNotebook`, `protocol`, `agentChat`, `agentChatRail`, `workflowManagement`, `papers`, `labCommonInventory`, `personalInventory`, `sampleRegistry`, `assay`, `sequenceViewer`, `toolBox`, `settings`, `homeDashboard`.
 
 When **inside** a feature module, prefer the injected callback over `registry.get(...)`. The registry exists so service files can fan out without each module knowing about the others.
 
@@ -67,7 +67,7 @@ The service layer is the glue you should reach for whenever a change in one modu
 | `notebookService` | `handleNotebookEntriesChanged()`, `handleAgentNotebookEntriesChanged()` |
 | `projectService` | `handleProjectsChanged()` |
 | `inventoryService` | `handleSamplesChanged()`, `openSampleSearch(query)` |
-| `analysisService` | `handleAssaysChanged()`, `handleGelAnalysesChanged()`, `openAssayForNotebook(...)`, `openGelForNotebook(...)` |
+| `analysisService` | `handleAssaysChanged()`, `openAssayForNotebook(...)` |
 | `sequenceService` | `openFromToolBox(seq)` |
 
 Each service is a closure over the registry. A typical implementation:
@@ -81,8 +81,6 @@ export function createProtocolService(registry) {
     registry.get('workflowManagement').render?.();
     registry.get('assay').renderNotebookOptions?.();
     registry.get('assay').renderList?.();
-    registry.get('gel').renderNotebookOptions?.();
-    registry.get('gel').renderList?.();
   }
   return { handleProtocolsChanged, ... };
 }

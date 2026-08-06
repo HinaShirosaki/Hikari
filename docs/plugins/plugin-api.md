@@ -1,12 +1,13 @@
 # Hikari Plugin Host API
 
-The host API is how a sandboxed plugin reads and writes Hikari data. It is a
-`postMessage` request/response protocol between the plugin's iframe and the
-host page, implemented in
+The host API is how a sandboxed plugin reads and writes Hikari data. It uses a
+`postMessage` request/response protocol plus a small host-event channel between
+the plugin's iframe and the host page, implemented in
 [`src/renderer/app/plugin-bridge.js`](../../src/renderer/app/plugin-bridge.js).
 
-Prerequisite: [plugin-system.md](plugin-system.md) for the folder contract and
-how `permissions` are declared and frozen.
+Start with [quickstart.md](quickstart.md) for a copyable plugin. Use
+[plugin-system.md](plugin-system.md) for the complete folder contract and how
+`permissions` are declared and frozen.
 
 **Local and served plugins only.** A remote plugin (one with `embed` in its
 manifest) cannot hold permissions and its frame is never registered with the
@@ -20,18 +21,32 @@ denied. See [plugin-system.md §1.0](plugin-system.md#10-four-kinds-of-plugin).
 Copy [`examples/plugins/notebook-results/hikari.js`](../../examples/plugins/notebook-results/hikari.js)
 into your plugin folder. It wraps the raw protocol in promises:
 
+```html
+<script src="./hikari.js"></script>
+<script src="./main.js"></script>
+```
+
 ```js
-import { hikari } from './hikari.js';
+const { hikari } = window.HikariPlugin;
 
 const entries = await hikari.call('notebook.list');
 await hikari.call('notebook.appendResult', { entryId: entries[0].id, text: 'done' });
 ```
 
+The client is intentionally a classic script, so the same copy works in both
+opaque-origin local plugins and loopback-served plugins. Local plugins cannot
+load relative ES modules; see
+[plugin-system.md §5.4](plugin-system.md#54-opaque-origins-cannot-load-es-modules).
+
 `hikari.call(verb, params)` resolves with the verb's result or rejects with an
 `Error` carrying the host's message. Calls time out after 10 s — the host
 stays silent for unregistered frames (§4), so without a timeout a call from a
 disabled plugin, or from the page opened directly in a browser, would hang
-forever.
+forever. The client rejects immediately for an empty verb, non-object params,
+an unavailable parent frame, or a value that `postMessage` cannot clone.
+
+`hikari.on(event, listener)` subscribes to the small set of host context events
+in §2.1. It returns an unsubscribe function.
 
 ### 1.1 The raw protocol
 
@@ -44,6 +59,9 @@ If you would rather not use the client, the wire format is:
 // host -> plugin
 { hikari: 1, id: "<same id>", ok: true,  result: <json> }
 { hikari: 1, id: "<same id>", ok: false, error: "<message>" }
+
+// host -> plugin event
+{ hikari: 1, event: "app.context", payload: <json> }
 ```
 
 `hikari: 1` is the protocol marker; messages without it are ignored in both
@@ -67,8 +85,34 @@ Hikari and to see what it was actually granted.
 
 ```js
 await hikari.call('app.info');
-// { host: 'hikari', pluginId: 'notebook-results', permissions: ['notebook:read', 'notebook:write'] }
+// {
+//   host: 'hikari',
+//   pluginId: 'notebook-results',
+//   permissions: ['notebook:read', 'notebook:write'],
+//   appearance: { mode: 'day', fontSize: 16 },
+//   storage: { configured: true }
+// }
 ```
+
+The storage value is deliberately a boolean. It lets a plugin disable file
+actions without revealing the user's storage path.
+
+### 2.1 `app.context` event — *no permission required*
+
+The host pushes the same safe `appearance` and `storage` context when either
+changes. `changed` identifies the part that triggered the event:
+
+```js
+const unsubscribe = hikari.on('app.context', ({ appearance, storage, changed }) => {
+  document.body.dataset.appearanceMode = appearance.mode;
+  saveButton.disabled = !storage.configured;
+});
+// payload: { appearance: {...}, storage: {...}, changed: 'appearance' | 'storage' }
+```
+
+Call `app.info` for the initial snapshot; use the event to stay synchronized.
+The event does not expose protocols, notebook records, or other mutable app
+data.
 
 ### `protocols.list` — `protocols:read`
 
@@ -127,13 +171,124 @@ await hikari.call('notebook.get', { id: 'n_123' });
 // { id, experimentName, protocolId, projectId, resultText, resultTables, savedAt }
 ```
 
+### `storage.get` — `storage`
+
+The plugin's own persisted blob, or `null` if it has never written one.
+
+```js
+await hikari.call('storage.get');
+// { value: { records: [...] } | null, limit: 1000000 }
+```
+
+`limit` is the cap `storage.set` enforces, in characters. Read it rather than
+hard-coding the number — showing the user how full they are is the difference
+between a save that fails and a save they saw coming.
+
 ---
 
 ## 3. Write verbs
 
+### `storage.set` — `storage`
+
+Replaces the plugin's blob. This is how a plugin keeps records of its own
+instead of pushing everything it produces into the notebook.
+
+```js
+await hikari.call('storage.set', { value: { records: [record, ...previous] } });
+// { bytes: 17240, limit: 1000000 }
+```
+
+| Param | Type | Notes |
+| --- | --- | --- |
+| `value` | any JSON | Required. Replaces the whole blob — read, modify, write back. `null` clears it. |
+
+Omitting `value` is rejected. Clearing is therefore always explicit:
+`hikari.call('storage.set', { value: null })`.
+
+Rules that matter:
+
+- **Namespaced by frame identity.** A plugin reads and writes only its own
+  slice; there is no key parameter, so there is nothing to pass to reach
+  another plugin's data.
+- **Capped at `limit` characters of JSON**, and a write over the cap is
+  rejected with the size in the error while leaving the previous value intact.
+  The cap is not politeness: every plugin's blob rides inside app state, which
+  is a single `localStorage` record, so one oversized blob would break *every*
+  later save app-wide.
+- **JSON only.** The value is round-tripped through `JSON.stringify` before it
+  is stored, so a `Map`, `Date`, or `Blob` that survived the structured clone
+  does not survive the write. Anything cyclic is refused outright.
+- **Removing the plugin in Settings does not erase the blob**, so re-adding a
+  plugin finds its records where they were.
+
+The blob is the right place for what the plugin owns — its records, its
+settings, its cache. It is the wrong place for what the *user* owns: results
+they will look for later belong in the notebook, where the rest of the app can
+see them. It is also the wrong place for anything measured in megabytes; that
+is what `files.write` is for.
+
+### `files.write` / `files.read` — `files`
+
+A folder on disk, under the user's storage root, for data a capped JSON blob
+cannot hold — images above all.
+
+```js
+const { path } = await hikari.call('files.write', {
+  path: 'Gels/run-3/source.png',
+  dataBase64: base64Png
+});
+const { dataBase64 } = await hikari.call('files.read', { path });
+```
+
+| Param | Type | Notes |
+| --- | --- | --- |
+| `path` | string | Required. **Relative**, always. Resolved under the plugin's own folder. |
+| `dataBase64` | string | `files.write` only. Required, up to 24 000 000 characters (~18 MB). |
+
+- **The plugin never learns where its folder is.** Every path is relative and
+  resolved by the host to `<storage root>/Plugins/<plugin id>/`. Absolute
+  paths, `..` segments, drive letters, backslash separators, and null bytes are
+  rejected outright — the validation is in the bridge, because the underlying
+  host calls would happily read any absolute path they were handed.
+- **`files.write` returns the path that was actually written**, which may
+  differ from the one you asked for if a file of that name already existed.
+  Store what comes back and read with that.
+- **The base64 must be canonical and the host write must succeed.** Invalid
+  base64 is rejected before IPC, and disk or permission failures reject the
+  promise. Never mark a record saved until this call resolves.
+- **A storage folder must be configured.** With none set in Settings, both
+  verbs fail with a message saying so rather than writing somewhere else.
+- Nothing here lists, deletes, or moves files. Keep your own index of what you
+  wrote, in `storage`.
+
+### `downloads.save` — `downloads`
+
+Exports plugin-owned bytes through a native save dialog. The plugin suggests a
+file name, but the user chooses the destination; the iframe never receives a
+filesystem path and does not need the broad `allow-downloads` sandbox token.
+
+```js
+const dataBase64 = btoa('lane,band\n1,1\n');
+await hikari.call('downloads.save', {
+  fileName: 'gel-bands.csv',
+  dataBase64
+});
+// { saved: true, fileName: 'gel-bands.csv' }
+// or { saved: false, canceled: true }
+```
+
+| Param | Type | Notes |
+| --- | --- | --- |
+| `fileName` | string | Suggested name only; sanitized by the host. |
+| `dataBase64` | string | Required, up to 24 000 000 characters (~18 MB). |
+
+Cancellation is a successful user choice, not an exception. Write failures are
+returned as normal host API errors.
+
 ### `notebook.appendResult` — `notebook:write`
 
-Appends results to an **existing** notebook entry. This is the only write verb.
+Appends results to an **existing** notebook entry. This is the only verb that
+writes to the user's own records.
 
 ```js
 await hikari.call('notebook.appendResult', {
@@ -208,14 +363,18 @@ probably belongs as a built-in module
 ([plugin-system.md §8](plugin-system.md#8-graduating-a-plugin-into-a-built-in-module))
 rather than a plugin.
 
-- **No create or delete.** A plugin cannot make a protocol, project, sample, or
-  notebook entry, and cannot delete anything. Writes only append to a record
-  the user already created.
-- **No settings, storage paths, or filesystem access.**
+- **No create or delete of the user's records.** A plugin cannot make a
+  protocol, project, sample, or notebook entry, and cannot delete one. Writes
+  only append to a record the user already created. (Its own blob is a
+  different matter — see `storage.set`.)
+- **No settings, and no direct filesystem access.** A plugin cannot read or
+  write the app's settings, cannot learn the storage root, and cannot reach a
+  file outside `<storage root>/Plugins/<its id>/`. `downloads.save` can write
+  elsewhere only after the user chooses the exact destination in a save dialog.
 - **No agent, LLM, or network verbs.** A plugin can `fetch()` on its own like
   any webpage; the host will not proxy it.
-- **No subscriptions.** Request/response only — there are no host-initiated
-  events, so poll if you need to observe change.
+- **No data subscriptions.** The host only pushes the safe `app.context`
+  snapshot. Protocol, notebook, project, and sample data remain request/response.
 - **No cross-plugin calls.**
 
 ---
@@ -245,5 +404,5 @@ Rules:
 - **Introducing a new capability?** Add it to `PLUGIN_PERMISSIONS` in
   [`inspect-plugin-folder.js`](../../src/main/lib/inspect-plugin-folder.js),
   or manifests requesting it will be rejected at install time. Then document it
-  in [plugin-system.md §1.2](plugin-system.md#15-permissions) and here, and
+  in [plugin-system.md §1.5](plugin-system.md#15-permissions) and here, and
   extend the bridge test in [`test.js`](../../test.js).

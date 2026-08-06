@@ -273,6 +273,9 @@ function createMainServices(context = {}) {
     getDefaultDataFilePath: appPaths.getDefaultDataFilePath,
     getStorageRootPointerPath: appPaths.getStorageRootPointerPath,
     getUserDataPath: appPaths.getUserDataPath,
+    getBundledPluginPath: (pluginId) => (
+      pluginId === 'gel' ? path.join(projectRoot, 'examples', 'plugins', 'gel') : ''
+    ),
     paperKnowledgeDatabaseRuntime: agents.paperKnowledgeDatabaseRuntime,
     discoverPapersFromStorageRoot: (input = {}) => discoverPapersFromStorageRoot({
       ...input,

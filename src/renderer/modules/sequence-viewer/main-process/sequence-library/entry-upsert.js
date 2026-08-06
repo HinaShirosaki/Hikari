@@ -2,7 +2,12 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { ALIGNMENTS_DIR_NAME, STATUS_SAVED, STATUS_TEMPORARY } = require('./constants');
+const {
+  ALIGNMENTS_DIR_NAME,
+  FEATURE_INDEX_VERSION,
+  STATUS_SAVED,
+  STATUS_TEMPORARY
+} = require('./constants');
 const {
   normalizeEntryRow,
   openDatabase,
@@ -44,7 +49,9 @@ async function upsertSequenceEntry(payload = {}) {
   try {
     const existing = await loadExistingEntry(db, payload);
     const row = await writeEntryFilesAndRow({ db, existing, paths, payload, gbkText });
-    replaceFeatureOccurrencesForEntry(db, row, payload);
+    if (hasFeatureIndexPayload(payload)) {
+      replaceFeatureOccurrencesForEntry(db, row, payload);
+    }
     const alignments = await resolveNextAlignmentSessions({ alignmentSessions, entryId: row.id, paths });
     await persistDatabase(paths.sqlitePath, db);
     return {
@@ -56,6 +63,10 @@ async function upsertSequenceEntry(payload = {}) {
   } finally {
     db.close();
   }
+}
+
+function hasFeatureIndexPayload(payload = {}) {
+  return typeof payload.sequence === 'string' && Array.isArray(payload.features);
 }
 
 async function loadExistingEntry(db, payload) {
@@ -96,6 +107,9 @@ function buildEntryRow({ existing, payload, entryId, resolvedName, status, gbkAb
     topology: cleanText(payload.topology || existing?.topology, 40) || 'linear',
     sequenceLength: Math.max(0, Math.round(Number(payload.sequenceLength) || Number(existing?.sequenceLength) || 0)),
     featureCount: Math.max(0, Math.round(Number(payload.featureCount) || Number(existing?.featureCount) || 0)),
+    featureIndexVersion: hasFeatureIndexPayload(payload)
+      ? FEATURE_INDEX_VERSION
+      : Math.max(0, Number(existing?.featureIndexVersion) || 0),
     gbkRelPath: toPosixRelative(paths.libraryRoot, gbkAbsPath),
     // ponytail: previews render from the .gbk now, so no preview document is
     // written. The column stays (NOT NULL, blanked on write) to avoid a table
@@ -111,8 +125,8 @@ function upsertEntryRow(db, row) {
   db.run(
     `INSERT INTO sequence_entries (
        id, name, normalized_name, status, source_format, topology, sequence_length, feature_count,
-       gbk_rel_path, html_rel_path, folder_id, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       feature_index_version, gbk_rel_path, html_rel_path, folder_id, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        name = excluded.name,
        normalized_name = excluded.normalized_name,
@@ -121,13 +135,14 @@ function upsertEntryRow(db, row) {
        topology = excluded.topology,
        sequence_length = excluded.sequence_length,
        feature_count = excluded.feature_count,
+       feature_index_version = excluded.feature_index_version,
        gbk_rel_path = excluded.gbk_rel_path,
        html_rel_path = excluded.html_rel_path,
        folder_id = excluded.folder_id,
        updated_at = excluded.updated_at`,
     [
       row.id, row.name, row.normalizedName, row.status, row.sourceFormat, row.topology,
-      row.sequenceLength, row.featureCount, row.gbkRelPath, row.htmlRelPath, row.folderId,
+      row.sequenceLength, row.featureCount, row.featureIndexVersion, row.gbkRelPath, row.htmlRelPath, row.folderId,
       row.createdAt, row.updatedAt
     ]
   );

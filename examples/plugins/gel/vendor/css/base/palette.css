@@ -1,0 +1,154 @@
+/*
+ * Shared application theme contract.
+ *
+ * App and module CSS should use these semantic colors first. A module that
+ * needs visualization-specific colors must define them in its own
+ * `*-palette.css` file instead of expanding this shared theme.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* Page and surface colors */
+  --theme-background: #fcfbf8;
+  --theme-surface: #fcfbf8;
+  --theme-surface-subtle: #f1e9de;
+  --theme-surface-elevated: #ffffff;
+  --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
+  --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface));
+  --theme-surface-active: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
+
+  /* Borders */
+  --theme-border: #d8cec1;
+  --theme-border-soft: #e6ddd1;
+  --theme-border-translucent: color-mix(in srgb, var(--theme-border) 90%, transparent);
+
+  /* Text */
+  --theme-text: #2a241d;
+  --theme-text-muted: #72675d;
+  --theme-text-strong: #17120e;
+  --theme-primary: var(--theme-text-strong);
+  --theme-text-on-accent: #fbf9f4;
+
+  /* Actions and status */
+  --theme-accent: #647255;
+  --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  --theme-focus: #7a8a69;
+  --theme-success: #166534;
+  --theme-warning: #b25522;
+  --theme-danger: #a74b3a;
+
+  /* Shared component states */
+  --theme-panel: var(--theme-surface-elevated);
+  --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 76%, var(--theme-surface-elevated) 24%);
+  --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
+  --theme-control-border: color-mix(in srgb, var(--theme-border) 84%, transparent);
+
+  /* Overlays and shadows */
+  --theme-loading-background: #11140f;
+  --theme-overlay: rgba(18, 34, 55, 0.2);
+  --theme-overlay-strong: rgba(0, 0, 0, 0.46);
+  --theme-shadow-color-subtle: rgba(27, 20, 14, 0.08);
+  --theme-shadow-color: rgba(27, 20, 14, 0.14);
+  --theme-shadow-color-strong: rgba(27, 20, 14, 0.18);
+  --theme-shadow-small: 0 2px 8px rgba(27, 20, 14, 0.1);
+  --theme-shadow-medium: 0 6px 14px rgba(27, 20, 14, 0.12);
+
+  /* Scrollbars */
+  --theme-scrollbar-size: 8px;
+  --theme-scrollbar-thumb: rgba(120, 113, 104, 0.24);
+  --theme-scrollbar-thumb-hover: rgba(120, 113, 104, 0.36);
+}
+
+body.theme-night {
+  color-scheme: dark;
+
+  --theme-background: #11140f;
+  --theme-surface: #171c17;
+  --theme-surface-subtle: #222a22;
+  --theme-surface-elevated: #1c231d;
+  --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
+  --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 8%, var(--theme-surface));
+  --theme-surface-active: color-mix(in srgb, var(--theme-accent) 14%, var(--theme-surface));
+
+  --theme-border: #3c473d;
+  --theme-border-soft: #2e382f;
+  --theme-border-translucent: color-mix(in srgb, var(--theme-border) 90%, transparent);
+
+  --theme-text: #e8eee5;
+  --theme-text-muted: #b4c0ae;
+  --theme-text-strong: #f8fbf4;
+  --theme-primary: var(--theme-text-strong);
+  /* Accent is light in night mode, so ink that sits on it must be dark. */
+  --theme-text-on-accent: #071006;
+
+  --theme-accent: #91aa75;
+  --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 18%, transparent);
+  --theme-focus: #a4bd8a;
+  --theme-success: #5cc98a;
+  --theme-warning: #e5a063;
+  --theme-danger: #ef8b77;
+
+  --theme-panel: var(--theme-surface-elevated);
+  --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 76%, var(--theme-surface-elevated) 24%);
+  --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 84%, var(--theme-accent) 16%);
+  --theme-control-border: color-mix(in srgb, var(--theme-border) 84%, transparent);
+
+  --theme-loading-background: #11140f;
+  --theme-overlay: rgba(5, 9, 6, 0.46);
+  --theme-overlay-strong: rgba(5, 9, 6, 0.58);
+  --theme-shadow-color-subtle: rgba(0, 0, 0, 0.18);
+  --theme-shadow-color: rgba(0, 0, 0, 0.3);
+  --theme-shadow-color-strong: rgba(0, 0, 0, 0.46);
+  --theme-shadow-small: 0 2px 8px rgba(0, 0, 0, 0.24);
+  --theme-shadow-medium: 0 6px 14px rgba(0, 0, 0, 0.3);
+
+  --theme-scrollbar-thumb: rgba(226, 236, 220, 0.24);
+  --theme-scrollbar-thumb-hover: rgba(226, 236, 220, 0.36);
+}
+
+body.theme-miku {
+  color-scheme: light;
+
+  --theme-background: #ecfbfa;
+  --theme-surface: #f4fdfc;
+  --theme-surface-subtle: #d8f3f1;
+  --theme-surface-elevated: #ffffff;
+  --theme-surface-muted: color-mix(in srgb, var(--theme-surface-subtle) 82%, var(--theme-surface-elevated) 18%);
+  --theme-surface-hover: color-mix(in srgb, var(--theme-accent) 10%, var(--theme-surface));
+  --theme-surface-active: color-mix(in srgb, var(--theme-accent) 18%, var(--theme-surface));
+
+  --theme-border: #9bd8d4;
+  --theme-border-soft: #c5ebe8;
+  --theme-border-translucent: color-mix(in srgb, var(--theme-border) 88%, transparent);
+
+  --theme-text: #233b3f;
+  --theme-text-muted: #527378;
+  --theme-text-strong: #142d31;
+  --theme-primary: var(--theme-text-strong);
+  --theme-text-on-accent: #102b2e;
+
+  --theme-accent: #39c5bb;
+  --theme-accent-soft: color-mix(in srgb, var(--theme-accent) 22%, transparent);
+  --theme-focus: #219d95;
+  --theme-success: #268b68;
+  --theme-warning: #bd7a24;
+  --theme-danger: #d84e72;
+
+  --theme-panel: var(--theme-surface-elevated);
+  --theme-control-background: color-mix(in srgb, var(--theme-surface-subtle) 78%, var(--theme-surface-elevated) 22%);
+  --theme-control-background-hover: color-mix(in srgb, var(--theme-surface-subtle) 68%, var(--theme-accent) 32%);
+  --theme-control-border: color-mix(in srgb, var(--theme-border) 90%, transparent);
+
+  --theme-loading-background: #102b2e;
+  --theme-overlay: rgba(20, 67, 70, 0.2);
+  --theme-overlay-strong: rgba(10, 47, 50, 0.48);
+  --theme-shadow-color-subtle: rgba(22, 87, 87, 0.08);
+  --theme-shadow-color: rgba(22, 87, 87, 0.14);
+  --theme-shadow-color-strong: rgba(22, 87, 87, 0.2);
+  --theme-shadow-small: 0 2px 8px rgba(22, 87, 87, 0.12);
+  --theme-shadow-medium: 0 6px 14px rgba(22, 87, 87, 0.16);
+
+  --theme-scrollbar-thumb: rgba(45, 151, 145, 0.3);
+  --theme-scrollbar-thumb-hover: rgba(45, 151, 145, 0.46);
+}

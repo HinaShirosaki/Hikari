@@ -1,6 +1,7 @@
 import { deleteContainer } from './container-delete-events.js';
 import { renameContainer } from './container-rename-events.js';
 import { deleteInventoryFolder, renameInventoryFolder } from './folder-actions.js';
+import { getSampleInventoryLocationNames, normalizeSampleInventoryLocations } from '../../lib/inventory-settings.js';
 
 export function installContainerContextMenu(ctx) {
   const { containerContextMenu } = ctx.elements;
@@ -11,6 +12,7 @@ export function installContainerContextMenu(ctx) {
   function hideContainerContextMenu() {
     uiState.contextContainer = null;
     uiState.contextFolder = null;
+    uiState.contextLocation = null;
     if (containerContextMenu) {
       containerContextMenu.hidden = true;
       renderMenuButtons();
@@ -21,8 +23,22 @@ export function installContainerContextMenu(ctx) {
     if (!containerContextMenu) {
       return;
     }
+    const isLocation = Boolean(uiState.contextLocation);
     const isFolder = Boolean(uiState.contextFolder);
-    containerContextMenu.innerHTML = isFolder ? `
+    containerContextMenu.innerHTML = isLocation ? `
+      <button type="button" class="personal-inventory-context-item" data-location-context-add-container>
+        Add Container Here
+      </button>
+      <button type="button" class="personal-inventory-context-item" data-location-context-add-folder>
+        New Folder Inside
+      </button>
+      <button type="button" class="personal-inventory-context-item" data-location-context-rename>
+        Rename Folder
+      </button>
+      <button type="button" class="personal-inventory-context-item personal-inventory-context-item-danger" data-location-context-delete${canDeleteLocation(uiState.contextLocation.section) ? '' : ' disabled'} title="${canDeleteLocation(uiState.contextLocation.section) ? 'Delete location' : 'Move or remove its folders and containers before deleting this location.'}">
+        Delete Folder
+      </button>
+    ` : isFolder ? `
       <button type="button" class="personal-inventory-context-item" data-folder-context-add-container>
         Add Container Here
       </button>
@@ -68,6 +84,30 @@ export function installContainerContextMenu(ctx) {
         deleteInventoryFolder(ctx, target.section, target.folderId);
       }
     });
+    containerContextMenu.querySelector('[data-location-context-add-container]')?.addEventListener('click', () => {
+      const target = uiState.contextLocation;
+      hideContainerContextMenu();
+      if (target) {
+        ctx.beginAddContainer?.({ section: target.section });
+      }
+    });
+    containerContextMenu.querySelector('[data-location-context-add-folder]')?.addEventListener('click', () => {
+      const target = uiState.contextLocation;
+      hideContainerContextMenu();
+      if (target) {
+        ctx.beginAddFolder?.({ section: target.section });
+      }
+    });
+    containerContextMenu.querySelector('[data-location-context-rename]')?.addEventListener('click', () => {
+      enterRenameMode(uiState.contextLocation, 'location');
+    });
+    containerContextMenu.querySelector('[data-location-context-delete]')?.addEventListener('click', () => {
+      const target = uiState.contextLocation;
+      hideContainerContextMenu();
+      if (target) {
+        deleteInventoryLocation(target.section);
+      }
+    });
     containerContextMenu.querySelector('[data-container-context-rename]')?.addEventListener('click', () => {
       enterRenameMode(uiState.contextContainer, 'container');
     });
@@ -86,15 +126,17 @@ export function installContainerContextMenu(ctx) {
     }
     const item = targetType === 'folder'
       ? ctx.helpers?.getFolder?.(target.section, target.folderId)
-      : ctx.helpers?.getContainer?.(target.section, target.containerId);
-    containerContextMenu.innerHTML = '<input type="text" class="personal-inventory-context-rename-input" maxlength="120" />';
-    const input = containerContextMenu.querySelector('.personal-inventory-context-rename-input');
+      : targetType === 'location'
+        ? { name: target.section }
+        : ctx.helpers?.getContainer?.(target.section, target.containerId);
+    containerContextMenu.innerHTML = '<input type="text" class="personal-inventory-context-rename-input" data-personal-inventory-context-rename-input maxlength="120" />';
+    const input = containerContextMenu.querySelector('[data-personal-inventory-context-rename-input]');
     if (!input) {
       return;
     }
     input.value = item?.name || '';
     input.focus();
-    input.select();
+    input.select?.();
 
     let settled = false;
     const commit = () => {
@@ -106,6 +148,8 @@ export function installContainerContextMenu(ctx) {
       hideContainerContextMenu();
       if (targetType === 'folder') {
         renameInventoryFolder(ctx, target.section, target.folderId, nextName);
+      } else if (targetType === 'location') {
+        renameInventoryLocation(target.section, nextName);
       } else {
         renameContainer(ctx, target.section, target.containerId, nextName);
       }
@@ -123,14 +167,95 @@ export function installContainerContextMenu(ctx) {
     input.addEventListener('blur', commit);
   }
 
-  function openContextMenu(event, targetType, section, itemId) {
-    if (!containerContextMenu || !section || !itemId) {
+  function getLocationNames() {
+    return getSampleInventoryLocationNames(ctx.state.settings, ctx.state.inventory);
+  }
+
+  function sameLocation(left, right) {
+    return String(left || '').trim().toLowerCase() === String(right || '').trim().toLowerCase();
+  }
+
+  function canDeleteLocation(section) {
+    const locations = getLocationNames();
+    const containers = Array.isArray(ctx.state.inventory?.[section]) ? ctx.state.inventory[section] : [];
+    const folders = Array.isArray(ctx.state.inventoryFolders?.[section]) ? ctx.state.inventoryFolders[section] : [];
+    return locations.length > 1 && containers.length === 0 && folders.length === 0;
+  }
+
+  function renameInventoryLocation(section, rawName) {
+    const nextName = String(rawName || '').trim().replace(/\s+/g, ' ');
+    const locations = getLocationNames();
+    const locationIndex = locations.findIndex((location) => sameLocation(location, section));
+    if (!nextName || locationIndex < 0 || sameLocation(nextName, section)) {
+      return false;
+    }
+    if (locations.some((location, index) => index !== locationIndex && sameLocation(location, nextName))) {
+      return false;
+    }
+
+    ctx.state.settings = ctx.state.settings && typeof ctx.state.settings === 'object' ? ctx.state.settings : {};
+    ctx.state.inventory = ctx.state.inventory && typeof ctx.state.inventory === 'object' ? ctx.state.inventory : {};
+    ctx.state.inventoryFolders = ctx.state.inventoryFolders && typeof ctx.state.inventoryFolders === 'object'
+      ? ctx.state.inventoryFolders
+      : {};
+    const sourceContainers = Array.isArray(ctx.state.inventory[section]) ? ctx.state.inventory[section] : [];
+    const sourceFolders = Array.isArray(ctx.state.inventoryFolders[section]) ? ctx.state.inventoryFolders[section] : [];
+    if (sourceContainers.length) {
+      ctx.state.inventory[nextName] = (ctx.state.inventory[nextName] || []).concat(sourceContainers);
+    }
+    if (sourceFolders.length) {
+      ctx.state.inventoryFolders[nextName] = (ctx.state.inventoryFolders[nextName] || []).concat(sourceFolders);
+    }
+    delete ctx.state.inventory[section];
+    delete ctx.state.inventoryFolders[section];
+    ctx.state.samples = (ctx.state.samples || []).map((sample) => {
+      if (sample?.inventoryLink?.section !== section) {
+        return sample;
+      }
+      return { ...sample, inventoryLink: { ...sample.inventoryLink, section: nextName } };
+    });
+    locations[locationIndex] = nextName;
+    ctx.state.settings.sampleInventoryLocations = normalizeSampleInventoryLocations(locations);
+    if (uiState.selectedSectionName === section) {
+      uiState.selectedSectionName = nextName;
+    }
+    if (uiState.selectedContainer?.section === section) {
+      uiState.selectedContainer = { ...uiState.selectedContainer, section: nextName };
+    }
+    ctx.persist();
+    ctx.notifyInventoryChanged();
+    ctx.renderSections();
+    return true;
+  }
+
+  function deleteInventoryLocation(section) {
+    if (!canDeleteLocation(section)) {
+      return false;
+    }
+    const locations = getLocationNames().filter((location) => !sameLocation(location, section));
+    ctx.state.settings = ctx.state.settings && typeof ctx.state.settings === 'object' ? ctx.state.settings : {};
+    ctx.state.settings.sampleInventoryLocations = normalizeSampleInventoryLocations(locations);
+    delete ctx.state.inventory?.[section];
+    delete ctx.state.inventoryFolders?.[section];
+    if (uiState.selectedSectionName === section) {
+      uiState.selectedSectionName = ctx.helpers.getPreferredSection();
+      uiState.selectedContainer = null;
+    }
+    ctx.persist();
+    ctx.notifyInventoryChanged();
+    ctx.renderSections();
+    return true;
+  }
+
+  function openContextMenu(event, targetType, section, itemId = '') {
+    if (!containerContextMenu || !section || (targetType !== 'location' && !itemId)) {
       return;
     }
     event?.preventDefault?.();
     event?.stopPropagation?.();
     uiState.contextContainer = targetType === 'container' ? { section, containerId: itemId } : null;
     uiState.contextFolder = targetType === 'folder' ? { section, folderId: itemId } : null;
+    uiState.contextLocation = targetType === 'location' ? { section } : null;
     renderMenuButtons();
     containerContextMenu.style.left = `${Math.max(0, Number(event?.clientX) || 0)}px`;
     containerContextMenu.style.top = `${Math.max(0, Number(event?.clientY) || 0)}px`;
@@ -151,6 +276,10 @@ export function installContainerContextMenu(ctx) {
 
   function openFolderContextMenu(event, section, folderId) {
     openContextMenu(event, 'folder', section, folderId);
+  }
+
+  function openLocationContextMenu(event, section) {
+    openContextMenu(event, 'location', section);
   }
 
   if (containerContextMenu) {
@@ -175,6 +304,7 @@ export function installContainerContextMenu(ctx) {
   Object.assign(ctx, {
     hideContainerContextMenu,
     openContainerContextMenu,
-    openFolderContextMenu
+    openFolderContextMenu,
+    openLocationContextMenu
   });
 }

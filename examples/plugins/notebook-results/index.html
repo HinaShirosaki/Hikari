@@ -15,19 +15,22 @@
       </p>
 
       <label for="entry">Notebook entry</label>
-      <select id="entry"><option value="">Loading&hellip;</option></select>
+      <select id="entry" disabled aria-busy="true"><option value="">Loading&hellip;</option></select>
 
       <label for="results">Results table (CSV or tab-separated)</label>
       <textarea id="results" rows="10" spellcheck="false"
         placeholder=" ,Area,Mean,Min,Max&#10;1,120.5,88.21,12,255&#10;2,98.0,91.44,10,248"></textarea>
 
       <div class="row">
-        <button id="attach" type="button">Attach to notebook entry</button>
-        <span id="status" class="status" role="status"></span>
+        <button id="attach" type="button" disabled>Attach to notebook entry</button>
+        <button id="retry" type="button" class="secondary" hidden>Try again</button>
+        <span id="status" class="status" role="status" aria-live="polite"></span>
       </div>
 
       <table id="preview" hidden></table>
     </main>
-    <script type="module" src="./main.js"></script>
+    <script src="./hikari.js"></script>
+    <script src="./parse-results.js"></script>
+    <script src="./main.js"></script>
   </body>
 </html>

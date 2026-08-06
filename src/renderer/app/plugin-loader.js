@@ -62,55 +62,27 @@ async function startServedFrame({ frame, plugin, api }) {
   }
 }
 
-// Builds the host-owned rail shown beside every plugin frame. It carries the
-// plugin's identity and, crucially, what it can reach — kind and host access —
-// so the user always knows what they are looking at. The frame is isolated and
-// cannot contribute here; a plugin that wants its own navigation draws it
-// inside its page, in the main pane.
-function buildPluginRail(documentObject, plugin, { isRemote, isServed }) {
-  const rail = documentObject.createElement('aside');
-  rail.className = 'plugin-rail app-left-rail left-rail-template__rail';
-  rail.setAttribute('data-sync-left-rail', '');
-  rail.setAttribute('aria-label', `${plugin.name || plugin.id} details`);
-
-  const group = documentObject.createElement('div');
-  group.className = 'app-left-rail-section plugin-rail__section';
-
-  const addLine = (className, text) => {
-    const el = documentObject.createElement('p');
-    el.className = className;
-    el.textContent = text;
-    group.append(el);
-  };
-
-  const title = documentObject.createElement('h2');
-  title.className = 'plugin-rail__title';
-  title.textContent = plugin.name || plugin.id;
-  group.append(title);
-
-  const kind = documentObject.createElement('span');
-  kind.className = 'plugin-rail__kind';
-  kind.textContent = isRemote ? 'Remote plugin' : (isServed ? 'Served plugin' : 'Local plugin');
-  group.append(kind);
-
-  if (plugin.description) {
-    addLine('plugin-rail__description small-note', plugin.description);
-  }
-
+// One line describing what this plugin is and what it can reach. It used to be
+// a host-drawn rail beside every frame, which cost ~280px of workspace to say
+// five static things — and a plugin that draws its own rail (any ported
+// workspace does) ended up with two rails, the host's empty one outermost.
+//
+// The identity now rides on the frame and the registry entry instead: the
+// plugin's name is already the topbar title and its dock/more entry, and this
+// string is the frame's accessible name and its tooltip. The disclosure that
+// gates trust was never the rail anyway — it is the permission list on the
+// plugin's row in Settings, shown before the plugin is enabled.
+function describePlugin(plugin, { isRemote, isServed }) {
+  const kind = isRemote ? 'Remote plugin' : (isServed ? 'Served plugin' : 'Local plugin');
   const permissions = Array.isArray(plugin.permissions) ? plugin.permissions : [];
-  addLine(
-    'plugin-rail__access small-note',
-    permissions.length ? `Host access: ${permissions.join(', ')}` : 'Host access: none'
-  );
-
-  if (isRemote && plugin.embedUrl) {
-    addLine('plugin-rail__origin small-note', `Loads ${plugin.embedUrl}`);
-  } else if (isServed) {
-    addLine('plugin-rail__origin small-note', 'Served locally over 127.0.0.1');
-  }
-
-  rail.append(group);
-  return rail;
+  const origin = isRemote && plugin.embedUrl
+    ? `loads ${plugin.embedUrl}`
+    : (isServed ? 'served locally over 127.0.0.1' : '');
+  return [
+    `${plugin.name || plugin.id} — ${kind}`,
+    origin,
+    permissions.length ? `host access: ${permissions.join(', ')}` : 'host access: none'
+  ].filter(Boolean).join(', ');
 }
 
 // Mounts a service plugin: a hidden, opaque-origin frame that runs the
@@ -173,7 +145,9 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
       if (!isServed) {
         frame.src = isRemote ? plugin.embedUrl : plugin.entryUrl;
       }
-      frame.title = plugin.name || plugin.id;
+      const summary = describePlugin(plugin, { isRemote, isServed });
+      frame.title = summary;
+      frame.setAttribute('aria-label', summary);
       // Plain local plugins get no allow-same-origin, so they run as an opaque
       // origin with no access to the host DOM, localStorage, or the preload
       // bridge — and, as a consequence, no storage of their own either.
@@ -189,22 +163,23 @@ export function installPlugins({ state, documentObject, appRegistry, bridge = nu
         frame.setAttribute('referrerpolicy', 'no-referrer');
       }
 
-      // Every plugin view carries the shared left-rail shape, so it reads as a
-      // real workspace rather than a bare iframe. The rail is host chrome (the
-      // sandboxed frame cannot draw into it), so it is drawn here and cannot be
-      // opted out of — that is what makes the shape mandatory. `data-sync-left-rail`
-      // opts the rail into the app-wide draggable/persisted width, and its
-      // presence is what flips `body.has-shared-left-rail-view` for this view.
-      const layout = documentObject.createElement('div');
-      layout.className = 'plugin-view__layout left-rail-template';
-      layout.append(buildPluginRail(documentObject, plugin, { isRemote, isServed }));
-
+      // The frame gets the whole workspace pane, with no host chrome around it.
+      //
+      // It used to be wrapped in the shared left-rail template with a host-drawn
+      // rail, on the theory that a plugin should read as a real workspace rather
+      // than a bare iframe. That was backwards for any plugin that *is* a
+      // workspace: a ported view brings its own rail, so the host's sat outside
+      // it holding five lines of static text, and the real rail — the one with
+      // the controls — was pushed 280px inward. Two rails, and the empty one
+      // outermost.
+      //
+      // A plugin lays out its own page, exactly like a built-in view does. What
+      // the host owes it is the pane, not a frame around the frame.
       const main = documentObject.createElement('div');
-      main.className = 'plugin-view__main left-rail-template__main';
+      main.className = 'plugin-view__main';
       main.append(frame);
-      layout.append(main);
 
-      section.append(layout);
+      section.append(main);
       host.append(section);
 
       // The section and registry entry must exist synchronously (the shell

@@ -24,7 +24,11 @@ const WORKSPACE_STATE_KEYS = [
 const WORKSPACE_SETTINGS_KEYS = [
   'pendingNotebookSampleCapture',
   'storageImport',
-  'dashboard'
+  'dashboard',
+  // A plugin's blob indexes files under <root>/Plugins/<id>/, so it belongs to
+  // the root it was written against. Carrying it across a root switch leaves
+  // records whose every file read resolves into the new root and fails.
+  'pluginStorage'
 ];
 
 function cloneDefaultValue(value) {

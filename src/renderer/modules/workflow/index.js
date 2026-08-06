@@ -19,7 +19,6 @@ export function initWorkflowManagement({
   onWorkflowsChanged = () => {},
   onOpenNotebookEntry = () => {},
   onCreateLinkedAssay = () => {},
-  onCreateLinkedGel = () => {}
 }) {
   const elements = getWorkflowElements(document);
 
@@ -101,7 +100,6 @@ export function initWorkflowManagement({
     onWorkflowsChanged,
     onOpenNotebookEntry,
     onCreateLinkedAssay,
-    onCreateLinkedGel
   });
 
   function render() {

@@ -20,7 +20,10 @@ const PLUGIN_PERMISSIONS = Object.freeze([
   'projects:read',
   'samples:read',
   'notebook:read',
-  'notebook:write'
+  'notebook:write',
+  'storage',
+  'files',
+  'downloads'
 ]);
 
 function cleanText(value, maxLength = MAX_TEXT_LENGTH) {

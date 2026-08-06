@@ -153,8 +153,11 @@ const sequenceViewerInternals = loadEsmStyleModule(
     'resolveBaseFromPoint'
   ]
 );
+// Gel now ships as a plugin (examples/plugins/gel), not a renderer module, so
+// its suites run against the plugin's copy — the only copy there is.
+const GEL_PLUGIN_DIR = path.join('examples', 'plugins', 'gel', 'vendor', 'modules', 'gel');
 const gelAnalysisInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'public-api.js'),
+  path.join(__dirname, GEL_PLUGIN_DIR, 'public-api.js'),
   {},
   [
     'clamp',
@@ -190,7 +193,7 @@ const gelAnalysisInternals = loadEsmStyleModule(
   ]
 );
 const gelLaneTableInternals = loadEsmStyleModule(
-  path.join(__dirname, 'src', 'renderer', 'modules', 'gel', 'rendering', 'lane-table.js')
+  path.join(__dirname, GEL_PLUGIN_DIR, 'rendering', 'lane-table.js')
 );
 const papersPdfViewerInternals = loadEsmStyleModule(
   path.join(__dirname, 'src', 'renderer', 'modules', 'papers', 'pdf-viewer', 'index.js')
@@ -329,6 +332,97 @@ test('plugin system: inspect-plugin-folder enforces the required folder shape', 
     assert.equal(rejected.ok, false, `${label} must be rejected`);
     assert.ok(rejected.error, `${label} must report a reason`);
   }
+});
+
+test('plugin system: bundled serve tokens resolve only to the matching packaged plugin', () => {
+  const { resolvePluginServePath } = require(
+    path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js')
+  );
+  const getBundledPluginPath = (id) => (id === 'gel' ? '/app/examples/plugins/gel' : '');
+  assert.equal(resolvePluginServePath({
+    pluginId: 'gel',
+    requestedPath: '@bundled/gel',
+    getBundledPluginPath
+  }), '/app/examples/plugins/gel');
+  assert.equal(resolvePluginServePath({
+    pluginId: 'local',
+    requestedPath: '/tmp/local',
+    getBundledPluginPath
+  }), '/tmp/local');
+  assert.throws(() => resolvePluginServePath({
+    pluginId: 'other',
+    requestedPath: '@bundled/gel',
+    getBundledPluginPath
+  }), /Invalid bundled plugin path/);
+  assert.throws(() => resolvePluginServePath({
+    pluginId: 'missing',
+    requestedPath: '@bundled/missing',
+    getBundledPluginPath
+  }), /Unknown bundled plugin/);
+});
+
+test('plugin system: Gel has no active renderer-module integrations after the plugin port', () => {
+  assert.equal(
+    fs.existsSync(path.join(__dirname, 'src', 'renderer', 'modules', 'gel')),
+    false,
+    'the Gel implementation lives only in examples/plugins/gel'
+  );
+  const activeHostSources = [
+    ['topbar item handler', 'src/renderer/app/topbar-open-handlers.js', /\bGel\s*:/],
+    ['Telegram view/search routing', 'src/main/lib/telegram-bot/config.js', /\['gels?',\s*\{[^\n]*(?:gel-view|scope:\s*'gel')/],
+    ['Agent sub-app API', 'src/main/agent/runtime/agent-sub-app-api.js', /\blistGelRecords\b|\bgel:\s*Object\.freeze/],
+    ['shared renderer CSS', 'ui/css/base/core.css', /#gel-view\b/]
+  ];
+  activeHostSources.forEach(([label, relativePath, pattern]) => {
+    const source = fs.readFileSync(path.join(__dirname, relativePath), 'utf8');
+    assert.doesNotMatch(source, pattern, label);
+  });
+
+  const bridgeSource = fs.readFileSync(
+    path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js'),
+    'utf8'
+  );
+  assert.match(bridgeSource, /migration\.importLegacyGel/, 'legacy Gel data keeps an identity-locked migration path');
+});
+
+test('plugin system: export IPC validates bytes and writes only after the user chooses a path', async () => {
+  const { registerDataIpc } = require(path.join(__dirname, 'src', 'main', 'ipc', 'register-data-ipc.js'));
+  const { PLUGINS } = require(path.join(__dirname, 'src', 'shared', 'ipc', 'channels.js'));
+  const handlers = new Map();
+  const writes = [];
+  const saveDialogs = [];
+  registerDataIpc({
+    ipcMain: { handle: (channel, handler) => handlers.set(channel, handler) },
+    dialog: {
+      async showSaveDialog(options) {
+        saveDialogs.push(options);
+        return { canceled: false, filePath: '/tmp/gel-export.csv' };
+      }
+    },
+    shell: {},
+    fs: {
+      async writeFile(filePath, bytes) {
+        writes.push({ filePath, bytes: Buffer.from(bytes) });
+      }
+    },
+    mainDataHelpers: {}
+  });
+  const exportFile = handlers.get(PLUGINS.EXPORT_FILE);
+  assert.equal(typeof exportFile, 'function');
+
+  const invalid = await exportFile(null, { fileName: 'bad.csv', dataBase64: 'not base64' });
+  assert.equal(invalid.ok, false);
+  assert.match(invalid.error, /valid base64/);
+  assert.equal(saveDialogs.length, 0, 'invalid bytes never open a destination dialog');
+
+  const result = await exportFile(null, {
+    fileName: '../gel export.csv',
+    dataBase64: Buffer.from('lane,band\n1,1\n').toString('base64')
+  });
+  assert.deepEqual(result, { ok: true, saved: true, fileName: 'gel-export.csv' });
+  assert.equal(saveDialogs[0].defaultPath, 'gel_export.csv');
+  assert.equal(writes[0].filePath, '/tmp/gel-export.csv');
+  assert.equal(writes[0].bytes.toString('utf8'), 'lane,band\n1,1\n');
 });
 
 test('plugin system: remote plugins require https and cannot hold host permissions', async () => {
@@ -647,8 +741,16 @@ test('plugin system: state normalizer strips unsafe embeds and remote permission
         { id: 'downgraded', name: 'A', entryUrl: 'file:///a/index.html', embedUrl: 'http://evil.test/' },
         { id: 'grabby', name: 'B', embedUrl: 'https://ij.imjoy.io/', permissions: ['notebook:write'] },
         { id: 'local', name: 'C', entryUrl: 'file:///c/index.html', permissions: ['notebook:read'] },
+        { id: 'gel', name: 'Tampered Gel', path: '/tmp/not-gel', serve: true, permissions: ['notebook:read'], enabled: false },
         { id: 'nowhere', name: 'D' }
-      ]
+      ],
+      // App state is one localStorage record, so an oversized blob arriving
+      // from an imported or hand-edited state would break every later save.
+      pluginStorage: {
+        keeper: { records: [{ id: 'g1' }] },
+        hog: 'x'.repeat(1000001),
+        '': { records: [] }
+      }
     }
   });
 
@@ -658,9 +760,17 @@ test('plugin system: state normalizer strips unsafe embeds and remote permission
   assert.deepEqual(byId.grabby.permissions, [], 'remote plugins lose host permissions');
   assert.deepEqual(byId.local.permissions, ['notebook:read'], 'local permissions survive');
   assert.equal(byId.nowhere, undefined, 'an entry with neither entryUrl nor embedUrl is dropped');
+  assert.equal(byId.gel.bundled, true, 'the Gel plugin is restored as a bundled app');
+  assert.equal(byId.gel.path, '@bundled/gel');
+  assert.deepEqual(byId.gel.permissions, ['storage', 'files', 'downloads']);
+  assert.equal(byId.gel.enabled, false, 'the user can keep a bundled plugin disabled');
+
+  assert.deepEqual(settings.pluginStorage.keeper, { records: [{ id: 'g1' }] });
+  assert.equal('hog' in settings.pluginStorage, false, 'an over-cap blob is dropped on load');
+  assert.equal('' in settings.pluginStorage, false, 'a blob with no plugin id is dropped');
 });
 
-test('plugin system: every plugin view is built with the mandatory left rail', async () => {
+test('plugin system: a plugin view is its frame, with no host chrome around it', async () => {
   const { installPlugins } = await import(
     pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-loader.js')).href
   );
@@ -710,44 +820,46 @@ test('plugin system: every plugin view is built with the mandatory left rail', a
   };
   const appRegistry = [];
   // api.servePluginFolder is async; the frame src arrives later and is not
-  // needed for the rail-shape assertions.
+  // needed for the view-shape assertions.
   installPlugins({ state, documentObject, appRegistry, api: { servePluginFolder: () => new Promise(() => {}) } });
 
   for (const pluginId of ['served-one', 'local-one']) {
     const section = documentObject.getElementById(`plugin-${pluginId}-view`);
     assert.ok(section, `${pluginId} view section exists`);
 
-    const layouts = findAll(section, (node) => hasClass(node, 'left-rail-template'));
-    assert.equal(layouts.length, 1, `${pluginId} has exactly one left-rail-template layout`);
-
-    // The rail is present and opts into the shared, draggable width.
+    // No host chrome. A plugin that draws its own rail — every ported
+    // workspace does — would otherwise end up behind a second, emptier one.
     const rails = findAll(section, (node) => node.getAttribute('data-sync-left-rail') !== null);
-    assert.equal(rails.length, 1, `${pluginId} has the mandatory rail`);
-    assert.ok(hasClass(rails[0], 'left-rail-template__rail'), `${pluginId} rail uses the template rail class`);
+    assert.equal(rails.length, 0, `${pluginId} view draws no host rail`);
+    const templates = findAll(section, (node) => hasClass(node, 'left-rail-template'));
+    assert.equal(templates.length, 0, `${pluginId} view is not wrapped in the rail template`);
 
-    // The iframe lives in the main pane, not loose in the section.
+    // The frame is the view: one pane, one frame, nothing beside it.
     const frames = findAll(section, (node) => node.tagName === 'IFRAME');
     assert.equal(frames.length, 1, `${pluginId} has one frame`);
-    const mains = findAll(section, (node) => hasClass(node, 'left-rail-template__main'));
-    assert.equal(mains.length, 1);
-    assert.ok(mains[0].children.includes(frames[0]), `${pluginId} frame is inside the main pane`);
+    const mains = findAll(section, (node) => hasClass(node, 'plugin-view__main'));
+    assert.equal(mains.length, 1, `${pluginId} has one pane`);
+    assert.ok(mains[0].children.includes(frames[0]), `${pluginId} frame fills the pane`);
 
-    // The rail names the plugin and states its host access.
-    const railText = findAll(rails[0], () => true).map((node) => node.textContent).join(' | ');
-    assert.ok(railText.includes(pluginId === 'served-one' ? 'Served One' : 'Local One'), `${pluginId} rail shows the name`);
-    assert.ok(/Host access/.test(railText), `${pluginId} rail states host access`);
+    // Identity did not vanish with the rail: it rides on the frame, so it is
+    // the accessible name and the tooltip.
+    assert.equal(frames[0].title, frames[0].getAttribute('aria-label'));
+    assert.ok(/Host access|host access/.test(frames[0].title), `${pluginId} frame states host access`);
   }
 
-  // Kind and access are reported accurately per plugin.
-  const servedRail = findAll(documentObject.getElementById('plugin-served-one-view'), (n) => n.getAttribute('data-sync-left-rail') !== null)[0];
-  const servedText = findAll(servedRail, () => true).map((n) => n.textContent).join(' | ');
-  assert.ok(servedText.includes('Served plugin'), 'served plugin is labelled as such');
-  assert.ok(servedText.includes('Host access: none'), 'served plugin with no permissions says none');
+  const frameFor = (pluginId) => findAll(
+    documentObject.getElementById(`plugin-${pluginId}-view`),
+    (node) => node.tagName === 'IFRAME'
+  )[0];
 
-  const localRail = findAll(documentObject.getElementById('plugin-local-one-view'), (n) => n.getAttribute('data-sync-left-rail') !== null)[0];
-  const localText = findAll(localRail, () => true).map((n) => n.textContent).join(' | ');
-  assert.ok(localText.includes('Local plugin'), 'local plugin is labelled as such');
-  assert.ok(localText.includes('notebook:read'), 'local plugin lists its declared permission');
+  const servedTitle = frameFor('served-one').title;
+  assert.ok(servedTitle.includes('Served One'), 'served plugin is named');
+  assert.ok(servedTitle.includes('Served plugin'), 'served plugin is labelled as such');
+  assert.ok(servedTitle.includes('host access: none'), 'served plugin with no permissions says none');
+
+  const localTitle = frameFor('local-one').title;
+  assert.ok(localTitle.includes('Local plugin'), 'local plugin is labelled as such');
+  assert.ok(localTitle.includes('notebook:read'), 'local plugin lists its declared permission');
 });
 
 test('plugin system: bridge gates verbs on manifest permissions and frame identity', async () => {
@@ -808,6 +920,354 @@ test('plugin system: bridge gates verbs on manifest permissions and frame identi
 
   assert.equal(send(reader, 'notebook.appendResult', { entryId: 'missing', text: 'x' }).ok, false);
   assert.equal(send(reader, 'notebook.appendResult', { entryId: 'n1' }).ok, false, 'empty writes are rejected');
+
+  // Per-plugin storage. The slice is keyed by the frame's resolved identity, so
+  // there is no parameter a plugin could pass to reach another plugin's data.
+  const keeper = makeFrame();
+  const neighbour = makeFrame();
+  bridge.register(keeper, { id: 'keeper', permissions: ['storage'] });
+  bridge.register(neighbour, { id: 'neighbour', permissions: ['storage'] });
+
+  assert.equal(send(reader, 'storage.get').ok, false, 'storage needs its own permission');
+  assert.equal(send(keeper, 'storage.get').result.value, null, 'unset storage reads as null');
+
+  assert.equal(send(keeper, 'storage.set', { value: { records: [{ id: 'g1' }] } }).ok, true);
+  assert.deepEqual(state.settings.pluginStorage.keeper, { records: [{ id: 'g1' }] });
+  assert.deepEqual(send(keeper, 'storage.get').result.value, { records: [{ id: 'g1' }] });
+  assert.equal(send(neighbour, 'storage.get').result.value, null, 'a plugin sees only its own slice');
+
+  const missingValue = send(keeper, 'storage.set', {});
+  assert.equal(missingValue.ok, false, 'omitting value is not an implicit delete');
+  assert.match(missingValue.error, /Pass null explicitly/);
+  assert.deepEqual(state.settings.pluginStorage.keeper, { records: [{ id: 'g1' }] });
+
+  const invalidParams = send(keeper, 'storage.get', []);
+  assert.equal(invalidParams.ok, false, 'raw protocol callers cannot pass array params');
+  assert.match(invalidParams.error, /object for params/);
+
+  // The cap guards app-wide state, not just this plugin's data, so a rejected
+  // write must leave what was already stored intact.
+  const overCap = send(keeper, 'storage.set', { value: 'x'.repeat(1000001) });
+  assert.equal(overCap.ok, false);
+  assert.ok(overCap.error.includes('exceeds'));
+  assert.deepEqual(state.settings.pluginStorage.keeper, { records: [{ id: 'g1' }] });
+
+  const cyclic = { self: null };
+  cyclic.self = cyclic;
+  assert.equal(send(keeper, 'storage.set', { value: cyclic }).ok, false, 'unserializable values are refused');
+
+  assert.equal(send(keeper, 'storage.set', { value: null }).ok, true);
+  assert.equal('keeper' in state.settings.pluginStorage, false, 'setting null clears the slice');
+});
+
+test('plugin system: files verbs stay inside the plugin folder', async () => {
+  const { createPluginBridge } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
+  );
+
+  // Stands in for the preload bridge. readFileBase64 in the real app reads any
+  // absolute path it is handed and storeImportedFile confines writes to the
+  // storage root but not below it, so containment has to come from the bridge —
+  // this fake records exactly what the bridge asked for.
+  const disk = new Map();
+  const overwriteRequests = [];
+  let writeFailure = '';
+  const api = {
+    async storeImportedFile({ storagePath, targetFolder, fileName, dataBase64, overwrite }) {
+      if (writeFailure) {
+        return { ok: false, error: writeFailure };
+      }
+      overwriteRequests.push(overwrite);
+      const filePath = `${targetFolder}/${fileName}`;
+      disk.set(filePath, dataBase64);
+      return { ok: true, filePath, relativePath: filePath.slice(`${storagePath}/`.length) };
+    },
+    async readFileBase64(target) {
+      return disk.has(target)
+        ? { ok: true, dataBase64: disk.get(target) }
+        : { ok: false, error: 'ENOENT' };
+    }
+  };
+
+  const state = { settings: { storagePath: '/root' } };
+  const listeners = [];
+  const bridge = createPluginBridge({
+    state,
+    api,
+    windowObject: { addEventListener: (_type, fn) => listeners.push(fn) }
+  });
+  const frame = { replies: [], postMessage: (payload) => frame.replies.push(payload) };
+  bridge.register(frame, { id: 'gel', permissions: ['files'] });
+
+  // files verbs are async, so a reply lands a turn later than a sync verb's.
+  const call = async (verb, params) => {
+    bridge.handleMessage({ source: frame, data: { hikari: 1, id: verb, verb, params } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return frame.replies[frame.replies.length - 1];
+  };
+
+  const written = await call('files.write', { path: 'Gels/run1/source.png', dataBase64: 'aGk=' });
+  assert.equal(written.ok, true);
+  assert.equal(written.result.path, 'Gels/run1/source.png', 'paths come back relative to the plugin folder');
+  assert.deepEqual([...disk.keys()], ['/root/Plugins/gel/Gels/run1/source.png']);
+
+  const read = await call('files.read', { path: 'Gels/run1/source.png' });
+  assert.equal(read.result.dataBase64, 'aGk=', 'a written file reads back');
+
+  const invalidBase64 = await call('files.write', { path: 'Gels/run1/bad.png', dataBase64: 'not base64' });
+  assert.equal(invalidBase64.ok, false, 'invalid base64 is refused before filesystem IPC');
+  assert.match(invalidBase64.error, /canonical base64/);
+  assert.equal(disk.size, 1);
+
+  writeFailure = 'disk full';
+  const failedWrite = await call('files.write', { path: 'Gels/run1/failure.png', dataBase64: 'aGk=' });
+  assert.equal(failedWrite.ok, false, 'downstream write failures are not acknowledged as saved');
+  assert.match(failedWrite.error, /disk full/);
+  writeFailure = '';
+
+  // Every one of these must fail closed, and must not reach the fake at all.
+  for (const badPath of [
+    '../../../notebook.json',
+    'Gels/../../../secret.txt',
+    '/etc/passwd',
+    'C:\\Windows\\system.ini',
+    '..\\..\\secret.txt',
+    'Gels/\u0000evil.txt',
+    ''
+  ]) {
+    const rejected = await call('files.write', { path: badPath, dataBase64: 'aGk=' });
+    assert.equal(rejected.ok, false, `write escaped the plugin folder: ${badPath}`);
+    const rejectedRead = await call('files.read', { path: badPath });
+    assert.equal(rejectedRead.ok, false, `read escaped the plugin folder: ${badPath}`);
+  }
+  assert.equal(disk.size, 1, 'no escape attempt wrote a file');
+
+  // The plugin owns this folder and addresses it by path, so re-writing a path
+  // replaces the file. Without this the host de-duplicates to source_2.png and
+  // every re-save leaks a copy the plugin can never reach or delete.
+  assert.equal(overwriteRequests.at(-1), true, 'plugin writes ask the host to overwrite');
+
+  // The id is half the confining path. inspect-plugin-folder checks it at
+  // install time, but a persisted record is re-hydrated without that check.
+  const hostile = { replies: [], postMessage: (payload) => hostile.replies.push(payload) };
+  bridge.register(hostile, { id: '../..', permissions: ['files'] });
+  bridge.handleMessage({
+    source: hostile,
+    data: { hikari: 1, id: 'r', verb: 'files.read', params: { path: 'notebook.json' } }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(hostile.replies.at(-1).ok, false, 'a traversing plugin id cannot address files');
+  assert.match(hostile.replies.at(-1).error, /Invalid plugin id/);
+
+  // No storage folder configured is a refusal, not a write to somewhere else.
+  state.settings.storagePath = '';
+  const unconfigured = await call('files.write', { path: 'a.txt', dataBase64: 'aGk=' });
+  assert.equal(unconfigured.ok, false);
+  assert.ok(unconfigured.error.includes('storage folder'));
+});
+
+test('plugin system: app context events and user-mediated downloads stay permission gated', async () => {
+  const { createPluginBridge } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
+  );
+  const exports = [];
+  const state = {
+    settings: {
+      storagePath: '/root',
+      appearance: { mode: 'night', fontSize: 18 }
+    }
+  };
+  const bridge = createPluginBridge({
+    state,
+    api: {
+      async exportPluginFile(payload) {
+        exports.push(payload);
+        return { ok: true, fileName: payload.fileName };
+      }
+    },
+    windowObject: { addEventListener() {} }
+  });
+  const makeFrame = () => {
+    const replies = [];
+    return { replies, postMessage: (payload) => replies.push(payload) };
+  };
+  const exporter = makeFrame();
+  const reader = makeFrame();
+  bridge.register(exporter, { id: 'exporter', permissions: ['downloads'] });
+  bridge.register(reader, { id: 'reader', permissions: [] });
+
+  const info = (() => {
+    bridge.handleMessage({ source: exporter, data: { hikari: 1, id: 'info', verb: 'app.info', params: {} } });
+    return exporter.replies.at(-1);
+  })();
+  assert.deepEqual(info.result.appearance, { mode: 'night', fontSize: 18 });
+  assert.deepEqual(info.result.storage, { configured: true });
+
+  bridge.handleMessage({
+    source: reader,
+    data: { hikari: 1, id: 'denied', verb: 'downloads.save', params: { fileName: 'x.csv', dataBase64: 'eA==' } }
+  });
+  assert.equal(reader.replies.at(-1).ok, false);
+
+  bridge.handleMessage({
+    source: exporter,
+    data: { hikari: 1, id: 'invalid', verb: 'downloads.save', params: { fileName: 'x.csv', dataBase64: 'not base64' } }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(exporter.replies.at(-1).ok, false);
+  assert.match(exporter.replies.at(-1).error, /canonical base64/);
+  assert.equal(exports.length, 0, 'invalid export bytes never reach native IPC');
+
+  bridge.handleMessage({
+    source: exporter,
+    data: { hikari: 1, id: 'save', verb: 'downloads.save', params: { fileName: 'gel.csv', dataBase64: 'Z2Vs' } }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(exporter.replies.at(-1).result.saved, true);
+  assert.equal(exports[0].fileName, 'gel.csv');
+
+  state.settings.appearance = { mode: 'miku', fontSize: 15 };
+  bridge.broadcastAppContext('appearance');
+  assert.equal(exporter.replies.at(-1).event, 'app.context');
+  assert.deepEqual(exporter.replies.at(-1).payload.appearance, { mode: 'miku', fontSize: 15 });
+  assert.equal(exporter.replies.at(-1).payload.changed, 'appearance');
+});
+
+test('plugin system: bundled Gel migration copies legacy records into its file namespace', async () => {
+  const { createPluginBridge } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
+  );
+  const disk = new Map([
+    ['/root/Gels/old/source.png', 'U09VUkNF'],
+    ['/root/Gels/old/preview.png', 'UFJFVklFVw==']
+  ]);
+  const api = {
+    async readFileBase64(filePath) {
+      return disk.has(filePath)
+        ? { ok: true, dataBase64: disk.get(filePath) }
+        : { ok: false, error: 'ENOENT' };
+    },
+    async storeImportedFile({ storagePath, targetFolder, fileName, dataBase64 }) {
+      const filePath = `${targetFolder}/${fileName}`;
+      disk.set(filePath, dataBase64);
+      return { ok: true, relativePath: filePath.slice(`${storagePath}/`.length) };
+    }
+  };
+  const state = {
+    settings: { storagePath: '/root' },
+    gelAnalyses: [{
+      id: 'gel-1',
+      name: 'Old Gel',
+      sourceImagePath: '/root/Gels/old/source.png',
+      previewImagePath: '/root/Gels/old/preview.png',
+      report: { lanes: [{ laneIndex: 1 }] },
+      updatedAt: '2026-08-01T00:00:00.000Z'
+    }]
+  };
+  const bridge = createPluginBridge({
+    state,
+    api,
+    windowObject: { addEventListener() {} }
+  });
+  const frame = { replies: [], postMessage: (payload) => frame.replies.push(payload) };
+  bridge.register(frame, { id: 'gel', permissions: ['storage', 'files'], bundled: true, path: '@bundled/gel' });
+  bridge.handleMessage({
+    source: frame,
+    data: { hikari: 1, id: 'migrate', verb: 'migration.importLegacyGel', params: {} }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const reply = frame.replies.at(-1);
+  assert.equal(reply.ok, true);
+  assert.equal(reply.result.records.length, 1);
+  const migrated = reply.result.records[0];
+  assert.match(migrated.sourceImagePath, /^Gels\/Old_Gel__gel-1\/source\.png$/);
+  assert.match(migrated.recordJsonPath, /^Gels\/Old_Gel__gel-1\/gel-record\.json$/);
+  assert.ok(disk.has('/root/Plugins/gel/Gels/Old_Gel__gel-1/analysis-result.json'));
+  assert.ok(disk.has('/root/Plugins/gel/Gels/Old_Gel__gel-1/gel-record.json'));
+
+  // Callable again: a storage-root import merges legacy gels into host state
+  // long after first run, and a one-shot gate would strand them.
+  state.gelAnalyses.push({
+    id: 'gel-2',
+    name: 'Imported Gel',
+    updatedAt: '2026-08-02T00:00:00.000Z'
+  });
+  bridge.handleMessage({
+    source: frame,
+    data: {
+      hikari: 1,
+      id: 'again',
+      verb: 'migration.importLegacyGel',
+      params: { skipIds: ['gel-1'] }
+    }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const second = frame.replies.at(-1).result.records;
+  assert.equal(second.length, 1, 'a repeat call returns only what is new');
+  assert.equal(second[0].id, 'gel-2');
+
+  // A moved storage root makes the recorded absolute path stale; the record's
+  // relative path still resolves, and losing the image here is permanent.
+  disk.set('/moved/Gels/old/source.png', 'U09VUkNF');
+  state.settings.storagePath = '/moved';
+  state.gelAnalyses = [{
+    id: 'gel-3',
+    name: 'Moved Gel',
+    sourceImagePath: '/root/Gels/old/source.png',
+    sourceImageRelativePath: 'Gels/old/source.png',
+    updatedAt: '2026-08-03T00:00:00.000Z'
+  }];
+  bridge.handleMessage({
+    source: frame,
+    data: { hikari: 1, id: 'moved', verb: 'migration.importLegacyGel', params: {} }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.match(
+    frame.replies.at(-1).result.records[0].sourceImagePath,
+    /source\.png$/,
+    'a stale absolute path falls back to the relative one'
+  );
+  state.settings.storagePath = '/root';
+
+  const other = { replies: [], postMessage: (payload) => other.replies.push(payload) };
+  bridge.register(other, { id: 'other', permissions: [], bundled: true, path: '@bundled/other' });
+  bridge.handleMessage({
+    source: other,
+    data: { hikari: 1, id: 'blocked', verb: 'migration.importLegacyGel', params: {} }
+  });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(other.replies.at(-1).ok, false, 'other plugin ids cannot claim Gel legacy data');
+});
+
+test('plugin system: a frame with unsaved work reaches the host quit guard', async () => {
+  const { createPluginBridge } = await import(
+    pathToFileURL(path.join(__dirname, 'src', 'renderer', 'app', 'plugin-bridge.js')).href
+  );
+  const bridge = createPluginBridge({
+    state: { settings: {} },
+    windowObject: { addEventListener() {}, setTimeout: () => 0 }
+  });
+  const frame = { replies: [], postMessage: (payload) => frame.replies.push(payload) };
+  bridge.register(frame, { id: 'gel', name: 'Gel Analysis', permissions: [] });
+  const push = (unsaved) => bridge.handleMessage({
+    source: frame,
+    data: { hikari: 1, id: 'u', verb: 'app.setUnsaved', params: { unsaved } }
+  });
+
+  assert.deepEqual(bridge.getUnsavedSources(), [], 'a clean frame does not block the quit');
+
+  push(true);
+  const [source] = bridge.getUnsavedSources();
+  assert.equal(source.label, 'Gel Analysis', 'the dialog names the plugin, not its id');
+  assert.equal(source.moduleApi.hasUnsavedChanges(), true);
+
+  // Saving is a broadcast plus a wait for the frame's next push — there is no
+  // host->plugin request in the protocol.
+  const saved = source.moduleApi.saveUnsavedChanges();
+  assert.equal(frame.replies.at(-1).event, 'app.save');
+  push(false);
+  assert.equal(await saved, true);
+  assert.deepEqual(bridge.getUnsavedSources(), []);
 });
 
 function selectTests() {

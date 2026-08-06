@@ -86,8 +86,8 @@ body.theme-night {
 .workflow-context-item:focus-visible,
 .sequence-viewer-context-item:hover:not(:disabled),
 .sequence-viewer-context-item:focus-visible:not(:disabled),
-.personal-inventory-context-item:hover,
-.personal-inventory-context-item:focus-visible,
+.personal-inventory-context-item:hover:not(:disabled),
+.personal-inventory-context-item:focus-visible:not(:disabled),
 .protocol-action-item:hover,
 .protocol-action-item:focus-visible {
   background: var(--hikari-menu-hover) !important;
@@ -101,12 +101,13 @@ body.theme-night {
 .biology-notebook-context-item:active,
 .workflow-context-item:active,
 .sequence-viewer-context-item:active:not(:disabled),
-.personal-inventory-context-item:active,
+.personal-inventory-context-item:active:not(:disabled),
 .protocol-action-item:active {
   background: var(--hikari-menu-pressed) !important;
 }
 
-.sequence-viewer-context-item:disabled {
+.sequence-viewer-context-item:disabled,
+.personal-inventory-context-item:disabled {
   cursor: not-allowed;
   opacity: 0.52;
 }
@@ -132,8 +133,8 @@ body.theme-night {
 
 .papers-context-item-danger:hover,
 .papers-context-item-danger:focus-visible,
-.personal-inventory-context-item-danger:hover,
-.personal-inventory-context-item-danger:focus-visible,
+.personal-inventory-context-item-danger:hover:not(:disabled),
+.personal-inventory-context-item-danger:focus-visible:not(:disabled),
 .protocol-action-item-danger:hover,
 .protocol-action-item-danger:focus-visible {
   color: var(--theme-danger);

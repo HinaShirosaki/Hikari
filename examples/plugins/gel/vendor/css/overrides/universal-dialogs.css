@@ -1,0 +1,241 @@
+/* Shared overlapping-window chrome. View files keep only content-specific layout. */
+.app-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2550;
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  overflow: auto;
+  padding: 18px;
+  background: var(--theme-overlay);
+}
+
+.app-dialog-overlay--top {
+  align-items: start;
+  padding: max(76px, env(safe-area-inset-top, 0px)) 18px 18px;
+}
+
+.app-dialog-overlay--center {
+  align-items: center;
+}
+
+.app-dialog-overlay[hidden] {
+  display: none !important;
+}
+
+.app-dialog-surface {
+  --app-dialog-width: 920px;
+  --app-dialog-max-height: calc(100svh - 36px);
+  --app-dialog-padding: 18px;
+  --app-dialog-gap: 16px;
+  width: min(var(--app-dialog-width), calc(100vw - 32px));
+  max-height: var(--app-dialog-max-height);
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  gap: var(--app-dialog-gap);
+  padding: var(--app-dialog-padding);
+  border: 1px solid color-mix(in srgb, var(--theme-border) 88%, var(--theme-accent) 12%);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--theme-surface-elevated) 96%, var(--theme-surface-subtle) 4%);
+  box-shadow: 0 24px 58px var(--theme-overlay);
+}
+
+.app-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.app-dialog-head h3,
+.app-dialog-head h4,
+.app-dialog-head p {
+  margin: 0;
+}
+
+button.app-dialog-close-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  inline-size: 32px;
+  block-size: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  min-inline-size: 32px;
+  min-block-size: 32px;
+  max-width: 32px;
+  max-height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--theme-text-muted);
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 1.12rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.app-dialog-head button.app-dialog-close-btn {
+  margin-left: auto;
+}
+
+button.app-dialog-close-btn:hover,
+button.app-dialog-close-btn:focus-visible {
+  border-color: color-mix(in srgb, var(--theme-border) 72%, transparent);
+  background: color-mix(in srgb, var(--theme-surface-subtle) 84%, transparent);
+  color: var(--theme-text-strong);
+}
+
+button.app-dialog-close-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--theme-accent) 58%, transparent);
+  outline-offset: 2px;
+}
+
+button.app-dialog-close-btn span {
+  display: block;
+  transform: translateY(-1px);
+}
+
+button.app-dialog-close-btn--floating {
+  position: absolute;
+  inset-block-start: 12px;
+  inset-inline-end: 12px;
+  z-index: 2;
+}
+
+#home-view .app-dialog-overlay.app-dialog-overlay--contained {
+  position: absolute;
+  z-index: 20;
+  padding: 84px 24px 24px;
+  background: var(--theme-overlay);
+}
+
+#home-view .home-dialog.app-dialog-surface {
+  --app-dialog-width: 320px;
+  --app-dialog-padding: 18px;
+  --app-dialog-gap: 12px;
+  border-color: color-mix(in srgb, var(--home-tile-line) 88%, var(--theme-accent) 12%);
+}
+
+#home-view .home-notebook-note-dialog.app-dialog-surface {
+  --app-dialog-width: 380px;
+}
+
+.chemical-dialog.app-dialog-surface {
+  --app-dialog-width: 920px;
+}
+
+.assay-serial-dilution-dialog.app-dialog-surface,
+.assay-result-import-dialog.app-dialog-surface {
+  --app-dialog-width: 1040px;
+  --app-dialog-max-height: calc(100svh - 96px);
+  --app-dialog-padding: 16px;
+  --app-dialog-gap: 12px;
+}
+
+.sequence-viewer-feature-editor.app-dialog-surface {
+  --app-dialog-width: 560px;
+  --app-dialog-padding: 14px;
+  --app-dialog-gap: 12px;
+}
+
+.sequence-viewer-sequence-edit-dialog.app-dialog-surface {
+  --app-dialog-width: 480px;
+  --app-dialog-padding: 14px;
+  --app-dialog-gap: 12px;
+}
+
+.sequence-viewer-backbone-dialog.app-dialog-surface {
+  --app-dialog-width: 1180px;
+  --app-dialog-max-height: calc(100svh - 96px);
+  --app-dialog-gap: 14px;
+}
+
+.sequence-viewer-alignment-dialog.app-dialog-surface {
+  --app-dialog-width: 760px;
+  --app-dialog-max-height: calc(100svh - 96px);
+  --app-dialog-padding: 16px;
+  --app-dialog-gap: 12px;
+}
+
+.protocol-polish-dialog.app-dialog-surface,
+.protocol-generate-input-dialog.app-dialog-surface,
+.protocol-generate-result-dialog.app-dialog-surface {
+  --app-dialog-width: 100%;
+  --app-dialog-padding: clamp(18px, 2.5vw, 24px);
+  --app-dialog-gap: 14px;
+  width: min(var(--app-dialog-width), 100%);
+}
+
+.unsaved-changes-dialog.app-dialog-surface {
+  --app-dialog-width: 520px;
+  --app-dialog-padding: 20px;
+  --app-dialog-gap: 14px;
+}
+
+.unsaved-changes-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.unsaved-changes-list li {
+  padding: 9px 10px;
+  border: 1px solid var(--theme-border-soft);
+  border-radius: 6px;
+  background: var(--theme-surface-subtle);
+  color: var(--theme-text-strong);
+}
+
+.unsaved-changes-actions {
+  justify-content: flex-end;
+}
+
+.unsaved-changes-dialog [role="status"].is-error {
+  color: var(--theme-danger);
+}
+
+body.theme-night .app-dialog-overlay {
+  background: var(--theme-overlay-strong);
+}
+
+body.theme-night .app-dialog-surface {
+  border-color: color-mix(in srgb, var(--theme-border) 82%, var(--theme-accent) 18%);
+  background: color-mix(in srgb, var(--theme-surface-elevated) 94%, var(--theme-surface-subtle) 6%);
+  color: var(--theme-text);
+  box-shadow: 0 24px 58px var(--theme-shadow-color-strong);
+}
+
+body.theme-night #home-view .home-dialog.app-dialog-surface {
+  background: color-mix(in srgb, var(--theme-surface-elevated) 92%, var(--theme-accent) 8%);
+}
+
+@media (max-width: 720px) {
+  .app-dialog-overlay {
+    padding: 12px;
+  }
+
+  .app-dialog-overlay--top {
+    padding-top: 68px;
+  }
+
+  #home-view .app-dialog-overlay.app-dialog-overlay--contained {
+    padding: 72px 14px 14px;
+  }
+
+  .app-dialog-surface {
+    width: min(var(--app-dialog-width), calc(100vw - 20px));
+    padding: clamp(14px, 4vw, var(--app-dialog-padding));
+  }
+}

@@ -1,3 +1,4 @@
+import { getGelAnalyses } from '../../lib/gel-records.js';
 import { BLOCK_TYPES } from './constants.js';
 import {
   createEmptyDraft,
@@ -57,9 +58,6 @@ export function createWorkflowActions(config = {}) {
     : () => {};
   const onCreateLinkedAssay = typeof config?.onCreateLinkedAssay === 'function'
     ? config.onCreateLinkedAssay
-    : () => {};
-  const onCreateLinkedGel = typeof config?.onCreateLinkedGel === 'function'
-    ? config.onCreateLinkedGel
     : () => {};
 
   function ensureStateShape() {
@@ -642,7 +640,7 @@ export function createWorkflowActions(config = {}) {
     const linkedAssayIds = (state.assays || [])
       .filter((item) => item.notebookEntryId === notebookId)
       .map((item) => item.id);
-    const linkedGelIds = (state.gelAnalyses || [])
+    const linkedGelIds = getGelAnalyses(state)
       .filter((item) => item.notebookEntryId === notebookId)
       .map((item) => item.id);
     const notebookEntry = {
@@ -848,29 +846,6 @@ export function createWorkflowActions(config = {}) {
       touchWorkflow(workflow);
       persistWorkflowChanges();
       onCreateLinkedAssay({
-        notebookEntryId: notebookEntry.id,
-        projectId: notebookEntry.projectId,
-        notebookType: notebookEntry.notebookType || 'biology'
-      });
-      renderWorkflowViews();
-      return;
-    }
-
-    const gelBtn = event.target.closest('[data-workflow-step-create-gel]');
-    if (gelBtn) {
-      const workflowId = String(gelBtn.dataset.workflowWorkflowId || '').trim();
-      const entryId = String(gelBtn.dataset.workflowEntryId || '').trim();
-      const blockId = String(gelBtn.dataset.workflowStepCreateGel || '').trim();
-      const { workflow, entry } = getWorkflowEntry(workflowId, entryId);
-      const block = (workflow?.blocks || []).find((item) => item.id === blockId);
-      if (!workflow || !entry || !block) {
-        return;
-      }
-      const notebookEntry = upsertNotebookEntryForStep(workflow, entry, block, { executed: false });
-      touchEntry(entry);
-      touchWorkflow(workflow);
-      persistWorkflowChanges();
-      onCreateLinkedGel({
         notebookEntryId: notebookEntry.id,
         projectId: notebookEntry.projectId,
         notebookType: notebookEntry.notebookType || 'biology'

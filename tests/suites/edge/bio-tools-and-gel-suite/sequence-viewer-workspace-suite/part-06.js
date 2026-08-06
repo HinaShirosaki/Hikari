@@ -304,6 +304,71 @@ test('[EDGE] sequence-viewer annotate button adds SQL DNA and CDS features to th
   assert.match(featureDetail.innerHTML, /ReporterCds/);
   assert.match(status.textContent, /Save the record to persist changes/);
 });
+test('[EDGE] sequence-viewer annotation includes the active saved entry and reports existing matches accurately', async () => {
+  const annotationModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'annotation.js')
+  );
+  const record = {
+    name: 'already_annotated',
+    sequence: 'GGGTTGACATATAATCCC',
+    topology: 'linear',
+    features: [{
+      id: 'existing_promoter',
+      name: 'StrongPromoter',
+      type: 'promoter',
+      strand: 1,
+      source: 'genbank',
+      segments: [{ start: 3, end: 15 }]
+    }]
+  };
+  const state = {
+    records: [record],
+    selectedRecordIndex: 0,
+    selectedFeatureIndex: -1,
+    activeEntryId: 'seq_self',
+    isAnnotating: false
+  };
+  const annotateCalls = [];
+  const statuses = [];
+  const controller = annotationModule.createSequenceViewerAnnotationController({
+    state,
+    getSelectedRecord: () => state.records[0],
+    getStoragePath: () => '/tmp/sequence-viewer-tests',
+    getBridge: () => ({
+      sequenceLibraryAnnotate: async (payload) => {
+        annotateCalls.push(payload);
+        return {
+          ok: true,
+          dnaMatches: [{
+            featureId: 'feature_promoter',
+            name: 'StrongPromoter',
+            type: 'promoter',
+            strand: 1,
+            segments: [{ start: 3, end: 15 }]
+          }],
+          proteinMatches: []
+        };
+      }
+    }),
+    detailController: {
+      clearSequenceSelection() {},
+      hideFeatureContextMenu() {},
+      hideFeatureEditor() {},
+      renderActiveRecord() {},
+      syncActionButtonsState() {}
+    },
+    setStatus: (message) => statuses.push(message)
+  });
+
+  await controller.annotateCurrentRecord();
+
+  assert.equal(annotateCalls.length, 1);
+  assert.equal(Object.prototype.hasOwnProperty.call(annotateCalls[0], 'excludeEntryId'), false);
+  assert.equal(state.records[0].features.length, 1);
+  assert.equal(state.records[0].features[0].source, 'genbank');
+  assert.match(statuses.at(-1), /1 SQL-backed annotation match is already present/i);
+  assert.doesNotMatch(statuses.at(-1), /No SQL-backed annotations matched/i);
+});
 test('[EDGE] sequence-viewer keeps the sequencing alignment workspace hidden until opened by the new methods', () => {
   const document = createMockDocument([
     'sequence-viewer-home-workspace',

@@ -851,19 +851,25 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
   height: 100%;
 }
 
-/* Plugin views use the shared left-rail template (rail drawn by the host in
-   plugin-loader.js). The section fills its workspace exactly like any other
-   rail view via body.has-shared-left-rail-view; the template handles the grid. */
-.plugin-view__layout {
+/* A plugin view is its frame and nothing else — no host rail, no gutter, no
+   host scroll. The plugin page lays out and scrolls itself, and if it wants a
+   left rail it draws one, the same way a built-in view does.
+
+   The full-height rule is spelled out here rather than inherited from
+   `body.has-shared-left-rail-view`, which only flips when the active view
+   contains a host-drawn rail. A plugin view has none, and without this the
+   section falls back to the iframe's intrinsic 150px. */
+.workspace-main > .plugin-view.is-active {
+  display: flex;
   height: 100%;
-  min-height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
-/* The frame owns the whole main pane: drop the template's reading gutter and
-   host scroll, since the plugin page lays out and scrolls itself. */
-.plugin-view__main.left-rail-template__main {
+.plugin-view__main {
   display: flex;
-  padding-left: 0;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -882,33 +888,11 @@ body.has-shared-left-rail-view .workspace-main > .view.is-active {
   display: none !important;
 }
 
-.plugin-rail__title {
-  margin: 0 0 2px;
-  font-size: 15px;
-  line-height: 1.3;
-}
-
-.plugin-rail__kind {
-  display: inline-block;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.6;
-}
-
-.plugin-rail__description,
-.plugin-rail__access,
-.plugin-rail__origin {
-  margin: 12px 0 0;
-  word-break: break-word;
-}
-
 #protocol-management-view > .panel:first-child > h2,
 #biology-notebook-view > .panel:first-child > h2,
 #lab-common-inventory-view > .panel:first-child > h2,
 #sample-registry-view > .panel:first-child > h2,
 #assay-view > .panel:first-child > h2,
-#gel-view > .panel:first-child > h2,
 #setting-view > .panel:first-child > h2,
 #workflow-management-view > .panel:first-child > h2,
 #agent-view > .panel:first-child > h2,

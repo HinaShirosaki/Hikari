@@ -6,19 +6,8 @@ import {
   createDefaultNotebookResultTable,
   createNotebookResultTableFromPlaceholder,
   normalizeNotebookResultTable,
-  normalizeNotebookResultTables,
-  summarizeNotebookResultTables,
-  summarizeNotebookResultTable
+  normalizeNotebookResultTables
 } from '../../../lib/notebook-result-tables.js';
-
-function escapeHtml(value) {
-  return String(value == null ? '' : value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
 
 function getResultTableHeight(table) {
   const rowCount = Array.isArray(table?.rows) ? table.rows.length : 0;
@@ -26,6 +15,13 @@ function getResultTableHeight(table) {
     return '';
   }
   return `${Math.min(420, 82 + (rowCount * 42))}px`;
+}
+
+function hasGeneratedColumnTitles(table) {
+  const columns = Array.isArray(table?.columns) ? table.columns : [];
+  return columns.length > 0 && columns.every((column, index) => (
+    String(column?.title || '').trim() === `Column ${index + 1}`
+  ));
 }
 
 export function createResultTableController({
@@ -72,16 +68,14 @@ export function createResultTableController({
       return;
     }
     if (message) {
+      statusEl.hidden = false;
       statusEl.textContent = message;
       return;
     }
     const normalizedTables = normalizeNotebookResultTables(tables);
-    const summary = summarizeNotebookResultTables(normalizedTables);
-    const activeTable = normalizedTables[clampActiveIndex(activeTableIndex, normalizedTables)];
-    const activeSummary = summarizeNotebookResultTable(activeTable);
-    statusEl.textContent = summary
-      ? `${summary}. ${normalizedTables.length > 1 ? `Selected Table ${activeTableIndex + 1}: ${activeSummary}. ` : ''}Edit cells directly.`
-      : 'Add a table to capture structured notebook results.';
+    const hasTables = normalizedTables.length > 0;
+    statusEl.hidden = hasTables;
+    statusEl.textContent = hasTables ? '' : 'Add a table to capture structured notebook results.';
   }
 
   function syncControls(tables = []) {
@@ -179,13 +173,15 @@ export function createResultTableController({
       return;
     }
 
+    const showTablePicker = draftTables.length > 1;
     host.innerHTML = draftTables.map((table, index) => `
       <section class="biology-notebook-result-table-editor${index === activeTableIndex ? ' is-active' : ''}" data-result-table-editor="${index}">
-        <div class="biology-notebook-result-table-editor-head">
-          <button class="biology-notebook-result-table-select" type="button" data-result-table-select="${index}">Table ${index + 1}</button>
-          <p class="small-note">${escapeHtml(summarizeNotebookResultTable(table))}</p>
-        </div>
-        <div class="biology-notebook-result-table" data-result-table-host="${index}" aria-label="Notebook result table ${index + 1}"></div>
+        ${showTablePicker ? `
+          <div class="biology-notebook-result-table-editor-head">
+            <button class="biology-notebook-result-table-select" type="button" data-result-table-select="${index}">Table ${index + 1}</button>
+          </div>
+        ` : ''}
+        <div class="biology-notebook-result-table${hasGeneratedColumnTitles(table) ? ' biology-notebook-result-table--untitled' : ''}" data-result-table-host="${index}" aria-label="Notebook result table ${index + 1}"></div>
       </section>
     `).join('');
 
@@ -207,6 +203,7 @@ export function createResultTableController({
         })),
         index: 'id',
         layout: 'fitColumns',
+        headerVisible: !hasGeneratedColumnTitles(table),
         reactiveData: false,
         placeholder: 'Use Add row / Add column to shape this notebook table.',
         cellEdited: () => handleEdited(index)

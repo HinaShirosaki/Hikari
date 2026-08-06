@@ -10,6 +10,8 @@ import {
 } from '../../lib/inventory-settings.js';
 import { defaultState, STARTUP_DEFAULT_VIEW_IDS } from './defaults.js';
 import { normalizeAppearanceMode } from './appearance.js';
+import { normalizePluginStorage } from '../../lib/plugin-storage.js';
+import { mergeBundledPluginEntries } from '../../lib/bundled-plugins.js';
 import { normalizePreferredJournalList } from '../../lib/preferred-journals.js';
 import {
   normalizeDashboardActiveTimers,
@@ -101,6 +103,7 @@ function normalizePluginEntries(rawPlugins) {
         // server, so `serve` only survives alongside one.
         serve: raw.serve === true && !embedUrl && Boolean(String(raw.path || '').trim()),
         service,
+        bundled: raw.bundled === true,
         enabled: raw.enabled !== false
       };
     })
@@ -193,7 +196,8 @@ function normalizeSettings(source) {
     sampleTypeHidden: normalizeSampleTypeHidden(rawSettings.sampleTypeHidden),
     preferredJournals,
     preferredJournal: preferredJournals.join('; '),
-    plugins: normalizePluginEntries(rawSettings.plugins)
+    plugins: mergeBundledPluginEntries(normalizePluginEntries(rawSettings.plugins)),
+    pluginStorage: normalizePluginStorage(rawSettings.pluginStorage)
   };
 }
 

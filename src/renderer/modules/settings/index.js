@@ -380,11 +380,13 @@ export function initSettings({
     if (!nextPath) {
       state.settings.storagePath = '';
       persist();
+      window.dispatchEvent(new CustomEvent('hikari:storage-changed'));
       return;
     }
     if (typeof onStoragePathSaved !== 'function') {
       state.settings.storagePath = nextPath;
       persist();
+      window.dispatchEvent(new CustomEvent('hikari:storage-changed'));
       return;
     }
     const result = await onStoragePathSaved(nextPath, {
@@ -394,6 +396,7 @@ export function initSettings({
     if (!result?.ok && rootChanged && result?.refreshed !== true && settingStoragePath) {
       settingStoragePath.value = previousPath;
     }
+    window.dispatchEvent(new CustomEvent('hikari:storage-changed'));
   }
 
   function onSaveStartupSettings(event) {

@@ -434,6 +434,84 @@ ORIGIN
         await fsPromises.rm(storageRoot, { recursive: true, force: true });
       }
     });
+    test('sequence library annotation and feature search backfill legacy saved GenBank entries', async () => {
+      const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-annotate-backfill-'));
+      try {
+        const hostSequence = 'TTGACATATAAT';
+        const saved = await sequenceLibrary.upsertSequenceEntry({
+          storagePath: storageRoot,
+          name: 'LegacyAnnotationHost',
+          status: 'saved',
+          sourceFormat: 'genbank',
+          topology: 'linear',
+          sequence: hostSequence,
+          sequenceLength: hostSequence.length,
+          featureCount: 1,
+          features: [{
+            name: 'LegacyPromoter',
+            type: 'promoter',
+            strand: 1,
+            source: 'genbank',
+            segments: [{ start: 0, end: hostSequence.length }]
+          }],
+          gbkText: `LOCUS       LegacyAnnotationHost       ${hostSequence.length} bp    DNA     linear   SYN 01-JAN-2026
+FEATURES             Location/Qualifiers
+     promoter        1..12
+                     /label="LegacyPromoter"
+ORIGIN
+        1 ttgacatataat
+//
+`
+        });
+        const sqlitePath = path.join(storageRoot, 'SequenceViewer', 'sequence-library.sqlite');
+        const sequenceLibraryDatabase = require(path.join(
+          __dirname,
+          'src',
+          'renderer',
+          'modules',
+          'sequence-viewer',
+          'main-process',
+          'sequence-library',
+          'database.js'
+        ));
+        const db = await sequenceLibraryDatabase.openDatabase(sqlitePath);
+        try {
+          db.run('DELETE FROM sequence_feature_occurrences WHERE host_vector_id = ?', [saved.entry.id]);
+          db.run('UPDATE sequence_entries SET feature_index_version = 0 WHERE id = ?', [saved.entry.id]);
+          await sequenceLibraryDatabase.persistDatabase(sqlitePath, db);
+        } finally {
+          db.close();
+        }
+
+        const annotated = await sequenceLibrary.annotateSequenceRecord({
+          storagePath: storageRoot,
+          sequence: `GGG${hostSequence}CCC`,
+          topology: 'linear'
+        });
+
+        assert.equal(annotated.dnaMatches.length, 1);
+        assert.equal(annotated.dnaMatches[0].name, 'LegacyPromoter');
+        assert.equal(JSON.stringify(annotated.dnaMatches[0].segments), JSON.stringify([{ start: 3, end: 15 }]));
+
+        const resetDb = await sequenceLibraryDatabase.openDatabase(sqlitePath);
+        try {
+          resetDb.run('DELETE FROM sequence_feature_occurrences WHERE host_vector_id = ?', [saved.entry.id]);
+          resetDb.run('UPDATE sequence_entries SET feature_index_version = 0 WHERE id = ?', [saved.entry.id]);
+          await sequenceLibraryDatabase.persistDatabase(sqlitePath, resetDb);
+        } finally {
+          resetDb.close();
+        }
+        const searched = await sequenceLibrary.searchSequenceFeatures({
+          storagePath: storageRoot,
+          query: 'LegacyPromoter'
+        });
+        assert.equal(searched.results.length, 1);
+        assert.equal(searched.results[0].name, 'LegacyPromoter');
+        assert.equal(searched.results[0].hosts[0].hostVectorId, saved.entry.id);
+      } finally {
+        await fsPromises.rm(storageRoot, { recursive: true, force: true });
+      }
+    });
     test('sequence library helper recognizes stored backbone and insert from a derived vector', async () => {
       const storageRoot = await fsPromises.mkdtemp(path.join(__dirname, 'tmp', 'sequence-library-backbone-recognition-'));
       try {

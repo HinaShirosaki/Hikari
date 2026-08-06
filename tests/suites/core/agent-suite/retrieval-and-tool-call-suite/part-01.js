@@ -241,7 +241,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(result.status, 'no_match');
       assert.equal(result.items.some((item) => item.record_type === 'assay'), false);
     });
-    test('agent sub-app API exposes protocol, notebook, assay, gel, and paper records for agent use', () => {
+    test('agent sub-app API exposes protocol, notebook, assay, and paper records for agent use', () => {
       const { AGENT_SUB_APP_API_CATALOG, createAgentSubAppApi } = require(path.join(
         __dirname,
         'src',
@@ -252,7 +252,7 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       ));
 
       const api = createAgentSubAppApi();
-      assert.deepEqual(Object.keys(AGENT_SUB_APP_API_CATALOG), ['assay', 'gel', 'papers', 'protocol', 'notebook']);
+      assert.deepEqual(Object.keys(AGENT_SUB_APP_API_CATALOG), ['assay', 'papers', 'protocol', 'notebook']);
 
       const protocolRows = api.protocol.listAgentRecords({
         snapshot: {
@@ -294,18 +294,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
           ]
         }
       });
-      const gelRows = api.gel.listAgentRecords({
-        snapshot: {
-          gelAnalyses: [
-            {
-              id: 'gel-1',
-              name: 'Atlas SDS-PAGE',
-              projectId: 'proj-1',
-              projectName: 'Atlas'
-            }
-          ]
-        }
-      });
       const paperRows = api.papers.listAgentRecords({
         snapshot: {
           papers: [
@@ -324,7 +312,6 @@ module.exports = function registerAgentRetrievalAndToolCallSuitePart01(context =
       assert.equal(protocolRows[0].record_type, 'protocol');
       assert.equal(notebookRows[0].record_type, 'notebook');
       assert.equal(assayRows[0].record_type, 'assay');
-      assert.equal(gelRows[0].record_type, 'gel');
       assert.equal(paperRows[0].record_type, 'paper');
       assert.equal(typeof api.protocol.matchForNotebook, 'function');
       assert.equal(typeof api.notebook.generateFromProtocol, 'function');

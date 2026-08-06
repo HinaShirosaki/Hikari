@@ -26,7 +26,7 @@ It does not select an intent or run a second conversational agent.
 
 ## `runtime/agent-sub-app-api.js`
 
-This adapter exposes narrow Agent-facing methods for assay, gel, papers, protocol, and notebook data. It also resolves protocol-matching and notebook-generation factories from the runtime registry.
+This adapter exposes narrow Agent-facing methods for assay, papers, protocol, and notebook data. It also resolves protocol-matching and notebook-generation factories from the runtime registry.
 
 The adapter stays below the MCP/tool layer: callers receive normalized records or invoke a registered tool rather than reaching renderer controllers directly.
 

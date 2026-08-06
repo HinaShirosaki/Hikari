@@ -19,26 +19,11 @@ export function createLinkedWorkActions({
   persist,
   previewImageLoader,
   resultFileAttachmentLoader,
-  onCreateLinkedGel,
   onCreateLinkedAssay,
   onOpenSampleRecorder
 } = {}) {
   function matchesType(entry) {
     return matchesNotebookType(entry, notebookType);
-  }
-
-  async function onAddGelClick() {
-    const entry = await ensureEntry();
-    if (!entry || typeof onCreateLinkedGel !== 'function') {
-      return;
-    }
-    const gelName = String(experimentNameInput?.value || '').trim() || resolveEntryExperimentName(entry);
-    onCreateLinkedGel({
-      notebookEntryId: entry.id,
-      projectId: entry.projectId,
-      notebookType: entry.notebookType || notebookType,
-      gelName
-    });
   }
 
   async function onAddAssayClick() {
@@ -184,7 +169,6 @@ export function createLinkedWorkActions({
   }
 
   return {
-    onAddGelClick,
     onAddAssayClick,
     onAddSamplesClick,
     exportEntryPdf,

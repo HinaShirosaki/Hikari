@@ -77,6 +77,10 @@ export function createPluginsController({
     if (index < 0) {
       return;
     }
+    if (plugins[index].bundled) {
+      setStatus(`"${plugins[index].name}" is bundled with Hikari. Turn it off to disable it.`, true);
+      return;
+    }
     const [removed] = plugins.splice(index, 1);
     persist();
     setStatus(`Removed "${removed.name}". The plugin folder itself was not deleted.`, true);
@@ -110,13 +114,15 @@ export function createPluginsController({
           ${plugin.embedUrl
             ? `<p class="small-note settings-skill-embed">Loads remote code from ${escapeHtml(plugin.embedUrl)} — needs internet, and anything you open in it leaves this machine.</p>`
             : ''}
-          <p class="small-note settings-skill-path">${escapeHtml(plugin.path)}</p>
+          <p class="small-note settings-skill-path">${plugin.bundled ? 'Bundled with Hikari' : escapeHtml(plugin.path)}</p>
         </div>
         <label class="settings-skill-toggle">
           <input type="checkbox" data-plugin-toggle data-plugin-id="${escapeHtml(plugin.id)}" ${plugin.enabled !== false ? 'checked' : ''} />
           <span>${plugin.enabled !== false ? 'On' : 'Off'}</span>
         </label>
-        <button type="button" class="danger-btn" data-plugin-remove data-plugin-id="${escapeHtml(plugin.id)}">Remove</button>
+        ${plugin.bundled
+          ? ''
+          : `<button type="button" class="danger-btn" data-plugin-remove data-plugin-id="${escapeHtml(plugin.id)}">Remove</button>`}
       </div>
     `).join('');
 

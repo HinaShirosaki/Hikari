@@ -6,7 +6,7 @@ This doc explains how renderer feature modules are grouped and what shape they s
 
 The renderer has largely finished migrating from single-file controllers to **folder modules**. Today almost every workspace lives in `modules/<feature>/` with an `index.js` entry, and only a handful of thin top-level files remain.
 
-- **Folder module** (`modules/<feature>/index.js`): the entry is usually an orchestrator that captures DOM nodes, builds sub-controllers, wires events, and exposes a compact API (`render()`, `renderList()`, ...). `gel/`, `assay/`, `papers/`, `sequence-viewer/`, `workflow/`, and the inventory/notebook folders all follow this.
+- **Folder module** (`modules/<feature>/index.js`): the entry is usually an orchestrator that captures DOM nodes, builds sub-controllers, wires events, and exposes a compact API (`render()`, `renderList()`, ...). `assay/`, `papers/`, `sequence-viewer/`, `workflow/`, and the inventory/notebook folders all follow this.
 - **Thin top-level orchestrator** that delegates to a folder: e.g. `home-dashboard.js` wires the widgets under `home-dashboard/`; `tool-box.js` composes the mini-tools under `tool-box/`. Conventional folder features are imported directly from their `index.js`; only deliberate secondary APIs, such as `sequence-viewer/public-api.js`, get another entry point.
 
 ## The shared module contract
@@ -30,11 +30,11 @@ Modules do **not** own their own persistence; `persist()` records undo state, no
 | `foundation` | `biologyNotebook`, `protocol` | core record-keeping that other features link into |
 | `collaboration` | `agentChat`, `agentChatRail`, `workflowManagement`, `papers` | assistant, workflows, and shared research surfaces |
 | `inventory` | `labCommonInventory`, `personalInventory`, `sampleRegistry` | chemicals, storage containers, and samples |
-| `analysis` | `assay`, `gel` | plate/gel data capture and analysis |
+| `analysis` | `assay` | plate data capture and analysis |
 | `sequence` | `sequenceViewer` | sequence import, library, inspection, and analysis |
 | `utility` | `toolBox`, `settings`, `homeDashboard` | calculators, configuration, and the dashboard |
 
-Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), and optionally a `bootOrder`. `module-runtime.js` runs boot renders in order: `protocol` (10) → `workflowManagement` (30) → `labCommonInventory` (40) → `biologyNotebook` (50) → `sampleRegistry` (60) → `assay` (70) → `gel` (80) → `settings` (90) → `homeDashboard` (100) → `papers` (110) → `agentChat` (120). Modules without a boot order still initialize and register normally. Boot order is independent of the family grouping above.
+Each manifest declares an `init` entry, a `viewKey` (from `modules/views.js`), and optionally a `bootOrder`. `module-runtime.js` runs boot renders in order: `protocol` (10) → `workflowManagement` (30) → `labCommonInventory` (40) → `biologyNotebook` (50) → `sampleRegistry` (60) → `assay` (70) → `settings` (90) → `homeDashboard` (100) → `papers` (110) → `agentChat` (120). Modules without a boot order still initialize and register normally. Boot order is independent of the family grouping above.
 
 `agentChatRail` is special: it has no view of its own and mounts a scoped agent chat as a side rail in Papers, Biology Notebook, and Assay.
 

@@ -2,7 +2,6 @@ const EDITOR_SOURCES = Object.freeze([
   { key: 'sampleRegistry', label: 'Sample' },
   { key: 'protocol', label: 'Protocol' },
   { key: 'assay', label: 'Assay' },
-  { key: 'gel', label: 'Gel' },
   { key: 'biologyNotebook', label: 'Notebook' }
 ]);
 
@@ -18,6 +17,10 @@ function safeHasUnsavedChanges(moduleApi) {
 export function createUnsavedChangesService({
   moduleRegistry,
   api,
+  // Sources that are not modules in this registry — today, plugin frames, which
+  // report their dirty state over the bridge because the host cannot reach into
+  // them. Same { key, label, moduleApi } shape as EDITOR_SOURCES.
+  externalSources = () => [],
   documentObject = globalThis?.document || null,
   windowObject = globalThis?.window || globalThis
 } = {}) {
@@ -31,12 +34,19 @@ export function createUnsavedChangesService({
   let saveInProgress = false;
 
   function getUnsavedSources() {
-    return EDITOR_SOURCES
-      .map((source) => ({
+    let external = [];
+    try {
+      external = externalSources() || [];
+    } catch (error) {
+      console.warn('Failed to collect external unsaved sources:', error);
+    }
+    return [
+      ...EDITOR_SOURCES.map((source) => ({
         ...source,
         moduleApi: moduleRegistry?.get?.(source.key)
-      }))
-      .filter((source) => safeHasUnsavedChanges(source.moduleApi));
+      })),
+      ...external
+    ].filter((source) => safeHasUnsavedChanges(source.moduleApi));
   }
 
   function setStatus(message, isError = false) {

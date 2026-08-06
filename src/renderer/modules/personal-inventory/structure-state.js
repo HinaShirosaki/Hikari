@@ -50,7 +50,7 @@ function setStructureStatus(message) {
 }
 
 function buildStructureClipboardNotFoundMessage(formats = []) {
-  const base = 'No MOL, SDF, SMILES, or copied structure image found on the clipboard.';
+  const base = 'No MOL, SDF, or SMILES structure data found on the clipboard.';
   const visibleFormats = Array.from(new Set((Array.isArray(formats) ? formats : [])
     .map((format) => String(format || '').trim())
     .filter(Boolean)));

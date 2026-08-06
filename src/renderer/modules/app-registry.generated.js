@@ -79,7 +79,7 @@ export const APP_REGISTRY = [
     "viewKey": "SAMPLE_REGISTRY",
     "label": "Samples",
     "viewId": "sample-registry-view",
-    "subtitle": "Sample records, storage details, and locations in one table.",
+    "subtitle": "Record and manage samples directly inside storage containers.",
     "icon": "sample-inventory.svg",
     "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <path d=\"M6 5.5h12v3H6Z\" />\n  <path d=\"M8 8.5v7.25a1.5 1.5 0 0 0 3 0V8.5M13 8.5v7.25a1.5 1.5 0 0 0 3 0V8.5\" />\n  <path d=\"M5 18.5h14\" />\n</svg>",
     "placement": "dock",
@@ -90,7 +90,7 @@ export const APP_REGISTRY = [
       "sample inventory",
       "sampleinventory"
     ],
-    "searchInputId": "sample-search",
+    "searchInputId": "",
     "agentChatRail": false,
     "hiddenFromNavigation": false
   },
@@ -109,24 +109,6 @@ export const APP_REGISTRY = [
     ],
     "searchInputId": "",
     "agentChatRail": true,
-    "hiddenFromNavigation": false
-  },
-  {
-    "id": "gel",
-    "viewKey": "GEL",
-    "label": "Gel",
-    "viewId": "gel-view",
-    "subtitle": "Gel and blot analysis with band-level review.",
-    "icon": "gel.svg",
-    "iconMarkup": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" stroke-linecap=\"round\" stroke-linejoin=\"round\">\n  <rect x=\"5\" y=\"4.5\" width=\"14\" height=\"15\" rx=\"1.5\" />\n  <path d=\"M9.5 7v10M14.5 7v10\" />\n  <path d=\"M6.75 9.5h1.5M10.75 12h1.5M15.75 14.5h1.5\" />\n</svg>",
-    "placement": "dock",
-    "aliases": [
-      "gels",
-      "blot",
-      "western"
-    ],
-    "searchInputId": "gel-search",
-    "agentChatRail": false,
     "hiddenFromNavigation": false
   },
   {
@@ -248,7 +230,6 @@ export const APP_DOCK_ORDER = [
   "agent",
   "sequence-viewer",
   "assay",
-  "gel",
   "tools",
   "settings"
 ];

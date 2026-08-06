@@ -343,26 +343,6 @@ export function createTopbarSearchController({
       });
     });
 
-    const gelTarget = getScopeTarget('gel');
-    asArray(state.gelAnalyses).forEach((record) => {
-      const label = record?.name || record?.imageName;
-      addCandidate(gelTarget, [
-        record?.name,
-        record?.projectName,
-        record?.notebookEntryProtocolName,
-        record?.analysisType,
-        record?.imageName,
-        record?.report?.confidence?.label,
-        asArray(record?.report?.warnings).join(' ')
-      ].join(' '), {
-        label,
-        sublabel: joinSublabel([record?.analysisType, record?.projectName, record?.notebookEntryProtocolName]),
-        kind: 'Gel',
-        applyQuery: label,
-        itemId: record?.id
-      });
-    });
-
     const projectTarget = getScopeTarget('projects');
     asArray(state.projects).forEach((project) => {
       const label = project?.name;
@@ -458,6 +438,31 @@ export function createTopbarSearchController({
         kind: 'Notebook',
         applyQuery: '',
         itemId: entry?.id
+      });
+    });
+
+    const personalInventoryTarget = {
+      viewId: VIEWS.PERSONAL_INVENTORY,
+      inputId: '',
+      label: 'Containers'
+    };
+    Object.entries(state.inventory || {}).forEach(([zone, containers]) => {
+      asArray(containers).forEach((container) => {
+        const label = container?.name;
+        addCandidate(personalInventoryTarget, [
+          zone,
+          container?.name,
+          container?.type,
+          container?.singleContent,
+          asArray(container?.wells)
+            .map((well) => (typeof well === 'string' ? well : `${well?.name || ''} ${well?.content || ''}`))
+            .join(' ')
+        ].join(' '), {
+          label,
+          sublabel: joinSublabel([container?.type, zone]),
+          kind: 'Container',
+          applyQuery: ''
+        });
       });
     });
 
@@ -669,19 +674,12 @@ export function createTopbarSearchController({
 
     if (type === 'search-samples') {
       showView(VIEWS.SAMPLE_REGISTRY);
-      setSearchInputValue('sample-search', payload.query);
       return;
     }
 
     if (type === 'search-assays') {
       showView(VIEWS.ASSAY);
       setSearchInputValue('assay-search', payload.query);
-      return;
-    }
-
-    if (type === 'search-gels') {
-      showView(VIEWS.GEL);
-      setSearchInputValue('gel-search', payload.query);
       return;
     }
 

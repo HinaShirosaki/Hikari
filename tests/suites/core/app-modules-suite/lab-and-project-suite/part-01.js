@@ -225,6 +225,9 @@ test('personal-inventory shows right-side sample editor and saves linked sample 
   });
 
   personalInventory.renderSections();
+  assert.equal(personalInventory.openSample('sample-1'), true);
+  assert.match(inventorySections.innerHTML, /data-well-sample-save="sample-1"/);
+  assert.equal(personalInventory.openSample('missing-sample'), false);
   const openBtn = inventorySections.querySelectorAll('[data-container-open]')[0];
   openBtn.dataset.section = '-20 Degree';
   trigger(openBtn, 'click');
@@ -297,6 +300,7 @@ test('personal-inventory creates a linked sample from the side editor for an emp
 
   let persistCalls = 0;
   let sampleChangedCalls = 0;
+  const recordedSamples = [];
   const state = {
     samples: [],
     inventory: {
@@ -325,6 +329,9 @@ test('personal-inventory creates a linked sample from the side editor for an emp
     cssEscape: shared.cssEscape,
     onSamplesChanged: () => {
       sampleChangedCalls += 1;
+    },
+    onSampleRecorded: (sample) => {
+      recordedSamples.push(sample);
     }
   });
 
@@ -368,6 +375,8 @@ test('personal-inventory creates a linked sample from the side editor for an emp
   assert.equal(state.samples[0].inventoryLink.wellIndex, 0);
   assert.ok(persistCalls >= 1);
   assert.equal(sampleChangedCalls, 1);
+  assert.equal(recordedSamples.length, 1);
+  assert.equal(recordedSamples[0], state.samples[0]);
 });
 test('personal-inventory keeps folders nestable while physical containers remain distinct leaves', () => {
   const document = createMockDocument([
@@ -376,7 +385,6 @@ test('personal-inventory keeps folders nestable while physical containers remain
     'inventory-container-context-menu',
     'container-detail',
     'inventory-add-container-btn',
-    'inventory-add-folder-btn',
     'inventory-add-container-overlay',
     'inventory-add-container-form',
     'inventory-add-container-title',
@@ -398,7 +406,6 @@ test('personal-inventory keeps folders nestable while physical containers remain
   const containerContextMenu = document.getElementById('inventory-container-context-menu');
   const addContainerOverlay = document.getElementById('inventory-add-container-overlay');
   const addContainerTitle = document.getElementById('inventory-add-container-title');
-  const addFolderBtn = document.getElementById('inventory-add-folder-btn');
   const addContainerNameInput = document.getElementById('inventory-add-container-name');
   const addContainerLocationSelect = document.getElementById('inventory-add-container-location');
   const addContainerForm = document.getElementById('inventory-add-container-form');
@@ -488,7 +495,15 @@ test('personal-inventory keeps folders nestable while physical containers remain
   assert.ok(containerContextMenu.querySelector('[data-container-context-rename]'));
   assert.ok(containerContextMenu.querySelector('[data-container-context-delete]'));
 
-  trigger(addFolderBtn, 'click');
+  const locationBtn = inventoryLocationNav.querySelectorAll('[data-inventory-section]')
+    .find((button) => button.dataset.inventorySection === '-20 Degree');
+  trigger(locationBtn, 'contextmenu', { clientX: 80, clientY: 120 });
+  assert.equal(containerContextMenu.hidden, false);
+  assert.ok(containerContextMenu.querySelector('[data-location-context-add-container]'));
+  assert.ok(containerContextMenu.querySelector('[data-location-context-add-folder]'));
+  assert.ok(containerContextMenu.querySelector('[data-location-context-rename]'));
+  assert.ok(containerContextMenu.querySelector('[data-location-context-delete]'));
+  trigger(containerContextMenu.querySelector('[data-location-context-add-folder]'), 'click');
   assert.equal(addContainerOverlay.hidden, false);
   assert.equal(addContainerTitle.textContent, 'New Folder');
   addContainerLocationSelect.value = '-20 Degree';
@@ -541,8 +556,26 @@ test('personal-inventory keeps folders nestable while physical containers remain
   assert.equal(persistCalls, 3);
   assert.equal(inventoryChangedCalls, 3);
   assert.equal(containerContextMenu.hidden, true);
+
+  const emptyLocationBtn = inventoryLocationNav.querySelectorAll('[data-inventory-section]')
+    .find((button) => button.dataset.inventorySection === 'Room Temp');
+  trigger(emptyLocationBtn, 'contextmenu', { clientX: 80, clientY: 120 });
+  trigger(containerContextMenu.querySelector('[data-location-context-rename]'), 'click');
+  const locationRenameInput = containerContextMenu.querySelector('[data-personal-inventory-context-rename-input]');
+  locationRenameInput.value = 'Ambient Storage';
+  trigger(locationRenameInput, 'keydown', { key: 'Enter' });
+  assert.ok(state.settings.sampleInventoryLocations.includes('Ambient Storage'));
+  assert.equal(state.inventory['Room Temp'], undefined);
+
+  const renamedLocationBtn = inventoryLocationNav.querySelectorAll('[data-inventory-section]')
+    .find((button) => button.dataset.inventorySection === 'Ambient Storage');
+  trigger(renamedLocationBtn, 'contextmenu', { clientX: 80, clientY: 120 });
+  trigger(containerContextMenu.querySelector('[data-location-context-delete]'), 'click');
+  assert.ok(!state.settings.sampleInventoryLocations.includes('Ambient Storage'));
+  assert.equal(persistCalls, 5);
+  assert.equal(inventoryChangedCalls, 5);
 });
-test('personal-inventory previews a copied structure image before saving a chemical sample', async () => {
+test('personal-inventory ignores copied images while preserving chemical sample entry', async () => {
   const document = createMockDocument([
     'inventory-sections',
     'container-detail',
@@ -624,8 +657,8 @@ test('personal-inventory previews a copied structure image before saving a chemi
   await flushAsync();
 
   const status = inventorySections.querySelector('[data-inventory-sample-structure-status]');
-  assert.equal(status.textContent, 'Structure ready. Click Add Sample to save it.');
-  assert.equal(Boolean(preview.hidden), false);
+  assert.match(status.textContent, /No MOL, SDF, or SMILES structure data/);
+  assert.equal(Boolean(preview.hidden), true);
 
   inventorySections.querySelector('[data-well-sample-new-code]').value = 'CHEM-IMG-1';
   inventorySections.querySelector('[data-well-sample-new-name]').value = 'Pasted structure';
@@ -633,13 +666,12 @@ test('personal-inventory previews a copied structure image before saving a chemi
 
   assert.equal(state.samples.length, 1);
   assert.equal(state.samples[0].type, 'chemical');
-  assert.equal(state.samples[0].compoundStructure.imageDataUrl, 'data:image/png;base64,NOTEPNG');
-  assert.match(inventorySections.innerHTML, /data-inventory-sample-structure-preview-image/);
-  assert.match(inventorySections.innerHTML, /data:image\/png;base64,NOTEPNG/);
+  assert.equal(state.samples[0].compoundStructure, null);
+  assert.doesNotMatch(inventorySections.innerHTML, /data:image\/png;base64,NOTEPNG/);
   assert.ok(persistCalls >= 1);
   assert.equal(sampleChangedCalls, 1);
 });
-test('sample-registry applies pasted SMILES, MOL/SDF, and copied images without editor hooks', async () => {
+test('sample-registry applies pasted SMILES and MOL/SDF but ignores copied images', async () => {
   const compoundActions = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'modules', 'sample-registry', 'compound-actions.js'));
   const molfile = [
     'ethanol',
@@ -684,11 +716,9 @@ test('sample-registry applies pasted SMILES, MOL/SDF, and copied images without 
   const imageCtx = createCtx();
   assert.equal(await compoundActions.applyCompoundStructurePasteCandidates(imageCtx, [
     { source: 'data:image/png;base64,PASTEPNG', sourceFormat: 'image', imageDataUrl: 'data:image/png;base64,PASTEPNG', clipboardFormat: 'image/png' }
-  ], ['image/png']), true);
-  assert.equal(imageCtx.compoundStructureDraft.imageDataUrl, 'data:image/png;base64,PASTEPNG');
-  assert.equal(imageCtx.dom.sampleCompoundPreview.hidden, false);
-  assert.equal(imageCtx.dom.sampleCompoundPreviewImage.src, 'data:image/png;base64,PASTEPNG');
-  assert.match(imageCtx.dom.sampleCompoundStatus.textContent, /Structure image pasted/);
+  ], ['image/png']), false);
+  assert.equal(imageCtx.compoundStructureDraft.imageDataUrl, '');
+  assert.match(imageCtx.dom.sampleCompoundStatus.textContent, /No MOL, SDF, or SMILES structure data/);
 });
 test('chemical structure clipboard helper extracts CDXML, MOL/SDF, SMILES, and images', async () => {
   const clipboardModule = loadEsmStyleModule(path.join(__dirname, 'src', 'renderer', 'services', 'chemical-structure-clipboard.js'));

@@ -5,7 +5,6 @@
 @import url("./ui/css/base/core.css");
 @import url("./ui/css/themes/modes.css");
 @import url("./ui/css/views/assay-plate-palette.css");
-@import url("./ui/css/views/gel-palette.css");
 @import url("./ui/css/views/home-palette.css");
 @import url("./ui/css/views/papers-palette.css");
 @import url("./ui/css/views/sequence-viewer-palette.css");
@@ -17,7 +16,6 @@
 @import url("./ui/css/views/personal-inventory-view.css");
 @import url("./ui/css/views/sample-registry-view.css");
 @import url("./ui/css/views/assay-view.css");
-@import url("./ui/css/views/gel-view.css");
 @import url("./ui/css/views/lab-common-inventory-view.css");
 @import url("./ui/css/views/setting-view.css");
 @import url("./ui/css/views/workflow-management-view.css");

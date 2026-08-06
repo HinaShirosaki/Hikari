@@ -19,9 +19,9 @@ Source: [`examples/plugins/imagej/`](../../examples/plugins/imagej/). Run
 `./fetch-imagej.sh` once to download the compiled ImageJ, install the folder,
 reload, and **More → ImageJ** is real ImageJ 1.53m — File, Edit, Image,
 Process, Analyze, Plugins, Window, Help — with your images staying on your
-machine. ImageJ fills the main pane; the host draws the identity rail beside it
-([plugin-system.md §4.1](plugin-system.md#41-boot-sequence)), the same as every
-plugin, which is why the example ships no rail markup of its own.
+machine. ImageJ fills the whole pane — the host draws no chrome around a plugin
+frame ([plugin-system.md §4.1](plugin-system.md#41-boot-sequence)), so what you
+see is ImageJ's own window and nothing else.
 
 The interesting part is why `"serve": true` is load-bearing, because the same
 reasoning applies to anything with a real runtime behind it.

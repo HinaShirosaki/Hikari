@@ -21,6 +21,7 @@ export function getGelElements(root = document) {
     gelOverrideStatus: root.getElementById('gel-override-status'),
     gelStatus: root.getElementById('gel-status'),
     gelRunBtn: root.getElementById('gel-run-btn'),
+    gelSaveBtn: root.getElementById('gel-save-btn'),
     gelCancelBtn: root.getElementById('gel-cancel-btn'),
     gelExportJsonBtn: root.getElementById('gel-export-json-btn'),
     gelExportCsvBtn: root.getElementById('gel-export-csv-btn'),

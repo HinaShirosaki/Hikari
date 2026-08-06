@@ -53,7 +53,8 @@ const SYSTEM = Object.freeze({
 
 const PLUGINS = Object.freeze({
   INSPECT_FOLDER: 'plugins:inspect-folder',
-  SERVE_FOLDER: 'plugins:serve-folder'
+  SERVE_FOLDER: 'plugins:serve-folder',
+  EXPORT_FILE: 'plugins:export-file'
 });
 
 const INVENTORY = Object.freeze({

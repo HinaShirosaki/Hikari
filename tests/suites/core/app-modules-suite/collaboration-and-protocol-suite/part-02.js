@@ -10,6 +10,8 @@ test('protocol-management keeps saved protocols unselected until the user opens 
     'protocol-view-panel',
     'protocol-view-title',
     'protocol-view-content',
+    'protocol-editor-heading',
+    'protocol-view-edit-btn',
     'protocol-list',
     'protocol-sort-menu-btn',
     'protocol-sort-menu'
@@ -73,6 +75,10 @@ test('protocol-management keeps saved protocols unselected until the user opens 
   assert.equal((protocolList.innerHTML.match(/protocol-list-row-selected/g) || []).length, 1);
   assert.match(protocolList.innerHTML, /protocol-list-row-selected list-row-selected"[\s\S]*data-protocol-select="protocol-a"/);
   assert.equal(document.getElementById('protocol-detail-panel').dataset.mode, 'view');
+
+  trigger(document.getElementById('protocol-view-edit-btn'), 'click');
+  assert.equal(document.getElementById('protocol-detail-panel').dataset.mode, 'edit');
+  assert.equal(document.getElementById('protocol-editor-heading').textContent, 'Edit Protocol');
 });
 test('protocol-management generates a protocol from the create editor overlay', async () => {
   const document = createMockDocument([

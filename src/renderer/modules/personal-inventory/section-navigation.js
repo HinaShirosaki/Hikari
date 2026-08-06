@@ -185,6 +185,9 @@ export function installSectionNavigation(ctx) {
         uiState.selectedContainer = null;
         ctx.renderSections();
       });
+      button.addEventListener('contextmenu', (event) => {
+        ctx.openLocationContextMenu?.(event, button.dataset.inventorySection);
+      });
     });
 
     inventoryLocationNav.querySelectorAll('[data-container-open]').forEach((button) => {

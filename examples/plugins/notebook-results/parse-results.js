@@ -26,7 +26,7 @@ function toField(title, index, taken) {
   return field;
 }
 
-export function parseImageJResults(rawText) {
+function parseImageJResults(rawText) {
   // Blank lines go, but leading whitespace within a line must survive: ImageJ's
   // row-number column has an empty header, so a clipboard paste legitimately
   // starts with the separator and trimming the text would drop that column.
@@ -55,7 +55,7 @@ export function parseImageJResults(rawText) {
 }
 
 // Run with: node examples/plugins/notebook-results/parse-results.js
-export function demo() {
+function demo() {
   const assert = (condition, message) => {
     if (!condition) {
       throw new Error(`parse-results self-check failed: ${message}`);
@@ -92,6 +92,14 @@ export function demo() {
   assert(rejected, 'a header with no data rows is rejected');
 
   return 'ok';
+}
+
+if (typeof window !== 'undefined') {
+  window.HikariNotebookResults = Object.freeze({ parseImageJResults });
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { demo, parseImageJResults };
 }
 
 if (typeof process !== 'undefined' && process.argv?.[1]?.endsWith('parse-results.js')) {

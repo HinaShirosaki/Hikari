@@ -109,7 +109,8 @@ export function startHikariCore({
     state,
     persist,
     onNotebookEntriesChanged: () => rendererServices?.notebook?.handleAgentNotebookEntriesChanged?.(),
-    windowObject
+    windowObject,
+    api: windowObject.hikariApi || null
   });
   // Service plugins register their converters here; the sequence viewer (and
   // any future consumer) reaches them through the module runtime below.
@@ -121,6 +122,12 @@ export function startHikariCore({
     bridge: pluginBridge,
     services: pluginServices,
     api: windowObject.hikariApi || null
+  });
+  windowObject.addEventListener?.('hikari:appearance-changed', () => {
+    pluginBridge.broadcastAppContext('appearance');
+  });
+  windowObject.addEventListener?.('hikari:storage-changed', () => {
+    pluginBridge.broadcastAppContext('storage');
   });
   const normalizeAppViewId = (viewId) => normalizeViewId(VIEWS, viewId);
   const globalViewAliases = buildViewAliasMap({
@@ -243,6 +250,7 @@ export function startHikariCore({
   createUnsavedChangesService({
     moduleRegistry,
     api: windowObject.hikariApi || null,
+    externalSources: () => pluginBridge.getUnsavedSources(),
     documentObject,
     windowObject
   });

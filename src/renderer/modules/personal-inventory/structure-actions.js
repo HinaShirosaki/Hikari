@@ -8,12 +8,14 @@ export function installStructureActions(ctx) {
   const notifySamplesChanged = () => ctx.notifySamplesChanged();
 
 async function applyStructurePasteCandidates(candidates, formats = []) {
-  if (!Array.isArray(candidates) || !candidates.length) {
+  const supportedCandidates = (Array.isArray(candidates) ? candidates : [])
+    .filter((candidate) => candidate?.sourceFormat !== 'image');
+  if (!supportedCandidates.length) {
     ctx.setStructureStatus(ctx.buildStructureClipboardNotFoundMessage(formats));
     return false;
   }
 
-  for (const candidate of candidates) {
+  for (const candidate of supportedCandidates) {
     const directDraft = toChemicalStructureDraftFromCandidate(candidate);
     if (directDraft) {
       const draft = ctx.toStructureDraft(directDraft);
@@ -22,7 +24,7 @@ async function applyStructurePasteCandidates(candidates, formats = []) {
     }
   }
 
-  ctx.setStructureStatus('Cannot save that structure yet. Try SMILES, MOL/SDF, or a copied image.');
+  ctx.setStructureStatus('Cannot save that structure yet. Try SMILES or MOL/SDF data.');
   return false;
 }
 

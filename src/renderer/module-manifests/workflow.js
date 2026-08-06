@@ -25,7 +25,6 @@ export const workflowManagementManifest = {
       modules.biologyNotebook?.openEntry?.(entryId);
     },
     onCreateLinkedAssay: rendererServices.analysis.openAssayForNotebook,
-    onCreateLinkedGel: rendererServices.analysis.openGelForNotebook
   }),
   render: ({ modules }) => modules.workflowManagement.render()
 };

@@ -22,6 +22,35 @@ const {
 // down with the app, and reused across renderer reloads so a reload does not
 // leak listeners.
 const pluginServers = createPluginServerRegistry();
+const MAX_PLUGIN_EXPORT_BASE64_CHARS = 24_000_000;
+const BUNDLED_PLUGIN_TOKEN_PATTERN = /^@bundled\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
+
+function resolvePluginServePath({ pluginId, requestedPath, getBundledPluginPath }) {
+  if (!String(requestedPath || '').startsWith('@bundled/')) {
+    return requestedPath;
+  }
+  const match = BUNDLED_PLUGIN_TOKEN_PATTERN.exec(String(requestedPath || ''));
+  if (!match || match[1] !== pluginId) {
+    throw new Error(`Invalid bundled plugin path for "${pluginId}".`);
+  }
+  const resolvedPath = getBundledPluginPath(pluginId);
+  if (!resolvedPath) {
+    throw new Error(`Unknown bundled plugin "${pluginId}".`);
+  }
+  return resolvedPath;
+}
+
+function isCanonicalBase64(value) {
+  const encoded = String(value || '');
+  if (!encoded || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(encoded)) {
+    return false;
+  }
+  try {
+    return Buffer.from(encoded, 'base64').toString('base64') === encoded;
+  } catch {
+    return false;
+  }
+}
 
 function registerDataIpc(deps = {}) {
   const ipcMain = deps.ipcMain;
@@ -45,6 +74,9 @@ function registerDataIpc(deps = {}) {
     ? deps.getStorageRootPointerPath
     : (() => '');
   const getUserDataPath = typeof deps.getUserDataPath === 'function' ? deps.getUserDataPath : (() => '');
+  const getBundledPluginPath = typeof deps.getBundledPluginPath === 'function'
+    ? deps.getBundledPluginPath
+    : (() => '');
   const legacyUserDataFilePath = () => {
     const userDataPath = cleanText(getUserDataPath(), 2400);
     return userDataPath ? path.join(userDataPath, 'enana-data.json') : '';
@@ -198,7 +230,13 @@ function registerDataIpc(deps = {}) {
     const resolvedTargetFolder = ensurePathWithinRoot(resolvedStoragePath, targetFolderInput);
     await fs.mkdir(resolvedTargetFolder, { recursive: true });
 
-    const targetFilePath = await getUniqueFilePath(resolvedTargetFolder, fileName);
+    // De-duplicating is right for a user *import* (two files named scan.png are
+    // two different files). It is wrong for a caller that owns its folder and
+    // addresses files by path — re-saving would leak a copy every time — so
+    // those opt into overwrite. fileName is already separator-free by then.
+    const targetFilePath = payload?.overwrite === true
+      ? path.join(resolvedTargetFolder, fileName)
+      : await getUniqueFilePath(resolvedTargetFolder, fileName);
     const binary = dataBytes?.byteLength ? dataBytes : Buffer.from(dataBase64, 'base64');
     await fs.writeFile(targetFilePath, binary);
     let paperMarkdown = null;
@@ -491,7 +529,47 @@ function registerDataIpc(deps = {}) {
   ipcMain.handle(PLUGINS.SERVE_FOLDER, async (_event, payload) => {
     const normalizedPayload = normalizeJsonPayload(payload, {});
     try {
-      return await pluginServers.serve(normalizedPayload?.id, normalizedPayload?.path);
+      const pluginId = cleanText(normalizedPayload?.id, 80);
+      const requestedPath = cleanText(normalizedPayload?.path, 2400);
+      const resolvedPath = resolvePluginServePath({ pluginId, requestedPath, getBundledPluginPath });
+      return await pluginServers.serve(pluginId, resolvedPath);
+    } catch (error) {
+      return { ok: false, error: String(error?.message || error) };
+    }
+  });
+
+  // Exports are mediated by a native save dialog instead of granting every
+  // plugin iframe the broad `allow-downloads` sandbox token. The plugin picks
+  // the suggested name; the user picks the actual destination.
+  ipcMain.handle(PLUGINS.EXPORT_FILE, async (_event, payload) => {
+    const normalizedPayload = normalizeJsonPayload(payload, {});
+    const dataBase64 = String(normalizedPayload?.dataBase64 || '');
+    if (!dataBase64) {
+      return { ok: false, error: 'Missing export data.' };
+    }
+    if (dataBase64.length > MAX_PLUGIN_EXPORT_BASE64_CHARS) {
+      return { ok: false, error: 'Plugin export is too large.' };
+    }
+    if (!isCanonicalBase64(dataBase64)) {
+      return { ok: false, error: 'Plugin export data is not valid base64.' };
+    }
+    const suggestedName = sanitizeImportedFileName(
+      path.basename(String(normalizedPayload?.fileName || 'plugin-export.dat'))
+    );
+    try {
+      const result = await dialog.showSaveDialog({
+        title: 'Export Plugin File',
+        defaultPath: suggestedName
+      });
+      if (result.canceled || !result.filePath) {
+        return { ok: false, canceled: true };
+      }
+      await fs.writeFile(result.filePath, Buffer.from(dataBase64, 'base64'));
+      return {
+        ok: true,
+        saved: true,
+        fileName: path.basename(result.filePath)
+      };
     } catch (error) {
       return { ok: false, error: String(error?.message || error) };
     }
@@ -727,5 +805,6 @@ function registerDataIpc(deps = {}) {
 
 module.exports = {
   registerDataIpc,
-  pluginServers
+  pluginServers,
+  resolvePluginServePath
 };

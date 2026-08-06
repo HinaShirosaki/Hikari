@@ -164,7 +164,7 @@ The services are defined in [src/renderer/services/](../../src/renderer/services
 - `notebookService.js` — `handleNotebookEntriesChanged`, `handleAgentNotebookEntriesChanged`
 - `projectService.js` — `handleProjectsChanged`
 - `inventoryService.js` — `handleSamplesChanged`, `openSampleSearch`
-- `analysisService.js` — `handleAssaysChanged`, `handleGelAnalysesChanged`, `openAssayForNotebook`, `openGelForNotebook`
+- `analysisService.js` — `handleAssaysChanged`, `openAssayForNotebook`
 - `modules/sequence-viewer/service.js` — `openFromToolBox` (destination-owned handoff service)
 
 Add a new service file for a new feature area. The shape is mechanical — see [src/renderer/services/protocolService.js](../../src/renderer/services/protocolService.js):
@@ -196,7 +196,7 @@ protocol.renderList?.();
 
 ```
 biologyNotebook, protocol, agentChat, workflowManagement,
-papers, labCommonInventory, personalInventory, sampleRegistry, assay, gel,
+papers, labCommonInventory, personalInventory, sampleRegistry, assay,
 sequenceViewer, toolBox, settings, homeDashboard
 ```
 

@@ -47,7 +47,7 @@ const moduleExportContracts = [
   ['src/renderer/modules/assay/analysis/index.js', 'analyzeAssayData', 'function'],
   ['src/renderer/modules/biology-notebook/index.js', 'initLabNotebook', 'function'],
   ['src/renderer/lib/chemistry/buffer-compounds.js', 'BUFFER_COMPOUNDS', 'object'],
-  ['src/renderer/modules/gel/index.js', 'initGelAnalysis', 'function'],
+  ['examples/plugins/gel/vendor/modules/gel/index.js', 'initGelAnalysis', 'function'],
   ['src/renderer/modules/lab-common-inventory/index.js', 'initLabCommonInventory', 'function'],
   ['src/renderer/modules/papers/index.js', 'initPapersManagement', 'function'],
   ['src/renderer/modules/personal-inventory/index.js', 'initPersonalInventory', 'function'],

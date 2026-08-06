@@ -1512,8 +1512,12 @@ body.theme-night #biology-notebook-view .biology-notebook-project-dashboard .pro
   gap: 8px 12px;
 }
 
-.biology-notebook-result-table-editor-head p {
-  margin: 0;
+.biology-notebook-result-table-head .small-note:empty {
+  display: none;
+}
+
+.biology-notebook-result-table--untitled .tabulator-header {
+  display: none;
 }
 
 .biology-notebook-result-table-select {

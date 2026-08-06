@@ -2,6 +2,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const { resolveSqlJsWasmJsPath } = require('../../../../../main/lib/sqljs-path.js');
+const { FEATURE_INDEX_VERSION } = require('./constants');
 const {
   cleanText,
   normalizeStatus
@@ -50,6 +51,7 @@ function applySchema(db) {
       topology TEXT NOT NULL DEFAULT 'linear',
       sequence_length INTEGER NOT NULL DEFAULT 0,
       feature_count INTEGER NOT NULL DEFAULT 0,
+      feature_index_version INTEGER NOT NULL DEFAULT 0,
       gbk_rel_path TEXT NOT NULL,
       html_rel_path TEXT NOT NULL,
       folder_id TEXT NOT NULL DEFAULT '',
@@ -118,14 +120,30 @@ function applySchema(db) {
 
   const entryColumns = readRows(db, 'PRAGMA table_info(sequence_entries)');
   const hadFolderIdColumn = entryColumns.some((row) => String(row?.name || '') === 'folder_id');
+  const hadFeatureIndexVersionColumn = entryColumns.some((row) => String(row?.name || '') === 'feature_index_version');
   if (!hadFolderIdColumn) {
     db.run("ALTER TABLE sequence_entries ADD COLUMN folder_id TEXT NOT NULL DEFAULT ''");
   }
+  if (!hadFeatureIndexVersionColumn) {
+    db.run('ALTER TABLE sequence_entries ADD COLUMN feature_index_version INTEGER NOT NULL DEFAULT 0');
+  }
+  db.run(
+    `UPDATE sequence_entries
+     SET feature_index_version = ?
+     WHERE feature_index_version < ?
+       AND EXISTS (
+         SELECT 1
+         FROM sequence_feature_occurrences o
+         WHERE o.host_vector_id = sequence_entries.id
+       )`,
+    [FEATURE_INDEX_VERSION, FEATURE_INDEX_VERSION]
+  );
+  const featureIndexMarkersChanged = Math.max(0, Number(db.getRowsModified?.() || 0));
   db.run(`
     CREATE INDEX IF NOT EXISTS idx_sequence_entries_folder
       ON sequence_entries(folder_id, status, updated_at DESC);
   `);
-  return !hadFolderTable || !hadFolderIdColumn;
+  return !hadFolderTable || !hadFolderIdColumn || !hadFeatureIndexVersionColumn || featureIndexMarkersChanged > 0;
 }
 async function openDatabase(sqlitePath) {
   const SQL = await loadSqlJs();
@@ -197,6 +215,7 @@ function normalizeEntryRow(row) {
     topology: cleanText(row.topology, 40) || 'linear',
     sequenceLength: Math.max(0, Number(row.sequence_length) || 0),
     featureCount: Math.max(0, Number(row.feature_count) || 0),
+    featureIndexVersion: Math.max(0, Number(row.feature_index_version) || 0),
     gbkRelPath: cleanText(row.gbk_rel_path, 1200),
     htmlRelPath: cleanText(row.html_rel_path, 1200),
     folderId: cleanText(row.folder_id, 200),

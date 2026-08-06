@@ -700,6 +700,7 @@ test('biology-notebook saves and reopens multiple result tables with Tabulator',
 
     constructor(host, options = {}) {
       this.host = host;
+      this.options = { ...options };
       this.data = Array.isArray(options.data) ? options.data.map((row) => ({ ...row })) : [];
       this.columns = Array.isArray(options.columns) ? options.columns.map((column) => ({ ...column })) : [];
       this.events = {};
@@ -776,6 +777,9 @@ test('biology-notebook saves and reopens multiple result tables with Tabulator',
   assert.equal(document.getElementById('biology-notebook-add-table-btn').hidden, false);
 
   let tableInstance = MockTabulator.instances[MockTabulator.instances.length - 1];
+  assert.equal(tableInstance.options.headerVisible, false);
+  assert.equal(document.getElementById('biology-notebook-result-table-status').textContent, '');
+  assert.equal(document.getElementById('biology-notebook-result-table-status').hidden, true);
   const firstField = tableInstance.columns[0].field;
   tableInstance.columns[0].title = 'Sample';
   tableInstance.data[0][firstField] = 'A1';
@@ -822,7 +826,8 @@ test('biology-notebook saves and reopens multiple result tables with Tabulator',
   assert.equal(reopenedTables[0].data[0][reopenedTables[0].columns[3].field], '0.82');
   assert.equal(reopenedTables[1].columns[0].title, 'Condition');
   assert.equal(reopenedTables[1].data[0][reopenedTables[1].columns[0].field], 'Induced');
-  assert.match(document.getElementById('biology-notebook-result-table-status').textContent, /2 tables/i);
+  assert.equal(document.getElementById('biology-notebook-result-table-status').textContent, '');
+  assert.equal(document.getElementById('biology-notebook-result-table-status').hidden, true);
   assert.ok(persistCalls >= 1);
 });
 

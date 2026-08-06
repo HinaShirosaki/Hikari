@@ -6,7 +6,6 @@ const TELEGRAM_MODULE_MAP = new Map([
   ['chemicals', { type: 'open-view', viewId: 'lab-common-inventory-view', label: 'Chemicals' }],
   ['samples', { type: 'open-view', viewId: 'sample-registry-view', label: 'Samples' }],
   ['assay', { type: 'open-view', viewId: 'assay-view', label: 'Assay' }],
-  ['gel', { type: 'open-view', viewId: 'gel-view', label: 'Gel' }],
   ['inventory', { type: 'open-view', viewId: 'sample-registry-view', label: 'Samples' }],
   ['projects', { type: 'open-view', viewId: 'biology-notebook-view', label: 'Notebook' }],
   ['workflows', { type: 'open-view', viewId: 'workflow-management-view', label: 'Workflows' }],
@@ -24,9 +23,7 @@ const TELEGRAM_SEARCH_TARGETS = new Map([
   ['sample', { scope: 'samples', label: 'Samples', type: 'search-samples' }],
   ['samples', { scope: 'samples', label: 'Samples', type: 'search-samples' }],
   ['assay', { scope: 'assay', label: 'Assay', type: 'search-assays' }],
-  ['assays', { scope: 'assay', label: 'Assay', type: 'search-assays' }],
-  ['gel', { scope: 'gel', label: 'Gel', type: 'search-gels' }],
-  ['gels', { scope: 'gel', label: 'Gel', type: 'search-gels' }]
+  ['assays', { scope: 'assay', label: 'Assay', type: 'search-assays' }]
 ]);
 
 const LOOKUP_ACTIONS = new Map([

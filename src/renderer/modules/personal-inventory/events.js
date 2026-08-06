@@ -1,7 +1,6 @@
 export function bindPersonalInventoryEvents(ctx) {
   const {
     addContainerBtn,
-    addFolderBtn,
     addContainerOverlay,
     addContainerNameInput,
     addContainerTypeSelect,
@@ -13,10 +12,9 @@ export function bindPersonalInventoryEvents(ctx) {
   const windowRef = rootDocument?.defaultView || globalThis.window || globalThis;
 
   function closeAddContainerDialog() {
-    const opener = ctx.uiState.addItemMode === 'folder' ? addFolderBtn : addContainerBtn;
     ctx.resetAddContainerForm();
     ctx.setAddContainerFormOpen(false);
-    opener?.focus();
+    addContainerBtn?.focus();
   }
 
   addContainerBtn?.addEventListener('click', () => {
@@ -25,16 +23,6 @@ export function bindPersonalInventoryEvents(ctx) {
       return;
     }
     ctx.beginAddContainer();
-    windowRef.requestAnimationFrame?.(() => {
-      addContainerNameInput?.focus();
-    }) || addContainerNameInput?.focus();
-  });
-  addFolderBtn?.addEventListener('click', () => {
-    if (ctx.uiState.isAddContainerFormOpen) {
-      closeAddContainerDialog();
-      return;
-    }
-    ctx.beginAddFolder();
     windowRef.requestAnimationFrame?.(() => {
       addContainerNameInput?.focus();
     }) || addContainerNameInput?.focus();

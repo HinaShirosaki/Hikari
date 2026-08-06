@@ -58,10 +58,10 @@
               <button type="button" id="gel-reset-overrides-btn" class="ghost-btn">Reset Manual Overrides</button>
               <span id="gel-override-status" class="small-note" hidden>Manual overrides: none</span>
             </div>
-            <div id="gel-status" class="small-note"></div>
+            <div id="gel-status" class="small-note" role="status" aria-live="polite" aria-atomic="true"></div>
             <div class="form-actions">
               <button type="button" id="gel-run-btn" class="primary-btn">Analyze Gel</button>
-              <button type="submit" class="primary-btn">Save Analysis</button>
+              <button type="submit" id="gel-save-btn" class="primary-btn">Save Analysis</button>
               <button type="button" id="gel-cancel-btn" class="ghost-btn">Cancel Edit</button>
               <button type="button" id="gel-export-json-btn" class="ghost-btn">Export JSON</button>
               <button type="button" id="gel-export-csv-btn" class="ghost-btn">Export CSV</button>

@@ -256,6 +256,13 @@ export function initProtocolManagement({
     }
   }
 
+  function onEditViewedProtocol() {
+    const protocol = getSelectedProtocol();
+    if (protocol) {
+      editProtocol(protocol.id);
+    }
+  }
+
   function onPrintViewedProtocol() {
     const protocol = getSelectedProtocol();
     if (!protocol || !ui.protocolViewContent) {
@@ -609,6 +616,7 @@ export function initProtocolManagement({
       closeProtocolSortMenu();
     }
   });
+  ui.protocolViewEditBtn?.addEventListener('click', onEditViewedProtocol);
   ui.protocolExportPdfBtn?.addEventListener('click', onExportViewedProtocolPdf);
   ui.protocolPrintBtn?.addEventListener('click', onPrintViewedProtocol);
   ui.openProtocolJsonImportBtn?.addEventListener('click', importController.openProtocolJsonImportOverlay);

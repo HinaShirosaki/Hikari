@@ -91,7 +91,10 @@ export function createBandsCsv(report) {
   return `${lines.join('\n')}\n`;
 }
 
-export function downloadTextFile({ content, fileName, mimeType }) {
+export async function downloadTextFile({ content, fileName, mimeType }) {
+  if (typeof window !== 'undefined' && typeof window.hikariApi?.exportTextFile === 'function') {
+    return window.hikariApi.exportTextFile({ content, fileName, mimeType });
+  }
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
@@ -101,4 +104,5 @@ export function downloadTextFile({ content, fileName, mimeType }) {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+  return { saved: true, fileName };
 }

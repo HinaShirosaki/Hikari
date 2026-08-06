@@ -376,8 +376,28 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(cssOrder, /ui\/css\/overrides\/folder-tree-template\.css/);
     });
 
+    // A served plugin's frame loads from http://127.0.0.1:<random port>. With
+    // `frame-src 'self' blob:` the browser blocks that outright and the plugin
+    // view renders as an empty pane — no error, no console message, nothing to
+    // debug from. The permission checks, the sandbox string, and the plugin
+    // server were all correct while served plugins simply did not run, so the
+    // one line that made them possible is asserted here.
+    test('the app CSP admits the loopback origin served plugins run on', () => {
+      for (const source of [
+        readLocalSource('ui', 'html', 'shell', 'start.html'),
+        readLocalSource('index.html')
+      ]) {
+        // Anchored on the directive itself — the comment above it also says
+        // "frame-src", and matching that would assert nothing.
+        const frameSrc = (source.match(/frame-src\s+('self'[^;]*);/) || [])[1] || '';
+        assert.match(frameSrc, /http:\/\/127\.0\.0\.1:\*/, 'served plugins need loopback http in frame-src');
+        assert.match(frameSrc, /'self'/, 'the app still frames its own pages');
+        assert.doesNotMatch(frameSrc, /\shttps:(\s|$)/, 'remote plugins are not enabled: that is a separate decision');
+      }
+    });
+
     test('gel tools omit manual steps and keep ladder MW in analysis controls', () => {
-      const gelView = readLocalSource('ui', 'html', 'views', 'gel-view.html');
+      const gelView = readLocalSource('examples', 'plugins', 'gel', 'vendor', 'gel-view.html');
       const analysisStart = gelView.indexOf('<summary>Analysis</summary>');
       const ladderMwInput = gelView.indexOf('id="gel-ladder-band-mw"');
 
@@ -452,25 +472,27 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(coreCss, /body\.has-agent-chat-rail\.has-agent-chat-rail-expanded \.workspace-shell/);
     });
 
-    test('renderer routes inventory aliases to the single samples table', () => {
+    test('renderer routes Samples directly to the container workspace', () => {
       const source = readRendererShellSource();
       const moduleRuntimeSource = readRendererModuleRuntimeSource();
-      const sampleHtml = readLocalSource('ui', 'html', 'views', 'sample-registry-view.html');
+      const shellHtml = readLocalSource('ui', 'html', 'shell', 'start.html');
       const registry = JSON.parse(fs.readFileSync(path.join(__dirname, 'ui', 'config', 'app-registry.json'), 'utf8'));
       const sampleEntry = registry.apps.find((app) => app.id === 'sample-inventory');
       assert.match(source, /function normalizeViewId\(VIEWS, viewId\)\s*\{\s*return viewId === VIEWS\.PERSONAL_INVENTORY \? VIEWS\.SAMPLE_REGISTRY : viewId;\s*\}/);
       assert.ok(sampleEntry);
       assert.ok(sampleEntry.aliases.includes('inventory'));
-      assert.equal(sampleEntry.searchInputId, 'sample-search');
+      assert.equal(sampleEntry.searchInputId, '');
       assert.match(source, /const searchScopeTargets = buildSearchScopeMap\(\{\s*apps: APP_REGISTRY,/);
-      assert.doesNotMatch(source, /showSampleInventoryWorkspace/);
-      assert.match(source, /view\.classList\.toggle\('is-active', view\.id === nextView\);/);
-      assert.doesNotMatch(source, /const personalInventoryTarget =/);
+      assert.match(source, /const showContainerWorkspace = nextView === VIEWS\.SAMPLE_REGISTRY;/);
+      assert.match(source, /showContainerWorkspace\s*\? view\.id === VIEWS\.PERSONAL_INVENTORY\s*: view\.id === nextView/);
+      assert.match(source, /const personalInventoryTarget = \{[\s\S]*viewId: VIEWS\.PERSONAL_INVENTORY,[\s\S]*label: 'Containers'/);
       assert.match(source, /moduleRuntime\.renderView\(nextView\);/);
-      assert.match(moduleRuntimeSource, /key:\s*'sampleRegistry'[\s\S]*viewKey:\s*'SAMPLE_REGISTRY'[\s\S]*modules\.sampleRegistry\.render\(\);/);
-      assert.doesNotMatch(moduleRuntimeSource, /modules\.personalInventory\.renderSections\(\);/);
-      assert.match(sampleHtml, /<label hidden>\s*Link Personal Inventory Container/);
-      assert.match(sampleHtml, /<label hidden>\s*Link Position \/ Slot/);
+      assert.match(moduleRuntimeSource, /key:\s*'sampleRegistry'[\s\S]*viewKey:\s*'SAMPLE_REGISTRY'[\s\S]*modules\.personalInventory\.renderSections\(\);/);
+      assert.match(moduleRuntimeSource, /key:\s*'personalInventory'[\s\S]*viewKey:\s*'PERSONAL_INVENTORY'[\s\S]*modules\.personalInventory\.renderSections\(\);/);
+      assert.match(moduleRuntimeSource, /onSampleRecorded:\s*\(sample\)\s*=>\s*modules\.sampleRegistry\?\.captureRecordedSample\?\.\(sample\)/);
+      assert.doesNotMatch(shellHtml, /sample-workspace-samples-btn/);
+      assert.doesNotMatch(shellHtml, /sample-workspace-containers-btn/);
+      assert.doesNotMatch(source, /sampleWorkspaceSamplesBtn|sampleWorkspaceContainersBtn/);
       assert.doesNotMatch(moduleRuntimeSource, /\[views\.SAMPLE_REGISTRY,\s*\(\)\s*=>/);
     });
 

@@ -20,7 +20,32 @@ export function initGelAnalysis({
   onGelAnalysesChanged,
   document: rootDocument = globalThis?.document || null
 }) {
+  if (!state || typeof state !== 'object') {
+    throw new Error('Gel initialization needs a mutable state object.');
+  }
+  if (typeof persist !== 'function' || typeof createId !== 'function' || typeof safeText !== 'function') {
+    throw new Error('Gel initialization needs persist, createId, and safeText functions.');
+  }
+  if (!rootDocument?.getElementById) {
+    throw new Error('Gel initialization needs a document containing the Gel workspace.');
+  }
   const elements = getGelElements(rootDocument);
+  const requiredElementKeys = [
+    'gelForm',
+    'gelNameInput',
+    'gelImageFileInput',
+    'gelStatus',
+    'gelRunBtn',
+    'gelSaveBtn',
+    'gelViewerStage',
+    'gelCanvas',
+    'gelList'
+  ];
+  const missingElementKeys = requiredElementKeys.filter((key) => !elements[key]);
+  if (missingElementKeys.length) {
+    throw new Error(`Gel workspace markup is missing required elements: ${missingElementKeys.join(', ')}.`);
+  }
+  const rootWindow = rootDocument.defaultView || (typeof window !== 'undefined' ? window : null);
   const runtime = {
     createId,
     cropApplied: false,
@@ -133,6 +158,12 @@ export function initGelAnalysis({
     elements,
     deps: {
       copyNormalizedImage: imageController.copyNormalizedImage,
+      confirmDelete: (record) => (
+        typeof rootWindow?.confirm !== 'function'
+        || rootWindow.confirm(
+          `Remove the saved Gel record "${record?.name || record?.id || 'Untitled gel'}"? Its artifact files will remain in plugin storage.`
+        )
+      ),
       decodeImageSource: imageController.decodeImageSource,
       imageDataToDataUrl: imageController.imageDataToDataUrl,
       leaveCropMode: () => cropController.leaveCropMode(),
@@ -158,7 +189,7 @@ export function initGelAnalysis({
   });
 
   elements.gelImageFileInput?.addEventListener('change', imageController.onImageFileChange);
-  bindFileDropTarget({
+  const unbindFileDrop = bindFileDropTarget({
     target: elements.gelViewerStage || elements.gelImageRow || elements.gelForm,
     accept: elements.gelImageFileInput?.getAttribute?.('accept') || 'image/*',
     onFiles: ([file]) => imageController.loadImageFile(file),
@@ -180,12 +211,12 @@ export function initGelAnalysis({
   elements.gelCanvas?.addEventListener('click', manualWorkflow.onCanvasClick);
   elements.gelCanvas?.addEventListener('contextmenu', manualWorkflow.onCanvasContextMenu);
   elements.gelCanvas?.addEventListener('mousedown', manualWorkflow.onCanvasMouseDown);
-  if (typeof window !== 'undefined') {
-    window.addEventListener('pointermove', cropController.onRotationDragMove);
-    window.addEventListener('pointerup', cropController.onRotationDragEnd);
-    window.addEventListener('pointercancel', cropController.onRotationDragEnd);
-    window.addEventListener('mousemove', manualWorkflow.onCanvasMouseMove);
-    window.addEventListener('mouseup', manualWorkflow.onCanvasMouseUp);
+  if (rootWindow) {
+    rootWindow.addEventListener('pointermove', cropController.onRotationDragMove);
+    rootWindow.addEventListener('pointerup', cropController.onRotationDragEnd);
+    rootWindow.addEventListener('pointercancel', cropController.onRotationDragEnd);
+    rootWindow.addEventListener('mousemove', manualWorkflow.onCanvasMouseMove);
+    rootWindow.addEventListener('mouseup', manualWorkflow.onCanvasMouseUp);
   }
   elements.gelCancelBtn?.addEventListener('click', recordsManager.resetForm);
   elements.gelExportJsonBtn?.addEventListener('click', recordsManager.onExportJson);
@@ -312,7 +343,25 @@ export function initGelAnalysis({
     }
   }
 
+  function destroy() {
+    unbindFileDrop?.();
+    if (runtime.enhancementRerunTimer) {
+      clearTimeout(runtime.enhancementRerunTimer);
+      runtime.enhancementRerunTimer = null;
+    }
+    cropController.leaveCropMode();
+    if (rootWindow) {
+      rootWindow.removeEventListener('pointermove', cropController.onRotationDragMove);
+      rootWindow.removeEventListener('pointerup', cropController.onRotationDragEnd);
+      rootWindow.removeEventListener('pointercancel', cropController.onRotationDragEnd);
+      rootWindow.removeEventListener('mousemove', manualWorkflow.onCanvasMouseMove);
+      rootWindow.removeEventListener('mouseup', manualWorkflow.onCanvasMouseUp);
+    }
+    rootDocument.removeEventListener?.('keydown', rendering.onReportKeyDown);
+  }
+
   return {
+    destroy,
     hasUnsavedChanges: () => Boolean(savedDraftSnapshot && getCurrentDraftSnapshot() !== savedDraftSnapshot),
     render,
     renderList: recordsManager.renderList,

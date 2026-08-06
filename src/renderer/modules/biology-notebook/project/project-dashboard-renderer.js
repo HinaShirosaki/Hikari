@@ -1,3 +1,4 @@
+import { getGelAnalyses } from '../../../lib/gel-records.js';
 import { summarizeNotebookResultTables } from '../../../lib/notebook-result-tables.js';
 
 const CONTRIBUTION_WEEK_COUNT = 22;
@@ -133,7 +134,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
   }
 
   function getProjectGelAnalyses(project, notebookEntryIds) {
-    return asArray(state?.gelAnalyses)
+    return asArray(getGelAnalyses(state))
       .filter((analysis) => recordMatchesProject(analysis, project) || notebookEntryIds.has(analysis.notebookEntryId))
       .sort((a, b) => parseTimestamp(b.updatedAt || b.createdAt) - parseTimestamp(a.updatedAt || a.createdAt));
   }
@@ -687,7 +688,7 @@ export function createProjectDashboardRenderer({ state, safeText } = {}) {
   }
 
   function formatLinkedGels(notebookEntryId) {
-    const analyses = asArray(state?.gelAnalyses)
+    const analyses = asArray(getGelAnalyses(state))
       .filter((analysis) => analysis.notebookEntryId === notebookEntryId)
       .sort((a, b) => parseTimestamp(b.updatedAt) - parseTimestamp(a.updatedAt));
     if (!analyses.length) {

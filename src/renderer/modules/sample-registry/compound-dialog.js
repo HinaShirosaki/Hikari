@@ -52,6 +52,6 @@ export function onSampleTypeChange(ctx) {
     renderCompoundFields(ctx);
     return;
   }
-  setCompoundStatus(ctx, 'Chemical structure mode enabled. Paste SMILES, MOL/SDF, or a copied structure image.', false);
+  setCompoundStatus(ctx, 'Chemical structure mode enabled. Paste SMILES or MOL/SDF structure data.', false);
   renderCompoundFields(ctx);
 }

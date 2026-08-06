@@ -28,16 +28,17 @@
 
 <sub>Home dashboard shown with fictional biology demo data. No private project records are included.</sub>
 
-Hikari is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay and gel analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace — no hosted backend required.
+Hikari is a local-first Electron desktop app for day-to-day lab work. It brings project planning, protocol management, experiment records, assay analysis, paper review, sequence inspection, and optional AI assistance into one desktop workspace — no hosted backend required.
 
 ## Highlights
 
 - Local desktop app built with Electron — your data stays on your machine.
-- One workspace for `Home`, `Protocols`, `Workflows`, `Biology Notebook` (including projects), `Sample & Inventory`, `Chemicals`, `Assay`, `Gel`, `Papers`, `Agent`, `Sequence Viewer`, `Tools`, and `Settings`.
+- One workspace for `Home`, `Protocols`, `Workflows`, `Biology Notebook` (including projects), `Sample & Inventory`, `Chemicals`, `Assay`, `Papers`, `Agent`, `Sequence Viewer`, `Tools`, and `Settings`.
 - Snapshot save/load support for `.json` and `.ena` data files.
 - Storage-root-backed files for notebooks, projects, papers, and sequence assets.
 - Optional LLM-backed features for `Papers` and `Agent`.
 - Optional Telegram bot for simple remote commands and lookups.
+- Sandboxed plugins for extra workspaces — `Gel` ships as a bundled plugin ([examples/plugins/gel](examples/plugins/gel/)).
 
 ## App Surface
 
@@ -57,7 +58,6 @@ Hikari is a local-first Electron desktop app for day-to-day lab work. It brings 
 | <img src="assets/icons/sample-inventory.svg" width="16"/> `Sample & Inventory` | Registry for plasmids, cell lines, strains, antibodies, proteins, compounds, primers, and storage locations. |
 | <img src="assets/icons/chemicals.svg" width="16"/> `Chemicals` | Shared reagent inventory with searchable records, locations, lots, and activity history. |
 | <img src="assets/icons/assay.svg" width="16"/> `Assay` | Plate design, CSV mapping flow, result capture, and analysis views. |
-| <img src="assets/icons/gel.svg" width="16"/> `Gel` | Manual gel analysis with lane/band annotation and CSV/JSON export. |
 
 ### Research and bench support
 
@@ -133,7 +133,6 @@ Common commands:
 - `/inventory <query>`
 - `/samples <query>`
 - `/assay <query>`
-- `/gel <query>`
 - `/status`
 
 <details>

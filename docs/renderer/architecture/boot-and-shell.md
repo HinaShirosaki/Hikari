@@ -50,7 +50,7 @@ The renderer core then computes:
 - `DOCK_APPS`: the preferred visible apps
 - `MORE_APPS`: overflow candidates
 - responsive dock capacity based on viewport width
-- alias maps for commands like `assay`, `gels`, `papers`, or `dna`
+- alias maps for commands like `assay`, `papers`, or `dna`
 
 One subtle detail is that the dock tries to keep the active app visible even when the viewport is too narrow to show the full preferred dock order.
 
