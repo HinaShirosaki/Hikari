@@ -13,6 +13,8 @@ const VECTOR_BUILDER_IDS = [
   'sequence-viewer-vector-builder-back-btn',
   'sequence-viewer-vector-builder-title',
   'sequence-viewer-vector-builder-cutters-toggle',
+  'sequence-viewer-vector-builder-primers-toggle',
+  'sequence-viewer-primers-toggle',
   'sequence-viewer-vector-builder-protein-builder-btn',
   'sequence-viewer-vector-builder-cloning-design-btn',
   'sequence-viewer-vector-builder-map',
@@ -30,7 +32,6 @@ const VECTOR_BUILDER_IDS = [
   'sequence-viewer-vector-builder-sequence-edit-textarea',
   'sequence-viewer-vector-builder-sequence-edit-note',
   'sequence-viewer-vector-builder-sequence-edit-cancel',
-  'sequence-viewer-protein-builder-vector-target',
   'sequence-viewer-protein-builder-insert-vector-btn',
   'sequence-viewer-protein-builder-assemble-btn',
   'sequence-viewer-status',
@@ -80,6 +81,101 @@ function bootVectorBuilder(features) {
   trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
   return { document, viewer };
 }
+
+test('[EDGE] protein builder common blocks are unique and buildable into DNA', () => {
+  const blocks = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'assembly-model.js')
+  );
+  const sequenceCalc = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'calculations', 'sequence.js')
+  );
+
+  const groups = {
+    tag: blocks.PROTEIN_ASSEMBLY_TAGS,
+    linker: blocks.PROTEIN_ASSEMBLY_LINKERS,
+    cleavage: blocks.PROTEIN_ASSEMBLY_CLEAVAGE_SITES,
+    peptide2a: blocks.PROTEIN_ASSEMBLY_SELF_CLEAVING
+  };
+  const seenKeys = new Set();
+  let count = 0;
+
+  Object.entries(groups).forEach(([type, items]) => {
+    assert.equal(Array.isArray(items) && items.length > 0, true, `${type} group is empty`);
+    items.forEach((item) => {
+      count += 1;
+      const key = `${type}:${item.id}`;
+      // Rows are looked up by `type:id`, so a duplicate would silently shadow.
+      assert.equal(seenKeys.has(key), false, `duplicate block ${key}`);
+      seenKeys.add(key);
+      assert.equal(Boolean(item.label), true, `${key} has no label`);
+
+      // Every block has to survive reverse translation, or adding it to a chain
+      // produces a construct that cannot be built into DNA.
+      assert.match(item.sequence, /^[ACDEFGHIKLMNPQRSTVWY]+$/, `${key} has non-standard residues`);
+      const dna = sequenceCalc.reverseTranslateProteinSequence(item.sequence);
+      assert.equal(Boolean(dna?.ok), true, `${key} failed reverse translation`);
+      assert.equal(dna.dna.length, item.sequence.length * 3, `${key} produced the wrong codon count`);
+    });
+  });
+
+  assert.equal(count > 40, true, 'expected the expanded block library');
+  // 2A peptides skip between the final Gly and Pro; a sequence not ending NPGP
+  // would not separate the products.
+  groups.peptide2a.forEach((item) => {
+    assert.match(item.sequence, /NPGP$/, `${item.label} does not end in the NPG/P skip motif`);
+    // The GSG spacer is part of the block, not something the user adds.
+    assert.match(item.sequence, /^GSG/, `${item.label} is missing its GSG spacer`);
+  });
+  // The default chain references these by id; renaming either would break startup.
+  assert.equal(groups.tag.some((item) => item.id === 'his6'), true);
+  assert.equal(groups.cleavage.some((item) => item.id === 'tev'), true);
+});
+
+test('[EDGE] protein builder reports 2A peptides as multiple products', () => {
+  const construct = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'protein-construct.js')
+  );
+
+  const withoutSkip = construct.buildConstruct({
+    activeDnaSource: { label: 'POI', proteinSequence: 'MAAAKLLL' },
+    rows: [{ type: 'poi' }, { type: 'tag', label: '6xHis', sequence: 'HHHHHH' }]
+  });
+  assert.equal(withoutSkip.productCount, 1);
+  assert.equal(withoutSkip.warnings.some((w) => /2A/.test(w)), false);
+
+  const withSkip = construct.buildConstruct({
+    activeDnaSource: { label: 'POI', proteinSequence: 'MAAAKLLL' },
+    rows: [
+      { type: 'poi' },
+      { type: 'peptide2a', label: 'P2A', sequence: 'ATNFSLLKQAGDVEENPGP' },
+      { type: 'tag', label: 'FLAG', sequence: 'DYKDDDDK' }
+    ]
+  });
+
+  // The chain still builds as one ORF, but it must not be reported as one
+  // protein: 2A skipping yields two polypeptides.
+  assert.equal(withSkip.ok, true);
+  assert.equal(withSkip.length, 8 + 19 + 8);
+  assert.equal(withSkip.selfCleavingCount, 1);
+  assert.equal(withSkip.productCount, 2);
+  assert.match(
+    withSkip.warnings.find((w) => /2A peptide/.test(w)) || '',
+    /separates into 2 polypeptides/
+  );
+
+  // Two 2A blocks means three products.
+  const twoSkips = construct.buildConstruct({
+    activeDnaSource: { label: 'POI', proteinSequence: 'MAAA' },
+    rows: [
+      { type: 'poi' },
+      { type: 'peptide2a', label: 'P2A', sequence: 'ATNFSLLKQAGDVEENPGP' },
+      { type: 'poi' },
+      { type: 'peptide2a', label: 'T2A', sequence: 'EGRGSLLTCGDVEENPGP' },
+      { type: 'tag', label: 'FLAG', sequence: 'DYKDDDDK' }
+    ]
+  });
+  assert.equal(twoSkips.productCount, 3);
+});
 
 test('[EDGE] sequence-viewer alignment workspace surfaces its status and reset control', () => {
   // These elements were referenced by the alignment controller but absent from
@@ -414,6 +510,37 @@ test('[EDGE] sequence-viewer vector builder inserts on the chosen side, in stran
   assert.match(note.innerHTML, /\b31\b/);
 });
 
+test('[EDGE] sequence-viewer Primers toggle hides primers in both workspaces and keeps both boxes in step', () => {
+  const { document } = bootVectorBuilder([
+    { name: 'His6', type: 'CDS', strand: 1, source: 'external', segments: [{ start: 6, end: 24 }] },
+    { name: 'M13 fwd', type: 'primer_bind', strand: 1, source: 'external', segments: [{ start: 30, end: 50 }] }
+  ]);
+
+  const map = document.getElementById('sequence-viewer-vector-builder-map');
+  const vectorToggle = document.getElementById('sequence-viewer-vector-builder-primers-toggle');
+  const detailToggle = document.getElementById('sequence-viewer-primers-toggle');
+
+  assert.match(map.innerHTML, /vector-map__primer/);
+  assert.equal(vectorToggle.checked, true);
+
+  vectorToggle.checked = false;
+  trigger(vectorToggle, 'change');
+
+  // The primer track is gone but the feature itself still renders, and hiding
+  // must renumber cleanly rather than leave His6 pointing at the primer's index.
+  assert.equal(/vector-map__primer/.test(map.innerHTML), false);
+  assert.match(map.innerHTML, /data-feature-index="0"/);
+  assert.equal(/data-feature-index="1"/.test(map.innerHTML), false);
+  assert.equal(detailToggle.checked, false, 'detail toolbar box should follow the vector builder box');
+
+  detailToggle.checked = true;
+  trigger(detailToggle, 'change');
+  trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
+
+  assert.match(map.innerHTML, /vector-map__primer/);
+  assert.equal(vectorToggle.checked, true, 'vector builder box should follow the detail toolbar box');
+});
+
 test('[EDGE] sequence-viewer vector builder refuses to replace a primer binding site', () => {
   const { document } = bootVectorBuilder([
     { name: 'M13 fwd', type: 'primer_bind', strand: 1, source: 'external', segments: [{ start: 6, end: 24 }] },
@@ -444,7 +571,6 @@ test('[EDGE] sequence-viewer vector builder folds Protein Builder in as an on-ma
   const builderWorkspace = document.getElementById('sequence-viewer-protein-builder-workspace');
   const insertBtn = document.getElementById('sequence-viewer-protein-builder-insert-vector-btn');
   const assembleBtn = document.getElementById('sequence-viewer-protein-builder-assemble-btn');
-  const targetNote = document.getElementById('sequence-viewer-protein-builder-vector-target');
 
   trigger(map, 'mousedown', { button: 0, target: featureTarget(0) });
   trigger(map, 'contextmenu', { clientX: 40, clientY: 40, target: featureTarget(0) });
@@ -455,8 +581,6 @@ test('[EDGE] sequence-viewer vector builder folds Protein Builder in as an on-ma
   assert.equal(builderWorkspace.hidden, false);
   assert.equal(insertBtn.hidden, false);
   assert.equal(assembleBtn.hidden, true);
-  assert.match(targetNote.textContent, /Replace 25-30 \(6 bp\)/);
-  assert.match(targetNote.textContent, /pVector/);
 });
 
   }

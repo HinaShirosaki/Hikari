@@ -19,6 +19,7 @@ import {
   isWorkflowStepOpenable
 } from './execution.js';
 import { createWorkflowArtifactStorage } from './artifact-storage.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 function createEmptyStepState() {
   return {
@@ -990,7 +991,7 @@ export function createWorkflowActions(config = {}) {
       persistWorkflowChanges();
       renderWorkflowViews();
     } catch (error) {
-      window.alert(String(error?.message || error || 'Failed to store workflow files.'));
+      showTransientNotice(String(error?.message || error || 'Failed to store workflow files.'), { type: 'error' });
     } finally {
       fileInput.value = '';
     }

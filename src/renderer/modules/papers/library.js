@@ -7,6 +7,7 @@ import {
 } from './model.js';
 import { getPaperDisplayTitle } from './pdf-metadata.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 const PAPER_DRAG_MIME = 'application/x-hikari-paper-id';
 
@@ -317,7 +318,7 @@ export function createPapersLibraryController(context) {
 
     const validation = validateRenamedFolderName(libraryState.renamingFolderName, folder.id);
     if (!validation.ok) {
-      windowRef?.alert?.(validation.error);
+      showTransientNotice(validation.error, { type: 'error' });
       focusRenameInput();
       return;
     }
@@ -619,7 +620,7 @@ export function createPapersLibraryController(context) {
   function onUploadTriggerClick() {
     const selectedFolder = getSelectedFolder();
     if (!selectedFolder) {
-      windowRef?.alert?.('Create or select a folder before uploading a paper.');
+      showTransientNotice('Create or select a folder before uploading a paper.', { type: 'error' });
       return;
     }
     if (elements.paperTitleInput) {
@@ -849,16 +850,16 @@ export function createPapersLibraryController(context) {
       onFiles: async (files) => {
         const selectedFolder = getSelectedFolder();
         if (!selectedFolder) {
-          windowRef?.alert?.('Create or select a folder before uploading a paper.');
+          showTransientNotice('Create or select a folder before uploading a paper.', { type: 'error' });
           return;
         }
         await context.actions?.uploadPaperFiles?.(files);
       },
       onRejected: () => {
-        windowRef?.alert?.('Drop PDF files to add them to the selected paper folder.');
+        showTransientNotice('Drop PDF files to add them to the selected paper folder.', { type: 'error' });
       },
       onError: (error) => {
-        windowRef?.alert?.(String(error?.message || error || 'Failed to upload dropped PDF files.'));
+        showTransientNotice(String(error?.message || error || 'Failed to upload dropped PDF files.'), { type: 'error' });
       }
     });
     if (typeof windowRef?.addEventListener === 'function') {

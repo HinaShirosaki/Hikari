@@ -1,6 +1,7 @@
 import { escapeHtml } from '../../../lib/html.js';
 import { readStoragePathFromLocalState } from '../storage.js';
 import { clamp } from '../shared.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 export function createSequenceViewerCoreActions({ options, elements, state }) {
   function getBridge() {
@@ -59,6 +60,9 @@ export function createSequenceViewerCoreActions({ options, elements, state }) {
   // Detail and Vector Builder are separate workspaces, so status has to land on
   // both surfaces -- only one of them is on screen at a time.
   function setStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     [elements.statusNote, elements.vectorBuilderStatusNote].forEach((node) => {
       if (!node) {
         return;

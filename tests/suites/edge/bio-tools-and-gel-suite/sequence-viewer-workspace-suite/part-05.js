@@ -11,7 +11,8 @@ test('[EDGE] sequence-viewer protein builder only lists recognized backbone sele
     'sequence-viewer-protein-builder-confirmation-summary',
     'sequence-viewer-protein-builder-confirmation-back-btn',
     'sequence-viewer-protein-builder-confirmation-confirm-btn',
-    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-vector-builder-btn',
+    'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
@@ -149,7 +150,9 @@ ORIGIN
     ]
   });
 
-  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
+  // Protein Builder is reached through Vector Builder now.
+  trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
+  trigger(document.getElementById('sequence-viewer-vector-builder-protein-builder-btn'), 'click', { preventDefault() {} });
 
   const constructNameInput = document.getElementById('sequence-viewer-protein-builder-name');
   constructNameInput.value = 'GFP Insert';
@@ -176,7 +179,8 @@ test('[EDGE] sequence-viewer protein builder does not hydrate saved library entr
     'sequence-viewer-home-workspace',
     'sequence-viewer-protein-builder-workspace',
     'sequence-viewer-detail-workspace',
-    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-vector-builder-btn',
+    'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
@@ -320,7 +324,9 @@ ORIGIN
     ]
   });
 
-  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
+  // Protein Builder is reached through Vector Builder now.
+  trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
+  trigger(document.getElementById('sequence-viewer-vector-builder-protein-builder-btn'), 'click', { preventDefault() {} });
 
   const constructNameInput = document.getElementById('sequence-viewer-protein-builder-name');
   constructNameInput.value = 'GFP Insert';

@@ -116,7 +116,13 @@ export function installProteinBuilderWorkflowRendering(ctx) {
     const construct = buildConstruct(ctx.getProteinBuilderPayload());
 
     if (elements.proteinBuilderMeta) {
-      elements.proteinBuilderMeta.textContent = `${construct.length} aa | ${construct.parts.length} blocks`;
+      // Annotate the length directly when 2A blocks make it an ORF total rather
+      // than the size of a single product.
+      const productNote = construct.productCount > 1
+        ? ` | ${construct.productCount} products (2A skip)`
+        : '';
+      elements.proteinBuilderMeta.textContent =
+        `${construct.length} aa | ${construct.parts.length} blocks${productNote}`;
     }
 
     if (elements.proteinBuilderSequence) {

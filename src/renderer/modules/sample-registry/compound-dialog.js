@@ -3,8 +3,12 @@ import {
   formatCompoundStructureSummary,
   isChemicalStructureSampleType
 } from './compound-model.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function setCompoundStatus(ctx, message, isError) {
+  if (isError && message) {
+    showTransientNotice(message, { type: 'error' });
+  }
   const { sampleCompoundStatus } = ctx.dom;
   if (!sampleCompoundStatus) {
     return;

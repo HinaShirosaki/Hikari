@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../../lib/notify.js';
+
 export function initToolBoxViewManager(options = {}) {
   const rootDocument = options?.document || globalThis?.document || null;
   if (!rootDocument) {
@@ -25,6 +27,7 @@ export function initToolBoxViewManager(options = {}) {
         const colonyStatus = rootDocument.getElementById('colony-status');
         if (colonyStatus) {
           colonyStatus.textContent = 'Failed to load colony counter tool.';
+          showTransientNotice(colonyStatus.textContent, { type: 'error' });
           colonyStatus.style.color = 'var(--theme-danger)';
         }
       });

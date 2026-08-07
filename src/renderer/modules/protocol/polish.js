@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../../lib/notify.js';
+
 function formatProtocolPolishTextBlock(value, fallback = '[blank]') {
   const normalized = String(value || '').trim();
   return normalized || fallback;
@@ -70,6 +72,9 @@ export function createProtocolPolishController({
   }
 
   function setProtocolPolishStatus(message = '', options = {}) {
+    if (options.state === 'error' && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     if (!ui.protocolPolishStatus) {
       return;
     }

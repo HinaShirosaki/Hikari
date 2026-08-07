@@ -7,6 +7,7 @@ import {
   getFolderById,
   resolveSessionFolderId
 } from './session-folders.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 const CHAT_SESSION_DRAG_MIME = 'application/x-hikari-agent-chat-session-id';
 
@@ -540,7 +541,7 @@ export function createAgentChatSessionManager(deps = {}) {
       item.id !== folder.id && item.name.toLowerCase() === nextName.toLowerCase()
     ));
     if (duplicate) {
-      sessionList?.ownerDocument?.defaultView?.alert?.('A chat folder with this name already exists.');
+      showTransientNotice('A chat folder with this name already exists.', { type: 'error' });
       focusRenameInput();
       return;
     }

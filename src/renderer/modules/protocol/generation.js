@@ -1,4 +1,5 @@
 import { requestDirectLlmText } from '../../services/direct-llm.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 function trimText(value, maxLength = 5000) {
   const text = String(value || '').trim();
@@ -157,6 +158,9 @@ export function createProtocolGenerationController({
   }
 
   function setProtocolGenerateInputStatus(message = '', options = {}) {
+    if (options.state === 'error' && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     if (!ui.protocolGenerateInputStatus) {
       return;
     }
@@ -174,6 +178,9 @@ export function createProtocolGenerationController({
   }
 
   function setProtocolGenerateStatus(message = '', options = {}) {
+    if (options.state === 'error' && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     if (!ui.protocolGenerateStatus) {
       return;
     }

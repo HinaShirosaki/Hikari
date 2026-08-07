@@ -6,6 +6,7 @@ import { attachMapHoverLabel } from './vector-builder/map-hover.js';
 import { attachMapZoomGestures } from './vector-builder/map-zoom.js';
 import { buildSequenceMapSvg } from './vector-builder/sequence-map.js';
 import { bindFileDropTarget } from '../../lib/file-drop.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function createSequenceViewerHomeController(config = {}) {
   const rootDocument = config?.rootDocument || globalThis?.document || null;
@@ -272,6 +273,9 @@ export function createSequenceViewerHomeController(config = {}) {
   }
 
   function setHomeStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     compactElementList(elements.homeStatusNote, elements.detailLibraryStatusNote).forEach((statusNode) => {
       statusNode.textContent = message;
       statusNode.style.color = isError ? 'var(--theme-danger)' : '';
@@ -728,7 +732,7 @@ export function createSequenceViewerHomeController(config = {}) {
         alignments: Array.isArray(response.alignments) ? response.alignments : []
       });
       navigateToDetail();
-      setStatus(`Opened ${response.entry.name}.`);
+      setStatus('');
     } catch (error) {
       setHomeStatus(error?.message || 'Failed to open sequence entry.', true);
     }

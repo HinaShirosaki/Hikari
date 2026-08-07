@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../../lib/notify.js';
+
 function sanitizeStorageName(value, fallback = 'item') {
   const cleaned = String(value || '')
     .trim()
@@ -145,6 +147,10 @@ export function createAssayArtifactStorage({
       ]);
     } catch (error) {
       console.warn('Failed to persist assay artifacts:', error);
+      showTransientNotice(
+        `Assay files were not written to the storage folder: ${String(error?.message || error || 'unknown error')}`,
+        { type: 'error' }
+      );
       return;
     }
 

@@ -24,6 +24,7 @@ import {
   normalizeMethodsExtract,
   normalizePaperSummary
 } from './normalizers.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function createPapersActions(context) {
   const {
@@ -105,7 +106,7 @@ export function createPapersActions(context) {
 
     const rootPath = String(state.settings?.storagePath || '').trim();
     if (!rootPath) {
-      windowRef?.alert?.('Set Storage Folder Path in Settings before uploading papers.');
+      showTransientNotice('Set Storage Folder Path in Settings before uploading papers.', { type: 'error' });
       return null;
     }
 
@@ -131,12 +132,12 @@ export function createPapersActions(context) {
 
     const pdfBytes = await fileToBytes(file);
     if (!pdfBytes?.byteLength) {
-      windowRef?.alert?.('Cannot read the selected PDF.');
+      showTransientNotice('Cannot read the selected PDF.', { type: 'error' });
       return null;
     }
 
     if (!windowRef?.hikariApi?.storeImportedFile) {
-      windowRef?.alert?.('Imported file storage API is unavailable.');
+      showTransientNotice('Imported file storage API is unavailable.', { type: 'error' });
       return null;
     }
 
@@ -161,7 +162,7 @@ export function createPapersActions(context) {
       }
       storedFile = result;
     } catch (error) {
-      windowRef?.alert?.(String(error?.message || error || 'Failed to store uploaded PDF.'));
+      showTransientNotice(String(error?.message || error || 'Failed to store uploaded PDF.'), { type: 'error' });
       return null;
     }
 
@@ -229,11 +230,11 @@ export function createPapersActions(context) {
       `- ${paper.fileName}: ${paper.ingestionErrors?.[0] || 'Unknown intake error.'}`
     ));
     const remaining = failed.length - listed.length;
-    windowRef?.alert?.([
+    showTransientNotice([
       `${failed.length} PDF${failed.length === 1 ? ' was' : 's were'} stored, but automatic paper intake failed:`,
       ...listed,
       ...(remaining > 0 ? [`- and ${remaining} more.`] : [])
-    ].join('\n'));
+    ].join('\n'), { type: 'error', durationMs: 12000 });
   }
 
   async function uploadPaperFiles(files = []) {
@@ -283,17 +284,17 @@ export function createPapersActions(context) {
 
     const rootPath = String(state.settings?.storagePath || '').trim();
     if (!rootPath) {
-      windowRef?.alert?.('Set Storage Folder Path in Settings before moving papers.');
+      showTransientNotice('Set Storage Folder Path in Settings before moving papers.', { type: 'error' });
       return { ok: false, error: 'Missing storage path.' };
     }
     if (typeof windowRef?.hikariApi?.moveStoredFile !== 'function') {
-      windowRef?.alert?.('Stored file move API is unavailable.');
+      showTransientNotice('Stored file move API is unavailable.', { type: 'error' });
       return { ok: false, error: 'Stored file move API is unavailable.' };
     }
 
     const sourcePath = resolveStoredPaperPath(paper, rootPath);
     if (!sourcePath) {
-      windowRef?.alert?.('This paper does not have a stored PDF file to move.');
+      showTransientNotice('This paper does not have a stored PDF file to move.', { type: 'error' });
       return { ok: false, error: 'Missing stored PDF path.' };
     }
 
@@ -334,7 +335,7 @@ export function createPapersActions(context) {
       return { ok: true, paper };
     } catch (error) {
       const message = String(error?.message || error || 'Failed to move stored PDF.');
-      windowRef?.alert?.(message);
+      showTransientNotice(message, { type: 'error' });
       return { ok: false, error: message };
     }
   }
@@ -507,7 +508,7 @@ export function createPapersActions(context) {
       return;
     }
 
-    windowRef?.alert?.('Unable to open this PDF. Re-upload the paper to restore the local file path.');
+    showTransientNotice('Unable to open this PDF. Re-upload the paper to restore the local file path.', { type: 'error' });
   }
 
   async function resolvePaperPdfBytes(paper) {
@@ -589,7 +590,7 @@ export function createPapersActions(context) {
       context.comments?.syncViewerComments();
       context.renderCommentSidebar?.();
     } catch (error) {
-      windowRef?.alert?.(String(error?.message || error || 'Failed to load the PDF viewer.'));
+      showTransientNotice(String(error?.message || error || 'Failed to load the PDF viewer.'), { type: 'error' });
     }
   }
 

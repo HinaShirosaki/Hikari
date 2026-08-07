@@ -1,6 +1,7 @@
 import { clamp } from './pdf-viewer-anchors.js';
 import { renderSearchHighlights } from './pdf-viewer-overlays.js';
 import { escapeHtml } from './pdf-viewer-search.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 export const installPdfViewerSearchUiController = (ctx) => {
   const { elements, state } = ctx;
@@ -87,6 +88,9 @@ export const installPdfViewerSearchUiController = (ctx) => {
   }
 
   function renderSelectionSearchMessage(message = '', isError = false) {
+    if (isError && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     if (!selectionSearchResults) {
       return;
     }

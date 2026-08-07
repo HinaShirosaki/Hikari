@@ -74,7 +74,7 @@
   -webkit-appearance: none;
   position: absolute;
   top: 0;
-  left: var(--shared-left-rail-width);
+  left: var(--app-left-rail-track-width);
   bottom: 0;
   width: 12px;
   border: 0;
@@ -105,7 +105,7 @@
   -webkit-appearance: none;
   position: absolute;
   top: 14px;
-  left: var(--shared-left-rail-width);
+  left: var(--app-left-rail-track-width);
   display: inline-grid;
   place-items: center;
   width: 28px;
@@ -165,6 +165,13 @@
 
 .app-left-rail-fold-toggle.is-folded .app-left-rail-fold-toggle__chevron {
   transform: rotate(180deg);
+}
+
+body.shared-left-rail-resizing .app-left-rail-fold-toggle {
+  transition:
+    color 140ms ease,
+    background-color 140ms ease,
+    transform 140ms ease;
 }
 
 body.shared-left-rail-resizing,

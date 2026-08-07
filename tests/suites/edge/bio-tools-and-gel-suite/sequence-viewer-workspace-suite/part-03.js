@@ -73,7 +73,8 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
     'sequence-viewer-protein-builder-workspace',
     'sequence-viewer-detail-workspace',
     'sequence-viewer-home-vector-builder-btn',
-    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-vector-builder-btn',
+    'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
@@ -131,7 +132,9 @@ test('[EDGE] sequence-viewer protein builder searches stored features and adds t
   moduleWithDom.initSequenceViewer();
   await flushAsync();
 
-  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
+  // Protein Builder is reached through Vector Builder now.
+  trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
+  trigger(document.getElementById('sequence-viewer-vector-builder-protein-builder-btn'), 'click', { preventDefault() {} });
   assert.equal(Boolean(document.getElementById('sequence-viewer-protein-builder-workspace').hidden), false);
 
   const searchInput = document.getElementById('sequence-viewer-protein-builder-feature-search-input');
@@ -169,7 +172,8 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
     'sequence-viewer-protein-builder-confirmation-summary',
     'sequence-viewer-protein-builder-confirmation-back-btn',
     'sequence-viewer-protein-builder-confirmation-confirm-btn',
-    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-vector-builder-btn',
+    'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
@@ -243,7 +247,9 @@ test('[EDGE] sequence-viewer protein builder can build DNA from the active vecto
     ]
   });
 
-  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
+  // Protein Builder is reached through Vector Builder now.
+  trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
+  trigger(document.getElementById('sequence-viewer-vector-builder-protein-builder-btn'), 'click', { preventDefault() {} });
 
   await flushAsync();
 

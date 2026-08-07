@@ -16,6 +16,7 @@ import {
 import {
   countColoniesWithModel
 } from './colony-counter-model.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 const EMPTY_MASK = Object.freeze({ kind: 'none', x: 0, y: 0, width: 0, height: 0 });
 
@@ -204,6 +205,9 @@ export function initColonyCounterTool() {
 
   // Update the status line and optionally switch it into an error color.
   function setColonyStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     if (!colonyStatus) {
       return;
     }

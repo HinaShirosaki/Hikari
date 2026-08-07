@@ -5,6 +5,7 @@ import {
 import {
   LIBRARY_STATUS_TEMPORARY
 } from './config.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 export function createRecordWorkflowActions(ctx) {
   const { state, elements, actions, controllers, dialogs } = ctx;
@@ -68,6 +69,10 @@ export function createRecordWorkflowActions(ctx) {
       return entry;
     } catch (error) {
       console.warn('Failed to persist imported GenBank record to the library:', error);
+      showTransientNotice(
+        `Imported record was not saved to the library: ${String(error?.message || error || 'unknown error')}`,
+        { type: 'error' }
+      );
       return null;
     }
   }

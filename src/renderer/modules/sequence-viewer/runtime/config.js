@@ -39,6 +39,9 @@ export function createInitialSequenceViewerState() {
     orfStopCodons: normalizeOrfStopCodonSelection({ TAG: true, TAA: true, TGA: true }),
     orfFrameFilter: { '+1': true, '+2': true, '+3': true, '-1': true, '-2': true, '-3': true },
     restrictionVendorFilter: { ...DEFAULT_RESTRICTION_VENDOR_FILTER },
+    // Shared by the detail workspace and the Vector Builder so a primer is
+    // shown or hidden in both views at once.
+    showPrimers: true,
     inputComposerVisible: true,
     libraryFilter: LIBRARY_STATUS_SAVED,
     libraryEntries: [],

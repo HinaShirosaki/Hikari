@@ -5,6 +5,7 @@ import {
   resolveEntryExperimentName,
   resolveEntryProtocol
 } from '../entry/entry-helpers.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 export function createLinkedWorkActions({
   notebookType,
@@ -109,9 +110,7 @@ export function createLinkedWorkActions({
         return (Number.isFinite(left) ? left : 0) - (Number.isFinite(right) ? right : 0);
       });
     if (!projectEntries.length) {
-      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-        window.alert('No notebook pages to export for this project.');
-      }
+      showTransientNotice('No notebook pages to export for this project.', { type: 'error' });
       return;
     }
 

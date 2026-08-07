@@ -369,6 +369,81 @@ test('[EDGE] sequence-viewer annotation includes the active saved entry and repo
   assert.match(statuses.at(-1), /1 SQL-backed annotation match is already present/i);
   assert.doesNotMatch(statuses.at(-1), /No SQL-backed annotations matched/i);
 });
+test('[EDGE] sequence-viewer clears the successful saved annotation status', async () => {
+  const annotationModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'annotation.js')
+  );
+  const persistenceModule = loadEsmStyleModule(
+    path.join(__dirname, 'src', 'renderer', 'modules', 'sequence-viewer', 'runtime', 'library-persistence.js')
+  );
+  const record = {
+    name: 'Protein_Builder__4',
+    sequence: 'GGGTTGACATATAATCCC',
+    topology: 'linear',
+    sourceFormat: 'genbank',
+    features: []
+  };
+  const state = {
+    records: [record],
+    selectedRecordIndex: 0,
+    selectedFeatureIndex: -1,
+    activeEntryId: 'seq_saved',
+    activeEntryStatus: 'saved',
+    isAnnotating: false
+  };
+  const statuses = [];
+  const bridge = {
+    sequenceLibraryAnnotate: async () => ({
+      ok: true,
+      dnaMatches: [{
+        featureId: 'feature_promoter',
+        name: 'StrongPromoter',
+        type: 'promoter',
+        strand: 1,
+        segments: [{ start: 3, end: 15 }]
+      }],
+      proteinMatches: []
+    }),
+    sequenceLibraryUpsert: async () => ({
+      ok: true,
+      entry: { id: 'seq_saved', name: 'Protein_Builder__4', status: 'saved' }
+    })
+  };
+  const actions = {
+    getBridge: () => bridge,
+    getStoragePath: () => '/tmp/sequence-viewer-tests',
+    setAlignmentSessions() {},
+    setStatus: (message) => statuses.push(message)
+  };
+  const persistence = persistenceModule.createLibraryPersistenceActions({
+    state,
+    actions,
+    controllers: { home: { refreshLibraryEntries: async () => {} } }
+  });
+  const controller = annotationModule.createSequenceViewerAnnotationController({
+    state,
+    getSelectedRecord: () => state.records[0],
+    getStoragePath: actions.getStoragePath,
+    getBridge: actions.getBridge,
+    persistFeatureMutation: persistence.persistFeatureMutation,
+    detailController: {
+      clearSequenceSelection() {},
+      findFeatureIndexByIdentity: () => 0,
+      getVisibleFeaturesForRecord: (current) => current.features,
+      hideFeatureContextMenu() {},
+      hideFeatureEditor() {},
+      renderActiveRecord() {},
+      syncActionButtonsState() {}
+    },
+    setStatus: actions.setStatus
+  });
+
+  await controller.annotateCurrentRecord();
+
+  assert.equal(state.records[0].features.length, 1);
+  assert.equal(statuses.at(-1), '');
+  assert.equal(statuses.some((message) => /Saved to Protein_Builder__4/i.test(message)), false);
+});
 test('[EDGE] sequence-viewer keeps the sequencing alignment workspace hidden until opened by the new methods', () => {
   const document = createMockDocument([
     'sequence-viewer-home-workspace',

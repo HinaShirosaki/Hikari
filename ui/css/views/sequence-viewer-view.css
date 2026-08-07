@@ -1462,7 +1462,7 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   width: 0;
   height: 0;
   border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
+  border-bottom: 0;
 }
 
 .sequence-viewer-feature-primer-forward .sequence-viewer-feature-primer-line {
@@ -2053,24 +2053,39 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   right: 0;
 }
 
+/* Barbed half-head, matching the vector map: the barb points at the strand the
+   oligo anneals to, so direction reads from the glyph alone. */
 .sequence-viewer-primer-arrow {
   position: absolute;
-  top: 8px;
   width: 0;
   height: 0;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
   pointer-events: none;
 }
 
 .sequence-viewer-line-feature-primer-forward .sequence-viewer-primer-arrow {
   right: 0;
+  top: 12px;
+  border-top: 0;
+  border-bottom: 4px solid transparent;
   border-left: 7px solid var(--sequence-viewer-primer-color);
 }
 
 .sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-arrow {
   left: 0;
+  top: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 0;
   border-right: 7px solid var(--sequence-viewer-primer-color);
+}
+
+/* Reverse primers hang below the duplex, so their row mirrors vertically:
+   oligo line nearest the strand, label and end marks underneath it. */
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-oligo-line {
+  top: 3px;
+}
+
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-end {
+  top: 7px;
 }
 
 .sequence-viewer-primer-label {
@@ -2082,6 +2097,10 @@ body.sequence-viewer-fixed-scroll #sequence-viewer-view.view.is-active .sequence
   color: var(--sequence-viewer-primer-color);
   font-size: 0.58rem;
   font-weight: 700;
+}
+
+.sequence-viewer-line-feature-primer-reverse .sequence-viewer-primer-label {
+  top: 6px;
 }
 
 .sequence-viewer-line-feature-primer.sequence-viewer-line-feature-active {
@@ -2785,6 +2804,30 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
   stroke-width: 2;
 }
 
+.vector-map__primer-shaft {
+  stroke-width: 2;
+  stroke-linecap: butt;
+}
+
+.vector-map__primer {
+  cursor: pointer;
+}
+
+.vector-map__primer:hover .vector-map__primer-shaft,
+.vector-map__primer--active .vector-map__primer-shaft {
+  stroke-width: 3;
+}
+
+.vector-map__primer:focus,
+.vector-map__primer:focus-visible {
+  outline: none;
+}
+
+.vector-map__primer:focus-visible .vector-map__primer-shaft {
+  stroke: var(--theme-text-strong);
+  stroke-width: 3;
+}
+
 .vector-map__intron {
   stroke-width: 1.5;
   stroke-dasharray: 4 3;
@@ -2923,10 +2966,6 @@ body.theme-night .sequence-viewer-sequence-edit-input-wrap textarea {
   border: 0;
   border-top: 1px solid var(--theme-border);
   margin: 3px 0;
-}
-
-.sequence-viewer-protein-builder-vector-target {
-  padding-right: 4px;
 }
 
 @media (max-width: 1100px) {

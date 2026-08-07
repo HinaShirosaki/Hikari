@@ -1,6 +1,7 @@
 import {
   PROTEIN_ASSEMBLY_CLEAVAGE_SITES,
   PROTEIN_ASSEMBLY_LINKERS,
+  PROTEIN_ASSEMBLY_SELF_CLEAVING,
   PROTEIN_ASSEMBLY_TAGS
 } from './assembly-model.js';
 
@@ -8,6 +9,7 @@ export const BLOCK_TYPE_LABELS = Object.freeze({
   tag: 'Tag',
   linker: 'Linker',
   cleavage: 'Cleavage Site',
+  peptide2a: '2A Peptide',
   feature: 'Feature DB',
   custom: 'Custom',
   poi: 'Current DNA'
@@ -35,8 +37,17 @@ export const COMMON_BLOCK_GROUPS = Object.freeze([
     id: 'cleavage',
     label: 'Protease sites',
     items: PROTEIN_ASSEMBLY_CLEAVAGE_SITES
+  },
+  {
+    id: 'peptide2a',
+    label: 'Self-cleaving 2A peptides',
+    items: PROTEIN_ASSEMBLY_SELF_CLEAVING
   }
 ]);
+
+// A 2A block means the ORF is translated as one chain but yields separate
+// polypeptides, so anything reporting a single product has to account for it.
+export const SELF_CLEAVING_BLOCK_TYPE = 'peptide2a';
 
 function buildLibraryLookup() {
   const lookup = new Map();

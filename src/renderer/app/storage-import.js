@@ -1,4 +1,5 @@
 import { defaultState } from '../modules/app-state.js';
+import { showTransientNotice } from '../lib/notify.js';
 
 const WORKSPACE_STATE_KEYS = [
   'members',
@@ -301,6 +302,7 @@ export function createStorageImportController({
   }
 
   function updateStorageImportError(message) {
+    showTransientNotice(String(message || 'Storage import failed.'), { type: 'error' });
     const previous = state.settings.storageImport && typeof state.settings.storageImport === 'object'
       ? state.settings.storageImport
       : {};

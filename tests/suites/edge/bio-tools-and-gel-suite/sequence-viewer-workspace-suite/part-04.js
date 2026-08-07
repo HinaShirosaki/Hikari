@@ -7,7 +7,8 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
     'sequence-viewer-home-workspace',
     'sequence-viewer-protein-builder-workspace',
     'sequence-viewer-detail-workspace',
-    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-vector-builder-btn',
+    'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
@@ -131,7 +132,9 @@ test('[EDGE] sequence-viewer protein builder can open an assembled plasmid from 
     ]
   });
 
-  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
+  // Protein Builder is reached through Vector Builder now.
+  trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
+  trigger(document.getElementById('sequence-viewer-vector-builder-protein-builder-btn'), 'click', { preventDefault() {} });
 
   const constructNameInput = document.getElementById('sequence-viewer-protein-builder-name');
   constructNameInput.value = 'GFP Insert';

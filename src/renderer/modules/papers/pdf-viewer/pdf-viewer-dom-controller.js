@@ -1,4 +1,5 @@
 import { clamp } from './pdf-viewer-anchors.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 export const installPdfViewerDomController = (ctx) => {
   const { elements, state } = ctx;
@@ -36,6 +37,9 @@ export const installPdfViewerDomController = (ctx) => {
   }
 
   function setStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     if (!status) {
       return;
     }

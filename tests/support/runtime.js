@@ -358,8 +358,27 @@ function createMockDocument(ids = []) {
   ids.forEach((id) => {
     elements.set(id, new MockElement(id));
   });
+  const appended = [];
 
   return {
+    body: {
+      appendChild(node) {
+        appended.push(node);
+        return node;
+      }
+    },
+    createElement(tagName) {
+      return new MockElement(String(tagName || ''));
+    },
+    // ponytail: attribute selectors over appended nodes only — enough for the
+    // shared transient notice. Widen it when a test needs a real selector.
+    querySelector(selector) {
+      const attribute = String(selector || '').match(/^\[([a-z0-9-]+)\]$/i);
+      if (!attribute) {
+        return null;
+      }
+      return appended.find((node) => node.hasAttribute(attribute[1])) || null;
+    },
     getElementById(id) {
       const key = String(id || '');
       if (!elements.has(key)) {

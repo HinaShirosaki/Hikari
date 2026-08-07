@@ -22,6 +22,7 @@ export {
   createDefaultChartStyle,
   normalizeChartStyle
 } from './plotly/chart-style-model.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 function asArray(value) {
   return Array.isArray(value) ? value : [];
@@ -433,6 +434,7 @@ export function createAssayAnalysisView({
       if (renderResult && typeof renderResult.then === 'function') {
         renderResult.catch((error) => {
           assayAnalysisSummary.textContent = String(error?.message || error || 'Unable to render Plotly graph.');
+          showTransientNotice(assayAnalysisSummary.textContent, { type: 'error' });
         });
       }
       lastAnalysisContext = {
@@ -444,6 +446,7 @@ export function createAssayAnalysisView({
       return true;
     } catch (error) {
       assayAnalysisSummary.textContent = String(error?.message || error || 'Unable to render Plotly graph.');
+          showTransientNotice(assayAnalysisSummary.textContent, { type: 'error' });
       return false;
     }
   }

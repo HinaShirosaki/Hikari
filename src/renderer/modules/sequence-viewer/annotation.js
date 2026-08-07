@@ -287,7 +287,7 @@ export function createSequenceViewerAnnotationController(config = {}) {
         state.selectedFeatureIndex = -1;
         detailController?.renderActiveRecord?.();
         if (hadPreviousSqlFeatures && state.activeEntryId) {
-          await persistFeatureMutation(current, 'Cleared SQL-derived annotations.');
+          await persistFeatureMutation(current, 'Cleared SQL-derived annotations.', { silentSuccess: true });
         }
         setStatus(matchedFeatures.length
           ? buildAlreadyPresentStatus(matchedFeatures.length)
@@ -311,7 +311,7 @@ export function createSequenceViewerAnnotationController(config = {}) {
         : ''}`;
 
       if (state.activeEntryId) {
-        await persistFeatureMutation(current, summary);
+        await persistFeatureMutation(current, summary, { silentSuccess: true });
       } else {
         setStatus(`${summary} Save the record to persist changes.`);
       }

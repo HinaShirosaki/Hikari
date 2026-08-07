@@ -7,7 +7,8 @@
 // - support editing existing entries and exporting them to PDF
 import { getGelAnalyses } from '../../lib/gel-records.js';
 import { findLatestLinkedRecord } from '../../services/notebook-linked-previews.js';
-import { buildClarifiedNotebookNote, clarifyNotebookNote, showTransientNotice } from '../../services/notebook-note-tools.js';
+import { buildClarifiedNotebookNote, clarifyNotebookNote } from '../../services/notebook-note-tools.js';
+import { showTransientNotice } from '../../lib/notify.js';
 import {
   buildNotebookFolderPath,
   cloneProtocolSnapshot,
@@ -422,6 +423,9 @@ export function initLabNotebook({
   }
 
   function setExperimentDialogStatus(message = '', { error = false } = {}) {
+    if (error && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     if (!notebookExperimentDialogStatus) {
       return;
     }
@@ -1394,7 +1398,7 @@ export function initLabNotebook({
         storeImportedFile: window.hikariApi?.storeImportedFile?.bind(window.hikariApi)
       });
     } catch (error) {
-      window.alert(String(error?.message || error || 'Failed to store notebook files.'));
+      showTransientNotice(String(error?.message || error || 'Failed to store notebook files.'), { type: 'error' });
       return null;
     }
 

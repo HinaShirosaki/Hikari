@@ -17,7 +17,7 @@ export function createProteinBuilderContext(config = {}) {
     isPreparingAssembly: false,
     storedBackbones: [],
     selectedBackboneId: '',
-    statusMessage: 'Linear chain: each block accepts one upstream and one downstream connection.',
+    statusMessage: '',
     statusError: false
   };
 
@@ -51,6 +51,7 @@ export function createProteinBuilderContext(config = {}) {
       return;
     }
     elements.proteinBuilderStatus.textContent = state.statusMessage;
+    elements.proteinBuilderStatus.hidden = !state.statusMessage;
     elements.proteinBuilderStatus.style.color = state.statusError ? 'var(--theme-danger)' : '';
   };
 
@@ -68,12 +69,6 @@ export function createProteinBuilderContext(config = {}) {
   ctx.syncVectorInsertControls = function syncVectorInsertControls() {
     const target = ctx.getVectorInsertTarget();
     const active = Boolean(target);
-    if (elements.proteinBuilderVectorTargetNote) {
-      elements.proteinBuilderVectorTargetNote.hidden = !active;
-      elements.proteinBuilderVectorTargetNote.textContent = active
-        ? `Target: ${cleanText(target.label, 120)} in ${cleanText(target.recordName, 120) || 'the open vector'}`
-        : '';
-    }
     if (elements.proteinBuilderInsertVectorBtn) {
       elements.proteinBuilderInsertVectorBtn.hidden = !active;
       elements.proteinBuilderInsertVectorBtn.disabled = Boolean(state.isPreparingAssembly);

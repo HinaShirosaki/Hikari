@@ -279,9 +279,11 @@ test('[EDGE] sequence-viewer render sync keeps Protein Builder visible inside th
     'sequence-viewer-protein-builder-confirmation-summary',
     'sequence-viewer-protein-builder-confirmation-back-btn',
     'sequence-viewer-protein-builder-confirmation-confirm-btn',
-    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-vector-builder-btn',
+    'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-home-vector-builder-btn',
-    'sequence-viewer-detail-protein-builder-btn',
+    'sequence-viewer-vector-builder-btn',
+    'sequence-viewer-vector-builder-protein-builder-btn',
     'sequence-viewer-protein-builder-back-btn',
     'sequence-viewer-protein-builder-status',
     'sequence-viewer-protein-builder-form',
@@ -349,7 +351,9 @@ test('[EDGE] sequence-viewer render sync keeps Protein Builder visible inside th
     features: []
   });
 
-  trigger(document.getElementById('sequence-viewer-detail-protein-builder-btn'), 'click');
+  // Protein Builder is reached through Vector Builder now.
+  trigger(document.getElementById('sequence-viewer-vector-builder-btn'), 'click', { preventDefault() {} });
+  trigger(document.getElementById('sequence-viewer-vector-builder-protein-builder-btn'), 'click', { preventDefault() {} });
   await flushAsync();
 
   const homeWorkspace = document.getElementById('sequence-viewer-home-workspace');
@@ -448,6 +452,7 @@ test('[EDGE] sequence-viewer library native dblclick opens detail while single c
   const ids = [
     'sequence-viewer-home-workspace',
     'sequence-viewer-detail-workspace',
+    'sequence-viewer-status',
     'sequence-viewer-home-status',
     'sequence-viewer-library-filter-saved',
     'sequence-viewer-library-filter-temporary',
@@ -516,6 +521,7 @@ ORIGIN
   await flushAsync();
   await flushAsync();
   assert.equal(transitions.length, 1);
+  assert.equal(document.getElementById('sequence-viewer-status').textContent, '');
 });
   }
 };

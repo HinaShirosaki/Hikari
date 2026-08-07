@@ -478,10 +478,8 @@ test('papers viewer imports and opens a PDF dropped on the viewer workspace', as
 test('papers viewer preserves and surfaces automatic intake failures after storing a PDF', async () => {
   const harness = buildPapersManagementHarness();
   const viewerShell = harness.document.getElementById('paper-viewer-shell');
-  const alerts = [];
   const pdfBytes = new Uint8Array([37, 80, 68, 70]);
   harness.state.settings.storagePath = '/tmp/hikari-storage';
-  harness.window.alert = (message) => alerts.push(String(message || ''));
   harness.window.hikariApi.storeImportedFile = async (payload) => ({
     ok: true,
     fileName: payload.fileName,
@@ -512,14 +510,14 @@ test('papers viewer preserves and surfaces automatic intake failures after stori
     Array.from(paper.ingestionErrors),
     ['Structured intake response failed validation.']
   );
-  assert.match(alerts[0], /automatic paper intake failed/i);
-  assert.equal(alerts.length, 1);
+  const notice = harness.document.querySelector('[data-hikari-transient-toast]');
+  assert.match(notice.textContent, /automatic paper intake failed/i);
+  assert.equal(notice.hidden, false);
 });
-test('papers viewer reports batched intake failures in one alert', async () => {
+test('papers viewer reports batched intake failures in one notice', async () => {
   const harness = buildPapersManagementHarness();
   const journalClubList = harness.document.getElementById('journal-club-list');
   const papersLibraryRail = harness.document.getElementById('papers-library-rail');
-  const alerts = [];
   const pdfBytes = new Uint8Array([37, 80, 68, 70]);
   const droppedNames = ['one.pdf', 'two.pdf', 'three.pdf'];
   harness.state.settings.storagePath = '/tmp/hikari-storage';
@@ -534,7 +532,6 @@ test('papers viewer reports batched intake failures in one alert', async () => {
       }
     }
   });
-  harness.window.alert = (message) => alerts.push(String(message || ''));
   harness.window.hikariApi.storeImportedFile = async (payload) => ({
     ok: true,
     fileName: payload.fileName,
@@ -560,13 +557,14 @@ test('papers viewer reports batched intake failures in one alert', async () => {
   await flushAsync();
   await flushAsync();
 
-  // One modal for the whole batch, not one per dropped PDF.
-  assert.equal(alerts.length, 1);
+  // One notice for the whole batch, not one per dropped PDF — a per-file notice
+  // would leave only the last file's message in the shared notice element.
+  const notice = harness.document.querySelector('[data-hikari-transient-toast]');
   for (const name of droppedNames) {
     assert.equal(harness.state.papers.find((item) => item.fileName === name)?.ingestionStatus, 'error');
-    assert.ok(alerts[0].includes(name), `${name} is named in the summary`);
+    assert.ok(notice.textContent.includes(name), `${name} is named in the summary`);
   }
-  assert.match(alerts[0], /^3 PDFs were stored, but automatic paper intake failed:/);
+  assert.match(notice.textContent, /^3 PDFs were stored, but automatic paper intake failed:/);
 });
 test('papers module drags a paper between folders and moves the stored PDF', async () => {
   const harness = buildPapersManagementHarness();

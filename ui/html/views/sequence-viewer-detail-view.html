@@ -74,7 +74,6 @@
 
           <div class="form-actions">
             <button id="sequence-viewer-cloning-design-btn" type="button" class="primary-btn" hidden>Cloning Design</button>
-            <button id="sequence-viewer-detail-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
             <button id="sequence-viewer-load-btn" type="button" class="primary-btn">Load</button>
             <button id="sequence-viewer-annotate-btn" type="button" class="ghost-btn">Annotate</button>
             <button id="sequence-viewer-recognize-backbone-btn" type="button" class="ghost-btn">Recognize Backbone/Insert</button>
@@ -148,6 +147,11 @@
                 </div>
               </div>
             </div>
+
+            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on the strands they anneal to.">
+              <input id="sequence-viewer-primers-toggle" type="checkbox" checked />
+              <span>Primers</span>
+            </label>
 
             <div class="sequence-viewer-menu-anchor">
               <button id="sequence-viewer-cutter-menu-btn" type="button" class="ghost-btn" aria-haspopup="true" aria-expanded="false">Cutter ▾</button>
@@ -353,7 +357,11 @@
               <input id="sequence-viewer-vector-builder-cutters-toggle" type="checkbox" />
               <span>Cutters</span>
             </label>
-            <button id="sequence-viewer-vector-builder-protein-builder-btn" type="button" class="ghost-btn">Insert Protein Construct</button>
+            <label class="sequence-viewer-inline-toggle" title="Show primer binding sites on their own map track.">
+              <input id="sequence-viewer-vector-builder-primers-toggle" type="checkbox" checked />
+              <span>Primers</span>
+            </label>
+            <button id="sequence-viewer-vector-builder-protein-builder-btn" type="button" class="ghost-btn">Protein Builder</button>
             <button id="sequence-viewer-vector-builder-cloning-design-btn" type="button" class="primary-btn">Cloning Design</button>
           </div>
         </div>

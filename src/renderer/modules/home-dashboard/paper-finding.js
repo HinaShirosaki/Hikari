@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../../lib/notify.js';
+
 function asArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -131,6 +133,7 @@ export function initPaperFindingWidget({
         tasks = [];
         lastLoadedAt = Date.now();
         summary.textContent = 'Could not load schedules.';
+        showTransientNotice(summary.textContent, { type: 'error' });
         list.innerHTML = '<p class="small-note">Open Notebook to manage paper finding.</p>';
       })
       .finally(() => {

@@ -12,6 +12,7 @@ import {
   upsertAlignmentSessionInList
 } from './alignment-input.js';
 import { getAlignmentSessionsForRecord } from './detail-alignment.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 function buildReferenceSignature(record) {
   if (!record?.sequence?.length) {
@@ -128,6 +129,9 @@ export function createSequenceViewerAlignmentController(config = {}) {
   }
 
   function setAlignmentStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     state.statusMessage = String(message || '').trim() || 'Idle';
     state.statusIsError = isError === true;
     if (elements.alignmentStatus) {

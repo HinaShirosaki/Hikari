@@ -1,8 +1,8 @@
 import {
   buildClarifiedNotebookNote,
-  clarifyNotebookNote,
-  showTransientNotice
+  clarifyNotebookNote
 } from '../../services/notebook-note-tools.js';
+import { showTransientNotice } from '../../lib/notify.js';
 import { notebookPageLabel } from './utils.js';
 
 // Recent notebook pages widget — surfaces the six most-recently-updated

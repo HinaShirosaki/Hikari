@@ -15,6 +15,7 @@ import { cleanText, clamp, normalizeSequenceText, reverseComplementIupac } from 
 import { attachMapHoverLabel } from './map-hover.js';
 import { attachMapZoomGestures } from './map-zoom.js';
 import { buildSequenceMapSvg, getMapKind, resolveBaseFromPoint } from './sequence-map.js';
+import { showTransientNotice } from '../../../lib/notify.js';
 
 // Element keys the reused detail sequence-editing controller reads, mapped onto
 // the Vector Builder's own dialog. Reusing that controller (rather than forking
@@ -120,7 +121,8 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
     return getRenderableFeaturesForRecord(record, {
       includeOrf: false,
       includeRestriction: Boolean(vb().showCutters),
-      restrictionVendorFilter: state.restrictionVendorFilter
+      restrictionVendorFilter: state.restrictionVendorFilter,
+      includePrimers: state.showPrimers !== false
     });
   }
 
@@ -201,6 +203,9 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
   }
 
   function setFeatureReplaceStatus(message, isError = false) {
+    if (isError && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     if (!elements.vectorBuilderFeatureReplaceStatus) {
       return;
     }
@@ -661,6 +666,10 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
       elements.vectorBuilderCuttersToggle.checked = Boolean(vb().showCutters);
       elements.vectorBuilderCuttersToggle.disabled = !hasRecord;
     }
+    if (elements.vectorBuilderPrimersToggle) {
+      elements.vectorBuilderPrimersToggle.checked = state.showPrimers !== false;
+      elements.vectorBuilderPrimersToggle.disabled = !hasRecord;
+    }
     if (elements.vectorBuilderProteinBuilderBtn) {
       elements.vectorBuilderProteinBuilderBtn.disabled = !hasRecord;
     }
@@ -851,6 +860,16 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
       render();
     });
 
+    // Shared with the detail workspace's own Primers box, so both stay in step.
+    elements.vectorBuilderPrimersToggle?.addEventListener('change', () => {
+      state.showPrimers = Boolean(elements.vectorBuilderPrimersToggle.checked);
+      vb().selectedFeatureIndex = -1;
+      if (elements.primersToggle) {
+        elements.primersToggle.checked = state.showPrimers;
+      }
+      render();
+    });
+
     elements.vectorBuilderCloningDesignBtn?.addEventListener('click', (event) => {
       event.preventDefault();
       hideOverlays();
@@ -859,7 +878,12 @@ export function createSequenceViewerVectorBuilderController(config = {}) {
 
     elements.vectorBuilderProteinBuilderBtn?.addEventListener('click', (event) => {
       event.preventDefault();
-      runContextAction('protein-insert');
+      // Standalone: clearing the target keeps the stored-backbone assembly path
+      // available. Targeted inserts come from the map's right-click menu, which
+      // also lets the user pick the 5' or 3' side.
+      vb().insertTarget = null;
+      hideOverlays();
+      onRequestProteinInsert(null);
     });
 
     elements.vectorBuilderMap?.addEventListener('mousedown', (event) => {

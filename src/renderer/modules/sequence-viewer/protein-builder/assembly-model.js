@@ -86,6 +86,78 @@ export const PROTEIN_ASSEMBLY_TAGS = Object.freeze([
     label: 'C-tag',
     sequence: 'EPEA',
     note: 'Minimal four-residue C-terminal tag.'
+  },
+  {
+    id: 'his10',
+    label: '10xHis',
+    sequence: 'HHHHHHHHHH',
+    note: 'Extended His-tag for difficult IMAC purifications.'
+  },
+  {
+    id: 'flag3x',
+    label: '3xFLAG',
+    sequence: 'DYKDHDGDYKDHDIDYKDDDDK',
+    note: 'Tandem FLAG for low-abundance detection.'
+  },
+  {
+    id: 't7tag',
+    label: 'T7-tag',
+    sequence: 'MASMTGGQQMG',
+    note: 'T7 gene10 leader epitope; N-terminal use.'
+  },
+  {
+    id: 'strep1',
+    label: 'Strep-tag I',
+    sequence: 'AWRHPQFGG',
+    note: 'Original streptavidin-binding tag.'
+  },
+  {
+    id: 'xpress',
+    label: 'Xpress',
+    sequence: 'DLYDDDDK',
+    note: 'Epitope tag with a built-in enterokinase site.'
+  },
+  {
+    id: 'vsvg',
+    label: 'VSV-G',
+    sequence: 'YTDIEMNRLGK',
+    note: 'Vesicular stomatitis virus G epitope.'
+  },
+  {
+    id: 'glu_glu',
+    label: 'Glu-Glu (EE)',
+    sequence: 'EYMPME',
+    note: 'Compact polyoma middle-T epitope.'
+  },
+  {
+    id: 'spot',
+    label: 'Spot-Tag',
+    sequence: 'PDRVRAVSHWSS',
+    note: 'Short nanobody-detected epitope.'
+  },
+  {
+    id: 'hibit',
+    label: 'HiBiT',
+    sequence: 'VSGWRLFKKIS',
+    note: 'Split-luciferase peptide for luminescent quantitation.'
+  },
+  {
+    id: 'rho1d4',
+    label: 'Rho1D4',
+    sequence: 'TETSQVAPA',
+    note: 'Rhodopsin C-terminal tag for membrane proteins.'
+  },
+  {
+    id: 'spytag003',
+    label: 'SpyTag003',
+    sequence: 'RGVPHIVMVDAYKRYK',
+    note: 'Faster SpyCatcher003 partner for covalent conjugation.'
+  },
+  {
+    id: 'snooptag',
+    label: 'SnoopTag',
+    sequence: 'KLGDIEFIKVNK',
+    note: 'SnoopCatcher partner; orthogonal to SpyTag.'
   }
 ]);
 
@@ -131,6 +203,74 @@ export const PROTEIN_ASSEMBLY_LINKERS = Object.freeze([
     label: 'GPGPG',
     sequence: 'GPGPG',
     note: 'Hinge-like linker with proline.'
+  },
+  {
+    id: 'gs',
+    label: 'GS',
+    sequence: 'GS',
+    note: 'Minimal two-residue spacer.'
+  },
+  {
+    id: 'ggs3',
+    label: '(GGS)3',
+    sequence: 'GGSGGSGGS',
+    note: 'Short flexible repeat.'
+  },
+  {
+    id: 'g4s4',
+    label: '(GGGGS)4',
+    sequence: 'GGGGSGGGGSGGGGSGGGGS',
+    note: 'Long flexible linker for well-separated domains.'
+  },
+  {
+    id: 'eaaak3',
+    label: '(EAAAK)3',
+    sequence: 'EAAAKEAAAKEAAAK',
+    note: 'Rigid helical linker; keeps domains apart.'
+  },
+  {
+    id: 'xten16',
+    label: 'XTEN16',
+    sequence: 'SGSETPGTSESATPES',
+    note: 'Unstructured XTEN spacer; protease resistant.'
+  },
+  {
+    id: 'papap',
+    label: 'PAPAP',
+    sequence: 'PAPAP',
+    note: 'Proline-rich rigid linker.'
+  }
+]);
+
+// Ribosome-skipping "self-cleaving" 2A peptides. The skip happens between the
+// final Gly and Pro, so the upstream product keeps the 2A minus that proline and
+// the downstream product starts with one. Each carries the GSG spacer that most
+// vectors include -- it raises skipping efficiency -- so the listed length is
+// three residues longer than the bare 2A.
+export const PROTEIN_ASSEMBLY_SELF_CLEAVING = Object.freeze([
+  {
+    id: 'p2a',
+    label: 'P2A',
+    sequence: 'GSGATNFSLLKQAGDVEENPGP',
+    note: 'GSG-P2A (porcine teschovirus-1); typically the highest skipping efficiency.'
+  },
+  {
+    id: 't2a',
+    label: 'T2A',
+    sequence: 'GSGEGRGSLLTCGDVEENPGP',
+    note: 'GSG-T2A (Thosea asigna virus); shortest of the common set.'
+  },
+  {
+    id: 'e2a',
+    label: 'E2A',
+    sequence: 'GSGQCTNYALLKLAGDVESNPGP',
+    note: 'GSG-E2A (equine rhinitis A virus).'
+  },
+  {
+    id: 'f2a',
+    label: 'F2A',
+    sequence: 'GSGVKQTLNFDLLKLAGDVESNPGP',
+    note: 'GSG-F2A (foot-and-mouth disease virus).'
   }
 ]);
 
@@ -164,6 +304,30 @@ export const PROTEIN_ASSEMBLY_CLEAVAGE_SITES = Object.freeze([
     label: 'Factor Xa',
     sequence: 'IEGR',
     note: 'Factor Xa cleavage motif.'
+  },
+  {
+    id: 'tev_s',
+    label: 'TEV (ENLYFQ/S)',
+    sequence: 'ENLYFQS',
+    note: 'TEV variant leaving a serine instead of glycine.'
+  },
+  {
+    id: 'tvmv',
+    label: 'TVMV protease',
+    sequence: 'ETVRFQS',
+    note: 'Orthogonal to TEV; useful for tandem tag removal.'
+  },
+  {
+    id: 'sortase_a',
+    label: 'Sortase A (LPETG)',
+    sequence: 'LPETGG',
+    note: 'Sortase-mediated ligation and tag exchange.'
+  },
+  {
+    id: 'granzyme_b',
+    label: 'Granzyme B',
+    sequence: 'IEPD',
+    note: 'Compact four-residue protease motif.'
   }
 ]);
 

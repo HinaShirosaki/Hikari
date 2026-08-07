@@ -1,6 +1,6 @@
 import { sanitizeProteinAssemblySequence } from './assembly-model.js';
 import { cleanText, normalizeSequenceText } from '../shared.js';
-import { getBlockTypeLabel } from './constants.js';
+import { getBlockTypeLabel, SELF_CLEAVING_BLOCK_TYPE } from './constants.js';
 
 export function buildConstruct(payload = {}) {
   const constructName = cleanText(payload?.constructName, 140) || 'Untitled construct';
@@ -83,6 +83,15 @@ export function buildConstruct(payload = {}) {
     warnings.push('The active DNA coding sequence is not placed in the chain.');
   }
 
+  // A 2A peptide is translated inline but splits the product, so every count and
+  // mass derived from `sequence` describes the ORF, not what the cell ends up
+  // with. Say so rather than quietly reporting one protein.
+  const selfCleavingCount = parts.filter((part) => part.type === SELF_CLEAVING_BLOCK_TYPE).length;
+  const productCount = selfCleavingCount + 1;
+  if (selfCleavingCount) {
+    warnings.push(`Contains ${selfCleavingCount} 2A peptide${selfCleavingCount === 1 ? '' : 's'}: this ORF is translated as one chain but separates into ${productCount} polypeptides. Reported length and mass cover the whole ORF.`);
+  }
+
   let cursor = 1;
   const mappedParts = parts.map((part) => {
     const start = cursor;
@@ -121,6 +130,8 @@ export function buildConstruct(payload = {}) {
     parts: mappedParts,
     sequence,
     length,
+    selfCleavingCount,
+    productCount,
     errors,
     warnings
   };

@@ -30,6 +30,7 @@ import {
   createTopbarSearchController
 } from '../app/topbar-search.js';
 import { createTopbarOpenItemHandlers } from '../app/topbar-open-handlers.js';
+import { showTransientNotice } from '../lib/notify.js';
 
 const APP_READY_EVENT = 'hikari:app-ready';
 
@@ -318,6 +319,7 @@ export function startHikariCore({
         rendererServices.protocol.handleExternalProtocolRecordSaved(payload);
       } catch (error) {
         console.error('Failed to apply queued protocol record:', error);
+        showTransientNotice('A protocol saved outside the app could not be applied.', { type: 'error' });
       }
     }
     undoService.reset();

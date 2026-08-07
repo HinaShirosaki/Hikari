@@ -420,6 +420,37 @@ test('[EDGE] sequence-viewer dual-strand renderer places selected ORF amino-acid
   const minusAa = minusHtml.indexOf('sequence-viewer-aa-row-minus');
   assert.equal(minusBottom < minusAa, true);
 });
+test('[EDGE] sequence-viewer dual-strand renderer puts primers on the strand side they anneal to and names a wrapped primer once', () => {
+  const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('ACGT'.repeat(24), [], {
+    lineLength: 48,
+    charAdvancePx: 8,
+    sequenceLineHeightPx: 16,
+    selectedFeatureIndex: -1,
+    features: [
+      { name: 'His6', type: 'CDS', strand: 1, segments: [{ start: 4, end: 22 }] },
+      { name: 'fwdP', type: 'primer_bind', strand: 1, segments: [{ start: 2, end: 24 }] },
+      // Wraps the 48 nt line boundary, so it renders as two fragments.
+      { name: 'revP', type: 'primer_bind', strand: -1, segments: [{ start: 38, end: 60 }] }
+    ]
+  });
+
+  // Forward primer track sits above the top strand, reverse below the bottom strand,
+  // and plain features keep the shared track under the whole duplex.
+  const forward = html.indexOf('sequence-viewer-line-feature-primer-forward');
+  const top = html.indexOf('sequence-viewer-strand-row-top');
+  const bottom = html.indexOf('sequence-viewer-strand-row-bottom');
+  const reverse = html.indexOf('sequence-viewer-line-feature-primer-reverse');
+  const feature = html.indexOf('sequence-viewer-line-feature-bar');
+  assert.equal(forward < top && top < bottom && bottom < reverse && reverse < feature, true);
+
+  // Every primer stays clickable on both fragments, but is labelled only once.
+  assert.equal((html.match(/sequence-viewer-line-feature-primer-reverse/g) || []).length, 2);
+  [0, 1, 2].forEach((index) => {
+    assert.match(html, new RegExp(`data-feature-index="${index}"`));
+  });
+  assert.equal((html.match(/>revP</g) || []).length, 1);
+  assert.equal((html.match(/>fwdP</g) || []).length, 1);
+});
 test('[EDGE] sequence-viewer dual-strand renderer renders an explicit reference-guide-read alignment block', () => {
   const html = sequenceViewerInternals.renderDualStrandSequenceLinesHtml('AAACCCGGGTTT', [], {
     lineLength: 12,

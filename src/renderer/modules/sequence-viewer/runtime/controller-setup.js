@@ -117,10 +117,12 @@ export function setupSequenceViewerControllers(ctx) {
     onNavigateVectorBuilder: actions.showVectorBuilderWorkspace,
     onReturnToDetail: actions.returnToSequenceDetailFromVectorBuilder,
     onRequestCloningDesign: () => controllers.cloningDesign?.open?.(),
-    onRequestProteinInsert: () => {
+    onRequestProteinInsert: (target) => {
       actions.showProteinBuilderWorkspace();
       controllers.proteinBuilder?.render?.();
-      actions.setStatus('Compose the construct, then use Insert Into Vector to splice it into the open plasmid.');
+      actions.setStatus(target
+        ? 'Compose the construct, then use Insert Into Vector to splice it into the open plasmid.'
+        : 'Compose the construct, then assemble it into a stored backbone.');
     }
   });
 

@@ -67,7 +67,7 @@ export function createLibraryPersistenceActions(ctx) {
     };
   }
 
-  async function persistFeatureMutation(record, actionLabel) {
+  async function persistFeatureMutation(record, actionLabel, mutationOptions = {}) {
     if (!state.activeEntryId) {
       actions.setStatus(`${actionLabel} Save the record to persist changes.`);
       return;
@@ -79,7 +79,7 @@ export function createLibraryPersistenceActions(ctx) {
         name: record.name || 'sequence'
       });
       await controllers.home?.refreshLibraryEntries({ selectedId: entry.id, filter: entry.status || state.activeEntryStatus || LIBRARY_STATUS_TEMPORARY, silent: true });
-      actions.setStatus(`${actionLabel} Saved to ${entry.name}.`);
+      actions.setStatus(mutationOptions?.silentSuccess ? '' : `${actionLabel} Saved to ${entry.name}.`);
     } catch (error) {
       actions.setStatus(`${actionLabel} Changes remain local: ${error?.message || 'Failed to save.'}`, true);
     }

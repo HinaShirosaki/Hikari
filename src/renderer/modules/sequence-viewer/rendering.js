@@ -536,9 +536,27 @@ function renderLineFeatureButtonsHtml(
       return right.widthPx - left.widthPx;
     });
 
+  // Primers ride their own tracks on the side of the duplex they anneal to:
+  // forward above the top strand, reverse below the bottom strand. Features
+  // keep the shared track underneath, so a primer never steals a feature lane.
+  return {
+    forwardPrimers: buildLineFeatureTrackHtml(fragments.filter((f) => f.isPrimer && f.direction === 1), {
+      lineWidthPx, safeOffset, safeAdvance, selectedFeatureIndex, invertLanes: true
+    }),
+    reversePrimers: buildLineFeatureTrackHtml(fragments.filter((f) => f.isPrimer && f.direction === -1), {
+      lineWidthPx, safeOffset, safeAdvance, selectedFeatureIndex
+    }),
+    features: buildLineFeatureTrackHtml(fragments.filter((f) => !f.isPrimer), {
+      lineWidthPx, safeOffset, safeAdvance, selectedFeatureIndex
+    })
+  };
+}
+
+function buildLineFeatureTrackHtml(fragments, options) {
   if (!fragments.length) {
     return '';
   }
+  const { lineWidthPx, safeOffset, safeAdvance, selectedFeatureIndex, invertLanes } = options;
 
   const laneRightEdges = [];
   fragments.forEach((fragment) => {
@@ -556,11 +574,15 @@ function renderLineFeatureButtonsHtml(
   const trackHeightPx = (laneCount * LINE_FEATURE_BAR_HEIGHT_PX) + ((laneCount - 1) * LINE_FEATURE_BAR_GAP_PX);
   const bars = fragments
     .map((fragment) => {
-      const topPx = fragment.lane * (LINE_FEATURE_BAR_HEIGHT_PX + LINE_FEATURE_BAR_GAP_PX);
+      // Lane 0 always sits closest to the strand, so tracks above it stack upwards.
+      const laneSlot = invertLanes ? (laneCount - 1 - fragment.lane) : fragment.lane;
+      const topPx = laneSlot * (LINE_FEATURE_BAR_HEIGHT_PX + LINE_FEATURE_BAR_GAP_PX);
       const isActive = fragment.index === selectedFeatureIndex;
       const label = String(fragment.feature?.name || `feature_${fragment.index + 1}`);
       const labelWidthPx = (label.length * safeAdvance) + (LINE_FEATURE_BAR_HORIZONTAL_PADDING_PX * 2);
-      const showLabel = fragment.widthPx >= (labelWidthPx + (fragment.isPrimer ? 38 : 0));
+      // A wrapped primer is named once, on the fragment carrying its 5' end.
+      const showLabel = fragment.widthPx >= (labelWidthPx + (fragment.isPrimer ? 38 : 0))
+        && (!fragment.isPrimer || fragment.hasFivePrime);
       if (fragment.isPrimer) {
         const directionClass = fragment.direction === -1
           ? 'sequence-viewer-line-feature-primer-reverse'
@@ -780,6 +802,7 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
       <div class="sequence-viewer-dual-line" data-line-start="${lineStart}" data-line-end="${lineEnd}">
         <span class="sequence-viewer-seq-coord"${coordStyle}>${(lineStart + 1).toLocaleString()}</span>
         <div class="sequence-viewer-strand-block">
+          ${lineFeatureButtons.forwardPrimers}
           <div class="sequence-viewer-strand-pair"${strandPairStyle}>
             ${cursorBlockOnLine
     ? `<span class="sequence-viewer-line-cursor sequence-viewer-line-cursor-block" style="left:${cursorLeftPx.toFixed(3)}px;top:${restrictionTopPaddingPx.toFixed(3)}px;height:${strandPairHeightPx.toFixed(3)}px;width:${charAdvancePx.toFixed(3)}px;" aria-hidden="true"></span>`
@@ -801,9 +824,10 @@ export function renderDualStrandSequenceLinesHtml(sequence, highlightedSegments 
               <span class="sequence-viewer-seq-text"><span class="sequence-viewer-seq-text-content">${complementaryBody}</span></span>
               <span class="sequence-viewer-strand-end">5'</span>
             </div>
+            ${lineFeatureButtons.reversePrimers}
             ${aminoAcidRow}
           </div>
-          ${lineFeatureButtons}
+          ${lineFeatureButtons.features}
         </div>
       </div>
     `);

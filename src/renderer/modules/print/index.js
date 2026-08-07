@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../../lib/notify.js';
+
 const PRINT_DOC_STYLES = `
   * { box-sizing: border-box; }
   html, body {
@@ -95,6 +97,7 @@ function disposePrintFrame(frame, blobUrl) {
 function invokePrintOnFrame(frame) {
   const win = frame?.contentWindow;
   if (!win) {
+    showTransientNotice('Could not open the print dialog.', { type: 'error' });
     return false;
   }
   try {
@@ -103,6 +106,7 @@ function invokePrintOnFrame(frame) {
     return true;
   } catch (error) {
     console.error('Failed to invoke print dialog:', error);
+    showTransientNotice(String(error?.message || error || 'Could not open the print dialog.'), { type: 'error' });
     return false;
   }
 }
@@ -136,6 +140,7 @@ export function printHtmlContent(bodyHtml, { title = 'Print', extraStyles = '' }
     frame.srcdoc = html;
   } catch (error) {
     console.error('Failed to set print frame content:', error);
+    showTransientNotice('Could not prepare the document for printing.', { type: 'error' });
     disposePrintFrame(frame);
     return false;
   }
@@ -185,6 +190,7 @@ export function printPdfBlob(blob, { title = 'Print' } = {}) {
     frame.src = blobUrl;
   } catch (error) {
     console.error('Failed to load PDF for printing:', error);
+    showTransientNotice('Could not load the PDF for printing.', { type: 'error' });
     disposePrintFrame(frame, blobUrl);
     return false;
   }

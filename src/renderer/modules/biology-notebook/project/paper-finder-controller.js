@@ -1,3 +1,5 @@
+import { showTransientNotice } from '../../../lib/notify.js';
+
 function cleanText(value) {
   return String(value || '').trim();
 }
@@ -132,6 +134,9 @@ export function createProjectPaperFinderController({
   }
 
   function setStatus(message = '', { error = false } = {}) {
+    if (error && message) {
+      showTransientNotice(message, { type: 'error' });
+    }
     const status = elements().status;
     if (!status) {
       return;

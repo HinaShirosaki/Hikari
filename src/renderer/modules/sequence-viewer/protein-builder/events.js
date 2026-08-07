@@ -5,14 +5,8 @@ export function installProteinBuilderEvents(ctx) {
   const { elements, state } = ctx;
 
   ctx.bindEvents = function bindEvents() {
-    // Home enters through Vector Builder now; Protein Builder is reached from an
-    // open record, either from the detail rail or from a site picked on the map.
-    elements.detailProteinBuilderBtn?.addEventListener('click', () => {
-      ctx.onNavigateBuilder();
-      ctx.setStatus('Opened Protein Builder.');
-      ctx.setBuilderStatus('Protein Builder is ready.');
-    });
-
+    // Protein Builder is reached only through Vector Builder now: its toolbar for
+    // the standalone stored-backbone path, its map menu for targeted inserts.
     elements.proteinBuilderBackBtn?.addEventListener('click', () => {
       ctx.onNavigateHome();
       ctx.setBuilderStatus('Returned to Sequence Library.');

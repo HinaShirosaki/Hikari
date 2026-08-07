@@ -3,6 +3,7 @@ import {
   normalizeNotebookResultTables
 } from '../../lib/notebook-result-tables.js';
 import { normalizeNotebookToolCalculations } from '../../lib/notebook-tool-calculations.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 const PLACEHOLDER_TOKEN_REGEX = /\{\{ph:([^}]+)\}\}/g;
 
@@ -75,7 +76,7 @@ function createContext({
 }) {
   const JsPdf = getJsPdfCtor();
   if (!JsPdf) {
-    window.alert('PDF generator is not loaded. Please restart the app and try again.');
+    showTransientNotice('PDF generator is not loaded. Please restart the app and try again.', { type: 'error' });
     return null;
   }
 
@@ -1083,9 +1084,7 @@ export const exportNotebookEntryPdf = async (params = {}) => {
     return true;
   } catch (error) {
     console.error('Failed to export notebook PDF:', error);
-    if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-      window.alert(String(error?.message || error || 'Failed to export notebook PDF.'));
-    }
+    showTransientNotice(String(error?.message || error || 'Failed to export notebook PDF.'), { type: 'error' });
     return false;
   }
 };
@@ -1106,9 +1105,7 @@ export const exportProjectNotebookEntriesPdf = async ({
     }
     const pages = Array.isArray(entries) ? entries.filter(Boolean) : [];
     if (!pages.length) {
-      if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-        window.alert('No notebook pages to export for this project.');
-      }
+      showTransientNotice('No notebook pages to export for this project.', { type: 'error' });
       return false;
     }
 
@@ -1171,9 +1168,7 @@ export const exportProjectNotebookEntriesPdf = async ({
     return true;
   } catch (error) {
     console.error('Failed to export project notebook PDF:', error);
-    if (typeof window !== 'undefined' && typeof window.alert === 'function') {
-      window.alert(String(error?.message || error || 'Failed to export project notebook PDF.'));
-    }
+    showTransientNotice(String(error?.message || error || 'Failed to export project notebook PDF.'), { type: 'error' });
     return false;
   }
 };

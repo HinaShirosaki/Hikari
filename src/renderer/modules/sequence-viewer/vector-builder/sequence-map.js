@@ -5,6 +5,7 @@ import {
   getContrastTextColor,
   hashTypeToColor
 } from '../feature-model.js';
+import { isPrimerBindingFeature } from '../feature-types.js';
 import { normalizeTopology } from '../shared.js';
 
 // Sequence map rendering, shared by the Vector Builder workspace and the
@@ -30,6 +31,14 @@ const CIRCULAR_VIEWBOX_MIN = -(RADIUS + LABEL_PAD);
 // Below this fraction of the sequence a feature arc collapses to an unclickable
 // sliver, so short features are padded out to stay selectable.
 const MIN_ARC_FRACTION = 0.0022;
+// Primers get their own track outside the feature lanes: an oligo is an
+// annotation *about* the construct, not a part of it, so it should never
+// compete with a CDS for a lane or for visual weight.
+const PRIMER_RING_GAP = 14;
+const PRIMER_HEAD_PX = 11;
+// A 22 bp primer is well under a degree of arc on a multi-kb plasmid, so the
+// glyph is anchored at the true 5' base and given a minimum visual span.
+const PRIMER_MIN_SPAN_PX = 26;
 
 // --- linear geometry ---------------------------------------------------------
 // A fixed viewBox in both modes keeps pointer->base inversion a pure function of
@@ -48,6 +57,9 @@ const LINEAR_ABOVE_BAR_CHAR_PX = 6.8;
 const LINEAR_ABOVE_BAR_ROWS = 3;
 const LINEAR_ABOVE_BAR_ROW_HEIGHT = 12;
 const LINEAR_MIN_SPAN_PX = 3;
+const LINEAR_PRIMER_ROW_OFFSET = 15;
+const LINEAR_PRIMER_MIN_SPAN_PX = 24;
+const LINEAR_PRIMER_HEAD_PX = 9;
 
 // Zoom scales the SVG's layout box; 1 is "fit the pane", so there is nothing
 // useful below it. The cap keeps a single gesture from scrolling into a
@@ -109,6 +121,38 @@ function describeFeature(feature, index, sequenceLength) {
     lane: Math.max(0, Number(feature.lane) || 0),
     segments: normalizeSegments(feature, sequenceLength)
   };
+}
+
+// Split primers out of the lane-packed features while keeping each feature's
+// original index: data-feature-index is what the click, hover and context-menu
+// handlers resolve against.
+function partitionFeatures(features, sequenceLength) {
+  const parts = [];
+  const primers = [];
+  features.forEach((feature, index) => {
+    (isPrimerBindingFeature(feature?.type) ? primers : parts).push({ feature, index });
+  });
+  const laidOut = assignFeatureLanes(parts.map((entry) => entry.feature))
+    .map((feature, position) => describeFeature(feature, parts[position].index, sequenceLength));
+  return {
+    laidOut,
+    primers: primers.map((entry) => describeFeature(entry.feature, entry.index, sequenceLength))
+  };
+}
+
+// The 5' end is the anchor: forward primers extend clockwise from their start,
+// reverse primers anticlockwise from their end.
+function primerAnchors(primer, minSpan) {
+  const range = primer.segments.length
+    ? { start: primer.segments[0].start, end: primer.segments[primer.segments.length - 1].end }
+    : null;
+  if (!range) {
+    return null;
+  }
+  const span = Math.max(range.end - range.start, minSpan);
+  return primer.strand === -1
+    ? { tail: range.end, lead: range.end - span }
+    : { tail: range.start, lead: range.start + span };
 }
 
 // =============================== circular ====================================
@@ -223,13 +267,52 @@ function renderCircularSelection(selection, sequenceLength) {
   return `<path class="vector-map__selection" d="${buildPlainArcPath(start, end, RADIUS - 7, RADIUS + 7, sequenceLength)}"></path>`;
 }
 
+// Plan B glyph: hairline shaft with a barbed half-head, so it reads as an oligo
+// rather than a region. Shaft runs to the head's base so the two never separate.
+function buildCircularPrimerGlyph(primer, radius, sequenceLength, isActive) {
+  const minSpan = (PRIMER_MIN_SPAN_PX * sequenceLength) / (TAU * radius);
+  const anchors = primerAnchors(primer, minSpan);
+  if (!anchors) {
+    return '';
+  }
+  const { tail, lead } = anchors;
+  const from = Math.min(tail, lead);
+  const to = Math.max(tail, lead);
+  const largeArc = (to - from) / sequenceLength > 0.5 ? 1 : 0;
+  const start = polar(radius, from, sequenceLength);
+  const end = polar(radius, to, sequenceLength);
+
+  const point = polar(radius, lead, sequenceLength);
+  const theta = (TAU * lead) / sequenceLength;
+  const tangent = { x: Math.cos(theta), y: Math.sin(theta) };
+  const radial = { x: Math.sin(theta), y: -Math.cos(theta) };
+  const direction = primer.strand === -1 ? -1 : 1;
+  const tip = {
+    x: point.x + (tangent.x * PRIMER_HEAD_PX * direction),
+    y: point.y + (tangent.y * PRIMER_HEAD_PX * direction)
+  };
+  const barb = {
+    x: point.x + (radial.x * PRIMER_HEAD_PX * 0.58),
+    y: point.y + (radial.y * PRIMER_HEAD_PX * 0.58)
+  };
+
+  return `
+    <g class="vector-map__primer${isActive ? ' vector-map__primer--active' : ''}" data-feature-index="${primer.index}" tabindex="0" role="button" aria-label="${escapeHtml(primer.title)}">
+      <path class="vector-map__primer-shaft" d="M ${fixed(start.x)} ${fixed(start.y)} A ${fixed(radius)} ${fixed(radius)} 0 ${largeArc} 1 ${fixed(end.x)} ${fixed(end.y)}" fill="none" stroke="${primer.color}"></path>
+      <path class="vector-map__primer-head" d="M ${fixed(tip.x)} ${fixed(tip.y)} L ${fixed(barb.x)} ${fixed(barb.y)} L ${fixed(point.x)} ${fixed(point.y)} Z" fill="${primer.color}"></path>
+    </g>
+  `;
+}
+
 function buildCircularMapSvg(record, options = {}) {
   const sequenceLength = Math.max(1, Number(record?.sequence?.length) || 0);
   const features = Array.isArray(options?.features) ? options.features : [];
   const selectedIndex = Number.isFinite(Number(options?.selectedFeatureIndex))
     ? Number(options.selectedFeatureIndex)
     : -1;
-  const laidOut = assignFeatureLanes(features).map((feature, index) => describeFeature(feature, index, sequenceLength));
+  const { laidOut, primers } = partitionFeatures(features, sequenceLength);
+  const laneCount = Math.max(1, laidOut.reduce((max, feature) => Math.max(max, feature.lane + 1), 1));
+  const primerRadius = RADIUS + RING_GAP + (laneCount * (RING_WIDTH + 5)) + PRIMER_RING_GAP;
 
   const arcMarkup = [];
   const labelEntries = [];
@@ -260,6 +343,25 @@ function buildCircularMapSvg(record, options = {}) {
       color: feature.color,
       title: feature.title,
       name: feature.name,
+      anchorX: anchor.x,
+      anchorY: anchor.y,
+      desiredY: anchor.y,
+      side: anchor.x >= 0 ? 'right' : 'left'
+    });
+  });
+
+  primers.forEach((primer) => {
+    arcMarkup.push(buildCircularPrimerGlyph(primer, primerRadius, sequenceLength, primer.index === selectedIndex));
+    const anchors = primerAnchors(primer, (PRIMER_MIN_SPAN_PX * sequenceLength) / (TAU * primerRadius));
+    if (!anchors) {
+      return;
+    }
+    const anchor = polar(primerRadius + 4, (anchors.tail + anchors.lead) / 2, sequenceLength);
+    labelEntries.push({
+      index: primer.index,
+      color: primer.color,
+      title: primer.title,
+      name: primer.name,
       anchorX: anchor.x,
       anchorY: anchor.y,
       desiredY: anchor.y,
@@ -387,13 +489,36 @@ function layoutAboveBarLabels(entries) {
     });
 }
 
+// Linear counterpart of the Plan B glyph: a hairline on its own row just above
+// the axis, with the same barbed half-head.
+function buildLinearPrimerGlyph(primer, sequenceLength, y, isActive) {
+  const minSpan = (LINEAR_PRIMER_MIN_SPAN_PX * sequenceLength) / (LINEAR_TRACK_X1 - LINEAR_TRACK_X0);
+  const anchors = primerAnchors(primer, minSpan);
+  if (!anchors) {
+    return null;
+  }
+  const tailX = linearX(anchors.tail, sequenceLength);
+  const leadX = linearX(anchors.lead, sequenceLength);
+  const direction = primer.strand === -1 ? -1 : 1;
+  const tipX = leadX + (LINEAR_PRIMER_HEAD_PX * direction);
+  return {
+    markup: `
+      <g class="vector-map__primer${isActive ? ' vector-map__primer--active' : ''}" data-feature-index="${primer.index}" tabindex="0" role="button" aria-label="${escapeHtml(primer.title)}">
+        <line class="vector-map__primer-shaft" x1="${fixed(tailX)}" y1="${fixed(y)}" x2="${fixed(leadX)}" y2="${fixed(y)}" stroke="${primer.color}"></line>
+        <path class="vector-map__primer-head" d="M ${fixed(tipX)} ${fixed(y)} L ${fixed(leadX)} ${fixed(y - (LINEAR_PRIMER_HEAD_PX * 0.58))} L ${fixed(leadX)} ${fixed(y)} Z" fill="${primer.color}"></path>
+      </g>
+    `,
+    centre: (tailX + leadX) / 2
+  };
+}
+
 function buildLinearMapSvg(record, options = {}) {
   const sequenceLength = Math.max(1, Number(record?.sequence?.length) || 0);
   const features = Array.isArray(options?.features) ? options.features : [];
   const selectedIndex = Number.isFinite(Number(options?.selectedFeatureIndex))
     ? Number(options.selectedFeatureIndex)
     : -1;
-  const laidOut = assignFeatureLanes(features).map((feature, index) => describeFeature(feature, index, sequenceLength));
+  const { laidOut, primers } = partitionFeatures(features, sequenceLength);
   const laneCount = Math.max(1, laidOut.reduce((max, feature) => Math.max(max, feature.lane + 1), 1));
   const { step, bandHeight } = linearLaneMetrics(laneCount);
   const laneTop = (lane) => LINEAR_AXIS_Y - LINEAR_FIRST_BAND_GAP - bandHeight - (lane * step);
@@ -463,6 +588,23 @@ function buildLinearMapSvg(record, options = {}) {
       ),
       top,
       halfWidth: ((feature.name.length * LINEAR_ABOVE_BAR_CHAR_PX) / 2) + 3
+    });
+  });
+
+  const primerRowY = LINEAR_AXIS_Y - LINEAR_PRIMER_ROW_OFFSET;
+  primers.forEach((primer) => {
+    const glyph = buildLinearPrimerGlyph(primer, sequenceLength, primerRowY, primer.index === selectedIndex);
+    if (!glyph) {
+      return;
+    }
+    bandMarkup.push(glyph.markup);
+    labelEntries.push({
+      feature: primer,
+      onBar: false,
+      x: Math.min(Math.max(glyph.centre, LINEAR_TRACK_X0), LINEAR_TRACK_X1),
+      // the barb rises above the row, so the label needs clearance over it
+      top: primerRowY - LINEAR_PRIMER_HEAD_PX,
+      halfWidth: ((primer.name.length * LINEAR_ABOVE_BAR_CHAR_PX) / 2) + 3
     });
   });
 

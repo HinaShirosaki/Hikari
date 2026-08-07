@@ -16,6 +16,7 @@ import {
   hasPaperPdfMetadata,
   normalizePaperPdfMetadata
 } from './pdf-metadata.js';
+import { showTransientNotice } from '../../lib/notify.js';
 
 export function normalizePaperSelectionSearchText(value = '') {
   return String(value || '')
@@ -776,7 +777,7 @@ export function initPapersManagement({
       }
       printPdfBytes(bytes, { title: getPaperDisplayTitle(activePaper) || 'Paper' });
     } catch (error) {
-      windowRef?.alert?.(String(error?.message || error || 'Failed to open the PDF for printing.'));
+      showTransientNotice(String(error?.message || error || 'Failed to open the PDF for printing.'), { type: 'error' });
     }
   });
 
@@ -788,10 +789,10 @@ export function initPapersManagement({
       await actions.uploadAndViewPaperFile(files[0]);
     },
     onRejected: () => {
-      windowRef?.alert?.('Drop one PDF file to import and view it.');
+      showTransientNotice('Drop one PDF file to import and view it.', { type: 'error' });
     },
     onError: (error) => {
-      windowRef?.alert?.(String(error?.message || error || 'Failed to open dropped PDF.'));
+      showTransientNotice(String(error?.message || error || 'Failed to open dropped PDF.'), { type: 'error' });
     }
   });
 

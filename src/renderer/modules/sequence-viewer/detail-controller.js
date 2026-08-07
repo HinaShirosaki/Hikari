@@ -77,7 +77,8 @@ export function createSequenceViewerDetailController(config = {}) {
       orfStopCodons: state.orfStopCodons,
       orfFrameFilter: state.orfFrameFilter,
       restrictionVendorFilter: state.restrictionVendorFilter,
-      includeRestriction: !alignmentActive
+      includeRestriction: !alignmentActive,
+      includePrimers: state.showPrimers !== false
     });
   }
 
@@ -337,6 +338,17 @@ export function createSequenceViewerDetailController(config = {}) {
     return detailAlignment.getAlignmentHighlightSegments(state, record);
   }
 
+  // One shared flag, two toolbars: keep both boxes showing the same thing.
+  function syncPrimersToggleState() {
+    const checked = state.showPrimers !== false;
+    if (elements.primersToggle) {
+      elements.primersToggle.checked = checked;
+    }
+    if (elements.vectorBuilderPrimersToggle) {
+      elements.vectorBuilderPrimersToggle.checked = checked;
+    }
+  }
+
   function syncRestrictionVendorToggleState() {
     if (elements.restrictionNebToggle) {
       elements.restrictionNebToggle.checked = Boolean(state.restrictionVendorFilter?.neb);
@@ -447,6 +459,7 @@ export function createSequenceViewerDetailController(config = {}) {
     syncAlignmentControlsState();
     syncOrfToggleState();
     syncRestrictionVendorToggleState();
+    syncPrimersToggleState();
     updateMessages();
   }
 
@@ -473,7 +486,9 @@ export function createSequenceViewerDetailController(config = {}) {
     renderActiveRecord();
   }
 
-  function setRestrictionVendorFilter(nextFilter) {
+  // Changing what is visible renumbers the feature list, so the selection has to
+  // be re-found by identity rather than kept by index.
+  function withFeatureVisibilityChange(applyChange) {
     const record = getSelectedRecord();
     const previousFeatures = getVisibleFeaturesForRecord(record);
     const selectedFeature = (
@@ -482,7 +497,7 @@ export function createSequenceViewerDetailController(config = {}) {
       && state.selectedFeatureIndex < previousFeatures.length
     ) ? previousFeatures[state.selectedFeatureIndex] : null;
 
-    state.restrictionVendorFilter = normalizeRestrictionVendorFilter(nextFilter);
+    applyChange();
 
     if (selectedFeature) {
       const nextFeatures = getVisibleFeaturesForRecord(record);
@@ -492,6 +507,19 @@ export function createSequenceViewerDetailController(config = {}) {
     }
 
     renderActiveRecord();
+  }
+
+  function setRestrictionVendorFilter(nextFilter) {
+    withFeatureVisibilityChange(() => {
+      state.restrictionVendorFilter = normalizeRestrictionVendorFilter(nextFilter);
+    });
+  }
+
+  function setShowPrimers(nextShowPrimers) {
+    withFeatureVisibilityChange(() => {
+      state.showPrimers = Boolean(nextShowPrimers);
+    });
+    syncPrimersToggleState();
   }
 
   function setOrfStopCodons(nextStopCodons) {
@@ -591,6 +619,7 @@ export function createSequenceViewerDetailController(config = {}) {
       readOrfFrameFilterFromControls,
       setOrfFrameFilter,
       setRestrictionVendorFilter,
+      setShowPrimers,
       resolveSequenceBoundaryFromEvent,
       resolveFeatureActionContext,
       renderFeatureContextMenu,
@@ -627,10 +656,12 @@ export function createSequenceViewerDetailController(config = {}) {
     renderSequence,
     setOrfViewEnabled,
     setRestrictionVendorFilter,
+    setShowPrimers,
     syncActionButtonsState,
     syncAlignmentControlsState,
     syncOrfToggleState,
     syncRestrictionVendorToggleState,
+    syncPrimersToggleState,
     updateRecordSelect
   };
 }

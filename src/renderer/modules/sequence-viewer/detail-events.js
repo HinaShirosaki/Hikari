@@ -23,6 +23,7 @@ export function bindSequenceViewerDetailEvents(config = {}) {
   const readOrfFrameFilterFromControls = config?.readOrfFrameFilterFromControls || (() => ({}));
   const setOrfFrameFilter = config?.setOrfFrameFilter || (() => {});
   const setRestrictionVendorFilter = config?.setRestrictionVendorFilter || (() => {});
+  const setShowPrimers = config?.setShowPrimers || (() => {});
   const setStatus = config?.setStatus || (() => {});
   const resolveSequenceBoundaryFromEvent = config?.resolveSequenceBoundaryFromEvent || (() => null);
   const resolveFeatureActionContext = config?.resolveFeatureActionContext || (() => null);
@@ -89,6 +90,10 @@ export function bindSequenceViewerDetailEvents(config = {}) {
       ...state.restrictionVendorFilter,
       thermo: Boolean(elements.restrictionThermoToggle.checked)
     });
+  });
+
+  elements.primersToggle?.addEventListener('change', () => {
+    setShowPrimers(Boolean(elements.primersToggle.checked));
   });
 
   const toolbarMenus = [

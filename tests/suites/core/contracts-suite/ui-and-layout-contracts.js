@@ -132,6 +132,7 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
     test('only Papers and Agent opt into the shared left-rail fold control', () => {
       const sharedController = readLocalSource('src', 'renderer', 'app', 'shared-left-rail.js');
       const sharedCss = readLocalSource('ui', 'css', 'overrides', 'left-rail-template.css');
+      const railControlsCss = readLocalSource('ui', 'css', 'overrides', 'cross-view-fixes.css');
       const viewFiles = fs.readdirSync(path.join(__dirname, 'ui', 'html', 'views'))
         .filter((fileName) => fileName.endsWith('.html'));
       const optedInViews = viewFiles
@@ -143,6 +144,9 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       assert.match(sharedController, /folded \? 'Open left rail' : 'Fold left rail'/);
       assert.match(sharedController, /rail\.inert = folded/);
       assert.match(sharedCss, /\[data-left-rail-foldable="true"\]\.is-left-rail-folded\s*\{[^}]*grid-template-columns:\s*var\(--shared-left-rail-folded-width\) minmax\(0,\s*1fr\) !important;/s);
+      assert.match(railControlsCss, /\.app-left-rail-handle\s*\{[^}]*left:\s*var\(--app-left-rail-track-width\);/s);
+      assert.match(railControlsCss, /\.app-left-rail-fold-toggle\s*\{[^}]*left:\s*var\(--app-left-rail-track-width\);/s);
+      assert.match(railControlsCss, /body\.shared-left-rail-resizing \.app-left-rail-fold-toggle\s*\{[^}]*transition:[^}]*transform 140ms ease;/s);
     });
 
     test('biology notebook page header stays fixed above its detail scroller', () => {
@@ -287,8 +291,8 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       const context = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'controller-context.js');
       const source = readLocalSource('src', 'renderer', 'modules', 'sequence-viewer', 'protein-builder', 'record-dna.js');
 
-      assert.match(html, /active DNA coding sequence/i);
       assert.match(html, /CurrentDNA/);
+      assert.doesNotMatch(html, /Build a linear fusion|Linear chain:|protein-builder-vector-target/);
       assert.doesNotMatch(html, /protein-builder-poi-(?:name|sequence)|protein-builder-add-poi-btn|POI Name|Add POI Block/);
       assert.doesNotMatch(dom, /proteinBuilderPoi(?:Name|Sequence)Input|proteinBuilderAddPoiBtn/);
       assert.match(context, /activeDnaSource:\s*ctx\.getCurrentDnaSource\(\)/);
@@ -562,7 +566,10 @@ module.exports = function registerUiAndLayoutContracts(context = {}) {
       // The rail's third action stays "Vector Builder" across home and detail so the
       // slot does not appear to rename itself; Protein Builder moved to the toolbar.
       assert.match(homeBlock, /id="sequence-viewer-home-vector-builder-btn"/);
-      assert.match(detailBlock, /id="sequence-viewer-detail-protein-builder-btn"/);
+      // Protein Builder folded into Vector Builder: the detail view no longer
+      // offers its own entry point.
+      assert.equal(detailBlock.includes('id="sequence-viewer-detail-protein-builder-btn"'), false);
+      assert.match(detailBlock, /id="sequence-viewer-vector-builder-protein-builder-btn"/);
       assert.equal(detailBlock.includes('id="sequence-viewer-save-btn"'), false);
       assert.equal(detailBlock.includes('id="sequence-viewer-save-name"'), false);
       assert.match(detailBlock, /id="sequence-viewer-detail-library-context-menu"[\s\S]*data-sequence-library-action="rename"/);
